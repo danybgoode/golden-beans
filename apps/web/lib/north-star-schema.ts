@@ -31,12 +31,23 @@ export type LeadingInputSyncEntry = z.infer<typeof leadingInputSyncEntrySchema>
 
 // The wire schema for POST /v1/inputs/:key/values (Story 3.3) — an append batch of
 // daily values for an 'external_push' input. `occurredOn` is a plain YYYY-MM-DD date
-// (no time-of-day — this is a daily rollup, not an event stream).
+// (no time-of-day — this is a daily rollup, not an event stream). The regex alone would
+// accept a shape-valid but impossible calendar date (e.g. 2026-99-99) — re-checking via
+// Date parsing + a round-trip back to the same string catches that (money-touching data
+// deserves the stricter check, not just a shape check).
+function isValidCalendarDate(value: string): boolean {
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 export const inputValuesSchema = z.object({
   values: z
     .array(
       z.object({
-        occurredOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'occurredOn must be YYYY-MM-DD'),
+        occurredOn: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, 'occurredOn must be YYYY-MM-DD')
+          .refine(isValidCalendarDate, { message: 'occurredOn must be a real calendar date' }),
         value: z.number().finite(),
       }),
     )

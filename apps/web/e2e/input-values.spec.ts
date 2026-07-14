@@ -52,6 +52,16 @@ test('malformed body (bad date format) → 400', async ({ request }) => {
   expect(res.status()).toBe(400)
 })
 
+test('shape-valid but impossible calendar date (2026-99-99) → 400', async ({ request }) => {
+  const inputKey = `values-spec-impossible-date-${Date.now()}`
+  await defineInput(request, inputKey, 'external_push')
+  const res = await request.post(`/api/v1/inputs/${inputKey}/values`, {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: { values: [{ occurredOn: '2026-99-99', value: 100 }] },
+  })
+  expect(res.status()).toBe(400)
+})
+
 test('pushing to an unknown input → 404', async ({ request }) => {
   const res = await request.post(`/api/v1/inputs/nonexistent-${Date.now()}/values`, {
     headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
@@ -131,6 +141,10 @@ test('valid push appends real rows, and re-pushing the same day is an idempotent
   const secondBody = await second.json()
   expect(secondBody.inserted).toBe(1)
   expect(secondBody.skippedDuplicates).toBe(1)
+  // The skipped 2026-01-01 resend carried a DIFFERENT value (999) than what's on file
+  // (150.5) — flagged, not silently dropped, since a real correction vs. an identical
+  // resend look the same at the dedupe layer alone.
+  expect(secondBody.mismatchedDuplicates).toEqual(['2026-01-01'])
 
   const { data: rowsAfter } = await db
     .from('input_values')
@@ -139,6 +153,24 @@ test('valid push appends real rows, and re-pushing the same day is an idempotent
     .order('occurred_on')
   expect(rowsAfter).toHaveLength(3) // no duplicate row for 2026-01-01
   expect(Number(rowsAfter![0].value)).toBe(150.5) // unchanged — the re-push value (999) never applied
+})
+
+test('re-pushing the exact same value for an already-present day is NOT flagged as a mismatch', async ({
+  request,
+}) => {
+  const inputKey = `values-spec-identical-resend-${Date.now()}`
+  await defineInput(request, inputKey, 'external_push')
+  await request.post(`/api/v1/inputs/${inputKey}/values`, {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: { values: [{ occurredOn: '2026-04-01', value: 42 }] },
+  })
+  const resend = await request.post(`/api/v1/inputs/${inputKey}/values`, {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: { values: [{ occurredOn: '2026-04-01', value: 42 }] },
+  })
+  const body = await resend.json()
+  expect(body.skippedDuplicates).toBe(1)
+  expect(body.mismatchedDuplicates).toEqual([])
 })
 
 test("tenant isolation: project-two cannot push to project-one's input", async ({ request }) => {

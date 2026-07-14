@@ -51,7 +51,7 @@ test('impact endpoint + page reflect real telemetry AND real pushed-revenue seri
     expect(link.status()).toBe(200)
   }
 
-  // Real telemetry: 2 shares on day one, 1 on day two.
+  // Real telemetry: 2 shares from 2 distinct users, same day.
   await track(request, 'alice', telemetryEvent, featureKey)
   await track(request, 'bob', telemetryEvent, featureKey)
 

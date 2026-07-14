@@ -81,10 +81,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ key
     return NextResponse.json({ ok: false, error: 'Failed to append values' }, { status: 500 })
   }
 
+  const insertedDates = new Set((inserted ?? []).map((r) => r.occurred_on))
+  const skippedDates = parsed.data.values.filter((v) => !insertedDates.has(v.occurredOn))
+
+  // A skipped day is usually an identical resend (the idempotent, expected case), but it
+  // could also be a genuine correction (a chargeback, a backfix) silently discarded by
+  // the append-only ledger — that distinction matters for money data, so check which one
+  // this was and flag it rather than staying quiet either way.
+  let mismatchedDuplicates: string[] = []
+  if (skippedDates.length > 0) {
+    const { data: onFile, error: onFileError } = await supabase
+      .from('input_values')
+      .select('occurred_on, value')
+      .eq('input_id', input.id)
+      .in(
+        'occurred_on',
+        skippedDates.map((v) => v.occurredOn),
+      )
+    if (onFileError) {
+      console.error('[inputs/values] on-file lookup for skipped dates failed:', onFileError)
+    } else {
+      const valueOnFileByDate = new Map((onFile ?? []).map((r) => [r.occurred_on, Number(r.value)]))
+      mismatchedDuplicates = skippedDates
+        .filter((v) => valueOnFileByDate.get(v.occurredOn) !== v.value)
+        .map((v) => v.occurredOn)
+      if (mismatchedDuplicates.length > 0) {
+        console.warn(
+          `[inputs/values] input '${inputKey}': ${mismatchedDuplicates.length} skipped day(s) had a DIFFERENT ` +
+            `incoming value than what's on file (dates: ${mismatchedDuplicates.join(', ')}) — the append-only ` +
+            'ledger keeps the original; a real correction needs a manual/backfill path, not a re-push.',
+        )
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     inputKey,
     inserted: inserted?.length ?? 0,
-    skippedDuplicates: rows.length - (inserted?.length ?? 0),
+    skippedDuplicates: skippedDates.length,
+    mismatchedDuplicates,
   })
 }

@@ -83,6 +83,38 @@ CREATE TRIGGER input_values_no_mutation
   BEFORE UPDATE OR DELETE ON input_values
   FOR EACH ROW EXECUTE FUNCTION input_values_no_mutation();
 
+-- The route (POST /v1/inputs/:key/values) already checks both of these before
+-- inserting, but only service_role can write this table at all, so a second belt here
+-- catches a future service-role-level mistake (a bad script, a manual insert) before it
+-- can corrupt money-adjacent data: a value row must belong to the SAME project as its
+-- input (never cross-tenant), and its input must actually be 'external_push' (a
+-- telemetry_event input's values are computed on the fly, never stored here).
+CREATE OR REPLACE FUNCTION input_values_check_input() RETURNS trigger AS $$
+DECLARE
+  input_project_id UUID;
+  input_value_source TEXT;
+BEGIN
+  SELECT project_id, value_source INTO input_project_id, input_value_source
+  FROM leading_inputs WHERE id = NEW.input_id;
+
+  IF input_project_id IS NULL THEN
+    RAISE EXCEPTION 'input_values.input_id % does not reference an existing leading_inputs row', NEW.input_id;
+  END IF;
+  IF input_project_id != NEW.project_id THEN
+    RAISE EXCEPTION 'input_values.project_id must match its input''s project_id (cross-tenant write rejected)';
+  END IF;
+  IF input_value_source != 'external_push' THEN
+    RAISE EXCEPTION 'input_values can only be written for an external_push input, got %', input_value_source;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS input_values_check_input ON input_values;
+CREATE TRIGGER input_values_check_input
+  BEFORE INSERT ON input_values
+  FOR EACH ROW EXECUTE FUNCTION input_values_check_input();
+
 GRANT SELECT, INSERT, UPDATE ON TABLE north_star_metrics TO service_role;
 GRANT SELECT, INSERT, UPDATE ON TABLE leading_inputs TO service_role;
 GRANT SELECT, INSERT ON TABLE feature_inputs TO service_role;

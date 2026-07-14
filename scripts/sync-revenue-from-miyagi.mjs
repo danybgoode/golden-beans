@@ -30,18 +30,32 @@ function requireEnv(name) {
   return value
 }
 
+const FETCH_PAGE_SIZE = 1000
+
 async function fetchMiyagiRevenueEvents() {
   const url = requireEnv('MIYAGI_SUPABASE_URL')
   const key = requireEnv('MIYAGI_SUPABASE_SERVICE_ROLE_KEY')
   const supabase = createClient(url, key, { auth: { persistSession: false } })
   // Read-only: financial_event is append-only in Miyagi too (financial_event_no_mutation
   // trigger) — this SELECT is the only operation this script ever performs against it.
-  const { data, error } = await supabase
-    .from('financial_event')
-    .select('amount_cents, captured_at')
-    .eq('event_type', 'revenue')
-  if (error) throw new Error(`Failed to read Miyagi financial_event: ${error.message}`)
-  return (data ?? []).map((row) => ({ amountCents: row.amount_cents, capturedAt: row.captured_at }))
+  //
+  // Paginated via .range() — PostgREST's default row cap would otherwise silently
+  // truncate the result set once the ledger grows past it, under-reporting real revenue
+  // while the request still returns success. Loop until a page comes back short of a
+  // full page (the standard "did we get everything" signal for offset pagination).
+  const rows = []
+  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('financial_event')
+      .select('amount_cents, captured_at')
+      .eq('event_type', 'revenue')
+      .order('captured_at', { ascending: true })
+      .range(from, from + FETCH_PAGE_SIZE - 1)
+    if (error) throw new Error(`Failed to read Miyagi financial_event: ${error.message}`)
+    rows.push(...(data ?? []))
+    if (!data || data.length < FETCH_PAGE_SIZE) break
+  }
+  return rows.map((row) => ({ amountCents: row.amount_cents, capturedAt: row.captured_at }))
 }
 
 async function pushValues(values) {
@@ -70,6 +84,13 @@ export async function main() {
   console.log(
     `Synced ${dailyValues.length} day(s) of revenue: ${result.inserted} new, ${result.skippedDuplicates} already present.`,
   )
+  if (result.mismatchedDuplicates?.length > 0) {
+    console.warn(
+      `WARNING: ${result.mismatchedDuplicates.length} day(s) had a different revenue figure than what's already ` +
+        `stored (dates: ${result.mismatchedDuplicates.join(', ')}) — the append-only ledger kept the ORIGINAL ` +
+        'value. If Miyagi corrected a past day, this sync run did not apply that correction.',
+    )
+  }
 }
 
 // Guard main() so importing this file for its pure helpers never re-executes it for

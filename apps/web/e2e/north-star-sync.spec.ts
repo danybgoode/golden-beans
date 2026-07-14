@@ -124,6 +124,37 @@ test('valid sync defines a metric with both a telemetry_event and an external_pu
   expect(metricRows?.[0]?.name).toBe('Payable Sellers (renamed)')
 })
 
+test("re-syncing an existing input with a DIFFERENT valueSource → 400 (would silently orphan its stored series)", async ({
+  request,
+}) => {
+  const metricKey = `spec-value-source-guard-metric-${Date.now()}`
+  const inputKey = `spec-value-source-guard-input-${Date.now()}`
+
+  const first = await request.post('/api/v1/north-star/sync', {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: {
+      metric: { key: metricKey, name: 'Spec Metric' },
+      inputs: [{ key: inputKey, name: 'Spec Input', valueSource: 'external_push' }],
+    },
+  })
+  expect(first.status()).toBe(200)
+
+  const second = await request.post('/api/v1/north-star/sync', {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: {
+      metric: { key: metricKey, name: 'Spec Metric' },
+      inputs: [
+        { key: inputKey, name: 'Spec Input', valueSource: 'telemetry_event', sourceEvent: 'some_event' },
+      ],
+    },
+  })
+  expect(second.status()).toBe(400)
+
+  const db = dbClient()
+  const { data: rows } = await db.from('leading_inputs').select('value_source').eq('key', inputKey)
+  expect(rows?.[0]?.value_source).toBe('external_push') // unchanged
+})
+
 test('tenant isolation: project-two sees its own metric but not project-one\'s', async ({ request }) => {
   // A positive check on project-two's OWN data, not just an absence check on project-one's key —
   // an endpoint that always returned an empty list would wrongly "pass" an absence-only test.

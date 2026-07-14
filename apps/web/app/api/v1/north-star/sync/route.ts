@@ -35,6 +35,37 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabaseServiceClient()
 
+  // An existing input's value_source must never silently change on re-sync: switching
+  // attributed_revenue from external_push to telemetry_event (a typo, a copy-paste
+  // mistake) would make north-star-query.ts start computing its series from `events`
+  // instead of `input_values` — every previously-pushed real revenue row would go
+  // invisible in the report with no error, even though the rows themselves still exist.
+  const { data: existingInputs, error: existingInputsError } = await supabase
+    .from('leading_inputs')
+    .select('key, value_source')
+    .eq('project_id', auth.projectId)
+    .in(
+      'key',
+      parsed.data.inputs.map((i) => i.key),
+    )
+  if (existingInputsError) {
+    console.error('[north-star/sync] existing-inputs lookup failed:', existingInputsError)
+    return NextResponse.json({ ok: false, error: 'Failed to check existing inputs' }, { status: 500 })
+  }
+  const valueSourceByKey = new Map(parsed.data.inputs.map((i) => [i.key, i.valueSource]))
+  const changedValueSourceKeys = (existingInputs ?? [])
+    .filter((existing) => valueSourceByKey.get(existing.key) !== existing.value_source)
+    .map((existing) => existing.key)
+  if (changedValueSourceKeys.length > 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Cannot change value_source of an existing input: ${changedValueSourceKeys.join(', ')}`,
+      },
+      { status: 400 },
+    )
+  }
+
   const { data: metric, error: metricError } = await supabase
     .from('north_star_metrics')
     .upsert(
