@@ -1,6 +1,6 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** 🏗️ in progress — 1/3 stories shipped (1.1)
+**Status:** 🏗️ in progress — 2/3 stories shipped (1.1, 1.2)
 
 ## Stories
 
@@ -21,7 +21,7 @@ sha256-hashed at rest in `projects.api_key_hash`) + `lib/track-schema.ts` (zod) 
 service-role only, mirrors Miyagi's `platform_flags` pattern).
 **Risk:** LOW
 
-### Story 1.2 — TS SDK (`track`, `trackAdoption`) ✅ `<pending>`
+### Story 1.2 — TS SDK (`track`, `trackAdoption`) ✅ `82b278b`
 **As an** app builder, **I want** a TS SDK exposing `track(event, props)` and
 `trackAdoption(featureKey)` that auto-appends context, **so that** integrating a new app takes
 minutes.
