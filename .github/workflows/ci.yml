@@ -1,0 +1,86 @@
+name: CI
+
+# Deterministic pre-merge gate (Roadmap/WAYS-OF-WORKING.md -> Review & merge):
+#   typecheck-build  -- tsc --noEmit + npm run build
+#   e2e              -- the `api` Playwright project against a local Supabase + a locally built
+#                       `next start` server. No Vercel dependency yet — golden-beans' Vercel
+#                       project is new paid infra, not provisioned until Daniel greenlights it
+#                       (Roadmap/01-growth-engine/growth-engine-v1/README.md). Once it exists,
+#                       swap this job for the preview-per-PR shape (see the template's original
+#                       ci.yml.example in git history for that worked example).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-build:
+    name: Type-check + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Type-check
+        working-directory: apps/web
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: Playwright vs local Supabase + local server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local Supabase (applies migrations + seed.sql)
+        working-directory: apps/web
+        run: supabase start
+
+      # Never hardcode a demo key literal here: it drifted once already (a CLI-version
+      # bump changed which key format the local API gateway accepts — the old-format
+      # service_role JWT worked against one CLI version and 500'd against a newer one).
+      # Capture whatever THIS run's CLI actually issued and export it for every later
+      # step, so a future CLI bump can't silently break this gate again.
+      - name: Export live local Supabase credentials
+        working-directory: apps/web
+        run: |
+          eval "$(supabase status -o env)"
+          echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: npm run build
+
+      - name: Start the app in the background
+        working-directory: apps/web
+        run: |
+          npm run start > /tmp/next-server.log 2>&1 &
+          echo "Waiting for http://localhost:3000..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3000 > /dev/null && exit 0
+            sleep 1
+          done
+          echo "::error::App never became ready"; exit 1
+
+      - name: Run Playwright api suite
+        run: npm run test:e2e
+
+      - name: Dump Next.js server log (diagnostics)
+        if: always()
+        run: cat /tmp/next-server.log || true

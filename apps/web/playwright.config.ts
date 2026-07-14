@@ -1,10 +1,22 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
+// Load .env.local (if present — never committed, gitignored) before reading any env var below,
+// so `npm run test:e2e` picks up local Supabase creds without a separate dotenv dependency or a
+// `node --env-file` wrapper (which can't invoke a PATH-resolved binary directly). No-op in CI,
+// where the real env vars are already set by the workflow.
+const envLocalPath = join(__dirname, '.env.local')
+if (existsSync(envLocalPath)) {
+  for (const line of readFileSync(envLocalPath, 'utf8').split('\n')) {
+    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())
+    if (match && !(match[1] in process.env)) process.env[match[1]] = match[2]
+  }
+}
+
 /**
- * Playwright harness template — see WAYS-OF-WORKING.md's "Automated QA" section for the two-layer
- * shape this implements. TEMPLATE FILL-IN: this file lives under apps/example-app/ as a worked
- * example; move/rename it to wherever your real app lives, and fill in the baseURL default + any
- * globalSetup your app's auth provider needs (see the commented-out block below).
+ * Playwright harness — see WAYS-OF-WORKING.md's "Automated QA" section for the two-layer shape
+ * this implements.
  *
  * TWO projects:
  *   - `api`     — the deterministic gate. API-level specs (`*.spec.ts`, excluding
@@ -32,9 +44,6 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000'
 
 export default defineConfig({
   testDir: './e2e',
-  // TEMPLATE FILL-IN: if authed browser smokes need a testing-token/session bypass from your auth
-  // provider, wire it here via a globalSetup file (no-op without the relevant env vars set, so the
-  // api gate stays unaffected). Example: `globalSetup: './e2e/global.setup.ts'`.
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

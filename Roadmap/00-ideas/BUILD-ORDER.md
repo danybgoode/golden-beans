@@ -10,13 +10,13 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (0)
+## 🏗️ Building now (1)
+
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 3/12 stories · risk: Low
+
+## 📋 Ready to build (scaffolded, not started) (0)
 
 _None._
-
-## 📋 Ready to build (scaffolded, not started) (1)
-
-- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 0/12 stories · risk: Low
 
 ## ✅ Shipped (0)
 
