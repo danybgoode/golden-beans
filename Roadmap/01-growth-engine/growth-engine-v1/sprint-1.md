@@ -1,19 +1,16 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** 🏗️ in progress — 3/3 stories built, CI green, both fresh-reviewed. Daniel greenlit
-infra provisioning 2026-07-14: a second Supabase project (`golden-beans`, ref
-`slweidgffcfndnskcskc`) and a Vercel project (`golden-beans`) are live in production — see the
-smoke walkthrough below for the real, verified API-level proof. **Two PRs remain open, neither
-merged by the agent.** A fresh-reviewer pass caught a risk-tier mislabel: both PRs ship a DB
-migration, which `WAYS-OF-WORKING.md` states is HIGH risk (always a product-owner merge), not
-LOW as originally written — corrected in both PR bodies. golden-beans
-[#1](https://github.com/danybgoode/golden-beans/pull/1) (Stories 1.1–1.2, CI green, reviewed) and
-medusa-bonsai [#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (Story 1.3, CI
-green, reviewed — one real bug found and fixed: a missing event-dedupe that would have inflated
-the funnel). **Both owed to Daniel to merge directly.** Sprint can't fully close until then:
-`growth.telemetry_enabled` is OFF (correct default) and PR #253 isn't merged, so the *browser*
-flag-flip + real-UI-triggered event smoke is still owed to Daniel too — see below for exactly
-what is and isn't verified yet.
+**Status:** ✅ all 3 stories shipped to `main` in both repos — golden-beans
+[#1](https://github.com/danybgoode/golden-beans/pull/1) (`55b6606`) and medusa-bonsai
+[#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (`6e8d912`), both squash-merged
+2026-07-14 by Daniel (HIGH risk — both PRs ship a DB migration, corrected from an initial LOW
+mislabel a fresh-reviewer pass caught; `WAYS-OF-WORKING.md` requires a product-owner merge for
+that tier). Infra is live: Supabase project `golden-beans` (ref `slweidgffcfndnskcskc`) + Vercel
+project `golden-beans` (https://golden-beans-gamma.vercel.app), provisioned 2026-07-14 on
+Daniel's green light. `growth.telemetry_enabled` exists in Miyagi's `/admin/flags`, correctly OFF
+by default. **Sprint not fully closed:** the Part B browser flag-flip + live-UI-event smoke below
+is still owed to Daniel by name — an admin flag flip + real seller-session walkthrough an agent
+can't perform.
 
 ## Stories
 
@@ -48,7 +45,7 @@ same envelope). Proven via `apps/web/e2e/sdk.spec.ts` — a real consumer (2-lin
 call = the "≤5 lines" acceptance), not a mock.
 **Risk:** LOW
 
-### Story 1.3 — Setup-guide funnel instrumented behind `growth.telemetry_enabled` ✅ built, PR open `91fde42`
+### Story 1.3 — Setup-guide funnel instrumented behind `growth.telemetry_enabled` ✅ `6e8d912` (medusa-bonsai)
 **As a** PM, **I want** the setup-guide funnel instrumented behind `growth.telemetry_enabled`
 (enablement flag in `platform_flags`, default **OFF**), **so that** real traffic proves the loop
 with an instant off-switch.
@@ -72,9 +69,9 @@ polarity exactly) + a seed migration · `lib/growth-track.ts` (pure flag-gating 
 no-ops until `GROWTH_ENGINE_URL`/`GROWTH_ENGINE_API_KEY` are set post-deploy) ·
 `app/api/growth/track/route.ts` (Clerk-authed, resolves userId server-side, checks the flag once so
 no client code is flag-aware) · `lib/growth-events.ts` (client-side `pushGrowthEvent`, a sibling to
-`pushAnalyticsEvent`) · wired at `SetupGuideCard.tsx` (`guide_view`, `guide_step_complete`) and
-`ComparteClient.tsx` (`first_share_tap`) — additive, no existing GTM call touched. **PR not yet
-merged** — this is what's "built" but not yet shipped to medusa-bonsai's `main`.
+`pushAnalyticsEvent`, deduped per the fresh-reviewer fix below) · wired at `SetupGuideCard.tsx`
+(`guide_view`, `guide_step_complete`) and `ComparteClient.tsx` (`first_share_tap`) — additive, no
+existing GTM call touched. **Shipped to medusa-bonsai's `main` as `6e8d912`.**
 
 ## Sprint QA
 - **api spec(s):** one Playwright `api` spec per testable story — 1.1 `apps/web/e2e/track.spec.ts`
@@ -86,21 +83,26 @@ merged** — this is what's "built" but not yet shipped to medusa-bonsai's `main
 - **browser smoke owed:** **yes, to Daniel by name** — the *real-UI* flag-flip + live-event smoke:
   flip `growth.telemetry_enabled` ON via `/admin/flags` in Miyagi (an admin action, deliberately not
   taken by the agent), load the setup-guide card and tap through it, confirm the events land in
-  golden-beans; flip OFF, confirm silence. **Additionally blocked on PR #253 merging** — the flag
-  and the `/api/growth/track` route don't exist on medusa-bonsai's `main` yet, so `/admin/flags`
-  won't show `growth.telemetry_enabled` at all until that PR ships.
-- **What the agent verified instead (API-level, real production infra, no UI):** see the smoke
-  walkthrough below — a real `curl` round-trip against the deployed golden-beans production API,
-  using a real seeded `miyagisanchez` project credential, proving the engine itself works end-to-end
-  on live infra. This is *not* a substitute for the browser smoke (it never exercises Miyagi's
-  code at all — Story 1.3 isn't deployed yet), just proof the target Story 1.3 will call is real.
+  golden-beans; flip OFF, confirm silence. The flag and the `/api/growth/track` route are now live
+  on medusa-bonsai's `main` (`6e8d912`), so `/admin/flags` shows `growth.telemetry_enabled` — this
+  smoke is unblocked, just not yet run.
+- **What the agent verified instead (API-level, real production infra, no UI):** see Part A of the
+  smoke walkthrough below — a real `curl` round-trip against the deployed golden-beans production
+  API, using a real seeded `miyagisanchez` project credential, proving the engine itself works
+  end-to-end on live infra. This is *not* a substitute for the browser smoke (it never exercised
+  Miyagi's code), just proof the target Story 1.3 calls is real.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green — confirmed in
   both repos (golden-beans for 1.1/1.2; medusa-bonsai for 1.3, including the existing
-  `flags-admin.spec.ts` suite still green after the new flag). Neither PR is merged yet.
+  `flags-admin.spec.ts` suite still green after the new flag). Both PRs merged to `main`.
+- **Review:** each PR got an independent fresh-reviewer pass (a different agent, no shared context)
+  plus an advisory cross-agent second opinion (codex). Real findings, all fixed before merge: a
+  Postgres permission bug only reproducible on a newer local Supabase CLI (golden-beans), a missing
+  event-dedupe that would have inflated the funnel (medusa-bonsai), plus assorted doc/dead-code
+  cleanup on both sides.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 Env: production · golden-beans: https://golden-beans-gamma.vercel.app · Miyagi:
-https://miyagisanchez.com (once PR #253 merges — not yet, see below)
+https://miyagisanchez.com
 
 ### Part A — Engine-only, API-level (✅ agent-verified 2026-07-14, no UI, no Miyagi involvement)
 Proves the golden-beans side of the loop is real and working on live infra. Uses a `miyagisanchez`
@@ -122,8 +124,7 @@ medusa-bonsai's Vercel project, Production scope) uses.
 
 ### Part B — The real thing: flag-flip + live-UI event (⬜ owed to Daniel by name)
 This is what "Story 1.3 works" actually means — Part A only proves the engine, not Miyagi's side.
-**Prerequisite: merge PR [#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) first**
-(after review — the agent deliberately did not merge it; see Status above). Then:
+PR #253 is merged, so this is unblocked:
 
 1. Open `https://miyagisanchez.com/admin/flags`, find `growth.telemetry_enabled` (should show
    disabled/OFF, enablement polarity).
