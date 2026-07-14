@@ -72,6 +72,19 @@ one-liner + why + date shape.
   batch — especially one large enough to plausibly share a rate-limit, or any showing a failed status —
   re-derive actual file state directly (grep the real repo) and run the language's type-checker/build
   before treating the batch as complete.
+- **Before setting a production env var, confirm which rail is *actually* serving production traffic —
+  don't assume it's the one named in the project's original deploy docs.** Set `GROWTH_ENGINE_URL`/
+  `GROWTH_ENGINE_API_KEY` on Vercel's production scope for a consumer whose frontend had silently
+  moved to Cloud Run days earlier (a sibling epic's own cutover); the vars never reached the running
+  site, and the fire-and-forget forwarder (correctly) no-op'd on every real request with zero error —
+  looked identical to "not yet triggered" until a live smoke + a direct `gcloud run services describe`
+  env-var diff caught it. Check the live service's actual env, not the platform you assume is prod,
+  before wiring a new integration into someone else's already-shipped surface. **Corollary — an
+  incremental `gcloud run services update --update-env-vars/--update-secrets` is far safer than
+  reconstructing a full `gcloud run deploy` from a hand-crafted script you don't have every value for**
+  (the full command replaces the ENTIRE env/secret set; a missing default silently clobbers unrelated
+  production config). Patch live incrementally, then separately fix the deploy script's source so the
+  NEXT full redeploy doesn't regress it — two commits, not one risky one.
 
 ## Tooling gotchas
 - **A script with a co-located pure-logic test file MUST guard its `main()` call with an `isMain`

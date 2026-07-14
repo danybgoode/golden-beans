@@ -1,16 +1,15 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** ✅ all 3 stories shipped to `main` in both repos — golden-beans
-[#1](https://github.com/danybgoode/golden-beans/pull/1) (`55b6606`) and medusa-bonsai
-[#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (`6e8d912`), both squash-merged
-2026-07-14 by Daniel (HIGH risk — both PRs ship a DB migration, corrected from an initial LOW
-mislabel a fresh-reviewer pass caught; `WAYS-OF-WORKING.md` requires a product-owner merge for
-that tier). Infra is live: Supabase project `golden-beans` (ref `slweidgffcfndnskcskc`) + Vercel
-project `golden-beans` (https://golden-beans-gamma.vercel.app), provisioned 2026-07-14 on
-Daniel's green light. `growth.telemetry_enabled` exists in Miyagi's `/admin/flags`, correctly OFF
-by default. **Sprint not fully closed:** the Part B browser flag-flip + live-UI-event smoke below
-is still owed to Daniel by name — an admin flag flip + real seller-session walkthrough an agent
-can't perform.
+**Status:** ✅ **Sprint 1 fully closed 2026-07-14.** All 3 stories shipped to `main` in both
+repos — golden-beans [#1](https://github.com/danybgoode/golden-beans/pull/1) (`55b6606`) and
+medusa-bonsai [#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (`6e8d912`),
+both squash-merged by Daniel (HIGH risk — both ship a DB migration, corrected from an initial LOW
+mislabel a fresh-reviewer pass caught). Infra live: Supabase project `golden-beans` (ref
+`slweidgffcfndnskcskc`) + Vercel project `golden-beans` (https://golden-beans-gamma.vercel.app).
+**Part B (the real browser flag-flip + live-UI-event smoke) is confirmed green by Daniel** — real
+`setup_guide_viewed` events landed in golden-beans with his actual Clerk user id, within seconds of
+his own live interaction. See the walkthrough below for the full story, including a real
+production bug this smoke caught and the fix ([miyagi-product-management#92](https://github.com/danybgoode/miyagi-product-management/pull/92)).
 
 ## Stories
 
@@ -80,17 +79,13 @@ existing GTM call touched. **Shipped to medusa-bonsai's `main` as `6e8d912`.**
   flag-gating decision, both branches, green — observed red on a deliberate mutation first) +
   `growth-track-api.spec.ts` (anonymous-401 gate, green; the authed 200/202 path is Clerk-gated and
   owed to Daniel, matching this codebase's own `admin-flags-api.spec.ts` precedent).
-- **browser smoke owed:** **yes, to Daniel by name** — the *real-UI* flag-flip + live-event smoke:
-  flip `growth.telemetry_enabled` ON via `/admin/flags` in Miyagi (an admin action, deliberately not
-  taken by the agent), load the setup-guide card and tap through it, confirm the events land in
-  golden-beans; flip OFF, confirm silence. The flag and the `/api/growth/track` route are now live
-  on medusa-bonsai's `main` (`6e8d912`), so `/admin/flags` shows `growth.telemetry_enabled` — this
-  smoke is unblocked, just not yet run.
-- **What the agent verified instead (API-level, real production infra, no UI):** see Part A of the
-  smoke walkthrough below — a real `curl` round-trip against the deployed golden-beans production
-  API, using a real seeded `miyagisanchez` project credential, proving the engine itself works
-  end-to-end on live infra. This is *not* a substitute for the browser smoke (it never exercised
-  Miyagi's code), just proof the target Story 1.3 calls is real.
+- **browser smoke: ✅ done by Daniel.** Flipped `growth.telemetry_enabled` ON in `/admin/flags`,
+  reloaded `/shop/manage`, saw the forward fire in the browser console. **This first pass caught a
+  real bug** — see the walkthrough below (Part C) — fixed live same-day, then re-confirmed by a
+  second reload landing real events in golden-beans.
+- **What the agent verified independently (API-level, real production infra, no UI):** see Part A
+  of the smoke walkthrough below — a real `curl` round-trip against the deployed golden-beans
+  production API, using a real seeded `miyagisanchez` project credential.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green — confirmed in
   both repos (golden-beans for 1.1/1.2; medusa-bonsai for 1.3, including the existing
   `flags-admin.spec.ts` suite still green after the new flag). Both PRs merged to `main`.
@@ -122,23 +117,50 @@ medusa-bonsai's Vercel project, Production scope) uses.
    → **Confirmed:** row present — `event: provisioning_smoke_test, user_id: smoke-test-user,
    feature_id: setup_guide`, timestamped 2026-07-14.
 
-### Part B — The real thing: flag-flip + live-UI event (⬜ owed to Daniel by name)
+### Part B — The real thing: flag-flip + live-UI event (✅ confirmed by Daniel 2026-07-14)
 This is what "Story 1.3 works" actually means — Part A only proves the engine, not Miyagi's side.
-PR #253 is merged, so this is unblocked:
 
-1. Open `https://miyagisanchez.com/admin/flags`, find `growth.telemetry_enabled` (should show
-   disabled/OFF, enablement polarity).
-   → Expected: flag listed, OFF.
-2. As a seller with an incomplete setup guide, load `https://miyagisanchez.com/shop/manage` with the
-   flag still OFF, then check golden-beans (or the DB) for any new `miyagisanchez`-project event.
-   → Expected: **zero new events** — confirms OFF ⇒ silence.
-3. Flip `growth.telemetry_enabled` ON in `/admin/flags`.
-4. Reload `https://miyagisanchez.com/shop/manage` (same seller). The setup-guide card should fire
-   `guide_view`; complete a step to fire `guide_step_complete`; tap a share button on
-   `/shop/manage/comparte` to fire `setup_guide_share_tapped`.
-   → Expected: each action produces a matching event in golden-beans within a few seconds
-   (`user_id` = the seller's Clerk id, `feature_id: setup_guide`).
-5. Flip `growth.telemetry_enabled` back OFF in `/admin/flags`. Repeat step 4's actions.
-   → Expected: **zero new events** — confirms the instant off-switch.
+1. Open `https://miyagisanchez.com/admin/flags`, find `growth.telemetry_enabled`.
+   → **Confirmed:** flag listed, enablement polarity.
+2. Flip `growth.telemetry_enabled` ON in `/admin/flags`.
+   → **Confirmed** by Daniel.
+3. Reload `https://miyagisanchez.com/shop/manage`. The setup-guide card fires `setup_guide_viewed`.
+   → **First attempt:** Daniel saw the event fire in the browser console (Miyagi's own
+   `/api/growth/track` route ran successfully) — **but it never reached golden-beans.** See Part C
+   for the root cause + fix.
+   → **Second attempt, after the Part C fix:** **Confirmed** — real `setup_guide_viewed` rows
+   landed in golden-beans' `events` table with Daniel's actual Clerk `user_id`
+   (`user_3EP4Vhhl43MuzQneHcyhlH75Ruu`), timestamped within seconds of the reload.
+4. Flip `growth.telemetry_enabled` back OFF in `/admin/flags` once done observing, to return to the
+   default-OFF state.
 
-If any step fails, note the step number + what you saw — that's the bug report.
+### Part C — Production bug found + fixed during Part B (2026-07-14)
+Daniel's Part B smoke caught a real gap Part A's API-only check couldn't: **the event fired
+client-side and Miyagi's own internal route ran, but the outbound hop to golden-beans silently
+never happened.** Root cause: `GROWTH_ENGINE_URL`/`GROWTH_ENGINE_API_KEY` were set on **Vercel's**
+production environment scope, but Miyagi's frontend production runtime moved to **Cloud Run**
+(`miyagi-web`, us-east4) on 2026-07-10 (`frontend-vercel-to-cloudrun` epic, S4.5) — Vercel now only
+serves PR previews. The vars never reached the actually-running service, so
+`sendGrowthEvent()` correctly no-op'd (its designed-safe behavior when unconfigured) on every real
+request — no error, no crash, just silence. Confirmed via a direct `gcloud run services describe`
+env-var diff against the live service.
+
+**Fix, same day:**
+- Patched the live Cloud Run revision via an incremental `gcloud run services update
+  --update-env-vars --update-secrets` (verified: all 52 pre-existing vars intact, site healthy).
+- The original `GROWTH_ENGINE_API_KEY` was unrecoverable (Vercel's `--sensitive` flag makes a value
+  permanently write-only, by design) and had never been live, so it was **rotated** with zero blast
+  radius — golden-beans' `projects.api_key_hash` for `miyagisanchez` updated to match, verified by
+  SHA-256 hash comparison (the raw key itself was never printed at any point).
+- Created a proper GCP Secret Manager secret + granted the Cloud Run service account IAM access,
+  matching every other credential's existing pattern in this codebase.
+- Fixed the durability gap: `infra/gcp/deploy-frontend.sh` / `provision-frontend.sh` now include
+  both vars, so the next *full* redeploy won't silently drop them again (PR
+  [miyagi-product-management#92](https://github.com/danybgoode/miyagi-product-management/pull/92),
+  CI green, HIGH risk — shared production infra, owed to Daniel to merge).
+- **Promoted to `Roadmap/LEARNINGS.md`** (Multi-agent & async deploy coordination) — the
+  generalizable lesson: confirm which rail is *actually* serving production before wiring a new
+  integration into someone else's already-shipped surface; don't assume from the original deploy
+  docs.
+
+If any step fails in a future run, note the step number + what you saw — that's the bug report.
