@@ -6,7 +6,7 @@ import { trackEventSchema } from '@/lib/track-schema'
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
   if (!auth.ok) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status })
+    return NextResponse.json({ ok: false, error: auth.error, detail: auth.detail }, { status: auth.status })
   }
 
   let body: unknown
@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error || !data) {
-    return NextResponse.json({ ok: false, error: 'Failed to persist event' }, { status: 500 })
+    console.error('[track] event insert failed:', error)
+    // TEMP-DEBUG: see the matching note in lib/auth.ts — remove `detail` with the fix.
+    return NextResponse.json({ ok: false, error: 'Failed to persist event', detail: error?.message }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, id: data.id }, { status: 201 })

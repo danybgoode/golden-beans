@@ -70,7 +70,7 @@ jobs:
       - name: Start the app in the background
         working-directory: apps/web
         run: |
-          npm run start &
+          npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."
           for i in $(seq 1 30); do
             curl -sf http://localhost:3000 > /dev/null && exit 0
@@ -80,3 +80,7 @@ jobs:
 
       - name: Run Playwright api suite
         run: npm run test:e2e
+
+      - name: Dump Next.js server log (diagnostics)
+        if: always()
+        run: cat /tmp/next-server.log || true
