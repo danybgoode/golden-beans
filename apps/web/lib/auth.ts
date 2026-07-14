@@ -2,9 +2,7 @@ import 'server-only'
 import { createHash } from 'node:crypto'
 import { getSupabaseServiceClient } from './supabase'
 
-export type AuthResult =
-  | { ok: true; projectId: string }
-  | { ok: false; status: number; error: string; detail?: string }
+export type AuthResult = { ok: true; projectId: string } | { ok: false; status: number; error: string }
 
 function hashApiKey(key: string): string {
   return createHash('sha256').update(key).digest('hex')
@@ -32,10 +30,7 @@ export async function resolveProjectFromAuthHeader(authHeader: string | null): P
 
   if (error) {
     console.error('[auth] project lookup failed:', error)
-    // TEMP-DEBUG: surfacing the raw error message in-band while diagnosing a CI-only
-    // 500 (see PR #1) — this project has no real users/traffic yet, so this is a safe
-    // window to do it. Remove `detail` once the root cause is fixed.
-    return { ok: false, status: 500, error: 'Auth lookup failed', detail: error.message }
+    return { ok: false, status: 500, error: 'Auth lookup failed' }
   }
   if (!data) {
     return { ok: false, status: 401, error: 'Invalid API key' }
