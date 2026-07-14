@@ -1,0 +1,30 @@
+# DevOps reliability cleanup — Sprint 2 follow-up.
+# Deterministic gate for the CLI/tooling node:tests under scripts/ — the cross-agent
+# reviewer rail (scripts/lib/cross-agent-cli.mjs) and the roadmap→notion generators
+# (scripts/roadmap-to-notion.mjs). These had no CI runner; only infra/ did (infra-guard.yml),
+# so a regression in the agy/codex driver or the build-order/notion logic was caught only by
+# a manual `node --test`. Both test files import node built-ins ONLY (zero npm deps), so this
+# needs no install step — same shape as infra-guard.yml.
+name: scripts-guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/scripts-guard.yml'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/scripts-guard.yml'
+
+jobs:
+  cli-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run CLI/tooling node:test
+        run: node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'

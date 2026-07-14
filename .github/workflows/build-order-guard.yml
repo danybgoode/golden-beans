@@ -1,0 +1,34 @@
+# Repo-hygiene: the in-repo status board must stay a faithful generated view.
+# BUILD-ORDER.md is GENERATED from the SSOT (each epic README's frontmatter `status:`,
+# plus seed frontmatter for the funnel) by scripts/build-order.mjs. This guard fails CI
+# if the committed board is stale — i.e. someone changed a status/seed/sprint doc (or the
+# scripts) without re-running the generator. Fix: `node scripts/build-order.mjs`.
+#
+# Pure node, zero dependencies — no install step. Same shape as infra-guard.yml.
+name: build-order-guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Roadmap/**'
+      - 'scripts/build-order.mjs'
+      - 'scripts/roadmap-to-notion.mjs'
+      - '.github/workflows/build-order-guard.yml'
+  pull_request:
+    paths:
+      - 'Roadmap/**'
+      - 'scripts/build-order.mjs'
+      - 'scripts/roadmap-to-notion.mjs'
+      - '.github/workflows/build-order-guard.yml'
+
+jobs:
+  build-order-fresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify BUILD-ORDER.md is up to date
+        run: node scripts/build-order.mjs --check

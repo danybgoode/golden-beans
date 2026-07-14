@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "dobby-foundation": {
+      "source": {
+        "source": "github",
+        "repo": "danybgoode/dobby-foundation"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "ways-of-work@dobby-foundation": true
+  }
+}
