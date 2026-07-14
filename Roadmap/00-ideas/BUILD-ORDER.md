@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 3/12 stories · risk: Low
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 6/12 stories · risk: Low
 
 ## 📋 Ready to build (scaffolded, not started) (0)
 
