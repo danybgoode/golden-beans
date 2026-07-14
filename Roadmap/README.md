@@ -38,7 +38,7 @@ independently shippable slice of value.
 
 | # | Macro-section | Covers |
 |---|---|---|
-| 01 | <TEMPLATE FILL-IN> | <TEMPLATE FILL-IN> |
+| 01 | Growth Engine | Telemetry ingest, SDK, TARS funnel (Targeted/Adopted/Retained), North Star metric, A/B bucketing — the core engine. |
 | 09 | Platform & Infra | Engineering/observability work that isn't a user-facing product domain — deploy pipeline, dev tooling, cross-cutting process (this convention — reserving `09` for platform/infra — is a deliberate carry-over from the origin project; keep the number stable so tooling that reads it doesn't need per-project config). |
 
 ---
@@ -50,8 +50,9 @@ independently shippable slice of value.
      merely intended — partial/aspirational is 🚧. Don't let this page lag a shipped epic; updating
      it is part of the epic Definition of Done (see WAYS-OF-WORKING.md). -->
 
-### 01 · <TEMPLATE FILL-IN: macro-section name>
-- 🚧 <TEMPLATE FILL-IN: first feature/epic, one line>
+### 01 · Growth Engine
+- 🚧 [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
+  funnel · North Star · A/B bucketing) — scaffolded, not yet built.
 
 ---
 

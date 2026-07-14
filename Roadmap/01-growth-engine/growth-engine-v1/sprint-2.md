@@ -1,0 +1,46 @@
+# Growth Engine v1 — Sprint 2: TARS funnel v1
+
+**Status:** ⬜ not started
+
+## Stories
+
+### Story 2.1 — Feature registry seeded from live `platform_flags` rows
+**As a** builder, **I want** a feature registry (key · target rule · retention window) seeded by the
+**client pushing** its live `platform_flags` rows (SDK `syncFeatures()`, or a one-command seed run
+from Miyagi), **so that** the Targeted denominator reflects real production flag state, never
+`lib/flags.ts` code defaults (code defaults are fail-safe fallbacks and systematically say OFF).
+**Acceptance:** running the seed/sync from Miyagi populates the registry with live rows; a
+stale/never-synced registry is visibly stale (timestamped), not silently wrong. Registry sync stays
+a command, not a product surface.
+**Risk:** LOW
+
+### Story 2.2 — TARS aggregation
+**As a** PM, **I want** Targeted (registry-declared) / Adopted (first event) / Retained (repeat
+event inside the feature's retention window) computed from Sprint 1's event stream, **so that**
+funnel numbers are trustworthy.
+**Acceptance:** a synthetic event sequence produces the expected Targeted/Adopted/Retained counts.
+Funnel numbers are labeled **registry-declared**, not gateway-observed — v1's honest boundary (flags
+are served by Miyagi, not this engine), noted so the funnel isn't oversold.
+**Risk:** LOW
+
+### Story 2.3 — Funnel page for the S1.3 feature
+**As a** PM, **I want** a funnel page rendering Targeted/Adopted/Retained for the feature
+instrumented in Sprint 1, **so that** the first real funnel is visible from live traffic.
+**Acceptance:** with `growth.telemetry_enabled` ON and real Miyagi traffic flowing, the funnel page
+shows non-zero, correct-looking TARS numbers for the S1.3 feature. This is one of the epic's
+headline acceptance checks (Decision 2 of the scope doc).
+**Risk:** LOW
+
+## Sprint QA
+- **api spec(s):** one Playwright `api` spec per testable story — 2.1 (sync populates the registry),
+  2.2 (aggregation math against a fixture event stream), 2.3 (funnel endpoint/page returns the
+  expected shape).
+- **browser smoke owed:** **yes, to Daniel by name** — the funnel-renders-real-data smoke (open the
+  funnel page, confirm it reflects live Miyagi traffic for the S1.3 feature).
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+
+## Sprint 2 — Smoke walkthrough (do these in order)
+_TBD — write this section before sprint close, per the epic Definition of Done. Must include the
+funnel-renders-real-data smoke (owed to Daniel by name) as numbered, real-URL steps._
+
+If any step fails, note the step number + what you saw — that's the bug report.

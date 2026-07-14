@@ -14,9 +14,9 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (0)
+## 📋 Ready to build (scaffolded, not started) (1)
 
-_None._
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 0/12 stories · risk: Low
 
 ## ✅ Shipped (0)
 
@@ -27,4 +27,4 @@ _None._
 _None._
 
 ---
-_Epics: 0 · seeds in funnel: 0 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 1 · seeds in funnel: 0 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._
