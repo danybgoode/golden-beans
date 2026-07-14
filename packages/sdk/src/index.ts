@@ -14,6 +14,23 @@ export type TrackResult =
   | { ok: true; id: string }
   | { ok: false; error: string; code?: string; issues?: unknown }
 
+// Sprint 2, Story 2.1: a feature registry entry pushed from the client's own live
+// flag rows (e.g. Miyagi's `platform_flags`). targetEvent/adoptedEvent/retainedEvent
+// are optional — see Roadmap/01-growth-engine/growth-engine-v1/sprint-2.md.
+export interface FeatureSyncEntry {
+  key: string
+  enabled: boolean
+  targetEvent?: string
+  adoptedEvent?: string
+  retainedEvent?: string
+  retentionDays?: number
+  description?: string
+}
+
+export type SyncResult =
+  | { ok: true; synced: number }
+  | { ok: false; error: string; code?: string; issues?: unknown }
+
 export interface GrowthEngineClientConfig {
   /** e.g. "https://growth.example.com" or "http://localhost:3000" for local dev. */
   baseUrl: string
@@ -28,6 +45,7 @@ export interface GrowthEngineClientConfig {
 export interface GrowthEngineClient {
   track(event: string, props?: TrackEventProps): Promise<TrackResult>
   trackAdoption(featureKey: string, props?: Omit<TrackEventProps, 'featureId'>): Promise<TrackResult>
+  syncFeatures(features: FeatureSyncEntry[]): Promise<SyncResult>
 }
 
 /**
@@ -56,8 +74,28 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     return { ok: true, id: body.id }
   }
 
+  async function syncFeatures(features: FeatureSyncEntry[]): Promise<SyncResult> {
+    let res: Response
+    try {
+      res = await fetchFn(`${config.baseUrl}/api/v1/features/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({ features }),
+      })
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Unknown network error', code: 'NETWORK_ERROR' }
+    }
+
+    const body = await res.json().catch(() => null)
+    if (!res.ok || !body?.ok) {
+      return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
+    }
+    return { ok: true, synced: body.synced }
+  }
+
   return {
     track,
     trackAdoption: (featureKey, props) => track('feature_adopted', { ...props, featureId: featureKey }),
+    syncFeatures,
   }
 }
