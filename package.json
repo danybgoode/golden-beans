@@ -1,0 +1,14 @@
+{
+  "name": "golden-beans",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "test:e2e": "npm run test:e2e --workspace=apps/web",
+    "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web"
+  }
+}

@@ -5,14 +5,20 @@
 ## Stories
 
 ### Story 1.1 — `POST /v1/track` ingest + store
-**As a** builder, **I want** `POST /v1/track` to reject malformed events (missing
-`projectId`/`userId`/`event`; `featureId` optional) and persist valid ones to Postgres, **so that**
+**As a** builder, **I want** `POST /v1/track` to reject malformed events (missing/invalid API key;
+missing `userId`/`event`; `featureId` optional) and persist valid ones to Postgres, **so that**
 funnels stay accurate.
-**Acceptance:** a malformed payload returns 4xx; a valid payload is persisted and queryable.
-Tenant-scoped by design: `projectId` is first-class, auth is a per-project credential, and no query
-path can cross projects — v1 runs single-tenant, but the schema/token shape never needs a migration
-to go multi-tenant. The event schema carries an extensible `tags`/`metadata` object from day one
-(so v2 friction/chaos tagging is additive, not a migration).
+**Acceptance:** a missing/invalid `Authorization: Bearer <key>` → 401; a malformed body (missing
+`userId`/`event`) → 400; a valid request → 201 + the persisted row's id, queryable after.
+Tenant-scoped by design: `project_id` is resolved server-side from the API key (never trusted from
+the request body — a client-supplied `projectId` would be a spoofing vector), so no query path can
+cross projects — v1 runs single-tenant, but the schema/credential shape never needs a migration to
+go multi-tenant (Decision 8). The event schema carries an extensible `tags`/`metadata` object from
+day one (so v2 friction/chaos tagging is additive, not a migration).
+**Implementation:** `apps/web/app/api/v1/track/route.ts` + `lib/auth.ts` (API-key → project_id,
+sha256-hashed at rest in `projects.api_key_hash`) + `lib/track-schema.ts` (zod) +
+`supabase/migrations/20260713220000_track_events.sql` (`projects` + `events`, RLS on, no policies —
+service-role only, mirrors Miyagi's `platform_flags` pattern).
 **Risk:** LOW
 
 ### Story 1.2 — TS SDK (`track`, `trackAdoption`)
