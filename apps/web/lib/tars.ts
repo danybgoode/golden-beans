@@ -14,7 +14,12 @@
 //     happened is a fact, not a declaration).
 //   - Retained counts distinct users (from Adopted) who additionally fired a qualifying
 //     "repeat" event — `retainedEvent` if declared, else any second distinct event for
-//     the feature — within `retentionDays` of their EARLIEST qualifying event.
+//     the feature — within `retentionDays` of their EARLIEST ADOPTING event (the event
+//     matching `adoptedEvent`, fallback: any event). The window is anchored to adoption,
+//     not to the user's first-ever event for the feature — anchoring to an earlier
+//     target/exposure event would only ever undercount Retained (a real repeat shortly
+//     after a late adoption could fall outside a window measured from a much earlier
+//     view).
 
 export interface TarsEvent {
   userId: string
@@ -44,9 +49,10 @@ function distinctUsersFor(events: TarsEvent[], eventName: string | null): Set<st
   return users
 }
 
-function earliestByUser(events: TarsEvent[]): Map<string, number> {
+function earliestQualifyingByUser(events: TarsEvent[], eventName: string | null): Map<string, number> {
   const earliest = new Map<string, number>()
   for (const e of events) {
+    if (eventName !== null && e.event !== eventName) continue
     const t = new Date(e.createdAt).getTime()
     const seen = earliest.get(e.userId)
     if (seen === undefined || t < seen) earliest.set(e.userId, t)
@@ -58,12 +64,14 @@ export function computeTars(events: TarsEvent[], feature: TarsFeature): TarsResu
   const targetedUsers = feature.enabled ? distinctUsersFor(events, feature.targetEvent) : new Set<string>()
   const adoptedUsers = distinctUsersFor(events, feature.adoptedEvent)
 
-  const firstSeen = earliestByUser(events)
+  // The retention window is anchored to each user's earliest ADOPTING event, not their
+  // earliest event of any kind — see the module comment above.
+  const adoptionBaseline = earliestQualifyingByUser(events, feature.adoptedEvent)
   const retentionMs = feature.retentionDays * 24 * 60 * 60 * 1000
   const retainedUsers = new Set<string>()
 
   for (const userId of adoptedUsers) {
-    const baseline = firstSeen.get(userId)
+    const baseline = adoptionBaseline.get(userId)
     if (baseline === undefined) continue
 
     const qualifyingEvents = events.filter(

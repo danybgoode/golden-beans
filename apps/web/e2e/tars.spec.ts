@@ -82,3 +82,16 @@ test('computeTars: a repeat exactly at the retention window boundary still count
   const result = computeTars(events, setupGuideFeature)
   expect(result.retained).toBe(1)
 })
+
+test('computeTars: the retention window is anchored to the ADOPTING event, not an earlier target/view event', () => {
+  // heidi: viewed on day 0 (targeted), but didn't actually adopt until day 20 — then shared
+  // 2 days after adopting. Retained relative to her real adoption, even though 22 days
+  // separate her view from her share (which would wrongly fail a window anchored to day 0).
+  const events: TarsEvent[] = [
+    { userId: 'heidi', event: 'setup_guide_viewed', createdAt: day(0) },
+    { userId: 'heidi', event: 'setup_guide_step_completed', createdAt: day(20) },
+    { userId: 'heidi', event: 'setup_guide_share_tapped', createdAt: day(22) },
+  ]
+  const result = computeTars(events, setupGuideFeature)
+  expect(result).toEqual({ targeted: 1, adopted: 1, retained: 1 })
+})

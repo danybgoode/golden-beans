@@ -33,6 +33,25 @@ test('malformed body (empty features array) → 400', async ({ request }) => {
   expect(body.ok).toBe(false)
 })
 
+test('duplicate keys in one payload → 400 (never reaches Postgres as a same-statement upsert conflict)', async ({
+  request,
+}) => {
+  const key = `spec-sync-dup-${Date.now()}`
+  const res = await request.post('/api/v1/features/sync', {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: {
+      features: [
+        { key, enabled: true },
+        { key, enabled: false },
+      ],
+    },
+  })
+  expect(res.status()).toBe(400)
+  const body = await res.json()
+  expect(body.ok).toBe(false)
+  expect(body.error).toContain(key)
+})
+
 test('valid sync → 200, row upserted with fresh synced_at, and re-sync updates without duplicating', async ({
   request,
 }) => {

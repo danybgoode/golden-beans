@@ -19,11 +19,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
 
   const result = await getFeatureFunnelByProjectId(auth.projectId, project.slug, key)
   if (!result.ok) {
+    if (result.reason === 'query_failed') {
+      return NextResponse.json({ ok: false, error: 'Funnel lookup failed' }, { status: 500 })
+    }
     return NextResponse.json({ ok: false, error: `Unknown feature: ${key}` }, { status: 404 })
   }
 
   return NextResponse.json({
     ok: true,
+    project: result.project,
     feature: result.feature,
     tars: result.tars,
     // v1's honest boundary (Roadmap/01-growth-engine/growth-engine-v1/sprint-2.md, Story 2.2) —

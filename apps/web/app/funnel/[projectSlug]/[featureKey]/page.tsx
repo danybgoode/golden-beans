@@ -11,7 +11,10 @@ export default async function FunnelPage({
 }) {
   const { projectSlug, featureKey } = await params
   const result = await getFeatureFunnel(projectSlug, featureKey)
-  if (!result.ok) notFound()
+  if (!result.ok) {
+    if (result.reason === 'query_failed') throw new Error('Funnel lookup failed')
+    notFound()
+  }
 
   const { feature, tars } = result
 

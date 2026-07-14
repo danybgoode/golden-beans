@@ -65,6 +65,21 @@ event sequence (both the JSON endpoint and the SSR page's HTML) — observed red
 - **browser smoke owed:** **yes, to Daniel by name** — the funnel-renders-real-data smoke (open the
   funnel page, confirm it reflects live Miyagi traffic for the S1.3 feature).
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+- **Review:** cross-agent second opinion (codex, advisory) + a fresh independent reviewer (different
+  agent, no shared context), both on PR #2. Real findings, all fixed before merge: `lib/tars-query.ts`
+  silently treated Supabase query errors as empty results (a DB outage could look like a normal 404 or
+  a plausible-looking zeroed funnel) — now returns a distinct `query_failed` reason surfaced as a 500
+  on both the JSON endpoint and the page; `POST /v1/features/sync` accepted duplicate keys in one
+  payload, which could 500 on the same-statement upsert conflict — now rejected with a 400; and the
+  fresh reviewer caught a real aggregation bug in `lib/tars.ts` — the retention window was anchored to
+  a user's earliest event of *any* kind instead of their earliest *adopting* event, which could
+  silently undercount Retained whenever a user viewed long before actually adopting (exactly the shape
+  of gap the "observed red on a deliberate mutation" process hadn't exercised yet — added a regression
+  case + confirmed it red on a revert before fixing). Non-blocking notes carried forward as known v1
+  debt, not fixed here: the funnel page is intentionally unauthenticated (no admin-auth system exists
+  yet — slug+key doubles as the access control, acceptable for this internal tool but worth revisiting
+  before the URL is shared more broadly) and `tars-query.ts` reads a feature's full event history with
+  no pagination (fine at current volume).
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 

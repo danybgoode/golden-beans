@@ -24,6 +24,17 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // A duplicate key in one payload would upsert-conflict on (project_id, key) twice in the
+  // same statement, which Postgres can reject outright — surface it as a clean 400 instead.
+  const keys = parsed.data.features.map((f) => f.key)
+  const duplicateKeys = [...new Set(keys.filter((key, i) => keys.indexOf(key) !== i))]
+  if (duplicateKeys.length > 0) {
+    return NextResponse.json(
+      { ok: false, error: `Duplicate feature key(s) in payload: ${duplicateKeys.join(', ')}` },
+      { status: 400 },
+    )
+  }
+
   const supabase = getSupabaseServiceClient()
   const now = new Date().toISOString()
   const rows = parsed.data.features.map((f) => ({

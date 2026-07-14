@@ -22,11 +22,19 @@ export type FunnelResult =
       }
       tars: ReturnType<typeof computeTars>
     }
-  | { ok: false; reason: 'project_not_found' | 'feature_not_found' }
+  | { ok: false; reason: 'project_not_found' | 'feature_not_found' | 'query_failed' }
 
 export async function getFeatureFunnel(projectSlug: string, featureKey: string): Promise<FunnelResult> {
   const supabase = getSupabaseServiceClient()
-  const { data: project } = await supabase.from('projects').select('id, slug').eq('slug', projectSlug).maybeSingle()
+  const { data: project, error } = await supabase
+    .from('projects')
+    .select('id, slug')
+    .eq('slug', projectSlug)
+    .maybeSingle()
+  if (error) {
+    console.error('[tars-query] project lookup failed:', error)
+    return { ok: false, reason: 'query_failed' }
+  }
   if (!project) return { ok: false, reason: 'project_not_found' }
   return getFeatureFunnelByProjectId(project.id, project.slug, featureKey)
 }
@@ -41,19 +49,27 @@ export async function getFeatureFunnelByProjectId(
   const supabase = getSupabaseServiceClient()
   const project = { id: projectId, slug: projectSlug }
 
-  const { data: feature } = await supabase
+  const { data: feature, error: featureError } = await supabase
     .from('features')
     .select('key, enabled, target_event, adopted_event, retained_event, retention_days, synced_at')
     .eq('project_id', project.id)
     .eq('key', featureKey)
     .maybeSingle()
+  if (featureError) {
+    console.error('[tars-query] feature lookup failed:', featureError)
+    return { ok: false, reason: 'query_failed' }
+  }
   if (!feature) return { ok: false, reason: 'feature_not_found' }
 
-  const { data: events } = await supabase
+  const { data: events, error: eventsError } = await supabase
     .from('events')
     .select('user_id, event, created_at')
     .eq('project_id', project.id)
     .eq('feature_id', featureKey)
+  if (eventsError) {
+    console.error('[tars-query] events query failed:', eventsError)
+    return { ok: false, reason: 'query_failed' }
+  }
 
   const tarsEvents: TarsEvent[] = (events ?? []).map((e) => ({
     userId: e.user_id,
