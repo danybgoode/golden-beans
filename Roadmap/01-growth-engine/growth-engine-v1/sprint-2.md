@@ -1,8 +1,9 @@
 # Growth Engine v1 — Sprint 2: TARS funnel v1
 
-**Status:** ✅ Sprint 2 shipped 2026-07-14 — merged to `main` (PR #2, squash `02c6219`), migration +
-deploy live in production, Part A confirmed by the agent against real data. Part B (the flag-flip +
-funnel-moves smoke) owed to Daniel — see walkthrough below.
+**Status:** ✅ **Sprint 2 fully closed 2026-07-14.** Merged to `main` (PR #2, squash `02c6219`),
+migration + deploy live in production. Part A confirmed by the agent against real data; Daniel then
+flipped `growth.telemetry_enabled` ON in Miyagi and **confirmed the funnel page live in his own
+browser, working as expected** — the headline "funnel-renders-real-data" smoke is done.
 
 ## Stories
 
@@ -45,7 +46,7 @@ observed **red** on a deliberate mutation (dropping the retention-window bound) 
 green.
 **Risk:** LOW
 
-### Story 2.3 — Funnel page for the S1.3 feature ✅ — Part A confirmed, Part B owed to Daniel
+### Story 2.3 — Funnel page for the S1.3 feature ✅ — confirmed live by Daniel
 **As a** PM, **I want** a funnel page rendering Targeted/Adopted/Retained for the feature
 instrumented in Sprint 1, **so that** the first real funnel is visible from live traffic.
 **Acceptance:** with `growth.telemetry_enabled` ON and real Miyagi traffic flowing, the funnel page
@@ -64,8 +65,8 @@ event sequence (both the JSON endpoint and the SSR page's HTML) — observed red
 - **api spec(s):** one Playwright `api` spec per testable story — 2.1 (sync populates the registry),
   2.2 (aggregation math against a fixture event stream), 2.3 (funnel endpoint/page returns the
   expected shape).
-- **browser smoke owed:** **yes, to Daniel by name** — the funnel-renders-real-data smoke (open the
-  funnel page, confirm it reflects live Miyagi traffic for the S1.3 feature).
+- **browser smoke: ✅ done by Daniel.** Flipped `growth.telemetry_enabled` ON, then opened
+  `/funnel/miyagisanchez/setup_guide` and confirmed it renders as expected.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 - **Review:** cross-agent second opinion (codex, advisory) + a fresh independent reviewer (different
   agent, no shared context), both on PR #2. Real findings, all fixed before merge: `lib/tars-query.ts`
@@ -117,18 +118,27 @@ a bypass of the write-only flag.
    because no `setup_guide_step_completed` event exists yet (matching step 2's finding exactly, not a
    bug).
 
-### Part B — owed to Daniel by name
-Part A proves the engine renders real data correctly, but the funnel is honestly at T=0/A=0/R=0
-because (a) this session doesn't know Miyagi's live flag state and (b) nobody has completed a
-setup-guide step or shared from it since Sprint 1's initial view. To see the funnel actually move:
+### Part A, continued — flag correction, agent-verified 2026-07-14
+Daniel flipped `growth.telemetry_enabled` **ON** in Miyagi's `/admin/flags` and confirmed it directly.
+Reading Miyagi's `platform_flags` table itself stayed out of scope for this session (a different
+system's credentials, not authorized) — Daniel's direct statement of the live value was the
+authoritative source, so the registry was corrected against golden-beans' own DB instead of by
+reading Miyagi's:
 
-1. Run `scripts/sync-features-from-miyagi.mjs` (or push a features-sync call by hand) with the real
-   live `growth.telemetry_enabled` value — this corrects step A3's conservative `enabled: false` to
-   the true state.
-2. In Miyagi, complete a setup-guide step and tap share once (or have any real seller do so) — this
-   produces the `setup_guide_step_completed`/`setup_guide_share_tapped` events the funnel is waiting
-   on.
-3. Reload `https://golden-beans-gamma.vercel.app/funnel/miyagisanchez/setup_guide` in a real browser
-   and confirm Targeted/Adopted/Retained now move — the headline "funnel-renders-real-data" smoke.
+1. Updated the `setup_guide` registry row: `enabled: false → true`, `synced_at` bumped.
+   → **Confirmed:** row updated.
+2. Re-fetched `https://golden-beans-gamma.vercel.app/funnel/miyagisanchez/setup_guide`.
+   → **Confirmed:** `Registry: enabled`, **Targeted: 1** (correctly counting the one distinct user —
+   Daniel's Clerk id — who fired `setup_guide_viewed`; the unrelated `provisioning_smoke_test` row
+   from Sprint 1 doesn't match `target_event` and is correctly excluded). Adopted/Retained remain 0 —
+   correct, since no `setup_guide_step_completed`/`setup_guide_share_tapped` events exist yet (nobody
+   has completed a step or shared since the initial view).
+
+### Part B — ✅ confirmed by Daniel 2026-07-14
+Daniel opened `https://golden-beans-gamma.vercel.app/funnel/miyagisanchez/setup_guide` in his own
+browser and confirmed it renders **as expected** — the headline "funnel-renders-real-data" smoke
+(Decision 2 of the scope doc) is done. Adopted/Retained will move to non-zero naturally once a real
+seller (or Daniel) completes a setup-guide step and taps share — that's real future usage, not a gap
+in this sprint's build.
 
 If any step fails, note the step number + what you saw — that's the bug report.
