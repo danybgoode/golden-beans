@@ -43,12 +43,19 @@ observed **red** on a deliberate mutation (dropping the retention-window bound) 
 green.
 **Risk:** LOW
 
-### Story 2.3 — Funnel page for the S1.3 feature
+### Story 2.3 — Funnel page for the S1.3 feature ✅ (code) — live-data smoke owed to Daniel
 **As a** PM, **I want** a funnel page rendering Targeted/Adopted/Retained for the feature
 instrumented in Sprint 1, **so that** the first real funnel is visible from live traffic.
 **Acceptance:** with `growth.telemetry_enabled` ON and real Miyagi traffic flowing, the funnel page
 shows non-zero, correct-looking TARS numbers for the S1.3 feature. This is one of the epic's
 headline acceptance checks (Decision 2 of the scope doc).
+**Implementation:** `lib/tars-query.ts` (`getFeatureFunnel`/`getFeatureFunnelByProjectId` — shared DB
+read, so the page needs no Bearer credential of its own) + `app/api/v1/features/[key]/funnel/route.ts`
+(Bearer-authed JSON endpoint, 404 for an unregistered feature) + `app/funnel/[projectSlug]/
+[featureKey]/page.tsx` (no auth — no admin-auth system exists yet in golden-beans; an early-stage
+internal tool with one viewer). Proven via `apps/web/e2e/funnel.spec.ts` against a synthetic
+event sequence (both the JSON endpoint and the SSR page's HTML) — observed red on a deliberate
+404-skip mutation before being fixed green.
 **Risk:** LOW
 
 ## Sprint QA
