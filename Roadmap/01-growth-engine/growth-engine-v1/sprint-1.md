@@ -1,10 +1,10 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** ⬜ not started
+**Status:** 🏗️ in progress — 1/3 stories shipped (1.1)
 
 ## Stories
 
-### Story 1.1 — `POST /v1/track` ingest + store
+### Story 1.1 — `POST /v1/track` ingest + store ✅ `f03464b`
 **As a** builder, **I want** `POST /v1/track` to reject malformed events (missing/invalid API key;
 missing `userId`/`event`; `featureId` optional) and persist valid ones to Postgres, **so that**
 funnels stay accurate.
