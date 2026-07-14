@@ -1,6 +1,6 @@
 # Growth Engine v1 — Sprint 2: TARS funnel v1
 
-**Status:** 🚧 in progress
+**Status:** 🚧 code complete, CI green, PR open — live-data smoke owed to Daniel (see walkthrough below)
 
 ## Stories
 
@@ -67,7 +67,27 @@ event sequence (both the JSON endpoint and the SSR page's HTML) — observed red
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
-_TBD — write this section before sprint close, per the epic Definition of Done. Must include the
-funnel-renders-real-data smoke (owed to Daniel by name) as numbered, real-URL steps._
+
+Unlike Sprint 1, this sprint has **no agent-verified Part A**: both the production Supabase
+service-role key and the real `miyagisanchez` API key are write-only on Vercel (`--sensitive`) — the
+CLI can confirm they're set but never read them back (the same limitation `LEARNINGS.md` already
+records for `GROWTH_ENGINE_API_KEY`). Everything below is **owed to Daniel by name**.
+
+1. Run `scripts/sync-features-from-miyagi.mjs` from a machine/session with both `MIYAGI_SUPABASE_URL`/
+   `MIYAGI_SUPABASE_SERVICE_ROLE_KEY` (Miyagi's own project) and `GROWTH_ENGINE_URL`/
+   `GROWTH_ENGINE_API_KEY` (the real `miyagisanchez` credential) set.
+   → **Expected:** prints `Synced 1 feature(s): setup_guide`.
+2. Open `https://golden-beans-gamma.vercel.app/funnel/miyagisanchez/setup_guide` in a browser.
+   → **Expected:** a page showing `Registry: enabled` (if `growth.telemetry_enabled` is currently ON
+   in Miyagi's `/admin/flags`, else `disabled`) with a `last synced` timestamp from step 1, and
+   Targeted/Adopted/Retained numbers. Adopted/Retained should be non-zero — Daniel's own Sprint-1
+   Part B smoke already produced real `setup_guide_viewed`/`setup_guide_step_completed` events for
+   his Clerk user id; Targeted will be 0 unless the flag is ON at sync time (steps 1-2's ordering
+   matters here — the registry's `enabled` reflects the flag's value *at sync time*, not live).
+3. If Targeted reads 0 but you know the flag is currently ON, re-run step 1 (the registry is
+   snapshot-based; sync again after flipping the flag) and reload.
+4. Optionally: `GET https://golden-beans-gamma.vercel.app/api/v1/features/setup_guide/funnel` with
+   `Authorization: Bearer <the real miyagisanchez key>` — confirms the JSON endpoint matches what the
+   page rendered in step 2.
 
 If any step fails, note the step number + what you saw — that's the bug report.
