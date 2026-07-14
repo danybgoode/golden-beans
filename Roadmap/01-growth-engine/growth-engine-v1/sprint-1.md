@@ -21,25 +21,33 @@ sha256-hashed at rest in `projects.api_key_hash`) + `lib/track-schema.ts` (zod) 
 service-role only, mirrors Miyagi's `platform_flags` pattern).
 **Risk:** LOW
 
-### Story 1.2 — TS SDK (`track`, `trackAdoption`)
+### Story 1.2 — TS SDK (`track`, `trackAdoption`) ✅ `<pending>`
 **As an** app builder, **I want** a TS SDK exposing `track(event, props)` and
 `trackAdoption(featureKey)` that auto-appends context, **so that** integrating a new app takes
 minutes.
 **Acceptance:** a fresh Next.js app fires an event with ≤5 lines of integration code. Any SDK
 resolve/config call returns an extensible **payload envelope** (not a bare boolean), so v2 fault
 injection (`delay_ms`, `force_error_code`) is additive, never a breaking SDK change.
+**Implementation:** `packages/sdk/src/index.ts` — `createGrowthEngineClient({ baseUrl, apiKey,
+userId })` returns `{ track, trackAdoption }`; both return `TrackResult = { ok: true; id } | { ok:
+false; error; code?; issues? }` and never throw (network errors are caught and normalized into the
+same envelope). Proven via `apps/web/e2e/sdk.spec.ts` — a real consumer (2-line client creation + 1
+call = the "≤5 lines" acceptance), not a mock.
 **Risk:** LOW
 
-### Story 1.3 — First Miyagi feature instrumented behind `growth.telemetry_enabled`
-**As a** PM, **I want** one real Miyagi feature instrumented behind `growth.telemetry_enabled`
+### Story 1.3 — Setup-guide funnel instrumented behind `growth.telemetry_enabled`
+**As a** PM, **I want** the setup-guide funnel instrumented behind `growth.telemetry_enabled`
 (enablement flag in `platform_flags`, default **OFF**), **so that** real traffic proves the loop
 with an instant off-switch.
 **Acceptance:** flag ON → events land in golden-beans; flag OFF → zero calls.
-**GTM-events-first check (do this before building the full SDK wire-up):** the three-doors/setup-guide
-`dataLayer` events may already yield Targeted/Adopted/Retained for a first funnel — if so, the first
-consumer can be a light adapter over those events rather than a fresh SDK integration. The SDK
-(Story 1.2) still ships regardless — it's the product surface every future tenant uses. Proposed
-candidate feature: `onboarding.three_doors_enabled` — confirm the final pick at build time.
+**GTM-events-first check — done at Sprint 1 kickoff:** research found `onboarding.three_doors_enabled`
+(the scope doc's original proposed candidate) has only one thin event (`door_share`) and no
+Targeted/Retained signal, while Miyagi's **setup-guide funnel already has a T/A/R-shaped event set**:
+`guide_view` (Targeted) → `guide_step_complete` (Adopted) → `first_share_tap`/`time_to_payable`
+(Retained), in `lib/analytics-events.ts` / `SetupGuideCard.tsx` / `ComparteClient.tsx` /
+`CobrosWizardClient.tsx`. **Daniel confirmed: setup-guide funnel is the target** — least new Miyagi-FE
+surface, forwarding existing signals through the new SDK rather than inventing new instrumentation
+points.
 **Risk:** LOW — **shared surface: this story's implementation touches the Miyagi frontend
 (medusa-bonsai). Build it additive, behind the flag, default OFF, on a separate branch + PR in
 medusa-bonsai. Announce the PR when opened — don't land it silently.**
