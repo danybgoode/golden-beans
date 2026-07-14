@@ -1,6 +1,10 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** 🏗️ in progress — 2/3 stories shipped (1.1, 1.2)
+**Status:** 🏗️ in progress — 3/3 stories built, PRs open (1.1, 1.2 merged to golden-beans' `main`
+via this branch's history; 1.3 is medusa-bonsai PR
+[#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253), not yet merged). **Sprint
+cannot close yet** — the live flag-flip + live-event smoke needs golden-beans actually deployed
+(new Supabase + Vercel projects, owed a green light from Daniel before provisioning).
 
 ## Stories
 
@@ -35,7 +39,7 @@ same envelope). Proven via `apps/web/e2e/sdk.spec.ts` — a real consumer (2-lin
 call = the "≤5 lines" acceptance), not a mock.
 **Risk:** LOW
 
-### Story 1.3 — Setup-guide funnel instrumented behind `growth.telemetry_enabled`
+### Story 1.3 — Setup-guide funnel instrumented behind `growth.telemetry_enabled` ✅ built, PR open `91fde42`
 **As a** PM, **I want** the setup-guide funnel instrumented behind `growth.telemetry_enabled`
 (enablement flag in `platform_flags`, default **OFF**), **so that** real traffic proves the loop
 with an instant off-switch.
@@ -51,19 +55,38 @@ points.
 **Risk:** LOW — **shared surface: this story's implementation touches the Miyagi frontend
 (medusa-bonsai). Build it additive, behind the flag, default OFF, on a separate branch + PR in
 medusa-bonsai. Announce the PR when opened — don't land it silently.**
+**Implementation (medusa-bonsai, branch `feat/growth-engine-telemetry`, PR
+[#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253)):** `lib/flags.ts` +
+`lib/flags-admin.ts` (flag def, following `onboarding.three_doors_enabled`'s enablement/OFF
+polarity exactly) + a seed migration · `lib/growth-track.ts` (pure flag-gating decision, unit-tested)
+· `lib/growth-engine.ts` (fire-and-forget forwarder mirroring `lib/telegram.ts`'s shape — silently
+no-ops until `GROWTH_ENGINE_URL`/`GROWTH_ENGINE_API_KEY` are set post-deploy) ·
+`app/api/growth/track/route.ts` (Clerk-authed, resolves userId server-side, checks the flag once so
+no client code is flag-aware) · `lib/growth-events.ts` (client-side `pushGrowthEvent`, a sibling to
+`pushAnalyticsEvent`) · wired at `SetupGuideCard.tsx` (`guide_view`, `guide_step_complete`) and
+`ComparteClient.tsx` (`first_share_tap`) — additive, no existing GTM call touched. **PR not yet
+merged** — this is what's "built" but not yet shipped to medusa-bonsai's `main`.
 
 ## Sprint QA
-- **api spec(s):** one Playwright `api` spec per testable story — 1.1 (reject/accept + tenant
-  isolation), 1.2 (SDK fires + envelope shape), 1.3 (flag OFF → zero calls / flag ON → event lands,
-  at the API layer).
+- **api spec(s):** one Playwright `api` spec per testable story — 1.1 `apps/web/e2e/track.spec.ts`
+  (reject/accept + tenant isolation, 5 cases, all green), 1.2 `apps/web/e2e/sdk.spec.ts` (SDK fires +
+  envelope shape, 3 cases, all green), 1.3 `apps/miyagisanchez/e2e/growth-track.spec.ts` (pure
+  flag-gating decision, both branches, green — observed red on a deliberate mutation first) +
+  `growth-track-api.spec.ts` (anonymous-401 gate, green; the authed 200/202 path is Clerk-gated and
+  owed to Daniel, matching this codebase's own `admin-flags-api.spec.ts` precedent).
 - **browser smoke owed:** **yes, to Daniel by name** — the flag-flip + live-event smoke (flip
   `growth.telemetry_enabled` ON in Miyagi, exercise the instrumented feature, confirm the event
-  lands in golden-beans; flip OFF, confirm silence).
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge, in
-  both repos touched (golden-beans for 1.1/1.2, medusa-bonsai for 1.3).
+  lands in golden-beans; flip OFF, confirm silence). **Blocked on infra:** this can't run until
+  golden-beans is actually deployed (new Supabase + Vercel projects — owed a green light from Daniel
+  before provisioning either; see the epic README's Open risks / Deploy order).
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green — confirmed in
+  both repos (golden-beans for 1.1/1.2; medusa-bonsai for 1.3, including the existing
+  `flags-admin.spec.ts` suite still green after the new flag). Neither PR is merged yet.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-_TBD — write this section before sprint close, per the epic Definition of Done. Must include the
-flag-flip + live-event smoke (owed to Daniel by name) as numbered, real-URL steps._
+_Blocked — golden-beans has no deployed environment yet (new Supabase + Vercel projects are owed a
+green light from Daniel before provisioning; see epic README). The numbered flag-flip + live-event
+walkthrough will be written here once that infra exists and the smoke can actually be run, per the
+epic Definition of Done — not invented ahead of time with placeholder URLs._
 
 If any step fails, note the step number + what you saw — that's the bug report.
