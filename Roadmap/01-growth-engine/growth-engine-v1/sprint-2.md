@@ -25,13 +25,22 @@ payload — set explicitly for the known `setup_guide` feature (mapped from
 anything else.
 **Risk:** LOW
 
-### Story 2.2 — TARS aggregation
+### Story 2.2 — TARS aggregation ✅
 **As a** PM, **I want** Targeted (registry-declared) / Adopted (first event) / Retained (repeat
 event inside the feature's retention window) computed from Sprint 1's event stream, **so that**
 funnel numbers are trustworthy.
 **Acceptance:** a synthetic event sequence produces the expected Targeted/Adopted/Retained counts.
 Funnel numbers are labeled **registry-declared**, not gateway-observed — v1's honest boundary (flags
 are served by Miyagi, not this engine), noted so the funnel isn't oversold.
+**Implementation:** `lib/tars.ts` — pure `computeTars(events, feature)`. Targeted = 0 whenever the
+registry declares the feature disabled (the "registry-declared" gate), else distinct users on
+`target_event` (fallback: any event). Adopted = distinct users on `adopted_event` (fallback: any
+event — the literal "first event" reading). Retained = the subset of Adopted with a qualifying
+repeat event (`retained_event`, fallback: any second distinct event) within `retention_days` of their
+earliest event. Proven via `apps/web/e2e/tars.spec.ts` against a synthetic `setup_guide`-shaped fixture
+(4 users: fully retained, adopted-not-retained, targeted-not-adopted, retained-just-outside-window) —
+observed **red** on a deliberate mutation (dropping the retention-window bound) before being fixed
+green.
 **Risk:** LOW
 
 ### Story 2.3 — Funnel page for the S1.3 feature
