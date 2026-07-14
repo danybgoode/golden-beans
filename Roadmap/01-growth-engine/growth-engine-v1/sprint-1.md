@@ -1,15 +1,19 @@
 # Growth Engine v1 — Sprint 1: Events flow end-to-end (skateboard)
 
-**Status:** 🏗️ in progress — 3/3 stories built. Daniel greenlit infra provisioning
-2026-07-14: a second Supabase project (`golden-beans`, ref `slweidgffcfndnskcskc`) and a Vercel
-project (`golden-beans`) are live in production — see the smoke walkthrough below for the
-real, verified API-level proof. **Two PRs remain open, neither merged by the agent** (builder ≠
-merger — WAYS-OF-WORKING's review/risk-tier rule; a fresh review is still needed even at LOW
-risk): golden-beans [#1](https://github.com/danybgoode/golden-beans/pull/1) (Stories 1.1–1.2) and
-medusa-bonsai [#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (Story 1.3).
-**Sprint still can't fully close:** `growth.telemetry_enabled` is OFF (correct default) and PR
-#253 isn't merged, so the *browser* flag-flip + real-UI-triggered event smoke is still owed to
-Daniel — see below for exactly what is and isn't verified yet.
+**Status:** 🏗️ in progress — 3/3 stories built, CI green, both fresh-reviewed. Daniel greenlit
+infra provisioning 2026-07-14: a second Supabase project (`golden-beans`, ref
+`slweidgffcfndnskcskc`) and a Vercel project (`golden-beans`) are live in production — see the
+smoke walkthrough below for the real, verified API-level proof. **Two PRs remain open, neither
+merged by the agent.** A fresh-reviewer pass caught a risk-tier mislabel: both PRs ship a DB
+migration, which `WAYS-OF-WORKING.md` states is HIGH risk (always a product-owner merge), not
+LOW as originally written — corrected in both PR bodies. golden-beans
+[#1](https://github.com/danybgoode/golden-beans/pull/1) (Stories 1.1–1.2, CI green, reviewed) and
+medusa-bonsai [#253](https://github.com/danybgoode/miyagisanchezcommerce/pull/253) (Story 1.3, CI
+green, reviewed — one real bug found and fixed: a missing event-dedupe that would have inflated
+the funnel). **Both owed to Daniel to merge directly.** Sprint can't fully close until then:
+`growth.telemetry_enabled` is OFF (correct default) and PR #253 isn't merged, so the *browser*
+flag-flip + real-UI-triggered event smoke is still owed to Daniel too — see below for exactly
+what is and isn't verified yet.
 
 ## Stories
 
