@@ -1,6 +1,7 @@
 # Growth Engine v1 — Sprint 3: North Star engine v1
 
-**Status:** ⬜ not started
+**Status:** 🚧 merged + deployed 2026-07-16 (PR #3, squash `bd154f1`) — engine confirmed working
+against real production data; the real revenue-sync run is owed to Daniel by name (see walkthrough).
 
 ## Scope note (revised at kickoff)
 
@@ -73,6 +74,44 @@ once 3.3 has run at least once).
   'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'` green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-_TBD — write this section before sprint close, per the epic Definition of Done._
+
+### Part A — agent-verified 2026-07-16 (production infra, no Miyagi involvement)
+1. PR #3 merged to `main` (squash `bd154f1`); migration `20260716100000_north_star.sql` pushed to
+   production Supabase (ref `slweidgffcfndnskcskc`); merged code deployed via `vercel --prod` (this
+   project has no Git-integration auto-deploy — same manual step as Sprints 1–2).
+   → **Confirmed:** `supabase migration list` shows `20260716100000` synced;
+   `https://golden-beans-gamma.vercel.app/` → 200.
+2. Defined the `payable_sellers` North Star metric + both leading inputs (`setup_guide_shares`,
+   `attributed_revenue`) for the real `miyagisanchez` project, and linked `setup_guide` to both — the
+   same DB operations `POST /v1/north-star/sync` + `POST /v1/features/setup_guide/link-input`
+   perform (done directly via the service-role client; this session has no plaintext `miyagisanchez`
+   API key for the HTTP routes, same limitation as Sprints 2–3's other Part A's).
+   → **Confirmed:** metric + both inputs created, both linked to `setup_guide`.
+3. Queried real `setup_guide` events for `miyagisanchez`: `provisioning_smoke_test` (1),
+   `setup_guide_viewed` (3) — no `setup_guide_step_completed`/`setup_guide_share_tapped` yet (matches
+   Sprint 2's close — nobody has completed a step or shared since Daniel's initial view).
+   → **Confirmed** via direct query.
+4. `curl https://golden-beans-gamma.vercel.app/impact/miyagisanchez/setup_guide`.
+   → **Confirmed:** renders `Impact — setup_guide (miyagisanchez)`, both `Attributed Revenue`
+   (`external_push`) and `Setup Guide Shares` (`telemetry_event`) correctly show **"No data yet"** —
+   honest given the real state: no revenue has been pushed, and no `setup_guide_share_tapped` event
+   exists yet. Not a bug — the report is working exactly as designed against real (currently empty)
+   data.
+
+### Part B — owed to Daniel by name
+The real revenue-sync run needs Miyagi's own Supabase service-role key — a different system's
+production credential this session correctly did not fetch on its own (confirmed blocked even after
+an explicit go-ahead; Daniel will run it himself or hand the credential over directly):
+
+1. Run `scripts/sync-revenue-from-miyagi.mjs` with `MIYAGI_SUPABASE_URL` /
+   `MIYAGI_SUPABASE_SERVICE_ROLE_KEY` (Miyagi's own project) and `GROWTH_ENGINE_URL` /
+   `GROWTH_ENGINE_API_KEY` (the real `miyagisanchez` credential) set.
+   → **Expected:** prints `Synced N day(s) of revenue: N new, 0 already present.`
+2. Reload `https://golden-beans-gamma.vercel.app/impact/miyagisanchez/setup_guide` in a real browser.
+   → **Expected:** `Attributed Revenue` now shows a real time series instead of "No data yet".
+   `Setup Guide Shares` will remain empty until a real seller (or Daniel) taps share from the
+   setup guide — that's real future usage, not a gap in this sprint's build.
+3. Re-running step 1 later is always safe (idempotent, append-only — a re-synced day is a no-op, and
+   a corrected day is flagged via `mismatchedDuplicates` rather than silently applied).
 
 If any step fails, note the step number + what you saw — that's the bug report.
