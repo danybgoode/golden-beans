@@ -94,14 +94,37 @@ one-liner + why + date shape.
   staging DB, unlike Stripe/GCP-style credentials); Medusa's own commerce/module tables (including
   `financial_event`) live in Medusa's PRIMARY Postgres, a completely different database reached via a
   plain connection string (`DATABASE_URL`, GCP Secret Manager, project `miyagisanchezback-497722` —
-  Neon-hosted per the sibling `NEON_BACKUP_DSN` secret), not Supabase's REST API at all. The failure
-  was loud and immediate ("table not found in schema cache"), not silent — but it still cost a full
-  round-trip before the real fix (swap `@supabase/supabase-js` for a raw `pg` client). **Before writing
-  ANY cross-repo read, confirm which physical database a specific table lives in — don't infer it from
-  a sibling table's access pattern, even one in the "same" system.** `gcloud secrets list
-  --project=<gcp-project>` (names only, no values) is a safe, narrow way to discover what credentials
-  actually exist for a sibling system before assuming a shape from docs. *(2026-07-15, growth-engine-v1
-  S3.)*
+  a **Cloud SQL instance** (`medusa-pg`), confirmed via `gcloud sql instances list`; the sibling
+  `NEON_BACKUP_DSN` secret is just a backup destination, NOT the primary DB — an initial guess this
+  meant "Neon-hosted" was wrong and corrected here, exactly the kind of assumption worth verifying
+  rather than inferring from a secret's name), not Supabase's REST API at all. The failure was loud
+  and immediate ("table not found in schema cache"), not silent — but it still cost a full round-trip
+  before the real fix (swap `@supabase/supabase-js` for a raw `pg` client). **Before writing ANY
+  cross-repo read, confirm which physical database a specific table lives in — don't infer it from a
+  sibling table's access pattern, even one in the "same" system, AND don't infer a provider from a
+  secret's name either.** `gcloud secrets list --project=<gcp-project>` (names only, no values) is a
+  safe, narrow way to discover what credentials actually exist for a sibling system before assuming a
+  shape from docs; `gcloud sql instances list` (also names/metadata only) confirms the actual DB
+  provider/networking. *(2026-07-15, growth-engine-v1 S3.)*
+- **A correct connection string can still be network-unreachable — "credentials exist" and "you can
+  reach the host" are two separate facts.** Continuing the S3 story above: even with the right
+  `DATABASE_URL`, connecting from outside GCP hung indefinitely rather than erroring (`medusa-pg` has
+  `ipv4Enabled: False` — no public IP, VPC-private only, confirmed via `gcloud sql instances list`'s
+  `IPV4_ENABLED` column). A **local Cloud SQL Auth Proxy tunnel did NOT fix this** — the proxy only
+  bridges the IAM/discovery layer; it still needs an actual network path (VPN/Interconnect) into that
+  VPC, which didn't exist from this environment. **The only fix for a private-IP-only Cloud SQL
+  instance is running from somewhere already inside that VPC** — a one-off Cloud Run Job attached to
+  the SAME VPC connector a real service already uses (found via `gcloud run services describe
+  <service> --format="value(...vpc-access-connector)"` on the sibling system's own backend service,
+  never guessed) is a clean, temporary way to do this: deploy with `--vpc-connector`/`--vpc-egress`,
+  bind secrets directly via `--set-secrets` (Cloud Run reads them from Secret Manager at runtime — the
+  agent never has to fetch/hold the plaintext value at all), run once, then delete the job AND any
+  container images Cloud Build produced (`gcloud artifacts docker images list/delete`) AND revert any
+  IAM binding added just to make it work — a temporary job should leave zero standing resources or
+  permissions behind. **Symptom to watch for:** a DB connection that HANGS (no error at all) rather
+  than failing is the tell for "unreachable network," not "wrong credentials" (which fails fast) — set
+  a short `connectionTimeoutMillis`/equivalent immediately when diagnosing, don't wait on the default.
+  *(2026-07-15, growth-engine-v1 S3.)*
 - **A script with a co-located pure-logic test file MUST guard its `main()` call with an `isMain`
   check.** Importing a script that calls `main()` unconditionally at module scope re-executes the
   whole script for real (shell-outs, notifications, git pushes, all of it) the moment a test file

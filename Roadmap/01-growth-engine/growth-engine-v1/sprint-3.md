@@ -1,7 +1,9 @@
 # Growth Engine v1 — Sprint 3: North Star engine v1
 
-**Status:** 🚧 merged + deployed 2026-07-16 (PR #3, squash `bd154f1`) — engine confirmed working
-against real production data; the real revenue-sync run is owed to Daniel by name (see walkthrough).
+**Status:** ✅ Sprint 3 fully closed 2026-07-15. PR #3 (squash `bd154f1`) + PR #4 (squash `75134a7`,
+the Postgres-connection fix) both merged to `main`, deployed, and the real revenue-sync run is
+confirmed working against production — see Part B below for the full story, including a real
+production network-topology finding.
 
 ## Scope note (revised at kickoff)
 
@@ -98,24 +100,43 @@ once 3.3 has run at least once).
    exists yet. Not a bug — the report is working exactly as designed against real (currently empty)
    data.
 
-### Part B — correction found on the first live run attempt, 2026-07-15
-The first live run attempt (Daniel authorized both the run and the credential lookup) failed
-loudly and correctly: `financial_event` is a Medusa **core module** table living in Medusa's own
-primary Postgres (`DATABASE_URL`), not the small auxiliary Supabase project `platform_flags`/
-seller-Clerk-linkage rows use — the script's original `MIYAGI_SUPABASE_URL`/
-`MIYAGI_SUPABASE_SERVICE_ROLE_KEY` env vars pointed at the wrong database entirely. Fixed in
-`fix/growth-engine-revenue-postgres` (a raw Postgres client against `MIYAGI_DATABASE_URL` instead
-of Supabase's REST API) — see that PR for the full writeup.
+### Part B — the real revenue sync, confirmed live 2026-07-15 (two corrections along the way)
+Daniel authorized the live run, the credential lookups, and (as things unfolded) a temporary Cloud
+Run Job to reach a network-isolated database. Two real, distinct problems surfaced and were fixed
+in order — both are now durable lessons in `Roadmap/LEARNINGS.md`.
 
-1. Run `scripts/sync-revenue-from-miyagi.mjs` with `MIYAGI_DATABASE_URL` (Medusa's own primary
-   Postgres connection string) and `GROWTH_ENGINE_URL` / `GROWTH_ENGINE_API_KEY` (the real
-   `miyagisanchez` credential) set.
-   → **Expected:** prints `Synced N day(s) of revenue: N new, 0 already present.`
-2. Reload `https://golden-beans-gamma.vercel.app/impact/miyagisanchez/setup_guide` in a real browser.
-   → **Expected:** `Attributed Revenue` now shows a real time series instead of "No data yet".
-   `Setup Guide Shares` will remain empty until a real seller (or Daniel) taps share from the
-   setup guide — that's real future usage, not a gap in this sprint's build.
-3. Re-running step 1 later is always safe (idempotent, append-only — a re-synced day is a no-op, and
-   a corrected day is flagged via `mismatchedDuplicates` rather than silently applied).
+1. **First attempt — wrong database.** The original script assumed `financial_event` (Miyagi's
+   revenue ledger) was reachable the same way `platform_flags` is: via Supabase's REST API. It
+   isn't — `financial_event` is a Medusa **core module** table living in Medusa's own primary
+   Postgres (`DATABASE_URL`), a completely different database from the small auxiliary Supabase
+   project `platform_flags` uses. Failed loudly ("table not found in schema cache"), not silently.
+   → **Fixed** in PR #4: rewrote the fetch to use a raw `pg` client against `MIYAGI_DATABASE_URL`.
+2. **Second attempt — wrong network path.** `MIYAGI_DATABASE_URL` points at a Cloud SQL instance
+   (`medusa-pg`, `us-east4`) with **no public IP** — reachable only from inside Google's network, not
+   from any external machine, regardless of credentials. A local Cloud SQL Auth Proxy tunnel (the
+   normal fix for this) still couldn't reach it — confirmed no VPN/Interconnect path exists from
+   outside GCP into that VPC at all.
+   → **Fixed** by running the sync from *inside* GCP: a temporary Cloud Run Job
+   (`revenue-sync-oneoff`, `miyagisanchezback-497722`/`us-east4`) attached to `medusa-conn` (the same
+   VPC connector the real `medusa-web` backend service uses), running as the `medusa-run` service
+   account (Medusa's own backend identity — already had `DATABASE_URL` access; briefly granted
+   `GROWTH_ENGINE_API_KEY` access too, revoked again immediately after). Both secrets were bound
+   directly by Cloud Run from Secret Manager — never handled as plaintext by the agent.
+   → **Confirmed:** job execution `revenue-sync-oneoff-wvd2z` completed successfully, logs show
+   `Synced 1 day(s) of revenue: 1 new, 0 already present.`
+3. **Cleanup, confirmed complete:** the Cloud Run Job, all 6 of its built container image versions,
+   and the temporary `GROWTH_ENGINE_API_KEY` IAM grant on `medusa-run` were all deleted/reverted —
+   no standing resources or permissions left behind beyond the original state.
+4. `curl https://golden-beans-gamma.vercel.app/impact/miyagisanchez/setup_guide`.
+   → **Confirmed:** `Attributed Revenue` now shows a real row — `2026-07-06`, value `0` (the one real
+   `financial_event` revenue row found sums to $0 — reported honestly, not a bug). `Setup Guide
+   Shares` still shows "No data yet" — correct, since nobody has tapped share from the setup guide
+   yet (matches Sprint 2's close).
+5. Re-running `scripts/sync-revenue-from-miyagi.mjs` later is always safe (idempotent, append-only —
+   a re-synced day is a no-op, and a corrected day is flagged via `mismatchedDuplicates` rather than
+   silently applied). It needs to run from somewhere with access to `medusa-conn`'s VPC (a fresh
+   one-off Cloud Run Job following this same pattern, or a promoted scheduled job if this becomes
+   routine) — a plain local/CI run will hang on the network, not fail loudly, so budget a short
+   connection timeout if scripting this again.
 
 If any step fails, note the step number + what you saw — that's the bug report.
