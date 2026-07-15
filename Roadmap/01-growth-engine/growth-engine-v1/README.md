@@ -1,9 +1,9 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: growth-engine-v1
 ---
 
-# Epic: Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing
+# Epic: Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped
 
 > **Area:** 01-growth-engine · **Risk:** low · **Archetype:** Builder ·
 > **Scope seed:** [`00-ideas/seeds/growth-engine-v1.md`](../../00-ideas/seeds/growth-engine-v1.md)
@@ -70,14 +70,25 @@ Vercel production env, ready for the moment PR #253 merges.
 
 ## Definition of Done (epic)
 
-- [ ] All sprints (S1–S4) merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs); S1.3's flag-flip + live-event smoke
-      and S2's funnel-renders-real-data smoke are **owed to Daniel by name**
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated — 01 · Growth Engine row flipped to ✅
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** `growth.telemetry_enabled` exists in Miyagi's `platform_flags`, **enablement
-      polarity, created OFF/disabled** — verified, not a new gate
-- [ ] Feature branch(es) deleted; this README's frontmatter `status: shipped`
+- [x] All sprints (S1–S4) merged to `main` + smoke-tested (gaps stated). S4: PR
+      [#5](https://github.com/danybgoode/golden-beans/pull/5), squash `94f0067`, deployed to
+      production (`vercel --prod`, `dpl_3XbG9GfK3Q5WGSTTW21CM2jKAhy5`). **Gap stated:** S4's
+      real-production smoke (Part A/B, an authenticated round-trip) is **owed to Daniel by name** —
+      no session ever held a plaintext production API key to run it as the agent (same limitation
+      Sprints 2–3 hit for their own Part A's); a copy-pasteable smoke kit is in `sprint-4.md`.
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs where deployed). S1.3's flag-flip +
+      live-event smoke and S2's funnel-renders-real-data smoke were **confirmed by Daniel** (see
+      those sprint docs). **S4's real-production smoke is owed to Daniel by name** (see above).
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated — 01 · Growth Engine row flipped to ✅
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch:** `growth.telemetry_enabled` exists in Miyagi's `platform_flags` with
+      **enablement polarity, created OFF/disabled** — established in Sprint 1's implementation
+      (medusa-bonsai `lib/flags.ts`, following `onboarding.three_doors_enabled`'s own polarity
+      exactly) and unchanged since; this is a creation-time code fact, not re-checked against
+      Miyagi's live DB this session (no session has held credentials to that system — Sprint 2
+      noted the same boundary and relied on Daniel's direct confirmation instead).
+- [x] Feature branch(es) deleted (`feat/growth-engine-s4`, deleted on merge); this README's
+      frontmatter `status: shipped`

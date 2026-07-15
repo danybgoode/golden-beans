@@ -51,17 +51,18 @@ independently shippable slice of value.
      it is part of the epic Definition of Done (see WAYS-OF-WORKING.md). -->
 
 ### 01 · Growth Engine
-- 🚧 [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
-  funnel · North Star · A/B bucketing) — scaffolded, not yet built.
+- ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
+  funnel · North Star metric · A/B bucketing) — live in production at
+  `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
 
 ---
 
 ## Recent highlights
 
-<!-- TEMPLATE FILL-IN: newest-first log of shipped epics, one bullet each, dated. Added at every
-     epic close (WAYS-OF-WORKING.md's epic Definition of Done). Example shape:
-- **2026-01-01** — `<epic-slug>` shipped: <one-line what changed and why it matters>.
--->
+- **2026-07-16** — `growth-engine-v1` shipped: a standalone telemetry engine (event ingest + SDK),
+  a TARS (Targeted/Adopted/Retained) funnel, a North Star metric with real Medusa revenue inputs,
+  and client-side A/B bucketing with a basic-lift comparison view — all proven against one real
+  Miyagi feature (the setup-guide funnel) with live production traffic.
 
 ## License
 

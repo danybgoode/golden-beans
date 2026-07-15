@@ -1,9 +1,14 @@
 # Growth Engine v1 — Sprint 4: A/B v1
 
-**Status:** 🟡 All 3 stories built, gate green, PR
-[#5](https://github.com/danybgoode/golden-beans/pull/5) open (draft) — not yet merged/deployed.
-Agent-verified locally (a fresh local Supabase + a real `next build`/`next start` production
-build); no browser/money/auth smoke is owed to Daniel for this sprint (see Sprint QA below).
+**Status:** ✅ **Sprint 4 merged + deployed 2026-07-16.** PR
+[#5](https://github.com/danybgoode/golden-beans/pull/5) squash-merged (`94f0067`), deployed to
+production via `vercel --prod` (`dpl_3XbG9GfK3Q5WGSTTW21CM2jKAhy5`, live at
+`https://golden-beans-gamma.vercel.app`). Agent-verified locally pre-merge (a fresh local Supabase +
+a real `next build`/`next start` production build, 59 Playwright `api` cases green) and
+post-deploy at the plain-200 level. **The authenticated production round-trip (Part A/B below) is
+owed to Daniel** — no session held a plaintext production API key to run it as the agent (same
+limitation Sprints 2–3 hit); a copy-pasteable kit is below. This is the epic's last sprint —
+`growth-engine-v1` is now fully shipped, see the epic `README.md` and `RETROSPECTIVE.md`.
 
 **Key design decision (made during build, not in the original scope note above): no new DB
 migration.** All three stories build entirely on Sprint 1's existing `events` table — `tags`/
@@ -92,10 +97,6 @@ exactly — no admin-auth system exists yet in golden-beans).
   exactly this case and was observed red against the old query before the fix landed.
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
-Env: local (this branch is not yet merged/deployed — golden-beans has no per-branch preview and no
-Git-integration auto-deploy, so there's no preview URL to point at pre-merge). Re-run this exact
-walkthrough against `https://golden-beans-gamma.vercel.app` once merged + `vercel --prod`'d, and
-update the URLs below — same sequence Sprints 1–3 followed.
 
 ### Part A — engine-only, agent-verified locally 2026-07-16 (a real local `next build`/`next start`
 production server + a freshly-reset local Supabase, `project-one` fixture credentials). Rerun after
@@ -126,13 +127,52 @@ the pre-fix bug went unnoticed.
    conversions/0.0%, `treatment` at 1 exposure/1 conversion/100.0%, both rows `—` for lift — matches
    point 4 exactly.
 
-### Part B — owed to Daniel (post-merge + deploy)
-No money/auth step exists in this sprint, so there's no browser-session-gated smoke to hand off —
-but the production round-trip itself is still worth a quick eyeball once live:
-1. After merge + `vercel --prod`, repeat Part A's 4 steps against
-   `https://golden-beans-gamma.vercel.app` with the real `miyagisanchez` project key.
-2. Optionally, from a real app already using the SDK (or a scratch script), call
-   `growth.bucket('some-experiment', [{key:'a'},{key:'b'}])` + `growth.trackExposure(...)` and
-   confirm the row lands the same way Part A's `curl` calls did.
+### Part B — owed to Daniel: the real production round-trip
+No money/auth step exists in this sprint (telemetry-only), so there's no browser-session-gated
+smoke — but no session has ever held a plaintext production API key (the real `miyagisanchez` key
+is write-only on Vercel and was never printed at any point, same limitation Sprints 2–3 hit for
+their own Part A's), so the *authenticated* round-trip has to be run by hand. This mints a fully
+disposable scratch project (not `miyagisanchez` — no need to touch real Miyagi data or credentials
+for this), runs the same sequence Part A ran locally, then cleans up.
+
+1. Open the Supabase SQL editor for the `golden-beans` project (ref `slweidgffcfndnskcskc`) and run,
+   picking your own random string for the key value:
+   ```sql
+   insert into projects (slug, api_key_hash)
+   values ('smoke-s4', encode(digest('<pick-any-random-string>', 'sha256'), 'hex'))
+   on conflict (slug) do update set api_key_hash = excluded.api_key_hash
+   returning id, slug;
+   ```
+2. Expose two users to `control`/`treatment` (replace `<key>` with the string you picked above):
+   ```bash
+   curl -X POST https://golden-beans-gamma.vercel.app/api/v1/track \
+     -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \
+     -d '{"userId":"smoke-user-a","event":"experiment_exposed","featureId":"smoke-cta-copy","tags":{"variant":"control"}}'
+   curl -X POST https://golden-beans-gamma.vercel.app/api/v1/track \
+     -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \
+     -d '{"userId":"smoke-user-b","event":"experiment_exposed","featureId":"smoke-cta-copy","tags":{"variant":"treatment"}}'
+   ```
+   → **Expect:** both `201 {"ok":true,"id":"..."}`.
+3. Fire a real, untagged conversion event (no `featureId` — the realistic shape Part A's fix
+   proved):
+   ```bash
+   curl -X POST https://golden-beans-gamma.vercel.app/api/v1/track \
+     -H "Authorization: Bearer <key>" -H "Content-Type: application/json" \
+     -d '{"userId":"smoke-user-b","event":"checkout_completed"}'
+   ```
+   → **Expect:** `201`.
+4. `curl "https://golden-beans-gamma.vercel.app/api/v1/experiments/smoke-cta-copy/compare?metricEvent=checkout_completed" -H "Authorization: Bearer <key>"`.
+   → **Expect:** `control` at `exposures:1, conversions:0`, `treatment` at `exposures:1,
+   conversions:1`, `baseline:"control"`.
+5. Open `https://golden-beans-gamma.vercel.app/experiments/smoke-s4/smoke-cta-copy?metricEvent=checkout_completed`
+   in a browser.
+   → **Expect:** a table showing `control (baseline)` at 0.0% and `treatment` at 100.0%.
+6. Clean up the scratch project (cascades to delete its events too — leaves zero standing test
+   data):
+   ```sql
+   delete from projects where slug = 'smoke-s4';
+   ```
+
+If any step fails or doesn't match, that's the bug report — note the step number + what you saw.
 
 If any step fails, note the step number + what you saw — that's the bug report.

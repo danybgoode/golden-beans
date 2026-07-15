@@ -10,31 +10,21 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (1)
+## 🏗️ Building now (0)
 
-- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 13/13 stories · risk: Low
+_None._
 
 ## 📋 Ready to build (scaffolded, not started) (0)
 
 _None._
 
-## ✅ Shipped (0)
+## ✅ Shipped (1)
 
-_None._
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 13/13 stories · risk: Low
 
 ## ⬜ Funnel — seeds not yet scaffolded (0)
 
 _None._
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
-
-These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
-derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
-forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.
-
-| Epic | frontmatter (used) | sprint/retro-derived |
-|---|---|---|
-| Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing | In progress | Shipped |
-
 ---
-_Epics: 1 · seeds in funnel: 0 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 1 · seeds in funnel: 0 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._

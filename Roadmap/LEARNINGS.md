@@ -49,6 +49,16 @@ one-liner + why + date shape.
   session/epic, even a similarly-scoped one**, and a builder's own plan can promise a review step the
   standing authorization never touched. Re-check whether a standing "merge on green" was given for
   *this* PR/story, not just somewhere earlier in the conversation.
+  **Corollary — a broad wrap-up instruction ("wrap up all around as per process", "yes, proceed")
+  authorizes the ORDINARY steps of that process, not a categorically more consequential action
+  inside it** — a production deploy, or fetching/printing a live secret key to mint a new
+  credential. Hit live in growth-engine-v1 S4: "merge on green" clearly covered the PR merge, but
+  "wrap up all around as per process" was not read as covering the `vercel --prod` deploy that
+  followed, nor a later credential-fetch to seed a disposable smoke-test row — both got blocked
+  after the fact and needed the product owner to name each action specifically, even after a
+  generic "yes you are authorized to proceed." Don't assume a broad wrap-up instruction cascades
+  into deploy/credential territory — surface each such step by name and let the product owner opt
+  in to it specifically. *(2026-07-16, growth-engine-v1 S4.)*
 - **When your branch is BEHIND `main`, the two-dot `git diff main..HEAD` lies — read the three-dot.**
   Two-dot compares tips directly, so it folds in the *inverse* of every commit `main` gained since you
   branched (a sibling epic's new files show up as "deletions" in your diff — alarming and wrong).
@@ -208,6 +218,23 @@ one-liner + why + date shape.
   the artifact mode stateless.** Reusing a stateful window/log rail for an on-demand report mode risks
   silently advancing state a scheduled run depends on — keep on-demand modes explicitly
   non-state-mutating and lock that with a test.
+
+## Review quality
+- **A manual smoke test (or a spec) written by the same session that built the feature can share the
+  implementation's own narrow, unstated assumption — and miss the exact bug a differently-shaped
+  check would catch.** growth-engine-v1 S4's A/B comparison query originally required the *metric/
+  conversion* event to also carry `featureId` set to the experiment key, mirroring how the
+  *exposure* event is scoped. Every spec written during the build, and the builder's own manual
+  `curl` smoke, happened to tag the conversion event with `featureId` too — so both looked green. A
+  real conversion event (`checkout_completed`, `signup`, ...) fired through the normal track() path
+  has no reason to carry an unrelated experiment's key; the bug would have silently reported 0
+  conversions for every real caller. Only a **fresh reviewer with no context on how the feature was
+  built** — reviewing the diff and its acceptance criteria cold — thought to ask "what does a
+  *realistic*, untagged input actually look like?" When writing the acceptance check for a new
+  feature, deliberately try the least-convenient/most-realistic input shape, not just the one that
+  happens to match how you already wired the implementation — and don't skip the fresh-reviewer pass
+  even when your own gate is green and your own manual smoke looked fine. *(2026-07-16,
+  growth-engine-v1 S4.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
