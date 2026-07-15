@@ -45,28 +45,48 @@ async function fetchMiyagiRevenueEvents() {
   // full certificate verification); weakening that to skip cert checks is never
   // appropriate for a real production credential and was not asked for.
   const client = new pg.Client({ connectionString })
-  await client.connect()
   try {
+    await client.connect()
     // Read-only: financial_event is append-only in Miyagi too (financial_event_no_mutation
     // trigger) — this SELECT is the only statement this script ever runs against it.
     //
-    // Paginated via LIMIT/OFFSET with a deterministic ORDER BY (captured_at, id) — a raw
-    // Postgres connection has no PostgREST-style default row cap, but chunking still
-    // avoids holding an unbounded ledger fully in memory, and keeps the "did we get
-    // everything" loop shape consistent with the rest of this codebase's sync scripts.
-    const rows = []
-    for (let offset = 0; ; offset += FETCH_PAGE_SIZE) {
-      const { rows: page } = await client.query(
-        `SELECT amount_cents, captured_at FROM financial_event
-         WHERE event_type = 'revenue'
-         ORDER BY captured_at ASC, id ASC
-         LIMIT $1 OFFSET $2`,
-        [FETCH_PAGE_SIZE, offset],
-      )
-      rows.push(...page)
+    // Keyset pagination (WHERE (captured_at, id) > last-seen cursor), not LIMIT/OFFSET —
+    // OFFSET's position shifts if a new row is inserted mid-scan (a real risk here: this
+    // ledger accumulates continuously), which can skip or double-count a row across
+    // pages. A keyset cursor on the same columns as ORDER BY is immune to that: rows
+    // already scanned never re-enter a later page no matter what gets inserted meanwhile.
+    // `id` is `financial_event`'s text primary key (prefix `fev`) — a stable tiebreaker
+    // for rows sharing a `captured_at`, not itself meaningful.
+    const events = []
+    let cursor = null
+    for (;;) {
+      const { rows: page } = cursor
+        ? await client.query(
+            `SELECT amount_cents, captured_at, id FROM financial_event
+             WHERE event_type = 'revenue' AND (captured_at, id) > ($1, $2)
+             ORDER BY captured_at ASC, id ASC
+             LIMIT $3`,
+            [cursor.capturedAt, cursor.id, FETCH_PAGE_SIZE],
+          )
+        : await client.query(
+            `SELECT amount_cents, captured_at, id FROM financial_event
+             WHERE event_type = 'revenue'
+             ORDER BY captured_at ASC, id ASC
+             LIMIT $1`,
+            [FETCH_PAGE_SIZE],
+          )
+      // Normalize `pg`'s driver types immediately, not left to the caller: timestamptz
+      // columns come back as JS `Date` objects (not the ISO string
+      // scripts/lib/revenue-sync-payload.mjs's type documents) and a bigint amount_cents
+      // column would come back as a string (pg's overflow-safety default) — silently
+      // summed as string concatenation instead of addition if left uncoerced.
+      for (const row of page) {
+        events.push({ amountCents: Number(row.amount_cents), capturedAt: new Date(row.captured_at).toISOString() })
+      }
       if (page.length < FETCH_PAGE_SIZE) break
+      cursor = { capturedAt: page[page.length - 1].captured_at, id: page[page.length - 1].id }
     }
-    return rows.map((row) => ({ amountCents: row.amount_cents, capturedAt: row.captured_at }))
+    return events
   } finally {
     await client.end()
   }
