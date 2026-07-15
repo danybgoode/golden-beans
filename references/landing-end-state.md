@@ -50,13 +50,18 @@ landing too).
 
 ## Design language
 
-PostHog-grade usability/playfulness is the bar, not the spec — **our own cooler version**:
-- **Brand:** Golden Beans. Dark-roast base + gold accents; a bean glyph/mascot used sparingly;
-  bold editorial type; tactile, toggle-heavy UI details (the PRD's "skeuomorphic toggles" note
-  survives as flavor, not mandate).
-- **Heuristics source:** medusa-bonsai `frontend-design` skill (its heuristics are the strongest
-  in-house rail); PostHog reference screenshots to be captured fresh into `references/` at E1
-  build time (none exist in-house today — validated 2026-07-14).
+PostHog-grade usability/playfulness is the bar, not the spec — **our own cooler version**.
+**Full direction: `references/design-direction.md`** (written 2026-07-14 from Daniel's PostHog
+homepage references — retro-desktop frame device, real-UI-inside-fiction, self-aware CTA
+mechanics). Headlines:
+- **Brand world:** the roastery. Kraft + gold-foil packaging materials, dark-roast product panels
+  (deliberately inverted from PostHog's cream), brass-instrument skeuomorphism for flags/toggles.
+- **Frame device:** the **agent conversation window** — live-proof panels render inside a chat
+  chrome where your agent queries the real engine (their `home.mdx` window, our BYO-agent
+  version).
+- **Voice:** self-aware, footnoted, honesty-as-bit; every joke sits next to a checkable claim.
+- **Heuristics source:** medusa-bonsai `frontend-design` skill (the quality rail); fresh PostHog
+  captures land in `references/posthog/` at E1 story 2.3.
 - **Honesty as aesthetic:** the registry-declared-Targeted caveat and shipped/coming badges are
   design elements, not fine print — the audience is PMs who smell vendor-ware.
 

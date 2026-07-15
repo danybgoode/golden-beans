@@ -1,14 +1,14 @@
 ---
 title: "E1 — Commercial shell: Golden Beans landing, waitlist, connector install page"
 slug: commercial-shell
-status: ready
+status: scaffolded
 area: "02"
 type: feature
 priority: "#1"
 risk: high
-epic: null
+epic: "02-commercial/commercial-shell"
 build_order: "#1"
-updated: 2026-07-14
+updated: 2026-07-15
 ---
 
 # Scope — E1 Commercial shell (landing-first, backfill-forward)
@@ -56,8 +56,9 @@ data, SDK, and funnel UI it shows off all shipped in growth-engine-v1.
 | Playwright api harness + CI gate | template via S0.3 | One spec per testable story, per WoW |
 
 **UX heuristics & rails check:** frontend-design heuristics apply; no design-token guard exists in
-gb yet (debt noted, not this epic); PostHog reference screenshots **do not exist in-house**
-(validated 2026-07-14) — captured fresh at S2.3 build time into `references/`.
+gb yet (debt noted, not this epic); design direction locked in `references/design-direction.md`
+(2026-07-14, from Daniel's PostHog homepage references — provided in-session after the initial
+"none exist" validation); fresh captures archived to `references/posthog/` at S2.3.
 
 ## v1 boundary
 **In:** public landing (end-state sections 1, 2, 3①③, 6, 8 live; 4, 5, 7 as honest teasers) ·
@@ -84,7 +85,7 @@ instrumentation (the engine tracks its own landing) · SEO/OG basics.
 |---|---|---|
 | 2.1 As a PM's agent I want a **read-only MCP connector** (tokenized URL path, tools: funnel, north-star, experiments for *your* project) so the headline route is real. Acceptance: fresh Claude session adds the connector via deep-link and reads the demo project; token revocation kills access; **ships dark** (Stage 6b below). **New primitive (public route contract + token namespace) → cross-panel offer stands.** | MCP connector v1 | **HIGH — Daniel merges** |
 | 2.2 As a visitor I want the install page (copy-URL field, "Add to Claude" deep-link, `npx` wizard docs) so each persona has a route in. Acceptance: deep-link works on free tier against the demo project. | install page | LOW |
-| 2.3 As the brand I want a polish pass (frontend-design heuristics; fresh PostHog screenshots captured to `references/` for calibration) so the bar is met, not approximated. Acceptance: heuristics checklist run + noted in PR. | design pass | LOW |
+| 2.3 As the brand I want a polish pass applying `references/design-direction.md` (roastery world · agent-window frame device · kraft/foil + dark-roast + brass materials; frontend-design heuristics checklist; fresh PostHog captures archived to `references/posthog/`) so the bar is met, not approximated. Acceptance: heuristics checklist run + noted in PR; direction guardrails held (evidence-first ratio, honesty badges). | design pass | LOW |
 
 ### Sprint 3 — Launch & dogfood
 | Story | Ships | Risk |
@@ -127,5 +128,6 @@ flip + live waitlist submission on production.
       pattern, verified 2026-07-11; screenshots-gap validated 2026-07-14).
 - [x] v1 in/out boundary written; stories risk-tiered; QA + smoke owners named.
 - [x] Kill-switch decision recorded (enablement env gate + revocable tokens; landing carve-out).
-- [ ] **Daniel approves this scope doc** → scaffold `02-commercial/commercial-shell/` (poster gains
-      the 02 macro-section), sprints 1–3, kickoffs emitted.
+- [x] **Daniel approved this scope doc (2026-07-14)** — with the design direction addendum
+      (`references/design-direction.md`) folded in → scaffolded `02-commercial/commercial-shell/`
+      (poster gains the 02 macro-section), sprints 1–3, kickoffs emitted.

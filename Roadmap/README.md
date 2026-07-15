@@ -39,6 +39,7 @@ independently shippable slice of value.
 | # | Macro-section | Covers |
 |---|---|---|
 | 01 | Growth Engine | Telemetry ingest, SDK, TARS funnel (Targeted/Adopted/Retained), North Star metric, A/B bucketing — the core engine. |
+| 02 | Commercial | The public offer: landing page (end-state-driven, backfilled by every epic), waitlist, connector install page, tenancy/pricing, pod reports — Golden Beans as a product, not just an engine. |
 | 09 | Platform & Infra | Engineering/observability work that isn't a user-facing product domain — deploy pipeline, dev tooling, cross-cutting process (this convention — reserving `09` for platform/infra — is a deliberate carry-over from the origin project; keep the number stable so tooling that reads it doesn't need per-project config). |
 
 ---
@@ -54,6 +55,11 @@ independently shippable slice of value.
 - ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
   funnel · North Star metric · A/B bucketing) — live in production at
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
+
+### 02 · Commercial
+- 🚧 [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
+  read-only MCP connector + install page · dogfood instrumentation) — scaffolded 2026-07-15; built
+  backwards from `references/landing-end-state.md` with the landing-backfill contract in force.
 
 ---
 
