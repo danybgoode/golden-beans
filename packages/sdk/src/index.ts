@@ -62,6 +62,16 @@ export interface GrowthEngineClient {
    * the caller's own variant list. Synchronous — no network call, no resolve endpoint (Story 4.1).
    */
   bucket(experimentKey: string, variants: BucketVariant[]): BucketResult
+  /**
+   * Fires an exposure event for a bucketed variant — the denominator for variant comparison
+   * (Story 4.2). Thin wrapper around track(), same as trackAdoption(): 'experiment_exposed' with
+   * `featureId` set to the experiment key and the variant carried in `tags.variant`.
+   */
+  trackExposure(
+    experimentKey: string,
+    variant: string,
+    props?: Omit<TrackEventProps, 'featureId'>
+  ): Promise<TrackResult>
 }
 
 /**
@@ -122,5 +132,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     trackAdoption: (featureKey, props) => track('feature_adopted', { ...props, featureId: featureKey }),
     syncFeatures,
     bucket,
+    trackExposure: (experimentKey, variant, props) =>
+      track('experiment_exposed', { ...props, featureId: experimentKey, tags: { ...props?.tags, variant } }),
   }
 }
