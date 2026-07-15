@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — the growth engine your agent operates (end-state reference)</title>
+<link rel="stylesheet" href="assets/tokens.css">
+</head>
+<body>
+
+<nav class="gb">
+  <span class="logo"><span class="bean"></span>golden beans</span>
+  <div style="display:flex;gap:22px;font-size:14px"><a href="#" style="color:var(--dim)">Product</a><a href="#" style="color:var(--dim)">Docs</a><a href="#" style="color:var(--dim)">Pods</a><a href="#" style="color:var(--dim)">Pricing</a></div>
+  <a class="btn btn-gold" href="#" style="margin-left:auto;padding:9px 18px;font-size:14px">Add to Claude →</a>
+</nav>
+
+<!-- 1 · HERO — E1 (waitlist CTA) → E2 (signup CTA) -->
+<section>
+  <div class="wrap hero-grid" style="display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center">
+    <div>
+      <h1 class="display" style="font-size:clamp(38px,5vw,62px)">The growth engine <em style="font-style:normal;color:var(--gold)">your agent</em> operates.</h1>
+      <p style="margin:20px 0 30px;font-size:19px;color:var(--dim);max-width:560px;text-wrap:pretty">Telemetry, TARS funnels, North Star metrics and A/B experiments — as primitives. Others close the signal loop with <i>their</i> AI. Golden Beans closes it with <b style="color:var(--crema)">yours</b>, over MCP.</p>
+      <div style="display:flex;gap:10px;max-width:600px;flex-wrap:wrap">
+        <div class="urlfield" style="flex:1;min-width:260px">https://goldenbeans.app/mcp/gb_live_7f3k…<button class="btn-mini">copy</button></div>
+        <button class="btn btn-gold">Add to Claude →</button>
+        <button class="btn btn-ghost">Start free</button>
+      </div>
+      <p style="margin:16px 0 0;font:400 13px var(--mono);color:var(--dim)">works on the Claude free tier · your data, your Supabase, your agent
+        <span class="tag tag-live" style="margin-left:8px">LIVE · E1</span> <span class="tag tag-next">signup · E2</span></p>
+    </div>
+    <div class="agent-win">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>claude<span class="agent-chip">connected</span></div>
+      <div class="agent-body" style="font:500 13px var(--mono)">
+        <div class="you"><b>you ▸</b> add golden-beans</div>
+        <div class="tool" style="line-height:1.7"><b>⚙ handshake</b> → 6 tools<br>get_tars_funnel · get_north_star<br>compare_experiment · sync_features<br>track · bucket</div>
+        <div style="color:var(--crema);font:400 13px var(--sans);line-height:1.55">Connected to <b>demo-roastery</b>. Ask me for the funnel — or bring your PM, no SQL required.<span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · LIVE PROOF — E1 -->
+<div class="divider"><div class="wrap"><span class="num">②</span><span class="stamp-title">Live proof — straight from the roaster</span><span class="tag tag-stamp">LIVE · E1</span></div></div>
+<section class="band">
+  <div class="wrap">
+    <h2 style="font-size:34px">Not screenshots. The actual engine, live.</h2>
+    <p style="margin:12px 0 28px;color:var(--dim);max-width:640px">Everything below is rendered from the synthetic <b style="color:var(--crema)">demo-roastery</b> project by the same queries your agent would run.* No client data appears on this page, ever.</p>
+    <div class="agent-win" style="border-radius:16px">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>claude — connected: golden-beans · demo-roastery<span class="agent-chip">gb_live_7f3k… · revocable</span></div>
+      <div class="agent-body" style="padding:24px 26px;gap:18px">
+        <div class="you"><b>you ▸</b> how's the setup-guide funnel?</div>
+        <div class="tool"><b>⚙ get_tars_funnel</b> { project: "demo-roastery", feature: "setup_guide" } → { targeted: 1204, adopted: 771, retained: 512 }</div>
+        <div class="row2" style="grid-template-columns:1fr 340px;gap:28px;align-items:end">
+          <div class="funnel">
+            <div class="bar"><div style="height:140px"></div>Targeted · 1,204</div>
+            <div class="bar"><div style="height:90px"></div>Adopted · 771</div>
+            <div class="bar"><div style="height:60px"></div>Retained · 512</div>
+          </div>
+          <div style="font-size:14px;line-height:1.6;padding-bottom:8px">Adoption <b class="data">64%</b>, retention <b class="data">43%</b>. <span class="note" style="font-size:12px">Targeted is registry-declared, not gateway-observed — the engine tells you so itself.</span></div>
+        </div>
+        <hr>
+        <div class="you"><b>you ▸</b> and the north star?</div>
+        <div class="tool"><b>⚙ get_north_star</b> { project: "demo-roastery" } → { metric: "payable_sellers", value: 312, wow: 0.094 }</div>
+        <div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+          <div class="gauge" style="width:132px;height:132px;flex:none">
+            <div class="gauge-face">
+              <div class="gauge-needle" style="height:46px;transform:translate(-50%,-100%) rotate(38deg)"></div>
+              <div class="gauge-hub"></div>
+              <div style="position:absolute;left:50%;bottom:16px;transform:translateX(-50%);font:600 9px var(--mono);color:var(--dim);letter-spacing:.1em">N★</div>
+            </div>
+          </div>
+          <div>
+            <div class="data" style="font-size:40px;font-weight:600;line-height:1">312 <span style="font-size:16px;color:var(--green)">+9.4% ↗</span></div>
+            <div style="font:500 12.5px var(--mono);color:var(--dim);margin-top:8px">payable_sellers · 2 leading inputs linked · per-feature impact report</div>
+          </div>
+        </div>
+        <hr>
+        <div class="you"><b>you ▸</b> is quick-upload winning?</div>
+        <div class="tool"><b>⚙ compare_experiment</b> { experiment: "quick-upload-ui", metricEvent: "upload_completed" }</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px;background:var(--roast);border:1px solid var(--line);border-radius:10px;padding:16px;font:500 13px var(--mono);color:var(--dim)">control (baseline)<b style="display:block;font-size:26px;color:var(--crema);margin:6px 0 2px">6.1%</b>2,410 exposed · 147 converted</div>
+          <div style="flex:1;min-width:220px;background:var(--roast);border:1px solid var(--gold);border-radius:10px;padding:16px;font:500 13px var(--mono);color:var(--dim)">treatment<b style="display:block;font-size:26px;color:var(--gold-hot);margin:6px 0 2px">7.9%</b>2,388 exposed · 189 converted · <span style="color:var(--green);font-weight:600">+1.8pt</span></div>
+        </div>
+        <div class="note" style="font-size:12px">deterministic client-side bucketing · basic lift only — no significance engine yet, and we won't pretend otherwise.</div>
+      </div>
+    </div>
+    <p class="note" style="margin:18px 0 0">* Same endpoints, same JSON: <a href="#">/api/v1/north-star</a> is public for the demo project. Curl it mid-meeting.</p>
+  </div>
+</section>
+
+<!-- 3 · OPERATE ROUTES — E1 (①③) → E2 (②) -->
+<div class="divider"><div class="wrap"><span class="num">③</span><span class="stamp-title">Three ways in — zero integrated AI</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 style="font-size:34px">Bring the agent you already pay for.</h2>
+    <div class="cards3" style="margin-top:28px">
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.1em">① CONNECTOR URL</span><span class="tag tag-live">✅ E1</span></div>
+        <h3 style="font-size:18px">Paste it into Claude</h3>
+        <p style="font-size:14px;color:var(--dim)">Copy your tokenized MCP URL, hit <b style="color:var(--crema)">Add to Claude</b>. Your PM asks their agent for the funnel. Revoke the token, revoke the access.</p>
+        <div style="margin-top:auto;font:500 12px var(--mono);color:var(--gold-hot);background:var(--roast);border:1px solid var(--line);border-radius:8px;padding:9px 12px">goldenbeans.app/mcp/gb_live_…</div>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.1em">② THE POD PLUGIN</span><span class="tag tag-next">🔜 E2</span></div>
+        <h3 style="font-size:18px">Cowork / Claude Code</h3>
+        <p style="font-size:14px;color:var(--dim)">The full pods experience — grooming, build order, benchmarks — installed as a plugin for your whole team.</p>
+        <div style="margin-top:auto;font:500 12px var(--mono);color:var(--dim);background:var(--roast);border:1px solid var(--line);border-radius:8px;padding:9px 12px">/plugin install golden-beans</div>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.1em">③ NPX WIZARD</span><span class="tag tag-live">✅ E1</span></div>
+        <h3 style="font-size:18px">For your engineers</h3>
+        <p style="font-size:14px;color:var(--dim)">SDK in, first event out in minutes. ≤5 lines to your first North Star input — <code style="font:500 12px var(--mono);color:var(--crema)">track</code>, <code style="font:500 12px var(--mono);color:var(--crema)">trackAdoption</code>, <code style="font:500 12px var(--mono);color:var(--crema)">bucket</code>.</p>
+        <div style="margin-top:auto;font:500 12px var(--mono);color:var(--gold-hot);background:var(--roast);border:1px solid var(--line);border-radius:8px;padding:9px 12px">npx golden-beans init</div>
+      </div>
+    </div>
+    <p class="note" style="margin:18px 0 0">The SDK is always the data-in layer. The routes above are how humans — and their agents — operate what it collects.</p>
+  </div>
+</section>
+
+<!-- 4 · INVERTED LOOP — E4 -->
+<div class="divider"><div class="wrap"><span class="num">④</span><span class="stamp-title">The inverted loop</span><span class="tag tag-stamp-next">LIGHTS UP · E4</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 style="font-size:34px">The loop ends in <em style="font-style:normal;color:var(--gold)">your</em> agent.</h2>
+    <div class="row2" style="margin-top:28px">
+      <div class="panel" style="opacity:.55">
+        <h3 style="margin-bottom:10px;font-size:18px">The integrated way</h3>
+        <p style="font:500 13px var(--mono);color:var(--dim);line-height:2.1">signal → task → <b style="color:var(--crema)">their</b> agent → a PR you review anyway</p>
+        <p style="margin-top:14px;font-size:13.5px;color:var(--dim)">You rent a second brain that lives in someone else's product and learns someone else's habits.</p>
+      </div>
+      <div class="panel" style="border-color:var(--next-line)">
+        <h3 style="margin-bottom:10px;font-size:18px">The Golden Beans way</h3>
+        <p style="font:500 13px var(--mono);color:var(--dim);line-height:2.1">signal → structured task → <span style="color:var(--gold-hot)">your agent, over MCP</span> → a fix in <b style="color:var(--crema)">your</b> workflow</p>
+        <div class="tool" style="margin-top:14px;line-height:1.8">{ "type": "task", "source": "north_star_dip",<br>&nbsp;&nbsp;"feature": "setup_guide", "evidence": { "adopted_wow": "-12%" },<br>&nbsp;&nbsp;"suggested_action": "inspect step-3 drop-off" }</div>
+        <p class="note" style="margin-top:12px;font-size:12px">The payload shape ships before the automation does — that's the contract.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · PODS & PROOF — E3 -->
+<div class="divider"><div class="wrap"><span class="num">⑤</span><span class="stamp-title">Pods &amp; proof</span><span class="tag tag-stamp-next">LIGHTS UP · E3</span></div></div>
+<section class="band">
+  <div class="wrap">
+    <h2 style="font-size:34px">Your dev team, as a revenue engine.</h2>
+    <div class="row2" style="grid-template-columns:1.2fr .8fr;margin-top:28px">
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:18px">POD REPORT · agent-augmented vs human-baseline</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+          <div><div class="data" style="font-size:28px;font-weight:600">+3.1×</div><div style="font:500 11.5px var(--mono);color:var(--dim);margin-top:4px">velocity</div></div>
+          <div><div class="data" style="font-size:28px;font-weight:600">−68%</div><div style="font:500 11.5px var(--mono);color:var(--dim);margin-top:4px">cycle time</div></div>
+          <div><div class="data" style="font-size:28px;font-weight:600">daily</div><div style="font:500 11.5px var(--mono);color:var(--dim);margin-top:4px">deploy freq</div></div>
+          <div><div class="data" style="font-size:28px;font-weight:600">−54%</div><div style="font:500 11.5px var(--mono);color:var(--dim);margin-top:4px">cost / shipped point</div></div>
+        </div>
+        <p class="note" style="margin-top:18px;font-size:12px">Illustrative until E3 computes it — the real report is generated, not claimed: 104 epics of dated dogfood history, DORA included.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:14px">OUTCOME LAYER</div>
+        <p style="font-size:14px;color:var(--dim);line-height:1.7">TARS adoption · North-Star input movement · revenue per feature — read from the engine itself, so the ROI story and the telemetry can't drift apart.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · PRIMITIVES — E1, rows flip as epics ship -->
+<div class="divider"><div class="wrap"><span class="num">⑥</span><span class="stamp-title">What's in the bag</span><span class="tag tag-stamp">LIVE · E1 — rows flip as epics ship</span></div></div>
+<section>
+  <div class="wrap row2" style="grid-template-columns:.9fr 1.1fr;gap:48px;align-items:center">
+    <div>
+      <h2 style="font-size:34px">Primitives, honestly badged.</h2>
+      <p style="margin:14px 0 0;color:var(--dim);max-width:440px">The label is the feature grid. If a row says ✅, you can curl it today* — the badge flips in the same epic that ships the capability, or it doesn't flip at all.</p>
+      <p class="note" style="margin:14px 0 0">* Try it: <a href="#">GET /api/v1/north-star</a> on the demo project. No sales call required.</p>
+    </div>
+    <div class="baglabel">
+      <div class="roundstamp">SMALL<br>BATCH<br>★★★</div>
+      <div class="brand"><b>GOLDEN BEANS</b><small>SINGLE-ORIGIN GROWTH PRIMITIVES</small></div>
+      <div class="netwt"><span>NET WT.</span><span>5 primitives shipped · 4 roasting</span></div>
+      <div class="row"><span>schema-validated telemetry ingest · tenant-scoped</span><b class="ok">✅ SHIPPED</b></div>
+      <div class="row"><span>TypeScript SDK · track / trackAdoption / bucket</span><b class="ok">✅ SHIPPED</b></div>
+      <div class="row"><span>feature registry + TARS funnels</span><b class="ok">✅ SHIPPED</b></div>
+      <div class="row"><span>North Star metric + per-feature impact</span><b class="ok">✅ SHIPPED</b></div>
+      <div class="row"><span>A/B comparison (basic lift)</span><b class="ok">✅ SHIPPED</b></div>
+      <div class="row"><span>self-serve tenants &amp; auth hardening</span><b>🔜 E2</b></div>
+      <div class="row"><span>flag serving &amp; migration</span><b>🔜 E5a</b></div>
+      <div class="row"><span>chaos + SecOps × business metrics</span><b>🔜 E5b</b></div>
+      <div class="row"><span>CMS integration (yours, not ours)</span><b>🔜 E6</b></div>
+      <div class="foot"><span>INTEGRATED AI</span><span>0g (0% DV)</span></div>
+      <div class="motto">ROASTED IN SMALL BATCHES · BEST SERVED THROUGH YOUR OWN AGENT</div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · PRICING — E2 -->
+<div class="divider"><div class="wrap"><span class="num">⑦</span><span class="stamp-title">Pricing &amp; tenancy</span><span class="tag tag-stamp-next">SELF-SERVE · E2</span></div></div>
+<section class="band">
+  <div class="wrap" style="text-align:center">
+    <h2 style="font-size:34px">Unlimited seats. Scarcity is for beans, not software.*</h2>
+    <div class="cards3" style="margin-top:32px;text-align:left">
+      <div class="panel" style="padding:26px">
+        <div style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.14em">HOUSE BLEND</div>
+        <div style="margin:12px 0 2px;font-size:34px;font-weight:900">$0</div>
+        <p style="margin-bottom:14px;font-size:13.5px;color:var(--dim)">One project, full primitives, the connector URL. Works on the Claude free tier.</p>
+        <div style="font:500 12px var(--mono);color:var(--dim);line-height:2">✓ 100k events / mo<br>✓ TARS + North Star + A/B<br>✓ revocable MCP tokens</div>
+      </div>
+      <div class="panel" style="padding:26px;border-color:var(--gold);position:relative">
+        <div style="position:absolute;top:-11px;left:26px;background:var(--gold);color:var(--roast);font:700 10px var(--mono);letter-spacing:.1em;padding:4px 10px;border-radius:99px">MOST POURED</div>
+        <div style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.14em">SINGLE ORIGIN</div>
+        <div style="margin:12px 0 2px;font-size:34px;font-weight:900">$49<span style="font-size:15px;font-weight:600;color:var(--dim)">/mo</span></div>
+        <p style="margin-bottom:14px;font-size:13.5px;color:var(--dim)">Unlimited projects and seats, higher event volume, priority ingest.</p>
+        <div style="font:500 12px var(--mono);color:var(--dim);line-height:2">✓ 5M events / mo<br>✓ everything in House Blend<br>✓ unlimited seats — see above</div>
+      </div>
+      <div class="panel" style="padding:26px">
+        <div style="font:700 12px var(--mono);color:var(--gold);letter-spacing:.14em">PRIVATE ROAST</div>
+        <div style="margin:12px 0 2px;font-size:34px;font-weight:900">Pods</div>
+        <p style="margin-bottom:14px;font-size:13.5px;color:var(--dim)">An agent-augmented pod engagement, benchmarked by the Pod Report — the engine measures its own ROI.</p>
+        <div style="font:500 12px var(--mono);color:var(--dim);line-height:2">✓ your tenancy, your Supabase<br>✓ pod plugin + ways-of-working<br>✓ quarterly Pod Report</div>
+      </div>
+    </div>
+    <p class="note" style="margin:20px auto 0;max-width:560px">* Checkable claim adjacent to the joke: seat count appears nowhere in the schema. Events are metered; humans aren't.</p>
+  </div>
+</section>
+
+<!-- 8 · FOOTER — E1, grows -->
+<footer style="border-top:1px solid var(--line)">
+  <div class="wrap" style="padding-top:48px;padding-bottom:48px">
+    <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:center;color:var(--dim);font-size:13.5px">
+      <span class="logo" style="font-size:16px"><span class="bean" style="width:15px;height:20px"></span>golden beans</span>
+      <a href="#" style="color:var(--dim)">Docs</a><a href="#" style="color:var(--dim)">GitHub</a><a href="#" style="color:var(--dim)">Status</a><a href="#" style="color:var(--dim)">Trust</a>
+      <span style="margin-left:auto;font:500 12px var(--mono)">agent-readable: <a href="#">/llms.txt</a> · <a href="#">/mcp</a></span>
+    </div>
+    <p style="margin:22px 0 0;font:400 12px var(--mono);color:#6d6250;line-height:1.8">Footnote ledger, in order of appearance: the demo project is synthetic · Targeted is registry-declared · lift has no significance engine yet · pod numbers are illustrative until E3 computes them · seats are genuinely unmetered. If a claim on this page ever stops being checkable, that's a bug — file it.</p>
+  </div>
+</footer>
+</body>
+</html>

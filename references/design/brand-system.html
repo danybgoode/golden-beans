@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — brand system reference</title>
+<link rel="stylesheet" href="assets/tokens.css">
+</head>
+<body>
+<div class="wrap" style="padding-bottom:96px">
+
+  <div style="margin:32px 0 0;background:var(--kraft);background-image:var(--kraft-fibers);border-radius:6px;padding:36px 40px;color:var(--stamp);position:relative">
+    <div style="font:600 12px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--stamp-dim)">Golden Beans · Public-face design system · v1</div>
+    <h1 class="display foil" style="margin-top:10px;font-size:56px">BRAND SYSTEM SHEET</h1>
+    <div style="margin-top:14px;display:flex;gap:24px;flex-wrap:wrap;font:500 12px var(--mono);letter-spacing:.08em">
+      <span>BATCH Nº 001</span><span>ROASTED 2026-07-15</span><span>ORIGIN: references/design-direction.md</span><span>TOKENS: assets/tokens.css</span>
+    </div>
+  </div>
+
+  <section style="padding-bottom:0">
+    <h2 style="font-size:28px">01 · Rules that bind</h2>
+    <ul style="margin:16px 0 0;padding-left:20px;color:var(--dim);line-height:1.9;max-width:720px">
+      <li>Exactly <b style="color:var(--crema)">three material families</b>: kraft+foil (narrates), dark-roast UI (proves), brass (operates). A fourth is a design bug.</li>
+      <li><b style="color:var(--crema)">Evidence ratio:</b> at least half of every viewport is real product UI or real numbers. Fiction frames, never fills.</li>
+      <li><b style="color:var(--crema)">Honesty badges are load-bearing:</b> ✅ only for deployed capability; 🔜 always carries its epic tag.</li>
+      <li>Every joke sits beside a checkable claim. Footnotes are a design element (class <code class="data" style="font-size:13px">.note</code>), not fine print.</li>
+      <li>Max <b style="color:var(--crema)">one hero brass instrument per section</b>.</li>
+      <li>Two CTAs everywhere: <b style="color:var(--crema)">Add to Claude</b> (primary) + waitlist (secondary, until E2 flips it to Start free).</li>
+      <li>Type: Archivo (wdth 62–125) + IBM Plex Mono. Two families, no more.</li>
+    </ul>
+  </section>
+
+  <section style="padding-bottom:0">
+    <h2 style="font-size:28px">02 · Buttons &amp; badges</h2>
+    <div class="row2" style="margin-top:20px">
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:16px">BUTTONS</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-gold">Add to Claude →</button>
+          <button class="btn btn-ghost">Join the waitlist</button>
+          <button class="btn-mini">copy</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:16px">HONESTY BADGES</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <span class="tag tag-live">✅ SHIPPED</span>
+          <span class="tag tag-next">🔜 E2 · self-serve</span>
+          <span class="tag tag-live">LIVE · E1</span>
+          <span class="tag tag-next">LIGHTS UP · E4</span>
+        </div>
+        <p class="note" style="margin-top:14px;font-size:12px">On kraft use .tag-stamp / .tag-stamp-next.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-bottom:0">
+    <h2 style="font-size:28px">03 · Agent conversation window — the signature frame device</h2>
+    <div class="agent-win" style="max-width:760px;margin-top:20px">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>claude — connected: golden-beans · 6 tools<span class="agent-chip">gb_live_7f3k… · revocable</span></div>
+      <div class="agent-body">
+        <div class="you"><b>you ▸</b> how did the setup-guide funnel do this week?</div>
+        <div class="tool"><b>⚙ get_tars_funnel</b> · demo-roastery / setup_guide<br>→ { targeted: 1204, adopted: 771, retained: 512 }</div>
+        <div style="font-size:14px;max-width:560px;line-height:1.6">Of <b class="data">1,204</b> targeted users, <b class="data">771</b> adopted (64%) and <b class="data">512</b> retained (43%). Targeted is registry-declared, not gateway-observed.*<span class="cursor"></span></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:12px;font-size:12px">* The chrome is fiction; every number inside it is a real engine response from the synthetic demo project.</p>
+  </section>
+
+  <section style="padding-bottom:0">
+    <h2 style="font-size:28px">04 · Brass instruments</h2>
+    <div class="row2" style="margin-top:20px">
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:16px">GAUGE — North Star / cupping score</div>
+        <div style="display:flex;gap:24px;align-items:center">
+          <div class="gauge" style="width:150px;height:150px;flex:none">
+            <div class="gauge-face">
+              <div class="gauge-needle" style="height:52px;transform:translate(-50%,-100%) rotate(29deg)"></div>
+              <div class="gauge-hub" style="width:14px;height:14px"></div>
+              <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);font:600 10px var(--mono);color:var(--dim);letter-spacing:.1em">N★</div>
+            </div>
+          </div>
+          <div>
+            <div class="data" style="font-size:30px;font-weight:600">312 <span style="font-size:14px;color:var(--green)">+9.4% ↗</span></div>
+            <div style="font:500 12px var(--mono);color:var(--dim);margin-top:4px">payable_sellers · 2 leading inputs linked</div>
+            <p class="note" style="margin-top:12px;font-size:12px">Needle angle = −120° + value/100 × 240°. Data-driven, never decorative.</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:16px">LEVER TOGGLE — flags &amp; splits</div>
+        <div style="display:flex;gap:24px;align-items:center">
+          <div class="toggle-plate" style="width:130px;flex:none">
+            <div style="display:flex;justify-content:space-between;font:700 10px var(--mono);letter-spacing:.14em;color:var(--dim);padding:0 4px 8px"><span>OFF</span><span style="color:var(--gold-hot)">ON</span></div>
+            <div class="toggle-track"><div class="toggle-knob" style="left:calc(100% - 30px)"></div></div>
+            <div style="margin-top:9px;text-align:center;font:600 10px var(--mono);letter-spacing:.1em;color:var(--green)">SERVING · 100%</div>
+          </div>
+          <p style="font-size:13px;color:var(--dim);max-width:300px">Machined, weighty, clickable. Engraved state label below the track.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-bottom:0">
+    <h2 style="font-size:28px">05 · Kraft primitives</h2>
+    <div class="row2" style="margin-top:20px;align-items:start">
+      <div class="baglabel" style="max-width:420px">
+        <div class="brand"><b style="font-size:19px">GOLDEN BEANS</b><small style="font-size:9.5px">SINGLE-ORIGIN GROWTH PRIMITIVES</small></div>
+        <div class="netwt"><span>NET WT.</span><span>5 shipped · 4 roasting</span></div>
+        <div class="row"><span>telemetry ingest</span><b class="ok">✅</b></div>
+        <div class="row"><span>TARS funnels</span><b class="ok">✅</b></div>
+        <div class="row"><span>flag serving</span><b>🔜 E5a</b></div>
+        <div class="foot"><span>INTEGRATED AI</span><span>0g (0% DV)</span></div>
+      </div>
+      <div>
+        <div class="divider" style="border-radius:0"><div style="display:flex;align-items:center;gap:14px;padding:14px 20px"><span class="num">②</span><span class="stamp-title">Live proof — straight from the roaster</span><span class="tag tag-stamp" style="margin-left:auto">LIVE · E1</span></div></div>
+        <p style="margin-top:14px;font-size:13px;color:var(--dim)">Section divider: number, stamped title, epic badge, dashed perforation edges. Kraft never appears mid-section.</p>
+        <p class="note" style="margin-top:10px">Rule of thumb: kraft narrates, dark roast proves, brass operates.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>

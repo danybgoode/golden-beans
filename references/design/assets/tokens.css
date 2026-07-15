@@ -1,0 +1,162 @@
+/* ============================================================
+   GOLDEN BEANS — public-face design tokens & component skin
+   Source of truth: Brand System sheet (design session 2026-07-15)
+   Three material families only: kraft+foil · dark-roast UI · brass.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+:root{
+  /* dark roast (family 2 — the product) */
+  --roast:#16120d;        /* page ground */
+  --roast-2:#221b13;      /* alternating band */
+  --card:#241d14;         /* panels */
+  --espresso:#0f0c08;     /* agent window body */
+  --line:#3a3023;         /* hairlines */
+  --crema:#f5ead6;        /* primary ink on dark */
+  --dim:#b8a888;          /* secondary ink on dark (WCAG AA on --roast) */
+  --dim-2:#8d8069;        /* teaser ink */
+  --gold:#e8b93c;         /* accent, CTA */
+  --gold-hot:#ffd45e;     /* data, hover */
+  --gold-deep:#8a6a1e;    /* CTA underside shadow */
+  /* kraft + foil (family 1 — packaging) */
+  --kraft:#c29c6a;
+  --kraft-deep:#9d7b4c;
+  --stamp:#3a2a16;        /* ink on kraft */
+  --stamp-dim:#6b4f2a;
+  --foil:linear-gradient(105deg,#7a5c1a 0%,#ffd45e 35%,#e8b93c 55%,#8a6a1e 100%);
+  --kraft-fibers:repeating-linear-gradient(0deg,rgba(60,42,22,.05) 0 1px,transparent 1px 3px),
+                 repeating-linear-gradient(90deg,rgba(255,244,220,.05) 0 2px,transparent 2px 5px);
+  /* brass (family 3 — instruments) */
+  --brass:conic-gradient(from 210deg,#8a6a2e,#e8c56a 25%,#6b5220 50%,#d9b45a 75%,#8a6a2e);
+  --brass-hub:conic-gradient(#d9b45a,#8a6a2e,#e8c56a,#8a6a2e);
+  --needle:linear-gradient(180deg,#ffd45e,#e8b93c);
+  /* semantic */
+  --green:#7fd069; --green-line:#3a5c33; --green-stamp:#2c5e22;
+  --red:#e86a5e; --blue:#6db3e8;
+  --next-line:#6b5620;
+  /* type */
+  --sans:Archivo,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  /* data bars */
+  --bar:linear-gradient(180deg,var(--gold-hot),#9c7a1e);
+}
+
+*{margin:0;box-sizing:border-box}
+body{background:var(--roast);color:var(--crema);font:16px/1.55 var(--sans)}
+a{color:var(--gold);text-decoration:none}a:hover{color:var(--gold-hot)}
+.wrap{max-width:1140px;margin:0 auto;padding:0 32px}
+h1,h2{font-weight:800;letter-spacing:-.01em}
+.display{font-weight:900;font-stretch:112%;letter-spacing:-.02em;line-height:1.02}
+.foil{background:var(--foil);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.note{font:italic 400 12.5px var(--mono);color:var(--dim)}   /* tasting note / footnote */
+.data{font-family:var(--mono);color:var(--gold-hot)}
+@keyframes gbBlink{0%,55%{opacity:1}56%,100%{opacity:0}}
+.cursor{display:inline-block;width:7px;height:15px;background:var(--gold);margin-left:4px;vertical-align:text-bottom;animation:gbBlink 1.1s steps(1) infinite}
+
+/* buttons — primary is always the connector CTA */
+.btn{border:none;border-radius:10px;padding:14px 22px;font:700 15px var(--sans);cursor:pointer}
+.btn-gold{background:var(--gold);color:var(--roast);box-shadow:0 3px 0 var(--gold-deep)}
+.btn-gold:hover{background:var(--gold-hot)}
+.btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:13px 22px}
+.btn-ghost:hover{color:var(--gold-hot);border-color:var(--gold-hot)}
+.btn-mini{border:none;background:var(--line);color:var(--crema);font:700 11px var(--sans);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn-mini:hover{background:#4a3f2d}
+
+/* honesty badges — ✅ only for shipped capability, ever */
+.tag{display:inline-block;font:600 10px var(--mono);letter-spacing:.08em;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim);vertical-align:middle;white-space:nowrap}
+.tag-live{color:var(--green);border-color:var(--green-line)}
+.tag-next{color:var(--gold);border-color:var(--next-line)}
+.tag-stamp{color:var(--green-stamp);border-color:var(--green-stamp)}      /* on kraft */
+.tag-stamp-next{color:var(--stamp-dim);border-color:var(--stamp-dim)}     /* on kraft */
+
+/* dark-roast panel */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+.panel-label{font:600 12px var(--mono);color:var(--dim);letter-spacing:.08em}
+
+/* agent conversation window — the signature frame device */
+.agent-win{background:var(--espresso);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.agent-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(180deg,#2a2218,#1c1610);border-bottom:1px solid var(--line);font:600 12px var(--mono);color:var(--dim)}
+.agent-dots{display:flex;gap:6px}
+.agent-dots span{width:10px;height:10px;border-radius:50%;background:#8a6a2e}
+.agent-dots span:nth-child(2){background:#6b5220}.agent-dots span:nth-child(3){background:#4a3a18}
+.agent-chip{margin-left:auto;font:500 10px var(--mono);color:var(--green);border:1px solid var(--green-line);border-radius:99px;padding:3px 8px}
+.agent-body{padding:20px 22px;display:flex;flex-direction:column;gap:15px}
+.agent-body hr{border:none;border-top:1px solid var(--line);width:100%}
+.you{font:500 13.5px var(--mono);color:var(--crema)}
+.you b{color:var(--gold);font-weight:600}                      /* the "you ▸" prompt */
+.tool{border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:8px;padding:10px 14px;background:var(--roast);font:400 12px var(--mono);color:var(--dim)}
+.tool b{color:var(--gold);font-weight:600}                     /* "⚙ tool_name" */
+
+/* funnel bars — always labeled with the real numbers */
+.funnel{display:flex;gap:14px;align-items:flex-end;height:170px}
+.funnel .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;font:500 12px var(--mono);color:var(--dim);gap:8px;height:100%}
+.funnel .bar>div{background:var(--bar);border-radius:8px 8px 0 0}
+
+/* brass gauge — max one hero instrument per section */
+.gauge{border-radius:50%;background:var(--brass);padding:8px;box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 2px 3px rgba(255,235,180,.5)}
+.gauge-face{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#2a2216,var(--roast) 65%);position:relative;box-shadow:inset 0 3px 8px rgba(0,0,0,.7)}
+.gauge-needle{position:absolute;left:50%;top:50%;width:3px;background:var(--needle);border-radius:2px;transform-origin:50% 100%}
+/* rotate: translate(-50%,-100%) rotate(θ); θ = -120deg + value/100 * 240deg */
+.gauge-hub{position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:var(--brass-hub);transform:translate(-50%,-50%)}
+
+/* brass lever toggle */
+.toggle-plate{background:linear-gradient(180deg,#2e2517,#1c1610);border:1px solid #4a3a18;border-radius:14px;padding:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.toggle-track{position:relative;height:34px;border-radius:99px;background:var(--espresso);box-shadow:inset 0 2px 5px rgba(0,0,0,.8);border:1px solid var(--line)}
+.toggle-knob{position:absolute;top:2px;width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f0d488,#c39b3f 55%,#8a6a2e);box-shadow:0 2px 5px rgba(0,0,0,.7),inset 0 1px 2px rgba(255,240,200,.8);transition:left .25s cubic-bezier(.3,1.4,.6,1)}
+
+/* kraft divider — every section opens with one */
+.divider{background:var(--kraft);background-image:var(--kraft-fibers);border-top:2px dashed var(--stamp-dim);border-bottom:2px dashed var(--stamp-dim);color:var(--stamp)}
+.divider .wrap{display:flex;align-items:center;gap:14px;padding-top:14px;padding-bottom:14px}
+.divider .num{font:700 12px var(--mono);letter-spacing:.14em}
+.divider .stamp-title{font-weight:900;font-stretch:112%;text-transform:uppercase;letter-spacing:.16em;font-size:13.5px}
+.divider .tag{margin-left:auto}
+
+/* kraft bag label — the primitives grid */
+.baglabel{background:var(--kraft);background-image:var(--kraft-fibers);border-radius:6px;padding:30px 34px;color:var(--stamp);box-shadow:0 20px 50px rgba(0,0,0,.5);position:relative}
+.baglabel .brand{text-align:center;border-bottom:3px solid var(--stamp);padding-bottom:12px}
+.baglabel .brand b{display:block;font-weight:900;font-stretch:112%;font-size:24px}
+.baglabel .brand small{font:600 10px var(--mono);letter-spacing:.22em}
+.baglabel .netwt{display:flex;justify-content:space-between;font:700 12px var(--mono);padding:10px 0;border-bottom:2px solid var(--stamp)}
+.baglabel .row{display:flex;justify-content:space-between;gap:12px;font:500 13px var(--mono);padding:9px 0;border-bottom:1px solid rgba(58,42,22,.35)}
+.baglabel .row b{flex:none}
+.baglabel .row .ok{color:var(--green-stamp)}
+.baglabel .foot{display:flex;justify-content:space-between;font:700 11px var(--mono);padding:11px 0 0;letter-spacing:.05em}
+.baglabel .motto{margin-top:14px;text-align:center;font:600 9.5px var(--mono);letter-spacing:.18em;color:var(--stamp-dim)}
+.roundstamp{position:absolute;top:-22px;right:-18px;width:78px;height:78px;background:var(--kraft);border:2px solid var(--stamp-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;transform:rotate(10deg);font:700 9px var(--mono);letter-spacing:.12em;text-align:center;color:var(--stamp-dim);box-shadow:0 4px 10px rgba(0,0,0,.35)}
+
+/* teaser — honestly-badged unlit section (E1 variant) */
+.teaser{border:1.5px dashed #4a3f2d;border-radius:14px;padding:26px 30px;display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.teaser h2{font-size:24px;color:var(--dim)}
+.teaser p{color:var(--dim-2)}
+.teaser .tag-next{flex:none;padding:6px 12px;font-size:11px}
+
+/* layout helpers */
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.band{background:var(--roast-2)}
+section{padding:72px 0}
+nav.gb{display:flex;align-items:center;gap:26px;padding:18px 32px;border-bottom:1px solid var(--line);max-width:1140px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-stretch:112%;font-size:19px;color:var(--gold)}
+.logo .bean{width:20px;height:26px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:radial-gradient(circle at 35% 30%,#ffd45e,#c39b3f 60%,#8a6a2e);transform:rotate(-16deg);position:relative}
+.logo .bean::after{content:'';position:absolute;left:48%;top:12%;width:2px;height:76%;background:#5a4416;border-radius:2px;transform:rotate(4deg)}
+.urlfield{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--dim);font:500 13px var(--mono);padding:13px 14px}
+.urlfield .btn-mini{margin-left:auto}
+input.gb{background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--crema);font:500 14px var(--mono);padding:14px 16px;outline:none}
+input.gb:focus{border-color:var(--gold)}
+
+/* ---------- mobile pass (≤720px): the E1 mobile design ---------- */
+@media (max-width:720px){
+  body{font-size:15px}
+  .wrap{padding:0 18px}
+  nav.gb{padding:14px 18px;gap:12px}
+  section{padding:44px 0}
+  .display{font-size:36px !important}
+  h2{font-size:26px !important}
+  .cards3,.row2,.hero-grid{grid-template-columns:1fr !important}
+  .funnel{height:130px;gap:10px}
+  .agent-body{padding:16px 14px;gap:13px}
+  .btn{width:100%}
+  .urlfield{white-space:nowrap;overflow:hidden}
+  .baglabel{padding:22px 20px}
+  .divider .stamp-title{font-size:11.5px;letter-spacing:.13em}
+}
