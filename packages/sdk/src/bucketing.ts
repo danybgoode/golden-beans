@@ -39,8 +39,11 @@ export function resolveVariant(userId: string, experimentKey: string, variants: 
   if (normalized.length === 0 || totalWeight <= 0) return null
 
   const hash = fnv1a(`${userId}:${experimentKey}`)
-  // Map the hash into [0, totalWeight) and walk cumulative weights to find the bucket.
-  const point = (hash / 0xffffffff) * totalWeight
+  // Map the hash into [0, totalWeight) and walk cumulative weights to find the bucket. Divide by
+  // 2^32 (not 2^32 - 1) so `point` never reaches `totalWeight` even for the max hash value —
+  // otherwise it falls out of every `point < cumulative` check and has to be caught by the
+  // post-loop fallback instead of resolving through the loop like every other hash does.
+  const point = (hash / 0x100000000) * totalWeight
   let cumulative = 0
   for (const variant of normalized) {
     cumulative += variant.weight

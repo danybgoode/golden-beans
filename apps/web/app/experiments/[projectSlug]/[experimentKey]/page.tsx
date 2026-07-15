@@ -12,9 +12,9 @@ export default async function ExperimentComparisonPage({
   searchParams: Promise<{ metricEvent?: string }>
 }) {
   const { projectSlug, experimentKey } = await params
-  const { metricEvent } = await searchParams
+  const metricEvent = (await searchParams).metricEvent?.trim()
 
-  if (!metricEvent?.trim()) {
+  if (!metricEvent) {
     return (
       <main>
         <h1>
