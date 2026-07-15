@@ -24,6 +24,28 @@ Two Playwright projects, matching WAYS-OF-WORKING.md's "Automated QA" section �
 - `funnel.spec.ts` — Story 2.3 (funnel endpoint/page): 404 for an unregistered feature; a registered
   feature's JSON endpoint and the SSR funnel page both reflect a real synthetic event sequence
   (the page's rendered HTML is inspected via the `request` fixture — no browser binary needed).
+- `north-star-sync.spec.ts` — Story 3.1 (`POST /v1/north-star/sync` + `GET /v1/north-star`): 401,
+  `telemetry_event`/`external_push` `sourceEvent` validation, duplicate keys → 400, a valid sync is
+  queryable, re-sync with a different `valueSource` → 400, tenant isolation.
+- `feature-input-link.spec.ts` — Story 3.2 (`POST /v1/features/:key/link-input`): 401, 404 for an
+  unknown input, idempotent link (no duplicate row on re-link), tenant isolation.
+- `input-values.spec.ts` — Story 3.3 (`POST /v1/inputs/:key/values`): 401, malformed/impossible
+  dates → 400, 404 for an unknown input, pushing to a `telemetry_event`-sourced input → 400 (those
+  are computed, never pushed), duplicate dates in one payload → 400, a valid push is idempotent on
+  re-run, tenant isolation, and the append-only trigger rejects a mutation attempt.
+- `impact.spec.ts` — Story 3.4 (per-feature input-impact report): 404 for a feature with no linked
+  inputs; the JSON endpoint and the SSR impact page both reflect a real telemetry series and a real
+  pushed-revenue series for a linked feature.
+- `bucketing.spec.ts` — Story 4.1 (SDK `bucket()`): synchronous (no network), the same
+  userId+experimentKey always resolves to the same variant regardless of the order variants are
+  passed in, and an empty/all-zero-weight variant list returns an `ok:false` envelope.
+- `exposure.spec.ts` — Story 4.2 (SDK `trackExposure()`): a bucketed variant persists an
+  `experiment_exposed` event with `tags.variant` set, caller-supplied tags are merged (not
+  overwritten), and exposure events are queryable alongside other events by `feature_id`.
+- `experiments.spec.ts` — Story 4.3 (variant comparison endpoint/page): 400 for a missing
+  `metricEvent` query param, an honest empty state (200, not 404) for an experiment with no
+  exposures yet, and real exposure + conversion events across two variants produce the expected
+  basic-lift math on both the JSON endpoint and the SSR page.
 
 ## Running locally
 
