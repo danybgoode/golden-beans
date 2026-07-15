@@ -71,19 +71,25 @@ exactly — no admin-auth system exists yet in golden-beans).
   `ok:false`, 7 cases), 4.2 (`exposure.spec.ts`: exposure event fires with `tags.variant`,
   caller tags merged not overwritten, queryable alongside the event stream, 3 cases), 4.3
   (`experiments.spec.ts`: 400 for missing `metricEvent`, honest empty state for zero exposures, real
-  basic-lift math on both the JSON endpoint and the SSR page, 3 cases). 13 new cases, **58 total
-  green** across all four sprints (no regressions), also updated `e2e/README.md`'s spec inventory
-  (which had drifted since Sprint 3 — north-star-sync/feature-input-link/input-values/impact were
-  missing from it).
+  basic-lift math on both the JSON endpoint and the SSR page, plus a case added during review for a
+  metric event carrying no `featureId` at all, 4 cases). 14 new cases, **59 total green** across all
+  four sprints (no regressions), also updated `e2e/README.md`'s spec inventory (which had drifted
+  since Sprint 3 — north-star-sync/feature-input-link/input-values/impact were missing from it).
 - **browser smoke owed:** none — per this sprint's original QA note, "no money/auth step here." This
   sprint is telemetry-only (bucketing + reporting over existing data); confirmed true during build,
   not just assumed.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` (58 cases) — all green,
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` (59 cases) — all green,
   run against a freshly-reset local Supabase (`supabase db reset`, applying all 4 migrations cleanly
   — Sprint 4 adds **zero** new migrations) + a real locally-built `next start` production server.
-- **Review:** PR [#5](https://github.com/danybgoode/golden-beans/pull/5) open (draft) — a fresh
-  reviewer pass + advisory cross-agent second opinion still to run before merge, per
-  `Roadmap/WAYS-OF-WORKING.md`.
+- **Review:** PR [#5](https://github.com/danybgoode/golden-beans/pull/5). Advisory cross-agent
+  second opinion (Codex, `node scripts/cross-review.mjs 5 --agent codex`) found two minor issues
+  (a hash-range edge case, a `metricEvent`-trim inconsistency) — both fixed. A fresh reviewer pass
+  (an independent agent with no shared context) found one real correctness bug: the comparison
+  query required the metric/conversion event to also carry `featureId` set to the experiment key,
+  which a realistic conversion event (`checkout_completed`, `signup`, ...) would never do — silently
+  reporting 0 conversions instead of erroring. Fixed (`2d2ea2c`) by scoping the metric-event query
+  to `project_id` + event name only (exposure events stay `feature_id`-scoped); a new spec exercises
+  exactly this case and was observed red against the old query before the fix landed.
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
 Env: local (this branch is not yet merged/deployed — golden-beans has no per-branch preview and no
@@ -92,27 +98,33 @@ walkthrough against `https://golden-beans-gamma.vercel.app` once merged + `verce
 update the URLs below — same sequence Sprints 1–3 followed.
 
 ### Part A — engine-only, agent-verified locally 2026-07-16 (a real local `next build`/`next start`
-production server + a freshly-reset local Supabase, `project-one` fixture credentials)
+production server + a freshly-reset local Supabase, `project-one` fixture credentials). Rerun after
+the fresh-reviewer fix, deliberately using an **untagged** conversion event — the realistic shape —
+rather than one carrying `featureId`, to actually exercise the fix rather than mask it the same way
+the pre-fix bug went unnoticed.
 
 1. `curl -X POST http://localhost:3002/api/v1/track -H "Authorization: Bearer
    local-test-key-do-not-use-in-prod" -d '{"userId":"smoke-user-a","event":"experiment_exposed",
-   "featureId":"smoke-cta-copy","tags":{"variant":"control"}}'`
-   → **Confirmed:** `201 {"ok":true,"id":"7a504b04-..."}`.
-2. Same call for `smoke-user-b`, `variant: "treatment"`, then a third call:
-   `{"userId":"smoke-user-b","event":"smoke_conversion","featureId":"smoke-cta-copy"}` (treatment
-   converts, control doesn't).
-   → **Confirmed:** both `201`.
-3. `curl "http://localhost:3002/api/v1/experiments/smoke-cta-copy/compare?metricEvent=
-   smoke_conversion" -H "Authorization: Bearer local-test-key-do-not-use-in-prod"`.
+   "featureId":"smoke-cta-copy-real","tags":{"variant":"control"}}'`
+   → **Confirmed:** `201 {"ok":true,"id":"849cf977-..."}`.
+2. Same call for `smoke-user-b`, `variant: "treatment"`.
+   → **Confirmed:** `201`.
+3. `smoke-user-b` converts via `{"userId":"smoke-user-b","event":"checkout_completed"}` — **no
+   `featureId` at all**, exactly how a real business event gets fired.
+   → **Confirmed:** `201`.
+4. `curl "http://localhost:3002/api/v1/experiments/smoke-cta-copy-real/compare?metricEvent=
+   checkout_completed" -H "Authorization: Bearer local-test-key-do-not-use-in-prod"`.
    → **Confirmed:** `{"ok":true,...,"comparison":{"variants":[{"key":"control","exposures":1,
    "conversions":0,"conversionRate":0,"lift":null},{"key":"treatment","exposures":1,"conversions":1,
-   "conversionRate":1,"lift":null}],"baseline":"control"}}` — `lift: null` for treatment is
-   *correct*, not a bug: control's (baseline) conversion rate is 0, and a % difference from zero is
-   undefined by design (see `lib/ab.ts`).
-4. `curl "http://localhost:3002/experiments/project-one/smoke-cta-copy?metricEvent=
-   smoke_conversion"`.
-   → **Confirmed:** renders `Experiment — smoke-cta-copy (project-one)`, a table with `control
-   (baseline)` at 0.0% and `treatment` at 100.0%, both rows showing `—` for lift (per point 3).
+   "conversionRate":1,"lift":null}],"baseline":"control"}}` — the untagged `checkout_completed`
+   event was correctly attributed to `treatment` via the userId join, proving the fix. `lift: null`
+   for treatment is separately correct, not a bug: control's (baseline) conversion rate is 0, and a
+   % difference from zero is undefined by design (see `lib/ab.ts`).
+5. `curl "http://localhost:3002/experiments/project-one/smoke-cta-copy-real?metricEvent=
+   checkout_completed"`.
+   → **Confirmed:** the page's embedded RSC payload shows `control (baseline)` at 1 exposure/0
+   conversions/0.0%, `treatment` at 1 exposure/1 conversion/100.0%, both rows `—` for lift — matches
+   point 4 exactly.
 
 ### Part B — owed to Daniel (post-merge + deploy)
 No money/auth step exists in this sprint, so there's no browser-session-gated smoke to hand off —
