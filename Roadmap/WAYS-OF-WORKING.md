@@ -146,6 +146,11 @@ When the last story of an epic is merged, the epic is not "done" until ALL of th
       **Feature map** and update its line(s) to reflect what's now live (✅), and add a **Recent
       highlights** entry. The poster is the at-a-glance product source of truth — it must never lag a
       shipped epic.
+- [ ] **Landing backfill (the public-offer contract, adopted 2026-07-14):** if the epic changes the
+      public offer, its landing-page section ships or updates **in the same epic** — flip the
+      section's 🔜 badge / content toward the end-state (`references/landing-end-state.md`). Like
+      the poster rule: the public page never claims ✅ for unshipped work, and never lags a shipped
+      one.
 - [ ] Team memory updated (epic memory + the index, if your workflow keeps one).
 - [ ] **`Roadmap/LEARNINGS.md` updated** — promote any durable, generalizable learning from the
       `RETROSPECTIVE.md` into the right section (one-liner + *why* + date/source). Dedupe — sharpen
@@ -225,6 +230,13 @@ project's `apps/*/e2e/README.md` for a worked example):
   `AGENTS.md` — don't make a new surface bilingual by default; extend any allow-list deliberately.
 - Build from existing primitives first (your project's canonical system of record for a domain, not a
   secondary datastore or a bespoke route).
+- **Grooming cadence (updated 2026-07-14):** with a strong planning model (Fable-class), the
+  default is a **single-session groom** — one deep Definition-of-Ready groom for the front-of-queue
+  epic *plus* a portfolio pass that seeds/resequences the rest of the funnel — rather than one seed
+  per session. The groom skill's discipline (stages, scope-doc gate, one *deep* ask per run) is
+  unchanged; what batches is the funnel bookkeeping. Deep-groom later epics only when they reach
+  the front. Build sprints stay session-sized — versions may supersede in the immediately-next
+  sprint, so keep per-sprint kickoffs thin and let the epic docs carry state.
 - **Session hygiene (long epics).** Running a whole multi-sprint epic in one session is the main
   context-cost driver. The durable state (the plan file, sprint docs, team memory) makes re-entry
   cheap by design — so compact at each sprint/PR boundary, and for big epics consider a **fresh
