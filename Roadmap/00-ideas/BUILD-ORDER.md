@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 6/13 stories · risk: Low
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 13/13 stories · risk: Low
 
 ## 📋 Ready to build (scaffolded, not started) (0)
 
@@ -26,5 +26,15 @@ _None._
 
 _None._
 
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
+
+These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
+derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
+forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.
+
+| Epic | frontmatter (used) | sprint/retro-derived |
+|---|---|---|
+| Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing | In progress | Shipped |
+
 ---
-_Epics: 1 · seeds in funnel: 0 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 1 · seeds in funnel: 0 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
