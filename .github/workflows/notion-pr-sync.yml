@@ -1,0 +1,51 @@
+# Live PR lifecycle overlay on the Notion board (drift prevention — added 2026-07-15).
+# An open PR shows its epic's live Lifecycle on the board WITHOUT rebuilding other rows:
+#   draft PR → "In progress" · ready-for-review PR → "In review" · closed/merged → overlay cleared
+# (notion-sync.yml then re-derives the docs-owned Status on merge). The label mapping lives in ONE
+# place — scripts/roadmap-to-notion.mjs `lifecycleForPr()` (--lifecycle mode) — so this workflow
+# can't drift from the script's tests. The --pr mode PATCHes ONLY the Lifecycle + PR link
+# properties of the named epic's rows, scoped by slug (parallel PRs on different epics never
+# touch the same row).
+#
+# The epic slug comes from the branch name — feat/<slug> (or fix/, chore/), per WAYS-OF-WORKING.
+# Requires the same NOTION_TOKEN / NOTION_DB_ID secrets as notion-sync.yml; skips cleanly if unset.
+name: notion-pr-sync
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, converted_to_draft, closed]
+
+jobs:
+  pr-overlay:
+    runs-on: ubuntu-latest
+    env:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+      PR_ACTION: ${{ github.event.action }}
+      PR_DRAFT: ${{ github.event.pull_request.draft }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # --pr mode builds the projection too; keep its dates honest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply / clear the Lifecycle overlay
+        if: env.NOTION_TOKEN != '' && env.NOTION_DB_ID != ''
+        run: |
+          SLUG="${HEAD_REF#*/}"   # feat/<slug> → <slug>
+          if [ -z "$SLUG" ] || [ "$SLUG" = "$HEAD_REF" ] && ! echo "$HEAD_REF" | grep -q '/'; then
+            SLUG="$HEAD_REF"      # branch with no prefix — use as-is
+          fi
+          LABEL="$(node scripts/roadmap-to-notion.mjs --lifecycle)"
+          echo "branch=$HEAD_REF slug=$SLUG lifecycle=$LABEL"
+          if [ "$LABEL" = "clear" ]; then
+            node scripts/roadmap-to-notion.mjs --pr "$SLUG" --clear
+          else
+            node scripts/roadmap-to-notion.mjs --pr "$SLUG" --status "$LABEL" --link "$PR_URL"
+          fi
+      - name: Skipped (secrets not configured)
+        if: env.NOTION_TOKEN == '' || env.NOTION_DB_ID == ''
+        run: echo "NOTION_TOKEN / NOTION_DB_ID not set — skipping PR lifecycle overlay."

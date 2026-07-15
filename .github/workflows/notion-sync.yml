@@ -1,0 +1,44 @@
+# Docs → Notion projection, hands-free (drift prevention — added 2026-07-15, E3 groom session).
+# Every merge to main that touches the Roadmap (or the projector itself) rebuilds the Notion
+# "Golden Beans — Marketplace Roadmap" board via scripts/roadmap-to-notion.mjs --sync.
+# ONE-WAY: docs are the SSOT, the board is a rebuilt projection — same contract as BUILD-ORDER.md.
+#
+# Requires two repo secrets (skips cleanly when absent, so forks/pre-setup pushes stay green):
+#   NOTION_TOKEN  — an internal-integration token the target DB is shared with
+#   NOTION_DB_ID  — the target database id
+#
+# fetch-depth: 0 is REQUIRED: the extractor derives "Status date" (when a row entered its current
+# status) from git history (`git log -G`); a shallow clone would silently date everything "today".
+name: notion-sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Roadmap/**'
+      - 'scripts/roadmap-to-notion.mjs'
+      - '.github/workflows/notion-sync.yml'
+
+concurrency:
+  group: notion-sync
+  cancel-in-progress: false   # let a running sync finish; upserts are idempotent by Slug anyway
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sync Roadmap docs → Notion board
+        if: env.NOTION_TOKEN != '' && env.NOTION_DB_ID != ''
+        run: node scripts/roadmap-to-notion.mjs --sync
+      - name: Skipped (secrets not configured)
+        if: env.NOTION_TOKEN == '' || env.NOTION_DB_ID == ''
+        run: echo "NOTION_TOKEN / NOTION_DB_ID not set — skipping Notion sync (board will drift until configured)."
