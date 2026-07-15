@@ -4,6 +4,10 @@
 // so v2 fault injection (delay_ms, force_error_code) can extend TrackResult without a breaking
 // change to callers that already just check `.ok`.
 
+import { resolveVariant, type BucketVariant } from './bucketing'
+
+export type { BucketVariant } from './bucketing'
+
 export interface TrackEventProps {
   featureId?: string
   tags?: Record<string, unknown>
@@ -31,6 +35,13 @@ export type SyncResult =
   | { ok: true; synced: number }
   | { ok: false; error: string; code?: string; issues?: unknown }
 
+// Sprint 4, Story 4.1 (Roadmap/01-growth-engine/growth-engine-v1/sprint-4.md): deterministic
+// client-side bucketing — same envelope shape as TrackResult/SyncResult (never a bare string), so
+// v2 can extend it (e.g. a `reason` field) without a breaking change to callers.
+export type BucketResult =
+  | { ok: true; variant: string }
+  | { ok: false; error: string; code?: string }
+
 export interface GrowthEngineClientConfig {
   /** e.g. "https://growth.example.com" or "http://localhost:3000" for local dev. */
   baseUrl: string
@@ -46,6 +57,11 @@ export interface GrowthEngineClient {
   track(event: string, props?: TrackEventProps): Promise<TrackResult>
   trackAdoption(featureKey: string, props?: Omit<TrackEventProps, 'featureId'>): Promise<TrackResult>
   syncFeatures(features: FeatureSyncEntry[]): Promise<SyncResult>
+  /**
+   * Deterministically resolves the configured userId into a variant for `experimentKey`, given
+   * the caller's own variant list. Synchronous — no network call, no resolve endpoint (Story 4.1).
+   */
+  bucket(experimentKey: string, variants: BucketVariant[]): BucketResult
 }
 
 /**
@@ -93,9 +109,18 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     return { ok: true, synced: body.synced }
   }
 
+  function bucket(experimentKey: string, variants: BucketVariant[]): BucketResult {
+    const variant = resolveVariant(config.userId, experimentKey, variants)
+    if (variant === null) {
+      return { ok: false, error: 'No valid variants provided', code: 'INVALID_VARIANTS' }
+    }
+    return { ok: true, variant }
+  }
+
   return {
     track,
     trackAdoption: (featureKey, props) => track('feature_adopted', { ...props, featureId: featureKey }),
     syncFeatures,
+    bucket,
   }
 }
