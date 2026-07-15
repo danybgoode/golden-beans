@@ -98,14 +98,18 @@ once 3.3 has run at least once).
    exists yet. Not a bug — the report is working exactly as designed against real (currently empty)
    data.
 
-### Part B — owed to Daniel by name
-The real revenue-sync run needs Miyagi's own Supabase service-role key — a different system's
-production credential this session correctly did not fetch on its own (confirmed blocked even after
-an explicit go-ahead; Daniel will run it himself or hand the credential over directly):
+### Part B — correction found on the first live run attempt, 2026-07-15
+The first live run attempt (Daniel authorized both the run and the credential lookup) failed
+loudly and correctly: `financial_event` is a Medusa **core module** table living in Medusa's own
+primary Postgres (`DATABASE_URL`), not the small auxiliary Supabase project `platform_flags`/
+seller-Clerk-linkage rows use — the script's original `MIYAGI_SUPABASE_URL`/
+`MIYAGI_SUPABASE_SERVICE_ROLE_KEY` env vars pointed at the wrong database entirely. Fixed in
+`fix/growth-engine-revenue-postgres` (a raw Postgres client against `MIYAGI_DATABASE_URL` instead
+of Supabase's REST API) — see that PR for the full writeup.
 
-1. Run `scripts/sync-revenue-from-miyagi.mjs` with `MIYAGI_SUPABASE_URL` /
-   `MIYAGI_SUPABASE_SERVICE_ROLE_KEY` (Miyagi's own project) and `GROWTH_ENGINE_URL` /
-   `GROWTH_ENGINE_API_KEY` (the real `miyagisanchez` credential) set.
+1. Run `scripts/sync-revenue-from-miyagi.mjs` with `MIYAGI_DATABASE_URL` (Medusa's own primary
+   Postgres connection string) and `GROWTH_ENGINE_URL` / `GROWTH_ENGINE_API_KEY` (the real
+   `miyagisanchez` credential) set.
    → **Expected:** prints `Synced N day(s) of revenue: N new, 0 already present.`
 2. Reload `https://golden-beans-gamma.vercel.app/impact/miyagisanchez/setup_guide` in a real browser.
    → **Expected:** `Attributed Revenue` now shows a real time series instead of "No data yet".

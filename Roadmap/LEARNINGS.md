@@ -85,8 +85,23 @@ one-liner + why + date shape.
   (the full command replaces the ENTIRE env/secret set; a missing default silently clobbers unrelated
   production config). Patch live incrementally, then separately fix the deploy script's source so the
   NEXT full redeploy doesn't regress it — two commits, not one risky one.
-
-## Tooling gotchas
+- **"Reads Miyagi's Supabase" is not one fact — a sibling system can have MULTIPLE databases wearing
+  similar names, and only ONE of them is actually a Supabase project.** Growth Engine v1 S3 assumed
+  `financial_event` (a Medusa CORE MODULE table) was reachable the same way `platform_flags` is — via
+  Supabase's REST API with a service-role key — because both "live in Miyagi." Wrong: `platform_flags`
+  lives in a small auxiliary Supabase project (`xljxqymsuyhlnorfrnno`, confirmed via medusa-bonsai's
+  own `LEARNINGS.md` — this project is ALSO shared between local dev and production, no separate
+  staging DB, unlike Stripe/GCP-style credentials); Medusa's own commerce/module tables (including
+  `financial_event`) live in Medusa's PRIMARY Postgres, a completely different database reached via a
+  plain connection string (`DATABASE_URL`, GCP Secret Manager, project `miyagisanchezback-497722` —
+  Neon-hosted per the sibling `NEON_BACKUP_DSN` secret), not Supabase's REST API at all. The failure
+  was loud and immediate ("table not found in schema cache"), not silent — but it still cost a full
+  round-trip before the real fix (swap `@supabase/supabase-js` for a raw `pg` client). **Before writing
+  ANY cross-repo read, confirm which physical database a specific table lives in — don't infer it from
+  a sibling table's access pattern, even one in the "same" system.** `gcloud secrets list
+  --project=<gcp-project>` (names only, no values) is a safe, narrow way to discover what credentials
+  actually exist for a sibling system before assuming a shape from docs. *(2026-07-15, growth-engine-v1
+  S3.)*
 - **A script with a co-located pure-logic test file MUST guard its `main()` call with an `isMain`
   check.** Importing a script that calls `main()` unconditionally at module scope re-executes the
   whole script for real (shell-outs, notifications, git pushes, all of it) the moment a test file

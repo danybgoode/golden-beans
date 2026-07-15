@@ -10,5 +10,8 @@
     "build": "npm run build --workspace=apps/web",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web"
+  },
+  "dependencies": {
+    "pg": "^8.22.0"
   }
 }

@@ -6,20 +6,26 @@
 // daily aggregate into golden-beans' `attributed_revenue` input via
 // POST /v1/inputs/attributed_revenue/values.
 //
-// Mirrors scripts/sync-features-from-miyagi.mjs's shape exactly (same two-Supabase-
-// credentials pattern) — this is the reuse Sprint 3's commerce-truth boundary is built
-// on: golden-beans never stores a copy of Medusa's order/payment rows, only this
-// derived rollup. Read-only against Miyagi's DB — no mutation, no new medusa-bonsai code.
+// CORRECTED (2026-07-15, first live run attempt): `financial_event` is a Medusa CORE
+// MODULE table — it lives in Medusa's own primary Postgres (`DATABASE_URL`), NOT in the
+// small auxiliary Supabase project `platform_flags`/seller-Clerk-linkage rows use. The
+// original version of this script assumed both lived behind the same Supabase REST API
+// (mirroring scripts/sync-features-from-miyagi.mjs's platform_flags read) — that
+// assumption was wrong and failed loudly (404 "table not found in schema cache") on the
+// first real run, rather than silently. Connects via a raw Postgres client instead.
+//
+// Read-only against Miyagi's DB — no mutation, no new medusa-bonsai code. This is the
+// reuse Sprint 3's commerce-truth boundary is built on: golden-beans never stores a copy
+// of Medusa's order/payment rows, only the derived daily rollup pushed below.
 //
 // Registry sync stays a command, not a product surface — run this by hand whenever a
 // fresh revenue figure is needed (no schedule, no UI). Idempotent: POST /v1/inputs/
 // attributed_revenue/values dedupes by day, so re-running this script is always safe.
 //
-// Env vars (both sides' credentials — this script talks to two separate Supabase
-// projects/services):
-//   MIYAGI_SUPABASE_URL / MIYAGI_SUPABASE_SERVICE_ROLE_KEY  — read financial_event
-//   GROWTH_ENGINE_URL / GROWTH_ENGINE_API_KEY                — push the aggregated payload
-import { createClient } from '@supabase/supabase-js'
+// Env vars:
+//   MIYAGI_DATABASE_URL         — Medusa's own primary Postgres connection string (read financial_event)
+//   GROWTH_ENGINE_URL / GROWTH_ENGINE_API_KEY — push the aggregated payload
+import pg from 'pg'
 import { aggregateDailyRevenue } from './lib/revenue-sync-payload.mjs'
 
 const ATTRIBUTED_REVENUE_INPUT_KEY = 'attributed_revenue'
@@ -33,29 +39,57 @@ function requireEnv(name) {
 const FETCH_PAGE_SIZE = 1000
 
 async function fetchMiyagiRevenueEvents() {
-  const url = requireEnv('MIYAGI_SUPABASE_URL')
-  const key = requireEnv('MIYAGI_SUPABASE_SERVICE_ROLE_KEY')
-  const supabase = createClient(url, key, { auth: { persistSession: false } })
-  // Read-only: financial_event is append-only in Miyagi too (financial_event_no_mutation
-  // trigger) — this SELECT is the only operation this script ever performs against it.
-  //
-  // Paginated via .range() — PostgREST's default row cap would otherwise silently
-  // truncate the result set once the ledger grows past it, under-reporting real revenue
-  // while the request still returns success. Loop until a page comes back short of a
-  // full page (the standard "did we get everything" signal for offset pagination).
-  const rows = []
-  for (let from = 0; ; from += FETCH_PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('financial_event')
-      .select('amount_cents, captured_at')
-      .eq('event_type', 'revenue')
-      .order('captured_at', { ascending: true })
-      .range(from, from + FETCH_PAGE_SIZE - 1)
-    if (error) throw new Error(`Failed to read Miyagi financial_event: ${error.message}`)
-    rows.push(...(data ?? []))
-    if (!data || data.length < FETCH_PAGE_SIZE) break
+  const connectionString = requireEnv('MIYAGI_DATABASE_URL')
+  // No SSL override here: `pg` honors the connection string's own sslmode (managed
+  // Postgres providers — Neon included — encode it via `?sslmode=require` and expect
+  // full certificate verification); weakening that to skip cert checks is never
+  // appropriate for a real production credential and was not asked for.
+  const client = new pg.Client({ connectionString })
+  try {
+    await client.connect()
+    // Read-only: financial_event is append-only in Miyagi too (financial_event_no_mutation
+    // trigger) — this SELECT is the only statement this script ever runs against it.
+    //
+    // Keyset pagination (WHERE (captured_at, id) > last-seen cursor), not LIMIT/OFFSET —
+    // OFFSET's position shifts if a new row is inserted mid-scan (a real risk here: this
+    // ledger accumulates continuously), which can skip or double-count a row across
+    // pages. A keyset cursor on the same columns as ORDER BY is immune to that: rows
+    // already scanned never re-enter a later page no matter what gets inserted meanwhile.
+    // `id` is `financial_event`'s text primary key (prefix `fev`) — a stable tiebreaker
+    // for rows sharing a `captured_at`, not itself meaningful.
+    const events = []
+    let cursor = null
+    for (;;) {
+      const { rows: page } = cursor
+        ? await client.query(
+            `SELECT amount_cents, captured_at, id FROM financial_event
+             WHERE event_type = 'revenue' AND (captured_at, id) > ($1, $2)
+             ORDER BY captured_at ASC, id ASC
+             LIMIT $3`,
+            [cursor.capturedAt, cursor.id, FETCH_PAGE_SIZE],
+          )
+        : await client.query(
+            `SELECT amount_cents, captured_at, id FROM financial_event
+             WHERE event_type = 'revenue'
+             ORDER BY captured_at ASC, id ASC
+             LIMIT $1`,
+            [FETCH_PAGE_SIZE],
+          )
+      // Normalize `pg`'s driver types immediately, not left to the caller: timestamptz
+      // columns come back as JS `Date` objects (not the ISO string
+      // scripts/lib/revenue-sync-payload.mjs's type documents) and a bigint amount_cents
+      // column would come back as a string (pg's overflow-safety default) — silently
+      // summed as string concatenation instead of addition if left uncoerced.
+      for (const row of page) {
+        events.push({ amountCents: Number(row.amount_cents), capturedAt: new Date(row.captured_at).toISOString() })
+      }
+      if (page.length < FETCH_PAGE_SIZE) break
+      cursor = { capturedAt: page[page.length - 1].captured_at, id: page[page.length - 1].id }
+    }
+    return events
+  } finally {
+    await client.end()
   }
-  return rows.map((row) => ({ amountCents: row.amount_cents, capturedAt: row.captured_at }))
 }
 
 async function pushValues(values) {
