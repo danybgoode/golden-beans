@@ -49,9 +49,10 @@ them — the engine stores attribution telemetry + derived reports only.
 | 2 | 2.1 Feature registry seeded by client-pushed live `platform_flags` rows | LOW |
 | 2 | 2.2 TARS aggregation (Targeted / Adopted / Retained) | LOW |
 | 2 | 2.3 Funnel page for the S1.3 feature | LOW |
-| 3 | 3.1 North Star metric + leading-inputs data model | LOW |
+| 3 | 3.1 North Star metric + leading-inputs data model (`payable_sellers`, two inputs) | LOW |
 | 3 | 3.2 Feature → input linkage | LOW |
-| 3 | 3.3 Per-feature input-impact report (revenue inputs read Medusa, never replicated) | LOW |
+| 3 | 3.3 Revenue ingest + one-command sync from Miyagi's real `financial_event` ledger (reads Medusa-owned revenue directly, never replicated — no new medusa-bonsai PR needed, mirrors S2.1's push pattern) | HIGH — DB migration + money-touching ingest, real production pull+push |
+| 3 | 3.4 Per-feature input-impact report over time | LOW |
 | 4 | 4.1 Deterministic client-side hash bucketing in the SDK (no resolve endpoint) | LOW |
 | 4 | 4.2 Exposure events | LOW |
 | 4 | 4.3 Side-by-side variant comparison (basic lift only) | LOW |

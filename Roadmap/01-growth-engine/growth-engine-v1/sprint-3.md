@@ -2,34 +2,75 @@
 
 **Status:** ⬜ not started
 
+## Scope note (revised at kickoff)
+
+The original 3-story slice is split into 4. Story 3.3 grew a real component: Daniel confirmed (at
+kickoff) he wants a **real Medusa-backed revenue input this sprint**, not a deferred/telemetry-only
+placeholder. Research into `medusa-bonsai` found the exact reuse pattern already established by
+Sprint 2's `scripts/sync-features-from-miyagi.mjs` (read Miyagi's live tables directly via its own
+Supabase service-role credentials, push a derived value into golden-beans via its own API) — so this
+does **not** need a new medusa-bonsai branch/PR. Miyagi's shipped `profit-analyzer` epic already
+maintains an append-only `financial_event` ledger (`event_type='revenue'`, `amount_cents`,
+`captured_at`) — the real source of truth this sprint reads from, never replicates.
+
+Because this sprint ships **both a DB migration and a money-touching ingest endpoint**, the PR is
+declared **HIGH risk** overall (same correction Sprint 1 got once a reviewer caught its migration),
+even though most individual stories are LOW-risk-shaped.
+
 ## Stories
 
 ### Story 3.1 — North Star metric + leading-inputs data model
 **As a** PM, **I want** a North Star metric defined with its leading inputs modeled, **so that**
 feature impact has a place to roll up to.
 **Acceptance:** the metric + at least one leading input are defined and queryable.
+**Design:** North Star = `payable_sellers` ("Payable Sellers"). Two inputs modeled from day one:
+`setup_guide_shares` (telemetry-native — derived from the already-flowing `setup_guide_share_tapped`
+event, no new plumbing) and `attributed_revenue` (external-push — real revenue figures, Story 3.3).
+An input's `value_source` (`telemetry_event` | `external_push`) decides how its time series is
+resolved later (Story 3.4) — computed on the fly from `events`, or read from a pushed ledger.
 **Risk:** LOW
 
 ### Story 3.2 — Feature → input linkage
 **As a** PM, **I want** features linked to the North Star inputs they're expected to move, **so
-that** the per-feature report (3.3) has something to report against.
-**Acceptance:** the S1.3 feature is linked to at least one input.
+that** the per-feature report (3.4) has something to report against.
+**Acceptance:** the S1.3 feature (`setup_guide`) is linked to both inputs defined in 3.1.
 **Risk:** LOW
 
-### Story 3.3 — Per-feature input-impact report over time
+### Story 3.3 — Revenue ingest + one-command sync from Miyagi's real ledger
+**As a** PM, **I want** `attributed_revenue` backed by Miyagi's real, already-shipped
+`financial_event` revenue ledger, **so that** the North Star report reflects real money, not a
+fixture.
+**Acceptance:** running the sync script pushes a real daily revenue aggregate into golden-beans;
+the ingest endpoint rejects pushes to a `telemetry_event`-sourced input (those are computed, never
+pushed) and is idempotent on re-run (same day pushed twice → no duplicate).
+**Commerce-truth boundary:** the sync script reads Miyagi's `financial_event` table **directly**
+(read-only, no mutation, mirroring how Sprint 2's registry sync reads `platform_flags` directly) and
+pushes only a **derived daily sum** — golden-beans never stores a copy of Medusa's order/payment
+rows, only this attribution rollup.
+**Risk:** HIGH — real revenue data; a new ingest endpoint that writes production financial figures;
+the live sync run is a real pull from + push to production, confirmed with Daniel before running
+(idempotent/append-only makes it safe to re-run, but the first real run is still flagged, not just
+executed).
+
+### Story 3.4 — Per-feature input-impact report over time
 **As a** PM, **I want** a report showing a feature's linked-input movement over time, **so that** I
 can see whether shipping the feature moved the number.
-**Acceptance:** the report renders a time series for the S1.3 feature's linked input.
-**Commerce-truth boundary:** any revenue/order input for Miyagi reads Medusa-owned order/payment
-surfaces directly — golden-beans stores attribution telemetry + derived reports only, never a
-commerce replica.
-**Risk:** LOW
+**Acceptance:** the report renders a time series for `setup_guide`'s linked inputs — both
+`setup_guide_shares` (from real event data) and `attributed_revenue` (from the real pushed ledger,
+once 3.3 has run at least once).
+**Risk:** LOW (read-only)
 
 ## Sprint QA
-- **api spec(s):** one Playwright `api` spec per testable story — 3.1 (metric/input CRUD), 3.2
-  (linkage), 3.3 (report endpoint against a fixture).
-- **browser smoke owed:** no money/auth step here (read-only reporting) — confirm at build time.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+- **api spec(s):** one Playwright `api` spec per testable story — 3.1
+  (`north-star-sync.spec.ts`: sync + list), 3.2 (`feature-input-link.spec.ts`: link/404/idempotent),
+  3.3 (`input-values.spec.ts`: push/400-wrong-source/dedupe/tenant isolation, synthetic data — no
+  live Miyagi credentials in CI, matching the existing features-sync script precedent), 3.4
+  (`impact.spec.ts`: report endpoint + page against a fixture).
+- **script unit tests:** `scripts/lib/revenue-sync-payload.test.mjs` (pure aggregation), picked up
+  by the existing `scripts-guard.yml` CI gate automatically.
+- **browser smoke owed:** no money/auth UI step here (read-only reporting) — confirm at build time.
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` + `node --test
+  'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'` green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 _TBD — write this section before sprint close, per the epic Definition of Done._
