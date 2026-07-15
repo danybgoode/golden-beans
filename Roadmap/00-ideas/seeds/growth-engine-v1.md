@@ -15,9 +15,10 @@ updated: 2026-07-13
 
 This is a **local mirror-pointer**, not the canonical scope doc. The full Definition-of-Ready
 grooming (mirror-back, decisions, panel adjudication, reuse list, v1 boundary, follow-on epics
-E1–E6) lives in the sibling repo, written before golden-beans existed:
+E1–E6) now lives **locally** (relocated 2026-07-14 from medusa-bonsai, where it was written before
+golden-beans existed):
 
-`~/dobby/medusa-bonsai/Roadmap/00-ideas/2. readyforscope/golden-beans-growth-engine.md`
+`Roadmap/01-growth-engine/growth-engine-v1/SCOPE.md`
 
 (Daniel approved 2026-07-11, re-groomed with a codex + antigravity panel adjudication.)
 
