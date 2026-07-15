@@ -20,6 +20,11 @@ installs, demo engagement), measured by the engine itself.
 - `references/landing-end-state-mock.html` — layout skeleton
 - `references/design-direction.md` — brand world (roastery), agent-window frame device, materials,
   voice, guardrails (2026-07-14, from Daniel's PostHog references)
+- `references/design/` — **Claude Design export (pending, Daniel, ~2026-07-15):** high-fidelity
+  landing design + brand system produced in Claude Design from the direction doc. **When present,
+  it supersedes the mock's skin** (the mock stays the layout/section skeleton; end-state spec stays
+  the content SSOT). Builders: check for this folder at sprint kickoff; if absent, build from the
+  direction doc + mock as before.
 
 ## Platform-primitives note (the Medusa-first slot, gb edition)
 Everything public reads existing engine primitives — tenant-scoped ingest, registry, TARS/North

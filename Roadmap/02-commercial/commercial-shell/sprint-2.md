@@ -30,7 +30,8 @@ world · agent-window frame · kraft/foil + dark-roast + brass materials · voic
 the mb `frontend-design` heuristics checklist, **so that** the PostHog bar is met, not
 approximated.
 **Acceptance:** heuristics checklist run + noted in the PR; evidence-first ratio held (≥ half of
-each viewport is real UI/numbers); fresh PostHog captures archived to `references/posthog/`.
+each viewport is real UI/numbers); fresh PostHog captures archived to `references/posthog/`;
+fidelity checked against `references/design/` (Claude Design export) where it exists.
 **Risk:** LOW
 
 ## Sprint QA
