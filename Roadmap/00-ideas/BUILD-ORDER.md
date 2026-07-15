@@ -14,21 +14,21 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (3)
 
-- [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Checkout & Payments · 0/10 stories · risk: High · #1
-- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Checkout & Payments · 0/9 stories · risk: High · #2
+- [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Commercial · 0/10 stories · risk: High · #1
+- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 0/9 stories · risk: High · #2
+- [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/9 stories · risk: High · #3
 
 ## ✅ Shipped (1)
 
-- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped](../../01-growth-engine/growth-engine-v1/README.md) — 01 Discovery · 13/13 stories · risk: Low
+- [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped](../../01-growth-engine/growth-engine-v1/README.md) — 01 Growth Engine · 13/13 stories · risk: Low
 
-## ⬜ Funnel — seeds not yet scaffolded (4)
+## ⬜ Funnel — seeds not yet scaffolded (3)
 
-- [E3 — Pod Report: velocity/DORA/cost-per-point benchmarks + outcome layer](seeds/pod-report.md) — Raw · Feature · #3
 - [E4 — Signals loop: error/friction signals → structured tasks → the customer's own agent](seeds/signals-loop.md) — Raw · Feature · #4
 - [E5 — a) Flag-serving migration · b) PRD-G chaos/SecOps + circuit breakers](seeds/flag-serving-and-prd-g.md) — Raw · Feature · #5
 - [E6 — CMS integration spike (Payload): integrate-don't-own, go/no-go](seeds/cms-integration-spike.md) — Raw · Spike · #6
 
 ---
-_Epics: 3 · seeds in funnel: 4 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 4 · seeds in funnel: 3 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._

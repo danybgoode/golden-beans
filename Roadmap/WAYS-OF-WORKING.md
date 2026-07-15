@@ -69,8 +69,13 @@ Plan → Branch + scaffold docs → Build story → Verify → QA/smoke-test (pr
      that mutates data; clean up after (revoke test tokens).
 6. **Push as you go.** Each push updates the preview (if your rail has one); the reviewer (and the
    product owner) can test per story without touching production.
-7. **PR → review → merge to `main`.** Open a PR early (draft is fine); keep it updated with a self-QA
-   note **and a risk tier** (see *Review & merge* below). Trigger the reviewer (a fresh agent, not the
+7. **PR → review → merge to `main`.** Open a PR early **as a draft**; keep it updated with a self-QA
+   note **and a risk tier** (see *Review & merge* below). **Flip the PR draft → ready-for-review the
+   moment the deterministic gate is green and the self-QA note is posted** (updated 2026-07-15): a
+   draft means *still building*, ready means *review me* — this is also what the roadmap board's
+   Lifecycle overlay reads (draft PR → In progress, ready PR → In review), so leaving finished work
+   in draft hides it in the "In review" column. Set the sprint doc's `Status:` line to `🟦 In review`
+   at the same moment. Trigger the reviewer (a fresh agent, not the
    builder — see *Review & merge* below). When the deterministic gate is green, the review is clean,
    and the merge is authorized for the PR's risk tier, merge to `main`. **Merging to `main` is the
    production deploy** — fill in your project's actual deploy mechanism/timing here. Small epics merge

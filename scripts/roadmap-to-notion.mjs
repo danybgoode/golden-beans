@@ -35,18 +35,27 @@
 import { readFileSync, readdirSync, existsSync, statSync, writeSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
 const ROADMAP = join(REPO, 'Roadmap');
 const SEEDS = join(ROADMAP, '00-ideas', 'seeds');
 
-const AREA_NAMES = {
-  '01': '01 Discovery', '02': '02 Checkout & Payments', '03': '03 Selling & Shops',
-  '04': '04 Shipping', '05': '05 Trust/Offers/Messaging', '06': '06 Print',
-  '07': '07 Agentic/Federated', '08': '08 Growth', '09': '09 Platform-infra',
-  '10': '10 Events & Ticketing',
-};
+// Area labels are DERIVED from this repo's own Roadmap macro-section folders
+// (`Roadmap/NN-slug/` → "NN Slug Title-Cased") — never hardcoded. The previous hardcoded map was
+// the origin project's (Miyagi) area list, which mislabeled every golden-beans line on the board
+// ("02 Checkout & Payments" for 02 Commercial); fixed 2026-07-15 (E3 groom session bookkeeping).
+// A number with no folder yet (e.g. a seed in a future macro-section) falls back to the raw number.
+const AREA_NAMES = Object.fromEntries(
+  readdirSync(ROADMAP)
+    .filter((d) => /^\d{2}-/.test(d) && statSync(join(ROADMAP, d)).isDirectory())
+    .map((d) => {
+      const [, num, slug] = d.match(/^(\d{2})-(.+)$/);
+      const label = slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      return [num, `${num} ${label}`];
+    })
+);
 const SEED_STATUS_LABEL = {
   raw: 'Raw', ready: 'Ready', queued: 'Queued', scaffolded: 'Scaffolded',
   'in-progress': 'In progress', shipped: 'Shipped', archived: 'Archived',
@@ -238,6 +247,34 @@ export function normalizeBuildOrder(v) {
   return /^-?\d+$/.test(s) ? Number(s) : v;
 }
 
+// Numeric sort key for build order: "#3" → 3, "#3c" → 3, 4 → 4, absent → null. The display value
+// ("Build order ID") stays as-is; this feeds a Notion NUMBER property so the "Build order" view
+// sorts 2 before 10 (rich_text sorted "#10" before "#2", which is why the board couldn't sort by it).
+export function buildOrderNum(v) {
+  if (v === null || v === undefined) return null;
+  const m = String(v).match(/\d+/);
+  return m ? Number(m[0]) : null;
+}
+
+// --- Status date: when a row ENTERED its current status (added 2026-07-15, board-sort polish). -----
+// One DATE property means ONE board sort ("Status date" descending) does the right thing per column:
+// Shipped sorts by ship date, In progress by latest-started, Scaffolded by scaffold/re-groom date;
+// Planned/Raw/Ready rows simply keep their last real change date (they "never update" by definition).
+// Derivation: the last commit whose diff touched the status-BEARING line (`status:` frontmatter for
+// epics/seeds via -G; the `Status:` line for sprints) — i.e. the moment the status last changed —
+// falling back to the file's last commit (fresh docs / status-line-less files), then to today
+// (a brand-new uncommitted scaffold entered its status "now"). Docs + git stay the only SSOT.
+function gitDate(args) {
+  try { return execFileSync('git', ['log', '-1', '--format=%as', ...args], { cwd: REPO, encoding: 'utf8' }).trim(); } catch { return ''; }
+}
+function statusDate(relFile, statusLineRegex) {
+  return (
+    (statusLineRegex && gitDate([`-G${statusLineRegex}`, '--', relFile])) ||
+    gitDate(['--', relFile]) ||
+    new Date().toISOString().slice(0, 10)
+  );
+}
+
 // Floor a sprint's derived status against its epic's AUTHORITATIVE status, so the Sprints board never
 // shows an archived epic full of "Planned" sprints (S1.1) nor a Shipped epic with stale "Planned" ones.
 // Real in-flight signals (In progress / In review) are preserved on non-archived epics.
@@ -282,7 +319,8 @@ function sprintKickoff({ epicKey, slug, n, risk }) {
     `Build Sprint ${n} of "${slug}" per WAYS-OF-WORKING, in your OWN git worktree off latest main on`,
     `feat/${slug}. Plan mode → confirm stories with me → build one story at a time. Commit per story`,
     `PATH-SCOPED (git add <your files> && git commit -- <those paths>; never -A). One api spec`,
-    `per testable story. Keep the CI gate green; open a draft PR declaring risk ${tier}.`,
+    `per testable story. Keep the CI gate green; open a draft PR declaring risk ${tier}, and flip it`,
+    `ready-for-review (+ sprint Status → 🟦 In review) once the gate is green and self-QA is posted.`,
     `Write the sprint smoke walkthrough into sprint-${n}.md before calling it done.`,
   ].join('\n');
   if (risk === 'High') k += `\nHIGH-risk: all stories HIGH → the product owner merges; the authed money-path browser smoke is owed to them.`;
@@ -325,12 +363,14 @@ function buildRows() {
       grain: 'Epic',
       status,
       status_derived: statusDerived,   // prose/retro derivation — for the advisory drift check on the board
+      status_date: statusDate(`Roadmap/${epicKey}/README.md`, '^status:'),
       area,
       priority,
       type: TYPE_LABEL[seed.type] || 'Epic',
       risk,
       sprint_progress: totStories ? `${doneStories}/${totStories} stories` : `${sprints.length} sprints`,
       build_order: buildOrder,
+      build_order_num: buildOrderNum(buildOrder),
       doc_link: `Roadmap/${epicKey}/README.md`,
       epic_slug: null,
     });
@@ -345,12 +385,14 @@ function buildRows() {
         slug: `${e.slug}--s${sp.n}`,
         grain: 'Sprint',
         status: sp.status,
+        status_date: statusDate(`Roadmap/${epicKey}/sprint-${sp.n}.md`, '^(\\*\\*)?Status:'),
         area,
         priority,
         type: 'Sprint',
         risk,
         sprint_progress: sp.total ? `${sp.done}/${sp.total} stories` : '—',
         build_order: buildOrder, // sprints inherit their epic's build order
+        build_order_num: buildOrderNum(buildOrder),
         doc_link: `Roadmap/${epicKey}/sprint-${sp.n}.md`,
         epic_slug: e.slug, // resolved to the Epic page id at sync time
         kickoff: sprintKickoff({ epicKey, slug: e.slug, n: sp.n, risk }),
@@ -365,12 +407,14 @@ function buildRows() {
       slug: s.slug,
       grain: 'Seed',
       status: seedStatusLabel(s.status, s._file),
+      status_date: statusDate(s._file, '^status:'),
       area: AREA_NAMES[s.area] || s.area || null,
       priority: s.priority ? PRIORITY_LABEL[s.priority] || s.priority : null,
       type: TYPE_LABEL[s.type] || 'Feature',
       risk: s.risk ? (s.risk === 'high' ? 'High' : 'Low') : null,
       sprint_progress: null,
       build_order: s.build_order || null,
+      build_order_num: buildOrderNum(s.build_order),
       doc_link: s._file,
       epic_slug: null,
     });
@@ -430,6 +474,8 @@ async function main() {
       Grain: sel(row.grain),
       'Sprint progress': rt(row.sprint_progress),
       'Build order ID': rt(row.build_order),
+      'Build order': { number: row.build_order_num ?? null },   // numeric sort key (board polish 2026-07-15)
+      'Status date': row.status_date ? { date: { start: row.status_date } } : { date: null }, // when the row entered its status
       'Doc link': rt(row.doc_link),
       Kickoff: rt(row.kickoff),
       'Last synced': { date: { start: new Date().toISOString().slice(0, 10) } },
