@@ -47,25 +47,43 @@ export async function getExperimentComparisonByProjectId(
 ): Promise<ExperimentComparisonResult> {
   const supabase = getSupabaseServiceClient()
 
-  const { data: events, error } = await supabase
+  // Two separate queries, not one `.in('event', [...])` scoped by feature_id for both: exposure
+  // events are feature_id-scoped (Story 4.2 tags them with the experiment key), but a real metric
+  // event (checkout_completed, signup, ...) fired through the normal track() path won't carry
+  // featureId set to an unrelated experiment's key — that's not how business events get tracked,
+  // and requiring it would silently report 0 conversions for the realistic case instead of the
+  // caller's actual data. computeVariantComparison already scopes correctly by only counting a
+  // conversion for an exposed user (via the userId join) — it doesn't need the metric row itself
+  // to carry this experiment's feature_id.
+  const { data: exposureRows, error: exposureError } = await supabase
     .from('events')
-    .select('user_id, event, tags')
+    .select('user_id, tags')
     .eq('project_id', projectId)
     .eq('feature_id', experimentKey)
-    .in('event', [...new Set(['experiment_exposed', metricEvent])])
-  if (error) {
-    console.error('[ab-query] events query failed:', error)
+    .eq('event', 'experiment_exposed')
+  if (exposureError) {
+    console.error('[ab-query] exposure events query failed:', exposureError)
     return { ok: false, reason: 'query_failed' }
   }
 
-  const abEvents: AbEvent[] = (events ?? []).map((e) => ({
-    userId: e.user_id,
-    event: e.event,
-    variant:
-      e.event === 'experiment_exposed'
-        ? ((e.tags as Record<string, unknown> | null)?.variant as string | undefined) ?? null
-        : null,
-  }))
+  const { data: metricRows, error: metricError } = await supabase
+    .from('events')
+    .select('user_id')
+    .eq('project_id', projectId)
+    .eq('event', metricEvent)
+  if (metricError) {
+    console.error('[ab-query] metric events query failed:', metricError)
+    return { ok: false, reason: 'query_failed' }
+  }
+
+  const abEvents: AbEvent[] = [
+    ...(exposureRows ?? []).map((e) => ({
+      userId: e.user_id,
+      event: 'experiment_exposed',
+      variant: ((e.tags as Record<string, unknown> | null)?.variant as string | undefined) ?? null,
+    })),
+    ...(metricRows ?? []).map((e) => ({ userId: e.user_id, event: metricEvent, variant: null })),
+  ]
 
   return {
     ok: true,

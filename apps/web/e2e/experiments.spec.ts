@@ -22,6 +22,18 @@ async function convert(request: APIRequestContext, userId: string, experimentKey
   expect(res.status()).toBe(201)
 }
 
+// The realistic shape: a real conversion event (checkout_completed, signup, ...) fired through the
+// normal track() path, with no featureId at all — a business event has no reason to know it's also
+// "the metric for experiment X." Conversions must still be attributed correctly via the userId join
+// against who was exposed, not by requiring the metric event to carry this experiment's key.
+async function convertUntagged(request: APIRequestContext, userId: string, metricEvent: string) {
+  const res = await request.post('/api/v1/track', {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+    data: { userId, event: metricEvent },
+  })
+  expect(res.status()).toBe(201)
+}
+
 test('GET /v1/experiments/:key/compare without metricEvent → 400', async ({ request }) => {
   const res = await request.get(`/api/v1/experiments/spec-experiment-${Date.now()}/compare`, {
     headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
@@ -87,4 +99,31 @@ test('comparison endpoint + page compute basic lift from real exposure + convers
   expect(html).toContain('25.0%')
   expect(html).toContain('50.0%')
   expect(html).toContain('+100.0%')
+})
+
+test('conversions are counted even when the metric event carries no featureId at all', async ({ request }) => {
+  const experimentKey = `spec-experiment-untagged-${Date.now()}`
+  const metricEvent = `spec_untagged_conversion_${Date.now()}`
+
+  await expose(request, 'u1', experimentKey, 'control')
+  await expose(request, 'u2', experimentKey, 'treatment')
+  // u2 converts via a real, unrelated-looking business event — no featureId, exactly how a real
+  // app would fire it (see the module comment on convertUntagged).
+  await convertUntagged(request, 'u2', metricEvent)
+  // u3 fires the same metric event but was never exposed to this experiment — must NOT be
+  // attributed to either variant (no false attribution from a project-wide, feature-unscoped
+  // metric-event query).
+  await convertUntagged(request, 'u3', metricEvent)
+
+  const res = await request.get(`/api/v1/experiments/${experimentKey}/compare?metricEvent=${metricEvent}`, {
+    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+  })
+  expect(res.status()).toBe(200)
+  const body = await res.json()
+  expect(body.ok).toBe(true)
+
+  const control = body.comparison.variants.find((v: { key: string }) => v.key === 'control')
+  const treatment = body.comparison.variants.find((v: { key: string }) => v.key === 'treatment')
+  expect(control).toMatchObject({ exposures: 1, conversions: 0, conversionRate: 0 })
+  expect(treatment).toMatchObject({ exposures: 1, conversions: 1, conversionRate: 1 })
 })
