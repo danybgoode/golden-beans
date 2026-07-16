@@ -184,7 +184,8 @@ export async function LiveProofSection() {
             </div>
           </div>
           <p className="note" style={{ margin: '18px 0 0' }}>
-            * Same endpoints, same JSON: /api/v1/public/north-star is public for the demo project. Curl it mid-meeting.
+            * These numbers are independently checkable: /api/v1/public/north-star is public for
+            the demo project and returns the same underlying data. Curl it mid-meeting.
           </p>
         </div>
       </section>

@@ -90,3 +90,27 @@ test('rapid repeated requests from the same IP → later ones 429', async ({ req
   const statuses = responses.map((r) => r.status())
   expect(statuses.some((s) => s === 429)).toBe(true)
 })
+
+// A naive "SELECT count, then INSERT if under the limit" rate limiter races: truly concurrent
+// requests can all read the same pre-insert count and all pass, letting a burst blow well past
+// `max`. checkRateLimit() closes this with a single atomic `INSERT ... ON CONFLICT DO UPDATE`
+// Postgres function (increment_rate_limit) — this test fires 12 requests genuinely in parallel
+// (Promise.all, not a sequential loop) and asserts the count of successes is EXACTLY `max` (5),
+// not "at least one 429 eventually." This would fail intermittently against the racy shape.
+test('12 genuinely concurrent requests from the same IP → exactly max (5) succeed, never more', async ({
+  request,
+}) => {
+  const headers = { 'x-forwarded-for': randomIp() }
+  const responses = await Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      request.post('/api/v1/public/waitlist', {
+        headers,
+        data: { email: `spec-concurrent-${Date.now()}-${i}@example.com` },
+      }),
+    ),
+  )
+  const succeeded = responses.filter((r) => r.status() === 200).length
+  const rateLimited = responses.filter((r) => r.status() === 429).length
+  expect(succeeded).toBe(5)
+  expect(rateLimited).toBe(7)
+})

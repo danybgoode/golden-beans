@@ -12,7 +12,7 @@ export function PrimitivesGrid() {
           <span className="tag tag-stamp">LIVE — rows flip as epics ship</span>
         </div>
       </div>
-      <section>
+      <section id="primitives">
         <div className="wrap row2" style={{ gridTemplateColumns: '.9fr 1.1fr', gap: 48, alignItems: 'center' }}>
           <div>
             <h2 style={{ fontSize: 34 }}>Primitives, honestly badged.</h2>
