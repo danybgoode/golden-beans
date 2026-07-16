@@ -59,15 +59,33 @@ Playwright's own Chromium instead (desktop + 390px screenshots). Commit `bd7c434
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
-Env: preview URL pre-merge · production post-merge (connector stays dark until 3.3)
+Env: no per-branch Vercel preview yet (ci.yml's own header comment — ADR unchanged since Sprint 1
+despite prod now being linked); run locally against `npm run build && npm run start` +
+`supabase start` + `npm run seed:demo` pre-merge. Production `https://golden-beans-gamma.vercel.app`
+post-merge — **connector stays dark there** until Story 3.3 flips `CONNECTOR_ENABLED` (and
+**`SITE_URL` must be set in prod first** — owed to Daniel, see Story 2.2's build note — or the
+install page's copy-URL field will render a broken `localhost` link in production).
 
-1. With `CONNECTOR_ENABLED` unset, request the MCP route directly.
-   → 404/403 — dark.
-2. On the preview (flag set), open the install page, copy the demo URL, click "Add to Claude".
-   → Claude opens the add-connector modal pre-filled; the connector lists read-only tools.
-3. Ask Claude for the demo project's funnel.
-   → Real TARS numbers, matching the landing's live-proof section.
-4. **(auth path — Daniel)** Revoke the demo token, ask again.
-   → Access dead within one request; no deploy happened.
+1. With `CONNECTOR_ENABLED` unset (the default — don't set it), `curl -X POST` the MCP route
+   directly with any token.
+   → 404, `{"error":"Not found."}` — dark, confirmed locally this sprint.
+2. Set `CONNECTOR_ENABLED=true` and restart. Run `npm run seed:demo` — it prints a real connector
+   URL. Open `/install`, copy the demo URL, click **Add to Claude**.
+   → Claude's add-custom-connector modal opens (it does **not** pre-fill the URL — paste the
+   copied one manually, confirmed against mb's shipped UX). The connector lists exactly 3 tools:
+   `get_tars_funnel`, `get_north_star`, `compare_experiment`.
+3. Ask Claude for the demo project's funnel, North Star, and the `quick-upload-ui` experiment.
+   → Real TARS numbers (targeted/adopted/retained), a real North Star series + WoW trend, and a
+   real control/treatment conversion-rate comparison — matching the landing's live-proof section
+   and this sprint's local verification exactly.
+4. **(auth path — Daniel)** Revoke the demo token (Supabase Studio → `connector_tokens` →
+   set `revoked_at`), ask Claude again.
+   → Access dead within one request (401) — verified locally this sprint via a disposable token;
+   the live Claude-session round-trip itself is owed to Daniel (an automated smoke can't drive
+   Claude's own UI).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Owed to Daniel (can't self-smoke):** the full Claude-session connector round-trip (deep-link →
+add → query → revoke → confirm dead, step 2-4 above, live in Claude's own UI); setting `SITE_URL`
+in production before Story 3.3's flag flip.
