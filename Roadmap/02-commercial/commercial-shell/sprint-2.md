@@ -1,8 +1,16 @@
 # Commercial shell — Sprint 2: The operate routes
 
-**Status:** 🟦 In review — [PR #9](https://github.com/danybgoode/golden-beans/pull/9), CI green,
-cross-agent advisory (Codex) findings fixed (`538d557`). Daniel merges (HIGH risk) after the live
-connector smoke.
+**Status:** ✅ Merged — [PR #9](https://github.com/danybgoode/golden-beans/pull/9) (`b475a90`), CI
+green, cross-agent advisory (Codex) findings fixed pre-merge (`538d557`). Deployed to production
+automatically via the GitHub integration (confirmed: `gh api repos/.../deployments` shows `b475a90`
+as the live Production deployment, status `success`). Post-merge production setup done via CLI:
+`connector_tokens` migration applied (`supabase db push`), `SITE_URL` env var set and confirmed
+live (the `/install` page's rendered SDK snippet shows the real prod URL, not `localhost`) — no
+manual redeploy was needed; Vercel picked up the new env var on already-deployed functions.
+**Still open (deferred to Sprint 3, not blocking):** the demo project's `connector_tokens` row
+hasn't been minted in prod yet (`/install` there still says "not seeded" — harmless while
+`CONNECTOR_ENABLED` stays off); the live Claude-session connector round-trip can't happen until
+Story 3.3 flips that flag, so it isn't a Sprint 2 gap, it's a Sprint 3 dependency.
 
 ## Stories
 
