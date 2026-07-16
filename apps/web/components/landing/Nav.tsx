@@ -7,6 +7,7 @@ export function Nav() {
       </span>
       <div className="nav-links" style={{ display: 'flex', gap: 22, fontSize: 14 }}>
         <a href="#live-proof" style={{ color: 'var(--dim)' }}>Product</a>
+        <a href="/install" style={{ color: 'var(--dim)' }}>Install</a>
         <a href="#primitives" style={{ color: 'var(--dim)' }}>Docs</a>
         <a href="#waitlist" style={{ color: 'var(--dim)' }}>Pricing</a>
       </div>

@@ -67,6 +67,29 @@ async function provisionProject(db) {
   return { projectId: data.id, apiKey: plaintextKey }
 }
 
+// Story 2.1 (commercial-shell/sprint-2.md) — provisioning-only, like the project row above: a
+// direct DB upsert, not a call through the real API (there is no self-serve token-minting
+// endpoint in v1). Reuses an existing non-revoked token if one exists (idempotent re-runs), else
+// mints one matching lib/connector-tokens.ts's format (kept in sync manually — this script can't
+// import that TS file, see the header comment).
+async function provisionConnectorToken(db, projectId) {
+  const { data: existing, error: existingError } = await db
+    .from('connector_tokens')
+    .select('token')
+    .eq('project_id', projectId)
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (existingError) throw new Error(`Failed to look up existing connector token: ${existingError.message}`)
+  if (existing) return existing.token
+
+  const token = process.env.DEMO_CONNECTOR_TOKEN?.trim() || `gb_connector_${randomBytes(24).toString('base64url')}`
+  const { error: insertError } = await db.from('connector_tokens').insert({ project_id: projectId, token })
+  if (insertError) throw new Error(`Failed to insert connector token: ${insertError.message}`)
+  return token
+}
+
 // Bounded, destructive maintenance scoped to this one project_id — not a substitute for the real
 // seeding below, just a clean slate so the funnel/A-B numbers don't double on reseed.
 //
@@ -217,12 +240,14 @@ export async function main() {
   await seedFunnel(baseUrl, apiKey)
   await seedNorthStarTrend(baseUrl, apiKey)
   await seedExperiment(baseUrl, apiKey)
+  const connectorToken = await provisionConnectorToken(db, projectId)
 
   console.log(
     `Seeded demo project '${DEMO_PROJECT_SLUG}' (${projectId}): ` +
       `${TARGETED_USERS} targeted / ${ADOPTED_USERS} adopted / ${RETAINED_USERS} retained, ` +
       `14-day North Star trend, ${AB_EXPOSURES_PER_VARIANT * 2} A/B exposures.`,
   )
+  console.log(`Connector URL: ${baseUrl}/api/v1/public/mcp/c/${connectorToken}`)
 }
 
 // Guard main() so importing this file for its constants (DEMO_PROJECT_SLUG) never re-executes it
