@@ -6,6 +6,7 @@ import { Teaser } from '@/components/landing/Teaser'
 import { PrimitivesGrid } from '@/components/landing/PrimitivesGrid'
 import { WaitlistSection } from '@/components/landing/WaitlistSection'
 import { Footer } from '@/components/landing/Footer'
+import { getSection } from '@/lib/landing-sections'
 
 // The Golden Beans public landing — sections per references/landing-end-state.md's section map,
 // the Sprint 1 ("E1 launch cut") slice: sections 1, 2, 3①③, 6, 8 fully live; 4, 5, 7 honestly
@@ -28,12 +29,12 @@ export default function Home() {
       <Teaser
         title={<>The loop ends in <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your</em> agent.</>}
         body="Signal → structured task → your agent, over MCP → a fix in your workflow. This section lights up in the same epic that ships the capability — or it doesn't light up at all."
-        epic="signals-loop"
+        epic={getSection('inverted-loop').epic}
       />
       <Teaser
         title="Your dev team, as a revenue engine."
         body="The Pod Report — velocity, cycle time, DORA, cost per shipped point, agent-augmented vs human-baseline — computed from dated dogfood history. Computed, not claimed: which is exactly why there are no numbers here yet."
-        epic="pod-report"
+        epic={getSection('pods-proof').epic}
         band
       />
       <PrimitivesGrid />

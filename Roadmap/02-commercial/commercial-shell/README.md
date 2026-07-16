@@ -40,6 +40,14 @@ primitives are the waitlist table and the read-only MCP route (per-project token
 - PostHog product audit (SCOPE.md, verified 2026-07-11) — primitives-grid honesty + positioning
 - mb `frontend-design` skill — heuristics rail for S2.3
 
+## Backfill contract — the mechanical surface (Story 1.4)
+`apps/web/lib/landing-sections.ts` is the section↔epic registry: each of the 8 landing sections
+(matching `references/landing-end-state.md`'s map) declares the epic that lights it up and a
+`status: 'live' | 'next'`. The landing's `<Teaser/>` badges read from it (`getSection(id).epic`)
+instead of hardcoding epic names — so the WAYS-OF-WORKING backfill DoD line ("section badges
+match shipped reality") has a single file to check, and flipping a section from teased to shipped
+is `status: 'next' -> 'live'` in this one place plus swapping in the section's real component.
+
 ## Scope — stories
 | Sprint | Story | Risk |
 |---|---|---|
