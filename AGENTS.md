@@ -16,9 +16,25 @@ it.>
 ```
 
 **Workflow (gitflow)**: work on a **feature branch** (`feat/<epic-slug>`), commit per story, open a
-**PR**, and **merge to `main`** when verified + approved. Merging to `main` is the deploy —
-<TEMPLATE FILL-IN: describe your actual deploy mechanism/timing here>. Never commit feature work
-straight to `main`. Roll back a bad merge with `git revert` on `main`.
+**PR**, and **merge to `main`** when verified + approved. Merging to `main` is the deploy — Vercel's
+GitHub integration auto-deploys `main` to production on every merge, no manual step. **Never run
+`vercel deploy`/`vercel deploy --prod` from the CLI** — that's an out-of-band deploy that bypasses
+the git-tracked pipeline and isn't how this project ships; if a deployment looks stuck or wrong,
+check `gh api repos/<owner>/<repo>/deployments` (confirms which commit SHA is actually live) or the
+Vercel dashboard, don't reach for a CLI deploy to "fix" it. Confirmed 2026-07-16 (commercial-shell
+Sprint 2): a Vercel env var added via `vercel env add ... --value ... --no-sensitive` took effect
+on the already-deployed production functions with **no redeploy needed** — env-var-only changes
+don't require a new deployment here. Two gotchas hit while confirming this: (1) `vercel env add`
+piped from `echo -n "..." |` can silently save an **empty** value — always verify with `--value
+<val>` explicitly, and check the live behavior it's supposed to affect (e.g. render the page that
+reads it), not just `vercel env ls` (which never shows values) or `vercel env pull` (unreliable for
+sensitive-flagged vars — mark anything non-secret `--no-sensitive` at creation); (2) a **local**
+checkout's `node_modules` can go stale after pulling a merge that added a dependency — `npm ci`
+before trusting a local build failure. **Supabase migrations are a separate step, not part of the
+Vercel deploy** — `supabase link --project-ref <ref>` (find the ref via `supabase projects list`)
+then `supabase migration list` (diffs local vs. remote) and `supabase db push` (apply pending
+ones); nothing here happens automatically on merge. Roll back a bad merge with `git revert` on
+`main`.
 
 ## Start here (orientation for any agent)
 

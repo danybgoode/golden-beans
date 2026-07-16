@@ -183,11 +183,31 @@ one-liner + why + date shape.
 - **A hosted CLI-authenticated integration (Vercel-style env-var management, similar platforms) can
   silently store or report EMPTY values** through a convenience CLI command even when the underlying
   API call "succeeds." Verify by value **length** where you can't read the value directly (a scoped
-  read token may be needed), not just by exit code.
+  read token may be needed), not just by exit code. **Reproduced again (2026-07-16, commercial-shell
+  Sprint 2):** `echo -n "value" | vercel env add NAME production` saved an empty string; explicit
+  `vercel env add NAME production --value "value"` is the reliable non-interactive form — pipe-to-stdin
+  isn't. Mark a var `--no-sensitive` at creation if it isn't actually secret (a public URL, a feature
+  flag) — sensitive-flagged vars can't be read back via `vercel env pull`/`env ls` at all (by design,
+  not a bug), so there is no way to verify them short of provider dashboard or live app behavior.
 - **A "sensitive"/write-only secret is confirmable by presence/type but not by value** — you can check
   it exists and which environment it targets, but not its actual content, from a CLI or API. Read the
   provider's dashboard, or have the app surface the cause on use (missing key → a specific, classifiable
-  error) instead of guessing.
+  error) instead of guessing. **The most reliable verification, when the var isn't secret, is neither
+  the dashboard nor the CLI — it's exercising the actual live behavior it controls** (e.g. curl the
+  page/route that reads it and check what it renders), which also sidesteps ever needing to pull a
+  full env file (including unrelated real secrets) just to confirm one var.
+- **When a repo's GitHub↔deploy-platform integration is already connected, a manual CLI deploy
+  (`vercel deploy --prod`, etc.) is an out-of-band action that bypasses the git-tracked pipeline —
+  don't reach for it to "make a deploy happen."** Confirm what's actually live via the platform's own
+  record of the integration (`gh api repos/<owner>/<repo>/deployments` shows the exact commit SHA and
+  status per environment) instead of assuming a manual deploy is needed. Env-var-only changes may take
+  effect on already-deployed functions with no redeploy at all (observed 2026-07-16) — don't assume a
+  fresh deploy is required before checking.
+- **A local checkout's `node_modules` goes stale the moment a merged PR adds a new dependency** —
+  `git pull`-ing the merge commit updates `package.json` on disk but not `node_modules`, so a local
+  `tsc`/`build` can fail with `Cannot find module` for code that builds fine everywhere else (CI
+  already ran `npm ci` fresh; the hosting platform's build does too). `npm ci` before trusting a local
+  build failure as a real regression.
 - **Driving a young foreign CLI: run `<cli> --help` first, pin the version, and design for degrade —
   never build against a documented flag from memory.** A less-mature CLI can have surprising interface
   shapes (no JSON output mode, arguments only via argv not stdin, or vice versa) that don't match a
