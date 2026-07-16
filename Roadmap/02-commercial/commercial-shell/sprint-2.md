@@ -1,6 +1,6 @@
 # Commercial shell — Sprint 2: The operate routes
 
-**Status:** ⬜ not started
+**Status:** 🟨 In progress
 
 ## Stories
 
