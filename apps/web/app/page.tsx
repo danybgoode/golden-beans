@@ -11,6 +11,13 @@ import { Footer } from '@/components/landing/Footer'
 // the Sprint 1 ("E1 launch cut") slice: sections 1, 2, 3①③, 6, 8 fully live; 4, 5, 7 honestly
 // teased/split per each section's own lit-epic. See references/design/e1.html for the reference
 // implementation this page ports.
+//
+// Without this, Next statically optimizes `/` at build time (no dynamic route params on this
+// page) and LiveProofSection's demo-project numbers would freeze into the build's HTML forever —
+// never reflecting a reseed. A 60s revalidate window keeps the marketing-page perf benefit while
+// still making "the actual engine, live" a true claim, not a stale snapshot.
+export const revalidate = 60
+
 export default function Home() {
   return (
     <>

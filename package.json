@@ -9,7 +9,8 @@
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
-    "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web"
+    "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web",
+    "seed:demo": "node scripts/seed-demo-project.mjs"
   },
   "dependencies": {
     "pg": "^8.22.0"
