@@ -14,3 +14,13 @@ export function getSiteUrl(): string {
   if (configured) return configured.replace(/\/+$/, '')
   return 'http://localhost:3000'
 }
+
+// A cross-review catch on this PR: without this check, a real Vercel production deploy that's
+// missing SITE_URL would silently show a live-looking but broken `localhost:3000` connector URL
+// on the public install page. `VERCEL_ENV` (set by Vercel's own build/runtime, distinct from
+// NODE_ENV — see this file's other header comment for why NODE_ENV can't be used for this) is only
+// 'production' when actually running on Vercel's production deployment, never in CI or a local
+// `npm run start` — so this can't falsely hide the connector anywhere this repo tests it.
+export function isSiteUrlMisconfiguredInProduction(): boolean {
+  return process.env.VERCEL_ENV === 'production' && !process.env.SITE_URL?.trim()
+}

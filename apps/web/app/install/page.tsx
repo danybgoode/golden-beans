@@ -3,6 +3,7 @@ import { Footer } from '@/components/landing/Footer'
 import { CopyUrlField } from '@/components/landing/CopyUrlField'
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
+import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page: copy-your-URL field, "Add to
 // Claude" deep-link, and the real SDK integration docs. Same force-dynamic rationale as
@@ -18,7 +19,11 @@ export const dynamic = 'force-dynamic'
 const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector'
 
 export default async function InstallPage() {
-  const connectorUrl = await getActiveConnectorUrl(DEMO_PROJECT_SLUG)
+  // A cross-review catch: if this ever runs in real Vercel production without SITE_URL set, show
+  // the honest "not ready" state instead of a live-looking but broken localhost URL.
+  const connectorUrl = isSiteUrlMisconfiguredInProduction()
+    ? null
+    : await getActiveConnectorUrl(DEMO_PROJECT_SLUG)
 
   return (
     <>
@@ -64,7 +69,9 @@ export default async function InstallPage() {
               </>
             ) : (
               <p style={{ fontSize: 14, color: 'var(--dim)' }}>
-                The demo connector isn&apos;t seeded yet — run <code>npm run seed:demo</code>.
+                {isSiteUrlMisconfiguredInProduction()
+                  ? "The connector isn't ready here yet — check back shortly."
+                  : <>The demo connector isn&apos;t seeded yet — run <code>npm run seed:demo</code>.</>}
               </p>
             )}
           </div>
@@ -96,7 +103,7 @@ export default async function InstallPage() {
 import { createGrowthEngineClient } from '@golden-beans/sdk'
 
 const engine = createGrowthEngineClient({
-  baseUrl: 'https://golden-beans-gamma.vercel.app',
+  baseUrl: '${getSiteUrl()}',
   apiKey: process.env.GROWTH_ENGINE_API_KEY,
   userId: currentUser.id,
 })

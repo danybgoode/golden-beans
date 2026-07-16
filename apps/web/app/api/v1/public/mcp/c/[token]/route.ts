@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { isConnectorEnabled } from '@/lib/flags'
-import { resolveConnectorToken } from '@/lib/connector-tokens'
+import { resolveConnectorToken, TOKEN_FORMAT } from '@/lib/connector-tokens'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getFeatureFunnelByProjectId } from '@/lib/tars-query'
 import { getFeatureImpactByProjectId } from '@/lib/north-star-query'
@@ -18,10 +18,18 @@ import { getExperimentComparisonByProjectId } from '@/lib/ab-query'
 export const runtime = 'nodejs'
 
 // Order matters: flag -> shape -> rate-limit -> resolve. The flag is checked before anything
-// else so a disabled connector never leaks a 401/429 that implies the route exists at all.
+// else so a disabled connector never leaks a 401/429 that implies the route exists at all. The
+// cheap shape check runs BEFORE rate-limiting (not after, per a cross-review catch) — rate-limiting
+// on the raw, unvalidated token first would let a malformed/arbitrarily-long token create an
+// unbounded number of noisy rate_limit_hits keys, one per garbage string an attacker sends.
 async function gate(token: string): Promise<{ ok: true; projectId: string; projectSlug: string } | Response> {
   if (!isConnectorEnabled()) {
     return Response.json({ error: 'Not found.' }, { status: 404 })
+  }
+
+  if (!TOKEN_FORMAT.test(token)) {
+    // Same 401 a truly unknown/revoked token gets below — no oracle on which reason.
+    return Response.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 
   const rateLimited = await checkRateLimit(`mcp-connector:${token}`, { windowMs: 60_000, max: 60 })
@@ -31,7 +39,6 @@ async function gate(token: string): Promise<{ ok: true; projectId: string; proje
 
   const resolved = await resolveConnectorToken(token)
   if (!resolved.ok) {
-    // Same 401 whether the token is malformed, unknown, or revoked — no oracle on which.
     return Response.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 
