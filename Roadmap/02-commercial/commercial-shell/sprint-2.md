@@ -1,6 +1,8 @@
 # Commercial shell — Sprint 2: The operate routes
 
-**Status:** 🟨 In progress
+**Status:** 🟦 In review — [PR #9](https://github.com/danybgoode/golden-beans/pull/9), CI green,
+cross-agent advisory (Codex) findings fixed (`538d557`). Daniel merges (HIGH risk) after the live
+connector smoke.
 
 ## Stories
 
