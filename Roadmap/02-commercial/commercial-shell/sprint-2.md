@@ -4,7 +4,7 @@
 
 ## Stories
 
-### Story 2.1 — Read-only MCP connector v1 (ships dark)
+### Story 2.1 — Read-only MCP connector v1 (ships dark) ✅
 **As a** PM's agent, **I want** a tokenized MCP endpoint (opaque revocable per-project credential
 in the URL path, pattern-lifted from mb `seller-agent-connect-mcp-url`) exposing **read-only**
 tools — funnel, north-star, experiments for *your* project — **so that** the headline operate
@@ -15,6 +15,9 @@ kills access without a deploy; the route no-ops 404/403 while `CONNECTOR_ENABLED
 (**born dark** — Stage 6b); no write tools exist in v1.
 **Risk:** **HIGH — Daniel merges.** New primitive (public route contract + token namespace) — the
 cross-panel advisory offer stands; run it before this PR if Daniel wants it.
+**Build note:** uses the real `@modelcontextprotocol/sdk` `Server` class (stateless
+`WebStandardStreamableHTTPServerTransport`), not mb's hand-rolled JSON-RPC dispatcher — confirmed
+with Daniel at plan time. Commit `5e85932`.
 
 ### Story 2.2 — Install page
 **As a** visitor, **I want** the install page (copy-your-URL field, "Add to Claude" deep-link,
