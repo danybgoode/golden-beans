@@ -1,6 +1,6 @@
 # Commercial shell — Sprint 1: Launch-ready landing
 
-**Status:** 🟨 In progress (all 4 stories built + tested locally; flips to 🟦 In review once the PR is opened and CI is green)
+**Status:** 🟦 In review — [PR #8](https://github.com/danybgoode/golden-beans/pull/8), CI green, self-QA posted
 
 ## Stories
 
