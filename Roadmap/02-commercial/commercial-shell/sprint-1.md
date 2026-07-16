@@ -4,7 +4,7 @@
 
 ## Stories
 
-### Story 1.1 — Public landing shell + brand v1
+### Story 1.1 — Public landing shell + brand v1 ✅
 **As a** visitor, **I want** a Golden Beans landing at `/` (hero, section scaffold per the
 end-state map, honest 🔜 badges on unlit sections), **so that** the offer is legible in 30 seconds.
 **Acceptance:** renders anonymously; mobile-clean (no horizontal overflow); zero client data
@@ -12,7 +12,7 @@ anywhere; internal engine pages move under `/app` (or equivalent path-gate) and 
 brand v1 follows `references/design-direction.md` (dark-roast panels, kraft/foil accents,
 agent-window frame device for the proof section shell) — **and `references/design/` (the Claude
 Design export) if present, which supersedes the mock's skin**.
-**Risk:** LOW
+**Risk:** LOW · commit `8f93b17`
 
 ### Story 1.2 — Live-proof section on a synthetic demo project
 **As a** skeptical PM, **I want** the live-proof section fed by a synthetic demo project seeded
