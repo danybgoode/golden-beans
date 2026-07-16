@@ -1,6 +1,8 @@
 # Commercial shell — Sprint 1: Launch-ready landing
 
-**Status:** 🟦 In review — [PR #8](https://github.com/danybgoode/golden-beans/pull/8), CI green, self-QA posted
+**Status:** ✅ Merged — [PR #8](https://github.com/danybgoode/golden-beans/pull/8) (`d3b19ed`), CI
+green, fresh-reviewer pass clean (SHIP), cross-agent advisory (Codex) findings fixed pre-merge
+(`783a456` — atomic rate limiting + two honesty/nav fixes)
 
 ## Stories
 
