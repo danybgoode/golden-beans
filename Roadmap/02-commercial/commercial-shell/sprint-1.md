@@ -1,6 +1,6 @@
 # Commercial shell — Sprint 1: Launch-ready landing
 
-**Status:** 🟨 In progress
+**Status:** 🟨 In progress (all 4 stories built + tested locally; flips to 🟦 In review once the PR is opened and CI is green)
 
 ## Stories
 
@@ -44,15 +44,41 @@ in the epic README.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: preview URL pre-merge · production `https://golden-beans-gamma.vercel.app` post-merge
+Env: preview URL pre-merge (no per-branch Vercel preview yet — golden-beans' Vercel project isn't
+provisioned, per `.github/workflows/ci.yml`'s own header comment; run locally against
+`npm run dev`/`npm run start` + `supabase start` until it is) · production
+`https://golden-beans-gamma.vercel.app` post-merge, **after** running `npm run seed:demo` against
+prod once (owed to Daniel — needs the prod `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`).
 
-1. Open `/` in a private window.
-   → Golden Beans landing renders; hero + sections per end-state map; 🔜 badges on E2/E3/E4 sections.
-2. Scroll to the live-proof section.
-   → A TARS funnel with real numbers renders inside the agent-window chrome; the Targeted caveat is visible.
-3. Submit a test email to the waitlist; submit it again.
-   → Confirmation state; second submit does not create a duplicate.
-4. Open `/funnel` (old internal path).
-   → Redirects/relocates to the internal app surface; not reachable as anonymous public content if gated.
+1. Run `npm run seed:demo` (server + local Supabase already running).
+   → `Seeded demo project 'golden-beans-demo' (<uuid>): 60 targeted / 39 adopted / 16 retained,
+   14-day North Star trend, 160 A/B exposures.`
+2. Open `/` in a private window.
+   → Golden Beans landing renders; hero (waitlist as the primary working CTA, connector shown
+   inert/🔜-badged) + live-proof + operate-routes + primitives-grid + footer sections fully live;
+   the inverted-loop and pods-proof sections render as dashed-border teasers tagged
+   `🔜 LIGHTS UP · signals-loop` / `🔜 LIGHTS UP · pod-report`; pricing section shows the waitlist
+   with a `SELF-SERVE · NEXT` tag. No horizontal scroll at mobile widths (verified: `npx playwright
+   test --project=browser`, `landing.browser.spec.ts`, 390px viewport).
+3. Scroll to the live-proof section (`#live-proof`).
+   → The `.agent-win` chat-chrome renders three real turns: `get_tars_funnel` with real
+   targeted/adopted/retained counts (matches step 1's numbers) + the "registry-declared, not
+   gateway-observed" caveat as a tasting note; `get_north_star` with a real value + WoW delta;
+   `compare_experiment` with real control/treatment conversion rates and lift.
+4. Submit a test email to the waitlist (hero or the pricing section); submit the same email again.
+   → First submit: inline confirmation ("You're on the list…"), no page reload. Second submit:
+   same 200/confirmation — verify via Supabase Studio (`waitlist` table) that only ONE row exists
+   for that email.
+5. Open `/funnel/golden-beans-demo/setup_guide` (old internal path, now redirects).
+   → 307 to `/app/funnel/golden-beans-demo/setup_guide`; the internal (unstyled, no-auth) funnel
+   page renders there with the same real numbers. `/impact/...` and `/experiments/...` redirect
+   the same way.
+6. `curl <base-url>/api/v1/public/funnel?project=golden-beans-demo&feature=setup_guide` → 200 with
+   real JSON. `curl <base-url>/api/v1/public/funnel?project=miyagisanchez&feature=setup_guide` →
+   **403** (the real production project is never publicly readable).
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+**Owed to Daniel (can't self-smoke):** the full visual/brand pass against `references/design/`
+(no money/auth steps involved — this is a design-fidelity review, not a security-gated flow); the
+production `npm run seed:demo` run + post-merge steps 2-6 against the real prod URL.
