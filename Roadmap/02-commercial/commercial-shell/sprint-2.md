@@ -19,13 +19,20 @@ cross-panel advisory offer stands; run it before this PR if Daniel wants it.
 `WebStandardStreamableHTTPServerTransport`), not mb's hand-rolled JSON-RPC dispatcher — confirmed
 with Daniel at plan time. Commit `5e85932`.
 
-### Story 2.2 — Install page
+### Story 2.2 — Install page ✅
 **As a** visitor, **I want** the install page (copy-your-URL field, "Add to Claude" deep-link,
 `npx` wizard docs, plugin route teased for E2), **so that** each persona has a route in.
 **Acceptance:** deep-link (`claude.ai/new?modal=add-custom-connector` — **re-verify at build
 time**, last verified 2026-07-11) works on the free tier against the demo project; npx docs match
 the real SDK surface.
 **Risk:** LOW
+**Build note:** re-verified live — the doc's `claude.ai/new?modal=...` guess was stale; the real
+URL (confirmed in mb's shipped `ConnectAgentPanel.tsx`) is
+`claude.ai/customize/connectors?modal=add-custom-connector`. There is no `npx` wizard/CLI in
+`packages/sdk` (library import only) — docs describe `npm install` + the real SDK surface instead,
+and the pre-existing "③ NPX WIZARD ✅ LIVE" landing-card mislabel is fixed to match. **Owed to
+Daniel:** production needs a `SITE_URL` env var set before Sprint 3 flips the connector live (the
+install page's URL-builder has no safe prod default — see `lib/site-url.ts`). Commit `33ffc1a`.
 
 ### Story 2.3 — Design-direction polish pass
 **As the** brand, **I want** a polish pass applying `references/design-direction.md` (roastery
