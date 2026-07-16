@@ -78,6 +78,11 @@ jobs:
           done
           echo "::error::App never became ready"; exit 1
 
+      - name: Seed the public demo project (commercial-shell Story 1.2)
+        run: npm run seed:demo
+        env:
+          GROWTH_ENGINE_URL: http://localhost:3000
+
       - name: Run Playwright api suite
         run: npm run test:e2e
 
