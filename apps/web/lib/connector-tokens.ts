@@ -1,6 +1,7 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { getSupabaseServiceClient } from './supabase'
+import { getSiteUrl } from './site-url'
 
 // Story 2.1 (commercial-shell/sprint-2.md) — the MCP connector's per-project credential.
 // Plaintext by design (see the migration's header comment): the value is meant to be openly
@@ -45,26 +46,29 @@ export async function resolveConnectorToken(token: string): Promise<ResolvedConn
   return { ok: true, projectId: data.project_id, projectSlug: project.slug }
 }
 
-// Upserts (and returns) a live, non-revoked connector token for a project — used only by
-// scripts/seed-demo-project.mjs, never by request-time code (v1 has no self-serve token minting).
-export async function getOrCreateConnectorToken(
-  projectId: string,
-  fixedToken?: string,
-): Promise<string> {
+// Story 2.2 — the install page's copy-your-URL field. Read-only by design: v1 has no self-serve
+// token minting, so a page render must never mint a token as a side effect (a bot crawl or
+// prerender hitting this page shouldn't create credentials). Returns null if the project has no
+// live token yet — e.g. scripts/seed-demo-project.mjs hasn't run — so the page can render an
+// honest "not seeded yet" state instead of a broken URL.
+export async function getActiveConnectorUrl(projectSlug: string): Promise<string | null> {
   const supabase = getSupabaseServiceClient()
-  const { data: existing, error: existingError } = await supabase
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('slug', projectSlug)
+    .maybeSingle()
+  if (projectError || !project) return null
+
+  const { data: tokenRow, error: tokenError } = await supabase
     .from('connector_tokens')
     .select('token')
-    .eq('project_id', projectId)
+    .eq('project_id', project.id)
     .is('revoked_at', null)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (existingError) throw new Error(`[connector-tokens] existing-token lookup failed: ${existingError.message}`)
-  if (existing) return existing.token
+  if (tokenError || !tokenRow) return null
 
-  const token = fixedToken?.trim() || generateConnectorToken()
-  const { error: insertError } = await supabase.from('connector_tokens').insert({ project_id: projectId, token })
-  if (insertError) throw new Error(`[connector-tokens] insert failed: ${insertError.message}`)
-  return token
+  return `${getSiteUrl()}/api/v1/public/mcp/c/${tokenRow.token}`
 }
