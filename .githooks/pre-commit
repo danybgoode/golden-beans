@@ -1,21 +1,39 @@
 #!/bin/sh
-# Opt-in pre-commit guard for the generated status board. Enable once per clone with:
-#   git config core.hooksPath .githooks
-# Mirrors the CI check (.github/workflows/build-order-guard.yml) locally: if this commit
-# touches the board's inputs (Roadmap/** or the scripts), it fails unless BUILD-ORDER.md
-# is freshly generated. Fix: `node scripts/build-order.mjs` then re-stage it.
+# Local-first pre-commit gate — BLOCKING. Auto-enabled via package.json's "prepare" script
+# (git config core.hooksPath .githooks), so this runs for every clone with no manual step.
+# Same pattern adopted in the root miyagi-product-management repo 2026-07-16 (GitHub Actions
+# minutes offload) — mirrors build-order-guard.yml + scripts-guard.yml locally, both cheap
+# pure-node checks that used to fire on every push. GH Actions (guards.yml equivalent here:
+# build-order-guard.yml / scripts-guard.yml) stays as the PR-triggered fallback safety net.
 #
-# CI is the real gate; this hook just catches drift before the (direct-to-main) commit lands.
+# Bypass with `git commit --no-verify` if you genuinely need to.
 
 changed=$(git diff --cached --name-only)
-echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-to-notion\.mjs)' || exit 0
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "pre-commit: node not found — skipping build-order check." >&2
+  echo "pre-commit: node not found — skipping local guards (GH Actions PR check still applies)." >&2
   exit 0
 fi
 
-if ! node scripts/build-order.mjs --check; then
-  echo "pre-commit: BUILD-ORDER.md is stale. Run 'node scripts/build-order.mjs' and stage it." >&2
+fail=0
+
+if echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-to-notion\.mjs)'; then
+  if ! node scripts/build-order.mjs --check; then
+    echo "pre-commit: build-order failed — BUILD-ORDER.md is stale. Run 'node scripts/build-order.mjs' and stage it." >&2
+    fail=1
+  fi
+fi
+
+if echo "$changed" | grep -qE '^scripts/'; then
+  if ! node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'; then
+    echo "pre-commit: scripts/ node:test failed — see output above." >&2
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "pre-commit: one or more checks failed. Fix and re-stage, or 'git commit --no-verify' to bypass." >&2
   exit 1
 fi
+
+exit 0

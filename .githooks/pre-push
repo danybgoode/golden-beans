@@ -1,0 +1,36 @@
+#!/bin/sh
+# Local-first pre-push — ADVISORY (never blocks the push, exits 0 regardless). Auto-enabled
+# via package.json's "prepare" script (git config core.hooksPath .githooks).
+#
+# Faster local feedback ahead of ci.yml's own PR-triggered typecheck-build + e2e jobs, which
+# stay exactly as-is on GitHub (unchanged by design — Daniel wants both layers, not local
+# replacing GH here). This hook is additive: catch a broken build/e2e before you even open the
+# PR, without waiting ~1-2min (typecheck-build) or ~3-4min (e2e) for GitHub to tell you.
+#
+# tsc + build always run (cheap, no external deps). The e2e suite only runs if a local Supabase
+# instance already looks up (best-effort — this hook does NOT spin up Docker/Supabase itself;
+# doing that from a git hook would make every push unpredictably slow). No local Supabase up?
+# Skips with a message; ci.yml's own e2e job is still the real gate for that path.
+
+if ! command -v node >/dev/null 2>&1; then
+  exit 0
+fi
+
+echo "pre-push: type-checking + building (apps/web)..." >&2
+if ! (cd apps/web && npx tsc --noEmit); then
+  echo "pre-push: tsc --noEmit failed — advisory only, push proceeding. ci.yml will also catch this." >&2
+fi
+if ! npm run build; then
+  echo "pre-push: build failed — advisory only, push proceeding. ci.yml will also catch this." >&2
+fi
+
+if command -v supabase >/dev/null 2>&1 && (cd apps/web && supabase status >/dev/null 2>&1); then
+  echo "pre-push: local Supabase detected — running e2e suite..." >&2
+  if ! npm run test:e2e; then
+    echo "pre-push: e2e failed — advisory only, push proceeding. ci.yml will also catch this." >&2
+  fi
+else
+  echo "pre-push: no local Supabase detected — skipping e2e locally (run 'cd apps/web && supabase start' to enable). ci.yml still runs it on the PR." >&2
+fi
+
+exit 0
