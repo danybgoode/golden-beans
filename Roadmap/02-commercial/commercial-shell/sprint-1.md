@@ -1,6 +1,6 @@
 # Commercial shell — Sprint 1: Launch-ready landing
 
-**Status:** ⬜ not started
+**Status:** 🟨 In progress
 
 ## Stories
 
