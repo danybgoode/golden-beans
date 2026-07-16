@@ -14,10 +14,15 @@ import { getSection } from '@/lib/landing-sections'
 // implementation this page ports.
 //
 // Without this, Next statically optimizes `/` at build time (no dynamic route params on this
-// page) and LiveProofSection's demo-project numbers would freeze into the build's HTML forever —
-// never reflecting a reseed. A 60s revalidate window keeps the marketing-page perf benefit while
-// still making "the actual engine, live" a true claim, not a stale snapshot.
-export const revalidate = 60
+// page) — which does two things wrong: LiveProofSection's demo-project numbers would freeze into
+// the build's HTML forever (never reflecting a reseed), AND the build itself would try to reach
+// Supabase at build time — this repo's `typecheck-build` CI job runs `npm run build` with NO
+// Supabase env vars at all (only the separate `e2e` job provisions them), so a build-time
+// prerender attempt throws `Missing required env var: SUPABASE_URL` and fails the gate. Every
+// other page in this app is already `force-dynamic` in practice (dynamic route params leave no
+// other option) — this makes `/` consistent with that, and "the actual engine, live" a true claim
+// on every request, not a periodically-stale one.
+export const dynamic = 'force-dynamic'
 
 export default function Home() {
   return (

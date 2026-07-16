@@ -68,15 +68,22 @@ async function provisionProject(db) {
 }
 
 // Bounded, destructive maintenance scoped to this one project_id — not a substitute for the real
-// seeding below, just a clean slate so reseeding is idempotent (no doubled-up funnel counts).
+// seeding below, just a clean slate so the funnel/A-B numbers don't double on reseed.
+//
+// Deliberately does NOT touch north_star_metrics/leading_inputs/feature_inputs/input_values:
+// input_values has a hard, permanent append-only trigger (BEFORE UPDATE OR DELETE, raises) — and
+// that trigger fires even on a DELETE cascaded in from north_star_metrics via the FK, so a
+// north_star_metrics delete fails outright the moment any input_values rows exist (i.e. on every
+// run after the first). North Star reseed idempotency instead relies on the real API's own
+// idempotent behavior: registerNorthStar/linkFeatureInput upsert on conflict (no duplicate rows),
+// and seedNorthStarTrend's daily pushes dedupe by (input_id, occurredOn) — re-running on the same
+// day is a complete no-op; running on a later day naturally extends the trend forward, which is
+// correct behavior for a real, growing ledger, not a bug to work around.
 async function resetProjectContent(db, projectId) {
   const { error: eventsError } = await db.from('events').delete().eq('project_id', projectId)
   if (eventsError) throw new Error(`Failed to reset events: ${eventsError.message}`)
   const { error: featuresError } = await db.from('features').delete().eq('project_id', projectId)
   if (featuresError) throw new Error(`Failed to reset features: ${featuresError.message}`)
-  // Cascades through leading_inputs -> feature_inputs / input_values.
-  const { error: northStarError } = await db.from('north_star_metrics').delete().eq('project_id', projectId)
-  if (northStarError) throw new Error(`Failed to reset north_star_metrics: ${northStarError.message}`)
 }
 
 // Mirrors packages/sdk/src/index.ts's track(): POST /api/v1/track, { userId, event, ...props }.
