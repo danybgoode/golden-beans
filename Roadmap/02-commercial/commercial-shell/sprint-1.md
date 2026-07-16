@@ -14,14 +14,14 @@ agent-window frame device for the proof section shell) — **and `references/des
 Design export) if present, which supersedes the mock's skin**.
 **Risk:** LOW · commit `8f93b17`
 
-### Story 1.2 — Live-proof section on a synthetic demo project
+### Story 1.2 — Live-proof section on a synthetic demo project ✅
 **As a** skeptical PM, **I want** the live-proof section fed by a synthetic demo project seeded
 through the real SDK/API, **so that** every number on the page is real engine output.
 **Acceptance:** anonymous visitor sees live TARS funnel + North Star + A/B comparison for the demo
 project; the public read path can serve **only** the demo project (allow-list at the route —
 assert 403 with a real Miyagi projectId, the least-convenient input); reseed is idempotent;
 registry-declared-Targeted caveat displayed as a tasting note.
-**Risk:** LOW
+**Risk:** LOW · commit `117d5fd`
 
 ### Story 1.3 — Waitlist
 **As a** prospect, **I want** to join a waitlist, **so that** I'm queued for a hand-provisioned
