@@ -29,13 +29,13 @@ pilot. **Acceptance:** email → row in gb's own Supabase; rate-limited + honeyp
 confirmation state; no third-party form service.
 **Risk:** LOW (public write, guarded) · commit `34e9cb7`
 
-### Story 1.4 — Backfill contract wiring
+### Story 1.4 — Backfill contract wiring ✅
 **As the** team, **I want** the section↔epic registry in the landing code (each section declares
 the epic that lights it up, driving the 🔜 badges), **so that** the WAYS-OF-WORKING backfill DoD
 line (already merged 2026-07-14) has a mechanical surface to check.
 **Acceptance:** registry file maps sections→epics; flipping one entry flips the badge; documented
 in the epic README.
-**Risk:** LOW
+**Risk:** LOW · commit `8552e5f`
 
 ## Sprint QA
 - **api spec(s):** 1.2 → demo-read endpoints (incl. the 403 allow-list assertion) · 1.3 → waitlist
