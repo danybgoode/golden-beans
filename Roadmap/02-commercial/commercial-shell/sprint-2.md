@@ -34,7 +34,7 @@ and the pre-existing "③ NPX WIZARD ✅ LIVE" landing-card mislabel is fixed to
 Daniel:** production needs a `SITE_URL` env var set before Sprint 3 flips the connector live (the
 install page's URL-builder has no safe prod default — see `lib/site-url.ts`). Commit `33ffc1a`.
 
-### Story 2.3 — Design-direction polish pass
+### Story 2.3 — Design-direction polish pass ✅
 **As the** brand, **I want** a polish pass applying `references/design-direction.md` (roastery
 world · agent-window frame · kraft/foil + dark-roast + brass materials · voice guardrails) with
 the mb `frontend-design` heuristics checklist, **so that** the PostHog bar is met, not
@@ -43,6 +43,12 @@ approximated.
 each viewport is real UI/numbers); fresh PostHog captures archived to `references/posthog/`;
 fidelity checked against `references/design/` (Claude Design export) where it exists.
 **Risk:** LOW
+**Build note:** `globals.css` was already a faithful port of `tokens.css` (Sprint 1) — this pass
+fixed a real spacing bug on `/install` (double section padding), extended the 390px overflow check
+to `/install`, archived fresh PostHog captures (`references/posthog/`, still matches
+design-direction.md's read), and ran the heuristics checklist against the new surface. The
+claude-in-chrome browser extension wasn't connected in this environment — verified visually via
+Playwright's own Chromium instead (desktop + 390px screenshots). Commit `bd7c434`.
 
 ## Sprint QA
 - **api spec(s):** 2.1 → MCP round-trip with a disposable token (list tools, read demo funnel,
