@@ -17,3 +17,18 @@ test('landing renders without horizontal overflow at 390px', async ({ page }) =>
   ])
   expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
 })
+
+// Story 2.3 (commercial-shell/sprint-2.md) — the new /install route gets the same mobile check.
+test('install page renders without horizontal overflow at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/install')
+
+  await expect(page.locator('nav.gb')).toBeVisible()
+  await expect(page.locator('h1')).toBeVisible()
+
+  const [scrollWidth, clientWidth] = await page.evaluate(() => [
+    document.documentElement.scrollWidth,
+    document.documentElement.clientWidth,
+  ])
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+})

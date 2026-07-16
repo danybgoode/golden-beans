@@ -24,7 +24,7 @@ export default async function InstallPage() {
     <>
       <Nav />
       <section className="band">
-        <div className="wrap" style={{ paddingTop: 56, paddingBottom: 56 }}>
+        <div className="wrap">
           <h1 className="display" style={{ fontSize: 40, maxWidth: 720 }}>
             Bring the agent you already pay for.
           </h1>
