@@ -69,6 +69,12 @@ jobs:
 
       - name: Start the app in the background
         working-directory: apps/web
+        # CONNECTOR_ENABLED=true so the Story 2.1 MCP connector round-trip/isolation/revocation
+        # specs exercise a live route; the connector's dark-by-default behavior is instead covered
+        # as a pure-function assertion (e2e/mcp-connector.spec.ts) — see lib/flags.ts's header
+        # comment for why that doesn't need a second differently-enved server boot.
+        env:
+          CONNECTOR_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."
