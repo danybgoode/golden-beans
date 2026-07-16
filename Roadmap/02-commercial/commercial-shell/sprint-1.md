@@ -23,11 +23,11 @@ assert 403 with a real Miyagi projectId, the least-convenient input); reseed is 
 registry-declared-Targeted caveat displayed as a tasting note.
 **Risk:** LOW · commit `117d5fd`
 
-### Story 1.3 — Waitlist
+### Story 1.3 — Waitlist ✅
 **As a** prospect, **I want** to join a waitlist, **so that** I'm queued for a hand-provisioned
 pilot. **Acceptance:** email → row in gb's own Supabase; rate-limited + honeypot; duplicate-safe;
 confirmation state; no third-party form service.
-**Risk:** LOW (public write, guarded)
+**Risk:** LOW (public write, guarded) · commit `34e9cb7`
 
 ### Story 1.4 — Backfill contract wiring
 **As the** team, **I want** the section↔epic registry in the landing code (each section declares
