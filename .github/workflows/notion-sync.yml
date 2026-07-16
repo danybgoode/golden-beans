@@ -18,6 +18,7 @@ on:
       - 'Roadmap/**'
       - 'scripts/roadmap-to-notion.mjs'
       - '.github/workflows/notion-sync.yml'
+  workflow_dispatch: {} # manual backfill — e.g. right after configuring the secrets for the first time
 
 concurrency:
   group: notion-sync
