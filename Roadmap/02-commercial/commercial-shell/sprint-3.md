@@ -32,7 +32,7 @@ resolved from the Bearer key server-side, never a slug/body field) and asserted 
 **Verify gap:** `tsc --noEmit` + `npm run build` clean; the Playwright `api` project (incl. this
 spec) could NOT be run here — Docker/local Supabase was unavailable in the worktree — so the e2e
 gate + a real red run are owed; the spec's mutation check (removing self-track's no-op guard ⇒ 500s
-⇒ first two tests red) is reasoned, not observed. Commit `PENDING`.
+⇒ first two tests red) is reasoned, not observed. Commit `c029622`.
 
 ### Story 3.2 — SEO/OG + agent-readable manifest
 **As a** searcher (human or agent), **I want** correct meta/OG unfurls and an `llms.txt`-style
