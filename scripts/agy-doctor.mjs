@@ -27,7 +27,10 @@
 // and fixed — on a machine where agy runs. The distribution point is checkAgyVersion's own failure
 // message, which names this command.
 //
-// Zero npm deps — Node 18+. Pure decision logic exported for node:test (isMain-guarded, per LEARNINGS).
+// Zero npm deps — Node 21+ (the --fix flow's `node --test 'scripts/**/*.test.mjs'` relies on the test
+// runner's own glob expansion under spawnSync(..., {shell:false}), which Node added in 21; below that,
+// the literal, unexpanded pattern silently matches nothing). Pure decision logic exported for node:test
+// (isMain-guarded, per LEARNINGS).
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
