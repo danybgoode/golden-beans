@@ -121,6 +121,20 @@ globally, so the "unset key" no-op branch is no longer independently exercised b
 run — verified by code inspection only (a one-line guard), stated as an accepted gap rather than
 silently dropped.
 
+**Round 3 — a real CI ordering bug, caught by actually running it**: even with the poll fix, the
+`e2e` job still failed, but now with a genuine `0/2 events after 5000ms` (not a race — the events
+simply never landed). Root cause: `ci.yml`'s "Seed the self-tracking project" step exported
+`SELF_PROJECT_API_KEY` into `$GITHUB_ENV` AFTER "Start the app in the background" had already
+forked the `npm run start` process — a value added to `$GITHUB_ENV` reaches later STEPS' shells,
+never an already-running background process's env, so every self-track call for the rest of the
+job silently no-op'd (no error; that's the whole design). Fixed by reordering: a new early step
+generates the key via `openssl rand -hex 24` and exports it to `$GITHUB_ENV` **before** the server
+starts (so the server boots already knowing it), and the seed step passes the SAME value as
+`SELF_PROJECT_API_KEY` (already ambient) so the DB's stored hash matches what the running server
+expects, instead of minting a second, different key nobody told the server about. This is exactly
+the kind of gap only real execution catches — a purely static review of either the app code or the
+workflow file in isolation wouldn't surface a cross-step env-propagation-timing bug.
+
 ### Story 3.3 — Launch checklist
 **As** Daniel, **I want** the launch executed: domain decision (**paid infra ⇒ Daniel green-lights
 before provisioning; staying on `golden-beans-gamma.vercel.app` is a valid v1 outcome**),
