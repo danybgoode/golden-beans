@@ -68,6 +68,40 @@ be run end-to-end here — verified instead via `npx tsc --noEmit`, `npm run bui
 new spec alone against a real `npm run start` server (including the red/green mutation check
 above); re-run the full suite once in an environment with Docker/Supabase before merge.
 
+### Cross-agent review (Codex + Agy) — fixed pre-merge
+Per the updated `WAYS-OF-WORKING.md` process (this sprint's experiment), both reviews ran as the
+judgment-layer pass in place of a same-family Claude reviewer. Blocking findings fixed:
+- **`scripts/seed-self-project.mjs` silently rotated the prod API key on a bare re-run** (Codex) —
+  a re-run with `SELF_PROJECT_API_KEY` unset minted a fresh random key and overwrote the existing
+  project's hash, silently invalidating whatever key the running app was configured with. Fixed:
+  `provisionProject()` now looks up the existing row first and leaves an already-provisioned
+  project's credential untouched unless `SELF_PROJECT_API_KEY` is explicitly passed; `main()`
+  handles the resulting "can't re-authenticate to re-sync" case by saying so plainly instead of
+  crashing or silently skipping.
+- **The waitlist route and the self-visit route both `await`ed `trackSelfEvent` inline** (Codex),
+  which (a) could hold the waitlist response open on a slow/hung self-tracking call after the real
+  join had already succeeded, and (b) delayed the self-visit route's `Set-Cookie` behind that same
+  network round-trip — a fast follow-up request could arrive before the visitor cookie was even
+  delivered, minting a second identity and disconnecting visit from join. Fixed: both now fire
+  `trackSelfEvent` via `next/server`'s `after()`, never inline-awaited before the response is
+  built; `self-track.ts` also gained a 3s `AbortSignal.timeout()` on the underlying fetch as
+  defense-in-depth.
+- **`self-visit` had no rate limiting**, unlike every other unauthenticated public write in this
+  app (Agy, filed against AGENTS.md rule #2 — the underlying concern is real even though the route
+  doesn't trust a slug, so rule #2 wasn't quite the right citation: an anonymous caller could flood
+  the route and inflate `landing_visited`, skewing the Grower signal). Fixed: same
+  `checkRateLimit`/`hashIp` primitive as the waitlist route, a looser per-minute cap (once per real
+  page load, not once per human decision).
+- **CI never actually exercised the funnel-isolation spec** (Codex — the "configured" path was
+  optional and always skipped). Fixed: `ci.yml` now runs `npm run seed:self` (a fresh CI Supabase
+  never already has this project, so it always takes the mint-a-real-key path) and exports the
+  printed key as `SELF_PROJECT_API_KEY`, so `self-track.spec.ts`'s isolation test runs for real on
+  every PR instead of perpetually skipping.
+- Regenerated `Roadmap/00-ideas/BUILD-ORDER.md` (Codex caught it reporting a stale progress count).
+- Two Agy nits (an "unused" `randomUUID` import, an "unused" `Metadata` type import) were checked
+  against the diff and are both false positives — `randomUUID` is used as the cookie-absent
+  fallback, `Metadata` types `generateMetadata()`'s return — no change made.
+
 ### Story 3.3 — Launch checklist
 **As** Daniel, **I want** the launch executed: domain decision (**paid infra ⇒ Daniel green-lights
 before provisioning; staying on `golden-beans-gamma.vercel.app` is a valid v1 outcome**),

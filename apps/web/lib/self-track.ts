@@ -42,10 +42,27 @@ export function isSelfTrackingConfigured(): boolean {
   return !!selfApiKey()
 }
 
+// A cross-review catch (commercial-shell Sprint 3 PR): the SDK's own fetch has no timeout, so a
+// slow/hung self-call could otherwise hold this promise open indefinitely. Callers already run
+// this via `after()` (never inline-awaited before a response), but a bounded timeout here is
+// cheap, load-bearing defense-in-depth against a genuinely hung request.
+const TRACK_TIMEOUT_MS = 3000
+
+function timeoutFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, { ...init, signal: AbortSignal.timeout(TRACK_TIMEOUT_MS) })
+}
+
 // Fire one funnel event for `userId` through the REAL SDK (POST /api/v1/track, Bearer=self key).
 // Total by construction: no key -> no-op; the SDK returns {ok:false} on any HTTP/network error (it
 // never throws) and we swallow+log; the surrounding try/catch is belt-and-suspenders for anything
-// unexpected. Returns nothing meaningful — callers must not branch on success in the request path.
+// unexpected (including an AbortSignal.timeout() abort). Returns nothing meaningful — callers must
+// not branch on success in the request path.
+//
+// Callers must invoke this via `next/server`'s `after()`, never inline-`await`ed before building a
+// response — a cross-review catch: the SDK call is a real network round-trip (this app calling its
+// own public URL), and awaiting it directly in a route handler would delay that route's response
+// (and, for self-visit specifically, delay delivering the Set-Cookie the waitlist route depends on
+// for a shared visitor identity) by however long the call takes, timeout included.
 export async function trackSelfEvent(
   event: typeof LANDING_VISITED_EVENT | typeof WAITLIST_JOINED_EVENT,
   userId: string,
@@ -54,7 +71,7 @@ export async function trackSelfEvent(
   if (!apiKey) return // unset in CI/local-without-config — dogfooding is a prod-config concern
 
   try {
-    const engine = createGrowthEngineClient({ baseUrl: getSiteUrl(), apiKey, userId })
+    const engine = createGrowthEngineClient({ baseUrl: getSiteUrl(), apiKey, userId, fetchImpl: timeoutFetch })
     const result = await engine.track(event)
     if (!result.ok) {
       console.warn(`[self-track] ${event} for ${userId} did not land: ${result.error}`)

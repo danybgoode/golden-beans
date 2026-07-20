@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { randomUUID } from 'node:crypto'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { waitlistSchema } from '@/lib/waitlist-schema'
@@ -53,10 +53,13 @@ export async function POST(req: NextRequest) {
   // a bot's silent-success never counts as a real `waitlist_joined`). We reuse the visitor id set
   // by the visited beacon (VISITOR_COOKIE), so this join is the SAME user who fired
   // `landing_visited` advancing through the funnel; if the cookie is somehow absent (JS beacon
-  // never ran), we still record the conversion under a fresh id rather than lose it. Fire-and-
-  // forget through the real SDK — never blocks or fails the join (trackSelfEvent is total).
+  // never ran), we still record the conversion under a fresh id rather than lose it.
+  //
+  // A cross-review catch (Sprint 3 PR): this MUST run via `after()`, not an inline `await` — the
+  // real join already succeeded (the DB row is inserted above), and a slow/hung self-tracking call
+  // must never delay or fail the response to a visitor who already got what they came for.
   const visitorId = req.cookies.get(VISITOR_COOKIE)?.value?.trim() || randomUUID()
-  await trackSelfEvent(WAITLIST_JOINED_EVENT, visitorId)
+  after(() => trackSelfEvent(WAITLIST_JOINED_EVENT, visitorId))
 
   return NextResponse.json({ ok: true })
 }

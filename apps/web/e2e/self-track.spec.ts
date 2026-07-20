@@ -9,10 +9,12 @@ import { createClient } from '@supabase/supabase-js'
 // under the SAME visitor id.
 //
 // The load-bearing CI-safe assertions run WITHOUT any tracking config: CI's `typecheck-build` job
-// has zero Supabase env vars and the `e2e` job may not have the `golden-beans` project seeded, so
-// the tracking helper must no-op cleanly and neither route may 500 when SELF_PROJECT_API_KEY is
-// unset. A deeper isolation check (events land in the self tenant and NEVER the demo) runs only
-// when a real self key IS provided — skipped, not failed, otherwise.
+// has zero Supabase env vars, so the tracking helper must no-op cleanly and neither route may 500
+// when SELF_PROJECT_API_KEY is unset. The deeper isolation check (events land in the self tenant
+// and NEVER the demo) runs for real in CI — ci.yml seeds the self project (a fresh CI Supabase
+// never already has it, so seed-self-project.mjs always mints+prints a real key) and exports it as
+// SELF_PROJECT_API_KEY — and only SKIPS (not fails) in an environment that genuinely lacks that
+// (e.g. a bare local run without `npm run seed:self` first).
 //
 // Mutation check (spec written after the code): deleting the `if (!apiKey) return` no-op guard in
 // lib/self-track.ts (so trackSelfEvent throws / hangs when unconfigured) turns the first two tests

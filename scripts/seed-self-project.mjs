@@ -57,8 +57,28 @@ function supabase() {
   })
 }
 
+// A cross-review catch (commercial-shell Sprint 3 PR): a bare re-run with SELF_PROJECT_API_KEY
+// unset must NOT rotate the key of an already-provisioned project — that would silently invalidate
+// whatever key is configured as SELF_PROJECT_API_KEY in the running app (self-tracking then just
+// 401s, swallowed+logged into a no-op by lib/self-track.ts's total-failure design, so the breakage
+// would be near-silent). A fresh random key is only minted on FIRST creation; re-running against an
+// existing row without an explicit override key is a true no-op on the credential. Passing
+// SELF_PROJECT_API_KEY explicitly still works as a deliberate, visible rotation.
 async function provisionProject(db) {
-  const plaintextKey = process.env.SELF_PROJECT_API_KEY?.trim() || randomBytes(24).toString('hex')
+  const { data: existing, error: existingError } = await db
+    .from('projects')
+    .select('id')
+    .eq('slug', SELF_PROJECT_SLUG)
+    .maybeSingle()
+  if (existingError) throw new Error(`Failed to look up self project: ${existingError.message}`)
+
+  const overrideKey = process.env.SELF_PROJECT_API_KEY?.trim()
+  if (existing && !overrideKey) {
+    // Already provisioned, no explicit key given: leave the credential untouched.
+    return { projectId: existing.id, apiKey: null }
+  }
+
+  const plaintextKey = overrideKey || randomBytes(24).toString('hex')
   const { data, error } = await db
     .from('projects')
     .upsert({ slug: SELF_PROJECT_SLUG, api_key_hash: hashApiKey(plaintextKey) }, { onConflict: 'slug' })
@@ -108,6 +128,20 @@ export async function main() {
   const db = supabase()
 
   const { projectId, apiKey } = await provisionProject(db)
+
+  if (!apiKey) {
+    // Already provisioned, no override key given: we deliberately left the credential untouched
+    // (see provisionProject's header comment), which means we no longer HOLD the plaintext key
+    // (only its hash is stored) — so we structurally CANNOT re-authenticate to re-sync the
+    // feature registry here. Say so plainly rather than crash or silently skip without a trace.
+    console.log(
+      `Self project '${SELF_PROJECT_SLUG}' (${projectId}) already exists — credential left ` +
+        `untouched (no SELF_PROJECT_API_KEY given). Skipped re-syncing the '${SIGNAL_KEY}' signal: ` +
+        `re-run with SELF_PROJECT_API_KEY set to the project's EXISTING key to also re-sync it.`,
+    )
+    return
+  }
+
   await registerGrowerSignal(baseUrl, apiKey)
 
   console.log(

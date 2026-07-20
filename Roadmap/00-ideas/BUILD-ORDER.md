@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Commercial · 8/10 stories · risk: High · #1
+- [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Commercial · 9/10 stories · risk: High · #1
 
 ## 📋 Ready to build (scaffolded, not started) (4)
 

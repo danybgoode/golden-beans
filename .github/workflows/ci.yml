@@ -89,6 +89,19 @@ jobs:
         env:
           GROWTH_ENGINE_URL: http://localhost:3000
 
+      # commercial-shell Story 3.1 — a fresh CI Supabase never already has this project, so
+      # provisionProject() always takes the first-creation path (mints+prints a real key) here;
+      # capture it so self-track.spec.ts's isolation test runs for real instead of skipping (the
+      # skip path stays exercised for a real production re-run against an already-seeded project,
+      # not for CI).
+      - name: Seed the self-tracking project (commercial-shell Story 3.1)
+        run: |
+          KEY=$(npm run seed:self 2>&1 | tee /dev/stderr | grep '^SELF_PROJECT_API_KEY=' | cut -d= -f2)
+          if [ -z "$KEY" ]; then echo "::error::seed:self produced no API key"; exit 1; fi
+          echo "SELF_PROJECT_API_KEY=$KEY" >> "$GITHUB_ENV"
+        env:
+          GROWTH_ENGINE_URL: http://localhost:3000
+
       - name: Run Playwright api suite
         run: npm run test:e2e
 
