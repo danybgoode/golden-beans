@@ -8,18 +8,20 @@ import { createClient } from '@supabase/supabase-js'
 //   - conversion: POST /v1/public/waitlist (successful, non-honeypot) fires `waitlist_joined`
 // under the SAME visitor id.
 //
-// The load-bearing CI-safe assertions run WITHOUT any tracking config: CI's `typecheck-build` job
-// has zero Supabase env vars, so the tracking helper must no-op cleanly and neither route may 500
-// when SELF_PROJECT_API_KEY is unset. The deeper isolation check (events land in the self tenant
-// and NEVER the demo) runs for real in CI — ci.yml seeds the self project (a fresh CI Supabase
-// never already has it, so seed-self-project.mjs always mints+prints a real key) and exports it as
-// SELF_PROJECT_API_KEY — and only SKIPS (not fails) in an environment that genuinely lacks that
-// (e.g. a bare local run without `npm run seed:self` first).
-//
-// Mutation check (spec written after the code): deleting the `if (!apiKey) return` no-op guard in
-// lib/self-track.ts (so trackSelfEvent throws / hangs when unconfigured) turns the first two tests
-// red — the beacon and waitlist routes would surface a 500 instead of 200. Verified by reasoning
-// against the route handlers; a local red run needs Docker/Supabase (see the sprint build note).
+// The first three tests assert an invariant that holds REGARDLESS of tracking config: neither
+// route may ever 500 or delay its response because of trackSelfEvent — true whether the key is
+// unset (a clean no-op) or the call fails for any other reason (swallowed+logged), and true in
+// EVERY environment now that both routes fire tracking via `next/server`'s `after()` (a cross-review
+// fix, round 2) rather than inline-awaiting it. This is deliberately NOT a test of "is the key
+// unset" specifically — a cross-review catch: CI now always seeds+exports a real
+// SELF_PROJECT_API_KEY (see below), so the unset-key branch in lib/self-track.ts's guard is no
+// longer independently exercised by any automated run; it stays covered by code inspection (a
+// one-line `if (!apiKey) return`) rather than a dedicated red/green test — a stated, accepted gap,
+// not a silent one. The deeper isolation check (events land in the self tenant and NEVER the demo)
+// runs for real in CI — ci.yml seeds the self project (a fresh CI Supabase never already has it, so
+// seed-self-project.mjs always mints+prints a real key) and exports it as SELF_PROJECT_API_KEY —
+// and only SKIPS (not fails) in an environment that genuinely lacks that (e.g. a bare local run
+// without `npm run seed:self` first).
 
 const SELF_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golden-beans'
 const DEMO_SLUG = process.env.DEMO_PROJECT_SLUG?.trim() || 'golden-beans-demo'
@@ -46,6 +48,30 @@ function setCookieHeaders(res: { headersArray(): { name: string; value: string }
     .headersArray()
     .filter((h) => h.name.toLowerCase() === 'set-cookie')
     .map((h) => h.value)
+}
+
+// Both funnel routes fire trackSelfEvent via `after()` (deliberately, so it never blocks the
+// response — self-track.ts) — the insert can still be in flight the instant the HTTP response
+// lands. Poll for `expectedCount` rows instead of racing a single immediate read.
+async function pollForEvents(
+  db: ReturnType<typeof dbClient>,
+  userId: string,
+  expectedCount: number,
+  timeoutMs = 5000,
+): Promise<{ event: string; projects: { slug: string } | null }[]> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const { data, error } = await db.from('events').select('event, projects(slug)').eq('user_id', userId)
+    if (error) throw new Error(`pollForEvents: ${error.message}`)
+    // @ts-expect-error -- supabase-js types the joined relation loosely; runtime shape is correct
+    if ((data ?? []).length >= expectedCount) return data ?? []
+    if (Date.now() > deadline) {
+      throw new Error(
+        `pollForEvents: only ${data?.length ?? 0}/${expectedCount} event(s) for ${userId} after ${timeoutMs}ms`,
+      )
+    }
+    await new Promise((r) => setTimeout(r, 200))
+  }
 }
 
 // --- CI-safe: the beacon and the no-op safety of the tracking helper (no config required) ---
@@ -123,17 +149,14 @@ test('funnel events land in the self tenant and NEVER the demo project', async (
   // Both events, under the one visitor id, must resolve to the self project — and NONE to the demo.
   // The tenant is chosen by the Bearer key server-side (lib/auth.ts), so this is structurally true;
   // the assertion guards against an accidental cross-wire (e.g. the helper grabbing the demo key).
-  const { data: rows, error } = await db
-    .from('events')
-    .select('event, projects(slug)')
-    .eq('user_id', vid)
-  expect(error).toBeNull()
-
-  const events = rows ?? []
-  const slugs = new Set(
-    // @ts-expect-error -- supabase-js types the joined relation loosely; runtime shape is correct
-    events.map((r) => r.projects?.slug),
-  )
+  //
+  // A cross-review catch (Sprint 3 PR, round 2): both routes fire trackSelfEvent via `after()` now
+  // (a deliberate fix so it never blocks the response — see self-track.ts), which means the events
+  // insert can genuinely still be in flight the instant this test receives the 200. A bare
+  // immediate read raced that write and would be flaky. Poll with a bounded timeout instead of
+  // asserting on the first read.
+  const events = await pollForEvents(db, vid, 2)
+  const slugs = new Set(events.map((r) => r.projects?.slug))
   expect(slugs.has(DEMO_SLUG), 'a landing event must NEVER land against the demo project').toBe(false)
   expect([...slugs]).toEqual([SELF_SLUG]) // every event for this visitor is the self tenant, nothing else
   expect(events.map((r) => r.event).sort()).toEqual(['landing_visited', 'waitlist_joined'])

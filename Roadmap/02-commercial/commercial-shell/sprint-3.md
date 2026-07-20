@@ -102,6 +102,25 @@ judgment-layer pass in place of a same-family Claude reviewer. Blocking findings
   against the diff and are both false positives — `randomUUID` is used as the cookie-absent
   fallback, `Metadata` types `generateMetadata()`'s return — no change made.
 
+**Round 2** (re-ran both reviews against the fixes above): Codex found the identity race wasn't
+fully closed and CI confirmed it live — the very first `e2e` run after `after()` landed hit exactly
+this, failing `funnel events land in the self tenant and NEVER the demo project` because the DB
+read raced the now-deferred write (`Received Array []`, expected `["golden-beans"]`). Two fixes:
+- **The visitor cookie is now minted client-side, synchronously** (`SelfTrackBeacon.tsx`, via
+  `document.cookie`, before firing the beacon POST) instead of relying on the self-visit route's
+  `Set-Cookie` — a network round-trip (even a fast, non-blocking one) is never as fast as an
+  in-memory same-tick write, and the route can no longer win a race against a real user action.
+  The server-side mint stays as a fallback for non-JS/API callers.
+- **`e2e/self-track.spec.ts`'s isolation test now polls** (`pollForEvents`, 200ms/5s bounded) for
+  both events instead of reading immediately after the response — the exact fix the live CI failure
+  called for.
+Also corrected the spec's own header comment: the earlier "mutation check" claim no longer holds
+now that tracking runs via `after()` (a route's response can't reflect a tracking failure that
+happens after the response is already sent), and CI now always configures `SELF_PROJECT_API_KEY`
+globally, so the "unset key" no-op branch is no longer independently exercised by any automated
+run — verified by code inspection only (a one-line guard), stated as an accepted gap rather than
+silently dropped.
+
 ### Story 3.3 — Launch checklist
 **As** Daniel, **I want** the launch executed: domain decision (**paid infra ⇒ Daniel green-lights
 before provisioning; staying on `golden-beans-gamma.vercel.app` is a valid v1 outcome**),
