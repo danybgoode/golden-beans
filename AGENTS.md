@@ -58,33 +58,45 @@ Before planning or building, read these — they are the source of truth and cha
 
 ## ⚠️ The rules that cannot be violated
 
-<!-- TEMPLATE FILL-IN — this is the load-bearing section of this file. Write 3-5 non-negotiable
-     architectural rules for THIS project: the things that must never be worked around, no matter how
-     convenient a shortcut looks in the moment. Worked example shape below, replace entirely — do not
-     ship this as-is: -->
-
-<!--
-
-### 1. <System of record> owns <domain>. Never build it from scratch.
-If a feature touches <core domain concepts>, it goes through <the canonical module/service>. Do not
-create ad-hoc tables or bespoke routes for these concerns.
+### 1. The growth engine (Supabase-backed ingest/registry/TARS/North Star/experiments) owns telemetry. Never build a parallel pipeline.
+If a feature needs to track an event, define a feature, read a funnel, or compare an experiment, it goes
+through the existing primitives — `/api/v1/track`, `/api/v1/features/sync`, the TARS/North Star/A-B query
+libs (`apps/web/lib/{tars,north-star,ab}*.ts`) — via the real `@golden-beans/sdk` client. Do not insert
+directly into `events`/`features` from application code, and do not stand up a second event table or a
+bespoke analytics route for something this system already models.
 
 | Concern | Where it lives |
 |---|---|
-| <concept> | <canonical location> |
+| Event ingest | `POST /api/v1/track` (`apps/web/app/api/v1/track/route.ts`) |
+| Feature/signal registry | `POST /api/v1/features/sync` (`apps/web/lib/feature-schema.ts`) |
+| Funnel / North Star / experiment reads | `apps/web/lib/{tars,north-star,ab}-query.ts` |
+| Client SDK | `packages/sdk` (`createGrowthEngineClient`) |
 
-### 2. <Secondary datastore> is ONLY for <non-core> data.
-<Rule of thumb for what belongs where.>
+### 2. `/api/v1/public/*` may only ever serve the demo project. Never widen it.
+The public landing's live-proof section and any other public read route are gated by
+`assertPublicAllowedSlug()` (`apps/web/lib/public-demo.ts`) against `DEMO_PROJECT_SLUG`. A real customer
+project (e.g. `miyagisanchez`) must 403, not 404, on these routes. Any new public-facing read path reuses
+this same allow-list check — never a route that trusts a caller-supplied project slug.
 
-### 3. <Any first-class cross-cutting concern> must stay accurate.
-<What "accurate" means here and how it's checked.>
+### 3. The MCP connector is enablement-gated. Never bypass either gate as a shortcut.
+`CONNECTOR_ENABLED` (`apps/web/lib/flags.ts`, born unset/OFF) and per-project revocable tokens
+(`connector_tokens`, `apps/web/lib/connector-tokens.ts`) are two independent kill switches — the route
+must 404 while the flag is off regardless of token validity, and a revoked token must fail regardless of
+the flag. Never hardcode the flag to `true`, and never add a connector code path that skips the token
+check "temporarily."
 
-### 4. <Auth provider> is the auth layer. Never replace it.
-<What this means in practice — no custom auth pages, etc.>
+### 4. Merging to `main` is the deploy. Never run a manual `vercel deploy`/`--prod`.
+Vercel's GitHub integration auto-deploys `main` on every merge — see "Workflow (gitflow)" above. If a
+deployment looks stuck or wrong, confirm via `gh api repos/<owner>/<repo>/deployments` (exact commit SHA +
+status per environment), never via a CLI deploy. Env-var-only changes can take effect on already-deployed
+functions with **no redeploy** — check before assuming a fresh deploy is needed at all.
 
-### 5. <Any other non-negotiable house rule, e.g. a copy/locale policy>.
-<State it precisely enough that a fresh agent can self-check against it.>
--->
+### 5. Site/base URLs never fall back to a request Host header.
+`getSiteUrl()` (`apps/web/lib/site-url.ts`) reads `SITE_URL` or falls back to a hardcoded
+`localhost:3000` — never `req.headers.get('host')` (Roadmap/LEARNINGS.md: a bare-container Host-header
+fallback can silently build a broken URL from a garbage header, dangerous on any redirect/URL-building
+path). Any new code that builds an absolute URL from the running request reuses this helper instead of
+deriving its own fallback.
 
 ---
 

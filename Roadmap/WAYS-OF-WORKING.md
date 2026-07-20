@@ -94,21 +94,24 @@ author's context-bias hides. Two layers do this, and they're complementary:
   preview (if your rail has one) is the minimum shape; adapt to your actual stack. If a repo has no
   per-branch preview (deploys post-merge only), there is correspondingly no e2e-vs-preview step in its
   gate — that's correct, not a gap.
-- **Reviewer (judgment):** a **fresh reviewer agent** re-derives intent from the diff alone and checks
-  correctness, architecture, and the rules from your project's `AGENTS.md`. Keep review a **single
-  pass on a green CI gate** — not an iterative refine loop (that loop is the dominant token cost in
-  multi-agent dev; let the deterministic gate carry the repetitive checking and have the reviewer read
-  once). The reviewer must be a different agent than the one that built the PR.
-- **Cross-agent second opinion (advisory) — run locally on every PR:** `node scripts/cross-review.mjs
-  <PR#> --agent codex|antigravity` pipes the PR diff into a **different model family's** CLI for one
-  pass and posts the findings as a clearly-labeled PR comment. It exists only to surface another
-  family's blind spots. **Advisory only** — it never gates, blocks, or authorizes a merge (CI + the
-  fresh reviewer + the risk-tier rule below stay the sole sources of truth), and it is **single-pass**
-  (no debate loop). It reads the same shared prompt the human reviewer does
-  (`scripts/cross-review.prompt.md`). `--skip-trivial` skips docs-only / tiny diffs. Fill in your
-  project's own driving-a-young-foreign-CLI gotchas here as you hit them (version pinning, `--help`
-  quirks, headless-auth limits) — see the origin project's LEARNINGS.md "Tooling gotchas" section for
-  a worked example set.
+- **Reviewer (judgment) — cross-agent by default (updated 2026-07-20):** the judgment-layer review is
+  `node scripts/cross-review.mjs <PR#> --agent codex` **and** `--agent antigravity` (Agy) — two
+  different, non-Claude model families reading the diff cold, each in a **single pass** (no debate/
+  iterate-to-convergence loop; that loop is the dominant token cost in multi-agent dev and stays out
+  of scope). This **replaces** spawning a same-family Claude subagent as "the fresh reviewer" for
+  ordinary PRs — running two genuinely different families catches more of the builder's blind spots
+  than a second same-family read would, and it's the whole point of contrasting model families rather
+  than just re-running your own. A **Blocking** finding from either agent must be resolved (fixed, or
+  explicitly triaged as a false positive with a stated reason) before merge — this is no longer merely
+  advisory background noise; it **is** the review. It still isn't a second gate alongside CI: CI decides
+  green/red mechanically, this decides "does the diff hold up," and the risk-tier rule below still
+  decides *who* clicks merge. Both reads use the same shared prompt (`scripts/cross-review.prompt.md`).
+  **When to still spawn a same-family Claude reviewer instead/in addition:** a HIGH-risk PR (money/
+  auth/DB/shared infra) benefits from a third, same-family read too — cross-family review is a floor,
+  not a ceiling, for the stakes that warrant it.
+  `--skip-trivial` skips docs-only / tiny diffs. Fill in your project's own driving-a-young-foreign-CLI
+  gotchas here as you hit them (version pinning, `--help` quirks, headless-auth limits) — see the origin
+  project's LEARNINGS.md "Tooling gotchas" section for a worked example set.
 
 **Every PR declares a risk tier** (in the PR body); that tier decides who may merge:
 - **Low-risk → reviewer may auto-merge** once CI is green and the review is clean: docs/copy,

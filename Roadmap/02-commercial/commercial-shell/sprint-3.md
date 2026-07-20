@@ -1,6 +1,6 @@
 # Commercial shell — Sprint 3: Launch & dogfood
 
-**Status:** ⬜ not started
+**Status:** 🟨 In progress — branch `feat/commercial-shell-sprint-3`
 
 ## Stories
 
