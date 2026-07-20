@@ -37,11 +37,30 @@ revocable rows — one taxonomy, not a third system.
 4. **Speed and stability paired** (DORA-2025 honesty): CFR/recovery/rework rendered beside
    velocity — the report that only shows speed is the vendor-ware our audience smells.
 
+## Amendment — the AI-adoption maturity lens (Daniel, 2026-07-20)
+
+Scope doc: [`00-ideas/seeds/ai-adoption-maturity-lens.md`](../../00-ideas/seeds/ai-adoption-maturity-lens.md).
+Adds **one LOW story (2.4)** to Sprint 2 and widens 2.3's citation set + the v1 boundary. No new
+sprint, no new epic, no new primitive.
+
+**Why it rides E3 rather than standing alone:** E3's metrics answer *how fast, how stable*. They
+don't answer *why, and what's next*. The lens places the pod on the published Steps-of-AI-Adoption
+ladder (Cherny, 2026-07-16) — a scale the buyer's leadership already reads — computed from the very
+inputs Story 2.1 loads. Standalone it's a questionnaire; as a section it's the interpretation layer,
+and **every "not instrumented" row names a guardrail a pods engagement installs**. That's the
+cost-center→revenue-engine pitch closing itself.
+
+**Evidence rule (the decision that keeps it a product):** git/PR-derived only. No self-declared
+criteria, no telemetry prerequisite. What can't be computed renders as **"not instrumented"** —
+honesty as a design element, same grammar as the registry-declared-Targeted caveat and the ✅/🔜
+badges. medusa-bonsai's own OTel/analytics guardrail work later flips those rows to computed with
+zero contract change.
+
 ## Sprints
 | # | Sprint | Ships |
 |---|---|---|
 | 1 | [The rendering primitive + hub skateboard](sprint-1.md) | `report_artifacts` + `roadmap-push` rail · journey + drill-down views (gb as tenant #0) · horizon view vs end-state registry |
-| 2 | [The Pod Report (computed, not claimed)](sprint-2.md) | delivery metrics from the mb dataset · outcome layer · designed report surface with benchmark citations |
+| 2 | [The Pod Report (computed, not claimed)](sprint-2.md) | delivery metrics from the mb dataset · outcome layer · designed report surface with benchmark citations · **AI-adoption maturity lens** |
 | 3 | [Share links + backfill (the flip)](sprint-3.md) | scoped share tokens (dark) · landing §5 backfill + hub dogfood · launch |
 
 **Build-time dependency:** Sprint 2 requires a local `~/dobby/medusa-bonsai` checkout (dogfood

@@ -73,6 +73,13 @@ epic. This epic is the *product* surface.
   (speed/effectiveness/quality/business-impact; diffs-per-engineer; benchmarks from 500+ companies)
   · DORA quick-check performance levels. **Licensing posture: cite + link, render our own numbers
   against named external levels — never republish vendors' benchmark tables wholesale.**
+- **Steps of AI Adoption** (Boris Cherny, 2026-07-16) — added by the 2026-07-20 amendment as the
+  fourth named external scale. Five rungs (0 Gated · 1 Assisted · 2 Parallel · 3 Supervised autonomy
+  · 4 AI-native), each with a bottleneck, a products list and a **guardrails** list. The
+  products/guardrails columns are what make it scoreable: discrete nameable criteria, not a vibe.
+  Same posture as the others — **cite + link, score our own evidence against the named rungs, never
+  republish the table.** Source of truth is the structured `references/Steps-of-AI-Adoption.md`;
+  version-pin title+author+date in the artifact so old reports stay interpretable.
 - **Story-point caveat is real:** velocity/points are gameable and non-comparable across teams —
   the report frames cost-per-point as *within-dataset* (same team, human-baseline vs pod eras of
   the same repo), not cross-company. DORA/cycle metrics carry the cross-industry comparison.
@@ -140,14 +147,21 @@ Hub views: horizon · journey · epic drill-down · funnel-haze, with freshness 
 scoping (team/client/investor) enforced server-side · Pod Report v1: velocity, throughput,
 cycle/lead time, DORA five (incl. rework), cost-per-shipped-point — human-baseline vs pod eras
 computed from the mb dataset · outcome layer (TARS adoption, North-Star movement, revenue-per-
-feature from engine data) · benchmark context lines (DORA/LinearB/DX, cited not republished) ·
+feature from engine data) · benchmark context lines (DORA/LinearB/DX/**Steps-of-AI-Adoption**, cited not republished) ·
+**AI-adoption maturity lens as a section of the Pod Report** (git/PR-derived evidence, un-measurable
+criteria rendered "not instrumented" — amendment 2026-07-20) ·
 tokenized share links, dark behind `REPORT_SHARES_ENABLED` · landing §5 backfill (teaser → live) ·
 hub dogfoods itself (views tracked as engine events).
 **Out (named, not creep):** custom report-builder UI · PDF/export polish · cross-company benchmark
 republishing · real-time websockets (merge cadence is the honest truth cadence) · Notion two-way
 sync (one-way ops projection stays) · SmallDocs coupling · significance stats · billing ·
-engine-side git/repo access (clients push) · non-roadmap report types (the primitive allows them;
-v1 ships these two).
+engine-side git/repo access (clients push) · non-roadmap report **types** — the primitive allows
+them; v1 ships these two, and the 2026-07-20 maturity amendment rides the Pod Report **as a
+section**, deliberately *not* as a third type · maturity as a standalone shareable scorecard ·
+cross-tenant maturity leaderboards or ranking · **any self-declared or questionnaire-sourced
+criterion** · telemetry/OTel ingestion to close the not-instrumented rows (that's medusa-bonsai's
+area-09 guardrail work) · scoring golden-beans' own repo as a *sold* artifact (gb is tenant #0 and
+dogfoods it internally; the sold artifact is mb's).
 
 ## Slicing (skateboard → car) — 3 sprints, ~3 stories each
 
@@ -163,7 +177,8 @@ v1 ships these two).
 |---|---|---|
 | 2.1 As the pods pitch I want delivery metrics computed from the mb dataset (velocity, throughput, cycle/lead, DORA five incl. rework, cost-per-shipped-point; human-baseline era vs pod era of the same repo) pushed as a report artifact, so every number is reproducible. Pattern-lifts mb `pmo-report.mjs`; **requires mb checkout at build**. Cost model declared as data (rates/token costs snapshotted, ledger-style). Acceptance: rerun ⇒ identical artifact from same inputs; a hand-computed sample matches. | metrics computation | LOW |
 | 2.2 As a decision-maker I want the outcome layer joined in (TARS adoption, North-Star movement, revenue-per-feature — engine-queried, Medusa-truth boundary respected), so the report says "shipped *and it mattered*". Acceptance: outcome rows trace to engine queries; no commerce replica. | outcome layer | LOW |
-| 2.3 As the brand I want the report rendered in the design language with **speed and stability paired** (DORA-2025 honesty: CFR/recovery/rework beside velocity) + benchmark context lines (cited, linked), so it survives a skeptical PM. Acceptance: heuristics checklist run; every external number carries its source; the story-point caveat is on the page. | report surface + design pass | LOW |
+| 2.3 As the brand I want the report rendered in the design language with **speed and stability paired** (DORA-2025 honesty: CFR/recovery/rework beside velocity) + benchmark context lines (cited, linked — DORA · LinearB · DX Core 4 · **Steps of AI Adoption**), so it survives a skeptical PM. Acceptance: heuristics checklist run; every external number carries its source; the story-point caveat is on the page. | report surface + design pass | LOW |
+| 2.4 *(amendment 2026-07-20)* As a decision-maker I want the report to place the pod on the published Steps-of-AI-Adoption ladder criterion-by-criterion, evidence beside every `met` row and **"not instrumented"** where we can't measure, so "agent-augmented pod" is auditable rather than adjectival. Computed from 2.1's existing inputs; no new table/ingest. Acceptance: determinism; every `met` row resolves to a real PR/check (evidence pointer is a required field); a low-maturity fixture repo scores low; not-instrumented count shown beside the verdict on every lens. | maturity lens | LOW |
 
 ### Sprint 3 — Share links + backfill (the flip)
 | Story | Ships | Risk |

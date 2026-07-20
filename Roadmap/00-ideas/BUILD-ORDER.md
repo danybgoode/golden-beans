@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-07-16 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-07-20 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -18,7 +18,7 @@
 
 - [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 0/9 stories · risk: High · #4
 - [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 0/9 stories · risk: High · #2
-- [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/9 stories · risk: High · #3
+- [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/10 stories · risk: High · #3
 
 ## ✅ Shipped (1)
 
