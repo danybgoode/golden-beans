@@ -59,6 +59,11 @@ test('contract-broken: BOTH models empty — a version this blind cannot be bump
   assert.equal(d.action, 'contract-broken');
 });
 
+test('contract-broken: unparseable installed version (null) is never blessed as a bump', () => {
+  const d = decideDoctorAction({ ...base, installed: null });
+  assert.equal(d.action, 'contract-broken');
+});
+
 test('model-drift: a missing pinned model is reported, outranked only by a broken contract', () => {
   assert.equal(decideDoctorAction({ ...base, primaryListed: false }).action, 'model-drift');
   assert.equal(decideDoctorAction({ ...base, installed: '1.0.19', fallbackListed: false }).action, 'model-drift');

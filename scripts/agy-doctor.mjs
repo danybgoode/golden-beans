@@ -53,6 +53,7 @@ const LIB_PATH = join(__dirname, 'lib', 'cross-agent-cli.mjs');
 // (non-zero exit) | 'skipped'.
 export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, fallbackListed, probes }) {
   const notes = [];
+  if (!installed) return { action: 'contract-broken', notes: ['`agy --version` output didn\'t contain a parseable X.Y.Z — a version this blind cannot be bumped (would write the literal string "null" as the pin).'] };
   if (!helpOk) return { action: 'contract-broken', notes: ['`agy --help` no longer shows the -p/--model print contract.'] };
   if (probes.primary === 'error' || probes.fallback === 'error')
     return { action: 'contract-broken', notes: ['a live `agy -p … --model …` probe exited non-zero (not the quota signature — a real interface error).'] };
