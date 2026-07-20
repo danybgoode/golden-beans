@@ -67,12 +67,25 @@ jobs:
       - name: Build
         run: npm run build
 
+      # commercial-shell Story 3.1 — MUST run before the server starts, not after: a value only
+      # reaches an already-running Node process's env if it was set before that process forked.
+      # Adding SELF_PROJECT_API_KEY to $GITHUB_ENV after "Start the app" (an earlier version of
+      # this workflow did exactly that) exports it for LATER steps' shells, but the already-running
+      # `npm run start` background process never re-reads its env — every self-track call silently
+      # no-op'd for the rest of the job (0 events, no error — caught live by this exact CI run
+      # during Sprint 3's cross-review round 2). Generating the key here, before boot, means the
+      # server sees it from its very first request.
+      - name: Generate the self-tracking project's API key
+        run: echo "SELF_PROJECT_API_KEY=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+
       - name: Start the app in the background
         working-directory: apps/web
         # CONNECTOR_ENABLED=true so the Story 2.1 MCP connector round-trip/isolation/revocation
         # specs exercise a live route; the connector's dark-by-default behavior is instead covered
         # as a pure-function assertion (e2e/mcp-connector.spec.ts) — see lib/flags.ts's header
         # comment for why that doesn't need a second differently-enved server boot.
+        # SELF_PROJECT_API_KEY rides in via $GITHUB_ENV (set above) — no explicit env: line needed,
+        # same as SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY above.
         env:
           CONNECTOR_ENABLED: 'true'
         run: |
@@ -86,6 +99,15 @@ jobs:
 
       - name: Seed the public demo project (commercial-shell Story 1.2)
         run: npm run seed:demo
+        env:
+          GROWTH_ENGINE_URL: http://localhost:3000
+
+      # A fresh CI Supabase never already has this project, so provisionProject() always takes the
+      # first-creation path — but here it upserts the SAME key generated above (SELF_PROJECT_API_KEY
+      # is already set), so the DB's stored hash matches what the running server was booted with,
+      # instead of seed:self minting a second, different random key nobody told the server about.
+      - name: Seed the self-tracking project (commercial-shell Story 3.1)
+        run: npm run seed:self
         env:
           GROWTH_ENGINE_URL: http://localhost:3000
 

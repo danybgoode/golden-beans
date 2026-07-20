@@ -6,6 +6,7 @@ import { Teaser } from '@/components/landing/Teaser'
 import { PrimitivesGrid } from '@/components/landing/PrimitivesGrid'
 import { WaitlistSection } from '@/components/landing/WaitlistSection'
 import { Footer } from '@/components/landing/Footer'
+import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 import { getSection } from '@/lib/landing-sections'
 
 // The Golden Beans public landing — sections per references/landing-end-state.md's section map,
@@ -27,6 +28,8 @@ export const dynamic = 'force-dynamic'
 export default function Home() {
   return (
     <>
+      {/* Story 3.1 — dogfood funnel entry beacon (fires `landing_visited`, mints the visitor id). */}
+      <SelfTrackBeacon />
       <Nav />
       <Hero />
       <LiveProofSection />

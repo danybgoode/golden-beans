@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// cross-review.mjs — an ADVISORY cross-agent second opinion on a pull-request diff.
+// cross-review.mjs — the cross-agent judgment-layer review for a pull-request diff.
 //
 // Pipes `gh pr diff <PR#>` into a DIFFERENT model family's CLI (Codex or Antigravity) with the shared prompt
 // (scripts/cross-review.prompt.md = the five AGENTS rules + WAYS single-pass discipline) and prints the
 // findings. It is dev tooling, not app code, and it is deliberately:
 //   • SINGLE-PASS — one read, no debate / iterate-to-convergence loop (our #1 token sink, out of scope).
-//   • ADVISORY ONLY — never gates, blocks, or merges. CI + the Claude reviewer + the risk-tier rule decide.
+//   • THE JUDGMENT-LAYER REVIEW (updated 2026-07-20, WAYS-OF-WORKING "Review & merge — cross-agent") —
+//     running this with BOTH --agent codex and --agent antigravity replaces spawning a same-family
+//     Claude subagent as "the fresh reviewer" for ordinary PRs. A Blocking finding from either run must
+//     be resolved (fixed, or explicitly triaged) before merge — this is no longer background-only noise.
+//     It still isn't a second CI: CI decides green/red mechanically, this decides whether the diff holds
+//     up, and the risk-tier rule still decides *who* clicks merge. HIGH-risk PRs still warrant an
+//     additional same-family Claude read on top of this, not instead of it.
 //
 // Usage:
 //   node scripts/cross-review.mjs [PR#] --agent codex|antigravity [--repo owner/repo] [--force] [--dry-run]
@@ -19,7 +25,7 @@
 // reviews the right diff, no rerun) and refuses a stale local HEAD unless --force. An explicit <PR#> still
 // overrides (and bypasses the stale guard — the deliberate escape hatch).
 //
-// Default posts the findings as a labeled, clearly-advisory PR comment; --dry-run prints instead.
+// Default posts the findings as a labeled PR comment; --dry-run prints instead.
 // `gh` resolves the repo from the current directory; pass --repo to target another (e.g. the app repo).
 // Zero npm deps — Node 18+. CLI plumbing is shared with cross-panel.mjs via scripts/lib/cross-agent-cli.mjs.
 //
@@ -55,11 +61,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
 
 const BANNER =
-  '> **Advisory only — not a gate, does not authorize merge.** ' +
-  'CI + the Claude reviewer + the risk-tier rule remain authoritative. ' +
-  'This is a single-pass second opinion from a different model family.';
+  '> **The judgment-layer review for this PR** (WAYS-OF-WORKING, updated 2026-07-20) — a single-pass ' +
+  'read from a different model family, standing in for a same-family fresh-reviewer pass. ' +
+  'Not a second CI: does not itself authorize a merge — CI (green/red) and the risk-tier rule ' +
+  '(who may click merge) remain the other two layers. Blocking findings should be resolved or ' +
+  'explicitly triaged before merge.';
 
-const HELP = `cross-review.mjs — advisory cross-agent second opinion on a PR diff.
+const HELP = `cross-review.mjs — the cross-agent judgment-layer review for a PR diff.
 
 Usage:
   node scripts/cross-review.mjs [PR#] --agent codex|antigravity [--repo owner/repo] [--force] [--dry-run]
@@ -80,7 +88,7 @@ Flags:
 With no [PR#], resolves the branch's PR via \`gh pr view\` and refuses a stale local HEAD unless --force.
 An explicit [PR#] overrides resolution and bypasses the stale guard.
 
-Advisory only — the output never gates, blocks, or authorizes a merge.`;
+The judgment-layer review — not a second CI. CI (green/red) + the risk-tier rule (who merges) decide the rest.`;
 
 function parseArgs(argv) {
   const out = {
@@ -252,7 +260,7 @@ function main() {
     process.stderr.write('\n(dry-run — no comment posted)\n');
   } else {
     const url = postComment(pr, repo, body);
-    process.stderr.write(`✓ Advisory comment posted${url ? `: ${url}` : ''}\n`);
+    process.stderr.write(`✓ Review comment posted${url ? `: ${url}` : ''}\n`);
   }
 }
 
