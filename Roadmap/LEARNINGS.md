@@ -255,8 +255,43 @@ one-liner + why + date shape.
   happens to match how you already wired the implementation — and don't skip the fresh-reviewer pass
   even when your own gate is green and your own manual smoke looked fine. *(2026-07-16,
   growth-engine-v1 S4.)*
+- **Two different non-Claude model families, single-pass each, can replace a same-family fresh-
+  reviewer subagent for ordinary PRs — not just supplement it as advisory noise.** commercial-shell
+  Sprint 3 ran Codex + Agy (Antigravity) as the judgment-layer review instead of also spawning a
+  same-family Claude reviewer, and they caught three real bugs a same-family read might well have
+  missed anyway: a seed script silently rotating a production API key hash on a bare re-run, two
+  routes inline-`await`ing a real network call (blocking the response, and in one case delaying a
+  Set-Cookie behind it), and a public write route with no rate limit its siblings all had. Findings
+  from this pass should be treated as real review feedback (Blocking → fix before merge), not
+  background-only noise — see the updated `WAYS-OF-WORKING.md` "Review & merge" section. Still
+  reserve an ADDITIONAL same-family read for HIGH-risk PRs (money/auth/DB/shared infra) — cross-
+  family review is a floor for ordinary PRs, not a ceiling for the stakes that warrant more.
+  **Corollary — fixing one round's findings can introduce a NEW bug a second review round then
+  catches, and actually EXECUTING the fix can catch a THIRD class of bug neither review round
+  found.** The same PR's round-1 fix (moving a blocking `await` to `next/server`'s `after()`)
+  introduced a subtler identity race that round-2 review caught; then the actual CI run caught a
+  totally different bug — a GitHub Actions workflow exporting an env var one step too late for an
+  already-running background process to see it (see below) — that no amount of reading the diff,
+  by any model, would have found. Static review and real execution are complementary, not
+  redundant; budget for both, especially right after a "fix" to something already reviewed.
+  *(2026-07-20, commercial-shell Sprint 3.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
   state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
   sprint/PR boundary, and for big epics consider a fresh session per sprint.
+- **A GitHub Actions workflow env var exported via `$GITHUB_ENV` only reaches steps AFTER that
+  point in the job — never an already-running background process from an earlier step.**
+  commercial-shell Sprint 3's CI exported a freshly-minted `SELF_PROJECT_API_KEY` right before
+  seeding a new tenant, but the `npm run start &` background server had already forked several
+  steps earlier — so the running process never saw it, and every tracking call for the rest of the
+  job silently no-op'd (0 events, no error, by design — that's what made it non-obvious). Fix:
+  generate/export anything a long-running background process needs to read from its env BEFORE
+  starting that process, not after — even if the value is only used by a LATER step logically.
+- **GitHub Actions minutes are a shared, cyclical, account-wide constraint, not a one-time
+  incident** — seen twice now (root `miyagi-product-management`'s `notion-sync` burning the
+  account's quota 2026-07-16; a general account-wide exhaustion flagged mid-session 2026-07-20).
+  When told minutes are tight, batch changes and verify locally (`tsc`, `build`, and the Playwright
+  `api` project against a local Supabase) before pushing, rather than using CI as an iterative test
+  runner — this repo's `.githooks/pre-push` already runs a local, best-effort version of the same
+  gate for exactly this reason.
