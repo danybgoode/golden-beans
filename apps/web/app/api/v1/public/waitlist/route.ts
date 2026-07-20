@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { waitlistSchema } from '@/lib/waitlist-schema'
 import { checkRateLimit, hashIp } from '@/lib/rate-limit'
+import { trackSelfEvent, WAITLIST_JOINED_EVENT, VISITOR_COOKIE } from '@/lib/self-track'
 
 // POST /v1/public/waitlist — Story 1.3 (commercial-shell/sprint-1.md). Public write, guarded:
 // honeypot, rate-limited, dedupe-safe. No third-party form service — email lands directly in
@@ -45,6 +47,16 @@ export async function POST(req: NextRequest) {
     console.error('[public/waitlist] insert failed:', error)
     return NextResponse.json({ ok: false, error: 'Failed to join the waitlist' }, { status: 500 })
   }
+
+  // Story 3.1 (commercial-shell/sprint-3.md) — the conversion half of the dogfood funnel. This is
+  // the ONLY successful, non-honeypot join path (the honeypot returned above without inserting, so
+  // a bot's silent-success never counts as a real `waitlist_joined`). We reuse the visitor id set
+  // by the visited beacon (VISITOR_COOKIE), so this join is the SAME user who fired
+  // `landing_visited` advancing through the funnel; if the cookie is somehow absent (JS beacon
+  // never ran), we still record the conversion under a fresh id rather than lose it. Fire-and-
+  // forget through the real SDK — never blocks or fails the join (trackSelfEvent is total).
+  const visitorId = req.cookies.get(VISITOR_COOKIE)?.value?.trim() || randomUUID()
+  await trackSelfEvent(WAITLIST_JOINED_EVENT, visitorId)
 
   return NextResponse.json({ ok: true })
 }
