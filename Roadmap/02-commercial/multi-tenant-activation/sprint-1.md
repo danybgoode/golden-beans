@@ -65,25 +65,47 @@ coordinate with E1 story 2.1's shape.
 rotation; Miyagi's existing ingest key keeps working through the migration, spec-verified.
 **Risk:** HIGH — Daniel merges (auth + migration)
 
-## Sprint QA
-- **api spec(s):** 1.1 → unauthed `/app` redirect + session expiry · 1.2 → cross-tenant 403 with a
-  real foreign slug + demo allow-list still anonymous · 1.3 → revoked-key 401 · rotation overlap ·
-  legacy-key continuity
-- **browser smoke owed:** yes, to Daniel — login → own dashboard; foreign slug → 403 (auth path)
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
+## Sprint QA — as built
+- **api specs (107 passing):** `app-auth.spec` → unauthed `/app` + foreign-slug dashboards + key
+  mgmt all bounce to `/login` (using the **real** `miyagisanchez` slug, per the S4
+  least-convenient-input lesson) · demo dashboard still anonymous · `safeRedirectPath` open-redirect
+  guard (6 hostile inputs) · `isOwner` fails closed. `api-keys.spec` → legacy/backfilled key still
+  authorizes · revoked key → 401 immediately · rotation overlap. Existing funnel/impact/experiments
+  specs kept their JSON-endpoint data coverage, page assertions updated to the gated reality.
+- **Deviation from the plan, deliberate:** the plan said non-member → "403/404"; as built it is
+  **404, never 403** — a 403 confirms the project exists. Slug-guessing gets no oracle at all.
+- **Not built here (moved, not dropped):** self-serve **sign-up** — cross-review flagged it was
+  reachable ahead of its born-OFF `SIGNUP_ENABLED` gate, and it belongs to Story 2.1. Sprint 1 is
+  **sign-in only**; accounts + memberships are hand-seeded.
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` — green before merge.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: preview URL pre-merge · production `https://golden-beans-gamma.vercel.app` post-merge
+Env: preview URL pre-merge · production `https://golden-beans-gamma.vercel.app` post-merge.
+**Prerequisite:** the PR's *ordering kit* is done — migrations applied to prod Supabase **before**
+the code deploys, `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY` set in Vercel, Supabase Auth redirect URLs
+include `/auth/callback`, and your membership row seeded **as `owner`**.
 
 1. Open `/app` in a private window.
-   → You're sent to a login screen, not a dashboard.
+   → You're sent to `/login`, not a dashboard.
 2. Sign in with your seeded account. *(auth path — owed to Daniel)*
-   → You see your project(s) only; no other tenant listed.
-3. Edit the URL to a project slug you don't belong to (use the real Miyagi slug).
-   → 403/404 — never data.
-4. Open the public landing's live-proof section anonymously.
-   → Demo project still renders (allow-list intact).
-5. In the dashboard, revoke a test API key, then fire a `curl` `/v1/track` call with it.
-   → 401 immediately.
+   → You see your project(s) only, with links to Funnel / Impact / API keys; no other tenant listed.
+3. Still signed in, edit the URL to a project slug you don't belong to (use the real Miyagi slug).
+   → **404** — never data, and never a 403 (a 403 would confirm the project exists).
+4. Still signed in, open `/app/keys/<a project you're only a `member` of>`.
+   → **404** — credential admin is owner-only. *(Skip if you're `owner` everywhere.)*
+5. On your own project's `/app/keys/<slug>`, click **Issue key**.
+   → The plaintext is shown **once**, with a "copy it now" warning; the row appears as `active`.
+6. `curl` `/api/v1/track` with that new key:
+   `curl -i -X POST <base>/api/v1/track -H "Authorization: Bearer <new-key>" -H 'Content-Type: application/json' -d '{"userId":"smoke","event":"smoke_event"}'`
+   → **201**.
+7. Revoke that key in the dashboard, then re-run the exact same `curl`.
+   → **401**, immediately — no deploy, no cache window.
+8. Confirm the **pre-existing** ingest key still works (the backfill did its job) — re-run step 6
+   with the key production was already using.
+   → **201**. *(This is the one that proves nothing broke for live tenants.)*
+9. Open the public landing's live-proof section anonymously (private window, signed out).
+   → Demo project still renders — the allow-list carve-out survived the auth boundary.
+10. Sign out from `/app`.
+   → You land on `/login`, and re-opening `/app` sends you back to `/login` (session really gone).
 
 If any step fails, note the step number + what you saw — that's the bug report.
