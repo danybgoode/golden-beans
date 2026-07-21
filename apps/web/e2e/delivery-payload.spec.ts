@@ -150,3 +150,15 @@ test('send-time SSRF: a host RESOLVING to a private IP is refused and NEVER fetc
   expect(result.disposition).toBe('permanent') // not retryable — the target is structurally unsafe
   expect(result.error).toContain('private')
 })
+
+test('send-time SSRF: the http://localhost TEST receiver is EXEMPT (its loopback is allowed)', async () => {
+  // Cross-review (Codex round 3): the localhost test receiver is deliberately allowed to be loopback
+  // (the disposable sink the smoke walkthrough POSTs to). The send-time guard must grant the SAME
+  // exception the create-time guard does, or the documented receiver could never be delivered to.
+  const localDest: DeliverableDestination = { ...DEST, targetUrl: 'http://localhost:4000/hook' }
+  const { impl, seen } = stubFetch(200)
+  // A resolver that WOULD flag loopback — proving the carve-out short-circuits BEFORE resolution.
+  const result = await deliverWebhook(localDest, 'x', { fetchImpl: impl, resolveHost: async () => ['127.0.0.1'] })
+  expect(result.disposition).toBe('delivered')
+  expect(seen).toHaveLength(1)
+})

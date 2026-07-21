@@ -39,7 +39,7 @@ It is owner-only, rate-limited (10/10min/project), SSRF-guarded, and sends a syn
 
 ## Still owed before this sprint can be called shipped
 
-- [ ] Cross-agent review (memory: **two rounds is a floor**, this epic needed 11 in S1) — not yet run
+- [x] Cross-agent judgment-layer review (`scripts/cross-review.mjs`, both `codex` + `antigravity`) — run and converged; findings fixed or explicitly triaged (see the SSRF-rebinding follow-up below)
 - [ ] `20260723100000` + `20260724100000` pushed to **prod** Supabase (migration-first, before merge)
 - [ ] `CRON_SECRET` set in Vercel prod (the cron fails closed without it)
 - [ ] Browser smoke owed to Daniel (authenticated create → test → enable → rotate → replay)

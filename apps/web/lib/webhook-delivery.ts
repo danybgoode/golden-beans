@@ -1,7 +1,11 @@
 import { lookup } from 'node:dns/promises'
 import { signWebhookPayload } from './webhook-signature'
-import { isPrivateOrLoopbackHost } from './webhook-url'
+import { isPrivateOrLoopbackHost, isLocalTestTarget } from './webhook-url'
 import type { DeliverableDestination } from './destinations'
+
+/** Cap on the send-time DNS lookup so a stalled resolver can't overrun the caller's deadline
+ *  (cross-review, Codex round 3). A lookup that exceeds this is treated as unresolvable → fail-open. */
+const RESOLVE_TIMEOUT_MS = 3_000
 
 // event-destination-router · Sprint 2 — the ACTUAL signed outbound POST. Shared by Story 2.1's
 // owner-initiated "send test" and Story 2.2's background dispatcher, so the bytes a receiver sees and
@@ -160,6 +164,12 @@ async function resolveTargetHost(
   targetUrl: string,
   resolveHost: (hostname: string) => Promise<string[]>,
 ): Promise<string | null> {
+  // The localhost test-receiver carve-out (lib/webhook-url.ts): its address IS loopback, which the
+  // check below would otherwise block — but this is the one target deliberately allowed to be
+  // loopback (the disposable sink the specs and smoke walkthrough POST to). Same exception the
+  // create-time guard grants, kept consistent end-to-end (cross-review, Codex round 3).
+  if (isLocalTestTarget(targetUrl)) return null
+
   let hostname: string
   try {
     hostname = new URL(targetUrl).hostname
@@ -167,16 +177,25 @@ async function resolveTargetHost(
     return 'invalid target URL'
   }
   try {
-    const addresses = await resolveHost(hostname)
+    // Bound the lookup so a stalled resolver can't overrun the caller's deadline; a timeout is
+    // treated like any resolution error → fail-open.
+    const addresses = await withTimeout(resolveHost(hostname), RESOLVE_TIMEOUT_MS)
     for (const address of addresses) {
       if (isPrivateOrLoopbackHost(address)) {
         return 'blocked: target resolves to a private or loopback address'
       }
     }
   } catch {
-    // Unresolvable host → not an SSRF target; let the fetch fail on its own terms.
+    // Unresolvable host (or a lookup timeout) → not an SSRF target; let the fetch fail on its own.
   }
   return null
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) => setTimeout(() => reject(new Error('resolve timeout')), ms)),
+  ])
 }
 
 // 5xx are transient by definition. 408 (Request Timeout) and 429 (Too Many Requests) are the two

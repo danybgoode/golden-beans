@@ -56,11 +56,10 @@ export async function POST(request: Request) {
   }
 
   const db = getSupabaseServiceClient()
-  const now = new Date()
 
   let projects: string[]
   try {
-    projects = await projectsWithDueWork(now, MAX_PROJECTS_PER_TICK)
+    projects = await projectsWithDueWork(new Date(), MAX_PROJECTS_PER_TICK)
   } catch (err) {
     console.error('[dispatch-cron] enumerate failed:', err)
     return NextResponse.json({ error: 'enumerate_failed' }, { status: 500 })
@@ -78,6 +77,10 @@ export async function POST(request: Request) {
     // the dispatcher so it also stops mid-batch (one project's 50 slow sends can't overrun alone).
     if (Date.now() >= deadlineMs) break
     processed += 1
+    // A FRESH clock per project (cross-review, Antigravity round 3): a single `now` captured at the
+    // top would be up to a full budget behind wall-time for the last projects, making their
+    // claim_deliveries see fewer rows as due than actually are.
+    const now = new Date()
     const outcome = await dispatchPendingDeliveries(db, projectId, { now, fetchImpl: fetch, deadlineMs })
     if (outcome.ok && outcome.dispatched) {
       // Count only settlements PERSISTED as delivered — never merely claimed (cross-review, Codex:

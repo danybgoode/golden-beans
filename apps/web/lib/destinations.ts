@@ -110,10 +110,12 @@ export async function createDestination(
   projectId: string,
   input: CreateDestinationInput,
 ): Promise<CreateDestinationResult> {
-  const name = input.name.trim()
+  // Defensive `?? ''` so the library is safe even if a caller reaches it without the action's string
+  // validation (cross-review, Antigravity round 3) — a null/undefined here would otherwise TypeError.
+  const name = (input.name ?? '').trim()
   if (!name || name.length > 128) return { ok: false, error: 'Name must be 1–128 characters.' }
 
-  const urlCheck = assertDeliverableUrl(input.targetUrl.trim())
+  const urlCheck = assertDeliverableUrl((input.targetUrl ?? '').trim())
   if (!urlCheck.ok) return { ok: false, error: urlCheck.error }
 
   const eventFilter = normalizeFilter(input.eventFilter)

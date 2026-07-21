@@ -22,6 +22,15 @@ export type UrlCheck = { ok: true } | { ok: false; error: string }
 
 const IS_LOCAL_TARGET = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/
 
+// The http://localhost(:port) / http://127.0.0.1 test-receiver carve-out — the ONE target allowed to
+// be loopback (the specs' and smoke walkthrough's disposable sink). Exported so the send-time SSRF
+// guard (lib/webhook-delivery.ts) grants the SAME exception its resolver would otherwise block as a
+// loopback address (cross-review, Codex round 3): without this the documented localhost receiver
+// could be created but never actually delivered to.
+export function isLocalTestTarget(raw: string): boolean {
+  return IS_LOCAL_TARGET.test(raw)
+}
+
 export function assertDeliverableUrl(raw: string): UrlCheck {
   let url: URL
   try {

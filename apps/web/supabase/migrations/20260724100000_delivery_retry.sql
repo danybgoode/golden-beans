@@ -176,7 +176,11 @@ BEGIN
          attempt_count   = p_attempt_count,
          last_error      = p_last_error,
          claimed_at      = NULL,
-         -- NULL means "leave unchanged" — only the retry path supplies a new schedule.
+         -- NULL means "leave unchanged" — only the retry (failed) path supplies a new schedule. A
+         -- terminal row (delivered/dead) therefore retains its last next_attempt_at; that is
+         -- harmless and intentional — next_attempt_at is NOT NULL (so it cannot be cleared) and is
+         -- only ever READ for claimable (pending/failed) rows, never for terminal ones (cross-review,
+         -- Codex round 3 flagged the staleness; it is a no-op by construction).
          next_attempt_at = COALESCE(p_next_attempt_at, next_attempt_at),
          -- a real attempt stamps last_attempt_at; the release (p_log=false) path attempted nothing.
          last_attempt_at = CASE WHEN p_log THEN p_now ELSE last_attempt_at END,
@@ -229,7 +233,12 @@ STABLE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
-  SELECT DISTINCT dd.project_id
+  -- ORDER BY the project's OLDEST due row, so the LIMIT keeps the LONGEST-WAITING projects rather
+  -- than an arbitrary set (cross-review, Codex round 3): an unordered LIMIT could let the same slow
+  -- projects occupy every tick and starve others. Deterministic oldest-first is a fairness FLOOR;
+  -- true round-robin across ticks (a cursor) is a scale follow-up, noted when measured traffic needs
+  -- it. GROUP BY replaces DISTINCT so the ORDER BY can key off the per-project MIN.
+  SELECT dd.project_id
     FROM event_deliveries dd
     JOIN event_destinations dest
       ON dest.id = dd.destination_id
@@ -241,6 +250,8 @@ AS $$
        (dd.status IN ('pending', 'failed') AND dd.next_attempt_at <= p_now)
        OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - make_interval(secs => p_stale_after_ms / 1000.0))
      )
+   GROUP BY dd.project_id
+   ORDER BY MIN(dd.next_attempt_at) ASC
    LIMIT p_limit;
 $$;
 

@@ -133,9 +133,19 @@ export async function dispatchPendingDeliveries(
     const settlements: DeliverySettlement[] = []
     for (let i = 0; i < rows.length; i++) {
       // Stop before overrunning the pass deadline: release the rows we claimed but will not reach,
-      // so they are NOT stranded in_flight, then finish. Guarded by the claim token like every write.
+      // so they are NOT stranded in_flight, then finish. The released rows are reported as unsent
+      // settlements (persisted = whether the release landed), so a FAILED release surfaces as
+      // `unsettled` in the cron rather than a silent clean pass (cross-review, Codex round 3).
       if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
-        await releaseUnsent(db, projectId, rows.slice(i).map((r) => r.id), now)
+        const deferred = rows.slice(i)
+        const released = await releaseUnsent(db, projectId, deferred.map((r) => r.id), now)
+        for (const r of deferred) {
+          const ok = released.has(r.id)
+          settlements.push({
+            id: r.id, event_id: r.event_id, destination_id: r.destination_id,
+            disposition: 'skipped', status: ok ? 'pending' : 'in_flight', attemptCount: r.attempt_count, persisted: ok,
+          })
+        }
         break
       }
       // One bad row must not sink the batch — settle it in isolation. A throw here would leave the
@@ -186,8 +196,25 @@ async function sendAndSettle(
     .eq('project_id', projectId)
     .maybeSingle()
 
-  if (!dest || !dest.enabled || !dest.target_url || !dest.signing_secret || !event) {
-    // Release to pending, unattempted, no attempt-log row (p_log=false).
+  // A MISSING parent (destination or event row gone) is a PERMANENT anomaly — DEAD-letter it, never
+  // recycle to pending (cross-review, Antigravity round 3): claim_deliveries does not join `events`,
+  // so a pending row whose event is missing would be re-claimed every tick forever. The composite FK
+  // CASCADE means a parent delete already removes the delivery row, so this branch is defensive — but
+  // "defensive" must not mean "infinite loop." Terminal, no attempt logged.
+  if (!dest || !event) {
+    const persisted = await settleDelivery(db, {
+      row, projectId, claimToken: nowIso, now: nowIso, status: 'dead',
+      nextAttemptAt: null, lastError: 'destination or event no longer exists', attemptCount: row.attempt_count,
+      log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
+    })
+    return { ...base, disposition: 'skipped', status: 'dead', attemptCount: row.attempt_count, persisted }
+  }
+
+  // A TRANSIENT non-deliverable state (destination exists but was disabled, or its url/secret was
+  // cleared, AFTER the claim) — release to pending, unattempted. This does NOT loop: claim_deliveries
+  // requires enabled + url + secret, so a disabled/unconfigured destination's row is not re-claimed
+  // until it is deliverable again. No attempt logged (p_log=false).
+  if (!dest.enabled || !dest.target_url || !dest.signing_secret) {
     const persisted = await settleDelivery(db, {
       row, projectId, claimToken: nowIso, now: nowIso, status: 'pending',
       nextAttemptAt: null, lastError: null, attemptCount: row.attempt_count,
@@ -261,17 +288,24 @@ async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<boolea
 }
 
 // Releases claimed-but-unsent rows back to pending (the deadline path), guarded by the claim token.
-async function releaseUnsent(db: SupabaseClient, projectId: string, ids: string[], now: Date): Promise<void> {
-  if (ids.length === 0) return
+// Returns the SET of ids actually released, so the caller can report any row it FAILED to release as
+// unsettled rather than as a clean deferral (cross-review, Codex round 3).
+async function releaseUnsent(db: SupabaseClient, projectId: string, ids: string[], now: Date): Promise<Set<string>> {
+  if (ids.length === 0) return new Set()
   const nowIso = now.toISOString()
-  const { error } = await db
+  const { data, error } = await db
     .from('event_deliveries')
     .update({ status: 'pending', claimed_at: null, updated_at: nowIso })
     .eq('project_id', projectId)
     .in('id', ids)
     .eq('status', 'in_flight')
     .eq('claimed_at', nowIso)
-  if (error) console.error('[delivery-dispatch] release-unsent failed:', error.message)
+    .select('id')
+  if (error) {
+    console.error('[delivery-dispatch] release-unsent failed:', error.message)
+    return new Set()
+  }
+  return new Set((data ?? []).map((r) => r.id as string))
 }
 
 // Maps an HTTP disposition + attempt count to the row's next state. The retry SCHEDULE is
