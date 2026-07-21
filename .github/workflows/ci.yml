@@ -66,6 +66,11 @@ jobs:
           eval "$(supabase status -o env)"
           echo "SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
+          # Auth session client (multi-tenant-activation Story 1.1). NEXT_PUBLIC_* are BUILD-time
+          # inlined into the client bundle, so they must be exported BEFORE the Build step below —
+          # and they persist to the runtime `npm run start` process too (same $GITHUB_ENV rail).
+          echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL" >> "$GITHUB_ENV"
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY" >> "$GITHUB_ENV"
 
       - name: Build
         run: npm run build
