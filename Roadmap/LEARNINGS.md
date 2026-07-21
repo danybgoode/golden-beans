@@ -203,6 +203,14 @@ one-liner + why + date shape.
   status per environment) instead of assuming a manual deploy is needed. Env-var-only changes may take
   effect on already-deployed functions with no redeploy at all (observed 2026-07-16) — don't assume a
   fresh deploy is required before checking.
+  **CORRECTION (2026-07-21, multi-tenant-activation launch): that "no redeploy" observation does NOT
+  generalize, and betting on it costs you a confusing debugging session.** Adding `SIGNUP_ENABLED`
+  to Vercel's Production scope left `/signup` returning 404 for 7+ minutes, because Vercel snapshots
+  env vars into a deployment at BUILD time and running functions keep serving the values captured at
+  their own build. **Treat "env var set" and "env var live" as two separate facts**: setting it is
+  half the job, a new deployment (here: a commit to `main`) is what makes it take effect. The
+  reliable check is always exercising the behaviour the var controls — a CLI listing shows presence,
+  never effect.
 - **A local checkout's `node_modules` goes stale the moment a merged PR adds a new dependency** —
   `git pull`-ing the merge commit updates `package.json` on disk but not `node_modules`, so a local
   `tsc`/`build` can fail with `Cannot find module` for code that builds fine everywhere else (CI

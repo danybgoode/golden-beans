@@ -36,10 +36,15 @@ GitHub integration auto-deploys `main` to production on every merge, no manual s
 `vercel deploy`/`vercel deploy --prod` from the CLI** — that's an out-of-band deploy that bypasses
 the git-tracked pipeline and isn't how this project ships; if a deployment looks stuck or wrong,
 check `gh api repos/<owner>/<repo>/deployments` (confirms which commit SHA is actually live) or the
-Vercel dashboard, don't reach for a CLI deploy to "fix" it. Confirmed 2026-07-16 (commercial-shell
-Sprint 2): a Vercel env var added via `vercel env add ... --value ... --no-sensitive` took effect
-on the already-deployed production functions with **no redeploy needed** — env-var-only changes
-don't require a new deployment here. Two gotchas hit while confirming this: (1) `vercel env add`
+Vercel dashboard, don't reach for a CLI deploy to "fix" it. **Env vars require a REDEPLOY to reach running functions — corrected 2026-07-21.** An earlier
+version of this file claimed the opposite ("took effect on the already-deployed production
+functions with no redeploy needed", from commercial-shell Sprint 2). That was **disproved
+empirically** during the multi-tenant-activation launch: `SIGNUP_ENABLED=true` was added to the
+Production scope with `vercel env add ... --value true`, and `/signup` still returned 404 more than
+seven minutes later, because Vercel snapshots env vars into a deployment at build time and the
+running functions kept serving the values captured at their own build. **Adding or changing a var
+is only half the job — a new deployment (i.e. a commit to `main`) is what makes it live.** Verify
+by exercising the behaviour the var controls, never by `vercel env ls` (which never shows values). Two gotchas hit while confirming this: (1) `vercel env add`
 piped from `echo -n "..." |` can silently save an **empty** value — always verify with `--value
 <val>` explicitly, and check the live behavior it's supposed to affect (e.g. render the page that
 reads it), not just `vercel env ls` (which never shows values) or `vercel env pull` (unreliable for
