@@ -1,0 +1,57 @@
+# Entity journeys — Sprint 1: Definition contract and deterministic subject projection
+
+**Status:** ⬜ not started
+
+## Stories
+
+### Story 1.1 — Versioned journey-definition registry
+
+**As a** tenant owner, **I want** a versioned ordered journey definition, **so that** lifecycle meaning is
+explicit and auditable before anyone relies on it.
+
+**Acceptance:** an owner can create a draft, validate bounded predicates, activate one version and create a new
+version for later edits; only one version is active; duplicate stage keys and unsafe/high-cardinality predicate
+fields fail closed; members and foreign-project identities cannot mutate definitions; every change records
+actor/time; `JOURNEY_PROJECTIONS_ENABLED` exists disabled and OFF hides the new seams.
+
+**Risk:** high — additive database migration and authenticated project management; Daniel merges.
+
+### Story 1.2 — Deterministic subject projection
+
+**As a** product operator, **I want** one subject projected from source events, **so that** I can explain its
+current stage, first-entered time and complete ordered history.
+
+**Acceptance:** an import-free evaluator handles ordered, late, duplicate, out-of-order and same-time fixtures;
+highest satisfied stage wins; lower-stage events do not regress; same-time ties use canonical event id;
+irrelevant events are ignored; response names definition version and source freshness.
+
+**Risk:** low — read-only pure/query logic over existing telemetry.
+
+## Sprint QA
+
+- **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/
+  same-time/irrelevant events and no-regression behavior.
+- **api specs:** owner/member/foreign definition mutations; API-key project scoping; flag OFF/ON; subject read
+  with realistic stable identity and definition version.
+- **browser smoke owed:** yes, to Daniel — authenticated definition creation/activation for a disposable project.
+- **deterministic gate:** typecheck + build + Playwright API green; migration verified locally and in production.
+
+## Sprint 1 — Smoke walkthrough (do these in order)
+
+Env: production · https://golden-beans-gamma.vercel.app
+
+1. With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL.
+   → The new surface is unavailable while existing funnels and experiments still work.
+2. Redeploy with the gate ON, sign in as the disposable project owner and open
+   https://golden-beans-gamma.vercel.app/app/journeys.
+   → “Create journey” appears for that project.
+3. Create `merchant-activation` with three ordered smoke stages, then activate version 1.
+   → The definition displays one active version and immutable activation history.
+4. Send the three subject events out of order, with one duplicate, then request
+   `https://golden-beans-gamma.vercel.app/api/v1/journeys/merchant-activation/subjects/merchant-smoke-journey-001`
+   using the disposable API key.
+   → One subject returns the correct current stage, first-entered timestamps and version 1.
+5. Try to mutate the definition as a member and through another project's identity.
+   → Both are denied and no definition changes.
+
+If any step fails, note the step number + URL/response — that's the bug report.

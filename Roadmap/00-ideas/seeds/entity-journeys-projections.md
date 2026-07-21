@@ -1,12 +1,12 @@
 ---
 title: "Entity journeys — configurable lifecycle projections beyond fixed TARS"
 slug: entity-journeys-projections
-status: ready
+status: scaffolded
 area: "01"
 type: feature
 priority: "#2b"
 risk: high
-epic: null
+epic: "01-growth-engine/entity-journeys-projections"
 build_order: "#2b"
 updated: 2026-07-21
 ---

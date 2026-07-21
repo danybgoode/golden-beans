@@ -1,12 +1,12 @@
 ---
 title: "Experiment governance v2 — registry, metrics, guardrails, and decision record"
 slug: experiment-governance-v2
-status: ready
+status: scaffolded
 area: "01"
 type: feature
 priority: "#2c"
 risk: high
-epic: null
+epic: "01-growth-engine/experiment-governance-v2"
 build_order: "#2c"
 updated: 2026-07-21
 ---
