@@ -31,7 +31,12 @@ export const LANDING_SECTIONS: LandingSection[] = [
   { id: 'inverted-loop', title: 'The inverted loop', epic: 'signals-loop', status: 'next' },
   { id: 'pods-proof', title: 'Pods & proof (ROI)', epic: 'pod-report', status: 'next' },
   { id: 'primitives', title: 'Primitives grid', epic: 'commercial-shell', status: 'live' },
-  { id: 'pricing', title: 'Pricing & tenancy', epic: 'multi-tenant-activation', status: 'next' },
+  // multi-tenant-activation · Sprint 3, Story 3.1 — flipped 'next' -> 'live': the section's real
+  // component (WaitlistSection.tsx) now renders honest self-serve tiers whenever SIGNUP_ENABLED
+  // is on, not just the waitlist teaser. This registry entry is the static "the capability
+  // shipped" declaration the backfill DoD checks — the per-request choice of which of the two
+  // (tiers vs waitlist) actually renders still lives in the component, keyed off the live flag.
+  { id: 'pricing', title: 'Pricing & tenancy', epic: 'multi-tenant-activation', status: 'live' },
   { id: 'footer', title: 'Footer', epic: 'commercial-shell', status: 'live' },
 ]
 
