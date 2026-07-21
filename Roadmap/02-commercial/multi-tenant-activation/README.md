@@ -40,9 +40,9 @@ no-policies service-role pattern as every existing table.
 ## Scope — stories
 | Sprint | Story | Risk |
 |---|---|---|
-| 1 | 1.1 Supabase Auth + `project_members` + authed `/app` shell | **HIGH — Daniel merges** |
-| 1 | 1.2 Dashboards behind per-tenant authorization (slug-guessing dies; demo allow-list survives) | **HIGH — Daniel merges** |
-| 1 | 1.3 `api_keys` lifecycle (issue/label/rotate/revoke; existing hashes migrated in) | **HIGH — Daniel merges** |
+| 1 | ✅ 1.1 Supabase Auth + `project_members` + authed `/app` shell | **HIGH — Daniel merges** |
+| 1 | ✅ 1.2 Dashboards behind per-tenant authorization (slug-guessing dies; demo allow-list survives) | **HIGH — Daniel merges** |
+| 1 | ✅ 1.3 `api_keys` lifecycle (issue/label/rotate/revoke; existing hashes migrated in) | **HIGH — Daniel merges** |
 | 2 | 2.1 Signup → instant tenant + first key (guardrailed, ships dark behind `SIGNUP_ENABLED`) | **HIGH — Daniel merges** |
 | 2 | 2.2 Isolation guardrails (quota · payload caps · per-key rate limit) + credential audit trail | **HIGH — Daniel merges** |
 | 2 | 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |

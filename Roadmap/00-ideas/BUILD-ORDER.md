@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 0/9 stories · risk: High · #2
+- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 3/9 stories · risk: High · #2
 
 ## 📋 Ready to build (scaffolded, not started) (3)
 

@@ -1,13 +1,37 @@
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
-**Status:** 🟦 In review — **PR #13, awaiting Daniel** (HIGH risk: auth + 2 DB migrations). All 3
-stories built; deterministic gate green (tsc + build + Playwright `api`, **107 passed**). Commits:
-1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`; review fixes `77350bc` (round 1) + `151b025` (round 2).
+**Status:** ✅ **MERGED + LIVE IN PRODUCTION** (2026-07-21) — PR #13 squash-merged as `e032867`,
+deployed to `https://golden-beans-gamma.vercel.app`. All 3 stories; deterministic gate green
+(tsc + build + Playwright `api`, **107 passed**). Commits: 1.1 `a33a316`, 1.2 `1c7ef9d`,
+1.3 `401c39b`; review fixes `77350bc` (round 1) + `151b025` (round 2).
 
-> **Do not merge code-first.** `auth.ts` now reads `api_keys`, so the migrations must be applied to
-> prod Supabase **before** the code deploys, or every ingest call 500s. Full ordering kit is in the
-> PR body (migrations → Vercel `NEXT_PUBLIC_*` envs *before* the build → Supabase Auth redirect URLs
-> → seed your membership as `owner`).
+### Production rollout — executed in the required order
+1. **Vercel envs first** — `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (prod, the
+   legacy `anon` JWT format — the same format local/CI validated against, avoiding the
+   `sb_secret`-vs-JWT confusion LEARNINGS records). Verified by **value length** via `env pull`, not
+   exit code; the pulled file was shredded immediately.
+2. **Migrations before code** — `supabase db push` applied `20260720120000_project_members` +
+   `20260720130000_api_keys` (dry-run first; `--include-seed` is off by default, so the local test
+   fixtures in `seed.sql` never touched prod). **Backfill verified: all 3 tenants
+   (`miyagisanchez`, `golden-beans-demo`, `golden-beans`) have exactly 1 active key.** RLS on for
+   both new tables.
+3. **Merged → deployed** — production deployment `e032867` succeeded.
+4. **Auth redirect allow-list — correctly a NO-OP for Sprint 1.** The only auth call is
+   `signInWithPassword` (no `emailRedirectTo`, no `signUp`), which sets cookies directly and never
+   round-trips through Supabase. This becomes required in Sprint 2 when signup lands.
+5. **Membership row — still owed** (see below): needs an auth user, and prod has 0.
+
+### Post-deploy production smoke (all green)
+| Check | Result |
+|---|---|
+| unauthed `/app` | 307 → `/login` |
+| unauthed `/app/funnel/miyagisanchez/setup_guide` (real foreign slug) | 307 → `/login` |
+| `/login` renders | 200 |
+| public demo read route (allow-list intact) | 200 |
+| invalid API key → **401, not 500** | 401 *(proves `api_keys` resolves in prod)* |
+| **a real backfilled key authorizes** — `/api/v1/public/self-visit` → `landing_visited` landed in the self tenant | ✅ *(the migration did not break live ingest; synthetic event cleaned up after)* |
+| MCP connector `tools/list` · `/install` · `/llms.txt` (prior epic) | 200 · 200 · 200 |
+| `NEXT_PUBLIC_*` inlined into the deployed client bundle | ✅ verified in `app/login/page-*.js` |
 
 **Cross-review (round 1):** Codex found **4 Blocking** — an open redirect in `/auth/callback`
 (`/\evil.example` defeats a naive prefix check; `new URL()` normalizes the backslash), a rule-#5
@@ -32,11 +56,24 @@ Blocking and confirmed the round-1 fixes ("open-redirect protection cleanly avoi
 parsing traps", "authorization gates properly fail-closed"), plus real UX gaps (the `/app` shell had
 no links to the dashboards). Fixed in `151b025`.
 
-**Owed to Daniel:** (1) the authed-session browser smoke — sign in → own dashboard; a *signed-in*
-non-member on a foreign slug → 404; a *member* (not owner) on `/app/keys/<slug>` → 404; (2) the prod
-migration-before-deploy ordering + Supabase Auth redirect config + a seeded membership row — **seed
-yourself as `owner`**, not `member`, or the API-keys page 404s (all in the PR's ordering kit; the
-migration MUST land before the code deploys, or ingest 500s).
+**Owed to Daniel — one blocking step, then the browser smoke.**
+
+**(1) Create your auth account** (prod has 0 users; Sprint 1 is sign-in-only by design, so there is
+no self-serve path yet — and your production password should be yours, not one an agent minted).
+Supabase Dashboard → **Authentication → Users → Add user** → email + password, tick *Auto Confirm*.
+
+**(2) Then seed your membership as `owner`** (`member` would 404 on the API-keys page — credential
+admin is owner-only). One command, resolves your user by email:
+```bash
+supabase db query --linked "insert into project_members (user_id, project_id, role)
+  select u.id, p.id, 'owner' from auth.users u, projects p
+  where u.email = '<your-email>' and p.slug in ('golden-beans','golden-beans-demo','miyagisanchez')
+  on conflict do nothing;"
+```
+
+**(3) The browser smoke** (`sprint-1.md` walkthrough below) — sign in → own dashboard; a *signed-in*
+non-member on a foreign slug → 404; a *member* (not owner) on `/app/keys/<slug>` → 404. An automated
+`api` run can't hold a real auth session, which is why this stays owed.
 
 ## Stories
 

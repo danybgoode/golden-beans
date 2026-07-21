@@ -53,6 +53,12 @@ independently shippable slice of value.
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
 
 ### 02 · Commercial
+- 🚧 [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
+  self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
+  per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
+  existence oracle; the public demo still renders anonymously), and API keys as a revocable
+  lifecycle (issue/rotate/revoke; owner-only). Sprints 2–3 (self-serve signup behind
+  `SIGNUP_ENABLED`, isolation guardrails, landing CTA flip) still to build.
 - ✅ [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
   read-only MCP connector + install page · dogfood instrumentation · SEO/OG + agent manifest) —
   **launched** and live in production at `https://golden-beans-gamma.vercel.app`. The landing tracks
@@ -64,6 +70,13 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-07-21** — `multi-tenant-activation` **Sprint 1 shipped to production**: the account
+  boundary. Dashboards were anonymous (anyone who guessed a project slug could read any tenant's
+  data) and each project had one unrotatable key — both closed. Supabase Auth + `project_members`,
+  per-tenant authorization, and `api_keys` as a revocable lifecycle, with every existing tenant's
+  live ingest key migrated in (verified in prod: a real backfilled key still authorizes). Two rounds
+  of cross-family review (Codex + Gemini) caught 6 blocking issues pre-merge, including a live open
+  redirect and a cross-tenant credential bind.
 - **2026-07-20** — `commercial-shell` **launched** (epic shipped): the landing dogfoods the growth
   engine as its own tenant (a real visitor→waitlist funnel + a `waitlist_conversion` Grower signal),
   serves real OG/Twitter cards and an `llms.txt` agent-readable manifest (Stories 3.1–3.2, PR #11),
