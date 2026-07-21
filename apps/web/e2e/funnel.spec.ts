@@ -55,16 +55,20 @@ test('funnel endpoint + page reflect a real event sequence for a registered feat
   expect(funnelBody.tars).toEqual({ targeted: 2, adopted: 1, retained: 1 })
   expect(funnelBody.note).toContain('registry-declared')
 
-  const pageRes = await request.get(`/funnel/project-one/${featureKey}`)
-  expect(pageRes.status()).toBe(200)
-  const html = await pageRes.text()
-  expect(html).toContain(featureKey)
-  expect(html).toContain('Targeted')
-  expect(html).toContain('Adopted')
-  expect(html).toContain('Retained')
+  // Story 1.2 (multi-tenant-activation): the dashboard page moved behind per-tenant auth. Unauthed
+  // access to a NON-demo project's page now bounces to /login — the authed content render (the HTML
+  // assertions this test used to make) is the browser smoke owed to Daniel. The JSON endpoint above
+  // remains the api-level data-correctness coverage.
+  const pageRes = await request.get(`/app/funnel/project-one/${featureKey}`, { maxRedirects: 0 })
+  expect([302, 307]).toContain(pageRes.status())
+  expect(pageRes.headers()['location']).toContain('/login')
 })
 
-test('funnel page 404s for an unregistered feature', async ({ request }) => {
-  const res = await request.get(`/funnel/project-one/spec-unregistered-page-${Date.now()}`)
+test('the demo funnel page 404s for an unregistered feature (anonymous carve-out still resolves)', async ({ request }) => {
+  // The demo project renders anonymously, so a missing feature reaches notFound() (404) rather than
+  // the /login bounce a non-demo slug would get — proving both the carve-out and the 404 path.
+  const res = await request.get(`/app/funnel/golden-beans-demo/spec-unregistered-page-${Date.now()}`, {
+    maxRedirects: 0,
+  })
   expect(res.status()).toBe(404)
 })

@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation'
 import { getExperimentComparison } from '@/lib/ab-query'
+import { requireDashboardAccess } from '@/lib/dashboard-auth'
 
 // Growth Engine v1 · Sprint 4, Story 4.3 — the side-by-side variant comparison page (v1's
-// headline case: /experiments/miyagisanchez/checkout-cta-copy?metricEvent=checkout_completed). No
-// auth — same rationale as /funnel and /impact (no admin-auth system exists yet in golden-beans).
+// headline case: /experiments/miyagisanchez/checkout-cta-copy?metricEvent=checkout_completed).
+// Behind per-tenant authorization (multi-tenant-activation Story 1.2) — same gate as /funnel and
+// /impact: demo is anonymous, every other slug requires a signed-in member.
 export default async function ExperimentComparisonPage({
   params,
   searchParams,
@@ -12,6 +14,7 @@ export default async function ExperimentComparisonPage({
   searchParams: Promise<{ metricEvent?: string }>
 }) {
   const { projectSlug, experimentKey } = await params
+  await requireDashboardAccess(projectSlug)
   const metricEvent = (await searchParams).metricEvent?.trim()
 
   if (!metricEvent) {
