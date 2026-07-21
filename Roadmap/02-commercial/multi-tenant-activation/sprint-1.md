@@ -1,6 +1,10 @@
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all 3 stories built + deterministic gate green (tsc + build + Playwright
+`api`, 96 passed). Commits: 1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`. **Owed to Daniel:** the
+authed-session browser smoke (sign in → own dashboard; foreign slug → 404 while signed in) and the
+prod migration-before-deploy step (see the PR's ordering kit). Revocation spec proven
+non-tautological via a mutation check.
 
 ## Stories
 

@@ -10,15 +10,14 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (0)
+## 🏗️ Building now (1)
 
-_None._
+- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 0/9 stories · risk: High · #2
 
-## 📋 Ready to build (scaffolded, not started) (4)
+## 📋 Ready to build (scaffolded, not started) (3)
 
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 0/7 stories · risk: High · #2a
 - [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 0/9 stories · risk: High · #4
-- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 0/9 stories · risk: High · #2
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/10 stories · risk: High · #3
 
 ## ✅ Shipped (2)
