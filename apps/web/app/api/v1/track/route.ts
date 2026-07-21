@@ -100,60 +100,61 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getSupabaseServiceClient()
-  const { data, error } = await supabase
-    .from('events')
-    .insert({
-      project_id: auth.projectId, // resolved from the API key, never from the body — Decision 8
-      user_id: parsed.data.userId,
-      event: parsed.data.event,
-      feature_id: parsed.data.featureId ?? null,
-      tags: parsed.data.tags,
-      metadata: parsed.data.metadata,
-      ...eventContext.context, // Story 1.1 — already snake_cased column names, or all-NULL for legacy
-    })
-    .select('id')
-    .single()
 
-  // ── Story 1.1 · idempotent replay ───────────────────────────────────────────────────────────
-  // A repeated idempotency key must resolve to the SAME logical event, not a second row and not an
-  // error. We let the unique index be the arbiter rather than checking-then-inserting: two
-  // concurrent retries of the same request would both pass a prior SELECT and both insert, which is
-  // precisely the check-then-act race the rate_limit migration already exists to avoid elsewhere in
-  // this route. Postgres 23505 = unique_violation.
+  // ── Story 1.2 · atomic ingest + outbox fan-out ──────────────────────────────────────────────
+  // The plain `.from('events').insert()` this replaced could not commit the event and its delivery
+  // work in one transaction — supabase-js has no multi-statement transaction, so a crash between two
+  // separate inserts would store the event with no delivery rows, an event that silently never
+  // reaches its destination with nothing recording that it should have. `ingest_event()` is a
+  // plpgsql function (one transaction by definition — see 20260722110000_delivery_outbox.sql) that
+  // writes the canonical event AND one outbox row per eligible destination, or neither.
   //
-  // Scoped to OUR index by name: another unique violation (a future constraint, a bug) must not be
-  // silently reinterpreted as "this was just a retry" and answered with someone else's event id.
-  if (error?.code === '23505' && error.message.includes('events_project_idempotency_key_uidx')) {
-    const idempotencyKey = eventContext.context.idempotency_key
-    const { data: existing, error: lookupError } = await supabase
-      .from('events')
-      .select('id')
-      .eq('project_id', auth.projectId) // the tenant scope is re-asserted, never assumed from the key
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle()
+  // The idempotent-replay semantics (Story 1.1) moved INTO that function verbatim; this route's HTTP
+  // contract is unchanged — 201 + id for a new event, 200 + id + deduplicated:true for a replay —
+  // and Story 1.1's specs still pass against it unmodified. `queued_count` is how many destinations
+  // wanted this event: 0 today (none configured) and correctly so, until Story 2.1 lets a tenant
+  // create one. project_id comes from `auth.projectId` (the resolved key), never the body.
+  const { data: ingest, error } = await supabase
+    .rpc('ingest_event', {
+      p_project_id: auth.projectId,
+      p_user_id: parsed.data.userId,
+      p_event: parsed.data.event,
+      p_feature_id: parsed.data.featureId ?? null,
+      p_tags: parsed.data.tags,
+      p_metadata: parsed.data.metadata,
+      p_context_version: eventContext.context.context_version,
+      p_actor_type: eventContext.context.actor_type,
+      p_actor_id: eventContext.context.actor_id,
+      p_subject_type: eventContext.context.subject_type,
+      p_subject_id: eventContext.context.subject_id,
+      p_correlation_id: eventContext.context.correlation_id,
+      p_occurred_at: eventContext.context.occurred_at,
+      p_idempotency_key: eventContext.context.idempotency_key,
+    })
+    // RETURNS TABLE(...) surfaces as a one-row array through PostgREST; ask for the single object.
+    .single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
 
-    // Nothing was stored, so hand the quota unit back — a client retrying a delivery it never got
-    // an answer for must not be charged twice for one logical event.
-    await refundMonthlyQuota(auth.projectId)
-
-    if (lookupError || !existing) {
-      console.error('[track] idempotency conflict but no matching row:', lookupError)
-      return NextResponse.json({ ok: false, error: 'Failed to resolve idempotent event' }, { status: 500 })
-    }
-    // 200, not 201: nothing was created this time. The id is the original event's, so an
-    // at-least-once caller converges on one identity no matter how many times it retries.
-    return NextResponse.json({ ok: true, id: existing.id, deduplicated: true }, { status: 200 })
-  }
-
-  if (error || !data) {
-    console.error('[track] event insert failed:', error)
+  if (error || !ingest) {
+    console.error('[track] ingest_event failed:', error)
     // Hand the quota unit back: it was charged above but nothing was stored. Without this, a
-    // sustained outage on `events` would burn a tenant's entire month one failed retry at a time
-    // (cross-review, Codex 2026-07-20). The rate-limit unit is deliberately NOT refunded — that
+    // sustained outage on the write path would burn a tenant's entire month one failed retry at a
+    // time (cross-review, Codex 2026-07-20). The rate-limit unit is deliberately NOT refunded — that
     // one is a burst guard protecting us from the caller, and a failing caller retrying hard is
     // exactly when it should still apply.
+    //
+    // A replay (deduplicated) never reaches here — the function returns the original id, not an
+    // error — so the dedup path's own quota refund lives below, next to its 200 response.
     await refundMonthlyQuota(auth.projectId)
     return NextResponse.json({ ok: false, error: 'Failed to persist event' }, { status: 500 })
+  }
+
+  if (ingest.deduplicated) {
+    // Nothing was stored this time, so hand the quota unit back — a client retrying a delivery it
+    // never got an answer for must not be charged twice for one logical event.
+    await refundMonthlyQuota(auth.projectId)
+    // 200, not 201: nothing was created. The id is the original event's, so an at-least-once caller
+    // converges on one identity no matter how many times it retries.
+    return NextResponse.json({ ok: true, id: ingest.event_id, deduplicated: true }, { status: 200 })
   }
 
   // ── Story 3.3 · the activation funnel's last stage ──────────────────────────────────────────
@@ -186,7 +187,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ ok: true, id: data.id }, { status: 201 })
+  return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
 }
 
 type BoundedRead = { ok: true; body: string } | { ok: false; tooLarge: boolean }
