@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import { isSignupEnabled } from '@/lib/flags'
-import { provisionTenantForUser } from '@/lib/provisioning'
 import { SignOutButton } from './sign-out-button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
@@ -16,38 +15,29 @@ export const dynamic = 'force-dynamic'
 // carry a placeholder the user edits. A real feature picker is dashboard work beyond this sprint.
 const DEFAULT_FEATURE_HINT = 'your-feature-key'
 
-export default async function AppHome() {
+export default async function AppHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ provision?: string }>
+}) {
   const user = await getSessionUser()
   if (!user) redirect('/login')
 
-  let projects = await getUserProjects(user.id)
+  const projects = await getUserProjects(user.id)
 
-  // multi-tenant-activation · Sprint 2 — the provisioning RETRY, and the reason it lives here
-  // rather than only in the auth callback.
-  //
-  // The callback provisions a tenant after the email round-trip. But `signInWithPassword`
-  // (app/login/login-form.tsx) sets its cookies client-side and NEVER touches /auth/callback — so
-  // an earlier "the next sign-in retries provisioning" was simply false: a user whose provisioning
-  // hit a transient DB error at confirmation time would have been stranded permanently, with a
-  // working account and no tenant, and no path back short of hand-seeded SQL (cross-review, Codex
-  // 2026-07-20).
+  // multi-tenant-activation · Sprint 2 — the provisioning RETRY trigger.
   //
   // /app is the one surface EVERY authenticated route funnels through, whichever way the user
-  // signed in, which makes it the correct retry point. Gated on both the flag and an empty project
-  // list, so it costs one already-made query for everyone else and cannot hand a tenant to a
-  // hand-seeded member who legitimately has none yet while signup is dark.
-  if (projects.length === 0 && isSignupEnabled()) {
-    // canRevealKey: false — a Server Component cannot set the hand-off cookie, so no first key is
-    // minted here. The user issues one from /app/keys, where it is shown properly at issue time.
-    const result = await provisionTenantForUser(user.id, user.email ?? '', { canRevealKey: false })
-    if (result.ok && result.created) {
-      projects = await getUserProjects(user.id)
-    } else if (!result.ok) {
-      // Deliberately not fatal and deliberately not surfaced as an error: the page below renders
-      // an honest "no projects yet" state, and the next visit retries. Failing the shell would
-      // strand the user harder than the state we are trying to recover from.
-      console.error('[app] provisioning retry failed:', result.error)
-    }
+  // signed in, which makes it the right place to NOTICE a missing tenant. The provisioning itself
+  // happens in app/app/provision/route.ts — a Route Handler, because only a Route Handler can set
+  // the one-time key cookie, and doing it inline here would force a degraded "no first key, no
+  // starter feature" variant (see that file's header for the full rationale).
+  //
+  // `?provision=failed` breaks the loop: after a failed attempt we render the honest empty state
+  // below instead of bouncing back and retrying forever.
+  const { provision } = await searchParams
+  if (projects.length === 0 && isSignupEnabled() && provision !== 'failed') {
+    redirect('/app/provision')
   }
 
   return (

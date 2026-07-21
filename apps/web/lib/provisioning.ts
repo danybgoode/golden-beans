@@ -32,6 +32,35 @@ function isForbiddenSlug(slug: string): boolean {
   return isReservedSlug(slug) || slug === DEMO_PROJECT_SLUG || slug === SELF_PROJECT_SLUG
 }
 
+/** The name of the partial unique index that enforces one self-serve project per creator. Must
+ *  match the migration exactly — a rename there without a rename here silently turns the race
+ *  handling back into the stranding bug, so both sides name it in a comment. */
+const CREATOR_CONSTRAINT = 'projects_one_per_creator_idx'
+
+function isCreatorConstraintViolation(error: { message?: string; details?: string } | null): boolean {
+  const haystack = `${error?.message ?? ''} ${error?.details ?? ''}`
+  return haystack.includes(CREATOR_CONSTRAINT)
+}
+
+/** The slug of the project this user CREATED, resolved without going through membership — the
+ *  project row is what the unique violation proves exists, whereas the membership row may still
+ *  be moments away from being written by the racing request. */
+async function findProjectByCreator(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('slug')
+    .eq('created_by', userId)
+    .maybeSingle()
+  if (error) {
+    console.error('[provisioning] created_by lookup failed:', error)
+    return null
+  }
+  return (data?.slug as string | undefined) ?? null
+}
+
 /** The slug of a tenant this user already belongs to, or null. `error` distinguishes "definitely
  *  no tenant" from "couldn't tell" — the caller must FAIL CLOSED on the latter rather than
  *  treating an outage as permission to mint a second tenant. */
@@ -63,15 +92,12 @@ async function findExistingTenant(
 export async function provisionTenantForUser(
   userId: string,
   email: string,
-  // Whether the CALLER is able to deliver a plaintext key to the user. False from the /app retry
-  // path, which is a Server Component and therefore cannot set the hand-off cookie. When false we
-  // skip minting the first key entirely rather than creating one whose plaintext exists nowhere:
-  // an active credential nobody holds is a phantom row that clutters the keys page and reads, to
-  // an operator, like a leaked key in use. The user issues their own from /app/keys instead — one
-  // extra click, and the key is shown properly at issue time.
-  options: { canRevealKey?: boolean } = {},
 ): Promise<ProvisionResult> {
-  const canRevealKey = options.canRevealKey ?? true
+  // Every caller is a Route Handler and can therefore set the one-time key cookie, so there is no
+  // "provision without revealing a key" mode. An earlier version had one, for a retry path that
+  // lived in a Server Component — it produced tenants with a phantom credential nobody held and
+  // no starter feature. The retry moved to a Route Handler instead (app/app/provision/route.ts),
+  // which deleted the special case rather than accommodating it.
   const supabase = getSupabaseServiceClient()
 
   // ── idempotency gate ──────────────────────────────────────────────────────────────────────
@@ -132,19 +158,29 @@ export async function provisionTenantForUser(
       break
     }
     if (error?.code === PG_UNIQUE_VIOLATION) {
-      // TWO different unique constraints can fire here, and conflating them is how the concurrency
-      // bug survives: `projects_slug_key` means the NAME is taken (retry with another), while
-      // `projects_one_per_creator_idx` means a CONCURRENT callback already provisioned this user's
-      // tenant (we lost the race — adopt the winner's, never retry into a second tenant).
+      // TWO different unique constraints can fire here and Postgres reports both as 23505, so the
+      // CONSTRAINT NAME is the only thing that distinguishes them:
+      //   • projects_slug_key            → the NAME is taken; retry with another.
+      //   • projects_one_per_creator_idx → a concurrent callback already created this user's
+      //                                    project; we lost the race. Never retry — adopt it.
       //
-      // Matched on the message rather than a second error code because Postgres reports both as
-      // 23505; the constraint name is what distinguishes them. If the message is unrecognisable
-      // for any reason, we re-read membership anyway — the safe direction, since the cost of
-      // wrongly adopting is a retry next visit, and the cost of wrongly retrying is a duplicate
-      // tenant the user can never merge (cross-review, Codex 2026-07-20).
-      const raced = await findExistingTenant(supabase, userId)
-      if (raced.slug !== null) {
-        return { ok: true, created: false, projectSlug: raced.slug, plaintextKey: null }
+      // Conflating them strands the user, and doing so is subtle enough that it survived one
+      // review round: an earlier version claimed in a comment to inspect the constraint but
+      // actually just re-read MEMBERSHIP. The winner writes its project row and its
+      // project_members row in two separate round-trips, so during that gap membership is still
+      // empty — the loser would read null, conclude "slug taken", retry, hit the creator
+      // constraint again, and burn every attempt before failing (cross-review, Agy 2026-07-20).
+      //
+      // So: resolve by `created_by`, which is the row that CAUSED the violation and is therefore
+      // guaranteed to exist, rather than by membership, which may not be written yet.
+      if (isCreatorConstraintViolation(error)) {
+        const winner = await findProjectByCreator(supabase, userId)
+        if (winner) {
+          return { ok: true, created: false, projectSlug: winner, plaintextKey: null }
+        }
+        // Constraint fired but the row is unreadable — bail rather than loop into the same wall.
+        console.error('[provisioning] creator constraint fired but no project resolved')
+        return { ok: false, error: 'Could not create your project — please try again.' }
       }
       continue // the slug was taken by someone else — try another name
     }
@@ -174,25 +210,11 @@ export async function provisionTenantForUser(
   }
 
   // ── first credential ──────────────────────────────────────────────────────────────────────
-  // Skipped entirely when the caller can't hand the plaintext over — see `canRevealKey` above.
-  const { error: keyError } = canRevealKey
-    ? await supabase.from('api_keys').insert({
-        project_id: projectId,
-        key_hash: hashApiKey(plaintextKey),
-        label: 'first key',
-      })
-    : { error: null }
-
-  if (!canRevealKey) {
-    await recordAudit({
-      action: 'tenant_provisioned',
-      projectId,
-      actorUserId: userId,
-      metadata: { slug: projectSlug, firstKey: false, reason: 'retry path — key not revealable' },
-    })
-    return { ok: true, created: true, projectSlug, plaintextKey: null }
-  }
-
+  const { error: keyError } = await supabase.from('api_keys').insert({
+    project_id: projectId,
+    key_hash: hashApiKey(plaintextKey),
+    label: 'first key',
+  })
   if (keyError) {
     console.error('[provisioning] first key insert failed:', keyError)
     // Deliberately NOT fatal, and deliberately NOT rolled back: the user has a project and an

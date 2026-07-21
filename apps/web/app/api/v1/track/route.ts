@@ -15,9 +15,10 @@ export async function POST(req: NextRequest) {
   // Ordered cheapest-first, and all AFTER authentication: an unauthenticated caller must not be
   // able to consume a real tenant's quota or burn its rate-limit window by guessing at this route.
   //
-  // 1. Payload cap, from the header — refuse an oversized body BEFORE reading or parsing it.
-  //    A caller can lie about or omit Content-Length, so this is the cheap first pass; the real
-  //    bound is the byte length check after the body is read below.
+  // 1. Payload cap, from the header — refuse an oversized body without reading a single byte of
+  //    it. A caller can lie about or omit Content-Length, so this is only a cheap fast path; the
+  //    authoritative bound is readBoundedBody() below, which enforces the same limit on the
+  //    stream itself and therefore cannot be lied past.
   const declaredLength = Number(req.headers.get('content-length') ?? '0')
   if (Number.isFinite(declaredLength) && declaredLength > MAX_TRACK_PAYLOAD_BYTES) {
     return NextResponse.json(
@@ -26,21 +27,22 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let raw: string
-  try {
-    raw = await req.text()
-  } catch {
-    return NextResponse.json({ ok: false, error: 'Could not read request body' }, { status: 400 })
+  // The authoritative cap, enforced WHILE READING rather than after. `await req.text()` buffers
+  // the entire body into memory first, so a caller who simply omits or lies about Content-Length
+  // could force us to hold an arbitrarily large payload before the size check ever ran — the
+  // check would be honest and the memory already spent (cross-review, Agy 2026-07-20). Reading
+  // chunk-by-chunk and bailing the moment the running total crosses the line bounds the memory a
+  // single request can cost us at the cap itself.
+  const read = await readBoundedBody(req)
+  if (!read.ok) {
+    return read.tooLarge
+      ? NextResponse.json(
+          { ok: false, error: `Payload too large (max ${MAX_TRACK_PAYLOAD_BYTES} bytes)` },
+          { status: 413 },
+        )
+      : NextResponse.json({ ok: false, error: 'Could not read request body' }, { status: 400 })
   }
-
-  // The authoritative payload cap — a missing or dishonest Content-Length can't get past this.
-  // Byte length, not string length: a multi-byte UTF-8 body is bigger than its character count.
-  if (Buffer.byteLength(raw, 'utf8') > MAX_TRACK_PAYLOAD_BYTES) {
-    return NextResponse.json(
-      { ok: false, error: `Payload too large (max ${MAX_TRACK_PAYLOAD_BYTES} bytes)` },
-      { status: 413 },
-    )
-  }
+  const raw = read.body
 
   let body: unknown
   try {
@@ -125,4 +127,36 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, id: data.id }, { status: 201 })
+}
+
+type BoundedRead = { ok: true; body: string } | { ok: false; tooLarge: boolean }
+
+// Reads the request body while enforcing MAX_TRACK_PAYLOAD_BYTES as it goes, so an oversized or
+// length-lying request is abandoned mid-stream instead of being fully buffered and then rejected.
+// Byte length, not string length: a multi-byte UTF-8 body is larger than its character count, and
+// counting characters would let a caller smuggle roughly 4x the cap past it.
+async function readBoundedBody(req: NextRequest): Promise<BoundedRead> {
+  if (!req.body) return { ok: true, body: '' }
+
+  const reader = req.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > MAX_TRACK_PAYLOAD_BYTES) {
+        // Stop pulling immediately — the point is to not receive the rest of it.
+        await reader.cancel().catch(() => {})
+        return { ok: false, tooLarge: true }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    return { ok: false, tooLarge: false }
+  }
+
+  return { ok: true, body: Buffer.concat(chunks).toString('utf8') }
 }
