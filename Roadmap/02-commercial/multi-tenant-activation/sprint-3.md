@@ -1,6 +1,30 @@
 # Multi-tenant activation — Sprint 3: The flip (landing backfill + trials live)
 
-**Status:** ✅ 3.1 + 3.2 merged to `main` (PR #14 — commit `577b560`), gated and dark. ⬜ **3.3 is the production flip — owed to Daniel** and the only story left in the epic.
+**Status:** ✅ 3.1 + 3.2 merged (PR #14 → `bbaffd2`). ✅ **3.3 — the gate is FLIPPED in production**
+(`SIGNUP_ENABLED=true`, 2026-07-21). Signup is live at `https://golden-beans-gamma.vercel.app/signup`.
+
+> ### ⚠️ ONE BLOCKING STEP REMAINS BEFORE THE FIRST REAL SIGNUP
+> **The Supabase Auth redirect allow-list still does not include the production `/auth/callback`.**
+> Until it does, a signup will be accepted and the confirmation email will **bounce on click** — the
+> account is created but never confirmed, so no tenant is provisioned.
+>
+> **Dashboard → Authentication → URL Configuration:** set **Site URL** to
+> `https://golden-beans-gamma.vercel.app` and add `https://golden-beans-gamma.vercel.app/auth/callback`
+> to **Redirect URLs**.
+>
+> This was deliberately NOT automated: the only CLI path is `supabase config push`, which pushes the
+> *entire local* `config.toml` (including `site_url = http://127.0.0.1:3000`) over production auth
+> config — the "a full deploy replaces the ENTIRE config" trap in `LEARNINGS.md`. A 30-second
+> dashboard edit beats risking every other auth setting.
+
+**Flip record:** `SIGNUP_ENABLED=true` set on the Vercel Production scope 2026-07-21. **A redeploy
+WAS required** — contrary to what `AGENTS.md` claimed at the time; the flag stayed dark for 7+
+minutes until commit `c3876a8` triggered a build. Both docs are corrected.
+
+**Verified live after the flip:** `/signup` 200 · signup API validates (400 on a bad payload) ·
+landing hero shows "Start free" · §7 shows `SELF-SERVE · LIVE` + honest tiers with **no `<form>` on
+the page at all** (the waitlist form is gone from the DOM, not hidden) · `/install` and the landing
+still 200 · an invalid ingest key still returns **401, not 500** (schema and code agree).
 
 ## What "the flip" actually is now
 `SIGNUP_ENABLED=true` in the Vercel production env. Nothing else. It is read fresh per request in

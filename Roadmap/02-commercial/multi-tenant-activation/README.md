@@ -48,7 +48,7 @@ no-policies service-role pattern as every existing table.
 | 2 | ✅ 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |
 | 3 | ✅ 3.1 Landing §1 hero CTA flip + §7 honest tiers (gated on `SIGNUP_ENABLED`) | LOW |
 | 3 | ✅ 3.2 Waitlist retirement (re-scoped from "waitlist → invite conversion" — the queue is empty; see `sprint-3.md`) | LOW |
-| 3 | ⬜ 3.3 Activation launch: flip the gate, dogfood funnel live, one self-serve pod-trial tenant | **HIGH — Daniel flips/merges** — *the only story left* |
+| 3 | 🚧 3.3 Activation launch — **gate FLIPPED in production 2026-07-21**; awaiting the Supabase redirect allow-list + one real self-serve activation | **HIGH — Daniel** |
 
 ## Kill-switch (decided at grooming, Stage 6b)
 `SIGNUP_ENABLED` env-gate at the signup route + landing CTA registry — **enablement, ships
@@ -79,9 +79,16 @@ Miyagi is untouched except hand-seeded membership rows (its ingest key keeps wor
       "two review rounds" entries were sharpened rather than duplicated)
 - [x] **Kill-switch:** `SIGNUP_ENABLED` exists, enablement polarity, born OFF, verified by spec
       (including that it does not open on a typo); key/membership revocation verified in Sprint 1.
-- [ ] **Story 3.3 — the production flip.** Daniel's, and the ONLY thing between here and ✅.
+- [x] **Story 3.3 — the production flip.** Done 2026-07-21: migration pushed, PR #14 merged and
+      deployed, `SIGNUP_ENABLED=true` live and verified by exercising `/signup`.
+- [ ] **Two things still stand between this and `shipped`, both Daniel's:**
+      (a) the **Supabase Auth redirect allow-list** must include the prod `/auth/callback` — until
+      then confirmation emails bounce and no tenant is provisioned; (b) **one real self-serve
+      activation** end-to-end, which is 3.3's actual acceptance and has never been exercised.
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
 
-> **Epic status stays `in-progress` on purpose.** Every line of code is merged, but the capability
-> is dark in production — marking this epic shipped before the flip would be exactly the kind of
-> "✅ for unshipped work" the poster convention forbids.
+> **Epic status stays `in-progress` on purpose.** The code is merged, deployed, and the gate is
+> flipped — but signup is **not yet known to work end-to-end**: the Supabase redirect allow-list is
+> unset, so a confirmation click will bounce. Marking the epic shipped while its headline flow has a
+> known-broken dependency and zero successful runs would be exactly the "✅ for unshipped work" the
+> poster convention forbids. One dashboard edit and one successful signup away.
