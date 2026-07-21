@@ -8,14 +8,59 @@ import { resolveVariant, type BucketVariant } from './bucketing'
 
 export type { BucketVariant } from './bucketing'
 
+/**
+ * event-destination-router · Story 1.1 — who caused an event vs. what it's about.
+ *
+ * `type` is a controlled vocabulary (lower_snake_case: "merchant", "shop", "campaign"); `id` is
+ * opaque to Golden Beans — we index and echo it, never parse meaning from it. Keep it a stable
+ * identifier from your own system, and DO NOT put personal data in it: it lands in an analytical
+ * event store, and the epics downstream (lifecycle projections, experiment attribution) join on it
+ * across every read surface including the MCP connector.
+ */
+export interface EventEntity {
+  type: string
+  id: string
+}
+
+/**
+ * The versioned context envelope. Every field is optional EXCEPT `version` — omitting the version
+ * is rejected rather than assumed, so a client written against a later contract can never be
+ * silently served older semantics.
+ */
+export interface EventContext {
+  /** Must be 1. Present so a v2 payload sent to a v1 server fails loudly instead of half-storing. */
+  version: 1
+  /** Who caused the event (a staff user, a system job, an integration). */
+  actor?: EventEntity
+  /** What the event is ABOUT — the join key for lifecycle projections and metric attribution. */
+  subject?: EventEntity
+  /** Ties several events emitted by one logical workflow together. */
+  correlationId?: string
+  /**
+   * When the fact HAPPENED, ISO-8601 with an explicit offset (`2026-07-22T10:00:00Z`). Distinct
+   * from when we received it. Set this for backfills and queued offline clients — past timestamps
+   * are unbounded and order correctly; future ones are capped at 24h of clock skew.
+   */
+  occurredAt?: string
+  /**
+   * Caller-supplied dedupe token, unique within your project. Retrying a request with the same key
+   * returns the ORIGINAL event id and creates nothing — safe to retry a send you never got an
+   * answer for. Use a stable id from the source fact (an order id, a webhook delivery id), never a
+   * fresh random per attempt, or every retry is a new event.
+   */
+  idempotencyKey?: string
+}
+
 export interface TrackEventProps {
   featureId?: string
   tags?: Record<string, unknown>
   metadata?: Record<string, unknown>
+  /** Optional versioned actor/subject context (Story 1.1). Omit it and the legacy contract applies. */
+  context?: EventContext
 }
 
 export type TrackResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; /** True when an idempotencyKey matched an existing event — nothing was created. */ deduplicated?: boolean }
   | { ok: false; error: string; code?: string; issues?: unknown }
 
 // Sprint 2, Story 2.1: a feature registry entry pushed from the client's own live
@@ -97,7 +142,9 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     if (!res.ok || !body?.ok) {
       return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
     }
-    return { ok: true, id: body.id }
+    // `deduplicated` rides along only when the server actually set it, so a caller that never uses
+    // idempotency keys sees the exact same result object it saw before Story 1.1.
+    return body.deduplicated ? { ok: true, id: body.id, deduplicated: true } : { ok: true, id: body.id }
   }
 
   async function syncFeatures(features: FeatureSyncEntry[]): Promise<SyncResult> {

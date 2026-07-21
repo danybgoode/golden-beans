@@ -21,3 +21,25 @@ export function isConnectorEnabled(): boolean {
 export function isSignupEnabled(): boolean {
   return process.env.SIGNUP_ENABLED === 'true'
 }
+
+// event-destination-router · Sprint 1, Story 1.2 — the dispatcher's enablement gate. Third flag,
+// same polarity, same dark-by-default contract as its two siblings above (epic README,
+// "Kill-switch"): born unset/OFF in preview and production, flipped deliberately once Sprint 2 has
+// a real sink and Sprint 3 has proven it against a disposable receiver.
+//
+// Exactly `=== 'true'`, for the same reason as `isSignupEnabled`: `DESTINATION_DELIVERY_ENABLED=
+// false`, `=0`, `=off`, `=TRUE` and an accidental `= ` must ALL read as OFF. A gate that opens on a
+// typo is not a gate — and this particular one opens outbound HTTP to third-party systems.
+//
+// WHAT IT GATES, PRECISELY: only the dispatcher (lib/delivery-dispatch.ts). Ingest and OUTBOX
+// PERSISTENCE stay fully active while it is OFF, which is the whole design — turning delivery off
+// must lose no events, it must only stop them moving. If you ever find yourself reading this flag
+// on the /track path, something has gone wrong: an ingest that depends on a delivery flag has
+// reintroduced exactly the coupling the outbox exists to remove.
+//
+// Read fresh per request, no module-level capture — but note that on Vercel a new value still needs
+// a REDEPLOY to reach running functions (AGENTS.md, corrected 2026-07-21: env vars are snapshotted
+// into a deployment at build time). "Set" and "live" are two separate facts.
+export function isDestinationDeliveryEnabled(): boolean {
+  return process.env.DESTINATION_DELIVERY_ENABLED === 'true'
+}
