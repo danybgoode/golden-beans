@@ -1,9 +1,10 @@
-import { requireProjectMembership } from '@/lib/dashboard-auth'
+import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { listProjectKeys } from '@/lib/api-keys'
 import { KeyManager } from './key-manager'
 
-// multi-tenant-activation · Sprint 1, Story 1.3 — the per-project API-key dashboard. Gated by
-// requireProjectMembership (no demo carve-out — key management always needs a real member).
+// multi-tenant-activation · Sprint 1, Story 1.3 — the per-project API-key dashboard. OWNER-only (no
+// demo carve-out): credential administration is least-privilege, so an ordinary member gets a 404
+// here even for a project they can otherwise read (cross-review round 2, 2026-07-20).
 export const dynamic = 'force-dynamic'
 
 export default async function KeysPage({
@@ -12,7 +13,7 @@ export default async function KeysPage({
   params: Promise<{ projectSlug: string }>
 }) {
   const { projectSlug } = await params
-  const { projectId } = await requireProjectMembership(projectSlug)
+  const { projectId } = await requireProjectOwnership(projectSlug)
   const keys = await listProjectKeys(projectId)
 
   return (

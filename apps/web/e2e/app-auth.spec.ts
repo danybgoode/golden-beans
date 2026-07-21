@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { safeRedirectPath } from '../lib/safe-redirect'
+import { isOwner } from '../lib/roles'
 
 // multi-tenant-activation · Sprint 1, Stories 1.1 + 1.2 — the auth boundary at the HTTP level.
 // The authed happy path (sign in → see only your own projects) is a real-session BROWSER smoke
@@ -66,6 +67,24 @@ test.describe('safeRedirectPath — the auth-callback open-redirect guard', () =
 
   test('no next param → the default landing', () => {
     expect(safeRedirectPath(null, base)).toBe(`${base}/app`)
+  })
+})
+
+// Credential administration is OWNER-only (cross-review round 2): an ordinary member can read the
+// project's dashboards but must not mint a full ingest credential or revoke production's key. The
+// authed member-vs-owner HTTP path needs a real session (browser smoke owed to Daniel), so the
+// predicate itself is pinned here — it's the whole rule, and it must never default-allow.
+test.describe('isOwner — the credential-admin predicate', () => {
+  test('only the literal owner role passes', () => {
+    expect(isOwner({ projectId: 'p1', role: 'owner' })).toBe(true)
+    expect(isOwner({ projectId: 'p1', role: 'member' })).toBe(false)
+  })
+
+  test('null membership and unknown roles never pass (fails closed)', () => {
+    expect(isOwner(null)).toBe(false)
+    expect(isOwner({ projectId: 'p1', role: '' })).toBe(false)
+    expect(isOwner({ projectId: 'p1', role: 'Owner' })).toBe(false) // case-exact, no fuzzy match
+    expect(isOwner({ projectId: 'p1', role: 'admin' })).toBe(false)
   })
 })
 

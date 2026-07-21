@@ -33,6 +33,29 @@ GRANT SELECT, INSERT, UPDATE ON TABLE api_keys TO service_role;
 -- (ON CONFLICT) so re-running the migration set — or applying it after a partial run — is safe.
 -- The IS NOT NULL guard is a cheap safeguard (cross-review, Gemini/Agy 2026-07-20): api_keys.key_hash
 -- is NOT NULL, so a single legacy ghost row with a null hash would abort the whole migration.
+--
+-- ABORT on a cross-project hash conflict (cross-review round 2, Codex 2026-07-20). A bare
+-- `ON CONFLICT DO NOTHING` would silently skip a row whose hash is already bound to a DIFFERENT
+-- project — leaving one tenant's key authenticating as another. That should be impossible
+-- (projects.api_key_hash is globally UNIQUE), but "impossible" is exactly what a partial/re-run
+-- state breaks, and a credential mis-binding is the worst failure this table can have. Fail loud
+-- instead: the same rule the seed scripts now enforce.
+DO $$
+DECLARE conflicting_count INT;
+BEGIN
+  SELECT count(*) INTO conflicting_count
+  FROM projects p
+  JOIN api_keys k ON k.key_hash = p.api_key_hash
+  WHERE p.api_key_hash IS NOT NULL
+    AND k.project_id <> p.id;
+
+  IF conflicting_count > 0 THEN
+    RAISE EXCEPTION
+      'api_keys backfill aborted: % key hash(es) already bound to a different project. Resolve before migrating.',
+      conflicting_count;
+  END IF;
+END $$;
+
 INSERT INTO api_keys (project_id, key_hash, label)
 SELECT id, api_key_hash, 'default (migrated)'
 FROM projects

@@ -1,5 +1,9 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
+import type { Membership } from './roles'
+
+export type { Membership } from './roles'
+export { isOwner } from './roles'
 
 // multi-tenant-activation · Sprint 1 — the authorization primitives (Stories 1.1 + 1.2).
 //
@@ -39,7 +43,7 @@ export async function getUserProjects(userId: string): Promise<MemberProject[]> 
 // DELIBERATE asymmetry with getUserProjects above: this one returns null (not throws) on a query
 // error, because it is an AUTHORIZATION decision — it must FAIL CLOSED (deny access) rather than
 // propagate. A denied request is safe; a thrown one that some caller catches into an allow is not.
-export async function getMemberProjectId(userId: string, slug: string): Promise<string | null> {
+export async function getMembership(userId: string, slug: string): Promise<Membership | null> {
   const supabase = getSupabaseServiceClient()
   const { data: project, error: projectError } = await supabase
     .from('projects')
@@ -54,7 +58,7 @@ export async function getMemberProjectId(userId: string, slug: string): Promise<
 
   const { data: membership, error: membershipError } = await supabase
     .from('project_members')
-    .select('user_id')
+    .select('role')
     .eq('user_id', userId)
     .eq('project_id', project.id)
     .maybeSingle()
@@ -62,10 +66,15 @@ export async function getMemberProjectId(userId: string, slug: string): Promise<
     console.error('[membership] membership lookup failed:', membershipError)
     return null
   }
-  return membership ? (project.id as string) : null
+  if (!membership) return null
+  return { projectId: project.id as string, role: String(membership.role) }
+}
+
+export async function getMemberProjectId(userId: string, slug: string): Promise<string | null> {
+  return (await getMembership(userId, slug))?.projectId ?? null
 }
 
 // Boolean form the dashboards call (Story 1.2). A non-member, or an unknown slug, is false.
 export async function isProjectMember(userId: string, slug: string): Promise<boolean> {
-  return (await getMemberProjectId(userId, slug)) !== null
+  return (await getMembership(userId, slug)) !== null
 }

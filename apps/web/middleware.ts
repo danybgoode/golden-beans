@@ -13,8 +13,13 @@ export async function middleware(request: NextRequest) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  // Auth not configured (e.g. a preview built before the envs land) — degrade to a no-op rather
-  // than 500 every /app request; the page's own getSessionUser() will send the user to /login.
+  // Auth env missing (e.g. a preview built before the vars land): skip the refresh — there's no
+  // session to refresh without a client. This is NOT graceful degradation to a login screen: the
+  // page's own getSessionUser() will then throw from requireEnv() and the request 500s. That is
+  // deliberate and correct — a misconfigured auth boundary must fail LOUD, never silently render
+  // as "logged out" (which could read as an authorization answer). An earlier comment here claimed
+  // a /login fallback that the code never provided; cross-review round 2 (Codex, 2026-07-20) caught
+  // the mismatch. The fix is the honest comment, not a softer failure.
   if (!url || !anon) return response
 
   const supabase = createServerClient(url, anon, {
