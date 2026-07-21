@@ -12,7 +12,8 @@
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web",
     "seed:demo": "node scripts/seed-demo-project.mjs",
-    "seed:self": "node scripts/seed-self-project.mjs"
+    "seed:self": "node scripts/seed-self-project.mjs",
+    "check:template-drift": "node scripts/check-template-drift.mjs"
   },
   "dependencies": {
     "pg": "^8.22.0"

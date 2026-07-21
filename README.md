@@ -10,19 +10,23 @@ here from one versioned place, not a copy-paste fork.
 
 ## Status
 
-Foundation only, right now. The Growth Engine's own build (S1 — events flow end-to-end, S2 — TARS
-funnel, S3 — North Star engine, S4 — A/B v1) has not started yet — see the scope doc that governs it:
-`golden-beans-growth-engine.md` in the `miyagi-product-management` repo
-(`Roadmap/00-ideas/2. readyforscope/`), Decisions 1–8 + the Panel adjudication. That doc's S0
-workstream (this repo's own spawn) is what shipped so far.
+**Live in production** at `https://golden-beans-gamma.vercel.app`. Two epics shipped:
+- **Growth Engine v1** (2026-07-16) — telemetry ingest + SDK, a TARS funnel, a North Star metric with
+  real Medusa revenue inputs, and A/B bucketing. Dogfooded against Miyagi's setup-guide funnel.
+- **Commercial shell** (2026-07-20) — public landing + waitlist, a read-only MCP connector + `/install`
+  page (enabled in prod), self-dogfood instrumentation, and SEO/OG + an `llms.txt` agent manifest.
+
+See `Roadmap/README.md` (the product poster) for the at-a-glance feature map and what's next.
 
 ## Start here
 
-- `AGENTS.md` — the per-project rules slot (fill in as the engine's architecture solidifies).
-- `Roadmap/WAYS-OF-WORKING.md` — the cadence, gitflow, Definition of Done, QA gate.
-- `Roadmap/LEARNINGS.md` — the transferable subset carried over from the template; will grow with
-  this project's own retros.
-- `Roadmap/00-ideas/` — the idea funnel; empty until the Growth Engine epics scaffold here.
+- `AGENTS.md` — the project's architecture + the non-negotiable rules. **Read it before building.**
+- `Roadmap/README.md` — the product poster (all features, by domain, with status).
+- `Roadmap/WAYS-OF-WORKING.md` — the cadence, gitflow, Definition of Done, QA/cross-review gate.
+- `Roadmap/LEARNINGS.md` — the cross-cutting retro digest; read at every session start.
+- `Roadmap/00-ideas/` — the idea funnel (seeds, audits, the generated `BUILD-ORDER.md`).
 
-Every `TEMPLATE FILL-IN` marker left over from the spawn should get filled in as this project's real
-shape emerges — `grep -rl "TEMPLATE FILL-IN" .` to find them.
+**Template-drift guard:** the spawn left `TEMPLATE FILL-IN` markers in load-bearing docs; they must
+stay filled. `npm run check:template-drift` (or `node scripts/check-template-drift.mjs`) greps the
+load-bearing set to zero and fails if any reappear — the one place the phrase is allowed is *this*
+sentence and the guard script's own allow-list, which explain it.

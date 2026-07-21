@@ -1,18 +1,31 @@
-# Agent index — <TEMPLATE FILL-IN: project name>
+# Agent index — Golden Beans
 
 ## What is this?
 
-<TEMPLATE FILL-IN: one or two sentences — what this product does, for whom, and the mission behind
-it.>
+**Golden Beans is a standalone Unified Growth Engine** — telemetry ingest + a TypeScript SDK, a TARS
+funnel (Targeted/Adopted/Retained), a North Star metric, and A/B bucketing, wrapped in a commercial
+shell (public landing, waitlist, and a read-only MCP connector). It is **multi-tenant by design**:
+every event is scoped to a `project`, and no read path can cross projects. It exists so a team can
+run product analytics + experimentation from one primitive set instead of stitching vendors together;
+its first proof-of-use is dogfooding Miyagi's real setup-guide funnel. It is *not* a fork of any
+sibling project — it's maintained on its own, consuming the shared `ways-of-work` plugin for process.
 
-**Architecture**: <TEMPLATE FILL-IN: the stack in one line — e.g. "Next.js App Router + Postgres" or
-"a Django API + a React SPA".>
+**Architecture**: **Next.js App Router (`apps/web`) + Supabase Postgres**, deployed on **Vercel**
+(merge to `main` = deploy). Supabase is accessed **service-role only, server-side** — RLS is ON with
+no anon policies; every query is scoped by a `project_id` resolved from the request's hashed API key
+(`lib/auth.ts`), never from the request body. A framework-agnostic TypeScript SDK lives in
+`packages/sdk`.
 
-**Repo layout** (fill in if this is a monorepo; delete if it's a single app):
+**Repo layout** (monorepo):
 ```
-<repo-root>/
-├── apps/<app-a>/     ← <what it is>
-└── apps/<app-b>/     ← <what it is>
+golden-beans/
+├── apps/web/            ← the Next.js app: ingest/registry/query API + landing/connector UI
+│   ├── app/api/v1/      ← the engine's public API (track, features/sync, public/*, connector)
+│   ├── lib/             ← the reusable seams (auth, supabase, rate-limit, query libs, flags…)
+│   └── supabase/migrations/  ← expand/contract SQL migrations (applied separately from deploy)
+├── packages/sdk/        ← @golden-beans/sdk — createGrowthEngineClient (the ONLY app→engine path)
+├── scripts/             ← CLI tooling (cross-review, seed-*, build-order, sync-* from Miyagi)
+└── Roadmap/             ← product source of truth (poster, ways-of-working, learnings, epics)
 ```
 
 **Workflow (gitflow)**: work on a **feature branch** (`feat/<epic-slug>`), commit per story, open a
@@ -102,28 +115,46 @@ deriving its own fallback.
 
 ## Context routing — read only what you need
 
-<!-- TEMPLATE FILL-IN: a table pointing from "what I'm working on" to the right context doc, so an
-     agent doesn't have to read everything. Keep entries short. -->
-
 | I'm working on… | Read these docs |
 |---|---|
-| <area> | <doc path> |
+| Event ingest / SDK / track schema | `apps/web/app/api/v1/track/route.ts`, `apps/web/lib/track-schema.ts`, `packages/sdk/src/index.ts` |
+| Feature/signal registry | `apps/web/lib/feature-schema.ts`, `apps/web/app/api/v1/features/sync/route.ts` |
+| TARS / North Star / A/B reads | `apps/web/lib/{tars,north-star,ab}-query.ts` + their `*-schema.ts` |
+| Tenant identity / auth / API keys | `apps/web/lib/auth.ts`, `apps/web/lib/supabase.ts`, the `projects`/`api_keys` migrations |
+| Public read routes (demo-only) | `apps/web/lib/public-demo.ts` (rule #2) |
+| MCP connector | `apps/web/lib/{flags,connector-tokens}.ts`, `apps/web/app/install/` (rule #3) |
+| Landing / waitlist / commercial | `apps/web/app/page.tsx`, `apps/web/lib/{landing-sections,waitlist-schema}.ts`, `references/landing-end-state.md` |
+| Rate-limit / abuse guards | `apps/web/lib/rate-limit.ts` |
+| A new epic (plan/scope) | `Roadmap/README.md`, `Roadmap/WAYS-OF-WORKING.md`, `Roadmap/LEARNINGS.md`, the epic's `README.md` |
 
 ---
 
 ## Quick-reference
 
 ```bash
-# TEMPLATE FILL-IN: your project's real dev/build/test commands
-npm run dev
-npx tsc --noEmit
-npm run build
+npm run dev                                   # next dev (apps/web)
+npx tsc --noEmit -p apps/web                   # type-check
+npm run build                                  # next build (the deterministic gate's build step)
+npm run test:e2e                               # Playwright `api` project — the always-on gate
+npm run test:e2e:browser                       # Playwright `browser` project — opt-in real-browser smoke
+npm run seed:demo | npm run seed:self          # (re)seed the demo / self-tracking tenants
+node scripts/cross-review.mjs <PR#> --agent codex        # cross-family review (also --agent antigravity)
+node scripts/build-order.mjs                   # regenerate Roadmap/00-ideas/BUILD-ORDER.md (never hand-edit)
+# Supabase migrations are SEPARATE from the Vercel deploy (see rule #4 / Workflow above):
+supabase link --project-ref <ref> && supabase migration list && supabase db push
 ```
 
-**Key env vars**:
-<!-- TEMPLATE FILL-IN: list the env vars an agent needs to know about, grouped by app if a monorepo. -->
+**Key env vars** (all on `apps/web`, set in Vercel):
+- **Supabase** — `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (service-role, server-only; `lib/supabase.ts` throws if missing).
+- **URLs** — `SITE_URL` (absolute-URL base; `lib/site-url.ts` — never a Host-header fallback, rule #5).
+- **Tenancy** — `DEMO_PROJECT_SLUG` + `DEMO_PROJECT_API_KEY` (the demo tenant), `DEMO_CONNECTOR_TOKEN`; `SELF_PROJECT_SLUG` + `SELF_PROJECT_API_KEY` (the landing's self-dogfood tenant).
+- **Gates** — `CONNECTOR_ENABLED` (`lib/flags.ts`, MCP connector kill-switch, ON in prod). *Future epics add `SIGNUP_ENABLED` / `DESTINATION_DELIVERY_ENABLED`, both born OFF.*
 
-**Key imports**:
-<!-- TEMPLATE FILL-IN: the handful of `lib/` seams every feature should reuse instead of reinventing
-     (a data client, an auth helper, a notification sender, a rate limiter — whatever your project's
-     equivalents are). -->
+**Key imports** (reuse before rebuild — the load-bearing `lib/` seams):
+- `lib/supabase.ts` → `getSupabaseServiceClient()` — the ONLY DB client (service-role, server-only).
+- `lib/auth.ts` — hashed-key → `project_id` resolution. Every authed route starts here.
+- `lib/rate-limit.ts` — DB-backed, serverless-safe bounded writes for any public write route.
+- `lib/site-url.ts` → `getSiteUrl()` — the ONLY absolute-URL builder (rule #5).
+- `lib/public-demo.ts` → `assertPublicAllowedSlug()` — the demo-only gate for any public read (rule #2).
+- `lib/{tars,north-star,ab}-query.ts` — the canonical read paths; never re-query `events` ad hoc.
+- `packages/sdk` → `createGrowthEngineClient` — the ONLY app→engine path for tracking (rule #1).

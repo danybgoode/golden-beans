@@ -1,6 +1,8 @@
-# <TEMPLATE FILL-IN: Project Name> — Product Roadmap & Feature Poster
+# Golden Beans — Product Roadmap & Feature Poster
 
-> **Mission:** <TEMPLATE FILL-IN: one or two sentences — what this product does and for whom.>
+> **Mission:** Give a product team one primitive set — telemetry ingest, an SDK, a TARS funnel, a
+> North Star metric, and A/B experiments — to run growth and experimentation without stitching
+> vendors together. Multi-tenant by design; dogfooded against real product funnels.
 
 This folder is the **product source of truth**. It speaks in plain product language for product,
 design, and business — **no engineering or tech specs here** (those live in `tasks/` and team memory).
@@ -31,11 +33,6 @@ independently shippable slice of value.
 
 ## The macro-sections (product domains)
 
-<!-- TEMPLATE FILL-IN: list your project's product domains here, one per macro-section folder
-     (e.g. `01-onboarding-and-auth`, `02-core-workflow`, ...). Number them so BUILD-ORDER.md and
-     epic paths sort predictably. One macro-section should be reserved for platform/infra work
-     that isn't user-facing product — see the convention below. -->
-
 | # | Macro-section | Covers |
 |---|---|---|
 | 01 | Growth Engine | Telemetry ingest, SDK, TARS funnel (Targeted/Adopted/Retained), North Star metric, A/B bucketing — the core engine. |
@@ -46,10 +43,9 @@ independently shippable slice of value.
 
 ## Feature map
 
-<!-- TEMPLATE FILL-IN: one `### <NN> · <Macro-section name>` heading per row above, each listing
-     shipped/in-progress features with a status marker. Convention: ✅ means enforced in code, not
-     merely intended — partial/aspirational is 🚧. Don't let this page lag a shipped epic; updating
-     it is part of the epic Definition of Done (see WAYS-OF-WORKING.md). -->
+<!-- Convention: ✅ means enforced in code, not merely intended — partial/aspirational is 🚧.
+     Updating this map is part of the epic Definition of Done (see WAYS-OF-WORKING.md); one
+     `### <NN> · <name>` heading per macro-section row above. -->
 
 ### 01 · Growth Engine
 - ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
@@ -81,4 +77,4 @@ independently shippable slice of value.
 
 ## License
 
-<TEMPLATE FILL-IN: if this repo is private/internal, say so; otherwise state the license.>
+Private / internal. Not open-source; all rights reserved.
