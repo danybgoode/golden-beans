@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 0/7 stories · risk: High · #2a
+- [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 2/7 stories · risk: High · #2a
 
 ## 📋 Ready to build (scaffolded, not started) (4)
 

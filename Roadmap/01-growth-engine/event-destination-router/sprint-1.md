@@ -1,6 +1,6 @@
 # Event destination router — Sprint 1: Contract and durable queue
 
-**Status:** 🟦 In review — Story 1.1 ✅ (`3d6950c`), Story 1.2 ✅ (`ea862d1`). Gate green (167 passed); cross-review pending.
+**Status:** 🟩 Ready to merge — Story 1.1 ✅ (`3d6950c`), Story 1.2 ✅ (`ea862d1`), + 7 cross-review hardening commits. Gate green (187 passed, 1 skipped); **cross-review CLEAN from both families (Codex + Agy) at round 11** after 10 rounds of findings converged from architectural → hardening → test-quality. PR #15, HIGH risk → Daniel merges. **Blocked on: the two migrations must be applied to prod Supabase BEFORE the merge deploys the RPC-calling route (migration-first rollout), else `/track` 500s.**
 
 ## Stories
 
