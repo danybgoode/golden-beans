@@ -245,27 +245,39 @@ BEGIN
   END;
 
   -- ── 3. fan-out: one delivery row per ELIGIBLE destination ─────────────────────────────────
-  -- Eligible = belongs to THIS project, is enabled, and its filter matches this event's name.
+  -- ONLY ON A FRESH INSERT. A replay (v_dedup) returns here having created no event — and it must
+  -- create no delivery work either. Two things make "fan out on every call" actively wrong, not
+  -- merely redundant (cross-review, Codex 2026-07-22):
+  --   (1) The RETRY's p_event and the CURRENT destination set are used, not the original event's.
+  --       A client that retries with a different event name, or a destination enabled AFTER the
+  --       original ingest, would attach BRAND-NEW deliveries to the ORIGINAL event — routing it
+  --       through a filter its canonical event never matched. "Repeat returns the original id and
+  --       creates nothing" would be violated.
+  --   (2) Retroactive delivery to a newly-enabled destination is a real feature — but it is Story
+  --       2.2's operator-initiated REPLAY, a deliberate act, not an accidental side effect of a
+  --       client's at-least-once retry. A destination receives events that arrive AFTER it is
+  --       enabled, never ones that merely get re-sent past it.
   --
   -- WITH ZERO DESTINATIONS CONFIGURED — the state of production today — THIS INSERTS NOTHING, and
   -- that is the correct dark behaviour, not a bug. `queued_count` returning 0 is the honest answer
   -- to "who wanted this event?", and it stays 0 until a tenant deliberately creates and enables a
   -- destination in Story 2.1.
   --
-  -- Run unconditionally rather than only on a fresh insert, with the (event_id, destination_id)
-  -- unique constraint as the arbiter: a replay of an already-ingested event converges on the same
-  -- set of delivery rows instead of creating a second unit of work. The same reasoning as the event
-  -- insert above — let the constraint decide, not a prior SELECT that two concurrent callers could
-  -- both pass.
-  INSERT INTO event_deliveries (project_id, event_id, destination_id)
-  SELECT p_project_id, v_event_id, d.id
-    FROM event_destinations d
-   WHERE d.project_id = p_project_id
-     AND d.enabled
-     AND (d.event_filter IS NULL OR d.event_filter = p_event)
-  ON CONFLICT ON CONSTRAINT event_deliveries_event_destination_uniq DO NOTHING;
+  -- The (event_id, destination_id) unique constraint remains the concurrency arbiter for the fresh
+  -- path: two genuinely-concurrent first inserts of the same event can't both win the event insert
+  -- (one becomes the dedup path), so only one reaches this fan-out — but the constraint is kept as
+  -- belt-and-braces against any future caller that reaches this line twice.
+  IF NOT v_dedup THEN
+    INSERT INTO event_deliveries (project_id, event_id, destination_id)
+    SELECT p_project_id, v_event_id, d.id
+      FROM event_destinations d
+     WHERE d.project_id = p_project_id
+       AND d.enabled
+       AND (d.event_filter IS NULL OR d.event_filter = p_event)
+    ON CONFLICT ON CONSTRAINT event_deliveries_event_destination_uniq DO NOTHING;
 
-  GET DIAGNOSTICS v_queued = ROW_COUNT;
+    GET DIAGNOSTICS v_queued = ROW_COUNT;
+  END IF;
 
   RETURN QUERY SELECT v_event_id, v_dedup, v_queued;
 END;

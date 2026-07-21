@@ -41,24 +41,52 @@ ALTER TABLE events
   ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
 
 -- Integrity the application must not be the only thing enforcing. The route validates all of this
--- too (lib/event-context.ts), but a CHECK is what makes it true for every writer forever — seed
+-- too (lib/event-context.ts), but a CHECK is what makes it true for EVERY writer forever — seed
 -- scripts, backfills, a future admin path, and any code written by someone who never read the
--- route. Bounded length matters because these are OPAQUE ids we index and echo back: unbounded
--- text in an indexed column is a cheap way for one tenant to bloat shared storage.
+-- route. These CHECKs deliberately mirror lib/event-context.ts rather than merely bounding length:
+-- a constraint that only checked length while the comment claimed "integrity for every writer"
+-- would be the "comment asserting a check the code does not perform" antipattern LEARNINGS records
+-- — a service-role seed could still inject `Merchant`/` spaced `/version-less rows that break every
+-- downstream projection (cross-review, Codex 2026-07-22). If you change a rule here, change it in
+-- lib/event-context.ts too, and vice versa.
 ALTER TABLE events
   ADD CONSTRAINT events_context_version_known
     CHECK (context_version IS NULL OR context_version = 1),
+  -- If ANY context field is populated, the row was written under the contract and MUST name its
+  -- version. Absence of version is only legal when the whole context is absent (a legacy row).
+  ADD CONSTRAINT events_context_version_present CHECK (
+    context_version IS NOT NULL OR (
+      actor_type IS NULL AND actor_id IS NULL AND subject_type IS NULL AND subject_id IS NULL AND
+      correlation_id IS NULL AND occurred_at IS NULL AND idempotency_key IS NULL
+    )
+  ),
   ADD CONSTRAINT events_actor_pairing
     CHECK ((actor_type IS NULL) = (actor_id IS NULL)),
   ADD CONSTRAINT events_subject_pairing
     CHECK ((subject_type IS NULL) = (subject_id IS NULL)),
   ADD CONSTRAINT events_opaque_id_bounds CHECK (
-    (actor_type      IS NULL OR char_length(actor_type)      BETWEEN 1 AND 64)  AND
     (actor_id        IS NULL OR char_length(actor_id)        BETWEEN 1 AND 128) AND
-    (subject_type    IS NULL OR char_length(subject_type)    BETWEEN 1 AND 64)  AND
     (subject_id      IS NULL OR char_length(subject_id)      BETWEEN 1 AND 128) AND
     (correlation_id  IS NULL OR char_length(correlation_id)  BETWEEN 1 AND 128) AND
     (idempotency_key IS NULL OR char_length(idempotency_key) BETWEEN 1 AND 128)
+  ),
+  -- Entity types are a controlled vocabulary, mirroring TYPE_PATTERN in lib/event-context.ts:
+  -- lower_snake_case, letter-initial, 1-64 chars. This is what stops `merchant`/`Merchant` becoming
+  -- two cohorts at the DATABASE level, for a writer that never went through the route.
+  ADD CONSTRAINT events_entity_type_vocabulary CHECK (
+    (actor_type   IS NULL OR actor_type   ~ '^[a-z][a-z0-9_]{0,63}$') AND
+    (subject_type IS NULL OR subject_type ~ '^[a-z][a-z0-9_]{0,63}$')
+  ),
+  -- Opaque ids: no control characters (they corrupt logs/CSV/terminal downstream) and no leading or
+  -- trailing whitespace (` u1` and `u1` must not read as one subject to a human). `~` with a
+  -- bracket range that includes the C0 controls, DEL, and a leading/trailing space guard. Mirrors
+  -- isValidOpaqueId(); \s in Postgres regex is locale-simple, so the anchors use a literal space +
+  -- the whitespace class the app rejects.
+  ADD CONSTRAINT events_opaque_id_charset CHECK (
+    (actor_id        IS NULL OR (actor_id        !~ '[[:cntrl:]]' AND actor_id        = btrim(actor_id))) AND
+    (subject_id      IS NULL OR (subject_id      !~ '[[:cntrl:]]' AND subject_id      = btrim(subject_id))) AND
+    (correlation_id  IS NULL OR (correlation_id  !~ '[[:cntrl:]]' AND correlation_id  = btrim(correlation_id))) AND
+    (idempotency_key IS NULL OR (idempotency_key !~ '[[:cntrl:]]' AND idempotency_key = btrim(idempotency_key)))
   );
 
 -- ── idempotency: unique PER PROJECT, never globally ──────────────────────────────────────────

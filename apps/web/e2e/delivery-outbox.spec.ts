@@ -177,11 +177,11 @@ test('dispatcher exports are internally consistent', () => {
 //        is what proves it fires.)
 //   D. remove the gate short-circuit in lib/delivery-dispatch.ts (check the flag AFTER the query)
 //      → 1 red: "gate OFF → dispatcher reads nothing" (the deliberately-throwing client fires).
-//
-// Honest coverage gap: NO mutation makes the "replayed ingest converges / no doubling" case depend
-// on the dedup path specifically — the single-row outcome is guaranteed by the (event_id,
-// destination_id) unique constraint whether the fan-out runs once or twice. That spec is a
-// regression tripwire for that constraint, not proof the dedup path skips re-fanning.
+//   E. remove the `IF NOT v_dedup` guard so fan-out runs on the replay path too (the round-1 bug)
+//      → 1 red: "a replay does NOT fan out to a destination enabled AFTER the original ingest".
+//         This is the spec added specifically to give Codex's Blocking finding teeth — the earlier
+//         "converges / no doubling" spec did NOT catch it (the unique constraint kept the count at
+//         1 either way), which is exactly the honest coverage gap round 1 flagged and this closes.
 
 test('an event with no destinations still persists — outbox dark, ingest unaffected', async ({ request }) => {
   const db = dbClient()
@@ -306,5 +306,38 @@ test('a replayed ingest converges on the same delivery work, never doubling it',
     // ONE event, and exactly ONE delivery row — the replay did not double the work.
     const { data: deliveries } = await db.from('event_deliveries').select('id').eq('event_id', firstId)
     expect(deliveries).toHaveLength(1)
+  })
+})
+
+test('a replay does NOT fan out to a destination enabled AFTER the original ingest', async ({
+  request,
+}) => {
+  // Cross-review round 1 (Codex): the fan-out must run ONLY on a fresh insert. If it re-ran on the
+  // dedup path, a client's at-least-once RETRY would retroactively attach the original event to any
+  // destination enabled in the meantime — routing it through a filter its canonical event never
+  // matched at ingest time. Retroactive delivery is Story 2.2's operator REPLAY, a deliberate act,
+  // never an accident of a client retry.
+  const db = dbClient()
+  const p1 = await projectIdBySlug(db, 'project-one')
+  const eventName = uniqueEvent('replay_no_refan')
+  const key = `refan-${Date.now()}`
+  const payload = { userId: 'refan-u', event: eventName, context: { version: 1, idempotencyKey: key } }
+
+  // Original ingest: NO destination exists yet, so it queues nothing.
+  const first = await track(request, PROJECT_ONE_KEY, payload)
+  expect(first.status()).toBe(201)
+  const firstId = (await first.json()).id
+  const { data: before } = await db.from('event_deliveries').select('id').eq('event_id', firstId)
+  expect(before).toHaveLength(0)
+
+  // NOW create + enable a matching destination, then replay the identical request.
+  await withDestination(db, p1, { enabled: true, eventFilter: eventName }, async () => {
+    const second = await track(request, PROJECT_ONE_KEY, payload)
+    expect(second.status()).toBe(200)
+    expect((await second.json()).deduplicated).toBe(true)
+
+    // The replay must have attached NOTHING — the destination did not exist when the event was born.
+    const { data: after } = await db.from('event_deliveries').select('id').eq('event_id', firstId)
+    expect(after).toHaveLength(0)
   })
 })

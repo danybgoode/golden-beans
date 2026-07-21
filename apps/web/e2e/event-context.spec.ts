@@ -404,10 +404,12 @@ test('context cannot smuggle a project — tenancy still comes only from the cre
     data: {
       userId: `smuggle-${Date.now()}`,
       event: 'spec_smuggle',
-      // Every plausible spelling an attacker would try, inside the new surface.
+      // Top-level projectId/project_id are stripped by the (non-passthrough) track schema; the
+      // in-CONTEXT smuggle now gets its own, stronger treatment below (a 400), so it is not repeated
+      // here — this spec proves the top-level smuggle is accepted-but-ignored, still 201.
       projectId: foreign!.id,
       project_id: foreign!.id,
-      context: { version: 1, projectId: foreign!.id, subject: { type: 'merchant', id: 'm1' } },
+      context: { version: 1, subject: { type: 'merchant', id: 'm1' } },
     },
   })
   expect(res.status()).toBe(201)
@@ -415,4 +417,61 @@ test('context cannot smuggle a project — tenancy still comes only from the cre
 
   const { data: row } = await dbClient().from('events').select('project_id').eq('id', body.id).single()
   expect(row?.project_id).not.toBe(foreign!.id)
+})
+
+// ── cross-review round 1 hardening (Codex + Agy, 2026-07-22) ──────────────────────────────────
+
+test('an unknown context field is REFUSED, not silently dropped', async ({ request }) => {
+  // Agy's finding: a snake_case misspelling of a real field is the likely mistake, and accepting the
+  // request while storing NULL for it strands the integration until someone notices the numbers are
+  // wrong. A smuggled `projectId` inside context is the same class — an unknown key — so it 400s
+  // here rather than being quietly ignored.
+  for (const badContext of [
+    { version: 1, idempotency_key: 'order-1' }, // snake_case of idempotencyKey
+    { version: 1, subject_id: 'm1' }, // snake_case, and not even a real field
+    { version: 1, projectId: 'someone-elses-project', subject: { type: 'merchant', id: 'm1' } },
+  ]) {
+    const res = await request.post('/api/v1/track', {
+      headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
+      data: { userId: `unknown-key-${Date.now()}`, event: 'spec_unknown_key', context: badContext },
+    })
+    expect(res.status()).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Malformed event context')
+  }
+})
+
+test('the DB CHECK constraints enforce the contract for a NON-route writer too', async () => {
+  // Codex's finding: the migration comment claimed integrity "for every writer forever", but the
+  // original CHECKs only bounded length — a service-role seed/backfill could still inject
+  // projection-breaking rows. These assertions go straight through the service-role client (the same
+  // authority a rogue seed would have), bypassing lib/event-context.ts entirely, and must be
+  // rejected by the DATABASE.
+  const db = dbClient()
+  const { data: proj } = await db.from('projects').select('id').eq('slug', 'project-one').single()
+  const base = { project_id: proj!.id, user_id: 'chk-u', event: 'chk_event' }
+
+  // Capitalised entity type — the cohort-forking bug, at the DB layer.
+  const badType = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'Merchant', subject_id: 'm1' })
+  expect(badType.error).not.toBeNull()
+
+  // Surrounding whitespace in an opaque id.
+  const spacedId = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: ' m1 ' })
+  expect(spacedId.error).not.toBeNull()
+
+  // Context populated but no version — an ambiguous row nothing can interpret.
+  const noVersion = await db.from('events').insert({ ...base, subject_type: 'merchant', subject_id: 'm1' })
+  expect(noVersion.error).not.toBeNull()
+
+  // A control character in an id.
+  const ctrl = await db.from('events').insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: `m${String.fromCharCode(7)}bell` })
+  expect(ctrl.error).not.toBeNull()
+
+  // The valid shape still inserts — the constraints reject bad data, not all data.
+  const good = await db
+    .from('events')
+    .insert({ ...base, context_version: 1, subject_type: 'merchant', subject_id: `chk-good-${Date.now()}` })
+    .select('id')
+    .single()
+  expect(good.error).toBeNull()
 })

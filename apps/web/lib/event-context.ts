@@ -48,8 +48,11 @@ const TYPE_PATTERN = /^[a-z][a-z0-9_]{0,63}$/
  * and are never meaningful in an identifier) and leading/trailing whitespace (` u1` and `u1` must
  * not become two subjects that look identical to a human reading a dashboard).
  */
-// eslint-disable-next-line no-control-regex
-const CONTROL_CHARS = /[\x00-\x1F\x7F]/
+// `\p{Cc}` is the full Unicode "Control" category — the C0 range (\x00–\x1F), DEL (\x7F) AND the C1
+// range (\x80–\x9F), which the old `[\x00-\x1F\x7F]` missed. C1 controls survive a copy-paste out of
+// some editors and corrupt terminal/CSV output downstream exactly like C0 does, so an opaque id we
+// echo back to a dashboard has no business carrying them (cross-review, Agy 2026-07-22).
+const CONTROL_CHARS = /\p{Cc}/u
 
 export type ContextFieldError = { field: string; message: string }
 
@@ -112,6 +115,17 @@ export type EventContextInput = {
   idempotencyKey?: unknown
 }
 
+/** The complete set of keys a v1 context may carry. Anything else is a caller mistake we REFUSE —
+ *  see the unknown-key check in normalizeEventContext for why silence would be the worse failure. */
+const KNOWN_CONTEXT_KEYS = new Set([
+  'version',
+  'actor',
+  'subject',
+  'correlationId',
+  'occurredAt',
+  'idempotencyKey',
+])
+
 /** The persisted shape — exactly the columns the migration added, snake_cased at the boundary. */
 export type NormalizedEventContext = {
   context_version: number
@@ -152,6 +166,22 @@ export function normalizeEventContext(
   now: number = Date.now(),
 ): ContextResult {
   const errors: ContextFieldError[] = []
+
+  // Unknown top-level keys are REFUSED, not ignored. This module's whole reason for existing is that
+  // silently dropping a field the caller believes it sent is the worst failure mode — the caller
+  // gets a 201, the column is NULL, and every downstream projection reads an honest-looking zero.
+  // The most likely mistake is a snake_case spelling of a real field (`idempotency_key`,
+  // `subject_id`, `occurred_at`): accepting the request while storing none of it would strand a
+  // real integration for exactly as long as it takes someone to notice the numbers are wrong
+  // (cross-review, Agy 2026-07-22). A 400 naming the stray key teaches it immediately.
+  for (const key of Object.keys(input)) {
+    if (!KNOWN_CONTEXT_KEYS.has(key)) {
+      errors.push({
+        field: `context.${key}`,
+        message: `unknown context field "${key}" — did you mean a camelCase form (correlationId, occurredAt, idempotencyKey)?`,
+      })
+    }
+  }
 
   // Version first and strictly. An absent version is NOT "assume v1" — a caller that omits it has
   // not agreed to any contract, and guessing on their behalf is how a v2 client silently gets
