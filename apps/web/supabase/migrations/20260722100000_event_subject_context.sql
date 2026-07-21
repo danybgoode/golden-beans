@@ -49,7 +49,12 @@ ALTER TABLE events
   ADD COLUMN IF NOT EXISTS subject_id      TEXT,
   ADD COLUMN IF NOT EXISTS correlation_id  TEXT,
   ADD COLUMN IF NOT EXISTS occurred_at     TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+  ADD COLUMN IF NOT EXISTS idempotency_key TEXT,
+  -- sha256 hex of the canonical payload (lib/idempotency-fingerprint.ts). Stored alongside the
+  -- idempotency key so a REUSE of that key with a DIFFERENT payload can be detected and rejected
+  -- (409) instead of silently returning the original and dropping the new event (cross-review,
+  -- Codex round 4). NULL when no idempotency key was supplied — there is nothing to guard.
+  ADD COLUMN IF NOT EXISTS idempotency_fingerprint TEXT;
 
 -- Integrity the application must not be the only thing enforcing. The route validates all of this
 -- too (lib/event-context.ts), but a CHECK is what makes it true for EVERY writer forever — seed

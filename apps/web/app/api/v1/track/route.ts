@@ -3,6 +3,7 @@ import { resolveProjectFromAuthHeader, type AuthSuccess } from '@/lib/auth'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { trackEventSchema } from '@/lib/track-schema'
 import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context'
+import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
 
@@ -79,6 +80,29 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseServiceClient()
   const idempotencyKey = eventContext.context.idempotency_key
 
+  // The fingerprint of THIS payload, computed only when there is an idempotency key to guard. Reused
+  // by every dedup decision below so a key reused with a DIFFERENT payload is a 409, not silent loss
+  // (cross-review, Codex round 4). The key itself is excluded from the fingerprint — it is the lookup
+  // key, not part of the identity being compared.
+  const payloadFingerprint = idempotencyKey
+    ? computePayloadFingerprint({
+        event: parsed.data.event,
+        userId: parsed.data.userId,
+        featureId: parsed.data.featureId ?? null,
+        tags: parsed.data.tags,
+        metadata: parsed.data.metadata,
+        context: {
+          context_version: eventContext.context.context_version,
+          actor_type: eventContext.context.actor_type,
+          actor_id: eventContext.context.actor_id,
+          subject_type: eventContext.context.subject_type,
+          subject_id: eventContext.context.subject_id,
+          correlation_id: eventContext.context.correlation_id,
+          occurred_at: eventContext.context.occurred_at,
+        },
+      })
+    : null
+
   // ── 2. Per-key BURST limit — first, and it applies to retries too ────────────────────────────
   // The rate limiter is an abuse guard, and a caller hammering the same idempotency key is exactly
   // the abuse it exists to bound — so it runs BEFORE the idempotency pre-check, which would otherwise
@@ -99,8 +123,8 @@ export async function POST(req: NextRequest) {
   // Best-effort, not the authority: the real dedup arbiter is still the unique index inside
   // ingest_event(). A miss falls through to the charged path.
   if (idempotencyKey) {
-    const existing = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
-    if (existing) return respondDeduplicated(supabase, auth, existing)
+    const resolved = await resolveIdempotent(supabase, auth, idempotencyKey, payloadFingerprint)
+    if (resolved) return resolved
   }
 
   // ── 3. Per-project monthly QUOTA ─────────────────────────────────────────────────────────────
@@ -122,8 +146,8 @@ export async function POST(req: NextRequest) {
     // its 200. Fully closing it would mean moving quota accounting inside ingest_event()'s
     // transaction, a disproportionate refactor for a boundary-only, self-healing race in Sprint 1.
     if (idempotencyKey) {
-      const existing = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
-      if (existing) return respondDeduplicated(supabase, auth, existing)
+      const resolved = await resolveIdempotent(supabase, auth, idempotencyKey, payloadFingerprint)
+      if (resolved) return resolved
     }
     return NextResponse.json({ ok: false, error: quota.error }, { status: quota.status })
   }
@@ -157,9 +181,10 @@ export async function POST(req: NextRequest) {
       p_correlation_id: eventContext.context.correlation_id,
       p_occurred_at: eventContext.context.occurred_at,
       p_idempotency_key: eventContext.context.idempotency_key,
+      p_idempotency_fingerprint: payloadFingerprint,
     })
     // RETURNS TABLE(...) surfaces as a one-row array through PostgREST; ask for the single object.
-    .single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
+    .single<{ event_id: string; deduplicated: boolean; queued_count: number; conflict: boolean }>()
 
   if (error || !ingest) {
     console.error('[track] ingest_event failed:', error)
@@ -175,6 +200,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Failed to persist event' }, { status: 500 })
   }
 
+  if (ingest.conflict) {
+    // The concurrent-race version of the payload-mismatch case (cross-review, Codex round 4): two
+    // same-key requests raced, and this one carries a DIFFERENT payload than the one that committed.
+    // Nothing was stored, so refund the quota unit, then reject as a conflict — never silently
+    // return the other payload's id.
+    await refundMonthlyQuota(auth.projectId)
+    return conflictResponse()
+  }
+
   if (ingest.deduplicated) {
     // The concurrent-race dedup the pre-check couldn't see: two first-time requests for the same key
     // both passed the quota check, one won the insert, this one lost it. Hand the quota unit back —
@@ -187,21 +221,78 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
 }
 
+type IdempotencyLookup =
+  | { ok: true; existing: { id: string; fingerprint: string | null } | null }
+  | { ok: false } // an infrastructure failure — the caller must NOT treat this as "no such event"
+
 // Looks up an existing event by its per-project idempotency key. The tenant scope is re-asserted
 // here, never assumed from the key — uniqueness is per (project_id, idempotency_key), so a lookup on
 // the key alone could match another tenant's row (Roadmap/LEARNINGS.md, multi-tenant-activation S1).
+//
+// A DB error is NOT flattened into `null` (cross-review, Codex round 4): doing so would misreport an
+// infrastructure failure as "no existing event", which then charges quota / returns a wrong 429
+// instead of a 500. The result distinguishes "looked, found nothing" from "could not look".
 async function findEventByIdempotencyKey(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   projectId: string,
   idempotencyKey: string,
-): Promise<{ id: string } | null> {
-  const { data } = await supabase
+): Promise<IdempotencyLookup> {
+  const { data, error } = await supabase
     .from('events')
-    .select('id')
+    .select('id, idempotency_fingerprint')
     .eq('project_id', projectId)
     .eq('idempotency_key', idempotencyKey)
     .maybeSingle()
-  return data ? { id: data.id as string } : null
+  if (error) {
+    console.error('[track] idempotency lookup failed:', error)
+    return { ok: false }
+  }
+  return {
+    ok: true,
+    existing: data ? { id: data.id as string, fingerprint: (data.idempotency_fingerprint as string | null) ?? null } : null,
+  }
+}
+
+// Resolves an idempotency key against an existing event and returns the response to send, or null
+// to mean "no such event — fall through to the charged path". Shared by the pre-check and the
+// quota-rejection re-check so both apply the SAME three-way decision:
+//   - lookup failed (infra)     → 500 (never a false "no event")
+//   - key reused, SAME payload  → 200 dedup
+//   - key reused, DIFF payload  → 409 conflict (never silently return the other event)
+async function resolveIdempotent(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  auth: AuthSuccess,
+  idempotencyKey: string,
+  fingerprint: string | null,
+): Promise<NextResponse | null> {
+  const lookup = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
+  if (!lookup.ok) {
+    return NextResponse.json({ ok: false, error: 'Idempotency lookup failed' }, { status: 500 })
+  }
+  if (!lookup.existing) return null
+
+  // A stored fingerprint that differs from this request's = the key was reused for a DIFFERENT
+  // event. A NULL stored fingerprint (a row written before this column existed) is "cannot compare",
+  // which we treat as a plain dedup rather than a false conflict.
+  if (
+    lookup.existing.fingerprint !== null &&
+    fingerprint !== null &&
+    lookup.existing.fingerprint !== fingerprint
+  ) {
+    return conflictResponse()
+  }
+  return respondDeduplicated(supabase, auth, lookup.existing)
+}
+
+function conflictResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      ok: false,
+      error:
+        'Idempotency key was already used for a different event. Reuse a key only to retry the identical request.',
+    },
+    { status: 409 },
+  )
 }
 
 // The one dedup response, shared by the pre-check and the quota-rejection re-check. 200 (nothing

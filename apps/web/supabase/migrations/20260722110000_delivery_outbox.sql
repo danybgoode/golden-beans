@@ -177,11 +177,12 @@ CREATE OR REPLACE FUNCTION ingest_event(
   p_actor_id        TEXT,
   p_subject_type    TEXT,
   p_subject_id      TEXT,
-  p_correlation_id  TEXT,
-  p_occurred_at     TIMESTAMPTZ,
-  p_idempotency_key TEXT
+  p_correlation_id          TEXT,
+  p_occurred_at             TIMESTAMPTZ,
+  p_idempotency_key         TEXT,
+  p_idempotency_fingerprint TEXT
 )
-RETURNS TABLE (event_id UUID, deduplicated BOOLEAN, queued_count INTEGER)
+RETURNS TABLE (event_id UUID, deduplicated BOOLEAN, queued_count INTEGER, conflict BOOLEAN)
 LANGUAGE plpgsql
 -- SECURITY INVOKER (the default, stated explicitly): this function must run with the caller's
 -- privileges. SECURITY DEFINER would make it a standing privilege-escalation surface — anything
@@ -193,10 +194,12 @@ SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_event_id   UUID;
-  v_dedup      BOOLEAN := false;
-  v_queued     INTEGER := 0;
-  v_constraint TEXT;
+  v_event_id     UUID;
+  v_dedup        BOOLEAN := false;
+  v_conflict     BOOLEAN := false;
+  v_queued       INTEGER := 0;
+  v_constraint   TEXT;
+  v_existing_fp  TEXT;
 BEGIN
   -- ── 1. the canonical event ────────────────────────────────────────────────────────────────
   -- The inner BEGIN/EXCEPTION block is a subtransaction: a unique violation here rolls back THIS
@@ -207,12 +210,12 @@ BEGIN
     INSERT INTO events (
       project_id, user_id, event, feature_id, tags, metadata,
       context_version, actor_type, actor_id, subject_type, subject_id,
-      correlation_id, occurred_at, idempotency_key
+      correlation_id, occurred_at, idempotency_key, idempotency_fingerprint
     ) VALUES (
       p_project_id, p_user_id, p_event, p_feature_id,
       COALESCE(p_tags, '{}'::jsonb), COALESCE(p_metadata, '{}'::jsonb),
       p_context_version, p_actor_type, p_actor_id, p_subject_type, p_subject_id,
-      p_correlation_id, p_occurred_at, p_idempotency_key
+      p_correlation_id, p_occurred_at, p_idempotency_key, p_idempotency_fingerprint
     )
     RETURNING id INTO v_event_id;
 
@@ -236,7 +239,7 @@ BEGIN
     -- The tenant scope is RE-ASSERTED here, never assumed from the key. Uniqueness is per
     -- (project_id, idempotency_key), so looking up on the key alone could match another tenant's
     -- row — the cross-tenant bind shape LEARNINGS.md records from multi-tenant-activation S1.
-    SELECT e.id INTO v_event_id
+    SELECT e.id, e.idempotency_fingerprint INTO v_event_id, v_existing_fp
       FROM events e
      WHERE e.project_id = p_project_id
        AND e.idempotency_key = p_idempotency_key;
@@ -250,8 +253,25 @@ BEGIN
         USING ERRCODE = 'GB001';
     END IF;
 
-    v_dedup := true;
+    -- PAYLOAD-MISMATCH detection (cross-review, Codex round 4). The key already belongs to a stored
+    -- event; if the fingerprint of THIS payload differs, the caller reused one key for two different
+    -- events — a client bug. Report it as a conflict (the route answers 409) instead of returning the
+    -- original id and silently dropping this event. A NULL stored fingerprint (an event written
+    -- before this column existed) is treated as "cannot compare" → a plain dedup, never a false
+    -- conflict.
+    IF v_existing_fp IS NOT NULL AND p_idempotency_fingerprint IS NOT NULL
+       AND v_existing_fp IS DISTINCT FROM p_idempotency_fingerprint THEN
+      v_conflict := true;
+    ELSE
+      v_dedup := true;
+    END IF;
   END;
+
+  -- A conflict fans out nothing and creates nothing — it is a rejected request, not a stored event.
+  IF v_conflict THEN
+    RETURN QUERY SELECT v_event_id, false, 0, true;
+    RETURN;
+  END IF;
 
   -- ── 3. fan-out: one delivery row per ELIGIBLE destination ─────────────────────────────────
   -- ONLY ON A FRESH INSERT. A replay (v_dedup) returns here having created no event — and it must
@@ -288,7 +308,7 @@ BEGIN
     GET DIAGNOSTICS v_queued = ROW_COUNT;
   END IF;
 
-  RETURN QUERY SELECT v_event_id, v_dedup, v_queued;
+  RETURN QUERY SELECT v_event_id, v_dedup, v_queued, false;
 END;
 $$;
 
@@ -301,7 +321,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_destinations TO service_role
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_deliveries   TO service_role;
 GRANT EXECUTE ON FUNCTION ingest_event(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
-  TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT
+  TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT
 ) TO service_role;
 
 COMMENT ON TABLE event_deliveries IS
@@ -310,6 +330,6 @@ COMMENT ON COLUMN event_destinations.enabled IS
   'Per-destination kill switch, born FALSE. Consulted at FAN-OUT time (not only at dispatch), so disabling a destination stops new work being queued for it.';
 COMMENT ON FUNCTION ingest_event(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
-  TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT
+  TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT
 ) IS
   'Atomic ingest: canonical event + eligible outbox work in one transaction. p_project_id must come from the resolved API key, never from a request body.';

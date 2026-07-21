@@ -14,6 +14,24 @@
 // increments `attempt_count` or writes `last_attempt_at`, because no attempt is made — a bookkeeping
 // column that counts imaginary attempts would make Story 2.2's backoff maths wrong from row one.
 //
+// A PREPARATORY SEAM, NOT A WIRED PRODUCTION PATH (cross-review, Codex round 4). Nothing INVOKES
+// `dispatchPendingDeliveries()` in production in Sprint 1 — no cron, no request handler, no queue
+// consumer. It is exercised only by specs, and that is correct for a sprint whose whole job is "fill
+// the outbox durably, send nothing." Story 2.1/2.2 add the production trigger (a cron or queue) and
+// the real send. Until then the flag gates this function's BEHAVIOUR (it returns `disabled`), which
+// is what makes the acceptance criterion "flag OFF prevents dispatch but not persistence" testable —
+// it does not yet gate a live dispatch loop, because there isn't one to gate.
+//
+// CROSS-TENANT BY DESIGN, AND ONLY HERE. `dispatchPendingDeliveries()` with no `projectId` scans
+// EVERY project's due work — the ONE deliberate exception to "no read path crosses projects"
+// (AGENTS.md rule #1), because a delivery dispatcher is INFRASTRUCTURE, not a tenant request: it
+// exists precisely to process all tenants' outbox work. This is not a tenant-facing read path and
+// resolves no caller identity. Tenant isolation of the DATA it touches is still absolute — the
+// composite FKs in 20260722110000_delivery_outbox.sql make a cross-tenant delivery row impossible to
+// have been created in the first place, so a global scan can only ever see correctly-scoped rows.
+// The optional `projectId` narrows a pass to one tenant for operational reasons (a targeted drain),
+// not as the isolation control.
+//
 // ── DELIBERATELY (ALMOST) ZERO-IMPORT ────────────────────────────────────────────────────────
 // The only runtime import is ./flags, which is itself zero-import; the Supabase client is INJECTED
 // rather than imported. That is not ceremony — it is the LEARNINGS.md rule about guards behind
@@ -181,6 +199,13 @@ async function claimDueDeliveries(
     // The guard that makes this a claim rather than a stomp: a row another worker already took has
     // moved off a claimable status and simply will not match.
     .in('status', CLAIMABLE_STATUSES as unknown as string[])
+    // AND re-assert due-time in the same atomic UPDATE (cross-review, Codex round 4): the candidate
+    // list is a stale snapshot, so between the SELECT and here another worker could have failed a row
+    // and pushed its next_attempt_at into the future (Story 2.2's backoff). Without this, we'd
+    // reclaim it early and bypass the backoff we just set. Sprint 1 sets no backoff, so this is
+    // defence for when 2.2 does — the real fix there is a SKIP LOCKED claim RPC, of which this is the
+    // supabase-js-expressible half.
+    .lte('next_attempt_at', options.now.toISOString())
     .select('id, project_id, event_id, destination_id, attempt_count')
 
   if (claimError) throw new Error(`could not claim deliveries: ${claimError.message}`)

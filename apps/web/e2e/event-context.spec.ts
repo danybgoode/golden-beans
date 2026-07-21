@@ -397,6 +397,41 @@ test('repeating an idempotency key returns the ORIGINAL event id and creates not
   expect(rows).toHaveLength(1)
 })
 
+test('reusing an idempotency key with a DIFFERENT payload is a 409, not silent loss', async ({
+  request,
+}) => {
+  // Codex round 4 Blocking: an accidental key reuse for a different event must not return the
+  // original and drop the new event. Same key, different `event` name → 409, and the second event
+  // is NOT stored.
+  const headers = { Authorization: `Bearer ${PROJECT_ONE_KEY}` }
+  const key = `conflict-${Date.now()}`
+
+  const first = await request.post('/api/v1/track', {
+    headers,
+    data: { userId: 'c-u', event: 'order_placed', context: { version: 1, idempotencyKey: key } },
+  })
+  expect(first.status()).toBe(201)
+
+  // Same key, DIFFERENT event → conflict.
+  const conflicting = await request.post('/api/v1/track', {
+    headers,
+    data: { userId: 'c-u', event: 'order_refunded', context: { version: 1, idempotencyKey: key } },
+  })
+  expect(conflicting.status()).toBe(409)
+
+  // A byte-identical retry still dedups cleanly (200) — the guard rejects MISMATCH, not reuse.
+  const identical = await request.post('/api/v1/track', {
+    headers,
+    data: { userId: 'c-u', event: 'order_placed', context: { version: 1, idempotencyKey: key } },
+  })
+  expect(identical.status()).toBe(200)
+
+  // Only the first event exists; the refund event was never stored.
+  const { data: rows } = await dbClient().from('events').select('event').eq('idempotency_key', key)
+  expect(rows).toHaveLength(1)
+  expect(rows![0].event).toBe('order_placed')
+})
+
 test('idempotency keys are scoped per project — one tenant cannot collapse another s event', async ({
   request,
 }) => {
