@@ -89,16 +89,17 @@ export default async function OnboardingPage({
           </span>
           {plaintextKey && (
             <span className="tag" style={{ color: 'var(--red)', borderColor: 'var(--red)' }}>
-              SHOWN ONCE
+              COPY IT NOW
             </span>
           )}
         </div>
         {plaintextKey ? (
           <>
             <p style={{ fontSize: 14, color: 'var(--red)', fontWeight: 700, margin: '0 0 16px' }}>
-              Copy this now. It will never be shown again on any screen — we store only its
-              one-way hash, so this isn&apos;t a &quot;we&apos;ll email it to you&quot; situation.
-              If it&apos;s lost, the only recovery is issuing a new one.
+              Copy this now. It is visible on this page for a few more minutes and then never
+              again — we store only its one-way hash, so this isn&apos;t a &quot;we&apos;ll email
+              it to you&quot; situation. If it&apos;s lost, the only recovery is issuing a new one.
+              Hit the button below the moment you&apos;ve saved it.
             </p>
             <CopyUrlField url={plaintextKey} />
             <DismissKeyButton slug={projectSlug} />

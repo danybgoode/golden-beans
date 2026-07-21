@@ -5,6 +5,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import { isSignupEnabled } from '@/lib/flags'
 import { provisionTenantForUser, registerStarterFeature } from '@/lib/provisioning'
 import { setOnboardingKeyCookie } from '@/lib/onboarding-key'
+import { trackSelfEvent, ACCOUNT_CONFIRMED_EVENT } from '@/lib/self-track'
 
 // multi-tenant-activation · Sprint 2 — the provisioning RETRY, as a Route Handler.
 //
@@ -44,10 +45,19 @@ export async function GET() {
     return NextResponse.redirect(new URL('/app?provision=failed', siteUrl))
   }
 
-  if (result.created && result.plaintextKey) {
-    await setOnboardingKeyCookie(result.projectSlug, result.plaintextKey)
-    const starterKey = result.plaintextKey
-    after(() => registerStarterFeature(starterKey))
+  if (result.created) {
+    // The activation funnel's MIDDLE stage. Fired here as well as in the auth callback, because
+    // this route handles exactly the transient-failure path where the callback's own emit was
+    // missed — omitting it would leave the funnel permanently missing account_confirmed for the
+    // users who most needed the retry (cross-review, Codex 2026-07-20). Double-firing across the
+    // two paths is harmless: TARS counts DISTINCT users per event.
+    after(() => trackSelfEvent(ACCOUNT_CONFIRMED_EVENT, user.id))
+
+    if (result.plaintextKey) {
+      await setOnboardingKeyCookie(result.projectSlug, result.plaintextKey)
+      const starterKey = result.plaintextKey
+      after(() => registerStarterFeature(starterKey))
+    }
   }
 
   if (result.created) {

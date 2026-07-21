@@ -56,6 +56,19 @@ export async function checkMonthlyQuota(projectId: string, quota: number): Promi
   const windowStart = monthWindowStart()
   const result = await checkRateLimit(`quota:${projectId}`, { windowStart, max: quota })
   if (result.ok) return { ok: true }
+
+  // REFUND THE REJECTED CALL. The counter increments before the comparison (that is what makes it
+  // atomic), so without this an over-quota tenant whose integration keeps retrying drives the
+  // count arbitrarily far above their ceiling — and then "raise the ceiling" (the documented, and
+  // only, remedy) silently fails to restore service, because the count is already past the new
+  // number too. The counter must mean "events accepted this month", not "requests attempted"
+  // (cross-review, Codex 2026-07-20).
+  //
+  // Deliberately NOT done for the per-key rate limit: that one is a burst guard, inflating it
+  // under a hammering caller is the desired behaviour, and its window resets every 60 seconds
+  // rather than persisting for a month.
+  await refundMonthlyQuota(projectId)
+
   const resetsOn = monthWindowEnd(windowStart).toISOString().slice(0, 10)
   return {
     ok: false,

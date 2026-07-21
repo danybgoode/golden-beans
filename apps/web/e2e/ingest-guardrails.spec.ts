@@ -226,6 +226,35 @@ test.describe('monthly event quota', () => {
     }
   })
 
+  test('raising the ceiling still works after SUSTAINED over-quota traffic', async ({ request }) => {
+    // The sharp version of the test below. The counter increments before the comparison (that is
+    // what makes it atomic), so a rejected call used to inflate it too — meaning a tenant whose
+    // integration kept retrying drove the count arbitrarily far above their ceiling, and "raise
+    // the ceiling", the documented and only remedy, silently failed to restore service because
+    // the count was already past the new number as well (cross-review, Codex 2026-07-20).
+    //
+    // The original test raised the ceiling after exactly ONE rejection, which the bug survived.
+    // This one hammers it first — the difference between a spec that looks right and one with
+    // teeth.
+    const db = dbClient()
+    const tenant = await createTenant(db, { monthly_event_quota: 1, ingest_rate_per_min: 600 })
+    try {
+      expect((await fire(request, tenant, { userId: 'u1', event: 'accepted' })).status()).toBe(201)
+
+      // 10 rejected attempts. Under the bug the counter reaches ~11 and a ceiling of 5 stays shut.
+      for (let i = 0; i < 10; i++) {
+        expect((await fire(request, tenant, { userId: 'u1', event: `over-${i}` })).status()).toBe(429)
+      }
+
+      await db.from('projects').update({ monthly_event_quota: 5 }).eq('id', tenant.projectId)
+
+      // The tenant has ONE accepted event against a new ceiling of 5, so this must be allowed.
+      expect((await fire(request, tenant, { userId: 'u1', event: 'after raise' })).status()).toBe(201)
+    } finally {
+      await destroyTenant(db, tenant)
+    }
+  })
+
   test('the ceiling is data — raising it is an UPDATE, not a deploy', async ({ request }) => {
     // Story 2.2's acceptance, demonstrated end-to-end: the same key that was refused starts
     // working again after a row update, with no restart in between.

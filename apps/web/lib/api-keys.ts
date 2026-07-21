@@ -47,19 +47,27 @@ export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
 export async function issueApiKey(
   projectId: string,
   label: string,
-): Promise<{ ok: true; plaintext: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; plaintext: string; id: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
   const plaintext = generateApiKey()
-  const { error } = await supabase.from('api_keys').insert({
-    project_id: projectId,
-    key_hash: hashApiKey(plaintext),
-    label: label.trim() || 'untitled',
-  })
-  if (error) {
+  // Returns the row id so the caller can AUDIT which key was minted. A label alone is not an
+  // identifier — nothing stops two keys being called "ci", and an audit trail whose stated job is
+  // "who minted the key that is ingesting this?" cannot answer it from a non-unique string
+  // (cross-review, Codex 2026-07-20). Revocation already audited its keyId; issuance now matches.
+  const { data, error } = await supabase
+    .from('api_keys')
+    .insert({
+      project_id: projectId,
+      key_hash: hashApiKey(plaintext),
+      label: label.trim() || 'untitled',
+    })
+    .select('id')
+    .single()
+  if (error || !data) {
     console.error('[api-keys] issue failed:', error)
     return { ok: false, error: 'Could not issue key' }
   }
-  return { ok: true, plaintext }
+  return { ok: true, plaintext, id: data.id as string }
 }
 
 // Revokes a key — but ONLY within `projectId`. Scoping the UPDATE by project_id is the security

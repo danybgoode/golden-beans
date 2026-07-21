@@ -65,6 +65,25 @@ minutes. Reuses E1's install page, rendered per-tenant.
 the funnel page shows it.
 **Risk:** LOW
 
+## Known limitation — our signup route is not the only way to create an account
+Cross-review (Codex, round 3) is right about this and it must not be glossed: the Supabase **anon
+key is public by design** (it is inlined into the client bundle), so anyone can call Supabase
+Auth's `signUp` endpoint directly and create an account **without passing our gate, honeypot, or
+IP rate limit**. Those guards protect *our* route, not account creation as such.
+
+What still holds, and why this isn't a hole in the epic's actual promise:
+- **`SIGNUP_ENABLED=false` still means no tenants.** The gate is re-checked in `/auth/callback`
+  and `/app/provision`, both of which run server-side, so a directly-created account gets **no
+  project, no membership, no key** while the flag is off. It is an inert `auth.users` row.
+- Once the flag is on, a bypassing signup lands a tenant whose blast radius is bounded by Story
+  2.2's per-project quota and per-key rate limit.
+
+**Owed to Daniel before/at the 3.3 flip** (Supabase Dashboard, not code):
+1. Consider **disabling public signups** in Auth settings and letting provisioning run through the
+   admin API server-side — that makes our route the only path, structurally.
+2. At minimum, set Supabase's own **Auth rate limits** (per-IP signup + email send), which is the
+   layer that actually governs the direct path.
+
 ## Sprint QA
 - **api spec(s) — shipped:** `e2e/signup.spec.ts` (gate polarity incl. the "opens on a typo" cases ·
   gate-OFF 404 on both the route and the page, indistinguishable across well-formed/malformed/empty

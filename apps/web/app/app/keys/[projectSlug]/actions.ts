@@ -36,7 +36,7 @@ export async function issueKeyAction(slug: unknown, label: unknown) {
       action: 'api_key_issued',
       projectId,
       actorUserId: userId,
-      metadata: { label: safeLabel || 'untitled' },
+      metadata: { keyId: result.id, label: safeLabel || 'untitled' },
     })
   }
   revalidatePath(`/app/keys/${safeSlug}`)
