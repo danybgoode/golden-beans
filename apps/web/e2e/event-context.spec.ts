@@ -164,6 +164,16 @@ test('an unknown context.version is rejected rather than half-stored', () => {
   expect(result.ok === false && result.errors).toHaveLength(1)
 })
 
+test('an unknown version short-circuits BEFORE the v1 unknown-key check', () => {
+  // Codex round 7: the version check must precede the unknown-key scan, or a v2 payload carrying a
+  // key that isn't in v1's set gets a spurious "unknown field" error ABOUT A CONTRACT IT NEVER
+  // CLAIMED. With version 2, the ONLY error must be the version one.
+  const result = normalizeEventContext({ version: 2, some_future_field: 'x' } as never, NOW)
+  expect(result.ok).toBe(false)
+  expect(result.ok === false && result.errors).toHaveLength(1)
+  expect(result.ok === false && result.errors[0].field).toBe('context.version')
+})
+
 // ── whole-context normalisation ───────────────────────────────────────────────────────────────
 
 test('a full merchant context normalises to the exact persisted columns', () => {
@@ -336,20 +346,36 @@ test('a merchant event round-trips its full versioned context', async ({ request
 })
 
 test('malformed context is rejected with 400 and charges no quota', async ({ request }) => {
-  const res = await request.post('/api/v1/track', {
-    headers: { Authorization: `Bearer ${PROJECT_ONE_KEY}` },
-    data: {
-      userId: `bad-${Date.now()}`,
-      event: 'spec_bad_context',
-      context: { version: 1, subject: { type: 'Merchant', id: 'm1' }, occurredAt: 'yesterday' },
-    },
-  })
-  expect(res.status()).toBe(400)
-  const body = await res.json()
-  expect(body.ok).toBe(false)
-  expect(body.error).toBe('Malformed event context')
-  const fields = (body.issues as { field: string }[]).map((i) => i.field).sort()
-  expect(fields).toEqual(['context.occurredAt', 'context.subject.type'])
+  // A quota=1 disposable tenant PROVES "charges no quota" (cross-review, Codex round 7): asserting
+  // only the 400 would still pass if quota were charged before validation. The malformed request
+  // must leave the single quota unit intact — proven by a later VALID event still succeeding.
+  const db = dbClient()
+  const p = await provisionProject(db, { quota: 1 })
+  try {
+    const res = await request.post('/api/v1/track', {
+      headers: { Authorization: `Bearer ${p.key}` },
+      data: {
+        userId: `bad-${Date.now()}`,
+        event: 'spec_bad_context',
+        context: { version: 1, subject: { type: 'Merchant', id: 'm1' }, occurredAt: 'yesterday' },
+      },
+    })
+    expect(res.status()).toBe(400)
+    const body = await res.json()
+    expect(body.ok).toBe(false)
+    expect(body.error).toBe('Malformed event context')
+    const fields = (body.issues as { field: string }[]).map((i) => i.field).sort()
+    expect(fields).toEqual(['context.occurredAt', 'context.subject.type'])
+
+    // The quota unit was NOT consumed by the rejected request — a valid event still lands.
+    const ok = await request.post('/api/v1/track', {
+      headers: { Authorization: `Bearer ${p.key}` },
+      data: { userId: 'good-u', event: 'spec_good_event' },
+    })
+    expect(ok.status()).toBe(201)
+  } finally {
+    await p.cleanup()
+  }
 })
 
 test('an unknown context version is refused rather than silently half-stored', async ({ request }) => {

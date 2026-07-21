@@ -196,25 +196,12 @@ export function normalizeEventContext(
     return { ok: false, errors: [{ field: 'context', message: 'context must be an object' }] }
   }
 
-  // Unknown top-level keys are REFUSED, not ignored. This module's whole reason for existing is that
-  // silently dropping a field the caller believes it sent is the worst failure mode — the caller
-  // gets a 201, the column is NULL, and every downstream projection reads an honest-looking zero.
-  // The most likely mistake is a snake_case spelling of a real field (`idempotency_key`,
-  // `subject_id`, `occurred_at`): accepting the request while storing none of it would strand a
-  // real integration for exactly as long as it takes someone to notice the numbers are wrong
-  // (cross-review, Agy 2026-07-22). A 400 naming the stray key teaches it immediately.
-  for (const key of Object.keys(input)) {
-    if (!KNOWN_CONTEXT_KEYS.has(key)) {
-      errors.push({
-        field: `context.${key}`,
-        message: `unknown context field "${key}" — did you mean a camelCase form (correlationId, occurredAt, idempotencyKey)?`,
-      })
-    }
-  }
-
-  // Version first and strictly. An absent version is NOT "assume v1" — a caller that omits it has
-  // not agreed to any contract, and guessing on their behalf is how a v2 client silently gets
-  // v1 semantics.
+  // VERSION FIRST, and it short-circuits before ANY v1-specific check — including the unknown-key
+  // scan below (cross-review, Codex round 7). An absent version is NOT "assume v1": a caller that
+  // omits it has agreed to no contract, and guessing gives a v2 client v1 semantics. And with an
+  // UNKNOWN version we cannot know what any field means, so reporting "unknown field X" against v1's
+  // key set would be a confidently-wrong message about a contract the caller never claimed — the
+  // policy is to report ONLY the version error and stop.
   if (input.version !== CURRENT_CONTEXT_VERSION) {
     errors.push({
       field: 'context.version',
@@ -223,9 +210,22 @@ export function normalizeEventContext(
           ? `context.version is required and must be ${CURRENT_CONTEXT_VERSION}`
           : `unsupported context.version ${JSON.stringify(input.version)} — this build understands ${CURRENT_CONTEXT_VERSION}`,
     })
-    // Return immediately: with an unknown version we cannot know what the other fields MEAN, so
-    // validating them against v1 rules would produce confidently wrong error messages.
     return { ok: false, errors }
+  }
+
+  // Now that version === 1 is confirmed, unknown top-level keys are REFUSED, not ignored. Silently
+  // dropping a field the caller believes it sent is the worst failure mode — the caller gets a 201,
+  // the column is NULL, and every downstream projection reads an honest-looking zero. The most
+  // likely mistake is a snake_case spelling of a real field (`idempotency_key`, `subject_id`,
+  // `occurred_at`): accepting the request while storing none of it would strand a real integration
+  // for as long as it takes someone to notice the numbers are wrong (cross-review, Agy 2026-07-22).
+  for (const key of Object.keys(input)) {
+    if (!KNOWN_CONTEXT_KEYS.has(key)) {
+      errors.push({
+        field: `context.${key}`,
+        message: `unknown context field "${key}" — did you mean a camelCase form (correlationId, occurredAt, idempotencyKey)?`,
+      })
+    }
   }
 
   const actor = readEntity(input.actor, 'context.actor', errors)

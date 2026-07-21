@@ -110,6 +110,19 @@ ALTER TABLE events
     (subject_id      IS NULL OR (subject_id      !~ '[[:cntrl:]]' AND subject_id      = btrim(subject_id))) AND
     (correlation_id  IS NULL OR (correlation_id  !~ '[[:cntrl:]]' AND correlation_id  = btrim(correlation_id))) AND
     (idempotency_key IS NULL OR (idempotency_key !~ '[[:cntrl:]]' AND idempotency_key = btrim(idempotency_key)))
+  ),
+  -- A key with NO fingerprint is a silent-loss hole (cross-review, Codex round 7): the conflict
+  -- check treats a NULL stored fingerprint as "cannot compare → dedup", so a service-role writer that
+  -- stored a key without a fingerprint would let a LATER different payload dedup (200) instead of
+  -- 409ing. Pair them at the DB level — if there is a key there must be a fingerprint — and pin the
+  -- fingerprint's shape to exactly a sha256 hex digest so a garbage value can't stand in for one. The
+  -- route always sets both together (lib/idempotency-fingerprint.ts), so this only binds other
+  -- writers.
+  ADD CONSTRAINT events_idempotency_fingerprint_paired CHECK (
+    idempotency_key IS NULL OR idempotency_fingerprint IS NOT NULL
+  ),
+  ADD CONSTRAINT events_idempotency_fingerprint_shape CHECK (
+    idempotency_fingerprint IS NULL OR idempotency_fingerprint ~ '^[0-9a-f]{64}$'
   );
 
 -- ── the ONE invariant that CANNOT be a CHECK, stated so the claim above stays honest ─────────────
