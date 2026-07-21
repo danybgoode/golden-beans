@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { resolveProjectFromAuthHeader } from '@/lib/auth'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { trackEventSchema } from '@/lib/track-schema'
+import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
 
@@ -59,6 +60,22 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // ── Story 1.1 · versioned actor/subject context ─────────────────────────────────────────────
+  // Validated BEFORE the rate/quota counters below, for the same reason those counters sit after
+  // schema validation: only an ACCEPTABLE event is ever charged. A broken integration sending an
+  // unparseable occurredAt must not silently consume the tenant's monthly allowance.
+  //
+  // Absent `context` is not an error — it's the legacy contract, and it must keep working forever.
+  const eventContext = parsed.data.context
+    ? normalizeEventContext(parsed.data.context)
+    : { ok: true as const, context: LEGACY_EVENT_CONTEXT }
+  if (!eventContext.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'Malformed event context', issues: eventContext.errors },
+      { status: 400 },
+    )
+  }
+
   // 2. Per-key burst limit, then 3. per-project monthly quota — both AFTER validation, so only an
   //    ACCEPTABLE event is ever charged. Checking them earlier (the first version of this route)
   //    meant a broken integration sending malformed JSON burned a tenant's monthly allowance
@@ -92,9 +109,41 @@ export async function POST(req: NextRequest) {
       feature_id: parsed.data.featureId ?? null,
       tags: parsed.data.tags,
       metadata: parsed.data.metadata,
+      ...eventContext.context, // Story 1.1 — already snake_cased column names, or all-NULL for legacy
     })
     .select('id')
     .single()
+
+  // ── Story 1.1 · idempotent replay ───────────────────────────────────────────────────────────
+  // A repeated idempotency key must resolve to the SAME logical event, not a second row and not an
+  // error. We let the unique index be the arbiter rather than checking-then-inserting: two
+  // concurrent retries of the same request would both pass a prior SELECT and both insert, which is
+  // precisely the check-then-act race the rate_limit migration already exists to avoid elsewhere in
+  // this route. Postgres 23505 = unique_violation.
+  //
+  // Scoped to OUR index by name: another unique violation (a future constraint, a bug) must not be
+  // silently reinterpreted as "this was just a retry" and answered with someone else's event id.
+  if (error?.code === '23505' && error.message.includes('events_project_idempotency_key_uidx')) {
+    const idempotencyKey = eventContext.context.idempotency_key
+    const { data: existing, error: lookupError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('project_id', auth.projectId) // the tenant scope is re-asserted, never assumed from the key
+      .eq('idempotency_key', idempotencyKey)
+      .maybeSingle()
+
+    // Nothing was stored, so hand the quota unit back — a client retrying a delivery it never got
+    // an answer for must not be charged twice for one logical event.
+    await refundMonthlyQuota(auth.projectId)
+
+    if (lookupError || !existing) {
+      console.error('[track] idempotency conflict but no matching row:', lookupError)
+      return NextResponse.json({ ok: false, error: 'Failed to resolve idempotent event' }, { status: 500 })
+    }
+    // 200, not 201: nothing was created this time. The id is the original event's, so an
+    // at-least-once caller converges on one identity no matter how many times it retries.
+    return NextResponse.json({ ok: true, id: existing.id, deduplicated: true }, { status: 200 })
+  }
 
   if (error || !data) {
     console.error('[track] event insert failed:', error)
