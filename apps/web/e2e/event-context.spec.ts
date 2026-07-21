@@ -228,11 +228,21 @@ test('an empty v1 context is valid — every field except version is optional', 
 
 // ── HTTP: the route is actually wired to all of the above ─────────────────────────────────────
 //
-// MUTATION-CHECKED (Definition of Done, and the S1 lesson that four green security specs passed
-// identically against a re-broken build): each HTTP spec below was observed RED by, in turn,
-// (a) deleting the `...eventContext.context` spread from the insert — the round-trip and isolation
-// specs fail; (b) removing the `normalizeEventContext` call so context is accepted unvalidated —
-// the rejection spec fails; (c) deleting the 23505 branch — the replay spec fails with a 500.
+// MUTATION-CHECKED against commit 3d6950c (Definition of Done, and the S1 lesson that four green
+// security specs passed identically against a deliberately re-broken build). Three mutations were
+// applied to route.ts in turn and the exact specs each one killed were recorded:
+//
+//   A. delete the `...eventContext.context` spread from the insert  → 3 red:
+//      round-trip, idempotent replay, per-project idempotency scoping.
+//   B. remove the `normalizeEventContext()` call (accept context unvalidated) → 5 red:
+//      the three above, plus malformed-context-400 and unknown-version-400.
+//   C. delete the 23505 branch → 1 red: idempotent replay (500s instead of returning the original).
+//
+// Baseline and post-restore runs were both 25 passed. Note what this exercise also revealed: NO
+// mutation turns the "context cannot smuggle a project" spec red, because tenancy is enforced by
+// the insert taking `auth.projectId` rather than by anything context-specific. That spec is a
+// regression tripwire for a future change, not proof of a guard this diff added — worth stating
+// plainly rather than letting a green tick imply more coverage than it has.
 
 test('legacy payload still ingests unchanged, with a NULL context', async ({ request }) => {
   // The compatibility guarantee. Every shipped caller sends exactly this shape.
