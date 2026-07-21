@@ -230,6 +230,67 @@ test('ingest_event() is NOT executable by the anon role — the REVOKE has teeth
   expect(message).not.toContain('row-level security')
 })
 
+test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destination', async () => {
+  // Codex round 9: the ROUTE resolves a sequential replay in resolveIdempotent() BEFORE calling the
+  // RPC, so the HTTP replay specs never reach ingest_event()'s own `IF NOT v_dedup` guard. This calls
+  // the RPC DIRECTLY, and — crucially — enables the matching destination ONLY AFTER the first call.
+  // The scenario matters: with the SAME destination present at both calls, the
+  // (event_id, destination_id) unique constraint would mask a re-fan (ON CONFLICT DO NOTHING), so
+  // that shape does NOT distinguish the guard from the constraint. A destination enabled AFTER the
+  // first ingest is a NEW (event, destination) pair with no conflict — so if `IF NOT v_dedup` were
+  // dropped, the dedup call WOULD attach it. This is the exact assertion mutation E breaks.
+  const db = dbClient()
+  const eventName = uniqueEvent('rpc_dedup')
+  const { data: proj } = await db
+    .from('projects')
+    .insert({ slug: `disp-rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .select('id')
+    .single()
+  const pid = proj!.id as string
+  try {
+    const args = {
+      p_project_id: pid,
+      p_user_id: 'rpc-u',
+      p_event: eventName,
+      p_feature_id: null,
+      p_tags: {},
+      p_metadata: {},
+      p_context_version: 1,
+      p_actor_type: null,
+      p_actor_id: null,
+      p_subject_type: null,
+      p_subject_id: null,
+      p_correlation_id: null,
+      p_occurred_at: null,
+      p_idempotency_key: `rpc-key-${Date.now()}`,
+      p_idempotency_fingerprint: 'a'.repeat(64),
+    }
+
+    // First call: NO destination exists yet, so a fresh insert queues nothing.
+    const first = await db.rpc('ingest_event', args).single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
+    expect(first.error).toBeNull()
+    expect(first.data!.deduplicated).toBe(false)
+    expect(first.data!.queued_count).toBe(0)
+
+    // NOW enable a matching destination — it did not exist when the event was born.
+    await db.from('event_destinations').insert({ project_id: pid, name: 'rpc-dest', enabled: true, event_filter: eventName })
+
+    // Second call, identical key: the RPC's OWN dedup branch. It must NOT re-fan to the new
+    // destination — queued_count 0, and ZERO deliveries for the event. Dropping `IF NOT v_dedup`
+    // makes this call attach the new destination (a fresh pair, no conflict to mask it) → red.
+    const second = await db.rpc('ingest_event', args).single<{ event_id: string; deduplicated: boolean; queued_count: number }>()
+    expect(second.error).toBeNull()
+    expect(second.data!.deduplicated).toBe(true)
+    expect(second.data!.queued_count).toBe(0)
+    expect(second.data!.event_id).toBe(first.data!.event_id)
+
+    const { data: deliveries } = await db.from('event_deliveries').select('id').eq('event_id', first.data!.event_id)
+    expect(deliveries).toHaveLength(0)
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
 // ── HTTP: ingest_event() commits event + outbox atomically ────────────────────────────────────
 //
 // MUTATION-CHECKED against the committed build. Each mutation was applied to the LIVE local build
@@ -247,10 +308,13 @@ test('ingest_event() is NOT executable by the anon role — the REVOKE has teeth
 //   D. remove the gate short-circuit in lib/delivery-dispatch.ts (check the flag AFTER the query)
 //      → 1 red: "gate OFF → dispatcher reads nothing" (the deliberately-throwing client fires).
 //   E. remove the `IF NOT v_dedup` guard so fan-out runs on the replay path too (the round-1 bug)
-//      → 1 red: "a replay does NOT fan out to a destination enabled AFTER the original ingest".
-//         This is the spec added specifically to give Codex's Blocking finding teeth — the earlier
-//         "converges / no doubling" spec did NOT catch it (the unique constraint kept the count at
-//         1 either way), which is exactly the honest coverage gap round 1 flagged and this closes.
+//      → 1 red: "ingest_event() RPC dedup path does NOT re-fan-out — tested directly". This is the
+//         spec that reaches the RPC's own dedup branch. IMPORTANT (cross-review, Codex round 9): the
+//         HTTP replay specs do NOT reach that branch — the route's resolveIdempotent() pre-check
+//         answers a sequential replay before ingest_event() is ever called, so only a DIRECT RPC
+//         call (or the rare concurrent race) exercises `IF NOT v_dedup`. An earlier version of this
+//         note credited the HTTP "does NOT fan out" spec, which was wrong: that spec stays GREEN
+//         under mutation E. The direct-RPC spec is what actually has teeth here.
 
 test('an event with no destinations still persists — outbox dark, ingest unaffected', async ({ request }) => {
   const db = dbClient()

@@ -716,8 +716,7 @@ test('a dedup completes first-event activation the original ingest may have left
     expect((await retry.json()).deduplicated).toBe(true)
 
     // after() runs post-response (a self-track network call + a DB update), so poll for the stamp
-    // rather than asserting instantly. Budget 5s — generous enough that parallel-load jitter can't
-    // flake it, still bounded.
+    // rather than asserting instantly. Budget 5s — generous enough for parallel-load jitter, bounded.
     let stamped: string | null = null
     for (let i = 0; i < 50 && stamped === null; i++) {
       await new Promise((r) => setTimeout(r, 100))

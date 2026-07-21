@@ -15,7 +15,7 @@ context; malformed ids/timestamps are rejected; project identity still comes onl
 
 **Risk:** high — shared SDK/wire contract + additive DB migration; Daniel merges.
 
-**✅ Shipped `3d6950c`.** The contract is `context: { version: 1, actor?, subject?, correlationId?, occurredAt?, idempotencyKey? }`, all optional, on `POST /api/v1/track` and `packages/sdk`.
+**✅ Implemented `3d6950c` (on-branch; live at merge).** The contract is `context: { version: 1, actor?, subject?, correlationId?, occurredAt?, idempotencyKey? }`, all optional, on `POST /api/v1/track` and `packages/sdk`.
 
 Decisions worth knowing, because the next two epics depend on them:
 - **`userId` stayed REQUIRED.** Making it optional would have been a breaking change dressed as an addition — every shipped TARS/A-B read counts DISTINCT `userId`, so a payload omitting it would ingest happily and be invisible to every existing read. Actor/subject *add* dimensions; they don't replace it.
@@ -37,7 +37,7 @@ idempotency key does not duplicate the logical event; forced sink outage still r
 
 **Risk:** high — DB migration, shared ingest and runtime gate; Daniel merges.
 
-**✅ Shipped `ea862d1`.** Atomicity is a plpgsql `ingest_event()` function (supabase-js has no multi-statement transaction), which writes the canonical event and one outbox row per eligible destination in one transaction — or neither. The route calls it via `.rpc()`; its HTTP contract is byte-identical to before and Story 1.1's specs pass unmodified.
+**✅ Implemented `ea862d1` (on-branch; live at merge).** Atomicity is a plpgsql `ingest_event()` function (supabase-js has no multi-statement transaction), which writes the canonical event and one outbox row per eligible destination in one transaction — or neither. The route calls it via `.rpc()`; its HTTP contract is byte-identical to before and Story 1.1's specs pass unmodified.
 
 - **`event_destinations`** (minimal — Story 2.1 owns the full lifecycle/HMAC/rotation) and **`event_deliveries`** (the outbox — Story 2.2 owns retry/backoff/replay). Both expand-only, RLS on, no policies.
 - **Composite FKs `(id, project_id)`** make a cross-tenant delivery row impossible to *insert*, not merely absent from a query — tenancy as a DB fact, backstopping the app-level `auth.projectId` scope.
