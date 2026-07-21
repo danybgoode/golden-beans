@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { issueApiKey, revokeApiKey } from '@/lib/api-keys'
+import { recordAudit } from '@/lib/audit'
 
 // multi-tenant-activation · Sprint 1, Story 1.3 — the key lifecycle server actions.
 //
@@ -24,8 +25,20 @@ export async function issueKeyAction(slug: unknown, label: unknown) {
   const safeSlug = requireString(slug, 'project')
   const safeLabel = requireString(label ?? '', 'label').slice(0, MAX_LABEL_LENGTH)
 
-  const { projectId } = await requireProjectOwnership(safeSlug)
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const result = await issueApiKey(projectId, safeLabel)
+  // Story 2.2 — audit the credential lifecycle. Recorded here, in the action, rather than inside
+  // lib/api-keys.ts: this is the only layer that knows WHO acted (the lib is also reachable from
+  // the signup provisioner, where there is no acting session yet). The label is non-secret and
+  // useful for "which key was this?"; the plaintext never goes anywhere near an audit row.
+  if (result.ok) {
+    await recordAudit({
+      action: 'api_key_issued',
+      projectId,
+      actorUserId: userId,
+      metadata: { label: safeLabel || 'untitled' },
+    })
+  }
   revalidatePath(`/app/keys/${safeSlug}`)
   return result
 }
@@ -34,8 +47,19 @@ export async function revokeKeyAction(slug: unknown, keyId: unknown) {
   const safeSlug = requireString(slug, 'project')
   const safeKeyId = requireString(keyId, 'key id')
 
-  const { projectId } = await requireProjectOwnership(safeSlug)
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const ok = await revokeApiKey(projectId, safeKeyId)
+  // Only a real revocation is audited. revokeApiKey returns false for an already-revoked or
+  // foreign key id, and logging those would fill the trail with rows describing nothing that
+  // happened — the opposite of what an operator reading it during an incident needs.
+  if (ok) {
+    await recordAudit({
+      action: 'api_key_revoked',
+      projectId,
+      actorUserId: userId,
+      metadata: { keyId: safeKeyId },
+    })
+  }
   revalidatePath(`/app/keys/${safeSlug}`)
   return { ok }
 }

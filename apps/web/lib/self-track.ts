@@ -25,6 +25,23 @@ export const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golde
 export const LANDING_VISITED_EVENT = 'landing_visited'
 export const WAITLIST_JOINED_EVENT = 'waitlist_joined'
 
+// multi-tenant-activation · Sprint 2/3 — the ACTIVATION funnel, the second funnel this tenant
+// measures (epic README: "Success includes a dogfooded signup→activated funnel rendered by the
+// engine itself"). Three stages, fired from three different places in the flow:
+//   signup_started       — a signup submission passed the gate + guards (public signup route)
+//   account_confirmed    — the email round-trip completed and a tenant was provisioned (callback)
+//   first_event_ingested — that new tenant's very first event landed (the ingest route)
+export const SIGNUP_STARTED_EVENT = 'signup_started'
+export const ACCOUNT_CONFIRMED_EVENT = 'account_confirmed'
+export const FIRST_EVENT_INGESTED_EVENT = 'first_event_ingested'
+
+export type SelfTrackEvent =
+  | typeof LANDING_VISITED_EVENT
+  | typeof WAITLIST_JOINED_EVENT
+  | typeof SIGNUP_STARTED_EVENT
+  | typeof ACCOUNT_CONFIRMED_EVENT
+  | typeof FIRST_EVENT_INGESTED_EVENT
+
 // The per-visitor identity cookie. A visit (Server Components can't set cookies, so the visited
 // beacon is a Route Handler — see app/api/v1/public/self-visit/route.ts) mints/returns this id;
 // the waitlist route reads the SAME cookie on the client's later join, so one visitor's visit and
@@ -63,10 +80,7 @@ function timeoutFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Res
 // own public URL), and awaiting it directly in a route handler would delay that route's response
 // (and, for self-visit specifically, delay delivering the Set-Cookie the waitlist route depends on
 // for a shared visitor identity) by however long the call takes, timeout included.
-export async function trackSelfEvent(
-  event: typeof LANDING_VISITED_EVENT | typeof WAITLIST_JOINED_EVENT,
-  userId: string,
-): Promise<void> {
+export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Promise<void> {
   const apiKey = selfApiKey()
   if (!apiKey) return // unset in CI/local-without-config — dogfooding is a prod-config concern
 

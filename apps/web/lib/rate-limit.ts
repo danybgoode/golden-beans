@@ -17,12 +17,20 @@ export function hashIp(ip: string): string {
 
 export type RateLimitResult = { ok: true } | { ok: false; status: 429; error: string }
 
+// `windowMs` floors the CURRENT time into a fixed-size bucket — right for "5 per 10 minutes",
+// wrong for any window whose length varies. Callers with a calendar-aligned window (a monthly
+// quota — lib/quota.ts) pass `windowStart` explicitly instead: months are not a fixed number of
+// milliseconds, so flooring by "milliseconds in this month" would land on an arbitrary multiple
+// of that duration since the Unix epoch, NOT on the first of the month. Exactly one of the two
+// must be supplied.
 export async function checkRateLimit(
   key: string,
-  opts: { windowMs: number; max: number },
+  opts: { max: number } & ({ windowMs: number; windowStart?: never } | { windowStart: Date; windowMs?: never }),
 ): Promise<RateLimitResult> {
   const supabase = getSupabaseServiceClient()
-  const windowStart = new Date(Math.floor(Date.now() / opts.windowMs) * opts.windowMs).toISOString()
+  const windowStart = (
+    opts.windowStart ?? new Date(Math.floor(Date.now() / opts.windowMs!) * opts.windowMs!)
+  ).toISOString()
 
   const { data, error } = await supabase.rpc('increment_rate_limit', {
     p_key: key,
