@@ -32,6 +32,14 @@ const MAX_PROJECTS_PER_TICK = 200
 // unprocessed projects still have due work and are simply picked up by the next */5 tick.
 const TICK_BUDGET_MS = 60_000
 
+// A per-PROJECT slice of the tick, so ONE slow tenant cannot monopolize the whole budget and starve
+// the others (cross-review, Codex round 5). Each project is dispatched under a deadline of
+// min(tick deadline, now + this), so a project with a slow receiver does a bounded amount of work,
+// then defers its remainder to the next tick and yields to the next project. True round-robin
+// scheduling / parallel workers are a scale follow-up when measured traffic needs them; this bounds
+// the monopoly with a single cheap cap.
+const PER_PROJECT_BUDGET_MS = 15_000
+
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return false // fail closed
@@ -81,7 +89,11 @@ export async function POST(request: Request) {
     // top would be up to a full budget behind wall-time for the last projects, making their
     // claim_deliveries see fewer rows as due than actually are.
     const now = new Date()
-    const outcome = await dispatchPendingDeliveries(db, projectId, { now, fetchImpl: fetch, deadlineMs })
+    // Per-project deadline: the smaller of the tick deadline and this project's own slice — bounds a
+    // slow tenant's share so later projects still get served this tick. No fetchImpl → the dispatcher
+    // uses the connection-PINNED default sender (SSRF-safe), not global fetch.
+    const projectDeadline = Math.min(deadlineMs, Date.now() + PER_PROJECT_BUDGET_MS)
+    const outcome = await dispatchPendingDeliveries(db, projectId, { now, deadlineMs: projectDeadline })
     if (outcome.ok && outcome.dispatched) {
       // Count only settlements PERSISTED as delivered — never merely claimed (cross-review, Codex:
       // reporting a claim as success without the write landing lets the same event be resent while

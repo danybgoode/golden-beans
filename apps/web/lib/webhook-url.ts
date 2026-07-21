@@ -71,7 +71,9 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
   // handled earlier in assertDeliverableUrl and never reaches here.
   if (h === 'localhost' || h.endsWith('.localhost')) return true
   if (h === '::1' || h === '::') return true // IPv6 loopback / unspecified
-  if (h.startsWith('fe80:')) return true // IPv6 link-local
+  // IPv6 link-local is the WHOLE fe80::/10 block (fe80–febf), not just fe80: (cross-review, Codex
+  // round 5) — the 10th bit spans third-hex-digit 8..b.
+  if (/^fe[89ab]/.test(h)) return true
   if (h.startsWith('fc') || h.startsWith('fd')) return true // IPv6 unique-local (fc00::/7)
 
   // IPv4-MAPPED / -embedded IPv6, e.g. `::ffff:169.254.169.254` or `::ffff:a9fe:a9fe` (cross-review,
@@ -110,5 +112,6 @@ function isPrivateIPv4([a, b]: [number, number, number, number]): boolean {
   if (a === 169 && b === 254) return true // link-local incl. 169.254.169.254 cloud metadata
   if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
   if (a === 192 && b === 168) return true // 192.168.0.0/16
+  if (a === 100 && b >= 64 && b <= 127) return true // 100.64.0.0/10 CGNAT (cross-review, Antigravity round 5)
   return false
 }

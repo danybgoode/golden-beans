@@ -126,6 +126,12 @@ ALTER TABLE event_delivery_attempts ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS event_delivery_attempts_dest_idx
   ON event_delivery_attempts (destination_id, outcome);
 
+-- delivery_health() filters attempts by PROJECT first (WHERE project_id = …), so it needs a
+-- project-leading index — the destination-leading one above can't serve it, and without this the
+-- aggregate degrades to a full scan as attempts accumulate (cross-review, Codex round 5).
+CREATE INDEX IF NOT EXISTS event_delivery_attempts_project_idx
+  ON event_delivery_attempts (project_id, destination_id, outcome);
+
 -- Append-only by GRANT (no UPDATE/DELETE to service_role), the same posture as audit_log: the
 -- history cannot be rewritten, only added to. REVOKE PUBLIC/anon/authenticated first (a later grant
 -- to service_role does not remove Postgres' PUBLIC default).

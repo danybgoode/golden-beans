@@ -1,11 +1,92 @@
 import { lookup } from 'node:dns/promises'
+import { lookup as lookupCb } from 'node:dns'
+import { request as httpsRequest } from 'node:https'
+import { request as httpRequest } from 'node:http'
+import { Readable } from 'node:stream'
 import { signWebhookPayload } from './webhook-signature'
-import { isPrivateOrLoopbackHost, isLocalTestTarget } from './webhook-url'
+import { isPrivateOrLoopbackHost, isLocalTestTarget, localhostWebhooksAllowed } from './webhook-url'
 import type { DeliverableDestination } from './destinations'
 
-/** Cap on the send-time DNS lookup so a stalled resolver can't overrun the caller's deadline
- *  (cross-review, Codex round 3). A lookup that exceeds this is treated as unresolvable → fail-open. */
+/** Cap on the send-time DNS pre-check so a stalled resolver can't overrun the caller's deadline
+ *  (cross-review, Codex round 3). A lookup that exceeds this fails CLOSED as retryable. */
 const RESOLVE_TIMEOUT_MS = 3_000
+
+// ── the CONNECTION-PINNED default sender ────────────────────────────────────────────────────────
+// The airtight SSRF fix (cross-review, Codex round 5): resolveTargetHost's pre-check is defence in
+// depth and what the specs exercise (injected resolver), but it resolves and then `fetch` resolves
+// AGAIN — a rebinding attacker could flip the record between the two. This sender uses node:http(s)
+// with a custom `lookup` that validates the address AT CONNECT TIME and pins the socket to exactly
+// that IP, so there is no second resolution to rebind. It is the DEFAULT send path (production);
+// tests inject `fetchImpl` and never touch it. Reachable via "Send test" too, so it closes that
+// surface even while automatic delivery is dark.
+//
+// The lookup REFUSES a private/loopback resolved address (unless the localhost dev/CI opt-in allows
+// it), so the socket never connects inward.
+const guardedLookup = ((hostname: string, options: unknown, callback: (err: Error | null, address?: unknown, family?: number) => void) => {
+  // Cast: node's LookupFunction overloads (all:true → array, else string) are awkward to type; we
+  // pass `options` straight through and only inspect the resolved address(es).
+  ;(lookupCb as unknown as (h: string, o: unknown, cb: (e: Error | null, a: unknown, f?: number) => void) => void)(
+    hostname,
+    options,
+    (err, address, family) => {
+      if (err) return callback(err, address, family)
+      // The dev/CI localhost opt-in: a localhost hostname is allowed to resolve to loopback (matches
+      // the create-time + Layer-1 carve-outs). Off in production, so this never loosens prod.
+      const loopbackOk = localhostWebhooksAllowed() && (hostname === 'localhost' || hostname === '127.0.0.1')
+      const list = Array.isArray(address)
+        ? (address as Array<{ address: string }>).map((a) => a.address)
+        : [address as string]
+      for (const ip of list) {
+        if (!loopbackOk && isPrivateOrLoopbackHost(ip)) {
+          return callback(new Error('blocked: target resolves to a private or loopback address'))
+        }
+      }
+      callback(null, address, family)
+    },
+  )
+}) as unknown as Parameters<typeof httpsRequest>[1]['lookup']
+
+function abortError(): Error {
+  const e = new Error('aborted')
+  e.name = 'AbortError'
+  return e
+}
+
+// A minimal fetch-shaped sender over node:http(s) with the pinning lookup. deliverWebhook only reads
+// `.status` and `.body` (a web stream), so that is all we surface. Never follows redirects (a 3xx is
+// returned as-is → classified non-2xx), which also means a redirect can't pivot around the pin.
+const pinnedFetch = ((url: string, init: RequestInit): Promise<Response> =>
+  new Promise<Response>((resolve, reject) => {
+    let u: URL
+    try {
+      u = new URL(url)
+    } catch {
+      return reject(new Error('invalid target URL'))
+    }
+    const requestFn = u.protocol === 'https:' ? httpsRequest : httpRequest
+    const req = requestFn(
+      u,
+      { method: init.method ?? 'POST', headers: init.headers as Record<string, string>, lookup: guardedLookup },
+      (res) => {
+        const webBody = Readable.toWeb(res) as unknown as ReadableStream<Uint8Array>
+        resolve(new Response(webBody, { status: res.statusCode ?? 0 }))
+      },
+    )
+    req.on('error', reject)
+    const signal = init.signal as AbortSignal | undefined
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy()
+        return reject(abortError())
+      }
+      signal.addEventListener('abort', () => {
+        req.destroy()
+        reject(abortError())
+      })
+    }
+    if (typeof init.body === 'string') req.write(init.body)
+    req.end()
+  })) as unknown as typeof fetch
 
 // event-destination-router · Sprint 2 — the ACTUAL signed outbound POST. Shared by Story 2.1's
 // owner-initiated "send test" and Story 2.2's background dispatcher, so the bytes a receiver sees and
@@ -57,9 +138,9 @@ export type DeliverOptions = {
   deliveryId?: string
   eventId?: string
   /**
-   * Resolves a hostname to its IP addresses — the send-time SSRF guard's input. Injected in unit
-   * tests to stay hermetic; defaults to a real DNS lookup. See resolveTargetHost below for the
-   * fail-open semantics and the documented residual.
+   * Resolves a hostname to its IP addresses — the Layer-1 SSRF pre-check's input. Injected in unit
+   * tests to stay hermetic; defaults to a real DNS lookup. See resolveTargetHost below for its
+   * fail-CLOSED semantics (a resolution error is reported retryable, never proceeds).
    */
   resolveHost?: (hostname: string) => Promise<string[]>
 }
@@ -86,21 +167,21 @@ export async function deliverWebhook(
   body: string,
   options: DeliverOptions = {},
 ): Promise<DeliveryResult> {
-  const fetchImpl = options.fetchImpl ?? fetch
+  // DEFAULT to the connection-pinned sender (production) — NOT global fetch, whose separate DNS
+  // resolution a rebinding attacker could exploit. Tests inject fetchImpl.
+  const fetchImpl = options.fetchImpl ?? pinnedFetch
   const timeoutMs = options.timeoutMs ?? DELIVERY_TIMEOUT_MS
 
-  // ── SSRF at SEND TIME ─────────────────────────────────────────────────────────────────────────
-  // assertDeliverableUrl (create/rotate) blocks LITERAL private/loopback targets, but a tenant can
-  // point a destination at a public HOSTNAME that RESOLVES to a private IP (cross-review, Codex).
-  // Resolve it here and refuse before any request leaves for cloud metadata (169.254.169.254) or an
-  // internal service. FAIL-CLOSED (cross-review, Codex round 4): a resolution error/timeout does NOT
-  // proceed to fetch (whose own separate lookup an adversary could rebind) — it is reported RETRYABLE
-  // so a transient DNS blip retries rather than dead-letters, while never leaking a request out.
-  //
-  // RESIDUAL, stated: active DNS REBINDING (resolve returns public to us, then fetch's own lookup
-  // returns private) is not fully closed by resolve-then-fetch — the airtight fix pins the socket to
-  // the checked IP via a custom connector (undici Agent / node:https lookup), a focused follow-up
-  // that GATES the DESTINATION_DELIVERY_ENABLED flip (see the epic notes).
+  // ── SSRF at SEND TIME — TWO LAYERS ────────────────────────────────────────────────────────────
+  // Layer 1 (here): a fast, SPEC-TESTABLE pre-check (injected resolver). assertDeliverableUrl blocks
+  // literal private targets at create time; this catches a public HOSTNAME that RESOLVES to a private
+  // IP. FAIL-CLOSED (cross-review, Codex round 4): a resolution error/timeout does NOT proceed — it
+  // returns RETRYABLE so a transient DNS blip retries rather than dead-letters, never leaking a
+  // request out.
+  // Layer 2 (the default pinnedFetch sender): validates the resolved address AT CONNECT and pins the
+  // socket to it, so there is no second resolution for a rebinding attacker to flip (cross-review,
+  // Codex round 5). Layer 1 is defence-in-depth + what the deterministic gate exercises; Layer 2 is
+  // the airtight backstop on the real network path (and closes the "Send test" surface too).
   const guard = await resolveTargetHost(destination.targetUrl, options.resolveHost ?? defaultResolveHost)
   if (!guard.ok) {
     return { disposition: guard.disposition, status: null, latencyMs: 0, error: guard.error }

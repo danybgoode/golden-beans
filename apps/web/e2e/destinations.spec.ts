@@ -112,6 +112,15 @@ test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treat
   expect(isPrivateOrLoopbackHost('::ffff:10.0.0.1')).toBe(true)
   expect(isPrivateOrLoopbackHost('::ffff:a9fe:a9fe')).toBe(true) // hex form of 169.254.169.254
   expect(isPrivateOrLoopbackHost('::ffff:0808:0808')).toBe(false) // 8.8.8.8 mapped — public
+  // The WHOLE fe80::/10 link-local block, not just fe80: (cross-review, Codex round 5).
+  expect(isPrivateOrLoopbackHost('fe80::1')).toBe(true)
+  expect(isPrivateOrLoopbackHost('feaa::1')).toBe(true) // still inside fe80::/10
+  expect(isPrivateOrLoopbackHost('fec0::1')).toBe(false) // fec0 is OUTSIDE /10 — not link-local
+  // CGNAT 100.64.0.0/10 (cross-review, Antigravity round 5) — internal cloud/metadata surfaces.
+  expect(isPrivateOrLoopbackHost('100.64.0.1')).toBe(true)
+  expect(isPrivateOrLoopbackHost('100.127.255.255')).toBe(true)
+  expect(isPrivateOrLoopbackHost('100.63.0.1')).toBe(false) // just below the /10 — public
+  expect(isPrivateOrLoopbackHost('100.128.0.1')).toBe(false) // just above the /10 — public
 })
 
 // ── DB-enforced invariants (service-role, driven directly) ─────────────────────────────────────

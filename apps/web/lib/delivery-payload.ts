@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 // event-destination-router · Sprint 2 — the webhook envelope a receiver actually parses. Kept as one
 // builder so a "send test" and a real delivery are byte-identical in SHAPE (only the values and the
 // `test` flag differ) — an owner who validated their receiver against the test shape must not then
@@ -81,11 +83,12 @@ export function buildEventEnvelope(row: CanonicalEventRow): WebhookEnvelope {
   }
 }
 
-// A synthetic envelope for the owner-initiated "send test". Its `id` is a test-prefixed value, never
-// a real event id, so a receiver that dedupes on `id` can't collide a test with a real event.
+// A synthetic envelope for the owner-initiated "send test". Its `id` is a test-prefixed RANDOM uuid,
+// never a real event id and never merely millisecond-unique (cross-review, Codex round 5: two
+// concurrent tests a ms apart must not collide and be deduped by a receiver).
 export function buildTestEnvelope(now: Date = new Date()): WebhookEnvelope {
   return {
-    id: `evt_test_${now.getTime()}`,
+    id: `evt_test_${randomUUID()}`,
     type: 'golden_beans.webhook.test',
     occurredAt: now.toISOString(),
     test: true,
