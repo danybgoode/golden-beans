@@ -36,10 +36,10 @@ export const AGENTS = { codex: 'Codex', antigravity: 'Antigravity' };
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-07-20 against 1.1.4.
+// agy-doctor: last verified 2026-07-21 against 1.1.5.
 //   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.1.4';
+export const AGY_PINNED = '1.1.5';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -48,8 +48,13 @@ export const AGY_PINNED = '1.1.4';
 // ("RESOURCE_EXHAUSTED 429: Individual quota reached"), so runAntigravity AUTO-FALLS-BACK to
 // AGY_FALLBACK_MODEL (GPT-OSS, a separate quota pool that worked on the dev machine) when the primary yields
 // empty. Override either via env.
-export const AGY_MODEL = process.env.AGY_MODEL || 'Gemini 3.1 Pro (High)';
-export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'GPT-OSS 120B (Medium)';
+// agy 1.1.5 renamed its model identifiers from display names ("Gemini 3.1 Pro (High)") to slugs
+// ("gemini-3.1-pro-high"). Same models, new naming scheme — a mechanical remap, NOT a change of
+// which models review. The Gemini-family primary is what gives this gate its model-family contrast
+// with Codex; the GPT-OSS fallback is GPT-lineage (so it costs that contrast) and exists only
+// because it draws on a separate quota pool when Gemini is exhausted.
+export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.1-pro-high';
+export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120b-medium';
 
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.

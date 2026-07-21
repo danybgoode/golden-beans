@@ -108,7 +108,11 @@ async function findExistingTenant(
   if (error) return { slug: null, error }
   if (!data) return { slug: null, error: null }
   const project = data.projects as unknown as { slug: string } | null
-  return { slug: project?.slug ?? '', error: null }
+  // `?? null`, never `?? ''`. The caller's existence test is `slug !== null`, so an empty string
+  // would read as "this user already has a tenant" and short-circuit provisioning — then redirect
+  // them to /app/onboarding/ with no slug. A membership row whose project relation is missing is
+  // a broken row, not a tenant (cross-review, Agy 2026-07-20).
+  return { slug: project?.slug ?? null, error: null }
 }
 
 /**
