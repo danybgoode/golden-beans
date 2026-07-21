@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { safeRedirectPath } from '../lib/safe-redirect'
 
 // multi-tenant-activation · Sprint 1, Stories 1.1 + 1.2 — the auth boundary at the HTTP level.
 // The authed happy path (sign in → see only your own projects) is a real-session BROWSER smoke
@@ -27,6 +28,45 @@ test('unauthed key management for a foreign slug → /login', async ({ request }
   const res = await request.get(`/app/keys/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
   expect([302, 307]).toContain(res.status())
   expect(res.headers()['location']).toContain('/login')
+})
+
+// Cross-review (Codex, 2026-07-20) caught an open redirect in /auth/callback: `/\evil.example`
+// passes a naive `startsWith('/') && !startsWith('//')` string check, but new URL() normalizes the
+// backslash to `//` and resolves off-origin.
+//
+// These assert the guard DIRECTLY as a pure function, not over HTTP. That's deliberate: the route
+// only consults `next` after a successful code exchange, so an unauthenticated HTTP request never
+// reaches the branch — an HTTP-level version of this spec passed against a deliberately vulnerable
+// build (a false-positive tautology, caught by a mutation check). Same pattern lib/flags.ts uses.
+test.describe('safeRedirectPath — the auth-callback open-redirect guard', () => {
+  const base = 'https://golden-beans-gamma.vercel.app'
+
+  for (const hostile of [
+    '/\\evil.example', // backslash normalizes to // — the exact bypass Codex found
+    '//evil.example',
+    'https://evil.example',
+    '/\\/evil.example',
+    'javascript:alert(1)',
+    'https://golden-beans-gamma.vercel.app.evil.example/x', // prefix-lookalike host
+  ]) {
+    test(`rejects ${hostile} → falls back on-origin`, () => {
+      const result = safeRedirectPath(hostile, base)
+      expect(result).toBe(`${base}/app`)
+      expect(result).not.toContain('evil.example')
+    })
+  }
+
+  test('allows a genuine same-origin relative path', () => {
+    expect(safeRedirectPath('/app/keys/my-project', base)).toBe(`${base}/app/keys/my-project`)
+  })
+
+  test('allows an absolute URL that is genuinely same-origin', () => {
+    expect(safeRedirectPath(`${base}/app/funnel/x/y`, base)).toBe(`${base}/app/funnel/x/y`)
+  })
+
+  test('no next param → the default landing', () => {
+    expect(safeRedirectPath(null, base)).toBe(`${base}/app`)
+  })
 })
 
 test('demo dashboard renders anonymously (allow-list carve-out intact)', async ({ request }) => {

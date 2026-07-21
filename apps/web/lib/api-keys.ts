@@ -20,6 +20,9 @@ export function generateApiKey(): string {
 
 export type ApiKeyRow = { id: string; label: string; createdAt: string; revokedAt: string | null }
 
+// Throws on a query failure rather than returning [] — an empty list renders as "no keys yet",
+// which during an outage would invite issuing a duplicate key or assuming a leaked one is gone
+// (cross-review catch, Codex 2026-07-20). A thrown error surfaces the real operational failure.
 export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
@@ -29,7 +32,7 @@ export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
     .order('created_at', { ascending: false })
   if (error) {
     console.error('[api-keys] list failed:', error)
-    return []
+    throw new Error('Could not load API keys')
   }
   return (data ?? []).map((r) => ({
     id: r.id as string,

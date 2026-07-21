@@ -3,15 +3,12 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAuthBrowserClient } from '@/lib/supabase-browser'
 
-// multi-tenant-activation · Sprint 1, Story 1.1 — email+password sign-in with a sign-up toggle.
-// Sign-up requires email confirmation (Supabase config); the confirmation link lands on
-// /auth/callback. On a successful sign-in we push to /app and refresh so the server shell re-reads
-// the freshly-set session.
-type Mode = 'signin' | 'signup'
-
+// multi-tenant-activation · Sprint 1, Story 1.1 — SIGN-IN ONLY. Self-serve sign-up is Sprint 2
+// (Story 2.1: signup → instant tenant), and it ships DARK behind SIGNUP_ENABLED — so Sprint 1
+// deliberately does not expose account creation here (accounts + memberships are hand-seeded).
+// On success we push to /app and refresh so the server shell re-reads the freshly-set session.
 export function LoginForm() {
   const router = useRouter()
-  const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -22,18 +19,6 @@ export function LoginForm() {
     setBusy(true)
     setStatus(null)
     const supabase = createAuthBrowserClient()
-
-    if (mode === 'signup') {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      })
-      setBusy(false)
-      setStatus(error ? error.message : 'Check your email to confirm your account, then sign in.')
-      return
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
     if (error) {
@@ -62,16 +47,12 @@ export function LoginForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-          minLength={8}
+          autoComplete="current-password"
           required
         />
       </label>
       <button type="submit" disabled={busy}>
-        {busy ? 'Working…' : mode === 'signup' ? 'Create account' : 'Sign in'}
-      </button>
-      <button type="button" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')} disabled={busy}>
-        {mode === 'signin' ? 'Need an account? Sign up' : 'Have an account? Sign in'}
+        {busy ? 'Signing in…' : 'Sign in'}
       </button>
       {status && <p role="status">{status}</p>}
     </form>

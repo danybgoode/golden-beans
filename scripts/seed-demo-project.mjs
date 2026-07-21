@@ -70,16 +70,35 @@ async function provisionProject(db) {
   return { projectId: data.id, apiKey: plaintextKey }
 }
 
-// Idempotent: the same key hash is a no-op on re-run (unique key_hash); a rotated key just adds a
-// new active row. Never revokes here — that's a deliberate dashboard action, not a seed side effect.
+// Idempotent, but NEVER silently cross-tenant. key_hash is globally unique, so an existing row for
+// this hash might belong to a DIFFERENT project — an `ignoreDuplicates` upsert would report success
+// and hand back a plaintext key that authenticates as that other tenant (cross-review catch, Codex
+// 2026-07-20). So: look first, and only accept a pre-existing row that belongs to THIS project and
+// is still active. Anything else fails loud. Never revokes here — that's a deliberate dashboard
+// action, not a seed side effect.
 async function ensureActiveApiKey(db, projectId, plaintextKey) {
+  const keyHash = hashApiKey(plaintextKey)
+  const { data: existing, error: lookupError } = await db
+    .from('api_keys')
+    .select('project_id, revoked_at')
+    .eq('key_hash', keyHash)
+    .maybeSingle()
+  if (lookupError) throw new Error(`Failed to look up demo api key: ${lookupError.message}`)
+
+  if (existing) {
+    if (existing.project_id !== projectId) {
+      throw new Error('Refusing to seed: this API key hash already belongs to a different project.')
+    }
+    if (existing.revoked_at) {
+      throw new Error('Refusing to seed: this API key exists but is revoked — issue a new key instead.')
+    }
+    return
+  }
+
   const { error } = await db
     .from('api_keys')
-    .upsert(
-      { project_id: projectId, key_hash: hashApiKey(plaintextKey), label: 'default (seed)' },
-      { onConflict: 'key_hash', ignoreDuplicates: true },
-    )
-  if (error) throw new Error(`Failed to upsert demo api key: ${error.message}`)
+    .insert({ project_id: projectId, key_hash: keyHash, label: 'default (seed)' })
+  if (error) throw new Error(`Failed to insert demo api key: ${error.message}`)
 }
 
 // Story 2.1 (commercial-shell/sprint-2.md) — provisioning-only, like the project row above: a

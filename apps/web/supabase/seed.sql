@@ -15,4 +15,5 @@ ON CONFLICT (slug) DO NOTHING;
 INSERT INTO api_keys (project_id, key_hash, label)
 SELECT id, api_key_hash, 'default (seed)'
 FROM projects
+WHERE api_key_hash IS NOT NULL
 ON CONFLICT (key_hash) DO NOTHING;

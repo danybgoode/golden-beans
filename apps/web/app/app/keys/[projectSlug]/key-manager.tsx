@@ -8,6 +8,14 @@ import { issueKeyAction, revokeKeyAction } from './actions'
 // straight from the `keys` prop (refreshed by router.refresh() after each mutation, since the
 // server actions revalidate the path). Only the just-issued plaintext lives in local state — it's
 // shown ONCE and never re-fetchable.
+// Timezone-stable rendering. `toLocaleString()` without a fixed zone formats in the SERVER's zone
+// during SSR and the BROWSER's zone on hydration — a guaranteed React hydration mismatch (flagged
+// by BOTH cross-review families, 2026-07-20). UTC is explicit, deterministic, and honest about
+// what the timestamp actually is.
+function formatUtc(iso: string): string {
+  return `${new Date(iso).toISOString().slice(0, 16).replace('T', ' ')} UTC`
+}
+
 export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) {
   const router = useRouter()
   const [label, setLabel] = useState('')
@@ -87,8 +95,8 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
             keys.map((key) => (
               <tr key={key.id}>
                 <td>{key.label}</td>
-                <td>{new Date(key.createdAt).toLocaleString('en-US')}</td>
-                <td>{key.revokedAt ? `revoked ${new Date(key.revokedAt).toLocaleDateString('en-US')}` : 'active'}</td>
+                <td>{formatUtc(key.createdAt)}</td>
+                <td>{key.revokedAt ? `revoked ${formatUtc(key.revokedAt)}` : 'active'}</td>
                 <td>
                   {!key.revokedAt && (
                     <button type="button" onClick={() => onRevoke(key.id)} disabled={pending}>

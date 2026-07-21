@@ -31,7 +31,10 @@ GRANT SELECT, INSERT, UPDATE ON TABLE api_keys TO service_role;
 -- Backfill: every existing project's single api_key_hash becomes its first api_keys row, so no
 -- currently-valid key stops working the moment auth.ts switches to reading api_keys. Idempotent
 -- (ON CONFLICT) so re-running the migration set — or applying it after a partial run — is safe.
+-- The IS NOT NULL guard is a cheap safeguard (cross-review, Gemini/Agy 2026-07-20): api_keys.key_hash
+-- is NOT NULL, so a single legacy ghost row with a null hash would abort the whole migration.
 INSERT INTO api_keys (project_id, key_hash, label)
 SELECT id, api_key_hash, 'default (migrated)'
 FROM projects
+WHERE api_key_hash IS NOT NULL
 ON CONFLICT (key_hash) DO NOTHING;

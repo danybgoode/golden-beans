@@ -9,7 +9,9 @@ import { getSupabaseServiceClient } from './supabase'
 
 export type MemberProject = { id: string; slug: string; role: string }
 
-// Every project a user belongs to — backs the /app shell's project list.
+// Every project a user belongs to — backs the /app shell's project list. Throws on a query failure
+// rather than returning [], which would render as "you're not a member of any project" and read as
+// an authorization answer when it's really an outage (cross-review catch, Codex 2026-07-20).
 export async function getUserProjects(userId: string): Promise<MemberProject[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
@@ -18,7 +20,7 @@ export async function getUserProjects(userId: string): Promise<MemberProject[]> 
     .eq('user_id', userId)
   if (error) {
     console.error('[membership] getUserProjects failed:', error)
-    return []
+    throw new Error('Could not load your projects')
   }
   return (data ?? []).flatMap((row) => {
     // supabase-js types a to-one embedded relation loosely without a generated Database type —
@@ -33,6 +35,10 @@ export async function getUserProjects(userId: string): Promise<MemberProject[]> 
 // membership) rather than an embedded-resource filter, for clarity and to avoid supabase-js
 // join-filter fragility. Returns the id (not just a bool) so management flows can scope their
 // mutations to it without a second lookup.
+//
+// DELIBERATE asymmetry with getUserProjects above: this one returns null (not throws) on a query
+// error, because it is an AUTHORIZATION decision — it must FAIL CLOSED (deny access) rather than
+// propagate. A denied request is safe; a thrown one that some caller catches into an allow is not.
 export async function getMemberProjectId(userId: string, slug: string): Promise<string | null> {
   const supabase = getSupabaseServiceClient()
   const { data: project, error: projectError } = await supabase

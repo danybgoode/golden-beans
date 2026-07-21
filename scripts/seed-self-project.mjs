@@ -88,14 +88,38 @@ async function provisionProject(db) {
   // multi-tenant-activation Story 1.3: lib/auth.ts resolves the Bearer key from api_keys now, so
   // the provisioned key needs an active api_keys row (only on the paths where we set the key —
   // the existing-project-no-override no-op above intentionally leaves the credential untouched).
-  const { error: keyError } = await db
-    .from('api_keys')
-    .upsert(
-      { project_id: data.id, key_hash: hashApiKey(plaintextKey), label: 'default (seed)' },
-      { onConflict: 'key_hash', ignoreDuplicates: true },
-    )
-  if (keyError) throw new Error(`Failed to upsert self api key: ${keyError.message}`)
+  await ensureActiveApiKey(db, data.id, plaintextKey)
   return { projectId: data.id, apiKey: plaintextKey }
+}
+
+// Idempotent, but NEVER silently cross-tenant. key_hash is globally unique, so a pre-existing row
+// for this hash might belong to a DIFFERENT project — an `ignoreDuplicates` upsert would report
+// success and hand back a plaintext key that authenticates as that other tenant (cross-review
+// catch, Codex 2026-07-20). Only a row belonging to THIS project and still active is acceptable;
+// anything else fails loud.
+async function ensureActiveApiKey(db, projectId, plaintextKey) {
+  const keyHash = hashApiKey(plaintextKey)
+  const { data: existing, error: lookupError } = await db
+    .from('api_keys')
+    .select('project_id, revoked_at')
+    .eq('key_hash', keyHash)
+    .maybeSingle()
+  if (lookupError) throw new Error(`Failed to look up self api key: ${lookupError.message}`)
+
+  if (existing) {
+    if (existing.project_id !== projectId) {
+      throw new Error('Refusing to seed: this API key hash already belongs to a different project.')
+    }
+    if (existing.revoked_at) {
+      throw new Error('Refusing to seed: this API key exists but is revoked — issue a new key instead.')
+    }
+    return
+  }
+
+  const { error } = await db
+    .from('api_keys')
+    .insert({ project_id: projectId, key_hash: keyHash, label: 'default (seed)' })
+  if (error) throw new Error(`Failed to insert self api key: ${error.message}`)
 }
 
 // Mirrors the SDK's syncFeatures(): POST /api/v1/features/sync, Bearer=self key. Idempotent —
