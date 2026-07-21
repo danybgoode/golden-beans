@@ -9,3 +9,15 @@
 export function isConnectorEnabled(): boolean {
   return process.env.CONNECTOR_ENABLED === 'true'
 }
+
+// multi-tenant-activation · Sprint 2, Story 2.1 — self-serve signup's enablement gate. Same
+// polarity and same dark-by-default contract as the connector flag above (epic README,
+// "Kill-switch"): born unset/OFF, flipped deliberately in production at Story 3.3.
+//
+// Exactly `=== 'true'` — not a truthiness check. `SIGNUP_ENABLED=false`, `=0`, `=off` and an
+// accidental `= ` must ALL read as OFF; an enablement gate that opens on a typo isn't a gate.
+// Everything downstream of this reads it fresh per request (no module-level capture), so the
+// production flip takes effect on the running functions without a redeploy.
+export function isSignupEnabled(): boolean {
+  return process.env.SIGNUP_ENABLED === 'true'
+}
