@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: multi-tenant-activation
 ---
 
@@ -48,7 +48,7 @@ no-policies service-role pattern as every existing table.
 | 2 | ✅ 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |
 | 3 | ✅ 3.1 Landing §1 hero CTA flip + §7 honest tiers (gated on `SIGNUP_ENABLED`) | LOW |
 | 3 | ✅ 3.2 Waitlist retirement (re-scoped from "waitlist → invite conversion" — the queue is empty; see `sprint-3.md`) | LOW |
-| 3 | 🚧 3.3 Activation launch — **gate FLIPPED in production 2026-07-21**; awaiting the Supabase redirect allow-list + one real self-serve activation | **HIGH — Daniel** |
+| 3 | ✅ 3.3 Activation launch — gate flipped, allow-list configured, **one real user activated fully self-serve** (2026-07-21) | **HIGH — Daniel** |
 
 ## Kill-switch (decided at grooming, Stage 6b)
 `SIGNUP_ENABLED` env-gate at the signup route + landing CTA registry — **enablement, ships
@@ -81,14 +81,20 @@ Miyagi is untouched except hand-seeded membership rows (its ingest key keeps wor
       (including that it does not open on a typo); key/membership revocation verified in Sprint 1.
 - [x] **Story 3.3 — the production flip.** Done 2026-07-21: migration pushed, PR #14 merged and
       deployed, `SIGNUP_ENABLED=true` live and verified by exercising `/signup`.
-- [ ] **Two things still stand between this and `shipped`, both Daniel's:**
-      (a) the **Supabase Auth redirect allow-list** must include the prod `/auth/callback` — until
-      then confirmation emails bounce and no tenant is provisioned; (b) **one real self-serve
-      activation** end-to-end, which is 3.3's actual acceptance and has never been exercised.
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
+- [x] **A real user signed up self-serve and got a working tenant** (2026-07-21). Verified in
+      production, not asserted: the `miyagi` project exists with `created_by` set, exactly **1 owner
+      membership**, **1 active API key**, **1 connector token**, and the **`first_integration`
+      starter feature** registered — so the new tenant's funnel has shape rather than being empty.
+      The activation funnel shows `signup_started → account_confirmed` **under the same user id**,
+      39 seconds apart (a real email round-trip, not two disconnected events), and the audit trail
+      recorded `signup_requested` then `tenant_provisioned` with an actor on both.
+- [ ] **Stated gap:** `first_event_ingested` — the funnel's third stage — has no real data yet,
+      because nobody has pasted the onboarding snippet. The tenant's `first_event_at` is still null.
+      Story 2.3's "reaches their first ingested event following only on-screen steps" is therefore
+      **delivered but not yet observed**. One paste from the onboarding page closes it.
+- [x] Feature branch deleted; **frontmatter `status: shipped`** (ran `node scripts/build-order.mjs`)
 
-> **Epic status stays `in-progress` on purpose.** The code is merged, deployed, and the gate is
-> flipped — but signup is **not yet known to work end-to-end**: the Supabase redirect allow-list is
-> unset, so a confirmation click will bounce. Marking the epic shipped while its headline flow has a
-> known-broken dependency and zero successful runs would be exactly the "✅ for unshipped work" the
-> poster convention forbids. One dashboard edit and one successful signup away.
+> **✅ Epic shipped 2026-07-21.** The engine was multi-tenant by design and single-tenant in
+> practice; it is now genuinely multi-tenant in operation. A stranger can go from the landing page
+> to their own isolated, credentialed, quota-bounded tenant without Daniel touching a database — and
+> that path has been walked by a real user, in production, and verified row by row.

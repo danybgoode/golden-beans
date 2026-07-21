@@ -325,7 +325,14 @@ one-liner + why + date shape.
   safe, but rollout is still strictly ordered). Verify afterward with a check that distinguishes the
   two failure modes: an invalid credential returning **401 rather than 500** proves the new table
   exists and resolves, and driving one real end-to-end call with a *pre-existing* credential proves the
-  backfill preserved live access. Also: `supabase db push` does **not** apply `seed.sql` unless you
+  backfill preserved live access.
+  **Re-run successfully at the multi-tenant-activation launch (2026-07-21), with one addition worth
+  copying: drive that "real credential" check through a route the APP already authenticates for**
+  (here `/api/v1/public/self-visit`, which uses the production key server-side) — you get the same
+  proof without a production secret ever entering a shell, which also sidesteps the auto-mode
+  classifier entirely. Same trick applies to admin seeding: registering a feature row via
+  `supabase db query --linked` beat re-running a seed script that would have needed the tenant's
+  plaintext key. Also: `supabase db push` does **not** apply `seed.sql` unless you
   pass `--include-seed` — worth confirming, since a test-fixture seed reaching prod would be its own
   incident. *(2026-07-21, multi-tenant-activation S1.)*
 - **A role column in the schema is not an access rule — grep for who actually reads it.**
@@ -380,6 +387,14 @@ one-liner + why + date shape.
   Moving the retry into a Route Handler (which can set cookies) deleted the mode and all of its
   consequences at once. When a fix needs a flag/mode to accommodate where it lives, question the
   location before adding the flag. *(2026-07-21, multi-tenant-activation S2.)*
+
+- **An enablement flag flipped at launch is only half a launch — verify by exercising the surface,
+  and expect to need a deploy.** The multi-tenant-activation flip looked done (`vercel env add`
+  reported success, `vercel env ls` showed the var) and was not: `/signup` kept 404ing for 7+
+  minutes. Vercel snapshots env vars into a deployment at BUILD time, so already-running functions
+  serve what they captured. A commit to `main` is what makes it live. Budget a deploy into any
+  "just flip the flag" step, and never treat a CLI listing as evidence the flag is in effect.
+  *(2026-07-21, multi-tenant-activation Story 3.3.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable

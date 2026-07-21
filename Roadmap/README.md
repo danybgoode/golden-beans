@@ -53,7 +53,7 @@ independently shippable slice of value.
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
 
 ### 02 · Commercial
-- 🚧 [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
+- ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
   self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
   per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
   existence oracle; the public demo still renders anonymously), and API keys as a revocable
@@ -62,10 +62,9 @@ independently shippable slice of value.
   token + a starter feature so the funnel isn't empty), the shared ingest path is bounded per
   tenant (payload cap · per-key rate limit · per-project monthly quota, all configurable as data on
   the project row), credential actions are audited append-only, and the landing's §1 hero + §7
-  tiers flip to a real signup CTA. **The gate was flipped in production 2026-07-21** — `/signup` is
-  live and the landing shows "Start free". 🚧 not ✅ because the flow is **not yet proven end-to-end**:
-  the Supabase Auth redirect allow-list still needs the production `/auth/callback`, so a
-  confirmation click currently bounces, and no self-serve activation has run yet.
+  tiers show a real "Start free" CTA. **Launched 2026-07-21** — a real user signed up and received a
+  working tenant (project, owner membership, API key, connector token, starter feature) with nobody
+  touching the database, verified row by row in production.
 - ✅ [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
   read-only MCP connector + install page · dogfood instrumentation · SEO/OG + agent manifest) —
   **launched** and live in production at `https://golden-beans-gamma.vercel.app`. The landing tracks
@@ -77,9 +76,10 @@ independently shippable slice of value.
 
 ## Recent highlights
 
-- **2026-07-21** — `multi-tenant-activation` **Sprints 2–3 shipped and the signup gate flipped**:
-  self-serve activation is live in production (one dashboard step short of a proven end-to-end
-  flow — see the epic). A confirmed signup now becomes a working tenant with no human in the loop, and the
+- **2026-07-21** — `multi-tenant-activation` **epic shipped**: the engine was multi-tenant by
+  design and single-tenant in practice; it is now multi-tenant in operation. A stranger goes from
+  the landing page to their own isolated, credentialed, quota-bounded tenant with no human in the
+  loop — and that path was walked by a real user in production on launch day. A confirmed signup now becomes a working tenant with no human in the loop, and the
   shared ingest path grew per-tenant isolation limits so an open signup can't hurt a real tenant or
   the bill. Everything customer-facing sits behind `SIGNUP_ENABLED`, born OFF — the launch itself is
   Story 3.3, an env flip with no redeploy. Three rounds of cross-family review (Codex + Agy) found

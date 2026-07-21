@@ -10,9 +10,9 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (1)
+## 🏗️ Building now (0)
 
-- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High · #2
+_None._
 
 ## 📋 Ready to build (scaffolded, not started) (3)
 
@@ -20,27 +20,18 @@
 - [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 0/9 stories · risk: High · #4
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/10 stories · risk: High · #3
 
-## ✅ Shipped (2)
+## ✅ Shipped (3)
 
 - [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped](../../01-growth-engine/growth-engine-v1/README.md) — 01 Growth Engine · 13/13 stories · risk: Low
 - [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Commercial · 10/10 stories · risk: High · #1
+- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High · #2
 
 ## ⬜ Funnel — seeds not yet scaffolded (4)
 
-- [Entity journeys — configurable lifecycle projections beyond fixed TARS](seeds/entity-journeys-projections.md) — Raw · Feature · #2b
+- [Entity journeys — configurable lifecycle projections beyond fixed TARS](seeds/entity-journeys-projections.md) — Ready · Feature · #2b
 - [Experiment governance v2 — registry, metrics, guardrails, and decision record](seeds/experiment-governance-v2.md) — Raw · Feature · #2c
 - [E5 — a) Flag-serving migration · b) PRD-G chaos/SecOps + circuit breakers](seeds/flag-serving-and-prd-g.md) — Raw · Feature · #5
 - [E6 — CMS integration spike (Payload): integrate-don't-own, go/no-go](seeds/cms-integration-spike.md) — Raw · Spike · #6
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
-
-These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
-derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
-forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.
-
-| Epic | frontmatter (used) | sprint/retro-derived |
-|---|---|---|
-| Multi-tenant activation — auth hardening, self-serve tenants, pod trials | In progress | Shipped |
-
 ---
-_Epics: 6 · seeds in funnel: 4 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 6 · seeds in funnel: 4 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._

@@ -3,19 +3,20 @@
 **Status:** ✅ 3.1 + 3.2 merged (PR #14 → `bbaffd2`). ✅ **3.3 — the gate is FLIPPED in production**
 (`SIGNUP_ENABLED=true`, 2026-07-21). Signup is live at `https://golden-beans-gamma.vercel.app/signup`.
 
-> ### ⚠️ ONE BLOCKING STEP REMAINS BEFORE THE FIRST REAL SIGNUP
-> **The Supabase Auth redirect allow-list still does not include the production `/auth/callback`.**
-> Until it does, a signup will be accepted and the confirmation email will **bounce on click** — the
-> account is created but never confirmed, so no tenant is provisioned.
+> ### ✅ LAUNCHED — a real user activated fully self-serve (2026-07-21)
+> The Supabase Auth redirect allow-list was configured (Dashboard → Authentication → URL
+> Configuration), and a real signup ran end-to-end in production. It was deliberately not automated:
+> the only CLI path is `supabase config push`, which pushes the *entire local* `config.toml`
+> (including `site_url = http://127.0.0.1:3000`) over production auth config — the "a full deploy
+> replaces the ENTIRE config" trap in `LEARNINGS.md`.
 >
-> **Dashboard → Authentication → URL Configuration:** set **Site URL** to
-> `https://golden-beans-gamma.vercel.app` and add `https://golden-beans-gamma.vercel.app/auth/callback`
-> to **Redirect URLs**.
+> **Verified in the production database, not assumed:** the `miyagi` tenant has `created_by` set,
+> 1 owner membership, 1 active API key, 1 connector token, and the `first_integration` starter
+> feature. `signup_started → account_confirmed` are both tagged `activation` and share **one user
+> id**, 39 seconds apart. `audit_log` holds `signup_requested` then `tenant_provisioned`.
 >
-> This was deliberately NOT automated: the only CLI path is `supabase config push`, which pushes the
-> *entire local* `config.toml` (including `site_url = http://127.0.0.1:3000`) over production auth
-> config — the "a full deploy replaces the ENTIRE config" trap in `LEARNINGS.md`. A 30-second
-> dashboard edit beats risking every other auth setting.
+> **Remaining gap:** `first_event_ingested` has no real data — nobody has pasted the onboarding
+> snippet yet, and the tenant's `first_event_at` is null.
 
 **Flip record:** `SIGNUP_ENABLED=true` set on the Vercel Production scope 2026-07-21. **A redeploy
 WAS required** — contrary to what `AGENTS.md` claimed at the time; the flag stayed dark for 7+
