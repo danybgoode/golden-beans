@@ -19,7 +19,14 @@ deployed to `https://golden-beans-gamma.vercel.app`. All 3 stories; deterministi
 4. **Auth redirect allow-list — correctly a NO-OP for Sprint 1.** The only auth call is
    `signInWithPassword` (no `emailRedirectTo`, no `signUp`), which sets cookies directly and never
    round-trips through Supabase. This becomes required in Sprint 2 when signup lands.
-5. **Membership row — still owed** (see below): needs an auth user, and prod has 0.
+5. **Auth account + membership — done (2026-07-21).** Daniel created his account in the Supabase
+   Dashboard (`daniel@despachobonsai.com`, auto-confirmed — Sprint 1 is sign-in-only, so there is no
+   self-serve path yet), and `project_members` was seeded with `role='owner'` for all three tenants
+   (`golden-beans`, `golden-beans-demo`, `miyagisanchez`). Verified the prod auth endpoint accepts
+   the deployed anon key and resolves the user (a deliberate wrong-password attempt returns
+   `invalid_credentials`, not an apikey error — so the whole chain up to the password check is
+   proven). *Note: `supabase db query --linked` must be run from `apps/web/` — the link is
+   per-directory, and running it from the repo root fails with "project wasn't linked".*
 
 ### Post-deploy production smoke (all green)
 | Check | Result |
@@ -56,24 +63,16 @@ Blocking and confirmed the round-1 fixes ("open-redirect protection cleanly avoi
 parsing traps", "authorization gates properly fail-closed"), plus real UX gaps (the `/app` shell had
 no links to the dashboards). Fixed in `151b025`.
 
-**Owed to Daniel — one blocking step, then the browser smoke.**
+**Owed to Daniel — the browser smoke only.** Everything else is done: the account exists, membership
+is seeded as `owner` on all three tenants, and the full rollout is verified in production.
 
-**(1) Create your auth account** (prod has 0 users; Sprint 1 is sign-in-only by design, so there is
-no self-serve path yet — and your production password should be yours, not one an agent minted).
-Supabase Dashboard → **Authentication → Users → Add user** → email + password, tick *Auto Confirm*.
-
-**(2) Then seed your membership as `owner`** (`member` would 404 on the API-keys page — credential
-admin is owner-only). One command, resolves your user by email:
-```bash
-supabase db query --linked "insert into project_members (user_id, project_id, role)
-  select u.id, p.id, 'owner' from auth.users u, projects p
-  where u.email = '<your-email>' and p.slug in ('golden-beans','golden-beans-demo','miyagisanchez')
-  on conflict do nothing;"
-```
-
-**(3) The browser smoke** (`sprint-1.md` walkthrough below) — sign in → own dashboard; a *signed-in*
-non-member on a foreign slug → 404; a *member* (not owner) on `/app/keys/<slug>` → 404. An automated
-`api` run can't hold a real auth session, which is why this stays owed.
+Run the walkthrough below at `https://golden-beans-gamma.vercel.app/login`. An automated `api` run
+can't hold a real auth session, which is the whole reason this stays owed. The two assertions no
+automated check has covered:
+- a **signed-in** non-member on a foreign slug → **404** (unauthed is spec-covered; signed-in isn't);
+- a **`member`** (not owner) on `/app/keys/<slug>` → **404**. *Daniel is `owner` everywhere, so
+  exercising this needs a second, deliberately-`member` row — optional, and the `isOwner` predicate
+  is unit-covered either way.*
 
 ## Stories
 
