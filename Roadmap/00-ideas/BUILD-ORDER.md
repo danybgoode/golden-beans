@@ -29,7 +29,7 @@ _None._
 ## ⬜ Funnel — seeds not yet scaffolded (4)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](seeds/entity-journeys-projections.md) — Ready · Feature · #2b
-- [Experiment governance v2 — registry, metrics, guardrails, and decision record](seeds/experiment-governance-v2.md) — Raw · Feature · #2c
+- [Experiment governance v2 — registry, metrics, guardrails, and decision record](seeds/experiment-governance-v2.md) — Ready · Feature · #2c
 - [E5 — a) Flag-serving migration · b) PRD-G chaos/SecOps + circuit breakers](seeds/flag-serving-and-prd-g.md) — Raw · Feature · #5
 - [E6 — CMS integration spike (Payload): integrate-don't-own, go/no-go](seeds/cms-integration-spike.md) — Raw · Spike · #6
 
