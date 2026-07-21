@@ -33,12 +33,12 @@ const MAX_PROJECTS_PER_TICK = 200
 const TICK_BUDGET_MS = 60_000
 
 // A per-PROJECT slice of the tick, so ONE slow tenant cannot monopolize the whole budget and starve
-// the others (cross-review, Codex round 5). Each project is dispatched under a deadline of
-// min(tick deadline, now + this), so a project with a slow receiver does a bounded amount of work,
-// then defers its remainder to the next tick and yields to the next project. True round-robin
-// scheduling / parallel workers are a scale follow-up when measured traffic needs them; this bounds
-// the monopoly with a single cheap cap.
-const PER_PROJECT_BUDGET_MS = 15_000
+// the others (cross-review, Codex round 5; anti-starvation ORDER is random() in the enumeration RPC).
+// Each project is dispatched under a deadline of min(tick deadline, now + this), then defers its
+// remainder and yields. 45s (not 15s) so that AFTER the dispatcher's ~13s per-send reservation a
+// project still gets ~30s of ACTIVE dispatch, not ~2s (cross-review, Antigravity round 6). True
+// round-robin/parallel scheduling is a scale follow-up when measured traffic needs it.
+const PER_PROJECT_BUDGET_MS = 45_000
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET

@@ -239,11 +239,13 @@ STABLE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
-  -- ORDER BY the project's OLDEST due row, so the LIMIT keeps the LONGEST-WAITING projects rather
-  -- than an arbitrary set (cross-review, Codex round 3): an unordered LIMIT could let the same slow
-  -- projects occupy every tick and starve others. Deterministic oldest-first is a fairness FLOOR;
-  -- true round-robin across ticks (a cursor) is a scale follow-up, noted when measured traffic needs
-  -- it. GROUP BY replaces DISTINCT so the ORDER BY can key off the per-project MIN.
+  -- ORDER BY random(), NOT oldest-first (cross-review, Codex rounds 3 & 6). Oldest-first looks fair
+  -- but is the OPPOSITE under a sequential, budget-limited cron: a deeply-backlogged slow project is
+  -- ALWAYS the oldest, so it is picked first on every tick and projects behind it can NEVER be
+  -- reached — deterministic starvation. Random order gives every due project an independent chance
+  -- each tick, so expected wait is bounded and no tenant is starved. Strict-oldest urgency is traded
+  -- for anti-starvation deliberately; true round-robin/parallel scheduling is a scale follow-up when
+  -- measured traffic needs it. GROUP BY collapses to one row per project (replaces DISTINCT).
   SELECT dd.project_id
     FROM event_deliveries dd
     JOIN event_destinations dest
@@ -257,7 +259,7 @@ AS $$
        OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - make_interval(secs => p_stale_after_ms / 1000.0))
      )
    GROUP BY dd.project_id
-   ORDER BY MIN(dd.next_attempt_at) ASC
+   ORDER BY random()
    LIMIT p_limit;
 $$;
 

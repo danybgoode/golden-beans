@@ -68,8 +68,22 @@ const pinnedFetch = ((url: string, init: RequestInit): Promise<Response> =>
       u,
       { method: init.method ?? 'POST', headers: init.headers as Record<string, string>, lookup: guardedLookup },
       (res) => {
-        const webBody = Readable.toWeb(res) as unknown as ReadableStream<Uint8Array>
-        resolve(new Response(webBody, { status: res.statusCode ?? 0 }))
+        try {
+          const status = res.statusCode ?? 0
+          // 204/205/304 forbid a body — `new Response(stream, { status })` THROWS for them
+          // (cross-review, Codex round 6). Drain the socket and use a null body. The try/catch turns
+          // ANY construction error into a rejected promise (→ retryable) rather than an uncaught
+          // throw that would strand the claimed row.
+          if (status === 204 || status === 205 || status === 304) {
+            res.resume() // drain & free the socket
+            resolve(new Response(null, { status }))
+          } else {
+            const webBody = Readable.toWeb(res) as unknown as ReadableStream<Uint8Array>
+            resolve(new Response(webBody, { status }))
+          }
+        } catch (e) {
+          reject(e instanceof Error ? e : new Error(String(e)))
+        }
       },
     )
     req.on('error', reject)
@@ -212,6 +226,10 @@ export async function deliverWebhook(
     const latencyMs = Date.now() - startedAt
 
     if (response.status >= 200 && response.status < 300) {
+      // Drain/cancel the success body — we don't read it, and a receiver that sends 200 headers then
+      // an endless body would otherwise retain the socket until worker resources exhaust
+      // (cross-review, Codex round 6).
+      await response.body?.cancel().catch(() => {})
       return { disposition: 'delivered', status: response.status, latencyMs, error: null }
     }
 
