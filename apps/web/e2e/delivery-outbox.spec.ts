@@ -88,7 +88,7 @@ test('gate OFF → dispatcher reads nothing, claims nothing, even with a client 
       },
     } as unknown as SupabaseClient
 
-    const outcome = await dispatchPendingDeliveries(exploding)
+    const outcome = await dispatchPendingDeliveries(exploding, '00000000-0000-0000-0000-000000000000')
     expect(outcome).toEqual({ ok: true, dispatched: false, reason: 'disabled', claimed: [] })
   } finally {
     if (prev === undefined) delete process.env.DESTINATION_DELIVERY_ENABLED
@@ -99,15 +99,23 @@ test('gate OFF → dispatcher reads nothing, claims nothing, even with a client 
 test('gate ON with no due work → a clean empty pass, not an error', async () => {
   const prev = process.env.DESTINATION_DELIVERY_ENABLED
   process.env.DESTINATION_DELIVERY_ENABLED = 'true'
+  // A DISPOSABLE project with nothing queued (cross-review, Codex round 5): scoping to shared
+  // project-one could pick up a concurrent spec's due rows and flake. A fresh project has provably
+  // zero due work.
+  const db = dbClient()
+  const { data: proj } = await db
+    .from('projects')
+    .insert({ slug: `disp-empty-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .select('id')
+    .single()
+  const pid = proj!.id as string
   try {
-    // Scope to a project with no enabled destinations, so "no due work" is deterministic regardless
-    // of what other specs have queued.
-    const db = dbClient()
-    const p1 = await projectIdBySlug(db, 'project-one')
-    const outcome = await dispatchPendingDeliveries(db, { projectId: p1 })
+    const outcome = await dispatchPendingDeliveries(db, pid)
     expect(outcome.ok).toBe(true)
     expect(outcome.dispatched).toBe(true)
+    expect(outcome.dispatched && outcome.claimed).toEqual([])
   } finally {
+    await db.from('projects').delete().eq('id', pid)
     if (prev === undefined) delete process.env.DESTINATION_DELIVERY_ENABLED
     else process.env.DESTINATION_DELIVERY_ENABLED = prev
   }
@@ -142,7 +150,7 @@ test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends noth
         .select('id')
         .single()
 
-      const outcome = await dispatchPendingDeliveries(db, { projectId: pid })
+      const outcome = await dispatchPendingDeliveries(db, pid)
       expect(outcome.dispatched).toBe(true)
       // PROOF the intended row was exercised, not merely that it ended pending: it must appear in the
       // claim set this pass actually took ownership of.

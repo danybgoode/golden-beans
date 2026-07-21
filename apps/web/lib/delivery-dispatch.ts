@@ -22,15 +22,13 @@
 // is what makes the acceptance criterion "flag OFF prevents dispatch but not persistence" testable —
 // it does not yet gate a live dispatch loop, because there isn't one to gate.
 //
-// CROSS-TENANT BY DESIGN, AND ONLY HERE. `dispatchPendingDeliveries()` with no `projectId` scans
-// EVERY project's due work — the ONE deliberate exception to "no read path crosses projects"
-// (AGENTS.md rule #1), because a delivery dispatcher is INFRASTRUCTURE, not a tenant request: it
-// exists precisely to process all tenants' outbox work. This is not a tenant-facing read path and
-// resolves no caller identity. Tenant isolation of the DATA it touches is still absolute — the
-// composite FKs in 20260722110000_delivery_outbox.sql make a cross-tenant delivery row impossible to
-// have been created in the first place, so a global scan can only ever see correctly-scoped rows.
-// The optional `projectId` narrows a pass to one tenant for operational reasons (a targeted drain),
-// not as the isolation control.
+// ALWAYS PROJECT-SCOPED — no cross-tenant mode (cross-review, Codex round 5). `projectId` is a
+// REQUIRED argument; every query this module runs is `.eq('project_id', projectId)`, honouring
+// AGENTS.md rule #1 without exception. A background dispatcher does not get to opt out of tenant
+// scoping just because it is infrastructure — an unscoped scan would both violate the invariant and
+// widen one worker's failure blast radius to every tenant. The production trigger Story 2.2 adds
+// enumerates the projects that have due work and calls this once per project; the composite FKs in
+// 20260722110000_delivery_outbox.sql remain the second line of defence on the data itself.
 //
 // ── DELIBERATELY (ALMOST) ZERO-IMPORT ────────────────────────────────────────────────────────
 // The only runtime import is ./flags, which is itself zero-import; the Supabase client is INJECTED
@@ -81,14 +79,17 @@ export type DispatchOutcome =
   | { ok: false; dispatched: false; reason: 'error'; error: string; claimed: [] }
 
 export type DispatchOptions = {
-  /** Restrict a pass to one tenant. Absent = all tenants, oldest work first. */
-  projectId?: string
   limit?: number
   now?: Date
 }
 
 /**
- * One dispatcher pass.
+ * One dispatcher pass, for ONE tenant. `projectId` is REQUIRED — there is no cross-project mode
+ * (cross-review, Codex round 5). AGENTS.md rule #1 is unconditional: every query is project_id
+ * scoped and no read path crosses projects, and a background dispatcher is not exempt from it. A
+ * production trigger (Story 2.2's cron/queue) enumerates the projects that HAVE due work — a cheap
+ * `SELECT DISTINCT project_id … WHERE status IN (…) AND next_attempt_at <= now` — and calls this once
+ * per project, so one worker's failure has a blast radius of exactly one tenant, not all of them.
  *
  * ORDER IS THE POINT: the gate is consulted BEFORE any query, so a disabled deployment does not so
  * much as read the outbox. Checking it after the claim would still "prevent sending", but it would
@@ -101,6 +102,7 @@ export type DispatchOptions = {
  */
 export async function dispatchPendingDeliveries(
   db: SupabaseClient,
+  projectId: string,
   options: DispatchOptions = {},
 ): Promise<DispatchOutcome> {
   // ── THE GATE ────────────────────────────────────────────────────────────────────────────────
@@ -114,7 +116,7 @@ export async function dispatchPendingDeliveries(
   const limit = Math.max(1, Math.min(options.limit ?? MAX_CLAIM_BATCH, MAX_CLAIM_BATCH))
 
   try {
-    const claimed = await claimDueDeliveries(db, { ...options, now, limit })
+    const claimed = await claimDueDeliveries(db, projectId, { now, limit })
 
     // ── WHERE SPRINT 1 STOPS ──────────────────────────────────────────────────────────────────
     // Story 2.1 replaces this comment with: build the signed request, POST it to the destination's
@@ -172,29 +174,28 @@ export async function dispatchPendingDeliveries(
  */
 async function claimDueDeliveries(
   db: SupabaseClient,
-  options: DispatchOptions & { now: Date; limit: number },
+  projectId: string,
+  options: { now: Date; limit: number },
 ): Promise<ClaimedDelivery[]> {
-  let candidates = db
+  // ALWAYS project-scoped (cross-review, Codex round 5). This is the tenancy control on the read
+  // path, exactly as AGENTS.md rule #1 requires — not merely an operational filter. The composite
+  // FKs in the migration are the SECOND line (they make a cross-tenant delivery row impossible to
+  // have created); belt and braces, with the query scope as the belt.
+  const { data: due, error: dueError } = await db
     .from('event_deliveries')
     .select('id')
+    .eq('project_id', projectId)
     .in('status', CLAIMABLE_STATUSES as unknown as string[])
     .lte('next_attempt_at', options.now.toISOString())
     .order('next_attempt_at', { ascending: true })
     .limit(options.limit)
-
-  // Tenant scoping is an explicit narrowing of an already-scoped-by-nothing query: a dispatcher
-  // pass legitimately spans tenants (it is infrastructure, not a request), so `project_id` here is
-  // an operational filter, NOT the tenancy control. The tenancy control is the composite foreign
-  // keys in the migration, which make a cross-tenant delivery row impossible to have created.
-  if (options.projectId) candidates = candidates.eq('project_id', options.projectId)
-
-  const { data: due, error: dueError } = await candidates
   if (dueError) throw new Error(`could not read due deliveries: ${dueError.message}`)
   if (!due || due.length === 0) return []
 
   const { data: claimed, error: claimError } = await db
     .from('event_deliveries')
     .update({ status: 'in_flight', claimed_at: options.now.toISOString(), updated_at: options.now.toISOString() })
+    .eq('project_id', projectId) // scoped on the write too, not just the candidate read
     .in('id', due.map((row) => row.id as string))
     // The guard that makes this a claim rather than a stomp: a row another worker already took has
     // moved off a claimable status and simply will not match.
