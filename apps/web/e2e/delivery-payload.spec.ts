@@ -151,14 +151,22 @@ test('send-time SSRF: a host RESOLVING to a private IP is refused and NEVER fetc
   expect(result.error).toContain('private')
 })
 
-test('send-time SSRF: the http://localhost TEST receiver is EXEMPT (its loopback is allowed)', async () => {
-  // Cross-review (Codex round 3): the localhost test receiver is deliberately allowed to be loopback
-  // (the disposable sink the smoke walkthrough POSTs to). The send-time guard must grant the SAME
-  // exception the create-time guard does, or the documented receiver could never be delivered to.
-  const localDest: DeliverableDestination = { ...DEST, targetUrl: 'http://localhost:4000/hook' }
-  const { impl, seen } = stubFetch(200)
-  // A resolver that WOULD flag loopback — proving the carve-out short-circuits BEFORE resolution.
-  const result = await deliverWebhook(localDest, 'x', { fetchImpl: impl, resolveHost: async () => ['127.0.0.1'] })
-  expect(result.disposition).toBe('delivered')
-  expect(seen).toHaveLength(1)
+test('send-time SSRF: the http://localhost TEST receiver is EXEMPT when opted in (dev/CI only)', async () => {
+  // Cross-review (Codex round 3/4): the localhost test receiver is deliberately allowed to be
+  // loopback, but ONLY under the dev/CI opt-in (off in production). The send-time guard must grant
+  // the SAME exception the create-time guard does, or the documented receiver could never be
+  // delivered to. Set the opt-in for this test.
+  const prev = process.env.WEBHOOK_ALLOW_LOCALHOST
+  process.env.WEBHOOK_ALLOW_LOCALHOST = 'true'
+  try {
+    const localDest: DeliverableDestination = { ...DEST, targetUrl: 'http://localhost:4000/hook' }
+    const { impl, seen } = stubFetch(200)
+    // A resolver that WOULD flag loopback — proving the carve-out short-circuits BEFORE resolution.
+    const result = await deliverWebhook(localDest, 'x', { fetchImpl: impl, resolveHost: async () => ['127.0.0.1'] })
+    expect(result.disposition).toBe('delivered')
+    expect(seen).toHaveLength(1)
+  } finally {
+    if (prev === undefined) delete process.env.WEBHOOK_ALLOW_LOCALHOST
+    else process.env.WEBHOOK_ALLOW_LOCALHOST = prev
+  }
 })

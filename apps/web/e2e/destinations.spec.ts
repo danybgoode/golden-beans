@@ -2,6 +2,20 @@ import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { assertDeliverableUrl, isPrivateOrLoopbackHost } from '@/lib/webhook-url'
 
+// The localhost webhook carve-out is env-gated (off in production). Set/restore around the specs
+// that exercise it, so the "production rejects localhost" spec can observe the OFF behaviour.
+function withLocalhostAllowed(on: boolean, body: () => void) {
+  const prev = process.env.WEBHOOK_ALLOW_LOCALHOST
+  if (on) process.env.WEBHOOK_ALLOW_LOCALHOST = 'true'
+  else delete process.env.WEBHOOK_ALLOW_LOCALHOST
+  try {
+    body()
+  } finally {
+    if (prev === undefined) delete process.env.WEBHOOK_ALLOW_LOCALHOST
+    else process.env.WEBHOOK_ALLOW_LOCALHOST = prev
+  }
+}
+
 // event-destination-router · Sprint 2, Story 2.1 — destination lifecycle + signed webhook.
 //
 // TWO LAYERS, the house discipline (see delivery-outbox.spec.ts, event-context.spec.ts):
@@ -34,10 +48,23 @@ async function disposableProject(client: SupabaseClient): Promise<string> {
 }
 
 // ── the SSRF guard (pure, mutation-checked) ───────────────────────────────────────────────────
-test('assertDeliverableUrl ACCEPTS a public https endpoint and the localhost test receiver', () => {
+test('assertDeliverableUrl ACCEPTS a public https endpoint always, and localhost only when opted in', () => {
   expect(assertDeliverableUrl('https://receiver.example.com/hook').ok).toBe(true)
-  expect(assertDeliverableUrl('http://localhost:4000/hook').ok).toBe(true)
-  expect(assertDeliverableUrl('http://127.0.0.1:4000/hook').ok).toBe(true)
+  // The localhost carve-out requires the explicit dev/CI opt-in (off in production).
+  withLocalhostAllowed(true, () => {
+    expect(assertDeliverableUrl('http://localhost:4000/hook').ok).toBe(true)
+    expect(assertDeliverableUrl('http://127.0.0.1:4000/hook').ok).toBe(true)
+  })
+})
+
+test('in PRODUCTION (opt-in unset) a localhost target is REJECTED — no loopback SSRF path', () => {
+  // Cross-review (Codex round 4): on a serverless function "localhost" is the function's own
+  // loopback, so the carve-out must be dev/CI-only. Unset → localhost is treated like any host and
+  // must be public https.
+  withLocalhostAllowed(false, () => {
+    expect(assertDeliverableUrl('http://localhost:4000/hook').ok).toBe(false)
+    expect(assertDeliverableUrl('http://127.0.0.1:4000/hook').ok).toBe(false)
+  })
 })
 
 test('assertDeliverableUrl REJECTS cleartext http to a real host, and non-http(s) schemes', () => {

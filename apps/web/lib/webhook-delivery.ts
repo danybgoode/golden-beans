@@ -91,18 +91,19 @@ export async function deliverWebhook(
 
   // ── SSRF at SEND TIME ─────────────────────────────────────────────────────────────────────────
   // assertDeliverableUrl (create/rotate) blocks LITERAL private/loopback targets, but a tenant can
-  // point a destination at a public HOSTNAME that RESOLVES to a private IP (cross-review, Codex
-  // 2026-07-21). Resolve it here and refuse if any address is internal, so the request never leaves
-  // for cloud metadata (169.254.169.254) or an internal service.
+  // point a destination at a public HOSTNAME that RESOLVES to a private IP (cross-review, Codex).
+  // Resolve it here and refuse before any request leaves for cloud metadata (169.254.169.254) or an
+  // internal service. FAIL-CLOSED (cross-review, Codex round 4): a resolution error/timeout does NOT
+  // proceed to fetch (whose own separate lookup an adversary could rebind) — it is reported RETRYABLE
+  // so a transient DNS blip retries rather than dead-letters, while never leaking a request out.
   //
-  // RESIDUAL, stated: this is resolve-then-fetch, so a DNS-rebinding attacker who flips the record
-  // between our check and fetch's own resolution (TOCTOU) is not fully closed — the airtight fix
-  // pins the socket to the checked IP via a custom connector, deliberately a focused follow-up (see
-  // the epic notes). FAIL-OPEN on a resolution error: a host that does not resolve is not an SSRF
-  // target (the fetch can't connect either), and failing open keeps the unit suite hermetic.
-  const blocked = await resolveTargetHost(destination.targetUrl, options.resolveHost ?? defaultResolveHost)
-  if (blocked) {
-    return { disposition: 'permanent', status: null, latencyMs: 0, error: blocked }
+  // RESIDUAL, stated: active DNS REBINDING (resolve returns public to us, then fetch's own lookup
+  // returns private) is not fully closed by resolve-then-fetch — the airtight fix pins the socket to
+  // the checked IP via a custom connector (undici Agent / node:https lookup), a focused follow-up
+  // that GATES the DESTINATION_DELIVERY_ENABLED flip (see the epic notes).
+  const guard = await resolveTargetHost(destination.targetUrl, options.resolveHost ?? defaultResolveHost)
+  if (!guard.ok) {
+    return { disposition: guard.disposition, status: null, latencyMs: 0, error: guard.error }
   }
 
   const signature = signWebhookPayload(destination.signingSecret, body, options.timestampSeconds)
@@ -160,42 +161,51 @@ export async function deliverWebhook(
 
 // Returns a rejection reason if the target hostname resolves to any private/loopback/link-local
 // address; null to proceed. Fail-open on a resolution error or empty result (see the caller's note).
+type GuardResult =
+  | { ok: true }
+  | { ok: false; disposition: 'permanent' | 'retryable'; error: string }
+
 async function resolveTargetHost(
   targetUrl: string,
   resolveHost: (hostname: string) => Promise<string[]>,
-): Promise<string | null> {
-  // The localhost test-receiver carve-out (lib/webhook-url.ts): its address IS loopback, which the
-  // check below would otherwise block — but this is the one target deliberately allowed to be
-  // loopback (the disposable sink the specs and smoke walkthrough POST to). Same exception the
-  // create-time guard grants, kept consistent end-to-end (cross-review, Codex round 3).
-  if (isLocalTestTarget(targetUrl)) return null
+): Promise<GuardResult> {
+  // The localhost test-receiver carve-out (dev/CI only, env-gated — lib/webhook-url.ts): its address
+  // IS loopback, which the check below would block, but this is the one target deliberately allowed
+  // to be loopback. Same exception the create-time guard grants, kept consistent end-to-end.
+  if (isLocalTestTarget(targetUrl)) return { ok: true }
 
   let hostname: string
   try {
     hostname = new URL(targetUrl).hostname
   } catch {
-    return 'invalid target URL'
+    return { ok: false, disposition: 'permanent', error: 'invalid target URL' }
   }
+  let addresses: string[]
   try {
-    // Bound the lookup so a stalled resolver can't overrun the caller's deadline; a timeout is
-    // treated like any resolution error → fail-open.
-    const addresses = await withTimeout(resolveHost(hostname), RESOLVE_TIMEOUT_MS)
-    for (const address of addresses) {
-      if (isPrivateOrLoopbackHost(address)) {
-        return 'blocked: target resolves to a private or loopback address'
-      }
-    }
+    // Bound the lookup so a stalled resolver can't overrun the caller's deadline.
+    addresses = await withTimeout(resolveHost(hostname), RESOLVE_TIMEOUT_MS)
   } catch {
-    // Unresolvable host (or a lookup timeout) → not an SSRF target; let the fetch fail on its own.
+    // A resolution error/timeout is TRANSIENT — do NOT proceed to fetch (fail-closed), but report
+    // RETRYABLE so a DNS blip retries rather than permanently dead-letters (cross-review, Codex 4).
+    return { ok: false, disposition: 'retryable', error: 'target DNS resolution failed' }
   }
-  return null
+  for (const address of addresses) {
+    if (isPrivateOrLoopbackHost(address)) {
+      // A private-resolving target is structurally unsafe — PERMANENT, never retry.
+      return { ok: false, disposition: 'permanent', error: 'blocked: target resolves to a private or loopback address' }
+    }
+  }
+  return { ok: true }
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_resolve, reject) => setTimeout(() => reject(new Error('resolve timeout')), ms)),
-  ])
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<T>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error('resolve timeout')), ms)
+  })
+  // clearTimeout in finally so a resolved lookup doesn't leave a dangling 3s timer holding the
+  // event loop open (which would stall test-process exit).
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
 
 // 5xx are transient by definition. 408 (Request Timeout) and 429 (Too Many Requests) are the two

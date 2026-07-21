@@ -27,7 +27,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isDestinationDeliveryEnabled } from './flags'
-import { deliverWebhook, type DeliveryDisposition } from './webhook-delivery'
+import { deliverWebhook, type DeliveryDisposition, DELIVERY_TIMEOUT_MS } from './webhook-delivery'
 import { serializeEnvelope, buildEventEnvelope, type CanonicalEventRow } from './delivery-payload'
 import { retryDecision } from './retry-policy'
 
@@ -49,6 +49,11 @@ export const CLAIMABLE_STATUSES = ['pending', 'failed'] as const
 
 /** How long a row may sit in_flight before a later pass reclaims it as a dead-worker casualty. */
 export const STALE_CLAIM_MS = 5 * 60 * 1000
+
+/** Wall-clock a single send may need (DNS resolve + HTTP timeout, plus slack). The deadline check
+ *  reserves this before starting each send, so a request begun near the deadline still FINISHES
+ *  before it rather than being killed with the row stuck in_flight (cross-review, Codex round 4). */
+export const PER_SEND_BUDGET_MS = DELIVERY_TIMEOUT_MS + 3_000
 
 type ClaimedRow = {
   id: string
@@ -136,7 +141,10 @@ export async function dispatchPendingDeliveries(
       // so they are NOT stranded in_flight, then finish. The released rows are reported as unsent
       // settlements (persisted = whether the release landed), so a FAILED release surfaces as
       // `unsettled` in the cron rather than a silent clean pass (cross-review, Codex round 3).
-      if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
+      // Reserve one send's worth of wall-clock before the deadline: if the next send couldn't
+      // FINISH in time, stop now and defer the rest rather than start a send that gets killed
+      // mid-flight (cross-review, Codex round 4).
+      if (options.deadlineMs !== undefined && Date.now() + PER_SEND_BUDGET_MS >= options.deadlineMs) {
         const deferred = rows.slice(i)
         const released = await releaseUnsent(db, projectId, deferred.map((r) => r.id), now)
         for (const r of deferred) {
@@ -181,13 +189,13 @@ async function sendAndSettle(
   // receive the event. If it is no longer deliverable (disabled / url or secret cleared) — or the
   // event or destination vanished (a concurrent offboarding) — release the row to pending,
   // unattempted, and DO NOT send. Next enumeration won't surface it while disabled.
-  const { data: dest } = await db
+  const { data: dest, error: destErr } = await db
     .from('event_destinations')
     .select('id, name, enabled, target_url, signing_secret')
     .eq('id', row.destination_id)
     .eq('project_id', projectId)
     .maybeSingle()
-  const { data: event } = await db
+  const { data: event, error: eventErr } = await db
     .from('events')
     .select(
       'id, event, occurred_at, created_at, user_id, feature_id, tags, metadata, actor_type, actor_id, subject_type, subject_id, correlation_id',
@@ -196,7 +204,20 @@ async function sendAndSettle(
     .eq('project_id', projectId)
     .maybeSingle()
 
-  // A MISSING parent (destination or event row gone) is a PERMANENT anomaly — DEAD-letter it, never
+  // A TRANSIENT read failure (the query itself errored) must NOT be mistaken for a missing parent —
+  // release to pending and retry next tick, never dead-letter (cross-review, Codex round 4: a DB blip
+  // would otherwise permanently kill a perfectly good delivery). `data: null` with NO error is the
+  // genuine "row absent" case handled below.
+  if (destErr || eventErr) {
+    const persisted = await settleDelivery(db, {
+      row, projectId, claimToken: nowIso, now: nowIso, status: 'pending',
+      nextAttemptAt: null, lastError: null, attemptCount: row.attempt_count,
+      log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
+    })
+    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted }
+  }
+
+  // A genuinely MISSING parent (clean null, no error) is a PERMANENT anomaly — DEAD-letter it, never
   // recycle to pending (cross-review, Antigravity round 3): claim_deliveries does not join `events`,
   // so a pending row whose event is missing would be re-claimed every tick forever. The composite FK
   // CASCADE means a parent delete already removes the delivery row, so this branch is defensive — but
@@ -231,13 +252,18 @@ async function sendAndSettle(
   )
 
   const attemptCount = row.attempt_count + 1 // this pass made one real attempt
-  const next = nextState(result.disposition, attemptCount, now)
+  // Backoff + last_attempt_at are anchored to when THIS attempt actually COMPLETED, not the batch's
+  // claim time (cross-review, Codex round 4): a later, slow send in a batch would otherwise get a
+  // shortened (or already-expired) backoff and an inaccurate last_attempt_at. The claim TOKEN stays
+  // `nowIso` (the claim time the RPC stamped) — only the settle clock advances.
+  const settledAt = new Date()
+  const next = nextState(result.disposition, attemptCount, settledAt)
 
   // Settle the row AND write the attempt-log row in ONE transaction (settle_delivery RPC), guarded
   // by the claim token — history cannot be lost by a partial write, and a lost reclaim race writes
   // neither (cross-review, Codex 2026-07-21).
   const persisted = await settleDelivery(db, {
-    row, projectId, claimToken: nowIso, now: nowIso, status: next.status,
+    row, projectId, claimToken: nowIso, now: settledAt.toISOString(), status: next.status,
     nextAttemptAt: next.nextAttemptAt, lastError: result.error, attemptCount,
     log: true, outcome: result.disposition, httpStatus: result.status, latencyMs: result.latencyMs,
   })

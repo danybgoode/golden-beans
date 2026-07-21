@@ -115,8 +115,15 @@ export async function createDestination(
   const name = (input.name ?? '').trim()
   if (!name || name.length > 128) return { ok: false, error: 'Name must be 1–128 characters.' }
 
-  const urlCheck = assertDeliverableUrl((input.targetUrl ?? '').trim())
+  const rawUrl = (input.targetUrl ?? '').trim()
+  const urlCheck = assertDeliverableUrl(rawUrl)
   if (!urlCheck.ok) return { ok: false, error: urlCheck.error }
+
+  // NORMALIZE before storing (cross-review, Codex round 4): `new URL()` accepts a case-insensitive
+  // scheme (`HTTPS://…`), but the DB CHECK only matches lowercase `https://`, so storing the raw
+  // string would pass app validation and then fail generically at insert. `.toString()` lowercases
+  // scheme + host, so the stored value always satisfies the constraint.
+  const targetUrl = new URL(rawUrl).toString()
 
   const eventFilter = normalizeFilter(input.eventFilter)
   if (eventFilter && eventFilter.length > 256) return { ok: false, error: 'Event filter is too long.' }
@@ -128,7 +135,7 @@ export async function createDestination(
     .insert({
       project_id: projectId,
       name,
-      target_url: input.targetUrl.trim(),
+      target_url: targetUrl,
       signing_secret: signingSecret,
       secret_set_at: new Date().toISOString(),
       event_filter: eventFilter,
@@ -164,6 +171,14 @@ function normalizeFilter(filter: string | null | undefined): string | null {
 // secret, and neither value is ever exposed by a read path. A receiver must be updated to the new
 // secret out-of-band (it was shown the plaintext here) — deliveries signed with the old secret will
 // fail the receiver's verification, which is the intended "old secret no longer trusted" behaviour.
+//
+// ROTATION WINDOW (cross-review, Codex round 4), stated rather than glossed: between this commit and
+// the receiver being updated, deliveries are signed with the NEW secret but verified against the OLD
+// one, so an enabled destination returns 401 and those deliveries dead-letter. This is RECOVERABLE —
+// the operator updates the receiver, then REPLAYS the dead-lettered deliveries (same logical event
+// id, so the receiver dedupes). A zero-window rotation (sign with both the new and a briefly-retained
+// previous secret — the multi-signature scheme our header already supports) is a documented
+// follow-up; for now, rotate when the receiver can be updated promptly, or disable-rotate-enable.
 export async function rotateSecret(
   projectId: string,
   destinationId: string,

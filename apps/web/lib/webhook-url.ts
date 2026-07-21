@@ -22,13 +22,22 @@ export type UrlCheck = { ok: true } | { ok: false; error: string }
 
 const IS_LOCAL_TARGET = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/
 
-// The http://localhost(:port) / http://127.0.0.1 test-receiver carve-out — the ONE target allowed to
-// be loopback (the specs' and smoke walkthrough's disposable sink). Exported so the send-time SSRF
-// guard (lib/webhook-delivery.ts) grants the SAME exception its resolver would otherwise block as a
-// loopback address (cross-review, Codex round 3): without this the documented localhost receiver
-// could be created but never actually delivered to.
+// The http://localhost / http://127.0.0.1 test-receiver carve-out is a DEV/CI convenience, and it is
+// DANGEROUS in production: on a serverless function, "localhost" is the function's own loopback
+// interface, so an unconditional carve-out would let a tenant point delivery at internal services
+// (cross-review, Codex round 4). So it is gated behind an explicit opt-in env, born OFF — in
+// production (env unset) a localhost target is treated like any other and must be public https.
+// Dev/CI set WEBHOOK_ALLOW_LOCALHOST=true to use a disposable localhost receiver. Read fresh (no
+// module capture) so a spec can toggle it.
+export function localhostWebhooksAllowed(): boolean {
+  return process.env.WEBHOOK_ALLOW_LOCALHOST === 'true'
+}
+
+// True only when the raw URL is the localhost test target AND the opt-in above is on. Exported so the
+// send-time SSRF guard (lib/webhook-delivery.ts) grants the SAME exception the create-time guard does
+// — kept consistent end-to-end so the documented dev receiver can actually be delivered to.
 export function isLocalTestTarget(raw: string): boolean {
-  return IS_LOCAL_TARGET.test(raw)
+  return IS_LOCAL_TARGET.test(raw) && localhostWebhooksAllowed()
 }
 
 export function assertDeliverableUrl(raw: string): UrlCheck {
@@ -39,9 +48,10 @@ export function assertDeliverableUrl(raw: string): UrlCheck {
     return { ok: false, error: 'Enter a valid URL.' }
   }
 
-  // The localhost/127.0.0.1 test-receiver carve-out (http only) matches the DB CHECK exactly — the
-  // disposable sink the specs and the smoke walkthrough POST to. Everything else must be https.
-  if (IS_LOCAL_TARGET.test(raw)) return { ok: true }
+  // The localhost/127.0.0.1 test-receiver carve-out — ONLY when explicitly opted in (dev/CI). In
+  // production (env unset) this is false, so a localhost target falls through to the https-required
+  // path below and is rejected. See localhostWebhooksAllowed().
+  if (isLocalTestTarget(raw)) return { ok: true }
 
   if (url.protocol !== 'https:') return { ok: false, error: 'Webhook URL must be https://.' }
 
