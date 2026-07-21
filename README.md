@@ -27,6 +27,7 @@ See `Roadmap/README.md` (the product poster) for the at-a-glance feature map and
 - `Roadmap/00-ideas/` — the idea funnel (seeds, audits, the generated `BUILD-ORDER.md`).
 
 **Template-drift guard:** the spawn left `TEMPLATE FILL-IN` markers in load-bearing docs; they must
-stay filled. `npm run check:template-drift` (or `node scripts/check-template-drift.mjs`) greps the
-load-bearing set to zero and fails if any reappear — the one place the phrase is allowed is *this*
-sentence and the guard script's own allow-list, which explain it.
+stay filled. `npm run check:template-drift` (or `node scripts/check-template-drift.mjs`) fails if any
+load-bearing doc still contains an *unfilled placeholder*. It matches the placeholder syntax (the
+phrase in angle brackets, or immediately followed by a colon) — which is what every real unfilled
+marker uses — so a plain prose mention of the phrase, like this sentence, is deliberately allowed.

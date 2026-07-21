@@ -12,9 +12,11 @@ sibling project — it's maintained on its own, consuming the shared `ways-of-wo
 
 **Architecture**: **Next.js App Router (`apps/web`) + Supabase Postgres**, deployed on **Vercel**
 (merge to `main` = deploy). Supabase is accessed **service-role only, server-side** — RLS is ON with
-no anon policies; every query is scoped by a `project_id` resolved from the request's hashed API key
-(`lib/auth.ts`), never from the request body. A framework-agnostic TypeScript SDK lives in
-`packages/sdk`.
+no anon policies; every query is `project_id`-scoped, and that `project_id` is always resolved
+**server-side** — from the request's hashed API key (`lib/auth.ts`) on authed ingest/read paths, or
+from an allow-listed demo slug (`lib/public-demo.ts`, rule #2) / a revocable connector token
+(`lib/connector-tokens.ts`, rule #3) on the public/connector paths — **never from the request body**.
+A framework-agnostic TypeScript SDK lives in `packages/sdk`.
 
 **Repo layout** (monorepo):
 ```
