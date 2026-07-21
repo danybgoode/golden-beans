@@ -290,6 +290,20 @@ one-liner + why + date shape.
   of reaching it — extract the guard into a **pure, zero-import module** and assert it directly (the
   `lib/flags.ts` precedent already in this repo), rather than assuming end-to-end coverage implies
   branch coverage. *(2026-07-20, multi-tenant-activation S1.)*
+- **When a migration changes what the CODE READS, the rollout has a mandatory order: env vars →
+  migration → merge/deploy. Getting it backwards is an outage, not a hiccup.** multi-tenant-activation
+  S1 switched `lib/auth.ts` from `projects.api_key_hash` to a new `api_keys` table; deploying that code
+  before the migration would have 500'd *every* ingest call for *every* tenant. Two ordering rules,
+  both easy to get wrong: (1) **`NEXT_PUBLIC_*` vars are build-time inlined**, so they must exist
+  *before* the merge triggers the build — setting them after means a deployed bundle with `undefined`
+  baked in, and no redeploy is triggered by an env change alone; (2) **the expand migration must land
+  before the code that reads it** (expand/contract exists precisely so both orders of *rollback* are
+  safe, but rollout is still strictly ordered). Verify afterward with a check that distinguishes the
+  two failure modes: an invalid credential returning **401 rather than 500** proves the new table
+  exists and resolves, and driving one real end-to-end call with a *pre-existing* credential proves the
+  backfill preserved live access. Also: `supabase db push` does **not** apply `seed.sql` unless you
+  pass `--include-seed` — worth confirming, since a test-fixture seed reaching prod would be its own
+  incident. *(2026-07-21, multi-tenant-activation S1.)*
 - **A role column in the schema is not an access rule — grep for who actually reads it.**
   multi-tenant-activation S1 shipped `project_members.role` with an `owner`/`member` CHECK constraint
   and a membership gate that only ever asked "is this user a member?" — so any member could mint a
