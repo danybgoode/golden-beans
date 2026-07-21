@@ -107,9 +107,10 @@ export type DeliveryHealthRow = {
   destinationId: string
   name: string
   enabled: boolean
-  delivered: number
-  failed: number
-  dead: number
+  delivered: number       // successful attempts ever (survives replay)
+  failedAttempts: number  // failed attempts ever (cumulative history)
+  awaitingRetry: number   // rows currently in the failed state (a retry is scheduled)
+  dead: number            // rows currently dead-lettered
   pending: number
   inFlight: number
   totalAttempts: number
@@ -134,7 +135,8 @@ export async function getDeliveryHealth(projectId: string): Promise<DeliveryHeal
     name: r.name as string,
     enabled: Boolean(r.enabled),
     delivered: Number(r.delivered ?? 0),
-    failed: Number(r.failed ?? 0),
+    failedAttempts: Number(r.failed_attempts ?? 0),
+    awaitingRetry: Number(r.awaiting_retry ?? 0),
     dead: Number(r.dead ?? 0),
     pending: Number(r.pending ?? 0),
     inFlight: Number(r.in_flight ?? 0),
@@ -161,7 +163,7 @@ export async function projectsWithDueWork(
   const { data, error } = await supabase.rpc('projects_with_due_work', {
     p_now: now.toISOString(),
     p_limit: limit,
-    p_stale_after: `${staleAfterMs} milliseconds`,
+    p_stale_after_ms: staleAfterMs,
   })
   if (error) {
     console.error('[deliveries] projectsWithDueWork failed:', error)

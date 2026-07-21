@@ -48,10 +48,10 @@ export default async function DestinationsPage({
               <th>Destination</th>
               <th>State</th>
               <th>Delivered</th>
+              <th>Failed attempts</th>
               <th>Awaiting retry</th>
               <th>Dead-lettered</th>
               <th>Queued</th>
-              <th>Total attempts</th>
               <th>Last delivery</th>
             </tr>
           </thead>
@@ -60,11 +60,13 @@ export default async function DestinationsPage({
               <tr key={h.destinationId}>
                 <td>{h.name}</td>
                 <td>{h.enabled ? 'enabled' : 'disabled'}</td>
+                {/* "Delivered" and "Failed attempts" are CUMULATIVE (from the attempt log, survive
+                    replay); "Awaiting retry", "Dead-lettered" and "Queued" are CURRENT row state. */}
                 <td>{h.delivered}</td>
-                <td>{h.failed}</td>
+                <td>{h.failedAttempts}</td>
+                <td>{h.awaitingRetry}</td>
                 <td>{h.dead}</td>
                 <td>{h.pending + h.inFlight}</td>
-                <td>{h.totalAttempts}</td>
                 <td>
                   {h.lastDeliveryAt
                     ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`

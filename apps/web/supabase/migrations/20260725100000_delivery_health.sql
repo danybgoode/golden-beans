@@ -30,7 +30,8 @@ RETURNS TABLE (
   name             TEXT,
   enabled          BOOLEAN,
   delivered        BIGINT,   -- successful ATTEMPTS ever (survives replay)
-  failed           BIGINT,   -- failed ATTEMPTS ever (retryable + permanent)
+  failed_attempts  BIGINT,   -- failed ATTEMPTS ever (retryable + permanent) — cumulative history
+  awaiting_retry   BIGINT,   -- delivery ROWS currently in the failed state (a retry is scheduled)
   dead             BIGINT,   -- delivery ROWS currently dead-lettered
   pending          BIGINT,   -- delivery ROWS currently pending
   in_flight        BIGINT,   -- delivery ROWS currently in flight
@@ -54,6 +55,7 @@ AS $$
   ),
   states AS (
     SELECT destination_id,
+           COUNT(*) FILTER (WHERE status = 'failed')    AS awaiting_retry,
            COUNT(*) FILTER (WHERE status = 'dead')      AS dead,
            COUNT(*) FILTER (WHERE status = 'pending')   AS pending,
            COUNT(*) FILTER (WHERE status = 'in_flight') AS in_flight
@@ -67,6 +69,7 @@ AS $$
     d.enabled,
     COALESCE(a.delivered, 0),
     COALESCE(a.failed, 0),
+    COALESCE(s.awaiting_retry, 0),
     COALESCE(s.dead, 0),
     COALESCE(s.pending, 0),
     COALESCE(s.in_flight, 0),

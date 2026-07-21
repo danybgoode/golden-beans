@@ -86,7 +86,16 @@ export type DispatchOptions = {
   now?: Date
   /** Injected for tests; defaults to global fetch (via deliverWebhook). */
   fetchImpl?: typeof fetch
+  /** Injected for tests; the SSRF host resolver (see lib/webhook-delivery.ts). */
+  resolveHost?: (hostname: string) => Promise<string[]>
   staleAfterMs?: number
+  /**
+   * Absolute epoch-ms deadline for this pass. Once reached, the loop stops BEFORE the next send and
+   * RELEASES the remaining claimed rows back to pending (cross-review, Codex 2026-07-21): without
+   * this, a project with a full 50-row batch of 10s-timeout sends could run ~500s and blow the
+   * function deadline mid-batch, stranding rows in_flight. Deferred rows are simply claimed next tick.
+   */
+  deadlineMs?: number
 }
 
 /**
@@ -116,18 +125,22 @@ export async function dispatchPendingDeliveries(
       p_project_id: projectId,
       p_limit: limit,
       p_now: now.toISOString(),
-      // Postgres interval accepts an ISO-8601 duration or a "N milliseconds" string; the latter is
-      // unambiguous and avoids float-seconds rounding.
-      p_stale_after: `${staleAfterMs} milliseconds`,
+      p_stale_after_ms: staleAfterMs,
     })
     if (claimError) throw new Error(`could not claim deliveries: ${claimError.message}`)
 
     const rows = (claimed ?? []) as ClaimedRow[]
     const settlements: DeliverySettlement[] = []
-    for (const row of rows) {
+    for (let i = 0; i < rows.length; i++) {
+      // Stop before overrunning the pass deadline: release the rows we claimed but will not reach,
+      // so they are NOT stranded in_flight, then finish. Guarded by the claim token like every write.
+      if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
+        await releaseUnsent(db, projectId, rows.slice(i).map((r) => r.id), now)
+        break
+      }
       // One bad row must not sink the batch — settle it in isolation. A throw here would leave the
       // rest of the claimed rows stuck in_flight until the stale-reclaim, for no reason.
-      settlements.push(await sendAndSettle(db, projectId, row, now, options.fetchImpl))
+      settlements.push(await sendAndSettle(db, projectId, rows[i], now, options))
     }
 
     return { ok: true, dispatched: true, reason: 'claimed', claimed: settlements }
@@ -148,7 +161,7 @@ async function sendAndSettle(
   projectId: string,
   row: ClaimedRow,
   now: Date,
-  fetchImpl?: typeof fetch,
+  options: DispatchOptions,
 ): Promise<DeliverySettlement> {
   const nowIso = now.toISOString()
   const base = { id: row.id, event_id: row.event_id, destination_id: row.destination_id }
@@ -174,102 +187,106 @@ async function sendAndSettle(
     .maybeSingle()
 
   if (!dest || !dest.enabled || !dest.target_url || !dest.signing_secret || !event) {
-    const released = await settleRow(db, projectId, row.id, nowIso, {
-      status: 'pending',
-      claimed_at: null,
-      updated_at: nowIso,
+    // Release to pending, unattempted, no attempt-log row (p_log=false).
+    const persisted = await settleDelivery(db, {
+      row, projectId, claimToken: nowIso, now: nowIso, status: 'pending',
+      nextAttemptAt: null, lastError: null, attemptCount: row.attempt_count,
+      log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
     })
-    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted: released }
+    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted }
   }
 
   const body = serializeEnvelope(buildEventEnvelope(event as CanonicalEventRow))
   const result = await deliverWebhook(
     { id: dest.id as string, name: dest.name as string, targetUrl: dest.target_url as string, signingSecret: dest.signing_secret as string },
     body,
-    { fetchImpl, deliveryId: row.id, eventId: row.event_id },
+    { fetchImpl: options.fetchImpl, resolveHost: options.resolveHost, deliveryId: row.id, eventId: row.event_id },
   )
 
   const attemptCount = row.attempt_count + 1 // this pass made one real attempt
-  const patch = settlePatch(result.disposition, attemptCount, now, result.error)
+  const next = nextState(result.disposition, attemptCount, now)
 
-  const persisted = await settleRow(db, projectId, row.id, nowIso, {
-    ...patch,
-    attempt_count: attemptCount,
-    last_attempt_at: nowIso,
-    updated_at: nowIso,
+  // Settle the row AND write the attempt-log row in ONE transaction (settle_delivery RPC), guarded
+  // by the claim token — history cannot be lost by a partial write, and a lost reclaim race writes
+  // neither (cross-review, Codex 2026-07-21).
+  const persisted = await settleDelivery(db, {
+    row, projectId, claimToken: nowIso, now: nowIso, status: next.status,
+    nextAttemptAt: next.nextAttemptAt, lastError: result.error, attemptCount,
+    log: true, outcome: result.disposition, httpStatus: result.status, latencyMs: result.latencyMs,
   })
 
-  // Record the attempt in the append-only log ONLY when we WON the settlement — tying the history
-  // entry to owning the row keeps a reclaim race from double-counting the same send. The log write
-  // is best-effort (like audit): a failure to log must not resend the event, which already happened.
-  if (persisted) {
-    const { error: logErr } = await db.from('event_delivery_attempts').insert({
-      project_id: projectId,
-      delivery_id: row.id,
-      destination_id: row.destination_id,
-      event_id: row.event_id,
-      outcome: result.disposition,
-      http_status: result.status,
-      latency_ms: result.latencyMs,
-      error: result.error,
-      attempt_no: attemptCount,
-    })
-    if (logErr) console.error('[delivery-dispatch] attempt-log write failed:', logErr.message)
-  }
-
-  return { ...base, disposition: result.disposition, status: patch.status, attemptCount, persisted }
+  return { ...base, disposition: result.disposition, status: next.status, attemptCount, persisted }
 }
 
-// One settling UPDATE, guarded by the ownership token (status still in_flight AND claimed_at is
-// still ours). Returns whether exactly the row we own was written — false on a DB error or a lost
-// reclaim race, so the caller reports the send as un-counted rather than as a clean success.
-async function settleRow(
-  db: SupabaseClient,
-  projectId: string,
-  id: string,
-  claimToken: string,
-  patch: Record<string, unknown>,
-): Promise<boolean> {
-  const { data, error } = await db
-    .from('event_deliveries')
-    .update(patch)
-    .eq('id', id)
-    .eq('project_id', projectId)
-    .eq('status', 'in_flight')
-    .eq('claimed_at', claimToken)
-    .select('id')
+type SettleArgs = {
+  row: ClaimedRow
+  projectId: string
+  claimToken: string
+  now: string
+  status: 'delivered' | 'failed' | 'dead' | 'pending'
+  nextAttemptAt: string | null
+  lastError: string | null
+  attemptCount: number
+  log: boolean
+  outcome: DeliveryDisposition | 'skipped'
+  httpStatus: number | null
+  latencyMs: number | null
+}
+
+// Calls the settle_delivery RPC (guarded UPDATE + append-only attempt insert, one transaction).
+// Returns whether the row WE own was persisted — false on a DB error or a lost reclaim race, so the
+// caller never reports an un-persisted send as counted.
+async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<boolean> {
+  const { data, error } = await db.rpc('settle_delivery', {
+    p_delivery_id: a.row.id,
+    p_project_id: a.projectId,
+    p_claim_token: a.claimToken,
+    p_status: a.status,
+    p_next_attempt_at: a.nextAttemptAt,
+    p_last_error: a.lastError,
+    p_attempt_count: a.attemptCount,
+    p_now: a.now,
+    p_log: a.log,
+    p_destination_id: a.row.destination_id,
+    p_event_id: a.row.event_id,
+    p_outcome: a.outcome,
+    p_http_status: a.httpStatus,
+    p_latency_ms: a.latencyMs,
+  })
   if (error) {
     console.error('[delivery-dispatch] settle failed:', error.message)
     return false
   }
-  return (data ?? []).length === 1
+  return data === true
+}
+
+// Releases claimed-but-unsent rows back to pending (the deadline path), guarded by the claim token.
+async function releaseUnsent(db: SupabaseClient, projectId: string, ids: string[], now: Date): Promise<void> {
+  if (ids.length === 0) return
+  const nowIso = now.toISOString()
+  const { error } = await db
+    .from('event_deliveries')
+    .update({ status: 'pending', claimed_at: null, updated_at: nowIso })
+    .eq('project_id', projectId)
+    .in('id', ids)
+    .eq('status', 'in_flight')
+    .eq('claimed_at', nowIso)
+  if (error) console.error('[delivery-dispatch] release-unsent failed:', error.message)
 }
 
 // Maps an HTTP disposition + attempt count to the row's next state. The retry SCHEDULE is
 // lib/retry-policy.ts's; this only translates its decision into a status + next_attempt_at.
-function settlePatch(
+function nextState(
   disposition: DeliveryDisposition,
   attemptCount: number,
   now: Date,
-  error: string | null,
-): { status: 'delivered' | 'failed' | 'dead'; next_attempt_at?: string; last_error: string | null; claimed_at: null } {
-  if (disposition === 'delivered') {
-    return { status: 'delivered', last_error: null, claimed_at: null }
-  }
-  if (disposition === 'permanent') {
-    // The receiver rejected THIS request (a 4xx that isn't 408/429). Retrying identical bytes can't
-    // help, so dead-letter immediately instead of burning the whole backoff schedule.
-    return { status: 'dead', last_error: error, claimed_at: null }
-  }
+): { status: 'delivered' | 'failed' | 'dead'; nextAttemptAt: string | null } {
+  if (disposition === 'delivered') return { status: 'delivered', nextAttemptAt: null }
+  // A permanent 4xx (not 408/429): retrying identical bytes can't help, so dead-letter immediately
+  // instead of burning the whole backoff schedule.
+  if (disposition === 'permanent') return { status: 'dead', nextAttemptAt: null }
   // retryable: schedule the next attempt, or dead-letter if the budget is spent.
   const decision = retryDecision(attemptCount)
-  if (!decision.retry) {
-    return { status: 'dead', last_error: error, claimed_at: null }
-  }
-  return {
-    status: 'failed',
-    next_attempt_at: new Date(now.getTime() + decision.delayMs).toISOString(),
-    last_error: error,
-    claimed_at: null,
-  }
+  if (!decision.retry) return { status: 'dead', nextAttemptAt: null }
+  return { status: 'failed', nextAttemptAt: new Date(now.getTime() + decision.delayMs).toISOString() }
 }

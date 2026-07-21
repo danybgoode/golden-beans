@@ -58,6 +58,8 @@ test('assertDeliverableUrl REJECTS https to a private / loopback / metadata addr
     'https://[::1]/hook',
     'https://localhost/hook', // loopback HOSTNAME over https — a hostname, not a literal IP
     'https://api.localhost/hook', // the reserved .localhost TLD
+    'https://[::ffff:169.254.169.254]/hook', // IPv4-mapped IPv6 → metadata (the round-2 bypass)
+    'https://[::ffff:10.0.0.1]/hook', // IPv4-mapped IPv6 → private
   ]) {
     expect(assertDeliverableUrl(hostile), hostile).toEqual({
       ok: false,
@@ -77,6 +79,12 @@ test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treat
   expect(isPrivateOrLoopbackHost('anything.localhost')).toBe(true)
   // A hostname that merely CONTAINS "localhost" is not the reserved TLD — must stay public.
   expect(isPrivateOrLoopbackHost('localhost.evil.com')).toBe(false)
+  // IPv4-mapped IPv6 (cross-review round 2, both families) — routes to the embedded v4, so it must
+  // be classified by the v4 rules, both dotted and hex forms.
+  expect(isPrivateOrLoopbackHost('[::ffff:169.254.169.254]')).toBe(true)
+  expect(isPrivateOrLoopbackHost('::ffff:10.0.0.1')).toBe(true)
+  expect(isPrivateOrLoopbackHost('::ffff:a9fe:a9fe')).toBe(true) // hex form of 169.254.169.254
+  expect(isPrivateOrLoopbackHost('::ffff:0808:0808')).toBe(false) // 8.8.8.8 mapped — public
 })
 
 // ── DB-enforced invariants (service-role, driven directly) ─────────────────────────────────────

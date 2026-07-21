@@ -55,10 +55,36 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
   if (h.startsWith('fe80:')) return true // IPv6 link-local
   if (h.startsWith('fc') || h.startsWith('fd')) return true // IPv6 unique-local (fc00::/7)
 
+  // IPv4-MAPPED / -embedded IPv6, e.g. `::ffff:169.254.169.254` or `::ffff:a9fe:a9fe` (cross-review,
+  // both families 2026-07-21): these route to an IPv4 address, so `[::ffff:169.254.169.254]` would
+  // otherwise sail past the dotted-quad regex below and hit cloud metadata. Extract the embedded v4
+  // and apply the v4 rules.
+  const embeddedV4 = extractEmbeddedIPv4(h)
+  if (embeddedV4) return isPrivateIPv4(embeddedV4)
+
   const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (!v4) return false // a hostname, not a literal IPv4 — allowed (DNS caveat documented above)
-  const a = Number(v4[1])
-  const b = Number(v4[2])
+  return isPrivateIPv4([Number(v4[1]), Number(v4[2]), Number(v4[3]), Number(v4[4])])
+}
+
+// Pulls an IPv4 out of an IPv4-mapped/embedded IPv6 literal, in either form:
+//   ::ffff:1.2.3.4  /  ::1.2.3.4        (dotted tail)
+//   ::ffff:0102:0304                    (hex pair — the same 4 octets)
+// Returns null when `h` is not such a literal.
+function extractEmbeddedIPv4(h: string): [number, number, number, number] | null {
+  if (!h.includes(':')) return null
+  const dotted = h.match(/:(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (dotted) return [Number(dotted[1]), Number(dotted[2]), Number(dotted[3]), Number(dotted[4])]
+  const hex = h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/)
+  if (hex) {
+    const g1 = parseInt(hex[1], 16)
+    const g2 = parseInt(hex[2], 16)
+    return [(g1 >> 8) & 0xff, g1 & 0xff, (g2 >> 8) & 0xff, g2 & 0xff]
+  }
+  return null
+}
+
+function isPrivateIPv4([a, b]: [number, number, number, number]): boolean {
   if (a === 10) return true // 10.0.0.0/8
   if (a === 127) return true // loopback
   if (a === 0) return true // 0.0.0.0/8 "this network"

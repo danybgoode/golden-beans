@@ -78,6 +78,10 @@ const DEST: DeliverableDestination = {
   signingSecret: 'whsec_stub_secret_0123456789',
 }
 
+// Inject a resolver returning a PUBLIC IP so the send-time SSRF guard passes deterministically and
+// the unit suite stays hermetic (no real DNS). A separate test injects a PRIVATE-resolving one.
+const PUBLIC_RESOLVE = async () => ['93.184.216.34']
+
 function stubFetch(status: number, body = 'ok'): { impl: typeof fetch; seen: { url: string; signature: string; body: string }[] } {
   const seen: { url: string; signature: string; body: string }[] = []
   const impl = (async (url: string | URL | Request, init?: RequestInit) => {
@@ -92,7 +96,7 @@ test('a 2xx is delivered, and the delivered request carries a VERIFIABLE signatu
   const { impl, seen } = stubFetch(200)
   const body = serializeEnvelope(buildTestEnvelope())
   const T = 1_800_000_000
-  const result = await deliverWebhook(DEST, body, { fetchImpl: impl, timestampSeconds: T })
+  const result = await deliverWebhook(DEST, body, { fetchImpl: impl, timestampSeconds: T, resolveHost: PUBLIC_RESOLVE })
   expect(result.disposition).toBe('delivered')
   expect(result.status).toBe(200)
   // The receiver verifies exactly what we sent — same secret, same body, the header we signed.
@@ -102,18 +106,18 @@ test('a 2xx is delivered, and the delivered request carries a VERIFIABLE signatu
 
 test('a 5xx is RETRYABLE; a 4xx (not 408/429) is PERMANENT; 429 is retryable', async () => {
   const b = 'x'
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(503).impl })).disposition).toBe('retryable')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(400).impl })).disposition).toBe('permanent')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(404).impl })).disposition).toBe('permanent')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(429).impl })).disposition).toBe('retryable')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(408).impl })).disposition).toBe('retryable')
+  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(503).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
+  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(400).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('permanent')
+  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(404).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('permanent')
+  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(429).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
+  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(408).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
 })
 
 test('a network error is retryable and never throws', async () => {
   const exploding = (async () => {
     throw new Error('ECONNREFUSED')
   }) as unknown as typeof fetch
-  const result = await deliverWebhook(DEST, 'x', { fetchImpl: exploding })
+  const result = await deliverWebhook(DEST, 'x', { fetchImpl: exploding, resolveHost: PUBLIC_RESOLVE })
   expect(result.disposition).toBe('retryable')
   expect(result.status).toBeNull()
   expect(result.error).toContain('ECONNREFUSED')
@@ -125,7 +129,24 @@ test('a timeout aborts and is reported as retryable', async () => {
     new Promise((_resolve, reject) => {
       init?.signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
     })) as unknown as typeof fetch
-  const result = await deliverWebhook(DEST, 'x', { fetchImpl: hang, timeoutMs: 20 })
+  const result = await deliverWebhook(DEST, 'x', { fetchImpl: hang, timeoutMs: 20, resolveHost: PUBLIC_RESOLVE })
   expect(result.disposition).toBe('retryable')
   expect(result.error).toContain('timed out')
+})
+
+test('send-time SSRF: a host RESOLVING to a private IP is refused and NEVER fetched', async () => {
+  // Cross-review (Codex 2026-07-21): a public hostname can resolve to a private IP. The send-time
+  // guard must refuse it BEFORE any request leaves. fetch must not be called at all.
+  let fetched = false
+  const shouldNotFetch = (async () => {
+    fetched = true
+    return new Response('', { status: 200 })
+  }) as unknown as typeof fetch
+  const result = await deliverWebhook(DEST, 'x', {
+    fetchImpl: shouldNotFetch,
+    resolveHost: async () => ['10.0.0.5'], // the hostname resolves inward
+  })
+  expect(fetched).toBe(false)
+  expect(result.disposition).toBe('permanent') // not retryable — the target is structurally unsafe
+  expect(result.error).toContain('private')
 })

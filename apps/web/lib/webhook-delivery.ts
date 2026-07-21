@@ -1,4 +1,6 @@
+import { lookup } from 'node:dns/promises'
 import { signWebhookPayload } from './webhook-signature'
+import { isPrivateOrLoopbackHost } from './webhook-url'
 import type { DeliverableDestination } from './destinations'
 
 // event-destination-router · Sprint 2 — the ACTUAL signed outbound POST. Shared by Story 2.1's
@@ -50,6 +52,18 @@ export type DeliverOptions = {
   /** Correlation headers the receiver can log / dedupe on. */
   deliveryId?: string
   eventId?: string
+  /**
+   * Resolves a hostname to its IP addresses — the send-time SSRF guard's input. Injected in unit
+   * tests to stay hermetic; defaults to a real DNS lookup. See resolveTargetHost below for the
+   * fail-open semantics and the documented residual.
+   */
+  resolveHost?: (hostname: string) => Promise<string[]>
+}
+
+// Default resolver: all A/AAAA records for the host.
+async function defaultResolveHost(hostname: string): Promise<string[]> {
+  const records = await lookup(hostname, { all: true })
+  return records.map((r) => r.address)
 }
 
 /**
@@ -70,6 +84,23 @@ export async function deliverWebhook(
 ): Promise<DeliveryResult> {
   const fetchImpl = options.fetchImpl ?? fetch
   const timeoutMs = options.timeoutMs ?? DELIVERY_TIMEOUT_MS
+
+  // ── SSRF at SEND TIME ─────────────────────────────────────────────────────────────────────────
+  // assertDeliverableUrl (create/rotate) blocks LITERAL private/loopback targets, but a tenant can
+  // point a destination at a public HOSTNAME that RESOLVES to a private IP (cross-review, Codex
+  // 2026-07-21). Resolve it here and refuse if any address is internal, so the request never leaves
+  // for cloud metadata (169.254.169.254) or an internal service.
+  //
+  // RESIDUAL, stated: this is resolve-then-fetch, so a DNS-rebinding attacker who flips the record
+  // between our check and fetch's own resolution (TOCTOU) is not fully closed — the airtight fix
+  // pins the socket to the checked IP via a custom connector, deliberately a focused follow-up (see
+  // the epic notes). FAIL-OPEN on a resolution error: a host that does not resolve is not an SSRF
+  // target (the fetch can't connect either), and failing open keeps the unit suite hermetic.
+  const blocked = await resolveTargetHost(destination.targetUrl, options.resolveHost ?? defaultResolveHost)
+  if (blocked) {
+    return { disposition: 'permanent', status: null, latencyMs: 0, error: blocked }
+  }
+
   const signature = signWebhookPayload(destination.signingSecret, body, options.timestampSeconds)
 
   const controller = new AbortController()
@@ -123,6 +154,31 @@ export async function deliverWebhook(
   }
 }
 
+// Returns a rejection reason if the target hostname resolves to any private/loopback/link-local
+// address; null to proceed. Fail-open on a resolution error or empty result (see the caller's note).
+async function resolveTargetHost(
+  targetUrl: string,
+  resolveHost: (hostname: string) => Promise<string[]>,
+): Promise<string | null> {
+  let hostname: string
+  try {
+    hostname = new URL(targetUrl).hostname
+  } catch {
+    return 'invalid target URL'
+  }
+  try {
+    const addresses = await resolveHost(hostname)
+    for (const address of addresses) {
+      if (isPrivateOrLoopbackHost(address)) {
+        return 'blocked: target resolves to a private or loopback address'
+      }
+    }
+  } catch {
+    // Unresolvable host → not an SSRF target; let the fetch fail on its own terms.
+  }
+  return null
+}
+
 // 5xx are transient by definition. 408 (Request Timeout) and 429 (Too Many Requests) are the two
 // 4xx that explicitly mean "try again" — every other 4xx is the receiver rejecting THIS request, so
 // retrying the identical bytes is pointless and just delays the dead-letter.
@@ -147,6 +203,10 @@ async function readBoundedBody(response: Response): Promise<string> {
       if (done) break
       out += decoder.decode(value, { stream: true })
     }
+    // Flush any bytes the streaming decoder is holding for a trailing multi-byte sequence — without
+    // this final flush a snippet ending mid-character is corrupted (cross-review, Antigravity
+    // 2026-07-21).
+    out += decoder.decode()
   } catch {
     // A read error mid-body just truncates the snippet — the disposition is already decided.
   } finally {

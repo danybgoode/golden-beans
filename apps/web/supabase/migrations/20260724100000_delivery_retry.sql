@@ -30,10 +30,10 @@
 --      Reclaiming it is safe because delivery is at-least-once by contract; the alternative is a row
 --      stranded forever.
 CREATE OR REPLACE FUNCTION claim_deliveries(
-  p_project_id  UUID,
-  p_limit       INTEGER,
-  p_now         TIMESTAMPTZ,
-  p_stale_after INTERVAL
+  p_project_id     UUID,
+  p_limit          INTEGER,
+  p_now            TIMESTAMPTZ,
+  p_stale_after_ms INTEGER
 )
 RETURNS TABLE (id UUID, project_id UUID, event_id UUID, destination_id UUID, attempt_count INTEGER)
 LANGUAGE plpgsql
@@ -58,7 +58,7 @@ BEGIN
         AND dest.signing_secret IS NOT NULL
         AND (
           (dd.status IN ('pending', 'failed') AND dd.next_attempt_at <= p_now)
-          OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - p_stale_after)
+          OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - make_interval(secs => p_stale_after_ms / 1000.0))
         )
       ORDER BY dd.next_attempt_at ASC
       LIMIT p_limit
@@ -72,10 +72,10 @@ $$;
 -- and a later GRANT to service_role does NOT remove it, so REVOKE from PUBLIC/anon/authenticated
 -- FIRST, then grant service_role. Naming the two API roles makes "service-role-only" conclusive
 -- rather than dependent on how the grant happened to be shaped (LEARNINGS.md, multi-tenant S2).
-REVOKE ALL ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTERVAL) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTERVAL) TO service_role;
+REVOKE ALL ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTEGER) TO service_role;
 
-COMMENT ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTERVAL) IS
+COMMENT ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTEGER) IS
   'Atomically claims up to p_limit due (or stale-in_flight) deliveries for ONE project via FOR UPDATE SKIP LOCKED, flipping them to in_flight. Only claims rows whose destination is enabled AND deliverable. p_project_id must come from the caller, never a request body.';
 
 -- ── event_delivery_attempts — the append-only attempt LOG ─────────────────────────────────────
@@ -135,6 +135,78 @@ GRANT SELECT, INSERT ON TABLE event_delivery_attempts TO service_role;
 COMMENT ON TABLE event_delivery_attempts IS
   'Append-only log of every settled send attempt. The delivery row holds current state; this holds history, so a replay (which resets the delivery row) never erases the delivery it already made. Read by the Story 3.3 operating view.';
 
+-- ── settle_delivery() — ATOMIC settle + attempt-log write ─────────────────────────────────────
+-- The delivery ROW's new state AND its attempt-log row must be written in ONE transaction
+-- (cross-review, Codex 2026-07-21): if the row settled but a separate best-effort log insert failed,
+-- the operating view (which counts from the log) would permanently under-report — history silently
+-- lost. supabase-js has no multi-statement transaction, so this is a plpgsql function, the same
+-- reasoning as ingest_event().
+--
+-- The guarded UPDATE carries the OWNERSHIP TOKEN (status='in_flight' AND claimed_at=p_claim_token):
+-- a row reclaimed out from under this worker (a later stale-reclaim gave it a new claimed_at) does
+-- NOT match, so a stale worker cannot overwrite the winner's result. The attempt row is written ONLY
+-- when the UPDATE matched exactly one row and p_log is true — tying history to owning the row keeps
+-- a reclaim race from double-counting a send. Returns whether the row was persisted.
+CREATE OR REPLACE FUNCTION settle_delivery(
+  p_delivery_id     UUID,
+  p_project_id      UUID,
+  p_claim_token     TIMESTAMPTZ,
+  p_status          TEXT,
+  p_next_attempt_at TIMESTAMPTZ,
+  p_last_error      TEXT,
+  p_attempt_count   INTEGER,
+  p_now             TIMESTAMPTZ,
+  p_log             BOOLEAN,
+  p_destination_id  UUID,
+  p_event_id        UUID,
+  p_outcome         TEXT,
+  p_http_status     INTEGER,
+  p_latency_ms      INTEGER
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_rows INTEGER;
+BEGIN
+  UPDATE event_deliveries
+     SET status          = p_status,
+         attempt_count   = p_attempt_count,
+         last_error      = p_last_error,
+         claimed_at      = NULL,
+         -- NULL means "leave unchanged" — only the retry path supplies a new schedule.
+         next_attempt_at = COALESCE(p_next_attempt_at, next_attempt_at),
+         -- a real attempt stamps last_attempt_at; the release (p_log=false) path attempted nothing.
+         last_attempt_at = CASE WHEN p_log THEN p_now ELSE last_attempt_at END,
+         updated_at      = p_now
+   WHERE id = p_delivery_id
+     AND project_id = p_project_id
+     AND status = 'in_flight'
+     AND claimed_at = p_claim_token;   -- the ownership token
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+
+  IF v_rows = 1 AND p_log THEN
+    INSERT INTO event_delivery_attempts (
+      project_id, delivery_id, destination_id, event_id, outcome, http_status, latency_ms, error, attempt_no
+    ) VALUES (
+      p_project_id, p_delivery_id, p_destination_id, p_event_id, p_outcome, p_http_status, p_latency_ms, p_last_error, p_attempt_count
+    );
+  END IF;
+
+  RETURN v_rows = 1;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION settle_delivery(UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION settle_delivery(UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER)
+  TO service_role;
+
+COMMENT ON FUNCTION settle_delivery(UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER) IS
+  'Atomically settles a claimed delivery (guarded by the claimed_at ownership token) AND writes its append-only attempt-log row in one transaction, so delivery history cannot be lost by a partial write. Returns whether the row was persisted.';
+
 -- ── projects_with_due_work() — the cron enumeration, eligibility-aware ────────────────────────
 -- Which projects should this tick dispatch? The naive answer (a PostgREST SELECT on pending/failed
 -- then de-dup in Node) had two bugs cross-review caught (Codex + Antigravity, 2026-07-21):
@@ -147,9 +219,9 @@ COMMENT ON TABLE event_delivery_attempts IS
 --      SELECT DISTINCT over only ELIGIBLE work (enabled + deliverable destination) has neither
 --      problem: a disabled destination's rows are not "due work" at all, and DISTINCT is exact.
 CREATE OR REPLACE FUNCTION projects_with_due_work(
-  p_now         TIMESTAMPTZ,
-  p_limit       INTEGER,
-  p_stale_after INTERVAL
+  p_now            TIMESTAMPTZ,
+  p_limit          INTEGER,
+  p_stale_after_ms INTEGER
 )
 RETURNS TABLE (project_id UUID)
 LANGUAGE sql
@@ -167,13 +239,13 @@ AS $$
      AND dest.signing_secret IS NOT NULL
      AND (
        (dd.status IN ('pending', 'failed') AND dd.next_attempt_at <= p_now)
-       OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - p_stale_after)
+       OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - make_interval(secs => p_stale_after_ms / 1000.0))
      )
    LIMIT p_limit;
 $$;
 
-REVOKE ALL ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) TO service_role;
+REVOKE ALL ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTEGER) TO service_role;
 
-COMMENT ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) IS
+COMMENT ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTEGER) IS
   'DISTINCT project_ids that currently have ELIGIBLE due work (enabled+deliverable destination, and either due pending/failed OR stale in_flight). Feeds the dispatch cron; matches claim_deliveries eligibility so enumeration and claim never disagree.';

@@ -58,6 +58,10 @@ async function fixture(db: SupabaseClient) {
   return { pid, destId: dest!.id as string, eventId: ev!.id as string, deliveryId: del!.id as string }
 }
 
+// A resolver returning a PUBLIC IP so the send-time SSRF guard passes deterministically and the
+// dispatcher specs stay hermetic (the fixture's .test host would otherwise hit real DNS).
+const PUBLIC_RESOLVE = async () => ['93.184.216.34']
+
 function stubFetch(status: number) {
   const bodies: { body: string; signature: string }[] = []
   const impl = (async (_url: string | URL | Request, init?: RequestInit) => {
@@ -102,7 +106,7 @@ test('a 2xx settles the delivery as DELIVERED with one attempt, over a verifiabl
     const { pid, eventId, deliveryId } = await fixture(db)
     const { impl, bodies } = stubFetch(200)
     try {
-      const outcome = await dispatchPendingDeliveries(db, pid, { fetchImpl: impl })
+      const outcome = await dispatchPendingDeliveries(db, pid, { fetchImpl: impl, resolveHost: PUBLIC_RESOLVE })
       expect(outcome.ok && outcome.dispatched).toBe(true)
       expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).toContain(deliveryId)
 
@@ -127,7 +131,7 @@ test('a 5xx settles as FAILED with a future next_attempt_at (a retry is schedule
     const { pid, deliveryId } = await fixture(db)
     try {
       const before = Date.now()
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl, resolveHost: PUBLIC_RESOLVE })
       const { data: row } = await db
         .from('event_deliveries')
         .select('status, attempt_count, next_attempt_at, last_error')
@@ -148,7 +152,7 @@ test('a permanent 4xx dead-letters IMMEDIATELY (no backoff burned)', async () =>
   await withGateOn(async () => {
     const { pid, deliveryId } = await fixture(db)
     try {
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(400).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(400).impl, resolveHost: PUBLIC_RESOLVE })
       const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
       expect(row!.status).toBe('dead')
       expect(row!.attempt_count).toBe(1) // one real attempt, then terminal — not the whole schedule
@@ -168,7 +172,7 @@ test('repeated 5xx eventually DEAD-LETTERS after the attempt budget is spent', a
       // wait). We keep attempt_count as the dispatcher set it — only the clock is moved.
       for (let i = 0; i < MAX_ATTEMPTS; i++) {
         await db.from('event_deliveries').update({ next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq('id', deliveryId).eq('status', 'failed')
-        await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl })
+        await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl, resolveHost: PUBLIC_RESOLVE })
       }
       const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
       expect(row!.status).toBe('dead')
@@ -190,14 +194,14 @@ test('after a delivery, a REPLAY (reset to pending) re-sends with the SAME logic
     const { pid, eventId, deliveryId } = await fixture(db)
     try {
       const first = stubFetch(200)
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: first.impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: first.impl, resolveHost: PUBLIC_RESOLVE })
       expect((await db.from('event_deliveries').select('status').eq('id', deliveryId).single()).data!.status).toBe('delivered')
 
       // Replay: the same reset replayDelivery() performs.
       await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null, last_error: null }).eq('id', deliveryId)
 
       const second = stubFetch(200)
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: second.impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: second.impl, resolveHost: PUBLIC_RESOLVE })
       const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
       expect(row!.status).toBe('delivered')
       expect(row!.attempt_count).toBe(1) // one NEW attempt, budget reset
@@ -219,14 +223,14 @@ test('each settled send is LOGGED to the append-only attempt log, and a replay A
   await withGateOn(async () => {
     const { pid, deliveryId } = await fixture(db)
     try {
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl, resolveHost: PUBLIC_RESOLVE })
       let { data: attempts } = await db.from('event_delivery_attempts').select('outcome, attempt_no').eq('delivery_id', deliveryId).order('attempt_no')
       expect(attempts).toHaveLength(1)
       expect(attempts![0].outcome).toBe('delivered')
 
       // Replay (the same reset replayDelivery performs) + deliver again.
       await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null }).eq('id', deliveryId)
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl, resolveHost: PUBLIC_RESOLVE })
 
       ;({ data: attempts } = await db.from('event_delivery_attempts').select('outcome, attempt_no').eq('delivery_id', deliveryId).order('created_at'))
       // TWO delivered attempts — the replay ADDED to history, the original was not erased.
@@ -243,16 +247,42 @@ test('delivery_health counts SUCCESSFUL deliveries from the attempt log — so r
   await withGateOn(async () => {
     const { pid, deliveryId, destId } = await fixture(db)
     try {
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl, resolveHost: PUBLIC_RESOLVE })
       // Replay + deliver again: the ROW is delivered once (current state), but TWO deliveries happened.
       await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null }).eq('id', deliveryId)
-      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl, resolveHost: PUBLIC_RESOLVE })
 
       const { data } = await db.rpc('delivery_health', { p_project_id: pid })
       const row = (data as Record<string, unknown>[]).find((r) => r.destination_id === destId)!
       expect(Number(row.delivered)).toBe(2) // both deliveries counted — from the attempt log
       expect(Number(row.dead)).toBe(0)
       expect(row.last_delivery_at).not.toBeNull()
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('a past deadline RELEASES claimed rows back to pending WITHOUT sending — never strands in_flight', async () => {
+  // Cross-review (Codex 2026-07-21): a project's full batch of slow sends could overrun the function
+  // deadline. With the deadline already passed, the dispatcher must claim, then release everything
+  // back to pending unattempted — no send, no row left in_flight.
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId } = await fixture(db)
+    const stub = stubFetch(200)
+    try {
+      const outcome = await dispatchPendingDeliveries(db, pid, {
+        fetchImpl: stub.impl,
+        resolveHost: PUBLIC_RESOLVE,
+        deadlineMs: Date.now() - 1, // already past → stop before the first send
+      })
+      expect(outcome.ok && outcome.dispatched).toBe(true)
+      expect(stub.bodies).toHaveLength(0) // nothing was sent
+      const { data: row } = await db.from('event_deliveries').select('status, attempt_count, claimed_at').eq('id', deliveryId).single()
+      expect(row!.status).toBe('pending') // released, not stranded in_flight
+      expect(row!.attempt_count).toBe(0)
+      expect(row!.claimed_at).toBeNull()
     } finally {
       await db.from('projects').delete().eq('id', pid)
     }
@@ -274,7 +304,7 @@ test('projects_with_due_work surfaces a project whose ONLY due work is a STALE i
     const { data } = await db.rpc('projects_with_due_work', {
       p_now: new Date().toISOString(),
       p_limit: 200,
-      p_stale_after: '300000 milliseconds', // 5 min — the row is 10 min stale, so it qualifies
+      p_stale_after_ms: 300000, // 5 min — the row is 10 min stale, so it qualifies
     })
     expect((data as { project_id: string }[]).map((r) => r.project_id)).toContain(pid)
   } finally {
@@ -295,7 +325,7 @@ test('projects_with_due_work EXCLUDES a project whose due work is behind a DISAB
     const { data } = await db.rpc('projects_with_due_work', {
       p_now: new Date().toISOString(),
       p_limit: 200,
-      p_stale_after: '300000 milliseconds',
+      p_stale_after_ms: 300000,
     })
     expect((data as { project_id: string }[]).map((r) => r.project_id)).not.toContain(pid)
   } finally {

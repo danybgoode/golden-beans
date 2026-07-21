@@ -67,20 +67,27 @@ export async function POST(request: Request) {
   }
 
   const startedAt = Date.now()
+  const deadlineMs = startedAt + TICK_BUDGET_MS
   let delivered = 0
   let errored = 0
+  let unsettled = 0
   let processed = 0
   for (const projectId of projects) {
     // Stop before we risk overrunning the function deadline; the rest is due work the next tick
-    // claims. Leaving early is safe — no row is lost, only deferred.
-    if (Date.now() - startedAt > TICK_BUDGET_MS) break
+    // claims. Leaving early is safe — no row is lost, only deferred. The SAME deadline is passed into
+    // the dispatcher so it also stops mid-batch (one project's 50 slow sends can't overrun alone).
+    if (Date.now() >= deadlineMs) break
     processed += 1
-    const outcome = await dispatchPendingDeliveries(db, projectId, { now, fetchImpl: fetch })
+    const outcome = await dispatchPendingDeliveries(db, projectId, { now, fetchImpl: fetch, deadlineMs })
     if (outcome.ok && outcome.dispatched) {
-      // Count only settlements that were actually PERSISTED as delivered — never merely claimed
-      // (cross-review, Codex 2026-07-21: reporting a claim as a success without the write landing
-      // lets the same event be resent while the tick claims it done).
-      delivered += outcome.claimed.filter((c) => c.persisted && c.status === 'delivered').length
+      // Count only settlements PERSISTED as delivered — never merely claimed (cross-review, Codex:
+      // reporting a claim as success without the write landing lets the same event be resent while
+      // the tick claims it done). A send whose settlement did NOT persist is surfaced as `unsettled`
+      // rather than silently counted as clean.
+      for (const c of outcome.claimed) {
+        if (!c.persisted) unsettled += 1
+        else if (c.status === 'delivered') delivered += 1
+      }
     }
     if (!outcome.ok) errored += 1
   }
@@ -91,6 +98,7 @@ export async function POST(request: Request) {
     processed,
     deferred: projects.length - processed,
     delivered,
+    unsettled,
     errored,
   })
 }
