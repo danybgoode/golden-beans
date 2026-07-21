@@ -85,6 +85,16 @@ async function provisionProject(db) {
     .select('id')
     .single()
   if (error || !data) throw new Error(`Failed to upsert self project: ${error?.message}`)
+  // multi-tenant-activation Story 1.3: lib/auth.ts resolves the Bearer key from api_keys now, so
+  // the provisioned key needs an active api_keys row (only on the paths where we set the key —
+  // the existing-project-no-override no-op above intentionally leaves the credential untouched).
+  const { error: keyError } = await db
+    .from('api_keys')
+    .upsert(
+      { project_id: data.id, key_hash: hashApiKey(plaintextKey), label: 'default (seed)' },
+      { onConflict: 'key_hash', ignoreDuplicates: true },
+    )
+  if (keyError) throw new Error(`Failed to upsert self api key: ${keyError.message}`)
   return { projectId: data.id, apiKey: plaintextKey }
 }
 

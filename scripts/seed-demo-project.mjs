@@ -64,7 +64,22 @@ async function provisionProject(db) {
     .select('id')
     .single()
   if (error || !data) throw new Error(`Failed to upsert demo project: ${error?.message}`)
+  // multi-tenant-activation Story 1.3: lib/auth.ts resolves the Bearer key from api_keys now, so
+  // the provisioned key needs an active api_keys row (projects.api_key_hash alone no longer auths).
+  await ensureActiveApiKey(db, data.id, plaintextKey)
   return { projectId: data.id, apiKey: plaintextKey }
+}
+
+// Idempotent: the same key hash is a no-op on re-run (unique key_hash); a rotated key just adds a
+// new active row. Never revokes here — that's a deliberate dashboard action, not a seed side effect.
+async function ensureActiveApiKey(db, projectId, plaintextKey) {
+  const { error } = await db
+    .from('api_keys')
+    .upsert(
+      { project_id: projectId, key_hash: hashApiKey(plaintextKey), label: 'default (seed)' },
+      { onConflict: 'key_hash', ignoreDuplicates: true },
+    )
+  if (error) throw new Error(`Failed to upsert demo api key: ${error.message}`)
 }
 
 // Story 2.1 (commercial-shell/sprint-2.md) — provisioning-only, like the project row above: a
