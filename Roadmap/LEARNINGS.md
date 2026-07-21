@@ -275,6 +275,44 @@ one-liner + why + date shape.
   by any model, would have found. Static review and real execution are complementary, not
   redundant; budget for both, especially right after a "fix" to something already reviewed.
   *(2026-07-20, commercial-shell Sprint 3.)*
+- **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
+  spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
+  S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a
+  `startsWith('/') && !startsWith('//')` check because `new URL()` normalizes the backslash into `//`)
+  and added four HTTP-level specs asserting the callback never redirects off-origin. All four passed —
+  **and passed identically against a deliberately re-broken build.** The route only consults `next`
+  *after* a successful auth-code exchange, so an unauthenticated request never reached the branch at
+  all; the specs were asserting the fallback path in both directions. Neither review round would ever
+  have caught this: the specs *look* correct, and CI was green. **The generalizable rules:** (1) run
+  the mutation check on every security-critical spec, not just when a test was written after the code —
+  "the spec passes" and "the spec can fail" are different facts; (2) when a guard sits behind an
+  auth/state precondition your test harness can't satisfy, an HTTP-level spec is structurally incapable
+  of reaching it — extract the guard into a **pure, zero-import module** and assert it directly (the
+  `lib/flags.ts` precedent already in this repo), rather than assuming end-to-end coverage implies
+  branch coverage. *(2026-07-20, multi-tenant-activation S1.)*
+- **A role column in the schema is not an access rule — grep for who actually reads it.**
+  multi-tenant-activation S1 shipped `project_members.role` with an `owner`/`member` CHECK constraint
+  and a membership gate that only ever asked "is this user a member?" — so any member could mint a
+  full ingest credential or revoke the key production runs on. Every test was green (they asserted
+  member-vs-non-member, the boundary that *was* implemented), and round-1 review missed it too; only a
+  second review round asked "what is `role` for?" **When a table carries a privilege column, one gate
+  per privilege LEVEL is the minimum — and the least-privilege split (read vs. credential-admin) is
+  worth designing at the same time as the column, not after.** *(2026-07-20, multi-tenant-activation S1.)*
+- **When you harden one instance of a class of bug, immediately grep for its siblings — a fix applied
+  in only one of two places is a *latent inconsistency* a later reviewer will find.** Round 1 hardened
+  both seed scripts against a cross-project credential bind; the identical `ON CONFLICT DO NOTHING` in
+  the *migration* that does the same backfill was left untouched, and round 2 flagged it as Blocking.
+  The fix is cheap at the time you're already in the mental model; it's a whole extra review cycle
+  later. *(2026-07-20, multi-tenant-activation S1.)*
+- **`onConflict` + `ignoreDuplicates` on a GLOBALLY-unique credential column is a silent cross-tenant
+  bind, not idempotency.** Two seed scripts upserted an `api_keys` row with `{ onConflict: 'key_hash',
+  ignoreDuplicates: true }` to be "safely re-runnable." Because `key_hash` is unique *across all
+  projects*, a hash already owned by a DIFFERENT project makes the upsert report success while writing
+  nothing — and the script then hands back the plaintext key as if it provisioned it, so that key
+  authenticates as the OTHER tenant. Caught by cross-review, invisible to every green test. **When a
+  unique column is a credential, "insert or ignore" must become "look first, then verify the existing
+  row belongs to the intended owner and is still active, else fail loud"** — silence on conflict is
+  only safe when the conflicting row can't belong to someone else. *(2026-07-20, multi-tenant-activation S1.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable

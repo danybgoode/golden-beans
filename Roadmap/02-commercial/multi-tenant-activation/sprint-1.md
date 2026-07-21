@@ -18,10 +18,20 @@ code exchange, so the branch was unreachable to an unauthenticated request. The 
 caught it, not the review. Rewritten to assert the guard as a pure function
 (`lib/safe-redirect.ts`, the `lib/flags.ts` precedent); re-mutating now correctly turns 3 specs red.
 
+**Cross-review (round 2, on the round-1 fixes):** Codex found **2 more Blocking** — credential admin
+was open to *any* member (`project_members.role` existed but nothing enforced it, so a member could
+mint or revoke production ingest keys → now **owner-only**), and the migration's backfill still had
+the bare `ON CONFLICT DO NOTHING` cross-project bind that the seed scripts had already been hardened
+against (→ now aborts loudly; verified by simulating a real cross-project bind). Gemini found no
+Blocking and confirmed the round-1 fixes ("open-redirect protection cleanly avoids common URL
+parsing traps", "authorization gates properly fail-closed"), plus real UX gaps (the `/app` shell had
+no links to the dashboards). Fixed in `151b025`.
+
 **Owed to Daniel:** (1) the authed-session browser smoke — sign in → own dashboard; a *signed-in*
-non-member on a foreign slug → 404; (2) the prod migration-before-deploy ordering + Supabase Auth
-redirect config + a seeded membership row (all in the PR's ordering kit — the migration MUST land
-before the code deploys, or ingest 500s).
+non-member on a foreign slug → 404; a *member* (not owner) on `/app/keys/<slug>` → 404; (2) the prod
+migration-before-deploy ordering + Supabase Auth redirect config + a seeded membership row — **seed
+yourself as `owner`**, not `member`, or the API-keys page 404s (all in the PR's ordering kit; the
+migration MUST land before the code deploys, or ingest 500s).
 
 ## Stories
 
