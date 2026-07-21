@@ -178,9 +178,11 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
         Fired the snippet?{' '}
         <a href={`/app/funnel/${projectSlug}/${STARTER_FEATURE_KEY}`}>Watch it land on your funnel</a>{' '}
         <small className="note">
-          — &quot;{STARTER_FEATURE_KEY}&quot; was registered for you when this tenant was created,
-          so the snippet above lands on it with nothing else to set up. Swap the key in the URL for
-          any feature you register yourself via features/sync.
+          — the &quot;{STARTER_FEATURE_KEY}&quot; feature is registered for you at signup so the
+          snippet above lands somewhere with nothing else to set up. If the funnel reads zero after
+          your event lands, that registration didn&apos;t complete: re-send it via features/sync (or
+          register your own feature and swap the key in this URL). We&apos;d rather tell you that
+          than have you stare at a zero wondering which half broke.
         </small>
       </p>
       <p style={{ marginTop: 10 }}>

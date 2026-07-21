@@ -36,6 +36,17 @@ const DEMO_PROJECT_SLUG = process.env.DEMO_PROJECT_SLUG?.trim() || 'golden-beans
 // (a landing visit), adoptedEvent is the conversion (a waitlist join) — exactly the two events
 // lib/self-track.ts fires. Adopted / Targeted is the waitlist conversion rate the epic measures.
 const SIGNAL_KEY = 'waitlist_conversion'
+// multi-tenant-activation Story 3.3 — the ACTIVATION funnel, the second signal this tenant
+// measures. Three real stages, so all three TARS slots are meaningful here (unlike the one-shot
+// waitlist join): signup submitted -> email confirmed + tenant provisioned -> first event ingested.
+// Mirrors lib/self-track.ts's ACTIVATION_SIGNAL_KEY / *_EVENT constants — the app tags every event
+// with one of these feature keys, and an event whose feature_id doesn't match a REGISTERED feature
+// is invisible to lib/tars-query.ts forever (it filters on feature_id). Registering it here is what
+// makes the funnel renderable at all.
+const ACTIVATION_KEY = 'activation'
+const ACTIVATION_TARGET_EVENT = 'signup_started'
+const ACTIVATION_ADOPTED_EVENT = 'account_confirmed'
+const ACTIVATION_RETAINED_EVENT = 'first_event_ingested'
 const TARGET_EVENT = 'landing_visited'
 const ADOPTED_EVENT = 'waitlist_joined'
 const RETENTION_DAYS = 7 // schema default; retention isn't meaningful for a one-shot join, but the
@@ -139,6 +150,15 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           adoptedEvent: ADOPTED_EVENT,
           retentionDays: RETENTION_DAYS,
           description: 'Golden Beans landing dogfood funnel: visitor → waitlist (Grower signal, Story 3.1).',
+        },
+        {
+          key: ACTIVATION_KEY,
+          enabled: true,
+          targetEvent: ACTIVATION_TARGET_EVENT,
+          adoptedEvent: ACTIVATION_ADOPTED_EVENT,
+          retainedEvent: ACTIVATION_RETAINED_EVENT,
+          retentionDays: RETENTION_DAYS,
+          description: 'Golden Beans activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
         },
       ],
     }),

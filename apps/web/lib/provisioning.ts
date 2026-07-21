@@ -61,6 +61,37 @@ async function findProjectByCreator(
   return (data?.slug as string | undefined) ?? null
 }
 
+/** Guarantees `userId` is an OWNER of `slug`, repairing the state where a project exists with no
+ *  membership row (a previous attempt whose membership insert failed and whose compensating
+ *  delete ALSO failed, leaving an orphan its creator cannot see). Idempotent: a row that already
+ *  exists conflicts harmlessly, and this deliberately never DOWNGRADES an existing role. */
+async function ensureOwnerMembership(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  userId: string,
+  slug: string,
+): Promise<void> {
+  const { data: project, error } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error || !project) {
+    console.error('[provisioning] ensureOwnerMembership could not resolve project:', error)
+    return
+  }
+  // ignoreDuplicates is safe HERE, unlike on a credential column: the conflict target is the
+  // (user_id, project_id) primary key, so a conflicting row is by definition this same user on
+  // this same project — never someone else's. That is the precise condition the S1 cross-tenant
+  // bind lesson says to check before trusting an "insert or ignore" (Roadmap/LEARNINGS.md).
+  const { error: insertError } = await supabase
+    .from('project_members')
+    .upsert(
+      { user_id: userId, project_id: project.id, role: 'owner' },
+      { onConflict: 'user_id,project_id', ignoreDuplicates: true },
+    )
+  if (insertError) console.error('[provisioning] ensureOwnerMembership insert failed:', insertError)
+}
+
 /** The slug of a tenant this user already belongs to, or null. `error` distinguishes "definitely
  *  no tenant" from "couldn't tell" — the caller must FAIL CLOSED on the latter rather than
  *  treating an outage as permission to mint a second tenant. */
@@ -176,6 +207,14 @@ export async function provisionTenantForUser(
       if (isCreatorConstraintViolation(error)) {
         const winner = await findProjectByCreator(supabase, userId)
         if (winner) {
+          // SELF-HEAL before adopting. The project row exists, but its membership row may not:
+          // either the racing request hasn't written it yet, or an earlier attempt's membership
+          // insert failed AND its compensating delete also failed, leaving an orphan project this
+          // user owns but cannot see. Returning `created: false` in that state produced an
+          // infinite /app ↔ /app/provision redirect loop — /app sees zero projects and bounces to
+          // provision, provision adopts the orphan and bounces back (cross-review, Codex
+          // 2026-07-20). Ensuring membership makes the adoption real rather than nominal.
+          await ensureOwnerMembership(supabase, userId, winner)
           return { ok: true, created: false, projectSlug: winner, plaintextKey: null }
         }
         // Constraint fired but the row is unreadable — bail rather than loop into the same wall.
@@ -205,7 +244,19 @@ export async function provisionTenantForUser(
     // The project row exists but nobody can reach it. Roll it back rather than leaving an orphan
     // squatting on a slug forever — there is no transaction across these calls (supabase-js
     // speaks REST, not sessions), so this compensating delete is the cleanup.
-    await supabase.from('projects').delete().eq('id', projectId)
+    //
+    // CHECKED, not fire-and-forget: if the delete also fails we have an orphan project owned by a
+    // user with no membership, which is exactly the state that produced an infinite
+    // /app ↔ /app/provision redirect loop. We can't fix it here, but the next attempt's
+    // ensureOwnerMembership() repairs it — and this log is what makes the state findable if it
+    // somehow persists (cross-review, Codex 2026-07-20).
+    const { error: cleanupError } = await supabase.from('projects').delete().eq('id', projectId)
+    if (cleanupError) {
+      console.error(
+        `[provisioning] ORPHAN project ${projectId} (${projectSlug}) — membership insert failed AND cleanup failed:`,
+        cleanupError,
+      )
+    }
     return { ok: false, error: 'Could not set up your account.' }
   }
 

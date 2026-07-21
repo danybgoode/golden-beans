@@ -1,5 +1,6 @@
 import 'server-only'
 import { checkRateLimit } from './rate-limit'
+import { getSupabaseServiceClient } from './supabase'
 import { monthWindowStart, monthWindowEnd, MAX_TRACK_PAYLOAD_BYTES } from './quota-window'
 
 // Re-exported so callers have ONE import site for the guardrails, pure and impure alike.
@@ -60,5 +61,22 @@ export async function checkMonthlyQuota(projectId: string, quota: number): Promi
     ok: false,
     status: 429,
     error: `Monthly event quota exceeded (${quota} events). It resets on ${resetsOn}.`,
+  }
+}
+
+// Hands back one unit of monthly quota. Called only when an event was CHARGED (the counter was
+// incremented) but then failed to persist — see the ingest route. Best-effort by design: a failed
+// refund must not turn a 500 into two problems, and the ceiling self-heals at the month boundary
+// regardless.
+export async function refundMonthlyQuota(projectId: string): Promise<void> {
+  try {
+    const supabase = getSupabaseServiceClient()
+    const { error } = await supabase.rpc('decrement_rate_limit', {
+      p_key: `quota:${projectId}`,
+      p_window_start: monthWindowStart().toISOString(),
+    })
+    if (error) console.error('[quota] refund failed:', error)
+  } catch (err) {
+    console.error('[quota] refund threw:', err)
   }
 }

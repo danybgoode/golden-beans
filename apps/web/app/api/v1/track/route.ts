@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { resolveProjectFromAuthHeader } from '@/lib/auth'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { trackEventSchema } from '@/lib/track-schema'
-import { checkIngestRate, checkMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
+import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
 
 export async function POST(req: NextRequest) {
@@ -66,13 +66,12 @@ export async function POST(req: NextRequest) {
   //    quota accepted, with nothing in the events table to explain where it went
   //    (cross-review, Codex 2026-07-20).
   //
-  //    Both counters are still incremented BEFORE the insert rather than after a confirmed write.
-  //    That is deliberate and is the one remaining over-charge: an atomic
-  //    increment-and-compare is what makes the limit race-free, and moving it after the insert
-  //    would reintroduce exactly the check-then-act window the rate_limit migration exists to
-  //    avoid. The residue is that a 500 on the insert consumes one unit — rare, bounded at one,
-  //    and self-healing at the month boundary. The alternative trades a correctness property for
-  //    an accounting nicety, which is the wrong direction for a shared ingest path.
+  //    Both counters are still incremented BEFORE the insert rather than after a confirmed write:
+  //    an atomic increment-and-compare is the only race-free shape, and moving it after the insert
+  //    would reintroduce the check-then-act window the rate_limit migration exists to avoid. The
+  //    resulting over-charge on a failed insert is REFUNDED explicitly below rather than waved
+  //    away — an earlier version of this comment called it "bounded at one", which was wrong: a
+  //    sustained `events` outage would burn a whole month one retry at a time.
   const rate = await checkIngestRate(auth.apiKeyId, auth.ingestRatePerMin)
   if (!rate.ok) {
     return NextResponse.json({ ok: false, error: rate.error }, { status: rate.status })
@@ -99,6 +98,12 @@ export async function POST(req: NextRequest) {
 
   if (error || !data) {
     console.error('[track] event insert failed:', error)
+    // Hand the quota unit back: it was charged above but nothing was stored. Without this, a
+    // sustained outage on `events` would burn a tenant's entire month one failed retry at a time
+    // (cross-review, Codex 2026-07-20). The rate-limit unit is deliberately NOT refunded — that
+    // one is a burst guard protecting us from the caller, and a failing caller retrying hard is
+    // exactly when it should still apply.
+    await refundMonthlyQuota(auth.projectId)
     return NextResponse.json({ ok: false, error: 'Failed to persist event' }, { status: 500 })
   }
 
@@ -114,15 +119,21 @@ export async function POST(req: NextRequest) {
     const funnelUserId = auth.createdBy
     const projectId = auth.projectId
     after(async () => {
-      const { data: stamped } = await supabase
+      // TRACK FIRST, STAMP SECOND. The stamp is a permanent "already counted" marker, so committing
+      // it before knowing the send landed loses the funnel's terminal stage forever — no later
+      // event retries it, because the project is already stamped (cross-review, Codex 2026-07-20).
+      //
+      // The inverted order can instead send the event more than once (two concurrent first events,
+      // or a crash between send and stamp). That is harmless by construction: TARS counts DISTINCT
+      // users per event (lib/tars.ts), so a duplicate for the same user changes no number. Losing
+      // the only send is unrecoverable; duplicating it costs nothing — so the trade is one-sided.
+      const landed = await trackSelfEvent(FIRST_EVENT_INGESTED_EVENT, funnelUserId)
+      if (!landed) return
+      await supabase
         .from('projects')
         .update({ first_event_at: new Date().toISOString() })
         .eq('id', projectId)
         .is('first_event_at', null)
-        .select('id')
-      if ((stamped ?? []).length > 0) {
-        await trackSelfEvent(FIRST_EVENT_INGESTED_EVENT, funnelUserId)
-      }
     })
   }
 

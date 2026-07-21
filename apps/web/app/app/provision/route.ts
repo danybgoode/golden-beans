@@ -50,7 +50,21 @@ export async function GET() {
     after(() => registerStarterFeature(starterKey))
   }
 
-  return result.created
-    ? NextResponse.redirect(new URL(`/app/onboarding/${result.projectSlug}`, siteUrl))
-    : NextResponse.redirect(backToApp)
+  if (result.created) {
+    return NextResponse.redirect(new URL(`/app/onboarding/${result.projectSlug}`, siteUrl))
+  }
+
+  // `created: false` means "you already had one" — but we only got here BECAUSE /app saw zero
+  // projects. If that's still true, provisioning and the membership read disagree, and bouncing
+  // back to /app would send the user straight here again, forever. The loop breaker is
+  // unconditional and does not depend on any particular cause being fixed upstream: whatever new
+  // way this disagreement arises, the user lands on a page instead of in a redirect cycle
+  // (cross-review, Codex 2026-07-20).
+  const afterProvision = await getUserProjects(user.id)
+  if (afterProvision.length === 0) {
+    console.error(`[app/provision] adopted "${result.projectSlug}" but user ${user.id} still has no projects`)
+    return NextResponse.redirect(new URL('/app?provision=failed', siteUrl))
+  }
+
+  return NextResponse.redirect(backToApp)
 }

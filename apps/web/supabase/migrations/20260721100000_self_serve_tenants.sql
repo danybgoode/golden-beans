@@ -60,6 +60,27 @@ ALTER TABLE projects ADD CONSTRAINT projects_ingest_rate_positive CHECK (ingest_
 CREATE UNIQUE INDEX IF NOT EXISTS projects_one_per_creator_idx
   ON projects(created_by) WHERE created_by IS NOT NULL;
 
+-- ── quota refund ─────────────────────────────────────────────────────────────────────────────
+-- The ingest guards increment their counter BEFORE the event insert, because an atomic
+-- increment-and-compare is the only shape that is race-free (see the rate_limit migration). That
+-- leaves one over-charge: an event whose insert then FAILS has consumed quota while storing
+-- nothing. Bounded at one per failure — but a sustained outage on `events` means every retry burns
+-- another unit, so a tenant could exhaust a whole month with zero rows stored (cross-review, Codex
+-- 2026-07-20, correcting an earlier comment that called the overcharge "bounded at one" full stop).
+--
+-- This gives the route a way to hand the unit back. GREATEST(0, ...) so a refund can never drive a
+-- counter negative, which would hand out free quota — the failure mode of a naive decrement.
+CREATE OR REPLACE FUNCTION decrement_rate_limit(p_key TEXT, p_window_start TIMESTAMPTZ)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE rate_limit_counters
+  SET count = GREATEST(0, count - 1)
+  WHERE key = p_key AND window_start = p_window_start;
+END;
+$$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION decrement_rate_limit(TEXT, TIMESTAMPTZ) TO service_role;
+
 -- ── audit trail (Story 2.2) ──────────────────────────────────────────────────────────────────
 -- An append-only record of every credential and provisioning action. Answers "who minted the key
 -- that is ingesting this?" and "when did this project come into existence, and from whose
