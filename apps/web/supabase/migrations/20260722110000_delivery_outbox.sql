@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS event_deliveries (
   -- Composite, not simple, FKs — see the note above events_id_project_uniq. `(event_id,
   -- project_id)` and `(destination_id, project_id)` both have to agree on the SAME project_id
   -- column, so a cross-tenant delivery row is a constraint violation rather than a quiet leak.
+  --
+  -- ON DELETE CASCADE on BOTH, and it is deliberate (cross-review, Codex round 8 flagged the
+  -- destination one as history-loss). The reason it stays CASCADE: the ONLY delete path in this
+  -- system is tenant OFFBOARDING — `DELETE FROM projects` — which must cleanly remove every trace of
+  -- a tenant (events, destinations, deliveries) in one cascade; RESTRICT here would make a project
+  -- with any delivery history un-deletable, and a mix of CASCADE/RESTRICT across the two parents
+  -- makes the offboarding cascade order-dependent and fragile. Crucially, the OPERATIONAL kill for a
+  -- destination is `enabled = false` (a disable, which PRESERVES its delivery history), NOT a row
+  -- delete — Story 2.1 owns the destination lifecycle and any soft-delete (`deleted_at`) semantics
+  -- that would preserve history across an intentional destination removal. So no history is lost in
+  -- normal operation; a cascade only fires when the whole tenant is being erased, which is exactly
+  -- when it should.
   CONSTRAINT event_deliveries_event_fk
     FOREIGN KEY (event_id, project_id) REFERENCES events (id, project_id) ON DELETE CASCADE,
   CONSTRAINT event_deliveries_destination_fk
@@ -314,17 +326,19 @@ $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_destinations TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_deliveries   TO service_role;
 
--- REVOKE the PUBLIC default BEFORE granting service_role (cross-review, Codex round 6). Postgres
+-- REVOKE the PUBLIC default BEFORE granting service_role (cross-review, Codex rounds 6+8). Postgres
 -- grants EXECUTE on a new function to PUBLIC by default, and a later GRANT to service_role does NOT
 -- take that away — the same "a narrower GRANT revokes nothing" trap LEARNINGS.md records for tables
--- (multi-tenant-activation S2). Without this, the anon/authenticated API roles could invoke this
--- ingest RPC directly; RLS + SECURITY INVOKER would still stop them writing rows, but relying on a
--- second layer to save an over-broad grant is exactly the posture that lesson warns against. This
--- function is service-role-only, so make the grant say so.
+-- (multi-tenant-activation S2). We revoke from `anon` and `authenticated` EXPLICITLY as well as
+-- PUBLIC: a revoke from PUBLIC leaves any role-specific grant intact, so naming the two API roles
+-- makes "service-role-only" conclusive rather than dependent on how the grant happened to be shaped.
+-- RLS + SECURITY INVOKER would still stop an anon caller writing rows even if EXECUTE leaked, but
+-- relying on a second layer to save an over-broad grant is exactly the posture that lesson warns
+-- against.
 REVOKE ALL ON FUNCTION ingest_event(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
   TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT
-) FROM PUBLIC;
+) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION ingest_event(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
   TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT

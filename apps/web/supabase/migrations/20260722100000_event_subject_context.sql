@@ -118,8 +118,12 @@ ALTER TABLE events
   -- fingerprint's shape to exactly a sha256 hex digest so a garbage value can't stand in for one. The
   -- route always sets both together (lib/idempotency-fingerprint.ts), so this only binds other
   -- writers.
+  -- Both-or-neither, BOTH directions (cross-review, Codex round 8). A key without a fingerprint is
+  -- the silent-loss hole; a fingerprint without a key is meaningless (nothing keys off it) and
+  -- signals a confused writer. `(a IS NULL) = (b IS NULL)` enforces the pair the way actor/subject
+  -- above are paired.
   ADD CONSTRAINT events_idempotency_fingerprint_paired CHECK (
-    idempotency_key IS NULL OR idempotency_fingerprint IS NOT NULL
+    (idempotency_key IS NULL) = (idempotency_fingerprint IS NULL)
   ),
   ADD CONSTRAINT events_idempotency_fingerprint_shape CHECK (
     idempotency_fingerprint IS NULL OR idempotency_fingerprint ~ '^[0-9a-f]{64}$'

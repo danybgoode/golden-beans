@@ -210,23 +210,24 @@ test('ingest_event() is NOT executable by the anon role — the REVOKE has teeth
     p_idempotency_key: null,
     p_idempotency_fingerprint: null,
   })
-  // Assert a FUNCTION-LEVEL permission denial specifically, not merely "some error" (cross-review,
-  // Codex round 7): a bare `error !== null` could be satisfied by an RLS/table error or the bogus
-  // project id, which would pass even if EXECUTE were still open. Postgres refuses EXECUTE with
-  // SQLSTATE 42501 ("permission denied for function …") BEFORE the body runs, so that is the exact
-  // signal the REVOKE produces. PostgREST surfaces it as a 404 (function not exposed) or the 42501
-  // itself depending on version, so accept either "permission denied" or a not-found-function shape —
-  // both mean "anon cannot call this", and neither can be produced by a successful call.
+  // Assert a FUNCTION-LEVEL denial specifically, distinguishable from an RLS failure (cross-review,
+  // Codex round 8). The subtlety: SQLSTATE 42501 alone is NOT conclusive — an RLS INSERT violation is
+  // ALSO 42501 ("new row violates row-level security policy"), so if EXECUTE had leaked and the
+  // SECURITY INVOKER body had RUN as anon, the RLS block would look identical by code. The MESSAGE is
+  // what separates them: a refused EXECUTE says "permission denied for FUNCTION ingest_event", and
+  // PostgREST hides a function the role can't call as "could not find the function" (PGRST202). The
+  // RLS message contains "row-level security", never "function". So require the word "function" (or
+  // the PostgREST not-found), which the RLS path cannot produce — proving the body never ran.
   expect(error).not.toBeNull()
   const code = error?.code ?? ''
   const message = (error?.message ?? '').toLowerCase()
-  expect(
-    code === '42501' ||
-      message.includes('permission denied') ||
-      // PostgREST hides a function the role can't execute → "could not find the function" / 404.
-      code === 'PGRST202' ||
-      message.includes('could not find the function'),
-  ).toBe(true)
+  const functionLevelDenial =
+    (code === '42501' && message.includes('function')) ||
+    code === 'PGRST202' ||
+    message.includes('could not find the function')
+  expect(functionLevelDenial).toBe(true)
+  // And explicitly NOT an RLS failure, which would mean EXECUTE was allowed and the body ran.
+  expect(message).not.toContain('row-level security')
 })
 
 // ── HTTP: ingest_event() commits event + outbox atomically ────────────────────────────────────
