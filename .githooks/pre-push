@@ -16,6 +16,11 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
+echo "pre-push: template-drift guard..." >&2
+if ! node scripts/check-template-drift.mjs; then
+  echo "pre-push: template-drift guard failed — advisory only, push proceeding. ci.yml will also catch this." >&2
+fi
+
 echo "pre-push: type-checking + building (apps/web)..." >&2
 if ! (cd apps/web && npx tsc --noEmit); then
   echo "pre-push: tsc --noEmit failed — advisory only, push proceeding. ci.yml will also catch this." >&2

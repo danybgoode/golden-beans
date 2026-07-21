@@ -233,9 +233,11 @@ project's `apps/*/e2e/README.md` for a worked example):
   periodically (paths · imports · env vars · routes · key policy claims vs the codebase).
 - Commit messages end with the `Co-Authored-By: Claude` trailer.
 - **Language.** Docs are written in **English** — everything under `Roadmap/`, `tasks/`, code
-  comments, and PR descriptions. **TEMPLATE FILL-IN:** if your project's user-facing app copy has its
-  own language/locale policy (a default + a bilingual allow-list, for example), state it here and in
-  `AGENTS.md` — don't make a new surface bilingual by default; extend any allow-list deliberately.
+  comments, and PR descriptions. **App copy is English too** (the landing renders `<html lang="en">`);
+  Golden Beans is a standalone English-language product with **no bilingual requirement** — do not
+  introduce a locale/translation layer or make a surface bilingual without a deliberate scope decision
+  that says so. (This differs from the Miyagi sibling, whose app copy is es-MX with an es/en
+  allow-list — that policy is theirs, not this repo's.)
 - Build from existing primitives first (your project's canonical system of record for a domain, not a
   secondary datastore or a bespoke route).
 - **Grooming cadence (updated 2026-07-14):** with a strong planning model (Fable-class), the
@@ -258,14 +260,15 @@ project's `apps/*/e2e/README.md` for a worked example):
 
 ## Tooling — what Claude can drive from the CLI
 
-**TEMPLATE FILL-IN:** list your project's authenticated CLI access here (git/gh, your deploy
-platform's CLI, your database CLI, Docker, node/npm) — the origin project's table is a useful shape to
-copy and refill:
+The authenticated CLI access Claude can drive in this repo:
 
 | Tool | Used for |
 |------|----------|
 | **git / gh** | Version control, feature branches, pull requests + merges, GitHub operations |
-| **node / npm** | Type-check (`tsc`), lint (`eslint`), build (`npm run build`), local dev server |
+| **node / npm** | Type-check (`tsc`), build (`npm run build`), Playwright (`npm run test:e2e`), local dev server, the `scripts/*` tooling |
+| **vercel** | Env-var management (`vercel env pull/add/ls`) + reading deploy state. **Never** `vercel deploy`/`--prod` — merge to `main` is the deploy (rule #4); check state via `gh api repos/<owner>/<repo>/deployments`. |
+| **supabase** | Migrations against linked project (`supabase link` / `migration list` / `db push`) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
+| **codex / antigravity (agy)** | Cross-family judgment-layer PR review via `scripts/cross-review.mjs` (see *Review & merge*). |
 
 This means a story can go from code → verified → preview-deployed → live-tested on a branch, then
 merged to production via PR — with verification at each step. Actions that touch live production, real

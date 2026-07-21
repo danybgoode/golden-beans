@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # Zero-dep guard — runs before install so template drift fails fast and cheap.
+      - name: Template-drift guard
+        run: node scripts/check-template-drift.mjs
       - run: npm ci --no-audit --no-fund
       - name: Type-check
         working-directory: apps/web
