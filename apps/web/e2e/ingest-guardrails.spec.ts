@@ -187,6 +187,45 @@ test.describe('monthly event quota', () => {
     }
   })
 
+  test('a REJECTED event does not consume quota', async ({ request }) => {
+    // Cross-review regression guard (Codex 2026-07-20): the first version checked the quota before
+    // parsing, so a broken integration sending malformed JSON burned a tenant's monthly allowance
+    // with nothing stored — the tenant would see far fewer than their configured quota accepted
+    // and nothing in `events` to explain where it went.
+    //
+    // A quota of exactly 1 makes the bug unmissable: under the old ordering the malformed calls
+    // would exhaust it and the one GOOD event would 429.
+    const db = dbClient()
+    const tenant = await createTenant(db, { monthly_event_quota: 1 })
+    try {
+      // Schema-invalid (no `event`), then genuinely malformed JSON, then an oversized body — the
+      // three ways a request dies before it could ever become a stored event.
+      expect((await fire(request, tenant, { userId: 'u1' })).status()).toBe(400)
+      const badJson = await request.post('/api/v1/track', {
+        headers: {
+          Authorization: `Bearer ${tenant.plaintextKey}`,
+          'Content-Type': 'application/json',
+        },
+        data: '{not json',
+      })
+      expect(badJson.status()).toBe(400)
+      expect(
+        (
+          await fire(request, tenant, {
+            userId: 'u1',
+            event: 'big',
+            metadata: { blob: 'x'.repeat(MAX_TRACK_PAYLOAD_BYTES + 512) },
+          })
+        ).status(),
+      ).toBe(413)
+
+      // The tenant's single unit of quota must still be entirely unspent.
+      expect((await fire(request, tenant, { userId: 'u1', event: 'the real one' })).status()).toBe(201)
+    } finally {
+      await destroyTenant(db, tenant)
+    }
+  })
+
   test('the ceiling is data — raising it is an UPDATE, not a deploy', async ({ request }) => {
     // Story 2.2's acceptance, demonstrated end-to-end: the same key that was refused starts
     // working again after a row update, with no restart in between.
@@ -201,6 +240,63 @@ test.describe('monthly event quota', () => {
       expect((await fire(request, tenant, { userId: 'u1', event: 'e3' })).status()).toBe(201)
     } finally {
       await destroyTenant(db, tenant)
+    }
+  })
+})
+
+test.describe('one self-serve tenant per creator', () => {
+  test('the DATABASE refuses a second project for the same creator', async () => {
+    // The provisioner's membership pre-check and its project INSERT are two separate round-trips
+    // with no transaction between them (supabase-js speaks REST), so two concurrent confirmed
+    // callbacks — what a double-clicked confirmation link produces — could both observe "no
+    // membership" and both create a project. Application-level idempotency cannot close that;
+    // a partial unique index can, and this asserts the index is actually there and actually
+    // partial (cross-review, Codex 2026-07-20).
+    const db = dbClient()
+    // A REAL auth user, not a random UUID. `projects.created_by` is a foreign key into
+    // auth.users, so a made-up id fails on the FK and the test would skip itself — verifying
+    // nothing while looking green, which is the failure mode this suite exists to avoid.
+    const { data: created, error: userError } = await db.auth.admin.createUser({
+      email: `spec-creator-${randomBytes(6).toString('hex')}@example.com`,
+      password: randomBytes(16).toString('base64url'),
+      email_confirm: true,
+    })
+    if (userError || !created.user) throw new Error(`could not create fixture user: ${userError?.message}`)
+    const creator = created.user.id
+
+    const first = await db
+      .from('projects')
+      .insert({ slug: `spec-creator-${randomBytes(6).toString('hex')}`, created_by: creator })
+      .select('id')
+      .single()
+    expect(first.error, 'the first project for a creator must be allowed').toBeNull()
+
+    try {
+      const second = await db
+        .from('projects')
+        .insert({ slug: `spec-creator-${randomBytes(6).toString('hex')}`, created_by: creator })
+        .select('id')
+        .single()
+      expect(second.error, 'a second project for the same creator must be refused').not.toBeNull()
+      expect(second.error?.code).toBe('23505')
+    } finally {
+      await db.from('projects').delete().eq('created_by', creator)
+      await db.auth.admin.deleteUser(creator)
+    }
+  })
+
+  test('the constraint is PARTIAL — hand-seeded projects (created_by NULL) are unaffected', async () => {
+    // The three pre-self-serve tenants all carry NULL here. A non-partial unique index would have
+    // allowed exactly one of them to exist, which would have broken production on migrate.
+    const db = dbClient()
+    const slugs = [`spec-null-${randomBytes(5).toString('hex')}`, `spec-null-${randomBytes(5).toString('hex')}`]
+    try {
+      for (const slug of slugs) {
+        const { error } = await db.from('projects').insert({ slug, created_by: null })
+        expect(error, `a second created_by-NULL project must be allowed (${slug})`).toBeNull()
+      }
+    } finally {
+      await db.from('projects').delete().in('slug', slugs)
     }
   })
 })

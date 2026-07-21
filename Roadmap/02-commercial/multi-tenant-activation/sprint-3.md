@@ -64,7 +64,8 @@ Env: production `https://golden-beans-gamma.vercel.app` (this sprint is the flip
 
 1. Before the flip, open `/` in a private window.
    → Hero shows the waitlist; §7 shows "hand-provisioned pilots".
-2. Flip `SIGNUP_ENABLED` in the Vercel production env + redeploy. *(flip — owed to Daniel)*
+2. Set `SIGNUP_ENABLED=true` in the Vercel production env. **No redeploy** — the flag is read
+   fresh per request, and a CLI deploy would violate AGENTS rule #4. *(flip — owed to Daniel)*
    → Hero shows "Start free"; §7 shows the tiers.
    Also check §7: the waitlist form is gone, replaced by the tiers + "Start free".
 3. Sign up from the flipped landing with a fresh email. *(auth path — owed to Daniel)*

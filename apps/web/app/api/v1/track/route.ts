@@ -26,18 +26,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 2. Per-key burst limit, then 3. per-project monthly quota. Rate first: it's the bound that
-  //    protects the counter behind the quota check from being hammered in the first place.
-  const rate = await checkIngestRate(auth.apiKeyId, auth.ingestRatePerMin)
-  if (!rate.ok) {
-    return NextResponse.json({ ok: false, error: rate.error }, { status: rate.status })
-  }
-
-  const quota = await checkMonthlyQuota(auth.projectId, auth.monthlyEventQuota)
-  if (!quota.ok) {
-    return NextResponse.json({ ok: false, error: quota.error }, { status: quota.status })
-  }
-
   let raw: string
   try {
     raw = await req.text()
@@ -67,6 +55,30 @@ export async function POST(req: NextRequest) {
       { ok: false, error: 'Malformed event', issues: parsed.error.flatten() },
       { status: 400 },
     )
+  }
+
+  // 2. Per-key burst limit, then 3. per-project monthly quota — both AFTER validation, so only an
+  //    ACCEPTABLE event is ever charged. Checking them earlier (the first version of this route)
+  //    meant a broken integration sending malformed JSON burned a tenant's monthly allowance
+  //    without a single event being stored: the tenant would see far fewer than their configured
+  //    quota accepted, with nothing in the events table to explain where it went
+  //    (cross-review, Codex 2026-07-20).
+  //
+  //    Both counters are still incremented BEFORE the insert rather than after a confirmed write.
+  //    That is deliberate and is the one remaining over-charge: an atomic
+  //    increment-and-compare is what makes the limit race-free, and moving it after the insert
+  //    would reintroduce exactly the check-then-act window the rate_limit migration exists to
+  //    avoid. The residue is that a 500 on the insert consumes one unit — rare, bounded at one,
+  //    and self-healing at the month boundary. The alternative trades a correctness property for
+  //    an accounting nicety, which is the wrong direction for a shared ingest path.
+  const rate = await checkIngestRate(auth.apiKeyId, auth.ingestRatePerMin)
+  if (!rate.ok) {
+    return NextResponse.json({ ok: false, error: rate.error }, { status: rate.status })
+  }
+
+  const quota = await checkMonthlyQuota(auth.projectId, auth.monthlyEventQuota)
+  if (!quota.ok) {
+    return NextResponse.json({ ok: false, error: quota.error }, { status: quota.status })
   }
 
   const supabase = getSupabaseServiceClient()

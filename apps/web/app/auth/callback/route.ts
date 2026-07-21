@@ -37,16 +37,20 @@ export async function GET(request: NextRequest) {
         const result = await provisionTenantForUser(user.id, user.email ?? '')
         if (!result.ok) {
           console.error('[auth/callback] provisioning failed:', result.error)
-          // The session is real and sign-in succeeded, so we do NOT fail the login. /app honestly
-          // shows "no projects yet" and the next sign-in retries provisioning — stranding a user
-          // who now has a working account would be the worse outcome.
+          // The session is real and sign-in succeeded, so we do NOT fail the login: /app renders an
+          // honest "no projects yet" and RETRIES provisioning there. That retry lives in
+          // app/app/page.tsx specifically because password sign-in never reaches this route at all
+          // (signInWithPassword sets its cookies client-side) — an earlier version of this comment
+          // claimed "the next sign-in retries provisioning" while no such retry existed anywhere,
+          // which would have stranded a confirmed user permanently (cross-review, Codex 2026-07-20).
         } else if (result.created) {
           // The plaintext key exists for exactly this one request and is never stored. Hand it to
-          // the onboarding page through a short-lived, httpOnly, single-read cookie — never a
-          // query parameter, which would land in server logs, browser history, and any Referer
-          // header the destination page emits.
+          // the onboarding page through a short-lived, httpOnly cookie BOUND TO THIS PROJECT'S
+          // SLUG — never a query parameter, which would land in server logs, browser history, and
+          // any Referer header the destination page emits. The slug binding is what stops a
+          // multi-project user seeing this credential on a different tenant's onboarding page.
           if (result.plaintextKey) {
-            await setOnboardingKeyCookie(result.plaintextKey)
+            await setOnboardingKeyCookie(result.projectSlug, result.plaintextKey)
             // Off the request path deliberately — see registerStarterFeature's own comment.
             const starterKey = result.plaintextKey
             after(() => registerStarterFeature(starterKey))

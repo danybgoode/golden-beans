@@ -1,5 +1,6 @@
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { peekOnboardingKeyCookie } from '@/lib/onboarding-key'
+import { readOnboardingKeyFor } from '@/lib/onboarding-key'
+import { DismissKeyButton } from './dismiss-key-button'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
 import { isConnectorEnabled } from '@/lib/flags'
 import { getSiteUrl } from '@/lib/site-url'
@@ -47,12 +48,13 @@ export default async function OnboardingPage({
   // authed-but-not-a-member → 404 (never confirms a foreign slug exists).
   await requireProjectMembership(projectSlug)
 
-  // Server Component render — MUST peek, not consume (see onboarding-key.ts's own header comment:
-  // a Server Component can't delete a cookie mid-render, so consuming here would silently no-op
-  // the delete and defeat show-once). The actual one-time-ness is enforced by the cookie's own
-  // short maxAge plus whichever Route Handler/Server Action calls consumeOnboardingKeyCookie() on
-  // the next mutation that touches this tenant — not by this render.
-  const plaintextKey = await peekOnboardingKeyCookie()
+  // Scoped to THIS project's slug. A user who belongs to more than one project must never be
+  // shown another tenant's freshly minted credential under this page's heading — the hand-off
+  // cookie carries the slug it was minted for and a mismatch reads as "nothing to show"
+  // (cross-review, Codex 2026-07-20). A Server Component render can't clear the cookie, so the
+  // reveal ends via the DismissKeyButton's server action or the cookie's short TTL, whichever
+  // comes first — see lib/onboarding-key.ts.
+  const plaintextKey = await readOnboardingKeyFor(projectSlug)
 
   // AGENTS rule #3: the connector is enablement-gated by TWO independent switches (the env flag
   // and a live per-project token). Both must be true, and when the flag is off we don't even
@@ -99,6 +101,7 @@ export default async function OnboardingPage({
               If it&apos;s lost, the only recovery is issuing a new one.
             </p>
             <CopyUrlField url={plaintextKey} />
+            <DismissKeyButton slug={projectSlug} />
           </>
         ) : (
           <p style={{ fontSize: 14, color: 'var(--dim)' }}>

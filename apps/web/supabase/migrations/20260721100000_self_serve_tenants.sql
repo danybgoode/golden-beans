@@ -47,7 +47,18 @@ ALTER TABLE projects ADD CONSTRAINT projects_monthly_event_quota_positive CHECK 
 ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_ingest_rate_positive;
 ALTER TABLE projects ADD CONSTRAINT projects_ingest_rate_positive CHECK (ingest_rate_per_min > 0);
 
-CREATE INDEX IF NOT EXISTS projects_created_by_idx ON projects(created_by);
+-- ONE self-serve project per creator, enforced by the DATABASE rather than by an application
+-- read-then-write. lib/provisioning.ts checks for an existing membership before inserting, but
+-- that check and the insert are two separate round-trips with no transaction between them
+-- (supabase-js speaks REST, not sessions) — so two concurrent confirmed callbacks, which is
+-- exactly what a double-clicked confirmation link produces, can both observe "no membership" and
+-- both create a project. A partial unique index closes that race properly: the loser gets a
+-- unique violation and re-reads the winner's tenant (cross-review, Codex 2026-07-20).
+--
+-- Partial (WHERE created_by IS NOT NULL) so it constrains only self-serve tenants: the
+-- hand-seeded projects all carry NULL here and any number of them may coexist.
+CREATE UNIQUE INDEX IF NOT EXISTS projects_one_per_creator_idx
+  ON projects(created_by) WHERE created_by IS NOT NULL;
 
 -- ── audit trail (Story 2.2) ──────────────────────────────────────────────────────────────────
 -- An append-only record of every credential and provisioning action. Answers "who minted the key
@@ -62,9 +73,16 @@ CREATE INDEX IF NOT EXISTS projects_created_by_idx ON projects(created_by);
 --                  it matters most).
 --   metadata:      non-secret context only (a key label, a project slug). NEVER a plaintext key
 --                  or a password — this table is read by humans debugging incidents.
+--   project_id:    ON DELETE SET NULL, deliberately NOT CASCADE. Cascading would make deleting a
+--                  project erase its entire credential history — an indirect DELETE that walks
+--                  straight around the REVOKE below and defeats the append-only property at
+--                  exactly the moment it matters most (cross-review, Codex 2026-07-20). The rows
+--                  survive the project; `metadata.slug` is what still identifies them afterward,
+--                  which is why the provisioner records the slug there rather than relying on the
+--                  foreign key alone.
 CREATE TABLE IF NOT EXISTS audit_log (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id    UUID        REFERENCES projects(id) ON DELETE CASCADE,
+  project_id    UUID        REFERENCES projects(id) ON DELETE SET NULL,
   actor_user_id UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
   action        TEXT        NOT NULL,
   metadata      JSONB       NOT NULL DEFAULT '{}'::jsonb,

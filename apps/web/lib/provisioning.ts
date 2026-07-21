@@ -32,6 +32,25 @@ function isForbiddenSlug(slug: string): boolean {
   return isReservedSlug(slug) || slug === DEMO_PROJECT_SLUG || slug === SELF_PROJECT_SLUG
 }
 
+/** The slug of a tenant this user already belongs to, or null. `error` distinguishes "definitely
+ *  no tenant" from "couldn't tell" — the caller must FAIL CLOSED on the latter rather than
+ *  treating an outage as permission to mint a second tenant. */
+async function findExistingTenant(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  userId: string,
+): Promise<{ slug: string | null; error: unknown }> {
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('project_id, projects(slug)')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle()
+  if (error) return { slug: null, error }
+  if (!data) return { slug: null, error: null }
+  const project = data.projects as unknown as { slug: string } | null
+  return { slug: project?.slug ?? '', error: null }
+}
+
 /**
  * Idempotent by design — the auth callback runs on EVERY confirmation link click, and a user who
  * clicks their link twice (or whose browser prefetches it) must not end up with two tenants.
@@ -44,29 +63,31 @@ function isForbiddenSlug(slug: string): boolean {
 export async function provisionTenantForUser(
   userId: string,
   email: string,
+  // Whether the CALLER is able to deliver a plaintext key to the user. False from the /app retry
+  // path, which is a Server Component and therefore cannot set the hand-off cookie. When false we
+  // skip minting the first key entirely rather than creating one whose plaintext exists nowhere:
+  // an active credential nobody holds is a phantom row that clutters the keys page and reads, to
+  // an operator, like a leaked key in use. The user issues their own from /app/keys instead — one
+  // extra click, and the key is shown properly at issue time.
+  options: { canRevealKey?: boolean } = {},
 ): Promise<ProvisionResult> {
+  const canRevealKey = options.canRevealKey ?? true
   const supabase = getSupabaseServiceClient()
 
   // ── idempotency gate ──────────────────────────────────────────────────────────────────────
   // Keyed on MEMBERSHIP, not on `projects.created_by`: a user hand-seeded into an existing
   // project (the three pre-self-serve tenants, or any future invite path) already has somewhere
   // to work and must not be handed a second, empty tenant on their next sign-in.
-  const { data: existing, error: existingError } = await supabase
-    .from('project_members')
-    .select('project_id, projects(slug)')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle()
-  if (existingError) {
-    console.error('[provisioning] membership pre-check failed:', existingError)
+  const existing = await findExistingTenant(supabase, userId)
+  if (existing.error) {
+    console.error('[provisioning] membership pre-check failed:', existing.error)
     // FAIL CLOSED. Continuing here would risk minting a duplicate tenant on what may simply be a
     // transient DB blip — and a spurious extra tenant is unrecoverable-by-user, whereas a failed
-    // provision is retried by the next sign-in.
+    // provision is retried on the user's next visit to /app.
     return { ok: false, error: 'Could not verify your account state — try signing in again.' }
   }
-  if (existing) {
-    const project = existing.projects as unknown as { slug: string } | null
-    return { ok: true, created: false, projectSlug: project?.slug ?? '', plaintextKey: null }
+  if (existing.slug !== null) {
+    return { ok: true, created: false, projectSlug: existing.slug, plaintextKey: null }
   }
 
   // ── slug selection ────────────────────────────────────────────────────────────────────────
@@ -110,7 +131,23 @@ export async function provisionTenantForUser(
       projectSlug = data.slug as string
       break
     }
-    if (error?.code === PG_UNIQUE_VIOLATION) continue // name taken — try another
+    if (error?.code === PG_UNIQUE_VIOLATION) {
+      // TWO different unique constraints can fire here, and conflating them is how the concurrency
+      // bug survives: `projects_slug_key` means the NAME is taken (retry with another), while
+      // `projects_one_per_creator_idx` means a CONCURRENT callback already provisioned this user's
+      // tenant (we lost the race — adopt the winner's, never retry into a second tenant).
+      //
+      // Matched on the message rather than a second error code because Postgres reports both as
+      // 23505; the constraint name is what distinguishes them. If the message is unrecognisable
+      // for any reason, we re-read membership anyway — the safe direction, since the cost of
+      // wrongly adopting is a retry next visit, and the cost of wrongly retrying is a duplicate
+      // tenant the user can never merge (cross-review, Codex 2026-07-20).
+      const raced = await findExistingTenant(supabase, userId)
+      if (raced.slug !== null) {
+        return { ok: true, created: false, projectSlug: raced.slug, plaintextKey: null }
+      }
+      continue // the slug was taken by someone else — try another name
+    }
     console.error('[provisioning] project insert failed:', error)
     return { ok: false, error: 'Could not create your project.' }
   }
@@ -137,11 +174,25 @@ export async function provisionTenantForUser(
   }
 
   // ── first credential ──────────────────────────────────────────────────────────────────────
-  const { error: keyError } = await supabase.from('api_keys').insert({
-    project_id: projectId,
-    key_hash: hashApiKey(plaintextKey),
-    label: 'first key',
-  })
+  // Skipped entirely when the caller can't hand the plaintext over — see `canRevealKey` above.
+  const { error: keyError } = canRevealKey
+    ? await supabase.from('api_keys').insert({
+        project_id: projectId,
+        key_hash: hashApiKey(plaintextKey),
+        label: 'first key',
+      })
+    : { error: null }
+
+  if (!canRevealKey) {
+    await recordAudit({
+      action: 'tenant_provisioned',
+      projectId,
+      actorUserId: userId,
+      metadata: { slug: projectSlug, firstKey: false, reason: 'retry path — key not revealable' },
+    })
+    return { ok: true, created: true, projectSlug, plaintextKey: null }
+  }
+
   if (keyError) {
     console.error('[provisioning] first key insert failed:', keyError)
     // Deliberately NOT fatal, and deliberately NOT rolled back: the user has a project and an
