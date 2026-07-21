@@ -1,10 +1,27 @@
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
-**Status:** 🟦 In review — all 3 stories built + deterministic gate green (tsc + build + Playwright
-`api`, 96 passed). Commits: 1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`. **Owed to Daniel:** the
-authed-session browser smoke (sign in → own dashboard; foreign slug → 404 while signed in) and the
-prod migration-before-deploy step (see the PR's ordering kit). Revocation spec proven
-non-tautological via a mutation check.
+**Status:** 🟦 In review — PR #13. All 3 stories built; deterministic gate green (tsc + build +
+Playwright `api`, **105 passed**). Commits: 1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`, review
+fixes `77350bc`.
+
+**Cross-review (round 1):** Codex found **4 Blocking** — an open redirect in `/auth/callback`
+(`/\evil.example` defeats a naive prefix check; `new URL()` normalizes the backslash), a rule-#5
+`window.location.origin` violation, sign-up reachable before its born-OFF `SIGNUP_ENABLED` gate, and
+a seed-script key **cross-bind** (an `ignoreDuplicates` upsert silently succeeded when a key hash
+belonged to another project, handing back a key that authenticated as *that* tenant). Gemini/Agy
+found no Blocking and independently flagged the same hydration bug. All fixed in `77350bc`; the
+signup finding was resolved by making Sprint 1 **sign-in only** (signup belongs to Story 2.1, dark).
+
+**A spec-quality lesson worth promoting:** the first open-redirect spec asserted over HTTP and
+**passed against a deliberately vulnerable build** — the route only reads `next` after a successful
+code exchange, so the branch was unreachable to an unauthenticated request. The mutation check
+caught it, not the review. Rewritten to assert the guard as a pure function
+(`lib/safe-redirect.ts`, the `lib/flags.ts` precedent); re-mutating now correctly turns 3 specs red.
+
+**Owed to Daniel:** (1) the authed-session browser smoke — sign in → own dashboard; a *signed-in*
+non-member on a foreign slug → 404; (2) the prod migration-before-deploy ordering + Supabase Auth
+redirect config + a seeded membership row (all in the PR's ordering kit — the migration MUST land
+before the code deploys, or ingest 500s).
 
 ## Stories
 
