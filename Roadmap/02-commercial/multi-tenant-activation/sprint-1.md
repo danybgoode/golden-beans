@@ -1,8 +1,13 @@
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
-**Status:** 🟦 In review — PR #13. All 3 stories built; deterministic gate green (tsc + build +
-Playwright `api`, **105 passed**). Commits: 1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`, review
-fixes `77350bc`.
+**Status:** 🟦 In review — **PR #13, awaiting Daniel** (HIGH risk: auth + 2 DB migrations). All 3
+stories built; deterministic gate green (tsc + build + Playwright `api`, **107 passed**). Commits:
+1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`; review fixes `77350bc` (round 1) + `151b025` (round 2).
+
+> **Do not merge code-first.** `auth.ts` now reads `api_keys`, so the migrations must be applied to
+> prod Supabase **before** the code deploys, or every ingest call 500s. Full ordering kit is in the
+> PR body (migrations → Vercel `NEXT_PUBLIC_*` envs *before* the build → Supabase Auth redirect URLs
+> → seed your membership as `owner`).
 
 **Cross-review (round 1):** Codex found **4 Blocking** — an open redirect in `/auth/callback`
 (`/\evil.example` defeats a naive prefix check; `new URL()` normalizes the backslash), a rule-#5
