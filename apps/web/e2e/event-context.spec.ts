@@ -707,23 +707,41 @@ test('a dedup completes first-event activation the original ingest may have left
     const first = await request.post('/api/v1/track', { headers: auth, data: payload })
     expect(first.status()).toBe(201)
 
-    // Simulate "crashed before stamping": force first_event_at back to null.
-    await db.from('projects').update({ first_event_at: null }).eq('id', p.projectId)
+    // WAIT for the ORIGINAL request's own activation after() to finish before touching anything
+    // (cross-review, Codex round 10). Otherwise the original stamp could land AFTER our manual clear
+    // and make the final assertion pass for the wrong reason — proving nothing about the dedup path.
+    const poll = async () => {
+      const { data } = await db.from('projects').select('first_event_at').eq('id', p.projectId).single()
+      return (data?.first_event_at as string | null) ?? null
+    }
+    let originalStamp: string | null = null
+    for (let i = 0; i < 50 && originalStamp === null; i++) {
+      await new Promise((r) => setTimeout(r, 100))
+      originalStamp = await poll()
+    }
+    expect(originalStamp).not.toBeNull() // the original ingest stamped it
 
-    // Replay the identical request — a dedup. It must schedule the activation stamp.
+    // NOW simulate "crashed before stamping": clear it, and ASSERT the clear actually hit one row —
+    // an unchecked update that affected zero rows would leave a stale stamp and false-pass the test.
+    const { data: cleared } = await db
+      .from('projects')
+      .update({ first_event_at: null })
+      .eq('id', p.projectId)
+      .select('id')
+    expect(cleared).toHaveLength(1)
+
+    // Replay the identical request — a dedup. With the original after() long finished, ONLY the
+    // dedup path can re-stamp, so a stamp reappearing proves the dedup path repairs activation.
     const retry = await request.post('/api/v1/track', { headers: auth, data: payload })
     expect(retry.status()).toBe(200)
     expect((await retry.json()).deduplicated).toBe(true)
 
-    // after() runs post-response (a self-track network call + a DB update), so poll for the stamp
-    // rather than asserting instantly. Budget 5s — generous enough for parallel-load jitter, bounded.
-    let stamped: string | null = null
-    for (let i = 0; i < 50 && stamped === null; i++) {
+    let restamped: string | null = null
+    for (let i = 0; i < 50 && restamped === null; i++) {
       await new Promise((r) => setTimeout(r, 100))
-      const { data } = await db.from('projects').select('first_event_at').eq('id', p.projectId).single()
-      stamped = (data?.first_event_at as string | null) ?? null
+      restamped = await poll()
     }
-    expect(stamped).not.toBeNull()
+    expect(restamped).not.toBeNull()
   } finally {
     await p.cleanup()
     await db.auth.admin.deleteUser(funnelUser).catch(() => {})

@@ -272,8 +272,13 @@ test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destinati
     expect(first.data!.deduplicated).toBe(false)
     expect(first.data!.queued_count).toBe(0)
 
-    // NOW enable a matching destination — it did not exist when the event was born.
-    await db.from('event_destinations').insert({ project_id: pid, name: 'rpc-dest', enabled: true, event_filter: eventName })
+    // NOW enable a matching destination — it did not exist when the event was born. ASSERT the
+    // insert succeeded (cross-review, Codex round 10): if it silently failed, "zero deliveries" would
+    // be guaranteed and the test would false-pass without ever exercising the re-fan guard.
+    const { error: destErr } = await db
+      .from('event_destinations')
+      .insert({ project_id: pid, name: 'rpc-dest', enabled: true, event_filter: eventName })
+    expect(destErr).toBeNull()
 
     // Second call, identical key: the RPC's OWN dedup branch. It must NOT re-fan to the new
     // destination — queued_count 0, and ZERO deliveries for the event. Dropping `IF NOT v_dedup`
