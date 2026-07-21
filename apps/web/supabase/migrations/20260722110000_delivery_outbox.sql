@@ -133,11 +133,20 @@ CREATE TABLE IF NOT EXISTS event_deliveries (
 );
 ALTER TABLE event_deliveries ENABLE ROW LEVEL SECURITY;
 
--- The dispatcher's claim query, exactly: "the oldest due work, per project". Partial on the two
--- statuses a dispatcher may touch, so the index stays small as delivered rows accumulate — the
--- delivered/dead rows are history, and history is read by a different (Story 3.3) query shape.
+-- The dispatcher's PROJECT-SCOPED claim query: "the oldest due work for this project". Partial on
+-- the two statuses a dispatcher may touch, so the index stays small as delivered rows accumulate —
+-- the delivered/dead rows are history, and history is read by a different (Story 3.3) query shape.
 CREATE INDEX IF NOT EXISTS event_deliveries_claimable_idx
   ON event_deliveries (project_id, next_attempt_at)
+  WHERE status IN ('pending', 'failed');
+
+-- The dispatcher's UNSCOPED claim query ("oldest due work across all projects", the default when no
+-- projectId is passed) orders by next_attempt_at with no leading project_id, so the composite index
+-- above cannot serve it without a full scan+sort once the outbox fills (cross-review, Codex round
+-- 2). This one leads on next_attempt_at for exactly that path. Both are partial on the same two
+-- claimable statuses; delivered/dead history stays out of both.
+CREATE INDEX IF NOT EXISTS event_deliveries_claimable_global_idx
+  ON event_deliveries (next_attempt_at)
   WHERE status IN ('pending', 'failed');
 
 -- "What happened to this event?" — the operator question Story 3.3's view answers.

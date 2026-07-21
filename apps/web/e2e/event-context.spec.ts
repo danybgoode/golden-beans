@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createHash } from 'node:crypto'
 import {
   normalizeEventContext,
   normalizeOccurredAt,
@@ -104,6 +105,28 @@ test('occurredAt rejects unparseable and non-string input', () => {
   expect(normalizeOccurredAt('', NOW).ok).toBe(false)
   expect(normalizeOccurredAt(1753185600000, NOW).ok).toBe(false)
   expect(normalizeOccurredAt(null, NOW).ok).toBe(false)
+})
+
+test('occurredAt rejects a date that PARSES but is not a real calendar date', () => {
+  // Codex round 2: Date.parse('2026-02-30T…') silently rolls over to March 2, storing a different
+  // instant than the caller supplied. The syntactic regex alone accepts it; the calendar check must
+  // reject it.
+  expect(normalizeOccurredAt('2026-02-30T10:00:00Z', NOW).ok).toBe(false) // Feb has 28/29 days
+  expect(normalizeOccurredAt('2025-02-29T10:00:00Z', NOW).ok).toBe(false) // 2025 is not a leap year
+  expect(normalizeOccurredAt('2026-04-31T10:00:00Z', NOW).ok).toBe(false) // April has 30
+  expect(normalizeOccurredAt('2026-13-01T10:00:00Z', NOW).ok).toBe(false) // no month 13
+  expect(normalizeOccurredAt('2026-01-01T24:00:00Z', NOW).ok).toBe(false) // hour 24
+  // ...but a real leap day IS accepted.
+  expect(normalizeOccurredAt('2024-02-29T10:00:00Z', NOW).ok).toBe(true) // 2024 is a leap year
+})
+
+test('normalizeEventContext rejects a null / non-object input without throwing', () => {
+  // Agy round 2: Object.keys(null) would throw a TypeError; the guard must turn that into a clean
+  // rejection for any direct caller.
+  for (const bad of [null, undefined, 42, 'ctx', [1, 2, 3]] as unknown[]) {
+    const result = normalizeEventContext(bad as never, NOW)
+    expect(result.ok).toBe(false)
+  }
 })
 
 test('occurredAt allows arbitrarily old timestamps — backfill is first-class', () => {
@@ -228,15 +251,23 @@ test('an empty v1 context is valid — every field except version is optional', 
 
 // ── HTTP: the route is actually wired to all of the above ─────────────────────────────────────
 //
-// MUTATION-CHECKED against commit 3d6950c (Definition of Done, and the S1 lesson that four green
-// security specs passed identically against a deliberately re-broken build). Three mutations were
-// applied to route.ts in turn and the exact specs each one killed were recorded:
+// MUTATION-CHECKED. These specs were first mutation-checked against commit 3d6950c, when the route
+// wrote events with a plain `.from('events').insert()`. Story 1.2 later moved that write — and the
+// idempotent-replay semantics — INTO the plpgsql `ingest_event()` function (the route now calls it
+// via `.rpc()`), so the ORIGINAL mutation targets below (the direct-insert spread, the route-level
+// 23505 branch) no longer exist as written (cross-review, Codex round 2 nit). The mutations that
+// cover the CURRENT wiring live in delivery-outbox.spec.ts's header (A/B/E against the DB function;
+// D against the dispatcher). Recorded here for provenance, against the code as it was at 3d6950c:
 //
 //   A. delete the `...eventContext.context` spread from the insert  → 3 red:
 //      round-trip, idempotent replay, per-project idempotency scoping.
 //   B. remove the `normalizeEventContext()` call (accept context unvalidated) → 5 red:
 //      the three above, plus malformed-context-400 and unknown-version-400.
 //   C. delete the 23505 branch → 1 red: idempotent replay (500s instead of returning the original).
+//
+// The context-VALIDATION mutation (B) still holds against the current route unchanged — validation
+// is still in the route before the RPC — and the new hardening specs below (unknown-key, DB-CHECK)
+// carry their own mutation provenance in their comments.
 //
 // Baseline and post-restore runs were both 25 passed. Note what this exercise also revealed: NO
 // mutation turns the "context cannot smuggle a project" spec red, because tenancy is enforced by
@@ -474,4 +505,128 @@ test('the DB CHECK constraints enforce the contract for a NON-route writer too',
     .select('id')
     .single()
   expect(good.error).toBeNull()
+})
+
+// ── cross-review round 2: idempotency vs. quota, and dedup vs. activation ──────────────────────
+
+// Provisions a throwaway project with a specific monthly quota and returns a usable Bearer key.
+// Cleaned up by the caller. Uses the service-role client (the same authority the seed scripts have)
+// — this is fixture provisioning, not an app path.
+async function provisionProject(
+  db: SupabaseClient,
+  opts: { quota: number; createdBy?: string | null },
+): Promise<{ projectId: string; key: string; cleanup: () => Promise<void> }> {
+  const slug = `disposable-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const key = `gb_key_test_${Math.random().toString(36).slice(2)}`
+  const keyHash = createHash('sha256').update(key).digest('hex')
+
+  const { data: proj, error: projErr } = await db
+    .from('projects')
+    .insert({
+      slug,
+      api_key_hash: keyHash, // legacy column still NOT NULL on projects; the auth path reads api_keys
+      monthly_event_quota: opts.quota,
+      created_by: opts.createdBy ?? null,
+    })
+    .select('id')
+    .single()
+  if (projErr || !proj) throw new Error(`could not provision project: ${projErr?.message}`)
+
+  const { error: keyErr } = await db
+    .from('api_keys')
+    .insert({ project_id: proj.id, key_hash: keyHash, label: 'spec disposable' })
+  if (keyErr) throw new Error(`could not provision api key: ${keyErr.message}`)
+
+  return {
+    projectId: proj.id as string,
+    key,
+    cleanup: async () => {
+      await db.from('projects').delete().eq('id', proj.id as string) // CASCADE takes events + keys
+    },
+  }
+}
+
+test('an at-quota tenant can still RETRY an already-accepted idempotent event (200, not 429)', async ({
+  request,
+}) => {
+  // Codex round 2 Blocking: quota was checked before dedup, so a retry of an already-counted event
+  // was rejected at quota — a "safe to retry" contract that isn't. The pre-check must resolve the
+  // duplicate BEFORE the quota gate.
+  const db = dbClient()
+  const p = await provisionProject(db, { quota: 1 })
+  try {
+    const key = `atquota-${Date.now()}`
+    const payload = { userId: 'q-u', event: 'order_placed', context: { version: 1, idempotencyKey: key } }
+    const auth = { Authorization: `Bearer ${p.key}` }
+
+    // First call consumes the tenant's ONLY quota unit.
+    const first = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(first.status()).toBe(201)
+    const firstId = (await first.json()).id
+
+    // The tenant is now at quota. A retry of the SAME event must still succeed as a dedup...
+    const retry = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(retry.status()).toBe(200)
+    const retryBody = await retry.json()
+    expect(retryBody.deduplicated).toBe(true)
+    expect(retryBody.id).toBe(firstId)
+
+    // ...while a genuinely NEW event is correctly rejected at quota.
+    const fresh = await request.post('/api/v1/track', {
+      headers: auth,
+      data: { userId: 'q-u', event: 'order_placed', context: { version: 1, idempotencyKey: `other-${Date.now()}` } },
+    })
+    expect(fresh.status()).toBe(429)
+  } finally {
+    await p.cleanup()
+  }
+})
+
+test('a dedup completes first-event activation the original ingest may have left unstamped', async ({
+  request,
+}) => {
+  // Codex round 2 Blocking: the dedup early-return skipped the activation path, so if the original
+  // ingest crashed after committing the event but before stamping first_event_at, no retry could
+  // ever repair it. We simulate that crash window by manually clearing first_event_at after the
+  // first ingest, then replaying — the dedup must re-stamp it.
+  //
+  // projects.created_by is a UUID FK to auth.users and the activation funnel only fires for a
+  // self-serve tenant (created_by set), so we mint a throwaway auth user to own the disposable
+  // project.
+  const db = dbClient()
+  const { data: userData, error: userErr } = await db.auth.admin.createUser({
+    email: `activation-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@spec.local`,
+    email_confirm: true,
+  })
+  if (userErr || !userData?.user) throw new Error(`could not create auth user: ${userErr?.message}`)
+  const funnelUser = userData.user.id
+  const p = await provisionProject(db, { quota: 100, createdBy: funnelUser })
+  try {
+    const key = `activation-${Date.now()}`
+    const payload = { userId: 'a-u', event: 'first_thing', context: { version: 1, idempotencyKey: key } }
+    const auth = { Authorization: `Bearer ${p.key}` }
+
+    const first = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(first.status()).toBe(201)
+
+    // Simulate "crashed before stamping": force first_event_at back to null.
+    await db.from('projects').update({ first_event_at: null }).eq('id', p.projectId)
+
+    // Replay the identical request — a dedup. It must schedule the activation stamp.
+    const retry = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(retry.status()).toBe(200)
+    expect((await retry.json()).deduplicated).toBe(true)
+
+    // after() runs post-response; poll briefly for the stamp rather than asserting instantly.
+    let stamped: string | null = null
+    for (let i = 0; i < 20 && stamped === null; i++) {
+      await new Promise((r) => setTimeout(r, 100))
+      const { data } = await db.from('projects').select('first_event_at').eq('id', p.projectId).single()
+      stamped = (data?.first_event_at as string | null) ?? null
+    }
+    expect(stamped).not.toBeNull()
+  } finally {
+    await p.cleanup()
+    await db.auth.admin.deleteUser(funnelUser).catch(() => {})
+  }
 })

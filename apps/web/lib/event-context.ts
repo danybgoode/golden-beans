@@ -92,11 +92,29 @@ export function normalizeOccurredAt(value: unknown, now: number = Date.now()): O
   // or local time depending on shape. Requiring an explicit time component AND an explicit zone
   // removes that ambiguity — "2026-07-22" could mean any of 24+ instants depending on who parses
   // it, and a lifecycle projection that orders by it deserves better than a coin flip.
-  if (!/\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}/.test(value) || !/([Zz]|[+-]\d{2}:?\d{2})$/.test(value)) {
+  const shape = /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?([Zz]|[+-]\d{2}:?\d{2})$/.exec(value)
+  if (!shape) {
     return {
       ok: false,
       message: 'occurredAt must include a time and an explicit UTC offset (e.g. 2026-07-22T10:00:00Z)',
     }
+  }
+
+  // Date.parse SILENTLY ROLLS OVER an out-of-range calendar date: "2026-02-30T…" becomes March 2,
+  // storing a different instant than the caller supplied (cross-review, Codex round 2). Validate the
+  // calendar fields against reality — the day-of-month bound depends on the month and leap year, and
+  // this check is offset-independent because "is 2026-02-30 a real date" doesn't depend on the zone.
+  const [, y, mo, d, h, mi, s] = shape
+  const year = Number(y)
+  const month = Number(mo)
+  const day = Number(d)
+  const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  if (
+    month < 1 || month > 12 ||
+    day < 1 || day > daysInMonth[month - 1] ||
+    Number(h) > 23 || Number(mi) > 59 || (s !== undefined && Number(s) > 59)
+  ) {
+    return { ok: false, message: `occurredAt is not a real calendar date/time: ${truncate(value)}` }
   }
 
   if (parsed > now + MAX_FUTURE_SKEW_MS) {
@@ -104,6 +122,10 @@ export function normalizeOccurredAt(value: unknown, now: number = Date.now()): O
   }
 
   return { ok: true, iso: new Date(parsed).toISOString() }
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
 }
 
 export type EventContextInput = {
@@ -166,6 +188,13 @@ export function normalizeEventContext(
   now: number = Date.now(),
 ): ContextResult {
   const errors: ContextFieldError[] = []
+
+  // The route only calls this when zod already proved `context` is an object, but this function is
+  // exported and unit-tested directly — a caller handing it `null`, an array or a primitive must get
+  // a clean rejection, not a `TypeError` from Object.keys(null) (cross-review, Agy round 2).
+  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+    return { ok: false, errors: [{ field: 'context', message: 'context must be an object' }] }
+  }
 
   // Unknown top-level keys are REFUSED, not ignored. This module's whole reason for existing is that
   // silently dropping a field the caller believes it sent is the worst failure mode — the caller

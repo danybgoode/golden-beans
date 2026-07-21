@@ -112,7 +112,18 @@ export async function dispatchPendingDeliveries(
     // is OFF in every environment for this sprint, so the window does not exist in practice; Story
     // 2.2's stale-claim reclaim (which is what `claimed_at` is for) closes it before the flag flips.
     if (claimed.length > 0) {
-      await releaseDeliveries(db, claimed.map((d) => d.id))
+      const released = await releaseDeliveries(db, claimed.map((d) => d.id), now)
+      // We just claimed these rows this pass, so we expect to release exactly as many. A shortfall
+      // means something moved them out from under us — which, in a gate-OFF single-worker Sprint 1,
+      // should be impossible. Surface it as an error rather than reporting a clean pass over rows
+      // that may now be stranded (cross-review, Codex round 2). Story 2.2's real reclaimer replaces
+      // this claim/release dance with SKIP LOCKED, at which point a partial result is normal and
+      // this strict check goes away.
+      if (released !== claimed.length) {
+        const error = `released ${released} of ${claimed.length} claimed deliveries — rows may be stranded in_flight`
+        console.error('[delivery-dispatch]', error)
+        return { ok: false, dispatched: false, reason: 'error', error, claimed: [] }
+      }
     }
 
     return { ok: true, dispatched: true, reason: 'claimed', claimed }
@@ -183,13 +194,20 @@ async function claimDueDeliveries(
  * status. `attempt_count` is untouched on purpose: nothing was attempted, and a counter inflated by
  * a claim that never sent anything would make Story 2.2's backoff and dead-letter thresholds fire
  * early on rows that were never actually tried.
+ *
+ * Returns the number of rows actually released so the caller can assert it matches what it claimed
+ * (cross-review, Codex round 2). Takes the same injected `now` the claim used, rather than reading
+ * the clock again, so a deterministic test sees one consistent timestamp across the pass (Agy round
+ * 2).
  */
-async function releaseDeliveries(db: SupabaseClient, ids: string[]): Promise<void> {
-  const { error } = await db
+async function releaseDeliveries(db: SupabaseClient, ids: string[], now: Date): Promise<number> {
+  const { data, error } = await db
     .from('event_deliveries')
-    .update({ status: 'pending', claimed_at: null, updated_at: new Date().toISOString() })
+    .update({ status: 'pending', claimed_at: null, updated_at: now.toISOString() })
     .in('id', ids)
     .eq('status', 'in_flight')
+    .select('id')
 
   if (error) throw new Error(`could not release claimed deliveries: ${error.message}`)
+  return data?.length ?? 0
 }

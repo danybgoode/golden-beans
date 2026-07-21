@@ -89,6 +89,18 @@ ALTER TABLE events
     (idempotency_key IS NULL OR (idempotency_key !~ '[[:cntrl:]]' AND idempotency_key = btrim(idempotency_key)))
   );
 
+-- ── the ONE invariant that CANNOT be a CHECK, stated so the claim above stays honest ─────────────
+-- lib/event-context.ts also bounds `occurred_at` to at most 24h in the FUTURE (an unbounded future
+-- date pins a subject's timeline forever — see that file). That bound is deliberately NOT enforced
+-- here, and the reason is a Postgres rule, not an oversight: a CHECK constraint may only call
+-- IMMUTABLE functions, and `now()` is STABLE, so `CHECK (occurred_at <= now() + interval '24 hours')`
+-- is rejected at migration time. A BEFORE-INSERT trigger could do it, but a trigger on the hottest
+-- write path in the system is disproportionate for a bound only a rogue/buggy backfill could cross —
+-- real tenant traffic goes through the route, which enforces it. So this is the single context
+-- invariant that is APP-LAYER ONLY: any internal seed or backfill that writes `occurred_at` directly
+-- must apply the same 24h-future clamp itself (cross-review, Codex round 2). The past is unbounded on
+-- purpose (backfill is first-class), so there is no lower bound to enforce anywhere.
+
 -- ── idempotency: unique PER PROJECT, never globally ──────────────────────────────────────────
 -- The `project_id` leading column is the whole security property, not an optimisation. A globally
 -- unique idempotency key would mean tenant A choosing `order-1` could make tenant B's `order-1`

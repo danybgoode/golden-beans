@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
-import { resolveProjectFromAuthHeader } from '@/lib/auth'
+import { resolveProjectFromAuthHeader, type AuthSuccess } from '@/lib/auth'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 import { trackEventSchema } from '@/lib/track-schema'
 import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context'
@@ -76,12 +76,42 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 2. Per-key burst limit, then 3. per-project monthly quota — both AFTER validation, so only an
-  //    ACCEPTABLE event is ever charged. Checking them earlier (the first version of this route)
-  //    meant a broken integration sending malformed JSON burned a tenant's monthly allowance
-  //    without a single event being stored: the tenant would see far fewer than their configured
-  //    quota accepted, with nothing in the events table to explain where it went
-  //    (cross-review, Codex 2026-07-20).
+  const supabase = getSupabaseServiceClient()
+
+  // ── Idempotency pre-resolution — BEFORE rate/quota (cross-review, Codex round 2) ─────────────
+  // A retry of an already-accepted event must return the original id even for a tenant now AT its
+  // monthly quota: that event was counted once, at its first ingest, and a "safe to retry" contract
+  // that 429s the retry isn't safe to retry — the client would conclude the event was rejected while
+  // it sits stored. So when an idempotency key is present we look it up first; a hit returns the
+  // original id with no charge at all.
+  //
+  // This SELECT is best-effort, not the authority: the real dedup arbiter is still the unique index
+  // inside ingest_event(), which catches the concurrent first+retry race this pre-check cannot see
+  // (both would miss here and one would win the insert). A miss simply falls through to the normal
+  // charged path below.
+  const idempotencyKey = eventContext.context.idempotency_key
+  if (idempotencyKey) {
+    const { data: existing } = await supabase
+      .from('events')
+      .select('id')
+      .eq('project_id', auth.projectId) // tenant scope re-asserted, never assumed from the key
+      .eq('idempotency_key', idempotencyKey)
+      .maybeSingle()
+    if (existing) {
+      // Already ingested — no charge. Still (re)schedule activation: if the ORIGINAL ingest crashed
+      // after the RPC commit but before stamping first_event_at, this retry is what completes the
+      // funnel's terminal stage (cross-review, Codex round 2). Idempotent by the `.is(null)` guard.
+      scheduleFirstEventActivation(supabase, auth)
+      return NextResponse.json({ ok: true, id: existing.id as string, deduplicated: true }, { status: 200 })
+    }
+  }
+
+  // 2. Per-key burst limit, then 3. per-project monthly quota — both AFTER validation and after the
+  //    idempotency pre-check, so only an ACCEPTABLE, NON-duplicate event is ever charged. Checking
+  //    them earlier (the first version of this route) meant a broken integration sending malformed
+  //    JSON burned a tenant's monthly allowance without a single event being stored: the tenant
+  //    would see far fewer than their configured quota accepted, with nothing in the events table to
+  //    explain where it went (cross-review, Codex 2026-07-20).
   //
   //    Both counters are still incremented BEFORE the insert rather than after a confirmed write:
   //    an atomic increment-and-compare is the only race-free shape, and moving it after the insert
@@ -98,8 +128,6 @@ export async function POST(req: NextRequest) {
   if (!quota.ok) {
     return NextResponse.json({ ok: false, error: quota.error }, { status: quota.status })
   }
-
-  const supabase = getSupabaseServiceClient()
 
   // ── Story 1.2 · atomic ingest + outbox fan-out ──────────────────────────────────────────────
   // The plain `.from('events').insert()` this replaced could not commit the event and its delivery
@@ -149,45 +177,56 @@ export async function POST(req: NextRequest) {
   }
 
   if (ingest.deduplicated) {
-    // Nothing was stored this time, so hand the quota unit back — a client retrying a delivery it
-    // never got an answer for must not be charged twice for one logical event.
+    // The concurrent-race dedup the pre-check above couldn't see: two first-time requests for the
+    // same key, one wins the insert, this one lost it. Hand the quota unit back — a client retrying
+    // a delivery it never got an answer for must not be charged twice for one logical event — and
+    // still (re)schedule activation for the same crash-window reason as the pre-check path.
     await refundMonthlyQuota(auth.projectId)
+    scheduleFirstEventActivation(supabase, auth)
     // 200, not 201: nothing was created. The id is the original event's, so an at-least-once caller
     // converges on one identity no matter how many times it retries.
     return NextResponse.json({ ok: true, id: ingest.event_id, deduplicated: true }, { status: 200 })
   }
 
-  // ── Story 3.3 · the activation funnel's last stage ──────────────────────────────────────────
-  // A project's FIRST successful event is `first_event_ingested`. The `firstEventAt === null`
-  // guard means the extra write happens at most once per project lifetime, not once per request —
-  // and the conditional `.is('first_event_at', null)` makes the write itself the race resolver, so
-  // two concurrent first events still stamp (and fire) exactly once.
-  //
-  // Only self-serve tenants (`createdBy` set) count toward this funnel: the three hand-seeded
-  // tenants were never signups, so stamping them would inject a conversion nobody made.
-  if (auth.firstEventAt === null && auth.createdBy) {
-    const funnelUserId = auth.createdBy
-    const projectId = auth.projectId
-    after(async () => {
-      // TRACK FIRST, STAMP SECOND. The stamp is a permanent "already counted" marker, so committing
-      // it before knowing the send landed loses the funnel's terminal stage forever — no later
-      // event retries it, because the project is already stamped (cross-review, Codex 2026-07-20).
-      //
-      // The inverted order can instead send the event more than once (two concurrent first events,
-      // or a crash between send and stamp). That is harmless by construction: TARS counts DISTINCT
-      // users per event (lib/tars.ts), so a duplicate for the same user changes no number. Losing
-      // the only send is unrecoverable; duplicating it costs nothing — so the trade is one-sided.
-      const landed = await trackSelfEvent(FIRST_EVENT_INGESTED_EVENT, funnelUserId)
-      if (!landed) return
-      await supabase
-        .from('projects')
-        .update({ first_event_at: new Date().toISOString() })
-        .eq('id', projectId)
-        .is('first_event_at', null)
-    })
-  }
-
+  scheduleFirstEventActivation(supabase, auth)
   return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
+}
+
+// ── Story 3.3 · the activation funnel's last stage ────────────────────────────────────────────
+// A project's FIRST successful event is `first_event_ingested`. Runs on EVERY success path — fresh
+// insert AND both dedup exits — because a dedup can be the moment that repairs an activation the
+// original ingest started but crashed before finishing (cross-review, Codex round 2): if
+// `first_event_at` is still null, the stamp genuinely hasn't happened and a retry is the only thing
+// that can complete it. The `firstEventAt === null` guard means the extra work happens at most once
+// per project lifetime; the conditional `.is('first_event_at', null)` UPDATE makes the write itself
+// the race resolver, so concurrent first events still stamp (and fire) exactly once.
+//
+// Only self-serve tenants (`createdBy` set) count toward this funnel: the three hand-seeded tenants
+// were never signups, so stamping them would inject a conversion nobody made.
+function scheduleFirstEventActivation(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  auth: AuthSuccess,
+): void {
+  if (auth.firstEventAt !== null || !auth.createdBy) return
+  const funnelUserId = auth.createdBy
+  const projectId = auth.projectId
+  after(async () => {
+    // TRACK FIRST, STAMP SECOND. The stamp is a permanent "already counted" marker, so committing
+    // it before knowing the send landed loses the funnel's terminal stage forever — no later event
+    // retries it, because the project is already stamped (cross-review, Codex 2026-07-20).
+    //
+    // The inverted order can instead send the event more than once (two concurrent first events, or
+    // a crash between send and stamp). That is harmless by construction: TARS counts DISTINCT users
+    // per event (lib/tars.ts), so a duplicate for the same user changes no number. Losing the only
+    // send is unrecoverable; duplicating it costs nothing — so the trade is one-sided.
+    const landed = await trackSelfEvent(FIRST_EVENT_INGESTED_EVENT, funnelUserId)
+    if (!landed) return
+    await supabase
+      .from('projects')
+      .update({ first_event_at: new Date().toISOString() })
+      .eq('id', projectId)
+      .is('first_event_at', null)
+  })
 }
 
 type BoundedRead = { ok: true; body: string } | { ok: false; tooLarge: boolean }
