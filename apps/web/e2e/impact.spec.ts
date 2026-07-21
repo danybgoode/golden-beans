@@ -86,15 +86,17 @@ test('impact endpoint + page reflect real telemetry AND real pushed-revenue seri
     { date: '2026-03-02', value: 80 },
   ])
 
-  const pageRes = await request.get(`/impact/project-one/${featureKey}`)
-  expect(pageRes.status()).toBe(200)
-  const html = await pageRes.text()
-  expect(html).toContain(featureKey)
-  expect(html).toContain('120.5')
-  expect(html).toContain('2026-03-01')
+  // Story 1.2 (multi-tenant-activation): the page is behind per-tenant auth now — unauthed access
+  // to a non-demo project's page bounces to /login (authed content render = browser smoke owed to
+  // Daniel). The JSON endpoint above is the api-level data-correctness coverage.
+  const pageRes = await request.get(`/app/impact/project-one/${featureKey}`, { maxRedirects: 0 })
+  expect([302, 307]).toContain(pageRes.status())
+  expect(pageRes.headers()['location']).toContain('/login')
 })
 
-test('impact page 404s for a feature with no linked inputs', async ({ request }) => {
-  const res = await request.get(`/impact/project-one/spec-unlinked-page-${Date.now()}`)
+test('the demo impact page 404s for a feature with no linked inputs (anonymous carve-out still resolves)', async ({ request }) => {
+  const res = await request.get(`/app/impact/golden-beans-demo/spec-unlinked-page-${Date.now()}`, {
+    maxRedirects: 0,
+  })
   expect(res.status()).toBe(404)
 })

@@ -54,10 +54,14 @@ test('an experiment key with no exposure events → 200, honest empty state (not
   expect(body.comparison.variants).toEqual([])
   expect(body.comparison.baseline).toBeNull()
 
-  const pageRes = await request.get(`/experiments/project-one/${experimentKey}?metricEvent=spec_conversion`)
-  expect(pageRes.status()).toBe(200)
-  const html = await pageRes.text()
-  expect(html).toContain('No exposure events yet')
+  // Story 1.2 (multi-tenant-activation): non-demo dashboard pages are auth-gated now — unauthed →
+  // /login. The endpoint above already asserts the honest empty state at the api level.
+  const pageRes = await request.get(
+    `/app/experiments/project-one/${experimentKey}?metricEvent=spec_conversion`,
+    { maxRedirects: 0 },
+  )
+  expect([302, 307]).toContain(pageRes.status())
+  expect(pageRes.headers()['location']).toContain('/login')
 })
 
 test('comparison endpoint + page compute basic lift from real exposure + conversion events', async ({ request }) => {
@@ -88,17 +92,15 @@ test('comparison endpoint + page compute basic lift from real exposure + convers
   expect(treatment.conversionRate).toBeCloseTo(0.5)
   expect(treatment.lift).toBeCloseTo(1.0) // (0.5 - 0.25) / 0.25 = +100%
 
-  const pageRes = await request.get(`/experiments/project-one/${experimentKey}?metricEvent=${metricEvent}`)
-  expect(pageRes.status()).toBe(200)
-  // React SSR splits adjacent text nodes with `<!-- -->` markers, so strip comments before
-  // asserting on a substring that spans more than one JSX expression (e.g. `{value}%`).
-  const html = (await pageRes.text()).replace(/<!--.*?-->/g, '')
-  expect(html).toContain('control')
-  expect(html).toContain('treatment')
-  expect(html).toContain('baseline')
-  expect(html).toContain('25.0%')
-  expect(html).toContain('50.0%')
-  expect(html).toContain('+100.0%')
+  // Story 1.2 (multi-tenant-activation): the page is auth-gated; the endpoint above is the
+  // data-correctness coverage (the lift math). Authed page render is the browser smoke owed to
+  // Daniel — a non-demo project's page bounces to /login when unauthed.
+  const pageRes = await request.get(
+    `/app/experiments/project-one/${experimentKey}?metricEvent=${metricEvent}`,
+    { maxRedirects: 0 },
+  )
+  expect([302, 307]).toContain(pageRes.status())
+  expect(pageRes.headers()['location']).toContain('/login')
 })
 
 test('conversions are counted even when the metric event carries no featureId at all', async ({ request }) => {

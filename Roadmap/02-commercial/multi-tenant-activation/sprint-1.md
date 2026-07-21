@@ -1,6 +1,42 @@
 # Multi-tenant activation — Sprint 1: The account boundary (auth hardening core)
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — **PR #13, awaiting Daniel** (HIGH risk: auth + 2 DB migrations). All 3
+stories built; deterministic gate green (tsc + build + Playwright `api`, **107 passed**). Commits:
+1.1 `a33a316`, 1.2 `1c7ef9d`, 1.3 `401c39b`; review fixes `77350bc` (round 1) + `151b025` (round 2).
+
+> **Do not merge code-first.** `auth.ts` now reads `api_keys`, so the migrations must be applied to
+> prod Supabase **before** the code deploys, or every ingest call 500s. Full ordering kit is in the
+> PR body (migrations → Vercel `NEXT_PUBLIC_*` envs *before* the build → Supabase Auth redirect URLs
+> → seed your membership as `owner`).
+
+**Cross-review (round 1):** Codex found **4 Blocking** — an open redirect in `/auth/callback`
+(`/\evil.example` defeats a naive prefix check; `new URL()` normalizes the backslash), a rule-#5
+`window.location.origin` violation, sign-up reachable before its born-OFF `SIGNUP_ENABLED` gate, and
+a seed-script key **cross-bind** (an `ignoreDuplicates` upsert silently succeeded when a key hash
+belonged to another project, handing back a key that authenticated as *that* tenant). Gemini/Agy
+found no Blocking and independently flagged the same hydration bug. All fixed in `77350bc`; the
+signup finding was resolved by making Sprint 1 **sign-in only** (signup belongs to Story 2.1, dark).
+
+**A spec-quality lesson worth promoting:** the first open-redirect spec asserted over HTTP and
+**passed against a deliberately vulnerable build** — the route only reads `next` after a successful
+code exchange, so the branch was unreachable to an unauthenticated request. The mutation check
+caught it, not the review. Rewritten to assert the guard as a pure function
+(`lib/safe-redirect.ts`, the `lib/flags.ts` precedent); re-mutating now correctly turns 3 specs red.
+
+**Cross-review (round 2, on the round-1 fixes):** Codex found **2 more Blocking** — credential admin
+was open to *any* member (`project_members.role` existed but nothing enforced it, so a member could
+mint or revoke production ingest keys → now **owner-only**), and the migration's backfill still had
+the bare `ON CONFLICT DO NOTHING` cross-project bind that the seed scripts had already been hardened
+against (→ now aborts loudly; verified by simulating a real cross-project bind). Gemini found no
+Blocking and confirmed the round-1 fixes ("open-redirect protection cleanly avoids common URL
+parsing traps", "authorization gates properly fail-closed"), plus real UX gaps (the `/app` shell had
+no links to the dashboards). Fixed in `151b025`.
+
+**Owed to Daniel:** (1) the authed-session browser smoke — sign in → own dashboard; a *signed-in*
+non-member on a foreign slug → 404; a *member* (not owner) on `/app/keys/<slug>` → 404; (2) the prod
+migration-before-deploy ordering + Supabase Auth redirect config + a seeded membership row — **seed
+yourself as `owner`**, not `member`, or the API-keys page 404s (all in the PR's ordering kit; the
+migration MUST land before the code deploys, or ingest 500s).
 
 ## Stories
 
@@ -34,25 +70,47 @@ coordinate with E1 story 2.1's shape.
 rotation; Miyagi's existing ingest key keeps working through the migration, spec-verified.
 **Risk:** HIGH — Daniel merges (auth + migration)
 
-## Sprint QA
-- **api spec(s):** 1.1 → unauthed `/app` redirect + session expiry · 1.2 → cross-tenant 403 with a
-  real foreign slug + demo allow-list still anonymous · 1.3 → revoked-key 401 · rotation overlap ·
-  legacy-key continuity
-- **browser smoke owed:** yes, to Daniel — login → own dashboard; foreign slug → 403 (auth path)
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
+## Sprint QA — as built
+- **api specs (107 passing):** `app-auth.spec` → unauthed `/app` + foreign-slug dashboards + key
+  mgmt all bounce to `/login` (using the **real** `miyagisanchez` slug, per the S4
+  least-convenient-input lesson) · demo dashboard still anonymous · `safeRedirectPath` open-redirect
+  guard (6 hostile inputs) · `isOwner` fails closed. `api-keys.spec` → legacy/backfilled key still
+  authorizes · revoked key → 401 immediately · rotation overlap. Existing funnel/impact/experiments
+  specs kept their JSON-endpoint data coverage, page assertions updated to the gated reality.
+- **Deviation from the plan, deliberate:** the plan said non-member → "403/404"; as built it is
+  **404, never 403** — a 403 confirms the project exists. Slug-guessing gets no oracle at all.
+- **Not built here (moved, not dropped):** self-serve **sign-up** — cross-review flagged it was
+  reachable ahead of its born-OFF `SIGNUP_ENABLED` gate, and it belongs to Story 2.1. Sprint 1 is
+  **sign-in only**; accounts + memberships are hand-seeded.
+- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` — green before merge.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: preview URL pre-merge · production `https://golden-beans-gamma.vercel.app` post-merge
+Env: preview URL pre-merge · production `https://golden-beans-gamma.vercel.app` post-merge.
+**Prerequisite:** the PR's *ordering kit* is done — migrations applied to prod Supabase **before**
+the code deploys, `NEXT_PUBLIC_SUPABASE_URL`/`_ANON_KEY` set in Vercel, Supabase Auth redirect URLs
+include `/auth/callback`, and your membership row seeded **as `owner`**.
 
 1. Open `/app` in a private window.
-   → You're sent to a login screen, not a dashboard.
+   → You're sent to `/login`, not a dashboard.
 2. Sign in with your seeded account. *(auth path — owed to Daniel)*
-   → You see your project(s) only; no other tenant listed.
-3. Edit the URL to a project slug you don't belong to (use the real Miyagi slug).
-   → 403/404 — never data.
-4. Open the public landing's live-proof section anonymously.
-   → Demo project still renders (allow-list intact).
-5. In the dashboard, revoke a test API key, then fire a `curl` `/v1/track` call with it.
-   → 401 immediately.
+   → You see your project(s) only, with links to Funnel / Impact / API keys; no other tenant listed.
+3. Still signed in, edit the URL to a project slug you don't belong to (use the real Miyagi slug).
+   → **404** — never data, and never a 403 (a 403 would confirm the project exists).
+4. Still signed in, open `/app/keys/<a project you're only a `member` of>`.
+   → **404** — credential admin is owner-only. *(Skip if you're `owner` everywhere.)*
+5. On your own project's `/app/keys/<slug>`, click **Issue key**.
+   → The plaintext is shown **once**, with a "copy it now" warning; the row appears as `active`.
+6. `curl` `/api/v1/track` with that new key:
+   `curl -i -X POST <base>/api/v1/track -H "Authorization: Bearer <new-key>" -H 'Content-Type: application/json' -d '{"userId":"smoke","event":"smoke_event"}'`
+   → **201**.
+7. Revoke that key in the dashboard, then re-run the exact same `curl`.
+   → **401**, immediately — no deploy, no cache window.
+8. Confirm the **pre-existing** ingest key still works (the backfill did its job) — re-run step 6
+   with the key production was already using.
+   → **201**. *(This is the one that proves nothing broke for live tenants.)*
+9. Open the public landing's live-proof section anonymously (private window, signed out).
+   → Demo project still renders — the allow-list carve-out survived the auth boundary.
+10. Sign out from `/app`.
+   → You land on `/login`, and re-opening `/app` sends you back to `/login` (session really gone).
 
 If any step fails, note the step number + what you saw — that's the bug report.
