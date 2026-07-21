@@ -9,7 +9,7 @@ The Golden Beans side needs no new code: the Sprint 2 signed-webhook destination
 these events, and Sprint 1's `subject: { type: 'merchant', id }` context is what routes them. What was
 produced here is the producer-side contract the Miyagi PR implements against —
 [`miyagi-lifecycle-contract.md`](./miyagi-lifecycle-contract.md): transport, envelope, the six
-lifecycle fixtures, and the five guarantees Miyagi must uphold (idempotency by event id, verify
+lifecycle fixtures, and the six guarantees Miyagi must uphold (idempotency by event id, verify
 before acting, 5xx-not-2xx on outage, Medusa stays commerce truth, no PII).
 **Owed:** the Miyagi PR itself (endpoint + projection table + migration + idempotency store), the
 identical fixtures running in both suites, and the disposable-merchant smoke. Cross-repo — Daniel

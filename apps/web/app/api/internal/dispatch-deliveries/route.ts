@@ -107,15 +107,22 @@ export async function POST(request: Request) {
     if (!outcome.ok) errored += 1
   }
 
-  return NextResponse.json({
-    enabled: true,
-    projects: projects.length,
-    processed,
-    deferred: projects.length - processed,
-    delivered,
-    unsettled,
-    errored,
-  })
+  // Return a FAILURE status when any project errored or any settlement didn't persist, so cron
+  // monitoring records a failed invocation instead of a green 200 that hides the problem
+  // (cross-review, Codex round 7). The body still carries the counts for diagnostics.
+  const status = errored > 0 || unsettled > 0 ? 500 : 200
+  return NextResponse.json(
+    {
+      enabled: true,
+      projects: projects.length,
+      processed,
+      deferred: projects.length - processed,
+      delivered,
+      unsettled,
+      errored,
+    },
+    { status },
+  )
 }
 
 // GET mirrors POST so a platform cron that issues GET still works; both require the bearer secret.

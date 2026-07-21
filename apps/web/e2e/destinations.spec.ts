@@ -112,15 +112,26 @@ test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treat
   expect(isPrivateOrLoopbackHost('::ffff:10.0.0.1')).toBe(true)
   expect(isPrivateOrLoopbackHost('::ffff:a9fe:a9fe')).toBe(true) // hex form of 169.254.169.254
   expect(isPrivateOrLoopbackHost('::ffff:0808:0808')).toBe(false) // 8.8.8.8 mapped — public
-  // The WHOLE fe80::/10 link-local block, not just fe80: (cross-review, Codex round 5).
-  expect(isPrivateOrLoopbackHost('fe80::1')).toBe(true)
-  expect(isPrivateOrLoopbackHost('feaa::1')).toBe(true) // still inside fe80::/10
-  expect(isPrivateOrLoopbackHost('fec0::1')).toBe(false) // fec0 is OUTSIDE /10 — not link-local
+  // IPv6: ONLY global unicast (2000::/3) is allowed — everything else is non-global (cross-review,
+  // Codex rounds 5 & 7). Link-local fe80::/10, site-local fec0::/10 (deprecated), ULA, multicast all
+  // rejected; a real 2xxx/3xxx public address is allowed.
+  expect(isPrivateOrLoopbackHost('fe80::1')).toBe(true) // link-local
+  expect(isPrivateOrLoopbackHost('feaa::1')).toBe(true) // link-local
+  expect(isPrivateOrLoopbackHost('fec0::1')).toBe(true) // site-local (deprecated) — non-global
+  expect(isPrivateOrLoopbackHost('fc00::1')).toBe(true) // unique-local
+  expect(isPrivateOrLoopbackHost('ff02::1')).toBe(true) // multicast
+  expect(isPrivateOrLoopbackHost('2606:4700:4700::1111')).toBe(false) // global unicast — allowed
+  expect(isPrivateOrLoopbackHost('2001:db8::1')).toBe(false) // within 2000::/3 (doc range, not routable inward)
   // CGNAT 100.64.0.0/10 (cross-review, Antigravity round 5) — internal cloud/metadata surfaces.
   expect(isPrivateOrLoopbackHost('100.64.0.1')).toBe(true)
   expect(isPrivateOrLoopbackHost('100.127.255.255')).toBe(true)
   expect(isPrivateOrLoopbackHost('100.63.0.1')).toBe(false) // just below the /10 — public
   expect(isPrivateOrLoopbackHost('100.128.0.1')).toBe(false) // just above the /10 — public
+  // Other special-use v4 the strict filter now rejects (cross-review, Codex round 7).
+  expect(isPrivateOrLoopbackHost('198.18.0.1')).toBe(true) // benchmarking 198.18.0.0/15
+  expect(isPrivateOrLoopbackHost('192.0.2.5')).toBe(true) // TEST-NET-1
+  expect(isPrivateOrLoopbackHost('255.255.255.255')).toBe(true) // broadcast / reserved
+  expect(isPrivateOrLoopbackHost('8.8.8.8')).toBe(false) // still public
 })
 
 // ── DB-enforced invariants (service-role, driven directly) ─────────────────────────────────────

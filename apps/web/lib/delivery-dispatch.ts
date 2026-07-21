@@ -156,9 +156,21 @@ export async function dispatchPendingDeliveries(
         }
         break
       }
-      // One bad row must not sink the batch — settle it in isolation. A throw here would leave the
-      // rest of the claimed rows stuck in_flight until the stale-reclaim, for no reason.
-      settlements.push(await sendAndSettle(db, projectId, rows[i], now, options))
+      // One bad row must not sink the batch — a throw would abandon THIS row and every later one in
+      // in_flight until stale reclaim (cross-review, Codex round 7 — the isolation was claimed but
+      // not implemented). Catch per row: record the failure as an un-persisted settlement (so the
+      // cron surfaces it as `unsettled`) and continue. The row stays in_flight and the stale-reclaim
+      // path recovers it; better than losing the rest of the batch.
+      const r = rows[i]
+      try {
+        settlements.push(await sendAndSettle(db, projectId, r, now, options))
+      } catch (rowErr) {
+        console.error('[delivery-dispatch] row settle threw:', rowErr instanceof Error ? rowErr.message : rowErr)
+        settlements.push({
+          id: r.id, event_id: r.event_id, destination_id: r.destination_id,
+          disposition: 'skipped', status: 'in_flight', attemptCount: r.attempt_count, persisted: false,
+        })
+      }
     }
 
     return { ok: true, dispatched: true, reason: 'claimed', claimed: settlements }

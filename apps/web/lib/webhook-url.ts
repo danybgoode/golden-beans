@@ -70,21 +70,23 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
   // localhost is an SSRF pivot, never a real receiver. The http://localhost TEST carve-out is
   // handled earlier in assertDeliverableUrl and never reaches here.
   if (h === 'localhost' || h.endsWith('.localhost')) return true
-  if (h === '::1' || h === '::') return true // IPv6 loopback / unspecified
-  // IPv6 link-local is the WHOLE fe80::/10 block (fe80–febf), not just fe80: (cross-review, Codex
-  // round 5) — the 10th bit spans third-hex-digit 8..b.
-  if (/^fe[89ab]/.test(h)) return true
-  if (h.startsWith('fc') || h.startsWith('fd')) return true // IPv6 unique-local (fc00::/7)
 
   // IPv4-MAPPED / -embedded IPv6, e.g. `::ffff:169.254.169.254` or `::ffff:a9fe:a9fe` (cross-review,
-  // both families 2026-07-21): these route to an IPv4 address, so `[::ffff:169.254.169.254]` would
-  // otherwise sail past the dotted-quad regex below and hit cloud metadata. Extract the embedded v4
-  // and apply the v4 rules.
+  // both families) — these route to an IPv4 address, so decode the embedded v4 and apply the v4
+  // rules. Checked BEFORE the generic IPv6 branch so a mapped PUBLIC v4 (e.g. ::ffff:8.8.8.8) is
+  // correctly allowed rather than swept up by "not global-unicast IPv6".
   const embeddedV4 = extractEmbeddedIPv4(h)
   if (embeddedV4) return isPrivateIPv4(embeddedV4)
 
+  // Any OTHER IPv6 literal: allow ONLY global unicast (2000::/3 — first nibble 2 or 3), reject
+  // everything else (cross-review, Codex round 7: "reject every address that is not global unicast").
+  // That one rule subsumes loopback (::1), unspecified (::), link-local (fe80::/10), site-local
+  // (fec0::/10, deprecated), unique-local (fc00::/7), multicast (ff00::/8) and all reserved blocks —
+  // an allowlist is safer here than chasing an ever-growing blocklist.
+  if (h.includes(':')) return !/^[23]/.test(h)
+
   const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
-  if (!v4) return false // a hostname, not a literal IPv4 — allowed (DNS caveat documented above)
+  if (!v4) return false // a hostname, not a literal IPv4 — allowed (its resolved IP is re-checked)
   return isPrivateIPv4([Number(v4[1]), Number(v4[2]), Number(v4[3]), Number(v4[4])])
 }
 
@@ -105,13 +107,23 @@ function extractEmbeddedIPv4(h: string): [number, number, number, number] | null
   return null
 }
 
-function isPrivateIPv4([a, b]: [number, number, number, number]): boolean {
-  if (a === 10) return true // 10.0.0.0/8
-  if (a === 127) return true // loopback
+// TRUE for any IPv4 that is NOT global unicast — the special-use ranges of RFC 6890 (cross-review,
+// Codex round 7: "reject every address that is not global unicast"). Enumerated because the global
+// space is the majority for IPv4 (an allowlist would be the whole internet minus these).
+function isPrivateIPv4([a, b, c]: [number, number, number, number]): boolean {
   if (a === 0) return true // 0.0.0.0/8 "this network"
-  if (a === 169 && b === 254) return true // link-local incl. 169.254.169.254 cloud metadata
-  if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12
-  if (a === 192 && b === 168) return true // 192.168.0.0/16
-  if (a === 100 && b >= 64 && b <= 127) return true // 100.64.0.0/10 CGNAT (cross-review, Antigravity round 5)
+  if (a === 10) return true // 10.0.0.0/8 private
+  if (a === 100 && b >= 64 && b <= 127) return true // 100.64.0.0/10 CGNAT (Antigravity round 5)
+  if (a === 127) return true // 127.0.0.0/8 loopback
+  if (a === 169 && b === 254) return true // 169.254.0.0/16 link-local incl. 169.254.169.254 metadata
+  if (a === 172 && b >= 16 && b <= 31) return true // 172.16.0.0/12 private
+  if (a === 192 && b === 0 && c === 0) return true // 192.0.0.0/24 IETF protocol assignments
+  if (a === 192 && b === 0 && c === 2) return true // 192.0.2.0/24 TEST-NET-1
+  if (a === 192 && b === 88 && c === 99) return true // 192.88.99.0/24 6to4 relay anycast (deprecated)
+  if (a === 192 && b === 168) return true // 192.168.0.0/16 private
+  if (a === 198 && (b === 18 || b === 19)) return true // 198.18.0.0/15 benchmarking (Codex round 7)
+  if (a === 198 && b === 51 && c === 100) return true // 198.51.100.0/24 TEST-NET-2
+  if (a === 203 && b === 0 && c === 113) return true // 203.0.113.0/24 TEST-NET-3
+  if (a >= 224) return true // 224.0.0.0/4 multicast + 240.0.0.0/4 reserved + 255.255.255.255 broadcast
   return false
 }
