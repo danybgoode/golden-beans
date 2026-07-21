@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: commercial-shell
 ---
 
@@ -72,14 +72,14 @@ Single repo, Vercel rail (per-PR previews). Demo-project seed (1.2) must land be
 live-proof section renders non-empty — same-PR ordering, no cross-repo dependency. Miyagi is
 untouched by this epic.
 
-## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] **Landing backfill check** (WAYS-OF-WORKING, adopted 2026-07-14): section badges match shipped reality
-- [ ] Team memory updated (if kept)
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** `CONNECTOR_ENABLED` exists with stated polarity (enablement, born OFF) + token revocation verified. *Verify-only — decided at grooming.*
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
+## Definition of Done (epic) — ✅ complete 2026-07-20
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — S1 (PR #8), S2 (PR #9), S3 (PR #11).
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] **Landing backfill check** (WAYS-OF-WORKING, adopted 2026-07-14): section badges match shipped reality — verified in sprint-3.md's Story 3.3 backfill note (all `next`-badged sections' epics still `scaffolded`).
+- [x] Team memory updated (if kept)
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch:** `CONNECTOR_ENABLED` exists with stated polarity (enablement, born OFF, flipped ON at launch 2026-07-20) + per-project token revocation verified in `e2e/mcp-connector.spec.ts` (revoked token → 401, no deploy). *Verify-only — decided at grooming.*
+- [x] Feature branch deleted (Sprint 3 shipped via PR #11, branch deleted on merge); **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)

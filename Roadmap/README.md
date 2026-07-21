@@ -57,22 +57,23 @@ independently shippable slice of value.
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
 
 ### 02 · Commercial
-- 🚧 [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
+- ✅ [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
   read-only MCP connector + install page · dogfood instrumentation · SEO/OG + agent manifest) —
-  live in production at `https://golden-beans-gamma.vercel.app`; the landing now tracks itself as a
-  real tenant (visitor→waitlist funnel via the actual SDK) and serves real OG cards + `/llms.txt`.
-  Still 🚧, not ✅: the MCP connector ships dark (`CONNECTOR_ENABLED` off) and the launch checklist
-  (domain decision, the flip, announce) is a named product-owner action, not yet executed.
+  **launched** and live in production at `https://golden-beans-gamma.vercel.app`. The landing tracks
+  itself as a real tenant (visitor→waitlist funnel via the actual SDK), serves real OG cards +
+  `/llms.txt`, and the read-only MCP connector is **enabled** (`CONNECTOR_ENABLED` flipped ON
+  2026-07-20) with a live demo token on `/install`. Staying on the `vercel.app` domain for v1.
 
 ---
 
 ## Recent highlights
 
-- **2026-07-20** — `commercial-shell` Sprint 3 (Stories 3.1–3.2) shipped: the landing dogfoods the
-  growth engine as its own tenant (a real visitor→waitlist funnel, a `waitlist_conversion` Grower
-  signal), plus real OG/Twitter cards and an `llms.txt` agent-readable manifest. The epic's launch
-  itself (Story 3.3 — domain, the `CONNECTOR_ENABLED` flip, announce) remains a product-owner
-  checklist.
+- **2026-07-20** — `commercial-shell` **launched** (epic shipped): the landing dogfoods the growth
+  engine as its own tenant (a real visitor→waitlist funnel + a `waitlist_conversion` Grower signal),
+  serves real OG/Twitter cards and an `llms.txt` agent-readable manifest (Stories 3.1–3.2, PR #11),
+  and the read-only **MCP connector is now enabled in production** with a live demo token
+  (Story 3.3 — self-tenant seeded, demo token minted, `CONNECTOR_ENABLED` flipped ON; domain stays
+  on `golden-beans-gamma.vercel.app` for v1).
 - **2026-07-16** — `growth-engine-v1` shipped: a standalone telemetry engine (event ingest + SDK),
   a TARS (Targeted/Adopted/Retained) funnel, a North Star metric with real Medusa revenue inputs,
   and client-side A/B bucketing with a basic-lift comparison view — all proven against one real

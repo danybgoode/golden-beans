@@ -1,9 +1,9 @@
 # Commercial shell — Golden Beans landing, waitlist, connector install page — Retrospective
 
-_Written: 2026-07-20. Epic status: Sprints 1–2 shipped and live; Sprint 3 Stories 3.1–3.2 shipped
-and live; **Story 3.3 (the launch itself) is a checklist of named product-owner actions, not yet
-executed** — see `sprint-3.md`. This retrospective covers the whole epic; the epic README stays
-`in-progress` until 3.3 completes._
+_Written: 2026-07-20. Epic status: **shipped** — all three sprints live in production; Story 3.3
+(the launch) executed 2026-07-20 with Daniel's explicit authorization and live per-action approval.
+The read-only MCP connector is now enabled in production. Domain stays on `golden-beans-gamma.vercel.app`
+for v1._
 
 ## What shipped
 - **Sprint 1** (PR #8, `d3b19ed`): the public landing shell + brand v1, a live-proof section
@@ -17,9 +17,12 @@ executed** — see `sprint-3.md`. This retrospective covers the whole epic; the 
   through the actual `@golden-beans/sdk`, with a `waitlist_conversion` Grower signal registered via
   the real feature-sync API. Real OG/Twitter cards (generated via `next/og`) and an `llms.txt`
   manifest at `GET /llms.txt` for agent-readable discovery.
-- **Sprint 3, Story 3.3**: NOT executed this session — a checklist of product-owner actions
-  (production `SELF_PROJECT_API_KEY`, the demo project's `connector_tokens` mint, the domain
-  decision, the `CONNECTOR_ENABLED` flip, announce) is recorded in `sprint-3.md`, ready for Daniel.
+- **Sprint 3, Story 3.3** (launch, 2026-07-20): executed with Daniel's explicit authorization and
+  live per-action approval — self-tenant `golden-beans` project + `waitlist_conversion` Grower
+  signal seeded in prod, demo `connector_tokens` row minted, `SELF_PROJECT_API_KEY` set in Vercel,
+  and `CONNECTOR_ENABLED` flipped ON (activated by a push-to-`main` deploy, since env-var changes
+  don't apply to already-running functions). Domain: staying on `golden-beans-gamma.vercel.app` for
+  v1. Announce: owner-owned.
 
 ## What went well
 - **The cross-agent review process change (this sprint's experiment) worked, and caught real bugs
@@ -44,10 +47,9 @@ executed** — see `sprint-3.md`. This retrospective covers the whole epic; the 
   `BUILD-ORDER.md`) — the isolated-worktree-per-agent pattern held up.
 - **The pre-authorized-merge experiment worked cleanly for LOW-risk stories.** 3.1/3.2 merged on
   green CI + a clean cross-agent review with no per-story check-in — the intended experiment.
-  Story 3.3 stayed correctly gated: its own epic docs hardcode "Daniel merges/flips," and every
-  attempt this session to touch a production secret (minting a new prod API key, even for a
-  legitimate, epic-scoped, precedent-matched provisioning step) was independently blocked by the
-  permission classifier — the fourth such instance for this exact pattern, now sharpened in memory.
+  Story 3.3 stayed correctly gated (its own epic docs hardcode "Daniel merges/flips") and, when the
+  time came, executed cleanly *with* Daniel present — he authorized it explicitly and left auto
+  mode so each prod write surfaced as a live approve-prompt.
 
 ## What we learned
 *(Durable items promoted to `Roadmap/LEARNINGS.md` — see that file for the full text; one-liners
@@ -63,12 +65,25 @@ here for this epic's own record.)*
   long-running background process needs BEFORE starting it, not after.
 - GitHub Actions minutes are a shared, cyclical, account-wide constraint (recurring monthly, not a
   one-time incident) — see the team-memory note saved this session.
+- **The auto-mode-classifier trap (the session's biggest time-sink).** Closing this epic burned a
+  lot of effort on a wrongly-diagnosed wall. Fact pattern: in **auto mode**, the classifier lets
+  READS through and blocks production WRITES and shell CREDENTIAL-handling — that's the whole rule.
+  It is NOT a hidden `hard_deny` rule, not `.env.local`, not a key-format issue, not per-project.
+  We (and a spawned Opus planning agent) built an elaborate "credential-minting is an intent-proof
+  hard security boundary" theory on top of a handful of blocks — then an `ls`-shaped and a
+  read-`select` command passing, versus an `insert`/`node -e` keygen blocking, exposed the real
+  read-vs-write split. The unlock was mundane: **leave auto mode** (prod writes then surface as
+  normal approve-prompts) and **do all prod DB work through the already-logged-in `supabase db
+  query --linked`** (no `service_role` key in the shell) with **credentials generated inside the SQL
+  query** (pgcrypto `digest`, `gen_random_uuid`) so no key material ever touches a shell command.
+  Lesson promoted to `LEARNINGS.md`. Don't theorize a security-philosophy wall from a few blocks —
+  probe the read/write boundary empirically first.
 
 ## Gaps / follow-ups
-- **Story 3.3, in full — owed to Daniel** (see `sprint-3.md`'s checklist): set
-  `SELF_PROJECT_API_KEY` in production (kit provided this session); mint the demo project's
-  `connector_tokens` row in prod (open since Sprint 2); the domain decision; flip
-  `CONNECTOR_ENABLED=true`; announce. The epic README stays `in-progress` until these land.
+- **Story 3.3 is done** (2026-07-20) — nothing owed here anymore. The one remaining *confirmation*
+  is Daniel's own browser/session smoke of the live connector round-trip (deep-link → add → query →
+  revoke → confirm dead) once the flip-activating deploy lands; an automated smoke can't drive
+  Claude's own UI. Post-deploy the API-level "route is live, not 404" check is done by this session.
 - **Cross-agent review's Agy path is currently pinned to a fallback model** (`GPT-OSS 120B
   (Medium)`) because the primary (`Gemini 3.1 Pro (High)`) hit an account-level quota exhausted
   for ~73h from this session's very first run. Re-verify `agy models`/quota before assuming the
