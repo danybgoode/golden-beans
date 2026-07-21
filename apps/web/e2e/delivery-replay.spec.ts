@@ -211,6 +211,98 @@ test('after a delivery, a REPLAY (reset to pending) re-sends with the SAME logic
   })
 })
 
+test('each settled send is LOGGED to the append-only attempt log, and a replay ADDS rather than erases', async () => {
+  // Cross-review (Codex 2026-07-21): replay resets the delivery ROW, so history must live elsewhere.
+  // Deliver once → one 'delivered' attempt logged. Replay + deliver again → a SECOND attempt logged,
+  // the first still present. The delivery it already made is never erased.
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId } = await fixture(db)
+    try {
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      let { data: attempts } = await db.from('event_delivery_attempts').select('outcome, attempt_no').eq('delivery_id', deliveryId).order('attempt_no')
+      expect(attempts).toHaveLength(1)
+      expect(attempts![0].outcome).toBe('delivered')
+
+      // Replay (the same reset replayDelivery performs) + deliver again.
+      await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null }).eq('id', deliveryId)
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+
+      ;({ data: attempts } = await db.from('event_delivery_attempts').select('outcome, attempt_no').eq('delivery_id', deliveryId).order('created_at'))
+      // TWO delivered attempts — the replay ADDED to history, the original was not erased.
+      expect(attempts).toHaveLength(2)
+      expect(attempts!.every((a) => a.outcome === 'delivered')).toBe(true)
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('delivery_health counts SUCCESSFUL deliveries from the attempt log — so replay does not lose the count', async () => {
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId, destId } = await fixture(db)
+    try {
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+      // Replay + deliver again: the ROW is delivered once (current state), but TWO deliveries happened.
+      await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null }).eq('id', deliveryId)
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(200).impl })
+
+      const { data } = await db.rpc('delivery_health', { p_project_id: pid })
+      const row = (data as Record<string, unknown>[]).find((r) => r.destination_id === destId)!
+      expect(Number(row.delivered)).toBe(2) // both deliveries counted — from the attempt log
+      expect(Number(row.dead)).toBe(0)
+      expect(row.last_delivery_at).not.toBeNull()
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+// ── enumeration eligibility (projects_with_due_work RPC) ──────────────────────────────────────
+test('projects_with_due_work surfaces a project whose ONLY due work is a STALE in_flight row', async () => {
+  // Cross-review (Codex + Antigravity 2026-07-21): the old Node enumeration filtered pending/failed
+  // only, so a project stranded with a stale in_flight row (dead worker) was never enumerated and its
+  // rows never reached the stale-reclaim path. The RPC includes the stale-in_flight condition.
+  const db = dbClient()
+  const { pid, deliveryId } = await fixture(db)
+  try {
+    // Mark the delivery in_flight and claimed 10 minutes ago — a dead-worker casualty.
+    const staleClaim = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    await db.from('event_deliveries').update({ status: 'in_flight', claimed_at: staleClaim }).eq('id', deliveryId)
+
+    const { data } = await db.rpc('projects_with_due_work', {
+      p_now: new Date().toISOString(),
+      p_limit: 200,
+      p_stale_after: '300000 milliseconds', // 5 min — the row is 10 min stale, so it qualifies
+    })
+    expect((data as { project_id: string }[]).map((r) => r.project_id)).toContain(pid)
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
+test('projects_with_due_work EXCLUDES a project whose due work is behind a DISABLED destination', async () => {
+  // The starvation fix (#8): a disabled destination's backlog is not "due work" and must not occupy
+  // the enumeration, crowding out tenants with real work.
+  const db = dbClient()
+  const { pid, destId, deliveryId } = await fixture(db)
+  try {
+    await db.from('event_destinations').update({ enabled: false }).eq('id', destId)
+    // The delivery row is pending + due, but its destination is disabled.
+    await db.from('event_deliveries').update({ status: 'pending', next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq('id', deliveryId)
+
+    const { data } = await db.rpc('projects_with_due_work', {
+      p_now: new Date().toISOString(),
+      p_limit: 200,
+      p_stale_after: '300000 milliseconds',
+    })
+    expect((data as { project_id: string }[]).map((r) => r.project_id)).not.toContain(pid)
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
 // ── the cron trigger's auth + dark no-op (HTTP) ───────────────────────────────────────────────
 test('the dispatch cron refuses an unauthenticated request', async ({ request }) => {
   const res = await request.post('/api/internal/dispatch-deliveries')

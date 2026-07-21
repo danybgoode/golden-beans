@@ -77,3 +77,103 @@ GRANT EXECUTE ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTERVAL)
 
 COMMENT ON FUNCTION claim_deliveries(UUID, INTEGER, TIMESTAMPTZ, INTERVAL) IS
   'Atomically claims up to p_limit due (or stale-in_flight) deliveries for ONE project via FOR UPDATE SKIP LOCKED, flipping them to in_flight. Only claims rows whose destination is enabled AND deliverable. p_project_id must come from the caller, never a request body.';
+
+-- ── event_delivery_attempts — the append-only attempt LOG ─────────────────────────────────────
+-- One row per REAL send attempt the dispatcher settled. It exists because the outbox row
+-- (event_deliveries) holds only CURRENT state — one row per (event, destination) — so a REPLAY that
+-- resets that row to pending would erase the record of the delivery it already made (cross-review,
+-- Codex 2026-07-21). The delivery row stays the retry engine's working state; THIS table is the
+-- history the operating view (Story 3.3) and any audit read from, and replay adds to it rather than
+-- destroying it. Same append-only-by-grant shape as audit_log (SELECT+INSERT, no UPDATE/DELETE).
+--
+--   outcome:     the send disposition — delivered | retryable | permanent | skipped. NOT the
+--                delivery's status: an attempt is delivered/retryable/permanent; the DELIVERY becomes
+--                dead when a permanent attempt lands or the retry budget is spent. Keeping the two
+--                vocabularies distinct is what lets the health view count "successful deliveries ever"
+--                (outcome='delivered') separately from "current rows in a dead state".
+--   attempt_no:  the post-increment attempt_count this attempt represents.
+--
+-- The composite FK below needs (id, project_id) unique on event_deliveries — redundant as a
+-- uniqueness claim (id is already PK), which is why it is free to add to a live table. Added BEFORE
+-- the table so the inline FK can reference it.
+ALTER TABLE event_deliveries
+  ADD CONSTRAINT event_deliveries_id_project_uniq UNIQUE (id, project_id);
+
+CREATE TABLE IF NOT EXISTS event_delivery_attempts (
+  id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id     UUID        NOT NULL,
+  delivery_id    UUID        NOT NULL,
+  destination_id UUID        NOT NULL,
+  event_id       UUID        NOT NULL,
+  outcome        TEXT        NOT NULL,
+  http_status    INTEGER,
+  latency_ms     INTEGER,
+  error          TEXT,
+  attempt_no     INTEGER     NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+  CONSTRAINT event_delivery_attempts_outcome_known
+    CHECK (outcome IN ('delivered', 'retryable', 'permanent', 'skipped')),
+  -- Composite FK: an attempt row can only pair a delivery with the SAME project — tenancy as a DB
+  -- fact, the same shape as event_deliveries' composite FKs. CASCADE so tenant offboarding
+  -- (DELETE FROM projects) erases attempts too.
+  CONSTRAINT event_delivery_attempts_delivery_fk
+    FOREIGN KEY (delivery_id, project_id) REFERENCES event_deliveries (id, project_id) ON DELETE CASCADE
+);
+ALTER TABLE event_delivery_attempts ENABLE ROW LEVEL SECURITY;
+
+-- "What happened to this destination?" — the operating view's aggregate scans by destination.
+CREATE INDEX IF NOT EXISTS event_delivery_attempts_dest_idx
+  ON event_delivery_attempts (destination_id, outcome);
+
+-- Append-only by GRANT (no UPDATE/DELETE to service_role), the same posture as audit_log: the
+-- history cannot be rewritten, only added to. REVOKE PUBLIC/anon/authenticated first (a later grant
+-- to service_role does not remove Postgres' PUBLIC default).
+REVOKE ALL ON TABLE event_delivery_attempts FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE event_delivery_attempts TO service_role;
+
+COMMENT ON TABLE event_delivery_attempts IS
+  'Append-only log of every settled send attempt. The delivery row holds current state; this holds history, so a replay (which resets the delivery row) never erases the delivery it already made. Read by the Story 3.3 operating view.';
+
+-- ── projects_with_due_work() — the cron enumeration, eligibility-aware ────────────────────────
+-- Which projects should this tick dispatch? The naive answer (a PostgREST SELECT on pending/failed
+-- then de-dup in Node) had two bugs cross-review caught (Codex + Antigravity, 2026-07-21):
+--   1. It filtered status IN (pending, failed) and so NEVER surfaced a project whose only due work is
+--      a STALE in_flight row — a worker crashed mid-send and its rows can never be reclaimed because
+--      the enumeration that feeds the reclaiming RPC omits them. This RPC includes the SAME
+--      stale-in_flight condition claim_deliveries uses, so enumeration and claim agree.
+--   2. It read a bounded page BEFORE de-duplicating, so one project with a huge backlog (or a backlog
+--      behind a DISABLED destination) could fill the page and starve every other tenant. A real
+--      SELECT DISTINCT over only ELIGIBLE work (enabled + deliverable destination) has neither
+--      problem: a disabled destination's rows are not "due work" at all, and DISTINCT is exact.
+CREATE OR REPLACE FUNCTION projects_with_due_work(
+  p_now         TIMESTAMPTZ,
+  p_limit       INTEGER,
+  p_stale_after INTERVAL
+)
+RETURNS TABLE (project_id UUID)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+  SELECT DISTINCT dd.project_id
+    FROM event_deliveries dd
+    JOIN event_destinations dest
+      ON dest.id = dd.destination_id
+     AND dest.project_id = dd.project_id
+   WHERE dest.enabled
+     AND dest.target_url IS NOT NULL
+     AND dest.signing_secret IS NOT NULL
+     AND (
+       (dd.status IN ('pending', 'failed') AND dd.next_attempt_at <= p_now)
+       OR (dd.status = 'in_flight' AND dd.claimed_at < p_now - p_stale_after)
+     )
+   LIMIT p_limit;
+$$;
+
+REVOKE ALL ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) TO service_role;
+
+COMMENT ON FUNCTION projects_with_due_work(TIMESTAMPTZ, INTEGER, INTERVAL) IS
+  'DISTINCT project_ids that currently have ELIGIBLE due work (enabled+deliverable destination, and either due pending/failed OR stale in_flight). Feeds the dispatch cron; matches claim_deliveries eligibility so enumeration and claim never disagree.';

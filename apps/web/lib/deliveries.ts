@@ -67,6 +67,10 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
 // this again from scratch" act, not a continuation of the exhausted schedule that dead-lettered it.
 // Scoped by id + project_id, and only replayable from a settled state (delivered/failed/dead) — a
 // row already pending/in_flight is queued and must not be reset out from under a live dispatcher.
+//
+// Resetting the delivery ROW does NOT lose history (cross-review, Codex 2026-07-21): the delivery it
+// already made is recorded immutably in event_delivery_attempts, which the operating view reads —
+// the row is only the retry engine's CURRENT state, not the record of what happened.
 export async function replayDelivery(
   projectId: string,
   deliveryId: string,
@@ -139,25 +143,29 @@ export async function getDeliveryHealth(projectId: string): Promise<DeliveryHeal
   }))
 }
 
-// The production trigger's fan-in: which projects currently have due work? A cheap DISTINCT the cron
-// enumerates, then dispatches once per project (the dispatcher is always single-tenant). Bounded so
-// one cron tick can't try to sweep an unbounded number of tenants.
-export async function projectsWithDueWork(now: Date, limit = 200): Promise<string[]> {
+// The production trigger's fan-in: which projects currently have ELIGIBLE due work? Delegates to the
+// projects_with_due_work RPC (a real SELECT DISTINCT), NOT a PostgREST page de-duped in Node. Two
+// bugs cross-review caught in the Node version (Codex + Antigravity, 2026-07-21) are why:
+//   • it filtered status IN (pending, failed) and so never surfaced a project whose only due work is
+//     a STALE in_flight row — which meant those rows could never reach the stale-reclaim path; and
+//   • it read a bounded page BEFORE de-duplicating, so one project's large (or disabled-destination)
+//     backlog could fill the page and starve other tenants.
+// The RPC enumerates only enabled+deliverable destinations and includes the SAME stale-in_flight
+// condition claim_deliveries uses, so enumeration and claim can never disagree.
+export async function projectsWithDueWork(
+  now: Date,
+  limit = 200,
+  staleAfterMs = 5 * 60 * 1000,
+): Promise<string[]> {
   const supabase = getSupabaseServiceClient()
-  const { data, error } = await supabase
-    .from('event_deliveries')
-    .select('project_id')
-    .in('status', ['pending', 'failed'])
-    .lte('next_attempt_at', now.toISOString())
-    .limit(limit * 20) // over-read then de-dup in memory; PostgREST has no SELECT DISTINCT
+  const { data, error } = await supabase.rpc('projects_with_due_work', {
+    p_now: now.toISOString(),
+    p_limit: limit,
+    p_stale_after: `${staleAfterMs} milliseconds`,
+  })
   if (error) {
     console.error('[deliveries] projectsWithDueWork failed:', error)
     throw new Error('Could not enumerate due work')
   }
-  const seen = new Set<string>()
-  for (const r of data ?? []) {
-    seen.add(r.project_id as string)
-    if (seen.size >= limit) break
-  }
-  return [...seen]
+  return (data ?? []).map((r: { project_id: string }) => r.project_id)
 }

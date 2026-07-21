@@ -56,6 +56,8 @@ test('assertDeliverableUrl REJECTS https to a private / loopback / metadata addr
     'https://172.16.5.5/hook',
     'https://127.0.0.1/hook', // loopback over https (the localhost carve-out is http-only)
     'https://[::1]/hook',
+    'https://localhost/hook', // loopback HOSTNAME over https — a hostname, not a literal IP
+    'https://api.localhost/hook', // the reserved .localhost TLD
   ]) {
     expect(assertDeliverableUrl(hostile), hostile).toEqual({
       ok: false,
@@ -64,12 +66,17 @@ test('assertDeliverableUrl REJECTS https to a private / loopback / metadata addr
   }
 })
 
-test('isPrivateOrLoopbackHost classifies literal IPs but treats hostnames as public', () => {
+test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treats real hostnames as public', () => {
   expect(isPrivateOrLoopbackHost('169.254.169.254')).toBe(true)
   expect(isPrivateOrLoopbackHost('172.15.0.1')).toBe(false) // just OUTSIDE 172.16/12 — a public range
   expect(isPrivateOrLoopbackHost('172.32.0.1')).toBe(false) // just above the /12
   expect(isPrivateOrLoopbackHost('8.8.8.8')).toBe(false)
   expect(isPrivateOrLoopbackHost('receiver.example.com')).toBe(false)
+  // Loopback HOSTNAMES (cross-review, Codex 2026-07-21) — not literal IPs, but they resolve inward.
+  expect(isPrivateOrLoopbackHost('localhost')).toBe(true)
+  expect(isPrivateOrLoopbackHost('anything.localhost')).toBe(true)
+  // A hostname that merely CONTAINS "localhost" is not the reserved TLD — must stay public.
+  expect(isPrivateOrLoopbackHost('localhost.evil.com')).toBe(false)
 })
 
 // ── DB-enforced invariants (service-role, driven directly) ─────────────────────────────────────

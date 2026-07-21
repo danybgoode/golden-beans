@@ -45,6 +45,12 @@ export function assertDeliverableUrl(raw: string): UrlCheck {
 export function isPrivateOrLoopbackHost(host: string): boolean {
   // new URL() keeps IPv6 hosts in brackets; strip them to compare.
   const h = host.replace(/^\[|\]$/g, '').toLowerCase()
+  // Loopback HOSTNAMES, not just literal 127/::1. `https://localhost` and anything under the
+  // reserved `.localhost` TLD resolve to loopback but are NOT literal IPs, so the IPv4/IPv6 checks
+  // below would miss them (cross-review, Codex 2026-07-21) — an https target claiming to be
+  // localhost is an SSRF pivot, never a real receiver. The http://localhost TEST carve-out is
+  // handled earlier in assertDeliverableUrl and never reaches here.
+  if (h === 'localhost' || h.endsWith('.localhost')) return true
   if (h === '::1' || h === '::') return true // IPv6 loopback / unspecified
   if (h.startsWith('fe80:')) return true // IPv6 link-local
   if (h.startsWith('fc') || h.startsWith('fd')) return true // IPv6 unique-local (fc00::/7)

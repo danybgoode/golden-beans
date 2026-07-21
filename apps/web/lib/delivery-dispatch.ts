@@ -64,8 +64,13 @@ export type DeliverySettlement = {
   event_id: string
   destination_id: string
   disposition: DeliveryDisposition | 'skipped'
-  status: 'delivered' | 'failed' | 'dead' | 'in_flight'
+  status: 'delivered' | 'failed' | 'dead' | 'pending' | 'in_flight'
   attemptCount: number
+  /** Whether the settling UPDATE actually landed on the row WE own. False when the row was reclaimed
+   *  out from under us or the write failed — in which case we must NOT report the send as counted
+   *  (cross-review, Codex 2026-07-21: a send reported as success without being persisted lets the
+   *  same event be resent while the cron reports it done). */
+  persisted: boolean
 }
 
 export type DispatchOutcome =
@@ -133,11 +138,11 @@ export async function dispatchPendingDeliveries(
   }
 }
 
-// Loads the destination secret + the canonical event, signs and POSTs, then writes the row's final
-// status. The claim already guaranteed the destination is enabled + deliverable, so a missing
-// destination/event here is a real anomaly (a concurrent tenant offboarding mid-pass) — parked back
-// to pending rather than lost, so the next pass re-evaluates instead of dead-lettering a row that a
-// transient read failure touched.
+// Loads the destination + the canonical event, RE-CHECKS eligibility, signs and POSTs, then writes
+// the row's final status. Every write carries an OWNERSHIP TOKEN — `.eq('claimed_at', nowIso)` — so
+// a row reclaimed out from under this worker (stale reclaim by a later pass) is NOT overwritten by
+// this pass's stale result (cross-review, Codex 2026-07-21). The claim RPC set claimed_at to this
+// pass's `now`, so that value IS our token.
 async function sendAndSettle(
   db: SupabaseClient,
   projectId: string,
@@ -146,10 +151,16 @@ async function sendAndSettle(
   fetchImpl?: typeof fetch,
 ): Promise<DeliverySettlement> {
   const nowIso = now.toISOString()
+  const base = { id: row.id, event_id: row.event_id, destination_id: row.destination_id }
 
+  // RE-READ the destination INCLUDING `enabled` (cross-review, Codex 2026-07-21): the claim checked
+  // eligibility, but a destination disabled AFTER the claim and BEFORE this send must not still
+  // receive the event. If it is no longer deliverable (disabled / url or secret cleared) — or the
+  // event or destination vanished (a concurrent offboarding) — release the row to pending,
+  // unattempted, and DO NOT send. Next enumeration won't surface it while disabled.
   const { data: dest } = await db
     .from('event_destinations')
-    .select('id, name, target_url, signing_secret')
+    .select('id, name, enabled, target_url, signing_secret')
     .eq('id', row.destination_id)
     .eq('project_id', projectId)
     .maybeSingle()
@@ -162,15 +173,13 @@ async function sendAndSettle(
     .eq('project_id', projectId)
     .maybeSingle()
 
-  if (!dest || !dest.target_url || !dest.signing_secret || !event) {
-    // Anomaly (see above): release to pending, unattempted. attempt_count untouched.
-    await db
-      .from('event_deliveries')
-      .update({ status: 'pending', claimed_at: null, updated_at: nowIso })
-      .eq('id', row.id)
-      .eq('project_id', projectId)
-      .eq('status', 'in_flight')
-    return { id: row.id, event_id: row.event_id, destination_id: row.destination_id, disposition: 'skipped', status: 'pending' as unknown as 'in_flight', attemptCount: row.attempt_count }
+  if (!dest || !dest.enabled || !dest.target_url || !dest.signing_secret || !event) {
+    const released = await settleRow(db, projectId, row.id, nowIso, {
+      status: 'pending',
+      claimed_at: null,
+      updated_at: nowIso,
+    })
+    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted: released }
   }
 
   const body = serializeEnvelope(buildEventEnvelope(event as CanonicalEventRow))
@@ -183,22 +192,57 @@ async function sendAndSettle(
   const attemptCount = row.attempt_count + 1 // this pass made one real attempt
   const patch = settlePatch(result.disposition, attemptCount, now, result.error)
 
-  // Settle scoped by id + project_id + status='in_flight' — we only write the row WE own this pass.
-  await db
+  const persisted = await settleRow(db, projectId, row.id, nowIso, {
+    ...patch,
+    attempt_count: attemptCount,
+    last_attempt_at: nowIso,
+    updated_at: nowIso,
+  })
+
+  // Record the attempt in the append-only log ONLY when we WON the settlement — tying the history
+  // entry to owning the row keeps a reclaim race from double-counting the same send. The log write
+  // is best-effort (like audit): a failure to log must not resend the event, which already happened.
+  if (persisted) {
+    const { error: logErr } = await db.from('event_delivery_attempts').insert({
+      project_id: projectId,
+      delivery_id: row.id,
+      destination_id: row.destination_id,
+      event_id: row.event_id,
+      outcome: result.disposition,
+      http_status: result.status,
+      latency_ms: result.latencyMs,
+      error: result.error,
+      attempt_no: attemptCount,
+    })
+    if (logErr) console.error('[delivery-dispatch] attempt-log write failed:', logErr.message)
+  }
+
+  return { ...base, disposition: result.disposition, status: patch.status, attemptCount, persisted }
+}
+
+// One settling UPDATE, guarded by the ownership token (status still in_flight AND claimed_at is
+// still ours). Returns whether exactly the row we own was written — false on a DB error or a lost
+// reclaim race, so the caller reports the send as un-counted rather than as a clean success.
+async function settleRow(
+  db: SupabaseClient,
+  projectId: string,
+  id: string,
+  claimToken: string,
+  patch: Record<string, unknown>,
+): Promise<boolean> {
+  const { data, error } = await db
     .from('event_deliveries')
-    .update({ ...patch, attempt_count: attemptCount, last_attempt_at: nowIso, updated_at: nowIso })
-    .eq('id', row.id)
+    .update(patch)
+    .eq('id', id)
     .eq('project_id', projectId)
     .eq('status', 'in_flight')
-
-  return {
-    id: row.id,
-    event_id: row.event_id,
-    destination_id: row.destination_id,
-    disposition: result.disposition,
-    status: patch.status,
-    attemptCount,
+    .eq('claimed_at', claimToken)
+    .select('id')
+  if (error) {
+    console.error('[delivery-dispatch] settle failed:', error.message)
+    return false
   }
+  return (data ?? []).length === 1
 }
 
 // Maps an HTTP disposition + attempt count to the row's next state. The retry SCHEDULE is

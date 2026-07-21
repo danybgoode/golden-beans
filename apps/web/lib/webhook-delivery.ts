@@ -131,13 +131,29 @@ function isRetryableStatus(status: number): boolean {
   return status === 408 || status === 429
 }
 
+// Read at most MAX_ERROR_BODY_CHARS worth of bytes from the response, STREAMING — never
+// `response.text()`, which buffers the entire body into memory first (cross-review, Codex
+// 2026-07-21): a hostile receiver could answer a rejected delivery with a multi-gigabyte body and
+// make the dispatcher OOM. We pull one chunk at a time, stop as soon as we have enough for the error
+// snippet, and cancel the rest so the connection is released.
 async function readBoundedBody(response: Response): Promise<string> {
+  const reader = response.body?.getReader()
+  if (!reader) return ''
+  const decoder = new TextDecoder()
+  let out = ''
   try {
-    const text = await response.text()
-    return text.slice(0, MAX_ERROR_BODY_CHARS).replace(/\s+/g, ' ').trim()
+    while (out.length < MAX_ERROR_BODY_CHARS) {
+      const { done, value } = await reader.read()
+      if (done) break
+      out += decoder.decode(value, { stream: true })
+    }
   } catch {
-    return ''
+    // A read error mid-body just truncates the snippet — the disposition is already decided.
+  } finally {
+    // Discard whatever is left; we only ever wanted a snippet for the operator's error record.
+    await reader.cancel().catch(() => {})
   }
+  return out.slice(0, MAX_ERROR_BODY_CHARS).replace(/\s+/g, ' ').trim()
 }
 
 function sanitizeError(err: unknown): string {

@@ -25,15 +25,26 @@ export const runtime = 'nodejs'
 
 const MAX_PROJECTS_PER_TICK = 200
 
+// A wall-clock budget for the whole tick. The per-delivery timeout is 10s and one project can hold
+// up to MAX_CLAIM_BATCH rows, so a naive "process every project sequentially" tick could run for
+// minutes and blow the function deadline — stranding every project after the slow one (cross-review,
+// Codex 2026-07-21). We stop enumerating once we are within one project-batch of the deadline; the
+// unprocessed projects still have due work and are simply picked up by the next */5 tick.
+const TICK_BUDGET_MS = 60_000
+
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return false // fail closed
   const header = request.headers.get('authorization') ?? ''
   const expected = `Bearer ${secret}`
-  // Constant-time compare; length-guard first because timingSafeEqual throws on a length mismatch
-  // (and that throw would itself be an observable timing signal).
-  if (header.length !== expected.length) return false
-  return timingSafeEqual(Buffer.from(header), Buffer.from(expected))
+  // Compare BYTE lengths, not string (char) lengths (cross-review, Antigravity 2026-07-21): a
+  // multi-byte UTF-8 header can match `expected` in char-length while differing in byte-length, and
+  // timingSafeEqual THROWS a RangeError on a byte-length mismatch — which, unguarded, would surface
+  // as an unhandled 500 instead of a clean 401 (and the throw is itself an observable signal).
+  const headerBuf = Buffer.from(header)
+  const expectedBuf = Buffer.from(expected)
+  if (headerBuf.length !== expectedBuf.length) return false
+  return timingSafeEqual(headerBuf, expectedBuf)
 }
 
 export async function POST(request: Request) {
@@ -55,15 +66,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'enumerate_failed' }, { status: 500 })
   }
 
-  let dispatched = 0
+  const startedAt = Date.now()
+  let delivered = 0
   let errored = 0
+  let processed = 0
   for (const projectId of projects) {
+    // Stop before we risk overrunning the function deadline; the rest is due work the next tick
+    // claims. Leaving early is safe — no row is lost, only deferred.
+    if (Date.now() - startedAt > TICK_BUDGET_MS) break
+    processed += 1
     const outcome = await dispatchPendingDeliveries(db, projectId, { now, fetchImpl: fetch })
-    if (outcome.ok && outcome.dispatched) dispatched += outcome.claimed.length
+    if (outcome.ok && outcome.dispatched) {
+      // Count only settlements that were actually PERSISTED as delivered — never merely claimed
+      // (cross-review, Codex 2026-07-21: reporting a claim as a success without the write landing
+      // lets the same event be resent while the tick claims it done).
+      delivered += outcome.claimed.filter((c) => c.persisted && c.status === 'delivered').length
+    }
     if (!outcome.ok) errored += 1
   }
 
-  return NextResponse.json({ enabled: true, projects: projects.length, dispatched, errored })
+  return NextResponse.json({
+    enabled: true,
+    projects: projects.length,
+    processed,
+    deferred: projects.length - processed,
+    delivered,
+    errored,
+  })
 }
 
 // GET mirrors POST so a platform cron that issues GET still works; both require the bearer secret.
