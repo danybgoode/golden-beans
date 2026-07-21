@@ -117,26 +117,39 @@ test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends noth
   const prev = process.env.DESTINATION_DELIVERY_ENABLED
   process.env.DESTINATION_DELIVERY_ENABLED = 'true'
   const db = dbClient()
-  const p1 = await projectIdBySlug(db, 'project-one')
+  // A DISPOSABLE project, not shared project-one (cross-review, Codex round 3): the dispatcher scoped
+  // to a project claims EVERY due row in it, so on shared project-one this pass could transiently
+  // flip a concurrent spec's rows to in_flight, and the old assertion (scoped to our event) could
+  // pass without our row ever being the one claimed. An isolated project makes the claim set exactly
+  // this test's rows.
   const eventName = uniqueEvent('release')
+  const { data: proj } = await db
+    .from('projects')
+    .insert({ slug: `disp-disp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .select('id')
+    .single()
+  const pid = proj!.id as string
   try {
-    await withDestination(db, p1, { enabled: true, eventFilter: eventName }, async (destId) => {
-      // An enabled destination means this event queues one delivery row. Insert both directly so
-      // this dispatcher spec is independent of the ingest route.
+    await withDestination(db, pid, { enabled: true, eventFilter: eventName }, async (destId) => {
       const { data: ev } = await db
         .from('events')
-        .insert({ project_id: p1, user_id: 'disp-u', event: eventName })
+        .insert({ project_id: pid, user_id: 'disp-u', event: eventName })
         .select('id')
         .single()
-      await db.from('event_deliveries').insert({ project_id: p1, event_id: ev!.id, destination_id: destId })
+      const { data: del } = await db
+        .from('event_deliveries')
+        .insert({ project_id: pid, event_id: ev!.id, destination_id: destId })
+        .select('id')
+        .single()
 
-      const outcome = await dispatchPendingDeliveries(db, { projectId: p1 })
+      const outcome = await dispatchPendingDeliveries(db, { projectId: pid })
       expect(outcome.dispatched).toBe(true)
+      // PROOF the intended row was exercised, not merely that it ended pending: it must appear in the
+      // claim set this pass actually took ownership of.
+      expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).toContain(del!.id)
 
-      // The row this sprint claims is released, NOT left in_flight — leaving it stuck would strand
-      // it permanently, because the reclaim loop is Story 2.2 and does not exist yet. attempt_count
-      // must be untouched (nothing was attempted). Scoped to THIS event's rows so a concurrent
-      // spec's due work cannot make the assertion flap.
+      // The claimed row is RELEASED, not left in_flight — stranding it would be permanent (the
+      // reclaim loop is Story 2.2). attempt_count untouched (nothing was attempted).
       const { data: rows } = await db
         .from('event_deliveries')
         .select('status, attempt_count')
@@ -148,6 +161,7 @@ test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends noth
       }
     })
   } finally {
+    await db.from('projects').delete().eq('id', pid) // CASCADE removes the event + delivery + destination
     if (prev === undefined) delete process.env.DESTINATION_DELIVERY_ENABLED
     else process.env.DESTINATION_DELIVERY_ENABLED = prev
   }

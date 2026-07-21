@@ -221,6 +221,17 @@ test('an entity given as a bare string or array is refused', () => {
   expect(normalizeEventContext({ version: 1, subject: ['merch_1'] }, NOW).ok).toBe(false)
 })
 
+test('an entity carrying an unknown property is refused, like the top-level context', () => {
+  // Agy round 3: strict-key policy must apply one level down too, or `{ type, id, name }` silently
+  // drops `name` while the top level would have rejected the same mistake.
+  const result = normalizeEventContext(
+    { version: 1, subject: { type: 'merchant', id: 'm1', name: 'Acme' } },
+    NOW,
+  )
+  expect(result.ok).toBe(false)
+  expect(result.ok === false && result.errors.some((e) => e.field === 'context.subject.name')).toBe(true)
+})
+
 test('every field error is reported at once, not one per round-trip', () => {
   const result = normalizeEventContext(
     {
@@ -514,7 +525,7 @@ test('the DB CHECK constraints enforce the contract for a NON-route writer too',
 // — this is fixture provisioning, not an app path.
 async function provisionProject(
   db: SupabaseClient,
-  opts: { quota: number; createdBy?: string | null },
+  opts: { quota: number; createdBy?: string | null; ingestRate?: number },
 ): Promise<{ projectId: string; key: string; cleanup: () => Promise<void> }> {
   const slug = `disposable-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const key = `gb_key_test_${Math.random().toString(36).slice(2)}`
@@ -526,6 +537,7 @@ async function provisionProject(
       slug,
       api_key_hash: keyHash, // legacy column still NOT NULL on projects; the auth path reads api_keys
       monthly_event_quota: opts.quota,
+      ...(opts.ingestRate !== undefined ? { ingest_rate_per_min: opts.ingestRate } : {}),
       created_by: opts.createdBy ?? null,
     })
     .select('id')
@@ -582,6 +594,31 @@ test('an at-quota tenant can still RETRY an already-accepted idempotent event (2
   }
 })
 
+test('the burst limiter applies to idempotent RETRIES — the fast path does not bypass it', async ({
+  request,
+}) => {
+  // Codex round 3 Blocking: the idempotency pre-check must NOT sit in front of the rate limiter, or
+  // a caller replaying one key gets unlimited authenticated DB reads. With an ingest rate of 1/min,
+  // a rapid retry of the SAME key must be rate-limited (429), not waved through as a 200 dedup.
+  const db = dbClient()
+  const p = await provisionProject(db, { quota: 100, ingestRate: 1 })
+  try {
+    const key = `burst-${Date.now()}`
+    const payload = { userId: 'b-u', event: 'order_placed', context: { version: 1, idempotencyKey: key } }
+    const auth = { Authorization: `Bearer ${p.key}` }
+
+    const first = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(first.status()).toBe(201)
+
+    // Immediate retry within the same minute — the rate window still holds, so the burst guard fires
+    // BEFORE the dedup fast path can answer.
+    const retry = await request.post('/api/v1/track', { headers: auth, data: payload })
+    expect(retry.status()).toBe(429)
+  } finally {
+    await p.cleanup()
+  }
+})
+
 test('a dedup completes first-event activation the original ingest may have left unstamped', async ({
   request,
 }) => {
@@ -617,9 +654,11 @@ test('a dedup completes first-event activation the original ingest may have left
     expect(retry.status()).toBe(200)
     expect((await retry.json()).deduplicated).toBe(true)
 
-    // after() runs post-response; poll briefly for the stamp rather than asserting instantly.
+    // after() runs post-response (a self-track network call + a DB update), so poll for the stamp
+    // rather than asserting instantly. Budget 5s — generous enough that parallel-load jitter can't
+    // flake it, still bounded.
     let stamped: string | null = null
-    for (let i = 0; i < 20 && stamped === null; i++) {
+    for (let i = 0; i < 50 && stamped === null; i++) {
       await new Promise((r) => setTimeout(r, 100))
       const { data } = await db.from('projects').select('first_event_at').eq('id', p.projectId).single()
       stamped = (data?.first_event_at as string | null) ?? null

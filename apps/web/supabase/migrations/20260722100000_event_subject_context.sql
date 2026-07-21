@@ -5,6 +5,17 @@
 -- safe to leave in place if that code is reverted. Nothing existing changes shape — a v1 payload
 -- (`{userId, event}`) still writes exactly the row it wrote yesterday, with these columns NULL.
 --
+-- LOCK NOTE (cross-review, Codex round 3): the validated CHECK constraints and the composite UNIQUE
+-- below take a brief ACCESS EXCLUSIVE lock and scan existing rows, which blocks ingest for the
+-- duration of the scan. This is left as a plain synchronous migration DELIBERATELY, not staged:
+-- the events table is small at the current dogfooding scale, so the scan is sub-second, and the
+-- migration is applied as a SEPARATE step BEFORE the code merge (AGENTS.md rollout order) — during
+-- that window ingest runs the OLD code, which needs none of these. The scale-safe pattern for when
+-- the table is large — `ADD CONSTRAINT ... NOT VALID` then a `VALIDATE CONSTRAINT` in a LATER
+-- migration (own transaction, weaker SHARE UPDATE EXCLUSIVE lock), and `CREATE UNIQUE INDEX
+-- CONCURRENTLY` + `ADD CONSTRAINT ... USING INDEX` outside any transaction — is the documented
+-- upgrade, adopted when row count warrants it rather than pre-emptively.
+--
 -- WHY a versioned context instead of more top-level columns: `userId` was doing three jobs at once
 -- (who acted, what the event is about, and the identity a funnel counts). One stream has to be able
 -- to describe a merchant, shop, promoter, campaign or experiment without overloading it, and
@@ -78,10 +89,17 @@ ALTER TABLE events
     (subject_type IS NULL OR subject_type ~ '^[a-z][a-z0-9_]{0,63}$')
   ),
   -- Opaque ids: no control characters (they corrupt logs/CSV/terminal downstream) and no leading or
-  -- trailing whitespace (` u1` and `u1` must not read as one subject to a human). `~` with a
-  -- bracket range that includes the C0 controls, DEL, and a leading/trailing space guard. Mirrors
-  -- isValidOpaqueId(); \s in Postgres regex is locale-simple, so the anchors use a literal space +
-  -- the whitespace class the app rejects.
+  -- trailing whitespace (` u1` and `u1` must not read as one subject to a human).
+  --
+  -- This is a COARSER backstop than lib/event-context.ts, on purpose, and the two are NOT
+  -- byte-identical (cross-review, Codex round 3): `btrim` strips fewer whitespace forms than JS
+  -- `.trim()` (no NBSP / Unicode spaces), and `char_length` counts code points where JS `.length`
+  -- counts UTF-16 units, so a handful of exotic ids the route rejects could still be inserted by a
+  -- direct service-role writer. That is acceptable because the route is AUTHORITATIVE for real
+  -- tenant traffic; this CHECK exists only to stop a seed/backfill from injecting the OBVIOUS
+  -- projection-breakers (a capital letter, an embedded newline, a wrapping space), not to replicate
+  -- the validator exactly. Making them identical would mean a plpgsql function call per insert on
+  -- the hot path for a rounding-error of extra coverage.
   ADD CONSTRAINT events_opaque_id_charset CHECK (
     (actor_id        IS NULL OR (actor_id        !~ '[[:cntrl:]]' AND actor_id        = btrim(actor_id))) AND
     (subject_id      IS NULL OR (subject_id      !~ '[[:cntrl:]]' AND subject_id      = btrim(subject_id))) AND

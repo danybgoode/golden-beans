@@ -77,55 +77,54 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getSupabaseServiceClient()
-
-  // ── Idempotency pre-resolution — BEFORE rate/quota (cross-review, Codex round 2) ─────────────
-  // A retry of an already-accepted event must return the original id even for a tenant now AT its
-  // monthly quota: that event was counted once, at its first ingest, and a "safe to retry" contract
-  // that 429s the retry isn't safe to retry — the client would conclude the event was rejected while
-  // it sits stored. So when an idempotency key is present we look it up first; a hit returns the
-  // original id with no charge at all.
-  //
-  // This SELECT is best-effort, not the authority: the real dedup arbiter is still the unique index
-  // inside ingest_event(), which catches the concurrent first+retry race this pre-check cannot see
-  // (both would miss here and one would win the insert). A miss simply falls through to the normal
-  // charged path below.
   const idempotencyKey = eventContext.context.idempotency_key
-  if (idempotencyKey) {
-    const { data: existing } = await supabase
-      .from('events')
-      .select('id')
-      .eq('project_id', auth.projectId) // tenant scope re-asserted, never assumed from the key
-      .eq('idempotency_key', idempotencyKey)
-      .maybeSingle()
-    if (existing) {
-      // Already ingested — no charge. Still (re)schedule activation: if the ORIGINAL ingest crashed
-      // after the RPC commit but before stamping first_event_at, this retry is what completes the
-      // funnel's terminal stage (cross-review, Codex round 2). Idempotent by the `.is(null)` guard.
-      scheduleFirstEventActivation(supabase, auth)
-      return NextResponse.json({ ok: true, id: existing.id as string, deduplicated: true }, { status: 200 })
-    }
-  }
 
-  // 2. Per-key burst limit, then 3. per-project monthly quota — both AFTER validation and after the
-  //    idempotency pre-check, so only an ACCEPTABLE, NON-duplicate event is ever charged. Checking
-  //    them earlier (the first version of this route) meant a broken integration sending malformed
-  //    JSON burned a tenant's monthly allowance without a single event being stored: the tenant
-  //    would see far fewer than their configured quota accepted, with nothing in the events table to
-  //    explain where it went (cross-review, Codex 2026-07-20).
-  //
-  //    Both counters are still incremented BEFORE the insert rather than after a confirmed write:
-  //    an atomic increment-and-compare is the only race-free shape, and moving it after the insert
-  //    would reintroduce the check-then-act window the rate_limit migration exists to avoid. The
-  //    resulting over-charge on a failed insert is REFUNDED explicitly below rather than waved
-  //    away — an earlier version of this comment called it "bounded at one", which was wrong: a
-  //    sustained `events` outage would burn a whole month one retry at a time.
+  // ── 2. Per-key BURST limit — first, and it applies to retries too ────────────────────────────
+  // The rate limiter is an abuse guard, and a caller hammering the same idempotency key is exactly
+  // the abuse it exists to bound — so it runs BEFORE the idempotency pre-check, which would otherwise
+  // hand an attacker unlimited authenticated DB reads by replaying one key (cross-review, Codex round
+  // 3). Unlike the monthly quota, the rate unit is NOT refunded on any downstream dedup/failure: its
+  // window resets every 60s and inflating it under a hammering caller is the point.
   const rate = await checkIngestRate(auth.apiKeyId, auth.ingestRatePerMin)
   if (!rate.ok) {
     return NextResponse.json({ ok: false, error: rate.error }, { status: rate.status })
   }
 
+  // ── Idempotency pre-resolution — BEFORE the monthly quota (cross-review, Codex round 2) ──────
+  // A retry of an already-accepted event must return the original id even for a tenant now AT its
+  // monthly quota: that event was counted once, at its first ingest, and a "safe to retry" contract
+  // that 429s the retry isn't safe to retry — the client would conclude the event was rejected while
+  // it sits stored. So a hit here returns the original id with no quota charge.
+  //
+  // Best-effort, not the authority: the real dedup arbiter is still the unique index inside
+  // ingest_event(). A miss falls through to the charged path.
+  if (idempotencyKey) {
+    const existing = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
+    if (existing) return respondDeduplicated(supabase, auth, existing)
+  }
+
+  // ── 3. Per-project monthly QUOTA ─────────────────────────────────────────────────────────────
+  // After validation, the burst limit and the idempotency pre-check, so only an ACCEPTABLE,
+  // NON-duplicate event is ever charged (the earliest version charged malformed JSON; cross-review,
+  // Codex 2026-07-20). checkMonthlyQuota increments-then-compares and REFUNDS its own rejection
+  // (lib/quota.ts), so a 429 here has already handed the unit back.
   const quota = await checkMonthlyQuota(auth.projectId, auth.monthlyEventQuota)
   if (!quota.ok) {
+    // The concurrent-first-attempt race (cross-review, Codex round 3): two same-key requests both
+    // missed the pre-check above; one won the last quota unit and committed the event, this one lost
+    // the quota check. Before returning 429, re-check — if the sibling has since committed the event,
+    // this is really a dedup and must answer 200, not reject a logical event that now exists. The
+    // rejected quota unit was already refunded by checkMonthlyQuota, so there is nothing to hand back.
+    //
+    // This NARROWS the race but does not fully close it: if the winner hasn't committed yet when this
+    // re-check runs, this request still 429s. That residual is acceptable because it SELF-HEALS — a
+    // client's normal (sequential) retry hits the pre-check once the winner has committed and gets
+    // its 200. Fully closing it would mean moving quota accounting inside ingest_event()'s
+    // transaction, a disproportionate refactor for a boundary-only, self-healing race in Sprint 1.
+    if (idempotencyKey) {
+      const existing = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
+      if (existing) return respondDeduplicated(supabase, auth, existing)
+    }
     return NextResponse.json({ ok: false, error: quota.error }, { status: quota.status })
   }
 
@@ -177,19 +176,44 @@ export async function POST(req: NextRequest) {
   }
 
   if (ingest.deduplicated) {
-    // The concurrent-race dedup the pre-check above couldn't see: two first-time requests for the
-    // same key, one wins the insert, this one lost it. Hand the quota unit back — a client retrying
-    // a delivery it never got an answer for must not be charged twice for one logical event — and
-    // still (re)schedule activation for the same crash-window reason as the pre-check path.
+    // The concurrent-race dedup the pre-check couldn't see: two first-time requests for the same key
+    // both passed the quota check, one won the insert, this one lost it. Hand the quota unit back —
+    // this request charged one but stored nothing — then answer with the shared dedup response.
     await refundMonthlyQuota(auth.projectId)
-    scheduleFirstEventActivation(supabase, auth)
-    // 200, not 201: nothing was created. The id is the original event's, so an at-least-once caller
-    // converges on one identity no matter how many times it retries.
-    return NextResponse.json({ ok: true, id: ingest.event_id, deduplicated: true }, { status: 200 })
+    return respondDeduplicated(supabase, auth, { id: ingest.event_id })
   }
 
   scheduleFirstEventActivation(supabase, auth)
   return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
+}
+
+// Looks up an existing event by its per-project idempotency key. The tenant scope is re-asserted
+// here, never assumed from the key — uniqueness is per (project_id, idempotency_key), so a lookup on
+// the key alone could match another tenant's row (Roadmap/LEARNINGS.md, multi-tenant-activation S1).
+async function findEventByIdempotencyKey(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  projectId: string,
+  idempotencyKey: string,
+): Promise<{ id: string } | null> {
+  const { data } = await supabase
+    .from('events')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('idempotency_key', idempotencyKey)
+    .maybeSingle()
+  return data ? { id: data.id as string } : null
+}
+
+// The one dedup response, shared by the pre-check and the quota-rejection re-check. 200 (nothing
+// created), the original id (an at-least-once caller converges on one identity), and activation is
+// (re)scheduled in case the ORIGINAL ingest crashed after committing but before stamping.
+function respondDeduplicated(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  auth: AuthSuccess,
+  existing: { id: string },
+): NextResponse {
+  scheduleFirstEventActivation(supabase, auth)
+  return NextResponse.json({ ok: true, id: existing.id, deduplicated: true }, { status: 200 })
 }
 
 // ── Story 3.3 · the activation funnel's last stage ────────────────────────────────────────────

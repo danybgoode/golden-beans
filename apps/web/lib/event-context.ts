@@ -299,7 +299,18 @@ function readEntity(value: unknown, field: string, errors: ContextFieldError[]):
 
   const { type, id } = value as { type?: unknown; id?: unknown }
 
+  // The same strict-key policy the top-level context applies (cross-review, Agy round 3): an actor or
+  // subject carrying an unexpected property (`{ type, id, name: '…' }`) is a caller mistake — they
+  // believe they attached `name` and it silently vanishes. Refuse it here too, so the whole context
+  // enforces one rule rather than being strict at the top and lax one level down.
   let valid = true
+  for (const key of Object.keys(value)) {
+    if (key !== 'type' && key !== 'id') {
+      errors.push({ field: `${field}.${key}`, message: `unknown field "${key}" — an entity has only \`type\` and \`id\`` })
+      valid = false
+    }
+  }
+
   if (!isValidEntityType(type)) {
     errors.push({
       field: `${field}.type`,
