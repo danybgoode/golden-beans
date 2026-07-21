@@ -132,7 +132,7 @@ export async function dispatchPendingDeliveries(
     // is OFF in every environment for this sprint, so the window does not exist in practice; Story
     // 2.2's stale-claim reclaim (which is what `claimed_at` is for) closes it before the flag flips.
     if (claimed.length > 0) {
-      const released = await releaseDeliveries(db, claimed.map((d) => d.id), now)
+      const released = await releaseDeliveries(db, projectId, claimed.map((d) => d.id), now)
       // We just claimed these rows this pass, so we expect to release exactly as many. A shortfall
       // means something moved them out from under us — which, in a gate-OFF single-worker Sprint 1,
       // should be impossible. Surface it as an error rather than reporting a clean pass over rows
@@ -185,7 +185,7 @@ async function claimDueDeliveries(
     .from('event_deliveries')
     .select('id')
     .eq('project_id', projectId)
-    .in('status', CLAIMABLE_STATUSES as unknown as string[])
+    .in('status', [...CLAIMABLE_STATUSES])
     .lte('next_attempt_at', options.now.toISOString())
     .order('next_attempt_at', { ascending: true })
     .limit(options.limit)
@@ -199,7 +199,7 @@ async function claimDueDeliveries(
     .in('id', due.map((row) => row.id as string))
     // The guard that makes this a claim rather than a stomp: a row another worker already took has
     // moved off a claimable status and simply will not match.
-    .in('status', CLAIMABLE_STATUSES as unknown as string[])
+    .in('status', [...CLAIMABLE_STATUSES])
     // AND re-assert due-time in the same atomic UPDATE (cross-review, Codex round 4): the candidate
     // list is a stale snapshot, so between the SELECT and here another worker could have failed a row
     // and pushed its next_attempt_at into the future (Story 2.2's backoff). Without this, we'd
@@ -224,12 +224,15 @@ async function claimDueDeliveries(
  * Returns the number of rows actually released so the caller can assert it matches what it claimed
  * (cross-review, Codex round 2). Takes the same injected `now` the claim used, rather than reading
  * the clock again, so a deterministic test sees one consistent timestamp across the pass (Agy round
- * 2).
+ * 2). Scoped by `projectId` like every other query in this module (cross-review, Codex round 6) —
+ * the ids alone would technically suffice, but a project-scoped WRITE keeps the invariant uniform
+ * and closes the gap a sibling of the claim scoping had left.
  */
-async function releaseDeliveries(db: SupabaseClient, ids: string[], now: Date): Promise<number> {
+async function releaseDeliveries(db: SupabaseClient, projectId: string, ids: string[], now: Date): Promise<number> {
   const { data, error } = await db
     .from('event_deliveries')
     .update({ status: 'pending', claimed_at: null, updated_at: now.toISOString() })
+    .eq('project_id', projectId)
     .in('id', ids)
     .eq('status', 'in_flight')
     .select('id')

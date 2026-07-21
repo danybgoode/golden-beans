@@ -313,6 +313,18 @@ $$;
 -- granted ALL, so a narrower GRANT revokes nothing (LEARNINGS.md, multi-tenant-activation S2).
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_destinations TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE event_deliveries   TO service_role;
+
+-- REVOKE the PUBLIC default BEFORE granting service_role (cross-review, Codex round 6). Postgres
+-- grants EXECUTE on a new function to PUBLIC by default, and a later GRANT to service_role does NOT
+-- take that away — the same "a narrower GRANT revokes nothing" trap LEARNINGS.md records for tables
+-- (multi-tenant-activation S2). Without this, the anon/authenticated API roles could invoke this
+-- ingest RPC directly; RLS + SECURITY INVOKER would still stop them writing rows, but relying on a
+-- second layer to save an over-broad grant is exactly the posture that lesson warns against. This
+-- function is service-role-only, so make the grant say so.
+REVOKE ALL ON FUNCTION ingest_event(
+  UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
+  TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT
+) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION ingest_event(
   UUID, TEXT, TEXT, TEXT, JSONB, JSONB, SMALLINT,
   TEXT, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, TEXT, TEXT

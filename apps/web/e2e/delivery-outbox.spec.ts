@@ -183,6 +183,38 @@ test('dispatcher exports are internally consistent', () => {
   expect(MAX_CLAIM_BATCH).toBeGreaterThan(0)
 })
 
+test('ingest_event() is NOT executable by the anon role — the REVOKE has teeth', async () => {
+  // Codex round 6: a GRANT to service_role does not remove Postgres' PUBLIC-by-default EXECUTE, so
+  // the migration REVOKEs it. Assert the PROPERTY (an anon caller is refused), not the statement —
+  // the same discipline as the append-only REVOKE spec in multi-tenant-activation S2. Skips
+  // gracefully where the anon key isn't in the env (it is in CI and the local gate).
+  const url = process.env.SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  test.skip(!url || !anon, 'anon key not in env')
+
+  const anonClient = createClient(url!, anon!, { auth: { persistSession: false } })
+  const { error } = await anonClient.rpc('ingest_event', {
+    p_project_id: '00000000-0000-0000-0000-000000000000',
+    p_user_id: 'x',
+    p_event: 'x',
+    p_feature_id: null,
+    p_tags: {},
+    p_metadata: {},
+    p_context_version: null,
+    p_actor_type: null,
+    p_actor_id: null,
+    p_subject_type: null,
+    p_subject_id: null,
+    p_correlation_id: null,
+    p_occurred_at: null,
+    p_idempotency_key: null,
+    p_idempotency_fingerprint: null,
+  })
+  // A permission-denied (or an unresolvable-function) error — never a success. The anon role must
+  // not be able to invoke the ingest RPC at all.
+  expect(error).not.toBeNull()
+})
+
 // ── HTTP: ingest_event() commits event + outbox atomically ────────────────────────────────────
 //
 // MUTATION-CHECKED against the committed build. Each mutation was applied to the LIVE local build
