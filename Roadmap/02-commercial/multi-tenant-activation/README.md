@@ -47,7 +47,7 @@ no-policies service-role pattern as every existing table.
 | 2 | 2.2 Isolation guardrails (quota · payload caps · per-key rate limit) + credential audit trail | **HIGH — Daniel merges** |
 | 2 | 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |
 | 3 | 3.1 Landing §1 hero CTA flip + §7 honest tiers (gated on `SIGNUP_ENABLED`) | LOW |
-| 3 | 3.2 Waitlist → invite conversion | LOW |
+| 3 | 3.2 Waitlist retirement (re-scoped from "waitlist → invite conversion" — the queue is empty; see `sprint-3.md`) | LOW |
 | 3 | 3.3 Activation launch: flip the gate, dogfood funnel live, one self-serve pod-trial tenant | **HIGH — Daniel flips/merges** |
 
 ## Kill-switch (decided at grooming, Stage 6b)

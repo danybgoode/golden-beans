@@ -1,6 +1,41 @@
 # Multi-tenant activation — Sprint 2: Self-serve activation
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all three stories built, deterministic gate green (128 `api` specs, 0 failed)
+
+## How it was built (design notes, for the reviewer and for future-you)
+- **`SIGNUP_ENABLED` is checked in FOUR places, not one** — the `/signup` page, the signup API
+  route, the landing CTA, and (the non-obvious one) **the auth callback**. A gate checked only at
+  the front door leaves a queue of already-sent confirmation links that can still create tenants
+  after the flag is flipped back off.
+- **Provisioning happens in the auth callback, never at signup.** That is what makes "unconfirmed
+  accounts own no tenant" *structural* rather than a check someone can forget — an account that
+  never completes the email round-trip never reaches the provisioner at all.
+- **Idempotency is keyed on MEMBERSHIP, not on `created_by`** — a hand-seeded member signing in
+  must not be handed a second, empty tenant.
+- **No upsert on `slug`.** A plain INSERT with a retry on unique-violation. An
+  `onConflict: 'slug', ignoreDuplicates` upsert would report success while writing nothing when
+  the slug already belongs to someone else, and the provisioner would then hand back a plaintext
+  key for a project the caller does not own — the exact cross-tenant bind cross-review caught in
+  the S1 seed scripts (`Roadmap/LEARNINGS.md`).
+- **The quota reuses the existing atomic counter**, at a month-long window, rather than a second
+  table or a `COUNT(*)` per ingest (unbounded scan that gets slower as a tenant gets more
+  valuable, and races the same way the naive rate limit did).
+- **The one-time key reaches onboarding via an httpOnly cookie, never a query parameter** — a
+  `?key=…` redirect writes the credential into access logs, browser history and any `Referer`.
+- **Limits are per-project ROWS** (`monthly_event_quota`, `ingest_rate_per_min`), so raising a
+  real customer's ceiling is an `UPDATE`, never a deploy. A spec demonstrates exactly that.
+
+## Two bugs this sprint found in its own work (kept here deliberately)
+1. **The month window was wrong first.** Flooring `Date.now()` by "milliseconds in this month"
+   lands on an arbitrary multiple of that duration since the Unix epoch, *not* on the 1st — every
+   quota would have reset on a wandering date matching no calendar. No HTTP spec could have seen
+   it (the counter still counts, just against the wrong bucket); the fix was to extract the maths
+   into a pure module and assert it directly.
+2. **The audit log was not actually append-only.** The migration granted `SELECT, INSERT` and a
+   comment claimed the trail could not be rewritten. False: Supabase's default privileges already
+   grant `service_role` ALL on new public-schema tables, so a narrower GRANT is purely additive
+   and revokes nothing. A spec that *attempted the UPDATE with the app's own client* caught it; an
+   explicit `REVOKE` is what made the claim true.
 
 ## Stories
 
@@ -31,8 +66,20 @@ the funnel page shows it.
 **Risk:** LOW
 
 ## Sprint QA
-- **api spec(s):** 2.1 → signup validation · rate-limit · gate-OFF 404 · no-tenant-before-confirm ·
-  2.2 → over-quota 429 · audit-row presence
+- **api spec(s) — shipped:** `e2e/signup.spec.ts` (gate polarity incl. the "opens on a typo" cases ·
+  gate-OFF 404 on both the route and the page, indistinguishable across well-formed/malformed/empty
+  payloads · slug derivation incl. the reserved/demo-slug hijack · month-window maths) and
+  `e2e/ingest-guardrails.spec.ts` (payload cap 413 with nothing persisted · per-key rate limit ·
+  the limit being per-KEY not per-project · over-quota 429 naming the reset date · quota isolation
+  between two tenants · ceiling-raise-without-deploy · audit-log append-only).
+- **Mutation-checked** (`Roadmap/LEARNINGS.md` — "a spec that passes is not a spec that can
+  fail"): the signup gate was re-broken to a truthiness check, the reserved-slug guard removed,
+  and the original month-window bug reintroduced. All three mutations were caught by the specs
+  that claim to defend them; restored and re-verified green afterward.
+- **Why so much is asserted on pure modules rather than over HTTP:** the gate is OFF in CI, so the
+  only signup behaviour an HTTP spec can reach is the 404. Everything past the gate sits behind a
+  real email round-trip this harness cannot perform — the exact structural trap that let S1's
+  open-redirect specs pass against a deliberately vulnerable build.
 - **browser smoke owed:** yes, to Daniel — full self-serve pass in a fresh browser: signup →
   confirm email → copy key → first event → funnel renders (auth path, needs a real inbox)
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge

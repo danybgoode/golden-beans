@@ -1,6 +1,13 @@
 # Multi-tenant activation — Sprint 3: The flip (landing backfill + trials live)
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — 3.1 + 3.2 built and gated; 3.3 is the production flip, **owed to Daniel**
+
+## What "the flip" actually is now
+`SIGNUP_ENABLED=true` in the Vercel production env. Nothing else. It is read fresh per request in
+all four places that gate on it, so **no redeploy is required** — the same env-var-only behaviour
+confirmed in commercial-shell Sprint 2 (`AGENTS.md`, Workflow). Flipping it back off is an equally
+complete rollback, including for confirmation links already sitting in inboxes (the callback
+re-checks the gate).
 
 ## Stories
 
@@ -13,12 +20,29 @@ registry; renders the signup CTA only when `SIGNUP_ENABLED` is on.
 the backfill contract (`references/landing-end-state.md` §1/§7).
 **Risk:** LOW (public content, gated)
 
-### Story 3.2 — Waitlist → invite conversion
-**As a** waitlisted prospect, **I want** an invite that takes me straight into signup, **so that**
-E1's queue converts into activated tenants.
-**Acceptance:** invite → signup → tenant; duplicate-safe against already-registered emails;
-waitlist row marked converted.
+### Story 3.2 — Waitlist retirement *(re-scoped 2026-07-20 — see note)*
+**As a** visitor, **I want** the waitlist to disappear the moment self-serve signup is real, **so
+that** the page never asks me to queue for something I can just start.
+**Acceptance:** gate ON → §7 shows the signup CTA and the waitlist form is gone from the page;
+gate OFF → the waitlist is unchanged and still works; the waitlist API route survives either way
+(it is the gate-OFF fallback, not dead code).
 **Risk:** LOW
+
+> **Why this changed.** The original story was "waitlist → invite conversion" — a converter that
+> walks E1's queue and invites each entry into signup. **The queue is empty (0 rows, checked
+> against production 2026-07-20) and this product has never been promoted**, so that converter
+> would ship with nothing to convert and no way to test it against a real row. Per
+> WAYS-OF-WORKING's orientation rule ("surface the existing-features path first; build new only
+> when the outcome genuinely needs it"), the outcome that actually matters here is the *landing
+> backfill contract* — the public offer must match shipped reality — and retiring the waitlist
+> achieves that directly. If a queue ever accumulates before the flip, the manual path is one
+> line: signup is open, send them the URL.
+>
+> **Deliberately NOT built here:** an owner inviting a *teammate* into an existing project.
+> `project_members` still only grows by hand-seeded SQL or by self-serve signup (which makes you
+> the owner of your *own* new project). That is real missing capability, but it is team
+> management, not activation — logged as a seed for a later epic rather than smuggled into this
+> one.
 
 ### Story 3.3 — Activation launch
 **As** Daniel, **I want** the launch: flip `SIGNUP_ENABLED` in production, dogfood funnel live
@@ -29,7 +53,8 @@ engine; at least one pod-trial tenant activated fully self-serve.
 **Risk:** HIGH — Daniel flips/merges
 
 ## Sprint QA
-- **api spec(s):** 3.1 → CTA/§7 render both gate states · 3.2 → invite flow + duplicate safety
+- **api spec(s):** 3.1 → CTA/§7 render both gate states · 3.2 → waitlist form absent when the gate
+  is on, present + still POSTable when it's off
 - **browser smoke owed:** yes, to Daniel — production flip + one real self-serve pod-trial
   activation (auth path, production env)
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
@@ -41,7 +66,8 @@ Env: production `https://golden-beans-gamma.vercel.app` (this sprint is the flip
    → Hero shows the waitlist; §7 shows "hand-provisioned pilots".
 2. Flip `SIGNUP_ENABLED` in the Vercel production env + redeploy. *(flip — owed to Daniel)*
    → Hero shows "Start free"; §7 shows the tiers.
-3. Send an invite to a waitlisted test email; follow it end-to-end. *(auth path — owed to Daniel)*
+   Also check §7: the waitlist form is gone, replaced by the tiers + "Start free".
+3. Sign up from the flipped landing with a fresh email. *(auth path — owed to Daniel)*
    → Signup → confirm → tenant + key + onboarding, no manual steps.
 4. Open the golden-beans dogfood funnel in `/app`.
    → `signup_started → account_confirmed → first_event_ingested` shows your test activation.
