@@ -1,6 +1,6 @@
 # Multi-tenant activation — Sprint 3: The flip (landing backfill + trials live)
 
-**Status:** 🟦 In review — 3.1 + 3.2 built and gated; 3.3 is the production flip, **owed to Daniel**
+**Status:** ✅ 3.1 + 3.2 merged to `main` (PR #14 — commit `577b560`), gated and dark. ⬜ **3.3 is the production flip — owed to Daniel** and the only story left in the epic.
 
 ## What "the flip" actually is now
 `SIGNUP_ENABLED=true` in the Vercel production env. Nothing else. It is read fresh per request in

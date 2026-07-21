@@ -1,6 +1,8 @@
 # Multi-tenant activation — Sprint 2: Self-serve activation
 
-**Status:** 🟦 In review — all three stories built, deterministic gate green (128 `api` specs, 0 failed)
+**Status:** ✅ Merged to `main` (PR #14 — commits `bee637f · 9348a71 · 6cacfd4`, plus review-round fixes `c724c91` · `29701fd` · `c75dc1d` · `3ebc05e` · `ea4f256`). Shipping **dark**: `SIGNUP_ENABLED` is unset in production, so every surface here 404s until Story 3.3.
+
+Deterministic gate at merge: `tsc` clean · `next build` clean · **132 Playwright `api` specs, 0 failed**.
 
 ## How it was built (design notes, for the reviewer and for future-you)
 - **`SIGNUP_ENABLED` is checked in FOUR places, not one** — the `/signup` page, the signup API

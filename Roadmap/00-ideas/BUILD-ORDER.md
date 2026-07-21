@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 3/9 stories · risk: High · #2
+- [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 6/9 stories · risk: High · #2
 
 ## 📋 Ready to build (scaffolded, not started) (3)
 
@@ -32,5 +32,15 @@
 - [E5 — a) Flag-serving migration · b) PRD-G chaos/SecOps + circuit breakers](seeds/flag-serving-and-prd-g.md) — Raw · Feature · #5
 - [E6 — CMS integration spike (Payload): integrate-don't-own, go/no-go](seeds/cms-integration-spike.md) — Raw · Spike · #6
 
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
+
+These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
+derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
+forgot to set `status:` (or the README is stale). Reconcile the README, then this advisory clears.
+
+| Epic | frontmatter (used) | sprint/retro-derived |
+|---|---|---|
+| Multi-tenant activation — auth hardening, self-serve tenants, pod trials | In progress | Shipped |
+
 ---
-_Epics: 6 · seeds in funnel: 4 · status drift: 0. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 6 · seeds in funnel: 4 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._

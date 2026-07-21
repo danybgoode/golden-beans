@@ -57,8 +57,13 @@ independently shippable slice of value.
   self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
   per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
   existence oracle; the public demo still renders anonymously), and API keys as a revocable
-  lifecycle (issue/rotate/revoke; owner-only). Sprints 2–3 (self-serve signup behind
-  `SIGNUP_ENABLED`, isolation guardrails, landing CTA flip) still to build.
+  lifecycle (issue/rotate/revoke; owner-only). **Sprints 2–3 built and merged, shipping dark**:
+  a confirmed signup provisions a whole tenant (project + owner membership + first key + connector
+  token + a starter feature so the funnel isn't empty), the shared ingest path is bounded per
+  tenant (payload cap · per-key rate limit · per-project monthly quota, all configurable as data on
+  the project row), credential actions are audited append-only, and the landing's §1 hero + §7
+  tiers flip to a real signup CTA. 🚧 not ✅ because **`SIGNUP_ENABLED` is still OFF in production**
+  — every signup-facing surface 404s until Daniel flips it (Story 3.3).
 - ✅ [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
   read-only MCP connector + install page · dogfood instrumentation · SEO/OG + agent manifest) —
   **launched** and live in production at `https://golden-beans-gamma.vercel.app`. The landing tracks
@@ -70,6 +75,15 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-07-21** — `multi-tenant-activation` **Sprints 2–3 merged, shipping dark**: self-serve
+  activation. A confirmed signup now becomes a working tenant with no human in the loop, and the
+  shared ingest path grew per-tenant isolation limits so an open signup can't hurt a real tenant or
+  the bill. Everything customer-facing sits behind `SIGNUP_ENABLED`, born OFF — the launch itself is
+  Story 3.3, an env flip with no redeploy. Three rounds of cross-family review (Codex + Agy) found
+  **12 blocking issues** pre-merge — including an infinite redirect loop, a quota-accounting bug
+  that would have made "raise the ceiling" silently fail to restore service, and a **live
+  production bug in the already-shipped landing funnel**: its dogfood events were never tagged with
+  a feature id, so the funnel had been reading zero since launch while ingesting perfectly.
 - **2026-07-21** — `multi-tenant-activation` **Sprint 1 shipped to production**: the account
   boundary. Dashboards were anonymous (anyone who guessed a project slug could read any tenant's
   data) and each project had one unrotatable key — both closed. Supabase Auth + `project_members`,
