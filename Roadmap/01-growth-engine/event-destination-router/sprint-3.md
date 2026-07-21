@@ -1,6 +1,44 @@
 # Event destination router — Sprint 3: CRM proof and operating view
 
-**Status:** ⬜ not started
+**Status:** 🟨 partially built — 3.3 done; 3.1 specified (cross-repo half owed); 3.2 deliberately NOT built
+
+## Where each story actually stands
+
+**Story 3.1 — Miyagi merchant-lifecycle projection · SPECIFIED, consumer owed**
+The Golden Beans side needs no new code: the Sprint 2 signed-webhook destination already delivers
+these events, and Sprint 1's `subject: { type: 'merchant', id }` context is what routes them. What was
+produced here is the producer-side contract the Miyagi PR implements against —
+[`miyagi-lifecycle-contract.md`](./miyagi-lifecycle-contract.md): transport, envelope, the six
+lifecycle fixtures, and the five guarantees Miyagi must uphold (idempotency by event id, verify
+before acting, 5xx-not-2xx on outage, Medusa stays commerce truth, no PII).
+**Owed:** the Miyagi PR itself (endpoint + projection table + migration + idempotency store), the
+identical fixtures running in both suites, and the disposable-merchant smoke. Cross-repo — Daniel
+merges both PRs.
+
+**Story 3.2 — Optional Attio adapter · NOT BUILT, deliberately**
+This one was left alone on purpose rather than half-built. It needs a destination *kind* abstraction
+(`webhook | attio`), a scoped vendor credential, and a merchant/contact/opportunity mapping — against
+a mutable third-party API, with **no token available to verify any of it**. Writing a speculative
+Attio mapping nobody can execute would produce plausible-looking code whose correctness is unknown,
+which is precisely the failure mode this epic's 11-round cross-review exists to catch. It is also the
+one story the epic itself marks *optional*.
+**Recommendation:** scope it with a real Attio workspace token in hand, as its own sprint. Nothing
+else in the epic depends on it — the adapter seam is a *destination kind*, and today's single kind
+(signed webhook) is a complete, shipped product on its own.
+
+**Story 3.3 — Delivery operating view + public-offer backfill · BUILT**
+- Migration `20260725100000_delivery_health.sql` — `delivery_health()` RPC aggregating per-destination
+  counts **in the database** (a Node-side count over a bounded fetch would describe a *window* while
+  claiming to describe everything). `LEFT JOIN` so a destination with zero deliveries still appears —
+  "configured, nothing ever delivered" is the state an operator most needs to see.
+- `getDeliveryHealth()` + the Delivery-health table on `/app/destinations/[projectSlug]`: enabled
+  sinks, delivered / awaiting-retry / dead-lettered / queued counts, total attempts, last delivery.
+  Carries **no signing secret, no target URL, no payload** — pinned by a spec that greps the RPC's
+  actual output for `whsec_` and the target host.
+- Landing backfill (`PrimitivesGrid.tsx`): a new row, badged **🔜 honestly**, worded
+  "at-least-once, with retries" — never exactly-once. It stays 🔜 until *both* the dispatcher is live
+  in production (`DESTINATION_DELIVERY_ENABLED` is still born OFF) **and** the 3.1 CRM proof lands,
+  exactly as this story's acceptance requires. Built ≠ live, and a ✅ on that label promises curl-able.
 
 ## Stories
 

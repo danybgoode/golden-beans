@@ -121,15 +121,16 @@ test('gate ON with no due work → a clean empty pass, not an error', async () =
   }
 })
 
-test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends nothing)', async () => {
+test('gate ON → a NON-deliverable destination (no url/secret) is NOT claimed (Story 2.2 eligibility gate)', async () => {
+  // Story 1.2 released claimed rows back to pending because it sent nothing; Story 2.2 replaced that
+  // with a real send + settle (see delivery-replay.spec.ts for the send/settle/dead-letter/replay
+  // coverage). What THIS spec now pins is the eligibility the claim_deliveries RPC enforces: an
+  // enabled destination with no target_url/signing_secret is NOT deliverable, so its queued work must
+  // never be claimed — the sender must never receive a row it can't send. withDestination() creates
+  // exactly such a destination (name/enabled/filter only), so its delivery row is the fixture.
   const prev = process.env.DESTINATION_DELIVERY_ENABLED
   process.env.DESTINATION_DELIVERY_ENABLED = 'true'
   const db = dbClient()
-  // A DISPOSABLE project, not shared project-one (cross-review, Codex round 3): the dispatcher scoped
-  // to a project claims EVERY due row in it, so on shared project-one this pass could transiently
-  // flip a concurrent spec's rows to in_flight, and the old assertion (scoped to our event) could
-  // pass without our row ever being the one claimed. An isolated project makes the claim set exactly
-  // this test's rows.
   const eventName = uniqueEvent('release')
   const { data: proj } = await db
     .from('projects')
@@ -152,12 +153,10 @@ test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends noth
 
       const outcome = await dispatchPendingDeliveries(db, pid)
       expect(outcome.dispatched).toBe(true)
-      // PROOF the intended row was exercised, not merely that it ended pending: it must appear in the
-      // claim set this pass actually took ownership of.
-      expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).toContain(del!.id)
+      // Claimed nothing — the destination has no url/secret, so it is not deliverable.
+      expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).not.toContain(del!.id)
 
-      // The claimed row is RELEASED, not left in_flight — stranding it would be permanent (the
-      // reclaim loop is Story 2.2). attempt_count untouched (nothing was attempted).
+      // The row is untouched: still pending, never attempted, never sent to a dead end.
       const { data: rows } = await db
         .from('event_deliveries')
         .select('status, attempt_count')

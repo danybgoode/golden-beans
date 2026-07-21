@@ -1,0 +1,238 @@
+import { test, expect } from '@playwright/test'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { dispatchPendingDeliveries } from '@/lib/delivery-dispatch'
+import { retryDecision, MAX_ATTEMPTS, BASE_DELAY_MS, MAX_DELAY_MS } from '@/lib/retry-policy'
+import { verifyWebhookSignature } from '@/lib/webhook-signature'
+
+// event-destination-router · Sprint 2, Story 2.2 — retry, terminal failure, and replay.
+//
+// THREE LAYERS, the house discipline:
+//   • PURE — the retry SCHEDULE, asserted at the first/middle/terminal attempt (Sprint QA).
+//   • INJECTED — the dispatcher's send + settle, driven with a disposable project, a deliverable
+//     destination, a real event/delivery row, and a FAKE fetch, so every settle branch (delivered /
+//     retry-scheduled / dead-letter / permanent) is observed directly. The flag is set in-process
+//     (read fresh per call) — an HTTP spec can't reach these branches (the LEARNINGS.md lesson).
+//   • HTTP — the cron trigger's AUTH + dark no-op, which IS reachable over HTTP.
+//
+// The authenticated /app replay + delivery-history UI is a real-session BROWSER smoke owed to Daniel.
+
+function dbClient(): SupabaseClient {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set to run this spec')
+  return createClient(url, key, { auth: { persistSession: false } })
+}
+
+// A DELIVERABLE destination + a real event + its queued delivery row, in an isolated disposable
+// project (so the project-scoped dispatcher claims exactly this test's rows, never a concurrent
+// spec's — the isolation lesson from delivery-outbox.spec.ts).
+async function fixture(db: SupabaseClient) {
+  const { data: proj } = await db
+    .from('projects')
+    .insert({ slug: `disp-rep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .select('id')
+    .single()
+  const pid = proj!.id as string
+  const { data: dest } = await db
+    .from('event_destinations')
+    .insert({
+      project_id: pid,
+      name: `dest-${Math.random().toString(36).slice(2, 8)}`,
+      enabled: true,
+      target_url: 'https://receiver.example.test/hook',
+      signing_secret: 'whsec_replay_spec_secret_0123456789',
+      secret_set_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single()
+  const { data: ev } = await db
+    .from('events')
+    .insert({ project_id: pid, user_id: 'rep-u', event: 'order_placed' })
+    .select('id')
+    .single()
+  const { data: del } = await db
+    .from('event_deliveries')
+    .insert({ project_id: pid, event_id: ev!.id, destination_id: dest!.id })
+    .select('id')
+    .single()
+  return { pid, destId: dest!.id as string, eventId: ev!.id as string, deliveryId: del!.id as string }
+}
+
+function stubFetch(status: number) {
+  const bodies: { body: string; signature: string }[] = []
+  const impl = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const headers = new Headers(init?.headers)
+    bodies.push({ body: String(init?.body), signature: headers.get('X-GB-Signature') ?? '' })
+    return new Response('', { status })
+  }) as unknown as typeof fetch
+  return { impl, bodies }
+}
+
+async function withGateOn(body: () => Promise<void>) {
+  const prev = process.env.DESTINATION_DELIVERY_ENABLED
+  process.env.DESTINATION_DELIVERY_ENABLED = 'true'
+  try {
+    await body()
+  } finally {
+    if (prev === undefined) delete process.env.DESTINATION_DELIVERY_ENABLED
+    else process.env.DESTINATION_DELIVERY_ENABLED = prev
+  }
+}
+
+// ── the retry schedule (pure) ─────────────────────────────────────────────────────────────────
+test('retryDecision: first failure waits BASE, then doubles, clamped at the ceiling', () => {
+  expect(retryDecision(1)).toEqual({ retry: true, delayMs: BASE_DELAY_MS })
+  expect(retryDecision(2)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 2 })
+  expect(retryDecision(3)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 4 })
+  // Far enough along that 2^(n-1) would exceed the cap → clamped.
+  const late = retryDecision(MAX_ATTEMPTS - 1)
+  expect(late.retry).toBe(true)
+  if (late.retry) expect(late.delayMs).toBeLessThanOrEqual(MAX_DELAY_MS)
+})
+
+test('retryDecision: at MAX_ATTEMPTS the delivery is dead — no further retry', () => {
+  expect(retryDecision(MAX_ATTEMPTS)).toEqual({ retry: false })
+  expect(retryDecision(MAX_ATTEMPTS + 1)).toEqual({ retry: false })
+})
+
+// ── the dispatcher's send + settle (injected fetch) ───────────────────────────────────────────
+test('a 2xx settles the delivery as DELIVERED with one attempt, over a verifiable signature', async () => {
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, eventId, deliveryId } = await fixture(db)
+    const { impl, bodies } = stubFetch(200)
+    try {
+      const outcome = await dispatchPendingDeliveries(db, pid, { fetchImpl: impl })
+      expect(outcome.ok && outcome.dispatched).toBe(true)
+      expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).toContain(deliveryId)
+
+      const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
+      expect(row!.status).toBe('delivered')
+      expect(row!.attempt_count).toBe(1)
+
+      // The receiver would verify exactly what we sent, and the envelope id is the EVENT id (the
+      // dedup anchor a receiver keys off).
+      expect(bodies).toHaveLength(1)
+      expect(JSON.parse(bodies[0].body).id).toBe(eventId)
+      expect(verifyWebhookSignature('whsec_replay_spec_secret_0123456789', bodies[0].body, bodies[0].signature)).toEqual({ ok: true })
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('a 5xx settles as FAILED with a future next_attempt_at (a retry is scheduled, not dead)', async () => {
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId } = await fixture(db)
+    try {
+      const before = Date.now()
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl })
+      const { data: row } = await db
+        .from('event_deliveries')
+        .select('status, attempt_count, next_attempt_at, last_error')
+        .eq('id', deliveryId)
+        .single()
+      expect(row!.status).toBe('failed')
+      expect(row!.attempt_count).toBe(1)
+      expect(new Date(row!.next_attempt_at as string).getTime()).toBeGreaterThan(before)
+      expect(row!.last_error).toContain('503')
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('a permanent 4xx dead-letters IMMEDIATELY (no backoff burned)', async () => {
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId } = await fixture(db)
+    try {
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(400).impl })
+      const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
+      expect(row!.status).toBe('dead')
+      expect(row!.attempt_count).toBe(1) // one real attempt, then terminal — not the whole schedule
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('repeated 5xx eventually DEAD-LETTERS after the attempt budget is spent', async () => {
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, deliveryId } = await fixture(db)
+    try {
+      // Drive the row through its whole schedule. Each pass claims it only if due, so force it due by
+      // resetting next_attempt_at to the past between passes (the backoff would otherwise make us
+      // wait). We keep attempt_count as the dispatcher set it — only the clock is moved.
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        await db.from('event_deliveries').update({ next_attempt_at: new Date(Date.now() - 1000).toISOString() }).eq('id', deliveryId).eq('status', 'failed')
+        await dispatchPendingDeliveries(db, pid, { fetchImpl: stubFetch(503).impl })
+      }
+      const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
+      expect(row!.status).toBe('dead')
+      expect(row!.attempt_count).toBe(MAX_ATTEMPTS)
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+test('after a delivery, a REPLAY (reset to pending) re-sends with the SAME logical event id — dedupable', async () => {
+  // The acceptance's substance: replay creates one new attempt for the SAME logical event id, so a
+  // receiver can deduplicate it against the original. We deliver once, reset the row the way
+  // replayDelivery() does (status→pending, attempt_count→0), dispatch again, and assert the second
+  // send carries the identical envelope id. (The /app replay button + its settled-state guard is the
+  // browser smoke owed to Daniel; this pins the delivery-level property it depends on.)
+  const db = dbClient()
+  await withGateOn(async () => {
+    const { pid, eventId, deliveryId } = await fixture(db)
+    try {
+      const first = stubFetch(200)
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: first.impl })
+      expect((await db.from('event_deliveries').select('status').eq('id', deliveryId).single()).data!.status).toBe('delivered')
+
+      // Replay: the same reset replayDelivery() performs.
+      await db.from('event_deliveries').update({ status: 'pending', attempt_count: 0, next_attempt_at: new Date().toISOString(), claimed_at: null, last_error: null }).eq('id', deliveryId)
+
+      const second = stubFetch(200)
+      await dispatchPendingDeliveries(db, pid, { fetchImpl: second.impl })
+      const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
+      expect(row!.status).toBe('delivered')
+      expect(row!.attempt_count).toBe(1) // one NEW attempt, budget reset
+
+      // Same logical id across both sends — this is what makes at-least-once delivery dedupable.
+      expect(JSON.parse(first.bodies[0].body).id).toBe(eventId)
+      expect(JSON.parse(second.bodies[0].body).id).toBe(eventId)
+    } finally {
+      await db.from('projects').delete().eq('id', pid)
+    }
+  })
+})
+
+// ── the cron trigger's auth + dark no-op (HTTP) ───────────────────────────────────────────────
+test('the dispatch cron refuses an unauthenticated request', async ({ request }) => {
+  const res = await request.post('/api/internal/dispatch-deliveries')
+  expect(res.status()).toBe(401)
+})
+
+test('the dispatch cron refuses a WRONG bearer secret', async ({ request }) => {
+  const res = await request.post('/api/internal/dispatch-deliveries', {
+    headers: { Authorization: 'Bearer definitely-not-the-secret' },
+  })
+  expect(res.status()).toBe(401)
+})
+
+test('with the RIGHT secret but the delivery gate OFF, the cron is an authenticated no-op', async ({ request }) => {
+  // The gate script boots the server with CRON_SECRET set and DESTINATION_DELIVERY_ENABLED unset —
+  // so a correctly-authenticated tick returns enabled:false, sending nothing. Skips gracefully if
+  // the secret isn't in the env (a bare `next dev` without the gate script).
+  const secret = process.env.CRON_SECRET
+  test.skip(!secret, 'CRON_SECRET not set (run via the gate script)')
+  const res = await request.post('/api/internal/dispatch-deliveries', {
+    headers: { Authorization: `Bearer ${secret}` },
+  })
+  expect(res.status()).toBe(200)
+  expect((await res.json()).enabled).toBe(false)
+})
