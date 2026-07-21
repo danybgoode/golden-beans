@@ -255,6 +255,17 @@ one-liner + why + date shape.
   happens to match how you already wired the implementation — and don't skip the fresh-reviewer pass
   even when your own gate is green and your own manual smoke looked fine. *(2026-07-16,
   growth-engine-v1 S4.)*
+  **This bug class has now recurred THREE times in this repo, and the third instance was already
+  LIVE IN PRODUCTION, undetected.** `lib/tars-query.ts` filters events by `feature_id`, so an event
+  written without a `featureId` tag belongs to no funnel and is invisible forever. `trackSelfEvent`
+  never set one — meaning the landing dogfood funnel `commercial-shell` S3 shipped had been reading
+  **zero since launch** while ingesting events perfectly (confirmed against prod: all four
+  `landing_visited` rows had `feature_id = NULL`). Nothing errored, nothing alerted. **The
+  generalizable rule: a query that silently REQUIRES a tag the realistic caller has no reason to set
+  fails as an honest-looking zero, and a zero pages nobody.** When you add a read path that filters
+  on an optional column, the very next thing to check is whether the WRITE path actually sets it —
+  and any dashboard whose "correct" empty state is indistinguishable from its broken state needs one
+  end-to-end check that produces a NON-zero number. *(2026-07-21, multi-tenant-activation S2/S3.)*
 - **Two different non-Claude model families, single-pass each, can replace a same-family fresh-
   reviewer subagent for ordinary PRs — not just supplement it as advisory noise.** commercial-shell
   Sprint 3 ran Codex + Agy (Antigravity) as the judgment-layer review instead of also spawning a
@@ -275,6 +286,11 @@ one-liner + why + date shape.
   by any model, would have found. Static review and real execution are complementary, not
   redundant; budget for both, especially right after a "fix" to something already reviewed.
   *(2026-07-20, commercial-shell Sprint 3.)*
+  **Two rounds is a FLOOR, not a ritual — on auth/DB/shared-ingest work the curve may still not be
+  flat at round three.** multi-tenant-activation S2/S3 ran three: round 1 found 4 Blocking, round 2
+  found 5 more (one of them a bug round 1's own fix introduced), round 3 found 3 more — including a
+  quota-accounting bug that made the feature's ONLY documented remedy silently fail. Stop when a
+  round comes back clean, not when you hit a round count. *(2026-07-21, multi-tenant-activation.)*
 - **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
   spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
   S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a
@@ -327,6 +343,35 @@ one-liner + why + date shape.
   unique column is a credential, "insert or ignore" must become "look first, then verify the existing
   row belongs to the intended owner and is still active, else fail loud"** — silence on conflict is
   only safe when the conflicting row can't belong to someone else. *(2026-07-20, multi-tenant-activation S1.)*
+
+- **A comment asserting a check the code does not actually perform is worse than no comment, and it
+  survives review rounds.** A round-1 fix claimed in prose to distinguish two unique constraints by
+  name; the code just re-read a membership table that is empty during precisely the window the race
+  opens, so the "fix" could strand a user harder than the bug had. Round 2 caught it by reading the
+  code against its own comment. **Prose in a diff reads as evidence** — a reviewer who sees a stated
+  rationale spends their scrutiny elsewhere. When you write "we check X here", re-read the lines
+  underneath and confirm they check X. *(2026-07-21, multi-tenant-activation S2.)*
+- **A narrower `GRANT` revokes nothing — on Supabase, new public-schema tables arrive with
+  `service_role` already granted ALL.** A migration granted `SELECT, INSERT` and a comment claimed
+  the table was therefore append-only; it was purely additive and the claim was false. Only an
+  explicit `REVOKE UPDATE, DELETE` made it true. **Caught because a spec ATTEMPTED the mutation with
+  the app's own client** rather than trusting the grant statement to mean what it looks like — the
+  same "assert the property, don't assert the code that's supposed to produce it" discipline as the
+  mutation check. *(2026-07-21, multi-tenant-activation S2.)*
+- **A "just raise the limit" remedy must be tested after SUSTAINED abuse, not one rejection.** A
+  monthly quota counter incremented BEFORE comparing against the ceiling (necessary — that's what
+  makes it atomic), but rejected calls were never refunded, so a retrying client drove the count
+  arbitrarily far past the ceiling and raising it then failed to restore service. The existing spec
+  raised the ceiling after exactly ONE rejection, which the bug survived. **Whenever the documented
+  recovery procedure for a limit is "change the limit", write the spec that abuses it first.**
+  *(2026-07-21, multi-tenant-activation S2.)*
+- **Fixing a review finding by adding a MODE is a smell; fixing it by MOVING the code is usually
+  right.** A retry path placed in a Server Component couldn't set cookies, which forced a
+  "provision without handing over a key" mode, which then silently skipped a starter-feature
+  registration too — one constraint metastasising into three defects across two review rounds.
+  Moving the retry into a Route Handler (which can set cookies) deleted the mode and all of its
+  consequences at once. When a fix needs a flag/mode to accommodate where it lives, question the
+  location before adding the flag. *(2026-07-21, multi-tenant-activation S2.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable

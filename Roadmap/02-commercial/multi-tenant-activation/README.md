@@ -43,12 +43,12 @@ no-policies service-role pattern as every existing table.
 | 1 | ✅ 1.1 Supabase Auth + `project_members` + authed `/app` shell | **HIGH — Daniel merges** |
 | 1 | ✅ 1.2 Dashboards behind per-tenant authorization (slug-guessing dies; demo allow-list survives) | **HIGH — Daniel merges** |
 | 1 | ✅ 1.3 `api_keys` lifecycle (issue/label/rotate/revoke; existing hashes migrated in) | **HIGH — Daniel merges** |
-| 2 | 2.1 Signup → instant tenant + first key (guardrailed, ships dark behind `SIGNUP_ENABLED`) | **HIGH — Daniel merges** |
-| 2 | 2.2 Isolation guardrails (quota · payload caps · per-key rate limit) + credential audit trail | **HIGH — Daniel merges** |
-| 2 | 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |
-| 3 | 3.1 Landing §1 hero CTA flip + §7 honest tiers (gated on `SIGNUP_ENABLED`) | LOW |
-| 3 | 3.2 Waitlist → invite conversion | LOW |
-| 3 | 3.3 Activation launch: flip the gate, dogfood funnel live, one self-serve pod-trial tenant | **HIGH — Daniel flips/merges** |
+| 2 | ✅ 2.1 Signup → instant tenant + first key (guardrailed, ships dark behind `SIGNUP_ENABLED`) | **HIGH — Daniel merges** |
+| 2 | ✅ 2.2 Isolation guardrails (quota · payload caps · per-key rate limit) + credential audit trail | **HIGH — Daniel merges** |
+| 2 | ✅ 2.3 First-run onboarding (copy MCP URL + ≤5-line SDK snippet with your key) | LOW |
+| 3 | ✅ 3.1 Landing §1 hero CTA flip + §7 honest tiers (gated on `SIGNUP_ENABLED`) | LOW |
+| 3 | ✅ 3.2 Waitlist retirement (re-scoped from "waitlist → invite conversion" — the queue is empty; see `sprint-3.md`) | LOW |
+| 3 | ⬜ 3.3 Activation launch: flip the gate, dogfood funnel live, one self-serve pod-trial tenant | **HIGH — Daniel flips/merges** — *the only story left* |
 
 ## Kill-switch (decided at grooming, Stage 6b)
 `SIGNUP_ENABLED` env-gate at the signup route + landing CTA registry — **enablement, ships
@@ -65,13 +65,23 @@ Miyagi is untouched except hand-seeded membership rows (its ingest key keeps wor
 1.3 migration — acceptance-checked).
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] **Landing backfill check** (WAYS-OF-WORKING, adopted 2026-07-14): §1 hero + §7 tenancy match shipped reality
-- [ ] Team memory updated (if kept)
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** `SIGNUP_ENABLED` exists with stated polarity (enablement, born OFF, flipped at 3.3) + key/membership revocation verified. *Verify-only — decided at grooming.*
+- [x] All sprints merged to `main` + smoke-tested (**gaps stated** — the real signup flow has never
+      been exercised end-to-end; it needs a real inbox and the gate ON. See `RETROSPECTIVE.md`.)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] Every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] **Landing backfill check**: §1 hero + §7 tenancy match shipped reality *in both gate states* —
+      waitlist while dark, signup CTA + honest tiers once flipped. The `pricing` section registry
+      entry is `live`.
+- [x] Team memory updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped — the "realistic input" and
+      "two review rounds" entries were sharpened rather than duplicated)
+- [x] **Kill-switch:** `SIGNUP_ENABLED` exists, enablement polarity, born OFF, verified by spec
+      (including that it does not open on a typo); key/membership revocation verified in Sprint 1.
+- [ ] **Story 3.3 — the production flip.** Daniel's, and the ONLY thing between here and ✅.
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (run `node scripts/build-order.mjs`)
+
+> **Epic status stays `in-progress` on purpose.** Every line of code is merged, but the capability
+> is dark in production — marking this epic shipped before the flip would be exactly the kind of
+> "✅ for unshipped work" the poster convention forbids.

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
+import { isSignupEnabled } from '@/lib/flags'
 import { SignOutButton } from './sign-out-button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
@@ -14,11 +15,30 @@ export const dynamic = 'force-dynamic'
 // carry a placeholder the user edits. A real feature picker is dashboard work beyond this sprint.
 const DEFAULT_FEATURE_HINT = 'your-feature-key'
 
-export default async function AppHome() {
+export default async function AppHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ provision?: string }>
+}) {
   const user = await getSessionUser()
   if (!user) redirect('/login')
 
   const projects = await getUserProjects(user.id)
+
+  // multi-tenant-activation · Sprint 2 — the provisioning RETRY trigger.
+  //
+  // /app is the one surface EVERY authenticated route funnels through, whichever way the user
+  // signed in, which makes it the right place to NOTICE a missing tenant. The provisioning itself
+  // happens in app/app/provision/route.ts — a Route Handler, because only a Route Handler can set
+  // the one-time key cookie, and doing it inline here would force a degraded "no first key, no
+  // starter feature" variant (see that file's header for the full rationale).
+  //
+  // `?provision=failed` breaks the loop: after a failed attempt we render the honest empty state
+  // below instead of bouncing back and retrying forever.
+  const { provision } = await searchParams
+  if (projects.length === 0 && isSignupEnabled() && provision !== 'failed') {
+    redirect('/app/provision')
+  }
 
   return (
     <main>

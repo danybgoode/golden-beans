@@ -1,4 +1,5 @@
 import { WaitlistForm } from './WaitlistForm'
+import { isSignupEnabled } from '@/lib/flags'
 
 // Section 1 — Hero. Per references/landing-end-state.md's own section table, this section's
 // "Lights up" column reads "E1 (waitlist CTA) → E2 (real signup CTA)" — the connector CTA
@@ -6,8 +7,15 @@ import { WaitlistForm } from './WaitlistForm'
 // (CONNECTOR_ENABLED, HIGH risk). Per the project's own honesty-badge rule ("capability badges
 // never claim ✅ for unshipped work"), the connector slot stays in its designed position but
 // renders as a non-interactive block — no <button>/<a href>, no fabricated key string — while
-// the waitlist is the real, working, primary CTA.
+// the primary CTA is the real, working thing.
+//
+// multi-tenant-activation · Sprint 3, Story 3.1 — the E2 half of that "Lights up" arrow: once
+// SIGNUP_ENABLED is on, the waitlist form is replaced by a direct link to the real /signup page
+// and the footnote tags stop claiming "waitlist" is the live path. Decided server-side (this is
+// still a Server Component — `isSignupEnabled()` is safe to call directly, see lib/flags.ts) so
+// there is exactly one render per request, never a client-side re-branch on the same flag.
 export function Hero() {
+  const signupEnabled = isSignupEnabled()
   return (
     <section>
       <div className="wrap hero-grid" style={{ display: 'grid', gridTemplateColumns: '1.15fr .85fr', gap: 48, alignItems: 'center' }}>
@@ -22,7 +30,13 @@ export function Hero() {
           </p>
           <div style={{ display: 'flex', gap: 10, maxWidth: 600, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 260px', minWidth: 260 }}>
-              <WaitlistForm compact />
+              {signupEnabled ? (
+                <a href="/signup" className="btn btn-gold" style={{ display: 'inline-block' }}>
+                  Start free
+                </a>
+              ) : (
+                <WaitlistForm compact />
+              )}
             </div>
           </div>
           <div
@@ -35,8 +49,17 @@ export function Hero() {
           </div>
           <p style={{ margin: '16px 0 0', font: '400 13px var(--mono)', color: 'var(--dim)' }}>
             works on the Claude free tier · your data, your Supabase, your agent
-            <span className="tag tag-live" style={{ marginLeft: 8 }}>LIVE · waitlist</span>{' '}
-            <span className="tag tag-next">🔜 signup · connector</span>
+            {signupEnabled ? (
+              <>
+                <span className="tag tag-live" style={{ marginLeft: 8 }}>LIVE · signup</span>{' '}
+                <span className="tag tag-next">🔜 connector</span>
+              </>
+            ) : (
+              <>
+                <span className="tag tag-live" style={{ marginLeft: 8 }}>LIVE · waitlist</span>{' '}
+                <span className="tag tag-next">🔜 signup · connector</span>
+              </>
+            )}
           </p>
         </div>
         <div className="agent-win">

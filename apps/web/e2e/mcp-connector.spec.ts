@@ -97,10 +97,10 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
 
   test('a token minted for a disposable project cannot read another project\'s data', async ({ request }) => {
     const db = dbClient()
-    const isolationSlug = `mcp-isolation-${Date.now()}`
+    const isolationSlug = `mcp-isolation-${randomBytes(6).toString('hex')}`
     const { data: project, error: projectError } = await db
       .from('projects')
-      .insert({ slug: isolationSlug, api_key_hash: `spec-${Date.now()}` })
+      .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
       .select('id')
       .single()
     if (projectError || !project) throw new Error(`failed to insert disposable project: ${projectError?.message}`)
@@ -131,10 +131,10 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
 
   test('a revoked token → 401, instantly, no deploy', async ({ request }) => {
     const db = dbClient()
-    const isolationSlug = `mcp-revoke-${Date.now()}`
+    const isolationSlug = `mcp-revoke-${randomBytes(6).toString('hex')}`
     const { data: project, error: projectError } = await db
       .from('projects')
-      .insert({ slug: isolationSlug, api_key_hash: `spec-${Date.now()}` })
+      .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
       .select('id')
       .single()
     if (projectError || !project) throw new Error(`failed to insert disposable project: ${projectError?.message}`)

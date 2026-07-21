@@ -25,6 +25,50 @@ export const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golde
 export const LANDING_VISITED_EVENT = 'landing_visited'
 export const WAITLIST_JOINED_EVENT = 'waitlist_joined'
 
+// multi-tenant-activation · Sprint 2/3 — the ACTIVATION funnel, the second funnel this tenant
+// measures (epic README: "Success includes a dogfooded signup→activated funnel rendered by the
+// engine itself"). Three stages, fired from three different places in the flow:
+//   signup_started       — a signup submission passed the gate + guards (public signup route)
+//   account_confirmed    — the email round-trip completed and a tenant was provisioned (callback)
+//   first_event_ingested — that new tenant's very first event landed (the ingest route)
+export const SIGNUP_STARTED_EVENT = 'signup_started'
+export const ACCOUNT_CONFIRMED_EVENT = 'account_confirmed'
+export const FIRST_EVENT_INGESTED_EVENT = 'first_event_ingested'
+
+export type SelfTrackEvent =
+  | typeof LANDING_VISITED_EVENT
+  | typeof WAITLIST_JOINED_EVENT
+  | typeof SIGNUP_STARTED_EVENT
+  | typeof ACCOUNT_CONFIRMED_EVENT
+  | typeof FIRST_EVENT_INGESTED_EVENT
+
+// The TARS feature each funnel event belongs to. Registered on the self tenant by
+// scripts/seed-self-project.mjs.
+export const WAITLIST_SIGNAL_KEY = 'waitlist_conversion'
+export const ACTIVATION_SIGNAL_KEY = 'activation'
+
+// ⚠️ THIS MAPPING IS LOAD-BEARING, AND ITS ABSENCE WAS A LIVE PRODUCTION BUG.
+//
+// lib/tars-query.ts reads a funnel with `.eq('feature_id', featureKey)` — so an event with a NULL
+// feature_id belongs to NO funnel and is invisible to every dashboard, forever. Until this map
+// existed, trackSelfEvent() fired every event untagged: checked against production 2026-07-20, all
+// four `landing_visited` rows on the `golden-beans` tenant had `feature_id = NULL`, which means the
+// landing dogfood funnel commercial-shell Sprint 3 shipped has been rendering a permanent zero
+// since it launched. Nothing errored; the events were ingested perfectly and simply counted toward
+// nothing (cross-review, Codex 2026-07-20 — raised against the NEW activation funnel, which would
+// have shipped with the identical defect).
+//
+// This is the growth-engine-v1 S4 "realistic input" lesson recurring in a third place: a query
+// that silently requires a tag the caller had no reason to set produces an honest-looking zero
+// rather than an error, and zeros do not page anyone.
+const EVENT_FEATURE: Record<SelfTrackEvent, string> = {
+  [LANDING_VISITED_EVENT]: WAITLIST_SIGNAL_KEY,
+  [WAITLIST_JOINED_EVENT]: WAITLIST_SIGNAL_KEY,
+  [SIGNUP_STARTED_EVENT]: ACTIVATION_SIGNAL_KEY,
+  [ACCOUNT_CONFIRMED_EVENT]: ACTIVATION_SIGNAL_KEY,
+  [FIRST_EVENT_INGESTED_EVENT]: ACTIVATION_SIGNAL_KEY,
+}
+
 // The per-visitor identity cookie. A visit (Server Components can't set cookies, so the visited
 // beacon is a Route Handler — see app/api/v1/public/self-visit/route.ts) mints/returns this id;
 // the waitlist route reads the SAME cookie on the client's later join, so one visitor's visit and
@@ -63,22 +107,27 @@ function timeoutFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Res
 // own public URL), and awaiting it directly in a route handler would delay that route's response
 // (and, for self-visit specifically, delay delivering the Set-Cookie the waitlist route depends on
 // for a shared visitor identity) by however long the call takes, timeout included.
-export async function trackSelfEvent(
-  event: typeof LANDING_VISITED_EVENT | typeof WAITLIST_JOINED_EVENT,
-  userId: string,
-): Promise<void> {
+// Returns whether the event actually LANDED. Callers that use the send as a one-shot state
+// transition (the ingest route stamping projects.first_event_at) must branch on this: committing
+// the "already sent" marker on a send that silently failed loses that funnel stage permanently,
+// because no later event ever retries it (cross-review, Codex 2026-07-20).
+export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Promise<boolean> {
   const apiKey = selfApiKey()
-  if (!apiKey) return // unset in CI/local-without-config — dogfooding is a prod-config concern
+  if (!apiKey) return false // unset in CI/local-without-config — dogfooding is a prod-config concern
 
   try {
     const engine = createGrowthEngineClient({ baseUrl: getSiteUrl(), apiKey, userId, fetchImpl: timeoutFetch })
-    const result = await engine.track(event)
+    // featureId is REQUIRED for this event to appear in any funnel — see EVENT_FEATURE above.
+    const result = await engine.track(event, { featureId: EVENT_FEATURE[event] })
     if (!result.ok) {
       console.warn(`[self-track] ${event} for ${userId} did not land: ${result.error}`)
+      return false
     }
+    return true
   } catch (err) {
     // Should be unreachable (the SDK catches its own network errors), but the request path must
     // survive even a programming/config error here — log, never rethrow.
     console.warn(`[self-track] ${event} threw unexpectedly:`, err)
+    return false
   }
 }
