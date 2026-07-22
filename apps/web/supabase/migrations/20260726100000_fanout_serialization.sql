@@ -293,11 +293,31 @@ CREATE OR REPLACE FUNCTION release_deliveries(
   p_now          TIMESTAMPTZ
 )
 RETURNS TABLE (id UUID, status TEXT)
-LANGUAGE sql
+LANGUAGE plpgsql
 VOLATILE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
+BEGIN
+  -- LOCK the destinations FIRST, as its own statement (cross-review, Codex round 20). An
+  -- `UPDATE … FROM event_destinations` does NOT lock the joined destination rows, so a concurrent
+  -- delete could mark a destination deleted (skipping the in_flight row it does not drain) while this
+  -- statement still reads the old, live version and restores that row to `pending` — permanently
+  -- unclaimable and invisible. Taking FOR SHARE in a SEPARATE statement makes us wait for any such
+  -- delete to commit; the UPDATE below then runs on a FRESH READ COMMITTED snapshot that sees
+  -- deleted_at set, so it settles to `dead` instead. Same destination-then-delivery lock order every
+  -- other path uses.
+  PERFORM 1
+     FROM event_destinations dest
+    WHERE dest.project_id = p_project_id
+      AND dest.id IN (
+        SELECT d.destination_id FROM event_deliveries d
+         WHERE d.id = ANY(p_delivery_ids) AND d.project_id = p_project_id
+      )
+    ORDER BY dest.id          -- deterministic order: no deadlock between concurrent releases
+      FOR SHARE;
+
+  RETURN QUERY
   UPDATE event_deliveries d
      SET status     = CASE WHEN dest.deleted_at IS NULL THEN 'pending' ELSE 'dead' END,
          last_error = CASE WHEN dest.deleted_at IS NULL THEN d.last_error ELSE 'destination removed' END,
@@ -308,12 +328,10 @@ AS $$
      AND d.project_id = p_project_id
      AND d.status = 'in_flight'
      AND d.claimed_at = p_claim_token
-     -- Joining the destination in the SAME statement is what makes the liveness check race-free here:
-     -- the UPDATE's row locks settle any concurrent delete, so we cannot restore a row to `pending`
-     -- after that delete's drain (the round-17 hazard), without needing a separate lock step.
      AND dest.id = d.destination_id
      AND dest.project_id = d.project_id
   RETURNING d.id, d.status;
+END;
 $$;
 
 REVOKE ALL ON FUNCTION release_deliveries(UUID, UUID[], TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;

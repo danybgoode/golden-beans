@@ -127,6 +127,19 @@ DECLARE
   v_cap   INTEGER := 20;
   v_count INTEGER;
 BEGIN
+  -- On UPDATE, only a transition INTO the live set can breach the cap (cross-review, Codex round 20:
+  -- un-deleting a row, or moving one to another project, added a live destination without ever
+  -- passing the INSERT trigger). Everything else — a rename, an enable/disable, a soft delete — is
+  -- exempt, so ordinary lifecycle updates pay no lock or count.
+  IF TG_OP = 'UPDATE' THEN
+    IF NOT (
+      (OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS NULL)   -- resurrected into the live set
+      OR (NEW.project_id IS DISTINCT FROM OLD.project_id AND NEW.deleted_at IS NULL) -- moved in, live
+    ) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
+
   -- SERIALIZE per project before counting (cross-review, Codex round 11). A bare COUNT(*) in a
   -- BEFORE INSERT trigger does NOT serialize concurrent transactions: under READ COMMITTED each
   -- would see 19 and all would insert, blowing straight past the cap — the same check-then-act race
@@ -135,10 +148,13 @@ BEGIN
   -- commit/rollback); creates for DIFFERENT projects never contend, since the key is the project id.
   PERFORM pg_advisory_xact_lock(hashtextextended(NEW.project_id::text, 0));
 
-  -- Only LIVE destinations count — a soft-deleted one frees its slot.
+  -- Only LIVE destinations count — a soft-deleted one frees its slot. On UPDATE the row itself may
+  -- already be counted, so exclude it and compare against the cap the same way.
   SELECT COUNT(*) INTO v_count
     FROM event_destinations
-   WHERE project_id = NEW.project_id AND deleted_at IS NULL;
+   WHERE project_id = NEW.project_id
+     AND deleted_at IS NULL
+     AND id <> NEW.id;
 
   IF v_count >= v_cap THEN
     RAISE EXCEPTION 'destination cap reached for project % (max %)', NEW.project_id, v_cap
@@ -150,7 +166,10 @@ $$;
 
 DROP TRIGGER IF EXISTS event_destinations_cap_trg ON event_destinations;
 CREATE TRIGGER event_destinations_cap_trg
-  BEFORE INSERT ON event_destinations
+  -- INSERT *and* UPDATE: the cap is a real invariant on the LIVE set, so a row transitioning into it
+  -- by update must be checked too (cross-review, Codex round 20). The function early-returns for
+  -- updates that are not such a transition.
+  BEFORE INSERT OR UPDATE ON event_destinations
   FOR EACH ROW EXECUTE FUNCTION enforce_destination_cap();
 
 -- ── delete_destination() — soft-delete AND drain, ATOMICALLY ──────────────────────────────────
