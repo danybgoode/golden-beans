@@ -265,8 +265,10 @@ export async function deliverWebhook(
   }
 }
 
-// Returns a rejection reason if the target hostname resolves to any private/loopback/link-local
-// address; null to proceed. Fail-open on a resolution error or empty result (see the caller's note).
+// The Layer-1 pre-check's verdict. FAIL-CLOSED: a private-resolving host is refused as `permanent`,
+// and a resolution error/timeout is refused as `retryable` — neither proceeds to a send (an earlier
+// version of this comment said "fail-open", which the implementation never did; corrected via
+// cross-review, Codex round 22, because a stale security comment invites a future regression).
 type GuardResult =
   | { ok: true }
   | { ok: false; disposition: 'permanent' | 'retryable'; error: string }

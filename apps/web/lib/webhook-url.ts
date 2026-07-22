@@ -87,9 +87,26 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
   // Any OTHER IPv6 literal: allow ONLY global unicast (2000::/3 — first nibble 2 or 3), reject
   // everything else (cross-review, Codex round 7: "reject every address that is not global unicast").
   // That one rule subsumes loopback (::1), unspecified (::), link-local (fe80::/10), site-local
-  // (fec0::/10, deprecated), unique-local (fc00::/7), multicast (ff00::/8) and all reserved blocks —
-  // an allowlist is safer here than chasing an ever-growing blocklist.
-  if (h.includes(':')) return !/^[23]/.test(h)
+  // (fec0::/10, deprecated), unique-local (fc00::/7), multicast (ff00::/8), NAT64 (64:ff9b::/96) and
+  // all reserved blocks — an allowlist is safer than chasing an ever-growing blocklist.
+  //
+  // …with TWO carve-outs INSIDE 2000::/3 for transition mechanisms that tunnel to an IPv4 target
+  // (cross-review, Codex round 22). These look global but route to whatever v4 they encode:
+  //   • 6to4, 2002::/16 — the next 32 bits ARE the IPv4 address, so 2002:7f00:0001:: is 127.0.0.1.
+  //     Decode it and apply the v4 rules.
+  //   • Teredo, 2001:0::/32 — encodes a v4 server and an obfuscated client address; refused outright
+  //     rather than partially decoded, since it exists to traverse NATs into private networks.
+  if (h.includes(':')) {
+    if (!/^[23]/.test(h)) return true // outside global unicast
+    const sixToFour = h.match(/^2002:([0-9a-f]{1,4}):([0-9a-f]{1,4})(:|$)/)
+    if (sixToFour) {
+      const g1 = parseInt(sixToFour[1], 16)
+      const g2 = parseInt(sixToFour[2], 16)
+      return isPrivateIPv4([(g1 >> 8) & 0xff, g1 & 0xff, (g2 >> 8) & 0xff, g2 & 0xff])
+    }
+    if (/^2001:0{0,3}:/.test(h)) return true // Teredo 2001:0::/32
+    return false
+  }
 
   const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
   if (!v4) return false // a hostname, not a literal IPv4 — allowed (its resolved IP is re-checked)

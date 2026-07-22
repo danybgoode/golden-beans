@@ -40,7 +40,7 @@ Fixed key order (the bytes are what the signature covers — do not re-serialize
     "subject": { "type": "merchant", "id": "<merchant id>" },
     "actor":   { "type": "user", "id": "…" },
     "correlationId": "…",
-    "metadata": { }
+    "metadata": { "plan": "pro" }
   }
 }
 ```

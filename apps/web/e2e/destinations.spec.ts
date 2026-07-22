@@ -122,6 +122,13 @@ test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treat
   expect(isPrivateOrLoopbackHost('ff02::1')).toBe(true) // multicast
   expect(isPrivateOrLoopbackHost('2606:4700:4700::1111')).toBe(false) // global unicast — allowed
   expect(isPrivateOrLoopbackHost('2001:db8::1')).toBe(false) // within 2000::/3 (doc range, not routable inward)
+  // IPv6 TRANSITION mechanisms that tunnel to a v4 target (cross-review, Codex round 22).
+  expect(isPrivateOrLoopbackHost('2002:7f00:0001::')).toBe(true) // 6to4 encoding 127.0.0.1
+  expect(isPrivateOrLoopbackHost('2002:a9fe:a9fe::')).toBe(true) // 6to4 encoding 169.254.169.254
+  expect(isPrivateOrLoopbackHost('2002:0a00:0001::')).toBe(true) // 6to4 encoding 10.0.0.1
+  expect(isPrivateOrLoopbackHost('2002:0808:0808::')).toBe(false) // 6to4 encoding 8.8.8.8 — public
+  expect(isPrivateOrLoopbackHost('2001:0:1234::1')).toBe(true) // Teredo 2001:0::/32
+  expect(isPrivateOrLoopbackHost('64:ff9b::7f00:1')).toBe(true) // NAT64 — outside 2000::/3 anyway
   // CGNAT 100.64.0.0/10 (cross-review, Antigravity round 5) — internal cloud/metadata surfaces.
   expect(isPrivateOrLoopbackHost('100.64.0.1')).toBe(true)
   expect(isPrivateOrLoopbackHost('100.127.255.255')).toBe(true)
