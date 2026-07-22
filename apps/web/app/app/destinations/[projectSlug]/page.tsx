@@ -1,6 +1,6 @@
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { listDestinations } from '@/lib/destinations'
-import { listRecentDeliveries, getDeliveryHealth } from '@/lib/deliveries'
+import { listRecentDeliveries, listRecentAttempts, getDeliveryHealth } from '@/lib/deliveries'
 import { DestinationManager } from './destination-manager'
 
 // event-destination-router · Sprint 2, Story 2.1 — the per-project destination dashboard. OWNER-only,
@@ -16,9 +16,10 @@ export default async function DestinationsPage({
 }) {
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
-  const [destinations, deliveries, health] = await Promise.all([
+  const [destinations, deliveries, attempts, health] = await Promise.all([
     listDestinations(projectId),
     listRecentDeliveries(projectId),
+    listRecentAttempts(projectId),
     getDeliveryHealth(projectId),
   ])
 
@@ -81,6 +82,54 @@ export default async function DestinationsPage({
       )}
 
       <DestinationManager slug={projectSlug} destinations={destinations} deliveries={deliveries} />
+
+      {/* The APPEND-ONLY attempt log — the immutable record of what actually happened, per attempt.
+          Distinct from "Recent deliveries" above, which is CURRENT delivery state (a replay resets
+          that row's attempt count; these rows are never rewritten). Read-only, so it renders here
+          server-side rather than travelling through the client manager. */}
+      <h2>Attempt log</h2>
+      <p>
+        <small>
+          Every send attempt, append-only — including attempts a later replay superseded. This is the
+          record; the table above is current state.
+        </small>
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Event</th>
+            <th>Destination</th>
+            <th>Attempt</th>
+            <th>Outcome</th>
+            <th>HTTP</th>
+            <th>Latency</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {attempts.length === 0 ? (
+            <tr>
+              <td colSpan={8}>No attempts yet.</td>
+            </tr>
+          ) : (
+            attempts.map((a) => (
+              <tr key={a.id}>
+                <td>{new Date(a.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
+                <td>{a.eventName ?? '—'}</td>
+                <td>{a.destinationName ?? '—'}</td>
+                <td>#{a.attemptNo}</td>
+                <td>{a.outcome}</td>
+                <td>{a.httpStatus ?? '—'}</td>
+                <td>{a.latencyMs != null ? `${a.latencyMs}ms` : '—'}</td>
+                <td>
+                  <small>{a.error ?? '—'}</small>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </main>
   )
 }

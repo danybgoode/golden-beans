@@ -329,6 +329,44 @@ test('delete_destination drains outstanding work, and replay_delivery REFUSES a 
   }
 })
 
+test('replay_delivery accepts TERMINAL rows only — a mid-retry `failed` row is refused', async () => {
+  // Cross-review (Codex round 14): a `failed` row is already scheduled for an automatic retry, so
+  // replaying it would silently override that schedule and reset its attempt budget — a different
+  // operation from what "replay" says. Terminal only: delivered | dead.
+  const db = dbClient()
+  const { pid, deliveryId } = await fixture(db)
+  const future = new Date(Date.now() + 60_000).toISOString()
+  try {
+    // A row mid-retry: failed, with a scheduled next attempt and a spent budget.
+    await db
+      .from('event_deliveries')
+      .update({ status: 'failed', attempt_count: 2, next_attempt_at: future })
+      .eq('id', deliveryId)
+
+    const { data: refused } = await db.rpc('replay_delivery', {
+      p_project_id: pid,
+      p_delivery_id: deliveryId,
+      p_now: new Date().toISOString(),
+    })
+    expect(refused == null || (Array.isArray(refused) && refused.length === 0)).toBe(true)
+    // Untouched: its retry schedule and budget survive.
+    const { data: row } = await db.from('event_deliveries').select('status, attempt_count').eq('id', deliveryId).single()
+    expect(row!.status).toBe('failed')
+    expect(row!.attempt_count).toBe(2)
+
+    // A DEAD row, by contrast, replays fine.
+    await db.from('event_deliveries').update({ status: 'dead' }).eq('id', deliveryId)
+    const { data: accepted } = await db.rpc('replay_delivery', {
+      p_project_id: pid,
+      p_delivery_id: deliveryId,
+      p_now: new Date().toISOString(),
+    })
+    expect(accepted).toBeTruthy()
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
 test('a REMOVED destination leaves no claimable work — enumeration ignores it', async () => {
   // Cross-review (Codex round 12): a deleted destination can never be re-enabled and the dispatcher
   // only claims ENABLED destinations, so any delivery left pending for it would be undrainable.

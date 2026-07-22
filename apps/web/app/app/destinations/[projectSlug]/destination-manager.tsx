@@ -281,10 +281,11 @@ export function DestinationManager({
                   <small>{d.lastError ?? '—'}</small>
                 </td>
                 <td>
-                  {/* Only a SETTLED delivery can be replayed — a pending/in_flight row is already
-                      queued, and re-queueing it would disturb a live dispatcher pass. A REMOVED
-                      destination has nothing to replay to (and re-queueing would be undrainable). */}
-                  {['delivered', 'failed', 'dead'].includes(d.status) && !d.destinationRemoved && (
+                  {/* Only a TERMINAL delivery can be replayed. `pending`/`in_flight` are queued, and
+                      `failed` is mid-retry — already scheduled for another attempt, so replaying it
+                      would silently override that schedule and reset its budget (cross-review, Codex
+                      round 14). A REMOVED destination has nothing to replay to. */}
+                  {['delivered', 'dead'].includes(d.status) && !d.destinationRemoved && (
                     <button type="button" onClick={() => onReplay(d.id)} disabled={pending}>
                       Replay
                     </button>

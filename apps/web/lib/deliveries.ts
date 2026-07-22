@@ -101,6 +101,53 @@ export async function replayDelivery(
   return { ok: true, eventId }
 }
 
+// The APPEND-ONLY attempt log — what actually happened, per attempt (cross-review, Codex round 14:
+// the "recent deliveries" table shows CURRENT delivery-row state, whose attempt_count a replay
+// resets, so earlier attempts were never displayed anywhere). This is the immutable record: every
+// send the dispatcher settled, including ones a later replay superseded.
+export type DeliveryAttemptRow = {
+  id: string
+  destinationName: string | null
+  eventName: string | null
+  eventId: string
+  outcome: string
+  httpStatus: number | null
+  latencyMs: number | null
+  error: string | null
+  attemptNo: number
+  createdAt: string
+}
+
+export async function listRecentAttempts(projectId: string, limit = 50): Promise<DeliveryAttemptRow[]> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('event_delivery_attempts')
+    .select('id, event_id, outcome, http_status, latency_ms, error, attempt_no, created_at, event_destinations(name), events(event)')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) {
+    console.error('[deliveries] attempts list failed:', error)
+    throw new Error('Could not load delivery attempts')
+  }
+  return (data ?? []).map((r) => {
+    const dest = r.event_destinations as unknown as { name: string } | null
+    const ev = r.events as unknown as { event: string } | null
+    return {
+      id: r.id as string,
+      destinationName: dest?.name ?? null,
+      eventName: ev?.event ?? null,
+      eventId: r.event_id as string,
+      outcome: r.outcome as string,
+      httpStatus: (r.http_status as number | null) ?? null,
+      latencyMs: (r.latency_ms as number | null) ?? null,
+      error: (r.error as string | null) ?? null,
+      attemptNo: (r.attempt_no as number) ?? 0,
+      createdAt: r.created_at as string,
+    }
+  })
+}
+
 // event-destination-router · Sprint 3, Story 3.3 — the delivery operating view.
 export type DeliveryHealthRow = {
   destinationId: string

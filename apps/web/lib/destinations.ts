@@ -199,6 +199,9 @@ export async function rotateSecret(
     })
     .eq('id', destinationId)
     .eq('project_id', projectId)
+    // A REMOVED destination is a tombstone — rotating its secret would mutate it and report a
+    // misleading success (cross-review, Codex round 14). Same guard as every other mutation here.
+    .is('deleted_at', null)
     .select('id')
   if (error) {
     console.error('[destinations] rotate failed:', error)
