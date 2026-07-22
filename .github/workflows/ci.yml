@@ -96,6 +96,9 @@ jobs:
         # same as SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY above.
         env:
           CONNECTOR_ENABLED: 'true'
+          # Journey projection HTTP specs exercise the live API seam. Dark-default behavior is
+          # covered directly by the pure flag assertion and the deployment remains born OFF.
+          JOURNEY_PROJECTIONS_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."

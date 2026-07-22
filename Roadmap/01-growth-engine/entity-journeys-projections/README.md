@@ -62,7 +62,7 @@ background projector or materialized subject/history store in v1; those require 
 | Sprint | Story | Risk |
 |---|---|---|
 | 1 | ✅ 1.1 Versioned journey-definition registry | high |
-| 1 | 1.2 Deterministic subject projection | low |
+| 1 | ✅ 1.2 Deterministic subject projection | low |
 | 2 | 2.1 Cohort conversion, aging and drop-off | low |
 | 2 | 2.2 UI, API and MCP read parity | high |
 | 3 | 3.1 Miyagi 13-stage founding-merchant proof | high |

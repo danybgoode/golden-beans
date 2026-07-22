@@ -1,6 +1,6 @@
 # Entity journeys — Sprint 1: Definition contract and deterministic subject projection
 
-**Status:** 🟨 in progress — Story 1.1 complete on the Sprint 1 feature branch; Story 1.2 remains
+**Status:** ✅ complete on the Sprint 1 feature branch; review/merge and the production smoke remain
 
 ## Stories
 
@@ -26,7 +26,7 @@ read-only; nonmembers/foreign identities fail closed. The enablement flag is bor
 auth/validation. Local migration reset, pure/DB/API specs, mutation checks, typecheck and build are green;
 remote migration application and authenticated browser smoke remain deployment/review work.
 
-### Story 1.2 — Deterministic subject projection
+### ✅ Story 1.2 — Deterministic subject projection
 
 **As a** product operator, **I want** one subject projected from source events, **so that** I can explain its
 current stage, first-entered time and complete ordered history.
@@ -36,6 +36,14 @@ highest satisfied stage wins; lower-stage events do not regress; same-time ties 
 irrelevant events are ignored; response names definition version and source freshness.
 
 **Risk:** low — read-only pure/query logic over existing telemetry.
+
+**Implementation status:** pure query-time evaluation reads only canonical, project-scoped subject facts;
+it orders by `occurred_at ?? created_at`, then canonical event id, and records only actual first
+satisfaction timestamps. The version is required on API reads, history is definition-stage order, and
+freshness reports the latest effective fact time separately from latest receipt time. The canonical
+API is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positive-integer>`; no
+legacy `/subjects/<id>` alias exists. Pure truth-table and API isolation specs, mutation checks,
+typecheck and build are green locally; production smoke remains deployment/review work.
 
 ## Sprint QA
 
@@ -55,10 +63,10 @@ Env: production · https://golden-beans-gamma.vercel.app
 2. Redeploy with the gate ON, sign in as the disposable project owner and open
    `https://golden-beans-gamma.vercel.app/app/journeys/<project-slug>`.
    → “Create journey” appears for that project.
-3. Create `merchant-activation` with three ordered smoke stages, then activate version 1.
+3. Create `merchant_activation` with three ordered smoke stages, then activate version 1.
    → The definition displays one active version and immutable activation history.
 4. Send the three subject events out of order, with one duplicate, then request
-   `https://golden-beans-gamma.vercel.app/api/v1/journeys/merchant-activation/subjects/merchant-smoke-journey-001`
+   `https://golden-beans-gamma.vercel.app/api/v1/journeys/merchant_activation/subject?subjectId=merchant-smoke-journey-001&version=1`
    using the disposable API key.
    → One subject returns the correct current stage, first-entered timestamps and version 1.
 5. Try to mutate the definition as a member and through another project's identity.
