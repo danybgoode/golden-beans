@@ -70,7 +70,8 @@ export function eventMatchesStage(event: JourneyProjectionEvent, stage: JourneyS
   if (event.event !== stage.event) return false
   for (const [key, expected] of Object.entries(stage.tags ?? {})) {
     // Exact is exact: do not coerce 42/"42", false/"false", or accept an object/array that merely
-    // contains the expected value. Registry validation limits expected values to safe scalars.
+    // contains the expected value. Registry validation limits numeric predicates to bounded safe
+    // integers, so strict equality remains exact after JSON/Postgres round-trips.
     if (event.tags[key] !== expected) return false
   }
   return true

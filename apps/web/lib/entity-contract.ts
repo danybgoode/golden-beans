@@ -27,6 +27,6 @@ export const EXACT_SEGMENT_TAG_FIELDS = ['source', 'channel', 'campaign', 'plan'
 export type ExactSegmentTagField = (typeof EXACT_SEGMENT_TAG_FIELDS)[number]
 export type ExactSegmentScalar = string | number | boolean
 
-// Deliberately below Number.MAX_SAFE_INTEGER: abs <= 1e15 round-trips predictably across JSON,
-// JavaScript and Postgres while rejecting exponent bombs / meaningless extreme segment values.
-export const MAX_EXACT_SEGMENT_NUMBER_ABS = 1_000_000_000_000_000
+// Deliberately below Number.MAX_SAFE_INTEGER: bounded safe integers round-trip exactly across JSON,
+// JavaScript and Postgres while rejecting fractions, exponent bombs and meaningless extremes.
+export const MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS = 1_000_000_000_000_000

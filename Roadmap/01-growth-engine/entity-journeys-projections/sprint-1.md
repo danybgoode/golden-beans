@@ -18,7 +18,8 @@ actor/time; `JOURNEY_PROJECTIONS_ENABLED` exists disabled and OFF hides the new 
 
 **Locked contract / implementation status:** 1–20 uniquely keyed `lower_snake_case` stages; each stage
 matches an event name plus at most five exact scalar TAG predicates from `source`, `channel`, `campaign`,
-`plan`, and `region` (string values ≤64; numeric absolute value ≤10^15). Optional cohort entry must name stage 1. Optional retention is
+`plan`, and `region` (string values ≤64; numbers are safe integers with absolute value ≤10^15).
+Optional cohort entry must name stage 1. Optional retention is
 `{stageKey, anchorStageKey, withinDays}`, with an existing anchor at/before the target and a 1–365-day
 integer window. Definitions are immutable numbered rows; edits create the next version, and activation moves
 one per-project registry pointer. Owner session identity supplies the audit actor; members see the registry
@@ -52,14 +53,17 @@ typecheck and build are green locally; production smoke remains deployment/revie
 - **api specs:** owner/member/foreign definition mutations; API-key project scoping; flag OFF/ON; subject read
   with realistic stable identity and definition version.
 - **browser smoke owed:** yes, to Daniel — authenticated definition creation/activation for a disposable project.
-- **deterministic gate:** typecheck + build + Playwright API green; migration verified locally and in production.
+- **deterministic gate:** typecheck + build + Playwright API green; a dedicated built-server OFF pass pins
+  journey page/API 404s before the normal ON suite; migration verified locally and in production.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 
 Env: production · https://golden-beans-gamma.vercel.app
 
-1. With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL.
-   → The new surface is unavailable while existing funnels and experiments still work.
+1. With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL,
+   call the subject endpoint without authorization, then open `/llms.txt`.
+   → Both new journey seams return 404 (the API does so before auth, never 401) while the existing
+   agent manifest returns 200.
 2. Redeploy with the gate ON, sign in as the disposable project owner and open
    `https://golden-beans-gamma.vercel.app/app/journeys/<project-slug>`.
    → “Create journey” appears for that project.

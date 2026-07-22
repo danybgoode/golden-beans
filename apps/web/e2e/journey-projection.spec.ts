@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import type { JourneyDefinition } from '@/lib/journey-definition'
 
@@ -23,7 +24,7 @@ const DEFINITION: JourneyDefinition = {
   entityType: 'merchant',
   stages: [
     { key: 'created', event: 'merchant_created', tags: { source: 'organic' } },
-    { key: 'configured', event: 'merchant_configured', tags: { plan: 'pro' } },
+    { key: 'configured', event: 'merchant_configured', tags: { plan: 'pro', campaign: MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } },
     { key: 'selling', event: 'merchant_sold', tags: { region: 'mx' } },
   ],
 }
@@ -47,16 +48,16 @@ test('projection truth table: ordered, late, out-of-order, duplicate, same-time,
     // Listed in receipt/input order, deliberately not fact order. The day-1 source event arrived
     // last (day 9 receipt), and must still be the first stage timestamp.
     fact({ id: '00000000-0000-0000-0000-000000000003', event: 'merchant_sold', tags: { region: 'mx' }, occurredAt: at(3), createdAt: at(4), subjectId }),
-    fact({ id: '00000000-0000-0000-0000-000000000002', event: 'merchant_configured', tags: { plan: 'pro' }, occurredAt: at(2), createdAt: at(2), subjectId }),
+    fact({ id: '00000000-0000-0000-0000-000000000002', event: 'merchant_configured', tags: { plan: 'pro', campaign: MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS }, occurredAt: at(2), createdAt: at(2), subjectId }),
     // Exact replay: one canonical id cannot create duplicate history.
-    fact({ id: '00000000-0000-0000-0000-000000000002', event: 'merchant_configured', tags: { plan: 'pro' }, occurredAt: at(2), createdAt: at(2), subjectId }),
+    fact({ id: '00000000-0000-0000-0000-000000000002', event: 'merchant_configured', tags: { plan: 'pro', campaign: MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS }, occurredAt: at(2), createdAt: at(2), subjectId }),
     // A later lower stage is valid evidence but cannot regress currentStage.
     fact({ id: '00000000-0000-0000-0000-000000000004', event: 'merchant_created', tags: { source: 'organic' }, occurredAt: at(4), createdAt: at(5), subjectId }),
     // Irrelevant but newest source fact: it advances freshness only.
     fact({ id: '00000000-0000-0000-0000-000000000006', event: 'merchant_note', tags: { source: 'organic' }, occurredAt: at(5), createdAt: at(10), subjectId }),
     // `occurredAt: null` falls back to receipt time; it has a nonmatching string "pro"/number 1
     // predicate to prove exact scalar matching does not coerce values.
-    fact({ id: '00000000-0000-0000-0000-000000000005', event: 'merchant_configured', tags: { plan: 1 }, occurredAt: null, createdAt: at(6), subjectId }),
+    fact({ id: '00000000-0000-0000-0000-000000000005', event: 'merchant_configured', tags: { plan: 1, campaign: MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS }, occurredAt: null, createdAt: at(6), subjectId }),
     fact({ id: '00000000-0000-0000-0000-000000000001', event: 'merchant_created', tags: { source: 'organic' }, occurredAt: at(1), createdAt: at(9), subjectId }),
   ]
 
@@ -197,7 +198,11 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     })
     await createVersion(client, two.id, twoOwner, journeyKey, DEFINITION)
     await insertSubjectEvent(client, one.id, subjectId, 'merchant_created', { source: 'organic' }, at(1))
-    await insertSubjectEvent(client, one.id, subjectId, 'merchant_configured', { plan: 'pro' }, at(2))
+    // Both this event tag and v1's definition predicate are stored as JSONB before evaluation.
+    // Reaching `configured` below proves the bounded safe integer survives both DB round-trips exactly.
+    await insertSubjectEvent(client, one.id, subjectId, 'merchant_configured', {
+      plan: 'pro', campaign: MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS,
+    }, at(2))
     // Project two deliberately owns the same journey key + opaque subject and has a higher stage.
     await insertSubjectEvent(client, two.id, subjectId, 'merchant_sold', { region: 'mx' }, at(3))
 

@@ -2,8 +2,8 @@ name: CI
 
 # Deterministic pre-merge gate (Roadmap/WAYS-OF-WORKING.md -> Review & merge):
 #   typecheck-build  -- tsc --noEmit + npm run build
-#   e2e              -- the `api` Playwright project against a local Supabase + a locally built
-#                       `next start` server. No Vercel dependency yet — golden-beans' Vercel
+#   e2e              -- the `api` Playwright project against local Supabase + locally built OFF/ON
+#                       `next start` servers. No Vercel dependency yet — golden-beans' Vercel
 #                       project is new paid infra, not provisioned until Daniel greenlights it
 #                       (Roadmap/01-growth-engine/growth-engine-v1/README.md). Once it exists,
 #                       swap this job for the preview-per-PR shape (see the template's original
@@ -75,6 +75,52 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Kill-switch behavior needs a real, differently-enved process. The Playwright process gets
+      # the same explicit OFF value as this second-port built server, so this cannot accidentally
+      # assert dark behavior against the normal ON server started later in the job.
+      - name: Verify journey projection seams with the gate OFF
+        env:
+          JOURNEY_PROJECTIONS_ENABLED: 'false'
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/next start apps/web --hostname 127.0.0.1 --port 3100 > /tmp/journey-dark-server.log 2>&1 &
+          dark_pid=$!
+          cleanup() {
+            if kill -0 "$dark_pid" 2>/dev/null; then
+              kill "$dark_pid" 2>/dev/null || true
+              for i in $(seq 1 20); do
+                kill -0 "$dark_pid" 2>/dev/null || break
+                sleep 0.1
+              done
+              kill -KILL "$dark_pid" 2>/dev/null || true
+            fi
+            wait "$dark_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3100/llms.txt > /dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::OFF app never became ready"
+            cat /tmp/journey-dark-server.log
+            exit 1
+          fi
+
+          if ! ./node_modules/.bin/playwright test \
+            --config=apps/web/playwright.config.ts \
+            apps/web/e2e/journey-dark.spec.ts \
+            --project=api; then
+            cat /tmp/journey-dark-server.log
+            exit 1
+          fi
+
       # commercial-shell Story 3.1 — MUST run before the server starts, not after: a value only
       # reaches an already-running Node process's env if it was set before that process forked.
       # Adding SELF_PROJECT_API_KEY to $GITHUB_ENV after "Start the app" (an earlier version of
@@ -96,8 +142,8 @@ jobs:
         # same as SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY above.
         env:
           CONNECTOR_ENABLED: 'true'
-          # Journey projection HTTP specs exercise the live API seam. Dark-default behavior is
-          # covered directly by the pure flag assertion and the deployment remains born OFF.
+          # Journey projection HTTP specs exercise the live API seam. The preceding dedicated
+          # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
@@ -123,6 +169,10 @@ jobs:
           GROWTH_ENGINE_URL: http://localhost:3000
 
       - name: Run Playwright api suite
+        # Match the test process to the already-running ON server. journey-dark.spec.ts skips in
+        # this pass; its assertions ran, without a skip, against the dedicated OFF server above.
+        env:
+          JOURNEY_PROJECTIONS_ENABLED: 'true'
         run: npm run test:e2e
 
       - name: Dump Next.js server log (diagnostics)

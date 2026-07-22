@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { EXACT_SEGMENT_TAG_FIELDS, MAX_EXACT_SEGMENT_NUMBER_ABS } from '@/lib/entity-contract'
+import { EXACT_SEGMENT_TAG_FIELDS, MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
 import {
   MAX_JOURNEY_STAGES,
@@ -26,7 +26,8 @@ import {
 //   C. removed PUBLIC from create_journey_version's REVOKE, reset local Supabase, then ran the
 //      service-role-only spec: failed 1/1 with 42501 "journey management requires project
 //      ownership" — proof anon reached the FUNCTION BODY, exactly the leak this assertion detects.
-// Every mutation was reverted; the restored focused file passed 8/8 after the final local reset.
+// Every mutation was reverted. The independent-review run replayed migrations cleanly, passed this
+// focused registry file 9/9, and passed the dedicated built-server OFF spec 1/1.
 
 const VALID_DEFINITION = {
   entityType: 'merchant',
@@ -99,11 +100,6 @@ test.describe('JOURNEY_PROJECTIONS_ENABLED — dark by default', () => {
     }
   })
 
-  test('while OFF, the new page 404s and the existing agent manifest still works', async ({ request }) => {
-    test.skip(isJourneyProjectionsEnabled(), 'dark-path test requires the enablement gate OFF')
-    expect((await request.get('/app/journeys/golden-beans-demo')).status()).toBe(404)
-    expect((await request.get('/llms.txt')).status()).toBe(200)
-  })
 })
 
 test.describe('journey definition — closed bounded contract', () => {
@@ -159,10 +155,23 @@ test.describe('journey definition — closed bounded contract', () => {
       { source: { nested: true } },
       { source: null },
       { source: 'x'.repeat(MAX_PREDICATE_STRING_LENGTH + 1) },
-      { campaign: MAX_EXACT_SEGMENT_NUMBER_ABS + 1 },
       { source: 'a', channel: 'b', campaign: 'c', plan: 'd', region: 'e', sixth: 'f' },
     ]) {
       expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags }] }).ok).toBe(false)
+    }
+  })
+
+  test('numeric predicates accept the bounded safe-integer maximum and reject fractions or unsafe integers', () => {
+    const definitionFor = (campaign: number) => ({
+      entityType: 'merchant',
+      stages: [{ key: 'one', event: 'x', tags: { campaign } }],
+    })
+    expect(parseJourneyDefinition(definitionFor(MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS)).ok).toBe(true)
+    expect(parseJourneyDefinition(definitionFor(-MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS)).ok).toBe(true)
+    for (const rejected of [42.5, MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS + 1, Number.MAX_SAFE_INTEGER + 1]) {
+      const result = parseJourneyDefinition(definitionFor(rejected))
+      expect(result.ok, String(rejected)).toBe(false)
+      if (!result.ok) expect(result.errors.join(' ')).toContain('safe integer')
     }
   })
 
@@ -172,7 +181,6 @@ test.describe('journey definition — closed bounded contract', () => {
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'one', anchorStageKey: 'two', withinDays: 30 } }).ok).toBe(false)
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'one', withinDays: 0 } }).ok).toBe(false)
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'two', withinDays: 365 } }).ok).toBe(true)
-    expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags: { campaign: MAX_EXACT_SEGMENT_NUMBER_ABS } }] }).ok).toBe(true)
   })
 })
 
@@ -294,27 +302,29 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       expect(rejected.error, key).not.toBeNull()
     }
 
-    // Raw JSON keeps 1e400 as a Postgres JSONB number. Passing it through a JS object would turn it
-    // into Infinity/null before the RPC, so use the REST function endpoint directly to prove the
-    // SQL magnitude guard—not JSON.stringify—rejects the exponent bomb.
+    // Raw JSON preserves the numeric literal sent to Postgres. Use the REST function endpoint
+    // directly to prove the SQL safe-integer backstop rejects both a fraction and 1e400; passing
+    // the latter through a JS object would turn it into Infinity/null before the RPC.
     const supabaseUrl = process.env.SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    const hugeBody = JSON.stringify({
-      p_project_id: projectId,
-      p_journey_key: 'huge_numeric',
-      p_definition: {
-        entityType: 'merchant',
-        stages: [{ key: 'one', event: 'x', tags: { campaign: '__HUGE_NUMBER__' } }],
-      },
-      p_actor_user_id: owner,
-    }).replace('"__HUGE_NUMBER__"', '1e400')
-    const hugeResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/create_journey_version`, {
-      method: 'POST',
-      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
-      body: hugeBody,
-    })
-    expect(hugeResponse.ok).toBe(false)
-    expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', 'huge_numeric')).data).toHaveLength(0)
+    for (const [key, literal] of [['decimal_numeric', '42.5'], ['huge_numeric', '1e400']] as const) {
+      const rawBody = JSON.stringify({
+        p_project_id: projectId,
+        p_journey_key: key,
+        p_definition: {
+          entityType: 'merchant',
+          stages: [{ key: 'one', event: 'x', tags: { campaign: '__RAW_NUMBER__' } }],
+        },
+        p_actor_user_id: owner,
+      }).replace('"__RAW_NUMBER__"', literal)
+      const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_journey_version`, {
+        method: 'POST',
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+        body: rawBody,
+      })
+      expect(response.ok, key).toBe(false)
+      expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', key)).data).toHaveLength(0)
+    }
 
     // Concurrent activation always settles on the highest version. Each successful state change
     // has exactly one audit row; losing/obsolete attempts return false and write none.

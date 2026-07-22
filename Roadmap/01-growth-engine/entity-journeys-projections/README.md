@@ -34,8 +34,9 @@ background projector or materialized subject/history store in v1; those require 
   unique, letter-initial `lower_snake_case` values up to 64 characters.
 - A stage matches one event name plus **0–5 exact tag predicates**. Predicate fields are limited to
   `source`, `channel`, `campaign`, `plan`, and `region`; values are string/number/boolean scalars, with
-  strings capped at 64 characters and numeric absolute value capped at **10^15** for predictable
-  JSON/JavaScript/Postgres round-trips. No metadata fields, subject ids, SQL, regex, code, or transforms.
+  strings capped at 64 characters and numbers restricted to **safe integers** with absolute value at
+  most **10^15** for exact JSON/JavaScript/Postgres round-trips. No metadata fields, subject ids, SQL,
+  regex, code, or transforms.
 - Cohort entry is optional; when present it is always **stage 1**. Retention is optional and exactly
   `{stageKey, anchorStageKey, withinDays}`: both keys must exist, the anchor precedes or equals the target,
   and the window is an integer from 1–365 days.
@@ -74,7 +75,8 @@ background projector or materialized subject/history store in v1; those require 
 `JOURNEY_PROJECTIONS_ENABLED` is an **enablement** environment gate in `lib/flags.ts`, born **OFF** in
 preview and production. It gates the new definition/read/UI/MCP seams while ingest, TARS, A/B and destinations
 continue unchanged. Additive migrations remain after rollback. Because Vercel snapshots environment variables
-at build time, every gate change requires a new Git-tracked deployment before behavior can change.
+at build time, every gate change requires a new Git-tracked deployment before behavior can change. CI boots a
+dedicated built server with the flag OFF and pins page + pre-auth API 404s before booting the normal ON test server.
 
 ## Deploy order
 

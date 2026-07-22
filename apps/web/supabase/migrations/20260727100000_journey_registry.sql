@@ -66,10 +66,13 @@ BEGIN
         IF jsonb_typeof(v_tag.value) NOT IN ('string', 'number', 'boolean') THEN RETURN false; END IF;
         IF jsonb_typeof(v_tag.value) = 'string'
            AND char_length(v_tag.value #>> '{}') > 64 THEN RETURN false; END IF;
-        -- Same exact magnitude as lib/entity-contract.ts. 1e15 is below JS's safe-integer ceiling,
-        -- round-trips predictably through JSON/Postgres, and rejects exponent bombs such as 1e400.
+        -- Same exact safe-integer contract as lib/entity-contract.ts. The value must have no
+        -- fractional component and abs <= 1e15, rejecting decimals and exponent bombs like 1e400.
         IF jsonb_typeof(v_tag.value) = 'number'
-           AND abs((v_tag.value #>> '{}')::NUMERIC) > 1000000000000000 THEN RETURN false; END IF;
+           AND (
+             (v_tag.value #>> '{}')::NUMERIC <> trunc((v_tag.value #>> '{}')::NUMERIC)
+             OR abs((v_tag.value #>> '{}')::NUMERIC) > 1000000000000000
+           ) THEN RETURN false; END IF;
       END LOOP;
     END IF;
   END LOOP;
