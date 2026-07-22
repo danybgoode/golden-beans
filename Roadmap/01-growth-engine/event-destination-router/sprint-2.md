@@ -1,6 +1,27 @@
 # Event destination router — Sprint 2: Destinations and reliable delivery
 
-**Status:** ✅ MERGED to `main` 2026-07-21 (squash `015eae4`, PR #16) · CI green · migrations live in prod · **DARK** (`DESTINATION_DELIVERY_ENABLED` still OFF)
+**Status:** ✅ MERGED (`015eae4`, PR #16) · migrations live in prod · **DELIVERY LIVE** (flag flipped 2026-07-22)
+
+## Production rollout — 2026-07-22 (the ordered runbook, executed)
+
+Delivery was activated end-to-end with the Miyagi consumer (Story 3.1, in `medusa-bonsai`). The order
+below is dependency-correct: the receiver holds the secret **before** the destination is enabled and
+**before** the flag flips, so no queued delivery can dead-letter against an unset secret (401 =
+permanent 4xx). The shared secret was generated once by the runbook so both sides match exactly (the
+UI's mint-and-show-once path would have created a chicken-and-egg with the Cloud Run env).
+
+1. **Secret → Miyagi Cloud Run.** `GOLDEN_BEANS_WEBHOOK_SECRET` set on service `miyagi-web`
+   (`us-east4`, revision `…00019-tbg`). Verified loaded: a bad-signature POST returns
+   `401 {"error":"Invalid signature"}` (secret present, verify path reached), no longer
+   `{"error":"Unauthorized"}` (the unset/fail-closed body).
+2. **Destination created** on GB project `miyagisanchez` (`3746f529…`), id `4fa663e8…`, target
+   `https://miyagisanchez.com/api/webhooks/golden-beans`, born **disabled**, secret set, audit row
+   written. (`mschz.org` deliberately NOT used — it 301-redirects and GB never follows redirects.)
+3. **End-to-end crypto test while still dark** — a hand-signed test envelope (GB's exact
+   `t=<unix>,v1=hmac(t.body)` scheme) → `200 {"ok":true,"test":true}`. Verify + reachability +
+   classification proven before enabling anything.
+4. **Destination enabled**, then **`DESTINATION_DELIVERY_ENABLED=true`** set in Vercel prod and made
+   live by this commit (the deploy). Post-deploy verification recorded in the closeout commit.
 
 ## What shipped in this sprint
 
