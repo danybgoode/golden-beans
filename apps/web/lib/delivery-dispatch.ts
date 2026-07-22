@@ -90,7 +90,8 @@ export type DispatchOutcome =
 export type DispatchOptions = {
   limit?: number
   now?: Date
-  /** Injected for tests; defaults to global fetch (via deliverWebhook). */
+  /** Injected for tests; when omitted, deliverWebhook uses its connection-PINNED sender (the
+   *  SSRF-safe production path) — NOT global fetch. */
   fetchImpl?: typeof fetch
   /** Injected for tests; the SSRF host resolver (see lib/webhook-delivery.ts). */
   resolveHost?: (hostname: string) => Promise<string[]>

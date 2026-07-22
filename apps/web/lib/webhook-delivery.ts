@@ -143,7 +143,8 @@ export type DeliveryResult = {
 }
 
 export type DeliverOptions = {
-  /** Injected for tests; defaults to global fetch. */
+  /** Injected for tests; defaults to the connection-PINNED sender (never global fetch — see
+   *  pinnedFetch above for why the pin is what closes DNS rebinding). */
   fetchImpl?: typeof fetch
   /** Injected so a spec asserts an exact signature against a fixed clock. */
   timestampSeconds?: number

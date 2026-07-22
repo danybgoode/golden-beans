@@ -16,8 +16,11 @@ Golden Beans delivers over the Sprint 2 signed-webhook destination:
 - `POST` to a Miyagi-owned https endpoint, configured as a destination on the Golden Beans project.
 - Header `X-GB-Signature: t=<unix_seconds>,v1=<hex_hmac_sha256>` over `` `${timestamp}.${rawBody}` ``.
 - Correlation headers `X-GB-Delivery-Id` and `X-GB-Event-Id`.
-- **Delivery is at least once.** Retries are bounded (6 attempts, 30s base, doubling, 1h cap) and a
-  permanent 4xx dead-letters immediately. An operator can replay a settled delivery.
+- **Delivery is at least once.** Retries are bounded: 6 attempts total, with **minimum eligibility
+  delays** of 30s, 1m, 2m, 4m, 8m (doubling, capped at 1h). These are floors, not a schedule — the
+  dispatcher runs on a 5-minute cron, so each actual retry lands at the next tick after the delay
+  elapses. Expect `delay + up to ~5 minutes`. A permanent 4xx dead-letters immediately (no retries).
+  An operator can replay a settled delivery.
 
 Miyagi **must** copy the reference verifier from `apps/web/lib/webhook-signature.ts`
 (`verifyWebhookSignature`) rather than reimplementing it, and **must** reject a timestamp outside its

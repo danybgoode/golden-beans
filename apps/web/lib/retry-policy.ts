@@ -10,6 +10,12 @@
 // testable to the millisecond. If concurrency ever grows enough to matter, add full-jitter HERE (one
 // pure function, one spec) rather than smearing Math.random through the dispatcher.
 
+// TIMING IS A FLOOR, NOT A SCHEDULE (cross-review, Codex round 9). These delays set when a delivery
+// becomes ELIGIBLE again; the dispatcher only runs on the cron's cadence (*/5 in vercel.json), so the
+// ACTUAL wait is `delay + up to one cron interval` of polling latency. A 30s backoff therefore means
+// "eligible after 30s, attempted at the next tick" — not "retried 30s later". Anything documenting
+// these numbers to a receiver must say the same (see miyagi-lifecycle-contract.md).
+
 /** Total send attempts a delivery gets before it is declared dead. Counts the FIRST try plus retries:
  *  6 → the original attempt and five retries. */
 export const MAX_ATTEMPTS = 6

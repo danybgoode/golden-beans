@@ -39,8 +39,18 @@ It is owner-only, rate-limited (10/10min/project), SSRF-guarded, and sends a syn
 
 ## Still owed before this sprint can be called shipped
 
-- [x] Cross-agent judgment-layer review (`scripts/cross-review.mjs`, both `codex` + `antigravity`) — run and converged; findings fixed or explicitly triaged (see the SSRF-rebinding follow-up below)
-- [ ] `20260723100000` + `20260724100000` pushed to **prod** Supabase (migration-first, before merge)
+- [x] Cross-agent judgment-layer review (`scripts/cross-review.mjs`, both `codex` + `antigravity`) —
+      run to convergence over 9 rounds; all blocking findings fixed. SSRF is closed end-to-end
+      (literal-IP classifier rejecting every non-global address + fail-closed DNS pre-check +
+      connection-**pinned** sender that re-checks the resolved address and pins the socket, so DNS
+      rebinding has no second resolution to flip). Explicitly triaged, not fixed: the secret-rotation
+      rejection window (dead-lettered events are replay-recoverable; a dual-secret grace window is a
+      noted follow-up) and the dispatcher's per-row event re-read (N+1, a scale follow-up).
+- [ ] **All three** migrations pushed to **prod** Supabase (migration-first, before merge):
+      `20260723100000_destination_lifecycle` + `20260724100000_delivery_retry` +
+      `20260725100000_delivery_health`. All three are required — `/app/destinations` calls
+      `delivery_health()` unconditionally, so merging with only the first two would 500 the page
+      (cross-review, Codex round 9).
 - [ ] `CRON_SECRET` set in Vercel prod (the cron fails closed without it)
 - [ ] Browser smoke owed to Daniel (authenticated create → test → enable → rotate → replay)
 - [ ] Daniel merges

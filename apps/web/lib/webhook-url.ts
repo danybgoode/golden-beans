@@ -12,11 +12,12 @@
 // target must not point at a PRIVATE / loopback / link-local literal IP, which is how SSRF reaches
 // cloud metadata (169.254.169.254) and internal services.
 //
-// RESIDUAL, stated rather than glossed: a HOSTNAME that RESOLVES to a private IP via DNS is NOT
-// caught here (we validate the literal host, not the resolved socket). A full fix pins the socket to
-// the resolved-and-checked address; that is deliberately out of scope for a webhook an owner points
-// at their OWN endpoint — the threat model here is "a public URL that redirects/resolves inward",
-// mitigated by redirect:'manual' on the send (lib/webhook-delivery.ts) and this literal-IP block.
+// SCOPE OF THIS FILE: it classifies a LITERAL host (or hostname) at create/rotate time. A hostname
+// that RESOLVES to a private IP is caught elsewhere, by the two send-time layers in
+// lib/webhook-delivery.ts: a fail-CLOSED DNS pre-check, and — the airtight one — a connection-PINNED
+// sender whose custom `lookup` re-runs THIS classifier on the resolved address and pins the socket to
+// it, so there is no second resolution for a DNS-rebinding attacker to flip. Redirects are never
+// followed (`redirect: 'manual'`), so a 3xx cannot pivot around the pin either.
 
 export type UrlCheck = { ok: true } | { ok: false; error: string }
 
