@@ -20,7 +20,7 @@ This one was left alone on purpose rather than half-built. It needs a destinatio
 (`webhook | attio`), a scoped vendor credential, and a merchant/contact/opportunity mapping — against
 a mutable third-party API, with **no token available to verify any of it**. Writing a speculative
 Attio mapping nobody can execute would produce plausible-looking code whose correctness is unknown,
-which is precisely the failure mode this epic's 11-round cross-review exists to catch. It is also the
+which is precisely the failure mode the cross-agent judgment-layer review exists to catch. It is also the
 one story the epic itself marks *optional*.
 **Recommendation:** scope it with a real Attio workspace token in hand, as its own sprint. Nothing
 else in the epic depends on it — the adapter seam is a *destination kind*, and today's single kind

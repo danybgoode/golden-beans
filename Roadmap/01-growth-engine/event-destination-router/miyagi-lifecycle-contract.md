@@ -79,8 +79,13 @@ parsing free-form metadata.
    return. Do **not** return `2xx` to "avoid retries" — that silently drops the event.
 5. **Medusa remains commerce truth.** These events carry lifecycle *facts*, not shop/product/order
    state. Miyagi must not treat `first_sale` as an order record; it is a milestone flag.
-6. **No PII in metadata.** Golden Beans forwards tenant metadata verbatim and does not inspect it —
-   so the producing call sites must keep customer PII out of these events.
+6. **No PII in metadata.** Golden Beans forwards tenant metadata *values* verbatim and does not
+   inspect them — so the producing call sites must keep customer PII out of these events.
+
+**Envelope shaping, precisely** (so the consumer codes against what is actually sent): null/absent
+fields are OMITTED rather than sent as `null`, and an EMPTY `metadata`/`tags` object is omitted
+entirely. Non-empty values are passed through unchanged. `actor`/`subject` appear only when at least
+one of their type/id is present. Treat every `data` field as optional.
 
 ## Degradation
 

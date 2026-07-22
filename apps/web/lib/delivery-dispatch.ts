@@ -153,10 +153,15 @@ export async function dispatchPendingDeliveries(
         const deferred = rows.slice(i)
         const released = await releaseUnsent(db, projectId, deferred, now)
         for (const r of deferred) {
-          const ok = released.has(r.id)
+          // Report the status the DB actually wrote (pending, or dead when the destination was
+          // removed) — not the one we asked for (cross-review, Codex round 18).
+          const restingStatus = released.get(r.id)
           settlements.push({
             id: r.id, event_id: r.event_id, destination_id: r.destination_id,
-            disposition: 'skipped', status: ok ? 'pending' : 'in_flight', attemptCount: r.attempt_count, persisted: ok,
+            disposition: 'skipped',
+            status: (restingStatus as DeliverySettlement['status']) ?? 'in_flight',
+            attemptCount: r.attempt_count,
+            persisted: restingStatus !== undefined,
           })
         }
         break
@@ -248,7 +253,11 @@ async function sendAndSettle(
       nextAttemptAt: null, lastError: 'destination or event no longer exists', attemptCount: row.attempt_count,
       log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
     })
-    return { ...base, disposition: 'skipped', status: 'dead', attemptCount: row.attempt_count, persisted }
+    return {
+      ...base, disposition: 'skipped',
+      status: (persisted as DeliverySettlement['status']) ?? 'in_flight',
+      attemptCount: row.attempt_count, persisted: persisted !== null,
+    }
   }
 
   // A TRANSIENT non-deliverable state (destination exists but was disabled, or its url/secret was
@@ -261,7 +270,11 @@ async function sendAndSettle(
       nextAttemptAt: null, lastError: null, attemptCount: row.attempt_count,
       log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
     })
-    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted }
+    return {
+      ...base, disposition: 'skipped',
+      status: (persisted as DeliverySettlement['status']) ?? 'in_flight',
+      attemptCount: row.attempt_count, persisted: persisted !== null,
+    }
   }
 
   const body = serializeEnvelope(buildEventEnvelope(event as CanonicalEventRow))
@@ -288,7 +301,13 @@ async function sendAndSettle(
     log: true, outcome: result.disposition, httpStatus: result.status, latencyMs: result.latencyMs,
   })
 
-  return { ...base, disposition: result.disposition, status: next.status, attemptCount, persisted }
+  // The DB's ACTUAL resting status, which differs from `next.status` when settle_delivery coerced a
+  // failed/pending settlement to `dead` because the destination was removed mid-flight.
+  return {
+    ...base, disposition: result.disposition,
+    status: (persisted as DeliverySettlement['status']) ?? next.status,
+    attemptCount, persisted: persisted !== null,
+  }
 }
 
 type SettleArgs = {
@@ -307,9 +326,11 @@ type SettleArgs = {
 }
 
 // Calls the settle_delivery RPC (guarded UPDATE + append-only attempt insert, one transaction).
-// Returns whether the row WE own was persisted — false on a DB error or a lost reclaim race, so the
-// caller never reports an un-persisted send as counted.
-async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<boolean> {
+// Returns the status the row ACTUALLY came to rest at — which may differ from what we asked for, when
+// the RPC coerces a failed/pending settlement to `dead` because the destination was removed
+// mid-flight (cross-review, Codex round 18). NULL on a DB error or a lost reclaim race, so the caller
+// never reports an un-persisted send as counted.
+async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<string | null> {
   const { data, error } = await db.rpc('settle_delivery', {
     p_delivery_id: a.row.id,
     p_project_id: a.projectId,
@@ -328,9 +349,9 @@ async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<boolea
   })
   if (error) {
     console.error('[delivery-dispatch] settle failed:', error.message)
-    return false
+    return null
   }
-  return data === true
+  return (data as string | null) ?? null
 }
 
 // Releases claimed-but-unsent rows at the deadline, via the release_delivery RPC — which takes the
@@ -343,24 +364,24 @@ async function releaseUnsent(
   projectId: string,
   rows: ClaimedRow[],
   now: Date,
-): Promise<Set<string>> {
-  const released = new Set<string>()
+): Promise<Map<string, string>> {
+  if (rows.length === 0) return new Map()
   const nowIso = now.toISOString()
-  for (const r of rows) {
-    const { data, error } = await db.rpc('release_delivery', {
-      p_delivery_id: r.id,
-      p_project_id: projectId,
-      p_claim_token: nowIso,
-      p_destination_id: r.destination_id,
-      p_now: nowIso,
-    })
-    if (error) {
-      console.error('[delivery-dispatch] release failed:', error.message)
-      continue
-    }
-    if (data === true) released.add(r.id)
+  // ONE round trip for the whole deferred set (cross-review, Codex round 18) — releasing row by row
+  // meant up to MAX_CLAIM_BATCH sequential RPCs AFTER the deadline had fired, so a slow DB could kill
+  // the function mid-release and strand the remainder in_flight, defeating the deadline guard itself.
+  const { data, error } = await db.rpc('release_deliveries', {
+    p_project_id: projectId,
+    p_delivery_ids: rows.map((r) => r.id),
+    p_claim_token: nowIso,
+    p_now: nowIso,
+  })
+  if (error) {
+    console.error('[delivery-dispatch] release failed:', error.message)
+    return new Map()
   }
-  return released
+  // id → the status it ACTUALLY came to rest at (pending, or dead if the destination was removed).
+  return new Map((data ?? []).map((r: { id: string; status: string }) => [r.id, r.status]))
 }
 
 // Maps an HTTP disposition + attempt count to the row's next state. The retry SCHEDULE is

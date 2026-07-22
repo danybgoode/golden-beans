@@ -182,6 +182,10 @@ COMMENT ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) IS
 -- re-queueable state (`failed`/`pending`), because nothing can ever claim a deleted destination. So
 -- the FINAL STATUS is coerced to `dead` in exactly that case. Everything else is the 20260724100000
 -- body verbatim.
+-- The return type changed (BOOLEAN → TEXT), so the old signature must be dropped explicitly —
+-- CREATE OR REPLACE cannot change a function's return type.
+DROP FUNCTION IF EXISTS settle_delivery(UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER);
+
 CREATE OR REPLACE FUNCTION settle_delivery(
   p_delivery_id     UUID,
   p_project_id      UUID,
@@ -198,7 +202,10 @@ CREATE OR REPLACE FUNCTION settle_delivery(
   p_http_status     INTEGER,
   p_latency_ms      INTEGER
 )
-RETURNS BOOLEAN
+-- Returns the row's ACTUAL resting status (or NULL when not persisted) rather than a bare boolean
+-- (cross-review, Codex round 18): the caller previously reported the status it ASKED for, which
+-- disagreed with the database whenever the coercion below fired.
+RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY INVOKER
 SET search_path = public, pg_temp
@@ -249,9 +256,11 @@ BEGIN
     );
   END IF;
 
-  RETURN v_rows = 1;
+  -- The status the row ACTUALLY came to rest at (post-coercion), or NULL if we didn't own the row.
+  RETURN CASE WHEN v_rows = 1 THEN v_status ELSE NULL END;
 END;
 $$;
+
 
 -- ── release_delivery() — the deadline-deferral path, deletion-aware ───────────────────────────
 -- When the dispatcher hits its deadline it releases claimed-but-unsent rows back to `pending`. Doing
@@ -260,47 +269,46 @@ $$;
 -- AFTER the delete's drain — orphaned, unclaimable queue work again. This takes the same FOR SHARE
 -- destination lock and settles to `dead` instead when the destination is gone. Nothing is attempted
 -- on this path, so no attempt row is written and attempt_count is untouched.
-CREATE OR REPLACE FUNCTION release_delivery(
-  p_delivery_id    UUID,
-  p_project_id     UUID,
-  p_claim_token    TIMESTAMPTZ,
-  p_destination_id UUID,
-  p_now            TIMESTAMPTZ
+-- BATCHED: the whole deferred set in ONE statement (cross-review, Codex round 18). Releasing row by
+-- row meant up to MAX_CLAIM_BATCH sequential round trips AFTER the deadline had already fired — a
+-- slow database could kill the function mid-release and strand the remainder `in_flight`, defeating
+-- the very safety mechanism. One UPDATE over the id array is a single round trip and one transaction.
+-- Returns the ids actually released, so the caller can report any it missed as unsettled.
+CREATE OR REPLACE FUNCTION release_deliveries(
+  p_project_id   UUID,
+  p_delivery_ids UUID[],
+  p_claim_token  TIMESTAMPTZ,
+  p_now          TIMESTAMPTZ
 )
-RETURNS BOOLEAN
-LANGUAGE plpgsql
+RETURNS TABLE (id UUID, status TEXT)
+LANGUAGE sql
 VOLATILE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
-DECLARE
-  v_removed BOOLEAN;
-  v_rows    INTEGER;
-BEGIN
-  SELECT (deleted_at IS NOT NULL) INTO v_removed
-    FROM event_destinations
-   WHERE id = p_destination_id AND project_id = p_project_id
-   FOR SHARE;
-
-  UPDATE event_deliveries
-     SET status     = CASE WHEN COALESCE(v_removed, true) THEN 'dead' ELSE 'pending' END,
-         last_error = CASE WHEN COALESCE(v_removed, true) THEN 'destination removed' ELSE last_error END,
+  UPDATE event_deliveries d
+     SET status     = CASE WHEN dest.deleted_at IS NULL THEN 'pending' ELSE 'dead' END,
+         last_error = CASE WHEN dest.deleted_at IS NULL THEN d.last_error ELSE 'destination removed' END,
          claimed_at = NULL,
          updated_at = p_now
-   WHERE id = p_delivery_id
-     AND project_id = p_project_id
-     AND status = 'in_flight'
-     AND claimed_at = p_claim_token;
-  GET DIAGNOSTICS v_rows = ROW_COUNT;
-  RETURN v_rows = 1;
-END;
+    FROM event_destinations dest
+   WHERE d.id = ANY(p_delivery_ids)
+     AND d.project_id = p_project_id
+     AND d.status = 'in_flight'
+     AND d.claimed_at = p_claim_token
+     -- Joining the destination in the SAME statement is what makes the liveness check race-free here:
+     -- the UPDATE's row locks settle any concurrent delete, so we cannot restore a row to `pending`
+     -- after that delete's drain (the round-17 hazard), without needing a separate lock step.
+     AND dest.id = d.destination_id
+     AND dest.project_id = d.project_id
+  RETURNING d.id, d.status;
 $$;
 
-REVOKE ALL ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) TO service_role;
+REVOKE ALL ON FUNCTION release_deliveries(UUID, UUID[], TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION release_deliveries(UUID, UUID[], TIMESTAMPTZ, TIMESTAMPTZ) TO service_role;
 
-COMMENT ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) IS
-  'Releases a claimed-but-unsent delivery at the dispatcher deadline, under the destination FOR SHARE lock: back to pending if the destination is live, to dead if it was removed. Never logs an attempt (nothing was sent).';
+COMMENT ON FUNCTION release_deliveries(UUID, UUID[], TIMESTAMPTZ, TIMESTAMPTZ) IS
+  'Releases the dispatcher''s deferred (claimed-but-unsent) deliveries in ONE statement at the deadline: back to pending if the destination is live, to dead if it was removed. Returns the ids released and their resulting status. Never logs an attempt (nothing was sent).';
 
 -- ── attempt-log FKs, so the operating view can EMBED destination + event names ─────────────────
 -- The attempt log (20260724100000) carried only a delivery FK. Showing per-attempt history
