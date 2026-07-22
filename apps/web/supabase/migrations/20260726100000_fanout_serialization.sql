@@ -146,8 +146,22 @@ BEGIN
     RETURN false; -- unknown, foreign, or already-deleted
   END IF;
 
+  -- DESTROY THE CREDENTIAL, don't just tombstone the row (cross-review, Codex round 21). The UI tells
+  -- the owner "the signing secret is lost" — that must be TRUE, not merely inaccessible through our
+  -- read paths. Retaining a live shared secret on a deleted row means a DB or backup compromise could
+  -- recover everything needed to forge signed requests to a receiver that still trusts it. The
+  -- target_url goes too: it is the other half of that forgery and has no purpose after deletion.
+  -- Delivery HISTORY is unaffected — the attempt log keys on ids, and the row itself survives as the
+  -- name the operating view and history join against.
+  -- (Clearing both secret columns together satisfies event_destinations_secret_paired; enabled=false
+  -- satisfies event_destinations_enabled_requires_target.)
   UPDATE event_destinations
-     SET deleted_at = p_now, enabled = false, updated_at = p_now
+     SET deleted_at     = p_now,
+         enabled        = false,
+         signing_secret = NULL,
+         secret_set_at  = NULL,
+         target_url     = NULL,
+         updated_at     = p_now
    WHERE id = p_destination_id
      AND project_id = p_project_id;
   GET DIAGNOSTICS v_rows = ROW_COUNT;

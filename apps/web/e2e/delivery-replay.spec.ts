@@ -308,6 +308,18 @@ test('delete_destination drains outstanding work, and replay_delivery REFUSES a 
     expect(delErr).toBeNull()
     expect(deleted).toBe(true)
 
+    // The CREDENTIAL is destroyed, not merely hidden (cross-review, Codex round 21) — the UI promises
+    // the secret is lost, so a DB/backup compromise must not be able to recover a forgeable secret.
+    const { data: tomb } = await db
+      .from('event_destinations')
+      .select('signing_secret, secret_set_at, target_url, deleted_at')
+      .eq('id', destId)
+      .single()
+    expect(tomb!.signing_secret).toBeNull()
+    expect(tomb!.secret_set_at).toBeNull()
+    expect(tomb!.target_url).toBeNull()
+    expect(tomb!.deleted_at).not.toBeNull()
+
     // Its outstanding work was DRAINED to dead — not left pending-and-unclaimable.
     const { data: row } = await db.from('event_deliveries').select('status, last_error').eq('id', deliveryId).single()
     expect(row!.status).toBe('dead')
