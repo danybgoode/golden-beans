@@ -16,8 +16,9 @@ export function isConnectorEnabled(): boolean {
 //
 // Exactly `=== 'true'` — not a truthiness check. `SIGNUP_ENABLED=false`, `=0`, `=off` and an
 // accidental `= ` must ALL read as OFF; an enablement gate that opens on a typo isn't a gate.
-// Everything downstream of this reads it fresh per request (no module-level capture), so the
-// production flip takes effect on the running functions without a redeploy.
+// Everything downstream of this reads it fresh per request (no module-level capture). Vercel still
+// snapshots environment variables into a deployment, so a changed value needs a new Git-tracked
+// deployment before running functions can observe it (AGENTS.md rule #4).
 export function isSignupEnabled(): boolean {
   return process.env.SIGNUP_ENABLED === 'true'
 }
@@ -42,4 +43,14 @@ export function isSignupEnabled(): boolean {
 // into a deployment at build time). "Set" and "live" are two separate facts.
 export function isDestinationDeliveryEnabled(): boolean {
   return process.env.DESTINATION_DELIVERY_ENABLED === 'true'
+}
+
+// entity-journeys-projections · Sprint 1, Story 1.1 — enablement gate for every NEW journey seam.
+// Born unset/OFF. Definition management, later projections, UI/API and MCP reads must all disappear
+// while dark, without changing ingest, TARS, experiments or destination delivery.
+//
+// Read fresh on every request/action. As above, changing a Vercel env value still needs a new
+// Git-tracked deployment before the running app receives the new snapshot.
+export function isJourneyProjectionsEnabled(): boolean {
+  return process.env.JOURNEY_PROJECTIONS_ENABLED === 'true'
 }

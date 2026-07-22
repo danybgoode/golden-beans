@@ -1,5 +1,5 @@
 ---
-status: scaffolded
+status: in-progress
 slug: entity-journeys-projections
 ---
 
@@ -28,6 +28,21 @@ background projector or materialized subject/history store in v1; those require 
 5. **Golden Beans is analytical:** contacts, consent, tasks and commerce stay in Miyagi/Medusa.
 6. **Scale must be earned:** materialization is separately groomed only after p95 >2s or >1M relevant events.
 
+## Definition contract locked in Story 1.1
+
+- A definition contains **1–20 ordered stages**. Every stage key and the definition's entity type use
+  unique, letter-initial `lower_snake_case` values up to 64 characters.
+- A stage matches one event name plus **0–5 exact tag predicates**. Predicate fields are limited to
+  `source`, `channel`, `campaign`, `plan`, and `region`; values are finite string/number/boolean scalars,
+  with strings capped at 64 characters. No metadata fields, subject ids, SQL, regex, code, or transforms.
+- Cohort entry is optional; when present it is always **stage 1**. Retention is optional and exactly
+  `{stageKey, anchorStageKey, withinDays}`: both keys must exist, the anchor precedes or equals the target,
+  and the window is an integer from 1–365 days.
+- The stable journey key owns immutable numbered definition rows. Creating another version is the edit path;
+  activation only moves forward to a newer draft, and one registry pointer makes exactly one version active.
+- Definition creation and activation are owner/session operations. Version allocation, state change and the
+  actor/time audit row commit in the same database transaction; members read only and nonmembers see no surface.
+
 ## What already exists (reuse, don't rebuild)
 
 | Capability | Existing seam | Reuse |
@@ -46,7 +61,7 @@ background projector or materialized subject/history store in v1; those require 
 
 | Sprint | Story | Risk |
 |---|---|---|
-| 1 | 1.1 Versioned journey-definition registry | high |
+| 1 | ✅ 1.1 Versioned journey-definition registry | high |
 | 1 | 1.2 Deterministic subject projection | low |
 | 2 | 2.1 Cohort conversion, aging and drop-off | low |
 | 2 | 2.2 UI, API and MCP read parity | high |

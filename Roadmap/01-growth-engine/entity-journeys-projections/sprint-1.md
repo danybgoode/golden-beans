@@ -1,10 +1,10 @@
 # Entity journeys — Sprint 1: Definition contract and deterministic subject projection
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress — Story 1.1 complete on the Sprint 1 feature branch; Story 1.2 remains
 
 ## Stories
 
-### Story 1.1 — Versioned journey-definition registry
+### ✅ Story 1.1 — Versioned journey-definition registry
 
 **As a** tenant owner, **I want** a versioned ordered journey definition, **so that** lifecycle meaning is
 explicit and auditable before anyone relies on it.
@@ -15,6 +15,16 @@ fields fail closed; members and foreign-project identities cannot mutate definit
 actor/time; `JOURNEY_PROJECTIONS_ENABLED` exists disabled and OFF hides the new seams.
 
 **Risk:** high — additive database migration and authenticated project management; Daniel merges.
+
+**Locked contract / implementation status:** 1–20 uniquely keyed `lower_snake_case` stages; each stage
+matches an event name plus at most five exact scalar TAG predicates from `source`, `channel`, `campaign`,
+`plan`, and `region` (string values ≤64). Optional cohort entry must name stage 1. Optional retention is
+`{stageKey, anchorStageKey, withinDays}`, with an existing anchor at/before the target and a 1–365-day
+integer window. Definitions are immutable numbered rows; edits create the next version, and activation moves
+one per-project registry pointer. Owner session identity supplies the audit actor; members see the registry
+read-only; nonmembers/foreign identities fail closed. The enablement flag is born OFF and returns 404 before
+auth/validation. Local migration reset, pure/DB/API specs, mutation checks, typecheck and build are green;
+remote migration application and authenticated browser smoke remain deployment/review work.
 
 ### Story 1.2 — Deterministic subject projection
 
@@ -43,7 +53,7 @@ Env: production · https://golden-beans-gamma.vercel.app
 1. With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL.
    → The new surface is unavailable while existing funnels and experiments still work.
 2. Redeploy with the gate ON, sign in as the disposable project owner and open
-   https://golden-beans-gamma.vercel.app/app/journeys.
+   `https://golden-beans-gamma.vercel.app/app/journeys/<project-slug>`.
    → “Create journey” appears for that project.
 3. Create `merchant-activation` with three ordered smoke stages, then activate version 1.
    → The definition displays one active version and immutable activation history.
