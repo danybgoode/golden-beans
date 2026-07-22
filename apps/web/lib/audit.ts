@@ -11,6 +11,16 @@ export type AuditAction =
   | 'tenant_provisioned'    // a confirmed user got a project + owner membership + first key
   | 'api_key_issued'
   | 'api_key_revoked'
+  // event-destination-router · Sprint 2, Story 2.1 — the destination lifecycle. Same append-only
+  // trail; metadata carries the destination id + non-secret context, never the signing secret.
+  | 'destination_created'
+  | 'destination_secret_rotated'
+  | 'destination_enabled'
+  | 'destination_disabled'
+  | 'destination_test_sent'
+  | 'destination_deleted'
+  // event-destination-router · Sprint 2, Story 2.2 — operator-initiated replay of a delivery.
+  | 'delivery_replayed'
 
 export type AuditEntry = {
   action: AuditAction

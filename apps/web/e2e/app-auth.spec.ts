@@ -31,6 +31,14 @@ test('unauthed key management for a foreign slug → /login', async ({ request }
   expect(res.headers()['location']).toContain('/login')
 })
 
+// event-destination-router · Sprint 2, Story 2.1 — destination admin is owner-only credential-class
+// management, same boundary as key management: an unauthed request never reaches the data.
+test('unauthed destination management for a foreign slug → /login', async ({ request }) => {
+  const res = await request.get(`/app/destinations/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
+  expect([302, 307]).toContain(res.status())
+  expect(res.headers()['location']).toContain('/login')
+})
+
 // Cross-review (Codex, 2026-07-20) caught an open redirect in /auth/callback: `/\evil.example`
 // passes a naive `startsWith('/') && !startsWith('//')` string check, but new URL() normalizes the
 // backslash to `//` and resolves off-origin.

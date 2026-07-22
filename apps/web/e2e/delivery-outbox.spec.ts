@@ -53,9 +53,19 @@ async function withDestination(
   body: (destinationId: string) => Promise<void>,
 ): Promise<void> {
   const name = `spec-dest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  // url+secret always set — an ENABLED destination MUST be deliverable (the enabled⟹deliverable DB
+  // invariant, 20260723100000). Harmless on the disabled fixtures.
   const { data, error } = await db
     .from('event_destinations')
-    .insert({ project_id: projectId, name, enabled: opts.enabled, event_filter: opts.eventFilter })
+    .insert({
+      project_id: projectId,
+      name,
+      enabled: opts.enabled,
+      event_filter: opts.eventFilter,
+      target_url: 'https://receiver.example.test/hook',
+      signing_secret: 'whsec_outbox_spec_secret_0123456789',
+      secret_set_at: new Date().toISOString(),
+    })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create destination: ${error?.message}`)
@@ -121,57 +131,27 @@ test('gate ON with no due work → a clean empty pass, not an error', async () =
   }
 })
 
-test('gate ON → a claimed row is RELEASED back to pending (Sprint 1 sends nothing)', async () => {
-  const prev = process.env.DESTINATION_DELIVERY_ENABLED
-  process.env.DESTINATION_DELIVERY_ENABLED = 'true'
+test('the DB invariant makes "enabled but undeliverable" impossible — no undrainable backlog', async () => {
+  // Cross-review (Codex round 8): an enabled destination with no url/secret would have ingest queue
+  // deliveries the dispatcher can never claim — an undrainable backlog. The enabled⟹deliverable
+  // CHECK (20260723100000) forbids that state at the DB, so the fan-out's `enabled` check and the
+  // claim's `enabled AND url AND secret` check can never disagree. Assert the CHECK has teeth.
   const db = dbClient()
-  // A DISPOSABLE project, not shared project-one (cross-review, Codex round 3): the dispatcher scoped
-  // to a project claims EVERY due row in it, so on shared project-one this pass could transiently
-  // flip a concurrent spec's rows to in_flight, and the old assertion (scoped to our event) could
-  // pass without our row ever being the one claimed. An isolated project makes the claim set exactly
-  // this test's rows.
-  const eventName = uniqueEvent('release')
   const { data: proj } = await db
     .from('projects')
-    .insert({ slug: `disp-disp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
+    .insert({ slug: `disp-inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${Math.random()}` })
     .select('id')
     .single()
   const pid = proj!.id as string
   try {
-    await withDestination(db, pid, { enabled: true, eventFilter: eventName }, async (destId) => {
-      const { data: ev } = await db
-        .from('events')
-        .insert({ project_id: pid, user_id: 'disp-u', event: eventName })
-        .select('id')
-        .single()
-      const { data: del } = await db
-        .from('event_deliveries')
-        .insert({ project_id: pid, event_id: ev!.id, destination_id: destId })
-        .select('id')
-        .single()
-
-      const outcome = await dispatchPendingDeliveries(db, pid)
-      expect(outcome.dispatched).toBe(true)
-      // PROOF the intended row was exercised, not merely that it ended pending: it must appear in the
-      // claim set this pass actually took ownership of.
-      expect(outcome.dispatched && outcome.claimed.map((c) => c.id)).toContain(del!.id)
-
-      // The claimed row is RELEASED, not left in_flight — stranding it would be permanent (the
-      // reclaim loop is Story 2.2). attempt_count untouched (nothing was attempted).
-      const { data: rows } = await db
-        .from('event_deliveries')
-        .select('status, attempt_count')
-        .eq('event_id', ev!.id)
-      expect(rows!.length).toBeGreaterThan(0)
-      for (const r of rows!) {
-        expect(r.status).toBe('pending')
-        expect(r.attempt_count).toBe(0)
-      }
-    })
+    // enabled=true with NO url/secret → must violate the invariant.
+    const { error } = await db
+      .from('event_destinations')
+      .insert({ project_id: pid, name: 'enabled-no-target', enabled: true })
+    expect(error).not.toBeNull()
+    expect(error!.message.toLowerCase()).toContain('enabled_requires_target')
   } finally {
-    await db.from('projects').delete().eq('id', pid) // CASCADE removes the event + delivery + destination
-    if (prev === undefined) delete process.env.DESTINATION_DELIVERY_ENABLED
-    else process.env.DESTINATION_DELIVERY_ENABLED = prev
+    await db.from('projects').delete().eq('id', pid)
   }
 })
 
@@ -277,7 +257,16 @@ test('ingest_event() RPC dedup path does NOT re-fan to a LATER-enabled destinati
     // be guaranteed and the test would false-pass without ever exercising the re-fan guard.
     const { error: destErr } = await db
       .from('event_destinations')
-      .insert({ project_id: pid, name: 'rpc-dest', enabled: true, event_filter: eventName })
+      .insert({
+        project_id: pid,
+        name: 'rpc-dest',
+        enabled: true,
+        event_filter: eventName,
+        // url+secret required for an ENABLED destination (enabled⟹deliverable invariant).
+        target_url: 'https://receiver.example.test/hook',
+        signing_secret: 'whsec_rpc_dedup_spec_0123456789',
+        secret_set_at: new Date().toISOString(),
+      })
     expect(destErr).toBeNull()
 
     // Second call, identical key: the RPC's OWN dedup branch. It must NOT re-fan to the new

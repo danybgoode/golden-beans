@@ -72,10 +72,16 @@ export default async function AppHome({
                   <small>— swap the feature key in the URL</small>
                 </li>
                 {project.role === 'owner' && (
-                  <li>
-                    <a href={`/app/keys/${project.slug}`}>API keys</a>{' '}
-                    <small>— issue, rotate, revoke</small>
-                  </li>
+                  <>
+                    <li>
+                      <a href={`/app/keys/${project.slug}`}>API keys</a>{' '}
+                      <small>— issue, rotate, revoke</small>
+                    </li>
+                    <li>
+                      <a href={`/app/destinations/${project.slug}`}>Destinations</a>{' '}
+                      <small>— signed webhook delivery</small>
+                    </li>
+                  </>
                 )}
               </ul>
             </li>
