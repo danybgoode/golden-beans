@@ -1,12 +1,17 @@
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { EXACT_SEGMENT_TAG_FIELDS } from '@/lib/entity-contract'
+import { EXACT_SEGMENT_TAG_FIELDS, MAX_EXACT_SEGMENT_NUMBER_ABS } from '@/lib/entity-contract'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
 import {
   MAX_JOURNEY_STAGES,
   MAX_PREDICATE_STRING_LENGTH,
   parseJourneyDefinition,
 } from '@/lib/journey-definition'
+import {
+  JOURNEY_REGISTRY_RELATIONAL_SELECT,
+  mapJourneyRegistryRows,
+  type JourneyRegistryRelationRow,
+} from '@/lib/journey-registry-view'
 
 // entity-journeys-projections · Sprint 1, Story 1.1.
 // Pure contract + HTTP dark path + database state machine. The database tests drive the same
@@ -102,6 +107,28 @@ test.describe('JOURNEY_PROJECTIONS_ENABLED — dark by default', () => {
 })
 
 test.describe('journey definition — closed bounded contract', () => {
+  // Mutation proof D: flipping the mapper's active-version equality makes this test fail with all
+  // three lifecycle states misclassified, proving the single-snapshot mapping is actually pinned.
+  test('one embedded snapshot maps active, superseded and draft versions coherently', () => {
+    const rows: JourneyRegistryRelationRow[] = [{
+      id: 'journey-1',
+      key: 'merchant_activation',
+      active_version_id: 'version-2',
+      created_by: 'owner-1',
+      created_at: '2026-07-22T00:00:00.000Z',
+      versions: [
+        { id: 'version-1', version: 1, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T00:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T01:00:00.000Z' },
+        { id: 'version-3', version: 3, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T03:00:00.000Z', activated_by: null, activated_at: null },
+        { id: 'version-2', version: 2, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T02:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T02:30:00.000Z' },
+      ],
+    }]
+    const mapped = mapJourneyRegistryRows(rows)
+    expect(mapped[0].activeVersionId).toBe('version-2')
+    expect(mapped[0].versions.map((version) => [version.version, version.state])).toEqual([
+      [3, 'draft'], [2, 'active'], [1, 'superseded'],
+    ])
+  })
+
   test('accepts 1–20 ordered stages, the five reusable dimensions and exact scalar predicates', () => {
     expect(EXACT_SEGMENT_TAG_FIELDS).toEqual(['source', 'channel', 'campaign', 'plan', 'region'])
     expect(parseJourneyDefinition(VALID_DEFINITION)).toEqual({ ok: true, definition: VALID_DEFINITION })
@@ -132,6 +159,7 @@ test.describe('journey definition — closed bounded contract', () => {
       { source: { nested: true } },
       { source: null },
       { source: 'x'.repeat(MAX_PREDICATE_STRING_LENGTH + 1) },
+      { campaign: MAX_EXACT_SEGMENT_NUMBER_ABS + 1 },
       { source: 'a', channel: 'b', campaign: 'c', plan: 'd', region: 'e', sixth: 'f' },
     ]) {
       expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags }] }).ok).toBe(false)
@@ -144,6 +172,7 @@ test.describe('journey definition — closed bounded contract', () => {
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'one', anchorStageKey: 'two', withinDays: 30 } }).ok).toBe(false)
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'one', withinDays: 0 } }).ok).toBe(false)
     expect(parseJourneyDefinition({ ...base, retention: { stageKey: 'two', anchorStageKey: 'two', withinDays: 365 } }).ok).toBe(true)
+    expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags: { campaign: MAX_EXACT_SEGMENT_NUMBER_ABS } }] }).ok).toBe(true)
   })
 })
 
@@ -220,6 +249,19 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       .from('journey_registries').select('active_version_id').eq('id', journeyId).single()
     expect(registry?.active_version_id).toBe(v2.id)
 
+    // The exact embedded relationship used by listJourneyRegistries resolves pointer + activation
+    // fields in one SQL statement/snapshot, then the shared mapper derives coherent states.
+    const { data: relational, error: relationalError } = await client
+      .from('journey_registries')
+      .select(JOURNEY_REGISTRY_RELATIONAL_SELECT)
+      .eq('id', journeyId)
+      .single()
+    expect(relationalError).toBeNull()
+    const mappedRegistry = mapJourneyRegistryRows([relational as unknown as JourneyRegistryRelationRow])[0]
+    expect(mappedRegistry.activeVersionId).toBe(v2.id)
+    expect(mappedRegistry.versions.find((version) => version.id === v2.id)?.state).toBe('active')
+    expect(mappedRegistry.versions.find((version) => version.id === v1.id)?.state).toBe('superseded')
+
     const { data: audit } = await client
       .from('journey_definition_audit')
       .select('action, actor_user_id, created_at')
@@ -252,6 +294,28 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       expect(rejected.error, key).not.toBeNull()
     }
 
+    // Raw JSON keeps 1e400 as a Postgres JSONB number. Passing it through a JS object would turn it
+    // into Infinity/null before the RPC, so use the REST function endpoint directly to prove the
+    // SQL magnitude guard—not JSON.stringify—rejects the exponent bomb.
+    const supabaseUrl = process.env.SUPABASE_URL!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const hugeBody = JSON.stringify({
+      p_project_id: projectId,
+      p_journey_key: 'huge_numeric',
+      p_definition: {
+        entityType: 'merchant',
+        stages: [{ key: 'one', event: 'x', tags: { campaign: '__HUGE_NUMBER__' } }],
+      },
+      p_actor_user_id: owner,
+    }).replace('"__HUGE_NUMBER__"', '1e400')
+    const hugeResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/create_journey_version`, {
+      method: 'POST',
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+      body: hugeBody,
+    })
+    expect(hugeResponse.ok).toBe(false)
+    expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', 'huge_numeric')).data).toHaveLength(0)
+
     // Concurrent activation always settles on the highest version. Each successful state change
     // has exactly one audit row; losing/obsolete attempts return false and write none.
     const raceCreates = []
@@ -277,11 +341,19 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     expect(raceAudit).toHaveLength(activations.filter((result) => result.data === true).length)
     expect(raceAudit?.some((row) => row.version_id === highest.version_id)).toBe(true)
 
-    // Audit is append-only to the app role: UPDATE and DELETE attempts fail; TRUNCATE is asserted
-    // at migration time because PostgREST intentionally exposes no TRUNCATE method.
+    // Audit is append-only to the app role: INSERT, UPDATE and DELETE attempts fail; TRUNCATE is
+    // asserted at migration time because PostgREST intentionally exposes no TRUNCATE method.
+    const auditInsert = await client.from('journey_definition_audit').insert({
+      project_id: projectId,
+      journey_id: journeyId,
+      version_id: v1.id,
+      action: 'version_created',
+      actor_user_id: owner,
+    })
     const auditUpdate = await client
       .from('journey_definition_audit').update({ actor_user_id: member }).eq('journey_id', journeyId)
     const auditDelete = await client.from('journey_definition_audit').delete().eq('journey_id', journeyId)
+    expect(auditInsert.error).not.toBeNull()
     expect(auditUpdate.error).not.toBeNull()
     expect(auditDelete.error).not.toBeNull()
 

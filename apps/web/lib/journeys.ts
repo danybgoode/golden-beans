@@ -1,80 +1,33 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import type { JourneyDefinition } from './journey-definition'
+import {
+  JOURNEY_REGISTRY_RELATIONAL_SELECT,
+  mapJourneyRegistryRows,
+  type JourneyRegistryRelationRow,
+  type JourneyRegistryView,
+  type JourneyVersionView,
+} from './journey-registry-view'
 
 // entity-journeys-projections · Sprint 1, Story 1.1 — the registry's server-only adapter.
 // Every mutation is one database RPC: version allocation/state change + actor/time audit commit or
 // roll back together. The project id and actor id come from requireProjectOwnership in the action.
 
-export type JourneyVersionRow = {
-  id: string
-  version: number
-  definition: JourneyDefinition
-  createdBy: string
-  createdAt: string
-  activatedBy: string | null
-  activatedAt: string | null
-  state: 'draft' | 'active' | 'superseded'
-}
-
-export type JourneyRegistryRow = {
-  id: string
-  key: string
-  activeVersionId: string | null
-  createdBy: string
-  createdAt: string
-  versions: JourneyVersionRow[]
-}
+export type JourneyVersionRow = JourneyVersionView
+export type JourneyRegistryRow = JourneyRegistryView
 
 export async function listJourneyRegistries(projectId: string): Promise<JourneyRegistryRow[]> {
   const supabase = getSupabaseServiceClient()
-  const [{ data: registries, error: registryError }, { data: versions, error: versionError }] =
-    await Promise.all([
-      supabase
-        .from('journey_registries')
-        .select('id, key, active_version_id, created_by, created_at')
-        .eq('project_id', projectId)
-        .order('key'),
-      supabase
-        .from('journey_definition_versions')
-        .select('id, journey_id, version, definition, created_by, created_at, activated_by, activated_at')
-        .eq('project_id', projectId)
-        .order('version', { ascending: false }),
-    ])
-  if (registryError || versionError) {
-    console.error('[journeys] list failed:', registryError ?? versionError)
+  const { data, error } = await supabase
+    .from('journey_registries')
+    .select(JOURNEY_REGISTRY_RELATIONAL_SELECT)
+    .eq('project_id', projectId)
+    .order('key')
+  if (error) {
+    console.error('[journeys] list failed:', error)
     throw new Error('Could not load journey definitions')
   }
-
-  const byJourney = new Map<string, NonNullable<typeof versions>>()
-  for (const version of versions ?? []) {
-    const rows = byJourney.get(version.journey_id as string) ?? []
-    rows.push(version)
-    byJourney.set(version.journey_id as string, rows)
-  }
-
-  return (registries ?? []).map((registry) => ({
-    id: registry.id as string,
-    key: registry.key as string,
-    activeVersionId: (registry.active_version_id as string | null) ?? null,
-    createdBy: registry.created_by as string,
-    createdAt: registry.created_at as string,
-    versions: (byJourney.get(registry.id as string) ?? []).map((version) => ({
-      id: version.id as string,
-      version: version.version as number,
-      definition: version.definition as JourneyDefinition,
-      createdBy: version.created_by as string,
-      createdAt: version.created_at as string,
-      activatedBy: (version.activated_by as string | null) ?? null,
-      activatedAt: (version.activated_at as string | null) ?? null,
-      state:
-        registry.active_version_id === version.id
-          ? 'active'
-          : version.activated_at
-            ? 'superseded'
-            : 'draft',
-    })),
-  }))
+  return mapJourneyRegistryRows((data ?? []) as unknown as JourneyRegistryRelationRow[])
 }
 
 export async function createJourneyVersion(

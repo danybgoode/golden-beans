@@ -18,7 +18,7 @@ actor/time; `JOURNEY_PROJECTIONS_ENABLED` exists disabled and OFF hides the new 
 
 **Locked contract / implementation status:** 1–20 uniquely keyed `lower_snake_case` stages; each stage
 matches an event name plus at most five exact scalar TAG predicates from `source`, `channel`, `campaign`,
-`plan`, and `region` (string values ≤64). Optional cohort entry must name stage 1. Optional retention is
+`plan`, and `region` (string values ≤64; numeric absolute value ≤10^15). Optional cohort entry must name stage 1. Optional retention is
 `{stageKey, anchorStageKey, withinDays}`, with an existing anchor at/before the target and a 1–365-day
 integer window. Definitions are immutable numbered rows; edits create the next version, and activation moves
 one per-project registry pointer. Owner session identity supplies the audit actor; members see the registry

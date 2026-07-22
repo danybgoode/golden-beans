@@ -1,5 +1,6 @@
 import {
   EXACT_SEGMENT_TAG_FIELDS,
+  MAX_EXACT_SEGMENT_NUMBER_ABS,
   type ExactSegmentScalar,
   type ExactSegmentTagField,
 } from './entity-contract'
@@ -123,9 +124,12 @@ export function parseJourneyDefinition(input: unknown): JourneyDefinitionResult 
             }
             const scalar =
               typeof value === 'string' || typeof value === 'boolean' ||
-              (typeof value === 'number' && Number.isFinite(value))
+              (typeof value === 'number' && Number.isFinite(value) &&
+                Math.abs(value) <= MAX_EXACT_SEGMENT_NUMBER_ABS)
             if (!scalar) {
-              errors.push(`${path}.tags.${field} must be a finite string, number or boolean`)
+              errors.push(
+                `${path}.tags.${field} must be a string, boolean, or finite number with absolute value <= ${MAX_EXACT_SEGMENT_NUMBER_ABS}`,
+              )
               continue
             }
             if (typeof value === 'string' && value.length > MAX_PREDICATE_STRING_LENGTH) {

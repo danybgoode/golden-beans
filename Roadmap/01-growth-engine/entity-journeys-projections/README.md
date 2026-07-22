@@ -33,8 +33,9 @@ background projector or materialized subject/history store in v1; those require 
 - A definition contains **1–20 ordered stages**. Every stage key and the definition's entity type use
   unique, letter-initial `lower_snake_case` values up to 64 characters.
 - A stage matches one event name plus **0–5 exact tag predicates**. Predicate fields are limited to
-  `source`, `channel`, `campaign`, `plan`, and `region`; values are finite string/number/boolean scalars,
-  with strings capped at 64 characters. No metadata fields, subject ids, SQL, regex, code, or transforms.
+  `source`, `channel`, `campaign`, `plan`, and `region`; values are string/number/boolean scalars, with
+  strings capped at 64 characters and numeric absolute value capped at **10^15** for predictable
+  JSON/JavaScript/Postgres round-trips. No metadata fields, subject ids, SQL, regex, code, or transforms.
 - Cohort entry is optional; when present it is always **stage 1**. Retention is optional and exactly
   `{stageKey, anchorStageKey, withinDays}`: both keys must exist, the anchor precedes or equals the target,
   and the window is an integer from 1–365 days.

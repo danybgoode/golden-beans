@@ -66,6 +66,10 @@ BEGIN
         IF jsonb_typeof(v_tag.value) NOT IN ('string', 'number', 'boolean') THEN RETURN false; END IF;
         IF jsonb_typeof(v_tag.value) = 'string'
            AND char_length(v_tag.value #>> '{}') > 64 THEN RETURN false; END IF;
+        -- Same exact magnitude as lib/entity-contract.ts. 1e15 is below JS's safe-integer ceiling,
+        -- round-trips predictably through JSON/Postgres, and rejects exponent bombs such as 1e400.
+        IF jsonb_typeof(v_tag.value) = 'number'
+           AND abs((v_tag.value #>> '{}')::NUMERIC) > 1000000000000000 THEN RETURN false; END IF;
       END LOOP;
     END IF;
   END LOOP;
@@ -203,6 +207,88 @@ $$;
 CREATE TRIGGER journey_definition_versions_immutable_trg
   BEFORE UPDATE OR DELETE ON journey_definition_versions
   FOR EACH ROW EXECUTE FUNCTION private.enforce_journey_version_immutability();
+
+-- Migration-time property proof: immutability is enforced even for the
+-- migration owner, while deleting the parent project still performs the
+-- intended cascading cleanup. The assertion creates and removes its own
+-- rows in one transaction, so a successful migration leaves no fixtures.
+DO $$
+DECLARE
+  v_project_id UUID;
+  v_journey_id UUID;
+  v_version_id UUID;
+BEGIN
+  INSERT INTO public.projects (slug, api_key_hash)
+  VALUES ('journey-immutability-migration-assertion', NULL)
+  RETURNING id INTO v_project_id;
+
+  INSERT INTO public.journey_registries (
+    project_id,
+    key,
+    created_by
+  )
+  VALUES (
+    v_project_id,
+    'migration_assertion',
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_journey_id;
+
+  INSERT INTO public.journey_definition_versions (
+    project_id,
+    journey_id,
+    version,
+    definition,
+    created_by
+  )
+  VALUES (
+    v_project_id,
+    v_journey_id,
+    1,
+    '{"entityType":"merchant","stages":[{"key":"created","event":"merchant_created"}]}'::JSONB,
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_version_id;
+
+  BEGIN
+    UPDATE public.journey_definition_versions
+    SET definition = '{"entityType":"merchant","stages":[{"key":"changed","event":"merchant_changed"}]}'::JSONB
+    WHERE id = v_version_id;
+
+    RAISE EXCEPTION 'journey version UPDATE unexpectedly bypassed the immutability trigger';
+  EXCEPTION
+    WHEN SQLSTATE '55000' THEN NULL;
+  END;
+
+  BEGIN
+    DELETE FROM public.journey_definition_versions
+    WHERE id = v_version_id;
+
+    RAISE EXCEPTION 'journey version DELETE unexpectedly bypassed the immutability trigger';
+  EXCEPTION
+    WHEN SQLSTATE '55000' THEN NULL;
+  END;
+
+  DELETE FROM public.projects
+  WHERE id = v_project_id;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.projects
+    WHERE id = v_project_id
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.journey_registries
+    WHERE id = v_journey_id
+  ) OR EXISTS (
+    SELECT 1
+    FROM public.journey_definition_versions
+    WHERE id = v_version_id
+  ) THEN
+    RAISE EXCEPTION 'parent project cleanup did not cascade through the journey registry';
+  END IF;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION create_journey_version(
   p_project_id UUID,

@@ -41,7 +41,7 @@ fail; responses paginate and exclude PII; legacy TARS and existing connector too
 Env: production · https://golden-beans-gamma.vercel.app
 
 1. Sign in and open
-   https://golden-beans-gamma.vercel.app/app/journeys/miyagisanchez/merchant-activation.
+   https://golden-beans-gamma.vercel.app/app/journeys/miyagisanchez/merchant_activation.
    → Stage counts, conversion, aging, definition version and source freshness render for the smoke cohort.
 2. Select one stage count.
    → Its paginated opaque subject ids exactly explain the total.
