@@ -258,6 +258,56 @@ test('the per-project destination CAP is enforced in-transaction (write-amplific
   }
 })
 
+test('a soft-deleted destination frees a cap slot and releases its name — the cap is survivable', async () => {
+  // Cross-review (Codex round 11): a cap with no removal path is a permanent dead end. Soft delete
+  // (deleted_at + enabled=false) frees the slot AND the name, while retaining history.
+  const client = db()
+  const pid = await disposableProject(client)
+  try {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ project_id: pid, name: `slot-${i}` }))
+    expect((await client.from('event_destinations').insert(rows)).error).toBeNull()
+    // At the cap.
+    expect((await client.from('event_destinations').insert({ project_id: pid, name: 'blocked' })).error).not.toBeNull()
+
+    // Soft-delete one — the slot AND the name free up.
+    const { error: delErr } = await client
+      .from('event_destinations')
+      .update({ deleted_at: new Date().toISOString(), enabled: false })
+      .eq('project_id', pid)
+      .eq('name', 'slot-0')
+    expect(delErr).toBeNull()
+
+    // A new destination now fits, and can even REUSE the deleted name (live-only uniqueness).
+    expect((await client.from('event_destinations').insert({ project_id: pid, name: 'slot-0' })).error).toBeNull()
+  } finally {
+    await client.from('projects').delete().eq('id', pid)
+  }
+})
+
+test('a soft-deleted destination can never be ENABLED (the DB forbids the state)', async () => {
+  const client = db()
+  const pid = await disposableProject(client)
+  try {
+    const { data } = await client
+      .from('event_destinations')
+      .insert({
+        project_id: pid,
+        name: 'gone',
+        deleted_at: new Date().toISOString(),
+        target_url: 'https://receiver.example.test/hook',
+        signing_secret: 'whsec_deleted_spec_0123456789',
+        secret_set_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+    const { error } = await client.from('event_destinations').update({ enabled: true }).eq('id', data!.id)
+    expect(error).not.toBeNull()
+    expect(error!.message.toLowerCase()).toContain('deleted_not_enabled')
+  } finally {
+    await client.from('projects').delete().eq('id', pid)
+  }
+})
+
 test('destination names are unique WITHIN a project but may repeat ACROSS projects', async () => {
   const client = db()
   const p1 = await disposableProject(client)

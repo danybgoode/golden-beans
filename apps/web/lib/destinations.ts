@@ -67,6 +67,7 @@ export async function listDestinations(projectId: string): Promise<DestinationRo
     .from('event_destinations')
     .select('id, name, enabled, event_filter, target_url, secret_set_at, created_at, updated_at')
     .eq('project_id', projectId)
+    .is('deleted_at', null) // soft-deleted destinations are history, not configuration
     .order('created_at', { ascending: false })
   if (error) {
     console.error('[destinations] list failed:', error)
@@ -222,9 +223,36 @@ export async function setDestinationEnabled(
     .update({ enabled, updated_at: new Date().toISOString() })
     .eq('id', destinationId)
     .eq('project_id', projectId)
+    .is('deleted_at', null) // a deleted destination can never be re-enabled
     .select('id')
   if (error) {
     console.error('[destinations] setEnabled failed:', error)
+    return { ok: false }
+  }
+  return { ok: (data ?? []).length > 0 }
+}
+
+// SOFT-deletes a destination — the removal path that makes the per-project cap survivable
+// (cross-review, Codex round 11). Deliberately NOT a row DELETE: the composite FKs CASCADE, so a
+// hard delete would erase the destination's delivery history along with it (see the outbox
+// migration's FK note). Instead we disable it and stamp deleted_at, which:
+//   • stops fan-out and dispatch immediately (both key off `enabled`),
+//   • removes it from the management list and the operating view,
+//   • PRESERVES its attempt history, and
+//   • frees a cap slot and releases its name for reuse (both are keyed on live rows only).
+// Scoped by id + project_id like every mutation here, and idempotent (deleting twice returns false).
+export async function deleteDestination(projectId: string, destinationId: string): Promise<{ ok: boolean }> {
+  const supabase = getSupabaseServiceClient()
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('event_destinations')
+    .update({ deleted_at: now, enabled: false, updated_at: now })
+    .eq('id', destinationId)
+    .eq('project_id', projectId)
+    .is('deleted_at', null)
+    .select('id')
+  if (error) {
+    console.error('[destinations] delete failed:', error)
     return { ok: false }
   }
   return { ok: (data ?? []).length > 0 }

@@ -23,6 +23,25 @@
 -- READ-ONLY, PROJECT-SCOPED, and anchored on event_destinations via LEFT JOINs so a destination with
 -- ZERO deliveries still appears — "configured, nothing ever delivered" is the state an operator most
 -- needs to see, and an INNER JOIN would hide it. NO secrets, NO target URL, NO PII in the output.
+-- ── soft delete, so the cap is not a one-way door ─────────────────────────────────────────────
+-- A cap with no way to remove a destination is a permanent dead end (cross-review, Codex round 11):
+-- at 20 you could never replace one. But a hard DELETE would CASCADE away its delivery history (see
+-- the outbox migration's FK note), so removal is a SOFT delete — exactly the semantics that
+-- migration said Story 2.1 would own. A soft-deleted row keeps its history, stops receiving
+-- (deletion also disables it), and frees a cap slot.
+ALTER TABLE event_destinations ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+-- A deleted destination must never be enabled — that keeps the fan-out (which checks `enabled`) and
+-- the claim (which checks enabled+deliverable) correct without either learning about deleted_at.
+ALTER TABLE event_destinations
+  ADD CONSTRAINT event_destinations_deleted_not_enabled CHECK (deleted_at IS NULL OR NOT enabled);
+
+-- Names are unique among LIVE destinations only, so a name can be reused after its destination is
+-- deleted. Replaces the unconditional unique constraint from the outbox migration.
+ALTER TABLE event_destinations DROP CONSTRAINT IF EXISTS event_destinations_project_name_uniq;
+CREATE UNIQUE INDEX IF NOT EXISTS event_destinations_project_name_live_uidx
+  ON event_destinations (project_id, name) WHERE deleted_at IS NULL;
+
 DROP FUNCTION IF EXISTS delivery_health(UUID);
 CREATE OR REPLACE FUNCTION delivery_health(p_project_id UUID)
 RETURNS TABLE (
@@ -79,6 +98,7 @@ AS $$
   LEFT JOIN attempts a ON a.destination_id = d.id
   LEFT JOIN states   s ON s.destination_id = d.id
   WHERE d.project_id = p_project_id
+    AND d.deleted_at IS NULL   -- the operating view shows LIVE destinations (history is retained)
   ORDER BY d.name;
 $$;
 
@@ -93,9 +113,10 @@ GRANT EXECUTE ON FUNCTION delivery_health(UUID) TO service_role;
 -- 10). Cap it per project.
 --
 -- Enforced by a TRIGGER, not by counting in the app: a count-then-insert in Node is check-then-act,
--- so two concurrent creates could both observe count = cap-1 and both insert — the same race the
--- rate_limit migration exists to avoid. A BEFORE INSERT trigger counts inside the inserting
--- transaction, so the cap holds under concurrency.
+-- so two concurrent creates could both observe count = cap-1 and both insert. The trigger takes a
+-- transaction-scoped ADVISORY LOCK on the project before counting — see the body for why the trigger
+-- alone is not enough (a bare COUNT in BEFORE INSERT does not serialize).
+
 CREATE OR REPLACE FUNCTION enforce_destination_cap()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -106,7 +127,19 @@ DECLARE
   v_cap   INTEGER := 20;
   v_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO v_count FROM event_destinations WHERE project_id = NEW.project_id;
+  -- SERIALIZE per project before counting (cross-review, Codex round 11). A bare COUNT(*) in a
+  -- BEFORE INSERT trigger does NOT serialize concurrent transactions: under READ COMMITTED each
+  -- would see 19 and all would insert, blowing straight past the cap — the same check-then-act race
+  -- the rate_limit migration exists to avoid. A transaction-scoped advisory lock keyed on the
+  -- project makes concurrent creates for the SAME project queue up (and is released automatically at
+  -- commit/rollback); creates for DIFFERENT projects never contend, since the key is the project id.
+  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.project_id::text, 0));
+
+  -- Only LIVE destinations count — a soft-deleted one frees its slot.
+  SELECT COUNT(*) INTO v_count
+    FROM event_destinations
+   WHERE project_id = NEW.project_id AND deleted_at IS NULL;
+
   IF v_count >= v_cap THEN
     RAISE EXCEPTION 'destination cap reached for project % (max %)', NEW.project_id, v_cap
       USING ERRCODE = 'check_violation', CONSTRAINT = 'event_destinations_project_cap';

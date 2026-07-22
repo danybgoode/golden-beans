@@ -18,6 +18,7 @@ export type AuditAction =
   | 'destination_enabled'
   | 'destination_disabled'
   | 'destination_test_sent'
+  | 'destination_deleted'
   // event-destination-router · Sprint 2, Story 2.2 — operator-initiated replay of a delivery.
   | 'delivery_replayed'
 

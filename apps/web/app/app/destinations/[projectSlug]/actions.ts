@@ -5,6 +5,7 @@ import {
   createDestination,
   rotateSecret,
   setDestinationEnabled,
+  deleteDestination,
   getDeliverableDestination,
 } from '@/lib/destinations'
 import { deliverWebhook } from '@/lib/webhook-delivery'
@@ -152,6 +153,26 @@ export async function sendTestAction(slug: unknown, destinationId: unknown) {
     latencyMs: result.latencyMs,
     error: result.error,
   }
+}
+
+// Soft-delete a destination — the removal path that keeps the per-project cap survivable. Owner-only
+// and project-scoped like the rest; history is preserved (see lib/destinations.ts deleteDestination).
+export async function deleteDestinationAction(slug: unknown, destinationId: unknown) {
+  const safeSlug = requireString(slug, 'project')
+  const safeId = requireString(destinationId, 'destination id')
+
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
+  const { ok } = await deleteDestination(projectId, safeId)
+  if (ok) {
+    await recordAudit({
+      action: 'destination_deleted',
+      projectId,
+      actorUserId: userId,
+      metadata: { destinationId: safeId },
+    })
+  }
+  revalidatePath(`/app/destinations/${safeSlug}`)
+  return { ok }
 }
 
 // Story 2.2 — operator REPLAY of a settled delivery. Owner-only + project-scoped like the rest;

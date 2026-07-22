@@ -9,6 +9,7 @@ import {
   setEnabledAction,
   sendTestAction,
   replayDeliveryAction,
+  deleteDestinationAction,
 } from './actions'
 
 // event-destination-router · Sprint 2, Story 2.1 — create / test / enable / rotate / disable UI.
@@ -94,6 +95,19 @@ export function DestinationManager({
         const detail = 'error' in result && result.error ? result.error : 'not delivered'
         setTestResult({ destinationId: id, ok: false, message: `Test failed: ${detail}.` })
       }
+    })
+  }
+
+  // Soft-delete: the destination stops receiving and frees a slot against the per-project cap, but
+  // its delivery history is retained. No confirm() — a browser dialog blocks the page (and the
+  // automation harness); the action is reversible in spirit (history is kept) and owner-only.
+  function onDelete(id: string) {
+    setError(null)
+    setTestResult(null)
+    startTransition(async () => {
+      const { ok } = await deleteDestinationAction(slug, id)
+      if (!ok) setError('Could not remove that destination.')
+      router.refresh()
     })
   }
 
@@ -198,6 +212,9 @@ export function DestinationManager({
                   </button>{' '}
                   <button type="button" onClick={() => onRotate(d.id)} disabled={pending}>
                     Rotate secret
+                  </button>{' '}
+                  <button type="button" onClick={() => onDelete(d.id)} disabled={pending}>
+                    Remove
                   </button>
                   {testResult && testResult.destinationId === d.id && (
                     <p role="status">{testResult.message}</p>
