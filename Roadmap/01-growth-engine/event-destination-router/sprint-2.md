@@ -46,11 +46,13 @@ It is owner-only, rate-limited (10/10min/project), SSRF-guarded, and sends a syn
       rebinding has no second resolution to flip). Explicitly triaged, not fixed: the secret-rotation
       rejection window (dead-lettered events are replay-recoverable; a dual-secret grace window is a
       noted follow-up) and the dispatcher's per-row event re-read (N+1, a scale follow-up).
-- [ ] **All three** migrations pushed to **prod** Supabase (migration-first, before merge):
+- [ ] **All four** migrations pushed to **prod** Supabase (migration-first, before merge):
       `20260723100000_destination_lifecycle` + `20260724100000_delivery_retry` +
-      `20260725100000_delivery_health`. All three are required — `/app/destinations` calls
-      `delivery_health()` unconditionally, so merging with only the first two would 500 the page
-      (cross-review, Codex round 9).
+      `20260725100000_delivery_health` + `20260726100000_fanout_serialization`. All four are
+      required — `/app/destinations` calls `delivery_health()` unconditionally (500s without
+      `…25`), and `…26` supplies the attempt-log FKs `listRecentAttempts()` embeds, terminal-only
+      replay, and the fan-out/delete serialization. Merging against a partial schema breaks the page
+      (cross-review, Codex rounds 9 + 15).
 - [ ] `CRON_SECRET` set in Vercel prod (the cron fails closed without it)
 - [ ] Browser smoke owed to Daniel (authenticated create → test → enable → rotate → replay)
 - [ ] Daniel merges

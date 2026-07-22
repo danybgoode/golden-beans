@@ -68,8 +68,10 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
 //
 // attempt_count is reset to 0 so the full retry budget applies again — replay is a deliberate "try
 // this again from scratch" act, not a continuation of the exhausted schedule that dead-lettered it.
-// Scoped by id + project_id, and only replayable from a settled state (delivered/failed/dead) — a
-// row already pending/in_flight is queued and must not be reset out from under a live dispatcher.
+// Scoped by id + project_id, and only replayable from a TERMINAL state — `delivered` or `dead`
+// (cross-review, Codex round 14). `pending`/`in_flight` are queued and must not be reset out from
+// under a live dispatcher; `failed` is MID-RETRY — already scheduled for another attempt — so
+// replaying it would silently override that schedule and reset its budget.
 //
 // Resetting the delivery ROW does NOT lose history (cross-review, Codex 2026-07-21): the delivery it
 // already made is recorded immutably in event_delivery_attempts, which the operating view reads —

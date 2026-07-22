@@ -187,26 +187,56 @@ ALTER TABLE event_delivery_attempts
 -- is a different operation from what the button says ("replay this delivery"). An operator who wants
 -- to retry sooner can wait for the schedule; replay now means what it says — re-send something that
 -- has finished (succeeded, or exhausted/dead-lettered).
+-- LOCKS the destination before touching the delivery (cross-review, Codex round 15). A bare EXISTS
+-- subquery does NOT lock: under READ COMMITTED a replay could evaluate it against a pre-delete
+-- snapshot, block on the delivery row that delete_destination is draining, and then resurrect the
+-- just-drained row as `pending` — permanently unclaimable. Taking FOR SHARE on the destination FIRST
+-- makes replay and delete conflict directly, and uses the SAME destination-then-delivery lock order
+-- delete_destination uses, so the two can never deadlock.
 CREATE OR REPLACE FUNCTION replay_delivery(p_project_id UUID, p_delivery_id UUID, p_now TIMESTAMPTZ)
 RETURNS UUID
-LANGUAGE sql
+LANGUAGE plpgsql
 VOLATILE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+  v_destination_id UUID;
+  v_live           UUID;
+  v_event_id       UUID;
+BEGIN
+  -- Which destination does this delivery belong to? (Unlocked read: only used to pick the row to
+  -- lock next; liveness is re-asserted under the lock below.)
+  SELECT destination_id INTO v_destination_id
+    FROM event_deliveries
+   WHERE id = p_delivery_id AND project_id = p_project_id;
+  IF v_destination_id IS NULL THEN
+    RETURN NULL; -- unknown or foreign delivery
+  END IF;
+
+  -- Lock the destination and assert it is LIVE. FOR SHARE conflicts with delete_destination's
+  -- FOR UPDATE, so a concurrent delete either finishes first (and this then sees deleted_at set and
+  -- returns NULL) or waits for us (and then drains the row we just re-queued).
+  SELECT id INTO v_live
+    FROM event_destinations
+   WHERE id = v_destination_id
+     AND project_id = p_project_id
+     AND deleted_at IS NULL
+   FOR SHARE;
+  IF v_live IS NULL THEN
+    RETURN NULL; -- destination removed — nothing to replay to
+  END IF;
+
   UPDATE event_deliveries d
      SET status = 'pending', attempt_count = 0, next_attempt_at = p_now,
          claimed_at = NULL, last_error = NULL, updated_at = p_now
    WHERE d.id = p_delivery_id
      AND d.project_id = p_project_id
      AND d.status IN ('delivered', 'dead')   -- TERMINAL only; `failed` is mid-retry, not finished
-     AND EXISTS (
-       SELECT 1 FROM event_destinations dest
-        WHERE dest.id = d.destination_id
-          AND dest.project_id = d.project_id
-          AND dest.deleted_at IS NULL
-     )
-  RETURNING d.event_id;
+  RETURNING d.event_id INTO v_event_id;
+
+  RETURN v_event_id; -- NULL when the row was not in a terminal state
+END;
 $$;
 
 REVOKE ALL ON FUNCTION replay_delivery(UUID, UUID, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
