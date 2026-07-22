@@ -123,14 +123,19 @@ export async function sendTestAction(slug: unknown, destinationId: unknown) {
   })
   if (!limited.ok) return { ok: false as const, error: limited.error }
 
-  const destination = await getDeliverableDestination(projectId, safeId)
-  if (!destination) {
+  const lookup = await getDeliverableDestination(projectId, safeId)
+  if (lookup.status === 'error') {
+    // A READ failure, not a config problem — say so, so the owner doesn't go re-adding a URL that
+    // is already there (cross-review, Codex round 8).
+    return { ok: false as const, error: 'Could not read this destination right now — try again.' }
+  }
+  if (lookup.status === 'not_deliverable') {
     return { ok: false as const, error: 'This destination has no webhook URL and secret yet.' }
   }
 
   const envelope = buildTestEnvelope()
   const body = serializeEnvelope(envelope)
-  const result = await deliverWebhook(destination, body, { eventId: envelope.id })
+  const result = await deliverWebhook(lookup.destination, body, { eventId: envelope.id })
 
   await recordAudit({
     action: 'destination_test_sent',

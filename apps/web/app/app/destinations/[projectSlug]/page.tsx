@@ -52,6 +52,7 @@ export default async function DestinationsPage({
               <th>Awaiting retry</th>
               <th>Dead-lettered</th>
               <th>Queued</th>
+              <th>Total attempts</th>
               <th>Last delivery</th>
             </tr>
           </thead>
@@ -67,6 +68,7 @@ export default async function DestinationsPage({
                 <td>{h.awaitingRetry}</td>
                 <td>{h.dead}</td>
                 <td>{h.pending + h.inFlight}</td>
+                <td>{h.totalAttempts}</td>
                 <td>
                   {h.lastDeliveryAt
                     ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`

@@ -65,6 +65,11 @@ export async function POST(request: Request) {
 
   const db = getSupabaseServiceClient()
 
+  // Start the tick clock BEFORE enumeration (cross-review, Codex round 8): the enumeration query
+  // itself consumes wall-clock, so basing the deadline on a post-enumeration timestamp would let the
+  // dispatch loop overrun the function deadline by however long enumeration took.
+  const deadlineMs = Date.now() + TICK_BUDGET_MS
+
   let projects: string[]
   try {
     projects = await projectsWithDueWork(new Date(), MAX_PROJECTS_PER_TICK)
@@ -73,8 +78,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'enumerate_failed' }, { status: 500 })
   }
 
-  const startedAt = Date.now()
-  const deadlineMs = startedAt + TICK_BUDGET_MS
   let delivered = 0
   let errored = 0
   let unsettled = 0

@@ -228,13 +228,21 @@ export async function setDestinationEnabled(
 
 // The ONLY function that reads a signing secret back — the internal outbound path (test-send here,
 // the dispatcher in Story 2.2). Scoped by project_id AND id: a delivery worker never learns a secret
-// for a destination outside the project it is dispatching for. Returns null if the destination is
-// not deliverable yet (no url/secret) — a destination with a NULL target is dark regardless of
-// `enabled`, so there is nothing to send.
+// for a destination outside the project it is dispatching for.
+//
+// THREE outcomes, deliberately distinct (cross-review, Codex round 8): a DB read ERROR must not be
+// reported as "not configured" — that would tell an owner to (re)add a URL that is already there,
+// during what is really an outage. 'ok' → deliverable; 'not_deliverable' → genuinely missing url or
+// secret; 'error' → the read itself failed.
+export type DeliverableLookup =
+  | { status: 'ok'; destination: DeliverableDestination }
+  | { status: 'not_deliverable' }
+  | { status: 'error' }
+
 export async function getDeliverableDestination(
   projectId: string,
   destinationId: string,
-): Promise<DeliverableDestination | null> {
+): Promise<DeliverableLookup> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('event_destinations')
@@ -244,13 +252,16 @@ export async function getDeliverableDestination(
     .maybeSingle()
   if (error) {
     console.error('[destinations] getDeliverable failed:', error)
-    return null
+    return { status: 'error' }
   }
-  if (!data || !data.target_url || !data.signing_secret) return null
+  if (!data || !data.target_url || !data.signing_secret) return { status: 'not_deliverable' }
   return {
-    id: data.id as string,
-    name: data.name as string,
-    targetUrl: data.target_url as string,
-    signingSecret: data.signing_secret as string,
+    status: 'ok',
+    destination: {
+      id: data.id as string,
+      name: data.name as string,
+      targetUrl: data.target_url as string,
+      signingSecret: data.signing_secret as string,
+    },
   }
 }

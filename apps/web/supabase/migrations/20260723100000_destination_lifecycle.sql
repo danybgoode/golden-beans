@@ -50,6 +50,16 @@ ALTER TABLE event_destinations
   -- secret_set_at is present exactly when the secret is.
   ADD CONSTRAINT event_destinations_secret_paired CHECK (
     (signing_secret IS NULL) = (secret_set_at IS NULL)
+  ),
+  -- ENABLED ⟹ DELIVERABLE (cross-review, Codex round 8). Without this, a destination could be
+  -- `enabled` with no url/secret: ingest_event's fan-out queues for any ENABLED destination, but the
+  -- dispatcher only CLAIMS deliverable (url+secret) rows — so those queued deliveries would pile up
+  -- pending forever with no UI path to add a url, an undrainable backlog. Making enabled⟹deliverable
+  -- a DB invariant means the fan-out's `enabled` check and the claim's `enabled AND url AND secret`
+  -- check can never disagree. (Prod has zero destination rows, and createDestination always sets
+  -- url+secret before a row can be enabled, so nothing existing violates this.)
+  ADD CONSTRAINT event_destinations_enabled_requires_target CHECK (
+    NOT enabled OR (target_url IS NOT NULL AND signing_secret IS NOT NULL)
   );
 
 COMMENT ON COLUMN event_destinations.signing_secret IS

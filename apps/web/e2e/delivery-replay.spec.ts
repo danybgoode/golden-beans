@@ -84,14 +84,17 @@ async function withGateOn(body: () => Promise<void>) {
 }
 
 // ── the retry schedule (pure) ─────────────────────────────────────────────────────────────────
-test('retryDecision: first failure waits BASE, then doubles, clamped at the ceiling', () => {
+test('retryDecision: first failure waits BASE, then doubles — EXACT delays', () => {
   expect(retryDecision(1)).toEqual({ retry: true, delayMs: BASE_DELAY_MS })
   expect(retryDecision(2)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 2 })
   expect(retryDecision(3)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 4 })
-  // Far enough along that 2^(n-1) would exceed the cap → clamped.
-  const late = retryDecision(MAX_ATTEMPTS - 1)
-  expect(late.retry).toBe(true)
-  if (late.retry) expect(late.delayMs).toBeLessThanOrEqual(MAX_DELAY_MS)
+  expect(retryDecision(4)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 8 })
+  // Attempt 5 is the last retry (MAX_ATTEMPTS=6). Its delay is base·16 = 8m, which at the current
+  // constants is BELOW MAX_DELAY_MS (1h) — so the ceiling is NOT reached in normal operation
+  // (cross-review, Codex round 8: the old `<= MAX_DELAY_MS` assertion was vacuous). Assert the exact
+  // value AND that the ceiling is defensive headroom for a larger MAX_ATTEMPTS, not active today.
+  expect(retryDecision(5)).toEqual({ retry: true, delayMs: BASE_DELAY_MS * 16 })
+  expect(BASE_DELAY_MS * 16).toBeLessThan(MAX_DELAY_MS)
 })
 
 test('retryDecision: at MAX_ATTEMPTS the delivery is dead — no further retry', () => {

@@ -50,10 +50,11 @@ export const CLAIMABLE_STATUSES = ['pending', 'failed'] as const
 /** How long a row may sit in_flight before a later pass reclaims it as a dead-worker casualty. */
 export const STALE_CLAIM_MS = 5 * 60 * 1000
 
-/** Wall-clock a single send may need (DNS resolve + HTTP timeout, plus slack). The deadline check
- *  reserves this before starting each send, so a request begun near the deadline still FINISHES
- *  before it rather than being killed with the row stuck in_flight (cross-review, Codex round 4). */
-export const PER_SEND_BUDGET_MS = DELIVERY_TIMEOUT_MS + 3_000
+/** Wall-clock ONE claimed row may need end-to-end before the deadline: the DNS resolve pre-check
+ *  (~3s), the HTTP send (DELIVERY_TIMEOUT_MS), two DB reads and the settle RPC (cross-review, Codex
+ *  rounds 4 & 8 — the earlier 3s slack covered only DNS+HTTP). Reserved before each send so a row
+ *  begun near the deadline still FINISHES rather than being killed in_flight. */
+export const PER_SEND_BUDGET_MS = DELIVERY_TIMEOUT_MS + 8_000
 
 type ClaimedRow = {
   id: string
