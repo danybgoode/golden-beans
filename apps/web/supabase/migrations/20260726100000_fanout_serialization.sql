@@ -152,11 +152,18 @@ BEGIN
      AND project_id = p_project_id;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
 
+  -- Drain only NOT-YET-SENDING work. `in_flight` is deliberately EXCLUDED (cross-review, Codex round
+  -- 16): a row in flight may have an HTTP request already on the wire, and stomping it to `dead`
+  -- while clearing its claim token would make the settling worker's guarded UPDATE fail to match —
+  -- so a delivery that really succeeded would be recorded as dead and unattempted, with its attempt
+  -- never logged. Instead we let it settle honestly; settle_delivery() coerces its final state to
+  -- `dead` when the destination has been removed (see 20260726100000's settle_delivery below), so it
+  -- still cannot re-queue for a destination that can never be claimed.
   UPDATE event_deliveries
      SET status = 'dead', last_error = 'destination removed', claimed_at = NULL, updated_at = p_now
    WHERE project_id = p_project_id
      AND destination_id = p_destination_id
-     AND status IN ('pending', 'failed', 'in_flight');
+     AND status IN ('pending', 'failed');
 
   RETURN v_rows = 1;
 END;
@@ -167,6 +174,79 @@ GRANT EXECUTE ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) TO service
 
 COMMENT ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) IS
   'Soft-deletes a destination AND drains its outstanding deliveries, in ONE transaction, holding FOR UPDATE on the destination row so it cannot interleave with ingest_event()''s FOR SHARE fan-out.';
+
+-- ── settle_delivery(): coerce to `dead` when the destination was REMOVED mid-flight ───────────
+-- The companion to delete_destination no longer draining `in_flight` rows (see above). An in-flight
+-- send whose destination is deleted while its request is on the wire must still settle HONESTLY —
+-- its real outcome is logged to the append-only attempt log — but it must NOT come to rest in a
+-- re-queueable state (`failed`/`pending`), because nothing can ever claim a deleted destination. So
+-- the FINAL STATUS is coerced to `dead` in exactly that case. Everything else is the 20260724100000
+-- body verbatim.
+CREATE OR REPLACE FUNCTION settle_delivery(
+  p_delivery_id     UUID,
+  p_project_id      UUID,
+  p_claim_token     TIMESTAMPTZ,
+  p_status          TEXT,
+  p_next_attempt_at TIMESTAMPTZ,
+  p_last_error      TEXT,
+  p_attempt_count   INTEGER,
+  p_now             TIMESTAMPTZ,
+  p_log             BOOLEAN,
+  p_destination_id  UUID,
+  p_event_id        UUID,
+  p_outcome         TEXT,
+  p_http_status     INTEGER,
+  p_latency_ms      INTEGER
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_rows    INTEGER;
+  v_removed BOOLEAN;
+  v_status  TEXT := p_status;
+  v_next    TIMESTAMPTZ := p_next_attempt_at;
+BEGIN
+  SELECT (deleted_at IS NOT NULL) INTO v_removed
+    FROM event_destinations
+   WHERE id = p_destination_id AND project_id = p_project_id;
+
+  -- Destination gone (or vanished entirely): no re-queueable resting state is valid.
+  IF COALESCE(v_removed, true) AND v_status IN ('failed', 'pending') THEN
+    v_status := 'dead';
+    v_next   := NULL;
+    p_last_error := COALESCE(p_last_error, 'destination removed');
+  END IF;
+
+  UPDATE event_deliveries
+     SET status          = v_status,
+         attempt_count   = p_attempt_count,
+         last_error      = p_last_error,
+         claimed_at      = NULL,
+         next_attempt_at = COALESCE(v_next, next_attempt_at),
+         last_attempt_at = CASE WHEN p_log THEN p_now ELSE last_attempt_at END,
+         updated_at      = p_now
+   WHERE id = p_delivery_id
+     AND project_id = p_project_id
+     AND status = 'in_flight'
+     AND claimed_at = p_claim_token;   -- the ownership token
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+
+  -- The attempt is logged with its TRUE outcome even when the status was coerced — the log is the
+  -- record of what happened on the wire, not of where the row came to rest.
+  IF v_rows = 1 AND p_log THEN
+    INSERT INTO event_delivery_attempts (
+      project_id, delivery_id, destination_id, event_id, outcome, http_status, latency_ms, error, attempt_no
+    ) VALUES (
+      p_project_id, p_delivery_id, p_destination_id, p_event_id, p_outcome, p_http_status, p_latency_ms, p_last_error, p_attempt_count
+    );
+  END IF;
+
+  RETURN v_rows = 1;
+END;
+$$;
 
 -- ── attempt-log FKs, so the operating view can EMBED destination + event names ─────────────────
 -- The attempt log (20260724100000) carried only a delivery FK. Showing per-attempt history

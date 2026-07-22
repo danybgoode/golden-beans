@@ -40,7 +40,7 @@ It is owner-only, rate-limited (10/10min/project), SSRF-guarded, and sends a syn
 ## Still owed before this sprint can be called shipped
 
 - [x] Cross-agent judgment-layer review (`scripts/cross-review.mjs`, both `codex` + `antigravity`) —
-      run to convergence over 9 rounds; all blocking findings fixed. SSRF is closed end-to-end
+      run to convergence over many rounds (16+); all blocking findings fixed. SSRF is closed end-to-end
       (literal-IP classifier rejecting every non-global address + fail-closed DNS pre-check +
       connection-**pinned** sender that re-checks the resolved address and pins the socket, so DNS
       rebinding has no second resolution to flip). Explicitly triaged, not fixed: the secret-rotation

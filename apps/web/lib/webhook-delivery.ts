@@ -117,8 +117,8 @@ const pinnedFetch = ((url: string, init: RequestInit): Promise<Response> =>
  *  up a delivery worker — a slow sink is a failed attempt, retried later, not a stuck one. */
 export const DELIVERY_TIMEOUT_MS = 10_000
 
-/** Cap the receiver's response body we read for the error record. We never ACT on the body; we keep
- *  a snippet only so an operator can see "why did this 400" without us buffering an unbounded reply. */
+/** Cap on the length of an error string WE generate (a network/timeout message). The receiver's own
+ *  response body is never stored — see the non-2xx branch for why. */
 const MAX_ERROR_BODY_CHARS = 500
 
 // The disposition a retry engine (Story 2.2) acts on. This module decides it from the HTTP outcome —
@@ -234,13 +234,19 @@ export async function deliverWebhook(
       return { disposition: 'delivered', status: response.status, latencyMs, error: null }
     }
 
-    const snippet = await readBoundedBody(response)
+    // DO NOT persist the receiver's response body (cross-review, Codex round 16). It was only
+    // truncated + whitespace-normalized before landing in `last_error` / the attempt log and being
+    // rendered to operators — but a receiver that echoes the request (or an auth error containing a
+    // token) would put tenant PII or a credential into our durable store, defeating the same
+    // secret/PII discipline the rest of this epic enforces. The STATUS CODE is the diagnostic that
+    // matters and cannot carry a secret; the body is drained and discarded.
+    await response.body?.cancel().catch(() => {})
     const disposition = isRetryableStatus(response.status) ? 'retryable' : 'permanent'
     return {
       disposition,
       status: response.status,
       latencyMs,
-      error: `HTTP ${response.status}${snippet ? `: ${snippet}` : ''}`,
+      error: `HTTP ${response.status}`,
     }
   } catch (err) {
     const latencyMs = Date.now() - startedAt
@@ -314,35 +320,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 function isRetryableStatus(status: number): boolean {
   if (status >= 500) return true
   return status === 408 || status === 429
-}
-
-// Read at most MAX_ERROR_BODY_CHARS worth of bytes from the response, STREAMING — never
-// `response.text()`, which buffers the entire body into memory first (cross-review, Codex
-// 2026-07-21): a hostile receiver could answer a rejected delivery with a multi-gigabyte body and
-// make the dispatcher OOM. We pull one chunk at a time, stop as soon as we have enough for the error
-// snippet, and cancel the rest so the connection is released.
-async function readBoundedBody(response: Response): Promise<string> {
-  const reader = response.body?.getReader()
-  if (!reader) return ''
-  const decoder = new TextDecoder()
-  let out = ''
-  try {
-    while (out.length < MAX_ERROR_BODY_CHARS) {
-      const { done, value } = await reader.read()
-      if (done) break
-      out += decoder.decode(value, { stream: true })
-    }
-    // Flush any bytes the streaming decoder is holding for a trailing multi-byte sequence — without
-    // this final flush a snippet ending mid-character is corrupted (cross-review, Antigravity
-    // 2026-07-21).
-    out += decoder.decode()
-  } catch {
-    // A read error mid-body just truncates the snippet — the disposition is already decided.
-  } finally {
-    // Discard whatever is left; we only ever wanted a snippet for the operator's error record.
-    await reader.cancel().catch(() => {})
-  }
-  return out.slice(0, MAX_ERROR_BODY_CHARS).replace(/\s+/g, ' ').trim()
 }
 
 function sanitizeError(err: unknown): string {
