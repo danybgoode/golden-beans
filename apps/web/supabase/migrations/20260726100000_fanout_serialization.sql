@@ -209,9 +209,14 @@ DECLARE
   v_status  TEXT := p_status;
   v_next    TIMESTAMPTZ := p_next_attempt_at;
 BEGIN
+  -- LOCK the destination (FOR SHARE) before reading its liveness — an UNLOCKED read could see "live",
+  -- then a delete commits, and we would write `failed`: an invisible, permanently unclaimable row
+  -- (cross-review, Codex round 17). FOR SHARE conflicts with delete_destination's FOR UPDATE, and
+  -- uses the SAME destination-then-delivery lock order every other path here uses, so no deadlock.
   SELECT (deleted_at IS NOT NULL) INTO v_removed
     FROM event_destinations
-   WHERE id = p_destination_id AND project_id = p_project_id;
+   WHERE id = p_destination_id AND project_id = p_project_id
+   FOR SHARE;
 
   -- Destination gone (or vanished entirely): no re-queueable resting state is valid.
   IF COALESCE(v_removed, true) AND v_status IN ('failed', 'pending') THEN
@@ -247,6 +252,55 @@ BEGIN
   RETURN v_rows = 1;
 END;
 $$;
+
+-- ── release_delivery() — the deadline-deferral path, deletion-aware ───────────────────────────
+-- When the dispatcher hits its deadline it releases claimed-but-unsent rows back to `pending`. Doing
+-- that as a raw UPDATE bypassed the deletion check (cross-review, Codex round 17): if a delete
+-- committed after the claim but before the release, the release would restore the row to `pending`
+-- AFTER the delete's drain — orphaned, unclaimable queue work again. This takes the same FOR SHARE
+-- destination lock and settles to `dead` instead when the destination is gone. Nothing is attempted
+-- on this path, so no attempt row is written and attempt_count is untouched.
+CREATE OR REPLACE FUNCTION release_delivery(
+  p_delivery_id    UUID,
+  p_project_id     UUID,
+  p_claim_token    TIMESTAMPTZ,
+  p_destination_id UUID,
+  p_now            TIMESTAMPTZ
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+VOLATILE
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_removed BOOLEAN;
+  v_rows    INTEGER;
+BEGIN
+  SELECT (deleted_at IS NOT NULL) INTO v_removed
+    FROM event_destinations
+   WHERE id = p_destination_id AND project_id = p_project_id
+   FOR SHARE;
+
+  UPDATE event_deliveries
+     SET status     = CASE WHEN COALESCE(v_removed, true) THEN 'dead' ELSE 'pending' END,
+         last_error = CASE WHEN COALESCE(v_removed, true) THEN 'destination removed' ELSE last_error END,
+         claimed_at = NULL,
+         updated_at = p_now
+   WHERE id = p_delivery_id
+     AND project_id = p_project_id
+     AND status = 'in_flight'
+     AND claimed_at = p_claim_token;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  RETURN v_rows = 1;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) TO service_role;
+
+COMMENT ON FUNCTION release_delivery(UUID, UUID, TIMESTAMPTZ, UUID, TIMESTAMPTZ) IS
+  'Releases a claimed-but-unsent delivery at the dispatcher deadline, under the destination FOR SHARE lock: back to pending if the destination is live, to dead if it was removed. Never logs an attempt (nothing was sent).';
 
 -- ── attempt-log FKs, so the operating view can EMBED destination + event names ─────────────────
 -- The attempt log (20260724100000) carried only a delivery FK. Showing per-attempt history

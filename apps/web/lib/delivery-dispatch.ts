@@ -151,7 +151,7 @@ export async function dispatchPendingDeliveries(
       // mid-flight (cross-review, Codex round 4).
       if (options.deadlineMs !== undefined && Date.now() + PER_SEND_BUDGET_MS >= options.deadlineMs) {
         const deferred = rows.slice(i)
-        const released = await releaseUnsent(db, projectId, deferred.map((r) => r.id), now)
+        const released = await releaseUnsent(db, projectId, deferred, now)
         for (const r of deferred) {
           const ok = released.has(r.id)
           settlements.push({
@@ -333,25 +333,34 @@ async function settleDelivery(db: SupabaseClient, a: SettleArgs): Promise<boolea
   return data === true
 }
 
-// Releases claimed-but-unsent rows back to pending (the deadline path), guarded by the claim token.
-// Returns the SET of ids actually released, so the caller can report any row it FAILED to release as
-// unsettled rather than as a clean deferral (cross-review, Codex round 3).
-async function releaseUnsent(db: SupabaseClient, projectId: string, ids: string[], now: Date): Promise<Set<string>> {
-  if (ids.length === 0) return new Set()
+// Releases claimed-but-unsent rows at the deadline, via the release_delivery RPC — which takes the
+// destination FOR SHARE lock and settles to `dead` instead of `pending` when the destination has been
+// removed (cross-review, Codex round 17: a raw UPDATE here bypassed the deletion check and could
+// restore a row to pending AFTER a delete's drain, orphaning it). Returns the SET of ids actually
+// released, so the caller reports any row it FAILED to release as unsettled, not as a clean deferral.
+async function releaseUnsent(
+  db: SupabaseClient,
+  projectId: string,
+  rows: ClaimedRow[],
+  now: Date,
+): Promise<Set<string>> {
+  const released = new Set<string>()
   const nowIso = now.toISOString()
-  const { data, error } = await db
-    .from('event_deliveries')
-    .update({ status: 'pending', claimed_at: null, updated_at: nowIso })
-    .eq('project_id', projectId)
-    .in('id', ids)
-    .eq('status', 'in_flight')
-    .eq('claimed_at', nowIso)
-    .select('id')
-  if (error) {
-    console.error('[delivery-dispatch] release-unsent failed:', error.message)
-    return new Set()
+  for (const r of rows) {
+    const { data, error } = await db.rpc('release_delivery', {
+      p_delivery_id: r.id,
+      p_project_id: projectId,
+      p_claim_token: nowIso,
+      p_destination_id: r.destination_id,
+      p_now: nowIso,
+    })
+    if (error) {
+      console.error('[delivery-dispatch] release failed:', error.message)
+      continue
+    }
+    if (data === true) released.add(r.id)
   }
-  return new Set((data ?? []).map((r) => r.id as string))
+  return released
 }
 
 // Maps an HTTP disposition + attempt count to the row's next state. The retry SCHEDULE is

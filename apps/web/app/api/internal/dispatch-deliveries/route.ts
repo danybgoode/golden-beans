@@ -30,7 +30,11 @@ const MAX_PROJECTS_PER_TICK = 200
 // minutes and blow the function deadline — stranding every project after the slow one (cross-review,
 // Codex 2026-07-21). We stop enumerating once we are within one project-batch of the deadline; the
 // unprocessed projects still have due work and are simply picked up by the next */5 tick.
-const TICK_BUDGET_MS = 60_000
+// Vercel's default function timeout is 300s, so a 60s tick was leaving most of the window unused
+// while forcing tiny per-project slices (cross-review, Codex round 17: an 18s reservation inside a
+// 30s slice meant a slow project managed roughly ONE send per tick and released the other 49).
+// 240s leaves a 60s margin under the platform limit.
+const TICK_BUDGET_MS = 240_000
 
 // A per-PROJECT slice of the tick, so ONE slow tenant cannot monopolize the whole budget and starve
 // the others (cross-review, Codex round 5; anti-starvation ORDER is random() in the enumeration RPC).
@@ -43,9 +47,10 @@ const TICK_BUDGET_MS = 60_000
 //     no ACTIVE dispatch time (the 15s version left ~-3s, i.e. nothing);
 //   • too large → project #1 eats the tick and project #2 is claimed with less than one send budget
 //     left, so its rows are claimed and immediately released without ever being sent — churn.
-// 30s of a 60s tick leaves ~12s of active dispatch for this project AND a full send budget for the
-// next one. The loop below also refuses to START a project without a full send budget remaining.
-const PER_PROJECT_BUDGET_MS = 30_000
+// 60s of a 240s tick leaves ~42s of ACTIVE dispatch per project after the ~18s per-send reservation
+// (enough for many normal sends, or ~3 worst-case timeouts), and still lets a tick serve several
+// projects. The loop below also refuses to START a project without a full send budget remaining.
+const PER_PROJECT_BUDGET_MS = 60_000
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET

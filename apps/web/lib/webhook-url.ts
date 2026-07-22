@@ -31,6 +31,11 @@ const IS_LOCAL_TARGET = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/
 // Dev/CI set WEBHOOK_ALLOW_LOCALHOST=true to use a disposable localhost receiver. Read fresh (no
 // module capture) so a spec can toggle it.
 export function localhostWebhooksAllowed(): boolean {
+  // BOTH conditions, and the second is not overridable by config (cross-review, Codex round 17):
+  // setting the env var in production must NOT open a loopback path, because there "localhost" is the
+  // serverless function's own interface. VERCEL_ENV is set by the platform and is 'production' only
+  // on production deployments — it is absent locally and in CI, and 'preview' on previews.
+  if (process.env.VERCEL_ENV === 'production') return false
   return process.env.WEBHOOK_ALLOW_LOCALHOST === 'true'
 }
 
