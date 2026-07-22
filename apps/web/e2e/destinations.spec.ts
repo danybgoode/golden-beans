@@ -239,6 +239,48 @@ test('delivery_health() is scoped to ONE project — another tenant\'s destinati
   }
 })
 
+test('every delivery RPC is service-role-only — the REVOKEs have teeth', async () => {
+  // Cross-review (Codex round 19): DROPping and re-CREATEing a function silently restores Postgres'
+  // PUBLIC-by-default EXECUTE, and a later GRANT to service_role does NOT remove it. Assert the
+  // PROPERTY (an anon caller is refused) for every RPC this epic added, so a future re-create that
+  // forgets its REVOKE turns this red. Same discipline as the ingest_event spec in delivery-outbox.
+  const url = process.env.SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  test.skip(!url || !anon, 'anon key not in env')
+  const anonClient = createClient(url!, anon!, { auth: { persistSession: false } })
+
+  const zero = '00000000-0000-0000-0000-000000000000'
+  const calls: [string, Record<string, unknown>][] = [
+    ['claim_deliveries', { p_project_id: zero, p_limit: 1, p_now: new Date().toISOString(), p_stale_after_ms: 1000 }],
+    ['projects_with_due_work', { p_now: new Date().toISOString(), p_limit: 1, p_stale_after_ms: 1000 }],
+    ['delivery_health', { p_project_id: zero }],
+    ['delete_destination', { p_project_id: zero, p_destination_id: zero, p_now: new Date().toISOString() }],
+    ['replay_delivery', { p_project_id: zero, p_delivery_id: zero, p_now: new Date().toISOString() }],
+    ['release_deliveries', { p_project_id: zero, p_delivery_ids: [zero], p_claim_token: new Date().toISOString(), p_now: new Date().toISOString() }],
+    ['settle_delivery', {
+      p_delivery_id: zero, p_project_id: zero, p_claim_token: new Date().toISOString(), p_status: 'dead',
+      p_next_attempt_at: null, p_last_error: null, p_attempt_count: 1, p_now: new Date().toISOString(),
+      p_log: false, p_destination_id: zero, p_event_id: zero, p_outcome: 'skipped', p_http_status: null, p_latency_ms: null,
+    }],
+  ]
+
+  for (const [fn, args] of calls) {
+    const { error } = await anonClient.rpc(fn, args)
+    expect(error, `${fn} must refuse an anon caller`).not.toBeNull()
+    const code = error?.code ?? ''
+    const message = (error?.message ?? '').toLowerCase()
+    // A FUNCTION-level denial specifically — 42501 mentioning "function", or PostgREST hiding a
+    // function the role cannot call. Never an RLS failure, which would mean EXECUTE leaked and the
+    // body actually ran.
+    const functionLevelDenial =
+      (code === '42501' && message.includes('function')) ||
+      code === 'PGRST202' ||
+      message.includes('could not find the function')
+    expect(functionLevelDenial, `${fn}: expected a function-level denial, got ${code} ${message}`).toBe(true)
+    expect(message).not.toContain('row-level security')
+  }
+})
+
 test('the per-project destination CAP is enforced in-transaction (write-amplification guard)', async () => {
   // Cross-review (Codex round 10): every enabled destination multiplies each ingested event into
   // another outbox row, so the count must be bounded. Enforced by trigger (not a Node count, which

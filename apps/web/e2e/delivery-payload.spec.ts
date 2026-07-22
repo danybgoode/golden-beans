@@ -65,6 +65,14 @@ test('buildEventEnvelope omits null fields and folds actor/subject into objects'
   expect('subject' in env.data).toBe(false)
 })
 
+test('a PARTIAL actor omits the missing half rather than emitting null (contract: nulls are omitted)', () => {
+  // Cross-review (Codex round 19): the builder used to emit `{ type, id: null }`, contradicting the
+  // documented "null fields are omitted" contract the Miyagi consumer codes against.
+  const env = buildEventEnvelope({ id: 'e', event: 'x', actor_type: 'system', actor_id: null })
+  expect(env.data.actor).toEqual({ type: 'system' })
+  expect(JSON.stringify(env.data)).not.toContain('null')
+})
+
 test('occurredAt falls back to created_at when the event asserted no occurred_at', () => {
   const env = buildEventEnvelope({ id: 'e', event: 'x', occurred_at: null, created_at: '2026-01-01T00:00:00.000Z' })
   expect(env.occurredAt).toBe('2026-01-01T00:00:00.000Z')

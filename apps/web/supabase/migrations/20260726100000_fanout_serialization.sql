@@ -261,6 +261,18 @@ BEGIN
 END;
 $$;
 
+-- RE-REVOKE, because the DROP above discarded 20260724100000's grants and a freshly CREATEd function
+-- gets EXECUTE granted to PUBLIC by default (cross-review, Codex round 19 — exactly the trap
+-- LEARNINGS.md records: "a narrower GRANT revokes nothing"). REVOKE from PUBLIC/anon/authenticated
+-- FIRST, then grant service_role, so service-role-only is conclusive rather than incidental. NOTE the
+-- signature ends in TEXT (the new return type is not part of the signature, but the arg list is).
+REVOKE ALL ON FUNCTION settle_delivery(
+  UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION settle_delivery(
+  UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, TEXT, INTEGER, TIMESTAMPTZ, BOOLEAN, UUID, UUID, TEXT, INTEGER, INTEGER
+) TO service_role;
+
 
 -- ── release_delivery() — the deadline-deferral path, deletion-aware ───────────────────────────
 -- When the dispatcher hits its deadline it releases claimed-but-unsent rows back to `pending`. Doing

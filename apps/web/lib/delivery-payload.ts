@@ -69,8 +69,14 @@ export function buildEventEnvelope(row: CanonicalEventRow): WebhookEnvelope {
   put('featureId', row.feature_id)
   put('tags', nonEmptyObject(row.tags))
   put('metadata', nonEmptyObject(row.metadata))
-  if (row.actor_type || row.actor_id) data.actor = { type: row.actor_type ?? null, id: row.actor_id ?? null }
-  if (row.subject_type || row.subject_id) data.subject = { type: row.subject_type ?? null, id: row.subject_id ?? null }
+  // Nested keys follow the SAME omit-don't-null rule as the top level (cross-review, Codex round 19:
+  // a partial actor emitted `{type, id: null}`, contradicting the contract's "null fields are
+  // omitted"). The object appears only when at least one half is present, and carries only the half
+  // that is.
+  const actor = compact({ type: row.actor_type, id: row.actor_id })
+  if (actor) data.actor = actor
+  const subject = compact({ type: row.subject_type, id: row.subject_id })
+  if (subject) data.subject = subject
   put('correlationId', row.correlation_id)
 
   return {
@@ -94,6 +100,16 @@ export function buildTestEnvelope(now: Date = new Date()): WebhookEnvelope {
     test: true,
     data: { message: 'This is a Golden Beans test delivery. If you can verify its signature, you are wired up.' },
   }
+}
+
+// Drops null/undefined entries; returns undefined when nothing is left, so the caller can omit the
+// key entirely rather than emit an empty object.
+function compact(fields: Record<string, string | null | undefined>): Record<string, string> | undefined {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== null && v !== undefined) out[k] = v
+  }
+  return Object.keys(out).length > 0 ? out : undefined
 }
 
 function nonEmptyObject(value: unknown): Record<string, unknown> | undefined {
