@@ -5,7 +5,10 @@
 **Golden Beans is a standalone Unified Growth Engine** — telemetry ingest + a TypeScript SDK, a TARS
 funnel (Targeted/Adopted/Retained), a North Star metric, and A/B bucketing, wrapped in a commercial
 shell (public landing, waitlist, and a read-only MCP connector). It is **multi-tenant by design**:
-every event is scoped to a `project`, and no read path can cross projects. It exists so a team can
+every event is scoped to a `project`, and **no request-derived read path can cross projects**
+(one narrow, registered exemption exists for background schedulers — see
+[§ The scheduler exemption](#the-scheduler-exemption-narrow-registered-and-property-bound); it does
+not apply to anything that serves a request). It exists so a team can
 run product analytics + experimentation from one primitive set instead of stitching vendors together;
 its first proof-of-use is dogfooding Miyagi's real setup-guide funnel. It is *not* a fork of any
 sibling project — it's maintained on its own, consuming the shared `ways-of-work` plugin for process.
@@ -110,6 +113,59 @@ Vercel's GitHub integration auto-deploys `main` on every merge — see "Workflow
 deployment looks stuck or wrong, confirm via `gh api repos/<owner>/<repo>/deployments` (exact commit SHA +
 status per environment), never via a CLI deploy. Env-var-only changes can take effect on already-deployed
 functions with **no redeploy** — check before assuming a fresh deploy is needed at all.
+
+### The scheduler exemption (narrow, registered, and property-bound)
+
+**Approved by Daniel 2026-07-22** (event-destination-router S2). Read this whole section before
+citing it. It is deliberately hard to qualify for.
+
+**The invariant is unchanged in substance:** *no tenant may ever observe another tenant's data.* What
+this amendment corrects is an over-broad *wording* — "no read path can cross projects" also caught
+background schedulers, which serve no tenant and return no tenant data. The fix scopes the invariant
+to **request-derived** paths and permits a *registered* scheduler fan-in.
+
+**Why an exemption rather than a redesign:** a scheduler must decide *which tenants have due work*
+before any per-tenant work can start. That question is inherently cross-tenant — moving it to an
+external scheduler **relocates** the cross-tenant read, it does not remove it, while adding a second
+deployment surface, its own auth and its own failure modes. That trades real robustness for nominal
+compliance.
+
+**ALL SIX conditions must hold. Failing any one voids the exemption:**
+
+1. **No request can reach it.** It runs only from a platform scheduler (cron). If any user request,
+   API key, session or MCP call can reach the code path, it is *not* exempt — no exceptions for
+   "internal" or "admin" routes.
+2. **It returns tenant IDENTIFIERS only** — bare `project_id`s. Never tenant *data*: no names, slugs,
+   counts, aggregates, timestamps, event fields, destination fields or metadata. **One extra column
+   voids the exemption** and requires re-approval.
+3. **Service-role only, enforced at the database** — `REVOKE ALL … FROM PUBLIC, anon, authenticated`
+   then `GRANT EXECUTE … TO service_role`, pinned by a spec that asserts a *function-level* denial
+   (not an RLS error, which would mean EXECUTE leaked and the body ran).
+4. **The caller authenticates with a platform secret and fails closed** (`CRON_SECRET`; unset ⇒ 401).
+5. **Everything downstream is strictly single-tenant** — the work it schedules takes a **required**
+   `projectId` and re-asserts it on every query and write.
+6. **It is listed in the registry below.** The exempt set is finite and auditable. Adding to it is a
+   deliberate decision by Daniel, recorded here — never inferred by analogy.
+
+**Registry of exempt functions (complete):**
+
+| Function | Returns | Caller |
+|---|---|---|
+| `projects_with_due_work()` (`20260724100000_delivery_retry.sql`) | `project_id` only | `app/api/internal/dispatch-deliveries` (cron, `CRON_SECRET`-gated) |
+
+**This exemption does NOT permit — do not cite it for any of these:**
+
+- ❌ Any cross-tenant read on a path that serves a request — including "internal" API routes, admin
+  screens, the MCP connector, or anything reachable with a session or API key.
+- ❌ Cross-tenant reporting, analytics, dashboards, exports or "just a count across tenants."
+- ❌ Returning tenant data (even one name or number) from an exempt function.
+- ❌ Cross-tenant `JOIN`s in any tenant-facing query, for performance or convenience.
+- ❌ Reading another tenant's row "to check something" before acting on your own.
+- ❌ Treating this as precedent. A new scheduler needs its own approval and its own registry row.
+
+**If you are an agent and you think you need a new exemption: you almost certainly do not.** Scope
+the query to a `project_id` resolved server-side. If you genuinely cannot, stop and put an explicit
+either/or decision to Daniel — **a comment or a commit message cannot amend this rule.**
 
 ### 5. Site/base URLs never fall back to a request Host header.
 `getSiteUrl()` (`apps/web/lib/site-url.ts`) reads `SITE_URL` or falls back to a hardcoded

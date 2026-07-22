@@ -251,6 +251,56 @@ test('delivery_health() is scoped to ONE project — another tenant\'s destinati
   }
 })
 
+test('the SCHEDULER EXEMPTION stays property-bound: projects_with_due_work returns ONLY project_id', async () => {
+  // AGENTS.md § "The scheduler exemption" condition 2: the exemption is bound to a PROPERTY, not to
+  // this function's name. It survives only while the function returns bare tenant IDENTIFIERS — one
+  // extra column (a name, a count, a timestamp) would make it a cross-tenant DATA read and void the
+  // exemption. Asserting the property here means a later "just add the name for logging" edit turns
+  // this red instead of silently widening an approved carve-out.
+  const client = db()
+  const p1 = await disposableProject(client)
+  const p2 = await disposableProject(client)
+  try {
+    // Give p1 genuinely due work so the function returns a real row to inspect.
+    const { data: dest } = await client
+      .from('event_destinations')
+      .insert({
+        project_id: p1,
+        name: 'exempt-probe',
+        enabled: true,
+        target_url: 'https://receiver.example.test/hook',
+        signing_secret: 'whsec_exempt_probe_0123456789',
+        secret_set_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+    const { data: ev } = await client
+      .from('events')
+      .insert({ project_id: p1, user_id: 'u', event: 'exempt_probe' })
+      .select('id')
+      .single()
+    await client
+      .from('event_deliveries')
+      .insert({ project_id: p1, event_id: ev!.id, destination_id: dest!.id })
+
+    const { data, error } = await client.rpc('projects_with_due_work', {
+      p_now: new Date().toISOString(),
+      p_limit: 200,
+      p_stale_after_ms: 300000,
+    })
+    expect(error).toBeNull()
+
+    const rows = data as Record<string, unknown>[]
+    const mine = rows.find((r) => r.project_id === p1)
+    expect(mine, 'the probe project should have due work').toBeDefined()
+    // THE PROPERTY: exactly one key, and it is the tenant identifier. Nothing else.
+    expect(Object.keys(mine!)).toEqual(['project_id'])
+    for (const row of rows) expect(Object.keys(row)).toEqual(['project_id'])
+  } finally {
+    await client.from('projects').delete().in('id', [p1, p2])
+  }
+})
+
 test('every delivery RPC is service-role-only — the REVOKEs have teeth', async () => {
   // Cross-review (Codex round 19): DROPping and re-CREATEing a function silently restores Postgres'
   // PUBLIC-by-default EXECUTE, and a later GRANT to service_role does NOT remove it. Assert the
