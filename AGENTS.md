@@ -111,8 +111,15 @@ check "temporarily."
 ### 4. Merging to `main` is the deploy. Never run a manual `vercel deploy`/`--prod`.
 Vercel's GitHub integration auto-deploys `main` on every merge — see "Workflow (gitflow)" above. If a
 deployment looks stuck or wrong, confirm via `gh api repos/<owner>/<repo>/deployments` (exact commit SHA +
-status per environment), never via a CLI deploy. Env-var-only changes can take effect on already-deployed
-functions with **no redeploy** — check before assuming a fresh deploy is needed at all.
+status per environment), never via a CLI deploy.
+
+**Env vars REQUIRE a redeploy to reach running functions**, and the redeploy must be a **commit to
+`main`** — not `vercel redeploy`/`--prod`, which this rule forbids. Vercel snapshots env vars into a
+deployment at build time, so setting a var is only half the job. (An earlier copy of this line
+claimed the opposite; it was corrected in the "Workflow" section on 2026-07-21 but this second copy
+survived until 2026-07-22 — see LEARNINGS' "grep for its siblings" rule, which is exactly what
+should have caught it.) Confirmed again 2026-07-22: `CRON_SECRET` was invisible to the running
+functions until a new deployment.
 
 ### The scheduler exemption (narrow, registered, and property-bound)
 
