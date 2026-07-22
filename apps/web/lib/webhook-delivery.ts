@@ -288,6 +288,17 @@ async function resolveTargetHost(
   } catch {
     return { ok: false, disposition: 'permanent', error: 'invalid target URL' }
   }
+
+  // An IP LITERAL needs no DNS at all — and passing one to dns.lookup() would fail anyway for IPv6,
+  // because URL.hostname keeps the brackets (`[2606:...]`), which is not a resolvable name. A valid
+  // public IPv6 destination would then fail resolution on every attempt and eventually dead-letter
+  // (cross-review, Codex round 23). Classify the literal directly instead.
+  const literal = hostname.replace(/^\[|\]$/g, '')
+  if (/^[0-9.]+$/.test(literal) || literal.includes(':')) {
+    return isPrivateOrLoopbackHost(literal)
+      ? { ok: false, disposition: 'permanent', error: 'blocked: target resolves to a private or loopback address' }
+      : { ok: true }
+  }
   let addresses: string[]
   try {
     // Bound the lookup so a stalled resolver can't overrun the caller's deadline.

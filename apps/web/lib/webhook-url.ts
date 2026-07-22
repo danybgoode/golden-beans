@@ -105,6 +105,12 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
       return isPrivateIPv4([(g1 >> 8) & 0xff, g1 & 0xff, (g2 >> 8) & 0xff, g2 & 0xff])
     }
     if (/^2001:0{0,3}:/.test(h)) return true // Teredo 2001:0::/32
+    // Other SPECIAL-USE blocks that sit inside 2000::/3 and are not globally routable (cross-review,
+    // Codex round 23). "Inside the global-unicast prefix" is not the same as "globally routable", and
+    // a hostname resolving into one of these can reach internally-routed infrastructure.
+    if (/^2001:0?db8:/.test(h)) return true // 2001:db8::/32 documentation
+    if (/^2001:0{0,3}2:/.test(h)) return true // 2001:2::/48 benchmarking
+    if (/^2001:0{0,2}2[0-9a-f]:/.test(h)) return true // 2001:20::/28 ORCHIDv2 (hextet 0020–002f)
     return false
   }
 

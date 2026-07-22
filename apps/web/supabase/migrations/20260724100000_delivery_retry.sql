@@ -228,6 +228,21 @@ COMMENT ON FUNCTION settle_delivery(UUID, UUID, TIMESTAMPTZ, TEXT, TIMESTAMPTZ, 
 --      behind a DISABLED destination) could fill the page and starve every other tenant. A real
 --      SELECT DISTINCT over only ELIGIBLE work (enabled + deliverable destination) has neither
 --      problem: a disabled destination's rows are not "due work" at all, and DISTINCT is exact.
+--
+-- ── EXPLICIT EXEMPTION from AGENTS rule #1's "no read path crosses projects" ──────────────────
+-- Flagged by cross-review (Codex round 23) and TRIAGED, not overlooked. This function is deliberately
+-- cross-tenant, and it is the ONLY such read in the epic:
+--   • It is a SCHEDULER FAN-IN, not a request read path. There is no acting user and no request
+--     context to scope it to — something must decide WHICH tenants have work before any per-tenant
+--     dispatch can happen, and that question is inherently cross-tenant. The alternative (iterate
+--     every project every tick) is strictly worse and also cross-tenant.
+--   • It returns ONLY project_ids — no events, no destinations, no secrets, no tenant data of any
+--     kind. Nothing a tenant owns can leak through a list of opaque uuids that never reaches a user.
+--   • It is service-role-only (REVOKEd from PUBLIC/anon/authenticated below, pinned by a spec), and
+--     its only caller is the CRON_SECRET-gated internal dispatch route.
+--   • Everything downstream is strictly single-tenant: the dispatcher takes a REQUIRED projectId and
+--     every claim/settle/read re-asserts it, so one worker's blast radius is exactly one tenant.
+-- The invariant that matters — no tenant can observe another tenant's data — is fully preserved.
 CREATE OR REPLACE FUNCTION projects_with_due_work(
   p_now            TIMESTAMPTZ,
   p_limit          INTEGER,
