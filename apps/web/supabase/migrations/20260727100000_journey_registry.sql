@@ -220,6 +220,7 @@ DECLARE
   v_project_id UUID;
   v_journey_id UUID;
   v_version_id UUID;
+  v_audit_id UUID;
 BEGIN
   INSERT INTO public.projects (slug, api_key_hash)
   VALUES ('journey-immutability-migration-assertion', NULL)
@@ -272,6 +273,22 @@ BEGIN
     WHEN SQLSTATE '55000' THEN NULL;
   END;
 
+  INSERT INTO public.journey_definition_audit (
+    project_id,
+    journey_id,
+    version_id,
+    action,
+    actor_user_id
+  )
+  VALUES (
+    v_project_id,
+    v_journey_id,
+    v_version_id,
+    'version_created',
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_audit_id;
+
   DELETE FROM public.projects
   WHERE id = v_project_id;
 
@@ -287,8 +304,26 @@ BEGIN
     SELECT 1
     FROM public.journey_definition_versions
     WHERE id = v_version_id
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.journey_definition_audit
+    WHERE id = v_audit_id
+      AND project_id = v_project_id
+      AND journey_id = v_journey_id
+      AND version_id = v_version_id
   ) THEN
-    RAISE EXCEPTION 'parent project cleanup did not cascade through the journey registry';
+    RAISE EXCEPTION 'parent cleanup must remove registry state while preserving journey audit evidence';
+  END IF;
+
+  DELETE FROM public.journey_definition_audit
+  WHERE id = v_audit_id;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.journey_definition_audit
+    WHERE id = v_audit_id
+  ) THEN
+    RAISE EXCEPTION 'journey migration assertion left an audit fixture behind';
   END IF;
 END;
 $$;

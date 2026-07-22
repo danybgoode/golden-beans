@@ -366,13 +366,9 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     expect(auditInsert.error).not.toBeNull()
     expect(auditUpdate.error).not.toBeNull()
     expect(auditDelete.error).not.toBeNull()
-
-    // Project cleanup removes operational registry/version rows but preserves stable audit evidence.
-    expect((await client.from('projects').delete().eq('id', projectId)).error).toBeNull()
-    const { data: survivingAudit } = await client
-      .from('journey_definition_audit').select('project_id, journey_id, version_id').eq('project_id', projectId)
-    expect(survivingAudit?.length).toBeGreaterThan(0)
   } finally {
+    // Best-effort fixture cleanup only: service_role intentionally has no direct projects DELETE.
+    // The migration-owner property assertion proves project cascade + audit survival instead.
     await client.from('projects').delete().in('id', [projectId, foreignProjectId])
     await Promise.all([owner, member, foreignOwner].map((id) => client.auth.admin.deleteUser(id)))
   }
