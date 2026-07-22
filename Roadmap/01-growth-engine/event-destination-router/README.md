@@ -75,7 +75,7 @@ contract lands in a separate Miyagi PR and must degrade safely until both sides 
 
 ## Definition of Done (epic)
 
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
+- [~] S1 + S2 + S3.3 merged to `main` and prod-smoked **dark**; S3.1's Miyagi consumer and S3.2 (Attio) not built — see sprint-3.md
 - [ ] Each `sprint-N.md` has its smoke walkthrough with deployed URLs and disposable credentials/data
 - [ ] This README marked ✅; every sprint status ticked with commit refs
 - [ ] `RETROSPECTIVE.md` written
@@ -83,5 +83,5 @@ contract lands in a separate Miyagi PR and must degrade safely until both sides 
 - [ ] Landing public-offer section reflects the shipped destination primitive honestly
 - [ ] Team memory updated if the project keeps one
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] `DESTINATION_DELIVERY_ENABLED` exists with enablement polarity, born OFF; production flip and per-sink disable verified
+- [~] `DESTINATION_DELIVERY_ENABLED` exists, born OFF, verified OFF in prod (cron authenticates and reports `enabled:false`). **The production flip is deliberately NOT done** — the epic's own deploy order puts it after the Sprint 3 CRM proof, which is still owed, and an open architecture decision (sprint-2.md) gates the cron's cross-tenant enumerator.
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** and `node scripts/build-order.mjs` run

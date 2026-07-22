@@ -1,6 +1,6 @@
 # Event destination router — Sprint 3: CRM proof and operating view
 
-**Status:** 🟨 partially built — 3.3 done; 3.1 specified (cross-repo half owed); 3.2 deliberately NOT built
+**Status:** 🟨 3.3 MERGED (`015eae4`, dark); 3.1 specified — **cross-repo consumer owed**; 3.2 deliberately NOT built
 
 ## Where each story actually stands
 

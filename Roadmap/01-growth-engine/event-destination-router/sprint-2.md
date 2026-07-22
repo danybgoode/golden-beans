@@ -1,6 +1,6 @@
 # Event destination router — Sprint 2: Destinations and reliable delivery
 
-**Status:** 🟨 built + local gate green (238 api specs) · cross-agent review complete — **prod migrations + Daniel's merge still owed**
+**Status:** ✅ MERGED to `main` 2026-07-21 (squash `015eae4`, PR #16) · CI green · migrations live in prod · **DARK** (`DESTINATION_DELIVERY_ENABLED` still OFF)
 
 ## What shipped in this sprint
 
@@ -72,16 +72,17 @@ Everything else in this sprint is independent of this choice.
       rebinding has no second resolution to flip). Explicitly triaged, not fixed: the secret-rotation
       rejection window (dead-lettered events are replay-recoverable; a dual-secret grace window is a
       noted follow-up) and the dispatcher's per-row event re-read (N+1, a scale follow-up).
-- [ ] **All four** migrations pushed to **prod** Supabase (migration-first, before merge):
+- [x] **All five** migrations pushed to **prod** Supabase (migration-first, before merge — done 2026-07-21):
       `20260723100000_destination_lifecycle` + `20260724100000_delivery_retry` +
-      `20260725100000_delivery_health` + `20260726100000_fanout_serialization`. All four are
+      `20260725100000_delivery_health` + `20260726100000_fanout_serialization` +
+      `20260726110000_cap_trigger_grants`. All are
       required — `/app/destinations` calls `delivery_health()` unconditionally (500s without
       `…25`), and `…26` supplies the attempt-log FKs `listRecentAttempts()` embeds, terminal-only
       replay, and the fan-out/delete serialization. Merging against a partial schema breaks the page
       (cross-review, Codex rounds 9 + 15).
-- [ ] `CRON_SECRET` set in Vercel prod (the cron fails closed without it)
+- [x] `CRON_SECRET` set in Vercel prod + redeployed; verified live — correct secret → `200 {"enabled":false}`, wrong secret → `401`
 - [ ] Browser smoke owed to Daniel (authenticated create → test → enable → rotate → replay)
-- [ ] Daniel merges
+- [x] Merged (PR #16, squash `015eae4`) — CI green including the Playwright gate
 
 ## Stories
 
