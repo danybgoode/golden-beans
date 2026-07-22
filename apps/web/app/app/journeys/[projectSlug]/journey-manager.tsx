@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatUtc } from '@/lib/format-utc'
 import type { JourneyRegistryRow } from '@/lib/journeys'
 import { activateJourneyVersionAction, createJourneyVersionAction } from './actions'
 
@@ -18,10 +19,6 @@ const EXAMPLE = JSON.stringify(
   null,
   2,
 )
-
-function formatUtc(iso: string): string {
-  return `${new Date(iso).toISOString().slice(0, 16).replace('T', ' ')} UTC`
-}
 
 export function JourneyManager({
   slug,

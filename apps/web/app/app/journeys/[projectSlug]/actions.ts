@@ -3,10 +3,8 @@ import { revalidatePath } from 'next/cache'
 import { notFound } from 'next/navigation'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
-import { parseJourneyDefinition, validateJourneyKey } from '@/lib/journey-definition'
+import { createJourneyVersionAfterGate } from '@/lib/journey-create-command'
 import { activateJourneyVersion, createJourneyVersion } from '@/lib/journeys'
-
-const MAX_DEFINITION_BYTES = 32 * 1024
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== 'string') throw new Error(`Invalid ${field}`)
@@ -25,30 +23,13 @@ export async function createJourneyVersionAction(
   definitionJson: unknown,
 ) {
   requireGate()
-  const safeSlug = requireString(slug, 'project')
-  const safeKey = requireString(journeyKey, 'journey key')
-  const raw = requireString(definitionJson, 'definition')
-  if (!validateJourneyKey(safeKey)) {
-    return { ok: false as const, error: 'Journey key must be lower_snake_case (1-64 characters).' }
-  }
-  if (Buffer.byteLength(raw, 'utf8') > MAX_DEFINITION_BYTES) {
-    return { ok: false as const, error: 'Definition is too large (maximum 32 KiB).' }
-  }
-
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return { ok: false as const, error: 'Definition must be valid JSON.' }
-  }
-  const checked = parseJourneyDefinition(parsed)
-  if (!checked.ok) return { ok: false as const, error: checked.errors.join(' · ') }
-
-  // Session identity, never an API key, supplies both project ownership and the audit actor.
-  const { projectId, userId } = await requireProjectOwnership(safeSlug)
-  const result = await createJourneyVersion(projectId, safeKey, checked.definition, userId)
-  if (result.ok) revalidatePath(`/app/journeys/${safeSlug}`)
-  return result
+  const command = await createJourneyVersionAfterGate(slug, journeyKey, definitionJson, {
+    // Session identity, never an API key, supplies both project ownership and the audit actor.
+    requireOwnership: requireProjectOwnership,
+    createVersion: createJourneyVersion,
+  })
+  if (command.result.ok) revalidatePath(`/app/journeys/${command.slug}`)
+  return command.result
 }
 export async function activateJourneyVersionAction(
   slug: unknown,

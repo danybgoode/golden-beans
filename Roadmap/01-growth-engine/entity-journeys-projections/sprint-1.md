@@ -46,6 +46,12 @@ API is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positi
 legacy `/subjects/<id>` alias exists. Pure truth-table and API isolation specs, mutation checks,
 typecheck and build are green locally; production smoke remains deployment/review work.
 
+**PR #17 review disposition:** accepted fixes move owner resolution ahead of every create-payload
+validation and make unexpected registry timestamps render fail-safe. The suggested predecessor-gated
+progression change was rejected: this epic's approved contract explicitly says highest satisfied stage
+wins, lower-stage events never regress, and history records each stage's actual first satisfaction in
+stage order. Requiring predecessors would fabricate or suppress facts and change the product semantics.
+
 ## Sprint QA
 
 - **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/

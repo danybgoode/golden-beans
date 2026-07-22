@@ -97,7 +97,7 @@ independently shippable slice of value.
   loop — and that path was walked by a real user in production on launch day. A confirmed signup now becomes a working tenant with no human in the loop, and the
   shared ingest path grew per-tenant isolation limits so an open signup can't hurt a real tenant or
   the bill. Everything customer-facing sits behind `SIGNUP_ENABLED`, born OFF — the launch itself is
-  Story 3.3, an env flip with no redeploy. Three rounds of cross-family review (Codex + Agy) found
+  Story 3.3, an env flip followed by a Git-tracked redeploy. Three rounds of cross-family review (Codex + Agy) found
   **12 blocking issues** pre-merge — including an infinite redirect loop, a quota-accounting bug
   that would have made "raise the ceiling" silently fail to restore service, and a **live
   production bug in the already-shipped landing funnel**: its dogfood events were never tagged with

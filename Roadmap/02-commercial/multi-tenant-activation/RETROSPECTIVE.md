@@ -52,8 +52,8 @@ build time. "Env var set" and "env var live" are two different facts.
 
 - **The kill-switch discipline paid for itself.** Because every signup surface is gated and the gate
   is read fresh per request, the entire epic could merge to production with zero customer-visible
-  change, and the launch is a single env var with no redeploy. It also made the rollback story
-  trivial to state honestly — including for confirmation links already sitting in inboxes.
+  change. Launch and rollback are each one env change plus a Git-tracked redeploy. It also made the
+  rollback story trivial to state honestly — including for confirmation links already sitting in inboxes.
 - **Reusing the atomic rate-limit counter for the monthly quota** avoided both a second counter
   table and a `COUNT(*)`-per-ingest that would get slower exactly as a tenant got more valuable.
 - **Extracting pure modules early** (`tenant-slug.ts`, `quota-window.ts`, on the `flags.ts` /

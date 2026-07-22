@@ -6,7 +6,8 @@ automatically via the GitHub integration (confirmed: `gh api repos/.../deploymen
 as the live Production deployment, status `success`). Post-merge production setup done via CLI:
 `connector_tokens` migration applied (`supabase db push`), `SITE_URL` env var set and confirmed
 live (the `/install` page's rendered SDK snippet shows the real prod URL, not `localhost`) — no
-manual redeploy was needed; Vercel picked up the new env var on already-deployed functions.
+manual deploy was run. **Correction (2026-07-21):** Vercel does not update already-deployed
+functions; every env change needs a later Git-tracked deployment before it is live.
 **Still open (deferred to Sprint 3, not blocking):** the demo project's `connector_tokens` row
 hasn't been minted in prod yet (`/install` there still says "not seeded" — harmless while
 `CONNECTOR_ENABLED` stays off); the live Claude-session connector round-trip can't happen until

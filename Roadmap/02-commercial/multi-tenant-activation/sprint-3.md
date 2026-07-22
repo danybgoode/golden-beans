@@ -28,11 +28,11 @@ the page at all** (the waitlist form is gone from the DOM, not hidden) · `/inst
 still 200 · an invalid ingest key still returns **401, not 500** (schema and code agree).
 
 ## What "the flip" actually is now
-`SIGNUP_ENABLED=true` in the Vercel production env. Nothing else. It is read fresh per request in
-all four places that gate on it, so **no redeploy is required** — the same env-var-only behaviour
-confirmed in commercial-shell Sprint 2 (`AGENTS.md`, Workflow). Flipping it back off is an equally
-complete rollback, including for confirmation links already sitting in inboxes (the callback
-re-checks the gate).
+Set `SIGNUP_ENABLED=true` in the Vercel production env, then create a new Git-tracked deployment.
+All four gates read the value fresh within a running deployment, but Vercel snapshots that
+deployment's environment at build time. Flipping it back off likewise needs a Git-tracked redeploy
+to become a complete rollback, including for confirmation links already sitting in inboxes (the
+callback re-checks the gate).
 
 ## Stories
 
@@ -89,8 +89,8 @@ Env: production `https://golden-beans-gamma.vercel.app` (this sprint is the flip
 
 1. Before the flip, open `/` in a private window.
    → Hero shows the waitlist; §7 shows "hand-provisioned pilots".
-2. Set `SIGNUP_ENABLED=true` in the Vercel production env. **No redeploy** — the flag is read
-   fresh per request, and a CLI deploy would violate AGENTS rule #4. *(flip — owed to Daniel)*
+2. Set `SIGNUP_ENABLED=true` in the Vercel production env, then trigger a new deployment with a
+   commit to `main` (never a manual CLI deploy, which violates AGENTS rule #4). *(flip — owed to Daniel)*
    → Hero shows "Start free"; §7 shows the tiers.
    Also check §7: the waitlist form is gone, replaced by the tiers + "Start free".
 3. Sign up from the flipped landing with a fresh email. *(auth path — owed to Daniel)*
