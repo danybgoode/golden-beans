@@ -37,6 +37,32 @@ That flag stops the automatic fan-out of the tenant's real stream; test-send is 
 diagnostic that makes the epic's rollout order possible (prove the receiver *before* enabling delivery).
 It is owner-only, rate-limited (10/10min/project), SSRF-guarded, and sends a synthetic `test:true` body.
 
+## ⚠️ Open decision for Daniel — an architecture rule this sprint cannot settle on its own
+
+`projects_with_due_work()` (migration `20260724100000`) is a **cross-tenant read**. AGENTS.md states
+the invariant unconditionally: *"no read path can cross projects."* Cross-review raised this twice
+and was right to refuse my in-code rationale — **a comment cannot amend an architecture rule.**
+
+**Why it exists:** a background dispatcher must decide *which tenants have due work* before any
+per-tenant dispatch can begin. That question is inherently cross-tenant; the only alternative (sweep
+every project every tick) is strictly worse *and* equally cross-tenant. It cannot be designed away,
+only relocated.
+
+**What bounds it:** it returns *only opaque `project_id`s* — no events, destinations, secrets, or any
+tenant data. It is service-role-only (REVOKEd from `PUBLIC`/`anon`/`authenticated`, pinned by a spec),
+its sole caller is the `CRON_SECRET`-gated internal route, and everything downstream is strictly
+single-tenant (the dispatcher takes a **required** `projectId`; every claim/settle/read re-asserts it).
+No tenant can observe another tenant's data through it.
+
+**Daniel decides one of:**
+1. **Amend the rule** to scope it to *request-derived* read paths, with a named exemption for
+   service-role schedulers that return only tenant identifiers — then this ships as-is; or
+2. **Reject the exemption** — in which case the cron trigger must be redesigned (e.g. an external
+   scheduler that is handed one project per invocation), and Sprint 2 ships with the dispatcher
+   unwired, exactly as Sprint 1 did.
+
+Everything else in this sprint is independent of this choice.
+
 ## Still owed before this sprint can be called shipped
 
 - [x] Cross-agent judgment-layer review (`scripts/cross-review.mjs`, `codex` + `antigravity`) — every

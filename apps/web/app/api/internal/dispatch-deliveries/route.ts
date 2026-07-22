@@ -22,6 +22,11 @@ import { isDestinationDeliveryEnabled } from '@/lib/flags'
 //      dark deployment does not even enumerate due work.
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// PIN the function's wall-clock limit rather than assuming the platform default (cross-review, Codex
+// round 24): TICK_BUDGET_MS below is sized against this number, and if the deployment's limit were
+// lower, Vercel would kill the worker mid-batch and leave claims to stale recovery. Declaring it here
+// makes the budget's assumption explicit and enforced.
+export const maxDuration = 300
 
 const MAX_PROJECTS_PER_TICK = 200
 

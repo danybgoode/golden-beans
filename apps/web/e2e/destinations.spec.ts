@@ -131,6 +131,9 @@ test('isPrivateOrLoopbackHost classifies literal IPs + loopback hostnames, treat
   expect(isPrivateOrLoopbackHost('64:ff9b::7f00:1')).toBe(true) // NAT64 — outside 2000::/3 anyway
   expect(isPrivateOrLoopbackHost('2001:2::1')).toBe(true) // benchmarking 2001:2::/48
   expect(isPrivateOrLoopbackHost('2001:20::1')).toBe(true) // ORCHIDv2 2001:20::/28
+  expect(isPrivateOrLoopbackHost('2001:10::1')).toBe(true) // ORCHID (deprecated) 2001:10::/28
+  expect(isPrivateOrLoopbackHost('3fff::1')).toBe(true) // documentation 3fff::/20 (RFC 9637)
+  expect(isPrivateOrLoopbackHost('3ffe::1')).toBe(false) // just outside 3fff::/20 — public
   // CGNAT 100.64.0.0/10 (cross-review, Antigravity round 5) — internal cloud/metadata surfaces.
   expect(isPrivateOrLoopbackHost('100.64.0.1')).toBe(true)
   expect(isPrivateOrLoopbackHost('100.127.255.255')).toBe(true)

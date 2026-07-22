@@ -110,7 +110,8 @@ export function isPrivateOrLoopbackHost(host: string): boolean {
     // a hostname resolving into one of these can reach internally-routed infrastructure.
     if (/^2001:0?db8:/.test(h)) return true // 2001:db8::/32 documentation
     if (/^2001:0{0,3}2:/.test(h)) return true // 2001:2::/48 benchmarking
-    if (/^2001:0{0,2}2[0-9a-f]:/.test(h)) return true // 2001:20::/28 ORCHIDv2 (hextet 0020–002f)
+    if (/^2001:0{0,2}[12][0-9a-f]:/.test(h)) return true // 2001:10::/28 ORCHID (deprecated) + 2001:20::/28 ORCHIDv2
+    if (/^3fff:/.test(h)) return true // 3fff::/20 documentation (RFC 9637)
     return false
   }
 
