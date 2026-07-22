@@ -8,6 +8,8 @@ export type DeliveryHistoryRow = {
   id: string
   destinationId: string
   destinationName: string | null
+  /** True when the destination has been removed — replay is refused for these (nothing to send to). */
+  destinationRemoved: boolean
   eventId: string
   eventName: string | null
   status: string
@@ -26,7 +28,7 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
   const { data, error } = await supabase
     .from('event_deliveries')
     .select(
-      'id, destination_id, event_id, status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_at, event_destinations(name), events(event)',
+      'id, destination_id, event_id, status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_at, event_destinations(name, deleted_at), events(event)',
     )
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
@@ -36,12 +38,13 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
     throw new Error('Could not load delivery history')
   }
   return (data ?? []).map((r) => {
-    const dest = r.event_destinations as unknown as { name: string } | null
+    const dest = r.event_destinations as unknown as { name: string; deleted_at: string | null } | null
     const ev = r.events as unknown as { event: string } | null
     return {
       id: r.id as string,
       destinationId: r.destination_id as string,
       destinationName: dest?.name ?? null,
+      destinationRemoved: dest?.deleted_at != null,
       eventId: r.event_id as string,
       eventName: ev?.event ?? null,
       status: r.status as string,
@@ -78,6 +81,26 @@ export async function replayDelivery(
 ): Promise<{ ok: true; eventId: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
   const nowIso = now.toISOString()
+
+  // REFUSE a replay whose destination has been REMOVED (cross-review, Codex round 12). A deleted
+  // destination can never be re-enabled and the dispatcher only claims enabled ones, so re-queueing
+  // such a row would create permanently undrainable work. (deleteDestination also drains the
+  // outstanding rows, so this is the second line of defence against the same state.)
+  const { data: live, error: liveErr } = await supabase
+    .from('event_deliveries')
+    .select('id, event_destinations!inner(deleted_at)')
+    .eq('id', deliveryId)
+    .eq('project_id', projectId)
+    .maybeSingle()
+  if (liveErr) {
+    console.error('[deliveries] replay precheck failed:', liveErr)
+    return { ok: false, error: 'Could not replay that delivery.' }
+  }
+  const destination = live?.event_destinations as unknown as { deleted_at: string | null } | null
+  if (!live || (destination && destination.deleted_at !== null)) {
+    return { ok: false, error: 'That destination has been removed — nothing to replay to.' }
+  }
+
   const { data, error } = await supabase
     .from('event_deliveries')
     .update({

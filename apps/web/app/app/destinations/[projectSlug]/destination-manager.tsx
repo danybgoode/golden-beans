@@ -41,6 +41,8 @@ export function DestinationManager({
   const [secret, setSecret] = useState<{ id: string; value: string; rotated: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<TestState | null>(null)
+  // Which destination is awaiting a second Remove click (the in-UI confirm step).
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function onCreate(event: FormEvent) {
@@ -99,11 +101,20 @@ export function DestinationManager({
   }
 
   // Soft-delete: the destination stops receiving and frees a slot against the per-project cap, but
-  // its delivery history is retained. No confirm() — a browser dialog blocks the page (and the
-  // automation harness); the action is reversible in spirit (history is kept) and owner-only.
+  // its delivery history is retained.
+  //
+  // TWO-STEP, because removal is irreversible in the way that matters: the signing secret is gone
+  // (never re-readable) and a removed destination can never be re-enabled (cross-review, Codex round
+  // 12 — a one-click Remove sat beside routine controls). An in-UI confirm rather than window.confirm:
+  // a browser dialog blocks the page and the automation harness.
   function onDelete(id: string) {
     setError(null)
     setTestResult(null)
+    if (confirmDelete !== id) {
+      setConfirmDelete(id)
+      return
+    }
+    setConfirmDelete(null)
     startTransition(async () => {
       const { ok } = await deleteDestinationAction(slug, id)
       if (!ok) setError('Could not remove that destination.')
@@ -214,8 +225,11 @@ export function DestinationManager({
                     Rotate secret
                   </button>{' '}
                   <button type="button" onClick={() => onDelete(d.id)} disabled={pending}>
-                    Remove
+                    {confirmDelete === d.id ? 'Click again to confirm' : 'Remove'}
                   </button>
+                  {confirmDelete === d.id && (
+                    <small> — the signing secret is lost and this cannot be undone.</small>
+                  )}
                   {testResult && testResult.destinationId === d.id && (
                     <p role="status">{testResult.message}</p>
                   )}
@@ -268,12 +282,14 @@ export function DestinationManager({
                 </td>
                 <td>
                   {/* Only a SETTLED delivery can be replayed — a pending/in_flight row is already
-                      queued, and re-queueing it would disturb a live dispatcher pass. */}
-                  {['delivered', 'failed', 'dead'].includes(d.status) && (
+                      queued, and re-queueing it would disturb a live dispatcher pass. A REMOVED
+                      destination has nothing to replay to (and re-queueing would be undrainable). */}
+                  {['delivered', 'failed', 'dead'].includes(d.status) && !d.destinationRemoved && (
                     <button type="button" onClick={() => onReplay(d.id)} disabled={pending}>
                       Replay
                     </button>
                   )}
+                  {d.destinationRemoved && <small>destination removed</small>}
                 </td>
               </tr>
             ))

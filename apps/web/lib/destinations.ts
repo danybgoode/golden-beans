@@ -255,7 +255,25 @@ export async function deleteDestination(projectId: string, destinationId: string
     console.error('[destinations] delete failed:', error)
     return { ok: false }
   }
-  return { ok: (data ?? []).length > 0 }
+  if ((data ?? []).length === 0) return { ok: false }
+
+  // DRAIN its outstanding work (cross-review, Codex round 12). A deleted destination can never be
+  // re-enabled, and the dispatcher only claims ENABLED destinations — so any delivery still
+  // pending/failed/in_flight for it would sit in the queue forever, undrainable. Terminate them
+  // explicitly with an honest reason. Their attempt HISTORY is untouched (it lives in the append-only
+  // event_delivery_attempts log), so this loses no record of what was already delivered.
+  const { error: drainErr } = await supabase
+    .from('event_deliveries')
+    .update({ status: 'dead', last_error: 'destination removed', claimed_at: null, updated_at: now })
+    .eq('project_id', projectId)
+    .eq('destination_id', destinationId)
+    .in('status', ['pending', 'failed', 'in_flight'])
+  if (drainErr) {
+    // The destination IS deleted (it will send nothing); a drain failure only leaves stale queue rows.
+    // Report success for the delete, but log loudly — the rows are visible in the operating view.
+    console.error('[destinations] delete drain failed:', drainErr)
+  }
+  return { ok: true }
 }
 
 // The ONLY function that reads a signing secret back — the internal outbound path (test-send here,
@@ -281,6 +299,9 @@ export async function getDeliverableDestination(
     .select('id, name, target_url, signing_secret')
     .eq('id', destinationId)
     .eq('project_id', projectId)
+    // A REMOVED destination is not deliverable — otherwise a stale tab (or a forged server-action
+    // request) could keep sending to an endpoint the owner deleted (cross-review, Codex round 12).
+    .is('deleted_at', null)
     .maybeSingle()
   if (error) {
     console.error('[destinations] getDeliverable failed:', error)

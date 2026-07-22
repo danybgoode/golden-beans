@@ -292,6 +292,31 @@ test('a past deadline RELEASES claimed rows back to pending WITHOUT sending — 
   })
 })
 
+test('a REMOVED destination leaves no claimable work — enumeration ignores it', async () => {
+  // Cross-review (Codex round 12): a deleted destination can never be re-enabled and the dispatcher
+  // only claims ENABLED destinations, so any delivery left pending for it would be undrainable.
+  // deleteDestination drains them to dead; here we pin the enumeration half — a project whose only
+  // work belongs to a removed destination is not enumerated as having due work.
+  const db = dbClient()
+  const { pid, destId } = await fixture(db)
+  try {
+    // Soft-delete the destination the way deleteDestination does.
+    await db
+      .from('event_destinations')
+      .update({ deleted_at: new Date().toISOString(), enabled: false })
+      .eq('id', destId)
+
+    const { data } = await db.rpc('projects_with_due_work', {
+      p_now: new Date().toISOString(),
+      p_limit: 200,
+      p_stale_after_ms: 300000,
+    })
+    expect((data as { project_id: string }[]).map((r) => r.project_id)).not.toContain(pid)
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
 // ── enumeration eligibility (projects_with_due_work RPC) ──────────────────────────────────────
 test('projects_with_due_work surfaces a project whose ONLY due work is a STALE in_flight row', async () => {
   // Cross-review (Codex + Antigravity 2026-07-21): the old Node enumeration filtered pending/failed
