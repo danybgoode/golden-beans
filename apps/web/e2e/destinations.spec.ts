@@ -239,6 +239,25 @@ test('delivery_health() is scoped to ONE project — another tenant\'s destinati
   }
 })
 
+test('the per-project destination CAP is enforced in-transaction (write-amplification guard)', async () => {
+  // Cross-review (Codex round 10): every enabled destination multiplies each ingested event into
+  // another outbox row, so the count must be bounded. Enforced by trigger (not a Node count, which
+  // would be check-then-act). Fill to the cap, then assert the next insert is refused.
+  const client = db()
+  const pid = await disposableProject(client)
+  try {
+    const rows = Array.from({ length: 20 }, (_, i) => ({ project_id: pid, name: `cap-${i}` }))
+    const { error: fillErr } = await client.from('event_destinations').insert(rows)
+    expect(fillErr).toBeNull()
+
+    const { error } = await client.from('event_destinations').insert({ project_id: pid, name: 'one-too-many' })
+    expect(error).not.toBeNull()
+    expect(error!.message.toLowerCase()).toContain('destination cap reached')
+  } finally {
+    await client.from('projects').delete().eq('id', pid)
+  }
+})
+
 test('destination names are unique WITHIN a project but may repeat ACROSS projects', async () => {
   const client = db()
   const p1 = await disposableProject(client)

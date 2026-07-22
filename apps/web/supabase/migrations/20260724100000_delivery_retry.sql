@@ -235,7 +235,11 @@ CREATE OR REPLACE FUNCTION projects_with_due_work(
 )
 RETURNS TABLE (project_id UUID)
 LANGUAGE sql
-STABLE
+-- VOLATILE, not STABLE (cross-review, Codex round 10): the body orders by random(), so repeated
+-- calls within one statement/snapshot legitimately return DIFFERENT rows. Declaring STABLE would
+-- promise the planner otherwise and license it to cache/collapse calls — defeating the very
+-- anti-starvation randomness the ORDER BY exists for.
+VOLATILE
 SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$

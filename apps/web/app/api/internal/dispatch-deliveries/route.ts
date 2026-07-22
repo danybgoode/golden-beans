@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { getSupabaseServiceClient } from '@/lib/supabase'
-import { dispatchPendingDeliveries } from '@/lib/delivery-dispatch'
+import { dispatchPendingDeliveries, PER_SEND_BUDGET_MS } from '@/lib/delivery-dispatch'
 import { projectsWithDueWork } from '@/lib/deliveries'
 import { isDestinationDeliveryEnabled } from '@/lib/flags'
 
@@ -35,10 +35,17 @@ const TICK_BUDGET_MS = 60_000
 // A per-PROJECT slice of the tick, so ONE slow tenant cannot monopolize the whole budget and starve
 // the others (cross-review, Codex round 5; anti-starvation ORDER is random() in the enumeration RPC).
 // Each project is dispatched under a deadline of min(tick deadline, now + this), then defers its
-// remainder and yields. 45s (not 15s) so that AFTER the dispatcher's ~13s per-send reservation a
-// project still gets ~30s of ACTIVE dispatch, not ~2s (cross-review, Antigravity round 6). True
-// round-robin/parallel scheduling is a scale follow-up when measured traffic needs it.
-const PER_PROJECT_BUDGET_MS = 45_000
+// remainder and yields.
+//
+// SIZED AGAINST THE TICK, not in isolation (cross-review, Antigravity round 6 then Codex round 10).
+// Two failure modes bracket this number:
+//   • too small → after the dispatcher's PER_SEND_BUDGET_MS reservation (~18s) a project gets almost
+//     no ACTIVE dispatch time (the 15s version left ~-3s, i.e. nothing);
+//   • too large → project #1 eats the tick and project #2 is claimed with less than one send budget
+//     left, so its rows are claimed and immediately released without ever being sent — churn.
+// 30s of a 60s tick leaves ~12s of active dispatch for this project AND a full send budget for the
+// next one. The loop below also refuses to START a project without a full send budget remaining.
+const PER_PROJECT_BUDGET_MS = 30_000
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET
@@ -86,7 +93,10 @@ export async function POST(request: Request) {
     // Stop before we risk overrunning the function deadline; the rest is due work the next tick
     // claims. Leaving early is safe — no row is lost, only deferred. The SAME deadline is passed into
     // the dispatcher so it also stops mid-batch (one project's 50 slow sends can't overrun alone).
-    if (Date.now() >= deadlineMs) break
+    // Don't START a project unless a FULL send budget remains — otherwise its rows get claimed and
+    // instantly released without a send, pure churn that also disturbs their claimed_at
+    // (cross-review, Codex round 10). Defer it to the next tick instead.
+    if (Date.now() + PER_SEND_BUDGET_MS >= deadlineMs) break
     processed += 1
     // A FRESH clock per project (cross-review, Antigravity round 3): a single `now` captured at the
     // top would be up to a full budget behind wall-time for the last projects, making their

@@ -87,5 +87,41 @@ $$;
 REVOKE ALL ON FUNCTION delivery_health(UUID) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION delivery_health(UUID) TO service_role;
 
+-- ── per-project DESTINATION CAP ───────────────────────────────────────────────────────────────
+-- Every ENABLED destination multiplies each ingested event into another outbox row, so an unbounded
+-- destination count is an unbounded write amplifier on a shared database (cross-review, Codex round
+-- 10). Cap it per project.
+--
+-- Enforced by a TRIGGER, not by counting in the app: a count-then-insert in Node is check-then-act,
+-- so two concurrent creates could both observe count = cap-1 and both insert — the same race the
+-- rate_limit migration exists to avoid. A BEFORE INSERT trigger counts inside the inserting
+-- transaction, so the cap holds under concurrency.
+CREATE OR REPLACE FUNCTION enforce_destination_cap()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_cap   INTEGER := 20;
+  v_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO v_count FROM event_destinations WHERE project_id = NEW.project_id;
+  IF v_count >= v_cap THEN
+    RAISE EXCEPTION 'destination cap reached for project % (max %)', NEW.project_id, v_cap
+      USING ERRCODE = 'check_violation', CONSTRAINT = 'event_destinations_project_cap';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS event_destinations_cap_trg ON event_destinations;
+CREATE TRIGGER event_destinations_cap_trg
+  BEFORE INSERT ON event_destinations
+  FOR EACH ROW EXECUTE FUNCTION enforce_destination_cap();
+
+COMMENT ON FUNCTION enforce_destination_cap() IS
+  'Caps destinations per project (20). Enforced in-transaction by trigger because a count-then-insert in the app is a check-then-act race. Each enabled destination is a write amplifier on ingest.';
+
 COMMENT ON FUNCTION delivery_health(UUID) IS
   'Per-destination delivery rollup for ONE project (Story 3.3). Success/failure/last-delivery come from the append-only attempt log (survive replay); queued/dead are current delivery-row state. Read-only; returns names, enabled flags and counts — never a signing secret or target URL.';

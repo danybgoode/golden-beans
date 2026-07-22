@@ -148,6 +148,10 @@ export async function createDestination(
     // A duplicate name within the project is the one user-correctable failure worth naming
     // (event_destinations_project_name_uniq). Everything else is an opaque server error.
     if (error?.code === '23505') return { ok: false, error: 'A destination with that name already exists.' }
+    // The per-project cap (enforce_destination_cap trigger) — also user-correctable: delete one first.
+    if (error?.message?.includes('destination cap reached')) {
+      return { ok: false, error: 'This project has reached its destination limit (20).' }
+    }
     console.error('[destinations] create failed:', error)
     return { ok: false, error: 'Could not create destination.' }
   }
