@@ -51,6 +51,13 @@ independently shippable slice of value.
 - ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
   funnel · North Star metric · A/B bucketing) — live in production at
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.
+- ✅ [Event destination router](01-growth-engine/event-destination-router/README.md) (versioned
+  actor/subject event contract · transactional outbox · tenant-managed **signed webhook
+  destinations** · bounded retry/dead-letter + operator replay · delivery operating view) —
+  **delivery LIVE in production** (2026-07-22). A tenant creates a signed, filtered destination and
+  receives their events reliably, at-least-once, without ingest ever depending on a sink's health.
+  First real consumer: Miyagi's merchant-lifecycle projection (Story 3.1, in `medusa-bonsai`). The
+  optional Attio adapter (3.2) is deferred until a workspace token exists.
 
 ### 02 · Commercial
 - ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
@@ -76,6 +83,14 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-07-22** — `event-destination-router` **epic shipped**: the event stream is now
+  *operational*. A tenant creates a signed, filtered webhook destination and their events are
+  delivered reliably — at-least-once, with bounded retries, dead-lettering and operator replay —
+  while ingest stays fully decoupled from sink health (a transactional outbox). Delivery was
+  activated in production 2026-07-22 with its first real consumer, Miyagi's merchant-lifecycle
+  projection. Hardened over a 24-round cross-agent review (SSRF closed with a connection-pinned
+  sender; a tightly-scoped, property-bound AGENTS.md exemption for the background scheduler). Attio
+  adapter deferred (optional, needs a token).
 - **2026-07-21** — `multi-tenant-activation` **epic shipped**: the engine was multi-tenant by
   design and single-tenant in practice; it is now multi-tenant in operation. A stranger goes from
   the landing page to their own isolated, credentialed, quota-bounded tenant with no human in the

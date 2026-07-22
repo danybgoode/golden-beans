@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: event-destination-router
 ---
 
@@ -75,13 +75,17 @@ contract lands in a separate Miyagi PR and must degrade safely until both sides 
 
 ## Definition of Done (epic)
 
-- [~] S1 + S2 + S3.3 merged to `main` and prod-smoked **dark**; S3.1's Miyagi consumer and S3.2 (Attio) not built — see sprint-3.md
-- [ ] Each `sprint-N.md` has its smoke walkthrough with deployed URLs and disposable credentials/data
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Landing public-offer section reflects the shipped destination primitive honestly
-- [ ] Team memory updated if the project keeps one
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [~] `DESTINATION_DELIVERY_ENABLED` exists, born OFF, verified OFF in prod (cron authenticates and reports `enabled:false`). **The production flip is deliberately NOT done** — the epic's own deploy order puts it after the Sprint 3 CRM proof, which is still owed, and an open architecture decision (sprint-2.md) gates the cron's cross-tenant enumerator.
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** and `node scripts/build-order.mjs` run
+- [x] S1 + S2 + S3.3 merged to `main`; delivery **LIVE in prod** 2026-07-22 with the Miyagi consumer (S3.1). S3.2 (Attio) deliberately deferred — optional, and needs a live workspace token; see sprint-3.md.
+- [x] Each `sprint-N.md` has its smoke walkthrough; sprint-2.md carries the executed production rollout runbook (secret → destination → enable → flip).
+- [x] This README marked ✅ (`status: shipped`); sprint statuses ticked with commit refs (`ce65993` S1, `015eae4` S2+S3.3, `13cdede` flag flip).
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Landing public-offer section flips the destinations row 🔜 → ✅ (honest: an owner can create a signed destination and receive events today).
+- [x] Team memory updated ([[project-event-destination-router]]).
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (the 24-round concurrency/grants/rule-amendment set + the secret-before-flag rollout order).
+- [x] `DESTINATION_DELIVERY_ENABLED` exists (born OFF), and was flipped ON in prod 2026-07-22 — verified live: the `CRON_SECRET`-gated dispatch cron reports `enabled:true`. The cross-tenant enumerator decision was resolved by Daniel (Option A — AGENTS.md scheduler exemption).
+- [x] Feature branch deleted (PR #16 squash-merge); README frontmatter `status: shipped`; `node scripts/build-order.mjs` run.
+
+### Deliberately NOT shipped (deferred, not abandoned)
+- **Story 3.2 — Attio adapter.** Optional per scope; needs a real Attio workspace token to build against (writing a speculative vendor mapping nobody can execute is the exact failure the review discipline exists to catch). The adapter seam is a *destination kind*; today's single kind (signed webhook) is a complete, shipped product. Scope it as its own sprint when a token is in hand.
+- **The disposable-merchant business smoke** (Sprint 3 walkthrough steps 1–3) — owned by Daniel, run through Miyagi's admin where it writes a real, visible, reversible projection row. The delivery *machinery* is verified (secret loaded, signed test delivery → 200, flag live, cron healthy); what remains is walking one real merchant milestone through the UI.

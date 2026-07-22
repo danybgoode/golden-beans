@@ -19,6 +19,23 @@ one-liner + why + date shape.
 ## Multi-agent & async deploy coordination
 *If several agents work in parallel on their own branches, against repos that deploy independently.*
 
+- **Rollout ORDER is part of a cross-repo feature's design, not an afterthought — the receiver must
+  hold the shared secret before delivery is enabled.** event-destination-router delivers to a
+  Miyagi endpoint that fails **closed** (401) when its `GOLDEN_BEANS_WEBHOOK_SECRET` is unset, and
+  Golden Beans classifies 401 as a **permanent** 4xx → immediate dead-letter. So flipping
+  `DESTINATION_DELIVERY_ENABLED` before the secret reached Miyagi's Cloud Run would have
+  dead-lettered the entire queued backlog in one pass, unrecoverable except by operator replay. The
+  correct order (2026-07-22): (1) secret into the receiver **and verified loaded** — the fail-closed
+  body (`Unauthorized`) differs from the bad-signature body (`Invalid signature`), so "is the secret
+  live?" is observable without a valid signature; (2) create the destination **born disabled**;
+  (3) a hand-signed test delivery while still dark; (4) enable; (5) flip the flag. **Generate the
+  shared secret yourself** so both sides match — the producer UI's mint-and-show-once path otherwise
+  creates a chicken-and-egg with the consumer's env.
+- **Vercel production env vars are write-only (sensitive by default) and need a REBUILD to reach
+  running functions — and the rebuild must be a commit to `main`, not `vercel redeploy`** (AGENTS
+  rule #4). `vercel env pull` returning an empty value for a var you just set is expected, not a
+  failure. Verify the flip against the running endpoint's behavior, never against a pull.
+
 - **`main` moves under you.** Before opening a PR — and again if it sits open — **merge latest `main`
   into your branch**. Tell-tale: CI fails on a spec/check for something you never touched → a sibling
   agent landed something on `main` and your preview (if you have one) predates it. **A re-run alone

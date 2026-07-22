@@ -1,10 +1,10 @@
 # Event destination router — Sprint 3: CRM proof and operating view
 
-**Status:** 🟨 3.3 MERGED (`015eae4`, dark); 3.1 specified — **cross-repo consumer owed**; 3.2 deliberately NOT built
+**Status:** ✅ 3.1 consumer SHIPPED (medusa-bonsai) + delivery LIVE 2026-07-22; 3.3 SHIPPED (landing flipped ✅); 3.2 deliberately DEFERRED (optional, needs Attio token)
 
 ## Where each story actually stands
 
-**Story 3.1 — Miyagi merchant-lifecycle projection · SPECIFIED, consumer owed**
+**Story 3.1 — Miyagi merchant-lifecycle projection · SHIPPED (consumer in medusa-bonsai) + LIVE**
 The Golden Beans side needs no new code: the Sprint 2 signed-webhook destination already delivers
 these events, and Sprint 1's `subject: { type: 'merchant', id }` context is what routes them. What was
 produced here is the producer-side contract the Miyagi PR implements against —

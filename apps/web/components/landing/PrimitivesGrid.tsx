@@ -30,22 +30,22 @@ export function PrimitivesGrid() {
               <b>GOLDEN BEANS</b>
               <small>SINGLE-ORIGIN GROWTH PRIMITIVES</small>
             </div>
-            <div className="netwt"><span>NET WT.</span><span>5 primitives shipped · 5 roasting</span></div>
+            <div className="netwt"><span>NET WT.</span><span>6 primitives shipped · 4 roasting</span></div>
             <div className="row"><span>schema-validated telemetry ingest · tenant-scoped</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>TypeScript SDK · track / trackAdoption / bucket</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>feature registry + TARS funnels</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>North Star metric + per-feature impact</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>A/B comparison (basic lift)</span><b className="ok">✅ SHIPPED</b></div>
-            {/* event-destination-router · Sprint 3, Story 3.3 — the public-offer backfill, badged
-                HONESTLY. This row stays 🔜 until BOTH conditions in the story's acceptance hold:
-                the dispatcher is live in production (DESTINATION_DELIVERY_ENABLED flipped ON — it is
-                still born OFF) AND the CRM projection proof (Story 3.1) has landed. The capability is
-                built and gate-green, but "built" is not "live", and this label's whole promise is
-                that a ✅ row is curl-able TODAY.
-                Note the wording: "at-least-once", never exactly-once — delivery is at-least-once by
-                contract (epic README) and claiming otherwise on the bag label would be a lie the
-                architecture cannot back. */}
-            <div className="row"><span>signed event destinations · at-least-once, with retries</span><b>🔜 event-destination-router</b></div>
+            {/* event-destination-router · Sprint 3, Story 3.3 — the public-offer backfill. Flipped
+                🔜 → ✅ on 2026-07-22, when BOTH acceptance conditions held: the dispatcher is LIVE in
+                production (DESTINATION_DELIVERY_ENABLED flipped ON) AND the CRM projection proof
+                (Story 3.1, the Miyagi consumer in medusa-bonsai) has landed and is receiving signed
+                deliveries. An owner can create a signed destination at /app/destinations today and
+                receive their project's events — so the ✅ is honest (curl-able today).
+                Wording stays "at-least-once", never exactly-once — delivery is at-least-once by
+                contract and claiming otherwise on the bag label would be a lie the architecture
+                cannot back. */}
+            <div className="row"><span>signed event destinations · at-least-once, with retries</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>read-only MCP connector</span><b>🔜 Sprint 2</b></div>
             <div className="row"><span>self-serve tenants &amp; auth hardening</span><b>🔜 multi-tenant-activation</b></div>
             <div className="row"><span>pod report (velocity, DORA, cost per point)</span><b>🔜 pod-report</b></div>
