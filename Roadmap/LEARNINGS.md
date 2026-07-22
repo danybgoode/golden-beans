@@ -248,6 +248,31 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **On concurrency work, most late review findings are bugs in your OWN previous round's fix.**
+  event-destination-router S2 took 24 cross-review rounds (Codex; Antigravity went clean at 11), and
+  from about round 12 the pattern was consistent: each round's blocking finding was a race introduced
+  by the previous round's fix — drain-vs-in-flight, then check-then-act on liveness, then an unlocked
+  join, then a batched release that skipped the lock. Iterating *fast* on lock/settle logic
+  manufactures new races as quickly as it closes old ones. When a fix touches ordering, locking or
+  settlement, slow down and reason about the whole state machine before shipping the next round —
+  and expect the reviewer to be right about the thing you just wrote.
+- **`UPDATE … FROM other_table` does NOT lock the joined rows.** A liveness/eligibility check written
+  as a join reads a snapshot and gives you nothing under READ COMMITTED. If a concurrent writer can
+  invalidate what you joined on, take an explicit `SELECT … FOR SHARE` as its **own statement** first
+  (the next statement then runs on a fresh snapshot). Pick one lock ORDER for the whole subsystem —
+  here every path locks the destination, then the delivery — so the paths can't deadlock.
+- **`DROP FUNCTION` + `CREATE` silently restores Postgres' PUBLIC EXECUTE default.** Changing a
+  function's return type forces a drop, which discards the earlier migration's REVOKEs — so a
+  service-role-only function quietly became anon-callable. Any migration that re-creates a function
+  must re-REVOKE from `PUBLIC, anon, authenticated` and re-GRANT `service_role`. Pin it with a spec
+  that asserts a **function-level** denial (42501 mentioning "function", or PostgREST's PGRST202) and
+  explicitly NOT an RLS error — an RLS failure would mean EXECUTE leaked and the body actually ran.
+- **A comment cannot amend an architecture rule.** When a reviewer flags a documented invariant
+  (AGENTS' "no read path can cross projects") and the honest answer is "this scheduler genuinely
+  needs to be cross-tenant", the move is NOT to write a persuasive in-code rationale and proceed. It
+  is to bound the exposure (return only opaque ids, service-role only, single-tenant downstream) and
+  put the rule change in front of the human as an explicit either/or decision. Cross-review rejected
+  the self-exemption twice, correctly.
 - **A manual smoke test (or a spec) written by the same session that built the feature can share the
   implementation's own narrow, unstated assumption — and miss the exact bug a differently-shaped
   check would catch.** growth-engine-v1 S4's A/B comparison query originally required the *metric/
