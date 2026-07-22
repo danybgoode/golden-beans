@@ -88,6 +88,7 @@ export async function POST(request: Request) {
   let delivered = 0
   let errored = 0
   let unsettled = 0
+  let internalErrors = 0
   let processed = 0
   for (const projectId of projects) {
     // Stop before we risk overrunning the function deadline; the rest is due work the next tick
@@ -113,7 +114,10 @@ export async function POST(request: Request) {
       // the tick claims it done). A send whose settlement did NOT persist is surfaced as `unsettled`
       // rather than silently counted as clean.
       for (const c of outcome.claimed) {
-        if (!c.persisted) unsettled += 1
+        // An internal (our-side) failure is counted separately from a benign deferral, so a
+        // persistent DB fault can't hide behind a green tick (cross-review, Codex round 13).
+        if (c.disposition === 'internal_error') internalErrors += 1
+        else if (!c.persisted) unsettled += 1
         else if (c.status === 'delivered') delivered += 1
       }
     }
@@ -123,7 +127,7 @@ export async function POST(request: Request) {
   // Return a FAILURE status when any project errored or any settlement didn't persist, so cron
   // monitoring records a failed invocation instead of a green 200 that hides the problem
   // (cross-review, Codex round 7). The body still carries the counts for diagnostics.
-  const status = errored > 0 || unsettled > 0 ? 500 : 200
+  const status = errored > 0 || unsettled > 0 || internalErrors > 0 ? 500 : 200
   return NextResponse.json(
     {
       enabled: true,
@@ -132,6 +136,7 @@ export async function POST(request: Request) {
       deferred: projects.length - processed,
       delivered,
       unsettled,
+      internalErrors,
       errored,
     },
     { status },

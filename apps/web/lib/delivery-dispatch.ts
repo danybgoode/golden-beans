@@ -69,7 +69,10 @@ export type DeliverySettlement = {
   id: string
   event_id: string
   destination_id: string
-  disposition: DeliveryDisposition | 'skipped'
+  /** `skipped` = a benign non-send (destination disabled/removed). `internal_error` = OUR read/write
+   *  failed — distinct so the cron can surface it instead of reporting a healthy pass (cross-review,
+   *  Codex round 13). */
+  disposition: DeliveryDisposition | 'skipped' | 'internal_error'
   status: 'delivered' | 'failed' | 'dead' | 'pending' | 'in_flight'
   attemptCount: number
   /** Whether the settling UPDATE actually landed on the row WE own. False when the row was reclaimed
@@ -170,7 +173,7 @@ export async function dispatchPendingDeliveries(
         console.error('[delivery-dispatch] row settle threw:', rowErr instanceof Error ? rowErr.message : rowErr)
         settlements.push({
           id: r.id, event_id: r.event_id, destination_id: r.destination_id,
-          disposition: 'skipped', status: 'in_flight', attemptCount: r.attempt_count, persisted: false,
+          disposition: 'internal_error', status: 'in_flight', attemptCount: r.attempt_count, persisted: false,
         })
       }
     }
@@ -223,12 +226,15 @@ async function sendAndSettle(
   // would otherwise permanently kill a perfectly good delivery). `data: null` with NO error is the
   // genuine "row absent" case handled below.
   if (destErr || eventErr) {
-    const persisted = await settleDelivery(db, {
+    console.error('[delivery-dispatch] parent read failed:', (destErr ?? eventErr)?.message)
+    await settleDelivery(db, {
       row, projectId, claimToken: nowIso, now: nowIso, status: 'pending',
       nextAttemptAt: null, lastError: null, attemptCount: row.attempt_count,
       log: false, outcome: 'skipped', httpStatus: null, latencyMs: null,
     })
-    return { ...base, disposition: 'skipped', status: 'pending', attemptCount: row.attempt_count, persisted }
+    // Reported as internal_error and NEVER persisted:true — a persistent DB read failure would
+    // otherwise stall every affected delivery while the cron stayed green (cross-review, Codex 13).
+    return { ...base, disposition: 'internal_error', status: 'pending', attemptCount: row.attempt_count, persisted: false }
   }
 
   // A genuinely MISSING parent (clean null, no error) is a PERMANENT anomaly — DEAD-letter it, never

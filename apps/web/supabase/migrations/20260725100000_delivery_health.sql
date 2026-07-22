@@ -153,6 +153,84 @@ CREATE TRIGGER event_destinations_cap_trg
   BEFORE INSERT ON event_destinations
   FOR EACH ROW EXECUTE FUNCTION enforce_destination_cap();
 
+-- ── delete_destination() — soft-delete AND drain, ATOMICALLY ──────────────────────────────────
+-- Two statements that MUST commit together (cross-review, Codex round 13): if the soft-delete
+-- committed and the drain then failed, the destination's outstanding deliveries would be left
+-- undrainable AND invisible (the operating view excludes deleted destinations). One plpgsql body is
+-- one transaction, so either both land or neither does — the same reasoning as ingest_event().
+--
+-- Draining marks pending/failed/in_flight rows `dead` with an honest reason. Attempt HISTORY is
+-- untouched: it lives in the append-only event_delivery_attempts log, not in these rows.
+CREATE OR REPLACE FUNCTION delete_destination(p_project_id UUID, p_destination_id UUID, p_now TIMESTAMPTZ)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_rows INTEGER;
+BEGIN
+  UPDATE event_destinations
+     SET deleted_at = p_now, enabled = false, updated_at = p_now
+   WHERE id = p_destination_id
+     AND project_id = p_project_id
+     AND deleted_at IS NULL;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows = 0 THEN
+    RETURN false; -- unknown, foreign, or already-deleted
+  END IF;
+
+  UPDATE event_deliveries
+     SET status = 'dead', last_error = 'destination removed', claimed_at = NULL, updated_at = p_now
+   WHERE project_id = p_project_id
+     AND destination_id = p_destination_id
+     AND status IN ('pending', 'failed', 'in_flight');
+
+  RETURN true;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) TO service_role;
+
+COMMENT ON FUNCTION delete_destination(UUID, UUID, TIMESTAMPTZ) IS
+  'Soft-deletes a destination AND drains its outstanding deliveries to dead, in ONE transaction so a partial failure cannot leave undrainable-and-invisible queue rows. Attempt history (event_delivery_attempts) is untouched.';
+
+-- ── replay_delivery() — check-and-requeue, ATOMICALLY ─────────────────────────────────────────
+-- The live-destination check and the re-queue must be ONE statement (cross-review, Codex round 13):
+-- checking in the app and then updating is check-then-act — a destination deleted in between would
+-- let replay flip a just-drained `dead` row back to `pending`, where nothing can ever claim it.
+-- The EXISTS subquery re-asserts liveness inside the same UPDATE, so the row only moves if its
+-- destination is still live at write time.
+CREATE OR REPLACE FUNCTION replay_delivery(p_project_id UUID, p_delivery_id UUID, p_now TIMESTAMPTZ)
+RETURNS UUID
+LANGUAGE sql
+VOLATILE
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+  UPDATE event_deliveries d
+     SET status = 'pending', attempt_count = 0, next_attempt_at = p_now,
+         claimed_at = NULL, last_error = NULL, updated_at = p_now
+   WHERE d.id = p_delivery_id
+     AND d.project_id = p_project_id
+     -- only a SETTLED row may be replayed; a pending/in_flight one is already queued
+     AND d.status IN ('delivered', 'failed', 'dead')
+     AND EXISTS (
+       SELECT 1 FROM event_destinations dest
+        WHERE dest.id = d.destination_id
+          AND dest.project_id = d.project_id
+          AND dest.deleted_at IS NULL
+     )
+  RETURNING d.event_id;
+$$;
+
+REVOKE ALL ON FUNCTION replay_delivery(UUID, UUID, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION replay_delivery(UUID, UUID, TIMESTAMPTZ) TO service_role;
+
+COMMENT ON FUNCTION replay_delivery(UUID, UUID, TIMESTAMPTZ) IS
+  'Re-queues a SETTLED delivery, but only while its destination is still live — the liveness check is inside the UPDATE, so a concurrent delete cannot let replay resurrect unclaimable work. Returns the event_id, or NULL if nothing matched.';
+
 COMMENT ON FUNCTION enforce_destination_cap() IS
   'Caps destinations per project (20). Enforced in-transaction by trigger because a count-then-insert in the app is a check-then-act race. Each enabled destination is a write amplifier on ingest.';
 

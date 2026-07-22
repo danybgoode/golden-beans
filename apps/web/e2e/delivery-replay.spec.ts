@@ -292,6 +292,43 @@ test('a past deadline RELEASES claimed rows back to pending WITHOUT sending — 
   })
 })
 
+test('delete_destination drains outstanding work, and replay_delivery REFUSES a removed destination', async () => {
+  // Cross-review (Codex rounds 12-13): both operations must be atomic. delete_destination
+  // soft-deletes AND drains in one transaction; replay_delivery re-checks liveness INSIDE its UPDATE,
+  // so a concurrent delete can never let replay resurrect unclaimable work.
+  const db = dbClient()
+  const { pid, destId, deliveryId } = await fixture(db)
+  try {
+    // The delivery starts pending. Remove the destination via the RPC.
+    const { data: deleted, error: delErr } = await db.rpc('delete_destination', {
+      p_project_id: pid,
+      p_destination_id: destId,
+      p_now: new Date().toISOString(),
+    })
+    expect(delErr).toBeNull()
+    expect(deleted).toBe(true)
+
+    // Its outstanding work was DRAINED to dead — not left pending-and-unclaimable.
+    const { data: row } = await db.from('event_deliveries').select('status, last_error').eq('id', deliveryId).single()
+    expect(row!.status).toBe('dead')
+    expect(row!.last_error).toBe('destination removed')
+
+    // And replay REFUSES it (returns null), so the drained row cannot be resurrected.
+    const { data: replayed, error: repErr } = await db.rpc('replay_delivery', {
+      p_project_id: pid,
+      p_delivery_id: deliveryId,
+      p_now: new Date().toISOString(),
+    })
+    expect(repErr).toBeNull()
+    expect(replayed == null || (Array.isArray(replayed) && replayed.length === 0)).toBe(true)
+    // Still dead — the refusal actually prevented the write.
+    const { data: after } = await db.from('event_deliveries').select('status').eq('id', deliveryId).single()
+    expect(after!.status).toBe('dead')
+  } finally {
+    await db.from('projects').delete().eq('id', pid)
+  }
+})
+
 test('a REMOVED destination leaves no claimable work — enumeration ignores it', async () => {
   // Cross-review (Codex round 12): a deleted destination can never be re-enabled and the dispatcher
   // only claims ENABLED destinations, so any delivery left pending for it would be undrainable.

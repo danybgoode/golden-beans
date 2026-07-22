@@ -243,37 +243,20 @@ export async function setDestinationEnabled(
 // Scoped by id + project_id like every mutation here, and idempotent (deleting twice returns false).
 export async function deleteDestination(projectId: string, destinationId: string): Promise<{ ok: boolean }> {
   const supabase = getSupabaseServiceClient()
-  const now = new Date().toISOString()
-  const { data, error } = await supabase
-    .from('event_destinations')
-    .update({ deleted_at: now, enabled: false, updated_at: now })
-    .eq('id', destinationId)
-    .eq('project_id', projectId)
-    .is('deleted_at', null)
-    .select('id')
+  // ONE transaction via the delete_destination RPC: the soft-delete and the DRAIN of its outstanding
+  // deliveries must commit together (cross-review, Codex round 13). Doing them as two supabase-js
+  // calls meant a drain failure left the destination deleted with undrainable queue rows that the
+  // operating view (which excludes deleted destinations) would never show.
+  const { data, error } = await supabase.rpc('delete_destination', {
+    p_project_id: projectId,
+    p_destination_id: destinationId,
+    p_now: new Date().toISOString(),
+  })
   if (error) {
     console.error('[destinations] delete failed:', error)
     return { ok: false }
   }
-  if ((data ?? []).length === 0) return { ok: false }
-
-  // DRAIN its outstanding work (cross-review, Codex round 12). A deleted destination can never be
-  // re-enabled, and the dispatcher only claims ENABLED destinations — so any delivery still
-  // pending/failed/in_flight for it would sit in the queue forever, undrainable. Terminate them
-  // explicitly with an honest reason. Their attempt HISTORY is untouched (it lives in the append-only
-  // event_delivery_attempts log), so this loses no record of what was already delivered.
-  const { error: drainErr } = await supabase
-    .from('event_deliveries')
-    .update({ status: 'dead', last_error: 'destination removed', claimed_at: null, updated_at: now })
-    .eq('project_id', projectId)
-    .eq('destination_id', destinationId)
-    .in('status', ['pending', 'failed', 'in_flight'])
-  if (drainErr) {
-    // The destination IS deleted (it will send nothing); a drain failure only leaves stale queue rows.
-    // Report success for the delete, but log loudly — the rows are visible in the operating view.
-    console.error('[destinations] delete drain failed:', drainErr)
-  }
-  return { ok: true }
+  return { ok: data === true }
 }
 
 // The ONLY function that reads a signing secret back — the internal outbound path (test-send here,

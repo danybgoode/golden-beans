@@ -80,49 +80,25 @@ export async function replayDelivery(
   now: Date = new Date(),
 ): Promise<{ ok: true; eventId: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
-  const nowIso = now.toISOString()
-
-  // REFUSE a replay whose destination has been REMOVED (cross-review, Codex round 12). A deleted
-  // destination can never be re-enabled and the dispatcher only claims enabled ones, so re-queueing
-  // such a row would create permanently undrainable work. (deleteDestination also drains the
-  // outstanding rows, so this is the second line of defence against the same state.)
-  const { data: live, error: liveErr } = await supabase
-    .from('event_deliveries')
-    .select('id, event_destinations!inner(deleted_at)')
-    .eq('id', deliveryId)
-    .eq('project_id', projectId)
-    .maybeSingle()
-  if (liveErr) {
-    console.error('[deliveries] replay precheck failed:', liveErr)
-    return { ok: false, error: 'Could not replay that delivery.' }
-  }
-  const destination = live?.event_destinations as unknown as { deleted_at: string | null } | null
-  if (!live || (destination && destination.deleted_at !== null)) {
-    return { ok: false, error: 'That destination has been removed — nothing to replay to.' }
-  }
-
-  const { data, error } = await supabase
-    .from('event_deliveries')
-    .update({
-      status: 'pending',
-      attempt_count: 0,
-      next_attempt_at: nowIso,
-      claimed_at: null,
-      last_error: null,
-      updated_at: nowIso,
-    })
-    .eq('id', deliveryId)
-    .eq('project_id', projectId)
-    .in('status', ['delivered', 'failed', 'dead'])
-    .select('event_id')
+  // ONE statement via the replay_delivery RPC. The destination-is-live check lives INSIDE the UPDATE
+  // (an EXISTS subquery), not in a separate app-side precheck (cross-review, Codex round 13): a
+  // check-then-update lets a destination deleted in between turn a just-drained `dead` row back into
+  // `pending`, where nothing can ever claim it. Returns the event_id, or null if nothing matched —
+  // unknown/foreign id, an already-queued row, or a removed destination.
+  const { data, error } = await supabase.rpc('replay_delivery', {
+    p_project_id: projectId,
+    p_delivery_id: deliveryId,
+    p_now: now.toISOString(),
+  })
   if (error) {
     console.error('[deliveries] replay failed:', error)
     return { ok: false, error: 'Could not replay that delivery.' }
   }
-  if (!data || data.length === 0) {
-    return { ok: false, error: 'Delivery not found, or already queued.' }
+  const eventId = Array.isArray(data) ? (data[0] as string | undefined) : (data as string | null)
+  if (!eventId) {
+    return { ok: false, error: 'Delivery not found, already queued, or its destination was removed.' }
   }
-  return { ok: true, eventId: data[0].event_id as string }
+  return { ok: true, eventId }
 }
 
 // event-destination-router · Sprint 3, Story 3.3 — the delivery operating view.
