@@ -218,11 +218,13 @@ supabase link --project-ref <ref> && supabase migration list && supabase db push
 - **Supabase** — `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (service-role, server-only; `lib/supabase.ts` throws if missing).
 - **URLs** — `SITE_URL` (absolute-URL base; `lib/site-url.ts` — never a Host-header fallback, rule #5).
 - **Tenancy** — `DEMO_PROJECT_SLUG` + `DEMO_PROJECT_API_KEY` (the demo tenant), `DEMO_CONNECTOR_TOKEN`; `SELF_PROJECT_SLUG` + `SELF_PROJECT_API_KEY` (the landing's self-dogfood tenant).
-- **Gates** — `CONNECTOR_ENABLED` (`lib/flags.ts`, MCP connector kill-switch, ON in prod) and
+- **Gates** — `CONNECTOR_ENABLED` (`lib/flags.ts`, MCP connector kill-switch, ON in prod),
+  `JOURNEY_PROJECTIONS_ENABLED` (`lib/flags.ts`, journey registry/read/UI kill-switch, **born OFF**), and
   `SIGNUP_ENABLED` (`lib/flags.ts`, self-serve signup enablement gate, **born OFF**; gates the
   `/signup` page, `POST /api/v1/public/signup`, tenant provisioning in `/auth/callback`, and the
   landing's §1/§7 CTA flip — all four read it fresh per request, but every env change still needs a
-  new Git-tracked deployment because Vercel snapshots env values at build time).
+  new Git-tracked deployment because Vercel snapshots env values at build time). The same redeploy
+  requirement applies to every gate above.
   *A future epic adds `DESTINATION_DELIVERY_ENABLED`, also born OFF.*
 - **Tenancy limits are DATA, not env** — `projects.monthly_event_quota` / `projects.ingest_rate_per_min`
   (`lib/quota.ts`); raising a customer's ceiling is an `UPDATE`, never a deploy.

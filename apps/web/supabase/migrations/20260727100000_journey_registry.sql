@@ -373,7 +373,8 @@ BEGIN
 
   SELECT COALESCE(MAX(v.version), 0) + 1 INTO v_version
     FROM public.journey_definition_versions v
-   WHERE v.journey_id = v_journey_id;
+   WHERE v.project_id = p_project_id
+     AND v.journey_id = v_journey_id;
 
   INSERT INTO public.journey_definition_versions(
     project_id, journey_id, version, definition, created_by
@@ -428,13 +429,18 @@ BEGIN
 
   IF v_active_id IS NOT NULL THEN
     SELECT v.version INTO v_active_version
-      FROM public.journey_definition_versions v WHERE v.id = v_active_id;
+      FROM public.journey_definition_versions v
+     WHERE v.project_id = p_project_id
+       AND v.journey_id = p_journey_id
+       AND v.id = v_active_id;
     IF v_target_version <= v_active_version THEN RETURN false; END IF;
   END IF;
 
   UPDATE public.journey_definition_versions
      SET activated_by = p_actor_user_id, activated_at = statement_timestamp()
-   WHERE id = p_version_id;
+   WHERE project_id = p_project_id
+     AND journey_id = p_journey_id
+     AND id = p_version_id;
   UPDATE public.journey_registries SET active_version_id = p_version_id
    WHERE project_id = p_project_id AND id = p_journey_id;
   INSERT INTO public.journey_definition_audit(
@@ -443,6 +449,51 @@ BEGIN
     p_project_id, p_journey_id, p_version_id, 'version_activated', p_actor_user_id
   );
   RETURN true;
+END;
+$$;
+
+-- A projection must evaluate one complete, coherent fact set. Aggregating into one JSONB value
+-- keeps the read to one SQL statement/snapshot and one PostgREST row, avoiding both the row cap and
+-- cross-page movement during concurrent ingest. This remains strictly single-tenant: project_id is
+-- required and explicit in the only events SELECT.
+CREATE OR REPLACE FUNCTION get_journey_subject_events(
+  p_project_id UUID,
+  p_subject_type TEXT,
+  p_subject_id TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, pg_temp
+AS $$
+DECLARE
+  v_events JSONB;
+BEGIN
+  IF p_project_id IS NULL OR p_subject_type IS NULL OR p_subject_id IS NULL THEN
+    RAISE EXCEPTION 'project, subject type and subject id are required' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', e.id,
+        'event', e.event,
+        'tags', e.tags,
+        'occurred_at', e.occurred_at,
+        'created_at', e.created_at,
+        'subject_id', e.subject_id
+      ) ORDER BY e.created_at, e.id
+    ),
+    '[]'::JSONB
+  )
+  INTO v_events
+  FROM public.events e
+  WHERE e.project_id = p_project_id
+    AND e.subject_type = p_subject_type
+    AND e.subject_id = p_subject_id;
+
+  RETURN v_events;
 END;
 $$;
 
@@ -471,6 +522,9 @@ GRANT EXECUTE ON FUNCTION create_journey_version(UUID, TEXT, JSONB, UUID) TO ser
 REVOKE ALL ON FUNCTION activate_journey_version(UUID, UUID, UUID, UUID)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION activate_journey_version(UUID, UUID, UUID, UUID) TO service_role;
+REVOKE ALL ON FUNCTION get_journey_subject_events(UUID, TEXT, TEXT)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_journey_subject_events(UUID, TEXT, TEXT) TO service_role;
 
 COMMENT ON TABLE journey_definition_versions IS
   'Immutable, project-scoped journey documents. State is derived: active when referenced by journey_registries.active_version_id, superseded when previously activated, otherwise draft.';

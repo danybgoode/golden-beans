@@ -47,8 +47,20 @@ export async function createJourneyVersionAfterGate(
   // behind the owner boundary.
   const { projectId, userId } = await dependencies.requireOwnership(safeSlug)
 
-  const safeKey = requireString(journeyKey, 'journey key')
-  const raw = requireString(definitionJson, 'definition')
+  if (typeof journeyKey !== 'string') {
+    return {
+      slug: safeSlug,
+      result: { ok: false, error: 'Journey key must be lower_snake_case (1-64 characters).' },
+    }
+  }
+  const safeKey = journeyKey
+  if (typeof definitionJson !== 'string') {
+    return {
+      slug: safeSlug,
+      result: { ok: false, error: 'Definition must be a JSON string.' },
+    }
+  }
+  const raw = definitionJson
   if (!validateJourneyKey(safeKey)) {
     return {
       slug: safeSlug,

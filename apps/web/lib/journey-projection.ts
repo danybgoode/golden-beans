@@ -68,11 +68,15 @@ export function projectJourneySubject(
 
 export function eventMatchesStage(event: JourneyProjectionEvent, stage: JourneyStage): boolean {
   if (event.event !== stage.event) return false
-  for (const [key, expected] of Object.entries(stage.tags ?? {})) {
+  const predicates = Object.entries(stage.tags ?? {})
+  if (predicates.length === 0) return true
+  const eventTags: unknown = event.tags
+  if (eventTags === null || typeof eventTags !== 'object' || Array.isArray(eventTags)) return false
+  for (const [key, expected] of predicates) {
     // Exact is exact: do not coerce 42/"42", false/"false", or accept an object/array that merely
     // contains the expected value. Registry validation limits numeric predicates to bounded safe
     // integers, so strict equality remains exact after JSON/Postgres round-trips.
-    if (event.tags[key] !== expected) return false
+    if ((eventTags as Record<string, unknown>)[key] !== expected) return false
   }
   return true
 }

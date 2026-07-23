@@ -374,7 +374,7 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
   }
 })
 
-test('journey mutation RPCs are service-role-only with function-level denial, never an RLS fallthrough', async () => {
+test('journey RPCs are service-role-only with function-level denial, never an RLS fallthrough', async () => {
   const url = process.env.SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   test.skip(!url || !anon, 'anon key not available')
@@ -383,6 +383,7 @@ test('journey mutation RPCs are service-role-only with function-level denial, ne
   const calls: [string, Record<string, unknown>][] = [
     ['create_journey_version', { p_project_id: zero, p_journey_key: 'x', p_definition: VALID_DEFINITION, p_actor_user_id: zero }],
     ['activate_journey_version', { p_project_id: zero, p_journey_id: zero, p_version_id: zero, p_actor_user_id: zero }],
+    ['get_journey_subject_events', { p_project_id: zero, p_subject_type: 'merchant', p_subject_id: 'subject-one' }],
   ]
   for (const [name, args] of calls) {
     const { error } = await anonClient.rpc(name, args)

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
-import { projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
+import { eventMatchesStage, projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import type { JourneyDefinition } from '@/lib/journey-definition'
 
 // entity-journeys-projections · Sprint 1, Story 1.2.
@@ -18,8 +18,8 @@ import type { JourneyDefinition } from '@/lib/journey-definition'
 //      because `created` entered at day 4, not its earliest fact time day 1.
 //   C. Removed `events.project_id` from the resolver: the HTTP grep failed 1/1 because project
 //      two's same-subject event advanced project one's result to `selling` on day 3.
-//   D. Restored the resolver's single unpaged event query: the HTTP grep failed 1/1 because the
-//      qualifying stage and newest freshness fact after row 1,000 were silently omitted.
+//   D. Replaced the snapshot RPC with an explicitly one-page scoped query (`range(0, 999)`): the
+//      HTTP grep failed 1/1 because the qualifying stage and newest freshness fact were omitted.
 // Every mutation was reverted before the restored focused suite.
 
 const DEFINITION: JourneyDefinition = {
@@ -110,6 +110,14 @@ test('projection truth table: tag predicates require every exact scalar with no 
     fact({ subjectId, event: 'merchant_qualified', tags: { source: 'web', channel: true, campaign: 42 }, occurredAt: at(4) }),
   ])
   expect(result.history).toEqual([{ key: 'qualified', enteredAt: at(4) }])
+
+  const stage = definition.stages[0]
+  for (const tags of [null, undefined, [], 'web']) {
+    expect(eventMatchesStage(
+      { ...fact({ event: 'merchant_qualified' }), tags } as unknown as JourneyProjectionEvent,
+      stage,
+    )).toBe(false)
+  }
 })
 
 function db(): SupabaseClient {

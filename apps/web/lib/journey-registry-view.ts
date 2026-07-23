@@ -56,6 +56,16 @@ export type JourneyRegistryView = {
   versions: JourneyVersionView[]
 }
 
+export function canActivateJourneyVersion(
+  registry: JourneyRegistryView,
+  candidate: JourneyVersionView,
+): boolean {
+  if (candidate.state !== 'draft') return false
+  if (registry.activeVersionId === null) return true
+  const active = registry.versions.find((version) => version.id === registry.activeVersionId)
+  return active !== undefined && candidate.version > active.version
+}
+
 export function mapJourneyRegistryRows(rows: JourneyRegistryRelationRow[]): JourneyRegistryView[] {
   return rows.map((registry) => ({
     id: registry.id,

@@ -3,6 +3,7 @@ import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
 import type { JourneyRegistryRow } from '@/lib/journeys'
+import { canActivateJourneyVersion } from '@/lib/journey-registry-view'
 import { activateJourneyVersionAction, createJourneyVersionAction } from './actions'
 
 const EXAMPLE = JSON.stringify(
@@ -127,7 +128,7 @@ export function JourneyManager({
                         <summary>Definition</summary>
                         <pre>{JSON.stringify(version.definition, null, 2)}</pre>
                       </details>
-                      {canManage && version.state === 'draft' && (
+                      {canManage && canActivateJourneyVersion(journey, version) && (
                         <button
                           type="button"
                           disabled={pending}

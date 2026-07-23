@@ -5,6 +5,10 @@ import {
   createJourneyVersionAfterGate,
   type JourneyCreateCommandDependencies,
 } from '@/lib/journey-create-command'
+import {
+  canActivateJourneyVersion,
+  type JourneyRegistryView,
+} from '@/lib/journey-registry-view'
 
 // entity-journeys-projections · PR #17 review fixes.
 // These are pure command/display checks: no Next runtime, session fixture or brittle source-text
@@ -68,6 +72,15 @@ test('an authorized owner reaches validation and the resolved identity scopes cr
     error: 'Journey key must be lower_snake_case (1-64 characters).',
   })
 
+  for (const invalidKey of [null, undefined, 42, {}]) {
+    expect((await createJourneyVersionAfterGate('project-one', invalidKey, VALID_DEFINITION, dependencies)).result)
+      .toEqual({ ok: false, error: 'Journey key must be lower_snake_case (1-64 characters).' })
+  }
+  for (const invalidDefinition of [null, undefined, 42, {}]) {
+    expect((await createJourneyVersionAfterGate('project-one', 'merchant_activation', invalidDefinition, dependencies)).result)
+      .toEqual({ ok: false, error: 'Definition must be a JSON string.' })
+  }
+
   const created = await createJourneyVersionAfterGate(
     'project-one',
     'merchant_activation',
@@ -81,6 +94,25 @@ test('an authorized owner reaches validation and the resolved identity scopes cr
     { entityType: 'merchant', stages: [{ key: 'signed_up', event: 'merchant_signed_up' }] },
     'owner-1',
   ]])
+})
+
+test('only drafts newer than the active journey version remain actionable', () => {
+  const definition = { entityType: 'merchant', stages: [{ key: 'signed_up', event: 'merchant_signed_up' }] }
+  const registry: JourneyRegistryView = {
+    id: 'journey-1',
+    key: 'merchant_activation',
+    activeVersionId: 'version-3',
+    createdBy: 'owner-1',
+    createdAt: '2026-07-22T00:00:00.000Z',
+    versions: [
+      { id: 'version-4', version: 4, definition, createdBy: 'owner-1', createdAt: '2026-07-22T04:00:00.000Z', activatedBy: null, activatedAt: null, state: 'draft' },
+      { id: 'version-3', version: 3, definition, createdBy: 'owner-1', createdAt: '2026-07-22T03:00:00.000Z', activatedBy: 'owner-1', activatedAt: '2026-07-22T03:30:00.000Z', state: 'active' },
+      { id: 'version-2', version: 2, definition, createdBy: 'owner-1', createdAt: '2026-07-22T02:00:00.000Z', activatedBy: null, activatedAt: null, state: 'draft' },
+    ],
+  }
+  expect(canActivateJourneyVersion(registry, registry.versions[0])).toBe(true)
+  expect(canActivateJourneyVersion(registry, registry.versions[1])).toBe(false)
+  expect(canActivateJourneyVersion(registry, registry.versions[2])).toBe(false)
 })
 
 test('formatUtc is timezone-stable and malformed timestamps render a safe placeholder', () => {

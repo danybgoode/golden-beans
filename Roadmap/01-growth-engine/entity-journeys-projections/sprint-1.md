@@ -39,9 +39,10 @@ irrelevant events are ignored; response names definition version and source fres
 **Risk:** low — read-only pure/query logic over existing telemetry.
 
 **Implementation status:** pure query-time evaluation reads only canonical, project-scoped subject facts;
-the resolver drains deterministic ≤1,000-row pages ordered by immutable `created_at`, then event id,
-with the project/entity/subject scope repeated on every page. Evaluation still orders the complete set
-by `occurred_at ?? created_at`, then canonical event id, and records only actual first satisfaction
+the resolver calls a service-role-only RPC whose single project/entity/subject-scoped SQL statement
+aggregates the complete ordered fact set into one JSONB value. One database snapshot avoids both
+PostgREST's row cap and cross-page movement during concurrent ingest. Evaluation then orders the complete
+set by `occurred_at ?? created_at`, then canonical event id, and records only actual first satisfaction
 timestamps. The version is required on API reads, history is definition-stage order, and freshness
 reports the latest effective fact time separately from latest receipt time. The canonical
 API is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positive-integer>`; no
@@ -59,6 +60,17 @@ now paginates the complete scoped subject fact set; a real DB/API fixture places
 the newest freshness fact after 1,000 earlier rows, and restoring the single-page query fails that spec.
 Also accepted defensive rejected-promise handling for both UI mutations and lower-snake-case route-key
 validation after the OFF/auth gates but before the resolver. The two-project collision tripwire remains.
+
+**PR #17 round-three disposition:** accepted structured owner-side validation for non-string action
+arguments and defensive runtime handling for malformed event tags. The unauthorized oracle-order proof
+still reaches ownership before those checks. Antigravity's suggestion to remove `service_role` RPC grants
+was rejected: the Server Actions and subject route use the server-only service-role client to call these
+functions, so after `PUBLIC`/`anon`/`authenticated` are revoked, the explicit `service_role` grants are
+the intended and necessary execution path; the function-level anonymous denials remain pinned by DB specs.
+Codex's concurrent-ingest finding replaced offset pagination with the single-snapshot aggregate RPC;
+its missing-tenant-predicate finding added `project_id` to every create/activate version lookup and update.
+The UI now hides obsolete drafts, and the root env reference lists the born-OFF journey gate plus redeploy
+requirement.
 
 ## Sprint QA
 
