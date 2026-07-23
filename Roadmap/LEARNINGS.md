@@ -353,10 +353,18 @@ one-liner + why + date shape.
   baseline architectural/security read; Devin's default router earns the second seat for high-risk
   migrations, tenancy and concurrency; Cursor Auto is slower/quota-limited but caught two real S1
   boundary defects (audit-cascade SQL and Unicode whitespace), so it remains a specialist/tie-breaker
-  when quota permits. OpenAI/Codex stays in the builder/architect role, not review. Rerun the finder
-  after substantive fixes (both Agy+Devin for high-risk fixes); do targeted validation rather than
-  two fresh full reads for wording/presentation-only deltas. Different tools are coverage, not a
-  ceremonial pass count.
+  when quota permits. OpenAI/Codex stays in the builder/architect role, not review. The efficient
+  high-risk sequence is Agy early → fix/rerun to clean → Devin once on the stabilized exact head;
+  rerun the finder after a substantive fix, and rerun the other tool only if the fix crosses the
+  boundary it reviewed. Do targeted validation rather than two fresh full reads for wording/
+  presentation-only deltas. Different tools are coverage, not a ceremonial pass count.
+- **A model catalog is not an entitlement list, and free-tier Devin needs strict triage.**
+  `devin models list` advertised named Claude tiers that returned `/upgrade` when invoked; the free
+  default router did run headlessly, but on Experiment Governance S2 it ignored an explicit
+  `origin/main...HEAD` boundary and promoted seven already-shipped or intentional facts as findings.
+  Keep its read-only prompt explicit, verify every cited line against the actual diff, and record false
+  positives rather than converting them into churn. This still earns a high-risk second seat because it
+  is a cheap independent repository scout; it does not replace Agy's cleaner diff discipline.
 - **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
   spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
   S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a
@@ -438,6 +446,20 @@ one-liner + why + date shape.
   raised the ceiling after exactly ONE rejection, which the bug survived. **Whenever the documented
   recovery procedure for a limit is "change the limit", write the spec that abuses it first.**
   *(2026-07-21, multi-tenant-activation S2.)*
+- **A write-side resource cap only guarantees readability if it measures the SAME bytes the read-side
+  bound sums — aligning the number is not aligning the measurement.** experiment-governance-v2 S3's
+  append-only decision ledger capped cumulative writes on `analysis_snapshot` bytes only, while the
+  read resolver's bound summed `rationale + analysis + integrity` per row. Because the read total is
+  always strictly greater, a history of long/multi-byte rationales (well within the supported 100
+  records) could be *accepted on write yet permanently unreadable* on read (`resource_limit`) — and an
+  append-only immutable ledger can never be shrunk, so it bricks the whole governed view (UI/API/MCP)
+  forever. An earlier fix that only lowered the write number (8→4 MiB) looked right and was still
+  wrong; the real fix makes the write path count the exact same fields (`jsonb_build_object` of all
+  three) so write-accept ⟹ read-accept by construction. **When two layers both bound the same data,
+  make them measure the same thing, and prove it with a teeth test that fills to the write cap then
+  round-trips the max-accepted payload through the real read path** — mutation-verify it fails against
+  the single-field cap. Green tests with small payloads never exercise this; a fresh cold reviewer
+  found it after typecheck+build+307-passing-api+dark all passed. *(2026-07-23, experiment-governance-v2 S3.)*
 - **Fixing a review finding by adding a MODE is a smell; fixing it by MOVING the code is usually
   right.** A retry path placed in a Server Component couldn't set cookies, which forced a
   "provision without handing over a key" mode, which then silently skipped a starter-feature

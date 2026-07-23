@@ -1,6 +1,22 @@
 # Experiment governance v2 — Sprint 3: Decision record, operating parity and Miyagi proof
 
-**Status:** ⬜ not started
+**Status:** 🟨 built, reviewed and CI-green in PR [#23](https://github.com/danybgoode/golden-beans/pull/23); production
+migration/flag rollout and the live Miyagi proof remain owed to Daniel (see "Owed to Daniel" below)
+
+**Commit refs:** 3.1 `db69d5b` + `a3b65a3` (review fix) · 3.2 `e642b99` · 3.3 `12d5d1b`
+
+**Review:** fresh cold reviewer found one BLOCKING cap-alignment defect (write cap counted only the analysis
+snapshot while the read bound sums rationale+analysis+integrity → a long-rationale history could be accepted yet
+be unreadable); fixed and mutation-verified with a teeth spec. Agy and Devin then reviewed the fixed branch clean
+(Agy's single "should-fix" was a hallucinated type union — `tsc` is green). CI: Playwright api + type-check/build
++ Vercel preview all pass.
+
+**Owed to Daniel (owner-only, not done in this PR — each needs naming by name):**
+1. Merge #23 (high-risk: auth/DB/immutable ledger).
+2. Apply migration `20260801100000_experiment_decision_records.sql` to production Supabase (separate from deploy).
+3. Flip `EXPERIMENT_GOVERNANCE_ENABLED` in production (needs a new Git-tracked deployment) + live verification.
+4. Story 3.3 live: drive Tiendas Fundadoras exposure through Miyagi's own flag and record the production human
+   decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's flag.
 
 ## Stories
 
