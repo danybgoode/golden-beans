@@ -321,6 +321,66 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
       asOf: canonicalHistoricalAsOf,
     })
 
+    const stoppedSnapshotResponse = await request.get(
+      `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}`,
+      { headers: { Authorization: `Bearer ${one.key}` } },
+    )
+    expect(stoppedSnapshotResponse.status()).toBe(200)
+    const stoppedSnapshot = await stoppedSnapshotResponse.json()
+    expect(stoppedSnapshot.decisions).toEqual({
+      state: 'undecided',
+      current: null,
+      history: [],
+    })
+    const decision = await client.rpc('record_experiment_decision', {
+      p_project_id: one.id,
+      p_experiment_id: versionOne.experimentId,
+      p_version_id: versionOne.versionId,
+      p_record_kind: 'decision',
+      p_outcome: 'inconclusive',
+      p_chosen_variant_key: null,
+      p_rationale: 'The fixture proves parity without authorizing an automatic rollout.',
+      p_analysis_snapshot: {
+        contractVersion: 1,
+        capturedAt: stoppedSnapshot.analysis.window.asOf,
+        ...stoppedSnapshot.analysis,
+      },
+      p_actor_user_id: ownerOne,
+      p_idempotency_key: crypto.randomUUID(),
+      p_supersedes_record_id: null,
+    })
+    expect(decision.error).toBeNull()
+
+    const decidedResponse = await request.get(
+      `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}`,
+      { headers: { Authorization: `Bearer ${one.key}` } },
+    )
+    expect(decidedResponse.status()).toBe(200)
+    const decidedBody = await decidedResponse.json()
+    expect(decidedBody.experiment.lifecycle).toBe('decided')
+    expect(decidedBody.decisions).toMatchObject({
+      state: 'decided',
+      current: {
+        ordinal: 1,
+        definitionVersion: versionOne.version,
+        recordKind: 'decision',
+        outcome: 'inconclusive',
+        chosenVariantKey: null,
+        actorUserId: ownerOne,
+      },
+      history: [{ ordinal: 1, outcome: 'inconclusive' }],
+    })
+    const serializedDecision = JSON.stringify(decidedBody.decisions)
+    expect(serializedDecision).not.toContain('idempotency')
+    expect(serializedDecision).not.toContain('z-control-0')
+    const decisionMcp = await mcpCall(request, one.token, 'get_experiment_analysis', {
+      experimentKey,
+      version: versionOne.version,
+      asOf: decidedBody.analysis.window.asOf,
+    })
+    expect(decisionMcp.response.status()).toBe(200)
+    expect(decisionMcp.payload).toEqual(decidedBody)
+
     expect((await client.from('connector_tokens')
       .update({ revoked_at: new Date().toISOString() })
       .eq('token', one.token)).error).toBeNull()

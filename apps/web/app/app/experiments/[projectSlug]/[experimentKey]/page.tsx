@@ -4,7 +4,9 @@ import { requireDashboardAccess, requireProjectMembership } from '@/lib/dashboar
 import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
 import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-request'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
+import { isOwner } from '@/lib/roles'
 import type { GovernedExperimentAnalysisResult } from '@/lib/experiment-analysis-query'
+import { DecisionRecorder } from './decision-recorder'
 
 type GovernedSuccess = Extract<GovernedExperimentAnalysisResult, { ok: true }>
 type GovernedMetric = GovernedSuccess['analysis']['primaryMetric']
@@ -73,10 +75,12 @@ function MetricTable({
 
 function GovernedAnalysis({
   result,
+  canManage,
 }: {
   result: GovernedSuccess
+  canManage: boolean
 }) {
-  const { experiment, analysis } = result
+  const { experiment, analysis, decisions } = result
   return (
     <main>
       <h1>
@@ -155,6 +159,68 @@ function GovernedAnalysis({
       {analysis.guardrailMetrics.map((metric) => (
         <MetricTable key={metric.event} title="Guardrail" metric={metric} />
       ))}
+
+      <section>
+        <h2>Human decision ledger</h2>
+        <p>
+          State: <strong>{decisions.state}</strong>
+          {decisions.current && (
+            <>
+              {' · '}current outcome: <strong>{decisions.current.outcome}</strong>
+              {decisions.current.chosenVariantKey && (
+                <> (<code>{decisions.current.chosenVariantKey}</code>)</>
+              )}
+            </>
+          )}
+        </p>
+        {decisions.history.length === 0 ? (
+          <p>No human decision has been recorded for this immutable version.</p>
+        ) : (
+          <ol>
+            {decisions.history.map((decision) => (
+              <li key={decision.id}>
+                <strong>
+                  #{decision.ordinal} {decision.recordKind}: {decision.outcome}
+                </strong>
+                {decision.chosenVariantKey && (
+                  <> — <code>{decision.chosenVariantKey}</code></>
+                )}
+                <p>{decision.rationale}</p>
+                <p>
+                  Recorded by <code>{decision.actorUserId}</code>
+                  {' at '}<time>{decision.createdAt}</time>
+                  {' · '}definition v{decision.definitionVersion}
+                  {decision.supersedesRecordId && (
+                    <> · supersedes <code>{decision.supersedesRecordId}</code></>
+                  )}
+                </p>
+                <details>
+                  <summary>Captured analysis and integrity evidence</summary>
+                  <pre>{JSON.stringify({
+                    analysis: decision.analysisSnapshot,
+                    integrity: decision.integritySnapshot,
+                  }, null, 2)}</pre>
+                </details>
+              </li>
+            ))}
+          </ol>
+        )}
+        {canManage ? (
+          <DecisionRecorder
+            slug={result.project.slug}
+            experimentKey={experiment.key}
+            definitionVersion={experiment.definitionVersion}
+            lifecycle={experiment.lifecycle}
+            controlVariantKey={experiment.definition.controlVariantKey}
+            treatmentVariantKeys={experiment.definition.variants
+              .map((variant) => variant.key)
+              .filter((key) => key !== experiment.definition.controlVariantKey)}
+            currentDecisionId={decisions.current?.id ?? null}
+          />
+        ) : (
+          <p><strong>Read-only access.</strong> A project owner records decisions and corrections.</p>
+        )}
+      </section>
       <p>
         <em>
           Descriptive counts and basic lift only. Golden Beans does not declare a winner,
@@ -208,7 +274,12 @@ export default async function ExperimentComparisonPage({
       }
       notFound()
     }
-    return <GovernedAnalysis result={result} />
+    return (
+      <GovernedAnalysis
+        result={result}
+        canManage={isOwner({ projectId: membership.projectId, role: membership.role })}
+      />
+    )
   }
 
   await requireDashboardAccess(projectSlug)
