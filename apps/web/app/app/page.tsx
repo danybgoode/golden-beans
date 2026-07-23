@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
-import { isSignupEnabled } from '@/lib/flags'
+import { isJourneyProjectionsEnabled, isSignupEnabled } from '@/lib/flags'
 import { SignOutButton } from './sign-out-button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
@@ -71,6 +71,12 @@ export default async function AppHome({
                   <a href={`/app/impact/${project.slug}/${DEFAULT_FEATURE_HINT}`}>Impact</a>{' '}
                   <small>— swap the feature key in the URL</small>
                 </li>
+                {isJourneyProjectionsEnabled() && (
+                  <li>
+                    <a href={`/app/journeys/${project.slug}`}>Journeys</a>{' '}
+                    <small>— {project.role === 'owner' ? 'define and activate' : 'read-only'}</small>
+                  </li>
+                )}
                 {project.role === 'owner' && (
                   <>
                     <li>

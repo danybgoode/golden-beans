@@ -140,8 +140,9 @@ function epicTitle(epicPath, slug) {
 // epics label them by epic-letter (`## C.1`, `### B1.1`, `## D.2`). Matching only `### S/US/Story`
 // silently undercounted ~22 epics to "0 stories" (status then leaned on the retro-floor by luck). The
 // letter form requires a `.digit` (`[A-Z]\d*\.\d+`) so it can't false-fire on `## QA` / `## Stories`. ---
-const STORY_RE = /^#{2,3}\s+(?:Story\s+\d+|S\d+(?:\.\d+)?(?:\s*\([^)]*\))?|US-\d+|[A-Z]\d*\.\d+)\b/i;
-function countStories(body) {
+const STORY_RE =
+  /^#{2,3}\s+(?:✅|⬜|🟦|🏗️?)?\s*(?:Story\s+\d+|S\d+(?:\.\d+)?(?:\s*\([^)]*\))?|US-\d+|[A-Z]\d*\.\d+)\b/i;
+export function countStories(body) {
   let total = 0, done = 0;
   for (const line of body.split('\n')) {
     if (STORY_RE.test(line)) { total++; if (line.includes('✅')) done++; }
