@@ -109,6 +109,10 @@ export async function cleanupExperimentProjects(projectIds: string[]): Promise<v
     await client.query('BEGIN')
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
     await client.query(
+      'DELETE FROM public.experiment_decision_records WHERE project_id = ANY($1::uuid[])',
+      [projectIds],
+    )
+    await client.query(
       'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
       [projectIds],
     )
