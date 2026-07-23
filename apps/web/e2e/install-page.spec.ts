@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { isJourneyMcpToolEnabled } from '@/lib/flags'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page's copy-your-URL field must show a
 // real, live connector URL (seeded by scripts/seed-demo-project.mjs), not a placeholder.
@@ -18,5 +19,11 @@ test('the /install page renders a live connector URL that actually round-trips',
   })
   expect(res.status()).toBe(200)
   const body = await res.json()
-  expect(body.result.tools.length).toBe(3)
+  const names = body.result.tools.map((tool: { name: string }) => tool.name).sort()
+  expect(names).toEqual([
+    'compare_experiment',
+    ...(isJourneyMcpToolEnabled() ? ['get_journey_cohort'] : []),
+    'get_north_star',
+    'get_tars_funnel',
+  ])
 })
