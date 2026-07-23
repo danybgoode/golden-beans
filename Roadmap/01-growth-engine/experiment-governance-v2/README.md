@@ -75,11 +75,12 @@ two-project isolation and synthetic clean/SRM fixtures pass; real Miyagi traffic
 ## Definition of Done (epic)
 
 > Sprints 1–2 merged (#19, #22); Sprint 3 merged (#23). Migration applied to production and
-> `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON in production (2026-07-23) with a live decision round-trip
-> verified. One operational follow-up remains: the live Miyagi (Tiendas Fundadoras) dogfood decision.
+> `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON in production (2026-07-23), flag flip verified live (governed
+> routes now authenticate instead of 404). Two authenticated browser smokes remain: the production decision
+> round-trip and the live Miyagi (Tiendas Fundadoras) dogfood decision.
 
-- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *live Miyagi dogfood is the stated gap*
-- [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *prod decision round-trip verified; Miyagi walkthrough follows*
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *prod decision round-trip + Miyagi dogfood are the stated browser-smoke gaps*
+- [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *walkthroughs documented; S3 authenticated prod walkthrough is the owed browser smoke*
 - [x] Existing local bucketing/exposure/v1 comparison remain compatible with governance OFF — *dark-state pass green*
 - [x] Realistic untagged conversions, SRM and exposure-integrity fixtures pass deterministically
 - [x] UI/API/MCP share one resolver and pass two-project + connector-gate isolation

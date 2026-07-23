@@ -1,7 +1,8 @@
 # Experiment governance v2 — Retrospective
 
-_Shipped & LIVE in production: 2026-07-23 (PRs #19/#22/#23; migration applied, flag flipped ON, live decision
-round-trip verified). One operational follow-up remains: the live Miyagi dogfood decision — see Gaps._
+_Shipped & LIVE in production: 2026-07-23 (PRs #19/#22/#23; migration applied, flag flipped ON, flag flip
+verified live). Two authenticated browser smokes remain: the production decision round-trip and the live Miyagi
+dogfood decision — see Gaps._
 
 ## What shipped
 
@@ -55,12 +56,15 @@ untouched.
 ## Gaps / follow-ups
 
 **Done on 2026-07-23 (rollout):** merged #23 · migration applied to prod Supabase · `EXPERIMENT_GOVERNANCE_ENABLED`
-flipped false→true and activated by a redeploy · live decision round-trip verified (create→stop→decide→read via
-API+MCP→correct) · README/poster/build-order finalized · feature branch deleted.
+flipped false→true and activated by a redeploy (`ea55ec0`) · **flag flip verified live** (governed `?version`
+route now 401/needs-auth instead of the OFF-state 404) · README/poster/build-order finalized · feature branch
+deleted. The ledger's functional correctness is covered by the 307-spec CI/local gate, not a prod round-trip.
 
-**Remaining operational follow-up (one):**
+**Remaining follow-ups (both authenticated browser smokes):**
 
-1. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
-   record the production human decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's
-   flag. This is a dogfood on top of the now-live, verified governance capability — not a code gap. Needs the
-   Miyagi repo/flag access details before it can be scheduled.
+1. **Production decision round-trip** through the UI — an owner creates a disposable experiment → stop → record an
+   `inconclusive` decision → confirm it reads back identically via API + MCP → append a correction. Needs an owner
+   session, so it is a browser smoke rather than an automated check.
+2. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
+   record the production human decision (cross-repo). Golden Beans never reads or changes Miyagi's flag. A dogfood
+   on top of the now-live governance capability — not a code gap. Needs the Miyagi repo/flag access details.

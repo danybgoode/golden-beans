@@ -1,8 +1,9 @@
 # Experiment governance v2 — Sprint 3: Decision record, operating parity and Miyagi proof
 
 **Status:** ✅ shipped & LIVE in production — merged in PR [#23](https://github.com/danybgoode/golden-beans/pull/23),
-migration `20260801100000` applied to prod Supabase, and `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON (2026-07-23)
-with a live decision round-trip verified. One operational follow-up remains: the live Miyagi dogfood decision.
+migration `20260801100000` applied to prod Supabase, and `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON (2026-07-23),
+flag flip verified live. Two follow-ups remain (both browser smokes): the authenticated production decision
+round-trip and the live Miyagi (Tiendas Fundadoras) dogfood decision.
 
 **Commit refs:** 3.1 `db69d5b` + `a3b65a3` (review fix) · 3.2 `e642b99` · 3.3 `12d5d1b`
 
@@ -14,12 +15,19 @@ be unreadable); fixed and mutation-verified with a teeth spec. Agy and Devin the
 
 **Production rollout (2026-07-23):** (1) merged #23 dark; (2) `supabase db push` applied the decision-records
 migration to prod (`slweidgffcfndnskcskc`) — the only pending one; (3) `EXPERIMENT_GOVERNANCE_ENABLED` false→true
-on Vercel Production, activated by a redeploy commit to `main`; (4) live round-trip verified (create → stop →
-record `inconclusive` decision → read back byte-identical via authenticated API + MCP → append a correction).
+on Vercel Production, activated by a redeploy commit to `main` (`ea55ec0`); (4) **flag flip verified live** — the
+governed `?version` compare route now returns 401 (needs auth) instead of the OFF-state 404, confirming the
+governance gate is enabled in production. The ledger's functional behaviour (create→stop→decide→read via API+MCP,
+immutability, idempotency, correction chain, cap bounds) is covered by the CI/local gate (307 api specs), not a
+prod round-trip.
 
-**Remaining operational follow-up:** Story 3.3 live — drive Tiendas Fundadoras exposure through Miyagi's own flag
-and record the production human decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's
-flag. This is a dogfood step on top of the now-live governance capability, not a code gap.
+**Remaining follow-ups (both authenticated browser smokes, owed):**
+1. The authenticated **production decision round-trip** through the UI (owner creates a disposable experiment →
+   stop → record an `inconclusive` decision → confirm it reads back identically via API + MCP → append a
+   correction). Needs an owner session, so it is a browser smoke rather than an automated check.
+2. Story 3.3 live — drive Tiendas Fundadoras exposure through Miyagi's own flag and record the production human
+   decision (cross-repo). Golden Beans never reads or changes Miyagi's flag. A dogfood on top of the now-live
+   capability, not a code gap; needs the Miyagi repo/flag access details.
 
 ## Stories
 
