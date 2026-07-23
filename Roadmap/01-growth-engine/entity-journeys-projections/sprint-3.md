@@ -1,6 +1,6 @@
 # Entity journeys — Sprint 3: Miyagi founding-merchant proof and scale decision
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress
 
 ## Stories
 
@@ -16,6 +16,13 @@ commerce state enters Golden Beans; both repos share the same contract fixture.
 
 **Risk:** high — cross-repo identity/event contract and real tenant smoke; Daniel merges both PRs.
 
+**Build contract:** the byte-identical canonical fixture is
+`apps/web/e2e/_fixtures/merchant-lifecycle.fixtures.json`, pinned to the same SHA-256 as Miyagi's
+`e2e/_fixtures/merchant-lifecycle.fixtures.json`. The journey is the 13 `merchant.<stage>` events;
+the separate `merchant.preview_approved` delivery signal remains valid but is not a fourteenth analytical stage.
+The definition is import-free application data in `lib/founding-merchant-journey.ts`, with no tag predicates or
+place to carry merchant PII/CRM/commerce state.
+
 ### Story 3.2 — Query-time scale decision from measured evidence
 
 **As a** platform owner, **I want** evidence for or against materialization, **so that** Golden Beans adds
@@ -26,6 +33,12 @@ subject data; thresholds are p95 >2s or >1M relevant events per project/journey 
 evidence-backed keep-query-time decision or a separate materialization scope seed—never hidden work in this epic.
 
 **Risk:** low — bounded operational telemetry and documentation.
+
+**Build contract:** every successful subject/cohort resolver records only project, journey/version, query kind,
+duration and relevant-event count through a service-role-only RPC. Each series retains its latest 100 samples
+and returns p50/p95 plus the strict `p95 > 2,000 ms` / `max relevant events > 1,000,000` decision. Telemetry
+failure never breaks the analytical read and is reported as unavailable; no subject id, tags or result payload
+may enter the observation table.
 
 ## Sprint QA
 
