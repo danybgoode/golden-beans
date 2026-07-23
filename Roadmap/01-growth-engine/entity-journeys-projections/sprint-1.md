@@ -110,6 +110,10 @@ explicit loopback host and the local Supabase database port; focused fixtures ac
 `localhost` local forms while rejecting remote, wrong-port and malformed values without echoing credentials.
 The guard also rejects every connection option or fragment because node-postgres otherwise lets query
 parameters override the URI authority's host/port after the visible local URL has passed validation.
+The same test boundary now requires the independent service-role `SUPABASE_URL` to be the standard
+loopback API endpoint, preventing a mixed environment from writing remote fixtures and cleaning locally.
+Activation resolves project ownership before validating journey/version identifiers, so foreign callers
+cannot use malformed action arguments as a management-seam oracle.
 
 ## Sprint QA
 

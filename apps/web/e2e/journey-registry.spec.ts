@@ -14,7 +14,11 @@ import {
   mapJourneyRegistryRows,
   type JourneyRegistryRelationRow,
 } from '@/lib/journey-registry-view'
-import { cleanupJourneyProjects, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import {
+  cleanupJourneyProjects,
+  requireLocalSupabaseApiUrl,
+  requireTestDatabaseUrl,
+} from './helpers/test-db-cleanup'
 
 // entity-journeys-projections · Sprint 1, Story 1.1.
 // Pure contract + HTTP dark path + database state machine. The database tests drive the same
@@ -45,9 +49,9 @@ const VALID_DEFINITION = {
 
 function db(): SupabaseClient {
   requireTestDatabaseUrl()
-  const url = process.env.SUPABASE_URL
+  const url = requireLocalSupabaseApiUrl()
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set')
+  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY must be set')
   return createClient(url, key, { auth: { persistSession: false } })
 }
 
@@ -464,10 +468,10 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
 })
 
 test('journey RPCs are service-role-only with function-level denial, never an RLS fallthrough', async () => {
-  const url = process.env.SUPABASE_URL
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  test.skip(!url || !anon, 'anon key not available')
-  const anonClient = createClient(url!, anon!, { auth: { persistSession: false } })
+  test.skip(!process.env.SUPABASE_URL || !anon, 'local Supabase or anon key not available')
+  const url = requireLocalSupabaseApiUrl()
+  const anonClient = createClient(url, anon!, { auth: { persistSession: false } })
   const zero = '00000000-0000-0000-0000-000000000000'
   const calls: [string, Record<string, unknown>][] = [
     ['create_journey_version', { p_project_id: zero, p_journey_key: 'x', p_definition: VALID_DEFINITION, p_actor_user_id: zero }],

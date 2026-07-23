@@ -6,7 +6,11 @@ import { MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { eventMatchesStage, projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import type { JourneyDefinition } from '@/lib/journey-definition'
 import { parseJourneyTimestamp } from '@/lib/journey-timestamp'
-import { cleanupJourneyProjects, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import {
+  cleanupJourneyProjects,
+  requireLocalSupabaseApiUrl,
+  requireTestDatabaseUrl,
+} from './helpers/test-db-cleanup'
 
 // entity-journeys-projections · Sprint 1, Story 1.2.
 // Pure truth-table coverage plus one real Bearer-authenticated query. The HTTP fixture intentionally
@@ -175,9 +179,9 @@ test('projection truth table: tag predicates require every exact scalar with no 
 
 function db(): SupabaseClient {
   requireTestDatabaseUrl()
-  const url = process.env.SUPABASE_URL
+  const url = requireLocalSupabaseApiUrl()
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set')
+  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY must be set')
   return createClient(url, key, { auth: { persistSession: false } })
 }
 

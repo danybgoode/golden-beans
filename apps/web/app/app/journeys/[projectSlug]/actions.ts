@@ -38,9 +38,11 @@ export async function activateJourneyVersionAction(
 ) {
   requireGate()
   const safeSlug = requireString(slug, 'project')
+  // Resolve session ownership before validating action-specific identifiers so a non-owner cannot
+  // use malformed arguments to distinguish this management seam from an authorization failure.
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeJourneyId = requireString(journeyId, 'journey id')
   const safeVersionId = requireString(versionId, 'version id')
-  const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const result = await activateJourneyVersion(projectId, safeJourneyId, safeVersionId, userId)
   if (result.ok) revalidatePath(`/app/journeys/${safeSlug}`)
   return result

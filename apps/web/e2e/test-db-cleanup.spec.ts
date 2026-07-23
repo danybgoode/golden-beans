@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import { requireLocalSupabaseApiUrl, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
 
 test.describe('test database cleanup guard', () => {
   test('accepts only local Supabase loopback URLs on the configured database port', () => {
@@ -27,6 +27,34 @@ test.describe('test database cleanup guard', () => {
       let message = ''
       try {
         requireTestDatabaseUrl({ SUPABASE_DB_URL: url })
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error)
+      }
+      expect(message).not.toBe('')
+      expect(message).not.toContain('do-not-print')
+    }
+  })
+
+  test('also refuses a mixed environment whose service-role API target is not local Supabase', () => {
+    for (const url of [
+      'http://127.0.0.1:54321',
+      'http://localhost:54321/',
+      'http://[::1]:54321',
+    ]) {
+      expect(requireLocalSupabaseApiUrl({ SUPABASE_URL: url })).toBe(url)
+    }
+
+    for (const url of [
+      'https://project.supabase.co',
+      'http://127.0.0.1:8000',
+      'http://127.0.0.1:54321/?host=project.supabase.co',
+      'http://user:do-not-print@127.0.0.1:54321/',
+      'not-a-url',
+      '',
+    ]) {
+      let message = ''
+      try {
+        requireLocalSupabaseApiUrl({ SUPABASE_URL: url })
       } catch (error) {
         message = error instanceof Error ? error.message : String(error)
       }
