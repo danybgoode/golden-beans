@@ -68,3 +68,9 @@ export function isExperimentGovernanceEnabled(): boolean {
 export function isJourneyMcpToolEnabled(): boolean {
   return isConnectorEnabled() && isJourneyProjectionsEnabled()
 }
+
+/** Governed experiment reads are independently removable while the legacy compare tool remains
+ * available. The connector route still enforces its route-wide flag and revocable token first. */
+export function isExperimentGovernanceMcpToolEnabled(): boolean {
+  return isConnectorEnabled() && isExperimentGovernanceEnabled()
+}

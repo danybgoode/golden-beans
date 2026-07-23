@@ -1,6 +1,6 @@
 # Experiment governance v2 — Sprint 2: Trust diagnostics, metrics and segments
 
-**Status:** ⬜ not started
+**Status:** 🟨 built and locally verified; external review, preview and production rollout remain
 
 ## Stories
 
@@ -46,6 +46,30 @@ API and MCP call one resolver; no contact/high-cardinality values appear.
   sample threshold boundaries and UI/API/MCP equality.
 - **browser smoke owed:** yes, to Daniel — authenticated report with one clean and one deliberately skewed run.
 - **deterministic gate:** typecheck + build + API/MCP tests green; non-zero realistic fixture required.
+
+## Implemented analysis contract
+
+- Effective fact time is `occurred_at ?? created_at`; canonical ordering is effective time then event UUID.
+  The immutable planned start applies, while planned end is truncated by stop time or the explicit `asOf`
+  snapshot. Windows are exact `[start,end)` intervals.
+- The first valid, version-matching exposure assigns the opaque subject. Same-variant repeats are warnings;
+  cross-variant, unknown-variant, wrong/missing subject, definition-version and eligibility mismatches block
+  integrity. Target-version exposures outside the window remain visible warnings and never enter results.
+- Primary and guardrail events need no experiment tag. They join by assignment subject after exposure, count
+  distinct converted subjects and compare against the registry's semantic control. Direction is descriptive;
+  no result stops traffic, declares a winner or changes a flag.
+- SRM is Pearson goodness-of-fit over distinct assigned subjects with predeclared `alpha=0.01`; any expected
+  cell below 5 is explicitly not evaluable. Human-review readiness requires clear integrity and the immutable
+  minimum sample in every arm.
+- Segment cuts are one exact allow-listed exposure field/value at a time, cap observed cardinality at 20 and
+  suppress every cut with a variant cell below 5. Responses never contain a subject/user id, metadata, raw tag
+  object or a segment-value catalog.
+
+**Local evidence:** migration `20260731100000_experiment_analysis_snapshot.sql` applied in a clean local reset.
+Targeted evaluator/registry/database/API/MCP verification is 13/13 green, including normal untagged conversions,
+semantic-control lift, exact window boundaries, clean/SRM distributions, every exposure defect, PII stripping,
+two-project isolation, connector revocation and byte-compatible legacy comparison. Web typecheck is green.
+The same explicit snapshot returned byte-identical governed analysis through Bearer API and MCP.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 

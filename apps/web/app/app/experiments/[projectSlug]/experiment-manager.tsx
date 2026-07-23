@@ -162,6 +162,15 @@ export function ExperimentManager({
                     {version.endedAt ? formatUtc(version.endedAt) : 'Open'}
                   </td>
                   <td>
+                    {(version.status === 'running' ||
+                      version.status === 'stopped' ||
+                      version.status === 'decided') && (
+                      <p>
+                        <a href={`/app/experiments/${encodeURIComponent(slug)}/${encodeURIComponent(experiment.key)}?version=${version.version}`}>
+                          Open governed analysis
+                        </a>
+                      </p>
+                    )}
                     <details>
                       <summary>Plan</summary>
                       <p>

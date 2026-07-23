@@ -520,6 +520,15 @@ test('experiment RPCs are service-role-only with function-level denial', async (
       p_target_status: 'running',
       p_actor_user_id: zero,
     }],
+    ['get_experiment_analysis_events', {
+      p_project_id: zero,
+      p_experiment_key: 'x',
+      p_definition_version: 1,
+      p_metric_events: ['completed'],
+      p_analysis_start: '2026-01-01T00:00:00Z',
+      p_analysis_end: '2026-01-02T00:00:00Z',
+      p_as_of: '2026-01-02T00:00:00Z',
+    }],
   ] as const) {
     const { error } = await client.rpc(name, args)
     expect(error).not.toBeNull()

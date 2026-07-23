@@ -13,6 +13,11 @@ test('governance management is nonexistent while OFF and legacy experiments rema
   expect((await request.get(
     '/api/v1/experiments/legacy-experiment/compare?metricEvent=checkout_completed',
   )).status()).toBe(401)
+  // The new version-explicit analysis seam disappears before authentication while the same
+  // route's legacy metric comparison above remains available.
+  expect((await request.get(
+    '/api/v1/experiments/legacy-experiment/compare?version=1',
+  )).status()).toBe(404)
   const local = createGrowthEngineClient({
     baseUrl: 'http://unused.invalid',
     apiKey: 'unused',

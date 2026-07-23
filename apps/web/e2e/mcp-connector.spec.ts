@@ -75,13 +75,19 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
     expect(res.status()).toBe(401)
   })
 
-  test('tools/list on the live demo token → the 4 read-only tools', async ({ request }) => {
+  test('tools/list on the live demo token → every enabled read-only tool', async ({ request }) => {
     const token = await demoToken()
     const res = await rpc(request, token, 'tools/list')
     expect(res.status()).toBe(200)
     const body = await res.json()
     const names = body.result.tools.map((t: { name: string }) => t.name).sort()
-    expect(names).toEqual(['compare_experiment', 'get_journey_cohort', 'get_north_star', 'get_tars_funnel'])
+    expect(names).toEqual([
+      'compare_experiment',
+      'get_experiment_analysis',
+      'get_journey_cohort',
+      'get_north_star',
+      'get_tars_funnel',
+    ])
   })
 
   test('get_tars_funnel on the live demo token → real numbers matching the seed', async ({ request }) => {
