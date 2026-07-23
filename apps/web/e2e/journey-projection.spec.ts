@@ -308,6 +308,7 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=+bad&version=${v1}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=01`, { headers })).status()).toBe(400)
+    expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=2147483648`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/Not-A-Key/subject?subjectId=${subjectId}&version=${v1}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subjects/${subjectId}?version=${v1}`, { headers })).status()).toBe(404)
   } finally {

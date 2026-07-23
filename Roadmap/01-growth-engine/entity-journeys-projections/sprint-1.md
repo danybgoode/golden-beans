@@ -80,7 +80,8 @@ requirement.
   with realistic stable identity and definition version.
 - **browser smoke owed:** yes, to Daniel — authenticated definition creation/activation for a disposable project.
 - **deterministic gate:** typecheck + build + Playwright API green; a dedicated built-server OFF pass pins
-  journey page/API 404s before the normal ON suite; migration verified locally and in production.
+  journey page/API 404s before the normal ON suite; migration verified locally, with production
+  application still owed as the release step before merge.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 

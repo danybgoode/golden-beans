@@ -5,6 +5,8 @@ import { isJourneyProjectionsEnabled } from '@/lib/flags'
 import { validateJourneyKey } from '@/lib/journey-definition'
 import { getJourneySubjectByProjectId } from '@/lib/journey-query'
 
+const MAX_POSTGRES_INTEGER = 2_147_483_647
+
 // GET /api/v1/journeys/:key/subject?subjectId=<opaque>&version=<positive integer>
 // `subjectId` stays a query input: it is data, not a route hierarchy/tenant identifier. Tenant
 // identity comes exclusively from the resolved API key; the key is project-scoped again in every
@@ -27,7 +29,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
   }
   const rawVersion = req.nextUrl.searchParams.get('version')
   const version = rawVersion === null ? Number.NaN : Number(rawVersion)
-  if (!Number.isSafeInteger(version) || version < 1 || String(version) !== rawVersion) {
+  if (
+    !Number.isSafeInteger(version) ||
+    version < 1 ||
+    version > MAX_POSTGRES_INTEGER ||
+    String(version) !== rawVersion
+  ) {
     return NextResponse.json({ ok: false, error: 'version must be a positive integer' }, { status: 400 })
   }
   const result = await getJourneySubjectByProjectId(auth.projectId, key, version, subjectId)
