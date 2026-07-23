@@ -94,21 +94,24 @@ author's context-bias hides. Two layers do this, and they're complementary:
   preview (if your rail has one) is the minimum shape; adapt to your actual stack. If a repo has no
   per-branch preview (deploys post-merge only), there is correspondingly no e2e-vs-preview step in its
   gate — that's correct, not a gap.
-- **Reviewer (judgment) — cross-agent by default (updated 2026-07-20):** the judgment-layer review is
-  `node scripts/cross-review.mjs <PR#> --agent codex` **and** `--agent antigravity` (Agy) — two
-  different, non-Claude model families reading the diff cold, each in a **single pass** (no debate/
-  iterate-to-convergence loop; that loop is the dominant token cost in multi-agent dev and stays out
-  of scope). This **replaces** spawning a same-family Claude subagent as "the fresh reviewer" for
-  ordinary PRs — running two genuinely different families catches more of the builder's blind spots
-  than a second same-family read would, and it's the whole point of contrasting model families rather
-  than just re-running your own. A **Blocking** finding from either agent must be resolved (fixed, or
-  explicitly triaged as a false positive with a stated reason) before merge — this is no longer merely
-  advisory background noise; it **is** the review. It still isn't a second gate alongside CI: CI decides
-  green/red mechanically, this decides "does the diff hold up," and the risk-tier rule below still
-  decides *who* clicks merge. Both reads use the same shared prompt (`scripts/cross-review.prompt.md`).
-  **When to still spawn a same-family Claude reviewer instead/in addition:** a HIGH-risk PR (money/
-  auth/DB/shared infra) benefits from a third, same-family read too — cross-family review is a floor,
-  not a ceiling, for the stakes that warrant it.
+- **Reviewer (judgment) — externally routed by risk (updated 2026-07-23):** the builder remains the
+  architect and does not approve its own diff or spawn an internal same-family reviewer. Ordinary PRs
+  receive one cold **Agy/Antigravity** pass:
+  `node scripts/cross-review.mjs <PR#> --agent antigravity`. High-risk PRs (money, auth, DB
+  migrations, tenancy, concurrency or shared infrastructure) add an independent **Devin** CLI pass.
+  **Cursor CLI Auto** is a quota-aware specialist/tie-breaker for SQL, Unicode/boundary contracts or
+  disagreement—not a mandatory third read. OpenAI/Codex models are not used for code review under
+  this cadence; the coordinating Codex stays on architecture, implementation and orchestration.
+  Every reviewer reads the diff cold in a **single pass** (no debate/iterate-to-convergence loop).
+  A **Blocking** finding must be resolved or explicitly triaged before merge. This still is not a
+  second deterministic gate: CI decides green/red mechanically, reviewer judgment decides whether
+  the diff holds up, and the risk-tier rule decides who clicks merge.
+
+  **Re-review only when the review target materially changed.** A substantive code/security/data fix
+  reruns the reviewer that found it; a high-risk fix reruns both Agy and Devin. A docs, wording or
+  presentation-only follow-up gets targeted typecheck/render/diff validation and does not automatically
+  spend two more full-model passes. Escalate to Cursor when the first reads disagree or the change has a
+  specialist boundary it has demonstrated value on.
   `--skip-trivial` skips docs-only / tiny diffs. Fill in your project's own driving-a-young-foreign-CLI
   gotchas here as you hit them (version pinning, `--help` quirks, headless-auth limits) — see the origin
   project's LEARNINGS.md "Tooling gotchas" section for a worked example set.
@@ -268,7 +271,9 @@ The authenticated CLI access Claude can drive in this repo:
 | **node / npm** | Type-check (`tsc`), build (`npm run build`), Playwright (`npm run test:e2e`), local dev server, the `scripts/*` tooling |
 | **vercel** | Env-var management (`vercel env pull/add/ls`) + reading deploy state. **Never** `vercel deploy`/`--prod` — merge to `main` is the deploy (rule #4); check state via `gh api repos/<owner>/<repo>/deployments`. |
 | **supabase** | Migrations against linked project (`supabase link` / `migration list` / `db push`) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
-| **codex / antigravity (agy)** | Cross-family judgment-layer PR review via `scripts/cross-review.mjs` (see *Review & merge*). |
+| **antigravity (agy)** | Baseline cold judgment-layer PR review via `scripts/cross-review.mjs` (see *Review & merge*). |
+| **devin** | Added independent review for high-risk migrations, tenancy, auth, concurrency and shared infrastructure. Default router is sufficient; named premium models may be plan-gated. |
+| **cursor-agent** | Quota-aware specialist/tie-breaker (SQL, boundary contracts, disputed findings). Auto is acceptable; prefer Anthropic then Grok when model selection/quota permits. |
 
 This means a story can go from code → verified → preview-deployed → live-tested on a branch, then
 merged to production via PR — with verification at each step. Actions that touch live production, real

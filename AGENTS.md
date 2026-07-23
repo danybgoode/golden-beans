@@ -208,7 +208,7 @@ npm run build                                  # next build (the deterministic g
 npm run test:e2e                               # Playwright `api` project — the always-on gate
 npm run test:e2e:browser                       # Playwright `browser` project — opt-in real-browser smoke
 npm run seed:demo | npm run seed:self          # (re)seed the demo / self-tracking tenants
-node scripts/cross-review.mjs <PR#> --agent codex        # cross-family review (also --agent antigravity)
+node scripts/cross-review.mjs <PR#> --agent antigravity  # baseline external review; add Devin for high-risk PRs
 node scripts/build-order.mjs                   # regenerate Roadmap/00-ideas/BUILD-ORDER.md (never hand-edit)
 # Supabase migrations are SEPARATE from the Vercel deploy (see rule #4 / Workflow above):
 supabase link --project-ref <ref> && supabase migration list && supabase db push

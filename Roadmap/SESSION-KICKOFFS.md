@@ -30,7 +30,7 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 | **Build S\<N\> of \<epic\>** | §2 — build a sprint |
 | **Spike \<name\>** | §3 — run a spike |
 | **Review PR #\<N\>** | §4 — fresh-reviewer single pass |
-| **Cross-review PR #\<N\> [codex\|antigravity]** | §4 advisory line — run locally on every PR, `node scripts/cross-review.mjs` (never gates) |
+| **Cross-review PR #\<N\>** | §4 judgment line — Agy baseline; add Devin for high-risk PRs, Cursor as specialist/tie-breaker |
 | **Panel: \<scope-doc \| ask\>** | advisory second opinion on a *plan* — `node scripts/cross-panel.mjs <doc> --lens both --agent codex\|antigravity` (single-pass, print-only, never gates; surfaced at groom Stage 2/4) |
 | **Wrap S\<N\>** | tick the sprint doc status + emit the §7 sprint-wrap terminal summary |
 | **Close epic \<slug\>** | §6 — full epic Definition of Done |
@@ -70,14 +70,13 @@ already-possible / light-enhancement / genuinely-new; end with Go / No-go / Go-w
 I sign off the decision before anything gets groomed.
 ```
 
-## 4 · Review a PR — fresh reviewer (NOT the builder)
+## 4 · Review a PR — external reviewer (NOT the builder)
 ```
-Review PR #<N> as a fresh reviewer — you did NOT build it. Run gh pr diff <N> and read the changed files.
-SINGLE PASS on a green CI gate — no iterative refine loop. Check correctness + this project's AGENTS.md
-rules (fill in your project's own cannot-be-violated rules here).
-Post findings; <LOW: auto-merge on green CI / HIGH: hand to the product owner>.
-On EVERY PR, run a different-model-family second opinion locally (advisory only) —
-node scripts/cross-review.mjs <N> --agent codex|antigravity (single-pass, never gates; --skip-trivial for tiny diffs).
+Review PR #<N> cold after the deterministic gate. The builder stays architect/coordinator and does not
+approve its own diff. Run Agy once via `node scripts/cross-review.mjs <N> --agent antigravity`; add
+Devin for money/auth/DB/tenancy/concurrency/shared-infra risk, and Cursor only as a specialist or
+tie-breaker. Check correctness + AGENTS.md, post findings, and resolve every Blocking item.
+Re-review substantive fixes; use targeted validation for docs/presentation-only deltas.
 ```
 
 ## 5 · Strategy / process work — strong model

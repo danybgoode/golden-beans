@@ -1,6 +1,6 @@
 # Entity journeys — Sprint 3: Miyagi founding-merchant proof and scale decision
 
-**Status:** 🟨 in progress
+**Status:** ✅ complete — PR [#20](https://github.com/danybgoode/golden-beans/pull/20), production `cd62a98`
 
 ## Stories
 
@@ -60,28 +60,47 @@ errors degrade to `telemetry_unavailable` without changing the valid analytical 
   definition version and PII allowlist.
 - **scale specs:** bounded timing/count telemetry, no subject identifiers, threshold-boundary behavior.
 - **browser smoke owed:** yes, to Daniel — authenticated production Miyagi merchant lifecycle + Golden Beans
-  journey/scorecard comparison.
+  journey/scorecard comparison. Golden Beans API + MCP production proof is complete; the shared live-smoke
+  skill is Miyagi-path-specific and cannot drive Golden Beans' authenticated page.
 - **deterministic gate:** both repos' typecheck/build/API suites green before merge.
 
 **Local evidence:** clean local migration reset through `20260730100000`; 16/16 definition/fixture/telemetry
 property specs passed, including function-level anonymous denial, cross-project version refusal, direct
 service-role table denial, exact percentile values, exact 100-row cap and schema redaction. Existing
 subject/cohort/API/MCP suites passed 12/12 with telemetry assertions; typecheck and production build are green.
-Production query evidence and the authenticated rendered comparison remain owed until the gate-on deployment.
+PR #20's deterministic CI passed typecheck/build and the complete local-Supabase/production-built Playwright
+gate (288 passed, 3 intentionally skipped). Agy and Devin each returned CLEAN on exact head `dd6ae94`.
+
+**Production evidence (2026-07-23):** migration `20260730100000` is aligned locally/remotely;
+`JOURNEY_PROJECTIONS_ENABLED=true` was captured by the Git-tracked production deployment
+`cd62a98cdc65628a360bf36948b946d6660f4504` (Vercel `dpl_G6C1mB1NNkqW2xrVtaHFDq8xjkNA`, Ready).
+The `golden-beans` self tenant owns active `merchant_activation` v1. Disposable opaque subject
+`proof_entity_s3_cd62a98` ingested all 13 lifecycle facts through `POST /api/v1/track` with canonical
+idempotency keys; subject projection returned 13 history stages and current stage `retained_30d`.
+The June cohort contained exactly that subject across all 13 stages with one met retention outcome.
+The same cohort resolved through MCP's `get_journey_cohort`.
+
+Measured decision: **keep query-time projection**. Subject evidence reached 8 samples, p50 88.48 ms /
+p95 118.87 ms / max 13 relevant events. API cohort evidence reached 5 samples, p50 69.74 ms /
+p95 73.94 ms / max 13; the sixth MCP sample produced p95 119.32 ms. Every series remained far below
+the strict p95 >2,000 ms or >1,000,000 relevant-event tripwires. Both one-use API keys and the temporary
+connector token were revoked after proof (zero active proof credentials).
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 
 Env: https://golden-beans-gamma.vercel.app + https://miyagisanchez.com
 
-1. Create the documented disposable Miyagi merchant and send the 13-stage fixture through normal SDK/router paths.
-   → Golden Beans receives only opaque subject and lifecycle facts.
-2. Open the merchant in Miyagi and its journey in Golden Beans.
-   → Current stage/history agree while contact/tasks remain only in Miyagi.
-3. Replay and shuffle the fixture.
-   → Both systems still show one logical lifecycle with identical stage timestamps.
-4. Inspect the Golden Beans subject, MCP and query-telemetry outputs.
-   → No PII appears; query timing/counts contain no subject identifiers.
-5. Compare production evidence to the p95/1M tripwires and record the close-out decision.
-   → Query-time remains, or a separate materialization seed exists with measured justification.
+1. ✅ Activate reviewed `merchant_activation` v1 for the `golden-beans` self tenant.
+   → Audited registry RPCs created and activated the exact 13-stage contract.
+2. ✅ Send the 13-stage proof through normal `/api/v1/track`.
+   → Only opaque subject `proof_entity_s3_cd62a98` and lifecycle facts entered Golden Beans.
+3. ✅ Replay the same canonical idempotency keys.
+   → One logical 13-stage history remained; no duplicate journey stages appeared.
+4. ✅ Inspect subject, cohort and MCP outputs.
+   → API/MCP agreed, retention was met, diagnostics held counts/timing only, and no credential remained active.
+5. ✅ Compare evidence to the p95/1M tripwires.
+   → **Keep query-time**; no materialization seed is justified.
+6. ⏳ Open the real merchant in Miyagi beside the authenticated Golden Beans journey page.
+   → Product-owner browser/session confirmation remains owed; the analytical API/MCP path is live and proven.
 
 If any step fails, note the step number + event/subject id — that's the bug report.

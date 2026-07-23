@@ -58,6 +58,11 @@ independently shippable slice of value.
   receives their events reliably, at-least-once, without ingest ever depending on a sink's health.
   First real consumer: Miyagi's merchant-lifecycle projection (Story 3.1, in `medusa-bonsai`). The
   optional Attio adapter (3.2) is deferred until a workspace token exists.
+- ✅ [Entity journeys](01-growth-engine/entity-journeys-projections/README.md) (versioned,
+  tenant-defined lifecycles · deterministic subject history · cohort conversion/aging/drop-off ·
+  exact retention · authenticated UI/API + gated MCP parity) — **live in production** (2026-07-23).
+  Miyagi's 13-stage founding-merchant lifecycle is the first proof. Measured production p95 stayed
+  under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
 - ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
@@ -83,6 +88,13 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-07-23** — `entity-journeys-projections` **epic shipped**: a tenant can define an ordered
+  lifecycle beyond fixed TARS and read deterministic subject history plus cohort conversion, aging,
+  drop-off and retention through one project-scoped UI/API/MCP resolver. The live
+  `merchant_activation` v1 proof reached all 13 Miyagi founding-merchant stages from normal
+  `/api/v1/track` facts, with no merchant PII or copied CRM/commerce state. Production query evidence
+  (p95 <120 ms; 13 relevant events) stays far below the >2 s / >1M-event tripwires, so no projector
+  or materialized subject table is justified.
 - **2026-07-22** — `event-destination-router` **epic shipped**: the event stream is now
   *operational*. A tenant creates a signed, filtered webhook destination and their events are
   delivered reliably — at-least-once, with bounded retries, dead-lettering and operator replay —
