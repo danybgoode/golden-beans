@@ -105,7 +105,10 @@ BEGIN
   IF NOT ((p_definition->'primaryMetric') ?& ARRAY['event', 'direction'])
      OR jsonb_typeof(p_definition#>'{primaryMetric,event}') IS DISTINCT FROM 'string'
      OR char_length(p_definition#>>'{primaryMetric,event}') NOT BETWEEN 1 AND 128
-     OR p_definition#>>'{primaryMetric,event}' <> btrim(p_definition#>>'{primaryMetric,event}')
+     OR p_definition#>>'{primaryMetric,event}' <> btrim(
+       p_definition#>>'{primaryMetric,event}',
+       U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'
+     )
      OR (p_definition#>>'{primaryMetric,event}') ~ '[[:cntrl:]]'
      OR jsonb_typeof(p_definition#>'{primaryMetric,direction}') IS DISTINCT FROM 'string'
      OR p_definition#>>'{primaryMetric,direction}' NOT IN ('increase', 'decrease') THEN RETURN false; END IF;
@@ -120,7 +123,10 @@ BEGIN
     IF NOT (v_metric ?& ARRAY['event', 'direction'])
        OR jsonb_typeof(v_metric->'event') IS DISTINCT FROM 'string'
        OR char_length(v_metric->>'event') NOT BETWEEN 1 AND 128
-       OR v_metric->>'event' <> btrim(v_metric->>'event')
+       OR v_metric->>'event' <> btrim(
+         v_metric->>'event',
+         U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'
+       )
        OR (v_metric->>'event') ~ '[[:cntrl:]]'
        OR jsonb_typeof(v_metric->'direction') IS DISTINCT FROM 'string'
        OR v_metric->>'direction' NOT IN ('increase', 'decrease') THEN RETURN false; END IF;

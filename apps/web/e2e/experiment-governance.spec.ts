@@ -223,6 +223,14 @@ test.describe('experiment definition — closed bounded contract', () => {
       },
       { ...VALID_DEFINITION, hypothesis: '\u00a0' },
       { ...VALID_DEFINITION, eligibility: { description: '\u3000' } },
+      {
+        ...VALID_DEFINITION,
+        primaryMetric: { event: `completed\u00a0`, direction: 'increase' },
+      },
+      {
+        ...VALID_DEFINITION,
+        guardrailMetrics: [{ event: `\u3000abandoned`, direction: 'decrease' }],
+      },
       { ...VALID_DEFINITION, minimumSamplePerVariant: 0 },
       { ...VALID_DEFINITION, sql: 'select true' },
     ]) expect(parseExperimentDefinition(definition).ok, JSON.stringify(definition)).toBe(false)
@@ -466,6 +474,14 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
       ['blank-unicode-eligibility', {
         ...VALID_DEFINITION,
         eligibility: { description: '\u3000' },
+      }],
+      ['unicode-padded-primary-event', {
+        ...VALID_DEFINITION,
+        primaryMetric: { event: `completed\u00a0`, direction: 'increase' },
+      }],
+      ['unicode-padded-guardrail-event', {
+        ...VALID_DEFINITION,
+        guardrailMetrics: [{ event: `\u3000abandoned`, direction: 'decrease' }],
       }],
       ['bad-window', {
         ...VALID_DEFINITION,
