@@ -1,6 +1,6 @@
 # Experiment governance v2 — Sprint 2: Trust diagnostics, metrics and segments
 
-**Status:** 🟨 built and locally verified; external review, preview and production rollout remain
+**Status:** ✅ shipped in PR [#22](https://github.com/danybgoode/golden-beans/pull/22)
 
 ## Stories
 
@@ -66,11 +66,15 @@ API and MCP call one resolver; no contact/high-cardinality values appear.
   object or a segment-value catalog. HTTP query strings remain strings by default; typed number/boolean cuts use
   an explicit `segmentValue=json:<scalar>` form, while MCP carries the scalar type directly.
 
-**Local evidence:** migration `20260731100000_experiment_analysis_snapshot.sql` applied in a clean local reset.
-Targeted evaluator/registry/database/API/MCP verification is 13/13 green, including normal untagged conversions,
+**Shipped evidence:** migration `20260731100000_experiment_analysis_snapshot.sql` applied in clean local resets
+and production before the reader code merged. Targeted evaluator/registry/database/API/MCP verification is green,
+including normal untagged conversions,
 semantic-control lift, exact window boundaries, clean/SRM distributions, every exposure defect, PII stripping,
 two-project isolation, connector revocation and byte-compatible legacy comparison. Web typecheck is green.
-The same explicit snapshot returned byte-identical governed analysis through Bearer API and MCP.
+The same explicit snapshot returned byte-identical governed analysis through Bearer API and MCP. Exact-head Agy
+review was clean after its time-travel and clock-skew findings were fixed; Devin's free-tier pass found no valid
+in-diff defect after triage. CI typecheck/build and the complete local-Supabase Playwright gate passed. Main
+deployment `ad2da1a…` reached production, while the born-OFF gate still returned 404 before authentication.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 

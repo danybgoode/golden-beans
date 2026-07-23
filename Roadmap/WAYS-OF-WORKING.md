@@ -107,8 +107,10 @@ author's context-bias hides. Two layers do this, and they're complementary:
   second deterministic gate: CI decides green/red mechanically, reviewer judgment decides whether
   the diff holds up, and the risk-tier rule decides who clicks merge.
 
-  **Re-review only when the review target materially changed.** A substantive code/security/data fix
-  reruns the reviewer that found it; a high-risk fix reruns both Agy and Devin. A docs, wording or
+  **Re-review only when the review target materially changed.** For high-risk work, run Agy early,
+  resolve/triage its findings and rerun it to clean, then give the stabilized exact head one Devin pass.
+  A substantive fix reruns the reviewer that found it; rerun the other reviewer too only when that fix
+  crosses a security/data/architecture boundary the other one previously reviewed. A docs, wording or
   presentation-only follow-up gets targeted typecheck/render/diff validation and does not automatically
   spend two more full-model passes. Escalate to Cursor when the first reads disagree or the change has a
   specialist boundary it has demonstrated value on.

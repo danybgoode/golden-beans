@@ -5,6 +5,10 @@ import {
   type ExperimentAnalysisResult,
 } from './experiment-analysis'
 import type { ExperimentAnalysisRequest } from './experiment-analysis-request'
+import {
+  getExperimentDecisionHistoryByProjectId,
+  type ExperimentDecisionHistoryResult,
+} from './experiment-decision-query'
 import type { ExperimentDefinition } from './experiment-definition'
 import {
   compareJourneyTimestamps,
@@ -18,12 +22,15 @@ export type GovernedExperimentAnalysisResult =
       ok: true
       project: { slug: string }
       experiment: {
+        id: string
+        versionId: string
         key: string
         definitionVersion: number
         lifecycle: 'running' | 'stopped' | 'decided'
         definition: ExperimentDefinition
       }
       analysis: ExperimentAnalysisResult
+      decisions: Extract<ExperimentDecisionHistoryResult, { ok: true }>['decisions']
     }
   | {
       ok: false
@@ -37,6 +44,7 @@ export type GovernedExperimentAnalysisResult =
     }
 
 type ExperimentVersionRow = {
+  id: unknown
   version: unknown
   definition: unknown
   status: unknown
@@ -132,7 +140,7 @@ export async function getExperimentAnalysisByProjectId(
 
   const { data: version, error: versionError } = await supabase
     .from('experiment_definition_versions')
-    .select('version, definition, status, started_at, ended_at')
+    .select('id, version, definition, status, started_at, ended_at')
     .eq('project_id', projectId)
     .eq('experiment_id', registry.id)
     .eq('version', request.version)
@@ -149,6 +157,9 @@ export async function getExperimentAnalysisByProjectId(
   }
   if (typeof row.started_at !== 'string') {
     return { ok: false, reason: 'lifecycle_unavailable' }
+  }
+  if (typeof registry.id !== 'string' || typeof row.id !== 'string') {
+    return { ok: false, reason: 'query_failed' }
   }
 
   const definition = row.definition as ExperimentDefinition
@@ -199,16 +210,25 @@ export async function getExperimentAnalysisByProjectId(
       facts,
       ...(request.segment ? { segment: request.segment } : {}),
     })
+    const decisionHistory = await getExperimentDecisionHistoryByProjectId(
+      projectId,
+      registry.id,
+      row.id,
+    )
+    if (!decisionHistory.ok) return { ok: false, reason: decisionHistory.reason }
     return {
       ok: true,
       project: { slug: projectSlug },
       experiment: {
+        id: registry.id,
+        versionId: row.id,
         key: registry.key as string,
         definitionVersion: row.version as number,
         lifecycle: row.status,
         definition,
       },
       analysis,
+      decisions: decisionHistory.decisions,
     }
   } catch (error) {
     console.error('[experiment-analysis-query] evaluation failed:', error)
