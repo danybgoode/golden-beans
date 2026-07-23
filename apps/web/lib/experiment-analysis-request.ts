@@ -35,12 +35,11 @@ function parseVersion(value: unknown): number | null {
 
 function parseSegmentScalar(value: unknown): ExactSegmentScalar | null {
   let candidate = value
-  if (typeof candidate === 'string') {
+  if (typeof candidate === 'string' && candidate.startsWith('json:')) {
     try {
-      candidate = JSON.parse(candidate)
+      candidate = JSON.parse(candidate.slice('json:'.length))
     } catch {
-      // An unquoted query-string value is a literal string. JSON quoting remains available when a
-      // caller needs to distinguish the string "true" from the boolean true.
+      return null
     }
   }
   if (typeof candidate === 'string') {
@@ -101,7 +100,7 @@ export function parseExperimentAnalysisRequest(
   if (value === null) {
     return {
       ok: false,
-      error: `segmentValue must be a string up to ${MAX_SEGMENT_STRING_LENGTH} characters, boolean, or bounded safe integer`,
+      error: `segmentValue must be a string up to ${MAX_SEGMENT_STRING_LENGTH} characters, or json:<scalar> for a boolean/bounded safe integer`,
     }
   }
   return {

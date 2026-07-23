@@ -170,22 +170,22 @@ test('analysis request parser captures a bounded immutable version, snapshot and
     request: {
       version: 7,
       asOf: at(50),
-      segment: { field: 'plan', value: true },
+      segment: { field: 'plan', value: 'true' },
     },
   })
   expect(parseExperimentAnalysisRequest({
     version: 7,
     segmentField: 'plan',
-    segmentValue: '"true"',
+    segmentValue: 'json:true',
   }, at(60))).toMatchObject({
     ok: true,
-    request: { segment: { field: 'plan', value: 'true' } },
+    request: { segment: { field: 'plan', value: true } },
   })
   for (const request of [
     { version: '0' },
     { version: '7', asOf: at(61) },
     { version: '7', segmentField: 'email', segmentValue: 'person@example.test' },
     { version: '7', segmentField: 'plan' },
-    { version: '7', segmentField: 'plan', segmentValue: '1.5' },
+    { version: '7', segmentField: 'plan', segmentValue: 'json:1.5' },
   ]) expect(parseExperimentAnalysisRequest(request, at(60)).ok).toBe(false)
 })

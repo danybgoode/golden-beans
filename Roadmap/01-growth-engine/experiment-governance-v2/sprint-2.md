@@ -63,7 +63,8 @@ API and MCP call one resolver; no contact/high-cardinality values appear.
   minimum sample in every arm.
 - Segment cuts are one exact allow-listed exposure field/value at a time, cap observed cardinality at 20 and
   suppress every cut with a variant cell below 5. Responses never contain a subject/user id, metadata, raw tag
-  object or a segment-value catalog.
+  object or a segment-value catalog. HTTP query strings remain strings by default; typed number/boolean cuts use
+  an explicit `segmentValue=json:<scalar>` form, while MCP carries the scalar type directly.
 
 **Local evidence:** migration `20260731100000_experiment_analysis_snapshot.sql` applied in a clean local reset.
 Targeted evaluator/registry/database/API/MCP verification is 13/13 green, including normal untagged conversions,

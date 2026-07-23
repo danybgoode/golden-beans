@@ -187,14 +187,30 @@ BEGIN
           )
         ),
         0
-      ) AS item_bytes
+      ) AS item_bytes,
+      COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'id', id,
+            'event', event,
+            'feature_id', feature_id,
+            'tags', tags,
+            'subject_type', subject_type,
+            'subject_id', subject_id,
+            'occurred_at', occurred_at,
+            'created_at', created_at
+          ) ORDER BY COALESCE(occurred_at, created_at), id
+        ),
+        '[]'::JSONB
+      ) AS events
     FROM bounded_events
   )
   SELECT
     event_count,
     subject_count,
-    item_bytes + 2 + GREATEST(event_count - 1, 0) * 2
-  INTO v_event_count, v_subject_count, v_payload_bytes
+    item_bytes + 2 + GREATEST(event_count - 1, 0) * 2,
+    events
+  INTO v_event_count, v_subject_count, v_payload_bytes, v_events
   FROM measured;
 
   IF v_event_count > 50000 THEN
@@ -209,45 +225,6 @@ BEGIN
     RAISE EXCEPTION 'experiment analysis payload limit exceeded (maximum 33554432 bytes)'
       USING ERRCODE = '54000';
   END IF;
-
-  SELECT COALESCE(
-    jsonb_agg(
-      jsonb_build_object(
-        'id', e.id,
-        'event', e.event,
-        'feature_id', e.feature_id,
-        'tags', private.experiment_safe_tags(e.tags),
-        'subject_type', e.subject_type,
-        'subject_id', e.subject_id,
-        'occurred_at', e.occurred_at,
-        'created_at', e.created_at
-      ) ORDER BY COALESCE(e.occurred_at, e.created_at), e.id
-    ),
-    '[]'::JSONB
-  )
-  INTO v_events
-  FROM public.events e
-  WHERE e.project_id = p_project_id
-    AND e.created_at <= p_as_of
-    AND COALESCE(e.occurred_at, e.created_at) <= p_as_of
-    AND (
-      (
-        e.event = 'experiment_exposed'
-        AND e.feature_id = p_experiment_key
-        AND (
-          e.tags->>'experiment_definition_version' = p_definition_version::TEXT
-          OR (
-            COALESCE(e.occurred_at, e.created_at) >= p_analysis_start
-            AND COALESCE(e.occurred_at, e.created_at) < p_analysis_end
-          )
-        )
-      )
-      OR (
-        e.event = ANY(p_metric_events)
-        AND COALESCE(e.occurred_at, e.created_at) >= p_analysis_start
-        AND COALESCE(e.occurred_at, e.created_at) < p_analysis_end
-      )
-    );
 
   RETURN v_events;
 END;
