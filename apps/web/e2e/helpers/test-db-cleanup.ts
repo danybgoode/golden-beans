@@ -96,3 +96,27 @@ export async function cleanupJourneyProjects(projectIds: string[]): Promise<void
     await client.end()
   }
 }
+
+/**
+ * Experiment lifecycle audit is append-only to the app role and has a composite FK to its version.
+ * Remove that evidence first, then let the project cascade clear registries and immutable versions.
+ */
+export async function cleanupExperimentProjects(projectIds: string[]): Promise<void> {
+  if (projectIds.length === 0) return
+  const client = new Client({ connectionString: requireTestDatabaseUrl() })
+  await client.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
+      [projectIds],
+    )
+    await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    await client.end()
+  }
+}

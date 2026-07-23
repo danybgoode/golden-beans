@@ -54,3 +54,11 @@ export function isDestinationDeliveryEnabled(): boolean {
 export function isJourneyProjectionsEnabled(): boolean {
   return process.env.JOURNEY_PROJECTIONS_ENABLED === 'true'
 }
+
+// experiment-governance-v2 · Sprint 1 — enablement gate for NEW registry/lifecycle management
+// only. Existing local SDK bucketing, exposure ingest and v1 comparison never consult this flag:
+// governance must be removable without changing runtime assignment or losing telemetry.
+// Born unset/OFF; changing it on Vercel requires a new Git-tracked deployment.
+export function isExperimentGovernanceEnabled(): boolean {
+  return process.env.EXPERIMENT_GOVERNANCE_ENABLED === 'true'
+}

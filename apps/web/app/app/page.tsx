@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
-import { isJourneyProjectionsEnabled, isSignupEnabled } from '@/lib/flags'
+import {
+  isExperimentGovernanceEnabled,
+  isJourneyProjectionsEnabled,
+  isSignupEnabled,
+} from '@/lib/flags'
 import { SignOutButton } from './sign-out-button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
@@ -75,6 +79,12 @@ export default async function AppHome({
                   <li>
                     <a href={`/app/journeys/${project.slug}`}>Journeys</a>{' '}
                     <small>— {project.role === 'owner' ? 'define and activate' : 'read-only'}</small>
+                  </li>
+                )}
+                {isExperimentGovernanceEnabled() && (
+                  <li>
+                    <a href={`/app/experiments/${project.slug}`}>Experiment governance</a>{' '}
+                    <small>— {project.role === 'owner' ? 'plan and operate' : 'read-only'}</small>
                   </li>
                 )}
                 {project.role === 'owner' && (

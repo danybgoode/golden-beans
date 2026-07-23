@@ -82,9 +82,10 @@ jobs:
       # Kill-switch behavior needs a real, differently-enved process. The Playwright process gets
       # the same explicit OFF value as this second-port built server, so this cannot accidentally
       # assert dark behavior against the normal ON server started later in the job.
-      - name: Verify journey projection seams with the gate OFF
+      - name: Verify new governance seams with enablement gates OFF
         env:
           JOURNEY_PROJECTIONS_ENABLED: 'false'
+          EXPERIMENT_GOVERNANCE_ENABLED: 'false'
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
         run: |
           set -euo pipefail
@@ -120,6 +121,7 @@ jobs:
           if ! ./node_modules/.bin/playwright test \
             --config=apps/web/playwright.config.ts \
             apps/web/e2e/journey-dark.spec.ts \
+            apps/web/e2e/experiment-governance-dark.spec.ts \
             --project=api; then
             cat /tmp/journey-dark-server.log
             exit 1
@@ -149,6 +151,7 @@ jobs:
           # Journey projection HTTP specs exercise the live API seam. The preceding dedicated
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
+          EXPERIMENT_GOVERNANCE_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."
@@ -177,6 +180,7 @@ jobs:
         # this pass; its assertions ran, without a skip, against the dedicated OFF server above.
         env:
           JOURNEY_PROJECTIONS_ENABLED: 'true'
+          EXPERIMENT_GOVERNANCE_ENABLED: 'true'
         run: npm run test:e2e
 
       - name: Dump Next.js server log (diagnostics)
