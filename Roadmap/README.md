@@ -97,8 +97,9 @@ independently shippable slice of value.
   Sprints 1–2. A fresh cold review caught a real accepted-but-unreadable resource-cap defect (fixed,
   mutation-verified); Agy + Devin reviewed clean. Rolled out 2026-07-23: migration applied to prod,
   `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON, flag flip verified live (governed routes now authenticate
-  instead of 404); the ledger's behaviour is covered by the 307-spec gate. Remaining follow-ups (browser
-  smokes): the authenticated prod decision round-trip and the live Miyagi (Tiendas Fundadoras) dogfood decision.
+  instead of 404); the ledger's behaviour is covered by the 307-spec gate, and the authenticated
+  prod decision round-trip validated on the UI. Deferred follow-up: the live Miyagi (Tiendas Fundadoras)
+  dogfood decision.
 - **2026-07-23** — `entity-journeys-projections` **epic shipped**: a tenant can define an ordered
   lifecycle beyond fixed TARS and read deterministic subject history plus cohort conversion, aging,
   drop-off and retention through one project-scoped UI/API/MCP resolver. The live

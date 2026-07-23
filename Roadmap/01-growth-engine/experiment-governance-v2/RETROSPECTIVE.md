@@ -1,8 +1,8 @@
 # Experiment governance v2 — Retrospective
 
 _Shipped & LIVE in production: 2026-07-23 (PRs #19/#22/#23; migration applied, flag flipped ON, flag flip
-verified live). Two authenticated browser smokes remain: the production decision round-trip and the live Miyagi
-dogfood decision — see Gaps._
+verified live; the authenticated production decision round-trip validated on the UI by Daniel). One deferred
+follow-up: the live Miyagi dogfood decision — see Gaps._
 
 ## What shipped
 
@@ -58,13 +58,11 @@ untouched.
 **Done on 2026-07-23 (rollout):** merged #23 · migration applied to prod Supabase · `EXPERIMENT_GOVERNANCE_ENABLED`
 flipped false→true and activated by a redeploy (`ea55ec0`) · **flag flip verified live** (governed `?version`
 route now 401/needs-auth instead of the OFF-state 404) · README/poster/build-order finalized · feature branch
-deleted. The ledger's functional correctness is covered by the 307-spec CI/local gate, not a prod round-trip.
+deleted · **production decision round-trip validated on the UI by Daniel** (create → stop → record decision →
+read back → append correction). The ledger's functional correctness is also covered by the 307-spec CI/local gate.
 
-**Remaining follow-ups (both authenticated browser smokes):**
+**Deferred follow-up (one, not a code gap):**
 
-1. **Production decision round-trip** through the UI — an owner creates a disposable experiment → stop → record an
-   `inconclusive` decision → confirm it reads back identically via API + MCP → append a correction. Needs an owner
-   session, so it is a browser smoke rather than an automated check.
-2. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
+1. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
    record the production human decision (cross-repo). Golden Beans never reads or changes Miyagi's flag. A dogfood
-   on top of the now-live governance capability — not a code gap. Needs the Miyagi repo/flag access details.
+   on top of the now-live governance capability. Deferred to a later session pending Miyagi repo/flag access.

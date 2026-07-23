@@ -2,8 +2,8 @@
 
 **Status:** ✅ shipped & LIVE in production — merged in PR [#23](https://github.com/danybgoode/golden-beans/pull/23),
 migration `20260801100000` applied to prod Supabase, and `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON (2026-07-23),
-flag flip verified live. Two follow-ups remain (both browser smokes): the authenticated production decision
-round-trip and the live Miyagi (Tiendas Fundadoras) dogfood decision.
+flag flip verified live, and the authenticated production decision round-trip validated on the UI by Daniel
+(2026-07-23). One follow-up deferred to a later session: the live Miyagi (Tiendas Fundadoras) dogfood decision.
 
 **Commit refs:** 3.1 `db69d5b` + `a3b65a3` (review fix) · 3.2 `e642b99` · 3.3 `12d5d1b`
 
@@ -21,13 +21,14 @@ governance gate is enabled in production. The ledger's functional behaviour (cre
 immutability, idempotency, correction chain, cap bounds) is covered by the CI/local gate (307 api specs), not a
 prod round-trip.
 
-**Remaining follow-ups (both authenticated browser smokes, owed):**
-1. The authenticated **production decision round-trip** through the UI (owner creates a disposable experiment →
-   stop → record an `inconclusive` decision → confirm it reads back identically via API + MCP → append a
-   correction). Needs an owner session, so it is a browser smoke rather than an automated check.
-2. Story 3.3 live — drive Tiendas Fundadoras exposure through Miyagi's own flag and record the production human
-   decision (cross-repo). Golden Beans never reads or changes Miyagi's flag. A dogfood on top of the now-live
-   capability, not a code gap; needs the Miyagi repo/flag access details.
+**Production decision round-trip — DONE (Daniel, 2026-07-23):** the authenticated UI round-trip (owner creates a
+disposable experiment → stop → record an `inconclusive` decision → confirm it reads back → append a correction)
+was validated directly on the production UI.
+
+**Deferred to a later session (one, not a code gap):** Story 3.3 live — drive Tiendas Fundadoras exposure through
+Miyagi's own flag and record the production human decision (cross-repo). Golden Beans never reads or changes
+Miyagi's flag. A dogfood on top of the now-live capability; picks up when the Miyagi acquisition stack / access
+is ready.
 
 ## Stories
 

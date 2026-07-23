@@ -76,11 +76,11 @@ two-project isolation and synthetic clean/SRM fixtures pass; real Miyagi traffic
 
 > Sprints 1–2 merged (#19, #22); Sprint 3 merged (#23). Migration applied to production and
 > `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON in production (2026-07-23), flag flip verified live (governed
-> routes now authenticate instead of 404). Two authenticated browser smokes remain: the production decision
-> round-trip and the live Miyagi (Tiendas Fundadoras) dogfood decision.
+> routes now authenticate instead of 404), and the authenticated production decision round-trip validated on
+> the UI by Daniel. The live Miyagi (Tiendas Fundadoras) dogfood decision is deferred to a later session.
 
-- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *prod decision round-trip + Miyagi dogfood are the stated browser-smoke gaps*
-- [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *walkthroughs documented; S3 authenticated prod walkthrough is the owed browser smoke*
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *prod decision round-trip validated on UI; live Miyagi dogfood deferred*
+- [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *S3 prod decision round-trip validated on the UI (Daniel)*
 - [x] Existing local bucketing/exposure/v1 comparison remain compatible with governance OFF — *dark-state pass green*
 - [x] Realistic untagged conversions, SRM and exposure-integrity fixtures pass deterministically
 - [x] UI/API/MCP share one resolver and pass two-project + connector-gate isolation
