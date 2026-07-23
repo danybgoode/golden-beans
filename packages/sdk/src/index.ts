@@ -281,7 +281,8 @@ function validGovernance(value: unknown): value is ExperimentGovernanceContext {
     Number.isInteger(candidate.definitionVersion) &&
     candidate.definitionVersion >= 1 &&
     candidate.definitionVersion <= 2_147_483_647 &&
-    entity !== undefined &&
+    entity !== null &&
+    typeof entity === 'object' &&
     typeof entity.type === 'string' &&
     ENTITY_TYPE.test(entity.type) &&
     typeof entity.id === 'string' &&

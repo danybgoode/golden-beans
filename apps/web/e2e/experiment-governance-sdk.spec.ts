@@ -133,6 +133,13 @@ test('governed reserved-field conflicts and malformed assignment fail before fet
     definitionVersion: 0,
     assignmentEntity: { type: 'Merchant', id: ' m-123' },
   })).toMatchObject({ ok: false, code: 'INVALID_GOVERNANCE_CONTEXT' })
+  expect(growth.bucket('checkout-cta-copy', variants, {
+    definitionVersion: 7,
+    assignmentEntity: null,
+  } as unknown as ExperimentGovernanceContext)).toMatchObject({
+    ok: false,
+    code: 'INVALID_GOVERNANCE_CONTEXT',
+  })
   for (const falsy of [null, false, 0, '']) {
     expect(growth.bucket(
       'checkout-cta-copy',
