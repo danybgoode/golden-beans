@@ -94,7 +94,21 @@ BEGIN
     RAISE EXCEPTION 'event names must contain 1-20 bounded values' USING ERRCODE = '22023';
   END IF;
 
-  WITH bounded_events AS (
+  -- A subject cannot enter this [from,to) cohort unless at least one definition event is
+  -- effective before `to`. Keep all as-of history for candidate subjects (later facts drive
+  -- conversion/retention), but do not let post-window-only subjects consume the safety caps.
+  WITH candidate_subjects AS MATERIALIZED (
+    SELECT DISTINCT candidate.subject_id
+    FROM public.events candidate
+    WHERE candidate.project_id = p_project_id
+      AND candidate.subject_type = p_subject_type
+      AND candidate.subject_id IS NOT NULL
+      AND candidate.event = ANY(p_event_names)
+      AND COALESCE(candidate.occurred_at, candidate.created_at) < p_to
+      AND candidate.created_at <= p_as_of
+    LIMIT 10001
+  ),
+  bounded_events AS (
     SELECT
       e.id,
       e.event,
@@ -103,6 +117,8 @@ BEGIN
       e.created_at,
       e.subject_id
     FROM public.events e
+    INNER JOIN candidate_subjects candidate
+      ON candidate.subject_id = e.subject_id
     WHERE e.project_id = p_project_id
       AND e.subject_type = p_subject_type
       AND e.subject_id IS NOT NULL
@@ -152,6 +168,17 @@ BEGIN
       USING ERRCODE = '54000';
   END IF;
 
+  WITH candidate_subjects AS MATERIALIZED (
+    SELECT DISTINCT candidate.subject_id
+    FROM public.events candidate
+    WHERE candidate.project_id = p_project_id
+      AND candidate.subject_type = p_subject_type
+      AND candidate.subject_id IS NOT NULL
+      AND candidate.event = ANY(p_event_names)
+      AND COALESCE(candidate.occurred_at, candidate.created_at) < p_to
+      AND candidate.created_at <= p_as_of
+    LIMIT 10001
+  )
   SELECT COALESCE(
     jsonb_agg(
       jsonb_build_object(
@@ -167,6 +194,8 @@ BEGIN
   )
   INTO v_events
   FROM public.events e
+  INNER JOIN candidate_subjects candidate
+    ON candidate.subject_id = e.subject_id
   WHERE e.project_id = p_project_id
     AND e.subject_type = p_subject_type
     AND e.subject_id IS NOT NULL

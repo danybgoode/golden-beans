@@ -4,6 +4,7 @@ import { projectJourneySubject, type JourneyProjectionEvent, type JourneySubject
 import type { JourneyDefinition } from './journey-definition'
 import {
   computeJourneyCohort,
+  isValidJourneyDrilldown,
   type JourneyCohortAggregate,
   type JourneyCohortOptions,
 } from './journey-cohort'
@@ -24,7 +25,7 @@ export type JourneyCohortQueryResult =
     }
   | {
       ok: false
-      reason: 'journey_not_found' | 'version_not_found' | 'query_failed' | 'resource_limit'
+      reason: 'journey_not_found' | 'version_not_found' | 'invalid_request' | 'query_failed' | 'resource_limit'
     }
 
 type JourneyEventRow = {
@@ -98,6 +99,9 @@ export async function getJourneyCohortByProjectId(
   const startedAt = performance.now()
   const lookup = await lookupJourneyDefinition(projectId, journeyKey, version)
   if (!lookup.ok) return lookup
+  if (!isValidJourneyDrilldown(lookup.definition, options.drilldown)) {
+    return { ok: false, reason: 'invalid_request' }
+  }
   const eventNames = [...new Set(lookup.definition.stages.map((stage) => stage.event))]
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase.rpc('get_journey_cohort_events', {

@@ -65,6 +65,9 @@ export default async function JourneyCohortPage({
   )
   if (!result.ok) {
     if (result.reason === 'query_failed') throw new Error('Journey cohort lookup failed')
+    if (result.reason === 'invalid_request') {
+      return <main><h1>Journey cohort — {journeyKey}</h1><p role="alert">That drilldown is not valid for this journey definition.</p></main>
+    }
     if (result.reason === 'resource_limit') {
       return <main><h1>Journey cohort — {journeyKey}</h1><p role="alert">This journey exceeds the query-time raw-fact safety limit. Reduce matching history or split the definition before retrying.</p></main>
     }

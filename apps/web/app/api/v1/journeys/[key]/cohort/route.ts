@@ -41,6 +41,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
     parsed.options,
   )
   if (!result.ok) {
+    if (result.reason === 'invalid_request') {
+      return NextResponse.json(
+        { ok: false, error: 'drilldown is not valid for this journey definition' },
+        { status: 400 },
+      )
+    }
     if (result.reason === 'resource_limit') {
       return NextResponse.json(
         { ok: false, error: 'Journey cohort exceeds the query-time safety limit' },

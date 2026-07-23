@@ -5,6 +5,7 @@ import { Client } from 'pg'
 import {
   computeJourneyCohort,
   encodeCursor,
+  isValidJourneyDrilldown,
   journeyCursorScope,
   type JourneyCohortOptions,
 } from '@/lib/journey-cohort'
@@ -167,6 +168,16 @@ test('retention uses exact microsecond deadlines and a matured-only denominator'
     { ...fact('outside', 'started', 1), occurredAt: anchor, createdAt: anchor },
     { ...fact('outside', 'returned', 2), occurredAt: outside, createdAt: outside },
     { ...fact('pending', 'started', 3), occurredAt: at(3), createdAt: at(3) },
+    // The first-ever target is before the anchor, but a qualifying repeat after the anchor meets
+    // retention. Looking only at projected first satisfaction would misclassify this subject.
+    { ...fact('repeat', 'returned', 1), occurredAt: at(1), createdAt: at(1) },
+    { ...fact('repeat', 'started', 2), occurredAt: at(2), createdAt: at(2) },
+    {
+      ...fact('repeat', 'returned', 2),
+      id: 'repeat-retention-target',
+      occurredAt: '2026-01-02T12:00:00.000000Z',
+      createdAt: '2026-01-02T12:00:00.000000Z',
+    },
   ]
   const result = computeJourneyCohort(definition, rows, {
     ...OPTIONS,
@@ -175,12 +186,12 @@ test('retention uses exact microsecond deadlines and a matured-only denominator'
     asOf: '2026-01-03T12:00:00.000000Z',
   })
   expect(result.retention).toMatchObject({
-    eligibleCount: 3,
-    maturedCount: 2,
-    metCount: 1,
+    eligibleCount: 4,
+    maturedCount: 3,
+    metCount: 2,
     missedCount: 1,
     pendingCount: 1,
-    rate: 0.5,
+    rate: 0.666667,
   })
 })
 
@@ -194,6 +205,20 @@ test('no qualifying events, zero cohort subjects, stale source and request failu
   })
   expect(zeroAndStale.populationStatus).toBe('zero_subjects')
   expect(zeroAndStale.freshness.status).toBe('stale')
+  const afterWindowOnly = computeJourneyCohort(
+    DEFINITION,
+    [fact('after', 'merchant_created', 12, { source: 'organic' })],
+    { ...OPTIONS, asOf: at(13) },
+  )
+  expect(afterWindowOnly.populationStatus).toBe('no_qualifying_events')
+
+  expect(isValidJourneyDrilldown(DEFINITION, 'satisfied:unknown')).toBe(false)
+  expect(isValidJourneyDrilldown(DEFINITION, 'missing_next:selling')).toBe(false)
+  expect(isValidJourneyDrilldown({ ...DEFINITION, retention: undefined }, 'retention:met')).toBe(false)
+  expect(() => computeJourneyCohort(DEFINITION, truthTableEvents(), {
+    ...OPTIONS,
+    drilldown: 'missing_next:selling',
+  })).toThrow('drilldown is not valid')
 
   expect(parseJourneyCohortRequest({ version: '1', from: at(11), to: at(1), asOf: at(11), timezone: 'UTC' }))
     .toEqual({ ok: false, error: 'from must be before to' })
@@ -368,8 +393,31 @@ test('cohort snapshot succeeds at 50,000 facts, then fails closed on 32 MiB and 
       await owner.query(
         `
           UPDATE public.events
+          SET occurred_at = '2026-01-12T00:00:00Z'::TIMESTAMPTZ,
+              created_at = '2026-01-12T00:00:00Z'::TIMESTAMPTZ
+          WHERE project_id = $1::UUID
+        `,
+        [project.id],
+      )
+    })
+    const postWindowOnly = await client.rpc('get_journey_cohort_events', {
+      p_project_id: project.id,
+      p_subject_type: 'merchant',
+      p_event_names: [shortEvent],
+      p_to: at(11),
+      p_as_of: asOf,
+    })
+    expect(postWindowOnly.error).toBeNull()
+    expect(postWindowOnly.data).toEqual([])
+
+    await withMigrationOwner(async (owner) => {
+      await owner.query(
+        `
+          UPDATE public.events
           SET event = $2::TEXT,
               subject_id = $3::TEXT,
+              occurred_at = '2026-01-01T00:00:00Z'::TIMESTAMPTZ,
+              created_at = '2026-01-01T00:00:00Z'::TIMESTAMPTZ,
               tags = jsonb_build_object(
                 'source', repeat('a', 64),
                 'channel', repeat('b', 64),
@@ -500,6 +548,12 @@ test('Bearer API and gated MCP return the same isolated versioned cohort with bo
     expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?${wrongVersion}`, {
       headers: { Authorization: `Bearer ${one.key}` },
     })).status()).toBe(404)
+
+    const invalidDrilldown = new URLSearchParams(query)
+    invalidDrilldown.set('drilldown', 'satisfied:unknown')
+    expect((await request.get(`/api/v1/journeys/${journeyKey}/cohort?${invalidDrilldown}`, {
+      headers: { Authorization: `Bearer ${one.key}` },
+    })).status()).toBe(400)
 
     const foreign = await request.get(`/api/v1/journeys/${journeyKey}/cohort?${query}`, {
       headers: { Authorization: `Bearer ${two.key}` },

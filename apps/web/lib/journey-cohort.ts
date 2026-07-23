@@ -109,6 +109,7 @@ export type JourneyCohortAggregate = {
 type ProjectedSubject = {
   id: string
   projection: JourneySubjectProjection
+  events: JourneyProjectionEvent[]
   currentIndex: number
   entryAt: JourneyTimestamp
 }
@@ -120,6 +121,9 @@ export function computeJourneyCohort(
   events: JourneyProjectionEvent[],
   options: JourneyCohortOptions,
 ): JourneyCohortAggregate {
+  if (!isValidJourneyDrilldown(definition, options.drilldown)) {
+    throw new Error('drilldown is not valid for this journey definition')
+  }
   const from = parseJourneyTimestamp(options.from)
   const to = parseJourneyTimestamp(options.to)
   const asOf = parseJourneyTimestamp(options.asOf)
@@ -151,7 +155,9 @@ export function computeJourneyCohort(
     const currentIndex = projection.currentStage
       ? definition.stages.findIndex((stage) => stage.key === projection.currentStage?.key)
       : -1
-    if (currentIndex >= 0) projected.push({ id: subjectId, projection, currentIndex, entryAt: entry })
+    if (currentIndex >= 0) {
+      projected.push({ id: subjectId, projection, events: subjectEvents, currentIndex, entryAt: entry })
+    }
   }
   projected.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 
@@ -218,8 +224,13 @@ export function computeJourneyCohort(
         asOf,
         parseJourneyTimestamp(latest.latestReceiptAt),
       ) > options.staleAfterHours * 3_600_000_000
+  const hasQualifyingEventBeforeWindowEnd = relevant.some((event) =>
+    compareJourneyTimestamps(
+      parseJourneyTimestamp(event.occurredAt ?? event.createdAt),
+      to,
+    ) < 0)
   const populationStatus: JourneyPopulationStatus =
-    relevant.length === 0 ? 'no_qualifying_events'
+    !hasQualifyingEventBeforeWindowEnd ? 'no_qualifying_events'
       : projected.length === 0 ? 'zero_subjects'
         : 'nonzero'
 
@@ -289,12 +300,17 @@ function computeRetention(
     if (!anchor) continue
     buckets.get('eligible')!.push(subject.id)
     const anchorAt = parseJourneyTimestamp(anchor.enteredAt)
-    const target = subject.projection.history.find((stage) => stage.key === retention.stageKey)
+    const targetStage = definition.stages.find((stage) => stage.key === retention.stageKey)!
     const deadlineMicroseconds = retention.withinDays * 86_400_000_000
-    const targetDelta = target
-      ? timestampDifferenceMicroseconds(parseJourneyTimestamp(target.enteredAt), anchorAt)
-      : null
-    if (targetDelta !== null && targetDelta >= 0 && targetDelta <= deadlineMicroseconds) {
+    const met = subject.events.some((event) => {
+      if (!eventMatchesStage(event, targetStage)) return false
+      const targetDelta = timestampDifferenceMicroseconds(
+        parseJourneyTimestamp(event.occurredAt ?? event.createdAt),
+        anchorAt,
+      )
+      return targetDelta >= 0 && targetDelta <= deadlineMicroseconds
+    })
+    if (met) {
       buckets.get('met')!.push(subject.id)
     } else if (timestampDifferenceMicroseconds(to, anchorAt) >= deadlineMicroseconds) {
       buckets.get('missed')!.push(subject.id)
@@ -323,6 +339,22 @@ function computeRetention(
       pending: 'retention:pending',
     },
   }
+}
+
+export function isValidJourneyDrilldown(
+  definition: JourneyDefinition,
+  key: string | undefined,
+): boolean {
+  if (!key || key === 'cohort') return true
+  const [kind, bucket] = key.split(':', 2)
+  if (kind === 'retention') {
+    return definition.retention !== undefined &&
+      (bucket === 'eligible' || bucket === 'met' || bucket === 'missed' || bucket === 'pending')
+  }
+  const stageIndex = definition.stages.findIndex((stage) => stage.key === bucket)
+  if (stageIndex < 0) return false
+  if (kind === 'missing_next') return stageIndex < definition.stages.length - 1
+  return kind === 'satisfied' || kind === 'at_or_beyond' || kind === 'current'
 }
 
 function aggregateFreshness(events: JourneyProjectionEvent[]): SourceFreshness {
