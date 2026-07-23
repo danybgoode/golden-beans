@@ -93,7 +93,11 @@ async function createRunningVersion(
     p_actor_user_id: ownerId,
   })
   if (transitioned.error) throw new Error(`could not start experiment version: ${transitioned.error.message}`)
-  return Number(created.version)
+  return {
+    experimentId: created.experiment_id,
+    versionId: created.version_id,
+    version: Number(created.version),
+  }
 }
 
 function eventTime(second: number): string {
@@ -202,7 +206,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     const snapshot = await client.rpc('get_experiment_analysis_events', {
       p_project_id: one.id,
       p_experiment_key: experimentKey,
-      p_definition_version: versionOne,
+      p_definition_version: versionOne.version,
       p_metric_events: ['founding_application_completed', 'founding_application_validation_failed'],
       p_analysis_start: START,
       p_analysis_end: asOf,
@@ -218,7 +222,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     expect(serializedSnapshot).not.toContain('Sensitive Person')
 
     const query = new URLSearchParams({
-      version: String(versionOne),
+      version: String(versionOne.version),
       asOf,
       segmentField: 'plan',
       segmentValue: 'founding',
@@ -253,7 +257,7 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
 
     const mcp = await mcpCall(request, one.token, 'get_experiment_analysis', {
       experimentKey,
-      version: versionOne,
+      version: versionOne.version,
       asOf,
       segmentField: 'plan',
       segmentValue: 'founding',
@@ -270,18 +274,38 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
 
     expect((await request.get(`/api/v1/experiments/${experimentKey}/compare?${query}`)).status()).toBe(401)
     const ui = await request.get(
-      `/app/experiments/${one.slug}/${experimentKey}?version=${versionOne}&asOf=${encodeURIComponent(asOf)}`,
+      `/app/experiments/${one.slug}/${experimentKey}?version=${versionOne.version}&asOf=${encodeURIComponent(asOf)}`,
       { maxRedirects: 0 },
     )
     expect([302, 307]).toContain(ui.status())
     expect(ui.headers().location).toContain('/login')
+
+    const stopped = await client.rpc('transition_experiment_version', {
+      p_project_id: one.id,
+      p_experiment_id: versionOne.experimentId,
+      p_version_id: versionOne.versionId,
+      p_target_status: 'stopped',
+      p_actor_user_id: ownerOne,
+    })
+    expect(stopped.error).toBeNull()
+    const historicalAsOf = '2026-07-03T00:00:00.000000Z'
+    const historical = await request.get(
+      `/api/v1/experiments/${experimentKey}/compare?version=${versionOne.version}&asOf=${encodeURIComponent(historicalAsOf)}`,
+      { headers: { Authorization: `Bearer ${one.key}` } },
+    )
+    expect(historical.status()).toBe(200)
+    const canonicalHistoricalAsOf = new Date(historicalAsOf).toISOString()
+    expect((await historical.json()).analysis.window).toMatchObject({
+      endAt: canonicalHistoricalAsOf,
+      asOf: canonicalHistoricalAsOf,
+    })
 
     expect((await client.from('connector_tokens')
       .update({ revoked_at: new Date().toISOString() })
       .eq('token', one.token)).error).toBeNull()
     const revoked = await mcpCall(request, one.token, 'get_experiment_analysis', {
       experimentKey,
-      version: versionOne,
+      version: versionOne.version,
       asOf,
     })
     expect(revoked.response.status()).toBe(401)

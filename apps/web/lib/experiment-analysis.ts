@@ -273,7 +273,9 @@ function metricResult(
       conversionRate: exposed === 0 ? null : converted / exposed,
     }
   })
-  const controlRate = rows.find((row) => row.key === definition.controlVariantKey)!.conversionRate
+  const controlRow = rows.find((row) => row.key === definition.controlVariantKey)
+  if (!controlRow) throw new Error('experiment definition control variant is not declared')
+  const controlRate = controlRow.conversionRate
   return {
     event: metric.event,
     direction: metric.direction,
@@ -315,7 +317,8 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
   const start = parseJourneyTimestamp(input.definition.plannedWindow.startAt)
   const plannedEnd = parseJourneyTimestamp(input.definition.plannedWindow.endAt)
   const lifecycleEnd = parseJourneyTimestamp(input.lifecycle.endedAt ?? input.asOf)
-  const end = compareJourneyTimestamps(plannedEnd, lifecycleEnd) < 0 ? plannedEnd : lifecycleEnd
+  const stoppedEnd = compareJourneyTimestamps(plannedEnd, lifecycleEnd) < 0 ? plannedEnd : lifecycleEnd
+  const end = compareJourneyTimestamps(stoppedEnd, asOf) < 0 ? stoppedEnd : asOf
   const facts = sortFacts(input.facts).filter((fact) => beforeOrAt(fact.created, asOf) && beforeOrAt(fact.effectiveAt, asOf))
   const counts = new Map<ExperimentIntegrityDiagnostic, number>([
     ['version_mismatch', 0], ['unknown_variant', 0], ['missing_or_wrong_subject', 0],
@@ -441,7 +444,8 @@ export function computeExperimentAnalysis(input: ExperimentAnalysisInput): Exper
   const start = parseJourneyTimestamp(input.definition.plannedWindow.startAt)
   const plannedEnd = parseJourneyTimestamp(input.definition.plannedWindow.endAt)
   const lifecycleEnd = parseJourneyTimestamp(input.lifecycle.endedAt ?? input.asOf)
-  const end = compareJourneyTimestamps(plannedEnd, lifecycleEnd) < 0 ? plannedEnd : lifecycleEnd
+  const stoppedEnd = compareJourneyTimestamps(plannedEnd, lifecycleEnd) < 0 ? plannedEnd : lifecycleEnd
+  const end = compareJourneyTimestamps(stoppedEnd, asOf) < 0 ? stoppedEnd : asOf
   const values = new Set<string>()
   const assignedSubjects = new Set<string>()
   const declaredVariants = new Set(input.definition.variants.map((variant) => variant.key))

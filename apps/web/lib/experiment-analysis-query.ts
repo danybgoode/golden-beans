@@ -79,8 +79,8 @@ function resolveAnalysisWindow(
     : endedAt === null
       ? null
       : parseJourneyTimestamp(endedAt)
-  if (lifecycleEnd === null || compareJourneyTimestamps(lifecycleEnd, asOf) > 0) return null
-  const end = chooseEarlier(plannedEnd, lifecycleEnd)
+  if (lifecycleEnd === null) return null
+  const end = chooseEarlier(chooseEarlier(plannedEnd, lifecycleEnd), asOf)
   return compareJourneyTimestamps(start, end) < 0 ? { start, end, asOf } : null
 }
 

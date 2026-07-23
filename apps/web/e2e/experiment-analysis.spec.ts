@@ -132,6 +132,23 @@ test('uses Pearson SRM, blocks detected and low-expected distributions, and free
   ], { lifecycle: { status: 'stopped', startedAt: at(1), endedAt: at(20) } }))
   expect(stopped.window.endAt).toBe(at(20))
   expect(stopped.diagnostics.integrity).toContainEqual({ code: 'out_of_window_exposure', severity: 'warning', count: 1 })
+
+  const historical = computeExperimentAnalysis(input([
+    ...balancedFacts(), exposure('after-snapshot', 'control', 18),
+  ], {
+    lifecycle: { status: 'stopped', startedAt: at(1), endedAt: at(20) },
+    asOf: at(17),
+  }))
+  expect(historical.window.endAt).toBe(at(17))
+  expect(historical.diagnostics.integrity).not.toContainEqual(
+    expect.objectContaining({ code: 'out_of_window_exposure' }),
+  )
+})
+
+test('fails closed when a stored definition names a control variant that is not declared', () => {
+  expect(() => computeExperimentAnalysis(input(balancedFacts(), {
+    definition: { ...definition, controlVariantKey: 'missing-control' },
+  }))).toThrow('experiment definition control variant is not declared')
 })
 
 test('bounds segments, redacts unsafe cuts, and reports freshness/addressability without identifiers or raw tags', () => {
