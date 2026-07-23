@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 // cross-review.mjs — the cross-agent judgment-layer review for a pull-request diff.
 //
-// Pipes `gh pr diff <PR#>` into a DIFFERENT model family's CLI (Codex or Antigravity) with the shared prompt
+// Pipes `gh pr diff <PR#>` into the external Antigravity reviewer with the shared prompt
 // (scripts/cross-review.prompt.md = the five AGENTS rules + WAYS single-pass discipline) and prints the
 // findings. It is dev tooling, not app code, and it is deliberately:
 //   • SINGLE-PASS — one read, no debate / iterate-to-convergence loop (our #1 token sink, out of scope).
-//   • THE JUDGMENT-LAYER REVIEW (updated 2026-07-20, WAYS-OF-WORKING "Review & merge — cross-agent") —
-//     running this with BOTH --agent codex and --agent antigravity replaces spawning a same-family
-//     Claude subagent as "the fresh reviewer" for ordinary PRs. A Blocking finding from either run must
+//   • THE JUDGMENT-LAYER REVIEW (updated 2026-07-23, WAYS-OF-WORKING "Review & merge — cross-agent") —
+//     running this with --agent antigravity replaces spawning an internal same-family reviewer for
+//     ordinary PRs. High-risk work adds an independent Devin pass outside this script. A Blocking finding must
 //     be resolved (fixed, or explicitly triaged) before merge — this is no longer background-only noise.
 //     It still isn't a second CI: CI decides green/red mechanically, this decides whether the diff holds
-//     up, and the risk-tier rule still decides *who* clicks merge. HIGH-risk PRs still warrant an
-//     additional same-family Claude read on top of this, not instead of it.
+//     up, and the risk-tier rule still decides *who* clicks merge.
 //
 // Usage:
-//   node scripts/cross-review.mjs [PR#] --agent codex|antigravity [--repo owner/repo] [--force] [--dry-run]
+//   node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
 //     [--skip-trivial] [--min-lines N]
 //
 // --skip-trivial is the CI cost guard: skip (exit 0, no comment) when the PR is docs-only or under
@@ -61,7 +60,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
 
 const BANNER =
-  '> **The judgment-layer review for this PR** (WAYS-OF-WORKING, updated 2026-07-20) — a single-pass ' +
+  '> **The judgment-layer review for this PR** (WAYS-OF-WORKING, updated 2026-07-23) — a single-pass ' +
   'read from a different model family, standing in for a same-family fresh-reviewer pass. ' +
   'Not a second CI: does not itself authorize a merge — CI (green/red) and the risk-tier rule ' +
   '(who may click merge) remain the other two layers. Blocking findings should be resolved or ' +
@@ -70,12 +69,12 @@ const BANNER =
 const HELP = `cross-review.mjs — the cross-agent judgment-layer review for a PR diff.
 
 Usage:
-  node scripts/cross-review.mjs [PR#] --agent codex|antigravity [--repo owner/repo] [--force] [--dry-run]
+  node scripts/cross-review.mjs [PR#] --agent antigravity [--repo owner/repo] [--force] [--dry-run]
 
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: ${Object.keys(AGENTS).join('|')} (default: codex)
+  --agent <name>       reviewer CLI: antigravity (default: antigravity)
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
   --force              proceed even when local HEAD differs from the resolved PR head (auto-resolve only)
   --skip-trivial       skip (exit 0, no comment) when the PR is docs-only or under --min-lines changed lines
@@ -93,7 +92,7 @@ The judgment-layer review — not a second CI. CI (green/red) + the risk-tier ru
 function parseArgs(argv) {
   const out = {
     pr: null,
-    agent: 'codex',
+    agent: 'antigravity',
     repo: null,
     force: false,
     dryRun: false,
@@ -196,7 +195,9 @@ function main() {
     process.exit(0);
   }
   if (pr !== null && !/^\d+$/.test(String(pr))) die(`PR number must be numeric, got '${pr}'.`);
-  if (!AGENTS[agent]) die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
+  if (agent !== 'antigravity') {
+    die(`reviewer '${agent}' is disabled by the current cadence; use antigravity (and add Devin for high-risk PRs)`);
+  }
 
   ensureGh();
 

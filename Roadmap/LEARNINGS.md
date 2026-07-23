@@ -35,6 +35,13 @@ one-liner + why + date shape.
   running functions — and the rebuild must be a commit to `main`, not `vercel redeploy`** (AGENTS
   rule #4). `vercel env pull` returning an empty value for a var you just set is expected, not a
   failure. Verify the flip against the running endpoint's behavior, never against a pull.
+  **Corollary — `vercel env run` can load the repo's existing `.env.local` over the requested
+  production environment.** Entity-journeys S3 requested Production and silently received
+  `SUPABASE_URL=127.0.0.1`; check only the selected hostname before trusting the process. Never rename
+  or overwrite the user's local file to work around it. For an authorized production proof, the
+  linked `supabase db query --linked` Management API can mint a one-use key/token, normal HTTP ingest
+  can exercise the real path, and a `finally` cleanup can revoke both—without pulling a service-role
+  secret into the shell.
 
 - **`main` moves under you.** Before opening a PR — and again if it sits open — **merge latest `main`
   into your branch**. Tell-tale: CI fails on a spec/check for something you never touched → a sibling
@@ -341,6 +348,15 @@ one-liner + why + date shape.
   found 5 more (one of them a bug round 1's own fix introduced), round 3 found 3 more — including a
   quota-accounting bug that made the feature's ONLY documented remedy silently fail. Stop when a
   round comes back clean, not when you hit a round count. *(2026-07-21, multi-tenant-activation.)*
+- **Route external review by risk and demonstrated strength; two full reads are not a tax on every
+  diff.** The 2026-07-23 Entity/Experiment trial established the current rail: Agy is the fast
+  baseline architectural/security read; Devin's default router earns the second seat for high-risk
+  migrations, tenancy and concurrency; Cursor Auto is slower/quota-limited but caught two real S1
+  boundary defects (audit-cascade SQL and Unicode whitespace), so it remains a specialist/tie-breaker
+  when quota permits. OpenAI/Codex stays in the builder/architect role, not review. Rerun the finder
+  after substantive fixes (both Agy+Devin for high-risk fixes); do targeted validation rather than
+  two fresh full reads for wording/presentation-only deltas. Different tools are coverage, not a
+  ceremonial pass count.
 - **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
   spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
   S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a

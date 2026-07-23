@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: shipped
 slug: entity-journeys-projections
 ---
 
@@ -67,8 +67,8 @@ background projector or materialized subject/history store in v1; those require 
 | 1 | ✅ 1.2 Deterministic subject projection | low |
 | 2 | ✅ 2.1 Cohort conversion, aging and drop-off | low |
 | 2 | ✅ 2.2 UI, API and MCP read parity | high |
-| 3 | 3.1 Miyagi 13-stage founding-merchant proof | high |
-| 3 | 3.2 Query-time scale decision from measured evidence | low |
+| 3 | ✅ 3.1 Miyagi 13-stage founding-merchant proof | high |
+| 3 | ✅ 3.2 Query-time scale decision from measured evidence | low |
 
 ## Kill-switch
 
@@ -87,13 +87,26 @@ and disposable merchant fixture pass in production.
 
 ## Definition of Done (epic)
 
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each sprint walkthrough contains real deployed URLs and disposable subject data
-- [ ] Late, duplicate, out-of-order and same-time fixtures produce deterministic projections
-- [ ] UI/API/MCP use one resolver and pass two-project isolation + connector gate tests
-- [ ] Miyagi's 13-stage proof carries no merchant PII and does not copy CRM/commerce state
-- [ ] Query timing/event-count telemetry supports keep-query-time or a separately groomed materialization seed
-- [ ] `JOURNEY_PROJECTIONS_ENABLED` exists born OFF; gate flip includes a new deployment and live verification
-- [ ] This README marked shipped; sprint headings carry commit refs
-- [ ] `RETROSPECTIVE.md`, product poster and durable learnings updated
-- [ ] Feature branch deleted and `node scripts/build-order.mjs` run
+- [x] All sprints merged to `main` + smoke-tested (authenticated Miyagi↔Golden Beans browser comparison stated as owed)
+- [x] Each sprint walkthrough contains real deployed URLs and disposable subject data
+- [x] Late, duplicate, out-of-order and same-time fixtures produce deterministic projections
+- [x] UI/API/MCP use one resolver and pass two-project isolation + connector gate tests
+- [x] Miyagi's 13-stage proof carries no merchant PII and does not copy CRM/commerce state
+- [x] Query timing/event-count telemetry supports keep-query-time or a separately groomed materialization seed
+- [x] `JOURNEY_PROJECTIONS_ENABLED` exists born OFF; gate flip includes a new deployment and live verification
+- [x] This README marked shipped; sprint headings carry commit refs
+- [x] `RETROSPECTIVE.md`, product poster and durable learnings updated
+- [x] Feature branch deleted and `node scripts/build-order.mjs` run
+
+## Production closeout
+
+Shipped in PRs [#17](https://github.com/danybgoode/golden-beans/pull/17),
+[#18](https://github.com/danybgoode/golden-beans/pull/18), and
+[#20](https://github.com/danybgoode/golden-beans/pull/20). The gate-on production deployment is
+`cd62a98cdc65628a360bf36948b946d6660f4504`.
+
+The live self-tenant proof reached all 13 `merchant_activation` v1 stages through normal ingest and returned
+the same one-subject retained cohort through Bearer API and MCP. Query-time remains the selected architecture:
+production p95 was 118.87 ms for subject projection and 119.32 ms after the MCP cohort sample, with 13 relevant
+events versus the >2,000 ms / >1,000,000-event tripwires. The disposable API and connector credentials used for
+the proof are revoked.
