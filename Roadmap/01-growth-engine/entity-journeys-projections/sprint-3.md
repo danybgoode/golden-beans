@@ -4,7 +4,7 @@
 
 ## Stories
 
-### Story 3.1 — Miyagi 13-stage founding-merchant proof
+### ✅ Story 3.1 — Miyagi 13-stage founding-merchant proof
 
 **As Miyagi's** activation team, **I want** its activation lifecycle represented as a Golden Beans journey, **so
 that** the scorecard consumes reusable analytics while Miyagi keeps merchant work records and Medusa facts.
@@ -23,7 +23,14 @@ the separate `merchant.preview_approved` delivery signal remains valid but is no
 The definition is import-free application data in `lib/founding-merchant-journey.ts`, with no tag predicates or
 place to carry merchant PII/CRM/commerce state.
 
-### Story 3.2 — Query-time scale decision from measured evidence
+**Implementation status:** Golden Beans now holds the canonical JSON fixture at the exact same
+`b53f300b…f3671` digest pinned by Miyagi's active Sprint 3 branch. The valid versionable definition consumes the
+13 lifecycle stage events and explicitly leaves `merchant.preview_approved` as the independent fourteenth
+delivery signal. Pure proof reverses receipt order, replays canonical ids, and still reaches all 13 stages in
+definition order with exact boundary retention. The serialized fixture/definition is structurally checked for
+merchant PII and copied workflow/Medusa identifiers.
+
+### ✅ Story 3.2 — Query-time scale decision from measured evidence
 
 **As a** platform owner, **I want** evidence for or against materialization, **so that** Golden Beans adds
 projection infrastructure only after the simple architecture stops serving real use.
@@ -40,6 +47,13 @@ and returns p50/p95 plus the strict `p95 > 2,000 ms` / `max relevant events > 1,
 failure never breaks the analytical read and is reported as unavailable; no subject id, tags or result payload
 may enter the observation table.
 
+**Implementation status:** migration `20260730100000_journey_query_telemetry.sql` adds a no-policy RLS table
+with no subject-shaped columns and a service-role-only transactional RPC. A per-series advisory lock keeps the
+latest-sample cap exact under concurrent serverless requests. Subject and cohort queries record their own
+duration/relevant count after evaluation, then expose bounded samples, p50, p95, maximum relevant-event count,
+thresholds and the descriptive keep/materialize signal through the existing API/UI/MCP result. Instrumentation
+errors degrade to `telemetry_unavailable` without changing the valid analytical answer.
+
 ## Sprint QA
 
 - **contract specs:** identical 13-stage fixtures in Golden Beans and Miyagi, including duplicates, late events,
@@ -48,6 +62,12 @@ may enter the observation table.
 - **browser smoke owed:** yes, to Daniel — authenticated production Miyagi merchant lifecycle + Golden Beans
   journey/scorecard comparison.
 - **deterministic gate:** both repos' typecheck/build/API suites green before merge.
+
+**Local evidence:** clean local migration reset through `20260730100000`; 16/16 definition/fixture/telemetry
+property specs passed, including function-level anonymous denial, cross-project version refusal, direct
+service-role table denial, exact percentile values, exact 100-row cap and schema redaction. Existing
+subject/cohort/API/MCP suites passed 12/12 with telemetry assertions; typecheck and production build are green.
+Production query evidence and the authenticated rendered comparison remain owed until the gate-on deployment.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 

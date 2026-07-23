@@ -45,5 +45,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
     return NextResponse.json({ ok: false, error: result.reason === 'journey_not_found' ? `Unknown journey: ${key}` : `Unknown journey version: ${version}` }, { status: 404 })
   }
 
-  return NextResponse.json({ ok: true, journey: result.journey, subject: result.subject })
+  return NextResponse.json({
+    ok: true,
+    journey: result.journey,
+    subject: result.subject,
+    diagnostics: result.diagnostics,
+  })
 }
