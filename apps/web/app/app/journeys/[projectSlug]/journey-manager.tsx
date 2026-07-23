@@ -41,11 +41,15 @@ export function JourneyManager({
     setError(null)
     setNotice(null)
     startTransition(async () => {
-      const result = await createJourneyVersionAction(slug, key, definition)
-      if (result.ok) {
-        setNotice(`Created ${key} version ${result.version} as a draft.`)
-        router.refresh()
-      } else setError(result.error)
+      try {
+        const result = await createJourneyVersionAction(slug, key, definition)
+        if (result.ok) {
+          setNotice(`Created ${key} version ${result.version} as a draft.`)
+          router.refresh()
+        } else setError(result.error)
+      } catch {
+        setError('Could not create this journey version. Try again.')
+      }
     })
   }
 
@@ -53,11 +57,15 @@ export function JourneyManager({
     setError(null)
     setNotice(null)
     startTransition(async () => {
-      const result = await activateJourneyVersionAction(slug, journeyId, versionId)
-      if (result.ok) {
-        setNotice(`Activated version ${version}.`)
-        router.refresh()
-      } else setError(result.error ?? 'Could not activate this version.')
+      try {
+        const result = await activateJourneyVersionAction(slug, journeyId, versionId)
+        if (result.ok) {
+          setNotice(`Activated version ${version}.`)
+          router.refresh()
+        } else setError(result.error ?? 'Could not activate this version.')
+      } catch {
+        setError('Could not activate this version. Try again.')
+      }
     })
   }
 

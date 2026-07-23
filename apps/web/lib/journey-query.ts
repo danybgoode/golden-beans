@@ -10,6 +10,11 @@ export type JourneySubjectQueryResult =
   | { ok: true; journey: { key: string; definitionVersion: number; entityType: string }; subject: { id: string } & JourneySubjectProjection }
   | { ok: false; reason: 'journey_not_found' | 'version_not_found' | 'query_failed' }
 
+// Supabase projects commonly cap PostgREST responses at 1,000 rows. Keep the page at or below that
+// ceiling and make the traversal deterministic on immutable columns so older source facts cannot be
+// silently dropped from a subject projection.
+const JOURNEY_EVENT_PAGE_SIZE = 1_000
+
 export async function getJourneySubjectByProjectId(
   projectId: string,
   journeyKey: string,
@@ -43,18 +48,35 @@ export async function getJourneySubjectByProjectId(
   if (!definitionVersion) return { ok: false, reason: 'version_not_found' }
 
   const definition = definitionVersion.definition as JourneyDefinition
-  const { data: rows, error: eventsError } = await supabase
-    .from('events')
-    .select('id, event, tags, occurred_at, created_at, subject_id')
-    .eq('project_id', projectId)
-    .eq('subject_type', definition.entityType)
-    .eq('subject_id', subjectId)
-  if (eventsError) {
-    console.error('[journey-query] subject events lookup failed:', eventsError)
-    return { ok: false, reason: 'query_failed' }
+  const rows: Array<{
+    id: unknown
+    event: unknown
+    tags: unknown
+    occurred_at: unknown
+    created_at: unknown
+    subject_id: unknown
+  }> = []
+  for (let offset = 0; ; offset += JOURNEY_EVENT_PAGE_SIZE) {
+    const { data: page, error: eventsError } = await supabase
+      .from('events')
+      .select('id, event, tags, occurred_at, created_at, subject_id')
+      .eq('project_id', projectId)
+      .eq('subject_type', definition.entityType)
+      .eq('subject_id', subjectId)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + JOURNEY_EVENT_PAGE_SIZE - 1)
+    if (eventsError) {
+      console.error('[journey-query] subject events lookup failed:', eventsError)
+      return { ok: false, reason: 'query_failed' }
+    }
+
+    const fetched = page ?? []
+    rows.push(...fetched)
+    if (fetched.length < JOURNEY_EVENT_PAGE_SIZE) break
   }
 
-  const events: JourneyProjectionEvent[] = (rows ?? []).map((row) => ({
+  const events: JourneyProjectionEvent[] = rows.map((row) => ({
     id: row.id as string,
     event: row.event as string,
     tags: (row.tags as Record<string, unknown>) ?? {},

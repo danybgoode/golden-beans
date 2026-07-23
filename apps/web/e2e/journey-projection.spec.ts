@@ -18,6 +18,8 @@ import type { JourneyDefinition } from '@/lib/journey-definition'
 //      because `created` entered at day 4, not its earliest fact time day 1.
 //   C. Removed `events.project_id` from the resolver: the HTTP grep failed 1/1 because project
 //      two's same-subject event advanced project one's result to `selling` on day 3.
+//   D. Restored the resolver's single unpaged event query: the HTTP grep failed 1/1 because the
+//      qualifying stage and newest freshness fact after row 1,000 were silently omitted.
 // Every mutation was reverted before the restored focused suite.
 
 const DEFINITION: JourneyDefinition = {
@@ -179,12 +181,63 @@ async function insertSubjectEvent(
   if (error) throw new Error(`could not insert event fixture: ${error.message}`)
 }
 
+async function insertPagedSubjectFixture(
+  client: SupabaseClient,
+  projectId: string,
+  subjectId: string,
+) {
+  const earlyRows = Array.from({ length: 1_000 }, (_, index) => ({
+    project_id: projectId,
+    user_id: `journey-paged-user-${index}-${crypto.randomUUID()}`,
+    event: 'merchant_note',
+    tags: {},
+    context_version: 1,
+    subject_type: 'merchant',
+    subject_id: subjectId,
+    occurred_at: at(10),
+    created_at: at(10),
+  }))
+  // Keep each fixture write comfortably bounded; the read path, not a large insert response, is
+  // what this regression exercises.
+  for (let offset = 0; offset < earlyRows.length; offset += 500) {
+    const { error } = await client.from('events').insert(earlyRows.slice(offset, offset + 500))
+    if (error) throw new Error(`could not insert paged event fixture: ${error.message}`)
+  }
+
+  const { error } = await client.from('events').insert([
+    {
+      project_id: projectId,
+      user_id: `journey-paged-stage-${crypto.randomUUID()}`,
+      event: 'merchant_sold',
+      tags: { region: 'mx' },
+      context_version: 1,
+      subject_type: 'merchant',
+      subject_id: subjectId,
+      occurred_at: at(11),
+      created_at: at(11),
+    },
+    {
+      project_id: projectId,
+      user_id: `journey-paged-freshness-${crypto.randomUUID()}`,
+      event: 'merchant_note',
+      tags: {},
+      context_version: 1,
+      subject_type: 'merchant',
+      subject_id: subjectId,
+      occurred_at: at(12),
+      created_at: at(12),
+    },
+  ])
+  if (error) throw new Error(`could not insert later paged event fixture: ${error.message}`)
+}
+
 test('GET journey subject is non-zero, version-explicit, opaque-id validated, and project isolated', async ({ request }) => {
   const client = db()
   const [oneOwner, twoOwner] = await Promise.all([createOwner(client, 'one'), createOwner(client, 'two')])
   const [one, two] = await Promise.all([createProject(client, 'one'), createProject(client, 'two')])
   const journeyKey = `merchant_activation_${Date.now()}`
   const subjectId = `merchant-smoke-${Date.now()}`
+  const pagedSubjectId = `merchant-paged-${Date.now()}`
   try {
     expect((await client.from('project_members').insert([
       { project_id: one.id, user_id: oneOwner, role: 'owner' },
@@ -205,6 +258,7 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     }, at(2))
     // Project two deliberately owns the same journey key + opaque subject and has a higher stage.
     await insertSubjectEvent(client, two.id, subjectId, 'merchant_sold', { region: 'mx' }, at(3))
+    await insertPagedSubjectFixture(client, one.id, pagedSubjectId)
 
     const headers = { Authorization: `Bearer ${one.key}` }
     const live = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=${v1}`, { headers })
@@ -222,6 +276,17 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     expect(body.subject.freshness.latestEffectiveFactAt).toBe(at(2))
     expect(body.subject.freshness.latestReceiptAt).toBeTruthy()
 
+    // A default PostgREST response stops at 1,000 rows. Both observable facts below live after that
+    // boundary in deterministic created_at/id order, proving the resolver drains every page.
+    const pagedRead = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${pagedSubjectId}&version=${v1}`, { headers })
+    expect(pagedRead.status()).toBe(200)
+    expect((await pagedRead.json()).subject).toMatchObject({
+      id: pagedSubjectId,
+      currentStage: { key: 'selling', enteredAt: at(11) },
+      history: [{ key: 'selling', enteredAt: at(11) }],
+      freshness: { latestEffectiveFactAt: at(12), latestReceiptAt: at(12) },
+    })
+
     // Explicit version freshness: version 2 is a different immutable definition, not a hidden
     // alias to whichever version happens to be active/latest.
     const v2Read = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=${v2}`, { headers })
@@ -235,6 +300,7 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=+bad&version=${v1}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=01`, { headers })).status()).toBe(400)
+    expect((await request.get(`/api/v1/journeys/Not-A-Key/subject?subjectId=${subjectId}&version=${v1}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subjects/${subjectId}?version=${v1}`, { headers })).status()).toBe(404)
   } finally {
     await client.from('projects').delete().in('id', [one.id, two.id])

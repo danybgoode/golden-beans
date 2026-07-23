@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveProjectFromAuthHeader } from '@/lib/auth'
 import { isValidOpaqueId } from '@/lib/event-context'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
+import { validateJourneyKey } from '@/lib/journey-definition'
 import { getJourneySubjectByProjectId } from '@/lib/journey-query'
 
 // GET /api/v1/journeys/:key/subject?subjectId=<opaque>&version=<positive integer>
@@ -15,6 +16,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status })
 
+  const { key } = await params
+  if (!validateJourneyKey(key)) {
+    return NextResponse.json({ ok: false, error: 'journey key must be 1-64 characters of lower_snake_case' }, { status: 400 })
+  }
+
   const subjectId = req.nextUrl.searchParams.get('subjectId')
   if (!isValidOpaqueId(subjectId)) {
     return NextResponse.json({ ok: false, error: 'subjectId must be a valid opaque subject id' }, { status: 400 })
@@ -24,8 +30,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
   if (!Number.isSafeInteger(version) || version < 1 || String(version) !== rawVersion) {
     return NextResponse.json({ ok: false, error: 'version must be a positive integer' }, { status: 400 })
   }
-
-  const { key } = await params
   const result = await getJourneySubjectByProjectId(auth.projectId, key, version, subjectId)
   if (!result.ok) {
     if (result.reason === 'query_failed') {

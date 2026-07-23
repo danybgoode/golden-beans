@@ -39,9 +39,11 @@ irrelevant events are ignored; response names definition version and source fres
 **Risk:** low — read-only pure/query logic over existing telemetry.
 
 **Implementation status:** pure query-time evaluation reads only canonical, project-scoped subject facts;
-it orders by `occurred_at ?? created_at`, then canonical event id, and records only actual first
-satisfaction timestamps. The version is required on API reads, history is definition-stage order, and
-freshness reports the latest effective fact time separately from latest receipt time. The canonical
+the resolver drains deterministic ≤1,000-row pages ordered by immutable `created_at`, then event id,
+with the project/entity/subject scope repeated on every page. Evaluation still orders the complete set
+by `occurred_at ?? created_at`, then canonical event id, and records only actual first satisfaction
+timestamps. The version is required on API reads, history is definition-stage order, and freshness
+reports the latest effective fact time separately from latest receipt time. The canonical
 API is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positive-integer>`; no
 legacy `/subjects/<id>` alias exists. Pure truth-table and API isolation specs, mutation checks,
 typecheck and build are green locally; production smoke remains deployment/review work.
@@ -51,6 +53,12 @@ validation and make unexpected registry timestamps render fail-safe. The suggest
 progression change was rejected: this epic's approved contract explicitly says highest satisfied stage
 wins, lower-stage events never regress, and history records each stage's actual first satisfaction in
 stage order. Requiring predecessors would fabricate or suppress facts and change the product semantics.
+
+**PR #17 round-two disposition:** accepted the silent PostgREST-cap finding. The projection resolver
+now paginates the complete scoped subject fact set; a real DB/API fixture places a qualifying stage and
+the newest freshness fact after 1,000 earlier rows, and restoring the single-page query fails that spec.
+Also accepted defensive rejected-promise handling for both UI mutations and lower-snake-case route-key
+validation after the OFF/auth gates but before the resolver. The two-project collision tripwire remains.
 
 ## Sprint QA
 
