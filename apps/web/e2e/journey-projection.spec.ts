@@ -4,6 +4,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { eventMatchesStage, projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import type { JourneyDefinition } from '@/lib/journey-definition'
+import { parseJourneyTimestamp } from '@/lib/journey-timestamp'
+import { cleanupJourneyProjects, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
 
 // entity-journeys-projections · Sprint 1, Story 1.2.
 // Pure truth-table coverage plus one real Bearer-authenticated query. The HTTP fixture intentionally
@@ -20,6 +22,8 @@ import type { JourneyDefinition } from '@/lib/journey-definition'
 //      two's same-subject event advanced project one's result to `selling` on day 3.
 //   D. Replaced the snapshot RPC with an explicitly one-page scoped query (`range(0, 999)`): the
 //      HTTP grep failed 1/1 because the qualifying stage and newest freshness fact were omitted.
+//   E. Replaced the microsecond comparator with millisecond-only Date ordering: the focused
+//      same-millisecond test failed because canonical IDs selected `.000900Z` before `.000100Z`.
 // Every mutation was reverted before the restored focused suite.
 
 const DEFINITION: JourneyDefinition = {
@@ -97,6 +101,44 @@ test('projection truth table: no source and source-with-no-match remain distinct
   })
 })
 
+test('projection preserves and orders PostgreSQL microseconds before the canonical-id tie break', () => {
+  expect(parseJourneyTimestamp('2026-01-20T02:00:00.000100+02:00').canonical)
+    .toBe('2026-01-20T00:00:00.0001Z')
+  expect(() => parseJourneyTimestamp('not-a-timestamp')).toThrow('invalid journey source timestamp')
+
+  const subjectId = 'microsecond-subject'
+  const events = [
+    fact({
+      id: '00000000-0000-0000-0000-00000000000a',
+      event: 'merchant_created',
+      tags: { source: 'organic' },
+      occurredAt: '2026-01-20T00:00:00.000900+00:00',
+      createdAt: '2026-01-20T00:00:01.000900+00:00',
+      subjectId,
+    }),
+    fact({
+      // Larger id but earlier by 800µs: Date.parse would collapse the facts and order this second.
+      id: '00000000-0000-0000-0000-00000000000b',
+      event: 'merchant_created',
+      tags: { source: 'organic' },
+      occurredAt: '2026-01-20T00:00:00.000100Z',
+      createdAt: '2026-01-20T00:00:01.000100Z',
+      subjectId,
+    }),
+  ]
+
+  const expected = {
+    currentStage: { key: 'created', enteredAt: '2026-01-20T00:00:00.0001Z' },
+    history: [{ key: 'created', enteredAt: '2026-01-20T00:00:00.0001Z' }],
+    freshness: {
+      latestEffectiveFactAt: '2026-01-20T00:00:00.0009Z',
+      latestReceiptAt: '2026-01-20T00:00:01.0009Z',
+    },
+  }
+  expect(projectJourneySubject(DEFINITION, subjectId, events)).toEqual(expected)
+  expect(projectJourneySubject(DEFINITION, subjectId, [...events].reverse())).toEqual(expected)
+})
+
 test('projection truth table: tag predicates require every exact scalar with no coercion', () => {
   const definition: JourneyDefinition = {
     entityType: 'merchant',
@@ -121,6 +163,7 @@ test('projection truth table: tag predicates require every exact scalar with no 
 })
 
 function db(): SupabaseClient {
+  requireTestDatabaseUrl()
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set')
@@ -175,8 +218,11 @@ async function insertSubjectEvent(
   event: string,
   tags: Record<string, unknown>,
   occurredAt: string | null,
+  createdAt?: string,
+  id?: string,
 ) {
   const { error } = await client.from('events').insert({
+    ...(id === undefined ? {} : { id }),
     project_id: projectId,
     user_id: `journey-user-${crypto.randomUUID()}`,
     event,
@@ -185,6 +231,7 @@ async function insertSubjectEvent(
     subject_type: 'merchant',
     subject_id: subjectId,
     occurred_at: occurredAt,
+    ...(createdAt === undefined ? {} : { created_at: createdAt }),
   })
   if (error) throw new Error(`could not insert event fixture: ${error.message}`)
 }
@@ -246,6 +293,7 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
   const journeyKey = `merchant_activation_${Date.now()}`
   const subjectId = `merchant-smoke-${Date.now()}`
   const pagedSubjectId = `merchant-paged-${Date.now()}`
+  const preciseSubjectId = `merchant-precise-${Date.now()}`
   try {
     expect((await client.from('project_members').insert([
       { project_id: one.id, user_id: oneOwner, role: 'owner' },
@@ -267,6 +315,28 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     // Project two deliberately owns the same journey key + opaque subject and has a higher stage.
     await insertSubjectEvent(client, two.id, subjectId, 'merchant_sold', { region: 'mx' }, at(3))
     await insertPagedSubjectFixture(client, one.id, pagedSubjectId)
+    // PostgreSQL retains microseconds. IDs are deliberately opposite timestamp order so a
+    // millisecond-only comparator chooses the wrong first entry and freshness fact.
+    await insertSubjectEvent(
+      client,
+      one.id,
+      preciseSubjectId,
+      'merchant_created',
+      { source: 'organic' },
+      '2026-01-20T00:00:00.000900Z',
+      '2026-01-20T00:00:01.000900Z',
+      '00000000-0000-0000-0000-00000000000a',
+    )
+    await insertSubjectEvent(
+      client,
+      one.id,
+      preciseSubjectId,
+      'merchant_created',
+      { source: 'organic' },
+      '2026-01-20T00:00:00.000100Z',
+      '2026-01-20T00:00:01.000100Z',
+      '00000000-0000-0000-0000-00000000000b',
+    )
 
     const headers = { Authorization: `Bearer ${one.key}` }
     const live = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=${v1}`, { headers })
@@ -295,6 +365,20 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
       freshness: { latestEffectiveFactAt: at(12), latestReceiptAt: at(12) },
     })
 
+    const preciseRead = await request.get(
+      `/api/v1/journeys/${journeyKey}/subject?subjectId=${preciseSubjectId}&version=${v1}`,
+      { headers },
+    )
+    expect(preciseRead.status()).toBe(200)
+    expect((await preciseRead.json()).subject).toMatchObject({
+      currentStage: { key: 'created', enteredAt: '2026-01-20T00:00:00.0001Z' },
+      history: [{ key: 'created', enteredAt: '2026-01-20T00:00:00.0001Z' }],
+      freshness: {
+        latestEffectiveFactAt: '2026-01-20T00:00:00.0009Z',
+        latestReceiptAt: '2026-01-20T00:00:01.0009Z',
+      },
+    })
+
     // Explicit version freshness: version 2 is a different immutable definition, not a hidden
     // alias to whichever version happens to be active/latest.
     const v2Read = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${subjectId}&version=${v2}`, { headers })
@@ -312,7 +396,11 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     expect((await request.get(`/api/v1/journeys/Not-A-Key/subject?subjectId=${subjectId}&version=${v1}`, { headers })).status()).toBe(400)
     expect((await request.get(`/api/v1/journeys/${journeyKey}/subjects/${subjectId}?version=${v1}`, { headers })).status()).toBe(404)
   } finally {
-    await client.from('projects').delete().in('id', [one.id, two.id])
-    await Promise.all([client.auth.admin.deleteUser(oneOwner), client.auth.admin.deleteUser(twoOwner)])
+    try {
+      await cleanupJourneyProjects([one.id, two.id])
+    } finally {
+      // Auth cleanup must still run if the migration-owner connection or SQL cleanup fails.
+      await Promise.all([client.auth.admin.deleteUser(oneOwner), client.auth.admin.deleteUser(twoOwner)])
+    }
   }
 })

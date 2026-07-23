@@ -70,10 +70,11 @@ export async function getJourneySubjectByProjectId(
     id: row.id as string,
     event: row.event as string,
     tags: (row.tags as Record<string, unknown>) ?? {},
-    // PostgREST may serialize the same timestamptz as `+00:00` while ingest stored `Z`. Normalize
-    // at the one DB boundary so pure fixtures and API results share a stable UTC representation.
-    occurredAt: row.occurred_at ? new Date(row.occurred_at as string).toISOString() : null,
-    createdAt: new Date(row.created_at as string).toISOString(),
+    // Do not round-trip through Date here: PostgreSQL retains six fractional digits and lifecycle
+    // facts within one millisecond must remain distinct. The pure evaluator normalizes these exact
+    // strings to canonical UTC while retaining their microseconds.
+    occurredAt: row.occurred_at ? row.occurred_at as string : null,
+    createdAt: row.created_at as string,
     subjectId: row.subject_id as string,
   }))
   const projection = projectJourneySubject(definition, subjectId, events)

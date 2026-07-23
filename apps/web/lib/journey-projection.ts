@@ -1,5 +1,6 @@
 import type { SourceFreshness } from './entity-contract'
 import type { JourneyDefinition, JourneyStage } from './journey-definition'
+import { compareJourneyTimestamps, parseJourneyTimestamp, type JourneyTimestamp } from './journey-timestamp'
 
 // entity-journeys-projections · Sprint 1, Story 1.2 — deterministic, query-time subject
 // projection. This module deliberately has no runtime/framework import: a lifecycle answer must be
@@ -25,7 +26,11 @@ export type JourneySubjectProjection = {
   freshness: SourceFreshness
 }
 
-type OrderedEvent = JourneyProjectionEvent & { effectiveAt: string; effectiveAtMs: number; createdAtMs: number }
+type OrderedEvent = JourneyProjectionEvent & {
+  effectiveAt: string
+  effectiveTime: JourneyTimestamp
+  createdTime: JourneyTimestamp
+}
 
 /**
  * Evaluates one opaque subject against one immutable definition version. The caller has already
@@ -83,13 +88,19 @@ export function eventMatchesStage(event: JourneyProjectionEvent, stage: JourneyS
 
 function uniqueCanonicalEvents(events: JourneyProjectionEvent[]): OrderedEvent[] {
   const ordered = events
-    .map((event) => ({
-      ...event,
-      effectiveAt: event.occurredAt ?? event.createdAt,
-      effectiveAtMs: Date.parse(event.occurredAt ?? event.createdAt),
-      createdAtMs: Date.parse(event.createdAt),
-    }))
-    .sort((a, b) => a.effectiveAtMs - b.effectiveAtMs || compareCanonicalIds(a.id, b.id))
+    .map((event) => {
+      const effectiveTime = parseJourneyTimestamp(event.occurredAt ?? event.createdAt)
+      const createdTime = parseJourneyTimestamp(event.createdAt)
+      return {
+        ...event,
+        createdAt: createdTime.canonical,
+        effectiveAt: effectiveTime.canonical,
+        effectiveTime,
+        createdTime,
+      }
+    })
+    .sort((a, b) =>
+      compareJourneyTimestamps(a.effectiveTime, b.effectiveTime) || compareCanonicalIds(a.id, b.id))
 
   // Events.id is a primary key, so a DB query cannot return a conflicting duplicate. The pure
   // evaluator still makes an at-least-once fixture converge: after the deterministic sort, retain
@@ -112,12 +123,12 @@ function sourceFreshness(events: OrderedEvent[]): SourceFreshness {
   let latestFact = events[0]
   let latestReceipt = events[0]
   for (const event of events.slice(1)) {
-    if (event.effectiveAtMs > latestFact.effectiveAtMs ||
-      (event.effectiveAtMs === latestFact.effectiveAtMs && compareCanonicalIds(event.id, latestFact.id) > 0)) {
+    const factOrder = compareJourneyTimestamps(event.effectiveTime, latestFact.effectiveTime)
+    if (factOrder > 0 || (factOrder === 0 && compareCanonicalIds(event.id, latestFact.id) > 0)) {
       latestFact = event
     }
-    if (event.createdAtMs > latestReceipt.createdAtMs ||
-      (event.createdAtMs === latestReceipt.createdAtMs && compareCanonicalIds(event.id, latestReceipt.id) > 0)) {
+    const receiptOrder = compareJourneyTimestamps(event.createdTime, latestReceipt.createdTime)
+    if (receiptOrder > 0 || (receiptOrder === 0 && compareCanonicalIds(event.id, latestReceipt.id) > 0)) {
       latestReceipt = event
     }
   }

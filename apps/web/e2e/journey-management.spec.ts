@@ -72,6 +72,16 @@ test('an authorized owner reaches validation and the resolved identity scopes cr
     error: 'Journey key must be lower_snake_case (1-64 characters).',
   })
 
+  expect((await createJourneyVersionAfterGate(
+    'project-one',
+    'merchant_activation',
+    '🚀'.repeat(MAX_JOURNEY_DEFINITION_BYTES),
+    dependencies,
+  )).result).toEqual({
+    ok: false,
+    error: 'Definition is too large (maximum 32 KiB).',
+  })
+
   for (const invalidKey of [null, undefined, 42, {}]) {
     expect((await createJourneyVersionAfterGate('project-one', invalidKey, VALID_DEFINITION, dependencies)).result)
       .toEqual({ ok: false, error: 'Journey key must be lower_snake_case (1-64 characters).' })

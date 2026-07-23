@@ -3,6 +3,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { EXACT_SEGMENT_TAG_FIELDS, MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
 import {
+  MAX_EVENT_NAME_LENGTH,
+  MAX_JOURNEY_DESCRIPTION_LENGTH,
   MAX_JOURNEY_STAGES,
   MAX_PREDICATE_STRING_LENGTH,
   parseJourneyDefinition,
@@ -12,6 +14,7 @@ import {
   mapJourneyRegistryRows,
   type JourneyRegistryRelationRow,
 } from '@/lib/journey-registry-view'
+import { cleanupJourneyProjects, requireTestDatabaseUrl } from './helpers/test-db-cleanup'
 
 // entity-journeys-projections · Sprint 1, Story 1.1.
 // Pure contract + HTTP dark path + database state machine. The database tests drive the same
@@ -41,6 +44,7 @@ const VALID_DEFINITION = {
 }
 
 function db(): SupabaseClient {
+  requireTestDatabaseUrl()
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set')
@@ -158,6 +162,37 @@ test.describe('journey definition — closed bounded contract', () => {
       { source: 'a', channel: 'b', campaign: 'c', plan: 'd', region: 'e', sixth: 'f' },
     ]) {
       expect(parseJourneyDefinition({ entityType: 'merchant', stages: [{ key: 'one', event: 'x', tags }] }).ok).toBe(false)
+    }
+  })
+
+  test('Unicode limits count code points exactly like PostgreSQL char_length', () => {
+    const emoji = '🚀'
+    expect(parseJourneyDefinition({
+      entityType: 'merchant',
+      description: emoji.repeat(MAX_JOURNEY_DESCRIPTION_LENGTH),
+      stages: [{
+        key: 'one',
+        event: emoji.repeat(MAX_EVENT_NAME_LENGTH),
+        tags: { source: emoji.repeat(MAX_PREDICATE_STRING_LENGTH) },
+      }],
+    }).ok).toBe(true)
+
+    for (const definition of [
+      {
+        entityType: 'merchant',
+        description: emoji.repeat(MAX_JOURNEY_DESCRIPTION_LENGTH + 1),
+        stages: [{ key: 'one', event: 'x' }],
+      },
+      {
+        entityType: 'merchant',
+        stages: [{ key: 'one', event: emoji.repeat(MAX_EVENT_NAME_LENGTH + 1) }],
+      },
+      {
+        entityType: 'merchant',
+        stages: [{ key: 'one', event: 'x', tags: { source: emoji.repeat(MAX_PREDICATE_STRING_LENGTH + 1) } }],
+      },
+    ]) {
+      expect(parseJourneyDefinition(definition).ok).toBe(false)
     }
   })
 
@@ -367,10 +402,12 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     expect(auditUpdate.error).not.toBeNull()
     expect(auditDelete.error).not.toBeNull()
   } finally {
-    // Best-effort fixture cleanup only: service_role intentionally has no direct projects DELETE.
-    // The migration-owner property assertion proves project cascade + audit survival instead.
-    await client.from('projects').delete().in('id', [projectId, foreignProjectId])
-    await Promise.all([owner, member, foreignOwner].map((id) => client.auth.admin.deleteUser(id)))
+    try {
+      await cleanupJourneyProjects([projectId, foreignProjectId])
+    } finally {
+      // Auth cleanup must still run if the migration-owner connection or SQL cleanup fails.
+      await Promise.all([owner, member, foreignOwner].map((id) => client.auth.admin.deleteUser(id)))
+    }
   }
 })
 

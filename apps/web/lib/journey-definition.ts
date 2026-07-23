@@ -39,6 +39,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function codePointLength(value: string): number {
+  // PostgreSQL char_length(text) counts Unicode code points; JavaScript `length` counts UTF-16
+  // code units. Keep application and database acceptance identical for astral characters.
+  return Array.from(value).length
+}
+
 function rejectUnknownKeys(
   value: Record<string, unknown>,
   allowed: readonly string[],
@@ -54,8 +60,8 @@ function rejectUnknownKeys(
 function validEventName(value: unknown): value is string {
   return (
     typeof value === 'string' &&
-    value.length >= 1 &&
-    value.length <= MAX_EVENT_NAME_LENGTH &&
+    codePointLength(value) >= 1 &&
+    codePointLength(value) <= MAX_EVENT_NAME_LENGTH &&
     value.trim() === value &&
     !/\p{Cc}/u.test(value)
   )
@@ -77,7 +83,8 @@ export function parseJourneyDefinition(input: unknown): JourneyDefinitionResult 
 
   if (
     input.description !== undefined &&
-    (typeof input.description !== 'string' || input.description.length > MAX_JOURNEY_DESCRIPTION_LENGTH)
+    (typeof input.description !== 'string' ||
+      codePointLength(input.description) > MAX_JOURNEY_DESCRIPTION_LENGTH)
   ) {
     errors.push(`definition.description must be a string up to ${MAX_JOURNEY_DESCRIPTION_LENGTH} characters`)
   }
@@ -132,7 +139,7 @@ export function parseJourneyDefinition(input: unknown): JourneyDefinitionResult 
               )
               continue
             }
-            if (typeof value === 'string' && value.length > MAX_PREDICATE_STRING_LENGTH) {
+            if (typeof value === 'string' && codePointLength(value) > MAX_PREDICATE_STRING_LENGTH) {
               errors.push(`${path}.tags.${field} strings may be at most ${MAX_PREDICATE_STRING_LENGTH} characters`)
               continue
             }

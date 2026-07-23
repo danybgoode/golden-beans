@@ -72,6 +72,19 @@ its missing-tenant-predicate finding added `project_id` to every create/activate
 The UI now hides obsolete drafts, and the root env reference lists the born-OFF journey gate plus redeploy
 requirement.
 
+**PR #17 round-four disposition:** accepted all final precision and test-hygiene findings. Journey
+timestamps no longer pass through JavaScript's millisecond-only `Date` representation: the evaluator
+normalizes exact Postgres `timestamptz` values to canonical UTC, compares whole seconds plus retained
+microseconds before the event-id tie break, and returns the exact source precision. An adversarial pure
+fixture and a real DB/API fixture pin `.000100` before `.000900` inside one millisecond; restoring
+millisecond-only comparison fails the focused proof. Definition description, event and predicate limits
+now count Unicode code points like PostgreSQL `char_length`, with 500/501, 128/129 and 64/65 emoji
+boundaries while the independent 32 KiB UTF-8 payload cap remains pinned. Database specs require the
+CI-exported local `SUPABASE_DB_URL` and clean audit plus project fixtures through a test-only
+migration-owner connection; the production `service_role` grants remain unchanged. Finally, the roadmap
+extractor now recognizes status-emoji story headings, and regenerating (never hand-editing)
+`BUILD-ORDER.md` reports the accurate 2/6 stories.
+
 ## Sprint QA
 
 - **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/
