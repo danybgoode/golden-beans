@@ -109,7 +109,7 @@ export default async function JourneyCohortPage({
         <dt>Query evidence</dt>
         <dd>
           {diagnostics.telemetryStatus === 'available'
-            ? `${diagnostics.sampleCount} bounded samples · p50 ${diagnostics.p50QueryDurationMs} ms · p95 ${diagnostics.p95QueryDurationMs} ms · max ${diagnostics.maxRelevantEventCount} relevant events`
+            ? `${diagnostics.sampleCount} bounded samples · p50 ${diagnostics.p50QueryDurationMs} ms · p95 ${diagnostics.p95QueryDurationMs} ms · max ${diagnostics.maxRelevantEventCount?.toLocaleString('en-US') ?? 'unknown'} relevant events`
             : 'Telemetry unavailable; this analytical result is still valid.'}
         </dd>
         <dt>Scale decision</dt>
