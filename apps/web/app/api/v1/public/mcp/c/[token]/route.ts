@@ -3,7 +3,11 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
-import { isConnectorEnabled, isJourneyMcpToolEnabled } from '@/lib/flags'
+import {
+  isConnectorEnabled,
+  isExperimentGovernanceMcpToolEnabled,
+  isJourneyMcpToolEnabled,
+} from '@/lib/flags'
 import { resolveConnectorToken, TOKEN_FORMAT } from '@/lib/connector-tokens'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getFeatureFunnelByProjectId } from '@/lib/tars-query'
@@ -12,6 +16,9 @@ import { getExperimentComparisonByProjectId } from '@/lib/ab-query'
 import { parseJourneyCohortRequest } from '@/lib/journey-cohort-request'
 import { getJourneyCohortByProjectId } from '@/lib/journey-query'
 import { validateJourneyKey } from '@/lib/journey-definition'
+import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
+import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-request'
+import { validateExperimentKey } from '@/lib/experiment-definition'
 
 // Story 2.1 (commercial-shell/sprint-2.md) — the read-only MCP connector. Pattern-lifted from
 // medusa-bonsai's seller-agent-connect-mcp-url (opaque revocable token in the URL path), built on
@@ -121,6 +128,58 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
       }
     },
   )
+
+  // Governed analysis is a separate, born-OFF tool. The legacy compare_experiment contract above
+  // stays unchanged while this extension is dark, and every enabled call remains scoped to the
+  // connector token's already-resolved project.
+  if (isExperimentGovernanceMcpToolEnabled()) {
+    server.registerTool(
+      'get_experiment_analysis',
+      {
+        description: "Read this project's immutable-version experiment plan, trust diagnostics and descriptive metrics.",
+        inputSchema: {
+          experimentKey: z.string().max(64).regex(/^[a-z][a-z0-9_-]{0,63}$/),
+          version: z.number().int().positive().max(1_000_000),
+          asOf: z.string().optional().describe('Non-future explicit-offset snapshot; omitted captures server now.'),
+          segmentField: z.enum(['source', 'channel', 'campaign', 'plan', 'region']).optional(),
+          segmentValue: z.union([z.string().max(64), z.number().int(), z.boolean()]).optional(),
+        },
+      },
+      async ({ experimentKey, version, asOf, segmentField, segmentValue }) => {
+        if (!validateExperimentKey(experimentKey)) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ ok: false, reason: 'invalid_request' }) }],
+            isError: true,
+          }
+        }
+        const parsed = parseExperimentAnalysisRequest({
+          version,
+          asOf,
+          segmentField,
+          segmentValue,
+        })
+        if (!parsed.ok) {
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({ ok: false, reason: 'invalid_request', error: parsed.error }),
+            }],
+            isError: true,
+          }
+        }
+        const result = await getExperimentAnalysisByProjectId(
+          projectId,
+          projectSlug,
+          experimentKey,
+          parsed.request,
+        )
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+          ...(!result.ok ? { isError: true } : {}),
+        }
+      },
+    )
+  }
 
   // Journey reads have their own born-OFF enablement gate in addition to the connector's route-wide
   // flag and revocable token. While dark, the tool does not exist; the three legacy tools above

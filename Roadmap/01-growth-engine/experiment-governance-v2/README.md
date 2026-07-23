@@ -1,5 +1,5 @@
 ---
-status: scaffolded
+status: in-progress
 slug: experiment-governance-v2
 ---
 
@@ -48,12 +48,12 @@ resolve assignments, reject telemetry, ramp traffic or roll out a winner. Flag s
 
 | Sprint | Story | Risk |
 |---|---|---|
-| 1 | 1.1 Versioned experiment registry and plan | high |
-| 1 | 1.2 Local SDK compatibility and assignment integrity context | high |
-| 1 | 1.3 Immutable experiment lifecycle | high |
-| 2 | 2.1 Primary and guardrail metric analysis | low |
-| 2 | 2.2 SRM and exposure-integrity diagnostics | low |
-| 2 | 2.3 Minimum-sample guidance and bounded segments | low |
+| 1 | ✅ 1.1 Versioned experiment registry and plan | high |
+| 1 | ✅ 1.2 Local SDK compatibility and assignment integrity context | high |
+| 1 | ✅ 1.3 Immutable experiment lifecycle | high |
+| 2 | 🟨 2.1 Primary and guardrail metric analysis | low |
+| 2 | 🟨 2.2 SRM and exposure-integrity diagnostics | low |
+| 2 | 🟨 2.3 Minimum-sample guidance and bounded segments | low |
 | 3 | 3.1 Immutable human decision record | high |
 | 3 | 3.2 Registry-aware UI, API and MCP parity | high |
 | 3 | 3.3 Tiendas Fundadoras governed experiment proof | high |

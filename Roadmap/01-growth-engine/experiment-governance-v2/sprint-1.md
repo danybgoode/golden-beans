@@ -1,6 +1,6 @@
 # Experiment governance v2 — Sprint 1: Registry, lifecycle and assignment contract
 
-**Status:** 🟨 built and locally verified; cross-review and preview smoke remain
+**Status:** ✅ shipped in PR [#19](https://github.com/danybgoode/golden-beans/pull/19)
 
 ## Stories
 
@@ -53,11 +53,11 @@ stopped to decided, so a status flip can never outrun its immutable human ration
 - **browser smoke owed:** yes, to Daniel — authenticated experiment draft/start/stop using a disposable project.
 - **deterministic gate:** typecheck + build + Playwright API green; migration verified locally and production.
 
-**Local evidence:** clean migration reset; governance/SDK suite 11/11 green including concurrent version
+**Shipped evidence:** clean migration reset; governance/SDK suite 11/11 green including concurrent version
 allocation, owner/member/foreign authorization, immutable/idempotent lifecycle, append-only audit and
-function-level anonymous denial; SDK and web typechecks green; production build green. The governed exposure
-round-trip remains in the deterministic full API gate, and cross-family exact-head reviews plus preview smoke
-remain the publication gate.
+function-level anonymous denial; SDK and web typechecks green; production build green. Migration
+`20260728100000_experiment_registry.sql` is applied in production. Main deployment `0d118387…` preserved the
+legacy public experiment read and `/llms.txt` while the born-OFF governance page returned 404.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 

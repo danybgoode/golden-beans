@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { isJourneyProjectionsEnabled } from '@/lib/flags'
+import { isExperimentGovernanceEnabled, isJourneyProjectionsEnabled } from '@/lib/flags'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page's copy-your-URL field must show a
 // real, live connector URL (seeded by scripts/seed-demo-project.mjs), not a placeholder.
@@ -22,6 +22,7 @@ test('the /install page renders a live connector URL that actually round-trips',
   const names = body.result.tools.map((tool: { name: string }) => tool.name).sort()
   expect(names).toEqual([
     'compare_experiment',
+    ...(isExperimentGovernanceEnabled() ? ['get_experiment_analysis'] : []),
     ...(isJourneyProjectionsEnabled() ? ['get_journey_cohort'] : []),
     'get_north_star',
     'get_tars_funnel',
