@@ -1,6 +1,6 @@
 # Entity journeys — Sprint 1: Definition contract and deterministic subject projection
 
-**Status:** ✅ complete on the Sprint 1 feature branch; review/merge and the production smoke remain
+**Status:** ✅ complete — merged in PR #17 at `ed6397c`; production OFF smoke complete
 
 ## Stories
 
@@ -24,8 +24,9 @@ Optional cohort entry must name stage 1. Optional retention is
 integer window. Definitions are immutable numbered rows; edits create the next version, and activation moves
 one per-project registry pointer. Owner session identity supplies the audit actor; members see the registry
 read-only; nonmembers/foreign identities fail closed. The enablement flag is born OFF and returns 404 before
-auth/validation. Local migration reset, pure/DB/API specs, mutation checks, typecheck and build are green;
-remote migration application and authenticated browser smoke remain deployment/review work.
+auth/validation. Migration `20260727100000_journey_registry.sql` is applied and aligned in production;
+pure/DB/API specs, mutation checks, typecheck and build are green. The authenticated ON browser smoke remains
+deliberately deferred until enablement.
 
 ### ✅ Story 1.2 — Deterministic subject projection
 
@@ -38,16 +39,17 @@ irrelevant events are ignored; response names definition version and source fres
 
 **Risk:** low — read-only pure/query logic over existing telemetry.
 
-**Implementation status:** pure query-time evaluation reads only canonical, project-scoped subject facts;
-the resolver calls a service-role-only RPC whose single project/entity/subject-scoped SQL statement
-aggregates the complete ordered fact set into one JSONB value. One database snapshot avoids both
-PostgREST's row cap and cross-page movement during concurrent ingest. Evaluation then orders the complete
-set by `occurred_at ?? created_at`, then canonical event id, and records only actual first satisfaction
-timestamps. The version is required on API reads, history is definition-stage order, and freshness
-reports the latest effective fact time separately from latest receipt time. The canonical
-API is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positive-integer>`; no
-legacy `/subjects/<id>` alias exists. Pure truth-table and API isolation specs, mutation checks,
-typecheck and build are green locally; production smoke remains deployment/review work.
+**Implementation status:** pure query-time evaluation reads only canonical, project-scoped subject facts.
+The resolver calls one service-role-only RPC. Its `STABLE` body first runs a bounded
+project/entity/subject-scoped measurement and, only after the 10,000-fact/32-MiB checks pass, runs the ordered
+JSONB aggregate; both selects share the calling statement's database snapshot. This avoids PostgREST's row cap
+and cross-page movement during concurrent ingest without claiming the function body is one SQL select.
+Evaluation then orders the complete set by `occurred_at ?? created_at`, then canonical event id, and records
+only actual first-satisfaction timestamps. The version is required on API reads, history is definition-stage
+order, and freshness reports latest effective fact time separately from latest receipt time. The canonical API
+is `GET /api/v1/journeys/<key>/subject?subjectId=<opaque-id>&version=<positive-integer>`; no legacy
+`/subjects/<id>` alias exists. PR #17 deployed exact SHA `ed6397c` through the GitHub/Vercel integration.
+With the flag OFF, production returned 404 for both the API and UI while `/llms.txt` remained 200.
 
 **PR #17 review disposition:** accepted fixes move owner resolution ahead of every create-payload
 validation and make unexpected registry timestamps render fail-safe. The suggested predecessor-gated
@@ -55,9 +57,9 @@ progression change was rejected: this epic's approved contract explicitly says h
 wins, lower-stage events never regress, and history records each stage's actual first satisfaction in
 stage order. Requiring predecessors would fabricate or suppress facts and change the product semantics.
 
-**PR #17 round-two disposition:** accepted the silent PostgREST-cap finding. The projection resolver
-now paginates the complete scoped subject fact set; a real DB/API fixture places a qualifying stage and
-the newest freshness fact after 1,000 earlier rows, and restoring the single-page query fails that spec.
+**PR #17 round-two disposition:** accepted the silent PostgREST-cap finding. An intermediate pagination
+implementation proved the cap with a real DB/API fixture placing a qualifying stage and newest freshness fact
+after 1,000 earlier rows; round three then replaced pagination with the final bounded `STABLE` snapshot RPC.
 Also accepted defensive rejected-promise handling for both UI mutations and lower-snake-case route-key
 validation after the OFF/auth gates but before the resolver. The two-project collision tripwire remains.
 
@@ -121,29 +123,29 @@ cannot use malformed action arguments as a management-seam oracle.
   same-time/irrelevant events and no-regression behavior.
 - **api specs:** owner/member/foreign definition mutations; API-key project scoping; flag OFF/ON; subject read
   with realistic stable identity and definition version.
-- **browser smoke owed:** yes, to Daniel — authenticated definition creation/activation for a disposable project.
+- **browser smoke owed:** authenticated ON definition creation/activation remains deferred to Daniel until
+  the enablement rollout; the production OFF smoke is complete.
 - **deterministic gate:** typecheck + build + Playwright API green; a dedicated built-server OFF pass pins
-  journey page/API 404s before the normal ON suite; migration verified locally, with production
-  application still owed as the release step before merge.
+  journey page/API 404s before the normal ON suite; migration verified locally and applied/aligned in production.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 
 Env: production · https://golden-beans-gamma.vercel.app
 
-1. With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL,
+1. ✅ With `JOURNEY_PROJECTIONS_ENABLED` OFF, open the disposable project's journey-management URL,
    call the subject endpoint without authorization, then open `/llms.txt`.
    → Both new journey seams return 404 (the API does so before auth, never 401) while the existing
-   agent manifest returns 200.
-2. Redeploy with the gate ON, sign in as the disposable project owner and open
+   agent manifest returns 200. Confirmed in production on deployed SHA `ed6397c`.
+2. **Deferred until enablement:** redeploy with the gate ON, sign in as the disposable project owner and open
    `https://golden-beans-gamma.vercel.app/app/journeys/<project-slug>`.
    → “Create journey” appears for that project.
-3. Create `merchant_activation` with three ordered smoke stages, then activate version 1.
+3. **Deferred until enablement:** create `merchant_activation` with three ordered smoke stages, then activate version 1.
    → The definition displays one active version and immutable activation history.
-4. Send the three subject events out of order, with one duplicate, then request
+4. **Deferred until enablement:** send the three subject events out of order, with one duplicate, then request
    `https://golden-beans-gamma.vercel.app/api/v1/journeys/merchant_activation/subject?subjectId=merchant-smoke-journey-001&version=1`
    using the disposable API key.
    → One subject returns the correct current stage, first-entered timestamps and version 1.
-5. Try to mutate the definition as a member and through another project's identity.
+5. **Deferred until enablement:** try to mutate the definition as a member and through another project's identity.
    → Both are denied and no definition changes.
 
 If any step fails, note the step number + URL/response — that's the bug report.

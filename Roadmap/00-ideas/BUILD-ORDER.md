@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 2/6 stories · risk: High · #2b
+- [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 4/6 stories · risk: High · #2b
 
 ## 📋 Ready to build (scaffolded, not started) (3)
 
