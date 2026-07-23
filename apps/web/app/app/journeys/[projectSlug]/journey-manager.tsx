@@ -110,6 +110,9 @@ export function JourneyManager({
         journeys.map((journey) => (
           <article key={journey.id} style={{ margin: '1.5rem 0' }}>
             <h3><code>{journey.key}</code></h3>
+            {journey.activeVersionId && (
+              <p><a href={`/app/journeys/${encodeURIComponent(slug)}/${encodeURIComponent(journey.key)}`}>Open active cohort</a></p>
+            )}
             <table>
               <thead><tr><th>Version</th><th>State</th><th>Created</th><th>Activated</th><th /></tr></thead>
               <tbody>

@@ -433,7 +433,7 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
     expect(body.subject.freshness.latestReceiptAt).toBeTruthy()
 
     // A default PostgREST response stops at 1,000 rows. Both observable facts below live after that
-    // boundary in deterministic created_at/id order, proving the resolver drains every page.
+    // boundary in deterministic created_at/id order, proving the bounded snapshot is complete.
     const pagedRead = await request.get(`/api/v1/journeys/${journeyKey}/subject?subjectId=${pagedSubjectId}&version=${v1}`, { headers })
     expect(pagedRead.status()).toBe(200)
     expect((await pagedRead.json()).subject).toMatchObject({

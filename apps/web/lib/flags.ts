@@ -62,3 +62,8 @@ export function isJourneyProjectionsEnabled(): boolean {
 export function isExperimentGovernanceEnabled(): boolean {
   return process.env.EXPERIMENT_GOVERNANCE_ENABLED === 'true'
 }
+
+/** Registration predicate for journey-only MCP tools. The route still performs its connector gate
+ * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
+export function isJourneyMcpToolEnabled(): boolean {
+  return isConnectorEnabled() && isJourneyProjectionsEnabled()
