@@ -167,6 +167,36 @@ test.describe('journey definition — closed bounded contract', () => {
     }
   })
 
+  test('rejects PostgreSQL-incompatible NUL strings without widening the event control policy', () => {
+    const description = parseJourneyDefinition({
+      entityType: 'merchant',
+      description: 'activation\u0000journey',
+      stages: [{ key: 'one', event: 'x' }],
+    })
+    expect(description.ok).toBe(false)
+    if (!description.ok) expect(description.errors).toContain('definition.description must not contain U+0000')
+
+    const predicate = parseJourneyDefinition({
+      entityType: 'merchant',
+      description: 'tabs\tremain valid outside event names',
+      stages: [{ key: 'one', event: 'x', tags: { source: 'organic\u0000direct', channel: 'web\tapp' } }],
+    })
+    expect(predicate.ok).toBe(false)
+    if (!predicate.ok) {
+      expect(predicate.errors).toContain('definition.stages[0].tags.source must not contain U+0000')
+    }
+
+    expect(parseJourneyDefinition({
+      entityType: 'merchant',
+      description: 'tabs\tremain valid outside event names',
+      stages: [{ key: 'one', event: 'x', tags: { source: 'web\tapp' } }],
+    }).ok).toBe(true)
+    expect(parseJourneyDefinition({
+      entityType: 'merchant',
+      stages: [{ key: 'one', event: 'event\tname' }],
+    }).ok).toBe(false)
+  })
+
   test('Unicode limits count code points exactly like PostgreSQL char_length', () => {
     const emoji = '🚀'
     expect(parseJourneyDefinition({

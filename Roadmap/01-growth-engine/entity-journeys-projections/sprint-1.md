@@ -102,6 +102,13 @@ fixtures pin success at exactly 10,000 and fail-closed behavior at 10,001. The r
 now consistently removes never-activated versions at or below the active version while retaining the
 immutable activation history and newer actionable drafts, matching the management UI claim.
 
+**PR #17 final hardening disposition:** accepted both remaining should-fixes. Application validation
+now rejects U+0000 in optional descriptions and string predicates before PostgreSQL JSONB can reject the
+RPC payload, while retaining the existing broader control-character ban for event names. The
+migration-owner cleanup helper now fails closed unless `SUPABASE_DB_URL` parses as PostgreSQL on an
+explicit loopback host and the local Supabase database port; focused fixtures accept IPv4, IPv6 and
+`localhost` local forms while rejecting remote, wrong-port and malformed values without echoing credentials.
+
 ## Sprint QA
 
 - **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/

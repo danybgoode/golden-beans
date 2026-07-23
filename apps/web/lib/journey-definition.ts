@@ -87,6 +87,10 @@ export function parseJourneyDefinition(input: unknown): JourneyDefinitionResult 
       codePointLength(input.description) > MAX_JOURNEY_DESCRIPTION_LENGTH)
   ) {
     errors.push(`definition.description must be a string up to ${MAX_JOURNEY_DESCRIPTION_LENGTH} characters`)
+  } else if (typeof input.description === 'string' && input.description.includes('\u0000')) {
+    // PostgreSQL jsonb rejects the \u0000 escape because text cannot represent a NUL byte.
+    // Catch it at the application boundary instead of accepting a definition the RPC cannot store.
+    errors.push('definition.description must not contain U+0000')
   }
 
   const stages: JourneyStage[] = []
@@ -141,6 +145,10 @@ export function parseJourneyDefinition(input: unknown): JourneyDefinitionResult 
             }
             if (typeof value === 'string' && codePointLength(value) > MAX_PREDICATE_STRING_LENGTH) {
               errors.push(`${path}.tags.${field} strings may be at most ${MAX_PREDICATE_STRING_LENGTH} characters`)
+              continue
+            }
+            if (typeof value === 'string' && value.includes('\u0000')) {
+              errors.push(`${path}.tags.${field} must not contain U+0000`)
               continue
             }
             tags[field as ExactSegmentTagField] = value as ExactSegmentScalar
