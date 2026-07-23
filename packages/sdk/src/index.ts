@@ -194,8 +194,9 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     variants: BucketVariant[],
     governance?: ExperimentGovernanceContext,
   ): BucketResult {
-    if (governance && !validGovernance(governance)) return invalidGovernanceResult()
-    const variant = governance
+    const governed = governance !== undefined
+    if (governed && !validGovernance(governance)) return invalidGovernanceResult()
+    const variant = governed
       ? resolveGovernedVariant(
           governance.assignmentEntity.type,
           governance.assignmentEntity.id,
@@ -216,7 +217,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     props?: Omit<TrackEventProps, 'featureId'>,
     governance?: ExperimentGovernanceContext,
   ): Promise<TrackResult> {
-    if (!governance) {
+    if (governance === undefined) {
       // Preserve the legacy request shape byte-for-byte: variant overrides a same-named caller tag,
       // no context is invented, and the path is the same thin track() wrapper as before governance.
       return track('experiment_exposed', {

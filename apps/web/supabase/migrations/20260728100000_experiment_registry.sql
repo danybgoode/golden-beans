@@ -101,6 +101,7 @@ BEGIN
      OR char_length(p_definition#>>'{primaryMetric,event}') NOT BETWEEN 1 AND 128
      OR p_definition#>>'{primaryMetric,event}' <> btrim(p_definition#>>'{primaryMetric,event}')
      OR (p_definition#>>'{primaryMetric,event}') ~ '[[:cntrl:]]'
+     OR jsonb_typeof(p_definition#>'{primaryMetric,direction}') IS DISTINCT FROM 'string'
      OR p_definition#>>'{primaryMetric,direction}' NOT IN ('increase', 'decrease') THEN RETURN false; END IF;
 
   IF jsonb_typeof(p_definition->'guardrailMetrics') IS DISTINCT FROM 'array'
@@ -115,6 +116,7 @@ BEGIN
        OR char_length(v_metric->>'event') NOT BETWEEN 1 AND 128
        OR v_metric->>'event' <> btrim(v_metric->>'event')
        OR (v_metric->>'event') ~ '[[:cntrl:]]'
+       OR jsonb_typeof(v_metric->'direction') IS DISTINCT FROM 'string'
        OR v_metric->>'direction' NOT IN ('increase', 'decrease') THEN RETURN false; END IF;
   END LOOP;
   IF (

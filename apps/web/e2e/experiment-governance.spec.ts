@@ -452,6 +452,14 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
     const invalidDefinitions: Array<[string, unknown]> = [
       ['bad-control', { ...VALID_DEFINITION, controlVariantKey: 'missing' }],
       ['bad-segment', { ...VALID_DEFINITION, segmentFields: ['email'] }],
+      ['null-primary-direction', {
+        ...VALID_DEFINITION,
+        primaryMetric: { ...VALID_DEFINITION.primaryMetric, direction: null },
+      }],
+      ['null-guardrail-direction', {
+        ...VALID_DEFINITION,
+        guardrailMetrics: [{ event: 'guardrail_with_null_direction', direction: null }],
+      }],
       ['bad-window', {
         ...VALID_DEFINITION,
         plannedWindow: { startAt: '2026-01-01T00:00:00.0000001Z', endAt: '2026-02-01T00:00:00Z' },
