@@ -67,3 +67,4 @@ export function isExperimentGovernanceEnabled(): boolean {
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {
   return isConnectorEnabled() && isJourneyProjectionsEnabled()
+}
