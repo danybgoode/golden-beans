@@ -220,6 +220,8 @@ supabase link --project-ref <ref> && supabase migration list && supabase db push
 - **Tenancy** — `DEMO_PROJECT_SLUG` + `DEMO_PROJECT_API_KEY` (the demo tenant), `DEMO_CONNECTOR_TOKEN`; `SELF_PROJECT_SLUG` + `SELF_PROJECT_API_KEY` (the landing's self-dogfood tenant).
 - **Gates** — `CONNECTOR_ENABLED` (`lib/flags.ts`, MCP connector kill-switch, ON in prod),
   `JOURNEY_PROJECTIONS_ENABLED` (`lib/flags.ts`, journey registry/read/UI kill-switch, **born OFF**), and
+  `EXPERIMENT_GOVERNANCE_ENABLED` (`lib/flags.ts`, experiment registry/lifecycle/UI enablement gate,
+  **born OFF**; legacy local bucketing, exposure ingest and v1 comparison do not read it), and
   `SIGNUP_ENABLED` (`lib/flags.ts`, self-serve signup enablement gate, **born OFF**; gates the
   `/signup` page, `POST /api/v1/public/signup`, tenant provisioning in `/auth/callback`, and the
   landing's §1/§7 CTA flip — all four read it fresh per request, but every env change still needs a

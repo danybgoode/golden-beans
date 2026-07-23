@@ -1,6 +1,6 @@
 # Experiment governance v2 — Sprint 1: Registry, lifecycle and assignment contract
 
-**Status:** ⬜ not started
+**Status:** 🟨 built and locally verified; cross-review and preview smoke remain
 
 ## Stories
 
@@ -40,6 +40,10 @@ diagnosed later rather than rejected.
 
 **Risk:** high — database state machine and owner authorization; Daniel merges.
 
+**Implementation note:** `decided` is reserved as a terminal database state in Sprint 1, but the generic
+lifecycle RPC cannot enter it. Sprint 3's atomic decision-record RPC will be the only application path from
+stopped to decided, so a status flip can never outrun its immutable human rationale and metric snapshot.
+
 ## Sprint QA
 
 - **pure specs:** registry schema, weights/control/segment caps, lifecycle transitions, concurrency/idempotency
@@ -48,6 +52,12 @@ diagnosed later rather than rejected.
   ingest compatibility.
 - **browser smoke owed:** yes, to Daniel — authenticated experiment draft/start/stop using a disposable project.
 - **deterministic gate:** typecheck + build + Playwright API green; migration verified locally and production.
+
+**Local evidence:** clean migration reset; governance/SDK suite 11/11 green including concurrent version
+allocation, owner/member/foreign authorization, immutable/idempotent lifecycle, append-only audit and
+function-level anonymous denial; SDK and web typechecks green; production build green. The governed exposure
+round-trip remains in the deterministic full API gate, and cross-family exact-head reviews plus preview smoke
+remain the publication gate.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 

@@ -96,3 +96,27 @@ export async function cleanupJourneyProjects(projectIds: string[]): Promise<void
     await client.end()
   }
 }
+
+/**
+ * Project cleanup cascades through operational experiment rows while durable lifecycle evidence
+ * deliberately survives. Remove the retained evidence only after proving the parent delete works.
+ */
+export async function cleanupExperimentProjects(projectIds: string[]): Promise<void> {
+  if (projectIds.length === 0) return
+  const client = new Client({ connectionString: requireTestDatabaseUrl() })
+  await client.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
+    await client.query(
+      'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
+      [projectIds],
+    )
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    await client.end()
+  }
+}

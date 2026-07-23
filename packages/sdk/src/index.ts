@@ -4,7 +4,7 @@
 // so v2 fault injection (delay_ms, force_error_code) can extend TrackResult without a breaking
 // change to callers that already just check `.ok`.
 
-import { resolveVariant, type BucketVariant } from './bucketing'
+import { resolveGovernedVariant, resolveVariant, type BucketVariant } from './bucketing'
 
 export type { BucketVariant } from './bucketing'
 
@@ -87,6 +87,13 @@ export type BucketResult =
   | { ok: true; variant: string }
   | { ok: false; error: string; code?: string }
 
+export interface ExperimentGovernanceContext {
+  /** Immutable registry version used to interpret this local assignment. */
+  definitionVersion: number
+  /** Stable opaque subject used for both local hashing and later metric attribution. */
+  assignmentEntity: EventEntity
+}
+
 export interface GrowthEngineClientConfig {
   /** e.g. "https://growth.example.com" or "http://localhost:3000" for local dev. */
   baseUrl: string
@@ -106,7 +113,11 @@ export interface GrowthEngineClient {
    * Deterministically resolves the configured userId into a variant for `experimentKey`, given
    * the caller's own variant list. Synchronous — no network call, no resolve endpoint (Story 4.1).
    */
-  bucket(experimentKey: string, variants: BucketVariant[]): BucketResult
+  bucket(
+    experimentKey: string,
+    variants: BucketVariant[],
+    governance?: ExperimentGovernanceContext,
+  ): BucketResult
   /**
    * Fires an exposure event for a bucketed variant — the denominator for variant comparison
    * (Story 4.2). Thin wrapper around track(), same as trackAdoption(): 'experiment_exposed' with
@@ -115,7 +126,8 @@ export interface GrowthEngineClient {
   trackExposure(
     experimentKey: string,
     variant: string,
-    props?: Omit<TrackEventProps, 'featureId'>
+    props?: Omit<TrackEventProps, 'featureId'>,
+    governance?: ExperimentGovernanceContext,
   ): Promise<TrackResult>
 }
 
@@ -138,7 +150,13 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
       return { ok: false, error: err instanceof Error ? err.message : 'Unknown network error', code: 'NETWORK_ERROR' }
     }
 
-    const body = await res.json().catch(() => null)
+    const body = await res.json().catch(() => null) as {
+      ok?: boolean
+      error?: string
+      issues?: unknown
+      deduplicated?: boolean
+      id: string
+    } | null
     if (!res.ok || !body?.ok) {
       return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
     }
@@ -159,19 +177,87 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
       return { ok: false, error: err instanceof Error ? err.message : 'Unknown network error', code: 'NETWORK_ERROR' }
     }
 
-    const body = await res.json().catch(() => null)
+    const body = await res.json().catch(() => null) as {
+      ok?: boolean
+      error?: string
+      issues?: unknown
+      synced: number
+    } | null
     if (!res.ok || !body?.ok) {
       return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
     }
     return { ok: true, synced: body.synced }
   }
 
-  function bucket(experimentKey: string, variants: BucketVariant[]): BucketResult {
-    const variant = resolveVariant(config.userId, experimentKey, variants)
+  function bucket(
+    experimentKey: string,
+    variants: BucketVariant[],
+    governance?: ExperimentGovernanceContext,
+  ): BucketResult {
+    const governed = governance !== undefined
+    if (governed && !validGovernance(governance)) return invalidGovernanceResult()
+    const variant = governed
+      ? resolveGovernedVariant(
+          governance.assignmentEntity.type,
+          governance.assignmentEntity.id,
+          experimentKey,
+          governance.definitionVersion,
+          variants,
+        )
+      : resolveVariant(config.userId, experimentKey, variants)
     if (variant === null) {
       return { ok: false, error: 'No valid variants provided', code: 'INVALID_VARIANTS' }
     }
     return { ok: true, variant }
+  }
+
+  async function trackExposure(
+    experimentKey: string,
+    variant: string,
+    props?: Omit<TrackEventProps, 'featureId'>,
+    governance?: ExperimentGovernanceContext,
+  ): Promise<TrackResult> {
+    if (governance === undefined) {
+      // Preserve the legacy request shape byte-for-byte: variant overrides a same-named caller tag,
+      // no context is invented, and the path is the same thin track() wrapper as before governance.
+      return track('experiment_exposed', {
+        ...props,
+        featureId: experimentKey,
+        tags: { ...props?.tags, variant },
+      })
+    }
+    if (!validGovernance(governance)) return invalidGovernanceResult()
+
+    const suppliedVariant = props?.tags?.variant
+    const suppliedVersion = props?.tags?.experiment_definition_version
+    const suppliedSubject = props?.context?.subject
+    if (
+      (suppliedVariant !== undefined && suppliedVariant !== variant) ||
+      (suppliedVersion !== undefined && suppliedVersion !== governance.definitionVersion) ||
+      (props?.context !== undefined && props.context.version !== 1) ||
+      (suppliedSubject !== undefined && !sameEntity(suppliedSubject, governance.assignmentEntity))
+    ) {
+      return {
+        ok: false,
+        error: 'Caller context conflicts with governed experiment assignment',
+        code: 'GOVERNANCE_CONTEXT_CONFLICT',
+      }
+    }
+
+    return track('experiment_exposed', {
+      ...props,
+      featureId: experimentKey,
+      tags: {
+        ...props?.tags,
+        variant,
+        experiment_definition_version: governance.definitionVersion,
+      },
+      context: {
+        ...props?.context,
+        version: 1,
+        subject: governance.assignmentEntity,
+      },
+    })
   }
 
   return {
@@ -179,7 +265,47 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     trackAdoption: (featureKey, props) => track('feature_adopted', { ...props, featureId: featureKey }),
     syncFeatures,
     bucket,
-    trackExposure: (experimentKey, variant, props) =>
-      track('experiment_exposed', { ...props, featureId: experimentKey, tags: { ...props?.tags, variant } }),
+    trackExposure,
   }
+}
+
+const ENTITY_TYPE = /^[a-z][a-z0-9_]{0,63}$/
+const CONTROL_CHARS = /\p{Cc}/u
+
+function validGovernance(value: unknown): value is ExperimentGovernanceContext {
+  if (value === null || typeof value !== 'object') return false
+  const candidate = value as Partial<ExperimentGovernanceContext>
+  const entity = candidate.assignmentEntity
+  return (
+    typeof candidate.definitionVersion === 'number' &&
+    Number.isInteger(candidate.definitionVersion) &&
+    candidate.definitionVersion >= 1 &&
+    candidate.definitionVersion <= 2_147_483_647 &&
+    entity !== null &&
+    typeof entity === 'object' &&
+    typeof entity.type === 'string' &&
+    ENTITY_TYPE.test(entity.type) &&
+    typeof entity.id === 'string' &&
+    entity.id.length >= 1 &&
+    entity.id.length <= 128 &&
+    entity.id.trim() === entity.id &&
+    !CONTROL_CHARS.test(entity.id)
+  )
+}
+
+function invalidGovernanceResult(): { ok: false; error: string; code: string } {
+  return {
+    ok: false,
+    error: 'Invalid experiment governance context',
+    code: 'INVALID_GOVERNANCE_CONTEXT',
+  }
+}
+
+function sameEntity(a: unknown, b: EventEntity): boolean {
+  return (
+    a !== null &&
+    typeof a === 'object' &&
+    (a as Partial<EventEntity>).type === b.type &&
+    (a as Partial<EventEntity>).id === b.id
+  )
 }

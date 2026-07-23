@@ -30,6 +30,27 @@ function fnv1a(input: string): number {
  * order the caller happened to pass them in.
  */
 export function resolveVariant(userId: string, experimentKey: string, variants: BucketVariant[]): string | null {
+  return resolveVariantForAssignment(`${userId}:${experimentKey}`, variants)
+}
+
+/**
+ * Governance-aware assignment uses a collision-safe tuple encoding and remains entirely local.
+ * Keep the legacy colon-joined seed above unchanged: existing callers must retain exact buckets.
+ */
+export function resolveGovernedVariant(
+  assignmentEntityType: string,
+  assignmentEntityId: string,
+  experimentKey: string,
+  definitionVersion: number,
+  variants: BucketVariant[],
+): string | null {
+  return resolveVariantForAssignment(
+    JSON.stringify([assignmentEntityType, assignmentEntityId, experimentKey, definitionVersion]),
+    variants,
+  )
+}
+
+function resolveVariantForAssignment(assignmentKey: string, variants: BucketVariant[]): string | null {
   const normalized = [...variants]
     .map((v) => ({ key: v.key, weight: v.weight ?? 1 }))
     .filter((v) => v.key.length > 0 && v.weight > 0)
@@ -38,7 +59,7 @@ export function resolveVariant(userId: string, experimentKey: string, variants: 
   const totalWeight = normalized.reduce((sum, v) => sum + v.weight, 0)
   if (normalized.length === 0 || totalWeight <= 0) return null
 
-  const hash = fnv1a(`${userId}:${experimentKey}`)
+  const hash = fnv1a(assignmentKey)
   // Map the hash into [0, totalWeight) and walk cumulative weights to find the bucket. Divide by
   // 2^32 (not 2^32 - 1) so `point` never reaches `totalWeight` even for the max hash value —
   // otherwise it falls out of every `point < cumulative` check and has to be caught by the
