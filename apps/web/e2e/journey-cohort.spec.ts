@@ -511,6 +511,19 @@ test('Bearer API and gated MCP return the same isolated versioned cohort with bo
     expect(apiBody.journey).toEqual({ key: journeyKey, definitionVersion: 1, entityType: 'merchant' })
     expect(apiBody.cohort.cohort.subjectCount).toBe(5)
     expect(apiBody.cohort.drilldown.subjectIds).toEqual(['a', 'b'])
+    expect(apiBody.diagnostics).toMatchObject({
+      queryKind: 'cohort',
+      relevantEventCount: 10,
+      telemetryStatus: 'available',
+      sampleCount: 1,
+      materializationDecision: 'keep_query_time',
+      thresholds: {
+        p95QueryDurationMs: 2_000,
+        relevantEventCount: 1_000_000,
+      },
+    })
+    expect(apiBody.diagnostics.queryDurationMs).toBeGreaterThanOrEqual(0)
+    expect(JSON.stringify(apiBody.diagnostics).toLowerCase()).not.toContain('subject')
     expect(JSON.stringify(apiBody)).not.toContain('sensitive-customer@example.test')
     expect(JSON.stringify(apiBody)).not.toContain('+52-55-sensitive')
     expect(JSON.stringify(apiBody)).not.toContain('Sensitive Person')
@@ -531,6 +544,13 @@ test('Bearer API and gated MCP return the same isolated versioned cohort with bo
     expect(mcp.payload.ok).toBe(true)
     expect(mcp.payload.journey).toEqual(apiBody.journey)
     expect(mcp.payload.cohort).toEqual(apiBody.cohort)
+    expect(mcp.payload.diagnostics).toMatchObject({
+      queryKind: 'cohort',
+      relevantEventCount: 10,
+      telemetryStatus: 'available',
+      sampleCount: 2,
+      materializationDecision: 'keep_query_time',
+    })
 
     const malformedMcp = await mcpCall(request, one.token, 'get_journey_cohort', {
       journeyKey: 'Not-A-Journey',

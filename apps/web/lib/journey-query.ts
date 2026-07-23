@@ -1,7 +1,14 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
-import { projectJourneySubject, type JourneyProjectionEvent, type JourneySubjectProjection } from './journey-projection'
+import {
+  eventMatchesStage,
+  projectJourneySubject,
+  type JourneyProjectionEvent,
+  type JourneySubjectProjection,
+} from './journey-projection'
 import type { JourneyDefinition } from './journey-definition'
+import { recordJourneyQueryTelemetry } from './journey-query-telemetry-server'
+import type { JourneyQueryDiagnostics } from './journey-query-telemetry'
 import {
   computeJourneyCohort,
   isValidJourneyDrilldown,
@@ -13,7 +20,12 @@ import {
 // callers receive an already-evaluated result and never assemble their own unscoped event query.
 
 export type JourneySubjectQueryResult =
-  | { ok: true; journey: { key: string; definitionVersion: number; entityType: string }; subject: { id: string } & JourneySubjectProjection }
+  | {
+      ok: true
+      journey: { key: string; definitionVersion: number; entityType: string }
+      subject: { id: string } & JourneySubjectProjection
+      diagnostics: JourneyQueryDiagnostics
+    }
   | { ok: false; reason: 'journey_not_found' | 'version_not_found' | 'query_failed' }
 
 export type JourneyCohortQueryResult =
@@ -21,7 +33,7 @@ export type JourneyCohortQueryResult =
       ok: true
       journey: { key: string; definitionVersion: number; entityType: string }
       cohort: JourneyCohortAggregate
-      diagnostics: { queryDurationMs: number; relevantEventCount: number }
+      diagnostics: JourneyQueryDiagnostics
     }
   | {
       ok: false
@@ -52,6 +64,7 @@ export async function getJourneySubjectByProjectId(
   version: number,
   subjectId: string,
 ): Promise<JourneySubjectQueryResult> {
+  const startedAt = performance.now()
   const lookup = await lookupJourneyDefinition(projectId, journeyKey, version)
   if (!lookup.ok) return lookup
   const supabase = getSupabaseServiceClient()
@@ -82,11 +95,23 @@ export async function getJourneySubjectByProjectId(
     subjectId: row.subject_id as string,
   }))
   const projection = projectJourneySubject(definition, subjectId, events)
+  const relevantEventCount = events.filter((event) =>
+    definition.stages.some((stage) => eventMatchesStage(event, stage))
+  ).length
+  const diagnostics = await recordJourneyQueryTelemetry({
+    projectId,
+    journeyId: lookup.registry.id,
+    definitionVersion: lookup.version,
+    queryKind: 'subject',
+    queryDurationMs: performance.now() - startedAt,
+    relevantEventCount,
+  })
 
   return {
     ok: true,
     journey: { key: lookup.registry.key, definitionVersion: lookup.version, entityType: definition.entityType },
     subject: { id: subjectId, ...projection },
+    diagnostics,
   }
 }
 
@@ -119,6 +144,14 @@ export async function getJourneyCohortByProjectId(
   try {
     const events = (data as JourneyEventRow[]).map(mapJourneyEvent)
     const cohort = computeJourneyCohort(lookup.definition, events, options)
+    const diagnostics = await recordJourneyQueryTelemetry({
+      projectId,
+      journeyId: lookup.registry.id,
+      definitionVersion: lookup.version,
+      queryKind: 'cohort',
+      queryDurationMs: performance.now() - startedAt,
+      relevantEventCount: cohort.diagnostics.relevantEventCount,
+    })
     return {
       ok: true,
       journey: {
@@ -127,10 +160,7 @@ export async function getJourneyCohortByProjectId(
         entityType: lookup.definition.entityType,
       },
       cohort,
-      diagnostics: {
-        queryDurationMs: Math.round((performance.now() - startedAt) * 100) / 100,
-        relevantEventCount: cohort.diagnostics.relevantEventCount,
-      },
+      diagnostics,
     }
   } catch (error) {
     console.error('[journey-query] cohort evaluation failed:', error)

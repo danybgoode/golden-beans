@@ -1,6 +1,6 @@
 # Entity journeys — Sprint 2: Cohort, aging and trustworthy operating reads
 
-**Status:** 🟦 in review; cross-review and authenticated preview smoke remain
+**Status:** ✅ complete — merged in PR #18 at `5005044`; migration aligned and production OFF smoke complete
 
 ## Stories
 
@@ -66,12 +66,16 @@ before a page boundary cannot create offset duplicates/skips.
 - **browser smoke owed:** yes, to Daniel — authenticated cohort page plus live MCP read using a disposable token.
 - **deterministic gate:** typecheck + build + API/MCP suite green; one real non-zero cohort renders.
 
-**Local evidence:** clean migration reset; focused pure/resource/index/function suite 6/6 green, including exact
+**Evidence:** clean migration reset; focused pure/resource/index/function suite 6/6 green, including exact
 50,000-fact success, 32-MiB failure, 50,001-fact failure and function-level anonymous denial; revised two-project
 Bearer/MCP parity 1/1 green; typecheck and production build green. Exact sensitive tag values are seeded and
 proven absent from both API and MCP output. Mutation checks proved positional at-or-beyond and inclusive
 retention-boundary assertions fail when their exact evaluator comparisons are broken. The authenticated rendered
-page smoke remains owed to Daniel.
+page smoke remains owed to Daniel. Exact-head Agy and Devin reviews returned clean, GitHub's build and isolated
+local-Supabase Playwright jobs passed, migration `20260729100000_journey_cohort_snapshot.sql` is aligned in
+production, and deployment `5575079705` reports success for merge SHA `5005044`. With the gate still OFF, the
+production cohort API and journey page return 404 while `/llms.txt` and the legacy public experiment comparison
+return 200.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 

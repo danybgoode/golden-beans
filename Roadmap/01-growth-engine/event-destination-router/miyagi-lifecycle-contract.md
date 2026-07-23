@@ -1,7 +1,8 @@
 # Miyagi merchant-lifecycle projection — the delivery contract
 
 > **Epic:** `01-growth-engine/event-destination-router` · **Story:** 3.1
-> **Status:** Golden Beans side specified + deliverable. **The Miyagi consumer is a separate PR and is NOT written yet.**
+> **Status:** Golden Beans side specified + deliverable. The Miyagi consumer/producer work lives on the
+> separate `feat/founding-merchant-activation-ops-s3` branch and still ships through its own PR.
 
 This is the contract the Miyagi projection implements against. It is written from the Golden Beans
 side because Golden Beans is the *producer*: it says exactly what bytes Miyagi will receive, how to
@@ -48,7 +49,7 @@ Fixed key order (the bytes are what the signature covers — do not re-serialize
 `id` is the **stable logical event id**. It does not change across retries *or* replays. It is the
 only correct dedupe key.
 
-## The six lifecycle fixtures
+## The lifecycle fixtures
 
 These are the events the Sprint 3 acceptance names. Each carries `subject.type = "merchant"` and
 `subject.id = <the Miyagi merchant id>` — that subject pair is the whole reason Sprint 1's versioned
@@ -57,12 +58,30 @@ parsing free-form metadata.
 
 | `type` | Means | Miyagi projection effect |
 |---|---|---|
-| `merchant.permission_granted` | Merchant granted Golden Beans permission | mark permission, stamp first-seen |
-| `merchant.preview_approved` | Merchant approved their storefront preview | set preview-approved milestone + timestamp |
+| `merchant.scouted` | Relationship entered the activation population | set scouted milestone |
+| `merchant.qualified` | Merchant passed the documented fit check | set qualified milestone |
+| `merchant.permission_granted` | Merchant granted permission | mark permission, stamp first-seen |
+| `merchant.preview_in_preparation` | Private preview work started | set preparation milestone |
+| `merchant.preview_delivered` | Merchant received the private preview | set delivery milestone |
+| `merchant.activation_scheduled` | Activation session was scheduled | set scheduled milestone |
 | `merchant.claimed` | Merchant claimed their shop | set claimed milestone |
-| `merchant.three_products_live` | Third product went live | set activation milestone |
-| `merchant.first_sale` | First order captured | set first-sale milestone |
-| `merchant.retained_30d` | Still active 30 days after first sale | set retention milestone |
+| `merchant.payments_ready` | A shipped payment rail is connected and ready | set payment-readiness milestone |
+| `merchant.three_products_live` | Third public product went live | set catalog milestone |
+| `merchant.shared_externally` | Merchant used the shipped external-share action | set share milestone |
+| `merchant.first_inquiry` | First buyer conversation exists | set inquiry milestone |
+| `merchant.first_sale` | First order was captured and remains valid | set first-sale milestone |
+| `merchant.retained_30d` | A captured order exists at least 30 days after first sale | set retention milestone |
+| `merchant.preview_approved` | Merchant approved their storefront preview | set preview-approved signal; not a separate 13-stage journey stage |
+
+The canonical plain-JSON fixture exists byte-for-byte in both repositories:
+
+- Golden Beans: `apps/web/e2e/_fixtures/merchant-lifecycle.fixtures.json`
+- Miyagi: `e2e/_fixtures/merchant-lifecycle.fixtures.json`
+
+Both suites pin SHA-256
+`b53f300bdd967bfe21dadbc7543655ccf36f95d27e643625fbb68df5739f3671`. Golden Beans'
+`merchant_activation` definition consumes the 13 `merchant.<stage>` events above and deliberately excludes the
+additional `merchant.preview_approved` signal.
 
 ## What Miyagi must guarantee
 
@@ -102,5 +121,5 @@ Either side may be unavailable without losing events:
 
 - [ ] The Miyagi PR: endpoint + signature verification + projection table + idempotency store
 - [ ] Miyagi DB migration for the projection
-- [ ] The identical lifecycle fixtures running in **both** repos' suites (Sprint 3 QA)
+- [x] The identical lifecycle fixtures running in **both** repos' suites (Sprint 3 QA)
 - [ ] The disposable-merchant end-to-end smoke (Sprint 3 walkthrough) — Daniel merges both PRs

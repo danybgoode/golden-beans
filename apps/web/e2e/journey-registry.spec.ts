@@ -478,6 +478,14 @@ test('journey RPCs are service-role-only with function-level denial, never an RL
     ['activate_journey_version', { p_project_id: zero, p_journey_id: zero, p_version_id: zero, p_actor_user_id: zero }],
     ['get_journey_subject_events', { p_project_id: zero, p_subject_type: 'merchant', p_subject_id: 'subject-one' }],
     ['get_journey_cohort_events', { p_project_id: zero, p_subject_type: 'merchant', p_event_names: ['merchant_created'], p_to: '2026-01-01T00:00:00Z', p_as_of: '2026-01-01T00:00:00Z' }],
+    ['record_journey_query_observation', {
+      p_project_id: zero,
+      p_journey_id: zero,
+      p_definition_version: 1,
+      p_query_kind: 'cohort',
+      p_duration_ms: 1,
+      p_relevant_event_count: 1,
+    }],
   ]
   for (const [name, args] of calls) {
     const { error } = await anonClient.rpc(name, args)

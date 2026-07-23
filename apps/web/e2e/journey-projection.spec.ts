@@ -428,7 +428,22 @@ test('GET journey subject is non-zero, version-explicit, opaque-id validated, an
         currentStage: { key: 'configured', enteredAt: at(2) },
         history: [{ key: 'created', enteredAt: at(1) }, { key: 'configured', enteredAt: at(2) }],
       },
+      diagnostics: {
+        queryKind: 'subject',
+        relevantEventCount: 2,
+        telemetryStatus: 'available',
+        sampleCount: 1,
+        materializationDecision: 'keep_query_time',
+        thresholds: {
+          p95QueryDurationMs: 2_000,
+          relevantEventCount: 1_000_000,
+        },
+      },
     })
+    expect(body.diagnostics.queryDurationMs).toBeGreaterThanOrEqual(0)
+    expect(body.diagnostics.p50QueryDurationMs).toBe(body.diagnostics.queryDurationMs)
+    expect(body.diagnostics.p95QueryDurationMs).toBe(body.diagnostics.queryDurationMs)
+    expect(JSON.stringify(body.diagnostics)).not.toContain(subjectId)
     expect(body.subject.freshness.latestEffectiveFactAt).toBe(at(2))
     expect(body.subject.freshness.latestReceiptAt).toBeTruthy()
 

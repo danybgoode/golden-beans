@@ -105,7 +105,18 @@ export default async function JourneyCohortPage({
         <dt>Source freshness</dt>
         <dd>{cohort.freshness.latestReceiptAt ? formatInTimezone(cohort.freshness.latestReceiptAt, cohort.cohort.timezone) : 'No matching source facts'} · {cohort.freshness.status}</dd>
         <dt>Relevant events</dt><dd>{diagnostics.relevantEventCount}</dd>
-        <dt>Query time</dt><dd>{diagnostics.queryDurationMs} ms</dd>
+        <dt>Current query time</dt><dd>{diagnostics.queryDurationMs} ms</dd>
+        <dt>Query evidence</dt>
+        <dd>
+          {diagnostics.telemetryStatus === 'available'
+            ? `${diagnostics.sampleCount} bounded samples · p50 ${diagnostics.p50QueryDurationMs} ms · p95 ${diagnostics.p95QueryDurationMs} ms · max ${diagnostics.maxRelevantEventCount?.toLocaleString('en-US') ?? 'unknown'} relevant events`
+            : 'Telemetry unavailable; this analytical result is still valid.'}
+        </dd>
+        <dt>Scale decision</dt>
+        <dd>
+          {diagnostics.materializationDecision} · tripwires are p95 &gt; {diagnostics.thresholds.p95QueryDurationMs} ms
+          {' '}or relevant events &gt; {diagnostics.thresholds.relevantEventCount.toLocaleString('en-US')}
+        </dd>
       </dl>
 
       {cohort.populationStatus === 'no_qualifying_events' && (
