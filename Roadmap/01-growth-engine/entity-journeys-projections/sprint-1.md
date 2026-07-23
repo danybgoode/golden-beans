@@ -108,6 +108,8 @@ RPC payload, while retaining the existing broader control-character ban for even
 migration-owner cleanup helper now fails closed unless `SUPABASE_DB_URL` parses as PostgreSQL on an
 explicit loopback host and the local Supabase database port; focused fixtures accept IPv4, IPv6 and
 `localhost` local forms while rejecting remote, wrong-port and malformed values without echoing credentials.
+The guard also rejects every connection option or fragment because node-postgres otherwise lets query
+parameters override the URI authority's host/port after the visible local URL has passed validation.
 
 ## Sprint QA
 

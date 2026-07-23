@@ -23,11 +23,16 @@ export function requireTestDatabaseUrl(
   if (
     !['postgres:', 'postgresql:'].includes(parsed.protocol) ||
     !LOCAL_SUPABASE_DB_HOSTS.has(parsed.hostname.toLowerCase()) ||
-    parsed.port !== LOCAL_SUPABASE_DB_PORT
+    parsed.port !== LOCAL_SUPABASE_DB_PORT ||
+    parsed.search !== '' ||
+    parsed.hash !== ''
   ) {
+    // node-postgres honors connection-string options such as `?host=...` and `?port=...`
+    // after parsing the URI. Reject every option/fragment so an apparently local authority
+    // cannot override the actual migration-owner destination.
     // Never echo the supplied connection string: it normally contains the database password.
     throw new Error(
-      `SUPABASE_DB_URL must target local Supabase on loopback port ${LOCAL_SUPABASE_DB_PORT}`,
+      `SUPABASE_DB_URL must target local Supabase on loopback port ${LOCAL_SUPABASE_DB_PORT} without connection options`,
     )
   }
 

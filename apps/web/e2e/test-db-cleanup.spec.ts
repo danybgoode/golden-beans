@@ -16,6 +16,10 @@ test.describe('test database cleanup guard', () => {
     for (const url of [
       'postgresql://postgres:do-not-print@db.example.test:54322/postgres',
       'postgresql://postgres:do-not-print@127.0.0.1:5432/postgres',
+      'postgresql://postgres:do-not-print@127.0.0.1:54322/postgres?host=db.example.test',
+      'postgresql://postgres:do-not-print@127.0.0.1:54322/postgres?port=5432',
+      'postgresql://postgres:do-not-print@127.0.0.1:54322/postgres?service=remote',
+      'postgresql://postgres:do-not-print@127.0.0.1:54322/postgres#host=db.example.test',
       'https://localhost:54322/postgres',
       'not-a-url',
       '',
