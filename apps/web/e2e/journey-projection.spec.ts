@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { Client } from 'pg'
 import { MAX_EXACT_SEGMENT_SAFE_INTEGER_ABS } from '@/lib/entity-contract'
 import { eventMatchesStage, projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import type { JourneyDefinition } from '@/lib/journey-definition'
@@ -295,6 +296,69 @@ async function insertPagedSubjectFixture(
   ])
   if (error) throw new Error(`could not insert later paged event fixture: ${error.message}`)
 }
+
+async function insertSubjectHistoryWithMigrationOwner(
+  projectId: string,
+  subjectId: string,
+  count: number,
+) {
+  const client = new Client({ connectionString: requireTestDatabaseUrl() })
+  await client.connect()
+  try {
+    await client.query(
+      `
+        INSERT INTO public.events (
+          project_id, user_id, event, tags, context_version,
+          subject_type, subject_id, occurred_at, created_at
+        )
+        SELECT
+          $1::UUID,
+          'journey-boundary-' || n,
+          'merchant_note',
+          '{}'::JSONB,
+          1,
+          'merchant',
+          $2::TEXT,
+          '2026-01-01T00:00:00Z'::TIMESTAMPTZ + n * INTERVAL '1 millisecond',
+          '2026-01-01T00:00:00Z'::TIMESTAMPTZ + n * INTERVAL '1 millisecond'
+        FROM generate_series(1, $3::INTEGER) AS n
+      `,
+      [projectId, subjectId, count],
+    )
+  } finally {
+    await client.end()
+  }
+}
+
+test('subject snapshot succeeds at 10,000 facts and fails closed at 10,001', async () => {
+  const client = db()
+  const project = await createProject(client, 'bounded-history')
+  const atLimitSubject = `merchant-limit-${Date.now()}`
+  const overLimitSubject = `merchant-over-limit-${Date.now()}`
+  try {
+    await insertSubjectHistoryWithMigrationOwner(project.id, atLimitSubject, 10_000)
+    await insertSubjectHistoryWithMigrationOwner(project.id, overLimitSubject, 10_001)
+
+    const atLimit = await client.rpc('get_journey_subject_events', {
+      p_project_id: project.id,
+      p_subject_type: 'merchant',
+      p_subject_id: atLimitSubject,
+    })
+    expect(atLimit.error).toBeNull()
+    expect(atLimit.data).toHaveLength(10_000)
+
+    const overLimit = await client.rpc('get_journey_subject_events', {
+      p_project_id: project.id,
+      p_subject_type: 'merchant',
+      p_subject_id: overLimitSubject,
+    })
+    expect(overLimit.data).toBeNull()
+    expect(overLimit.error?.code).toBe('54000')
+    expect(overLimit.error?.message).toContain('journey subject event limit exceeded')
+  } finally {
+    await cleanupJourneyProjects([project.id])
+  }
+})
 
 test('GET journey subject is non-zero, version-explicit, opaque-id validated, and project isolated', async ({ request }) => {
   const client = db()

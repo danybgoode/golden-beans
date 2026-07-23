@@ -53,8 +53,8 @@ export async function getJourneySubjectByProjectId(
 
   const definition = definitionVersion.definition as JourneyDefinition
   // The RPC performs one project/entity/subject-scoped SELECT and aggregates the result into one
-  // JSONB value. That gives the evaluator one database snapshot without PostgREST's row cap or a
-  // cross-page concurrent-ingest gap.
+  // bounded JSONB value. That gives the evaluator one database snapshot without PostgREST's row cap
+  // or a cross-page concurrent-ingest gap, while oversized subject histories fail closed.
   const { data, error: eventsError } = await supabase.rpc('get_journey_subject_events', {
     p_project_id: projectId,
     p_subject_type: definition.entityType,

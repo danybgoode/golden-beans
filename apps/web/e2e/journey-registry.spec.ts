@@ -109,24 +109,26 @@ test.describe('JOURNEY_PROJECTIONS_ENABLED — dark by default', () => {
 test.describe('journey definition — closed bounded contract', () => {
   // Mutation proof D: flipping the mapper's active-version equality makes this test fail with all
   // three lifecycle states misclassified, proving the single-snapshot mapping is actually pinned.
-  test('one embedded snapshot maps active, superseded and draft versions coherently', () => {
+  test('one embedded snapshot maps lifecycle state and hides obsolete never-activated drafts', () => {
     const rows: JourneyRegistryRelationRow[] = [{
       id: 'journey-1',
       key: 'merchant_activation',
-      active_version_id: 'version-2',
+      active_version_id: 'version-active',
       created_by: 'owner-1',
       created_at: '2026-07-22T00:00:00.000Z',
       versions: [
         { id: 'version-1', version: 1, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T00:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T01:00:00.000Z' },
-        { id: 'version-3', version: 3, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T03:00:00.000Z', activated_by: null, activated_at: null },
-        { id: 'version-2', version: 2, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T02:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T02:30:00.000Z' },
+        { id: 'version-obsolete', version: 2, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T01:30:00.000Z', activated_by: null, activated_at: null },
+        { id: 'version-4', version: 4, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T04:00:00.000Z', activated_by: null, activated_at: null },
+        { id: 'version-active', version: 3, definition: VALID_DEFINITION, created_by: 'owner-1', created_at: '2026-07-22T03:00:00.000Z', activated_by: 'owner-1', activated_at: '2026-07-22T03:30:00.000Z' },
       ],
     }]
     const mapped = mapJourneyRegistryRows(rows)
-    expect(mapped[0].activeVersionId).toBe('version-2')
+    expect(mapped[0].activeVersionId).toBe('version-active')
     expect(mapped[0].versions.map((version) => [version.version, version.state])).toEqual([
-      [3, 'draft'], [2, 'active'], [1, 'superseded'],
+      [4, 'draft'], [3, 'active'], [1, 'superseded'],
     ])
+    expect(mapped[0].versions.some((version) => version.id === 'version-obsolete')).toBe(false)
   })
 
   test('accepts 1–20 ordered stages, the five reusable dimensions and exact scalar predicates', () => {

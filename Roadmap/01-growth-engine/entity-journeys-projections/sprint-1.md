@@ -94,6 +94,14 @@ CI was closed with the actual gate evidence. Antigravity's external quota was un
 its preceding clean verdict was supplemented by a fresh Terra review, whose invalid-calendar finding added
 explicit leap-year/day/time validation before timestamp normalization.
 
+**PR #17 final Codex disposition:** accepted the lifetime-history and obsolete-version findings. The
+single-snapshot subject RPC now streams a measurement over at most 10,001 project/type/subject-scoped
+candidates, aggregates only when the complete history is within 10,000 facts and 32 MiB of aggregate
+JSON text, and raises a clear program-limit error otherwise; it never returns a partial projection. Database-backed boundary
+fixtures pin success at exactly 10,000 and fail-closed behavior at 10,001. The registry snapshot mapper
+now consistently removes never-activated versions at or below the active version while retaining the
+immutable activation history and newer actionable drafts, matching the management UI claim.
+
 ## Sprint QA
 
 - **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/

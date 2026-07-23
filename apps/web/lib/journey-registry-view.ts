@@ -67,15 +67,26 @@ export function canActivateJourneyVersion(
 }
 
 export function mapJourneyRegistryRows(rows: JourneyRegistryRelationRow[]): JourneyRegistryView[] {
-  return rows.map((registry) => ({
-    id: registry.id,
-    key: registry.key,
-    activeVersionId: registry.active_version_id,
-    createdBy: registry.created_by,
-    createdAt: registry.created_at,
-    versions: [...registry.versions]
-      .sort((a, b) => b.version - a.version)
-      .map((version) => ({
+  return rows.map((registry) => {
+    const sortedVersions = [...registry.versions].sort((a, b) => b.version - a.version)
+    const activeVersion = sortedVersions.find((version) => version.id === registry.active_version_id)
+    // Once a later version is active, a never-activated older draft cannot become active and cannot
+    // be edited (versions are immutable). Keep activation history plus newer actionable drafts, but
+    // do not expose those obsolete dead-end documents in the management view.
+    const visibleVersions = sortedVersions.filter(
+      (version) =>
+        activeVersion === undefined ||
+        version.activated_at !== null ||
+        version.version > activeVersion.version,
+    )
+
+    return {
+      id: registry.id,
+      key: registry.key,
+      activeVersionId: registry.active_version_id,
+      createdBy: registry.created_by,
+      createdAt: registry.created_at,
+      versions: visibleVersions.map((version) => ({
         id: version.id,
         version: version.version,
         definition: version.definition,
@@ -90,5 +101,6 @@ export function mapJourneyRegistryRows(rows: JourneyRegistryRelationRow[]): Jour
               ? 'superseded'
               : 'draft',
       })),
-  }))
+    }
+  })
 }

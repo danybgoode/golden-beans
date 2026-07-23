@@ -454,8 +454,11 @@ $$;
 
 -- A projection must evaluate one complete, coherent fact set. Aggregating into one JSONB value
 -- keeps the read to one SQL statement/snapshot and one PostgREST row, avoiding both the row cap and
--- cross-page movement during concurrent ingest. This remains strictly single-tenant: project_id is
--- required and explicit in the only events SELECT.
+-- cross-page movement during concurrent ingest. A streaming measurement reads at most one row beyond
+-- the supported lifetime (10,000 facts / 32 MiB of aggregate JSON text) and fails closed before the
+-- JSON aggregate is built. Because this function is STABLE, both internal SELECTs use the calling
+-- statement's snapshot: the second pass cannot gain or lose concurrent rows after the first pass.
+-- This remains strictly single-tenant: project_id is required and explicit in both events SELECTs.
 CREATE OR REPLACE FUNCTION get_journey_subject_events(
   p_project_id UUID,
   p_subject_type TEXT,
@@ -468,10 +471,61 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public, pg_temp
 AS $$
 DECLARE
-  v_events JSONB;
+  v_events        JSONB;
+  v_event_count   BIGINT;
+  v_payload_bytes NUMERIC;
 BEGIN
   IF p_project_id IS NULL OR p_subject_type IS NULL OR p_subject_id IS NULL THEN
     RAISE EXCEPTION 'project, subject type and subject id are required' USING ERRCODE = '22023';
+  END IF;
+
+  WITH bounded_events AS (
+    SELECT
+      e.id,
+      e.event,
+      e.tags,
+      e.occurred_at,
+      e.created_at,
+      e.subject_id
+    FROM public.events e
+    WHERE e.project_id = p_project_id
+      AND e.subject_type = p_subject_type
+      AND e.subject_id = p_subject_id
+    LIMIT 10001
+  ),
+  measured AS (
+    SELECT
+      COUNT(*) AS event_count,
+      COALESCE(
+        SUM(
+          octet_length(
+            jsonb_build_object(
+              'id', id,
+              'event', event,
+              'tags', tags,
+              'occurred_at', occurred_at,
+              'created_at', created_at,
+              'subject_id', subject_id
+            )::TEXT
+          )
+        ),
+        0
+      ) AS item_bytes
+    FROM bounded_events
+  )
+  SELECT
+    event_count,
+    item_bytes + 2 + GREATEST(event_count - 1, 0) * 2
+  INTO v_event_count, v_payload_bytes
+  FROM measured;
+
+  IF v_event_count > 10000 THEN
+    RAISE EXCEPTION 'journey subject event limit exceeded (maximum 10000)'
+      USING ERRCODE = '54000';
+  END IF;
+  IF v_payload_bytes > 33554432 THEN
+    RAISE EXCEPTION 'journey subject event payload limit exceeded (maximum 33554432 bytes)'
+      USING ERRCODE = '54000';
   END IF;
 
   SELECT COALESCE(
