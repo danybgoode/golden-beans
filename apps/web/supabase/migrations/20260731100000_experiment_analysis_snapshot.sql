@@ -109,7 +109,9 @@ BEGIN
      OR p_as_of IS NULL OR NOT isfinite(p_as_of)
      OR p_analysis_start >= p_analysis_end
      OR p_analysis_end > p_as_of
-     OR p_as_of > statement_timestamp() THEN
+     -- The request layer rejects future snapshots against the application clock. Keep a
+     -- database-side ceiling too, but tolerate ordinary app/database clock skew.
+     OR p_as_of > statement_timestamp() + INTERVAL '5 minutes' THEN
     RAISE EXCEPTION 'invalid experiment analysis snapshot arguments' USING ERRCODE = '22023';
   END IF;
   IF p_metric_events IS NULL

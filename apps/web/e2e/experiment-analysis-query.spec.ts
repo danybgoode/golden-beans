@@ -221,6 +221,27 @@ test('bounded RPC strips PII and API/MCP share one versioned, tenant-isolated an
     expect(serializedSnapshot).not.toContain('+52-55-sensitive')
     expect(serializedSnapshot).not.toContain('Sensitive Person')
 
+    const skewTolerantSnapshot = await client.rpc('get_experiment_analysis_events', {
+      p_project_id: one.id,
+      p_experiment_key: experimentKey,
+      p_definition_version: versionOne.version,
+      p_metric_events: ['founding_application_completed'],
+      p_analysis_start: START,
+      p_analysis_end: new Date().toISOString(),
+      p_as_of: new Date(Date.now() + 60_000).toISOString(),
+    })
+    expect(skewTolerantSnapshot.error).toBeNull()
+    const tooFarFutureSnapshot = await client.rpc('get_experiment_analysis_events', {
+      p_project_id: one.id,
+      p_experiment_key: experimentKey,
+      p_definition_version: versionOne.version,
+      p_metric_events: ['founding_application_completed'],
+      p_analysis_start: START,
+      p_analysis_end: new Date().toISOString(),
+      p_as_of: new Date(Date.now() + 360_000).toISOString(),
+    })
+    expect(tooFarFutureSnapshot.error?.code).toBe('22023')
+
     const query = new URLSearchParams({
       version: String(versionOne.version),
       asOf,

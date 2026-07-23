@@ -20,6 +20,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
     return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status })
   }
   const { key } = await params
+  if (governed && !validateExperimentKey(key)) {
+    return NextResponse.json({ ok: false, error: 'Invalid experiment key' }, { status: 400 })
+  }
 
   const supabase = getSupabaseServiceClient()
   const { data: project, error } = await supabase.from('projects').select('slug').eq('id', auth.projectId).single()
@@ -29,9 +32,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ key:
   }
 
   if (governed) {
-    if (!validateExperimentKey(key)) {
-      return NextResponse.json({ ok: false, error: 'Invalid experiment key' }, { status: 400 })
-    }
     const parsed = parseExperimentAnalysisRequest({
       version: req.nextUrl.searchParams.get('version'),
       asOf: req.nextUrl.searchParams.get('asOf'),
