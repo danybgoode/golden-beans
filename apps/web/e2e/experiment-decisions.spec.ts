@@ -5,6 +5,13 @@ import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,
 } from './helpers/test-db-cleanup'
+import {
+  mapExperimentDecisionRows,
+  type ExperimentDecisionRow,
+} from '@/lib/experiment-decision-contract'
+
+const DECISION_READ_COLUMNS =
+  'id, ordinal, definition_version, record_kind, outcome, chosen_variant_key, rationale, analysis_snapshot, integrity_snapshot, actor_user_id, created_at, supersedes_record_id'
 
 const DEFINITION = {
   hypothesis: 'A clearer founding-store promise increases completed applications.',
@@ -584,6 +591,89 @@ test('decision history fails closed before its cumulative analysis payload excee
       .select('id', { count: 'exact', head: true })
       .eq('project_id', projectId)
       .eq('version_id', version.version_id)).count).toBe(16)
+  } finally {
+    try {
+      await cleanupRetainedExperimentEvidence([projectId])
+    } finally {
+      await client.auth.admin.deleteUser(owner)
+    }
+  }
+})
+
+test('a long-rationale history accepted by the write cap always maps through the read resolver', async () => {
+  // Teeth for the write/read cap alignment: the write cap must count the SAME rationale + analysis +
+  // integrity bytes the read resolver bounds. Under the earlier analysis-only write cap, a history of
+  // maxed multi-byte rationales was accepted on write yet exceeded the read bound — permanently
+  // bricking the governed view. Here we fill until the payload cap fires, then prove every accepted
+  // record maps without ExperimentDecisionResourceLimitError. This fails if the write cap regresses to
+  // counting analysis alone.
+  const client = db()
+  const owner = await createUser(client, 'readable-owner')
+  const projectId = await createProject(client, 'readable-cap')
+  try {
+    expect((await client.from('project_members').insert({
+      project_id: projectId,
+      user_id: owner,
+      role: 'owner',
+    })).error).toBeNull()
+    const version = await createStoppedVersion(client, projectId, owner, 'readable-bounded-decision')
+    // Moderate analysis (~50 KiB) so the payload cap fires well before the 100-record cap, plus a
+    // MAX rationale of 2000 emoji code points (8000 UTF-8 bytes) — the exact uncounted term the old
+    // cap ignored.
+    const analysis = { ...ANALYSIS, proofPadding: 'x'.repeat(50_000) }
+    const bigRationale = '😀'.repeat(2_000)
+    let latest = (await recordDecision(client, {
+      projectId,
+      experimentId: version.experiment_id,
+      versionId: version.version_id,
+      actorId: owner,
+      outcome: 'inconclusive',
+      chosenVariant: null,
+      rationale: bigRationale,
+      analysis,
+    })).data?.[0]
+    expect(latest).toBeTruthy()
+
+    let accepted = 1
+    let capFired = false
+    for (let ordinal = 2; ordinal <= 100; ordinal += 1) {
+      const res = await recordDecision(client, {
+        projectId,
+        experimentId: version.experiment_id,
+        versionId: version.version_id,
+        actorId: owner,
+        kind: 'correction',
+        outcome: 'inconclusive',
+        chosenVariant: null,
+        rationale: bigRationale,
+        analysis,
+        supersedesId: latest!.id,
+      })
+      if (res.error) {
+        expect(res.error.code, `unexpected error at ordinal ${ordinal}`).toBe('54000')
+        capFired = true
+        break
+      }
+      latest = res.data?.[0]
+      accepted += 1
+    }
+    // The payload cap — not the 100-record cap — must be what stopped the fill.
+    expect(capFired, 'payload cap must fire before the 100-record cap').toBe(true)
+    expect(accepted).toBeLessThan(100)
+
+    const { data: rows, error } = await client
+      .from('experiment_decision_records')
+      .select(DECISION_READ_COLUMNS)
+      .eq('project_id', projectId)
+      .eq('version_id', version.version_id)
+      .order('ordinal', { ascending: true })
+    expect(error).toBeNull()
+    expect(rows?.length).toBe(accepted)
+    // The whole accepted history reads back through the exact read-mapping logic without tripping its
+    // resource bound: proof that anything the write cap accepts is always readable.
+    expect(() =>
+      mapExperimentDecisionRows(rows as unknown as ExperimentDecisionRow[]),
+    ).not.toThrow()
   } finally {
     try {
       await cleanupRetainedExperimentEvidence([projectId])

@@ -160,7 +160,7 @@ DECLARE
   v_existing public.experiment_decision_records%ROWTYPE;
   v_inserted public.experiment_decision_records%ROWTYPE;
   v_control_variant TEXT;
-  v_existing_analysis_bytes BIGINT;
+  v_existing_history_bytes BIGINT;
   v_now TIMESTAMPTZ := statement_timestamp();
   v_integrity_snapshot JSONB;
 BEGIN
@@ -282,21 +282,6 @@ BEGIN
     RAISE EXCEPTION 'experiment decision history limit reached' USING ERRCODE = '54000';
   END IF;
 
-  SELECT COALESCE(SUM(octet_length(candidate.analysis_snapshot::TEXT)), 0)
-  INTO v_existing_analysis_bytes
-  FROM public.experiment_decision_records candidate
-  WHERE candidate.project_id = p_project_id
-    AND candidate.experiment_id = p_experiment_id
-    AND candidate.version_id = p_version_id;
-  -- 4 MiB, deliberately BELOW the read resolver's MAX_DECISION_HISTORY_BYTES (4.5 MiB, measured over
-  -- rationale + analysis + integrity per row). The write cap must stay under the read bound so this
-  -- ledger can never accept history the UI/API/MCP read path would then refuse with `resource_limit`
-  -- — an accepted-but-unreadable decision record is worse than a rejected write.
-  IF v_existing_analysis_bytes + octet_length(p_analysis_snapshot::TEXT) > 4194304 THEN
-    RAISE EXCEPTION 'experiment decision analysis history payload limit reached'
-      USING ERRCODE = '54000';
-  END IF;
-
   v_integrity_snapshot := jsonb_build_object(
     'integrityReady', p_analysis_snapshot->'integrityReady',
     'decisionReady', p_analysis_snapshot->'decisionReady',
@@ -304,6 +289,34 @@ BEGIN
     'srm', p_analysis_snapshot#>'{diagnostics,srm}',
     'diagnostics', p_analysis_snapshot#>'{diagnostics,integrity}'
   );
+
+  -- Cap the CUMULATIVE readable history by the EXACT same three fields the read resolver sums in
+  -- mapExperimentDecisionRows (rationale + analysis + integrity) — so anything accepted here is
+  -- guaranteed readable there. Counting analysis alone (an earlier bug) left rationale and integrity
+  -- uncounted, so a long-/multi-byte-rationale history could be accepted on write yet fail the read
+  -- with `resource_limit`, permanently bricking the whole governed view (append-only, unfixable). The
+  -- 4 MiB write cap sits below the read bound MAX_DECISION_HISTORY_BYTES (4.5 MiB); the ~0.5 MiB slack
+  -- absorbs only the tiny jsonb-vs-JSON.stringify serialization skew across up to 100 rows, NOT the
+  -- rationale/integrity terms (now counted here). An accepted-but-unreadable record is worse than a
+  -- rejected write.
+  SELECT COALESCE(SUM(octet_length(jsonb_build_object(
+    'rationale', candidate.rationale,
+    'analysisSnapshot', candidate.analysis_snapshot,
+    'integritySnapshot', candidate.integrity_snapshot
+  )::TEXT)), 0)
+  INTO v_existing_history_bytes
+  FROM public.experiment_decision_records candidate
+  WHERE candidate.project_id = p_project_id
+    AND candidate.experiment_id = p_experiment_id
+    AND candidate.version_id = p_version_id;
+  IF v_existing_history_bytes + octet_length(jsonb_build_object(
+       'rationale', p_rationale,
+       'analysisSnapshot', p_analysis_snapshot,
+       'integritySnapshot', v_integrity_snapshot
+     )::TEXT) > 4194304 THEN
+    RAISE EXCEPTION 'experiment decision analysis history payload limit reached'
+      USING ERRCODE = '54000';
+  END IF;
 
   INSERT INTO public.experiment_decision_records (
     project_id,
