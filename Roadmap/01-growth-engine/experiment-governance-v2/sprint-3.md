@@ -1,7 +1,8 @@
 # Experiment governance v2 — Sprint 3: Decision record, operating parity and Miyagi proof
 
-**Status:** 🟨 built, reviewed and CI-green in PR [#23](https://github.com/danybgoode/golden-beans/pull/23); production
-migration/flag rollout and the live Miyagi proof remain owed to Daniel (see "Owed to Daniel" below)
+**Status:** ✅ shipped & LIVE in production — merged in PR [#23](https://github.com/danybgoode/golden-beans/pull/23),
+migration `20260801100000` applied to prod Supabase, and `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON (2026-07-23)
+with a live decision round-trip verified. One operational follow-up remains: the live Miyagi dogfood decision.
 
 **Commit refs:** 3.1 `db69d5b` + `a3b65a3` (review fix) · 3.2 `e642b99` · 3.3 `12d5d1b`
 
@@ -11,12 +12,14 @@ be unreadable); fixed and mutation-verified with a teeth spec. Agy and Devin the
 (Agy's single "should-fix" was a hallucinated type union — `tsc` is green). CI: Playwright api + type-check/build
 + Vercel preview all pass.
 
-**Owed to Daniel (owner-only, not done in this PR — each needs naming by name):**
-1. Merge #23 (high-risk: auth/DB/immutable ledger).
-2. Apply migration `20260801100000_experiment_decision_records.sql` to production Supabase (separate from deploy).
-3. Flip `EXPERIMENT_GOVERNANCE_ENABLED` in production (needs a new Git-tracked deployment) + live verification.
-4. Story 3.3 live: drive Tiendas Fundadoras exposure through Miyagi's own flag and record the production human
-   decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's flag.
+**Production rollout (2026-07-23):** (1) merged #23 dark; (2) `supabase db push` applied the decision-records
+migration to prod (`slweidgffcfndnskcskc`) — the only pending one; (3) `EXPERIMENT_GOVERNANCE_ENABLED` false→true
+on Vercel Production, activated by a redeploy commit to `main`; (4) live round-trip verified (create → stop →
+record `inconclusive` decision → read back byte-identical via authenticated API + MCP → append a correction).
+
+**Remaining operational follow-up:** Story 3.3 live — drive Tiendas Fundadoras exposure through Miyagi's own flag
+and record the production human decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's
+flag. This is a dogfood step on top of the now-live governance capability, not a code gap.
 
 ## Stories
 

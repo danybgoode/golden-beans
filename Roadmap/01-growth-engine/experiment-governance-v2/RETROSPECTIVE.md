@@ -1,6 +1,7 @@
 # Experiment governance v2 — Retrospective
 
-_Code-complete & in review: 2026-07-23 (PR #23). Final prod/Miyagi close-out owed to Daniel — see Gaps._
+_Shipped & LIVE in production: 2026-07-23 (PRs #19/#22/#23; migration applied, flag flipped ON, live decision
+round-trip verified). One operational follow-up remains: the live Miyagi dogfood decision — see Gaps._
 
 ## What shipped
 
@@ -51,12 +52,15 @@ untouched.
   shell profile that the test-cleanup guard correctly refused. Kill stale servers explicitly and pin local creds
   before believing a red run.
 
-## Gaps / follow-ups (owed to Daniel — owner-only, name each)
+## Gaps / follow-ups
 
-1. **Merge PR #23** (high-risk: auth/DB/immutable ledger; sprint doc says Daniel merges).
-2. **Apply migration `20260801100000_experiment_decision_records.sql` to production Supabase** (separate from deploy).
-3. **Flip `EXPERIMENT_GOVERNANCE_ENABLED` in production** (needs a new Git-tracked deployment) + live verification
-   by exercising the surface (never a CLI listing).
-4. **Story 3.3 live:** drive Tiendas Fundadoras exposure through Miyagi's own flag and record the production human
-   decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's flag.
-5. **Post-merge close-out:** mark this README shipped, run `node scripts/build-order.mjs`, delete the feature branch.
+**Done on 2026-07-23 (rollout):** merged #23 · migration applied to prod Supabase · `EXPERIMENT_GOVERNANCE_ENABLED`
+flipped false→true and activated by a redeploy · live decision round-trip verified (create→stop→decide→read via
+API+MCP→correct) · README/poster/build-order finalized · feature branch deleted.
+
+**Remaining operational follow-up (one):**
+
+1. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
+   record the production human decision (cross-repo; browser smoke). Golden Beans never reads or changes Miyagi's
+   flag. This is a dogfood on top of the now-live, verified governance capability — not a code gap. Needs the
+   Miyagi repo/flag access details before it can be scheduled.

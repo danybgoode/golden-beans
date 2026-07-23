@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: shipped
 slug: experiment-governance-v2
 ---
 
@@ -54,9 +54,9 @@ resolve assignments, reject telemetry, ramp traffic or roll out a winner. Flag s
 | 2 | ✅ 2.1 Primary and guardrail metric analysis | low |
 | 2 | ✅ 2.2 SRM and exposure-integrity diagnostics | low |
 | 2 | ✅ 2.3 Minimum-sample guidance and bounded segments | low |
-| 3 | 🟨 3.1 Immutable human decision record — code in PR #23 (green), awaiting merge | high |
-| 3 | 🟨 3.2 Registry-aware UI, API and MCP parity — code in PR #23 (green), awaiting merge | high |
-| 3 | 🟨 3.3 Tiendas Fundadoras governed experiment proof — fixtures/contract in PR #23; live Miyagi rollout owed | high |
+| 3 | ✅ 3.1 Immutable human decision record | high |
+| 3 | ✅ 3.2 Registry-aware UI, API and MCP parity | high |
+| 3 | ✅ 3.3 Tiendas Fundadoras governed experiment proof — fixtures/contract shipped; live Miyagi dogfood is a follow-up | high |
 
 ## Kill-switch
 
@@ -74,17 +74,18 @@ two-project isolation and synthetic clean/SRM fixtures pass; real Miyagi traffic
 
 ## Definition of Done (epic)
 
-> Sprints 1–2 are merged (#19, #22). Sprint 3 code is complete, reviewed and CI-green in **PR #23**; the
-> remaining unchecked items require Daniel's merge + production rollout and close at epic close (post-merge).
+> Sprints 1–2 merged (#19, #22); Sprint 3 merged (#23). Migration applied to production and
+> `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON in production (2026-07-23) with a live decision round-trip
+> verified. One operational follow-up remains: the live Miyagi (Tiendas Fundadoras) dogfood decision.
 
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated) — *S1/S2 merged; S3 in PR #23 awaiting merge*
-- [ ] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *prod walkthrough owed to Daniel*
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *live Miyagi dogfood is the stated gap*
+- [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *prod decision round-trip verified; Miyagi walkthrough follows*
 - [x] Existing local bucketing/exposure/v1 comparison remain compatible with governance OFF — *dark-state pass green*
 - [x] Realistic untagged conversions, SRM and exposure-integrity fixtures pass deterministically
 - [x] UI/API/MCP share one resolver and pass two-project + connector-gate isolation
 - [x] Decisions are immutable, allow invalid/inconclusive and cannot mutate a product flag
-- [x] Tiendas Fundadoras proof is PII-free and uses Miyagi's own flag for exposure — *fixtures/contract; live traffic owed*
-- [x] `EXPERIMENT_GOVERNANCE_ENABLED` exists born OFF — *live flip + verification owed to Daniel*
-- [ ] This README marked shipped; sprint headings carry commit refs — *sprint headings carry refs; "shipped" awaits merge*
+- [x] Tiendas Fundadoras proof is PII-free and uses Miyagi's own flag for exposure — *fixtures/contract shipped; live traffic follows*
+- [x] `EXPERIMENT_GOVERNANCE_ENABLED` exists born OFF; flip includes a new deployment and live verification
+- [x] This README marked shipped; sprint headings carry commit refs
 - [x] `RETROSPECTIVE.md`, product poster and durable learnings updated
-- [ ] Feature branch deleted and `node scripts/build-order.mjs` run — *post-merge close-out*
+- [x] Feature branch deleted and `node scripts/build-order.mjs` run

@@ -88,15 +88,16 @@ independently shippable slice of value.
 
 ## Recent highlights
 
-- **2026-07-23** — `experiment-governance-v2` **Sprint 3 code-complete & in review** (PR #23, CI-green):
-  the epic's capstone — an **immutable human decision record** for a stopped experiment (ship/keep/iterate/
+- **2026-07-23** — `experiment-governance-v2` **epic shipped & LIVE in production** (PRs #19/#22/#23):
+  the capstone — an **immutable human decision record** for a stopped experiment (ship/keep/iterate/
   inconclusive/invalid + rationale over a frozen definition/analysis/integrity snapshot, append-only,
   owner-only, and structurally unable to mutate a product flag or roll out a variant), plus one resolver so
   the authenticated UI, the Bearer compare API and the gated MCP tool serve byte-identical plan + diagnostics
-  + metrics + decision. Sprints 1–2 (registry, immutable lifecycle, governed trust analysis/SRM/segments)
-  already merged (#19, #22). A fresh cold review caught a real accepted-but-unreadable resource-cap defect
-  (fixed, mutation-verified); Agy + Devin reviewed clean. Stays behind born-OFF `EXPERIMENT_GOVERNANCE_ENABLED`;
-  production migration/flag rollout and the live Miyagi (Tiendas Fundadoras) decision are owed to Daniel.
+  + metrics + decision. Registry, immutable lifecycle and governed trust analysis (SRM/segments) shipped in
+  Sprints 1–2. A fresh cold review caught a real accepted-but-unreadable resource-cap defect (fixed,
+  mutation-verified); Agy + Devin reviewed clean. Rolled out 2026-07-23: migration applied to prod,
+  `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON, and a live decision round-trip verified. Remaining follow-up:
+  the live Miyagi (Tiendas Fundadoras) dogfood decision.
 - **2026-07-23** — `entity-journeys-projections` **epic shipped**: a tenant can define an ordered
   lifecycle beyond fixed TARS and read deterministic subject history plus cohort conversion, aging,
   drop-off and retention through one project-scoped UI/API/MCP resolver. The live
