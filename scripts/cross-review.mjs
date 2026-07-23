@@ -47,7 +47,6 @@ import {
   checkAgyVersion,
   loadPromptBody,
   runAntigravity,
-  runWithCodexFallback,
   resolveCurrentPr,
   currentHeadSha,
   decideHeadGuard,
@@ -152,26 +151,17 @@ function ghFiles(pr, repo) {
   }
 }
 
-// agy 1.0.7 has no stdin, so the diff rides embedded in the argv string (same framing codex gets on stdin).
+// agy 1.0.7 has no stdin, so the diff rides embedded in the argv string.
 function agyArgv(prompt, diff) {
   return `${prompt}\n\n## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`;
 }
 
-// Returns { findings, fellBack[, from, to] }. The codex path auto-falls-back to Antigravity on a dead token.
-function runReview(agent, prompt, diff) {
-  if (agent === 'codex') {
-    return runWithCodexFallback({ prompt, stdin: diff, antigravityArgv: agyArgv(prompt, diff) });
-  }
-  if (agent === 'antigravity') {
-    return { findings: runAntigravity(agyArgv(prompt, diff)), fellBack: false };
-  }
-  die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
+function runReview(prompt, diff) {
+  return runAntigravity(agyArgv(prompt, diff));
 }
 
-function buildComment(agentLabel, findings, fellBack) {
-  // When codex fell back, make it unmistakable so nobody reads an Antigravity review as a Codex one.
-  const header = fellBack ? `${AGENTS.antigravity} — Codex unavailable` : agentLabel;
-  return `### 🔎 Cross-agent review (${header})\n\n${BANNER}\n\n---\n\n${findings}\n`;
+function buildComment(agentLabel, findings) {
+  return `### 🔎 Cross-agent review (${agentLabel})\n\n${BANNER}\n\n---\n\n${findings}\n`;
 }
 
 function postComment(pr, repo, body) {
@@ -232,12 +222,8 @@ function main() {
     }
   }
 
-  if (agent === 'codex') {
-    ensureCmd('codex', 'codex not found — install Codex CLI (https://github.com/openai/codex) and `codex login`.');
-  } else if (agent === 'antigravity') {
-    ensureCmd('agy', 'agy not found — install the Antigravity CLI and authenticate it, then retry.');
-    checkAgyVersion();
-  }
+  ensureCmd('agy', 'agy not found — install the Antigravity CLI and authenticate it, then retry.');
+  checkAgyVersion();
 
   const prompt = loadPromptBody(PROMPT_PATH);
   const rawDiff = ghDiff(pr, repo);
@@ -252,10 +238,10 @@ function main() {
       );
     }
   }
-  const { findings, fellBack } = runReview(agent, prompt, diff);
-  if (!findings) die(`${fellBack ? AGENTS.antigravity : AGENTS[agent]} returned no output.`);
+  const findings = runReview(prompt, diff);
+  if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
-  const body = buildComment(AGENTS[agent], findings, fellBack);
+  const body = buildComment(AGENTS[agent], findings);
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
