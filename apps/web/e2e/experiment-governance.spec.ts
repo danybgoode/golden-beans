@@ -221,6 +221,8 @@ test.describe('experiment definition — closed bounded contract', () => {
           endAt: '2026-01-01T00:00:00.000100Z',
         },
       },
+      { ...VALID_DEFINITION, hypothesis: '\u00a0' },
+      { ...VALID_DEFINITION, eligibility: { description: '\u3000' } },
       { ...VALID_DEFINITION, minimumSamplePerVariant: 0 },
       { ...VALID_DEFINITION, sql: 'select true' },
     ]) expect(parseExperimentDefinition(definition).ok, JSON.stringify(definition)).toBe(false)
@@ -459,6 +461,11 @@ test('DB registry is owner-scoped, concurrent, immutable, idempotent and append-
       ['null-guardrail-direction', {
         ...VALID_DEFINITION,
         guardrailMetrics: [{ event: 'guardrail_with_null_direction', direction: null }],
+      }],
+      ['blank-unicode-hypothesis', { ...VALID_DEFINITION, hypothesis: '\u00a0' }],
+      ['blank-unicode-eligibility', {
+        ...VALID_DEFINITION,
+        eligibility: { description: '\u3000' },
       }],
       ['bad-window', {
         ...VALID_DEFINITION,

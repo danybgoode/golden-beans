@@ -36,7 +36,10 @@ BEGIN
 
   IF jsonb_typeof(p_definition->'hypothesis') IS DISTINCT FROM 'string'
      OR char_length(p_definition->>'hypothesis') NOT BETWEEN 1 AND 500
-     OR btrim(p_definition->>'hypothesis') = '' THEN RETURN false; END IF;
+     OR btrim(
+       p_definition->>'hypothesis',
+       U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'
+     ) = '' THEN RETURN false; END IF;
   IF jsonb_typeof(p_definition->'assignmentEntityType') IS DISTINCT FROM 'string'
      OR (p_definition->>'assignmentEntityType') !~ '^[a-z][a-z0-9_]{0,63}$' THEN RETURN false; END IF;
 
@@ -48,7 +51,10 @@ BEGIN
   IF NOT ((p_definition->'eligibility') ? 'description')
      OR jsonb_typeof(p_definition#>'{eligibility,description}') IS DISTINCT FROM 'string'
      OR char_length(p_definition#>>'{eligibility,description}') NOT BETWEEN 1 AND 500
-     OR btrim(p_definition#>>'{eligibility,description}') = '' THEN RETURN false; END IF;
+     OR btrim(
+       p_definition#>>'{eligibility,description}',
+       U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'
+     ) = '' THEN RETURN false; END IF;
   IF (p_definition->'eligibility') ? 'tags' THEN
     IF jsonb_typeof(p_definition#>'{eligibility,tags}') IS DISTINCT FROM 'object' THEN RETURN false; END IF;
     IF (SELECT COUNT(*) FROM jsonb_object_keys(p_definition#>'{eligibility,tags}')) > 5 THEN RETURN false; END IF;
@@ -230,6 +236,8 @@ CREATE UNIQUE INDEX experiment_one_running_version_idx
 
 CREATE TABLE experiment_lifecycle_audit (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Stable identifiers deliberately carry no cascading FK. Project cleanup removes operational
+  -- registry state but retains the actor-time evidence of lifecycle changes.
   project_id    UUID        NOT NULL,
   experiment_id UUID        NOT NULL,
   version_id    UUID        NOT NULL,
@@ -237,12 +245,9 @@ CREATE TABLE experiment_lifecycle_audit (
     CHECK (action IN (
       'version_created', 'version_started', 'version_stopped', 'version_decided',
       'version_invalidated'
-    )),
+  )),
   actor_user_id UUID        NOT NULL,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT experiment_audit_version_fk
-    FOREIGN KEY (project_id, experiment_id, version_id)
-    REFERENCES experiment_definition_versions(project_id, experiment_id, id)
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX experiment_lifecycle_audit_project_created_idx
   ON experiment_lifecycle_audit(project_id, created_at DESC);
@@ -290,6 +295,120 @@ $$;
 CREATE TRIGGER experiment_definition_versions_immutable_trg
   BEFORE UPDATE OR DELETE ON experiment_definition_versions
   FOR EACH ROW EXECUTE FUNCTION private.enforce_experiment_version_immutability();
+
+-- Migration-time property proof: direct version rewrites/deletes are blocked while a parent project
+-- cleanup can still cascade through the operational registry and preserve lifecycle evidence.
+DO $$
+DECLARE
+  v_project_id UUID;
+  v_experiment_id UUID;
+  v_version_id UUID;
+  v_audit_id UUID;
+BEGIN
+  INSERT INTO public.projects (slug, api_key_hash)
+  VALUES ('experiment-immutability-migration-assertion', NULL)
+  RETURNING id INTO v_project_id;
+
+  INSERT INTO public.experiment_registries (project_id, key, created_by)
+  VALUES (
+    v_project_id,
+    'migration_assertion',
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_experiment_id;
+
+  INSERT INTO public.experiment_definition_versions (
+    project_id,
+    experiment_id,
+    version,
+    definition,
+    created_by
+  )
+  VALUES (
+    v_project_id,
+    v_experiment_id,
+    1,
+    '{
+      "hypothesis":"Migration assertion",
+      "assignmentEntityType":"merchant",
+      "eligibility":{"description":"All migration assertion merchants."},
+      "variants":[{"key":"control","weight":1},{"key":"treatment","weight":1}],
+      "controlVariantKey":"control",
+      "primaryMetric":{"event":"migration_assertion_completed","direction":"increase"},
+      "guardrailMetrics":[],
+      "segmentFields":[],
+      "plannedWindow":{"startAt":"2026-01-01T00:00:00Z","endAt":"2026-02-01T00:00:00Z"},
+      "minimumSamplePerVariant":1
+    }'::JSONB,
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_version_id;
+
+  BEGIN
+    UPDATE public.experiment_definition_versions
+    SET definition = jsonb_set(definition, '{hypothesis}', '"Rewritten"'::JSONB)
+    WHERE id = v_version_id;
+
+    RAISE EXCEPTION 'experiment version UPDATE unexpectedly bypassed the immutability trigger';
+  EXCEPTION
+    WHEN SQLSTATE '55000' THEN NULL;
+  END;
+
+  BEGIN
+    DELETE FROM public.experiment_definition_versions
+    WHERE id = v_version_id;
+
+    RAISE EXCEPTION 'experiment version DELETE unexpectedly bypassed the immutability trigger';
+  EXCEPTION
+    WHEN SQLSTATE '55000' THEN NULL;
+  END;
+
+  INSERT INTO public.experiment_lifecycle_audit (
+    project_id,
+    experiment_id,
+    version_id,
+    action,
+    actor_user_id
+  )
+  VALUES (
+    v_project_id,
+    v_experiment_id,
+    v_version_id,
+    'version_created',
+    '00000000-0000-0000-0000-000000000001'
+  )
+  RETURNING id INTO v_audit_id;
+
+  DELETE FROM public.projects
+  WHERE id = v_project_id;
+
+  IF EXISTS (
+    SELECT 1 FROM public.projects WHERE id = v_project_id
+  ) OR EXISTS (
+    SELECT 1 FROM public.experiment_registries WHERE id = v_experiment_id
+  ) OR EXISTS (
+    SELECT 1 FROM public.experiment_definition_versions WHERE id = v_version_id
+  ) OR NOT EXISTS (
+    SELECT 1
+    FROM public.experiment_lifecycle_audit
+    WHERE id = v_audit_id
+      AND project_id = v_project_id
+      AND experiment_id = v_experiment_id
+      AND version_id = v_version_id
+  ) THEN
+    RAISE EXCEPTION 'project cleanup must remove experiment registry state while preserving audit evidence';
+  END IF;
+
+  DELETE FROM public.experiment_lifecycle_audit
+  WHERE id = v_audit_id;
+
+  IF EXISTS (
+    SELECT 1 FROM public.experiment_lifecycle_audit WHERE id = v_audit_id
+  ) THEN
+    RAISE EXCEPTION 'experiment migration assertion left an audit fixture behind';
+  END IF;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION create_experiment_version(
   p_project_id UUID,
@@ -486,7 +605,10 @@ GRANT SELECT ON TABLE experiment_registries, experiment_definition_versions, exp
 
 DO $$
 BEGIN
-  IF has_table_privilege('service_role', 'public.experiment_lifecycle_audit', 'INSERT,UPDATE,DELETE,TRUNCATE') THEN
+  IF has_table_privilege('service_role', 'public.experiment_lifecycle_audit', 'INSERT')
+     OR has_table_privilege('service_role', 'public.experiment_lifecycle_audit', 'UPDATE')
+     OR has_table_privilege('service_role', 'public.experiment_lifecycle_audit', 'DELETE')
+     OR has_table_privilege('service_role', 'public.experiment_lifecycle_audit', 'TRUNCATE') THEN
     RAISE EXCEPTION 'experiment_lifecycle_audit must be append-only to service_role';
   END IF;
 END;
