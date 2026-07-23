@@ -85,6 +85,15 @@ migration-owner connection; the production `service_role` grants remain unchange
 extractor now recognizes status-emoji story headings, and regenerating (never hand-editing)
 `BUILD-ORDER.md` reports the accurate 2/6 stories.
 
+**PR #17 round-five disposition:** accepted the workspace-dependency and near-limit JSONB findings:
+the web test workspace now declares both `pg` and its types, and the owner command mirrors PostgreSQL's
+JSONB text byte accounting before the RPC while retaining the raw 32 KiB request envelope. A schema-valid
+boundary fixture pins the same rejection in TypeScript and the database. The roadmap parser regression is
+already a required `scripts-guard.yml` / pre-commit test (`cli-tests`), so the suggestion that it was outside
+CI was closed with the actual gate evidence. Antigravity's external quota was unavailable for this delta;
+its preceding clean verdict was supplemented by a fresh Terra review, whose invalid-calendar finding added
+explicit leap-year/day/time validation before timestamp normalization.
+
 ## Sprint QA
 
 - **pure specs:** registry schema/state machine plus evaluator table for ordered/late/duplicate/out-of-order/

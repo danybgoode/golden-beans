@@ -7,6 +7,30 @@ import { parseJourneyDefinition, validateJourneyKey, type JourneyDefinition } fr
 
 export const MAX_JOURNEY_DEFINITION_BYTES = 32 * 1024
 
+/**
+ * PostgreSQL renders JSONB with `: ` and `, ` separators before the migration applies its
+ * 32 KiB backstop. Mirror that representation's byte length so a compact near-limit request gets
+ * the same friendly validation result here instead of a generic RPC failure.
+ *
+ * Object key order is irrelevant to the length. Journey definitions contain only JSON scalars,
+ * arrays and objects, so this recursive formatter covers the complete closed contract.
+ */
+export function postgresJsonbTextByteLength(value: unknown): number {
+  return Buffer.byteLength(postgresJsonbText(value), 'utf8')
+}
+
+function postgresJsonbText(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(postgresJsonbText).join(', ')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.entries(value)
+      .map(([key, child]) => `${JSON.stringify(key)}: ${postgresJsonbText(child)}`)
+      .join(', ')}}`
+  }
+  const encoded = JSON.stringify(value)
+  if (encoded === undefined) throw new Error('invalid JSON value')
+  return encoded
+}
+
 type OwnerIdentity = { projectId: string; userId: string }
 
 export type JourneyVersionCreationResult =
@@ -79,6 +103,12 @@ export async function createJourneyVersionAfterGate(
     parsed = JSON.parse(raw)
   } catch {
     return { slug: safeSlug, result: { ok: false, error: 'Definition must be valid JSON.' } }
+  }
+  if (postgresJsonbTextByteLength(parsed) > MAX_JOURNEY_DEFINITION_BYTES) {
+    return {
+      slug: safeSlug,
+      result: { ok: false, error: 'Definition is too large (maximum 32 KiB).' },
+    }
   }
   const checked = parseJourneyDefinition(parsed)
   if (!checked.ok) {

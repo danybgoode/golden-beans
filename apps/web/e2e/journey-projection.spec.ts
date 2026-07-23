@@ -104,7 +104,17 @@ test('projection truth table: no source and source-with-no-match remain distinct
 test('projection preserves and orders PostgreSQL microseconds before the canonical-id tie break', () => {
   expect(parseJourneyTimestamp('2026-01-20T02:00:00.000100+02:00').canonical)
     .toBe('2026-01-20T00:00:00.0001Z')
+  expect(parseJourneyTimestamp('2024-02-29T23:59:59.000100+00:00').canonical)
+    .toBe('2024-02-29T23:59:59.0001Z')
   expect(() => parseJourneyTimestamp('not-a-timestamp')).toThrow('invalid journey source timestamp')
+  for (const invalid of [
+    '2026-02-29T00:00:00Z',
+    '2026-02-30T00:00:00Z',
+    '2026-13-01T00:00:00Z',
+    '2026-01-01T24:00:00Z',
+  ]) {
+    expect(() => parseJourneyTimestamp(invalid), invalid).toThrow('invalid journey source timestamp')
+  }
 
   const subjectId = 'microsecond-subject'
   const events = [

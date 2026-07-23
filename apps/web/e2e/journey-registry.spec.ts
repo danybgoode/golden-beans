@@ -322,9 +322,27 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
     expect(unsafe.error).not.toBeNull()
     expect((await client.from('journey_registries').select('id').eq('project_id', projectId).eq('key', 'unsafe_definition')).data).toHaveLength(0)
 
+    const jsonbTextLimitDefinition = {
+      entityType: 'merchant',
+      description: '🚀'.repeat(446),
+      stages: Array.from({ length: 20 }, (_, index) => ({
+        key: `stage_${index}`,
+        event: '🚀'.repeat(128),
+        tags: {
+          source: '🚀'.repeat(46),
+          channel: '🚀'.repeat(46),
+          campaign: '🚀'.repeat(46),
+          plan: '🚀'.repeat(46),
+          region: '🚀'.repeat(46),
+        },
+      })),
+    }
+
     // SQL's three-valued NULL logic must not let absent required JSON fields slip through. Drive
     // the RPC directly (bypassing the pure TypeScript validator), including the DB-side 32KiB cap.
-    for (const [key, definition] of [
+    // `jsonb_text_limit` is schema-valid and compact JSON fits the raw request envelope, but the
+    // database's JSONB text representation exceeds the semantic size backstop.
+    const invalidDefinitions: Array<[string, unknown]> = [
       ['missing_entity', { stages: [{ key: 'one', event: 'x' }] }],
       ['missing_stages', { entityType: 'merchant' }],
       ['missing_stage_key', { entityType: 'merchant', stages: [{ event: 'x' }] }],
@@ -332,7 +350,9 @@ test('DB RPCs bind owner identity, allocate versions safely, activate once, and 
       ['missing_cohort_key', { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }], cohortEntry: {} }],
       ['missing_retention_field', { entityType: 'merchant', stages: [{ key: 'one', event: 'x' }], retention: { stageKey: 'one', withinDays: 30 } }],
       ['oversized_json', { entityType: 'merchant', description: 'x'.repeat(33 * 1024), stages: [{ key: 'one', event: 'x' }] }],
-    ] as const) {
+      ['jsonb_text_limit', jsonbTextLimitDefinition],
+    ]
+    for (const [key, definition] of invalidDefinitions) {
       const rejected = await createVersion(client, projectId, owner, key, definition)
       expect(rejected.error, key).not.toBeNull()
     }

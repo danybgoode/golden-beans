@@ -3,6 +3,7 @@ import { UNKNOWN_UTC_TIME, formatUtc } from '@/lib/format-utc'
 import {
   MAX_JOURNEY_DEFINITION_BYTES,
   createJourneyVersionAfterGate,
+  postgresJsonbTextByteLength,
   type JourneyCreateCommandDependencies,
 } from '@/lib/journey-create-command'
 import {
@@ -76,6 +77,37 @@ test('an authorized owner reaches validation and the resolved identity scopes cr
     'project-one',
     'merchant_activation',
     '🚀'.repeat(MAX_JOURNEY_DEFINITION_BYTES),
+    dependencies,
+  )).result).toEqual({
+    ok: false,
+    error: 'Definition is too large (maximum 32 KiB).',
+  })
+
+  // A compact, schema-valid definition can fit inside the raw request envelope while PostgreSQL's
+  // JSONB text representation crosses 32 KiB because it adds separator spaces. The command mirrors
+  // that database measurement and returns the friendly size error before invoking the RPC.
+  const emoji = '🚀'
+  const nearLimit = JSON.stringify({
+    entityType: 'merchant',
+    description: emoji.repeat(446),
+    stages: Array.from({ length: 20 }, (_, index) => ({
+      key: `stage_${index}`,
+      event: emoji.repeat(128),
+      tags: {
+        source: emoji.repeat(46),
+        channel: emoji.repeat(46),
+        campaign: emoji.repeat(46),
+        plan: emoji.repeat(46),
+        region: emoji.repeat(46),
+      },
+    })),
+  })
+  expect(Buffer.byteLength(nearLimit, 'utf8')).toBeLessThanOrEqual(MAX_JOURNEY_DEFINITION_BYTES)
+  expect(postgresJsonbTextByteLength(JSON.parse(nearLimit))).toBeGreaterThan(MAX_JOURNEY_DEFINITION_BYTES)
+  expect((await createJourneyVersionAfterGate(
+    'project-one',
+    'merchant_activation',
+    nearLimit,
     dependencies,
   )).result).toEqual({
     ok: false,
