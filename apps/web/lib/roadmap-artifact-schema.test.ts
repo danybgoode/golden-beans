@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   parseRoadmapPush,
   summarizeRoadmap,
+  isRoadmapStatusShipped,
   ROADMAP_SCHEMA_VERSION,
   type RoadmapRow,
 } from './roadmap-artifact-schema.ts'
@@ -163,4 +164,20 @@ test('summarizeRoadmap handles an all-seeds payload without inventing epics', ()
   const s = summarizeRoadmap([row({ slug: 's', grain: 'Seed', status: 'Raw' })])
   assert.deepEqual(s.counts, { epics: 0, sprints: 0, seeds: 1, shippedEpics: 0 })
   assert.deepEqual(s.epics, [])
+})
+
+// ── isRoadmapStatusShipped ──────────────────────────────────────────────────────────────────
+// Pinned directly (not just indirectly through summarizeRoadmap above) because the epic drill-down
+// view (Story 1.2) calls this exported function itself for SPRINT rows' ✅ ticks — it needs to be
+// correct as a standalone public API, not just as an internal implementation detail.
+
+test('isRoadmapStatusShipped is case- and whitespace-insensitive, and refuses anything else', () => {
+  assert.equal(isRoadmapStatusShipped('Shipped'), true)
+  assert.equal(isRoadmapStatusShipped('shipped'), true)
+  assert.equal(isRoadmapStatusShipped('  SHIPPED  '), true)
+  assert.equal(isRoadmapStatusShipped('In progress'), false)
+  assert.equal(isRoadmapStatusShipped('Shipping'), false)
+  assert.equal(isRoadmapStatusShipped(null), false)
+  assert.equal(isRoadmapStatusShipped(undefined), false)
+  assert.equal(isRoadmapStatusShipped(''), false)
 })

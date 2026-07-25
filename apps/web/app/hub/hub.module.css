@@ -1,0 +1,439 @@
+/* pod-report · Sprint 1, Story 1.2 — the Roadmap Hub's own rules, scoped to /hub only.
+   Reuses the EXISTING tokens from app/globals.css (--roast, --gold, --crema, --dim, --line, the
+   .agent-win / .tag / .wrap / .data / .note vocabulary already shared by the rest of the app) —
+   nothing here redefines a color or a family. This module only adds the shapes globals.css has no
+   opinion on yet: the journey path, the freshness badge's tone variants, and the sprint list. */
+
+.hub {
+  padding: 48px 0 96px;
+}
+
+.kicker {
+  font: 600 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  margin-bottom: 6px;
+}
+
+.hubHeader {
+  margin-bottom: 28px;
+}
+
+.hubHeader h1 {
+  font-size: 34px;
+  margin: 4px 0 16px;
+}
+
+/* ---------- counts row ---------- */
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 28px 0 40px;
+}
+.countPill {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 112px;
+}
+.countPill b {
+  font-size: 22px;
+}
+.countPill span {
+  font: 500 11.5px var(--sans);
+  color: var(--dim);
+}
+
+/* ---------- freshness stamp — a design element, not fine print ---------- */
+.freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 12.5px var(--mono);
+  padding: 7px 14px 7px 11px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  margin-top: 4px;
+}
+.freshnessDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.freshnessFresh {
+  color: var(--green);
+  border-color: var(--green-line);
+}
+.freshnessRecent {
+  color: var(--gold);
+  border-color: var(--next-line);
+}
+/* Stale must read as "don't fully trust this" even to someone who cannot distinguish the color —
+   a dashed border and a spelled-out warning word do that work, not hue alone. */
+.freshnessStale {
+  color: var(--red);
+  border: 1px dashed var(--red);
+  background: rgba(232, 106, 94, 0.08);
+}
+.freshnessUnknown {
+  color: var(--dim-2);
+  border-style: dashed;
+}
+
+/* ---------- the journey path ---------- */
+.journey {
+  overflow-x: auto;
+  padding: 44px 4px 24px;
+  margin: 0 -4px;
+}
+.journeyTrack {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: max-content;
+  list-style: none;
+  padding: 0 24px;
+}
+.journeyTrack::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 9px;
+  height: 2px;
+  background: var(--line);
+  z-index: 0;
+}
+.epicNode {
+  position: relative;
+  z-index: 1;
+  padding: 0 26px;
+}
+.epicLink {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  width: 128px;
+}
+.epicDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--roast);
+  flex: none;
+}
+.epicNodeShipped .epicDot {
+  background: var(--green);
+  border-color: var(--green-line);
+  box-shadow: 0 0 0 5px rgba(127, 208, 105, 0.14);
+}
+.epicNodeUpcoming .epicDot {
+  background: var(--card);
+}
+.epicLabel {
+  font: 600 12.5px var(--sans);
+  color: var(--dim);
+  text-align: center;
+  line-height: 1.3;
+}
+.epicNodeShipped .epicLabel,
+.epicNode:hover .epicLabel {
+  color: var(--crema);
+}
+
+.marker {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font: 700 10.5px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--gold-hot);
+  text-transform: uppercase;
+}
+.markerFlag {
+  list-style: none;
+  position: relative;
+  padding: 0 26px;
+  display: flex;
+  align-items: center;
+  font: 700 12px var(--sans);
+  color: var(--dim-2);
+  z-index: 1;
+}
+
+.seedNote {
+  margin-top: 8px;
+  color: var(--dim-2);
+  font: italic 400 13px var(--mono);
+}
+
+/* ---------- empty state — deliberate, friendly, never a broken-looking zero ---------- */
+.emptyState {
+  border: 1.5px dashed var(--line);
+  border-radius: 14px;
+  padding: 40px 36px;
+  margin-top: 20px;
+  max-width: 620px;
+}
+.emptyStateKicker {
+  font: 600 11px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.emptyState h2 {
+  font-size: 21px;
+  margin-bottom: 12px;
+}
+.emptyState p {
+  color: var(--dim);
+  margin-bottom: 10px;
+  line-height: 1.55;
+}
+.emptyStateCmd {
+  background: var(--espresso);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 6px 0 14px;
+  overflow-x: auto;
+}
+.emptyStateCmd code {
+  font: 500 13px var(--mono);
+  color: var(--gold-hot);
+}
+.emptyStateInline {
+  color: var(--dim-2);
+  font: italic 400 13.5px var(--mono);
+}
+
+/* ---------- epic drill-down ---------- */
+.riskTag {
+  display: inline-block;
+  font: 600 10px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.riskTag[data-risk='high'] {
+  color: var(--red);
+  border-color: var(--red);
+}
+.riskTag[data-risk='medium'] {
+  color: var(--gold);
+  border-color: var(--next-line);
+}
+.riskTag[data-risk='low'] {
+  color: var(--green);
+  border-color: var(--green-line);
+}
+
+.sprintList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.sprintRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.sprintName {
+  flex: 1;
+  font: 600 14px var(--sans);
+  color: var(--crema);
+}
+.sprintProgress {
+  font: 600 12.5px var(--mono);
+  color: var(--gold-hot);
+}
+.sprintStatus {
+  font: 500 11.5px var(--sans);
+  color: var(--dim);
+  min-width: 96px;
+  text-align: right;
+}
+
+@media (max-width: 720px) {
+  .hub {
+    padding: 32px 0 64px;
+  }
+  .hubHeader h1 {
+    font-size: 26px;
+  }
+  .sprintRow {
+    flex-wrap: wrap;
+  }
+  .sprintStatus {
+    text-align: left;
+  }
+}
+
+/* ── Story 1.3 · the horizon view ──────────────────────────────────────────────────────────────
+   Destinations lead; epics appear only underneath as the things that light them. The visual weight
+   is deliberately on the DESTINATION card, not on the epic list, because a stakeholder is asking
+   "how much of where we're going is lit" — not "what happens to be done". */
+
+.destGrid {
+  list-style: none;
+  padding: 0;
+  margin: 28px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 16px;
+}
+
+.destCard {
+  border: 1px solid rgba(232, 185, 60, 0.18);
+  border-radius: 10px;
+  padding: 18px;
+  background: var(--roast-2);
+  /* The left rail is the badge you read first at a glance across a grid. */
+  border-left-width: 4px;
+}
+
+.destLit {
+  border-left-color: var(--gold-hot);
+}
+.destPartial {
+  border-left-color: var(--gold-deep);
+}
+.destComing {
+  border-left-color: rgba(184, 168, 136, 0.35);
+}
+
+.destHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.destTitle {
+  font-size: 1.02rem;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.destBadge {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  white-space: nowrap;
+  color: var(--dim);
+}
+
+.destLit .destBadge {
+  color: var(--gold-hot);
+}
+
+.destDesc {
+  color: var(--dim);
+  font-size: 0.88rem;
+  margin: 8px 0 12px;
+}
+
+.destEpics {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.destEpicShipped a {
+  color: var(--crema);
+}
+/* A pending contributor is dimmed, never hidden: the reader should see the whole cost of the
+   destination, not only the part already paid. */
+.destEpicPending a {
+  color: var(--dim);
+}
+
+.destEpicsEmpty {
+  color: var(--dim);
+  font-size: 0.82rem;
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── The haze: un-groomed seeds ────────────────────────────────────────────────────────────────
+   Low contrast and blurred ON PURPOSE. These carry no date and no commitment, and the styling has
+   to say that before the caption does — a seed rendered with the same weight as a destination is a
+   promise nobody made. */
+.hazeSection {
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px dashed rgba(184, 168, 136, 0.22);
+}
+
+.hazeHeading {
+  font-size: 0.95rem;
+  color: var(--dim);
+  margin: 0 0 6px;
+}
+
+.hazeNote {
+  color: var(--dim);
+  font-size: 0.82rem;
+  margin: 0 0 12px;
+  max-width: 60ch;
+}
+
+.hazeList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hazeItem {
+  font-size: 0.8rem;
+  color: var(--dim);
+  border: 1px dashed rgba(184, 168, 136, 0.28);
+  border-radius: 999px;
+  padding: 4px 12px;
+  opacity: 0.62;
+  filter: blur(0.2px);
+}
+
+/* Blur is decoration, not information. Anyone who has asked for reduced motion/effects, or who is
+   reading at high zoom, gets the crisp version — the dashed border and low contrast still carry the
+   "not promised" meaning without degrading legibility. */
+@media (prefers-reduced-motion: reduce) {
+  .hazeItem {
+    filter: none;
+    opacity: 0.78;
+  }
+}

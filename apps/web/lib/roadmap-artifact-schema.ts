@@ -116,6 +116,22 @@ export function parseRoadmapPush(
 }
 
 /**
+ * Whether a raw extract `status` string means "shipped" — the ONE place this is decided (poster
+ * rule: ✅ only for shipped work, never claimed for anything else). Status strings come from the
+ * generator, not from us, so compare case-insensitively and treat anything unrecognised as
+ * not-shipped: over-claiming ✅ is the one failure the poster rule explicitly forbids;
+ * under-claiming is merely untidy.
+ *
+ * Exported (not just a local of `summarizeRoadmap` below) so the epic drill-down view (Story 1.2)
+ * can apply the exact same rule to SPRINT rows' ✅ ticks instead of re-deriving "is it shipped"
+ * with its own string comparison — "shipped" has to mean one thing everywhere a ✅ can appear, at
+ * every grain, not just at the epic grain `summarizeRoadmap` itself needs.
+ */
+export function isRoadmapStatusShipped(status: string | null | undefined): boolean {
+  return (status ?? '').trim().toLowerCase() === 'shipped'
+}
+
+/**
  * The hub's derived view of an artifact: counts and the epic→sprint tree, computed once.
  *
  * Lives here rather than in the page so it is unit-testable without rendering, and so the drill-down
@@ -126,11 +142,7 @@ export function summarizeRoadmap(items: RoadmapRow[]) {
   const epics = items.filter((i) => i.grain === 'Epic')
   const sprints = items.filter((i) => i.grain === 'Sprint')
   const seeds = items.filter((i) => i.grain === 'Seed')
-
-  // Status strings come from the generator, not from us, so compare case-insensitively and treat
-  // anything unrecognised as not-shipped. Over-claiming ✅ is the one failure the poster rule
-  // explicitly forbids; under-claiming is merely untidy.
-  const isShipped = (s: string | null | undefined) => (s ?? '').trim().toLowerCase() === 'shipped'
+  const isShipped = isRoadmapStatusShipped
 
   return {
     counts: {
