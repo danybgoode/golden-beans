@@ -24,13 +24,26 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runAntigravity, checkAgyVersion, ensureCmd, die, need, AGY_ARG_LIMIT } from './lib/cross-agent-cli.mjs';
+import {
+  runAntigravity,
+  checkAgyVersion,
+  ensureCmd,
+  die,
+  need,
+  AGY_ARG_LIMIT,
+  PROSE_MODEL,
+  PROSE_FALLBACK_MODEL,
+} from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 
-export const PROSE_MODEL = process.env.PROSE_MODEL || 'Gemini 3.5 Flash (High)';
-export const PROSE_FALLBACK_MODEL = process.env.PROSE_FALLBACK_MODEL || 'GPT-OSS 120B (Medium)';
+// Re-exported for this module's existing test, which asserts the pair's shape. The constants
+// THEMSELVES moved to lib/cross-agent-cli.mjs on 2026-07-25 — they used to be declared here, held
+// agy's pre-1.1.5 display names, and agy silently substituted its own default for every draft
+// rather than erroring. `agy-doctor` only validated the review pair, so nothing caught it. All agy
+// model names now live in one file that the doctor checks in full (AGY_MODELS_IN_USE).
+export { PROSE_MODEL, PROSE_FALLBACK_MODEL };
 
 export const KINDS = ['retro', 'poster', 'sprint-wrap'];
 

@@ -36,7 +36,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
-import { AGY_PINNED, AGY_MODEL, AGY_FALLBACK_MODEL } from './lib/cross-agent-cli.mjs';
+import { AGY_PINNED, AGY_MODEL, AGY_FALLBACK_MODEL, AGY_MODELS_IN_USE } from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LIB_PATH = join(__dirname, 'lib', 'cross-agent-cli.mjs');
@@ -54,7 +54,13 @@ const LIB_PATH = join(__dirname, 'lib', 'cross-agent-cli.mjs');
 //   'ok'              — everything matches and probes green.
 // `probes` values: 'ok' (real stdout) | 'empty' (exit 0, no output — the quota signature) | 'error'
 // (non-zero exit) | 'skipped'.
-export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, fallbackListed, probes }) {
+// `unlistedModels` (optional) carries EVERY configured agy model that `agy models` no longer lists,
+// as {constant, value} — not just the review pair. It exists because the review pair was the only
+// thing this doctor checked, and the prose pair rotted to pre-1.1.5 display names unnoticed for a
+// whole release cycle while agy silently substituted its default (see cross-agent-cli.mjs's note on
+// AGY_MODELS_IN_USE). Defaults to [] so the review-pair flags below remain the sole signal for
+// callers that don't pass it.
+export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, fallbackListed, probes, unlistedModels = [] }) {
   const notes = [];
   if (!installed) return { action: 'contract-broken', notes: ['`agy --version` output didn\'t contain a parseable X.Y.Z — a version this blind cannot be bumped (would write the literal string "null" as the pin).'] };
   if (!helpOk) return { action: 'contract-broken', notes: ['`agy --help` no longer shows the -p/--model print contract.'] };
@@ -62,9 +68,20 @@ export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, f
     return { action: 'contract-broken', notes: ['a live `agy -p … --model …` probe exited non-zero (not the quota signature — a real interface error).'] };
   if (probes.primary === 'empty' && probes.fallback === 'empty')
     return { action: 'contract-broken', notes: ['BOTH models returned empty on the live probe — could be simultaneous quota exhaustion, but a version this blind cannot be blessed; re-run later or re-verify by hand.'] };
-  if (!primaryListed || !fallbackListed) {
-    const missing = [!primaryListed && 'AGY_MODEL', !fallbackListed && 'AGY_FALLBACK_MODEL'].filter(Boolean);
-    return { action: 'model-drift', notes: [`${missing.join(' and ')} no longer listed by \`agy models\` — pick a replacement (env override or edit the constant); not auto-swapped.`] };
+  // Union of the review-pair flags and the full configured set, de-duped by constant name so a
+  // caller passing both spellings of the same problem reports it once.
+  const missing = [
+    ...[!primaryListed && 'AGY_MODEL', !fallbackListed && 'AGY_FALLBACK_MODEL'].filter(Boolean),
+    ...unlistedModels.map((m) => `${m.constant} ("${m.value}")`),
+  ].filter((name, i, all) => all.findIndex((n) => n.split(' ')[0] === name.split(' ')[0]) === i);
+  if (missing.length) {
+    return {
+      action: 'model-drift',
+      notes: [
+        `${missing.join(' and ')} no longer listed by \`agy models\` — pick a replacement (env override or edit the constant); not auto-swapped. ` +
+          `NOTE: agy does NOT fail on an unknown --model; it silently substitutes its default, so an unlisted name here means that tool has been quietly running on the wrong model.`,
+      ],
+    };
   }
   if (probes.primary === 'empty') notes.push('the primary model returned empty on the live probe (quota/transient) — the fallback carried it.');
   if (installed !== pinned) return { action: 'bump', notes };
@@ -117,6 +134,9 @@ function observe() {
     helpOk,
     primaryListed: models.includes(AGY_MODEL),
     fallbackListed: models.includes(AGY_FALLBACK_MODEL),
+    // Checked cheaply against the already-fetched list — no extra model calls, so widening the
+    // audit from 2 names to all 6 costs nothing.
+    unlistedModels: AGY_MODELS_IN_USE.filter((m) => !models.includes(m.value)),
     models,
     probes,
   };
@@ -136,7 +156,11 @@ async function main() {
 
   const line = (s) => process.stdout.write(`${s}\n`);
   line(`agy-doctor — installed ${obs.installed} · pinned ${obs.pinned} · help contract ${obs.helpOk ? 'ok' : 'BROKEN'}`);
-  line(`models: primary ${obs.primaryListed ? 'listed' : 'MISSING'} ("${AGY_MODEL}") · fallback ${obs.fallbackListed ? 'listed' : 'MISSING'} ("${AGY_FALLBACK_MODEL}")`);
+  // Print all six configured names, not just the review pair — the whole point of AGY_MODELS_IN_USE
+  // is that a silently-substituted model is visible at a glance instead of found a release later.
+  for (const m of AGY_MODELS_IN_USE) {
+    line(`  ${obs.models.includes(m.value) ? '·' : '✗'} ${m.constant} = "${m.value}"${obs.models.includes(m.value) ? '' : '  ← NOT LISTED'}`);
+  }
   line(`live probe: primary ${obs.probes.primary} · fallback ${obs.probes.fallback}`);
   for (const n of decision.notes) line(`  note: ${n}`);
 

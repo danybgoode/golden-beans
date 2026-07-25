@@ -9,6 +9,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
+    "typecheck": "tsc --noEmit -p apps/web && tsc --noEmit -p apps/web/tsconfig.test.json && tsc --noEmit -p packages/sdk && tsc --noEmit -p packages/sdk/tsconfig.test.json",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write",

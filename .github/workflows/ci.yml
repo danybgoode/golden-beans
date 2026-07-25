@@ -69,9 +69,15 @@ jobs:
           echo '### Dependency audit' >> "$GITHUB_STEP_SUMMARY"
           npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
 
-      - name: Type-check
-        working-directory: apps/web
-        run: npx tsc --noEmit
+      # Four projects, not one. The unit tests import with an explicit `.ts` extension because
+      # that is what Node's native type-stripping requires — and the app/sdk tsconfigs reject it
+      # (TS5097). Rather than enable `allowImportingTsExtensions` globally (which would also let
+      # APP code write `./foo.ts`, an import Next's bundler may not resolve — trading a caught type
+      # error for an uncaught build break), each package excludes its tests and a sibling
+      # tsconfig.test.json opts only the tests into the looser rule. Tests stay type-checked;
+      # app code keeps the strict rule.
+      - name: Type-check (app + tests, web + sdk)
+        run: npm run typecheck
       - name: Build
         run: npm run build
 
