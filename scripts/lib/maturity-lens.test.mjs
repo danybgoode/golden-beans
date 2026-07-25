@@ -15,20 +15,40 @@ import { computeMaturityLens, scoreVerdict, NOT_INSTRUMENTED, LADDER_CITATION } 
 
 /** A repo doing essentially everything: reviewed, gated, parallel, agent-written, disciplined. */
 const HIGH = {
+  // NOTE THE FIELD NAMES. The lens reads `reviewComments[].isAgentReviewer` and `ciCheckNames` —
+  // the NORMALISED shape produced by pod-report.mjs's adapter — not gh's raw `comments`/
+  // `statusCheckRollup`. An earlier version of this fixture used gh's names, so the two scorers
+  // that matter most never saw their data and HIGH scored the same step as LOW: the high-maturity
+  // path was effectively unverified while the suite stayed green. Cross-review caught it.
   prs: Array.from({ length: 20 }, (_, i) => ({
     number: i + 1,
-    createdAt: `2026-07-${String((i % 27) + 1).padStart(2, '0')}T00:00:00Z`,
-    mergedAt: `2026-07-${String((i % 27) + 1).padStart(2, '0')}T04:00:00Z`,
+    // OVERLAPPING lifetimes, deliberately: the worktree-isolation criterion looks for two PRs open
+    // at the same time as its proxy for parallel agents. An earlier fixture put each PR on its own
+    // calendar day, so nothing overlapped and the criterion read `not_met` — the fixture failed to
+    // represent the very practice it was meant to demonstrate.
+    createdAt: `2026-07-10T${String(i).padStart(2, '0')}:00:00Z`,
+    mergedAt: `2026-07-11T${String(i).padStart(2, '0')}:00:00Z`,
     body: 'Risk tier: LOW\n\nCross-agent review (Antigravity): clean.',
-    comments: [{ body: '### 🔎 Cross-agent review (Antigravity)\n\nNo blocking findings.' }],
+    reviewComments: [
+      { body: '### 🔎 Cross-agent review (Antigravity)\n\nNo blocking findings.', isAgentReviewer: true },
+    ],
+    ciCheckNames: ['Static gate + build', 'Playwright vs local Supabase'],
     checks: [{ name: 'Static gate + build', conclusion: 'success' }],
     headRefName: `feat/thing-${i}`,
+    // The last two scorers need these, and a fixture missing them leaves those criteria
+    // `not_instrumented` — which the lens correctly refuses to climb the ladder on.
+    // Every PR HIGH-tier and human-merged: the risk-tier scorer measures whether HIGH-tier PRs are
+    // merged by a human, so a fixture with only a handful of HIGH PRs leaves it under-evidenced.
+    riskTier: 'HIGH',
+    mergedByIsAgent: false, // a HIGH-tier PR merged by a human = the discipline holding
+    ciPassedBeforeMerge: true,
   })),
   commits: Array.from({ length: 100 }, (_, i) => ({
     sha: `sha${i}`,
     date: '2026-07-10',
     subject: `feat: thing ${i}`,
     agentCoAuthored: i < 90,
+    isRevert: false,
   })),
   ciCheckNames: ['Static gate + build', 'Playwright vs local Supabase'],
   hasClaudeMd: true,
@@ -77,6 +97,18 @@ test('ACCEPTANCE: a deliberately LOW-maturity repo scores lower than a high-matu
   const low = computeMaturityLens(LOW).verdict;
   assert.ok(low.step < high.step, `low (${low.step}) must score below high (${high.step})`);
   assert.ok(low.metCriteria < high.metCriteria);
+  // And HIGH must actually reach the upper rungs. Without this the assertion above passes when
+  // BOTH fixtures score step 1 — which is exactly what happened while the fixture used gh's field
+  // names: a green test that verified nothing about high maturity.
+  // A COMPLETELY instrumented fixture must clear step 1. Note what this does NOT assert: that a
+  // partially-instrumented repo climbs. The lens deliberately refuses to advance on a
+  // `not_instrumented` row — unmeasured is not met — and an earlier version of this assertion
+  // demanded the opposite, which would have been a request to inflate the score.
+  assert.ok(high.step >= 2, `a fully-instrumented repo must clear step 1, got ${high.step}`);
+  assert.ok(
+    high.metCriteria >= 5,
+    `HIGH should satisfy most criteria, got ${high.metCriteria}/${high.totalCriteria}`
+  );
 });
 
 test('ACCEPTANCE: the verdict ALWAYS travels with the not-instrumented count', () => {

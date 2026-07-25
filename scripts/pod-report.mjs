@@ -48,15 +48,15 @@ function git(repo, args, { allowFail = true } = {}) {
  * contain newlines; splitting on those would shred every multi-line message into fake commits.
  */
 export function readCommits(repo, run = git) {
-  const SEP = ''; // ASCII record separator — cannot occur in a commit message
+  const SEP = '\x1e'; // ASCII record separator — cannot occur in a commit message
   const raw = run(repo, ['log', '--no-merges', `--format=%H%x1f%ad%x1f%B${SEP}`, '--date=short']);
   return raw
     .split(SEP)
     .map((chunk) => chunk.trim())
     .filter(Boolean)
     .map((chunk) => {
-      const [sha, date, ...rest] = chunk.split('');
-      const body = rest.join('');
+      const [sha, date, ...rest] = chunk.split('\x1f');
+      const body = rest.join('\x1f');
       return {
         sha,
         date,
@@ -255,16 +255,17 @@ function main() {
   // Story 2.4 — the maturity lens, computed from the SAME inputs Story 2.1 already loaded. No new
   // data source, per the amendment: what cannot be derived from git/PR data renders as
   // "not instrumented" rather than being gathered from somewhere new.
-  // Pass ONLY what was genuinely gathered. `undefined` means "not measured" and the lens renders
-  // it as not-instrumented; an empty array would mean "measured, found none" and would render as
-  // not_met — a stronger claim than the data supports. That distinction is the whole point.
-  const ciCheckNames = [
-    ...new Set(prs.flatMap((pr) => (pr.statusCheckRollup ?? []).map((c) => c?.name).filter(Boolean))),
-  ];
+  // Pass ONLY what was genuinely gathered. `undefined` means "not measured" and the lens renders it
+  // as not-instrumented; an empty array would mean "measured, found none" and would render as
+  // not_met — a stronger claim than the data supports. That distinction is the whole point of this
+  // epic, and it is why `skillsProvenance` is undefined rather than [].
+  //
+  // No top-level `ciCheckNames`: the scorers read it PER PR (`input.prs[i].ciCheckNames`), which
+  // normalisePrForLens sets. Passing it at the top level as well looked reassuring and did nothing
+  // — cross-review caught the dead argument.
   const maturity = computeMaturityLens({
     prs: prs.map(normalisePrForLens),
     commits,
-    ciCheckNames: ciCheckNames.length > 0 ? ciCheckNames : undefined,
     hasClaudeMd: existsSync(`${repo}/CLAUDE.md`) || existsSync(`${repo}/AGENTS.md`),
     skillsProvenance: undefined,
   });
