@@ -26,6 +26,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need } from './lib/cross-agent-cli.mjs';
 import { computeDelivery } from './lib/pod-metrics.mjs';
+import { computeMaturityLens } from './lib/maturity-lens.mjs';
 
 /** The artifact's payload contract version. Bump only alongside a renderer migration. */
 export const POD_REPORT_SCHEMA_VERSION = 1;
@@ -102,7 +103,22 @@ export function readEpics(repo, run = git) {
 export function readPullRequests(repo, run = spawnSync) {
   const r = run(
     'gh',
-    ['pr', 'list', '--state', 'merged', '--limit', '500', '--json', 'number,createdAt,mergedAt,title'],
+    [
+      'pr',
+      'list',
+      '--state',
+      'merged',
+      '--limit',
+      '500',
+      // `comments`, `statusCheckRollup`, `headRefName` and `body` are NOT optional extras — the
+      // maturity lens scores review presence, CI enforcement, parallel-branch isolation and
+      // risk-tier discipline from exactly these fields. Requesting only the timestamps (as the
+      // first version did) handed the lens 98 PRs with no comment data, which it correctly read as
+      // "reviewed: no" — reporting a practice as ABSENT when the truth was that it was never
+      // measured. A false `not_met` is still a false claim, even when it understates us.
+      '--json',
+      'number,createdAt,mergedAt,title,body,comments,statusCheckRollup,headRefName',
+    ],
     { cwd: repo, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
   );
   if (r.status !== 0) {
@@ -117,6 +133,42 @@ export function readPullRequests(repo, run = spawnSync) {
   } catch {
     return [];
   }
+}
+
+/**
+ * Patterns that identify a REVIEWER-AGENT comment.
+ *
+ * Detected by comment BODY, never by author identity, and that is forced by the data rather than a
+ * preference: cross-agent review comments in this dataset are posted under the human maintainer's
+ * own account (`user.type: "User"`), so there is no bot login to filter on. Filtering by author
+ * would find zero reviewed PRs across a repo that reviews nearly all of them.
+ */
+const AGENT_REVIEW_PATTERNS = [
+  /cross-agent review/i,
+  /fresh-reviewer findings/i,
+  /judgment-layer review/i,
+  /\bcodex\b.{0,20}\breview\b/i,
+];
+
+/**
+ * Adapt gh's PR shape to the shape the lens scores.
+ *
+ * This adapter is where a subtle dishonesty crept in and had to be fixed: the lens reads
+ * `reviewComments[].isAgentReviewer` and `ciCheckNames`, while gh returns `comments[]` and
+ * `statusCheckRollup[]`. Passing gh's raw shape meant the lens saw 98 PRs with no review data and
+ * concluded the practice was ABSENT — a `not_met`, which asserts something stronger than
+ * "not measured". The two must never be confused, in either direction.
+ */
+export function normalisePrForLens(pr) {
+  const comments = Array.isArray(pr.comments) ? pr.comments : [];
+  return {
+    ...pr,
+    reviewComments: comments.map((c) => ({
+      ...c,
+      isAgentReviewer: AGENT_REVIEW_PATTERNS.some((re) => re.test(c?.body ?? '')),
+    })),
+    ciCheckNames: (pr.statusCheckRollup ?? []).map((c) => c?.name).filter(Boolean),
+  };
 }
 
 /** Whole-history window in days, from the first commit to the last. */
@@ -200,7 +252,25 @@ function main() {
   const prs = readPullRequests(repo);
   const days = windowDays(commits);
 
+  // Story 2.4 — the maturity lens, computed from the SAME inputs Story 2.1 already loaded. No new
+  // data source, per the amendment: what cannot be derived from git/PR data renders as
+  // "not instrumented" rather than being gathered from somewhere new.
+  // Pass ONLY what was genuinely gathered. `undefined` means "not measured" and the lens renders
+  // it as not-instrumented; an empty array would mean "measured, found none" and would render as
+  // not_met — a stronger claim than the data supports. That distinction is the whole point.
+  const ciCheckNames = [
+    ...new Set(prs.flatMap((pr) => (pr.statusCheckRollup ?? []).map((c) => c?.name).filter(Boolean))),
+  ];
+  const maturity = computeMaturityLens({
+    prs: prs.map(normalisePrForLens),
+    commits,
+    ciCheckNames: ciCheckNames.length > 0 ? ciCheckNames : undefined,
+    hasClaudeMd: existsSync(`${repo}/CLAUDE.md`) || existsSync(`${repo}/AGENTS.md`),
+    skillsProvenance: undefined,
+  });
+
   const artifact = buildArtifact({
+    maturity,
     delivery: computeDelivery({
       prs,
       epics,
