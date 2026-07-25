@@ -85,6 +85,87 @@ Plan → Branch + scaffold docs → Build story → Verify → QA/smoke-test (pr
    re-summary. At **epic close**, do the epic Definition of Done (below) — including updating the
    product poster.
 
+## The default unit of work is now the EPIC, not the sprint (adopted 2026-07-25)
+
+Earlier versions of this file assumed one session ≈ one sprint. That is no longer the default. With
+a long-context planning model, the standard shape is: **the product owner hands over a whole groomed
+epic plus follow-ups, pre-authorizes the merges, and one coordinating agent runs it end to end** —
+planning, routing the build, reviewing, merging, and closing out. It has worked well enough across
+several epics to be the rule rather than an experiment.
+
+What that changes, concretely:
+
+1. **One architect, many builders.** The coordinating agent owns the plan, the architecture calls and
+   the merges. It does **not** hand-build every story. It classifies each story by complexity and
+   type, then dispatches builders — see the routing table below.
+2. **Assembly line, not a relay.** Read-only research on an external dataset, doc scaffolding and
+   independent stories run in **parallel, in the background**, while the architect works the critical
+   path. Anything touching shared surface (CI config, `package.json`, lint config, a `lib/` seam
+   several stories import) is done **first and by the architect**, because its blast radius is every
+   branch opened after it.
+3. **Pre-authorized merges change WHO decides to pause, not WHETHER the gates run.** A standing
+   "merge high-risk PRs" still means: deterministic gate green, cross-agent review clean or its
+   findings answered, kill-switch polarity verified. It is permission to proceed through the
+   established gate without re-asking at each step — never permission to skip it. (Already a
+   LEARNINGS rule; restated here because the epic-sized handover makes it far easier to forget.)
+4. **Surface scope-breaking findings the moment you have them, then keep building.** An epic-sized
+   handover means research can invalidate a premise written weeks ago. Put the decision to the
+   product owner as an explicit either/or **with a recommendation**, record the answer as a dated
+   **amendment in the epic README** (never a silent reinterpretation), and meanwhile finish
+   everything that does not depend on the answer. Worked example: pod-report's
+   "human-baseline vs agent-augmented eras" spine, which the dataset could not support — amended
+   2026-07-25 to published-benchmark baselines.
+
+### Routing a build by model tier
+
+The point is to spend the expensive model where judgment compounds and the cheap one where the work
+is mechanical — not to use one tier for everything.
+
+| Work | Tier | Why |
+|---|---|---|
+| Grooming, architecture, the epic plan, merge decisions, review triage | **Strongest** (the coordinating agent) | These are the decisions everything else inherits. |
+| Shared-surface changes: CI, lint config, `package.json`, a `lib/` seam many stories import | **Strongest**, done FIRST | Highest blast radius; a mistake here breaks every later branch. |
+| A well-specified story with a clear acceptance check | **Mid** (Sonnet-class subagent) | Bounded, verifiable, cheap to re-run. |
+| Read-only research / data-availability reports over a large or foreign codebase | **Mid**, background, parallel | Fan-out with no write conflicts. Ask for an explicit "NOT DERIVABLE" list — an honest gap beats an optimistic guess. |
+| Money · auth · migrations · tenancy · concurrency | **Strongest**, never delegated | Same tier that decides who merges. |
+| Cold judgment-layer PR review | **Foreign family** (Agy; + Devin on high-risk) | Different-family contrast is the point — see *Review & merge*. |
+| File-derived prose: retro, poster entry, sprint wrap, the merge report | **Cheap foreign** (`scripts/prose-draft.mjs`, `scripts/commit-report.mjs`) | Inputs are files on disk; the architect edits. **Always read the draft** — see the warning in those scripts' headers. |
+
+### Verifying delegated work — the rule that is not optional
+
+**A subagent's final message is not evidence.** A subagent that dies mid-task (a shared session
+rate-limit will do it) still returns a plausible-sounding `result`, and that text is just its last
+tool-call narration. Always re-derive state yourself: `git status`, `git diff HEAD`, then the
+type-checker and the test suite.
+
+This is not theoretical. On 2026-07-25 a subagent building the unit-test layer died mid-**mutation**
+and left `apps/web/lib/webhook-signature.ts` with `timingSafeEqual` replaced by `a === b` — a real
+security regression sitting in the working tree, reported by the agent's own last words as ordinary
+progress. `git diff HEAD` found it in seconds. **After any subagent batch, diff the tree for source
+files it should not have touched**, and re-run at least one mutation check yourself rather than
+trusting a claim that they were run.
+
+## Shipping a merge
+
+Merging to `main` is the deploy. Two pings fire automatically from
+`.github/workflows/notify-telegram.yml` — 📦 on the push, 🚀 ✅/❌ when Vercel's **production** deploy
+reaches a terminal state (previews stay silent). Neither needs anything from you.
+
+The **product report** is the one manual step, because `agy` has no headless auth and cannot run in a
+runner:
+
+```bash
+node scripts/commit-report.mjs                 # read the draft FIRST
+node scripts/commit-report.mjs --post          # send it as-is
+node scripts/commit-report.mjs --text "…" --post   # send corrected prose
+```
+
+**Read it before you post it.** On its first three live runs a cheap model fabricated material facts
+twice — inventing customer impact for internal tooling, and claiming a commit had fixed an
+open-redirect bug when it had only added tests for a fix that shipped weeks earlier. The prompt now
+names both failures explicitly, which reduces them and does not eliminate them. The Telegram footer
+distinguishes `unreviewed draft · <model>` from `reviewed by hand`; keep that distinction honest.
+
 ## Review & merge — cross-agent
 With multiple agents potentially running in parallel, the agent that **builds** a PR is not the one
 that **approves** it — a fresh reviewer re-derives intent from the diff alone and catches what the
