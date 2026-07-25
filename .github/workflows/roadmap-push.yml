@@ -1,0 +1,55 @@
+# pod-report · Sprint 1, Story 1.1 — push golden-beans' own roadmap on every merge to `main`.
+#
+# golden-beans is tenant #0. It dogfoods the client-pushes rail through the SAME public endpoint,
+# with the SAME kind of API key a customer uses. There is no privileged internal path — the engine
+# never reads anyone's git, including its own. That is what makes the Roadmap Hub's freshness stamp
+# ("as of merge <sha>") honest: it is stamping a real push, not a server-side scrape.
+#
+# ── This is DORMANT until SELF_PROJECT_API_KEY exists as a repo secret ────────────────────────
+# The script exits 0 with a message when the key is unset, so this job is green-and-inert rather
+# than red, exactly like the Telegram workflow. Turning it on is a deliberate, named act by Daniel:
+# the key is a production credential and adding it is not something an agent does on a standing
+# authorization (Roadmap/LEARNINGS.md — a broad "wrap up as per process" never extends to credential
+# territory).
+#
+# Runs AFTER the deploy rather than racing it: a push carries a commit SHA, and stamping a SHA whose
+# deployment has not finished would let the hub claim a state that is not serving yet. `deployment_status`
+# on the Production environment is the same signal notify-telegram.yml's deploy-finish ping uses.
+
+name: Push roadmap artifact
+
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  push-roadmap:
+    name: Push roadmap to the engine
+    # Only a SUCCESSFUL production deploy. A failed deploy means the SHA we would stamp is not the
+    # SHA that is serving, and the hub would render a freshness stamp that is quietly a lie.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.environment == 'Production' &&
+       github.event.deployment_status.state == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The roadmap extract reads Roadmap/ at the DEPLOYED commit, not at whatever `main` has
+          # drifted to since. Stamping a SHA whose docs we did not actually read would be the same
+          # class of dishonesty the `if:` above avoids.
+          ref: ${{ github.event.deployment.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      - name: Push the roadmap artifact
+        env:
+          GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
+          SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
+        run: node scripts/roadmap-push.mjs

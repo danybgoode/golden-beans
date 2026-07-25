@@ -1,6 +1,7 @@
 # Pod Report + Roadmap Hub — Sprint 1: The rendering primitive + hub skateboard (internal)
 
-**Status:** ⬜ not started
+**Status:** 🟨 In progress — Story 1.1 built (`73391c9`), shared freshness seam (`436b630`);
+1.2 and 1.3 in build.
 
 ## Stories
 
@@ -14,6 +15,19 @@ gb's own roadmap on merge to `main`.
 **Acceptance:** push → new queryable version; malformed/wrong-version payload → 4xx; a real
 foreign API key cannot read it (S4 realistic-input lesson).
 **Risk:** LOW
+**Built:** ✅ `73391c9` — `report_artifacts` (one table, `kind`-discriminated, immutable +
+per-tenant versioned), `POST /api/v1/roadmap/push`, `scripts/roadmap-push.mjs`, and the
+`roadmap-push.yml` workflow. 8 api cases + 21 unit cases.
+- **Version allocation is an RPC under a transaction-scoped advisory lock**, not a route-level
+  read-then-insert (two pushes reading `max(version)=N` is the classic lost update).
+- **The write cap measures exactly what the read path returns** — `getLatestArtifact` returns
+  `payload` and nothing derived, so write-accept ⟹ read-accept holds *by construction* rather than
+  by two numbers agreeing (the E6 S3 trap).
+- **Mutation-verified, both security specs:** dropping the explicit `REVOKE UPDATE, DELETE` +
+  immutability trigger fails the append-only spec; removing the advisory lock fails the concurrency
+  spec. Both restored and green.
+- **⚠️ Owed to Daniel (named credential action):** `roadmap-push.yml` is DORMANT until
+  `SELF_PROJECT_API_KEY` exists as a repo secret. It skips cleanly (green, inert) until then.
 
 ### Story 1.2 — Journey + epic drill-down views (gb as tenant #0)
 **As a** team member, **I want** the hub's **journey view** (the build order as a path, a "you are
