@@ -17,7 +17,7 @@ _None._
 ## 📋 Ready to build (scaffolded, not started) (2)
 
 - [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 0/9 stories · risk: High · #4
-- [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 0/10 stories · risk: High · #3
+- [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 3/10 stories · risk: High · #3
 
 ## ✅ Shipped (6)
 

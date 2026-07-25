@@ -1,7 +1,11 @@
 # Pod Report + Roadmap Hub — Sprint 1: The rendering primitive + hub skateboard (internal)
 
-**Status:** 🟨 In progress — Story 1.1 built (`73391c9`), shared freshness seam (`436b630`);
-1.2 and 1.3 in build.
+**Status:** ✅ SHIPPED 2026-07-25 — PR [#30](https://github.com/danybgoode/golden-beans/pull/30)
+squash `bea1728`. Migration `20260802100000` applied to production **before** the merge (the
+mandatory order when code reads a new table); production deploy `success`; API-level prod smoke
+green. Two independent review seats (Agy + Devin) came back with **zero findings**.
+**Owed to Daniel:** the `SELF_PROJECT_API_KEY` repo secret (see Story 1.1) and the browser read of
+the three hub views.
 
 ## Stories
 
@@ -56,5 +60,36 @@ unshipped work (poster rule); seeds render hazy (un-groomed ≠ promised).
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-_Write the fool-proof numbered walkthrough here at sprint close (real URLs, one action + one
-expected result per step). Owed per Stage 8b: push gb's roadmap → hub views match BUILD-ORDER._
+
+Environment: production — `https://golden-beans-gamma.vercel.app`. Steps 1–4 are already run and
+green (API-level, by the agent); steps 5–7 are **owed to Daniel** because they need a browser and a
+repo secret.
+
+1. `curl -s -o /dev/null -w "%{http_code}\n" -X POST https://golden-beans-gamma.vercel.app/api/v1/roadmap/push -H 'Content-Type: application/json' -d '{}'`
+   → **401.** The rail is live and fails closed. *(401 rather than 404 is the load-bearing part: it
+   proves the route exists and resolves, so a missing table would look different from a missing
+   route — the multi-tenant-activation rollout check, reused.)*
+2. Repeat with `-H 'Authorization: Bearer definitely-not-a-real-key'`
+   → **401.** An invalid credential is rejected the same way as none.
+3. Open `https://golden-beans-gamma.vercel.app/hub/golden-beans-demo`
+   → **200**, showing "No roadmap pushed yet / empty hopper" and the `roadmap-push.mjs` command.
+   That is the deliberate empty state, not a broken page — no artifact has been pushed to
+   production yet, and the page says so and tells you how to fix it.
+4. Open `https://golden-beans-gamma.vercel.app/hub/some-foreign-tenant`
+   → **307 to /login**, never 200. Tenant isolation holds on the live surface.
+5. **Owed — Daniel:** add `SELF_PROJECT_API_KEY` as a repo secret (Settings → Secrets → Actions).
+   → The `Push roadmap artifact` workflow stops skipping. Until then it is green-and-inert by
+   design.
+6. **Owed — Daniel:** merge anything to `main`, then wait for the production deploy to finish.
+   → The workflow pushes golden-beans' own roadmap, and
+   `https://golden-beans-gamma.vercel.app/hub/golden-beans-demo` flips from the empty state to the
+   journey view: shipped epics behind, a 📍 "you are here" marker on the first unshipped epic, and
+   a freshness stamp reading "as of merge `<sha>`, just now". Content should match
+   `Roadmap/00-ideas/BUILD-ORDER.md`.
+7. **Owed — Daniel (a judgement call no spec can make):** open `/hub/golden-beans-demo/horizon` and
+   read it cold. Does it read as *"here is the destination and how much of it is lit"*, or as a
+   backlog with status badges? If it reads as a backlog, the view has failed its purpose even
+   though every test passes — that disagreement is the acceptance test, same shape as Sprint 2's
+   maturity-lens read.
+
+**Money/auth path:** none. **Migration:** `20260802100000_report_artifacts.sql`, already applied.
