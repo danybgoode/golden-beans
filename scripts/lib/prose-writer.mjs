@@ -21,7 +21,7 @@
 // the same mistake cannot recur silently.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -81,22 +81,33 @@ export function runDevin(prompt, deps = {}) {
   const file = join(dir, 'prompt.md');
   write(file, prompt, 'utf8');
 
-  const r = spawn('devin', ['--print', '--permission-mode', 'auto', '--prompt-file', file], {
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    input: '',
-  });
+  try {
+    const r = spawn('devin', ['--print', '--permission-mode', 'auto', '--prompt-file', file], {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      input: '',
+    });
 
-  if (r.error) return { ok: false, text: '', error: r.error.message };
-  const text = (r.stdout || '').trim();
-  if (r.status !== 0) {
-    const last = (r.stderr || '').trim().split('\n').filter(Boolean).pop() || `exit ${r.status}`;
-    return { ok: false, text, error: last };
+    if (r.error) return { ok: false, text: '', error: r.error.message };
+    const text = (r.stdout || '').trim();
+    if (r.status !== 0) {
+      const last = (r.stderr || '').trim().split('\n').filter(Boolean).pop() || `exit ${r.status}`;
+      return { ok: false, text, error: last };
+    }
+    // Empty output on a zero exit is FAILURE, not success — the same young-CLI contract trap agy
+    // taught this repo (LEARNINGS: treat empty output as failure, never absorb it silently).
+    if (!text) return { ok: false, text: '', error: 'devin returned no output (exit 0, empty stdout)' };
+    return { ok: true, text };
+  } finally {
+    // In a `finally` so the temp dir goes even on a throw. Every draft plus every revision pass
+    // allocates one, so on a busy day this is dozens of stray directories holding prompt text —
+    // untidy, and the prompts can quote repo content.
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      /* a leftover temp dir is not worth failing a prose run over */
+    }
   }
-  // Empty output on a zero exit is FAILURE, not success — the same young-CLI contract trap agy
-  // taught this repo (LEARNINGS: treat empty output as failure, never absorb it silently).
-  if (!text) return { ok: false, text: '', error: 'devin returned no output (exit 0, empty stdout)' };
-  return { ok: true, text };
 }
 
 /** Run agy with the prose model pair. Returns the same shape as runDevin. */
@@ -193,9 +204,12 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
       const verdict = guard(result.text, evidence);
       if (verdict.ok) return { ok: true, text: result.text, writer: name, guard: verdict, attempts };
 
-      // Keep the first draft as a fallback so a run that never satisfies the guard still returns
-      // something a human can read and correct, rather than nothing at all.
-      if (!best) best = { text: result.text, writer: name, guard: verdict };
+      // Keep the LATEST draft as the fallback, not the first. Cross-review caught the original
+      // `if (!best)` here: it pinned `best` to the pass-0 draft, so when the revision pass also
+      // tripped a rule we returned the UNREVISED text and threw away the one written specifically
+      // to address the findings. The revision is strictly better informed even when it is still
+      // imperfect, and returning the older draft would make the retry pass pure cost.
+      best = { text: result.text, writer: name, guard: verdict };
       warn(`⚠ ${name} draft rejected (${verdict.findings.map((f) => f.code).join(', ')}) — revising.`);
       currentPrompt = `${prompt}\n\n---\n\n## Your previous draft\n\n${result.text}\n\n---\n\n${findingsToRevisionNote(verdict.findings)}`;
     }

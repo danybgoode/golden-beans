@@ -73,11 +73,21 @@ test('the horizon renders destinations and never claims a destination is lit on 
   // With nothing pushed, the page still shows the DESTINATIONS (the horizon is not a backlog), and
   // none of them may claim ✅ — the poster rule, asserted against rendered pixels rather than a
   // derived object.
+  //
+  // The branch is resolved by WAITING for either outcome first, never by a bare `isVisible()`.
+  // Cross-review caught that: `isVisible()` is an instantaneous probe with none of Playwright's
+  // web-first auto-retry, so a few milliseconds of hydration makes it return false, the test falls
+  // into the else-branch, and it times out hunting for destination cards that were never going to
+  // be there. Racing the two locators gives each branch the full retry budget and makes the choice
+  // deterministic.
   const empty = page.getByTestId('hub-empty-state')
-  if (await empty.isVisible()) {
+  const destinations = page.locator('[data-status]')
+  await expect(empty.or(destinations.first())).toBeVisible()
+
+  if ((await empty.count()) > 0) {
     await expect(empty).toContainText('No roadmap pushed yet')
   } else {
-    await expect(page.locator('[data-status]').first()).toBeVisible()
+    await expect(destinations.first()).toBeVisible()
     await expect(page.locator('[data-status="lit"]')).toHaveCount(0)
   }
 })
