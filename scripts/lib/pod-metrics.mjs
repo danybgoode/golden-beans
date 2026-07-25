@@ -68,16 +68,39 @@ export function percentile(values, p) {
   return sorted[Math.min(Math.max(rank, 1), sorted.length) - 1];
 }
 
+/**
+ * True median — the AVERAGE of the two middle values on an even count, not the lower one.
+ *
+ * `percentile(values, 50)` would be the obvious implementation and it is the wrong one here.
+ * Nearest-rank picks the LOWER middle, so a two-epic dataset of 2 and 4 days reports 2 days — the
+ * faster, more flattering number, selected by an implementation detail rather than by the data. On
+ * a sales artifact every such coin-flip has to land on the conservative side, and the standard
+ * definition of a median happens to be that side. Percentiles above stay nearest-rank, which is
+ * their standard definition.
+ */
 export function median(values) {
-  return percentile(values, 50);
+  const sorted = [...(values ?? [])].filter((v) => Number.isFinite(v)).sort((a, b) => a - b);
+  if (sorted.length === 0) return null;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /**
- * PR cycle time — created → merged, in hours.
+ * PR review latency — opened → merged, in hours.
  *
- * The most trustworthy metric available here: both timestamps are real, machine-written, and
- * unambiguous. Unmerged PRs are excluded rather than counted as open-forever, which would make the
- * number a measure of the backlog rather than of throughput.
+ * ── Renamed from "cycle time", and the rename is the honest part ──────────────────────────────
+ * Measured against the real dataset before shipping: the median came out at 0.16 hours — under ten
+ * minutes — and a fifth of PRs merge within sixty seconds of opening. That is not a delivery speed.
+ * In this pod's workflow the branch is built first and the PR is opened as the final step, so this
+ * interval measures the REVIEW-AND-MERGE formality, not how long the work took.
+ *
+ * Reported as "review latency" and explicitly marked NOT comparable to DORA's change lead time
+ * (commit → production), because presenting a nine-minute number beside DORA's "under one day
+ * is elite" would be the single most flattering and least meaningful line in the whole report.
+ * `comparableToDora: false` is a structural field, not a footnote, so a renderer cannot drop it.
+ *
+ * Unmerged PRs are excluded rather than counted as open-forever, which would turn this into a
+ * measure of the backlog.
  */
 export function cycleTimeHours(prs) {
   const durations = (prs ?? [])
@@ -85,8 +108,16 @@ export function cycleTimeHours(prs) {
     .map((pr) => (Date.parse(pr.mergedAt) - Date.parse(pr.createdAt)) / 3_600_000)
     .filter((h) => Number.isFinite(h) && h >= 0);
 
-  if (durations.length === 0) return { count: 0, medianHours: null, p90Hours: null };
+  const base = {
+    comparableToDora: false,
+    interpretation:
+      'Time from a pull request being opened to being merged. In this pod the branch is built first ' +
+      'and the PR is opened as the final step, so this measures review-and-merge latency — NOT how ' +
+      'long the work took, and NOT comparable to DORA change lead time (commit to production).',
+  };
+  if (durations.length === 0) return { ...base, count: 0, medianHours: null, p90Hours: null };
   return {
+    ...base,
     count: durations.length,
     medianHours: round(median(durations), 2),
     p90Hours: round(percentile(durations, 90), 2),
@@ -100,13 +131,36 @@ export function cycleTimeHours(prs) {
  * precision the underlying "when did this really start" question does not have.
  */
 export function epicLeadTimeDays(epics) {
-  const spans = (epics ?? [])
-    .filter((e) => e.startedAt && e.shippedAt)
-    .map((e) => (Date.parse(e.shippedAt) - Date.parse(e.startedAt)) / 86_400_000)
-    .filter((d) => Number.isFinite(d) && d >= 0);
+  const withBothDates = (epics ?? []).filter((e) => e.startedAt && e.shippedAt);
 
-  if (spans.length === 0) return { count: 0, medianDays: null, p90Days: null };
+  // ── Exclude RETROACTIVELY DOCUMENTED epics, or the median is a documentation artifact ───────
+  // Measured against the real dataset: many epic READMEs were committed with `status: shipped`
+  // ALREADY SET — the create-commit and the ship-flip are the same commit, to the second. Those
+  // epics were written up after the fact, so their "lead time" is zero by construction and says
+  // nothing about delivery. Including them dragged the median to 0 days, which would have been the
+  // most impressive and least true figure in the report.
+  //
+  // A one-hour floor separates "documented after the work" from "genuinely fast": no epic is
+  // planned, built and shipped inside an hour, so anything below it is bookkeeping.
+  const RETRO_THRESHOLD_MS = 60 * 60 * 1000;
+  const spansMs = withBothDates
+    .map((e) => Date.parse(e.shippedAt) - Date.parse(e.startedAt))
+    .filter((ms) => Number.isFinite(ms) && ms >= 0);
+  const measurable = spansMs.filter((ms) => ms >= RETRO_THRESHOLD_MS);
+  const retroactivelyDocumented = spansMs.length - measurable.length;
+
+  const base = {
+    retroactivelyDocumented,
+    interpretation:
+      retroactivelyDocumented > 0
+        ? `${retroactivelyDocumented} epic(s) were documented after the work — their README was committed with the shipped status already set, so no elapsed time is measurable for them and they are excluded rather than counted as zero.`
+        : 'Elapsed days from the epic doc first appearing to its status flipping to shipped.',
+  };
+
+  const spans = measurable.map((ms) => ms / 86_400_000);
+  if (spans.length === 0) return { ...base, count: 0, medianDays: null, p90Days: null };
   return {
+    ...base,
     count: spans.length,
     medianDays: round(median(spans), 1),
     p90Days: round(percentile(spans, 90), 1),
@@ -187,12 +241,17 @@ export function computeDelivery(input) {
 }
 
 /**
- * Round half-up to `places`.
+ * Round to `places`, DETERMINISTICALLY.
  *
- * `Math.round` alone is not enough: it is subject to binary floating-point representation, so
- * `Math.round(1.005 * 100) / 100` yields 1 rather than 1.01 and two runs over the same data could
- * differ in the last digit. Rounding through a fixed-precision string removes that class of drift,
- * which matters because determinism is an acceptance criterion here, not a nicety.
+ * Read the claim carefully, because an earlier version of this comment overstated it and the test
+ * written from that claim failed: `toFixed` does NOT give textbook half-up rounding. `1.005` is not
+ * exactly 1.005 in binary — it is 1.00499999… — so `round(1.005, 2)` returns 1, not 1.01. No
+ * decimal-rounding approach in floating point fixes that; only decimal arithmetic would.
+ *
+ * What this DOES guarantee is the property the artifact actually needs: the same input always
+ * produces the same output, on any machine, on any run. Determinism is the acceptance criterion
+ * here — "byte-identical artifact from the same inputs" — not half-up correctness at the third
+ * decimal of a metric reported to two.
  */
 export function round(n, places) {
   if (n === null || n === undefined || !Number.isFinite(n)) return null;

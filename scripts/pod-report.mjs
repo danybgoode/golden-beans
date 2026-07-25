@@ -1,0 +1,238 @@
+#!/usr/bin/env node
+// pod-report.mjs — gather the medusa-bonsai dataset and compute the Pod Report artifact.
+//
+// pod-report · Sprint 2, Story 2.1. This is the I/O half: it runs git and gh against a LOCAL
+// medusa-bonsai checkout, hands the result to the pure `lib/pod-metrics.mjs` computation, and
+// pushes the artifact through the same client-pushes rail Sprint 1 built.
+//
+//   node scripts/pod-report.mjs --repo ~/dobby/medusa-bonsai            # print the artifact
+//   node scripts/pod-report.mjs --repo … --push                        # push it to the engine
+//   node scripts/pod-report.mjs --repo … --out artifact.json           # write it to a file
+//
+// ── What this deliberately does NOT compute ───────────────────────────────────────────────────
+// Velocity, cost-per-point, change-failure-rate and MTTR are absent by design, not by omission —
+// see lib/pod-metrics.mjs's NOT_INSTRUMENTED list, which travels INSIDE the artifact so a renderer
+// cannot drop the caveats. The dataset supports none of them, and a fabricated 0% change-failure
+// rate would be the most flattering number on the page and the least true.
+//
+// ── Determinism ───────────────────────────────────────────────────────────────────────────────
+// `--generated-at` exists so a rerun can produce a byte-identical artifact (Sprint 2's headline
+// acceptance criterion). Without it the timestamp is the only field that differs between runs, and
+// a determinism check that ignores one field is not a determinism check.
+
+import { spawnSync } from 'node:child_process';
+import { writeFileSync, existsSync, writeSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { die, need } from './lib/cross-agent-cli.mjs';
+import { computeDelivery } from './lib/pod-metrics.mjs';
+
+/** The artifact's payload contract version. Bump only alongside a renderer migration. */
+export const POD_REPORT_SCHEMA_VERSION = 1;
+
+function git(repo, args, { allowFail = true } = {}) {
+  const r = spawnSync('git', args, { cwd: repo, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024 });
+  if (r.status !== 0 && !allowFail) die(`git ${args.slice(0, 2).join(' ')} failed in ${repo}`);
+  return r.status === 0 ? (r.stdout || '').trim() : '';
+}
+
+/**
+ * Commits, with whether each carries an agent co-author trailer.
+ *
+ * `%B` (the full body) rather than `%s`, because the trailer lives in the body — reading only the
+ * subject would report 0% agent authorship across a repo that is 82% agent-co-authored, which is
+ * both wrong and the exact opposite of the truth.
+ *
+ * The record separator is a literal control character rather than a newline because commit bodies
+ * contain newlines; splitting on those would shred every multi-line message into fake commits.
+ */
+export function readCommits(repo, run = git) {
+  const SEP = ''; // ASCII record separator — cannot occur in a commit message
+  const raw = run(repo, ['log', '--no-merges', `--format=%H%x1f%ad%x1f%B${SEP}`, '--date=short']);
+  return raw
+    .split(SEP)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean)
+    .map((chunk) => {
+      const [sha, date, ...rest] = chunk.split('');
+      const body = rest.join('');
+      return {
+        sha,
+        date,
+        // Matches the trailer with or without a model name ("Co-Authored-By: Claude Opus 4.8").
+        agentCoAuthored: /^Co-Authored-By:\s*(?:Claude|OpenAI|GPT|Devin)/im.test(body ?? ''),
+      };
+    });
+}
+
+/**
+ * Epics and their lifecycle dates, from the roadmap docs' own git history.
+ *
+ * `startedAt` is the first commit that touched the epic's README; `shippedAt` is the first commit
+ * whose diff flipped `status:` to `shipped`. Both are real commit timestamps — no estimate, no
+ * inferred date. An epic still in flight has a null `shippedAt` and is excluded from lead time
+ * rather than counted as taking forever.
+ */
+export function readEpics(repo, run = git) {
+  const readmes = run(repo, ['ls-files', 'Roadmap/*/*/README.md'])
+    .split('\n')
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return readmes.map((path) => {
+    const slug = path.split('/').slice(-2, -1)[0];
+    const startedAt =
+      run(repo, ['log', '--diff-filter=A', '--format=%aI', '--reverse', '--', path])
+        .split('\n')
+        .filter(Boolean)[0] ?? null;
+
+    // Find the commit that INTRODUCED `status: shipped`. `-S` with the literal string finds commits
+    // where its occurrence count changed, which is exactly the flip we want — a plain `git log`
+    // over the file would return every edit.
+    const shippedAt =
+      run(repo, ['log', '-S', 'status: shipped', '--format=%aI', '--reverse', '--', path])
+        .split('\n')
+        .filter(Boolean)[0] ?? null;
+
+    return { slug, path, startedAt, shippedAt };
+  });
+}
+
+/** Merged PRs via `gh`. Returns [] when gh is unavailable rather than failing the whole report. */
+export function readPullRequests(repo, run = spawnSync) {
+  const r = run(
+    'gh',
+    ['pr', 'list', '--state', 'merged', '--limit', '500', '--json', 'number,createdAt,mergedAt,title'],
+    { cwd: repo, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
+  );
+  if (r.status !== 0) {
+    process.stderr.write(
+      '⚠ gh could not list pull requests — cycle time and the deploy-frequency proxy will be omitted.\n' +
+        '  They will render as "not instrumented" rather than as zero.\n'
+    );
+    return [];
+  }
+  try {
+    return JSON.parse(r.stdout || '[]');
+  } catch {
+    return [];
+  }
+}
+
+/** Whole-history window in days, from the first commit to the last. */
+export function windowDays(commits) {
+  const dates = commits.map((c) => Date.parse(c.date)).filter((n) => Number.isFinite(n));
+  if (dates.length === 0) return 0;
+  return Math.max(1, Math.round((Math.max(...dates) - Math.min(...dates)) / 86_400_000));
+}
+
+/**
+ * The benchmark citations Story 2.3 requires.
+ *
+ * CITED AND LINKED, never republished: we state what the published level is and where to read it,
+ * and we do not reproduce anyone's table. Version-pinned by date so an old artifact stays
+ * interpretable against the benchmark it was actually scored against.
+ */
+export const BENCHMARKS = [
+  {
+    id: 'dora-2025',
+    label: 'DORA — Accelerate State of DevOps 2025',
+    url: 'https://dora.dev/research/',
+    note: 'Elite performers: change lead time under one day; deployment frequency on demand. Cited, not republished.',
+  },
+  {
+    id: 'linearb-2026',
+    label: 'LinearB Engineering Benchmarks 2026',
+    url: 'https://linearb.io/resources/engineering-benchmarks',
+    note: 'Elite PR cycle time is measured in hours, not days. Cited, not republished.',
+  },
+  {
+    id: 'dx-core-4',
+    label: 'DX Core 4',
+    url: 'https://getdx.com/research/',
+    note: 'Speed, effectiveness, quality and impact are reported together — never speed alone.',
+  },
+];
+
+export function buildArtifact({ delivery, source, generatedAt, maturity }) {
+  return {
+    schemaVersion: POD_REPORT_SCHEMA_VERSION,
+    generatedAt,
+    source,
+    delivery,
+    benchmarks: BENCHMARKS,
+    ...(maturity ? { maturity } : {}),
+    // Travels INSIDE the artifact so a renderer cannot silently drop it. The epic's whole ethic:
+    // speed is never shown without the honesty about what is not measured.
+    caveats: [
+      "Every number here is computed from this repository's own git and pull-request history. Nothing is estimated.",
+      'The comparison baseline is PUBLISHED BENCHMARKS, not an internal human-era baseline: this dataset has no human-majority era to compare against.',
+      'Metrics listed as "not instrumented" are absent because the data cannot support them — not because they are zero.',
+    ],
+  };
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  let repo = process.env.MEDUSA_BONSAI_PATH || `${process.env.HOME}/dobby/medusa-bonsai`;
+  let out, generatedAt;
+  let push = false;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--repo') repo = need(args[++i], '--repo');
+    else if (args[i] === '--out') out = need(args[++i], '--out');
+    else if (args[i] === '--generated-at') generatedAt = need(args[++i], '--generated-at');
+    else if (args[i] === '--push') push = true;
+    else die(`unknown arg ${args[i]}`);
+  }
+
+  repo = resolve(repo.replace(/^~/, process.env.HOME ?? '~'));
+  if (!existsSync(repo)) {
+    die(
+      `no checkout at ${repo}. Sprint 2 needs a local medusa-bonsai clone — pass --repo <path> ` +
+        `or set MEDUSA_BONSAI_PATH.`
+    );
+  }
+
+  const commits = readCommits(repo);
+  if (commits.length === 0) die(`no commits found in ${repo} — is it a git checkout?`);
+
+  const epics = readEpics(repo);
+  const prs = readPullRequests(repo);
+  const days = windowDays(commits);
+
+  const artifact = buildArtifact({
+    delivery: computeDelivery({
+      prs,
+      epics,
+      commits,
+      windowDays: days,
+      generatedAt: generatedAt ?? new Date().toISOString(),
+    }),
+    source: {
+      repo: 'medusa-bonsai',
+      commits: commits.length,
+      epics: epics.length,
+      mergedPrs: prs.length,
+      windowDays: days,
+    },
+    generatedAt: generatedAt ?? new Date().toISOString(),
+  });
+
+  const json = JSON.stringify(artifact, null, 2);
+  if (out) {
+    writeFileSync(out, `${json}\n`);
+    process.stderr.write(`✓ wrote ${out}\n`);
+  } else {
+    writeSync(1, `${json}\n`);
+  }
+
+  if (push) {
+    process.stderr.write(
+      '⚠ --push is not wired yet: the pod_report artifact kind rides the same rail as roadmap ' +
+        'pushes (Story 1.1), and wiring it is Story 2.2. Printing the artifact instead.\n'
+    );
+  }
+}
+
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) main();
