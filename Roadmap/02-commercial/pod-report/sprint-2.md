@@ -1,8 +1,8 @@
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
-**Status:** 🟨 Computation SHIPPED, surface + outcome layer OPEN.
-Stories **2.1** (`8cc093b`) and **2.4** (`14202d5`) built and tested; **2.3** has its view/honesty
-layer built and tested but **no rendered page yet**; **2.2** is deferred with a stated reason (below).
+**Status:** 🟨 All four stories' logic BUILT and tested; the rendered page is the remaining gap.
+**2.1** (`8cc093b`) · **2.4** (`14202d5`) · **2.2** built against the real `miyagisanchez` tenant ·
+**2.3** has its view + honesty layer tested, but **no page component yet**.
 
 ## Stories
 
