@@ -69,20 +69,26 @@ jobs:
           fi
 
           SHORT_SHA="${GITHUB_SHA:0:7}"
-          HEADER="${COMMIT_MSG%%$'\n'*}"   # first line of the commit message only
           DIFF_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
 
           # jq builds the HTML-escaped message AND the JSON body in one safe pass — no manual
           # string concatenation, no risk of a stray & < > breaking the payload.
+          #
+          # The commit message is passed WHOLE and split inside jq (`split("\n")[0]`). An earlier
+          # version took the first line in bash with `${COMMIT_MSG%%$'\n'*}`, which works but is a
+          # Bash-only expansion sitting outside the one place that already owns payload assembly.
+          # Cross-review flagged the inconsistency on PR #24: everything that shapes the message now
+          # happens in jq, so there is a single place to read and a single place to get it wrong.
           TEXT=$(jq -n \
             --arg repo "golden-beans" \
             --arg sha "$SHORT_SHA" \
-            --arg header "$HEADER" \
+            --arg message "$COMMIT_MSG" \
             --arg author "$AUTHOR" \
             --arg url "$DIFF_URL" \
-            '($repo + " · 📦 · <code>" + $sha + "</code>\n" +
-              ($header | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) + "\n" +
-              "by @" + ($author | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) + "\n" +
+            'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+             ($repo + " · 📦 · <code>" + $sha + "</code>\n" +
+              (($message | split("\n")[0]) | esc) + "\n" +
+              "by @" + ($author | esc) + "\n" +
               "<a href=\"" + $url + "\">view diff</a>")')
 
           BODY=$(jq -n \

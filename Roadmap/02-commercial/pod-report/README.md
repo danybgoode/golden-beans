@@ -56,6 +56,46 @@ honesty as a design element, same grammar as the registry-declared-Targeted cave
 badges. medusa-bonsai's own OTel/analytics guardrail work later flips those rows to computed with
 zero contract change.
 
+## Amendment — the baseline is PUBLISHED BENCHMARKS, not a human era (Daniel, 2026-07-25)
+
+**This supersedes the "human-baseline vs agent-augmented pod eras of the *same* repo" framing in
+the Why section above.** That comparison cannot be computed, so it is not going to be claimed.
+
+**What the data actually says.** A read of the medusa-bonsai dataset before building Sprint 2 found
+no human-baseline era to compare against. mb is agent-native from its first commit
+(`chore: initialize monorepo…`): **75% of June's 347 commits already carry a `Co-Authored-By:
+Claude` trailer, rising to 86% of July's 499** — 691 of 846 commits overall. There is no window in
+this repo's 7-week life where humans wrote the majority of the code. The honest internal transition
+is a *model-tier* cutover (Opus-4.8 → Sonnet-5 around 2026-07-01, matching mb's own
+`model-split-sonnet5-execution` epic), which answers "which model tier is faster" — a question no
+buyer asked.
+
+**Three metrics from Story 2.1 are also not derivable, and will render as "not instrumented":**
+
+| Metric | Why not |
+|---|---|
+| Velocity (points/sprint) | Story points **do not exist** anywhere in mb's Roadmap. A repo-wide grep returns zero real hits. Sprints track named stories (1.1, 1.2…), never estimates. |
+| Cost-per-shipped-point | Both halves absent: no points (above) and no token/cost ledger anywhere in the repo. |
+| Change failure rate · failed-deployment recovery time | **0 true `git revert` commits in 846.** Fixes are folded forward; there is no rollback mechanism and no incident record to measure. A computed rate would read ~0% and misrepresent "not instrumented" as "zero defects" — the exact dishonesty this epic exists to avoid. |
+
+Deploy frequency stays as a **labelled proxy** (merged-PR count), which is what mb's own
+`pmo-report.mjs` already does — it calls the field `changeFailProxy` in its own source, and we
+inherit the caveat rather than quietly dropping it. Derivable and kept: **PR cycle time**
+(create→merge, real timestamps), **epic lead time** (scaffold-commit→`status: shipped` flip), and
+**epic throughput**. Story-level throughput is *not* reliable — mb's own rail hardcodes
+`storyShipEvents: []` because no per-story ship event exists.
+
+**The decision.** Compute our real numbers and compare them against the **published benchmarks
+Story 2.3 already requires us to cite and link** — DORA 2025 levels · LinearB 2026 · DX Core 4.
+Our side is computed-not-claimed; their side is cited-not-republished. Same grammar the epic already
+uses, and it keeps the cost-center→revenue-engine pitch intact without asserting a human-replacement
+story the data cannot support.
+
+This makes Story 2.4's evidence rule (git/PR-derived only; what can't be computed renders **"not
+instrumented"**) the rule for **all of Sprint 2**, not just the maturity lens. Every
+not-instrumented row still names the guardrail a pods engagement installs — so the gaps stay the
+upsell, exactly as designed.
+
 ## Sprints
 | # | Sprint | Ships |
 |---|---|---|

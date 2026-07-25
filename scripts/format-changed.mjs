@@ -31,6 +31,7 @@
 // Base ref resolution: --base <ref>, else $PRETTIER_BASE_REF, else origin/main, else main.
 
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 const args = process.argv.slice(2);
 const write = args.includes('--write');
@@ -72,9 +73,14 @@ const committed = git(['diff', '--name-only', `--diff-filter=${filter}`, `${base
 const working = write ? git(['diff', '--name-only', `--diff-filter=${filter}`, 'HEAD']) || '' : '';
 const untracked = git(['ls-files', '--others', '--exclude-standard']) || '';
 
+// existsSync is not belt-and-braces: `--diff-filter=A` against the merge base reports a file this
+// branch ADDED, and a later commit on the same branch may have moved or deleted it. Prettier exits
+// non-zero on a path it cannot open, so without this filter the gate fails for a file that is
+// correctly absent — a red CI nobody can act on. Cross-review flagged it on PR #24.
 const files = [...new Set([...committed.split('\n'), ...working.split('\n'), ...untracked.split('\n')])]
   .map((f) => f.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .filter((f) => existsSync(f));
 
 if (files.length === 0) {
   process.stdout.write(`format-changed: no ${write ? 'changed' : 'added'} files vs ${base}.\n`);
