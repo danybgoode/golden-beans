@@ -4,6 +4,6 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["lib/**/*.test.ts"],
+  "include": ["lib/**/*.test.ts", "e2e/helpers/*.test.ts"],
   "exclude": ["node_modules"]
 }

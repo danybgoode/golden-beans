@@ -40,3 +40,6 @@ npm-debug.log*
 .vscode/
 .idea/
 .vercel
+
+# Playwright authed-fixture state (contains a real, disposable session token)
+apps/web/e2e/.auth/
