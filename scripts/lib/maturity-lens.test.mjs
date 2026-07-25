@@ -172,3 +172,30 @@ test('scoreVerdict never reports a step above what the evidence supports', () =>
   assert.equal(scoreVerdict(allUnmet).step, 0);
   assert.ok(scoreVerdict(allUnmet).notInstrumentedCount >= NOT_INSTRUMENTED.length);
 });
+
+// ── Regression from cross-review round 3 ────────────────────────────────────────────────────
+
+test('the standards evidence cites the file that ACTUALLY exists, not a hardcoded name', () => {
+  // The lens's central promise is that a `met` row's evidence pointer resolves to a real object. A
+  // pointer reading "CLAUDE.md" for a repo whose file is AGENTS.md does not resolve — it is a
+  // met row whose evidence is wrong, which is the failure this whole design forbids.
+  const withAgents = computeMaturityLens({ ...HIGH, hasClaudeMd: true, standardsFile: 'AGENTS.md' });
+  const row = withAgents.rows.find((r) => /Standards encoded/.test(r.criterion));
+  assert.equal(row.status, 'met');
+  assert.equal(row.evidence.ref, 'AGENTS.md');
+  assert.match(row.evidence.detail, /AGENTS\.md/);
+});
+
+test('"measured and absent" stays not_met, distinct from "never measured"', () => {
+  // Collapsing the boolean into the filename regressed this row from not_met to not_instrumented,
+  // turning "we checked and there is none" back into "we never checked" — the exact distinction
+  // this epic turns on.
+  const measuredAbsent = computeMaturityLens({ ...HIGH, hasClaudeMd: false, standardsFile: undefined });
+  assert.equal(measuredAbsent.rows.find((r) => /Standards encoded/.test(r.criterion)).status, 'not_met');
+
+  const neverMeasured = computeMaturityLens({ ...HIGH, hasClaudeMd: undefined, standardsFile: undefined });
+  assert.equal(
+    neverMeasured.rows.find((r) => /Standards encoded/.test(r.criterion)).status,
+    'not_instrumented'
+  );
+});

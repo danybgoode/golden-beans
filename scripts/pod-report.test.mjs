@@ -8,7 +8,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalisePrForLens, parseRiskTier, windowDays, BENCHMARKS, buildArtifact } from './pod-report.mjs';
+import {
+  normalisePrForLens,
+  parseRiskTier,
+  checkSucceeded,
+  windowDays,
+  BENCHMARKS,
+  buildArtifact,
+} from './pod-report.mjs';
 
 test('an agent review comment is detected by BODY, never by author identity', () => {
   // Forced by the data, not a preference: these comments are posted under the human maintainer's
@@ -140,4 +147,28 @@ test('a PR with NO checks reports ciPassedBeforeMerge as undefined, not false', 
 
 test('an UNMERGED pr has no merged-by verdict', () => {
   assert.equal(normalisePrForLens({ number: 1, mergedBy: { is_bot: true } }).mergedByIsAgent, undefined);
+});
+
+// ── Regressions from cross-review round 3 ───────────────────────────────────────────────────
+
+test('a classic commit STATUS counts as success, not just a check-run conclusion', () => {
+  // GitHub check-RUNS carry `conclusion`; classic commit STATUSES carry `state`. medusa-bonsai uses
+  // check-runs exclusively (94 of 94), so this dataset never exercises the second shape — but this
+  // tool runs against CUSTOMER repos, and one posting statuses from an external CI would have had
+  // every PR silently reported as failing its gate.
+  assert.equal(checkSucceeded({ conclusion: 'SUCCESS' }), true);
+  assert.equal(checkSucceeded({ state: 'SUCCESS' }), true);
+  assert.equal(checkSucceeded({ state: 'success' }), true, 'case is tolerated');
+  assert.equal(checkSucceeded({ conclusion: 'FAILURE' }), false);
+  assert.equal(checkSucceeded({ state: 'PENDING' }), false);
+  assert.equal(checkSucceeded({}), false);
+  assert.equal(checkSucceeded(null), false);
+});
+
+test('mixed check shapes are all required to pass, not just the ones we recognise', () => {
+  const pr = normalisePrForLens({
+    number: 1,
+    statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'FAILURE' }],
+  });
+  assert.equal(pr.ciPassedBeforeMerge, false, 'one failing classic status must fail the whole gate');
 });

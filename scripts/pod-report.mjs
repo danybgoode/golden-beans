@@ -202,6 +202,14 @@ export function normalisePrForLens(pr) {
  * many PR bodies declare no tier at all — and that is fine: an undeclared tier yields `undefined`,
  * the lens counts only the PRs that did declare one, and nothing is inferred for the rest.
  */
+/** Filenames that count as encoded standards, in the order they are preferred. */
+export const STANDARDS_FILES = ['CLAUDE.md', 'AGENTS.md'];
+
+/** True when a check reports success, whichever of the two GitHub shapes it uses. */
+export function checkSucceeded(check) {
+  return String(check?.conclusion ?? check?.state ?? '').toUpperCase() === 'SUCCESS';
+}
+
 export function parseRiskTier(body) {
   const m =
     /risk\s*tier\s*[:*]*\s*\**(LOW|MED|MEDIUM|HIGH)|\*\*risk:?\*\*\s*:?\s*(LOW|MED|MEDIUM|HIGH)/i.exec(
@@ -307,7 +315,16 @@ function main() {
   const maturity = computeMaturityLens({
     prs: prs.map(normalisePrForLens),
     commits,
-    hasClaudeMd: existsSync(`${repo}/CLAUDE.md`) || existsSync(`${repo}/AGENTS.md`),
+    // BOTH, and each carries a distinct fact. `hasClaudeMd` is the measured-ness signal — a real
+    // boolean means "we looked", and its absence means "we did not", which is the not_met vs
+    // not_instrumented distinction this whole epic turns on. `standardsFile` names WHICH file was
+    // found, so the evidence pointer resolves: a pointer reading "CLAUDE.md" for a repo whose file
+    // is AGENTS.md does not resolve, quietly breaking the lens's central promise (round 3).
+    //
+    // Collapsing these two into one field was tried first and regressed the row from not_met to
+    // not_instrumented — turning "we checked and there is none" back into "we never checked".
+    hasClaudeMd: STANDARDS_FILES.some((f) => existsSync(`${repo}/${f}`)),
+    standardsFile: STANDARDS_FILES.find((f) => existsSync(`${repo}/${f}`)),
     skillsProvenance: undefined,
   });
 

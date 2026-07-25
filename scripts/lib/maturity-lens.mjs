@@ -458,7 +458,12 @@ export function scoreTrustedSelfVerificationLoop({ prs, commits } = {}) {
  * PROXY: the presence of a CLAUDE.md file (and ways-of-work Skill provenance) is a proxy for
  * "standards are encoded", not proof they are followed.
  */
-export function scoreStandardsEncoded({ hasClaudeMd, skillsProvenance } = {}) {
+export function scoreStandardsEncoded({ hasClaudeMd, standardsFile, skillsProvenance } = {}) {
+  // `standardsFile` names the file that actually exists; `hasClaudeMd` is the older boolean form,
+  // still accepted so an existing caller keeps working. The evidence cites whichever was supplied,
+  // because a pointer that names the wrong filename does not resolve — and "every `met` row's
+  // evidence resolves" is this lens's central promise, not a nicety.
+  const foundFile = standardsFile ?? (hasClaudeMd ? 'CLAUDE.md' : undefined);
   const base = {
     id: 'standards_encoded',
     criterion: 'Standards encoded in CLAUDE.md / Skills',
@@ -472,8 +477,11 @@ export function scoreStandardsEncoded({ hasClaudeMd, skillsProvenance } = {}) {
       notInstrumentedReason: 'Whether CLAUDE.md exists was not supplied to the lens.',
     });
   }
-  if (!hasClaudeMd) {
-    return makeCriterionRow({ ...base, notMetReason: 'No CLAUDE.md was found in the pushed extract.' });
+  if (!foundFile) {
+    return makeCriterionRow({
+      ...base,
+      notMetReason: 'Neither CLAUDE.md nor AGENTS.md was found in the pushed extract.',
+    });
   }
   const provenance = Array.isArray(skillsProvenance)
     ? skillsProvenance.find((s) => s.plugin === 'ways-of-work')
@@ -482,10 +490,10 @@ export function scoreStandardsEncoded({ hasClaudeMd, skillsProvenance } = {}) {
     ...base,
     evidence: {
       pointerType: 'file',
-      ref: 'CLAUDE.md',
+      ref: foundFile ?? 'CLAUDE.md',
       detail: provenance
-        ? `CLAUDE.md present; ways-of-work Skill provenance recorded (${provenance.ref ?? provenance.plugin})`
-        : 'CLAUDE.md present in the pushed extract',
+        ? `${foundFile} present; ways-of-work Skill provenance recorded (${provenance.ref ?? provenance.plugin})`
+        : `${foundFile} present in the pushed extract`,
     },
   });
 }
