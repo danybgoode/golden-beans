@@ -106,6 +106,25 @@ one-liner + why + date shape.
   batch — especially one large enough to plausibly share a rate-limit, or any showing a failed status —
   re-derive actual file state directly (grep the real repo) and run the language's type-checker/build
   before treating the batch as complete.
+  **Sharpened 2026-07-25 — the danger is not just an INCOMPLETE task, it is a HALF-APPLIED one, and
+  the worst case is a security mutation left in the tree.** A subagent writing the unit-test layer was
+  instructed to mutation-check each spec (break the line, confirm red, revert). It died from a session
+  rate-limit *between the break and the revert*, leaving
+  `apps/web/lib/webhook-signature.ts` with `timingSafeEqual` swapped for `a === b` — timing-attack
+  protection silently removed — while its returned `result` read as ordinary progress ("Now mutation
+  8..."). Nothing failed; the tests passed, because the mutation was functionally equivalent for
+  equality. **So the check after any delegated batch is `git diff HEAD` for SOURCE files the task had
+  no business modifying, not just "did the new files appear".** A task that deliberately mutates code
+  as part of its method must be assumed to have left a mutation behind, and any agent asked to
+  mutation-check should be told to revert-then-verify-clean as its final step. *(2026-07-25, the
+  quality-rails epic.)*
+- **When you delegate a whole epic, do the SHARED-SURFACE work yourself and FIRST.** CI config, lint
+  config, `package.json`, a `lib/` seam several stories import: every branch opened after it inherits
+  it, and every branch opened before it conflicts with it. Sequencing it first is what makes parallel
+  story agents safe. Corollary: read-only research over a large or foreign codebase is the ideal
+  parallel-background task (no write conflicts at all) — and ask it for an explicit **"NOT DERIVABLE"
+  list**, because an honest gap is far more useful than an optimistic guess and is the thing you most
+  need before designing against someone else's data. *(2026-07-25.)*
 - **Before setting a production env var, confirm which rail is *actually* serving production traffic —
   don't assume it's the one named in the project's original deploy docs.** Set `GROWTH_ENGINE_URL`/
   `GROWTH_ENGINE_API_KEY` on Vercel's production scope for a consumer whose frontend had silently
@@ -475,6 +494,35 @@ one-liner + why + date shape.
   serve what they captured. A commit to `main` is what makes it live. Budget a deploy into any
   "just flip the flag" step, and never treat a CLI listing as evidence the flag is in effect.
   *(2026-07-21, multi-tenant-activation Story 3.3.)*
+
+## Delegating prose to a cheap model
+- **A cheap model summarising a dense engineering commit will fabricate, and its two failure modes are
+  predictable enough to write into the prompt.** Measured over three live runs of
+  `scripts/commit-report.mjs` (2026-07-25): (1) it **invents a beneficiary** — "Tenants now benefit
+  from a faster test suite", for work no tenant can observe; (2) far worse, it **reports a fix that
+  did not happen**, because commit messages here routinely cite a past incident to explain why present
+  work matters. Given a commit that only ADDED TESTS for an open-redirect bug fixed weeks earlier, it
+  wrote "the previous backslash bypass is blocked, eliminating a potential open-redirect attack."
+  Confident, plausible, false, and landing in the channel the product owner reads as status. **Both are
+  fixable by naming the exact failure in the prompt with the false sentence quoted** (run 3 came back
+  accurate on every count), and neither is eliminated — so keep these tools **advisory**: print by
+  default, post opt-in, and label the message so an unreviewed machine claim is self-identifying.
+- **A model constant is a silent-rot surface: an unrecognized `--model` does not fail, it substitutes.**
+  `prose-draft.mjs` held agy's pre-1.1.5 display names for a whole release cycle after the slug rename,
+  so every draft ran on agy's default model — exit 0, no warning, plausible output. The rail's own
+  comment had *predicted* exactly this ("a future typo would silently review with the WRONG model
+  instead of failing loud") and it shipped anyway, because the prediction guarded the two constants the
+  doctor checked and these lived somewhere it never looked. **The fix for a predicted-but-unguarded
+  failure is structural, not a re-typing: put every instance in ONE registry the checker walks
+  (`AGY_MODELS_IN_USE`), so a new consumer inherits the check instead of needing to remember it.**
+  *(2026-07-25.)*
+- **Wire the fallback to the CONDITION, not to one of its signatures.** `runAntigravity` fell back to
+  the second model only on EMPTY output, so when `gpt-oss-120b` answered "Our servers are experiencing
+  high traffic right now" with a **non-zero exit**, it aborted instead of trying the separate capacity
+  pool sitting right there. Same transient condition, different exit code, no fallback. Classify
+  transient failures explicitly (`isTransientAgyError`) and keep the pattern **tight** — a loose match
+  on "error"/"failed" would convert a real contract break into a silent retry, which is precisely the
+  1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable

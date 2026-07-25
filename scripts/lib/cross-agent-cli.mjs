@@ -81,7 +81,8 @@ export const PROSE_FALLBACK_MODEL = process.env.PROSE_FALLBACK_MODEL || 'gpt-oss
 // merge, and Daniel's call is that the GPT lineage handles that register best — so its pair is the
 // inverse of the prose pair: GPT primary, Gemini Flash as the separate-quota fallback.
 export const COMMIT_REPORT_MODEL = process.env.COMMIT_REPORT_MODEL || 'gpt-oss-120b-medium';
-export const COMMIT_REPORT_FALLBACK_MODEL = process.env.COMMIT_REPORT_FALLBACK_MODEL || 'gemini-3.6-flash-high';
+export const COMMIT_REPORT_FALLBACK_MODEL =
+  process.env.COMMIT_REPORT_FALLBACK_MODEL || 'gemini-3.6-flash-high';
 
 // Every agy model name this repo pins, as {constant, value} — the list agy-doctor walks. Keeping it
 // adjacent to the declarations (rather than rebuilt in the doctor) means adding a model and
@@ -180,7 +181,10 @@ export function decideTrivialSkip({ files, minLines = 10 } = {}) {
   if (files.every((f) => isDocFile(f.path))) return { skip: true, reason: 'docs-only diff' };
   const lines = files.reduce((n, f) => n + (f.additions || 0) + (f.deletions || 0), 0);
   if (lines < minLines)
-    return { skip: true, reason: `trivial diff (${lines} changed line${lines === 1 ? '' : 's'} < ${minLines})` };
+    return {
+      skip: true,
+      reason: `trivial diff (${lines} changed line${lines === 1 ? '' : 's'} < ${minLines})`,
+    };
   return { skip: false };
 }
 
@@ -199,7 +203,8 @@ export function decideTrivialSkip({ files, minLines = 10 } = {}) {
 // basenames, replacing each with a one-line placeholder so the reviewer still sees THAT the file changed —
 // just not its (often huge, low-signal) content. Pure string logic, no git/gh dependency, so it's directly
 // unit-testable against a hand-built diff fixture.
-const GENERATED_FILE_RE = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Gemfile\.lock|Cargo\.lock|poetry\.lock|reports-data\.json)$/;
+const GENERATED_FILE_RE =
+  /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|composer\.lock|Gemfile\.lock|Cargo\.lock|poetry\.lock|reports-data\.json)$/;
 
 export function stripGeneratedFileDiffs(diffText, { extraPatterns = [] } = {}) {
   if (!diffText) return { diff: diffText, strippedFiles: [] };
@@ -226,6 +231,20 @@ export function stripGeneratedFileDiffs(diffText, { extraPatterns = [] } = {}) {
 // diagnostics ("tokens used\n0") can land on either depending on the failure path, which is what made this
 // failure mode read as an opaque `(non-auth): 0` before this check existed. Kept as a named, tested export so
 // the message stays actionable instead of falling through to the generic non-auth failure text.
+// True when an agy failure is TRANSIENT — provider capacity, rate limiting or a passing upstream
+// blip — as opposed to a real interface error (bad flag, crash, unknown subcommand). Only a
+// transient failure justifies spending the fallback model, which draws on a separate capacity pool.
+//
+// Kept deliberately TIGHT. A loose pattern here is actively harmful: it would convert genuine
+// breakage (the 1.0.10 class of contract change this whole file exists to catch) into a silent
+// retry on a second model, which is exactly how empty reviews shipped for weeks. Every phrase below
+// is one observed live, and anything unrecognized still fails loud.
+export function isTransientAgyError(stderr) {
+  return /high traffic|temporarily unavailable|try again (in a|later)|rate ?limit|too many requests|RESOURCE_EXHAUSTED|\b(429|500|502|503|504)\b|overloaded|capacity|timed? ?out|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(
+    stderr || ''
+  );
+}
+
 export function isContextWindowOverflow(output) {
   // ['’] covers both a straight and a "smart"/curly apostrophe — CLIs are inconsistent about which they emit.
   return /ran out of room in the model['’]?s context window/i.test(output || '');
@@ -388,10 +407,7 @@ export function decideCodexFallback({ codexOk, authFailed, contextOverflow, agyA
 
 // Orchestrate codex with a one-shot Antigravity fallback on an auth failure. `deps` is injectable so a
 // pure node:test can mock both runners (no network). Returns { findings, fellBack[, from, to] }.
-export function runWithCodexFallback(
-  { prompt, stdin, antigravityArgv },
-  deps = {}
-) {
+export function runWithCodexFallback({ prompt, stdin, antigravityArgv }, deps = {}) {
   const {
     tryCodex: tryCodexFn = tryCodex,
     runAntigravity: runAntigravityFn = runAntigravity,
@@ -415,7 +431,7 @@ export function runWithCodexFallback(
       return failFn(
         "codex exec failed: the diff is too large for Codex's context window. " +
           'This is usually a large auto-generated file (a lockfile, a minified bundle, a snapshot) — ' +
-          'stripGeneratedFileDiffs() already excludes the known lockfile patterns by default, so if you\'re ' +
+          "stripGeneratedFileDiffs() already excludes the known lockfile patterns by default, so if you're " +
           'seeing this, either that allowlist needs a new pattern for this file, or the PR has a genuinely ' +
           'large hand-written diff that needs splitting.'
       );
@@ -469,19 +485,34 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
   // Default: the review pair above — existing callers are byte-identical in behavior.
   const modelPair = opts.models?.length
     ? [...new Set(opts.models)]
-    : AGY_MODEL === AGY_FALLBACK_MODEL ? [AGY_MODEL] : [AGY_MODEL, AGY_FALLBACK_MODEL];
+    : AGY_MODEL === AGY_FALLBACK_MODEL
+      ? [AGY_MODEL]
+      : [AGY_MODEL, AGY_FALLBACK_MODEL];
   const tried = [];
   for (const model of modelPair) {
     const r = execAgy(fullArgv, model, spawn);
     if (r.status !== 0) {
-      // A non-zero exit is a real agy error (bad flags, crash) — NOT the quota signal — so don't burn the
-      // fallback on it; surface it directly.
       const last = (r.stderr || '').trim().split('\n').filter(Boolean).pop() || 'unknown error';
+      // A non-zero exit is USUALLY a real agy error (bad flags, crash) — surface those directly
+      // rather than burning the fallback on them.
+      //
+      // But not always, and this cost a real run to learn (2026-07-25, commit-report's first live
+      // use after merge): `gpt-oss-120b-medium` answered "Our servers are experiencing high traffic
+      // right now, please try again in a minute" with a NON-ZERO exit. That is precisely the
+      // situation the second model exists for — a different provider with a separate capacity pool
+      // — and the old branch refused to try it, because the fallback was wired only to the
+      // EMPTY-output signal. Same transient condition, different exit code, no fallback.
+      if (isTransientAgyError(last) && model !== modelPair[modelPair.length - 1]) {
+        warn(`⚠ agy "${model}" is temporarily unavailable (${last}) → trying the fallback model.`);
+        tried.push(model);
+        continue;
+      }
       return fail(opts.soft, `agy -p failed (model "${model}"): ${last}`);
     }
     const out = (r.stdout || '').trim();
     if (out) {
-      if (model !== modelPair[0]) warn(`⚠ agy "${modelPair[0]}" returned no output (quota/unavailable?) → used "${model}".`);
+      if (model !== modelPair[0])
+        warn(`⚠ agy "${modelPair[0]}" returned no output (quota/unavailable?) → used "${model}".`);
       return out;
     }
     tried.push(model);
