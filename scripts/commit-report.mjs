@@ -29,6 +29,21 @@
 //   node scripts/commit-report.mjs --range a..b       # a span (e.g. a whole merged sprint)
 //   node scripts/commit-report.mjs --post             # also send it to the CI/CD Telegram channel
 //   node scripts/commit-report.mjs --dry-run          # print the assembled PROMPT, call no model
+//   node scripts/commit-report.mjs --text "…" --post  # post REVIEWED prose, skipping the model
+//
+// ── Read the draft before you post it. This is not boilerplate caution ────────────────────────
+// Measured on this rail's own first two live runs (2026-07-25), a cheap model summarising a dense
+// engineering commit fabricated material facts BOTH times: it claimed a commit that merely added
+// tests for an open-redirect bug had "blocked the bypass, eliminating a potential open-redirect
+// attack" (the fix shipped weeks earlier — the claim was simply untrue), and it twice invented
+// customer impact for changes no customer can observe. commit-report.prompt.md now names both
+// failures explicitly, which helps and does not eliminate them.
+//
+// So this tool is ADVISORY, exactly like cross-review and prose-draft: the default mode prints to
+// stdout for a human or the coordinating agent to read. `--post` exists for when the draft is
+// right, and `--text` exists for when it is nearly right — fix the sentence and post that instead
+// of re-rolling the model. The posted message is always labelled with the model that drafted it, so
+// an unreviewed claim is at least self-identifying in the channel.
 //
 // Telegram credentials come from the environment or `.env.local` (TELEGRAM_BOT_TOKEN +
 // TELEGRAM_CICD_CHAT_ID). Missing credentials with --post is a clean skip, never a crash — same
@@ -214,7 +229,7 @@ export function buildTelegramMessage({ shortSha, subject, prose, url, model }) {
     `golden-beans · 📝 · <code>${escapeHtml(shortSha)}</code>\n` +
     `${safeSubject}\n\n` +
     `${body}\n\n` +
-    `<a href="${escapeHtml(url)}">view diff</a> · <i>drafted by ${escapeHtml(model)}</i>`
+    `<a href="${escapeHtml(url)}">view diff</a> · <i>${escapeHtml(model)}</i>`
   );
 }
 
@@ -297,12 +312,13 @@ function postToTelegram(text) {
 
 function main() {
   const args = process.argv.slice(2);
-  let sha, range;
+  let sha, range, text;
   let post = false;
   let dryRun = false;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--sha') sha = need(args[++i], '--sha');
     else if (args[i] === '--range') range = need(args[++i], '--range');
+    else if (args[i] === '--text') text = need(args[++i], '--text');
     else if (args[i] === '--post') post = true;
     else if (args[i] === '--dry-run') dryRun = true;
     else die(`unknown arg ${args[i]}`);
@@ -344,14 +360,25 @@ function main() {
     return;
   }
 
-  if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
-    die(`assembled prompt exceeds the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — narrow --range.`);
+  // --text is the reviewed-prose path: skip the model entirely and post what the caller wrote.
+  // Attributed to 'reviewed by hand' so the channel distinguishes it from a raw machine draft.
+  let prose = text;
+  let attribution = 'reviewed by hand';
+
+  if (!prose) {
+    if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
+      die(`assembled prompt exceeds the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — narrow --range.`);
+    }
+
+    ensureCmd(
+      'agy',
+      'agy not found — the commit reporter rides the Antigravity CLI (see scripts/README.md).'
+    );
+    checkAgyVersion();
+
+    prose = runAntigravity(prompt, { models: [COMMIT_REPORT_MODEL, COMMIT_REPORT_FALLBACK_MODEL] });
+    attribution = `unreviewed draft · ${COMMIT_REPORT_MODEL}`;
   }
-
-  ensureCmd('agy', 'agy not found — the commit reporter rides the Antigravity CLI (see scripts/README.md).');
-  checkAgyVersion();
-
-  const prose = runAntigravity(prompt, { models: [COMMIT_REPORT_MODEL, COMMIT_REPORT_FALLBACK_MODEL] });
 
   // Synchronous write before any exit — `console.log` + `process.exit` truncates down a pipe
   // (Roadmap/LEARNINGS.md), and this script is designed to be piped.
@@ -365,7 +392,7 @@ function main() {
         subject: message.split('\n')[0],
         prose,
         url,
-        model: COMMIT_REPORT_MODEL,
+        model: attribution,
       })
     );
     process.stderr.write(sent ? '✓ posted to the CI/CD Telegram channel.\n' : '');

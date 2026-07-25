@@ -30,10 +30,45 @@ So do not restate them. If your sentence would still be true after deleting the 
 wrong sentence.
 
 Concretely, do NOT write about: file names, function names, class names, migration file names,
-table or column names, test counts, line counts, framework or library names, type signatures,
-refactoring, or "improved code quality". If the change is genuinely invisible to users — plumbing,
-tooling, a test layer, a CI rail — then say what it makes possible or what risk it removes, in the
-reader's terms. There is always a "so what". Find it.
+table or column names, test counts, line counts, type signatures, refactoring, or "improved code
+quality". Do NOT name any framework, library, tool, vendor or AI model — no Playwright, no Next.js,
+no Supabase, no Gemini, no GPT, no Vercel. Those are implementation, and the reader either knows
+them already or does not need to.
+
+## Only report what THIS change did — commit messages cite history
+
+Commit messages here routinely explain *why* something matters by referring to a bug that was found
+and fixed **in the past**, in a different change. Adding a test for an old bug is not fixing that
+bug. Explaining a past incident is not resolving it. Mentioning a vulnerability is not closing it.
+
+Observed failure, do not repeat it: given a commit that ADDED TESTS covering an open-redirect bug
+fixed weeks earlier, a previous run wrote "the previous backslash bypass is blocked, eliminating a
+potential open-redirect attack." That is false. The bypass was already blocked; this change only
+added tests proving it stays blocked. Reporting a fix that did not happen is the single worst error
+you can make here, because it is confident, plausible, and reads as good news.
+
+The test: does the commit say it DID this, or does it mention this as background? If the verb
+belongs to a past change, it is context — use it only to explain why the present change matters, and
+never as the outcome. When you are unsure which it is, describe the safer, smaller claim.
+
+## Never invent a beneficiary
+
+This is the most common way this report goes wrong, so be careful here.
+
+If a change is internal — tooling, tests, CI, developer plumbing — **the honest answer is that
+customers are unaffected, and you must say so plainly.** Do not manufacture a customer benefit for
+work customers cannot see.
+
+Wrong: "Tenants now benefit from a faster test suite." Tenants do not run our tests. They are not
+affected, and claiming otherwise is false.
+
+Right: name the real beneficiary — usually Daniel or whoever builds here next — and the real
+effect: a bug class that can no longer reach production unnoticed, a mistake caught in seconds
+instead of after a deploy, a risk that is now impossible rather than merely unlikely. That is a
+genuine outcome, stated truthfully, and it is far more useful than a flattering fiction.
+
+Ask yourself before writing: *if a customer read this sentence, would it be true for them?* If not,
+change who the sentence is about — never soften it into something vague.
 
 ## How to think about it
 
@@ -63,6 +98,11 @@ Work in this order, and let it shape the paragraph:
 **Two to four sentences. Sixty words at the absolute maximum.** This sits under a commit header in
 a chat message, not in a newsletter. If you cannot say it in sixty words you have not decided what
 the point is yet. One well-chosen sentence beats four hedged ones.
+
+**Finish your last sentence.** Running out of room mid-clause is worse than writing one sentence
+fewer — a trailing fragment reads as a broken tool, not as brevity. Plan the ending before you start
+it. If you are near the limit, stop at the previous full stop rather than beginning a clause you
+cannot complete.
 
 ## Output format
 
