@@ -14,10 +14,11 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write",
     "format:changed": "node scripts/format-changed.mjs",
-    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'packages/*/src/**/*.test.ts'",
-    "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web",
+    "test:e2e:authed": "npm run test:e2e:authed --workspace=apps/web",
     "seed:demo": "node scripts/seed-demo-project.mjs",
     "seed:self": "node scripts/seed-self-project.mjs",
     "check:template-drift": "node scripts/check-template-drift.mjs"

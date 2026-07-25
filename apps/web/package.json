@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test:e2e": "playwright test --project=api",
-    "test:e2e:browser": "playwright test --project=browser"
+    "test:e2e:browser": "playwright test --project=browser",
+    "test:e2e:authed": "playwright test --project=authed"
   },
   "dependencies": {
     "@golden-beans/sdk": "*",

@@ -1,0 +1,80 @@
+// standup-report — the pure gathering/assembly core.
+//
+// The case that matters most is the EMPTY PERIOD. A model handed an empty changelog will produce
+// confident prose about nothing, and a standup is read as a status report — so a quiet day must be
+// reported as a quiet day, by refusing to call a writer at all. Roadmap/LEARNINGS.md records the
+// sibling failure: a delta-only tool must treat a missing baseline as a bounded no-op, never as
+// "everything happened".
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { gatherActivity, isEmptyPeriod, buildTask, KINDS } from './standup-report.mjs';
+
+const fakeGit = (commits, paths) => (args) => {
+  if (args.includes('--name-only')) return paths.join('\n');
+  return commits.join('\n');
+};
+
+const COMMITS = [
+  'abc1234\u0000feat(pod-report): the hub skateboard\u0000Daniel\u00002026-07-25',
+  'def5678\u0000fix(auth): stop the redirect loop\u0000Daniel\u00002026-07-25',
+];
+const PATHS = ['apps/web/app/hub/page.tsx', 'Roadmap/02-commercial/pod-report/sprint-1.md', 'scripts/x.mjs'];
+
+test('gatherActivity parses commits, areas and roadmap docs', () => {
+  const a = gatherActivity('yesterday', fakeGit(COMMITS, PATHS));
+  assert.equal(a.commits.length, 2);
+  assert.equal(a.commits[0].subject, 'feat(pod-report): the hub skateboard');
+  assert.equal(a.fileCount, 3);
+  assert.deepEqual(a.roadmapDocs, ['Roadmap/02-commercial/pod-report/sprint-1.md']);
+  assert.ok(a.areas.length > 0);
+});
+
+test('an EMPTY period is detected, so no writer is ever asked to invent one', () => {
+  assert.equal(isEmptyPeriod(gatherActivity('yesterday', fakeGit([], []))), true);
+  assert.equal(isEmptyPeriod(null), true);
+  assert.equal(isEmptyPeriod(gatherActivity('yesterday', fakeGit(COMMITS, PATHS))), false);
+});
+
+test('duplicate file paths are counted once', () => {
+  // `git log --name-only` repeats a path once per commit that touched it; counting raw lines would
+  // inflate "files touched" and hand the writer a number that is simply wrong.
+  const a = gatherActivity('yesterday', fakeGit(COMMITS, ['a.ts', 'a.ts', 'a.ts', 'b.ts']));
+  assert.equal(a.fileCount, 2);
+});
+
+test('buildTask carries the real commit subjects and the no-files rule', () => {
+  const activity = gatherActivity('yesterday', fakeGit(COMMITS, PATHS));
+  const task = buildTask({ kind: 'standup', since: 'yesterday', activity });
+  assert.match(task, /the hub skateboard/);
+  assert.match(task, /do NOT name files/i);
+  assert.match(task, /2 commits/);
+});
+
+test('standup and weekly ask for genuinely different reports', () => {
+  const activity = gatherActivity('yesterday', fakeGit(COMMITS, PATHS));
+  const standup = buildTask({ kind: 'standup', since: 'yesterday', activity });
+  const weekly = buildTask({ kind: 'weekly', since: '7.days', activity });
+
+  // A standup's most valuable line is the blocked one; a weekly's is the through-line.
+  assert.match(standup, /stuck or owed/i);
+  assert.match(weekly, /through-line/i);
+  assert.match(weekly, /not by commit/i);
+  assert.notEqual(standup, weekly);
+});
+
+test('the weekly gets a longer budget than the standup, and both are bounded', () => {
+  assert.ok(KINDS.weekly.maxWords > KINDS.standup.maxWords);
+  for (const cfg of Object.values(KINDS)) {
+    assert.ok(cfg.maxWords > 0 && cfg.maxWords <= 200, 'a report nobody finishes reading is not a report');
+    assert.ok(cfg.since && cfg.label && cfg.emoji);
+  }
+});
+
+test('buildTask states the length budget the guard will enforce', () => {
+  const activity = gatherActivity('yesterday', fakeGit(COMMITS, PATHS));
+  for (const kind of Object.keys(KINDS)) {
+    const task = buildTask({ kind, since: 'x', activity });
+    assert.ok(task.includes(String(KINDS[kind].maxWords)), `${kind} must state its word budget`);
+  }
+});

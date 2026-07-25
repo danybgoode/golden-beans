@@ -24,6 +24,7 @@ import {
   extractStoryContext,
   buildPrompt,
   buildTelegramMessage,
+  deriveEvidence,
   TELEGRAM_LIMIT,
 } from './commit-report.mjs';
 
@@ -214,4 +215,58 @@ test('buildPrompt states the no-files rule beside the area list', () => {
     stat: 'x',
   });
   assert.match(p, /do NOT name files/i);
+});
+
+// ── deriveEvidence ──────────────────────────────────────────────────────────────────────────
+// This decides what the draft is ALLOWED to claim, so it is the gate behind both measured
+// hallucinations. Both permissions default to FALSE and must be earned by evidence — a guard that
+// grants permission on a maybe is not a guard.
+
+test('a fix claim is permitted only when the commit is genuinely a fix', () => {
+  const paths = ['apps/web/lib/thing.ts'];
+  for (const message of [
+    'fix: sign-in fails on slow connections',
+    'fix(auth): stop the redirect loop',
+    'hotfix: revert the bad query',
+  ]) {
+    assert.equal(deriveEvidence({ message, paths }).allowsFixClaim, true, message);
+  }
+  // The measured failure: a test-only commit that MENTIONS a past bug must not be allowed to claim
+  // it fixed it.
+  for (const message of [
+    'test(unit): fast pure-logic layer covering the open-redirect bypass',
+    'feat(pod-report): the hub skateboard',
+    'chore(ci): quality rails',
+    'docs: record the amendment',
+  ]) {
+    assert.equal(deriveEvidence({ message, paths }).allowsFixClaim, false, message);
+  }
+});
+
+test('naming customers is permitted only when a customer-observable surface changed', () => {
+  const message = 'feat: something';
+  const allows = (paths) => deriveEvidence({ message, paths }).allowsBeneficiary;
+
+  // Customer-observable.
+  assert.equal(allows(['apps/web/app/api/v1/track/route.ts']), true);
+  assert.equal(allows(['apps/web/app/hub/[projectSlug]/page.tsx']), true);
+  assert.equal(allows(['packages/sdk/src/index.ts']), true);
+  assert.equal(allows(['apps/web/supabase/migrations/20260101_x.sql']), true);
+
+  // NOT customer-observable — this is the invented-beneficiary hole, held shut.
+  assert.equal(allows(['.github/workflows/ci.yml']), false);
+  assert.equal(allows(['scripts/commit-report.mjs']), false);
+  assert.equal(allows(['apps/web/e2e/hub.spec.ts']), false);
+  assert.equal(allows(['Roadmap/02-commercial/pod-report/README.md']), false);
+  assert.equal(allows([]), false);
+  // Server logic alone is deliberately excluded: it can change behaviour, but on its own it is not
+  // evidence of anything a customer would notice, and counting it would re-open the hole for most
+  // commits.
+  assert.equal(allows(['apps/web/lib/quota.ts']), false);
+});
+
+test('deriveEvidence carries the length budget the guard enforces', () => {
+  const e = deriveEvidence({ message: 'feat: x', paths: [] });
+  assert.equal(e.maxWords, 60);
+  assert.ok(e.minWords > 0);
 });

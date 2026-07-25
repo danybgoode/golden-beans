@@ -53,17 +53,8 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync, writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  runAntigravity,
-  checkAgyVersion,
-  ensureCmd,
-  die,
-  need,
-  loadPromptBody,
-  AGY_ARG_LIMIT,
-  COMMIT_REPORT_MODEL,
-  COMMIT_REPORT_FALLBACK_MODEL,
-} from './lib/cross-agent-cli.mjs';
+import { die, need, loadPromptBody } from './lib/cross-agent-cli.mjs';
+import { writeProse, buildWriterPrompt, loadLessons } from './lib/prose-writer.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -189,6 +180,42 @@ export function extractStoryContext(diffText) {
   }
   // De-dupe and cap: this is context, not the payload, and the argv budget is shared.
   return [...new Set(out)].slice(0, 25);
+}
+
+/**
+ * What the SOURCE DATA supports, for the prose guard to check the draft against.
+ *
+ * This is the piece that makes the guard's two headline rules enforceable rather than advisory. The
+ * guard cannot know whether a fix happened; it can only know whether the draft is ALLOWED to say
+ * one did. That permission is derived here, from the commit itself:
+ *
+ *   - a fix claim is allowed only when the commit is actually a fix (conventional-commit `fix:`,
+ *     or a subject that says so). A `feat:`/`test:`/`chore:` commit asserting "this resolves…" is
+ *     the exact hallucination measured on this rail;
+ *   - naming customers/tenants/users is allowed only when the change touches a surface they can
+ *     observe. A diff confined to CI, tooling and tests has no customer story, and inventing one
+ *     was the other measured failure.
+ *
+ * Both default to FALSE — the permissive direction has to be earned by evidence.
+ */
+export function deriveEvidence({ message, paths }) {
+  const subject = String(message ?? '').split('\n')[0];
+  const allowsFixClaim =
+    /^(?:fix|hotfix|revert)(?:\([^)]*\))?!?:/i.test(subject) || /\bfix(?:es|ed)?\b/i.test(subject);
+
+  // Customer-observable surfaces only. `apps/web/lib` is deliberately EXCLUDED: server logic can
+  // change behaviour, but on its own it is not evidence of anything a customer would notice, and
+  // treating it as such would re-open the invented-beneficiary hole for most commits.
+  const customerFacing = [
+    /^apps\/web\/app\/api\//,
+    /^apps\/web\/app\/(?!api\/)[^/]*\//,
+    /^apps\/web\/app\/[^/]+\.tsx?$/,
+    /^packages\/sdk\//,
+    /^apps\/web\/supabase\/migrations\//,
+  ];
+  const allowsBeneficiary = (paths ?? []).some((p) => customerFacing.some((re) => re.test(p)));
+
+  return { allowsFixClaim, allowsBeneficiary, maxWords: 60, minWords: 8 };
 }
 
 export function buildPrompt({ style, meta, areas, storyContext, stat }) {
@@ -342,6 +369,8 @@ function main() {
     ? git(['diff', logRange, '--', 'Roadmap/'], { allowFail: true })
     : '';
 
+  const evidence = deriveEvidence({ message, paths });
+
   const prompt = buildPrompt({
     style: loadPromptBody(join(__dirname, 'commit-report.prompt.md')),
     meta: {
@@ -366,18 +395,30 @@ function main() {
   let attribution = 'reviewed by hand';
 
   if (!prose) {
-    if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
-      die(`assembled prompt exceeds the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — narrow --range.`);
+    // Devin writes, agy falls back, and every draft passes the mechanical guard before a human sees
+    // it — see scripts/lib/prose-writer.mjs for why the router is that way round.
+    const result = writeProse({
+      prompt: buildWriterPrompt({
+        style: loadPromptBody(join(__dirname, 'commit-report.prompt.md')),
+        lessons: loadLessons(),
+        task: prompt,
+      }),
+      evidence,
+    });
+
+    if (!result.text) die(result.error || 'no prose writer produced a draft.');
+    prose = result.text;
+    attribution = result.ok ? `unreviewed draft · ${result.writer}` : `FLAGGED draft · ${result.writer}`;
+
+    if (!result.ok) {
+      // Surface the findings on stderr so the draft on stdout can never be mistaken for a clean
+      // one. It is still emitted: a flawed draft a human can correct beats no output at all.
+      process.stderr.write(
+        `\n⚠ The guard rejected this draft and it did NOT converge after a revision pass:\n` +
+          result.guard.findings.map((f) => `  · ${f.code}: ${f.note}`).join('\n') +
+          `\n  Read it carefully before posting, or rewrite it and use --text.\n\n`
+      );
     }
-
-    ensureCmd(
-      'agy',
-      'agy not found — the commit reporter rides the Antigravity CLI (see scripts/README.md).'
-    );
-    checkAgyVersion();
-
-    prose = runAntigravity(prompt, { models: [COMMIT_REPORT_MODEL, COMMIT_REPORT_FALLBACK_MODEL] });
-    attribution = `unreviewed draft · ${COMMIT_REPORT_MODEL}`;
   }
 
   // Synchronous write before any exit — `console.log` + `process.exit` truncates down a pipe
