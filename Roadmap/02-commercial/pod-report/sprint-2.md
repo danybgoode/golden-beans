@@ -1,6 +1,8 @@
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
-**Status:** ⬜ not started
+**Status:** 🟨 Computation SHIPPED, surface + outcome layer OPEN.
+Stories **2.1** (`8cc093b`) and **2.4** (`14202d5`) built and tested; **2.3** has its view/honesty
+layer built and tested but **no rendered page yet**; **2.2** is deferred with a stated reason (below).
 
 ## Stories
 
