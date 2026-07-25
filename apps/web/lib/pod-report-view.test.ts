@@ -121,3 +121,37 @@ test('numbers without top-level caveats is also dishonest', () => {
 test('an EMPTY view is honest — it claims nothing, so it cannot mislead', () => {
   assert.equal(isHonest(buildPodReportView(null)), true)
 })
+
+// ── Regressions from cross-review round 2 (PR #32) ──────────────────────────────────────────
+
+test('a NON-OBJECT delivery payload is empty, not a report with nothing in it', () => {
+  // `{ delivery: "invalid" }` is truthy, so a plain `!p.delivery` reported non-empty while every
+  // metric resolved to null — a malformed payload slipping past the empty state.
+  for (const bad of ['invalid', 42, true, ['a']]) {
+    const v = buildPodReportView({ delivery: bad, caveats: ['x'] })
+    assert.equal(v.empty, true, `expected empty for delivery=${JSON.stringify(bad)}`)
+  }
+  // …and a real delivery object is still non-empty.
+  assert.equal(buildPodReportView(artifact).empty, false)
+})
+
+test('isHonest counts COMPOSITION numbers too, not just speed', () => {
+  // The hole: a view whose speed rows are all null but whose composition carries real percentages
+  // passed the guard with its caveats stripped. An authorship share shown without context is
+  // precisely what this guard exists to prevent.
+  const compositionOnly = buildPodReportView({
+    generatedAt: 'x',
+    caveats: [],
+    delivery: {
+      cycleTime: { medianHours: null },
+      epicLeadTime: { medianDays: null },
+      deployFrequency: {},
+      epicThroughput: {},
+      authorship: [{ month: '2026-07', agentShare: 0.911 }],
+      notInstrumented: [],
+    },
+  })
+  assert.equal(compositionOnly.empty, false)
+  assert.ok(compositionOnly.composition.some((r) => r.value !== null))
+  assert.equal(isHonest(compositionOnly), false, 'composition numbers without caveats must be refused')
+})

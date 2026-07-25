@@ -117,7 +117,7 @@ export function readPullRequests(repo, run = spawnSync) {
       // "reviewed: no" — reporting a practice as ABSENT when the truth was that it was never
       // measured. A false `not_met` is still a false claim, even when it understates us.
       '--json',
-      'number,createdAt,mergedAt,title,body,comments,statusCheckRollup,headRefName',
+      'number,createdAt,mergedAt,title,body,comments,statusCheckRollup,headRefName,mergedBy',
     ],
     { cwd: repo, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
   );
@@ -161,14 +161,55 @@ const AGENT_REVIEW_PATTERNS = [
  */
 export function normalisePrForLens(pr) {
   const comments = Array.isArray(pr.comments) ? pr.comments : [];
+  const checks = Array.isArray(pr.statusCheckRollup) ? pr.statusCheckRollup : [];
+  const tier = parseRiskTier(pr.body);
+
   return {
     ...pr,
     reviewComments: comments.map((c) => ({
       ...c,
       isAgentReviewer: AGENT_REVIEW_PATTERNS.some((re) => re.test(c?.body ?? '')),
     })),
-    ciCheckNames: (pr.statusCheckRollup ?? []).map((c) => c?.name).filter(Boolean),
+    ciCheckNames: checks.map((c) => c?.name).filter(Boolean),
+
+    // ── The three fields cross-review caught missing (PR #32, round 2) ────────────────────────
+    // `readPullRequests` was already fetching the data these need, and the adapter simply did not
+    // map it — so the risk-tier and self-verification criteria read `not_instrumented` on every
+    // real repo, capping the ladder at step 1. Exactly the bug class fixed once already in round 1
+    // (fetch the data, forget to map it), caught a second time in a different place.
+    //
+    // Each stays UNDEFINED when genuinely unknowable, never guessed: undefined means "not
+    // measured" to the lens, while a wrong default would be a claim.
+    riskTier: tier,
+    // Only meaningful once a PR is merged. `is_bot` is GitHub's own flag; an agent merging through
+    // a human's account is indistinguishable from the human here, and this proxy says so rather
+    // than pretending otherwise.
+    mergedByIsAgent: pr.mergedAt && pr.mergedBy ? pr.mergedBy.is_bot === true : undefined,
+    // Undefined rather than false when NO checks are attached: "this PR ran no checks" and "we
+    // don't know whether checks passed" are different facts, and false would assert the first.
+    ciPassedBeforeMerge:
+      checks.length > 0
+        ? checks.every((c) => String(c?.conclusion ?? '').toUpperCase() === 'SUCCESS')
+        : undefined,
   };
+}
+
+/**
+ * Pull a declared risk tier out of a PR body.
+ *
+ * Two spellings, because the dataset genuinely contains both: this repo's template writes
+ * `Risk tier:` while the sibling roadmap docs write `**Risk:** LOW`. Coverage is PARTIAL by nature —
+ * many PR bodies declare no tier at all — and that is fine: an undeclared tier yields `undefined`,
+ * the lens counts only the PRs that did declare one, and nothing is inferred for the rest.
+ */
+export function parseRiskTier(body) {
+  const m =
+    /risk\s*tier\s*[:*]*\s*\**(LOW|MED|MEDIUM|HIGH)|\*\*risk:?\*\*\s*:?\s*(LOW|MED|MEDIUM|HIGH)/i.exec(
+      body ?? ''
+    );
+  if (!m) return undefined;
+  const raw = (m[1] || m[2]).toUpperCase();
+  return raw === 'MEDIUM' ? 'MED' : raw;
 }
 
 /** Whole-history window in days, from the first commit to the last. */

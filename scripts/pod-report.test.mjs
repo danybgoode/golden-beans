@@ -8,7 +8,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalisePrForLens, windowDays, BENCHMARKS, buildArtifact } from './pod-report.mjs';
+import { normalisePrForLens, parseRiskTier, windowDays, BENCHMARKS, buildArtifact } from './pod-report.mjs';
 
 test('an agent review comment is detected by BODY, never by author identity', () => {
   // Forced by the data, not a preference: these comments are posted under the human maintainer's
@@ -87,4 +87,57 @@ test('the maturity section is included only when computed, never as an empty she
   assert.ok(
     buildArtifact({ delivery: {}, source: {}, generatedAt: 'x', maturity: { verdict: {} } }).maturity
   );
+});
+
+// ── Regressions from cross-review round 2 (PR #32) ──────────────────────────────────────────
+// The adapter dropped three fields the gatherer was already fetching, so the risk-tier and
+// self-verification criteria read `not_instrumented` on every real repo and the ladder was capped
+// at step 1. The same bug class as round 1 — fetch the data, forget to map it — in a second place.
+
+test('the adapter maps riskTier, mergedByIsAgent and ciPassedBeforeMerge', () => {
+  const pr = normalisePrForLens({
+    number: 1,
+    mergedAt: '2026-07-01T00:00:00Z',
+    mergedBy: { login: 'danybgoode', is_bot: false },
+    body: 'Risk tier: HIGH\n\nSome description.',
+    statusCheckRollup: [{ name: 'ci', conclusion: 'SUCCESS' }],
+  });
+  assert.equal(pr.riskTier, 'HIGH');
+  assert.equal(pr.mergedByIsAgent, false);
+  assert.equal(pr.ciPassedBeforeMerge, true);
+});
+
+test('both risk-tier spellings in the dataset are parsed', () => {
+  // This repo's template writes `Risk tier:`; the sibling roadmap docs write `**Risk:** LOW`.
+  assert.equal(parseRiskTier('Risk tier: LOW'), 'LOW');
+  assert.equal(parseRiskTier('- [x] **Risk tier:** HIGH'), 'HIGH');
+  assert.equal(parseRiskTier('**Risk:** MED'), 'MED');
+  assert.equal(parseRiskTier('**Risk:** MEDIUM'), 'MED', 'MEDIUM normalises to MED');
+  assert.equal(parseRiskTier('risk TIER : high'), 'HIGH', 'case and spacing are tolerated');
+});
+
+test('an UNDECLARED risk tier is undefined — never guessed, never defaulted', () => {
+  // Coverage is partial by nature: many PR bodies declare no tier. Undefined means "not measured"
+  // to the lens; any default would be a claim the body does not support.
+  assert.equal(parseRiskTier('no tier here'), undefined);
+  assert.equal(parseRiskTier(''), undefined);
+  assert.equal(parseRiskTier(null), undefined);
+  assert.equal(parseRiskTier(undefined), undefined);
+});
+
+test('a PR with NO checks reports ciPassedBeforeMerge as undefined, not false', () => {
+  // "This PR ran no checks" and "we don't know whether checks passed" are different facts, and
+  // `false` would assert the first.
+  assert.equal(normalisePrForLens({ number: 1, statusCheckRollup: [] }).ciPassedBeforeMerge, undefined);
+  assert.equal(normalisePrForLens({ number: 1 }).ciPassedBeforeMerge, undefined);
+  // A failing check is a real false.
+  assert.equal(
+    normalisePrForLens({ number: 1, statusCheckRollup: [{ name: 'ci', conclusion: 'FAILURE' }] })
+      .ciPassedBeforeMerge,
+    false
+  );
+});
+
+test('an UNMERGED pr has no merged-by verdict', () => {
+  assert.equal(normalisePrForLens({ number: 1, mergedBy: { is_bot: true } }).mergedByIsAgent, undefined);
 });

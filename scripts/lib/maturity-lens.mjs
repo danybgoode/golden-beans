@@ -339,7 +339,9 @@ export function scoreClaudeWritesMostCode({ commits } = {}) {
   const agentCoAuthored = commits.filter((c) => c.agentCoAuthored).length;
   const ratio = agentCoAuthored / commits.length;
   const pct = Math.round(ratio * 1000) / 10;
-  if (ratio > 0.5) {
+  // `>=` not `>`, matching the other presence criteria. At exactly 50% the criteria should agree
+  // with one another rather than one silently taking the stricter reading (cross-review, PR #32).
+  if (ratio >= 0.5) {
     return makeCriterionRow({
       ...base,
       evidence: {

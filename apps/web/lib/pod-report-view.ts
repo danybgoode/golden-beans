@@ -74,7 +74,11 @@ const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : und
 export function buildPodReportView(payload: unknown): PodReportView {
   const p = obj(payload)
   const delivery = obj(p.delivery)
-  const empty = !p.delivery
+  // Empty when `delivery` is absent OR is not an object. Cross-review caught the difference:
+  // `{ delivery: "invalid" }` is truthy, so a plain `!p.delivery` reported the view as non-empty
+  // while every metric resolved to null — a malformed payload slipping past the empty state and
+  // rendering as a report with nothing in it.
+  const empty = Object.keys(delivery).length === 0
 
   const cycle = obj(delivery.cycleTime)
   const lead = obj(delivery.epicLeadTime)
@@ -154,6 +158,11 @@ export function buildPodReportView(payload: unknown): PodReportView {
  */
 export function isHonest(view: PodReportView): boolean {
   if (view.empty) return true // an empty state claims nothing, so it cannot mislead
-  const hasNumbers = view.speed.some((r) => r.value !== null)
+  // BOTH metric groups count. Checking only `speed` left a hole cross-review found: a view whose
+  // speed rows are all null but whose composition rows carry real percentages would pass the guard
+  // with its caveats stripped — and an agent-authorship share presented without context is exactly
+  // the kind of number this guard exists to keep honest.
+  const hasNumbers =
+    view.speed.some((r) => r.value !== null) || view.composition.some((r) => r.value !== null)
   return !hasNumbers || (view.notInstrumented.length > 0 && view.caveats.length > 0)
 }
