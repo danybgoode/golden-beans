@@ -1,0 +1,17 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 110,
+  "trailingComma": "es5",
+  "arrowParens": "always",
+  "overrides": [
+    {
+      "files": ["scripts/**/*.mjs", "*.mjs", "eslint.config.mjs"],
+      "options": { "semi": true }
+    },
+    {
+      "files": ["*.md", "*.yml", "*.yaml", "*.json"],
+      "options": { "printWidth": 100 }
+    }
+  ]
+}

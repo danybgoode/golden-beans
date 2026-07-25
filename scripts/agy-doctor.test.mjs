@@ -33,7 +33,11 @@ test('bump: version drift with a fully green contract probe', () => {
 });
 
 test('bump: still blessed when only the primary is quota-empty (fallback carried it), with a note', () => {
-  const d = decideDoctorAction({ ...base, installed: '1.0.19', probes: { primary: 'empty', fallback: 'ok' } });
+  const d = decideDoctorAction({
+    ...base,
+    installed: '1.0.19',
+    probes: { primary: 'empty', fallback: 'ok' },
+  });
   assert.equal(d.action, 'bump');
   assert.equal(d.notes.length, 1);
 });
@@ -49,13 +53,20 @@ test('contract-broken beats everything: help contract gone', () => {
 });
 
 test('contract-broken: a probe ERROR is an interface break, never blessed and never treated as quota', () => {
-  for (const probes of [{ primary: 'error', fallback: 'ok' }, { primary: 'ok', fallback: 'error' }]) {
+  for (const probes of [
+    { primary: 'error', fallback: 'ok' },
+    { primary: 'ok', fallback: 'error' },
+  ]) {
     assert.equal(decideDoctorAction({ ...base, installed: '1.0.19', probes }).action, 'contract-broken');
   }
 });
 
 test('contract-broken: BOTH models empty — a version this blind cannot be bumped', () => {
-  const d = decideDoctorAction({ ...base, installed: '1.0.19', probes: { primary: 'empty', fallback: 'empty' } });
+  const d = decideDoctorAction({
+    ...base,
+    installed: '1.0.19',
+    probes: { primary: 'empty', fallback: 'empty' },
+  });
   assert.equal(d.action, 'contract-broken');
 });
 
@@ -66,10 +77,43 @@ test('contract-broken: unparseable installed version (null) is never blessed as 
 
 test('model-drift: a missing pinned model is reported, outranked only by a broken contract', () => {
   assert.equal(decideDoctorAction({ ...base, primaryListed: false }).action, 'model-drift');
-  assert.equal(decideDoctorAction({ ...base, installed: '1.0.19', fallbackListed: false }).action, 'model-drift');
+  assert.equal(
+    decideDoctorAction({ ...base, installed: '1.0.19', fallbackListed: false }).action,
+    'model-drift'
+  );
   // …and a version bump must NOT be blessed while a model is missing:
   const d = decideDoctorAction({ ...base, installed: '1.0.19', primaryListed: false });
   assert.notEqual(d.action, 'bump');
+});
+
+test('model-drift: every configured model is reported, not just the review pair', () => {
+  // The whole reason unlistedModels exists: prose-draft's constants rotted to invalid names for a
+  // release cycle while the review pair stayed valid, so this function reported "ok".
+  const d = decideDoctorAction({
+    ...base,
+    unlistedModels: [{ constant: 'PROSE_MODEL', value: 'Gemini 3.5 Flash (High)' }],
+  });
+  assert.equal(d.action, 'model-drift');
+  assert.match(d.notes[0], /PROSE_MODEL \("Gemini 3\.5 Flash \(High\)"\)/);
+  // The note must explain WHY an unlisted name is dangerous rather than merely listing it — agy
+  // substitutes a default silently, so "unlisted" means "has been running on the wrong model".
+  assert.match(d.notes[0], /silently substitutes/i);
+});
+
+test('model-drift: a drifted review-pair model keeps the offending model NAME in the note', () => {
+  // Regression for a defect cross-review caught on PR #24. Both the bare `primaryListed` flag and
+  // the descriptive unlistedModels entry describe the SAME constant; de-duping by name kept the
+  // bare one because it happened to be first in the array, discarding the only actionable detail —
+  // which model to replace. The descriptive entry must win regardless of source ordering.
+  const d = decideDoctorAction({
+    ...base,
+    primaryListed: false,
+    unlistedModels: [{ constant: 'AGY_MODEL', value: 'gemini-9.9-imaginary' }],
+  });
+  assert.equal(d.action, 'model-drift');
+  assert.match(d.notes[0], /AGY_MODEL \("gemini-9\.9-imaginary"\)/);
+  // And exactly once — not "AGY_MODEL and AGY_MODEL (...)".
+  assert.equal(d.notes[0].match(/AGY_MODEL/g).length, 1);
 });
 
 // ── bumpPinnedSource: anchored rewrite of the real lib shape ──────────────────────────────────────
@@ -89,17 +133,25 @@ test('bumpPinnedSource rewrites BOTH the constant and the marker, nothing else',
 });
 
 test('bumpPinnedSource THROWS (never half-writes) when an anchor is missing', () => {
-  assert.throws(() => bumpPinnedSource("export const AGY_PINNED = '1.0.16';\n", '1.0.19', '2026-07-10'),
-    /marker line not found/);
-  assert.throws(() => bumpPinnedSource('// agy-doctor: last verified 2026-07-03 against 1.0.16.\n', '1.0.19', '2026-07-10'),
-    /constant line not found/);
+  assert.throws(
+    () => bumpPinnedSource("export const AGY_PINNED = '1.0.16';\n", '1.0.19', '2026-07-10'),
+    /marker line not found/
+  );
+  assert.throws(
+    () =>
+      bumpPinnedSource('// agy-doctor: last verified 2026-07-03 against 1.0.16.\n', '1.0.19', '2026-07-10'),
+    /constant line not found/
+  );
 });
 
 test('bumpPinnedSource round-trips against the REAL lib source (anchors exist exactly once)', async () => {
   const { readFileSync } = await import('node:fs');
   const { fileURLToPath } = await import('node:url');
   const { dirname, join } = await import('node:path');
-  const lib = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'lib', 'cross-agent-cli.mjs'), 'utf8');
+  const lib = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), 'lib', 'cross-agent-cli.mjs'),
+    'utf8'
+  );
   const out = bumpPinnedSource(lib, '9.9.9', '2099-01-01');
   assert.match(out, /export const AGY_PINNED = '9\.9\.9';/);
   assert.match(out, /agy-doctor: last verified 2099-01-01 against 9\.9\.9\./);

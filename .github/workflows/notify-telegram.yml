@@ -1,0 +1,173 @@
+# Telegram CI/CD pings — same shape as danybgoode/miyagisanchezcommerce &
+# medusa-bonsai-backend's `notify-telegram.yml`
+# (see miyagi-product-management/Roadmap/09-platform-infra/cicd-telegram-notifications/).
+#
+# Two halves, one file:
+#   push-notification        — 📦 fires on every push to `main` (the merge = the deploy trigger)
+#   deploy-notification      — 🚀 fires when Vercel's PRODUCTION deploy reaches a terminal state
+#
+# House style, reused from apps/web/lib/telegram.ts:
+#   - HTML parse_mode, & < > escaped (never MarkdownV2)
+#   - fire-and-forget: a Telegram/network hiccup must never fail the workflow (`|| true` + timeout)
+#   - secrets only from GitHub Secrets, never inlined in YAML
+#   - skips cleanly (exit 0, no failure) if the secrets aren't configured yet
+#
+# ── Why `deployment_status` and not a Vercel API poll (decided 2026-07-24) ────────────────────
+# The original plan (mirroring miyagi's Sprint 3) was a jq/curl loop against
+# `GET /v6/deployments?target=production`, matching `meta.githubCommitSha == $GITHUB_SHA`. That
+# shape exists because miyagi's rail needed it. golden-beans doesn't, for two reasons:
+#
+#   1. Vercel's GitHub integration ALREADY writes GitHub Deployments + statuses for this repo
+#      (`gh api repos/danybgoode/golden-beans/deployments` — creator `vercel[bot]`, environment
+#      `Production`, terminal `state: success`). That is the same fact the poll would go fetch,
+#      delivered as a push instead of a pull. AGENTS rule #4 already treats it as the source of
+#      truth for "which SHA is actually live".
+#   2. GitHub Actions minutes are a recurring account-wide constraint here
+#      (Roadmap/LEARNINGS.md → Working efficiently). A poll job holds a runner for the WHOLE
+#      build (2-5 min every merge); this job runs for ~5 seconds, once, on the terminal event.
+#
+# It also needs no `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` at all — one fewer
+# production credential minted, stored and rotated for an observability-only feature.
+#
+# If Vercel's GitHub integration is ever disconnected, this job goes silent (it can't fire on an
+# event nobody emits) — that is the failure mode to watch for, and the poll variant is the fallback.
+#
+# ── The PM-level prose report is NOT here, deliberately ────────────────────────────────────────
+# `scripts/commit-report.mjs` drafts the executive/product summary of a merge via the `agy` CLI.
+# agy authenticates through an interactive OAuth login with no headless credential path, so it
+# cannot run in a runner (Roadmap/LEARNINGS.md → "A CLI authed by an interactive/OAuth login is
+# NOT free to run in CI"). It is a LOCAL post-merge step — see WAYS-OF-WORKING.md → "Shipping a
+# merge". These pings stay mechanical and always-on; the prose is a separate, human-triggered rail.
+
+name: Notify Telegram
+
+on:
+  push:
+    branches: [main]
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  push-notification:
+    name: Push-to-main ping
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram push notification
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          AUTHOR: ${{ github.event.head_commit.author.username || github.actor }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "TELEGRAM_BOT_TOKEN / TELEGRAM_CICD_CHAT_ID not set — skipping cleanly. \
+                  Set both as GitHub Secrets on this repo to turn this on."
+            exit 0
+          fi
+
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          DIFF_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+
+          # jq builds the HTML-escaped message AND the JSON body in one safe pass — no manual
+          # string concatenation, no risk of a stray & < > breaking the payload.
+          #
+          # The commit message is passed WHOLE and split inside jq (`split("\n")[0]`). An earlier
+          # version took the first line in bash with `${COMMIT_MSG%%$'\n'*}`, which works but is a
+          # Bash-only expansion sitting outside the one place that already owns payload assembly.
+          # Cross-review flagged the inconsistency on PR #24: everything that shapes the message now
+          # happens in jq, so there is a single place to read and a single place to get it wrong.
+          TEXT=$(jq -n \
+            --arg repo "golden-beans" \
+            --arg sha "$SHORT_SHA" \
+            --arg message "$COMMIT_MSG" \
+            --arg author "$AUTHOR" \
+            --arg url "$DIFF_URL" \
+            'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+             ($repo + " · 📦 · <code>" + $sha + "</code>\n" +
+              (($message | split("\n")[0]) | esc) + "\n" +
+              "by @" + ($author | esc) + "\n" +
+              "<a href=\"" + $url + "\">view diff</a>")')
+
+          BODY=$(jq -n \
+            --arg chat_id "$CHAT_ID" \
+            --arg text "$TEXT" \
+            '{chat_id: $chat_id, text: $text, parse_mode: "HTML", disable_web_page_preview: true}')
+
+          curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            || true
+
+  deploy-notification:
+    name: Production deploy-finish ping
+    # Three filters, all load-bearing:
+    #   - deployment_status  → not the push event (both triggers share this file)
+    #   - environment        → Vercel emits these for Preview deploys too; previews stay SILENT
+    #   - state              → success/failure/error are terminal; pending/in_progress/queued are
+    #                          not, and Vercel emits several per deploy. Without this the channel
+    #                          gets 3-4 messages per merge.
+    # A job skipped by `if:` consumes no runner time at all, so the preview/interim events are free.
+    if: >-
+      github.event_name == 'deployment_status' &&
+      github.event.deployment_status.environment == 'Production' &&
+      contains(fromJSON('["success", "failure", "error"]'), github.event.deployment_status.state)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram deploy-finish notification
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_STATE: ${{ github.event.deployment_status.state }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+          # environment_url is the deployment itself; target_url is Vercel's inspect page. Either
+          # can be absent depending on the state, so the fallback chain ends at the commit page.
+          DEPLOY_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
+            echo "TELEGRAM_BOT_TOKEN / TELEGRAM_CICD_CHAT_ID not set — skipping cleanly."
+            exit 0
+          fi
+
+          SHORT_SHA="${DEPLOY_SHA:0:7}"
+
+          # The deployment_status payload carries no commit message — resolve it from the API.
+          # Never fatal: a rate-limited/failed lookup degrades to a placeholder, it does not
+          # cost us the ping (the SHA and the state are the load-bearing parts).
+          HEADER=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${DEPLOY_SHA}" \
+                     --jq '.commit.message | split("\n")[0]' 2>/dev/null || true)
+          [ -z "$HEADER" ] && HEADER="(commit message unavailable)"
+
+          if [ "$DEPLOY_STATE" = "success" ]; then
+            STATUS="✅ READY"
+          else
+            # failure and error are both hard stops; name which one so a build failure and a
+            # platform error aren't indistinguishable in the channel.
+            STATUS="❌ $(printf '%s' "$DEPLOY_STATE" | tr '[:lower:]' '[:upper:]')"
+          fi
+
+          [ -z "$DEPLOY_URL" ] && DEPLOY_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${DEPLOY_SHA}"
+
+          TEXT=$(jq -n \
+            --arg repo "golden-beans" \
+            --arg sha "$SHORT_SHA" \
+            --arg header "$HEADER" \
+            --arg status "$STATUS" \
+            --arg url "$DEPLOY_URL" \
+            '($repo + " · 🚀 · <code>" + $sha + "</code>\n" +
+              ($header | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) + "\n" +
+              $status + "\n" +
+              "<a href=\"" + $url + "\">open deployment</a>")')
+
+          BODY=$(jq -n \
+            --arg chat_id "$CHAT_ID" \
+            --arg text "$TEXT" \
+            '{chat_id: $chat_id, text: $text, parse_mode: "HTML", disable_web_page_preview: true}')
+
+          curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            || true

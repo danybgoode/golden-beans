@@ -36,7 +36,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
-import { AGY_PINNED, AGY_MODEL, AGY_FALLBACK_MODEL } from './lib/cross-agent-cli.mjs';
+import { AGY_PINNED, AGY_MODEL, AGY_FALLBACK_MODEL, AGY_MODELS_IN_USE } from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LIB_PATH = join(__dirname, 'lib', 'cross-agent-cli.mjs');
@@ -54,19 +54,78 @@ const LIB_PATH = join(__dirname, 'lib', 'cross-agent-cli.mjs');
 //   'ok'              — everything matches and probes green.
 // `probes` values: 'ok' (real stdout) | 'empty' (exit 0, no output — the quota signature) | 'error'
 // (non-zero exit) | 'skipped'.
-export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, fallbackListed, probes }) {
+// `unlistedModels` (optional) carries EVERY configured agy model that `agy models` no longer lists,
+// as {constant, value} — not just the review pair. It exists because the review pair was the only
+// thing this doctor checked, and the prose pair rotted to pre-1.1.5 display names unnoticed for a
+// whole release cycle while agy silently substituted its default (see cross-agent-cli.mjs's note on
+// AGY_MODELS_IN_USE). Defaults to [] so the review-pair flags below remain the sole signal for
+// callers that don't pass it.
+export function decideDoctorAction({
+  installed,
+  pinned,
+  helpOk,
+  primaryListed,
+  fallbackListed,
+  probes,
+  unlistedModels = [],
+}) {
   const notes = [];
-  if (!installed) return { action: 'contract-broken', notes: ['`agy --version` output didn\'t contain a parseable X.Y.Z — a version this blind cannot be bumped (would write the literal string "null" as the pin).'] };
-  if (!helpOk) return { action: 'contract-broken', notes: ['`agy --help` no longer shows the -p/--model print contract.'] };
+  if (!installed)
+    return {
+      action: 'contract-broken',
+      notes: [
+        '`agy --version` output didn\'t contain a parseable X.Y.Z — a version this blind cannot be bumped (would write the literal string "null" as the pin).',
+      ],
+    };
+  if (!helpOk)
+    return {
+      action: 'contract-broken',
+      notes: ['`agy --help` no longer shows the -p/--model print contract.'],
+    };
   if (probes.primary === 'error' || probes.fallback === 'error')
-    return { action: 'contract-broken', notes: ['a live `agy -p … --model …` probe exited non-zero (not the quota signature — a real interface error).'] };
+    return {
+      action: 'contract-broken',
+      notes: [
+        'a live `agy -p … --model …` probe exited non-zero (not the quota signature — a real interface error).',
+      ],
+    };
   if (probes.primary === 'empty' && probes.fallback === 'empty')
-    return { action: 'contract-broken', notes: ['BOTH models returned empty on the live probe — could be simultaneous quota exhaustion, but a version this blind cannot be blessed; re-run later or re-verify by hand.'] };
-  if (!primaryListed || !fallbackListed) {
-    const missing = [!primaryListed && 'AGY_MODEL', !fallbackListed && 'AGY_FALLBACK_MODEL'].filter(Boolean);
-    return { action: 'model-drift', notes: [`${missing.join(' and ')} no longer listed by \`agy models\` — pick a replacement (env override or edit the constant); not auto-swapped.`] };
+    return {
+      action: 'contract-broken',
+      notes: [
+        'BOTH models returned empty on the live probe — could be simultaneous quota exhaustion, but a version this blind cannot be blessed; re-run later or re-verify by hand.',
+      ],
+    };
+  // Report each drifted constant ONCE, and always prefer the entry that names the offending model.
+  //
+  // The first version of this merged both sources into one array and de-duped by constant name.
+  // Cross-review caught that it kept the WRONG duplicate: the bare flag strings are listed first,
+  // so `findIndex` always retained `'AGY_MODEL'` and discarded `'AGY_MODEL ("gemini-3.1-pro-high")'`
+  // — throwing away the one detail the operator needs, which model to replace.
+  //
+  // Building the descriptive entries FIRST and only then filling gaps from the bare flags makes the
+  // precedence explicit rather than an accident of array order.
+  const described = new Map(unlistedModels.map((m) => [m.constant, `${m.constant} ("${m.value}")`]));
+  for (const [flag, isListed] of [
+    ['AGY_MODEL', primaryListed],
+    ['AGY_FALLBACK_MODEL', fallbackListed],
+  ]) {
+    if (!isListed && !described.has(flag)) described.set(flag, flag);
   }
-  if (probes.primary === 'empty') notes.push('the primary model returned empty on the live probe (quota/transient) — the fallback carried it.');
+  const missing = [...described.values()];
+  if (missing.length) {
+    return {
+      action: 'model-drift',
+      notes: [
+        `${missing.join(' and ')} no longer listed by \`agy models\` — pick a replacement (env override or edit the constant); not auto-swapped. ` +
+          `NOTE: agy does NOT fail on an unknown --model; it silently substitutes its default, so an unlisted name here means that tool has been quietly running on the wrong model.`,
+      ],
+    };
+  }
+  if (probes.primary === 'empty')
+    notes.push(
+      'the primary model returned empty on the live probe (quota/transient) — the fallback carried it.'
+    );
   if (installed !== pinned) return { action: 'bump', notes };
   if (notes.length) return { action: 'quota-warn', notes };
   return { action: 'ok', notes };
@@ -77,8 +136,10 @@ export function decideDoctorAction({ installed, pinned, helpOk, primaryListed, f
 export function bumpPinnedSource(source, newVersion, date) {
   const pinRe = /^export const AGY_PINNED = '[^']+';$/m;
   const markerRe = /^\/\/ agy-doctor: last verified [0-9-]+ against \S+\.$/m;
-  if (!pinRe.test(source)) throw new Error('AGY_PINNED constant line not found — lib shape changed, bump by hand.');
-  if (!markerRe.test(source)) throw new Error('agy-doctor marker line not found — lib shape changed, bump by hand.');
+  if (!pinRe.test(source))
+    throw new Error('AGY_PINNED constant line not found — lib shape changed, bump by hand.');
+  if (!markerRe.test(source))
+    throw new Error('agy-doctor marker line not found — lib shape changed, bump by hand.');
   return source
     .replace(pinRe, `export const AGY_PINNED = '${newVersion}';`)
     .replace(markerRe, `// agy-doctor: last verified ${date} against ${newVersion}.`);
@@ -101,7 +162,10 @@ function observe() {
   const help = (helpR.stdout || '') + (helpR.stderr || '');
   const helpOk = /^\s*-p\b/m.test(help) && /--model\b/.test(help);
   const modelsR = agy(['models']);
-  const models = ((modelsR.stdout || '') + (modelsR.stderr || '')).split('\n').map((l) => l.trim()).filter(Boolean);
+  const models = ((modelsR.stdout || '') + (modelsR.stderr || ''))
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
   const probe = (model) => {
     const r = agy(['-p', 'Reply with exactly: OK', '--model', model]);
     if (r.status !== 0) return 'error';
@@ -117,6 +181,9 @@ function observe() {
     helpOk,
     primaryListed: models.includes(AGY_MODEL),
     fallbackListed: models.includes(AGY_FALLBACK_MODEL),
+    // Checked cheaply against the already-fetched list — no extra model calls, so widening the
+    // audit from 2 names to all 6 costs nothing.
+    unlistedModels: AGY_MODELS_IN_USE.filter((m) => !models.includes(m.value)),
     models,
     probes,
   };
@@ -131,12 +198,23 @@ async function main() {
   // condition ever changes, revisit this substitution.)
   const decision = decideDoctorAction({
     ...obs,
-    probes: { primary: obs.probes.primary, fallback: obs.probes.fallback === 'skipped' ? 'ok' : obs.probes.fallback },
+    probes: {
+      primary: obs.probes.primary,
+      fallback: obs.probes.fallback === 'skipped' ? 'ok' : obs.probes.fallback,
+    },
   });
 
   const line = (s) => process.stdout.write(`${s}\n`);
-  line(`agy-doctor — installed ${obs.installed} · pinned ${obs.pinned} · help contract ${obs.helpOk ? 'ok' : 'BROKEN'}`);
-  line(`models: primary ${obs.primaryListed ? 'listed' : 'MISSING'} ("${AGY_MODEL}") · fallback ${obs.fallbackListed ? 'listed' : 'MISSING'} ("${AGY_FALLBACK_MODEL}")`);
+  line(
+    `agy-doctor — installed ${obs.installed} · pinned ${obs.pinned} · help contract ${obs.helpOk ? 'ok' : 'BROKEN'}`
+  );
+  // Print all six configured names, not just the review pair — the whole point of AGY_MODELS_IN_USE
+  // is that a silently-substituted model is visible at a glance instead of found a release later.
+  for (const m of AGY_MODELS_IN_USE) {
+    line(
+      `  ${obs.models.includes(m.value) ? '·' : '✗'} ${m.constant} = "${m.value}"${obs.models.includes(m.value) ? '' : '  ← NOT LISTED'}`
+    );
+  }
   line(`live probe: primary ${obs.probes.primary} · fallback ${obs.probes.fallback}`);
   for (const n of decision.notes) line(`  note: ${n}`);
 
@@ -145,20 +223,28 @@ async function main() {
       line('✓ no drift — pin, models, and print contract all verified live.');
       return;
     case 'quota-warn':
-      line('✓ no drift (transient primary-model quota noted above — runAntigravity degrades to the fallback on its own).');
+      line(
+        '✓ no drift (transient primary-model quota noted above — runAntigravity degrades to the fallback on its own).'
+      );
       return;
     case 'model-drift':
       line(`✗ model drift. Current \`agy models\`:\n  ${obs.models.join('\n  ')}`);
-      line('Pick a replacement: set AGY_MODEL / AGY_FALLBACK_MODEL env, or edit the constants in scripts/lib/cross-agent-cli.mjs. Not auto-fixed (judgment call).');
+      line(
+        'Pick a replacement: set AGY_MODEL / AGY_FALLBACK_MODEL env, or edit the constants in scripts/lib/cross-agent-cli.mjs. Not auto-fixed (judgment call).'
+      );
       process.exitCode = 1;
       return;
     case 'contract-broken':
-      line('✗ contract broken — do NOT bump the pin. Re-verify `agy -p "<prompt>" --model "<model>"` by hand against `agy --help`.');
+      line(
+        '✗ contract broken — do NOT bump the pin. Re-verify `agy -p "<prompt>" --model "<model>"` by hand against `agy --help`.'
+      );
       process.exitCode = 1;
       return;
     case 'bump': {
       if (!fix) {
-        line(`→ version drift with a GREEN contract probe: safe to bump. Run \`node scripts/agy-doctor.mjs --fix\` to update AGY_PINNED ${obs.pinned} → ${obs.installed}.`);
+        line(
+          `→ version drift with a GREEN contract probe: safe to bump. Run \`node scripts/agy-doctor.mjs --fix\` to update AGY_PINNED ${obs.pinned} → ${obs.installed}.`
+        );
         return;
       }
       const src = readFileSync(LIB_PATH, 'utf8');
@@ -166,16 +252,28 @@ async function main() {
       writeFileSync(LIB_PATH, bumpPinnedSource(src, obs.installed, today));
       line(`✓ AGY_PINNED bumped ${obs.pinned} → ${obs.installed} (probe green; marker dated ${today}).`);
       const t = spawnSync('node', ['--test', 'scripts/lib/*.test.mjs', 'scripts/*.test.mjs'], {
-        encoding: 'utf8', cwd: resolve(__dirname, '..'), shell: false,
+        encoding: 'utf8',
+        cwd: resolve(__dirname, '..'),
+        shell: false,
       });
       if (t.status !== 0) {
         line('✗ test suite FAILED after the bump — review before committing:');
-        process.stdout.write((t.stdout || '').split('\n').filter((l) => /not ok|fail/i.test(l)).slice(0, 10).join('\n') + '\n');
+        process.stdout.write(
+          (t.stdout || '')
+            .split('\n')
+            .filter((l) => /not ok|fail/i.test(l))
+            .slice(0, 10)
+            .join('\n') + '\n'
+        );
         process.exitCode = 1;
         return;
       }
       line('✓ scripts test suite green. Next: commit the one-line bump (LOW tier) via the normal flow —');
-      line('  branch `chore/agy-pin-bump-' + obs.installed + '`, path-limited commit of scripts/lib/cross-agent-cli.mjs, PR.');
+      line(
+        '  branch `chore/agy-pin-bump-' +
+          obs.installed +
+          '`, path-limited commit of scripts/lib/cross-agent-cli.mjs, PR.'
+      );
       return;
     }
   }

@@ -36,10 +36,10 @@ export const AGENTS = { codex: 'Codex', antigravity: 'Antigravity' };
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-07-21 against 1.1.5.
+// agy-doctor: last verified 2026-07-25 against 1.1.7.
 //   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.1.5';
+export const AGY_PINNED = '1.1.7';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -55,6 +55,45 @@ export const AGY_PINNED = '1.1.5';
 // because it draws on a separate quota pool when Gemini is exhausted.
 export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.1-pro-high';
 export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120b-medium';
+
+// ── The PROSE pair lives HERE, not in prose-draft.mjs, and that move fixed a live silent bug ─────
+// (2026-07-25.) prose-draft.mjs owned its own constants and still held agy's PRE-1.1.5 display
+// names — `'Gemini 3.5 Flash (High)'` / `'GPT-OSS 120B (Medium)'`. Neither has been a valid model
+// identifier since the 1.1.5 slug rename, and per the note above agy answers an unrecognized
+// `--model` by silently substituting its own default and returning output anyway. So every prose
+// draft produced since that rename ran on agy's default model, exit 0, no warning, plausible
+// output — the exact failure the paragraph above predicted ("a future typo in either constant
+// would silently review with the WRONG model instead of failing loud"). It was predicted, written
+// down, and still shipped, because the prediction guarded the constants agy-doctor checks and
+// these two lived somewhere it never looked.
+//
+// The fix is structural, not a re-typing: every agy model this repo configures is now declared in
+// THIS file, and `agy-doctor` validates AGY_MODELS_IN_USE (below) against `agy models` in one
+// pass. A new consumer that wants its own pair adds it here and inherits the check for free.
+//
+// Flash (not Pro) for prose is deliberate and unchanged in intent: prose doesn't need Pro-tier
+// reasoning and the coordinating agent is the editor. Moved 3.5 → 3.6 because 3.6 shipped and is
+// listed; same tier, current generation.
+export const PROSE_MODEL = process.env.PROSE_MODEL || 'gemini-3.6-flash-high';
+export const PROSE_FALLBACK_MODEL = process.env.PROSE_FALLBACK_MODEL || 'gpt-oss-120b-medium';
+
+// The commit-report rail (scripts/commit-report.mjs) writes an EXECUTIVE product summary of a
+// merge, and Daniel's call is that the GPT lineage handles that register best — so its pair is the
+// inverse of the prose pair: GPT primary, Gemini Flash as the separate-quota fallback.
+export const COMMIT_REPORT_MODEL = process.env.COMMIT_REPORT_MODEL || 'gpt-oss-120b-medium';
+export const COMMIT_REPORT_FALLBACK_MODEL = process.env.COMMIT_REPORT_FALLBACK_MODEL || 'gemini-3.6-flash-high';
+
+// Every agy model name this repo pins, as {constant, value} — the list agy-doctor walks. Keeping it
+// adjacent to the declarations (rather than rebuilt in the doctor) means adding a model and
+// forgetting to register it is a one-line miss in ONE file, visible in review.
+export const AGY_MODELS_IN_USE = [
+  { constant: 'AGY_MODEL', value: AGY_MODEL },
+  { constant: 'AGY_FALLBACK_MODEL', value: AGY_FALLBACK_MODEL },
+  { constant: 'PROSE_MODEL', value: PROSE_MODEL },
+  { constant: 'PROSE_FALLBACK_MODEL', value: PROSE_FALLBACK_MODEL },
+  { constant: 'COMMIT_REPORT_MODEL', value: COMMIT_REPORT_MODEL },
+  { constant: 'COMMIT_REPORT_FALLBACK_MODEL', value: COMMIT_REPORT_FALLBACK_MODEL },
+];
 
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.

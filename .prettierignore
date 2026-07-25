@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+dist
+build
+playwright-report
+test-results
+.vercel
+package-lock.json
+references
+apps/web/supabase/migrations
+Roadmap
+tasks
+*.md

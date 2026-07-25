@@ -345,7 +345,7 @@ export default async function ExperimentComparisonPage({
         </table>
       )}
       <p>
-        <em>Basic lift only — no statistical-significance engine (that's a later epic).</em>
+        <em>Basic lift only — no statistical-significance engine (that&rsquo;s a later epic).</em>
       </p>
     </main>
   )
