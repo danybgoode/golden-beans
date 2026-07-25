@@ -75,3 +75,21 @@ test('null and undefined are handled as non-transient, not thrown', () => {
   assert.equal(isTransientAgyError(null), false);
   assert.equal(isTransientAgyError(undefined), false);
 });
+
+test('transient: the signal is found anywhere in MULTI-LINE output, not just on the last line', () => {
+  // Cross-review caught the caller passing only the final stderr line (the nicest one to show a
+  // human). agy can print the transient notice and THEN a stack trace or a status line, which would
+  // hide the phrase and abort instead of falling back. The classifier must scan the whole blob, and
+  // the caller must hand it the whole blob.
+  const multiline = [
+    'Error: Our servers are experiencing high traffic right now, please try again in a minute.',
+    '    at Object.<anonymous> (/opt/agy/dist/index.js:1:1)',
+    '    at Module._compile (node:internal/modules/cjs/loader:1234:14)',
+    'exit status 1',
+  ].join('\n');
+  assert.equal(isTransientAgyError(multiline), true);
+
+  // …and the same when the notice arrives on stdout while stderr carries only the trailing status,
+  // which is how the caller concatenates the two streams.
+  assert.equal(isTransientAgyError('exit status 1\n\nupstream returned 503\n'), true);
+});

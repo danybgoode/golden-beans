@@ -502,7 +502,14 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
       // situation the second model exists for — a different provider with a separate capacity pool
       // — and the old branch refused to try it, because the fallback was wired only to the
       // EMPTY-output signal. Same transient condition, different exit code, no fallback.
-      if (isTransientAgyError(last) && model !== modelPair[modelPair.length - 1]) {
+      // Classify on the FULL output, not on `last`. `last` is only the final non-empty stderr line,
+      // chosen because it makes the best human-readable message — but agy can emit the transient
+      // notice followed by a stack trace or a trailing status line, which would push the phrase we
+      // match on out of view and abort instead of falling back (cross-review, PR #29). Both streams
+      // are checked because agy is already known to split diagnostics across them inconsistently —
+      // the same reason isContextWindowOverflow is called on stdout and stderr above.
+      const failureOutput = `${r.stderr || ''}\n${r.stdout || ''}`;
+      if (isTransientAgyError(failureOutput) && model !== modelPair[modelPair.length - 1]) {
         warn(`⚠ agy "${model}" is temporarily unavailable (${last}) → trying the fallback model.`);
         tried.push(model);
         continue;
