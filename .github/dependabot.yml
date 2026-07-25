@@ -1,0 +1,47 @@
+# Dependency updates. Dependabot runs on GitHub's own infrastructure — it does NOT consume this
+# account's Actions minutes (a recurring constraint here: Roadmap/LEARNINGS.md → Working
+# efficiently). The PRs it opens DO trigger ci.yml, which is why the limits below are deliberately
+# low and the cadence is weekly, not daily.
+#
+# Grouping matters more than it looks: without it, a React or Next patch bump arrives as four
+# separate PRs, each spending a full typecheck-build + Playwright run.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      # One PR per family instead of one per package — see the note above.
+      next-react:
+        patterns:
+          ['next', 'react', 'react-dom', '@types/react', '@types/react-dom', 'eslint-config-next']
+      supabase:
+        patterns: ['@supabase/*']
+      types-and-tooling:
+        patterns: ['@types/*', 'typescript', 'eslint*', '@typescript-eslint/*', 'prettier']
+      playwright:
+        patterns: ['@playwright/*', 'playwright*']
+    ignore:
+      # Majors are an architecture decision, not a dependency chore — they arrive through a
+      # groomed epic with its own migration plan, never as an auto-opened PR.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore(ci)
+    groups:
+      actions:
+        patterns: ['*']

@@ -1,0 +1,61 @@
+# CodeQL — static security analysis for the JS/TS surface.
+#
+# ── Why WEEKLY-SCHEDULED and not per-PR (decided 2026-07-24) ──────────────────────────────────
+# The default CodeQL template runs on every push AND every pull_request. On this repo that would
+# roughly double the Actions minutes spent per PR — and Actions minutes are a recurring,
+# account-wide, cyclical constraint here, not a one-time incident (Roadmap/LEARNINGS.md →
+# Working efficiently: seen exhausted twice already).
+#
+# The tradeoff is honest: a weekly scan finds an introduced vulnerability days later than a
+# per-PR scan would. That is acceptable *pre-launch* — zero tenants, zero campaigns, zero
+# transactions in production — and it is the wrong tradeoff after launch. The `workflow_dispatch`
+# trigger exists so a specific security-shaped PR can still be scanned on demand without
+# flipping the whole repo to per-PR.
+#
+# WHEN TO REVISIT: at launch, or the first time a real tenant's data is in production. Move
+# `pull_request: branches: [main]` back in and accept the minutes. This comment is the reminder.
+#
+# What this does NOT replace: `npm audit` (dependency CVEs, runs per-PR inside ci.yml — near-free)
+# and the cross-agent security read on high-risk PRs. CodeQL covers the third thing neither does —
+# taint/dataflow through our own code.
+
+name: CodeQL
+
+on:
+  schedule:
+    # Mondays 06:00 UTC — ahead of the week, and off the Dependabot Monday PR wave's peak.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze JS/TS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-extended over the default query pack: this codebase handles API keys,
+          # multi-tenant row scoping and revocable tokens, so the extra security queries are
+          # the entire reason for running CodeQL at all.
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'

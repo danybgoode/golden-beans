@@ -1,13 +1,17 @@
 name: CI
 
 # Deterministic pre-merge gate (Roadmap/WAYS-OF-WORKING.md -> Review & merge):
-#   typecheck-build  -- tsc --noEmit + npm run build
+#   typecheck-build  -- lint + format(new files) + unit tests + audit + tsc --noEmit + npm run build
 #   e2e              -- the `api` Playwright project against local Supabase + locally built OFF/ON
-#                       `next start` servers. No Vercel dependency yet — golden-beans' Vercel
-#                       project is new paid infra, not provisioned until Daniel greenlights it
-#                       (Roadmap/01-growth-engine/growth-engine-v1/README.md). Once it exists,
-#                       swap this job for the preview-per-PR shape (see the template's original
-#                       ci.yml.example in git history for that worked example).
+#                       `next start` servers.
+#
+# Vercel IS provisioned (project `golden-beans`, prod on every merge to `main`) — corrected
+# 2026-07-24; an earlier version of this comment said it wasn't and went stale. This gate still
+# runs against a LOCAL build rather than the PR's preview deployment, and that is deliberate, not
+# a leftover: the suite needs a real Supabase it can seed and clean (`supabase start` applies the
+# migrations + seed.sql), plus a SECOND differently-enved server to prove dark/flag-OFF behavior.
+# A preview deployment gives neither — it points at production Supabase and carries one env set.
+# Deploy-finish is observed instead of gated: see `notify-telegram.yml`'s deploy-notification job.
 
 on:
   pull_request:
@@ -18,11 +22,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # One job, ordered cheapest-first. Deliberately NOT split into separate lint/test/build jobs:
+  # each additional job pays its own checkout + `npm ci` (~40s of runner time), and Actions minutes
+  # are a recurring account-wide constraint here (Roadmap/LEARNINGS.md -> Working efficiently).
+  # Sequential steps in one job also fail fast — a lint error stops before the 2-minute build.
   typecheck-build:
-    name: Type-check + build
+    name: Static gate + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # scripts/format-changed.mjs diffs against the PR base. A shallow clone has no
+          # origin/main to resolve, and the script would (correctly, by design) no-op — a gate
+          # that silently checks nothing. Full history makes it real.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -31,6 +44,31 @@ jobs:
       - name: Template-drift guard
         run: node scripts/check-template-drift.mjs
       - run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      # New files only — see the script's header for why modified legacy files are exempt.
+      - name: Format (files this PR adds)
+        env:
+          PRETTIER_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: npm run format:changed
+
+      # The fast pure-logic layer: no Supabase, no browser, no server. Runs in ~1s, so it belongs
+      # here in front of the slow gate rather than beside the Playwright job.
+      - name: Unit tests (pure logic)
+        run: npm run test:unit
+
+      # Dependency CVEs. `|| true` is deliberate and NOT laziness: a transitive advisory published
+      # overnight would otherwise block every unrelated PR until someone triages it, which trains
+      # people to merge red. The finding still appears in the log and in the job summary, and
+      # Dependabot (.github/dependabot.yml) opens the actual fix PR. Revisit at launch: once real
+      # tenant data is in production, this should block.
+      - name: Dependency audit (advisory)
+        run: |
+          echo '### Dependency audit' >> "$GITHUB_STEP_SUMMARY"
+          npm audit --audit-level=high >> "$GITHUB_STEP_SUMMARY" 2>&1 || true
+
       - name: Type-check
         working-directory: apps/web
         run: npx tsc --noEmit

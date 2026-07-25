@@ -9,6 +9,12 @@
     "prepare": "git config core.hooksPath .githooks",
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write",
+    "format:changed": "node scripts/format-changed.mjs",
+    "test:unit": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'packages/*/src/**/*.test.ts'",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:browser": "npm run test:e2e:browser --workspace=apps/web",
     "seed:demo": "node scripts/seed-demo-project.mjs",
@@ -17,5 +23,12 @@
   },
   "dependencies": {
     "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.20",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6"
   }
 }
