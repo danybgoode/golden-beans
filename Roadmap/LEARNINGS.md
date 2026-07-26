@@ -304,6 +304,25 @@ one-liner + why + date shape.
   invalidate what you joined on, take an explicit `SELECT … FOR SHARE` as its **own statement** first
   (the next statement then runs on a fresh snapshot). Pick one lock ORDER for the whole subsystem —
   here every path locks the destination, then the delivery — so the paths can't deadlock.
+- **A `CHECK` constraint that evaluates to NULL is a suggestion — PostgreSQL accepts the row.** Only
+  an explicit FALSE rejects. `CHECK ((scope='share' AND share_lens IN (...)) OR (scope='ingest' AND
+  share_lens IS NULL))` looks airtight and permits exactly the row it appears to forbid: for
+  `scope='share', share_lens=NULL` the first arm is `TRUE AND NULL` = NULL, the second is FALSE, and
+  `NULL OR FALSE` = NULL. Both the INSERT and an `UPDATE … SET scope='share'` on an existing row
+  succeeded. **Wrap any composite predicate in `IS TRUE`** (and add the column-level check as a
+  second, independent statement, so a later rewrite of the composite cannot silently reopen it).
+  Two further rules from the same incident: the migration's COMMENT asserted the invariant held, and
+  four review rounds believed it — **verify a database-level guarantee by ATTEMPTING the write you
+  claim is impossible**, against the real database, before writing the comment. And check the UPDATE
+  path, not just the INSERT: nothing else prevents flipping a discriminator column.
+  *(2026-07-26, pod-report S3.)*
+- **An audit label that can be chosen by picking an endpoint is worse than no audit log.** A
+  share-link revoke action called the generic `revokeApiKey`, so a request carrying an INGEST key's id
+  revoked that key while the trail recorded `report_share_revoked`. The privilege boundary held — an
+  owner may revoke their own keys — but an incident responder searching `api_key_revoked` for "why did
+  ingest stop?" would find nothing. **When two operations share a table, the mutation needs the
+  discriminator in its WHERE clause, or the endpoint decides what the record says.**
+  *(2026-07-26, pod-report S3.)*
 - **`DROP FUNCTION` + `CREATE` silently restores Postgres' PUBLIC EXECUTE default.** Changing a
   function's return type forces a drop, which discards the earlier migration's REVOKEs — so a
   service-role-only function quietly became anon-callable. Any migration that re-creates a function
@@ -367,6 +386,24 @@ one-liner + why + date shape.
   found 5 more (one of them a bug round 1's own fix introduced), round 3 found 3 more — including a
   quota-accounting bug that made the feature's ONLY documented remedy silently fail. Stop when a
   round comes back clean, not when you hit a round count. *(2026-07-21, multi-tenant-activation.)*
+- **Cross-FAMILY review is a floor on high-risk work, and a same-family "clean" round is not a
+  finish line.** pod-report S3 ran FOUR agy rounds on a new credential surface — seven Should-fix,
+  zero Blocking, and round 4, aimed deliberately at the auth/tenancy surface, came back **clean**.
+  Codex then opened with a **Blocking** finding on that same surface (a share route re-resolving its
+  tenant from a MUTABLE `slug` instead of carrying the `project_id` its credential had already
+  resolved), plus two Should-fix the other family had read past four times. Neither family is better;
+  they are blind in different directions, which is the entire reason to run both. **Stop when a round
+  from the OTHER family comes back clean, not when your usual reviewer does.** *(2026-07-26.)*
+- **Report a finding's severity from what you can reproduce, not from what the reviewer labelled it.**
+  The Blocking finding above was real and worth fixing — and it was NOT reachable the way it read.
+  A spec was written to pin it (mint a token for tenant A, rename A, give A's old slug to B, assert
+  the token still renders A) and it **passed against a deliberately re-broken build**: the resolving
+  view re-reads the slug through a live JOIN every request, so a rename resolves correctly. The real
+  exposure is a TOCTOU window inside one request, milliseconds wide, not HTTP-testable. Fix it (the
+  fix was free — the caller already held the id), and then say plainly that the argument is
+  construction rather than coverage. **A spec that LOOKS like a teeth test is worse than an absent
+  one, because the next reader stops there** — mutation-check the ones you are proudest of.
+  *(2026-07-26, pod-report S3.)*
 - **Route external review by risk and demonstrated strength; two full reads are not a tax on every
   diff.** The 2026-07-23 Entity/Experiment trial established the current rail: Agy is the fast
   baseline architectural/security read; Devin's default router earns the second seat for high-risk
@@ -400,6 +437,17 @@ one-liner + why + date shape.
   `\"` escapes. Building `TEXT` in one `jq` and passing it to a second as `--arg text "$TEXT"`
   double-encodes it, and the recipient sees literal `<a href=\"…\">`. Build the whole payload in a
   SINGLE jq pass so the double-encoding is unrepresentable rather than merely fixed.
+  **Sharpened 2026-07-26 — the right fix is an EXIT CODE, not an annotation, and it depends on where
+  the notifier lives.** The `|| true` + `::warning` arrangement was inherited from a design where the
+  ping was a step inside a deploy job, where failing it would fail a deploy. In a repo where the
+  notifier is its OWN workflow triggered by `push`/`deployment_status`, it is an observer: it cannot
+  fail a deploy and cannot block a PR (neither trigger is a `pull_request` event), so a rejected
+  message SHOULD turn the run red. A green check plus an annotation nobody reads is not monitoring.
+  Also: two implementations of the same escaping/length rule is one too many — a jq copy of an
+  already-tested `escapeToFit` was written and its FIRST test proved it wrong in exactly the way the
+  original's comment predicted (it capped the RAW subject; 3,500 `>` characters escape to 14,129).
+  Share the tested function instead of porting it. And measure the real payloads before believing a
+  length theory: the live pings are 232 and 261 characters against a 4,096 limit.
   *(2026-07-26, pod-report/quality-rails.)*
 - **A scripted `str.replace()` that finds nothing SUCCEEDS SILENTLY — and the test you write alongside
   it can pass while the change never landed.** pod-report S2 added `checkSucceeded()` (accepting both
@@ -558,6 +606,29 @@ one-liner + why + date shape.
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
   state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
   sprint/PR boundary, and for big epics consider a fresh session per sprint.
+- **A local gate that is a SUBSET of CI's gate is worse than no local gate, because it produces a
+  green that does not mean what CI means by green.** pod-report S3 burned three push-and-wait round
+  trips on static checks that run in seconds locally — lint, then prettier's changed-files check, then
+  the TEST tsconfigs. The last one is the instructive one: `tsc --noEmit -p apps/web` passed while
+  `npm run typecheck` failed, because the latter checks FOUR projects (app, app-tests, sdk,
+  sdk-tests) and the error was in a test fixture whose object literal narrows more tightly than the
+  runtime type. **Invoke CI's own npm scripts, never a hand-written approximation of them**, and run
+  them in CI's order so the cheapest fails first. Especially where Actions minutes are the scarce
+  account-wide resource they are in this repo.
+- **Re-derive a handover's status from the artifact, never from the previous session's summary.**
+  pod-report Sprint 2's close-out said all four stories were built. Two claims did not survive a check
+  against `origin/main`, the production database and the live site: `--push` printed "not wired yet"
+  and exited **0** (so production held zero artifacts while runs looked successful), and a module the
+  doc said was "built against the real `miyagisanchez` tenant" had **zero callers**. Both were written
+  in good faith by a session that had genuinely done the hard half. The cheap checks that found it:
+  one `select kind, count(*) … group by kind` against prod, one `curl -o /dev/null -w '%{http_code}'`,
+  and one grep for callers. *(2026-07-26.)*
+- **Never infer which rail a credential serves from what the credential is NAMED.** golden-beans'
+  `SELF_PROJECT_API_KEY` authenticates as the **demo** tenant, not the self tenant. A landing section
+  was switched to read the self tenant on the strength of that name and shipped rendering its fallback
+  teaser in production. Confirm by asking the data which tenant a write actually landed on. This is
+  the same lesson as the earlier "don't infer a provider from a secret's name" entry, one level in.
+  *(2026-07-26.)*
 - **A GitHub Actions workflow env var exported via `$GITHUB_ENV` only reaches steps AFTER that
   point in the job — never an already-running background process from an earlier step.**
   commercial-shell Sprint 3's CI exported a freshly-minted `SELF_PROJECT_API_KEY` right before

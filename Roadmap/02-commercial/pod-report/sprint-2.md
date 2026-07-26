@@ -1,6 +1,10 @@
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
-**Status:** 🟨 **COMPUTATION SHIPPED · SURFACE NOT SHIPPED.** PR
+**Status:** ✅ SHIPPED — computation in PR [#32](https://github.com/danybgoode/golden-beans/pull/32)
+(`0eca9fc`), the surface in PR [#33](https://github.com/danybgoode/golden-beans/pull/33) (`7697bba`).
+The re-derived status below is kept verbatim as the record of what a close-out claim is worth
+unverified; every gap it names is now closed. **Originally recorded as:** 🟨 COMPUTATION SHIPPED ·
+SURFACE NOT SHIPPED. PR
 [#32](https://github.com/danybgoode/golden-beans/pull/32) squash `0eca9fc`, deployed to production
 `success`. Every number the Pod Report needs is computed, deterministic and unit-tested — and **no
 human can see any of it**: nothing renders it, and no `pod_report` artifact has ever reached the

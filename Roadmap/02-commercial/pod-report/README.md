@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: pod-report
 ---
 
@@ -102,6 +102,11 @@ upsell, exactly as designed.
 | 1 | [The rendering primitive + hub skateboard](sprint-1.md) | `report_artifacts` + `roadmap-push` rail · journey + drill-down views (gb as tenant #0) · horizon view vs end-state registry |
 | 2 | [The Pod Report (computed, not claimed)](sprint-2.md) | delivery metrics from the mb dataset · outcome layer · designed report surface with benchmark citations · **AI-adoption maturity lens** |
 | 3 | [Share links + backfill (the flip)](sprint-3.md) | scoped share tokens (dark) · landing §5 backfill + hub dogfood · launch |
+
+**SHIPPED 2026-07-26.** All three sprints live in production, plus a Sprint 2.5 carry-over that
+built the surface Sprint 2's computation had nowhere to render into. See
+[`RETROSPECTIVE.md`](RETROSPECTIVE.md). One item owed to Daniel: minting the first real share links
+(`sprint-3.md` → Smoke walkthrough, steps 6-9).
 
 **Build-time dependency:** Sprint 2 requires a local `~/dobby/medusa-bonsai` checkout (dogfood
 dataset = its Roadmap frontmatter + git history). Builds after E1/E2; if E2 slips, Sprint 1

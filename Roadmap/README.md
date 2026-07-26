@@ -77,6 +77,24 @@ independently shippable slice of value.
   tiers show a real "Start free" CTA. **Launched 2026-07-21** — a real user signed up and received a
   working tenant (project, owner membership, API key, connector token, starter feature) with nobody
   touching the database, verified row by row in production.
+- ✅ [Pod Report + Roadmap Hub](02-commercial/pod-report/README.md) (benchmarks/ROI + live
+  roadmap-vs-end-state views · scoped share links) — **shipped and live in production 2026-07-26**
+  (PRs #30/#32/#33/#34). The report-rendering primitive became an engine primitive with two consumers
+  at birth: a **Pod Report** whose every figure is computed from a repository's own git and
+  pull-request history, and a **Roadmap Hub** (journey · epic drill-down · horizon) rendering a
+  tenant's own pushed roadmap artifact. What makes it a product rather than a dashboard is the
+  honesty, and it is structural: speed is never rendered without its gaps beside it, the ladder
+  verdict and its not-instrumented count live in one element, a `met` criterion with no resolvable
+  evidence pointer is downgraded rather than claimed, and an artifact that lost its caveats is
+  REFUSED rather than shown. The baseline is published benchmarks (DORA 2025 · LinearB 2026 · DX
+  Core 4), cited and linked, never republished — because the dataset has no human-majority era to
+  compare against and that comparison is therefore not claimed. **Landing §5 is live with real
+  numbers** (13 days · 88 commits · 2.2 d median epic lead time · step 1 "Assisted" · **11 things we
+  do not measure, named**), and **share links** (`/s/<token>`, team/client/investor lenses, revocable
+  and expirable) are enabled — as scoped rows in the existing `api_keys` taxonomy, with the ingest
+  scope filter welded into a Postgres view so a URL-borne token can never authenticate against the
+  API. Six cross-review rounds across two model families; Codex caught a Blocking cross-tenant read
+  that four agy rounds had read past. **Owed to Daniel:** minting the first real share links.
 - ✅ [Commercial shell](02-commercial/commercial-shell/README.md) (Golden Beans landing · waitlist ·
   read-only MCP connector + install page · dogfood instrumentation · SEO/OG + agent manifest) —
   **launched** and live in production at `https://golden-beans-gamma.vercel.app`. The landing tracks
@@ -88,6 +106,18 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-07-26** — `pod-report` **epic shipped & LIVE** (PRs #30/#32/#33/#34): the Pod Report and the
+  Roadmap Hub, both rendered from the same versioned immutable artifact primitive. Sprint 2 had
+  computed every number and shipped none of the surface — a re-derivation against production found
+  `--push` exiting 0 without storing anything and an outcome module with zero callers, so a Sprint 2.5
+  carry-over built the surface those numbers had nowhere to render into. Three latent bugs were found
+  by running things rather than reading them, including a payload CHECK that would have rejected every
+  `pod_report` push (verified against production before the fix). Review took six rounds across two
+  model families: agy found seven Should-fix and went clean on the auth surface, then Codex opened with
+  a Blocking finding on that same surface plus a `CHECK` constraint that evaluated to NULL and so
+  permitted exactly the row it appeared to forbid. Also fixed the Telegram rail properly — a rejected
+  ping now turns its workflow red instead of leaving a green check, and the escaping/length rule is one
+  tested function instead of two.
 - **2026-07-23** — `experiment-governance-v2` **epic shipped & LIVE in production** (PRs #19/#22/#23):
   the capstone — an **immutable human decision record** for a stopped experiment (ship/keep/iterate/
   inconclusive/invalid + rationale over a frozen definition/analysis/integrity snapshot, append-only,
