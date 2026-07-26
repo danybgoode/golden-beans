@@ -242,6 +242,15 @@ jobs:
           # this to pick between its gate-OFF and its live-render assertions, and a mismatch would
           # silently skip whichever half matters.
           REPORT_SHARES_ENABLED: 'true'
+          # signals-loop. The same rule, and it bit: CONNECTOR_ENABLED + SIGNALS_ENABLED were set on
+          # the SERVER step but not here, so the server registered list_tasks/get_task while the test
+          # process — which evaluates isTaskMcpToolEnabled() locally to decide what to expect — did
+          # not know they existed. Three specs failed with the tools present-but-unexpected, and the
+          # dark-state dashboard spec ran (instead of skipping) against a server where the seam was
+          # live. Every flag a spec BRANCHES on has to be set in both places or the two halves of the
+          # test disagree about what they are testing.
+          CONNECTOR_ENABLED: 'true'
+          SIGNALS_ENABLED: 'true'
         run: npm run test:e2e
 
       - name: Dump Next.js server log (diagnostics)
