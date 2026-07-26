@@ -6,6 +6,7 @@ import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context
 import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
+import { scheduleSignalGrouping } from '@/lib/signals'
 
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
@@ -218,6 +219,26 @@ export async function POST(req: NextRequest) {
   }
 
   scheduleFirstEventActivation(supabase, auth)
+
+  // ── signals-loop · Story 1.2 · group a reserved `$error` event into its signal ───────────────
+  // Scheduled AFTER the event is committed and only on the fresh-insert path, never on a dedup: a
+  // replayed occurrence is the same occurrence, and counting it twice would inflate exactly the
+  // number the impact rank is built on.
+  //
+  // Deliberately fire-and-forget (see lib/signals.ts): grouping is a DERIVED projection of an event
+  // that is already stored, so its failure must cost a signal row and never the tenant's event. An
+  // ingest that could be failed by a projection has reintroduced the coupling the outbox exists to
+  // remove — the same rule isDestinationDeliveryEnabled's comment states for delivery.
+  scheduleSignalGrouping({
+    projectId: auth.projectId,
+    event: parsed.data.event,
+    userId: parsed.data.userId,
+    featureId: parsed.data.featureId ?? null,
+    tags: parsed.data.tags,
+    metadata: parsed.data.metadata,
+    occurredAt: eventContext.context.occurred_at,
+  })
+
   return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
 }
 

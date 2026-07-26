@@ -4,9 +4,21 @@
 // so v2 fault injection (delay_ms, force_error_code) can extend TrackResult without a breaking
 // change to callers that already just check `.ok`.
 
+// Relative imports here stay EXTENSIONLESS, matching the rest of the source tree. .github/
+// workflows/ci.yml records why: enabling `allowImportingTsExtensions` so source could use `.ts`
+// would also let app code do it, "trading a caught type error for an uncaught build break". Only
+// *.test.ts opts into the looser rule.
+//
+// That means this file cannot be loaded by `npm run test:unit` (Node's native TS loader demands
+// extensions), so the pure, directly-testable half of error capture lives in ./capture instead —
+// see that module's header. This file keeps only the parts that genuinely need the client's config
+// and `fetch`, which the e2e suite covers end to end.
 import { resolveGovernedVariant, resolveVariant, type BucketVariant } from './bucketing'
+import { normalizeError, normalizeSampleRate, ERROR_EVENT } from './capture'
+import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub'
 
 export type { BucketVariant } from './bucketing'
+export { ERROR_EVENT } from './capture'
 
 /**
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.
@@ -103,6 +115,23 @@ export interface GrowthEngineClientConfig {
   userId: string
   /** Override for testing; defaults to the global fetch. */
   fetchImpl?: typeof fetch
+  /**
+   * signals-loop · Story 1.1 — the fraction of captured errors actually sent, 0..1 (default 1).
+   *
+   * A crash loop can emit the same error thousands of times a second, and the grouping downstream
+   * collapses them into one row with a counter — so the marginal value of the thousandth copy is
+   * nil while its cost to the tenant's quota is not. Sampling is applied per OCCURRENCE, after
+   * dedupe, so a rare error is still virtually certain to be reported at least once.
+   */
+  errorSampleRate?: number
+}
+
+/** signals-loop · Story 1.1 — what `captureError` accepts alongside the error itself. */
+export interface CaptureErrorProps {
+  /** The feature this error happened inside, if known — the join key for the evidence bundle. */
+  featureId?: string
+  /** Extra diagnostic context. Scrubbed here and again, authoritatively, at ingest. */
+  context?: Record<string, unknown>
 }
 
 export interface GrowthEngineClient {
@@ -129,6 +158,26 @@ export interface GrowthEngineClient {
     props?: Omit<TrackEventProps, 'featureId'>,
     governance?: ExperimentGovernanceContext,
   ): Promise<TrackResult>
+  /**
+   * signals-loop · Story 1.1 — report a runtime error as a reserved `$error` event.
+   *
+   * One line to adopt, and it rides the same envelope, the same auth and the same quota as every
+   * other event — no second ingest path, no schema migration (AGENTS rule #1).
+   *
+   * NEVER THROWS and never rejects: a reporter that can fail inside a `catch` block turns one bug
+   * into two, and the second one is in the error handler where nobody is looking.
+   */
+  captureError(error: unknown, props?: CaptureErrorProps): Promise<TrackResult>
+  /**
+   * Installs global `error` + `unhandledrejection` handlers that call `captureError`.
+   *
+   * Returns a disposer that removes them again — required, not a nicety: without it a hot-reloading
+   * dev server or a re-mounting component stacks a new pair of listeners on every call, and the
+   * duplicate reports look exactly like a worsening bug.
+   *
+   * Safe to call where `window` does not exist (SSR, a worker); it no-ops and returns a disposer.
+   */
+  captureGlobalErrors(props?: CaptureErrorProps): () => void
 }
 
 /**
@@ -260,14 +309,100 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     })
   }
 
+  // ── signals-loop · Story 1.1 · error capture ─────────────────────────────────────────────────
+
+  const sampleRate = normalizeSampleRate(config.errorSampleRate)
+
+  async function captureError(error: unknown, props: CaptureErrorProps = {}): Promise<TrackResult> {
+    try {
+      // Sampled BEFORE any work. A crash loop's thousandth copy adds nothing the grouping counter
+      // has not already recorded, and the tenant pays quota for every one of them.
+      if (sampleRate < 1 && Math.random() >= sampleRate) {
+        return { ok: false, error: 'Sampled out', code: 'SAMPLED_OUT' }
+      }
+
+      // Normalize, THEN scrub — and scrub here rather than inside normalizeError, so the two
+      // concerns stay independently testable (see ./capture's header). The cap is applied by
+      // scrubClientText as part of the same pass, because truncating before redaction can slice a
+      // secret in half and store the surviving portion.
+      const normalized = normalizeError(error)
+      return await track(ERROR_EVENT, {
+        featureId: props.featureId,
+        tags: {
+          name: scrubClientText(normalized.name, 64),
+          message: scrubClientText(normalized.message, SDK_MAX_MESSAGE),
+          // The stack rides `tags` because that is where the server's fingerprint reads it from.
+          // Both sides name it in one place each, and the e2e spec asserts the round trip.
+          stack: normalized.stack === null ? null : scrubClientText(normalized.stack, SDK_MAX_STACK),
+        },
+        metadata: { context: props.context ?? {} },
+      })
+    } catch (err) {
+      // The whole method is wrapped, not just the fetch. `captureError` is called from catch blocks
+      // and global handlers — the two places where a thrown exception is most likely to be swallowed
+      // silently or to replace the original error in the report.
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'captureError failed',
+        code: 'CAPTURE_FAILED',
+      }
+    }
+  }
+
+  function captureGlobalErrors(props: CaptureErrorProps = {}): () => void {
+    const target = getErrorEventTarget()
+    if (!target) return () => {}
+
+    const onError = (event: { error?: unknown; message?: unknown }) => {
+      void captureError(event.error ?? event.message, props)
+    }
+    const onRejection = (event: { reason?: unknown }) => {
+      void captureError(event.reason, props)
+    }
+
+    target.addEventListener('error', onError as (e: unknown) => void)
+    target.addEventListener('unhandledrejection', onRejection as (e: unknown) => void)
+
+    return () => {
+      target.removeEventListener('error', onError as (e: unknown) => void)
+      target.removeEventListener('unhandledrejection', onRejection as (e: unknown) => void)
+    }
+  }
+
   return {
     track,
     trackAdoption: (featureKey, props) => track('feature_adopted', { ...props, featureId: featureKey }),
     syncFeatures,
     bucket,
     trackExposure,
+    captureError,
+    captureGlobalErrors,
   }
 }
+
+// ── Why this is a hand-rolled structural type and not `lib: ["DOM"]` ─────────────────────────
+// This package's tsconfig deliberately declares `lib: ["ES2022"]` and nothing else, because the SDK
+// is framework- AND runtime-agnostic: it runs in a browser, in Node, in a worker, on an edge
+// runtime. Adding the DOM lib to make `window` type-check would let ANY future code in this package
+// silently assume a browser and still compile — the error would move from here (where it is one
+// obvious line) to a customer's server bundle at runtime.
+//
+// So the global handler describes only the shape it actually uses. `captureGlobalErrors` is the one
+// browser-shaped API in the SDK, and this keeps that fact local to it.
+type ErrorEventTarget = {
+  addEventListener: (type: string, listener: (event: never) => void) => void
+  removeEventListener: (type: string, listener: (event: never) => void) => void
+}
+
+function getErrorEventTarget(): ErrorEventTarget | null {
+  const g = globalThis as unknown as { addEventListener?: unknown; removeEventListener?: unknown }
+  if (typeof g.addEventListener !== 'function' || typeof g.removeEventListener !== 'function') {
+    return null
+  }
+  return g as unknown as ErrorEventTarget
+}
+
+
 
 const ENTITY_TYPE = /^[a-z][a-z0-9_]{0,63}$/
 const CONTROL_CHARS = /\p{Cc}/u
