@@ -7,6 +7,7 @@ import { impactRank } from './signal-rank'
 import { DEFAULT_PROMOTION_RULE, shouldPromote, type PromotionRule } from './task-promotion'
 import { taskEventForStatus, TASK_SUBJECT_TYPE, TASK_OPENED_EVENT, type TaskStatus } from './task-events'
 import { tgNotify } from './telegram'
+import { recordAudit } from './audit'
 
 // signals-loop · Sprint 2, Story 2.1 — signal → task promotion, the evidence bundle, and the
 // lifecycle fan-out.
@@ -249,10 +250,51 @@ export async function emitTaskLifecycleEvent(
       p_idempotency_key: `task:${taskId}:${status}`,
       p_idempotency_fingerprint: null,
     })
-    if (error) console.error('[tasks] lifecycle emit failed:', error)
+    if (error) {
+      console.error('[tasks] lifecycle emit failed:', error)
+      await recordEmitFailure(projectId, taskId, status, error.message)
+    }
   } catch (err) {
     console.error('[tasks] lifecycle emit threw:', err)
+    await recordEmitFailure(projectId, taskId, status, err instanceof Error ? err.message : 'unknown')
   }
+}
+
+/**
+ * Records a failed lifecycle emit in the append-only audit trail.
+ *
+ * ── Why this is the right size of fix, and what it deliberately is NOT ──────────────────────
+ * Cross-review (Codex round 1) flagged that a failed emit is never retried: the transition commits,
+ * the event is absent, and every later call returns already-claimed/terminal so nothing re-fires.
+ * That is accurate.
+ *
+ * What it does NOT mean is that state is lost. The `tasks` row holds the truth — status,
+ * `claimed_by`, `claimed_at`, `resolved_at`, `resolution` — so a missing event costs a
+ * NOTIFICATION, never the fact. The event stream is how a tenant's automation hears about a
+ * transition; the table is the record of it. Those are different jobs and only one of them is
+ * load-bearing for correctness.
+ *
+ * A durable emit queue is therefore the wrong answer here: it would be a second outbox in front of
+ * the outbox, with its own dispatcher, its own retry budget and its own failure modes, to make an
+ * advisory notification exactly-once — for a system whose delivery contract is already explicitly
+ * at-LEAST-once. The proportionate answer is that a failure leaves a durable, queryable trace
+ * instead of only a log line nobody greps, so "why did our Slack channel miss that resolve?" has an
+ * answer. The emit itself is already idempotent (a stable key per task+status), so a future
+ * reconciliation pass can replay from these rows without risking duplicates.
+ *
+ * Recorded as a KNOWN LIMITATION in sprint-2.md rather than silently accepted.
+ */
+async function recordEmitFailure(
+  projectId: string,
+  taskId: string,
+  status: TaskStatus,
+  detail: string
+): Promise<void> {
+  await recordAudit({
+    action: 'task_event_emit_failed',
+    projectId,
+    metadata: { taskId, status, detail: detail.slice(0, 500) },
+  })
 }
 
 /**

@@ -226,6 +226,73 @@ test.describe('connector task read tools', () => {
     expect(JSON.stringify(after)).toContain('setup_guide')
   })
 
+  test('a RESOLVED task does not rise from the dead on the next queue read', async ({ request }) => {
+    // ── The zombie bug, pinned ──────────────────────────────────────────────────────────────
+    // Cross-review (Codex round 1) found this and it was severe: the partial unique index only
+    // covers open/claimed tasks, so the moment one went terminal the underlying signal — whose
+    // counts never decrease — re-qualified, and the very next queue read created a fresh open
+    // duplicate. Resolve, refresh, it is back. Every refresh, forever.
+    //
+    // Reproduced against the database before fixing. This spec is the guard, and it is worth its
+    // weight because the failure is invisible in any single-read test: you only see it on the
+    // SECOND read after a resolve, which is exactly what this does.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'zombie')
+    await seedPromotableSignal(request, tenant, 'zombie-marker')
+
+    await callTool(request, tenant.connectorToken, 'list_tasks', {})
+    const created = await waitForTasks(db, tenant.projectId)
+    expect(created).toHaveLength(1)
+
+    await db
+      .from('tasks')
+      .update({ status: 'resolved', resolved_at: new Date().toISOString(), resolution: 'fixed' })
+      .eq('id', created[0].id as string)
+
+    // Two further reads — one is not enough to distinguish "slow" from "fixed".
+    await callTool(request, tenant.connectorToken, 'list_tasks', {})
+    await callTool(request, tenant.connectorToken, 'list_tasks', {})
+
+    const { data: after } = await db.from('tasks').select('id, status').eq('project_id', tenant.projectId)
+    expect(after ?? []).toHaveLength(1)
+    expect((after ?? [])[0].status).toBe('resolved')
+  })
+
+  test('a RECURRENCE after resolution DOES open a fresh task', async ({ request }) => {
+    // The counter-test, and the reason the fix is a recurrence gate rather than "never re-promote".
+    // A problem that comes back must get a new task with its own history — otherwise resolving one
+    // occurrence would permanently silence the signal, which is a worse bug than the zombie.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'recur')
+    await seedPromotableSignal(request, tenant, 'recurring-marker')
+
+    await callTool(request, tenant.connectorToken, 'list_tasks', {})
+    const first = await waitForTasks(db, tenant.projectId)
+    expect(first).toHaveLength(1)
+
+    await db
+      .from('tasks')
+      .update({ status: 'resolved', resolved_at: new Date().toISOString(), resolution: 'fixed' })
+      .eq('id', first[0].id as string)
+
+    // The problem happens AGAIN — real new occurrences through the real ingest path, which is what
+    // advances last_seen_at past the resolution.
+    await seedPromotableSignal(request, tenant, 'recurring-marker')
+    await callTool(request, tenant.connectorToken, 'list_tasks', {})
+
+    const deadline = Date.now() + 10_000
+    let rows: Array<Record<string, unknown>> = []
+    while (Date.now() < deadline) {
+      const { data } = await db.from('tasks').select('id, status').eq('project_id', tenant.projectId)
+      rows = data ?? []
+      if (rows.length >= 2) break
+      await new Promise((r) => setTimeout(r, 200))
+    }
+    expect(rows).toHaveLength(2)
+    expect(rows.filter((r) => r.status === 'open')).toHaveLength(1)
+    expect(rows.filter((r) => r.status === 'resolved')).toHaveLength(1)
+  })
+
   test('a revoked connector token cannot reach the task tools', async ({ request }) => {
     const db = dbClient()
     const tenant = await createTenant(db, 'revoked')

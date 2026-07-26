@@ -35,6 +35,9 @@ export type AuditAction =
   // pod-report S3 finding, one layer up. Sprint 3's agent writes reuse this same action, so
   // "who moved this task, human or agent?" is answered from one place.
   | 'task_transitioned'
+  // A lifecycle event that could not be emitted. The task row still holds the truth; this records
+  // that a tenant's automation was never told, so the gap is queryable rather than only a log line.
+  | 'task_event_emit_failed'
 
 export type AuditEntry = {
   action: AuditAction

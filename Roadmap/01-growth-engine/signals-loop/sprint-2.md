@@ -68,6 +68,23 @@ rows, asserted through the real authenticated path with a real foreign token.
 - **mutation check:** the cross-tenant and dark-flag specs, broken once each and observed red — a
   spec that cannot fail is worse than an absent one because the next reader stops there
 
+## Known limitation (cross-review, Codex round 1 — 2026-07-26)
+
+**A failed lifecycle emit is not retried.** If `ingest_event` fails while emitting
+`task_claimed`/`task_resolved`, the transition is already committed and no later call re-fires it —
+subsequent calls return already-claimed/terminal.
+
+What this does and does not cost: the `tasks` row holds the truth (status, claimant, timestamps,
+resolution), so a missing event costs a **notification**, never the fact. The event stream is how a
+tenant's automation hears about a transition; the table is the record of it.
+
+A durable emit queue was considered and rejected as disproportionate — it would be a second outbox
+in front of the outbox, with its own dispatcher and retry budget, to make an advisory notification
+exactly-once for a system whose delivery contract is explicitly at-**least**-once. Instead a failure
+writes a `task_event_emit_failed` audit row, so the gap is queryable rather than a log line nobody
+greps, and the emit is already idempotent (a stable key per task+status) so a reconciliation pass
+can replay from those rows without duplicates. **Recorded rather than silently accepted.**
+
 ## Sprint 2 — Smoke walkthrough (do these in order)
 
 _Preview URLs pre-merge; swap for production URLs at epic close._
