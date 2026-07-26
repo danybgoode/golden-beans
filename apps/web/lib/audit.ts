@@ -35,6 +35,16 @@ export type AuditAction =
   // pod-report S3 finding, one layer up. Sprint 3's agent writes reuse this same action, so
   // "who moved this task, human or agent?" is answered from one place.
   | 'task_transitioned'
+  // signals-loop · Sprint 3, Story 3.1 — the agent-write credential lifecycle. Their OWN labels,
+  // beside `api_key_*` and `report_share_*` rather than folded into them, because these three
+  // credential kinds share one table and one revoke shape but answer completely different incident
+  // questions: "why did ingest stop?", "who handed our numbers to an outsider?", and "which agent
+  // credential moved this task?". A trail that cannot separate them is read as authoritative and
+  // answers all three wrong (LEARNINGS: an audit label that can be chosen by picking an endpoint is
+  // worse than no audit log). lib/agent-write-keys.ts pins the labels to the scope with a predicate
+  // in the UPDATE, so the endpoint cannot decide what the record says.
+  | 'agent_write_key_minted'
+  | 'agent_write_key_revoked'
   // A lifecycle event that could not be emitted. The task row still holds the truth; this records
   // that a tenant's automation was never told, so the gap is queryable rather than only a log line.
   | 'task_event_emit_failed'

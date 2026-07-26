@@ -166,3 +166,33 @@ Sprint 2 MERGED (3b76d48) + migrations applied to prod. Both gates OFF. NEXT: Sp
 }
 ```
 
+## 2026-07-26T22:23:13.600Z — `feat/signals-loop-s3` @ 7811682b
+
+_HEAD: chore(process): Codex becomes a build delegate, and the session trail stops losing its own trail_
+
+S3 shared surface committed (7811682): codex-task delegation rail + tier table (ONE entitled model, effort-based tiers), session-trail epic resolution + parsePorcelain fix. NEXT: Story 3.1 agent_write credential scope (architect-only).
+
+**Verified by running (observed output, not believed):**
+- 213 script unit tests green
+- codex-task live smoke wrote a real file; bogus model + bad tier both fail loud
+- mutation check: reintroducing the porcelain .trim() turns 2 specs red, reverted clean
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-26T22:23:13.600Z",
+  "note": "S3 shared surface committed (7811682): codex-task delegation rail + tier table (ONE entitled model, effort-based tiers), session-trail epic resolution + parsePorcelain fix. NEXT: Story 3.1 agent_write credential scope (architect-only).",
+  "branch": "feat/signals-loop-s3",
+  "head": "7811682b10e011bca5577e03fbb545e37ccd2b38",
+  "headSubject": "chore(process): Codex becomes a build delegate, and the session trail stops losing its own trail",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "213 script unit tests green",
+    "codex-task live smoke wrote a real file; bogus model + bad tier both fail loud",
+    "mutation check: reintroducing the porcelain .trim() turns 2 specs red, reverted clean"
+  ]
+}
+```
+
