@@ -1,6 +1,7 @@
 import 'server-only'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { getSupabaseServiceClient } from './supabase'
+import { hashCredential } from './credential-hash'
 
 // multi-tenant-activation · Sprint 1, Story 1.3 — API keys as a lifecycle (issue / list / revoke).
 // The one place a key is generated and hashed; lib/auth.ts imports hashApiKey so ingest and the
@@ -8,8 +9,11 @@ import { getSupabaseServiceClient } from './supabase'
 
 const KEY_PREFIX = 'gb_key_'
 
+// Delegates to the ONE credential hash (lib/credential-hash.ts). Share tokens hash through the
+// same function, because both land in the same UNIQUE `key_hash` column — sharing the function is
+// what makes them equal, rather than two copies that merely happen to agree today.
 export function hashApiKey(key: string): string {
-  return createHash('sha256').update(key).digest('hex')
+  return hashCredential(key)
 }
 
 // An opaque, prefixed random key. The plaintext is returned to the caller exactly once (at issue
@@ -29,6 +33,12 @@ export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
     .from('api_keys')
     .select('id, label, created_at, revoked_at')
     .eq('project_id', projectId)
+    // Ingest keys ONLY. Share links (pod-report S3) are rows in this same table by design, and
+    // without this filter they would surface on the "API keys" screen labelled as ingest
+    // credentials — inviting someone to read a share link as a key they could rotate, or to
+    // conclude their ingest keys had multiplied on their own. They get their own labelled list
+    // (lib/report-shares.ts → listShareLinks) and share this table's ONE revoke path.
+    .eq('scope', 'ingest')
     .order('created_at', { ascending: false })
   if (error) {
     console.error('[api-keys] list failed:', error)
@@ -46,7 +56,7 @@ export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
 // authorized the acting user against `projectId` (see requireProjectMembership).
 export async function issueApiKey(
   projectId: string,
-  label: string,
+  label: string
 ): Promise<{ ok: true; plaintext: string; id: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
   const plaintext = generateApiKey()

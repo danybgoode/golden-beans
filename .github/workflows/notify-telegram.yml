@@ -6,11 +6,38 @@
 #   push-notification        — 📦 fires on every push to `main` (the merge = the deploy trigger)
 #   deploy-notification      — 🚀 fires when Vercel's PRODUCTION deploy reaches a terminal state
 #
-# House style, reused from apps/web/lib/telegram.ts:
-#   - HTML parse_mode, & < > escaped (never MarkdownV2)
-#   - fire-and-forget: a Telegram/network hiccup must never fail the workflow (`|| true` + timeout)
-#   - secrets only from GitHub Secrets, never inlined in YAML
-#   - skips cleanly (exit 0, no failure) if the secrets aren't configured yet
+# ── The payload is built by a TESTED SCRIPT, not by inline shell (rewritten 2026-07-26) ────────
+# Both jobs shell out to `scripts/telegram-notify.mjs`. Nothing about the message is assembled in
+# YAML any more, and the reason is this rail's own history:
+#
+#   1. The original built the message text in one `jq -n` pass and the request body in a SECOND,
+#      which double-encoded every `href=\"` — so Telegram rejected EVERY ping this workflow ever
+#      sent with `400 can't parse entities`, for its entire life, behind a green check. Nobody found
+#      it from CI; Daniel noticed he had stopped receiving messages.
+#   2. Collapsing to a single jq pass fixed that. A LENGTH guard was then added to the jq program,
+#      and its first test proved the guard wrong in precisely the way this repo already had a written
+#      warning about: it capped the RAW subject, and 3,500 `>` characters escape to 14,129 — far past
+#      Telegram's 4,096 ceiling.
+#
+# Two implementations of one escaping/length rule is one too many. The rule now lives in
+# `scripts/lib/telegram-text.mjs`, shared with `scripts/commit-report.mjs` and unit-tested once
+# (`scripts/telegram-notify.test.mjs`, including the entity-heavy input that broke the jq version).
+#
+# ── A rejected ping now turns this workflow RED, and that is deliberate ────────────────────────
+# The inline version ended in `|| true`, so a Telegram outage could never fail a deploy. Sound
+# reasoning — in the design it was inherited from, where the ping was a step inside a deploy job.
+# Here it is not: this workflow is an OBSERVER, fired by `push` and `deployment_status`. It cannot
+# fail a deploy (Vercel's build is not this job) and it cannot block a PR (neither trigger is a
+# pull_request event, so it never appears as a PR check).
+#
+# So the old behaviour — green check plus a `::warning` annotation — bought nothing and cost the
+# only monitoring this rail had. A notification whose failures are visible only to someone reading
+# annotations on a PASSING run is a notification with no monitoring at all. The one path that still
+# exits 0 without delivering is a repo with the secrets unset, which is a configuration state rather
+# than a failure.
+#
+# House style, unchanged: HTML parse_mode with & < > escaped (never MarkdownV2); secrets only from
+# GitHub Secrets; a 10s timeout on the request.
 #
 # ── Why `deployment_status` and not a Vercel API poll (decided 2026-07-24) ────────────────────
 # The original plan (mirroring miyagi's Sprint 3) was a jq/curl loop against
@@ -55,73 +82,24 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Send Telegram push notification
         env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CICD_CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           AUTHOR: ${{ github.event.head_commit.author.username || github.actor }}
         run: |
-          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
-            echo "TELEGRAM_BOT_TOKEN / TELEGRAM_CICD_CHAT_ID not set — skipping cleanly. \
-                  Set both as GitHub Secrets on this repo to turn this on."
-            exit 0
-          fi
-
-          SHORT_SHA="${GITHUB_SHA:0:7}"
-          DIFF_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-
-          # jq builds the HTML-escaped message AND the JSON body in one safe pass — no manual
-          # string concatenation, no risk of a stray & < > breaking the payload.
-          #
-          # The commit message is passed WHOLE and split inside jq (`split("\n")[0]`). An earlier
-          # version took the first line in bash with `${COMMIT_MSG%%$'\n'*}`, which works but is a
-          # Bash-only expansion sitting outside the one place that already owns payload assembly.
-          # Cross-review flagged the inconsistency on PR #24: everything that shapes the message now
-          # happens in jq, so there is a single place to read and a single place to get it wrong.
-          # ── ONE jq call builds the whole body. This is the bug fix, not a tidy-up ──────────────
-          # The original built TEXT in one jq and then passed it to a SECOND jq as `--arg text`.
-          # `jq -n '...'` emits JSON — a *quoted* string with `\"` escapes — so the second call
-          # embedded those literally and Telegram received `<a href=\"https://…\">`. Every ping
-          # since this workflow shipped was rejected:
-          #   {"ok":false,"error_code":400,"description":"can't parse entities: Unexpected end of
-          #    name token at byte offset 158"}
-          # Byte 158 is exactly where `href=\"` begins.
-          #
-          # Building the payload in a single pass makes the double-encoding unrepresentable rather
-          # than merely fixed.
-          BODY=$(jq -n \
-            --arg chat_id "$CHAT_ID" \
-            --arg repo "golden-beans" \
-            --arg sha "$SHORT_SHA" \
-            --arg message "$COMMIT_MSG" \
-            --arg author "$AUTHOR" \
-            --arg url "$DIFF_URL" \
-            'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
-             {
-               chat_id: $chat_id,
-               parse_mode: "HTML",
-               disable_web_page_preview: true,
-               text: ($repo + " · 📦 · <code>" + $sha + "</code>\n" +
-                      (($message | split("\n")[0]) | esc) + "\n" +
-                      "by @" + ($author | esc) + "\n" +
-                      "<a href=\"" + ($url | esc) + "\">view diff</a>")
-             }')
-
-          # ── Verify DELIVERY, not just that curl ran ───────────────────────────────────────────
-          # `|| true` still means a Telegram outage never fails the build — that part was right.
-          # What was missing is that it also hid a REJECTED message behind a green check for this
-          # workflow's entire life. The response is now inspected and a failure raised as a warning
-          # annotation, so "the job succeeded" and "the message arrived" stop being the same signal.
-          RESPONSE=$(curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" || echo '{"ok":false,"description":"curl failed or timed out"}')
-
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo "✓ push ping delivered"
-          else
-            echo "::warning title=Telegram push ping not delivered::$RESPONSE"
-          fi
+          node scripts/telegram-notify.mjs \
+            --icon 📦 \
+            --sha "$GITHUB_SHA" \
+            --subject "$COMMIT_MSG" \
+            --meta "by @$AUTHOR" \
+            --url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}" \
+            --link-label "view diff"
 
   deploy-notification:
     name: Production deploy-finish ping
@@ -138,10 +116,14 @@ jobs:
       contains(fromJSON('["success", "failure", "error"]'), github.event.deployment_status.state)
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Send Telegram deploy-finish notification
         env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CICD_CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
           GH_TOKEN: ${{ github.token }}
           DEPLOY_STATE: ${{ github.event.deployment_status.state }}
           DEPLOY_SHA: ${{ github.event.deployment.sha }}
@@ -149,16 +131,9 @@ jobs:
           # can be absent depending on the state, so the fallback chain ends at the commit page.
           DEPLOY_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
         run: |
-          if [ -z "$BOT_TOKEN" ] || [ -z "$CHAT_ID" ]; then
-            echo "TELEGRAM_BOT_TOKEN / TELEGRAM_CICD_CHAT_ID not set — skipping cleanly."
-            exit 0
-          fi
-
-          SHORT_SHA="${DEPLOY_SHA:0:7}"
-
           # The deployment_status payload carries no commit message — resolve it from the API.
-          # Never fatal: a rate-limited/failed lookup degrades to a placeholder, it does not
-          # cost us the ping (the SHA and the state are the load-bearing parts).
+          # Never fatal: a rate-limited or failed lookup degrades to a placeholder rather than
+          # costing us the ping, because the SHA and the state are the load-bearing parts.
           HEADER=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${DEPLOY_SHA}" \
                      --jq '.commit.message | split("\n")[0]' 2>/dev/null || true)
           [ -z "$HEADER" ] && HEADER="(commit message unavailable)"
@@ -167,38 +142,16 @@ jobs:
             STATUS="✅ READY"
           else
             # failure and error are both hard stops; name which one so a build failure and a
-            # platform error aren't indistinguishable in the channel.
+            # platform error are not indistinguishable in the channel.
             STATUS="❌ $(printf '%s' "$DEPLOY_STATE" | tr '[:lower:]' '[:upper:]')"
           fi
 
           [ -z "$DEPLOY_URL" ] && DEPLOY_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${DEPLOY_SHA}"
 
-          # One jq call — see the push job above for why the two-step version silently broke every
-          # message this workflow has ever sent.
-          BODY=$(jq -n \
-            --arg chat_id "$CHAT_ID" \
-            --arg repo "golden-beans" \
-            --arg sha "$SHORT_SHA" \
-            --arg header "$HEADER" \
-            --arg status "$STATUS" \
-            --arg url "$DEPLOY_URL" \
-            'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
-             {
-               chat_id: $chat_id,
-               parse_mode: "HTML",
-               disable_web_page_preview: true,
-               text: ($repo + " · 🚀 · <code>" + $sha + "</code>\n" +
-                      ($header | esc) + "\n" +
-                      $status + "\n" +
-                      "<a href=\"" + ($url | esc) + "\">open deployment</a>")
-             }')
-
-          RESPONSE=$(curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$BODY" || echo '{"ok":false,"description":"curl failed or timed out"}')
-
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo "✓ deploy-finish ping delivered"
-          else
-            echo "::warning title=Telegram deploy ping not delivered::$RESPONSE"
-          fi
+          node scripts/telegram-notify.mjs \
+            --icon 🚀 \
+            --sha "$DEPLOY_SHA" \
+            --subject "$HEADER" \
+            --status "$STATUS" \
+            --url "$DEPLOY_URL" \
+            --link-label "open deployment"

@@ -35,17 +35,34 @@ export const SIGNUP_STARTED_EVENT = 'signup_started'
 export const ACCOUNT_CONFIRMED_EVENT = 'account_confirmed'
 export const FIRST_EVENT_INGESTED_EVENT = 'first_event_ingested'
 
+// pod-report · Sprint 3, Story 3.2 — the hub/report surfaces measured BY THE ENGINE ITSELF ("we
+// sell what we use"). Two events, deliberately with two different notions of "user":
+//   report_viewed — a person opened the internal Pod Report. Fired only when the visitor cookie is
+//                   already present, never with a freshly invented id: TARS counts DISTINCT users
+//                   (lib/tars.ts), so minting a random id per view would turn a page-view counter
+//                   into a fake audience-size number.
+//   share_viewed  — a SHARE LINK was opened. The "user" here is the share row id, so `targeted`
+//                   reads as "distinct links opened", which is the honest unit for a bearer URL
+//                   that may be forwarded to a room full of people from one email. Stated here
+//                   because a reader of the funnel would otherwise assume "people".
+export const REPORT_VIEWED_EVENT = 'report_viewed'
+export const SHARE_VIEWED_EVENT = 'share_viewed'
+
 export type SelfTrackEvent =
   | typeof LANDING_VISITED_EVENT
   | typeof WAITLIST_JOINED_EVENT
   | typeof SIGNUP_STARTED_EVENT
   | typeof ACCOUNT_CONFIRMED_EVENT
   | typeof FIRST_EVENT_INGESTED_EVENT
+  | typeof REPORT_VIEWED_EVENT
+  | typeof SHARE_VIEWED_EVENT
 
 // The TARS feature each funnel event belongs to. Registered on the self tenant by
 // scripts/seed-self-project.mjs.
 export const WAITLIST_SIGNAL_KEY = 'waitlist_conversion'
 export const ACTIVATION_SIGNAL_KEY = 'activation'
+/** pod-report S3.2 — registered on the self tenant by scripts/seed-self-project.mjs. */
+export const HUB_ENGAGEMENT_SIGNAL_KEY = 'hub_engagement'
 
 // ⚠️ THIS MAPPING IS LOAD-BEARING, AND ITS ABSENCE WAS A LIVE PRODUCTION BUG.
 //
@@ -67,6 +84,11 @@ const EVENT_FEATURE: Record<SelfTrackEvent, string> = {
   [SIGNUP_STARTED_EVENT]: ACTIVATION_SIGNAL_KEY,
   [ACCOUNT_CONFIRMED_EVENT]: ACTIVATION_SIGNAL_KEY,
   [FIRST_EVENT_INGESTED_EVENT]: ACTIVATION_SIGNAL_KEY,
+  // Both hub events MUST appear here. An event missing from this map ingests perfectly and counts
+  // toward nothing, forever — the live production bug documented above, which is why every new
+  // event added to SelfTrackEvent gets a row here in the same edit.
+  [REPORT_VIEWED_EVENT]: HUB_ENGAGEMENT_SIGNAL_KEY,
+  [SHARE_VIEWED_EVENT]: HUB_ENGAGEMENT_SIGNAL_KEY,
 }
 
 // The per-visitor identity cookie. A visit (Server Components can't set cookies, so the visited
@@ -116,7 +138,12 @@ export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Pro
   if (!apiKey) return false // unset in CI/local-without-config — dogfooding is a prod-config concern
 
   try {
-    const engine = createGrowthEngineClient({ baseUrl: getSiteUrl(), apiKey, userId, fetchImpl: timeoutFetch })
+    const engine = createGrowthEngineClient({
+      baseUrl: getSiteUrl(),
+      apiKey,
+      userId,
+      fetchImpl: timeoutFetch,
+    })
     // featureId is REQUIRED for this event to appear in any funnel — see EVENT_FEATURE above.
     const result = await engine.track(event, { featureId: EVENT_FEATURE[event] })
     if (!result.ok) {

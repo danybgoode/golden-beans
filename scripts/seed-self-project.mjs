@@ -23,19 +23,19 @@
 //                                              the SAME key can be exported into the app's env
 //                                              (this is the key the landing's self-track helper
 //                                              authenticates with).
-import { createHash, randomBytes } from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
+import { createHash, randomBytes } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
 
 // The self tenant's slug. Kept in sync with lib/self-track.ts's SELF_PROJECT_SLUG (this script
 // can't import that TS file — see the header comment).
-export const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golden-beans'
+export const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golden-beans';
 // The demo tenant's slug (mirrors lib/public-demo.ts) — used ONLY for the isolation guard below.
-const DEMO_PROJECT_SLUG = process.env.DEMO_PROJECT_SLUG?.trim() || 'golden-beans-demo'
+const DEMO_PROJECT_SLUG = process.env.DEMO_PROJECT_SLUG?.trim() || 'golden-beans-demo';
 
 // The Grower signal: waitlist conversion rate, as a TARS feature. targetEvent is the funnel entry
 // (a landing visit), adoptedEvent is the conversion (a waitlist join) — exactly the two events
 // lib/self-track.ts fires. Adopted / Targeted is the waitlist conversion rate the epic measures.
-const SIGNAL_KEY = 'waitlist_conversion'
+const SIGNAL_KEY = 'waitlist_conversion';
 // multi-tenant-activation Story 3.3 — the ACTIVATION funnel, the second signal this tenant
 // measures. Three real stages, so all three TARS slots are meaningful here (unlike the one-shot
 // waitlist join): signup submitted -> email confirmed + tenant provisioned -> first event ingested.
@@ -43,29 +43,37 @@ const SIGNAL_KEY = 'waitlist_conversion'
 // with one of these feature keys, and an event whose feature_id doesn't match a REGISTERED feature
 // is invisible to lib/tars-query.ts forever (it filters on feature_id). Registering it here is what
 // makes the funnel renderable at all.
-const ACTIVATION_KEY = 'activation'
-const ACTIVATION_TARGET_EVENT = 'signup_started'
-const ACTIVATION_ADOPTED_EVENT = 'account_confirmed'
-const ACTIVATION_RETAINED_EVENT = 'first_event_ingested'
-const TARGET_EVENT = 'landing_visited'
-const ADOPTED_EVENT = 'waitlist_joined'
-const RETENTION_DAYS = 7 // schema default; retention isn't meaningful for a one-shot join, but the
+const ACTIVATION_KEY = 'activation';
+const ACTIVATION_TARGET_EVENT = 'signup_started';
+const ACTIVATION_ADOPTED_EVENT = 'account_confirmed';
+const ACTIVATION_RETAINED_EVENT = 'first_event_ingested';
+// pod-report Story 3.2 — the hub-engagement signal: the engine measuring its own reporting surface.
+// Two stages that are real here: a Pod Report opened internally (targetEvent), and a SHARE LINK
+// opened by someone outside (adoptedEvent). Mirrors lib/self-track.ts's HUB_ENGAGEMENT_SIGNAL_KEY.
+// Note the two events count different UNITS of "user" on purpose — a person for the first, a share
+// row for the second — which lib/self-track.ts documents at the point the ids are chosen.
+const HUB_KEY = 'hub_engagement';
+const HUB_TARGET_EVENT = 'report_viewed';
+const HUB_ADOPTED_EVENT = 'share_viewed';
+const TARGET_EVENT = 'landing_visited';
+const ADOPTED_EVENT = 'waitlist_joined';
+const RETENTION_DAYS = 7; // schema default; retention isn't meaningful for a one-shot join, but the
 //                          column is NOT NULL-defaulted to 7 server-side — set it explicitly here.
 
 function requireEnv(name) {
-  const value = process.env[name]
-  if (!value) throw new Error(`Missing required env var: ${name}`)
-  return value
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required env var: ${name}`);
+  return value;
 }
 
 function hashApiKey(key) {
-  return createHash('sha256').update(key).digest('hex')
+  return createHash('sha256').update(key).digest('hex');
 }
 
 function supabase() {
   return createClient(requireEnv('SUPABASE_URL'), requireEnv('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false },
-  })
+  });
 }
 
 // A cross-review catch (commercial-shell Sprint 3 PR): a bare re-run with SELF_PROJECT_API_KEY
@@ -80,27 +88,27 @@ async function provisionProject(db) {
     .from('projects')
     .select('id')
     .eq('slug', SELF_PROJECT_SLUG)
-    .maybeSingle()
-  if (existingError) throw new Error(`Failed to look up self project: ${existingError.message}`)
+    .maybeSingle();
+  if (existingError) throw new Error(`Failed to look up self project: ${existingError.message}`);
 
-  const overrideKey = process.env.SELF_PROJECT_API_KEY?.trim()
+  const overrideKey = process.env.SELF_PROJECT_API_KEY?.trim();
   if (existing && !overrideKey) {
     // Already provisioned, no explicit key given: leave the credential untouched.
-    return { projectId: existing.id, apiKey: null }
+    return { projectId: existing.id, apiKey: null };
   }
 
-  const plaintextKey = overrideKey || randomBytes(24).toString('hex')
+  const plaintextKey = overrideKey || randomBytes(24).toString('hex');
   const { data, error } = await db
     .from('projects')
     .upsert({ slug: SELF_PROJECT_SLUG, api_key_hash: hashApiKey(plaintextKey) }, { onConflict: 'slug' })
     .select('id')
-    .single()
-  if (error || !data) throw new Error(`Failed to upsert self project: ${error?.message}`)
+    .single();
+  if (error || !data) throw new Error(`Failed to upsert self project: ${error?.message}`);
   // multi-tenant-activation Story 1.3: lib/auth.ts resolves the Bearer key from api_keys now, so
   // the provisioned key needs an active api_keys row (only on the paths where we set the key —
   // the existing-project-no-override no-op above intentionally leaves the credential untouched).
-  await ensureActiveApiKey(db, data.id, plaintextKey)
-  return { projectId: data.id, apiKey: plaintextKey }
+  await ensureActiveApiKey(db, data.id, plaintextKey);
+  return { projectId: data.id, apiKey: plaintextKey };
 }
 
 // Idempotent, but NEVER silently cross-tenant. key_hash is globally unique, so a pre-existing row
@@ -109,28 +117,28 @@ async function provisionProject(db) {
 // catch, Codex 2026-07-20). Only a row belonging to THIS project and still active is acceptable;
 // anything else fails loud.
 async function ensureActiveApiKey(db, projectId, plaintextKey) {
-  const keyHash = hashApiKey(plaintextKey)
+  const keyHash = hashApiKey(plaintextKey);
   const { data: existing, error: lookupError } = await db
     .from('api_keys')
     .select('project_id, revoked_at')
     .eq('key_hash', keyHash)
-    .maybeSingle()
-  if (lookupError) throw new Error(`Failed to look up self api key: ${lookupError.message}`)
+    .maybeSingle();
+  if (lookupError) throw new Error(`Failed to look up self api key: ${lookupError.message}`);
 
   if (existing) {
     if (existing.project_id !== projectId) {
-      throw new Error('Refusing to seed: this API key hash already belongs to a different project.')
+      throw new Error('Refusing to seed: this API key hash already belongs to a different project.');
     }
     if (existing.revoked_at) {
-      throw new Error('Refusing to seed: this API key exists but is revoked — issue a new key instead.')
+      throw new Error('Refusing to seed: this API key exists but is revoked — issue a new key instead.');
     }
-    return
+    return;
   }
 
   const { error } = await db
     .from('api_keys')
-    .insert({ project_id: projectId, key_hash: keyHash, label: 'default (seed)' })
-  if (error) throw new Error(`Failed to insert self api key: ${error.message}`)
+    .insert({ project_id: projectId, key_hash: keyHash, label: 'default (seed)' });
+  if (error) throw new Error(`Failed to insert self api key: ${error.message}`);
 }
 
 // Mirrors the SDK's syncFeatures(): POST /api/v1/features/sync, Bearer=self key. Idempotent —
@@ -158,13 +166,24 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           adoptedEvent: ACTIVATION_ADOPTED_EVENT,
           retainedEvent: ACTIVATION_RETAINED_EVENT,
           retentionDays: RETENTION_DAYS,
-          description: 'Golden Beans activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
+          description:
+            'Golden Beans activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
+        },
+        {
+          key: HUB_KEY,
+          enabled: true,
+          targetEvent: HUB_TARGET_EVENT,
+          adoptedEvent: HUB_ADOPTED_EVENT,
+          retentionDays: RETENTION_DAYS,
+          description:
+            'Golden Beans hub dogfood: Pod Report opened → share link opened (pod-report Story 3.2).',
         },
       ],
     }),
-  })
-  const body = await res.json().catch(() => null)
-  if (!res.ok || !body?.ok) throw new Error(`registerGrowerSignal: HTTP ${res.status} ${JSON.stringify(body)}`)
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.ok)
+    throw new Error(`registerGrowerSignal: HTTP ${res.status} ${JSON.stringify(body)}`);
 }
 
 export async function main() {
@@ -174,14 +193,14 @@ export async function main() {
   if (SELF_PROJECT_SLUG === DEMO_PROJECT_SLUG) {
     throw new Error(
       `SELF_PROJECT_SLUG ('${SELF_PROJECT_SLUG}') must differ from DEMO_PROJECT_SLUG — the self ` +
-        `tenant is a separate project; sharing a slug would mix landing traffic into the demo.`,
-    )
+        `tenant is a separate project; sharing a slug would mix landing traffic into the demo.`
+    );
   }
 
-  const baseUrl = process.env.GROWTH_ENGINE_URL?.trim() || 'http://localhost:3000'
-  const db = supabase()
+  const baseUrl = process.env.GROWTH_ENGINE_URL?.trim() || 'http://localhost:3000';
+  const db = supabase();
 
-  const { projectId, apiKey } = await provisionProject(db)
+  const { projectId, apiKey } = await provisionProject(db);
 
   if (!apiKey) {
     // Already provisioned, no override key given: we deliberately left the credential untouched
@@ -191,27 +210,27 @@ export async function main() {
     console.log(
       `Self project '${SELF_PROJECT_SLUG}' (${projectId}) already exists — credential left ` +
         `untouched (no SELF_PROJECT_API_KEY given). Skipped re-syncing the '${SIGNAL_KEY}' signal: ` +
-        `re-run with SELF_PROJECT_API_KEY set to the project's EXISTING key to also re-sync it.`,
-    )
-    return
+        `re-run with SELF_PROJECT_API_KEY set to the project's EXISTING key to also re-sync it.`
+    );
+    return;
   }
 
-  await registerGrowerSignal(baseUrl, apiKey)
+  await registerGrowerSignal(baseUrl, apiKey);
 
   console.log(
     `Seeded self project '${SELF_PROJECT_SLUG}' (${projectId}): registered Grower signal ` +
-      `'${SIGNAL_KEY}' (${TARGET_EVENT} → ${ADOPTED_EVENT}).`,
-  )
+      `'${SIGNAL_KEY}' (${TARGET_EVENT} → ${ADOPTED_EVENT}).`
+  );
   // Print the API key so a human/CI can export it as SELF_PROJECT_API_KEY (matching how the demo
   // script prints its connector URL). If SELF_PROJECT_API_KEY was set going in, this echoes it back.
-  console.log(`SELF_PROJECT_API_KEY=${apiKey}`)
+  console.log(`SELF_PROJECT_API_KEY=${apiKey}`);
 }
 
 // Guard main() so importing this file for its constants never re-executes it (Roadmap/LEARNINGS.md).
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`
+const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   main().catch((err) => {
-    console.error(err)
-    process.exitCode = 1
-  })
+    console.error(err);
+    process.exitCode = 1;
+  });
 }

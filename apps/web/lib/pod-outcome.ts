@@ -36,10 +36,23 @@ export type OutcomeRow = {
 
 export type OutcomeSection = {
   tenant: string
+  /**
+   * True when the outcome layer could not be READ, as distinct from having nothing to report.
+   *
+   * These are opposite facts and this repo has already shipped the bug that conflates them: a query
+   * that silently returns nothing renders as an honest-looking zero, and a zero pages nobody
+   * (Roadmap/LEARNINGS.md). "No features are registered" is a truthful sales answer; "the database
+   * did not answer" is an incident. The renderer must not present the second as the first.
+   */
+  unavailable: boolean
   rows: OutcomeRow[]
   northStar: {
     metric: string | null
-    inputCount: number
+    /** True when the metric read FAILED. Distinct from `null` (no metric registered) — same
+     *  three-state discipline as the section's own `unavailable`, applied one level down. */
+    unavailable?: boolean
+    /** Null when the count query itself failed — NOT 0, which would assert "none are registered". */
+    inputCount: number | null
     /** Null when no value has been recorded — distinct from a recorded zero. */
     latestValue: number | null
     caveat?: string
@@ -127,7 +140,14 @@ export function buildOutcomeRow(
 export function buildOutcomeSection(input: {
   tenant: string
   features: Array<{ key: string; tars: { targeted: number; adopted: number; retained: number } | null }>
-  northStar?: { metric: string | null; inputCount: number; latestValue: number | null } | null
+  northStar?: {
+    metric: string | null
+    inputCount: number | null
+    latestValue: number | null
+    unavailable?: boolean
+  } | null
+  /** Set by the caller when a read FAILED. Defaults false — an absent flag means "we looked". */
+  unavailable?: boolean
 }): OutcomeSection {
   const rows = input.features.map((f) => buildOutcomeRow(f.key, f.tars))
 
@@ -135,12 +155,22 @@ export function buildOutcomeSection(input: {
   if (input.northStar) {
     northStar = {
       ...input.northStar,
-      caveat:
-        input.northStar.latestValue === null
+      // An unreadable metric gets the failure sentence, never the reassuring one. Cross-review
+      // round 2 (Agy): the sibling of the `unavailable` fix one round earlier — when you harden one
+      // instance of a bug class, its siblings are what the NEXT round finds (Roadmap/LEARNINGS.md).
+      caveat: input.northStar.unavailable
+        ? 'The North-Star metric could not be read — this is a failed query, not an absence of a registered metric.'
+        : input.northStar.latestValue === null
           ? 'A metric and its inputs are registered, but no value has been recorded yet — this is a defined metric with no reading, not a reading of zero.'
           : undefined,
     }
   }
 
-  return { tenant: input.tenant, rows, northStar, notInstrumented: OUTCOME_NOT_INSTRUMENTED }
+  return {
+    tenant: input.tenant,
+    unavailable: input.unavailable === true,
+    rows,
+    northStar,
+    notInstrumented: OUTCOME_NOT_INSTRUMENTED,
+  }
 }

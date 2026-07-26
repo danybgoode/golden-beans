@@ -196,6 +196,12 @@ jobs:
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
           EXPERIMENT_GOVERNANCE_ENABLED: 'true'
+          # pod-report Story 3.1 — the share route needs a live gate for its render/revoke/expiry
+          # specs. Its DARK behaviour is covered without a second server boot: e2e/report-share.spec.ts
+          # asserts gate-OFF-404 only when the flag is off, and lib/flags.test.ts pins the predicate
+          # itself. Same arrangement, and the same reasoning, as CONNECTOR_ENABLED above. Deployment
+          # remains born OFF.
+          REPORT_SHARES_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."
@@ -225,6 +231,10 @@ jobs:
         env:
           JOURNEY_PROJECTIONS_ENABLED: 'true'
           EXPERIMENT_GOVERNANCE_ENABLED: 'true'
+          # Match the test process to the server it is talking to: report-share.spec.ts branches on
+          # this to pick between its gate-OFF and its live-render assertions, and a mismatch would
+          # silently skip whichever half matters.
+          REPORT_SHARES_ENABLED: 'true'
         run: npm run test:e2e
 
       - name: Dump Next.js server log (diagnostics)

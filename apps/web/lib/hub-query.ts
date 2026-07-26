@@ -34,7 +34,19 @@ export async function getHubRoadmap(projectSlug: string): Promise<HubRoadmapResu
   }
   if (!project) return { ok: false, reason: 'project_not_found' }
 
-  const artifact = await getLatestArtifact<RoadmapArtifactPayload>(project.id as string, 'roadmap')
+  return getHubRoadmapByProjectId(project.id as string)
+}
+
+/**
+ * The same read for a caller holding an immutable project id.
+ *
+ * Added alongside `getPodReportByProjectId` (cross-review, Codex, PR #33): the share route had
+ * resolved a tenant from its token and then re-derived one from the MUTABLE slug, so a rename plus a
+ * slug reassignment could have pointed a live token at another tenant. Anything reached from a
+ * credential carries the id from here on.
+ */
+export async function getHubRoadmapByProjectId(projectId: string): Promise<HubRoadmapResult> {
+  const artifact = await getLatestArtifact<RoadmapArtifactPayload>(projectId, 'roadmap')
   if (!artifact) return { ok: false, reason: 'no_artifact' }
 
   const items = Array.isArray(artifact.payload?.items) ? artifact.payload.items : []

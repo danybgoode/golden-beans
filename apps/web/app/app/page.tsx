@@ -1,11 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
-import {
-  isExperimentGovernanceEnabled,
-  isJourneyProjectionsEnabled,
-  isSignupEnabled,
-} from '@/lib/flags'
+import { isExperimentGovernanceEnabled, isJourneyProjectionsEnabled, isSignupEnabled } from '@/lib/flags'
 import { SignOutButton } from './sign-out-button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
@@ -19,11 +15,7 @@ export const dynamic = 'force-dynamic'
 // carry a placeholder the user edits. A real feature picker is dashboard work beyond this sprint.
 const DEFAULT_FEATURE_HINT = 'your-feature-key'
 
-export default async function AppHome({
-  searchParams,
-}: {
-  searchParams: Promise<{ provision?: string }>
-}) {
+export default async function AppHome({ searchParams }: { searchParams: Promise<{ provision?: string }> }) {
   const user = await getSessionUser()
   if (!user) redirect('/login')
 
@@ -55,8 +47,8 @@ export default async function AppHome({
 
       {projects.length === 0 ? (
         <p>
-          You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve
-          signup is live) create one.
+          You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve signup is
+          live) create one.
         </p>
       ) : (
         <ul>
@@ -96,6 +88,14 @@ export default async function AppHome({
                     <li>
                       <a href={`/app/destinations/${project.slug}`}>Destinations</a>{' '}
                       <small>— signed webhook delivery</small>
+                    </li>
+                    {/* pod-report S3 — deliberately NOT wrapped in isReportSharesEnabled(). The
+                        flag gates whether a minted link SERVES; hiding the screen behind it too
+                        would mean the launch (Story 3.3) could not mint links before flipping,
+                        which is the order that lets a link be verified before it is sent. */}
+                    <li>
+                      <a href={`/app/shares/${project.slug}`}>Share links</a>{' '}
+                      <small>— scoped, revocable report links</small>
                     </li>
                   </>
                 )}

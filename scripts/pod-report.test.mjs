@@ -8,6 +8,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { basename } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   normalisePrForLens,
   parseRiskTier,
@@ -17,6 +21,10 @@ import {
   windowDays,
   BENCHMARKS,
   buildArtifact,
+  gatherSourceRef,
+  resolvePushConfig,
+  buildPushEnvelope,
+  POD_REPORT_SCHEMA_VERSION,
 } from './pod-report.mjs';
 
 test('an agent review comment is detected by BODY, never by author identity', () => {
@@ -262,4 +270,125 @@ test('the adapter collects names from BOTH check shapes', () => {
   });
   assert.deepEqual(pr.ciCheckNames, ['gate', 'ci/external']);
   assert.equal(pr.ciPassedBeforeMerge, true, 'and both count toward the gate');
+});
+
+// ── Sprint 2.5a — wiring `--push` for real ───────────────────────────────────────────────────
+// The bug this closes: the old `--push` printed a warning and exited 0 whether or not anything was
+// actually stored. These pure helpers are what main() calls to decide WHERE to push, WITH what
+// credential, and WHAT to send — each is worth pinning on its own, without a network or a real
+// medusa-bonsai checkout.
+
+test('gatherSourceRef reads the ANALYSED repo, not this one, via an injectable git runner', () => {
+  const calls = [];
+  const run = (repo, args) => {
+    calls.push([repo, args]);
+    if (args[0] === 'rev-parse' && args[1] === 'HEAD') return 'deadbeef1234';
+    if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') return 'main';
+    return '';
+  };
+  const ref = gatherSourceRef('/some/medusa-bonsai', run);
+  assert.deepEqual(ref, { commit: 'deadbeef1234', ref: 'main' });
+  assert.ok(
+    calls.every(([repo]) => repo === '/some/medusa-bonsai'),
+    'every git call must target the analysed repo, never this checkout'
+  );
+});
+
+test('gatherSourceRef returns null, never empty string, when git yields nothing', () => {
+  // null (not '' and not undefined) matches buildPushEnvelope's own `?? null` and
+  // scripts/roadmap-push.mjs's stated reason: JSON.stringify drops undefined keys silently, and an
+  // empty string is a value a caller could mistake for a real (if odd) ref.
+  assert.deepEqual(
+    gatherSourceRef('/irrelevant', () => ''),
+    { commit: null, ref: null }
+  );
+});
+
+test('resolvePushConfig prefers POD_REPORT_API_KEY over SELF_PROJECT_API_KEY', () => {
+  const cfg = resolvePushConfig({
+    POD_REPORT_API_KEY: 'pod-key',
+    SELF_PROJECT_API_KEY: 'self-key',
+  });
+  assert.equal(cfg.apiKey, 'pod-key', 'the Pod Report may push to a different tenant than the roadmap');
+});
+
+test('resolvePushConfig falls back to SELF_PROJECT_API_KEY when POD_REPORT_API_KEY is unset', () => {
+  const cfg = resolvePushConfig({ SELF_PROJECT_API_KEY: 'self-key' });
+  assert.equal(cfg.apiKey, 'self-key');
+});
+
+test('resolvePushConfig yields a null apiKey when neither env var is set — the clean-skip signal', () => {
+  const cfg = resolvePushConfig({});
+  assert.equal(cfg.apiKey, null);
+  assert.equal(cfg.baseUrl, 'http://localhost:3000', "matches roadmap-push.mjs's own default");
+});
+
+test('resolvePushConfig reads GROWTH_ENGINE_URL when set', () => {
+  const cfg = resolvePushConfig({ GROWTH_ENGINE_URL: 'https://golden-beans-gamma.vercel.app' });
+  assert.equal(cfg.baseUrl, 'https://golden-beans-gamma.vercel.app');
+});
+
+test('buildPushEnvelope adds git provenance WITHOUT displacing the dataset counts', () => {
+  const artifact = buildArtifact({
+    delivery: { cycleTimeDays: 1 },
+    source: { repo: 'medusa-bonsai', commits: 841, epics: 133, mergedPrs: 98, windowDays: 400 },
+    generatedAt: '2026-07-25T00:00:00.000Z',
+  });
+  const envelope = buildPushEnvelope(artifact, { commit: 'abc1234', ref: 'main' });
+
+  assert.equal(envelope.schemaVersion, POD_REPORT_SCHEMA_VERSION);
+  assert.equal(envelope.generatedAt, artifact.generatedAt);
+  assert.deepEqual(envelope.delivery, artifact.delivery);
+  assert.deepEqual(envelope.caveats, artifact.caveats);
+
+  // Git provenance rides in its OWN key. An earlier draft put it in `source`, which meant the push
+  // overwrote Story 2.1's dataset provenance — so every PUSHED report rendered "measured over ⟨⟩"
+  // with no counts, while a locally printed one looked perfect. This pair of assertions is what
+  // distinguishes the two implementations, so it is the pair that has to exist.
+  assert.deepEqual(envelope.pushSource, { commit: 'abc1234', ref: 'main' });
+  assert.deepEqual(envelope.source, artifact.source, 'the dataset counts must survive the push');
+  assert.equal(envelope.source.commits, 841);
+});
+
+test('buildPushEnvelope emits explicit nulls, never undefined, for a missing commit/ref', () => {
+  const artifact = buildArtifact({ delivery: {}, source: {}, generatedAt: 'x' });
+  const envelope = buildPushEnvelope(artifact, {});
+  assert.equal(envelope.pushSource.commit, null);
+  assert.equal(envelope.pushSource.ref, null);
+  const round = JSON.parse(JSON.stringify(envelope));
+  assert.ok('commit' in round.pushSource, 'commit must survive serialisation as an explicit null');
+  assert.ok('ref' in round.pushSource, 'ref must survive serialisation as an explicit null');
+});
+
+test('the script and the server agree on POD_REPORT_SCHEMA_VERSION', () => {
+  // Duplicated on purpose (this zero-dependency .mjs cannot import the TypeScript module behind
+  // Next's `@/` alias) — the same convention roadmap-push.test.mjs pins for ROADMAP_SCHEMA_VERSION.
+  const ts = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '..', 'apps', 'web', 'lib', 'pod-report-schema.ts'),
+    'utf8'
+  );
+  const m = ts.match(/export const POD_REPORT_SCHEMA_VERSION = (\d+)/);
+  assert.ok(m, 'could not find POD_REPORT_SCHEMA_VERSION in the schema module — did it move?');
+  assert.equal(
+    Number(m[1]),
+    POD_REPORT_SCHEMA_VERSION,
+    'scripts/pod-report.mjs and lib/pod-report-schema.ts disagree on the schema version'
+  );
+});
+
+test('source.repo names the ANALYSED checkout, never a hardcoded dataset', () => {
+  // This was the literal string 'medusa-bonsai', so pointing --repo anywhere else produced an
+  // artifact claiming to measure medusa-bonsai — a false provenance line on a document whose whole
+  // value is traceability. Invisible with one dataset; found the first time a second repo was
+  // measured. The basename is also REPO_PR_BASE's key in the renderer, so a wrong name silently
+  // downgrades every `pr` evidence pointer to plain text instead of linking it.
+  assert.equal(basename('/Users/someone/dobby/golden-beans'), 'golden-beans');
+  assert.equal(basename('/Users/someone/dobby/medusa-bonsai'), 'medusa-bonsai');
+  // And the constant is gone from the source — the assertion that would actually have caught it.
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'pod-report.mjs'), 'utf8');
+  assert.equal(
+    /repo:\s*'medusa-bonsai'/.test(src),
+    false,
+    'source.repo must be derived from the checkout, not hardcoded'
+  );
 });

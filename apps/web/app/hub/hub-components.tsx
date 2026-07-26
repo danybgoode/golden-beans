@@ -1,3 +1,9 @@
+/** @jsxImportSource react */
+// The pragma above is a NO-OP for Next (react/jsx-runtime is already its default) and load-bearing
+// for the test rail: Playwright's transform hardcodes its OWN jsx runtime, which emits `__pw_type`
+// objects that react-dom/server cannot render. Without this line, any spec that renders this
+// component — or anything importing it — dies with "Objects are not valid as a React child".
+// Added at Sprint 2.5c, when e2e/pod-report-surface.spec.tsx started rendering FreshnessStamp.
 import type { Freshness, FreshnessTone } from '@/lib/hub-freshness'
 import { freshnessLabel } from '@/lib/hub-freshness'
 import styles from './hub.module.css'

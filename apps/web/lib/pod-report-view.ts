@@ -30,6 +30,35 @@ export type NotInstrumentedRow = {
   guardrail: string
 }
 
+/** One criterion on the published Steps-of-AI-Adoption ladder, as the page renders it. */
+export type MaturityRow = {
+  id: string
+  criterion: string
+  ladderStep: number
+  status: 'met' | 'not_met' | 'not_instrumented'
+  isProxy?: boolean
+  /** Why this row is a proxy rather than proof. Survives every lens (lib/pod-report-lens.ts). */
+  proxyNote?: string
+  /** A pointer to a real, checkable object. Required for `met`; null when a lens withheld it. */
+  evidence: { pointerType: string; ref: string | number; detail: string } | null
+  /** True when the lens removed the pointer, so the page says so instead of implying none exists. */
+  evidenceWithheld?: boolean
+  reason?: string | null
+}
+
+export type MaturitySection = {
+  ladder: { title?: string; author?: string; date?: string; source?: string } | null
+  verdict: {
+    step: number
+    stepLabel: string
+    metCriteria: number
+    totalCriteria: number
+    notInstrumentedCount: number
+  } | null
+  rows: MaturityRow[]
+  notInstrumented: NotInstrumentedRow[]
+}
+
 export type PodReportView = {
   generatedAt: string | null
   source: { repo?: string; commits?: number; epics?: number; mergedPrs?: number; windowDays?: number }
@@ -38,6 +67,11 @@ export type PodReportView = {
   notInstrumented: NotInstrumentedRow[]
   benchmarks: Array<{ id: string; label: string; url: string; note: string }>
   caveats: string[]
+  /**
+   * Story 2.4's output. Null when the artifact predates the lens — an OLD artifact is immutable and
+   * genuinely has no maturity section, which is a different fact from a lens that scored nothing.
+   */
+  maturity: MaturitySection | null
   /** True when the artifact is missing or unreadable — the page renders an empty state, not zeros. */
   empty: boolean
 }
@@ -145,7 +179,106 @@ export function buildPodReportView(payload: unknown): PodReportView {
       : []) as NotInstrumentedRow[],
     benchmarks: (Array.isArray(p.benchmarks) ? p.benchmarks : []) as PodReportView['benchmarks'],
     caveats: (Array.isArray(p.caveats) ? p.caveats : []).filter((c): c is string => typeof c === 'string'),
+    maturity: buildMaturitySection(p.maturity),
     empty,
+  }
+}
+
+/**
+ * Shape the artifact's `maturity` section for rendering.
+ *
+ * ── The one rule ──────────────────────────────────────────────────────────────────────────────
+ * A row whose status is `met` but whose evidence pointer is missing or malformed is DOWNGRADED to
+ * `not_instrumented`, not rendered as a met claim without a pointer. Story 2.4's acceptance says
+ * the renderer must be "structurally incapable of an unevidenced claim" — the computation enforces
+ * that on the way in, and this enforces it again on the way out, because an artifact is immutable
+ * and may have been written by an older, less careful build than the one rendering it.
+ *
+ * The downgrade is deliberately toward the LESS flattering answer. Dropping the row entirely would
+ * quietly shrink the denominator and inflate the coverage the verdict reports.
+ */
+export function buildMaturitySection(raw: unknown): MaturitySection | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const m = obj(raw)
+
+  const rows: MaturityRow[] = (Array.isArray(m.rows) ? m.rows : []).map((r: unknown) => {
+    const row = obj(r)
+    const ev = obj(row.evidence)
+    const hasEvidence =
+      typeof ev.pointerType === 'string' &&
+      ev.pointerType.length > 0 &&
+      (typeof ev.ref === 'string' || typeof ev.ref === 'number') &&
+      String(ev.ref).length > 0
+
+    const declared = String(row.status ?? '')
+    const status: MaturityRow['status'] =
+      declared === 'met'
+        ? hasEvidence
+          ? 'met'
+          : 'not_instrumented'
+        : declared === 'not_met'
+          ? 'not_met'
+          : 'not_instrumented'
+
+    return {
+      id: str(row.id) ?? 'unknown',
+      criterion: str(row.criterion) ?? 'Unnamed criterion',
+      ladderStep: num(row.ladderStep) ?? 0,
+      status,
+      isProxy: row.isProxy === true,
+      proxyNote: str(row.proxyNote),
+      evidence: hasEvidence
+        ? {
+            pointerType: String(ev.pointerType),
+            ref: ev.ref as string | number,
+            detail: str(ev.detail) ?? '',
+          }
+        : null,
+      // Set by lib/pod-report-lens.ts when a lens withheld a pointer that DOES exist. Untouched
+      // here, so "withheld from you" and "never existed" stay distinguishable on the page.
+      evidenceWithheld: row.evidenceWithheld === true,
+      reason:
+        str(row.reason) ??
+        (declared === 'met' && !hasEvidence
+          ? 'Reported as met by the computation but carrying no resolvable evidence pointer — shown as not instrumented rather than as an unevidenced claim.'
+          : null),
+    }
+  })
+
+  const v = obj(m.verdict)
+  const verdict =
+    num(v.step) === null
+      ? null
+      : {
+          step: num(v.step)!,
+          stepLabel: str(v.stepLabel) ?? '',
+          // Recomputed from the rows AFTER the downgrade above, exactly like notInstrumentedCount
+          // below — and for a sharper reason. Cross-review round 3 (Agy, PR #33): this was copied
+          // straight from the artifact while its sibling count was recomputed, so a single
+          // evidence-less `met` row left the verdict claiming "4 of 7 met" above a table showing 3,
+          // and made metCriteria + notInstrumentedCount exceed totalCriteria. Two numbers describing
+          // one table, disagreeing, with the summary the flattering one — which is the direction
+          // that matters: a reader who checks the arithmetic loses trust in every other figure here.
+          //
+          // `Math.min` rather than a bare recount: it can only ever LOWER the artifact's own claim,
+          // never raise it. If the stored verdict is somehow more conservative than the rows imply,
+          // that conservatism survives.
+          metCriteria: Math.min(num(v.metCriteria) ?? 0, rows.filter((r) => r.status === 'met').length),
+          totalCriteria: num(v.totalCriteria) ?? rows.length,
+          // Recomputed from the rows AFTER the downgrade above, never copied from the artifact: a
+          // stale count that disagrees with what the page actually shows is the one number on this
+          // section a reader would never think to check.
+          notInstrumentedCount: Math.max(
+            num(v.notInstrumentedCount) ?? 0,
+            rows.filter((r) => r.status === 'not_instrumented').length
+          ),
+        }
+
+  return {
+    ladder: (m.ladder && typeof m.ladder === 'object' ? m.ladder : null) as MaturitySection['ladder'],
+    verdict,
+    rows,
+    notInstrumented: (Array.isArray(m.notInstrumented) ? m.notInstrumented : []) as NotInstrumentedRow[],
   }
 }
 
@@ -164,5 +297,18 @@ export function isHonest(view: PodReportView): boolean {
   // the kind of number this guard exists to keep honest.
   const hasNumbers =
     view.speed.some((r) => r.value !== null) || view.composition.some((r) => r.value !== null)
-  return !hasNumbers || (view.notInstrumented.length > 0 && view.caveats.length > 0)
+  if (hasNumbers && !(view.notInstrumented.length > 0 && view.caveats.length > 0)) return false
+
+  // ── The maturity section's own honesty condition (Story 2.4) ────────────────────────────────
+  // A ladder VERDICT — "operates at step N" — is a claim on a named external scale, and it is only
+  // interpretable against the version of that scale it was scored on. An artifact carrying a
+  // verdict with no version-pinned citation is a score floating free of its rubric, which is the
+  // failure the acceptance criterion ("cited + linked and version-pinned — title + author + date")
+  // exists to prevent. A section with rows but no verdict is fine: it claims nothing.
+  const verdict = view.maturity?.verdict
+  if (verdict) {
+    const ladder = view.maturity?.ladder
+    if (!ladder?.title || !ladder?.author || !ladder?.date) return false
+  }
+  return true
 }

@@ -29,7 +29,12 @@ export const LANDING_SECTIONS: LandingSection[] = [
     note: '① connector URL and ③ npx wizard only — ② the pod plugin lands with multi-tenant-activation',
   },
   { id: 'inverted-loop', title: 'The inverted loop', epic: 'signals-loop', status: 'next' },
-  { id: 'pods-proof', title: 'Pods & proof (ROI)', epic: 'pod-report', status: 'next' },
+  // pod-report · Sprint 3, Story 3.2 — flipped 'next' -> 'live': PodsProofSection.tsx now renders a
+  // real, computed Pod Report (the demo tenant's artifact, computed from golden-beans' OWN repo —
+  // never a client's, which stays behind auth and share links). This entry is the static "the
+  // capability shipped" declaration the backfill DoD checks; the component still falls back to the
+  // honest teaser when no artifact has been pushed, which is a data state, not a capability state.
+  { id: 'pods-proof', title: 'Pods & proof (ROI)', epic: 'pod-report', status: 'live' },
   { id: 'primitives', title: 'Primitives grid', epic: 'commercial-shell', status: 'live' },
   // multi-tenant-activation · Sprint 3, Story 3.1 — flipped 'next' -> 'live': the section's real
   // component (WaitlistSection.tsx) now renders honest self-serve tiers whenever SIGNUP_ENABLED
