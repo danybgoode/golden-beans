@@ -62,6 +62,33 @@ export type PromotionCandidate = {
 }
 
 /**
+ * Coerce a caller-supplied count to a non-negative finite integer.
+ *
+ * ── Why this is a named function and not `Math.max(0, Math.trunc(x))` ────────────────────────
+ * That is what it was, and it was a real hole — found by cross-review (Agy, 2026-07-26), and
+ * missed by both the other reviewing family and the unit tests. `Math.max(0, NaN)` returns **NaN**,
+ * not 0, because Math.max propagates NaN rather than treating it as smaller. Every relational
+ * comparison against NaN is then false — so `users < MIN_DISTINCT_USERS_FOR_ERROR` was false, the
+ * impact floor `users * events < minImpactScore` was false, and a candidate with a NaN user count
+ * and a valid event count sailed through BOTH guards and promoted.
+ *
+ * The test suite missed it for a reason worth recording: its NaN case set BOTH fields to NaN, which
+ * made the final `events >= minEventCount` comparison false too, so the function returned false —
+ * the right answer for the wrong reason. A "handles NaN safely" test that passes because a second
+ * NaN happens to cancel the first is the LEARNINGS realistic-input failure in miniature.
+ *
+ * Reachability, stated honestly: `users_affected` is `INTEGER NOT NULL` in the schema and
+ * `event_count` is `BIGINT NOT NULL`, so the real promotion path cannot supply NaN today. This is a
+ * pure exported function whose documented contract is that it coerces safely, and the fix costs one
+ * guard — an argument about reachability is not a reason to ship a function that lies about what it
+ * does.
+ */
+function toCount(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.trunc(value))
+}
+
+/**
  * Does this signal deserve a task?
  *
  * The two count thresholds are an **OR**, gated by the impact floor. That shape is the whole
@@ -75,8 +102,8 @@ export type PromotionCandidate = {
  * signal qualifying on one dimension has to be genuinely large on it.
  */
 export function shouldPromote(candidate: PromotionCandidate, rule: PromotionRule): boolean {
-  const users = Math.max(0, Math.trunc(candidate.usersAffected))
-  const events = Math.max(0, Math.trunc(candidate.eventCount))
+  const users = toCount(candidate.usersAffected)
+  const events = toCount(candidate.eventCount)
 
   // Friction is DERIVED from a funnel aggregate that already applied its own `minSample` floor, so
   // it carries no per-user attribution (users_affected is 0 by construction — see friction-eval).

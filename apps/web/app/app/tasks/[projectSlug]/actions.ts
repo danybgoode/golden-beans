@@ -72,6 +72,8 @@ function humanReason(reason: string): string {
       return 'Someone else already claimed this task.'
     case 'already_terminal':
       return 'This task is already resolved or dismissed.'
+    case 'invalid_resolution':
+      return 'That is not a valid resolution.'
     case 'actor_required':
       // Not reachable from the dashboard — the action always supplies `user:<id>`. Handled anyway
       // because Sprint 3's connector writes pass an AGENT-supplied label, and a shared reason map

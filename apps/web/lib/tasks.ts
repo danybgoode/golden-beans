@@ -126,7 +126,17 @@ async function buildEvidence(
 
 export type PromotionOutcome =
   | { promoted: true; taskId: string }
-  | { promoted: false; reason: 'below_threshold' | 'absorbed' | 'not_found'; taskId?: string }
+  | {
+      promoted: false
+      // `quiet` is its own reason, and adding it was a cross-review finding (Agy, 2026-07-26).
+      // The recurrence gate suppresses a signal that has been silent since its last task closed —
+      // the single most COMMON outcome once a tenant has resolved anything, and it was being
+      // reported as `not_found`, which this type's own doc reserves for a bug or a cross-tenant
+      // attempt. Labelling routine, correct suppression as an operational error is how a real
+      // not_found stops being noticed.
+      reason: 'below_threshold' | 'absorbed' | 'quiet' | 'not_found'
+      taskId?: string
+    }
 
 /**
  * Promote one signal if it qualifies.
@@ -189,9 +199,12 @@ export async function promoteSignal(projectId: string, signalId: string): Promis
     return { promoted: false, reason: 'not_found' }
   }
   if (!data.created) {
-    return data.task_id
-      ? { promoted: false, reason: 'absorbed', taskId: data.task_id }
-      : { promoted: false, reason: 'not_found' }
+    if (data.task_id) return { promoted: false, reason: 'absorbed', taskId: data.task_id }
+    // No active task and nothing created. The signal row was read successfully at the top of this
+    // function, so it exists and belongs to this project — which leaves exactly one explanation:
+    // the recurrence gate held, because this problem has been quiet since its last task closed.
+    // A genuine not_found would have returned at the `!signal` check above.
+    return { promoted: false, reason: 'quiet' }
   }
 
   // Fan-out and the operator ping ride `after()` so neither can slow or fail the promotion that

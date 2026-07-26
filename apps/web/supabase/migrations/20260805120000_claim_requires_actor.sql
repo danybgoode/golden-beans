@@ -36,8 +36,9 @@ SET search_path = pg_catalog, public, pg_temp
 AS $$
 DECLARE
   v_from    TEXT;
-  v_updated INT;
-  v_actor   TEXT;
+  v_updated    INT;
+  v_actor      TEXT;
+  v_resolution TEXT;
 BEGIN
   -- Normalized once, up front. A whitespace-only actor is the same as an absent one — storing
   -- '   ' as a claimant satisfies the NOT NULL pairing while telling a human reading the queue
@@ -76,9 +77,22 @@ BEGIN
      WHERE id = p_task_id AND project_id = p_project_id;
 
   ELSIF p_to_status = 'resolved' THEN
+    -- Same treatment as the actor, for the same reason and found the same way. Cross-review (Agy)
+    -- flagged that a whitespace-only resolution is not trimmed; its stated consequence — that the
+    -- blank would PERSIST — is wrong, because `tasks_resolution_check` restricts the column to four
+    -- literals and rejects it. But it rejects it by RAISING, which turns an outside caller's bad
+    -- input into a 500 instead of a structured refusal. Normalizing first, then validating against
+    -- the same vocabulary the constraint enforces, makes it `invalid_resolution` in the same shape
+    -- as every other refusal here. The constraint stays as the backstop; this is the front door.
+    v_resolution := NULLIF(btrim(COALESCE(p_resolution, '')), '');
+    IF v_resolution IS NOT NULL
+       AND v_resolution NOT IN ('fixed', 'wont_fix', 'duplicate', 'not_reproducible') THEN
+      RETURN QUERY SELECT FALSE, 'invalid_resolution'::TEXT, v_from;
+      RETURN;
+    END IF;
     UPDATE tasks
        SET status = 'resolved',
-           resolution = COALESCE(p_resolution, 'fixed'),
+           resolution = COALESCE(v_resolution, 'fixed'),
            evidence_pointer = NULLIF(btrim(COALESCE(p_evidence_pointer, '')), ''),
            resolved_at = now(),
            updated_at = now()

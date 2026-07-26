@@ -184,3 +184,45 @@ test('DEFAULT_PROMOTION_RULE thresholds are internally sensible', () => {
   assert.ok(DEFAULT_PROMOTION_RULE.minUsersAffected >= 0)
   assert.ok(DEFAULT_PROMOTION_RULE.minEventCount >= 0)
 })
+
+// ── The NaN hole, and why the original NaN test could not see it ─────────────────────────────
+// Cross-review (Agy, 2026-07-26) found that `Math.max(0, NaN)` returns NaN — Math.max propagates it
+// rather than treating it as smaller — and every relational comparison against NaN is false, so a
+// NaN user count sailed through BOTH the plurality gate and the impact floor.
+//
+// The existing NaN test could not catch it because it set BOTH fields to NaN, which made the final
+// `events >= minEventCount` comparison false too: the right answer for the wrong reason. These
+// tests use ONE NaN and one VALID value, which is the input that distinguishes the two
+// implementations — the LEARNINGS rule about testing a helper through the input whose result
+// differs, not the one that happens to agree.
+
+test('a NaN user count with a VALID event count does not promote', () => {
+  assert.equal(
+    shouldPromote({ usersAffected: NaN, eventCount: 40, kind: 'error' }, DEFAULT_PROMOTION_RULE),
+    false
+  )
+})
+
+test('a NaN event count with a VALID user count does not promote past the floor', () => {
+  assert.equal(
+    shouldPromote({ usersAffected: 200, eventCount: NaN, kind: 'error' }, DEFAULT_PROMOTION_RULE),
+    false
+  )
+})
+
+test('a non-finite count is coerced, not passed through', () => {
+  // Infinity cleared every threshold before the fix — arithmetically "true", but it is a garbage
+  // input reaching a promotion decision, and a queue populated from garbage is not a queue.
+  for (const bad of [Infinity, -Infinity]) {
+    assert.equal(
+      shouldPromote({ usersAffected: bad, eventCount: 40, kind: 'error' }, DEFAULT_PROMOTION_RULE),
+      false,
+      `non-finite users=${bad} promoted`
+    )
+    assert.equal(
+      shouldPromote({ usersAffected: 200, eventCount: bad, kind: 'error' }, DEFAULT_PROMOTION_RULE),
+      false,
+      `non-finite events=${bad} promoted`
+    )
+  }
+})
