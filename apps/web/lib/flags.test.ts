@@ -19,6 +19,10 @@ import {
   isExperimentGovernanceEnabled,
   isJourneyMcpToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
+  isSignalsEnabled,
+  isConnectorWritesEnabled,
+  isTaskMcpToolEnabled,
+  isConnectorWriteToolEnabled,
 } from './flags.ts'
 
 function withEnv(key: string, value: string | undefined, fn: () => void) {
@@ -39,6 +43,13 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['DESTINATION_DELIVERY_ENABLED', isDestinationDeliveryEnabled],
   ['JOURNEY_PROJECTIONS_ENABLED', isJourneyProjectionsEnabled],
   ['EXPERIMENT_GOVERNANCE_ENABLED', isExperimentGovernanceEnabled],
+  // signals-loop · Story 1.0. Added to the SHARED table rather than tested separately on purpose:
+  // the contract is a property of every gate in the file, so a new flag should inherit the whole
+  // near-miss matrix automatically instead of relying on whoever adds it remembering to. Same
+  // structural reasoning as the AGY_MODELS_IN_USE registry (LEARNINGS: the fix for a
+  // predicted-but-unguarded failure is one registry the checker walks, not a re-typing).
+  ['SIGNALS_ENABLED', isSignalsEnabled],
+  ['CONNECTOR_WRITES_ENABLED', isConnectorWritesEnabled],
 ]
 
 for (const [envKey, gate] of singleFlagGates) {
@@ -95,6 +106,68 @@ test('isExperimentGovernanceMcpToolEnabled requires BOTH the connector gate and 
   withEnv('CONNECTOR_ENABLED', 'true', () => {
     withEnv('EXPERIMENT_GOVERNANCE_ENABLED', 'true', () => {
       assert.equal(isExperimentGovernanceMcpToolEnabled(), true)
+    })
+  })
+})
+
+test('isTaskMcpToolEnabled requires BOTH the connector gate and the signals gate', () => {
+  withEnv('CONNECTOR_ENABLED', 'true', () => {
+    withEnv('SIGNALS_ENABLED', undefined, () => {
+      assert.equal(isTaskMcpToolEnabled(), false)
+    })
+  })
+  withEnv('CONNECTOR_ENABLED', undefined, () => {
+    withEnv('SIGNALS_ENABLED', 'true', () => {
+      assert.equal(isTaskMcpToolEnabled(), false)
+    })
+  })
+  withEnv('CONNECTOR_ENABLED', 'true', () => {
+    withEnv('SIGNALS_ENABLED', 'true', () => {
+      assert.equal(isTaskMcpToolEnabled(), true)
+    })
+  })
+})
+
+// The engine's first public MUTATION surface. This is the assertion that matters most in the file:
+// it enumerates all eight combinations rather than the three the other predicates check, because
+// "the write tools exist" must be false for every arrangement except the single all-on one, and a
+// predicate that got two of three conditions right would pass a three-case test.
+test('isConnectorWriteToolEnabled is ON for exactly one of the eight flag combinations', () => {
+  const values = [undefined, 'true'] as const
+  let onCount = 0
+  for (const connector of values) {
+    for (const signals of values) {
+      for (const writes of values) {
+        withEnv('CONNECTOR_ENABLED', connector, () => {
+          withEnv('SIGNALS_ENABLED', signals, () => {
+            withEnv('CONNECTOR_WRITES_ENABLED', writes, () => {
+              const allOn = connector === 'true' && signals === 'true' && writes === 'true'
+              assert.equal(
+                isConnectorWriteToolEnabled(),
+                allOn,
+                `connector=${connector} signals=${signals} writes=${writes}`,
+              )
+              if (isConnectorWriteToolEnabled()) onCount += 1
+            })
+          })
+        })
+      }
+    }
+  }
+  assert.equal(onCount, 1)
+})
+
+// The write gate must not be reachable through the READ gate. If someone later "simplified"
+// isConnectorWriteToolEnabled to delegate to isTaskMcpToolEnabled and forgot the writes flag, the
+// combination test above would catch it — but this states the property in the form a reader would
+// actually reason about: turning writes off leaves reads working.
+test('turning CONNECTOR_WRITES_ENABLED off leaves the task READ tools enabled', () => {
+  withEnv('CONNECTOR_ENABLED', 'true', () => {
+    withEnv('SIGNALS_ENABLED', 'true', () => {
+      withEnv('CONNECTOR_WRITES_ENABLED', undefined, () => {
+        assert.equal(isTaskMcpToolEnabled(), true)
+        assert.equal(isConnectorWriteToolEnabled(), false)
+      })
     })
   })
 })

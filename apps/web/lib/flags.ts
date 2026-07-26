@@ -81,10 +81,59 @@ export function isReportSharesEnabled(): boolean {
   return process.env.REPORT_SHARES_ENABLED === 'true'
 }
 
+// signals-loop · Story 1.0 — the seventh flag, and the enablement gate for the whole signals seam:
+// error/friction capture, deterministic grouping, signal→task promotion, the dashboard task views
+// and the connector's task READ tools. Born unset/OFF.
+//
+// Amendment 5 (epic README) added this. The groom had planned only CONNECTOR_WRITES_ENABLED below,
+// but that flag gates a mutation surface, not a seam — and capture/grouping/tasks is a new ingest
+// AND storage surface, which every prior epic gave its own born-OFF gate
+// (JOURNEY_PROJECTIONS_ENABLED, EXPERIMENT_GOVERNANCE_ENABLED, REPORT_SHARES_ENABLED). Without
+// this, the only way to stop signal capture would be a revert.
+//
+// Exactly `=== 'true'`, for the reason all six above give: a gate that opens on a typo is not a
+// gate. Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isSignalsEnabled(): boolean {
+  return process.env.SIGNALS_ENABLED === 'true'
+}
+
+// signals-loop · Story 1.0 — the engine's FIRST PUBLIC MUTATION SURFACE, and therefore the flag on
+// this list whose OFF state matters most. Born unset/OFF, flipped deliberately at Story 3.4.
+//
+// WHAT IT GATES, PRECISELY: only the staged connector write tools (claim/resolve/dismiss). Signal
+// capture, grouping, promotion, the dashboard and the task READ tools all ride isSignalsEnabled()
+// above and are unaffected. Turning writes off must not stop the queue filling — it must only stop
+// an agent changing it.
+//
+// This flag is ONE of three independent kill switches on that surface (epic README, Amendment 2):
+// this env gate · revoking the project's connector token · revoking the agent_write credential.
+// Any one of them alone must be sufficient, which is why none of them is checked in place of
+// another. AGENTS rule #3 requires two for the connector; the first mutation path earns a third.
+export function isConnectorWritesEnabled(): boolean {
+  return process.env.CONNECTOR_WRITES_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {
   return isConnectorEnabled() && isJourneyProjectionsEnabled()
+}
+
+/** Registration predicate for the task READ tools. Same shape as the journey predicate above: the
+ * route enforces its route-wide connector flag and revocable token first, and this pins that a task
+ * tool additionally needs the signals seam to be enabled. */
+export function isTaskMcpToolEnabled(): boolean {
+  return isConnectorEnabled() && isSignalsEnabled()
+}
+
+/** Registration predicate for the staged WRITE tools. Deliberately requires all three flags rather
+ * than delegating to isTaskMcpToolEnabled(): a reader checking "can this agent mutate?" should see
+ * every condition in one expression, not inherit two of them from a helper named after reads. The
+ * credential checks (connector token + agent_write key, same project) are enforced separately at
+ * call time — a flag can only decide whether the tool EXISTS. */
+export function isConnectorWriteToolEnabled(): boolean {
+  return isConnectorEnabled() && isSignalsEnabled() && isConnectorWritesEnabled()
 }
 
 /** Governed experiment reads are independently removable while the legacy compare tool remains
