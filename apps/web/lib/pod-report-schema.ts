@@ -29,6 +29,8 @@ export const POD_REPORT_MAX_PAYLOAD_BYTES = 2 * 1024 * 1024
 export type PodReportPushValue = {
   generatedAt: Date
   payload: Record<string, unknown>
+  /** Git provenance of the pushing checkout, from the envelope's `pushSource`. Stored in the
+   *  artifact's own `source_commit`/`source_ref` columns, never inside the payload. */
   source: { commit?: string; ref?: string } | null
 }
 
@@ -98,10 +100,19 @@ export function parsePodReportPush(body: unknown): PodReportParseResult {
 
   if (issues.length > 0) return { ok: false, error: 'Invalid pod_report payload', issues }
 
-  // The stored payload is the whole document minus the transport envelope. `source` describes where
-  // the push came from and is stored in its own columns, so keeping a copy inside the payload would
-  // create two answers to "which commit produced this".
-  const { source: _source, ...payload } = body
+  // ── Why the transport key is `pushSource` and not `source` ──────────────────────────────────
+  // The artifact ALREADY has a `source`: Story 2.1's dataset provenance (repo, commits, epics,
+  // mergedPrs, windowDays), which lib/pod-report-view.ts reads to render the "measured over 841
+  // commits / 49 days" line. The first version of this parser took the push's git provenance from
+  // that same key, so pushing stripped the dataset counts out of the stored payload and every
+  // pushed report rendered its source section empty — while a locally printed one looked perfect.
+  // Caught by the push rail's own builder before it shipped, not by a test: the two halves were
+  // written a sprint apart and each key was reasonable on its own.
+  //
+  // So the two live in separate keys, and the collision is now unrepresentable rather than
+  // documented. `pushSource` is the transport's ({commit, ref} → the artifact's own columns);
+  // `source` stays in the payload where the renderer expects it.
+  const { pushSource: _pushSource, ...payload } = body
 
   const bytes = Buffer.byteLength(JSON.stringify(payload), 'utf8')
   if (bytes > POD_REPORT_MAX_PAYLOAD_BYTES) {
@@ -111,7 +122,7 @@ export function parsePodReportPush(body: unknown): PodReportParseResult {
     }
   }
 
-  const src = isObject(body.source) ? body.source : null
+  const src = isObject(body.pushSource) ? body.pushSource : null
   return {
     ok: true,
     value: {

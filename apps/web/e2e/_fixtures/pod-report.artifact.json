@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26T00:00:00.000Z",
+  "source": {
+    "repo": "medusa-bonsai",
+    "commits": 841,
+    "epics": 133,
+    "mergedPrs": 98,
+    "windowDays": 49
+  },
+  "delivery": {
+    "windowDays": 49,
+    "generatedAt": "2026-07-26T00:00:00.000Z",
+    "cycleTime": {
+      "comparableToDora": false,
+      "interpretation": "Time from a pull request being opened to being merged. In this pod the branch is built first and the PR is opened as the final step, so this measures review-and-merge latency — NOT how long the work took, and NOT comparable to DORA change lead time (commit to production).",
+      "count": 98,
+      "medianHours": 0.16,
+      "p90Hours": 2.78
+    },
+    "epicLeadTime": {
+      "retroactivelyDocumented": 83,
+      "interpretation": "83 epic(s) were documented after the work — their README was committed with the shipped status already set, so no elapsed time is measurable for them and they are excluded rather than counted as zero.",
+      "count": 48,
+      "medianDays": 7.1,
+      "p90Days": 7.3
+    },
+    "deployFrequency": {
+      "isProxy": true,
+      "proxyNote": "Merged pull requests per week. No deploy log exists in this dataset, so this is a proxy for deploy frequency, not a measurement of it.",
+      "mergedPrs": 98,
+      "perWeek": 14
+    },
+    "epicThroughput": {
+      "shipped": 131,
+      "perWeek": 18.71
+    },
+    "authorship": [
+      {
+        "month": "2026-06",
+        "total": 342,
+        "agentCoAuthored": 278,
+        "agentShare": 0.813
+      },
+      {
+        "month": "2026-07",
+        "total": 499,
+        "agentCoAuthored": 455,
+        "agentShare": 0.912
+      }
+    ],
+    "notInstrumented": [
+      {
+        "key": "velocity",
+        "label": "Velocity (points per sprint)",
+        "reason": "Story points are not tracked in this dataset — there is nothing to sum.",
+        "guardrail": "Adopt a sizing convention, or accept throughput as the honest substitute."
+      },
+      {
+        "key": "cost_per_point",
+        "label": "Cost per shipped point",
+        "reason": "Needs both story points and a token/spend ledger. Neither exists.",
+        "guardrail": "Instrument agent spend per epic; pair it with a sizing convention."
+      },
+      {
+        "key": "change_failure_rate",
+        "label": "Change failure rate",
+        "reason": "Zero true revert commits across the whole history. Fixes are folded forward, so there is no rollback signal to count — a computed rate here would read 0% and mean \"not measured\", not \"no failures\".",
+        "guardrail": "Record deploy outcomes and link incidents to the change that caused them."
+      },
+      {
+        "key": "recovery_time",
+        "label": "Failed-deployment recovery time",
+        "reason": "Requires paired incident start/resolve timestamps. No incident record exists.",
+        "guardrail": "An incident log with timestamps, linked to deploys."
+      },
+      {
+        "key": "story_throughput",
+        "label": "Throughput (stories per period)",
+        "reason": "No per-story ship event carries a timestamp. Epic-level throughput below is computed; story-level is not derivable without inventing a date.",
+        "guardrail": "Emit a ship event per story, or track story status transitions with dates."
+      }
+    ]
+  },
+  "benchmarks": [
+    {
+      "id": "dora-2025",
+      "label": "DORA — Accelerate State of DevOps 2025",
+      "url": "https://dora.dev/research/",
+      "note": "Elite performers: change lead time under one day; deployment frequency on demand. Cited, not republished."
+    },
+    {
+      "id": "linearb-2026",
+      "label": "LinearB Engineering Benchmarks 2026",
+      "url": "https://linearb.io/resources/engineering-benchmarks",
+      "note": "Elite PR cycle time is measured in hours, not days. Cited, not republished."
+    },
+    {
+      "id": "dx-core-4",
+      "label": "DX Core 4",
+      "url": "https://getdx.com/research/",
+      "note": "Speed, effectiveness, quality and impact are reported together — never speed alone."
+    }
+  ],
+  "maturity": {
+    "ladder": {
+      "title": "Steps of AI Adoption",
+      "author": "Boris Cherny",
+      "date": "2026-07-16",
+      "source": "references/Steps-of-AI-Adoption.md"
+    },
+    "rows": [
+      {
+        "id": "automated_code_review",
+        "criterion": "Automated code review present",
+        "ladderStep": 2,
+        "status": "not_met",
+        "isProxy": true,
+        "proxyNote": "A reviewer-agent PR comment is a proxy for \"automated review ran on this PR\", not proof it caught anything.",
+        "evidence": null,
+        "reason": "Only 36 of 98 PRs carry an agent reviewer comment — under the 50% presence bar."
+      },
+      {
+        "id": "code_quality_enforcement",
+        "criterion": "Automatic code-quality enforcement (CI check names)",
+        "ladderStep": 2,
+        "status": "met",
+        "isProxy": true,
+        "proxyNote": "A named CI check on a PR is a proxy for \"quality was enforced automatically\", not proof the check was strict.",
+        "evidence": {
+          "pointerType": "ci_check",
+          "ref": "guards",
+          "detail": "83 of 98 PRs carry at least one CI check (e.g. \"guards\" on PR #107)"
+        },
+        "reason": null
+      },
+      {
+        "id": "worktree_isolation",
+        "criterion": "Worktree isolation / parallel agents (overlapping branch lifetimes)",
+        "ladderStep": 2,
+        "status": "met",
+        "isProxy": true,
+        "proxyNote": "Two PR lifetimes overlapping in time is a proxy for parallel agents on separate worktrees, not direct proof of worktree usage.",
+        "evidence": {
+          "pointerType": "pr",
+          "ref": "6+7",
+          "detail": "PR #6 and PR #7 had overlapping open periods"
+        },
+        "reason": null
+      },
+      {
+        "id": "claude_writes_most_code",
+        "criterion": "\"Claude writes most of the code\" (Co-Authored-By trailer ratio)",
+        "ladderStep": 2,
+        "status": "met",
+        "isProxy": true,
+        "proxyNote": "A Co-Authored-By: Claude trailer ratio is a proxy for \"the agent wrote most of the code\", not proof.",
+        "evidence": {
+          "pointerType": "stat",
+          "ref": "733/841",
+          "detail": "87.2% of commits (733 of 841) carry a Claude co-author trailer"
+        },
+        "reason": null
+      },
+      {
+        "id": "risk_tier_merge_discipline",
+        "criterion": "Risk-tier merge discipline (PR-declared tier vs. merging identity)",
+        "ladderStep": 2,
+        "status": "met",
+        "isProxy": true,
+        "proxyNote": "A HIGH-risk PR merged under a human identity is a proxy for merge discipline, not proof the risk tier itself was assessed correctly.",
+        "evidence": {
+          "pointerType": "pr",
+          "ref": 92,
+          "detail": "6 of 6 HIGH-risk PRs with a recorded merger were merged under a human identity"
+        },
+        "reason": null
+      },
+      {
+        "id": "trusted_self_verification_loop",
+        "criterion": "Trusted self-verification loop (green-gate-before-merge rate, revert rate)",
+        "ladderStep": 2,
+        "status": "not_met",
+        "isProxy": true,
+        "proxyNote": "A high green-before-merge rate and a low revert rate are proxies for \"the team trusts the gate\", not proof the gate itself is sufficient.",
+        "evidence": null,
+        "reason": "Green-before-merge rate 84.3% and/or revert rate 0.0% fall outside the trusted-loop bar (>=90% green, <=5% reverts)."
+      },
+      {
+        "id": "standards_encoded",
+        "criterion": "Standards encoded in CLAUDE.md / Skills",
+        "ladderStep": 3,
+        "status": "not_met",
+        "isProxy": true,
+        "proxyNote": "The presence of CLAUDE.md (and ways-of-work Skill provenance) is a proxy for \"standards are encoded\", not proof they are followed.",
+        "evidence": null,
+        "reason": "Neither CLAUDE.md nor AGENTS.md was found in the pushed extract."
+      }
+    ],
+    "notInstrumented": [
+      {
+        "key": "auto_mode_state",
+        "label": "Auto-mode state",
+        "reason": "Whether auto mode is enabled is a local CLI/session setting. It is never written into a commit or a PR, so git history cannot answer it either way.",
+        "guardrail": "OpenTelemetry export of session state into the existing SIEM/observability stack (Step 1 guardrail)."
+      },
+      {
+        "key": "live_agent_concurrency",
+        "label": "Live agent-concurrency count",
+        "reason": "How many agents are running at once is a point-in-time process fact. Git only records commits after the fact and never captures how many sessions were open concurrently.",
+        "guardrail": "Analytics to monitor team usage (Step 2 guardrail) — a live agent-concurrency dashboard."
+      },
+      {
+        "key": "token_cost_per_outcome",
+        "label": "Token / cost per outcome",
+        "reason": "No token or spend ledger exists anywhere in git history. Cost-per-outcome needs a billing or usage-API join this dataset does not have — same gap pod-metrics.mjs names for cost-per-point.",
+        "guardrail": "Manage token use with model selection + the Analytics API (Step 3 guardrail)."
+      },
+      {
+        "key": "automatic_security_review",
+        "label": "Automatic security review",
+        "reason": "A security-specific review pass is not distinguishable from an ordinary code-quality check in PR metadata unless it runs as its own named CI check — which this dataset does not carry.",
+        "guardrail": "Claude Security Review wired in as a named CI check (Step 2–3 guardrail/product)."
+      },
+      {
+        "key": "proactive_agent_kickoff_monitor",
+        "label": "Proactive agent-kicks-off-agent monitor",
+        "reason": "Whether an agent proactively kicked off another agent, versus a human invoking it, is not recorded by git — the resulting commit and PR look identical either way.",
+        "guardrail": "Claude Tag monitoring a channel or data source and kicking off tasks proactively (Step 3 product) — instrument the trigger source."
+      },
+      {
+        "key": "agent_sandboxing",
+        "label": "Agent sandboxing",
+        "reason": "Sandbox usage is a runtime execution-environment fact. It leaves no trace in git or PR metadata once the run completes.",
+        "guardrail": "Agent sandboxing (Step 3 product) — record sandbox usage per run."
+      }
+    ],
+    "verdict": {
+      "step": 1,
+      "stepLabel": "Assisted",
+      "metCriteria": 4,
+      "totalCriteria": 7,
+      "notInstrumentedCount": 6
+    }
+  },
+  "caveats": [
+    "Every number here is computed from this repository's own git and pull-request history. Nothing is estimated.",
+    "The comparison baseline is PUBLISHED BENCHMARKS, not an internal human-era baseline: this dataset has no human-majority era to compare against.",
+    "Metrics listed as \"not instrumented\" are absent because the data cannot support them — not because they are zero."
+  ]
+}

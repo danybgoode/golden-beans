@@ -437,3 +437,503 @@
     opacity: 0.78;
   }
 }
+
+/* ══ Sprint 2.5c · the Pod Report surface ══════════════════════════════════════════════════════
+   Same rule as the rest of this module: no color, no family and no token is redefined here. These
+   are only the shapes globals.css has no opinion on — the speed/gaps pairing, the metric tables,
+   the maturity ladder and the verdict card.
+
+   ── The contrast rule this section obeys ────────────────────────────────────────────────────
+   --dim-2 measures 4.30:1 on --card and 4.39:1 on --roast-2, i.e. BELOW WCAG AA (4.5:1) for normal
+   text. It clears AA only on --roast (4.82) and --espresso (5.04). So every panel below sits on
+   --card or --roast-2 and uses --dim (7.13:1 on --card) for its body copy; --dim-2 appears only on
+   the page ground, and only on the kicker, which is uppercase 11px tracking — decorative labelling
+   a reader never has to parse. A sales artifact whose caveats are the hardest text on the page to
+   read would be fine print by another means, which is the one thing this surface must not be. */
+
+.report {
+  padding: 48px 0 96px;
+}
+
+.reportSection {
+  margin-top: 46px;
+}
+
+.reportHeading {
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+
+.reportLede {
+  color: var(--dim);
+  font-size: 0.92rem;
+  max-width: 72ch;
+  margin: 0 0 18px;
+}
+
+/* ---------- the source strip: the denominator for everything below ---------- */
+.sourceStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sourceItem {
+  font: 500 12.5px var(--mono);
+  color: var(--dim);
+}
+.sourceItem b {
+  color: var(--gold-hot);
+  font-family: var(--mono);
+}
+
+/* ---------- caveats: above the numbers, never under them ----------
+   Placement IS the acceptance criterion here ("the caveats are on the page, not in a footnote").
+   A reader who scrolls only the top of this page has already read them. */
+.caveatBand {
+  margin-top: 26px;
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold);
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+.caveatBandTitle {
+  font: 700 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 10px;
+}
+.caveatList {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.caveatItem {
+  color: var(--crema);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 78ch;
+}
+
+/* ---------- the pairing: speed and the gaps, side by side ----------
+   Decision 4 of the epic, made a layout constraint rather than a habit: the not-instrumented panel
+   is a COLUMN of the same section as the numbers, not a block underneath them. On a narrow screen
+   the aside stacks directly after the table it qualifies — still adjacent, never relegated. */
+.pairing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pairing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---------- metric tables ----------
+   A table of metrics is a <table>: three columns of related values with row and column headers, and
+   a screen reader should be able to say "Deploy frequency, reading, 14 / week". Divs would render
+   the same and mean nothing. */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.metricTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+.metricTable caption {
+  text-align: left;
+  padding: 16px 20px 12px;
+  font: 700 13px var(--sans);
+  color: var(--crema);
+  letter-spacing: 0.01em;
+}
+.metricTable th,
+.metricTable td {
+  text-align: left;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+.metricTable thead th {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.metricName {
+  font: 600 13.5px var(--sans);
+  color: var(--crema);
+  width: 34%;
+}
+.metricValue {
+  font: 600 17px var(--mono);
+  color: var(--gold-hot);
+  white-space: nowrap;
+}
+/* "not measured" must never look like a small number. Different family, different weight, no gold. */
+.metricNull {
+  font: italic 400 13px var(--mono);
+  color: var(--dim);
+  white-space: nowrap;
+}
+.metricRead {
+  color: var(--dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 52ch;
+}
+.proxyTag {
+  display: inline-block;
+  margin-left: 8px;
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px dashed var(--next-line);
+  border-radius: 99px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.benchLink {
+  display: block;
+  margin-top: 6px;
+  font: 500 11.5px var(--mono);
+  color: var(--gold);
+}
+/* A number the computation attached no reading to. Dashed + gold so it reads as a deliberate
+   admission rather than as a missing field the renderer forgot to fill. */
+.uninterpreted {
+  display: block;
+  border-left: 2px dashed var(--next-line);
+  padding-left: 10px;
+  color: var(--dim);
+  font: italic 400 12.5px var(--mono);
+  line-height: 1.5;
+}
+
+/* ---------- the not-instrumented panel: the tasting-note treatment ----------
+   references/design-direction.md: "the registry-declared-Targeted caveat stays styled as a tasting
+   note, not fine print." Same body size as the metric readings, its own kraft-gold rail, and a
+   guardrail line per row — a gap here is a product line, not an apology. */
+.gapPanel {
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--kraft);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.gapHeading {
+  font: 700 13px var(--sans);
+  color: var(--crema);
+  margin: 0 0 6px;
+}
+.gapIntro {
+  color: var(--dim);
+  font-size: 0.83rem;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+.gapList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gapItem {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.gapItem:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.gapLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font: 600 13px var(--sans);
+  color: var(--crema);
+  margin: 0 0 5px;
+}
+.gapStamp {
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--kraft);
+  border: 1px solid var(--kraft-deep);
+  border-radius: 99px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.gapReason {
+  color: var(--dim);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  margin: 0 0 6px;
+  max-width: 60ch;
+}
+.gapGuardrail {
+  color: var(--crema);
+  font: 500 12.5px var(--mono);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 60ch;
+}
+.gapGuardrail b {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ---------- the maturity verdict ----------
+   The step and the not-instrumented count live in ONE card, in one flex row, deliberately at the
+   same type size. Story 2.4: coverage can never be hidden by the score — so the layout gives the
+   two numbers equal weight instead of trusting a future editor to remember. */
+.verdictCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px;
+}
+.verdictRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 34px;
+  align-items: flex-start;
+}
+.verdictCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+.verdictBig {
+  font: 700 21px var(--mono);
+  color: var(--gold-hot);
+}
+/* The gaps figure is deliberately NOT gold: gold is this page's "achievement" ink, and the
+   not-instrumented count is not an achievement. Same size, different meaning. */
+.verdictBigGap {
+  color: var(--crema);
+}
+.verdictCellLabel {
+  font: 500 11.5px var(--sans);
+  color: var(--dim);
+}
+.verdictPairNote {
+  margin: 14px 0 0;
+  color: var(--dim);
+  font-size: 0.83rem;
+  line-height: 1.5;
+  max-width: 74ch;
+}
+.ladderCite {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font: 500 12px var(--mono);
+  color: var(--dim);
+  line-height: 1.6;
+}
+.ladderCite b {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+/* ---------- the ladder criterion table ---------- */
+.ladderTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 620px;
+}
+.ladderTable caption {
+  text-align: left;
+  padding: 16px 20px 12px;
+  font: 700 13px var(--sans);
+  color: var(--crema);
+}
+.ladderTable th,
+.ladderTable td {
+  text-align: left;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+.ladderTable thead th {
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.critName {
+  font: 600 13.5px var(--sans);
+  color: var(--crema);
+  width: 32%;
+}
+.critProxy {
+  display: block;
+  margin-top: 6px;
+  color: var(--dim);
+  font: italic 400 12px var(--mono);
+  line-height: 1.5;
+  font-weight: 400;
+}
+.critStep {
+  font: 600 13px var(--mono);
+  color: var(--dim);
+  white-space: nowrap;
+}
+/* Status carries a word AND a mark. Hue alone would leave the whole ladder unreadable to anyone who
+   cannot distinguish green from gold — and this column is the entire point of the section. */
+.critStatus {
+  font: 600 12px var(--mono);
+  white-space: nowrap;
+}
+.statusMet {
+  color: var(--green);
+}
+.statusNotMet {
+  color: var(--dim);
+}
+.statusNotInstrumented {
+  color: var(--kraft);
+}
+.evidenceCell {
+  color: var(--dim);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  max-width: 46ch;
+}
+.evidenceDetail {
+  display: block;
+  margin-top: 4px;
+  color: var(--dim);
+}
+.evidencePointer {
+  font: 600 12.5px var(--mono);
+}
+/* Withheld ≠ absent. The dashed rail marks "a lens is standing between you and this pointer", which
+   is a different fact from "no evidence exists" and must not render like it. */
+.evidenceWithheld {
+  border-left: 2px dashed var(--kraft-deep);
+  padding-left: 10px;
+  color: var(--dim);
+}
+.evidenceNone {
+  color: var(--dim);
+  font-style: italic;
+}
+
+/* ---------- outcome ---------- */
+.outcomeCaveat {
+  display: block;
+  margin-top: 6px;
+  color: var(--dim);
+  font: italic 400 12px var(--mono);
+  line-height: 1.5;
+  max-width: 56ch;
+}
+.northStarCard {
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+.northStarCard h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+.northStarCard p {
+  color: var(--dim);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0 0 6px;
+  max-width: 70ch;
+}
+
+/* ---------- benchmarks ---------- */
+.benchList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+.benchItem {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.benchItem a {
+  font: 600 13.5px var(--sans);
+}
+.benchNote {
+  margin: 8px 0 0;
+  color: var(--dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ---------- the refusal state ----------
+   Red, dashed, and it says what it is refusing and why. This is the one place on the surface where
+   an alarming treatment is the correct one: the artifact reached the renderer with its caveats
+   missing, which is a data-integrity fault, not an empty hopper. */
+.refuseCard {
+  border: 1.5px dashed var(--red);
+  background: rgba(232, 106, 94, 0.07);
+  border-radius: 14px;
+  padding: 34px 32px;
+  margin-top: 24px;
+  max-width: 720px;
+}
+.refuseKicker {
+  font: 700 11px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin: 0 0 10px;
+}
+.refuseCard h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+.refuseCard p {
+  color: var(--crema);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 0 10px;
+  max-width: 70ch;
+}
+
+@media (max-width: 720px) {
+  .report {
+    padding: 32px 0 64px;
+  }
+  .reportHeading {
+    font-size: 19px;
+  }
+  .verdictCell {
+    min-width: 120px;
+  }
+}

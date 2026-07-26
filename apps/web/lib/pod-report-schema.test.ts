@@ -9,22 +9,36 @@ import {
 const valid = () => ({
   schemaVersion: POD_REPORT_SCHEMA_VERSION,
   generatedAt: '2026-07-26T00:00:00.000Z',
-  source: { commit: 'abc1234', ref: 'refs/heads/main' },
+  pushSource: { commit: 'abc1234', ref: 'refs/heads/main' },
+  source: { repo: 'medusa-bonsai', commits: 841, epics: 133, windowDays: 49 },
   delivery: { epicLeadTime: { medianDays: 7.1 }, notInstrumented: [{ key: 'velocity' }] },
   maturity: { verdict: { step: 1 } },
   benchmarks: [{ id: 'dora-2025' }],
   caveats: ['computed, not claimed'],
 })
 
-test('a well-formed push parses, and source leaves the stored payload', () => {
+test('a well-formed push parses; pushSource leaves the payload and dataset source STAYS', () => {
   const r = parsePodReportPush(valid())
   assert.equal(r.ok, true)
   if (!r.ok) return
   assert.equal(r.value.generatedAt.toISOString(), '2026-07-26T00:00:00.000Z')
   assert.deepEqual(r.value.source, { commit: 'abc1234', ref: 'refs/heads/main' })
-  // Stored in its own columns, so a copy inside the payload would create two answers to "which
-  // commit produced this".
-  assert.equal('source' in r.value.payload, false)
+
+  // Git provenance is stripped: it lands in the artifact's own source_commit/source_ref columns, so
+  // a copy inside the payload would create two answers to "which commit produced this".
+  assert.equal('pushSource' in r.value.payload, false)
+
+  // The DATASET provenance must survive, and this is the assertion that would have caught the bug
+  // the two keys exist to prevent: an earlier draft read git provenance from `source`, which
+  // stripped repo/commits/epics out of every PUSHED artifact — so the renderer's "measured over 841
+  // commits / 49 days" line came out empty in production while a locally printed report looked
+  // perfect. Two keys, and the mistake is no longer expressible.
+  assert.deepEqual(r.value.payload.source, {
+    repo: 'medusa-bonsai',
+    commits: 841,
+    epics: 133,
+    windowDays: 49,
+  })
   assert.ok('delivery' in r.value.payload)
 })
 

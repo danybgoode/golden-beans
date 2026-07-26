@@ -311,7 +311,50 @@ export function buildArtifact({ delivery, source, generatedAt, maturity }) {
   };
 }
 
-function main() {
+/**
+ * Git provenance of the ANALYSED repo (the medusa-bonsai checkout, not this golden-beans one) — the
+ * freshness stamp a push carries. `run` is injectable so a unit test pins the call shape without a
+ * real checkout, mirroring `readCommits`/`readEpics` above.
+ */
+export function gatherSourceRef(repo, run = git) {
+  return {
+    commit: run(repo, ['rev-parse', 'HEAD']) || null,
+    ref: run(repo, ['rev-parse', '--abbrev-ref', 'HEAD']) || null,
+  };
+}
+
+/**
+ * Where to push and with which credential.
+ *
+ * `POD_REPORT_API_KEY` is checked FIRST, `SELF_PROJECT_API_KEY` second. The two need not agree: the
+ * Pod Report is computed from a medusa-bonsai checkout but the tenant that OWNS the pushed artifact
+ * is whichever project the key belongs to (resolved server-side from the key, never from this
+ * script — same rule as the route). A team dogfooding both rails from one tenant can set only
+ * `SELF_PROJECT_API_KEY` and have it cover both; a team pushing the Pod Report to a different
+ * tenant than its own roadmap sets `POD_REPORT_API_KEY` to override just this one.
+ */
+export function resolvePushConfig(env = process.env) {
+  return {
+    baseUrl: env.GROWTH_ENGINE_URL || 'http://localhost:3000',
+    apiKey: env.POD_REPORT_API_KEY || env.SELF_PROJECT_API_KEY || null,
+  };
+}
+
+/**
+ * The wire envelope for POST /api/v1/reports/pod/push.
+ *
+ * Git provenance travels under `pushSource`, NOT `source` — the artifact already owns `source` for
+ * Story 2.1's dataset provenance (repo/commits/epics/mergedPrs/windowDays), which the renderer reads
+ * to show what the numbers were measured over. An earlier draft of this function put the push's
+ * commit/ref in that slot, which meant every PUSHED report rendered its dataset counts empty while a
+ * locally printed one looked perfect. Two separate keys makes that collision unrepresentable
+ * (lib/pod-report-schema.ts strips exactly `pushSource` and keeps the rest).
+ */
+export function buildPushEnvelope(artifact, { commit, ref } = {}) {
+  return { ...artifact, pushSource: { commit: commit ?? null, ref: ref ?? null } };
+}
+
+async function main() {
   const args = process.argv.slice(2);
   let repo = process.env.MEDUSA_BONSAI_PATH || `${process.env.HOME}/dobby/medusa-bonsai`;
   let out, generatedAt;
@@ -395,12 +438,45 @@ function main() {
   }
 
   if (push) {
-    process.stderr.write(
-      '⚠ --push is not wired yet: the pod_report artifact kind rides the same rail as roadmap ' +
-        'pushes (Story 1.1), and wiring it is Story 2.2. Printing the artifact instead.\n'
-    );
+    const { baseUrl, apiKey } = resolvePushConfig();
+    if (!apiKey) {
+      // Clean skip, not a failure — same stance as scripts/roadmap-push.mjs: a repo without the
+      // secret configured must not turn a run red over an observability-grade nicety. This is NOT
+      // the bug this story fixes: the old code printed a warning and exited 0 on EVERY --push,
+      // whether or not the push actually happened. Here, a skip and a failure are distinguishable —
+      // only the missing-credential case exits clean; an attempted-and-failed push does not (below).
+      process.stderr.write(
+        'POD_REPORT_API_KEY / SELF_PROJECT_API_KEY not set — skipping the pod_report push cleanly.\n' +
+          '  The artifact was computed and discarded. Set one of these to enable this.\n'
+      );
+      return;
+    }
+
+    const envelope = buildPushEnvelope(artifact, gatherSourceRef(repo));
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/reports/pod/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify(envelope),
+      signal: AbortSignal.timeout(30_000),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      // The server's own error body names WHICH field failed and whether it was a version or a
+      // shape problem. Printing it and exiting non-zero is the whole point of this story: the old
+      // behaviour swallowed exactly this and reported success regardless.
+      process.stderr.write(`✗ pod_report push failed (${res.status}): ${text}\n`);
+      process.exitCode = 1;
+      return;
+    }
+    process.stderr.write(`✓ pod_report pushed: ${text}\n`);
   }
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isMain) main();
+if (isMain) {
+  main().catch((err) => {
+    process.stderr.write(`✗ ${err.message}\n`);
+    process.exit(1);
+  });
+}
