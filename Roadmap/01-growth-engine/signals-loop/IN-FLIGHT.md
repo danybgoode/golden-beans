@@ -135,3 +135,34 @@ Sprint 1 COMMITTED (c3008a5). Docs amendments (1f20e33), S0 shared surface (36ed
 }
 ```
 
+## 2026-07-26T21:41:00.672Z — `main` @ 3b76d488
+
+_HEAD: signals-loop Sprint 2 — signals become tasks, humans and agents see the same queue (#37)_
+
+Sprint 2 MERGED (3b76d48) + migrations applied to prod. Both gates OFF. NEXT: Sprint 3 on a FRESH branch off main — agent_write credential scope, staged propose->confirm->apply writes, landing S4 (PostHog = ANNOUNCED not shipped), launch.
+
+**Verified by running (observed output, not believed):**
+- all 6 CI checks green on PR #37
+- prod: 4 migrations applied, recurrence gate + actor validation present in the DEPLOYED function bodies
+
+**In flight at this checkpoint** — uncommitted, so it exists only in this working tree:
+- `oadmap/01-growth-engine/signals-loop/sprint-2.md (modified)`
+
+```json session-trail-state
+{
+  "at": "2026-07-26T21:41:00.672Z",
+  "note": "Sprint 2 MERGED (3b76d48) + migrations applied to prod. Both gates OFF. NEXT: Sprint 3 on a FRESH branch off main — agent_write credential scope, staged propose->confirm->apply writes, landing S4 (PostHog = ANNOUNCED not shipped), launch.",
+  "branch": "main",
+  "head": "3b76d488d81252e8061a91bab53471aa3b12e2f7",
+  "headSubject": "signals-loop Sprint 2 — signals become tasks, humans and agents see the same queue (#37)",
+  "dirty": [
+    "oadmap/01-growth-engine/signals-loop/sprint-2.md"
+  ],
+  "untracked": [],
+  "verified": [
+    "all 6 CI checks green on PR #37",
+    "prod: 4 migrations applied, recurrence gate + actor validation present in the DEPLOYED function bodies"
+  ]
+}
+```
+

@@ -1,6 +1,6 @@
 # Signals loop — Sprint 2: Tasks out (structuring + the read surface)
 
-**Status:** 🟦 In review — PR pending
+**Status:** ✅ Merged — PR #37 (`3b76d48`), migrations applied to production 2026-07-26. Both gates remain OFF.
 
 > Amended 2026-07-26 (see the epic README). Story 2.1 absorbs two approved additions: task lifecycle
 > events ride the existing destination router, and the first task a project ever creates fires one

@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 0/11 stories · risk: High · #4
+- [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 3/11 stories · risk: High · #4
 
 ## 📋 Ready to build (scaffolded, not started) (0)
 
