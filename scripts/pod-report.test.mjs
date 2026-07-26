@@ -12,6 +12,7 @@ import {
   normalisePrForLens,
   parseRiskTier,
   checkSucceeded,
+  checkName,
   readCommits,
   windowDays,
   BENCHMARKS,
@@ -237,4 +238,28 @@ test('readCommits still parses sha, date and agent authorship from a multi-line 
   assert.equal(c.sha, 'abc');
   assert.equal(c.date, '2026-07-01');
   assert.equal(c.agentCoAuthored, true, 'the trailer lives in the BODY, not the subject');
+});
+
+// ── Regression from cross-review round 8 ────────────────────────────────────────────────────
+
+test('a check NAME is read from either shape — `name` or classic `context`', () => {
+  // The third half-migration of the same two-shape API: round 3 taught `checkSucceeded` about
+  // classic `state`, and the NAME beside it kept reading only `name`. A repo posting classic
+  // statuses produced an empty ciCheckNames and a false `not_met` on code-quality enforcement.
+  assert.equal(checkName({ name: 'Static gate + build' }), 'Static gate + build');
+  assert.equal(checkName({ context: 'ci/circleci: build' }), 'ci/circleci: build');
+  assert.equal(checkName({}), null);
+  assert.equal(checkName(null), null);
+});
+
+test('the adapter collects names from BOTH check shapes', () => {
+  const pr = normalisePrForLens({
+    number: 1,
+    statusCheckRollup: [
+      { name: 'gate', conclusion: 'SUCCESS' },
+      { context: 'ci/external', state: 'SUCCESS' },
+    ],
+  });
+  assert.deepEqual(pr.ciCheckNames, ['gate', 'ci/external']);
+  assert.equal(pr.ciPassedBeforeMerge, true, 'and both count toward the gate');
 });

@@ -71,9 +71,16 @@ export const OUTCOME_NOT_INSTRUMENTED = [
   },
 ]
 
-/** Safe ratio: null when the denominator is zero, never 0 — "no data" must not read as "total failure". */
+/**
+ * Safe ratio: null when the denominator is zero, never 0 — "no data" must not read as "total failure".
+ *
+ * A NEGATIVE numerator also yields null. Counts of people cannot be negative, so a negative value
+ * here means the input is malformed — and `-0.2` would render as a real, plausible-looking rate
+ * rather than announcing that something upstream is broken.
+ */
 export function rate(numerator: number, denominator: number): number | null {
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return null
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator)) return null
+  if (numerator < 0 || denominator <= 0) return null
   return Math.round((numerator / denominator) * 1000) / 1000
 }
 

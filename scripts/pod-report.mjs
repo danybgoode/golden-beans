@@ -196,7 +196,7 @@ export function normalisePrForLens(pr) {
       ...c,
       isAgentReviewer: AGENT_REVIEW_PATTERNS.some((re) => re.test(c?.body ?? '')),
     })),
-    ciCheckNames: checks.map((c) => c?.name).filter(Boolean),
+    ciCheckNames: checks.map((c) => checkName(c)).filter(Boolean),
 
     // ── The three fields cross-review caught missing (PR #32, round 2) ────────────────────────
     // `readPullRequests` was already fetching the data these need, and the adapter simply did not
@@ -228,7 +228,22 @@ export function normalisePrForLens(pr) {
 /** Filenames that count as encoded standards, in the order they are preferred. */
 export const STANDARDS_FILES = ['CLAUDE.md', 'AGENTS.md'];
 
-/** True when a check reports success, whichever of the two GitHub shapes it uses. */
+// ── The two GitHub check shapes, handled in ONE place ────────────────────────────────────────
+// `statusCheckRollup` mixes two entirely different objects: modern CHECK RUNS carry `name` +
+// `conclusion`, while classic COMMIT STATUSES carry `context` + `state`. Every field read has to
+// account for both, and three separate review rounds each caught a different half-migrated read —
+// `conclusion` without `state` (round 3), the helper written but never called (round 4), and the
+// NAME still reading only `name` (round 8).
+//
+// So both accessors now live here, adjacent and named, rather than as inline expressions scattered
+// through the adapter. The next field that needs the same treatment has an obvious home.
+
+/** A check's display name, whichever shape it is. */
+export function checkName(check) {
+  return check?.name ?? check?.context ?? null;
+}
+
+/** True when a check reports success, whichever shape it is. */
 export function checkSucceeded(check) {
   return String(check?.conclusion ?? check?.state ?? '').toUpperCase() === 'SUCCESS';
 }

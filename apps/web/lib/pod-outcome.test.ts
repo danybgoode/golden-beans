@@ -100,3 +100,11 @@ test('the section is deterministic for the same input', () => {
   }
   assert.equal(JSON.stringify(buildOutcomeSection(input)), JSON.stringify(buildOutcomeSection(input)))
 })
+
+test('a NEGATIVE numerator yields null — a malformed count must not render as a real rate', () => {
+  // Counts of people cannot be negative, so a negative value means something upstream is broken.
+  // `-0.2` would render as a plausible-looking rate instead of announcing the problem.
+  assert.equal(rate(-1, 5), null)
+  assert.equal(rate(-0.5, 10), null)
+  assert.equal(rate(0, 5), 0, 'a real zero is still a real zero')
+})
