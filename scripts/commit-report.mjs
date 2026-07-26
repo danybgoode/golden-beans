@@ -65,7 +65,10 @@ const REPO_ROOT = resolve(__dirname, '..');
 // (scripts/telegram-notify.mjs), because two implementations of `escapeToFit` is exactly one
 // too many. Re-exported here so this module's existing importers and tests are unaffected.
 export { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/telegram-text.mjs';
-import { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/telegram-text.mjs';
+// Imported separately from the re-export above, and deliberately only the three this file CALLS:
+// `truncateWords` is part of the public surface (its own tests import it from here) but is not used
+// in this module, and importing it purely to re-export it trips no-unused-vars.
+import { TELEGRAM_LIMIT, escapeHtml, escapeToFit } from './lib/telegram-text.mjs';
 
 /**
  * Which commit(s) to report on, from the parsed flags. Pure so the precedence is pinned by a test
