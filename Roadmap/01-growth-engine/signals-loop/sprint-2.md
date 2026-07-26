@@ -1,6 +1,6 @@
 # Signals loop — Sprint 2: Tasks out (structuring + the read surface)
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — PR pending
 
 > Amended 2026-07-26 (see the epic README). Story 2.1 absorbs two approved additions: task lifecycle
 > events ride the existing destination router, and the first task a project ever creates fires one
@@ -69,4 +69,32 @@ rows, asserted through the real authenticated path with a real foreign token.
   spec that cannot fail is worse than an absent one because the next reader stops there
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
-_Written at sprint close (real URLs, one action + one expected result per step)._
+
+_Preview URLs pre-merge; swap for production URLs at epic close._
+
+1. **Open the task queue.** Visit `/app/tasks/<your-project-slug>` signed in as a member.
+   → The page renders. With no qualifying signals yet it says *"No tasks yet"* and explains the
+   three reasons that can mean — it never renders a bare empty table.
+2. **Capture a real error.** In a project using the SDK, call
+   `growth.captureError(new Error('smoke test failure'))` from five different `userId`s.
+   → Each returns `ok: true`. Nothing appears on the dashboard yet — promotion is lazy by design.
+3. **Refresh the queue.** Reload `/app/tasks/<slug>`.
+   → A task now appears, titled `Error: smoke test failure`, with an impact figure and
+   `5 users · 5 events` beneath it.
+4. **Open the evidence.** Click the task title.
+   → The drawer shows the signal's first/last seen, the feature context (or an explicit *"No feature
+   context"*), and the scrubbed sample. **Check the sample contains no secret** — that is the one
+   step worth doing by eye.
+5. **Claim it.** Click *Claim*.
+   → Status becomes `claimed`, showing `by user:<your-id>`. Clicking *Claim* again is not offered.
+6. **Resolve it.** Click *Resolve*.
+   → Status becomes `resolved` with resolution `fixed`. The claim line is retained — a resolved task
+   remembers who did the work.
+7. **Read the same queue as an agent.** In a fresh Claude session, add the connector URL from
+   `/install` and ask it to call `list_tasks`.
+   → It returns the same task, with the same evidence bundle the drawer showed. **This is the
+   acceptance criterion for the whole sprint: a human and an agent see the same queue.**
+   *(Owed to Daniel by name — needs a real Claude session.)*
+8. **Confirm cross-tenant isolation by hand.** Using a SECOND project's connector URL, call
+   `get_task` with the first project's task id.
+   → `{"ok": false, "reason": "not_found"}` — identical to an invented id.
