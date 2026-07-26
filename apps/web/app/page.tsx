@@ -2,18 +2,21 @@ import { Nav } from '@/components/landing/Nav'
 import { Hero } from '@/components/landing/Hero'
 import { LiveProofSection } from '@/components/landing/LiveProofSection'
 import { OperateRoutes } from '@/components/landing/OperateRoutes'
-import { Teaser } from '@/components/landing/Teaser'
+import { InvertedLoopSection } from '@/components/landing/InvertedLoopSection'
 import { PodsProofSection } from '@/components/landing/PodsProofSection'
 import { PrimitivesGrid } from '@/components/landing/PrimitivesGrid'
 import { WaitlistSection } from '@/components/landing/WaitlistSection'
 import { Footer } from '@/components/landing/Footer'
 import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
-import { getSection } from '@/lib/landing-sections'
 
-// The Golden Beans public landing — sections per references/landing-end-state.md's section map,
-// the Sprint 1 ("E1 launch cut") slice: sections 1, 2, 3①③, 6, 8 fully live; 4, 5, 7 honestly
-// teased/split per each section's own lit-epic. See references/design/e1.html for the reference
-// implementation this page ports.
+// The Golden Beans public landing — sections per references/landing-end-state.md's section map.
+// See references/design/e1.html for the reference implementation this page ports.
+//
+// Which sections are lit is NOT recorded here. It was — "sections 1, 2, 3①③, 6, 8 fully live;
+// 4, 5, 7 honestly teased" — and it went stale three times as §7 (multi-tenant-activation), §5
+// (pod-report) and now §4 (signals-loop) each flipped, because the epic that lights a section has
+// no reason to come and edit a list in a different file. lib/landing-sections.ts is the registry
+// and the single source of truth for that; a second copy in prose is a copy that drifts.
 //
 // Without this, Next statically optimizes `/` at build time (no dynamic route params on this
 // page) — which does two things wrong: LiveProofSection's demo-project numbers would freeze into
@@ -35,15 +38,7 @@ export default function Home() {
       <Hero />
       <LiveProofSection />
       <OperateRoutes />
-      <Teaser
-        title={
-          <>
-            The loop ends in <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your</em> agent.
-          </>
-        }
-        body="Signal → structured task → your agent, over MCP → a fix in your workflow. This section lights up in the same epic that ships the capability — or it doesn't light up at all."
-        epic={getSection('inverted-loop').epic}
-      />
+      <InvertedLoopSection />
       <PodsProofSection />
       <PrimitivesGrid />
       <WaitlistSection />
