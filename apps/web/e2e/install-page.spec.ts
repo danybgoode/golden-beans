@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { isExperimentGovernanceEnabled, isJourneyProjectionsEnabled } from '@/lib/flags'
+import { isExperimentGovernanceEnabled, isJourneyProjectionsEnabled, isTaskMcpToolEnabled } from '@/lib/flags'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page's copy-your-URL field must show a
 // real, live connector URL (seeded by scripts/seed-demo-project.mjs), not a placeholder.
@@ -20,11 +20,17 @@ test('the /install page renders a live connector URL that actually round-trips',
   expect(res.status()).toBe(200)
   const body = await res.json()
   const names = body.result.tools.map((tool: { name: string }) => tool.name).sort()
-  expect(names).toEqual([
-    'compare_experiment',
-    ...(isExperimentGovernanceEnabled() ? ['get_experiment_analysis'] : []),
-    ...(isJourneyProjectionsEnabled() ? ['get_journey_cohort'] : []),
-    'get_north_star',
-    'get_tars_funnel',
-  ])
+  // Sorted, so gated entries can be listed in their natural place rather than alphabetically by
+  // hand — `get_task`/`list_tasks` do not sort adjacent to each other.
+  expect(names).toEqual(
+    [
+      'compare_experiment',
+      ...(isExperimentGovernanceEnabled() ? ['get_experiment_analysis'] : []),
+      ...(isJourneyProjectionsEnabled() ? ['get_journey_cohort'] : []),
+      'get_north_star',
+      'get_tars_funnel',
+      // signals-loop Sprint 2 — gated on connector AND signals, like its siblings above.
+      ...(isTaskMcpToolEnabled() ? ['get_task', 'list_tasks'] : []),
+    ].sort()
+  )
 })

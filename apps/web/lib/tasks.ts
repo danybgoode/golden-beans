@@ -1,0 +1,419 @@
+import 'server-only'
+import { after } from 'next/server'
+import { getSupabaseServiceClient } from './supabase'
+import { isSignalsEnabled } from './flags'
+import { scrubValue } from './signal-scrub'
+import { impactRank } from './signal-rank'
+import { DEFAULT_PROMOTION_RULE, shouldPromote, type PromotionRule } from './task-promotion'
+import { taskEventForStatus, TASK_SUBJECT_TYPE, TASK_OPENED_EVENT, type TaskStatus } from './task-events'
+import { tgNotify } from './telegram'
+
+// signals-loop · Sprint 2, Story 2.1 — signal → task promotion, the evidence bundle, and the
+// lifecycle fan-out.
+//
+// Everything here is scoped by a `projectId` the CALLER resolved server-side (from a hashed key, a
+// connector token or a verified session). No function in this module accepts a project identifier
+// from a request body, and the two RPCs it calls re-assert the scope in their own WHERE clauses —
+// so a mismatched pair writes nothing rather than crossing tenants.
+
+export type TaskRow = {
+  id: string
+  signalId: string
+  status: TaskStatus
+  title: string
+  evidence: Record<string, unknown>
+  impactRank: number
+  claimedBy: string | null
+  claimedAt: string | null
+  resolvedAt: string | null
+  resolution: string | null
+  evidencePointer: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Per-project overrides, falling back to the conservative defaults. */
+export async function loadPromotionRule(projectId: string): Promise<PromotionRule> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('task_promotion_rules')
+    .select('min_users_affected, min_event_count, min_impact_score')
+    .eq('project_id', projectId)
+    .maybeSingle()
+
+  if (error) {
+    // Falling back rather than throwing: a config-table hiccup must not stop a real problem from
+    // becoming a task. The defaults are conservative, so the failure mode is "promotes slightly
+    // less than this tenant configured", never "promotes something it shouldn't".
+    console.error('[tasks] promotion rule load failed:', error)
+    return DEFAULT_PROMOTION_RULE
+  }
+  if (!data) return DEFAULT_PROMOTION_RULE
+
+  return {
+    minUsersAffected: data.min_users_affected as number,
+    minEventCount: data.min_event_count as number,
+    minImpactScore: data.min_impact_score as number,
+  }
+}
+
+/**
+ * The evidence bundle — the whole reason a task is worth more to an agent than a log line.
+ *
+ * EVERY field traces to a query this engine already answers: the feature registry, the funnel, the
+ * signal's own scrubbed sample. Nothing here is inferred, summarised or generated, because there is
+ * **no LLM anywhere in this engine** and that is the product claim, not an implementation detail.
+ * The moment one field here is a guess, the differentiator is gone.
+ */
+async function buildEvidence(
+  projectId: string,
+  signal: {
+    id: string
+    kind: string
+    featureId: string | null
+    sample: Record<string, unknown>
+    eventCount: number
+    usersAffected: number
+    firstSeenAt: string
+    lastSeenAt: string
+  }
+): Promise<Record<string, unknown>> {
+  const supabase = getSupabaseServiceClient()
+
+  let feature: Record<string, unknown> | null = null
+  if (signal.featureId) {
+    const { data } = await supabase
+      .from('features')
+      .select('key, enabled, target_event, adopted_event, retained_event, retention_days')
+      .eq('project_id', projectId)
+      .eq('key', signal.featureId)
+      .maybeSingle()
+    if (data) {
+      feature = {
+        key: data.key,
+        // The flag state AT PROMOTION TIME. A task saying "this broke while the feature was on"
+        // is actionable; re-reading the flag when an agent opens the task days later would answer
+        // a different question and quietly mislead.
+        enabled: data.enabled,
+        targetEvent: data.target_event,
+        adoptedEvent: data.adopted_event,
+        retainedEvent: data.retained_event,
+        retentionDays: data.retention_days,
+      }
+    }
+  }
+
+  return {
+    // Re-scrubbed on the way out. The sample was already redacted at ingest; doing it again is
+    // cheap and means a bug in one layer cannot put raw customer data in front of an outside agent.
+    // Belt and braces on the one field that carries someone else's runtime state.
+    sample: scrubValue(signal.sample) as Record<string, unknown>,
+    signal: {
+      id: signal.id,
+      kind: signal.kind,
+      eventCount: signal.eventCount,
+      usersAffected: signal.usersAffected,
+      firstSeenAt: signal.firstSeenAt,
+      lastSeenAt: signal.lastSeenAt,
+    },
+    feature,
+    // Stamped so a reader can tell how old the bundle's view of the world is — the same freshness
+    // discipline the Roadmap Hub applies to its artifacts.
+    capturedAt: new Date().toISOString(),
+  }
+}
+
+export type PromotionOutcome =
+  | { promoted: true; taskId: string }
+  | { promoted: false; reason: 'below_threshold' | 'absorbed' | 'not_found'; taskId?: string }
+
+/**
+ * Promote one signal if it qualifies.
+ *
+ * Returns a discriminated outcome rather than a boolean because the three "no" cases mean genuinely
+ * different things to a caller: below threshold is normal and expected, absorbed is a successful
+ * dedupe, and not_found is a bug or a cross-tenant attempt. Collapsing them into `false` is how a
+ * real failure gets logged as routine.
+ */
+export async function promoteSignal(projectId: string, signalId: string): Promise<PromotionOutcome> {
+  const supabase = getSupabaseServiceClient()
+
+  const { data: signal, error } = await supabase
+    .from('signals')
+    .select('id, kind, title, feature_id, sample, event_count, users_affected, first_seen_at, last_seen_at')
+    .eq('id', signalId)
+    .eq('project_id', projectId)
+    .maybeSingle()
+
+  if (error || !signal) return { promoted: false, reason: 'not_found' }
+
+  const rule = await loadPromotionRule(projectId)
+  const candidate = {
+    usersAffected: signal.users_affected as number,
+    eventCount: Number(signal.event_count),
+    kind: signal.kind as 'error' | 'friction',
+  }
+  if (!shouldPromote(candidate, rule)) return { promoted: false, reason: 'below_threshold' }
+
+  const evidence = await buildEvidence(projectId, {
+    id: signal.id as string,
+    kind: signal.kind as string,
+    featureId: (signal.feature_id as string | null) ?? null,
+    sample: (signal.sample as Record<string, unknown>) ?? {},
+    eventCount: candidate.eventCount,
+    usersAffected: candidate.usersAffected,
+    firstSeenAt: signal.first_seen_at as string,
+    lastSeenAt: signal.last_seen_at as string,
+  })
+
+  const rank = impactRank({
+    usersAffected: candidate.usersAffected,
+    eventCount: candidate.eventCount,
+    lastSeenAt: new Date(signal.last_seen_at as string),
+    now: new Date(),
+  })
+
+  const { data, error: rpcError } = await supabase
+    .rpc('promote_signal_to_task', {
+      p_signal_id: signalId,
+      p_project_id: projectId,
+      p_title: signal.title as string,
+      p_evidence: evidence,
+      p_impact_rank: rank,
+    })
+    .single<{ task_id: string | null; created: boolean }>()
+
+  if (rpcError || !data) {
+    console.error('[tasks] promote failed:', rpcError)
+    return { promoted: false, reason: 'not_found' }
+  }
+  if (!data.created) {
+    return data.task_id
+      ? { promoted: false, reason: 'absorbed', taskId: data.task_id }
+      : { promoted: false, reason: 'not_found' }
+  }
+
+  // Fan-out and the operator ping ride `after()` so neither can slow or fail the promotion that
+  // already committed. Same contract as signal grouping: a derived side effect must never be able
+  // to undo the write it describes.
+  after(async () => {
+    await emitTaskLifecycleEvent(projectId, data.task_id as string, 'open')
+    await maybeNotifyFirstTask(projectId)
+  })
+
+  return { promoted: true, taskId: data.task_id as string }
+}
+
+/**
+ * Emit a task lifecycle event through the ENGINE'S OWN ingest path (Amendment 4.1).
+ *
+ * Calling `ingest_event` — the same function `/v1/track` calls — is what makes this free: the event
+ * lands in `events`, the transactional outbox fans it out to every destination whose filter matches,
+ * and the tenant's existing signed webhook carries it to Linear or Slack or anywhere else. We build
+ * zero integrations, and delivery inherits the retries, dead-lettering and operator replay the
+ * router epic already paid for.
+ *
+ * The task id rides as `context.subject`, which is the join key every downstream projection in this
+ * engine already understands.
+ */
+export async function emitTaskLifecycleEvent(
+  projectId: string,
+  taskId: string,
+  status: TaskStatus,
+  actor?: string | null
+): Promise<void> {
+  try {
+    const supabase = getSupabaseServiceClient()
+    const { error } = await supabase.rpc('ingest_event', {
+      p_project_id: projectId,
+      // The ENGINE is the actor, not a tenant user. Using the claiming agent's opaque label here
+      // would pollute `userId` — the field every TARS funnel and A/B comparison counts DISTINCT on
+      // — with non-user values, which is the "honest-looking zero" failure this repo has hit three
+      // times. The agent's identity travels in tags, where it belongs.
+      p_user_id: 'golden-beans-engine',
+      p_event: taskEventForStatus(status),
+      p_feature_id: null,
+      p_tags: actor ? { actor } : {},
+      p_metadata: {},
+      p_context_version: 1,
+      p_actor_type: 'system',
+      p_actor_id: 'signals-loop',
+      p_subject_type: TASK_SUBJECT_TYPE,
+      p_subject_id: taskId,
+      p_correlation_id: null,
+      p_occurred_at: null,
+      // A stable idempotency key per (task, status): a retried emit returns the original event
+      // rather than delivering the same transition twice to a tenant's automation. `task_opened`
+      // fires once per task by construction, and a re-emitted claim/resolve is the retry case this
+      // guards. Uses the engine's existing dedupe rather than inventing a second one.
+      p_idempotency_key: `task:${taskId}:${status}`,
+      p_idempotency_fingerprint: null,
+    })
+    if (error) console.error('[tasks] lifecycle emit failed:', error)
+  } catch (err) {
+    console.error('[tasks] lifecycle emit threw:', err)
+  }
+}
+
+/**
+ * One Telegram line the first time a project ever produces a task (Amendment 4.4).
+ *
+ * "Ever" is asked of the DATA — `count === 1` — rather than tracked in a flag somewhere, so it
+ * cannot drift out of sync with reality and needs no migration to store. It is best-effort and
+ * silent on failure: an operator convenience must never be able to affect a tenant's queue.
+ */
+async function maybeNotifyFirstTask(projectId: string): Promise<void> {
+  try {
+    const supabase = getSupabaseServiceClient()
+    const { count, error } = await supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+    if (error || count !== 1) return
+
+    const { data: project } = await supabase.from('projects').select('slug').eq('id', projectId).maybeSingle()
+
+    await tgNotify(`🔔 First signals-loop task created for <b>${project?.slug ?? projectId}</b>`)
+  } catch (err) {
+    console.error('[tasks] first-task notify threw:', err)
+  }
+}
+
+export type TransitionResult = {
+  ok: boolean
+  reason: string
+  fromStatus: string | null
+}
+
+/**
+ * The ONE status-change path, shared by the dashboard and (in Sprint 3) the connector write tools.
+ *
+ * Sharing it is deliberate: two implementations of "may this task be claimed?" is one too many, and
+ * the second copy is the one that forgets a rule. The database function it calls holds the actual
+ * lifecycle logic behind a row lock.
+ */
+export async function transitionTask(
+  projectId: string,
+  taskId: string,
+  toStatus: TaskStatus,
+  options: { actor?: string | null; resolution?: string | null; evidencePointer?: string | null } = {}
+): Promise<TransitionResult> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .rpc('transition_task', {
+      p_task_id: taskId,
+      p_project_id: projectId,
+      p_to_status: toStatus,
+      p_actor: options.actor ?? null,
+      p_resolution: options.resolution ?? null,
+      p_evidence_pointer: options.evidencePointer ?? null,
+    })
+    .single<{ ok: boolean; reason: string; from_status: string | null }>()
+
+  if (error || !data) {
+    console.error('[tasks] transition failed:', error)
+    return { ok: false, reason: 'error', fromStatus: null }
+  }
+
+  if (data.ok) {
+    after(async () => {
+      await emitTaskLifecycleEvent(projectId, taskId, toStatus, options.actor ?? null)
+    })
+  }
+
+  return { ok: data.ok, reason: data.reason, fromStatus: data.from_status }
+}
+
+/** A project's task queue, most impactful first. */
+export async function listTasksByProjectId(
+  projectId: string,
+  options: { status?: TaskStatus; limit?: number } = {}
+): Promise<TaskRow[]> {
+  const supabase = getSupabaseServiceClient()
+  let query = supabase
+    .from('tasks')
+    .select(
+      'id, signal_id, status, title, evidence, impact_rank, claimed_by, claimed_at, resolved_at, resolution, evidence_pointer, created_at, updated_at'
+    )
+    .eq('project_id', projectId)
+  if (options.status) query = query.eq('status', options.status)
+
+  const { data, error } = await query
+    .order('impact_rank', { ascending: false })
+    .limit(Math.min(Math.max(options.limit ?? 50, 1), 200))
+
+  if (error) {
+    // Thrown, not flattened to []. An empty queue renders as "nothing to do", which during an
+    // outage is the most dangerous lie a task queue can tell.
+    console.error('[tasks] list failed:', error)
+    throw new Error('Could not load tasks')
+  }
+  return (data ?? []).map(mapTaskRow)
+}
+
+/** One task with its full evidence bundle. Returns null for a task belonging to another tenant. */
+export async function getTaskByProjectId(projectId: string, taskId: string): Promise<TaskRow | null> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('tasks')
+    .select(
+      'id, signal_id, status, title, evidence, impact_rank, claimed_by, claimed_at, resolved_at, resolution, evidence_pointer, created_at, updated_at'
+    )
+    .eq('id', taskId)
+    .eq('project_id', projectId)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return mapTaskRow(data)
+}
+
+function mapTaskRow(r: Record<string, unknown>): TaskRow {
+  return {
+    id: r.id as string,
+    signalId: r.signal_id as string,
+    status: r.status as TaskStatus,
+    title: r.title as string,
+    evidence: (r.evidence as Record<string, unknown>) ?? {},
+    impactRank: Number(r.impact_rank),
+    claimedBy: (r.claimed_by as string | null) ?? null,
+    claimedAt: (r.claimed_at as string | null) ?? null,
+    resolvedAt: (r.resolved_at as string | null) ?? null,
+    resolution: (r.resolution as string | null) ?? null,
+    evidencePointer: (r.evidence_pointer as string | null) ?? null,
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
+  }
+}
+
+/**
+ * Promote every qualifying signal for a project, and return how many tasks were created.
+ *
+ * This is the function the read paths call (Story 2.3), which is also where friction evaluation is
+ * triggered — so opening the queue is what makes the queue current. Gated here, in one place, so no
+ * caller has to remember the flag.
+ */
+export async function promoteEligibleSignals(projectId: string): Promise<number> {
+  if (!isSignalsEnabled()) return 0
+
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('signals')
+    .select('id')
+    .eq('project_id', projectId)
+    .order('users_affected', { ascending: false })
+    // Bounded. A tenant with thousands of signals must not turn one queue read into an unbounded
+    // write storm; the ranking means the most impactful are the ones considered first, and the rest
+    // are picked up on subsequent reads.
+    .limit(100)
+
+  if (error || !data) return 0
+
+  let created = 0
+  for (const row of data) {
+    const outcome = await promoteSignal(projectId, row.id as string)
+    if (outcome.promoted) created += 1
+  }
+  return created
+}
+
+export { TASK_OPENED_EVENT }

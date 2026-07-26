@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
-import { isConnectorEnabled } from '@/lib/flags'
+import { isConnectorEnabled, isTaskMcpToolEnabled } from '@/lib/flags'
 
 function disposableToken(): string {
   return `gb_connector_${randomBytes(24).toString('base64url')}`
@@ -24,7 +24,12 @@ function dbClient() {
   return createClient(url, key, { auth: { persistSession: false } })
 }
 
-async function rpc(request: import('@playwright/test').APIRequestContext, token: string, method: string, params?: unknown) {
+async function rpc(
+  request: import('@playwright/test').APIRequestContext,
+  token: string,
+  method: string,
+  params?: unknown
+) {
   return request.post(`/api/v1/public/mcp/c/${token}`, {
     headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
     data: { jsonrpc: '2.0', id: 1, method, params },
@@ -81,18 +86,32 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
     expect(res.status()).toBe(200)
     const body = await res.json()
     const names = body.result.tools.map((t: { name: string }) => t.name).sort()
-    expect(names).toEqual([
+    // EXHAUSTIVE on purpose, and worth keeping that way: this connector is a public surface, and an
+    // exact-match assertion means a new tool cannot appear on it without someone deliberately
+    // adding it here. It caught signals-loop's two task tools the moment they registered — which is
+    // the assertion working, not the assertion being in the way.
+    //
+    // The task tools are gated (isTaskMcpToolEnabled = connector AND signals), so the expected set
+    // depends on the environment rather than being a fixed list. Written as a conditional rather
+    // than by relaxing the comparison to a subset check: a subset check would silently accept a
+    // THIRD unexpected tool, which is the property this test exists to prevent.
+    const expected = [
       'compare_experiment',
       'get_experiment_analysis',
       'get_journey_cohort',
       'get_north_star',
       'get_tars_funnel',
-    ])
+      ...(isTaskMcpToolEnabled() ? ['get_task', 'list_tasks'] : []),
+    ].sort()
+    expect(names).toEqual(expected)
   })
 
   test('get_tars_funnel on the live demo token → real numbers matching the seed', async ({ request }) => {
     const token = await demoToken()
-    const res = await rpc(request, token, 'tools/call', { name: 'get_tars_funnel', arguments: { featureKey: 'setup_guide' } })
+    const res = await rpc(request, token, 'tools/call', {
+      name: 'get_tars_funnel',
+      arguments: { featureKey: 'setup_guide' },
+    })
     expect(res.status()).toBe(200)
     const body = await res.json()
     const payload = JSON.parse(body.result.content[0].text)
@@ -101,7 +120,7 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
     expect(payload.tars.targeted).toBeGreaterThan(0)
   })
 
-  test('a token minted for a disposable project cannot read another project\'s data', async ({ request }) => {
+  test("a token minted for a disposable project cannot read another project's data", async ({ request }) => {
     const db = dbClient()
     const isolationSlug = `mcp-isolation-${randomBytes(6).toString('hex')}`
     const { data: project, error: projectError } = await db
@@ -109,7 +128,8 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
       .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
       .select('id')
       .single()
-    if (projectError || !project) throw new Error(`failed to insert disposable project: ${projectError?.message}`)
+    if (projectError || !project)
+      throw new Error(`failed to insert disposable project: ${projectError?.message}`)
 
     const isolationToken = disposableToken()
     const { error: tokenError } = await db
@@ -143,10 +163,13 @@ test.describe('POST /api/v1/public/mcp/c/:token', () => {
       .insert({ slug: isolationSlug, api_key_hash: `spec-${randomBytes(8).toString('hex')}` })
       .select('id')
       .single()
-    if (projectError || !project) throw new Error(`failed to insert disposable project: ${projectError?.message}`)
+    if (projectError || !project)
+      throw new Error(`failed to insert disposable project: ${projectError?.message}`)
 
     const revokeToken = disposableToken()
-    const { error: tokenError } = await db.from('connector_tokens').insert({ project_id: project.id, token: revokeToken })
+    const { error: tokenError } = await db
+      .from('connector_tokens')
+      .insert({ project_id: project.id, token: revokeToken })
     if (tokenError) throw new Error(`failed to insert disposable token: ${tokenError.message}`)
 
     try {

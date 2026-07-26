@@ -28,6 +28,13 @@ export type AuditAction =
   // Metadata carries the row id, the lens and the label — never the token.
   | 'report_share_minted'
   | 'report_share_revoked'
+  // signals-loop · Sprint 2, Story 2.2 — the task lifecycle. ONE action with the transition in its
+  // metadata, rather than task_claimed/task_resolved/task_dismissed as separate labels: the three
+  // share a single code path (transition_task), and three labels over one path is how a record ends
+  // up describing the endpoint someone happened to call instead of what actually changed — the
+  // pod-report S3 finding, one layer up. Sprint 3's agent writes reuse this same action, so
+  // "who moved this task, human or agent?" is answered from one place.
+  | 'task_transitioned'
 
 export type AuditEntry = {
   action: AuditAction

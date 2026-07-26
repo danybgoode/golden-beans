@@ -7,7 +7,10 @@ import {
   isConnectorEnabled,
   isExperimentGovernanceMcpToolEnabled,
   isJourneyMcpToolEnabled,
+  isTaskMcpToolEnabled,
 } from '@/lib/flags'
+import { listTasksByProjectId, getTaskByProjectId, promoteEligibleSignals } from '@/lib/tasks'
+import { evaluateFrictionForProject } from '@/lib/friction-eval'
 import { resolveConnectorToken, TOKEN_FORMAT } from '@/lib/connector-tokens'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getFeatureFunnelByProjectId } from '@/lib/tars-query'
@@ -83,7 +86,7 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
           },
         ],
       }
-    },
+    }
   )
 
   server.registerTool(
@@ -98,7 +101,7 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
         return { content: [{ type: 'text', text: JSON.stringify(result) }], isError: true }
       }
       return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-    },
+    }
   )
 
   server.registerTool(
@@ -111,7 +114,12 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
       },
     },
     async ({ experimentKey, metricEvent }) => {
-      const result = await getExperimentComparisonByProjectId(projectId, projectSlug, experimentKey, metricEvent)
+      const result = await getExperimentComparisonByProjectId(
+        projectId,
+        projectSlug,
+        experimentKey,
+        metricEvent
+      )
       if (!result.ok) {
         return { content: [{ type: 'text', text: JSON.stringify(result) }], isError: true }
       }
@@ -126,7 +134,7 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
           },
         ],
       }
-    },
+    }
   )
 
   // Governed analysis is a separate, born-OFF tool. The legacy compare_experiment contract above
@@ -136,11 +144,18 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
     server.registerTool(
       'get_experiment_analysis',
       {
-        description: "Read this project's immutable-version experiment plan, trust diagnostics and descriptive metrics.",
+        description:
+          "Read this project's immutable-version experiment plan, trust diagnostics and descriptive metrics.",
         inputSchema: {
-          experimentKey: z.string().max(64).regex(/^[a-z][a-z0-9_-]{0,63}$/),
+          experimentKey: z
+            .string()
+            .max(64)
+            .regex(/^[a-z][a-z0-9_-]{0,63}$/),
           version: z.number().int().positive().max(1_000_000),
-          asOf: z.string().optional().describe('Non-future explicit-offset snapshot; omitted captures server now.'),
+          asOf: z
+            .string()
+            .optional()
+            .describe('Non-future explicit-offset snapshot; omitted captures server now.'),
           segmentField: z.enum(['source', 'channel', 'campaign', 'plan', 'region']).optional(),
           segmentValue: z.union([z.string().max(64), z.number().int(), z.boolean()]).optional(),
         },
@@ -160,10 +175,12 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
         })
         if (!parsed.ok) {
           return {
-            content: [{
-              type: 'text',
-              text: JSON.stringify({ ok: false, reason: 'invalid_request', error: parsed.error }),
-            }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ ok: false, reason: 'invalid_request', error: parsed.error }),
+              },
+            ],
             isError: true,
           }
         }
@@ -171,13 +188,13 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
           projectId,
           projectSlug,
           experimentKey,
-          parsed.request,
+          parsed.request
         )
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],
           ...(!result.ok ? { isError: true } : {}),
         }
-      },
+      }
     )
   }
 
@@ -190,12 +207,24 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
       {
         description: "Read this project's bounded, version-explicit journey cohort.",
         inputSchema: {
-          journeyKey: z.string().max(64).regex(/^[a-z][a-z0-9_]{0,63}$/).describe('The lower_snake_case stable journey key.'),
+          journeyKey: z
+            .string()
+            .max(64)
+            .regex(/^[a-z][a-z0-9_]{0,63}$/)
+            .describe('The lower_snake_case stable journey key.'),
           version: z.number().int().positive().describe('The immutable definition version.'),
           from: z.string().describe('Inclusive explicit-offset cohort timestamp.'),
           to: z.string().describe('Exclusive explicit-offset cohort timestamp.'),
-          asOf: z.string().optional().describe('Non-future explicit-offset receipt-time snapshot; omitted first pages capture server now.'),
-          timezone: z.string().default('UTC').describe('IANA display timezone; window semantics come from the offset-bearing instants.'),
+          asOf: z
+            .string()
+            .optional()
+            .describe(
+              'Non-future explicit-offset receipt-time snapshot; omitted first pages capture server now.'
+            ),
+          timezone: z
+            .string()
+            .default('UTC')
+            .describe('IANA display timezone; window semantics come from the offset-bearing instants.'),
           staleAfterHours: z.number().int().positive().max(8760).default(24),
           drilldown: z.string().optional().describe('A drilldown key returned by the cohort result.'),
           cursor: z.string().optional().describe('Opaque next cursor from a prior drilldown page.'),
@@ -216,7 +245,12 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
       }) => {
         if (!validateJourneyKey(journeyKey)) {
           return {
-            content: [{ type: 'text', text: JSON.stringify({ ok: false, reason: 'invalid_request', error: 'invalid journey key' }) }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ ok: false, reason: 'invalid_request', error: 'invalid journey key' }),
+              },
+            ],
             isError: true,
           }
         }
@@ -233,7 +267,12 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
         })
         if (!parsed.ok) {
           return {
-            content: [{ type: 'text', text: JSON.stringify({ ok: false, reason: 'invalid_request', error: parsed.error }) }],
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({ ok: false, reason: 'invalid_request', error: parsed.error }),
+              },
+            ],
             isError: true,
           }
         }
@@ -241,13 +280,102 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
           projectId,
           journeyKey,
           parsed.version,
-          parsed.options,
+          parsed.options
         )
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],
           ...(!result.ok ? { isError: true } : {}),
         }
+      }
+    )
+  }
+
+  // ── signals-loop · Sprint 2, Story 2.3 — the task READ tools ────────────────────────────────
+  // Additive siblings of the four tools above, behind BOTH the connector gate and the signals gate
+  // (isTaskMcpToolEnabled), following the journey/governance precedent. While either is off the
+  // tools do not EXIST — they are absent from tools/list, not present-and-erroring, which is the
+  // difference between a dark feature and a discoverable one.
+  //
+  // Neither tool takes a project parameter. Scope comes from the token this route already resolved
+  // and has nowhere else to come from, which is what makes cross-tenant isolation true by
+  // construction rather than by a filter someone has to remember to write.
+  //
+  // Plain tools, NOT the MCP tasks extension: it is SEP-2663, moved out of core after production
+  // feedback (epic README, Amendment 1). Revisit when it is promoted back into core — not on a
+  // version bump.
+  if (isTaskMcpToolEnabled()) {
+    server.registerTool(
+      'list_tasks',
+      {
+        description:
+          "Read this project's ranked task queue — problems the engine grouped and promoted, most impactful first. Each task carries an evidence bundle (feature, flag state, signal counts, scrubbed sample).",
+        inputSchema: {
+          status: z
+            .enum(['open', 'claimed', 'resolved', 'dismissed'])
+            .optional()
+            .describe('Filter by lifecycle status. Omit for the whole queue.'),
+          limit: z.number().int().positive().max(100).default(25),
+        },
       },
+      async ({ status, limit }) => {
+        // ── This is the lazy trigger the whole friction design rests on (Amendment 3) ──────────
+        // Sprint 1 shipped evaluateFrictionForProject() with NO production caller, and recorded
+        // that gap in sprint-1.md rather than letting it look finished. THIS is the caller it owed.
+        //
+        // Both run before the read, for the one resolved project, so an agent pulling its queue is
+        // what makes the queue current — which is the accepted cost of declining a cross-tenant
+        // cron (and therefore an AGENTS.md scheduler-exemption registry row).
+        //
+        // Both are throttled internally and both fail soft: a detector or promotion hiccup must
+        // degrade to a slightly stale queue, never to a failed read. An agent that cannot list its
+        // work because a background refresh broke is worse off than one reading last hour's list.
+        await evaluateFrictionForProject(projectId, projectSlug).catch(() => null)
+        await promoteEligibleSignals(projectId).catch(() => 0)
+
+        try {
+          const tasks = await listTasksByProjectId(projectId, { status, limit })
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  ok: true,
+                  tasks,
+                  note: 'Ranked by users affected × frequency, decayed by recency. Evidence is engine-computed — no model wrote any field of it.',
+                }),
+              },
+            ],
+          }
+        } catch {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ ok: false, reason: 'query_failed' }) }],
+            isError: true,
+          }
+        }
+      }
+    )
+
+    server.registerTool(
+      'get_task',
+      {
+        description: "Read one of this project's tasks in full, including its complete evidence bundle.",
+        inputSchema: {
+          taskId: z.string().uuid().describe('The task id, as returned by list_tasks.'),
+        },
+      },
+      async ({ taskId }) => {
+        const task = await getTaskByProjectId(projectId, taskId)
+        if (!task) {
+          // Same answer for "no such task" and "another tenant's task". A distinguishable response
+          // would turn this into an existence oracle over other projects' task ids — the house rule
+          // every tenant-scoped surface in this codebase follows.
+          return {
+            content: [{ type: 'text', text: JSON.stringify({ ok: false, reason: 'not_found' }) }],
+            isError: true,
+          }
+        }
+        return { content: [{ type: 'text', text: JSON.stringify({ ok: true, task }) }] }
+      }
     )
   }
 
