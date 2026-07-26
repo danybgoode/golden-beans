@@ -1,4 +1,4 @@
-import { SELF_PROJECT_SLUG } from '@/lib/self-track'
+import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getPodReport } from '@/lib/pod-report-query'
 import { getSection } from '@/lib/landing-sections'
 
@@ -14,12 +14,20 @@ import { getSection } from '@/lib/landing-sections'
 // medusa-bonsai Pod Report — that is a real client's delivery history and it stays behind auth and
 // revocable share links.
 //
-// It reads the SELF tenant (`golden-beans`), not the marketing demo, for two reasons that point the
-// same way. The data is OURS: golden-beans' own repository, our own numbers, published on purpose —
-// so there is no client-exposure question to get wrong. And it is the tenant whose credential the
-// roadmap-push workflow already holds, so the section stays current on every deploy without minting
-// a second production key for a page to read itself. Same dogfood tenant §1 and §7 already use:
-// "we sell what we use" is a claim this section can only make by being an instance of it.
+// It reads the DEMO tenant, and the artifact stored there is computed from golden-beans' OWN
+// repository — our numbers, about our own work, published on purpose. So there is no
+// client-exposure question to get wrong, and "we sell what we use" is a claim this section makes by
+// being an instance of it.
+//
+// ── Why the DEMO tenant and not the self tenant, corrected after checking production ───────────
+// This first read `SELF_PROJECT_SLUG`, on the reasoning that the push workflow's credential belonged
+// to the self tenant. It does not: `SELF_PROJECT_API_KEY` — despite its name — authenticates as
+// `golden-beans-demo`, which is where every roadmap artifact has always landed and where the first
+// pod_report landed too. The section rendered its fallback teaser in production as a result.
+//
+// The name was the trap, and this repo has a LEARNINGS entry for exactly it: do not infer which rail
+// a credential serves from what the credential is called. Confirmed by querying which project the
+// pushed artifact actually belongs to, rather than by reading the variable name a second time.
 //
 // ── The INVESTOR lens, on purpose ─────────────────────────────────────────────────────────────
 // The narrowest lens (lib/pod-report-lens.ts): no per-criterion ladder rows, no month-by-month
@@ -29,7 +37,7 @@ import { getSection } from '@/lib/landing-sections'
 // exactly why this section can be short without becoming a boast.
 export async function PodsProofSection() {
   const section = getSection('pods-proof')
-  const report = await getPodReport(SELF_PROJECT_SLUG, 'investor')
+  const report = await getPodReport(DEMO_PROJECT_SLUG, 'investor')
 
   // Not-yet-pushed and could-not-be-read both land here. A landing section must never be the thing
   // that 500s the homepage, and it must never invent numbers to fill the space either — so the
