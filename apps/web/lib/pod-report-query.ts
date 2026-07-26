@@ -98,9 +98,17 @@ async function readOutcome(projectId: string, projectSlug: string): Promise<Outc
 
   if (error) {
     console.error('[pod-report-query] feature list failed:', error)
-    // A read failure produces NO rows and no claim. Returning a section that says "0 features
-    // adopted" here would turn an outage into a sales number.
-    return buildOutcomeSection({ tenant: projectSlug, features: [], northStar: null })
+    // ── Cross-review (Agy, PR #33) caught this being wrong in exactly the way its own comment
+    // warned about ──────────────────────────────────────────────────────────────────────────────
+    // The previous version returned `features: []` here, which the renderer showed as "no features
+    // are registered, so there is no adoption to read" — a truthful-sounding sales sentence produced
+    // by a database outage. The comment said "a read failure produces NO rows and no claim"; the
+    // code produced a claim. That is the prose-as-evidence trap this repo has a LEARNINGS entry for.
+    //
+    // `unavailable: true` is a THIRD state, deliberately not a thrown error: the delivery half of
+    // this report is fine and still worth rendering, so failing the whole page would destroy real
+    // information to report a partial failure. The renderer says the layer could not be read.
+    return buildOutcomeSection({ tenant: projectSlug, features: [], northStar: null, unavailable: true })
   }
 
   const keys = (features ?? []).map((f) => f.key as string)
@@ -132,7 +140,7 @@ async function readOutcome(projectId: string, projectSlug: string): Promise<Outc
  */
 async function readNorthStar(
   projectId: string
-): Promise<{ metric: string | null; inputCount: number; latestValue: number | null } | null> {
+): Promise<{ metric: string | null; inputCount: number | null; latestValue: number | null } | null> {
   const supabase = getSupabaseServiceClient()
 
   const { data: metric, error } = await supabase
@@ -145,10 +153,14 @@ async function readNorthStar(
     return null
   }
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from('leading_inputs')
     .select('key', { count: 'exact', head: true })
     .eq('project_id', projectId)
+  if (countError) console.error('[pod-report-query] leading_inputs count failed:', countError)
 
-  return { metric: metric.key as string, inputCount: count ?? 0, latestValue: null }
+  // `count ?? null`, never `?? 0`. Cross-review (Agy, PR #33): a failed count resolves to null, and
+  // coercing that to 0 asserts "no leading inputs are registered" on the strength of a query that
+  // never answered. Same not-zero rule the rest of this file follows.
+  return { metric: metric.key as string, inputCount: count ?? null, latestValue: null }
 }

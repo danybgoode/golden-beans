@@ -425,7 +425,18 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
         the artifact at computation time.
       </p>
 
-      {outcome.rows.length === 0 ? (
+      {/* THREE states, not two — cross-review (Agy, PR #33). "Could not read" is not "nothing to
+          read": the first is an incident, the second is a truthful sales answer about a pod that has
+          not wired the engine to its product yet. Rendering an outage as the second is how a broken
+          dashboard reassures you (Roadmap/LEARNINGS.md, the zero that pages nobody). */}
+      {outcome.unavailable ? (
+        <p className={styles.emptyStateInline} data-testid="outcome-unavailable">
+          <strong>The outcome layer could not be read just now.</strong> This is a failure to reach the
+          engine’s own funnel queries — <em>not</em> a report of zero adoption, and not “not
+          instrumented” either. The delivery half above is unaffected and still accurate; this half is
+          simply missing, and says so rather than showing you a zero.
+        </p>
+      ) : outcome.rows.length === 0 ? (
         <p className={styles.emptyStateInline} data-testid="outcome-empty">
           No features are registered for <code>{outcome.tenant}</code>, so there is no adoption to read.
           That is “not instrumented”, not zero adoption — the two look nothing alike and must not render
@@ -475,8 +486,17 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
         <div className={styles.northStarCard} data-testid="outcome-north-star">
           <h3>North Star — {outcome.northStar.metric ?? 'not registered'}</h3>
           <p>
-            <b className="data">{outcome.northStar.inputCount}</b> leading input
-            {outcome.northStar.inputCount === 1 ? '' : 's'} registered ·{' '}
+            {/* A null count means the count QUERY failed, which must not print as "0 leading inputs
+                registered" — that asserts an absence on the strength of an answer we never got. */}
+            {outcome.northStar.inputCount === null ? (
+              <span className={styles.metricNull}>input count unavailable</span>
+            ) : (
+              <>
+                <b className="data">{outcome.northStar.inputCount}</b> leading input
+                {outcome.northStar.inputCount === 1 ? '' : 's'} registered
+              </>
+            )}{' '}
+            ·{' '}
             {outcome.northStar.latestValue === null ? (
               <span className={styles.metricNull}>no value recorded</span>
             ) : (

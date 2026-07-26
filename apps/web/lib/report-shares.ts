@@ -57,13 +57,17 @@ export async function resolveShareToken(token: string): Promise<ShareResolution>
   if (!token || typeof token !== 'string') return { ok: false, reason: 'not_found' }
 
   const supabase = getSupabaseServiceClient()
+  // ── Reads the VIEW, in database time ────────────────────────────────────────────────────────
+  // `active_share_links` (20260803120000) has scope, revocation AND expiry welded in, exactly as
+  // `active_ingest_keys` does for the other credential kind in this table. The previous version
+  // compared expiry in JavaScript by interpolating this process's clock into a PostgREST filter
+  // string, which meant the two credential kinds were judged live by two different clocks — any
+  // app-vs-database skew was a window where an expired link still rendered (cross-review, Agy,
+  // PR #33). One clock, and no filter built by string concatenation.
   const { data, error } = await supabase
-    .from('api_keys')
-    .select('id, project_id, share_lens, projects(slug)')
+    .from('active_share_links')
+    .select('id, project_id, share_lens, project_slug')
     .eq('key_hash', hashCredential(token))
-    .eq('scope', 'share')
-    .is('revoked_at', null)
-    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .maybeSingle()
 
   if (error) {
@@ -72,16 +76,14 @@ export async function resolveShareToken(token: string): Promise<ShareResolution>
   }
   if (!data) return { ok: false, reason: 'not_found' }
 
-  // supabase-js types a to-one embedded relation loosely without a generated Database type — the
-  // same cast lib/membership.ts and lib/connector-tokens.ts already use.
-  const project = data.projects as unknown as { slug: string } | null
-
-  // Both of these should be impossible: the FK is ON DELETE CASCADE, and the CHECK constraint makes
-  // a scope='share' row without a valid lens unstorable. They are checked anyway because the
-  // failure mode of guessing is picking a default audience for a token whose audience is unknown —
-  // and the widest default is the one a tired reader would reach for.
-  if (!project) {
-    console.error(`[report-shares] share ${data.id} resolved no project row`)
+  // The view's JOIN is INNER, so a row whose project vanished simply is not returned — the same way
+  // `active_ingest_keys` absorbs that case. The lens check below stays: it should be impossible
+  // (the CHECK constraint makes a scope='share' row without a valid lens unstorable), but the
+  // failure mode of guessing is picking a default AUDIENCE for a token whose audience is unknown,
+  // and the widest default is the one a tired reader reaches for.
+  const projectSlug = data.project_slug as string | null
+  if (!projectSlug) {
+    console.error(`[report-shares] share ${data.id} resolved no project slug`)
     return { ok: false, reason: 'not_found' }
   }
   const lens = parseLens(data.share_lens)
@@ -90,7 +92,7 @@ export async function resolveShareToken(token: string): Promise<ShareResolution>
     return { ok: false, reason: 'not_found' }
   }
 
-  return { ok: true, projectId: data.project_id as string, projectSlug: project.slug, lens, shareId: data.id as string }
+  return { ok: true, projectId: data.project_id as string, projectSlug, lens, shareId: data.id as string }
 }
 
 /**

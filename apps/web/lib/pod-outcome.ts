@@ -36,10 +36,20 @@ export type OutcomeRow = {
 
 export type OutcomeSection = {
   tenant: string
+  /**
+   * True when the outcome layer could not be READ, as distinct from having nothing to report.
+   *
+   * These are opposite facts and this repo has already shipped the bug that conflates them: a query
+   * that silently returns nothing renders as an honest-looking zero, and a zero pages nobody
+   * (Roadmap/LEARNINGS.md). "No features are registered" is a truthful sales answer; "the database
+   * did not answer" is an incident. The renderer must not present the second as the first.
+   */
+  unavailable: boolean
   rows: OutcomeRow[]
   northStar: {
     metric: string | null
-    inputCount: number
+    /** Null when the count query itself failed — NOT 0, which would assert "none are registered". */
+    inputCount: number | null
     /** Null when no value has been recorded — distinct from a recorded zero. */
     latestValue: number | null
     caveat?: string
@@ -127,7 +137,9 @@ export function buildOutcomeRow(
 export function buildOutcomeSection(input: {
   tenant: string
   features: Array<{ key: string; tars: { targeted: number; adopted: number; retained: number } | null }>
-  northStar?: { metric: string | null; inputCount: number; latestValue: number | null } | null
+  northStar?: { metric: string | null; inputCount: number | null; latestValue: number | null } | null
+  /** Set by the caller when a read FAILED. Defaults false — an absent flag means "we looked". */
+  unavailable?: boolean
 }): OutcomeSection {
   const rows = input.features.map((f) => buildOutcomeRow(f.key, f.tars))
 
@@ -142,5 +154,11 @@ export function buildOutcomeSection(input: {
     }
   }
 
-  return { tenant: input.tenant, rows, northStar, notInstrumented: OUTCOME_NOT_INSTRUMENTED }
+  return {
+    tenant: input.tenant,
+    unavailable: input.unavailable === true,
+    rows,
+    northStar,
+    notInstrumented: OUTCOME_NOT_INSTRUMENTED,
+  }
 }
