@@ -74,6 +74,35 @@ window does no work.
 - **mutation check:** every scrub and tenancy spec is broken deliberately once and observed red,
   then reverted and the tree re-diffed clean (LEARNINGS: a half-applied mutation is the worst case)
 
+## Known gap carried into Sprint 2 (cross-review, Codex round 2 — 2026-07-26)
+
+**`evaluateFrictionForProject()` has no production caller yet.** Story 1.3's design (Amendment 3) is
+that friction evaluates lazily *from the tenant-scoped read paths* — and those read paths are the
+dashboard (Story 2.2) and `list_tasks` (Story 2.3). Sprint 1 ships no read surface, so the function
+is reachable only from its spec.
+
+This is stated here rather than left to look finished, because it is exactly the failure
+`Roadmap/LEARNINGS.md` records from pod-report Sprint 2: *"a module the doc said was built had ZERO
+callers"*, found by one grep after the sprint was declared done.
+
+**What IS proven, and what is not — precisely:**
+
+| Layer | Status |
+|---|---|
+| Rule evaluation (`lib/friction-rules.ts`) — thresholds, `minSample` floors, rule exclusivity, determinism, rules-as-data | ✅ unit-tested directly, 13 specs |
+| The SQL half — `claim_friction_evaluation` grants one winner per window, `record_signal` groups and denies `anon` at function level | ✅ verified against a real Postgres |
+| The TypeScript orchestration in `evaluateFrictionForProject()` — loading rules, calling the TARS seam, writing `$friction` rows | ❌ **UNPROVEN** |
+
+An earlier attempt to close that last row with an e2e spec was **deleted rather than kept**:
+`friction-eval.ts` imports `server-only` (correctly — it uses the service-role client), so a
+Playwright spec cannot import it, and there is no HTTP surface to reach it through until Sprint 2.
+Every other lib module the e2e suite imports is a pure, zero-framework file; there is no precedent
+for reaching a `server-only` one, and manufacturing an exception would have weakened a real guard to
+produce a proof. Writing "exercised end-to-end" when it is not is the precise failure LEARNINGS
+calls *"a comment asserting a check the code does not actually perform"*.
+
+**Story 2.3 owes the caller AND this proof**, and its acceptance criterion names both.
+
 ## Sprint 1 — Smoke walkthrough (do these in order)
 _Written at sprint close (real URLs, one action + one expected result per step). Owed per Stage 8b:
 throw a real error in the demo app → watch the signal appear (**owed to Daniel by name**)._

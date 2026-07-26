@@ -44,7 +44,10 @@ version bump).
 `isJourneyMcpToolEnabled()` precedent already in `lib/flags.ts`. Neither tool accepts a project
 parameter; scope comes from the resolved token and has nowhere else to come from.
 **`list_tasks` is the lazy friction trigger** (Amendment 3): it evaluates the resolved project's
-detectors before ranking, throttled and locked.
+detectors before ranking, throttled and locked. **This story owes the FIRST production caller of
+`evaluateFrictionForProject()`** — Sprint 1 shipped the function with no read surface to call it
+from, recorded as a known gap in `sprint-1.md`. Acceptance is not met until a `list_tasks` call
+materialises a `$friction` signal that did not exist before it.
 **Acceptance:** a fresh Claude session reads the demo project's tasks via the connector; a token
 sees only its own project's tasks (spec uses a **real** foreign token, not a fabricated one); with
 `SIGNALS_ENABLED` OFF the tools are absent from `tools/list` entirely, not merely erroring.

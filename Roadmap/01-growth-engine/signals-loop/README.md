@@ -144,8 +144,16 @@ loop is provable end to end, then one deliberate flip. Migrations apply as they 
 ## Kill-switches (Stage 6b, as amended)
 | Flag | Gates | Polarity |
 |---|---|---|
-| `SIGNALS_ENABLED` | capture · grouping · friction · tasks · dashboard · connector read tools | enablement, born **OFF** |
+| `SIGNALS_ENABLED` | grouping · friction · promotion · dashboard · connector read tools | enablement, born **OFF** |
 | `CONNECTOR_WRITES_ENABLED` | the staged write tools only | enablement, born **OFF**, flipped at 3.4 |
+
+**What `SIGNALS_ENABLED` does NOT gate (corrected 2026-07-26, cross-review Codex round 2):** ingest
+of a `$error` event, and the redaction applied to it. This table previously said "capture", the code
+never did that, and the doc was the side that was wrong. A `$error` is an ordinary event — it arrives
+through `/v1/track`, it is the tenant's data, and storing it is the engine's job; rejecting it while
+a seam they cannot see is dark would break a contractually valid SDK call. Redaction is ungated for a
+sharper reason: a kill switch whose OFF position starts storing raw credentials is worse than no
+switch.
 
 Fine-grained kill: revoking or descoping an `agent_write` row cuts one agent's writes instantly, no
 deploy; revoking the connector token cuts that agent entirely. Carve-outs: signal capture is

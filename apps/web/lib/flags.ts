@@ -81,9 +81,27 @@ export function isReportSharesEnabled(): boolean {
   return process.env.REPORT_SHARES_ENABLED === 'true'
 }
 
-// signals-loop · Story 1.0 — the seventh flag, and the enablement gate for the whole signals seam:
-// error/friction capture, deterministic grouping, signal→task promotion, the dashboard task views
-// and the connector's task READ tools. Born unset/OFF.
+// signals-loop · Story 1.0 — the seventh flag. Born unset/OFF.
+//
+// ── WHAT IT GATES, PRECISELY (corrected after cross-review, Codex round 2, 2026-07-26) ────────
+// GATED:     deterministic grouping into `signals` · friction evaluation · signal→task promotion ·
+//            the dashboard task views · the connector's task READ tools.
+// NOT gated: ingest of a `$error` event itself, and the redaction applied to it.
+//
+// The first version of this comment said it gated "capture", and the epic README said the same.
+// The code never did, and the doc was the thing that was wrong — so the doc is what changed.
+//
+// Two reasons this is the right polarity, not a shortcut. First, a `$error` event is an ORDINARY
+// event: it arrives through /v1/track, it belongs to the tenant, and storing it is the engine's
+// core job. Rejecting it while the seam is dark would mean a customer's SDK starts taking 4xx on a
+// call that is contractually valid, to hide a feature they cannot see. That is the same coupling
+// isDestinationDeliveryEnabled's comment forbids one layer down: turning a downstream seam off must
+// lose no events, only stop them moving.
+//
+// Second, and more important: REDACTION IS NOT GATED BY THIS FLAG EITHER (see
+// lib/signals.ts → scrubReservedEventPayload). If it were, pulling the kill switch would start
+// storing raw credentials — a switch whose OFF position is less safe than its ON position is worse
+// than no switch at all.
 //
 // Amendment 5 (epic README) added this. The groom had planned only CONNECTOR_WRITES_ENABLED below,
 // but that flag gates a mutation surface, not a seam — and capture/grouping/tasks is a new ingest

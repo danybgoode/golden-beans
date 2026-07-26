@@ -141,8 +141,19 @@ CREATE TABLE IF NOT EXISTS tasks (
   CONSTRAINT tasks_resolution_matches_status CHECK (
     ((status = 'resolved') = (resolution IS NOT NULL)) IS TRUE
   ),
+  -- Both claim columns are welded to the status, in BOTH directions. The first version constrained
+  -- only `claimed_at`, which left `claimed_by` free to carry an agent name on an open or resolved
+  -- task (cross-review, Codex round 2). That is ambiguous state the write path in Story 3.2 would
+  -- have had to interpret — and "who holds this task?" answered from a column the schema permits on
+  -- an unclaimed row is exactly the kind of question that gets answered wrongly at 2am.
   CONSTRAINT tasks_claimed_has_timestamp CHECK (
-    (status <> 'claimed' OR claimed_at IS NOT NULL) IS TRUE
+    ((status = 'claimed') = (claimed_at IS NOT NULL)) IS TRUE
+  ),
+  -- claimed_by travels with claimed_at, so the pair is always both-set or both-null. A resolved task
+  -- therefore records no claimant; if that history is ever wanted it belongs in the audit trail,
+  -- which is append-only, rather than in a mutable column on the task itself.
+  CONSTRAINT tasks_claimed_by_matches_claimed_at CHECK (
+    ((claimed_by IS NOT NULL) = (claimed_at IS NOT NULL)) IS TRUE
   )
 );
 
