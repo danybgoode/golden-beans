@@ -199,3 +199,51 @@ test('"measured and absent" stays not_met, distinct from "never measured"', () =
     'not_instrumented'
   );
 });
+
+// ── Regression from cross-review round 5 ────────────────────────────────────────────────────
+
+test('an UNKNOWN merge identity can never produce a `met` risk-tier row', () => {
+  // The worst failure this lens can produce, and it shipped for four rounds: filtering on
+  // `mergedByIsAgent === true` meant a PR whose merger was never captured counted as "not a
+  // violation", so the row returned `met` with the evidence "N of N merged under a human identity"
+  // — a specific, checkable-looking claim about data that does not exist.
+  const unidentified = {
+    prs: [
+      { number: 1, mergedAt: '2026-07-01T00:00:00Z', riskTier: 'HIGH' }, // no mergedByIsAgent at all
+      { number: 2, mergedAt: '2026-07-02T00:00:00Z', riskTier: 'HIGH', mergedByIsAgent: undefined },
+    ],
+    commits: [],
+  };
+  const row = computeMaturityLens(unidentified).rows.find((r) =>
+    /Risk-tier merge discipline/.test(r.criterion)
+  );
+  assert.equal(row.status, 'not_instrumented', 'unknown identity must never read as met');
+  assert.ok(!row.evidence, 'a not-instrumented row must carry no evidence pointer');
+  assert.match(row.reason, /none records who merged it/i);
+});
+
+test('a KNOWN human merge still earns met, and the evidence counts only what was checked', () => {
+  const mixed = {
+    prs: [
+      { number: 10, mergedAt: '2026-07-01T00:00:00Z', riskTier: 'HIGH', mergedByIsAgent: false },
+      { number: 11, mergedAt: '2026-07-02T00:00:00Z', riskTier: 'HIGH' }, // identity unknown → excluded
+    ],
+    commits: [],
+  };
+  const row = computeMaturityLens(mixed).rows.find((r) => /Risk-tier merge discipline/.test(r.criterion));
+  assert.equal(row.status, 'met');
+  // "1 of 1" — the identified subset — plus an explicit note that one PR was excluded. Saying
+  // "2 of 2" would be true-looking and misleading.
+  assert.match(row.evidence.detail, /1 of 1/);
+  assert.match(row.evidence.detail, /1 further HIGH-risk PR\(s\) record no merger/);
+});
+
+test('a KNOWN agent merge is a real violation, not hidden by the new guard', () => {
+  const violating = {
+    prs: [{ number: 20, mergedAt: '2026-07-01T00:00:00Z', riskTier: 'HIGH', mergedByIsAgent: true }],
+    commits: [],
+  };
+  const row = computeMaturityLens(violating).rows.find((r) => /Risk-tier merge discipline/.test(r.criterion));
+  assert.equal(row.status, 'not_met');
+  assert.match(row.reason, /agent identity/i);
+});

@@ -385,20 +385,45 @@ export function scoreRiskTierMergeDiscipline({ prs } = {}) {
         'No PR in the window declares a HIGH risk tier, so there is no high-stakes case to check discipline against.',
     });
   }
-  const violations = highTier.filter((pr) => pr.mergedByIsAgent === true);
+  // ── Merge identity must be KNOWN before any claim is made about it ──────────────────────────
+  // Cross-review round 5, Blocking, and the worst failure this lens can produce: an earlier version
+  // filtered on `mergedByIsAgent === true`, so a PR whose merge identity was never captured
+  // (undefined) counted as "not a violation" and the row returned `met` with the evidence string
+  // "N of N HIGH-risk PRs were merged under a human identity" — a claim about data that does not
+  // exist.
+  //
+  // Every other row in this lens is careful that unmeasured is not met. This one asserted the
+  // opposite in the one place it does most damage, because the evidence READS as specific and
+  // checkable. Only PRs whose identity is actually a boolean can support a verdict either way.
+  const identified = highTier.filter((pr) => typeof pr.mergedByIsAgent === 'boolean');
+  if (identified.length === 0) {
+    return makeCriterionRow({
+      ...base,
+      notInstrumentedReason: `${highTier.length} HIGH-risk PR(s) found, but none records who merged it — merge identity was not captured, so discipline cannot be judged either way.`,
+    });
+  }
+
+  const violations = identified.filter((pr) => pr.mergedByIsAgent === true);
   if (violations.length === 0) {
     return makeCriterionRow({
       ...base,
       evidence: {
         pointerType: 'pr',
-        ref: highTier[0].number,
-        detail: `${highTier.length} of ${highTier.length} HIGH-risk PRs were merged under a human identity`,
+        ref: identified[0].number,
+        // Counts the IDENTIFIED subset, not the whole high-tier set, so the number in the evidence
+        // is the number actually checked. Saying "N of N" while N excluded unidentified PRs would
+        // be true-looking and misleading.
+        detail:
+          `${identified.length} of ${identified.length} HIGH-risk PRs with a recorded merger were merged under a human identity` +
+          (identified.length < highTier.length
+            ? ` (${highTier.length - identified.length} further HIGH-risk PR(s) record no merger and are excluded)`
+            : ''),
       },
     });
   }
   return makeCriterionRow({
     ...base,
-    notMetReason: `${violations.length} of ${highTier.length} HIGH-risk PRs were merged under an agent identity.`,
+    notMetReason: `${violations.length} of ${identified.length} HIGH-risk PRs with a recorded merger were merged under an agent identity.`,
   });
 }
 
