@@ -155,3 +155,116 @@ test('isHonest counts COMPOSITION numbers too, not just speed', () => {
   assert.ok(compositionOnly.composition.some((r) => r.value !== null))
   assert.equal(isHonest(compositionOnly), false, 'composition numbers without caveats must be refused')
 })
+
+// ── Sprint 2.5c — the maturity section (Story 2.4's output, finally given somewhere to land) ──
+
+const ladder = { title: 'Steps of AI Adoption', author: 'Boris Cherny', date: '2026-07-16' }
+
+const maturityArtifact = {
+  ...artifact,
+  maturity: {
+    ladder,
+    verdict: { step: 1, stepLabel: 'Assisted', metCriteria: 4, totalCriteria: 7, notInstrumentedCount: 6 },
+    rows: [
+      {
+        id: 'code_quality_enforcement',
+        criterion: 'Automatic code-quality enforcement',
+        ladderStep: 2,
+        status: 'met',
+        isProxy: true,
+        proxyNote: 'A named CI check is a proxy, not proof the check was strict.',
+        evidence: { pointerType: 'ci_check', ref: 'guards', detail: '83 of 98 PRs' },
+      },
+      {
+        id: 'agent_sandboxing',
+        criterion: 'Agent sandboxing',
+        ladderStep: 3,
+        status: 'not_instrumented',
+        evidence: null,
+        reason: 'Never written into a commit or a PR.',
+      },
+    ],
+    notInstrumented: [{ key: 'auto_mode_state', label: 'Auto-mode state', reason: 'local setting', guardrail: 'OTel export' }],
+  },
+}
+
+test('the maturity section rides through with its ladder citation and verdict', () => {
+  const m = buildPodReportView(maturityArtifact).maturity
+  assert.ok(m)
+  assert.equal(m!.verdict!.step, 1)
+  assert.equal(m!.verdict!.stepLabel, 'Assisted')
+  assert.equal(m!.ladder!.author, 'Boris Cherny')
+  assert.equal(m!.rows.length, 2)
+  assert.equal(m!.rows[0].proxyNote, 'A named CI check is a proxy, not proof the check was strict.')
+})
+
+test('an artifact with no maturity section reads as null, not as an empty score', () => {
+  // An OLD artifact is immutable and genuinely predates the lens. "Scored nothing" and "was never
+  // scored" must not render alike.
+  assert.equal(buildPodReportView(artifact).maturity, null)
+  assert.equal(buildPodReportView({ ...artifact, maturity: 'nope' }).maturity, null)
+})
+
+test('a MET row with no resolvable evidence pointer is downgraded, never rendered as a claim', () => {
+  const broken = {
+    ...maturityArtifact,
+    maturity: {
+      ...maturityArtifact.maturity,
+      rows: [{ ...maturityArtifact.maturity.rows[0], evidence: null }],
+    },
+  }
+  const row = buildPodReportView(broken).maturity!.rows[0]
+  assert.equal(row.status, 'not_instrumented')
+  assert.match(row.reason!, /no resolvable evidence pointer/)
+})
+
+test('the downgrade is toward the LESS flattering answer — the row is kept, not dropped', () => {
+  // Dropping it would shrink the denominator and inflate the coverage the verdict reports.
+  const broken = {
+    ...maturityArtifact,
+    maturity: {
+      ...maturityArtifact.maturity,
+      verdict: { ...maturityArtifact.maturity.verdict, notInstrumentedCount: 6 },
+      rows: maturityArtifact.maturity.rows.map((r) => ({ ...r, evidence: null })),
+    },
+  }
+  const m = buildPodReportView(broken).maturity!
+  assert.equal(m.rows.length, 2, 'no row may disappear')
+  assert.ok(m.rows.every((r) => r.status === 'not_instrumented'))
+  assert.ok(m.verdict!.notInstrumentedCount >= 2)
+})
+
+test('a partial evidence pointer does not count as evidence', () => {
+  for (const ev of [{ pointerType: 'pr' }, { ref: 92 }, { pointerType: '', ref: 92 }, { pointerType: 'pr', ref: '' }]) {
+    const broken = {
+      ...maturityArtifact,
+      maturity: { ...maturityArtifact.maturity, rows: [{ ...maturityArtifact.maturity.rows[0], evidence: ev }] },
+    }
+    assert.equal(
+      buildPodReportView(broken).maturity!.rows[0].status,
+      'not_instrumented',
+      `evidence ${JSON.stringify(ev)} must not count`
+    )
+  }
+})
+
+test('isHonest refuses a verdict whose ladder is not version-pinned', () => {
+  // A score floating free of the rubric it was scored against. An old report must stay
+  // interpretable, which means title + author + date, not just a name.
+  assert.equal(isHonest(buildPodReportView(maturityArtifact)), true)
+  for (const partial of [{ title: 'x', author: 'y' }, { title: 'x', date: 'z' }, { author: 'y', date: 'z' }, {}]) {
+    const v = buildPodReportView({
+      ...maturityArtifact,
+      maturity: { ...maturityArtifact.maturity, ladder: partial },
+    })
+    assert.equal(isHonest(v), false, `ladder ${JSON.stringify(partial)} must be refused`)
+  }
+})
+
+test('a maturity section with rows but NO verdict is honest — it claims nothing', () => {
+  const v = buildPodReportView({
+    ...maturityArtifact,
+    maturity: { ...maturityArtifact.maturity, ladder: {}, verdict: null },
+  })
+  assert.equal(isHonest(v), true)
+})

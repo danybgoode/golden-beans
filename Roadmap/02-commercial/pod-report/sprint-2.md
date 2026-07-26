@@ -1,8 +1,36 @@
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
-**Status:** 🟨 All four stories' logic BUILT and tested; the rendered page is the remaining gap.
-**2.1** (`8cc093b`) · **2.4** (`14202d5`) · **2.2** built against the real `miyagisanchez` tenant ·
-**2.3** has its view + honesty layer tested, but **no page component yet**.
+**Status:** 🟨 **COMPUTATION SHIPPED · SURFACE NOT SHIPPED.** PR
+[#32](https://github.com/danybgoode/golden-beans/pull/32) squash `0eca9fc`, deployed to production
+`success`. Every number the Pod Report needs is computed, deterministic and unit-tested — and **no
+human can see any of it**: nothing renders it, and no `pod_report` artifact has ever reached the
+engine.
+
+## Status re-derived from the tree, not from the PR description (2026-07-26)
+
+The close-out below was written by validating against `origin/main`, the production database and the
+live site — not by reading the previous session's own summary. Two of its claims did not survive.
+
+| Story | Previously claimed | Verified reality |
+|---|---|---|
+| 2.1 Delivery metrics | built `8cc093b` | ✅ **computation shipped.** `scripts/lib/pod-metrics.mjs` + `scripts/pod-report.mjs` run clean against the real checkout (841 commits · 133 epics · 98 merged PRs · 49-day window). ⚠️ **`--push` is NOT wired** — it prints `⚠ --push is not wired yet` and exits 0, so a run that looks successful stores nothing. |
+| 2.2 Outcome layer | "built against the real `miyagisanchez` tenant" | ❌ **overstated.** `lib/pod-outcome.ts` is pure shaping with 6 unit tests. A repo-wide grep finds **zero callers**: nothing joins it to `lib/tars-query.ts` or `lib/north-star-query.ts`, so no outcome row has ever traced to an engine query. The acceptance criterion is unverifiable as shipped. |
+| 2.3 Report surface | "view + honesty layer tested, no page component" | ✅ **accurate, and understated.** `lib/pod-report-view.ts` + 14 tests exist and no route renders them (`/hub/<slug>/report` → **404** in production). The view seam also has **no `maturity` field at all**, so Story 2.4's output has nowhere to go even once a page exists. |
+| 2.4 Maturity lens | built `14202d5` | ✅ **computation shipped** (`scripts/lib/maturity-lens.mjs`, 599 lines, mutation-verified). ❌ **Not rendered anywhere**, so three of its acceptance criteria — the verdict shown beside the not-instrumented count, the count present *on the investor lens*, each row stating its proxy — are structurally unmet: there is no lens and no page. |
+
+**Evidence for the two hard claims.** `select kind, count(*) from report_artifacts group by kind` on
+production returns exactly one row — `roadmap`, 3 versions. `curl -o /dev/null -w '%{http_code}'
+…/hub/golden-beans-demo/report` returns **404** (its two siblings, the journey and horizon views,
+return 200).
+
+**What this is not.** None of the shipped work is wrong — the computation is the hard half and it is
+genuinely good (it caught and rejected two flattering-but-false numbers of its own accord). The gap
+is that a report nobody can read is not a sales artifact, and Sprint 3's share links have nothing to
+share until it renders.
+
+**Carry-over, tracked as Sprint 2.5 below and shipped before Sprint 3 starts** — because Story 3.2
+("§5 flipped teaser → live Pod Report section") and Story 3.1 (a client lens showing "their Pod
+Report") both hard-depend on a surface that does not exist yet.
 
 ## Stories
 
@@ -106,6 +134,48 @@ this dataset appends a growing changelog to the `status:` comment, so those edit
 Doing it properly means parsing the frontmatter at each revision rather than pattern-matching the
 diff, with a fixture proving it reproduces the validated numbers first. Left as a follow-up rather
 than shipped as an unverified swap that silently moves a headline metric.
+
+## Sprint 2.5 — the carry-over that makes Sprint 2 real
+
+Scoped from the verified gaps above. Not new scope: this is the unshipped half of stories 2.1–2.4,
+and it is the hard dependency Sprint 3 sits on.
+
+### 2.5a — Wire `--push` (completes 2.1)
+`POST /api/v1/reports/pod/push` — its own payload contract (`lib/pod-report-schema.ts`), the same
+`push_report_artifact` RPC + advisory lock Story 1.1 built, `kind='pod_report'`. The tenant comes
+from the hashed API key and never from the body, exactly like the roadmap rail. Then
+`scripts/pod-report.mjs --push` actually pushes.
+**Acceptance:** unauthenticated → 401 · wrong `schemaVersion` → 400 · a real push produces a new
+queryable version · a foreign tenant's key cannot read it. **Risk:** LOW.
+
+### 2.5b — The lens seam (shared surface, and the reason it is built now)
+`lib/pod-report-lens.ts` — `team` | `client` | `investor`, a **pure, zero-import** module. The lens
+decides which sections and which rows a viewer receives, and it is resolved **server-side from a
+credential, never from a URL**. Built in Sprint 2.5 rather than Sprint 3 because Story 3.1's share
+links inherit it: a lens invented inside the share route would be a second policy that can drift
+from the one the internal page uses.
+**The invariant it carries:** no lens may drop the not-instrumented rows, the caveats, or the
+verdict's not-instrumented count. `investor` narrows *detail*, never *honesty* — that is Story 2.4's
+acceptance criterion made structural instead of remembered. **Acceptance:** a spec asserts every
+lens keeps them, mutation-verified. **Risk:** LOW (pure), but load-bearing.
+
+### 2.5c — The report surface (completes 2.3 + renders 2.4)
+`/hub/[projectSlug]/report`, behind the same `requireDashboardAccess` gate as its sibling hub views.
+Renders speed **with** stability and gaps beside it (never speed alone — Decision 4), composition,
+the maturity ladder with a resolvable evidence pointer on every `met` row, the verdict beside the
+not-instrumented count, and every benchmark cited + linked. `lib/pod-report-view.ts` grows a
+`maturity` section so the artifact's lens output has somewhere to land.
+**Acceptance:** frontend-design heuristics run + noted in the PR · every external number carries its
+linked source · the caveats are on the page, not in a footnote · `isHonest()` refuses to render a
+numbers-without-caveats view. **Risk:** LOW.
+
+### 2.5d — The outcome layer, actually joined (completes 2.2)
+`lib/pod-report-query.ts` reads the stored delivery artifact and joins a **live** outcome read
+through `lib/tars-query.ts` / `lib/north-star-query.ts` — the canonical query libs, never a fresh
+`events` query (AGENTS rule #1). Wired against a real tenant with real registered features.
+**Acceptance:** every rendered outcome row traces to an engine query; no commerce data is copied
+into an artifact; a tenant with no registered features renders "not instrumented", never zeros.
+**Risk:** LOW.
 
 ## Sprint QA
 - **api spec(s):** 2.1 → artifact determinism (same inputs ⇒ same output) · 2.2 → outcome rows
