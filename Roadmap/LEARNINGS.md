@@ -384,6 +384,19 @@ one-liner + why + date shape.
   Keep its read-only prompt explicit, verify every cited line against the actual diff, and record false
   positives rather than converting them into churn. This still earns a high-risk second seat because it
   is a cheap independent repository scout; it does not replace Agy's cleaner diff discipline.
+- **A scripted `str.replace()` that finds nothing SUCCEEDS SILENTLY — and the test you write alongside
+  it can pass while the change never landed.** pod-report S2 added `checkSucceeded()` (accepting both
+  GitHub check-run `conclusion` and classic commit-status `state`), unit-tested it, and shipped —
+  except the edit wiring it into the caller silently no-op'd, because a formatter had reflowed the
+  target text between writing the patch and running it. The helper existed, its tests passed, and
+  the caller kept its old conclusion-only comparison for **three review rounds**. What let it hide
+  was the test's shape: it exercised the helper DIRECTLY, and the one adapter case it did check
+  (`state: 'FAILURE'`) returns false under both the fixed and the broken code. The distinguishing
+  input — a *succeeding* classic status — was never tried. **Two rules: (1) assert that a scripted
+  edit matched (`assert old in s`) — an unasserted replace is a no-op waiting to happen, and it is
+  invisible in a green test run; (2) when you extract a helper, test it THROUGH its caller with an
+  input whose result DIFFERS between the old and new implementations, or you have tested the helper
+  and not the integration.** *(2026-07-25, pod-report S2.)*
 - **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
   spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
   S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a

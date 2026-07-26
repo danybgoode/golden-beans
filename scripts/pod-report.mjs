@@ -187,10 +187,7 @@ export function normalisePrForLens(pr) {
     mergedByIsAgent: pr.mergedAt && pr.mergedBy ? pr.mergedBy.is_bot === true : undefined,
     // Undefined rather than false when NO checks are attached: "this PR ran no checks" and "we
     // don't know whether checks passed" are different facts, and false would assert the first.
-    ciPassedBeforeMerge:
-      checks.length > 0
-        ? checks.every((c) => String(c?.conclusion ?? '').toUpperCase() === 'SUCCESS')
-        : undefined,
+    ciPassedBeforeMerge: checks.length > 0 ? checks.every((c) => checkSucceeded(c)) : undefined,
   };
 }
 

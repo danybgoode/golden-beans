@@ -165,10 +165,39 @@ test('a classic commit STATUS counts as success, not just a check-run conclusion
   assert.equal(checkSucceeded(null), false);
 });
 
-test('mixed check shapes are all required to pass, not just the ones we recognise', () => {
-  const pr = normalisePrForLens({
+test('the ADAPTER honours a classic commit status, not just the helper in isolation', () => {
+  // This test exists because its absence let a real bug ship past three review rounds. Round 3
+  // added `checkSucceeded` (handling both `conclusion` and `state`) and tested it DIRECTLY — but
+  // the edit wiring it into the adapter silently failed, so `normalisePrForLens` kept its own
+  // conclusion-only comparison. Every test still passed, because none of them exercised a classic
+  // `state` through the adapter: the coverage was real for the helper and unreachable for the
+  // integration. Exactly the "spec passes but cannot fail" trap Roadmap/LEARNINGS.md records.
+  //
+  // The distinguishing case is a SUCCEEDING classic status: it yields true only if the adapter
+  // actually calls the helper, and false under the old conclusion-only code.
+  const classicPass = normalisePrForLens({
+    number: 1,
+    statusCheckRollup: [{ name: 'ci', state: 'SUCCESS' }],
+  });
+  assert.equal(classicPass.ciPassedBeforeMerge, true, 'a passing classic status must count as passing');
+
+  // A failing one must still fail — and note this case alone proves nothing, since it is false
+  // under both implementations. That is why the assertion above has to exist.
+  const classicFail = normalisePrForLens({
+    number: 1,
+    statusCheckRollup: [{ name: 'ci', state: 'FAILURE' }],
+  });
+  assert.equal(classicFail.ciPassedBeforeMerge, false);
+
+  // Mixed shapes: every check must pass, whichever field carries its verdict.
+  const mixed = normalisePrForLens({
+    number: 1,
+    statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'SUCCESS' }],
+  });
+  assert.equal(mixed.ciPassedBeforeMerge, true);
+  const mixedFail = normalisePrForLens({
     number: 1,
     statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'FAILURE' }],
   });
-  assert.equal(pr.ciPassedBeforeMerge, false, 'one failing classic status must fail the whole gate');
+  assert.equal(mixedFail.ciPassedBeforeMerge, false, 'one failing classic status fails the whole gate');
 });
