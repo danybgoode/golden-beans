@@ -1,0 +1,145 @@
+import { SELF_PROJECT_SLUG } from '@/lib/self-track'
+import { getPodReport } from '@/lib/pod-report-query'
+import { getSection } from '@/lib/landing-sections'
+
+// Section 5 — Pods & proof (ROI). pod-report · Sprint 3, Story 3.2.
+//
+// Replaces the <Teaser/> this section shipped with. Reads in-process with the slug as a hardcoded
+// constant rather than request input — the same arrangement LiveProofSection uses, and the same
+// reason rule #2's `assertPublicAllowedSlug` isn't repeated here: that check guards the HTTP
+// boundary where a slug IS attacker-controlled, and no slug crosses one here.
+//
+// ── Whose data a PUBLIC page is allowed to show, and why it is the SELF tenant ────────────────
+// Story 3.2: "no client data on the public page, ever." So this deliberately does NOT render the
+// medusa-bonsai Pod Report — that is a real client's delivery history and it stays behind auth and
+// revocable share links.
+//
+// It reads the SELF tenant (`golden-beans`), not the marketing demo, for two reasons that point the
+// same way. The data is OURS: golden-beans' own repository, our own numbers, published on purpose —
+// so there is no client-exposure question to get wrong. And it is the tenant whose credential the
+// roadmap-push workflow already holds, so the section stays current on every deploy without minting
+// a second production key for a page to read itself. Same dogfood tenant §1 and §7 already use:
+// "we sell what we use" is a claim this section can only make by being an instance of it.
+//
+// ── The INVESTOR lens, on purpose ─────────────────────────────────────────────────────────────
+// The narrowest lens (lib/pod-report-lens.ts): no per-criterion ladder rows, no month-by-month
+// authorship. Not because a stranger cannot be trusted with them, but because a landing section is
+// not a report and a wall of criteria would bury the one line that matters. The lens cannot narrow
+// the honesty — the not-instrumented count and the caveats survive it by construction, which is
+// exactly why this section can be short without becoming a boast.
+export async function PodsProofSection() {
+  const section = getSection('pods-proof')
+  const report = await getPodReport(SELF_PROJECT_SLUG, 'investor')
+
+  // Not-yet-pushed and could-not-be-read both land here. A landing section must never be the thing
+  // that 500s the homepage, and it must never invent numbers to fill the space either — so the
+  // honest teaser copy stays as the fallback, and the section is still badged by its epic.
+  if (!report.ok) return <PodsProofFallback epic={section.epic} />
+
+  const { view } = report
+  const lead = view.speed.find((r) => r.key === 'epic_lead_time')
+  const freq = view.speed.find((r) => r.key === 'deploy_frequency')
+  const verdict = view.maturity?.verdict ?? null
+  const repo = view.source.repo
+
+  return (
+    <section className="band" style={{ padding: '44px 0' }} id="pods-proof">
+      <div className="wrap">
+        <p className="kicker">Pods &amp; proof</p>
+        <h2>
+          Your dev team, as a{' '}
+          <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
+        </h2>
+        <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 620 }}>
+          Computed, not claimed — every figure below comes from{' '}
+          <code>{repo ?? 'this repository'}</code>&apos;s own git and pull-request history, measured over{' '}
+          <b className="data">{view.source.windowDays ?? '—'}</b> days and{' '}
+          <b className="data">{view.source.commits ?? '—'}</b> commits. Nothing here is estimated, and
+          the things we <em>cannot</em> measure are listed beside the things we can.
+        </p>
+
+        <div className="statrow">
+          {lead?.value && (
+            <div className="stat">
+              <b className="data">{lead.value}</b>
+              <span>median epic lead time</span>
+            </div>
+          )}
+          {freq?.value && (
+            <div className="stat">
+              <b className="data">{freq.value}</b>
+              {/* The proxy label is part of the value, not a footnote. The computation marks this row
+                  `isProxy` and the page says so where the number is. */}
+              <span>deploys / week{freq.isProxy ? ' (proxy)' : ''}</span>
+            </div>
+          )}
+          {verdict && (
+            <div className="stat">
+              <b className="data">
+                step {verdict.step} · {verdict.stepLabel}
+              </b>
+              <span>on the published AI-adoption ladder</span>
+            </div>
+          )}
+          {/* Rendered UNCONDITIONALLY beside the score, never as an afterthought. A maturity verdict
+              shown without its coverage is the single most misleading thing this section could do,
+              and Story 2.4's acceptance names it explicitly for exactly this lens. */}
+          <div className="stat stat-gap">
+            <b className="data">
+              {(verdict?.notInstrumentedCount ?? 0) + view.notInstrumented.length}
+            </b>
+            <span>things we do not measure — and say so</span>
+          </div>
+        </div>
+
+        <p className="note" style={{ margin: '18px 0 0', fontSize: 12, maxWidth: 620 }}>
+          {view.notInstrumented.length > 0 ? (
+            <>
+              Not instrumented here:{' '}
+              {view.notInstrumented.map((row) => row.label.toLowerCase()).join(' · ')}. Each gap names
+              the guardrail that would close it — which is most of what a pods engagement installs.
+            </>
+          ) : (
+            <>Every gap this report can declare is declared inside the artifact itself.</>
+          )}
+        </p>
+
+        <p style={{ margin: '18px 0 0', fontSize: 13 }}>
+          <span className="tag tag-live">✅ LIVE · {section.epic}</span>
+        </p>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * The honest empty state for a public page.
+ *
+ * Deliberately keeps the teaser's shape and drops its stale claim: the original copy promised
+ * "agent-augmented vs human-baseline", a comparison the 2026-07-25 amendment established cannot be
+ * computed from this dataset and must not be advertised. Copy that outlives the decision that
+ * retired it is how a landing page starts lying by omission.
+ */
+function PodsProofFallback({ epic }: { epic: string }) {
+  return (
+    <section className="band" style={{ padding: '44px 0' }} id="pods-proof">
+      <div className="wrap">
+        <div className="teaser">
+          <div style={{ flex: '1 1 320px', minWidth: 320 }}>
+            <h2>
+              Your dev team, as a{' '}
+              <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
+            </h2>
+            <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 560 }}>
+              The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and
+              an auditable position on the published AI-adoption ladder, computed from a real
+              repository&apos;s own history and read against published benchmarks. Computed, not
+              claimed: which is exactly why there are no numbers here until one is pushed.
+            </p>
+          </div>
+          <span className="tag tag-next">🔜 LIGHTS UP · {epic}</span>
+        </div>
+      </div>
+    </section>
+  )
+}

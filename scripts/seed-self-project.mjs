@@ -47,6 +47,14 @@ const ACTIVATION_KEY = 'activation'
 const ACTIVATION_TARGET_EVENT = 'signup_started'
 const ACTIVATION_ADOPTED_EVENT = 'account_confirmed'
 const ACTIVATION_RETAINED_EVENT = 'first_event_ingested'
+// pod-report Story 3.2 — the hub-engagement signal: the engine measuring its own reporting surface.
+// Two stages that are real here: a Pod Report opened internally (targetEvent), and a SHARE LINK
+// opened by someone outside (adoptedEvent). Mirrors lib/self-track.ts's HUB_ENGAGEMENT_SIGNAL_KEY.
+// Note the two events count different UNITS of "user" on purpose — a person for the first, a share
+// row for the second — which lib/self-track.ts documents at the point the ids are chosen.
+const HUB_KEY = 'hub_engagement'
+const HUB_TARGET_EVENT = 'report_viewed'
+const HUB_ADOPTED_EVENT = 'share_viewed'
 const TARGET_EVENT = 'landing_visited'
 const ADOPTED_EVENT = 'waitlist_joined'
 const RETENTION_DAYS = 7 // schema default; retention isn't meaningful for a one-shot join, but the
@@ -159,6 +167,14 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           retainedEvent: ACTIVATION_RETAINED_EVENT,
           retentionDays: RETENTION_DAYS,
           description: 'Golden Beans activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
+        },
+        {
+          key: HUB_KEY,
+          enabled: true,
+          targetEvent: HUB_TARGET_EVENT,
+          adoptedEvent: HUB_ADOPTED_EVENT,
+          retentionDays: RETENTION_DAYS,
+          description: 'Golden Beans hub dogfood: Pod Report opened → share link opened (pod-report Story 3.2).',
         },
       ],
     }),

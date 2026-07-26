@@ -22,7 +22,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { writeFileSync, existsSync, writeSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need } from './lib/cross-agent-cli.mjs';
 import { computeDelivery } from './lib/pod-metrics.mjs';
@@ -420,7 +420,17 @@ async function main() {
     maturity,
     delivery: computeDelivery({ prs, epics, commits, windowDays: days, generatedAt: stamp }),
     source: {
-      repo: 'medusa-bonsai',
+      // The checkout's directory name, NOT a hardcoded string. It was `'medusa-bonsai'` literally,
+      // which meant `--repo` pointed anywhere else still produced an artifact CLAIMING to measure
+      // medusa-bonsai — a false provenance line on a document whose entire value is that every
+      // number is traceable. Found the first time the script was run against a second repository
+      // (golden-beans' own, for the demo-safe landing artifact), which is the only way it could have
+      // been found: with one dataset the constant was indistinguishable from correct.
+      //
+      // The basename is also the key `app/hub/report-components.tsx`'s REPO_PR_BASE map uses to
+      // decide whether an evidence pointer resolves to a real URL, so a wrong name there silently
+      // downgrades every `pr` pointer to plain text rather than linking it.
+      repo: basename(repo),
       commits: commits.length,
       epics: epics.length,
       mergedPrs: prs.length,

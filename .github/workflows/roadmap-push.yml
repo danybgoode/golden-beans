@@ -24,6 +24,11 @@ on:
 
 permissions:
   contents: read
+  # pod-report Story 3.2 — scripts/pod-report.mjs shells out to `gh pr list` for review latency, the
+  # deploy-frequency proxy and four of the maturity criteria. WITHOUT this scope the script does not
+  # fail: it warns and renders those rows as "not instrumented" (correct behaviour, and much worse
+  # than the truth). An honest degradation is still a degradation when the data is right there.
+  pull-requests: read
 
 jobs:
   push-roadmap:
@@ -42,6 +47,12 @@ jobs:
           # drifted to since. Stamping a SHA whose docs we did not actually read would be the same
           # class of dishonesty the `if:` above avoids.
           ref: ${{ github.event.deployment.sha || github.sha }}
+          # FULL history, and this is load-bearing for the pod-report step below, not a nicety.
+          # actions/checkout defaults to depth 1, and scripts/pod-report.mjs derives every number
+          # from `git log` and from when each epic README first appeared. On a shallow clone it would
+          # succeed, report "1 commit / 0 measurable epics", and push that as an artifact — a
+          # confidently wrong report, which is the one outcome this epic exists to prevent.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -53,3 +64,22 @@ jobs:
           GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
           SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
         run: node scripts/roadmap-push.mjs
+
+      # pod-report · Sprint 3, Story 3.2 — the landing's §5 reads THIS artifact, so it has to stay
+      # current on its own. Computed from this very checkout (`--repo .`): golden-beans measuring
+      # golden-beans, which is both the demo-safe dataset for a public page and the only version of
+      # "we sell what we use" that is literally true.
+      #
+      # `continue-on-error`: a failed Pod Report must not fail the deploy pipeline, and it must not
+      # take the roadmap push down with it. The landing section falls back to its honest teaser when
+      # no artifact is readable, so the visible consequence of a failure here is a page that claims
+      # less — never a broken one, and never a stale number presented as fresh.
+      - name: Push golden-beans' own Pod Report artifact
+        continue-on-error: true
+        env:
+          GROWTH_ENGINE_URL: ${{ vars.SITE_URL || 'https://golden-beans-gamma.vercel.app' }}
+          SELF_PROJECT_API_KEY: ${{ secrets.SELF_PROJECT_API_KEY }}
+          # `gh` reads GH_TOKEN from the environment; the job token carries the pull-requests: read
+          # scope declared above.
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pod-report.mjs --repo . --push

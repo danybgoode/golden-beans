@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
+import { after } from 'next/server'
 import { isReportSharesEnabled } from '@/lib/flags'
+import { trackSelfEvent, SHARE_VIEWED_EVENT } from '@/lib/self-track'
 import { resolveShareToken } from '@/lib/report-shares'
 import { looksLikeShareToken } from '@/lib/share-token'
 import { getPodReport } from '@/lib/pod-report-query'
@@ -65,6 +67,12 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
 
   const { projectSlug, lens } = share
   const policy = lensPolicy(lens)
+
+  // Story 3.2 — keyed on the SHARE ROW, not on a person. A bearer URL can be forwarded to a room
+  // full of people from one email, so "distinct links opened" is the only unit this page can
+  // honestly report; calling it a visitor count would be a number that reads as an audience and is
+  // not one. Never the token itself: that would write a live credential into the event stream.
+  after(() => trackSelfEvent(SHARE_VIEWED_EVENT, `share:${share.shareId}`))
 
   const report = await getPodReport(projectSlug, lens)
   if (!report.ok && report.reason === 'query_failed') throw new Error('Pod report lookup failed')

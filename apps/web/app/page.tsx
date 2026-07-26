@@ -3,6 +3,7 @@ import { Hero } from '@/components/landing/Hero'
 import { LiveProofSection } from '@/components/landing/LiveProofSection'
 import { OperateRoutes } from '@/components/landing/OperateRoutes'
 import { Teaser } from '@/components/landing/Teaser'
+import { PodsProofSection } from '@/components/landing/PodsProofSection'
 import { PrimitivesGrid } from '@/components/landing/PrimitivesGrid'
 import { WaitlistSection } from '@/components/landing/WaitlistSection'
 import { Footer } from '@/components/landing/Footer'
@@ -39,12 +40,7 @@ export default function Home() {
         body="Signal → structured task → your agent, over MCP → a fix in your workflow. This section lights up in the same epic that ships the capability — or it doesn't light up at all."
         epic={getSection('inverted-loop').epic}
       />
-      <Teaser
-        title="Your dev team, as a revenue engine."
-        body="The Pod Report — velocity, cycle time, DORA, cost per shipped point, agent-augmented vs human-baseline — computed from dated dogfood history. Computed, not claimed: which is exactly why there are no numbers here yet."
-        epic={getSection('pods-proof').epic}
-        band
-      />
+      <PodsProofSection />
       <PrimitivesGrid />
       <WaitlistSection />
       <Footer />

@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation'
+import { after } from 'next/server'
+import { cookies } from 'next/headers'
 import { requireDashboardAccess } from '@/lib/dashboard-auth'
+import { trackSelfEvent, REPORT_VIEWED_EVENT, VISITOR_COOKIE } from '@/lib/self-track'
 import { getPodReport } from '@/lib/pod-report-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { EmptyPodReportState, PodReportBody } from '../../report-components'
@@ -45,6 +48,16 @@ export default async function HubPodReportPage({ params }: { params: Promise<{ p
       </main>
     )
   }
+
+  // Story 3.2 — the engine measures its own reporting surface. Via `after()`, never inline-awaited:
+  // this is a real network round-trip (the app calling its own public API through the SDK) and
+  // awaiting it would put a tracking call in front of the page's own response.
+  //
+  // Fired ONLY when a visitor cookie already exists. Minting an id here would be wrong twice over:
+  // a Server Component cannot set a cookie, so the id would never persist, and TARS counts DISTINCT
+  // users — a fresh id per view turns a page-view counter into a fabricated audience size.
+  const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value
+  if (visitorId) after(() => trackSelfEvent(REPORT_VIEWED_EVENT, visitorId))
 
   const { artifact, view, outcome, lens } = result
   const freshness = formatFreshness(artifact.generatedAt, new Date(), artifact.sourceCommit)

@@ -9,6 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -369,5 +370,25 @@ test('the script and the server agree on POD_REPORT_SCHEMA_VERSION', () => {
     Number(m[1]),
     POD_REPORT_SCHEMA_VERSION,
     'scripts/pod-report.mjs and lib/pod-report-schema.ts disagree on the schema version'
+  );
+});
+
+test('source.repo names the ANALYSED checkout, never a hardcoded dataset', () => {
+  // This was the literal string 'medusa-bonsai', so pointing --repo anywhere else produced an
+  // artifact claiming to measure medusa-bonsai — a false provenance line on a document whose whole
+  // value is traceability. Invisible with one dataset; found the first time a second repo was
+  // measured. The basename is also REPO_PR_BASE's key in the renderer, so a wrong name silently
+  // downgrades every `pr` evidence pointer to plain text instead of linking it.
+  assert.equal(basename('/Users/someone/dobby/golden-beans'), 'golden-beans');
+  assert.equal(basename('/Users/someone/dobby/medusa-bonsai'), 'medusa-bonsai');
+  // And the constant is gone from the source — the assertion that would actually have caught it.
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), 'pod-report.mjs'),
+    'utf8'
+  );
+  assert.equal(
+    /repo:\s*'medusa-bonsai'/.test(src),
+    false,
+    "source.repo must be derived from the checkout, not hardcoded"
   );
 });
