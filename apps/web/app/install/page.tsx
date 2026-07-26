@@ -4,6 +4,7 @@ import { CopyUrlField } from '@/components/landing/CopyUrlField'
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
 import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
+import { isConnectorWritesEnabled } from '@/lib/flags'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page: copy-your-URL field, "Add to
 // Claude" deep-link, and the real SDK integration docs. Same force-dynamic rationale as
@@ -34,8 +35,8 @@ export default async function InstallPage() {
             Bring the agent you already pay for.
           </h1>
           <p style={{ margin: '14px 0 36px', color: 'var(--dim)', maxWidth: 640 }}>
-            Three ways in. Pick the one that matches how you already work — the SDK is always the
-            data-in layer underneath all three.
+            Three ways in. Pick the one that matches how you already work — the SDK is always the data-in
+            layer underneath all three.
           </p>
 
           <div className="panel" style={{ marginBottom: 24 }}>
@@ -66,12 +67,42 @@ export default async function InstallPage() {
                 <p className="note" style={{ marginTop: 14 }}>
                   Revoke the token, revoke the access — no deploy required.
                 </p>
+                {/* signals-loop S3.2 — AGENTS rule #3 honesty: once a write surface exists, the page
+                    that hands out the connector URL has to say what this URL can and cannot do.
+                    "Read-only" above is exact rather than cautious, and this explains WHY: the URL
+                    is displayed openly on this very page, so it is deliberately incapable of
+                    authorizing a mutation. Writing needs a second, hashed credential.
+
+                    Gate-aware, for the same reason landing §4 is: a sentence promising a capability
+                    that is switched off, or omitting one that is live, is a claim this page cannot
+                    check and a reader can. */}
+                <p className="note" style={{ marginTop: 8 }}>
+                  {isConnectorWritesEnabled() ? (
+                    <>
+                      This URL is <b style={{ color: 'var(--crema)' }}>read-only on its own</b> — it is
+                      displayed on this public page, so it can never authorize a change. To let your agent{' '}
+                      <em>claim</em> and <em>resolve</em> tasks, mint an <b>agent write key</b> in your
+                      dashboard and send it as a bearer token alongside this URL. Both must belong to the same
+                      project, and every change is previewed and confirmed before it applies.
+                    </>
+                  ) : (
+                    <>
+                      This URL is <b style={{ color: 'var(--crema)' }}>read-only</b> — it is displayed on this
+                      public page, so it can never authorize a change. Letting your own agent claim and
+                      resolve tasks is built and not yet switched on.
+                    </>
+                  )}
+                </p>
               </>
             ) : (
               <p style={{ fontSize: 14, color: 'var(--dim)' }}>
-                {isSiteUrlMisconfiguredInProduction()
-                  ? "The connector isn't ready here yet — check back shortly."
-                  : <>The demo connector isn&apos;t seeded yet — run <code>npm run seed:demo</code>.</>}
+                {isSiteUrlMisconfiguredInProduction() ? (
+                  "The connector isn't ready here yet — check back shortly."
+                ) : (
+                  <>
+                    The demo connector isn&apos;t seeded yet — run <code>npm run seed:demo</code>.
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -98,7 +129,7 @@ export default async function InstallPage() {
                 overflowX: 'auto',
               }}
             >
-{`npm install @golden-beans/sdk
+              {`npm install @golden-beans/sdk
 
 import { createGrowthEngineClient } from '@golden-beans/sdk'
 

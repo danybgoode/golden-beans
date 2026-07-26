@@ -5,10 +5,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import {
   isConnectorEnabled,
+  isConnectorWriteToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
   isJourneyMcpToolEnabled,
   isTaskMcpToolEnabled,
 } from '@/lib/flags'
+import { authorizeAgentWrite } from '@/lib/agent-write-keys'
+import { proposeTaskChange, applyTaskChange } from '@/lib/task-write-staging'
 import { listTasksByProjectId, getTaskByProjectId, promoteEligibleSignals } from '@/lib/tasks'
 import { evaluateFrictionForProject } from '@/lib/friction-eval'
 import { resolveConnectorToken, TOKEN_FORMAT } from '@/lib/connector-tokens'
@@ -61,7 +64,7 @@ async function gate(token: string): Promise<{ ok: true; projectId: string; proje
 // Every tool call is scoped to this one resolved project — no tool schema below accepts a
 // project/projectId param, so a token minted for project A has no way to even ask for project
 // B's data. This is what makes the cross-project isolation acceptance true by construction.
-function buildMcpServer(projectId: string, projectSlug: string): McpServer {
+function buildMcpServer(projectId: string, projectSlug: string, writeKeyId: string | null): McpServer {
   const server = new McpServer({ name: 'golden-beans-connector', version: '1.0.0' })
 
   server.registerTool(
@@ -379,6 +382,104 @@ function buildMcpServer(projectId: string, projectSlug: string): McpServer {
     )
   }
 
+  // ── signals-loop · Sprint 3, Story 3.2 — the STAGED WRITE tools ─────────────────────────────
+  // The engine's first public mutation surface. Registered only when ALL of the following hold:
+  //   • the connector gate, the signals gate AND CONNECTOR_WRITES_ENABLED are on
+  //     (isConnectorWriteToolEnabled), and
+  //   • the caller presented an `agent_write` Bearer key that resolved to THIS SAME project
+  //     (writeKeyId is non-null — see POST, where the two credentials are compared).
+  //
+  // When either fails the tools do not EXIST: absent from tools/list, not present-and-erroring.
+  // That is the same "dark means invisible" rule the read tools follow, and here it also means an
+  // agent without a write credential is never told that a write surface is there to attack.
+  //
+  // ── Why the credential is not re-checked inside each tool ───────────────────────────────────
+  // Because it cannot be bypassed: the tools are not REGISTERED unless it passed. Re-resolving the
+  // key per call would be a second place for the rule to live and a second place to get it wrong —
+  // and pod-report S3's cross-review caught precisely the shape where a route re-resolves identity
+  // it was already handed. `writeKeyId` is carried through for the audit trail, not re-derived.
+  if (isConnectorWriteToolEnabled() && writeKeyId) {
+    server.registerTool(
+      'propose_task_change',
+      {
+        description:
+          "Stage a change to one of this project's tasks — claim, resolve or dismiss. This does NOT change anything: it returns a preview of exactly what would happen plus a single-use confirmation token, which you pass to apply_task_change to actually perform it.",
+        inputSchema: {
+          taskId: z.string().uuid().describe('The task id, as returned by list_tasks.'),
+          action: z
+            .enum(['claim', 'resolve', 'dismiss'])
+            .describe('claim = take ownership; resolve = close as done; dismiss = close without acting.'),
+          actor: z
+            .string()
+            .min(1)
+            .max(120)
+            .optional()
+            .describe('Who is doing this, e.g. "claude-code" or a person. REQUIRED for claim.'),
+          resolution: z
+            .enum(['fixed', 'wont_fix', 'duplicate', 'not_reproducible'])
+            .optional()
+            .describe('Only for resolve. Defaults to fixed.'),
+          evidencePointer: z
+            .string()
+            .max(500)
+            .optional()
+            .describe(
+              'Only for resolve. A commit SHA or a URL is recorded as EVIDENCE; free text is stored as a note and the resolution is recorded as having no evidence.'
+            ),
+        },
+      },
+      async ({ taskId, action, actor, resolution, evidencePointer }) => {
+        const result = await proposeTaskChange({
+          projectId,
+          taskId,
+          action,
+          actor,
+          resolution,
+          evidencePointer,
+          agentKeyId: writeKeyId,
+        })
+        if (!result.ok) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify(result) }],
+            isError: true,
+          }
+        }
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                ...result,
+                note: 'NOTHING HAS CHANGED YET. Review the preview, then call apply_task_change with this confirmationToken to perform it. The token is single-use and expires.',
+              }),
+            },
+          ],
+        }
+      }
+    )
+
+    server.registerTool(
+      'apply_task_change',
+      {
+        description:
+          'Perform a change previously staged by propose_task_change. Consumes the confirmation token — it works exactly once.',
+        inputSchema: {
+          confirmationToken: z
+            .string()
+            .min(1)
+            .describe('The confirmationToken returned by propose_task_change.'),
+        },
+      },
+      async ({ confirmationToken }) => {
+        const result = await applyTaskChange(projectId, confirmationToken)
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+          ...(!result.ok ? { isError: true } : {}),
+        }
+      }
+    )
+  }
+
   return server
 }
 
@@ -387,7 +488,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const gated = await gate(token)
   if (gated instanceof Response) return gated
 
-  const server = buildMcpServer(gated.projectId, gated.projectSlug)
+  // ── The second credential (Amendment 2) ─────────────────────────────────────────────────────
+  // The connector token in the URL identified the project and authorized reads. A WRITE additionally
+  // requires an `agent_write` Bearer key that resolves to the SAME project. Both must agree or the
+  // write tools are not registered at all.
+  //
+  // This is resolved once per request, here, rather than inside each tool: registration is the gate,
+  // so there is no code path on which a tool exists without it having passed.
+  //
+  // A failure is deliberately SILENT — no 401, no error body. The read tools must keep working for a
+  // caller with no write key (that is the ordinary case), and a distinguishable response would tell
+  // an attacker holding only a connector token whether a write surface exists and whether a guessed
+  // key was closer. The observable consequence of any failure — missing, unknown, revoked, expired,
+  // or belonging to another project — is identical: the write tools are absent from tools/list.
+  const bearer = req.headers.get('authorization')
+  const presentedKey = bearer?.toLowerCase().startsWith('bearer ') ? bearer.slice(7).trim() : null
+  const writeAuth = presentedKey ? await authorizeAgentWrite(gated.projectId, presentedKey) : null
+  const writeKeyId = writeAuth?.ok ? writeAuth.keyId : null
+
+  const server = buildMcpServer(gated.projectId, gated.projectSlug, writeKeyId)
   // Stateless: a fresh server + transport per request, no session ID, no connection reuse —
   // matches the read-only, single-call-per-request shape of these tools.
   const transport = new WebStandardStreamableHTTPServerTransport({
