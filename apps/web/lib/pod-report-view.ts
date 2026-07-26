@@ -242,7 +242,18 @@ export function buildMaturitySection(raw: unknown): MaturitySection | null {
       : {
           step: num(v.step)!,
           stepLabel: str(v.stepLabel) ?? '',
-          metCriteria: num(v.metCriteria) ?? 0,
+          // Recomputed from the rows AFTER the downgrade above, exactly like notInstrumentedCount
+          // below — and for a sharper reason. Cross-review round 3 (Agy, PR #33): this was copied
+          // straight from the artifact while its sibling count was recomputed, so a single
+          // evidence-less `met` row left the verdict claiming "4 of 7 met" above a table showing 3,
+          // and made metCriteria + notInstrumentedCount exceed totalCriteria. Two numbers describing
+          // one table, disagreeing, with the summary the flattering one — which is the direction
+          // that matters: a reader who checks the arithmetic loses trust in every other figure here.
+          //
+          // `Math.min` rather than a bare recount: it can only ever LOWER the artifact's own claim,
+          // never raise it. If the stored verdict is somehow more conservative than the rows imply,
+          // that conservatism survives.
+          metCriteria: Math.min(num(v.metCriteria) ?? 0, rows.filter((r) => r.status === 'met').length),
           totalCriteria: num(v.totalCriteria) ?? rows.length,
           // Recomputed from the rows AFTER the downgrade above, never copied from the artifact: a
           // stale count that disagrees with what the page actually shows is the one number on this

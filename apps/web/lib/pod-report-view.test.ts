@@ -268,3 +268,42 @@ test('a maturity section with rows but NO verdict is honest — it claims nothin
   })
   assert.equal(isHonest(v), true)
 })
+
+test('a downgraded row lowers metCriteria too — the verdict cannot outrun its own table', () => {
+  // Cross-review round 3 (Agy, PR #33). notInstrumentedCount was recomputed after the
+  // evidence-downgrade; metCriteria was copied. So one evidence-less `met` row produced a verdict
+  // claiming more met criteria than the table below it showed, and metCriteria +
+  // notInstrumentedCount could exceed totalCriteria. Both counts now describe the same rows.
+  const broken = {
+    ...maturityArtifact,
+    maturity: {
+      ...maturityArtifact.maturity,
+      verdict: { step: 2, stepLabel: 'Adopted', metCriteria: 2, totalCriteria: 2, notInstrumentedCount: 0 },
+      rows: [
+        { ...maturityArtifact.maturity.rows[0], id: 'a', evidence: null },
+        { ...maturityArtifact.maturity.rows[0], id: 'b' },
+      ],
+    },
+  }
+  const m = buildPodReportView(broken).maturity!
+  const actuallyMet = m.rows.filter((r) => r.status === 'met').length
+  assert.equal(actuallyMet, 1, 'the evidence-less row must have been downgraded')
+  assert.equal(m.verdict!.metCriteria, 1, 'the verdict must agree with the table')
+  assert.ok(
+    m.verdict!.metCriteria + m.verdict!.notInstrumentedCount <= m.verdict!.totalCriteria,
+    'the parts cannot exceed the whole'
+  )
+})
+
+test('metCriteria can only be LOWERED, never raised above the artifact’s own claim', () => {
+  // A stored verdict more conservative than its rows stays conservative: this layer's job is to
+  // refuse flattery, not to award credit the computation declined to give.
+  const modest = {
+    ...maturityArtifact,
+    maturity: {
+      ...maturityArtifact.maturity,
+      verdict: { step: 1, stepLabel: 'Assisted', metCriteria: 0, totalCriteria: 2, notInstrumentedCount: 1 },
+    },
+  }
+  assert.equal(buildPodReportView(modest).maturity!.verdict!.metCriteria, 0)
+})
