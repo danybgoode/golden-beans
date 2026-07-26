@@ -10,9 +10,12 @@
 // person best placed to write it (the agent that just built the thing) is also the most expensive
 // one to ask.
 //
-// So this rail hands the commit's own data to a cheap model with a product-manager brief. Daniel's
-// call is that the GPT lineage handles that register best, so COMMIT_REPORT_MODEL leads with
-// gpt-oss-120b and falls back to Gemini Flash (a separate quota pool — see runAntigravity).
+// So this rail hands the commit's own data to a dedicated prose writer with a product-manager brief.
+// The writer is DEVIN (specialized for prose, so agy/Codex quota stays free for review and building);
+// agy on `gpt-oss-120b-medium` is the fallback. Both are routed by scripts/lib/prose-writer.mjs.
+//
+// This comment used to name COMMIT_REPORT_MODEL, which nothing read — the rail has always routed
+// through PROSE_MODEL. See cross-agent-cli.mjs for why those dead constants are now deleted.
 //
 // ── Why this is NOT a GitHub Actions step ─────────────────────────────────────────────────────
 // `agy` authenticates through an interactive OAuth login and exposes no headless credential path,
@@ -293,7 +296,7 @@ function postToTelegram(text) {
 
 function main() {
   const args = process.argv.slice(2);
-  let sha, range, text;
+  let sha, range, text, writer;
   let post = false;
   let dryRun = false;
   for (let i = 0; i < args.length; i++) {
@@ -302,6 +305,10 @@ function main() {
     else if (args[i] === '--text') text = need(args[++i], '--text');
     else if (args[i] === '--post') post = true;
     else if (args[i] === '--dry-run') dryRun = true;
+    // Force one writer. `writeProse` has always accepted `preferred`; there was no way to reach it
+    // from the CLI, which made "which writer produced this bad draft?" unanswerable without editing
+    // the rail. Diagnosing a two-writer router needs a way to run one writer at a time.
+    else if (args[i] === '--writer') writer = need(args[++i], '--writer');
     else die(`unknown arg ${args[i]}`);
   }
 
@@ -358,11 +365,17 @@ function main() {
         task: prompt,
       }),
       evidence,
+      preferred: writer,
     });
 
     if (!result.text) die(result.error || 'no prose writer produced a draft.');
     prose = result.text;
-    attribution = result.ok ? `unreviewed draft · ${result.writer}` : `FLAGGED draft · ${result.writer}`;
+    // Name the MODEL, not just the writer. Daniel's accepted examples read "drafted by
+    // gpt-oss-120b-medium"; a footer saying only "agy" cannot distinguish the primary from a silent
+    // fallback to a model with a different register — which is exactly the change that took a human
+    // to spot. `drafted by` for a guard-clean draft, `FLAGGED` when it still trips a rule, so an
+    // unreviewed machine claim stays self-identifying either way.
+    attribution = result.ok ? `drafted by ${result.model}` : `FLAGGED draft · ${result.model}`;
 
     if (!result.ok) {
       // Surface the findings on stderr so the draft on stdout can never be mistaken for a clean

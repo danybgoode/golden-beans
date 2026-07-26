@@ -1,10 +1,21 @@
 // prose-writer.mjs — the one rail every prose surface in this repo writes through.
 //
-// ── The router (Daniel's call, 2026-07-25) ────────────────────────────────────────────────────
-// Devin is CHIEF PROSE WRITER; agy is the automatic fallback. Devin was already installed as a
-// third code-review seat and sat mostly idle, while prose was the thing we were paying a cheap
-// model to guess at. Promoting it costs nothing we were not already paying for, and it is the
-// stronger writer of the two.
+// ── The router (Daniel's call, confirmed 2026-07-26) ──────────────────────────────────────────
+// **Devin is the DEDICATED prose writer; agy on `gpt-oss-120b-medium` is the fallback.**
+//
+// This is a division of LABOUR, not a ranking. Codex and agy are the primary code reviewers and the
+// builders lean on them, so their quota is the scarce resource; Devin was installed as a third review
+// seat and sat mostly idle. Giving Devin prose outright keeps the review quota free and lets one
+// writer be specialized for the register — via commit-report.prompt.md and the accumulating
+// prose-lessons.md, both plain files in the repo so the specialization survives a machine change.
+//
+// ── The order was briefly reversed, and that was my misdiagnosis ───────────────────────────────
+// When Daniel reported the reports had lost their register, I read it as "Devin is the wrong writer"
+// and put agy first. Wrong: the register never came from the router. `PROSE_MODEL` was
+// `gemini-3.6-flash-high`, so agy's prose came from a Gemini model, while the accepted drafts had come
+// from GPT-OSS on the occasions Gemini's quota was exhausted. The fix belonged in the model constant
+// (now GPT-OSS, single, no Gemini fallback) and in the footer (which now names the model rather than
+// just "agy"). Devin leads, as designed.
 //
 // The fallback is not decoration: agy carries a genuinely separate quota pool, and this repo has
 // already been bitten by a single-provider rail going quiet mid-session (Roadmap/LEARNINGS.md —
@@ -26,13 +37,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkProse, findingsToRevisionNote } from './prose-guard.mjs';
-import {
-  runAntigravity,
-  hasCmd,
-  PROSE_MODEL,
-  PROSE_FALLBACK_MODEL,
-  AGY_ARG_LIMIT,
-} from './cross-agent-cli.mjs';
+import { runAntigravity, hasCmd, PROSE_MODEL, AGY_ARG_LIMIT } from './cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LESSONS_PATH = join(__dirname, '..', 'prose-lessons.md');
@@ -116,8 +121,24 @@ export function runAgy(prompt, deps = {}) {
   if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
     return { ok: false, text: '', error: `prompt exceeds agy's argv cap (${AGY_ARG_LIMIT / 1024} KB)` };
   }
-  const text = run(prompt, { models: [PROSE_MODEL, PROSE_FALLBACK_MODEL], soft: true });
-  return text ? { ok: true, text: text.trim() } : { ok: false, text: '', error: 'agy returned no output' };
+  // `model` is captured so the posted report can name the model that actually wrote it rather than
+  // just "agy". The pair is two models with materially different registers, and a silent fallback
+  // between them is a change in voice that nothing used to record.
+  // ONE model, not a pair — see PROSE_MODEL's note in cross-agent-cli.mjs. A model-level fallback
+  // to a Gemini slug is what silently changed the register of every report, so it is deliberately
+  // unavailable here. `onModel` still confirms which model answered, because a constant that has
+  // rotted is exactly the failure this rail has already shipped once.
+  let model = PROSE_MODEL;
+  const text = run(prompt, {
+    models: [PROSE_MODEL],
+    soft: true,
+    onModel: (m) => {
+      model = m;
+    },
+  });
+  return text
+    ? { ok: true, text: text.trim(), model }
+    : { ok: false, text: '', error: 'agy returned no output' };
 }
 
 /**
@@ -128,6 +149,8 @@ export function runAgy(prompt, deps = {}) {
  * bad draft) without editing the rail.
  */
 export function planWriters({ devinAvailable, agyAvailable, preferred }) {
+  // ORDER IS THE POLICY. Devin first — see the router note at the top of this file. Changing this
+  // array changes who writes every report in the repo, so it is the one line to read.
   const all = [
     { name: 'devin', available: devinAvailable },
     { name: 'agy', available: agyAvailable },
@@ -202,14 +225,24 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
       }
 
       const verdict = guard(result.text, evidence);
-      if (verdict.ok) return { ok: true, text: result.text, writer: name, guard: verdict, attempts };
+      // `model` rides along when the writer reported one (agy does; devin is a single model, so its
+      // own name IS the model). The channel footer names it — see commit-report's attribution.
+      if (verdict.ok)
+        return {
+          ok: true,
+          text: result.text,
+          writer: name,
+          model: result.model ?? name,
+          guard: verdict,
+          attempts,
+        };
 
       // Keep the LATEST draft as the fallback, not the first. Cross-review caught the original
       // `if (!best)` here: it pinned `best` to the pass-0 draft, so when the revision pass also
       // tripped a rule we returned the UNREVISED text and threw away the one written specifically
       // to address the findings. The revision is strictly better informed even when it is still
       // imperfect, and returning the older draft would make the retry pass pure cost.
-      best = { text: result.text, writer: name, guard: verdict };
+      best = { text: result.text, writer: name, model: result.model ?? name, guard: verdict };
       warn(`⚠ ${name} draft rejected (${verdict.findings.map((f) => f.code).join(', ')}) — revising.`);
       currentPrompt = `${prompt}\n\n---\n\n## Your previous draft\n\n${result.text}\n\n---\n\n${findingsToRevisionNote(verdict.findings)}`;
     }

@@ -17,8 +17,16 @@ const okWriter = (text) => () => ({ ok: true, text });
 const failWriter = (error) => () => ({ ok: false, text: '', error });
 const silent = () => {};
 
-test('planWriters: devin leads, agy follows — the promotion, expressed as policy', () => {
+test('planWriters: DEVIN leads, agy follows — the division of labour, expressed as policy', () => {
+  // Devin is the dedicated prose writer so that agy's and Codex's quota stays free for review and
+  // building. This assertion is the policy: if it changes, every report in the repo changes writer.
+  // It was briefly reversed while diagnosing a lost register — the cause turned out to be PROSE_MODEL
+  // pointing at a Gemini slug, not the router, so the order is back where it was designed.
   assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true }), ['devin', 'agy']);
+});
+
+test('planWriters: devin carries it alone when agy is missing (a real, separate quota pool)', () => {
+  assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: false }), ['devin']);
 });
 
 test('planWriters: agy carries it alone when devin is missing', () => {
@@ -43,11 +51,18 @@ test('a clean first draft is returned immediately, with one attempt', () => {
 test('a rejected draft is RETRIED with the findings, not discarded', () => {
   // The core behaviour: the guard's job is to trigger a correction, not merely to say no.
   const prompts = [];
-  const devin = (prompt) => {
+  const writer = (prompt) => {
     prompts.push(prompt);
     return { ok: true, text: prompts.length === 1 ? DIRTY : CLEAN };
   };
-  const r = writeProse({ prompt: 'BASE', evidence: {} }, { devin, has: () => true, warn: silent });
+  // BOTH writers stubbed, always. This test previously stubbed only `devin` and relied on devin
+  // running first, so the day the router order flipped it reached the REAL agy CLI and hung for two
+  // minutes. A unit test that can invoke a network CLI when a policy constant changes is a trap for
+  // whoever changes the constant.
+  const r = writeProse(
+    { prompt: 'BASE', evidence: {} },
+    { agy: writer, devin: writer, has: () => true, warn: silent }
+  );
 
   assert.equal(r.ok, true);
   assert.equal(r.attempts, 2);
@@ -61,27 +76,40 @@ test('a rejected draft is RETRIED with the findings, not discarded', () => {
 
 test('a writer that FAILS is skipped without burning its retry on a revision note', () => {
   // A broken CLI is not fixed by being told its prose was bad; move to the next writer instead.
-  let devinCalls = 0;
-  const devin = () => {
-    devinCalls++;
-    return { ok: false, text: '', error: 'devin exploded' };
+  // Written against the FIRST writer in the router rather than a named one, so it keeps testing the
+  // behaviour ("a failed writer is not retried") and not the current order.
+  let firstCalls = 0;
+  const failing = () => {
+    firstCalls++;
+    return { ok: false, text: '', error: 'the lead writer exploded' };
   };
   const r = writeProse(
     { prompt: 'p', evidence: {} },
-    { devin, agy: okWriter(CLEAN), has: () => true, warn: silent }
+    { devin: failing, agy: okWriter(CLEAN), has: () => true, warn: silent }
   );
-  assert.equal(devinCalls, 1, 'a failed writer must not be retried');
+  assert.equal(firstCalls, 1, 'a failed writer must not be retried');
   assert.equal(r.ok, true);
-  assert.equal(r.writer, 'agy');
+  assert.equal(r.writer, 'agy', 'the fallback picked it up');
 });
 
-test('falls back to agy when devin is unavailable at all', () => {
+test('runs agy alone when devin is not installed at all', () => {
   const r = writeProse(
     { prompt: 'p', evidence: {} },
     { devin: failWriter('never called'), agy: okWriter(CLEAN), has: (c) => c === 'agy', warn: silent }
   );
   assert.equal(r.ok, true);
   assert.equal(r.writer, 'agy');
+});
+
+test('falls back to DEVIN when agy is not installed at all', () => {
+  // The complement, and the one that matters after the router flip: agy leads now, so "the fallback
+  // still works" is a different assertion than it was, and the old suite did not make it.
+  const r = writeProse(
+    { prompt: 'p', evidence: {} },
+    { agy: failWriter('never called'), devin: okWriter(CLEAN), has: (c) => c === 'devin', warn: silent }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.writer, 'devin');
 });
 
 test('a draft that never satisfies the guard is STILL RETURNED, flagged, never silently passed', () => {

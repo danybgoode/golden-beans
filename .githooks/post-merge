@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# post-merge — post the 📝 product report for any `main` commit that has not had one yet.
+#
+# The deterministic local trigger for the prose rail. `git pull` / `git merge` on main is the exact
+# moment new shipped commits arrive in this checkout, so it is when a report is owed. No schedule to
+# interpret, no cloud runner, no model deciding when to fire.
+#
+# Why a hook and not CI: the prose writers (`devin`, `agy`) authenticate through interactive OAuth and
+# expose no headless credential path, so a GitHub Actions runner cannot produce prose at all
+# (Roadmap/LEARNINGS.md). The mechanical 📦/🚀 pings stay in the workflow where they belong; the prose
+# is local by necessity, and this makes it automatic rather than remembered.
+#
+# ── Three properties this hook must have, in order of importance ───────────────────────────────
+# 1. NEVER block or fail a git operation. A prose model being slow or down must not make `git pull`
+#    look broken. Every path exits 0.
+# 2. NEVER post twice for the same commit — report-new-commits.mjs owns that via its state file.
+# 3. Be silent when there is nothing to do, so a normal pull looks normal.
+
+# Only when `main` is the branch that just moved. The hook also fires on feature-branch merges, and a
+# feature commit is not something to report.
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+[ "$branch" = "main" ] || exit 0
+
+# GB_SKIP_COMMIT_REPORT=1 for a bulk pull or a rebase where reports would be noise.
+[ -n "$GB_SKIP_COMMIT_REPORT" ] && exit 0
+
+command -v node >/dev/null 2>&1 || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || echo '')"
+[ -n "$root" ] || exit 0
+[ -f "$root/scripts/report-new-commits.mjs" ] || exit 0
+
+# Backgrounded and fully detached: a prose model can take a minute, and property 1 says `git pull`
+# must not wait for it. Output goes to a log rather than the terminal so a pull stays readable, and
+# `|| true` means even a crash in the reporter cannot affect git's exit status.
+(
+  node "$root/scripts/report-new-commits.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
+) &
+
+exit 0
