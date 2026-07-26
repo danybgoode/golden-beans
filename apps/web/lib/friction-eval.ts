@@ -1,6 +1,7 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import { isSignalsEnabled } from './flags'
+import { getFeatureFunnelByProjectId } from './tars-query'
 import {
   DEFAULT_FRICTION_RULES,
   evaluateFriction,
@@ -68,6 +69,12 @@ export async function loadFrictionRules(projectId: string): Promise<readonly Fri
  */
 export async function evaluateFrictionForProject(
   projectId: string,
+  // The slug is REQUIRED, not looked up here, because every caller has already resolved it
+  // server-side alongside the id (from a hashed key, a connector token or a verified session).
+  // Re-deriving it inside would add a second resolution path for the same tenant identity — the
+  // pod-report S3 finding, where a route re-resolved its tenant from a mutable slug instead of
+  // carrying the project_id its credential had already resolved.
+  projectSlug: string,
   options: { force?: boolean } = {},
 ): Promise<number | null> {
   if (!isSignalsEnabled()) return null
@@ -96,7 +103,7 @@ export async function evaluateFrictionForProject(
 
   const [rules, funnels] = await Promise.all([
     loadFrictionRules(projectId),
-    loadProjectFunnels(projectId),
+    loadProjectFunnels(projectId, projectSlug),
   ])
 
   const findings = evaluateFriction(rules, funnels)
@@ -143,16 +150,27 @@ export async function evaluateFrictionForProject(
 /**
  * The funnel aggregates the detectors read.
  *
- * Deliberately derived from the SAME registry + events the TARS funnel already reads, rather than a
- * new measurement: friction is a reading of numbers this engine has had since v1, which is why the
- * story ships with no new client instrumentation at all.
+ * ── This goes through the canonical TARS seam, and the first version did not ────────────────
+ * Cross-review (Codex, 2026-07-26) flagged the original as Blocking: it counted distinct users with
+ * its own `events` queries. That is a direct violation of AGENTS.md rule #1 — `lib/{tars,north-star,
+ * ab}-query.ts` are "the canonical read paths; never re-query `events` ad hoc" — and the finding was
+ * right about the consequence, not just the rule. `computeTars` is not a pair of COUNT DISTINCTs: it
+ * applies fallback semantics when `adoptedEvent`/`retainedEvent` are absent, anchors the retention
+ * window to each user's own adoption, and honours `feature.enabled` by zeroing the targeted set. A
+ * hand-rolled count agrees with it only for the simplest feature, and diverges silently for every
+ * other — so friction would have fired on numbers no dashboard in the product could reproduce, which
+ * is the fastest possible way to destroy trust in the queue.
+ *
+ * Reusing the seam also means friction inherits future TARS fixes for free, rather than needing the
+ * same correction applied twice by someone who remembers both copies exist.
  */
-async function loadProjectFunnels(projectId: string): Promise<FunnelCounts[]> {
+async function loadProjectFunnels(projectId: string, projectSlug: string): Promise<FunnelCounts[]> {
   const supabase = getSupabaseServiceClient()
   const { data: features, error } = await supabase
     .from('features')
-    .select('key, target_event, adopted_event, retained_event')
+    .select('key')
     .eq('project_id', projectId)
+    .order('key', { ascending: true })
 
   if (error || !features) {
     console.error('[friction] feature load failed:', error)
@@ -161,47 +179,21 @@ async function loadProjectFunnels(projectId: string): Promise<FunnelCounts[]> {
 
   const funnels: FunnelCounts[] = []
   for (const feature of features) {
-    const targetEvent = feature.target_event as string | null
-    const adoptedEvent = feature.adopted_event as string | null
-    const retainedEvent = feature.retained_event as string | null
-    // A feature with no declared funnel events has no funnel to have friction in. Skipped rather
-    // than counted as zeros, which would make every unconfigured feature look like a dead end.
-    if (!targetEvent || !adoptedEvent) continue
-
-    const [targeted, adopted, retained] = await Promise.all([
-      countDistinctUsers(projectId, feature.key as string, targetEvent),
-      countDistinctUsers(projectId, feature.key as string, adoptedEvent),
-      retainedEvent ? countDistinctUsers(projectId, feature.key as string, retainedEvent) : Promise.resolve(0),
-    ])
-
-    funnels.push({ featureKey: feature.key as string, targeted, adopted, retained })
+    const key = feature.key as string
+    const result = await getFeatureFunnelByProjectId(projectId, projectSlug, key)
+    // A feature with no resolvable funnel has no funnel to have friction in. Skipped rather than
+    // counted as zeros, which would make every unconfigured feature look like a dead end — the
+    // false-positive class the epic names as its own biggest risk to trust.
+    if (!result.ok) continue
+    funnels.push({
+      featureKey: key,
+      targeted: result.tars.targeted,
+      adopted: result.tars.adopted,
+      retained: result.tars.retained,
+    })
   }
 
-  // Sorted by key so two evaluations over the same data emit findings in the same order — the
-  // "deterministic on rerun" acceptance criterion, at the seam where it is easiest to lose.
-  return funnels.sort((a, b) => a.featureKey.localeCompare(b.featureKey))
-}
-
-async function countDistinctUsers(
-  projectId: string,
-  featureKey: string,
-  event: string,
-): Promise<number> {
-  const supabase = getSupabaseServiceClient()
-  // `feature_id` is filtered here for the same reason lib/tars-query.ts filters it — and it is worth
-  // naming the scar: an event written WITHOUT a feature tag belongs to no funnel and is invisible
-  // forever, which shipped to production once and read as an honest zero for weeks
-  // (Roadmap/LEARNINGS.md, the bug class this repo has now hit three times).
-  const { data, error } = await supabase
-    .from('events')
-    .select('user_id')
-    .eq('project_id', projectId)
-    .eq('feature_id', featureKey)
-    .eq('event', event)
-
-  if (error) {
-    console.error('[friction] count failed:', error)
-    return 0
-  }
-  return new Set((data ?? []).map((r) => r.user_id as string)).size
+  // Already ordered by key from the query above, so two evaluations over the same data emit findings
+  // in the same order — the "deterministic on rerun" acceptance criterion.
+  return funnels
 }

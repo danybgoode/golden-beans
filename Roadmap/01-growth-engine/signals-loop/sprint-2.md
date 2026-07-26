@@ -48,6 +48,11 @@ detectors before ranking, throttled and locked.
 **Acceptance:** a fresh Claude session reads the demo project's tasks via the connector; a token
 sees only its own project's tasks (spec uses a **real** foreign token, not a fabricated one); with
 `SIGNALS_ENABLED` OFF the tools are absent from `tools/list` entirely, not merely erroring.
+**Carried over from Sprint 1 (cross-review, Codex 2026-07-26):** the S1 cross-tenant spec could only
+assert isolation from the *data* side, because Sprint 1 ships no HTTP read surface for signals — an
+end-to-end authenticated cross-tenant read was unreachable by construction there. **This story owes
+that spec**: tenant A's connector token issuing `list_tasks`/`get_task` must never return tenant B's
+rows, asserted through the real authenticated path with a real foreign token.
 **Risk:** LOW — delegable.
 
 ## Sprint QA

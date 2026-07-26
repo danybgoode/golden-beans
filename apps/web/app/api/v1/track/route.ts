@@ -6,7 +6,7 @@ import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context
 import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
-import { scheduleSignalGrouping } from '@/lib/signals'
+import { scheduleSignalGrouping, scrubReservedEventPayload } from '@/lib/signals'
 
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
@@ -78,6 +78,21 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // ── signals-loop · Story 1.1 · redact a reserved $error payload BEFORE it is persisted ──────
+  // Cross-review (Codex) found, and a probe against a real database confirmed, that scrubbing only
+  // on the way into `signals` left the caller's RAW tags in `events` forever. This runs here — ahead
+  // of the idempotency fingerprint, the quota charge and ingest_event — so the unredacted payload
+  // never reaches storage, and so the fingerprint is computed over what we actually store.
+  //
+  // NOT gated by SIGNALS_ENABLED, deliberately: that flag decides whether we group signals, not
+  // whether we redact credentials. A kill switch that starts storing secrets when you pull it is
+  // worse than no kill switch.
+  const safePayload = scrubReservedEventPayload({
+    event: parsed.data.event,
+    tags: parsed.data.tags,
+    metadata: parsed.data.metadata,
+  })
+
   const supabase = getSupabaseServiceClient()
   const idempotencyKey = eventContext.context.idempotency_key
 
@@ -90,8 +105,8 @@ export async function POST(req: NextRequest) {
         event: parsed.data.event,
         userId: parsed.data.userId,
         featureId: parsed.data.featureId ?? null,
-        tags: parsed.data.tags,
-        metadata: parsed.data.metadata,
+        tags: safePayload.tags,
+        metadata: safePayload.metadata,
         context: {
           context_version: eventContext.context.context_version,
           actor_type: eventContext.context.actor_type,
@@ -172,8 +187,8 @@ export async function POST(req: NextRequest) {
       p_user_id: parsed.data.userId,
       p_event: parsed.data.event,
       p_feature_id: parsed.data.featureId ?? null,
-      p_tags: parsed.data.tags,
-      p_metadata: parsed.data.metadata,
+      p_tags: safePayload.tags,
+      p_metadata: safePayload.metadata,
       p_context_version: eventContext.context.context_version,
       p_actor_type: eventContext.context.actor_type,
       p_actor_id: eventContext.context.actor_id,
@@ -234,8 +249,8 @@ export async function POST(req: NextRequest) {
     event: parsed.data.event,
     userId: parsed.data.userId,
     featureId: parsed.data.featureId ?? null,
-    tags: parsed.data.tags,
-    metadata: parsed.data.metadata,
+    tags: safePayload.tags,
+    metadata: safePayload.metadata,
     occurredAt: eventContext.context.occurred_at,
   })
 

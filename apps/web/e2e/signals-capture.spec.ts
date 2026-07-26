@@ -282,6 +282,64 @@ test.describe('signals capture + grouping', () => {
     expect(serialized).toContain('keep me')
   })
 
+  test('the raw EVENT row is scrubbed too, not just the signal', async ({ request }) => {
+    // ── The spec that should have existed first ─────────────────────────────────────────────
+    // Cross-review (Codex, 2026-07-26) found this as Blocking, and a probe against the real
+    // database confirmed it before it was accepted: scrubbing ran only on the way into `signals`,
+    // while ingest_event had already written the caller's RAW tags into `events`. A hand-rolled
+    // post produced a clean signal row AND a permanent plaintext credential in events.tags.
+    //
+    // The spec above it asserted exactly the right property against exactly the wrong table. That
+    // is the sharper version of the LEARNINGS lesson: a green assertion about `signals` says
+    // nothing about `events`, and `events` is where the durable copy lives — append-only for the
+    // service role, so a leak there is not something a later cleanup can fully undo.
+    const db = dbClient()
+    const tenant = await createTenant(db)
+    const secret = `gb_key_${randomBytes(24).toString('base64url')}`
+
+    const res = await captureError(request, tenant, {
+      userId: 'u1',
+      name: 'AuthError',
+      message: `rejected ${secret} for daniel@example.com`,
+      stack: `Error\n    at auth (/app/auth.ts:3:1)`,
+      context: { apiKey: secret },
+    })
+    expect(res.status()).toBe(201)
+
+    const { data: events } = await db
+      .from('events')
+      .select('tags, metadata')
+      .eq('project_id', tenant.projectId)
+    expect((events ?? []).length).toBeGreaterThan(0)
+
+    const serialized = JSON.stringify(events)
+    expect(serialized).not.toContain(secret)
+    expect(serialized).not.toContain('daniel@example.com')
+  })
+
+  test('an ORDINARY event is NOT redacted — only reserved ones are', async ({ request }) => {
+    // The counter-test, and the boundary that keeps the fix from becoming its own bug. A tenant's
+    // own event vocabulary is data they chose and rely on; redacting it would silently corrupt
+    // their analytics. Only `$error`/`$friction` carry payloads assembled by someone else's code.
+    const db = dbClient()
+    const tenant = await createTenant(db)
+
+    const res = await request.post('/api/v1/track', {
+      headers: { Authorization: `Bearer ${tenant.plaintextKey}`, 'Content-Type': 'application/json' },
+      data: {
+        userId: 'u1',
+        event: 'checkout_completed',
+        tags: { orderRef: 'a3f5c9d1e7b28406a3f5c9d1e7b28406', email: 'buyer@example.com' },
+      },
+    })
+    expect(res.status()).toBe(201)
+
+    const { data: events } = await db.from('events').select('tags').eq('project_id', tenant.projectId)
+    const serialized = JSON.stringify(events)
+    expect(serialized).toContain('a3f5c9d1e7b28406a3f5c9d1e7b28406')
+    expect(serialized).toContain('buyer@example.com')
+  })
+
   test('a foreign tenant cannot read another tenant signals', async ({ request }) => {
     // Cross-tenant isolation with a REAL foreign key, not a fabricated one (the S4 lesson): a spec
     // using a made-up key proves only that garbage is rejected, which is a different property.
@@ -297,14 +355,37 @@ test.describe('signals capture + grouping', () => {
     })
     await waitForSignals(db, victim.projectId, 1)
 
-    // The attacker's own project must be empty. There is no request-shaped way to even ASK for
-    // another project's signals — every read is scoped by a server-resolved project_id — so this
-    // asserts the property from the data side, which is where a leak would actually show.
+    // ── Asserted from BOTH sides, after a cross-review Should-fix ───────────────────────────
+    // The first version checked only that the attacker's project had no rows, using the
+    // service-role client. Codex (2026-07-26) correctly pointed out that this exercises no
+    // attacker-AUTHENTICATED read at all, so it could not catch a tenant-scope leak in a read
+    // surface — it asserts a property of the data rather than of the boundary.
+    //
+    // Sprint 1 genuinely has no HTTP read surface for signals yet (that is Story 2.2/2.3), so an
+    // end-to-end authenticated read is not reachable here and pretending otherwise would be the
+    // "unreachable-by-construction spec" LEARNINGS warns about. What IS assertable today is that
+    // the attacker's own credential, used against the one authenticated path that exists, cannot
+    // cause a read of the victim's rows — plus the data-side check below. The full authenticated
+    // cross-tenant read assertion is owed by Story 2.3 and is named in sprint-2.md's QA section.
     const { data: attackerRows } = await db.from('signals').select('*').eq('project_id', attacker.projectId)
     expect(attackerRows ?? []).toHaveLength(0)
 
+    // The attacker authenticates for real and ingests their own error. Their credential must
+    // resolve to THEIR project — the property that makes every downstream read safe by
+    // construction, since no tool or route accepts a caller-supplied project id.
+    await captureError(request, attacker, {
+      userId: 'attacker-user',
+      name: 'AttackerError',
+      message: 'attacker-only-marker',
+      stack: 'Error\n    at a (/app/a.ts:1:1)',
+    })
+    const attackerAfter = await waitForSignals(db, attacker.projectId, 1)
+    expect(JSON.stringify(attackerAfter)).toContain('attacker-only-marker')
+    expect(JSON.stringify(attackerAfter)).not.toContain('victim-only-marker')
+
     const { data: victimRows } = await db.from('signals').select('title').eq('project_id', victim.projectId)
     expect(JSON.stringify(victimRows)).toContain('victim-only-marker')
+    expect(JSON.stringify(victimRows)).not.toContain('attacker-only-marker')
   })
 
   test('a non-reserved event does NOT create a signal', async ({ request }) => {

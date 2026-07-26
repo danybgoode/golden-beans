@@ -15,7 +15,64 @@ import { computeSignalFingerprint, signalTitle } from './signal-fingerprint'
 // here for callers that already depend on this file. See that file's header for why they cannot
 // live in this one: it imports `server-only`, which breaks any test runner that touches it.
 export { ERROR_EVENT, FRICTION_EVENT, isReservedSignalEvent } from './signal-events'
-import { ERROR_EVENT } from './signal-events'
+import { ERROR_EVENT, isReservedSignalEvent } from './signal-events'
+
+/**
+ * Redacts a reserved `$error` event's tags/metadata BEFORE the event itself is persisted.
+ *
+ * ── Why this exists, and why it is not gated by SIGNALS_ENABLED ─────────────────────────────
+ * Found by cross-review (Codex, 2026-07-26) and REPRODUCED against a real database before being
+ * accepted: the first version of this epic scrubbed only on the way into `signals`, while
+ * `ingest_event` had already written the caller's RAW tags into `events`. A hand-rolled client
+ * posting `{"event":"$error","tags":{"message":"failed with gb_key_…"}}` got a clean signal row and
+ * a permanent plaintext credential in `events.tags`. The e2e spec missed it completely because it
+ * asserted against the `signals` table — the right property, checked in the wrong place.
+ *
+ * Two consequences shape this function:
+ *
+ * 1. It runs on the INGEST path, before persistence, so there is no window in which the raw payload
+ *    exists at rest. `events` is append-only for the service role, so a leak here is not something a
+ *    later cleanup could fully undo.
+ *
+ * 2. It is deliberately NOT behind `SIGNALS_ENABLED`. That flag gates whether we GROUP signals; it
+ *    must not decide whether we redact credentials. Otherwise turning the seam off — the thing an
+ *    operator does when something looks wrong — would silently start storing raw secrets, which is
+ *    the exact inversion of what a kill switch is for.
+ */
+export function scrubReservedEventPayload(input: {
+  event: string
+  tags: Record<string, unknown>
+  metadata: Record<string, unknown>
+}): { tags: Record<string, unknown>; metadata: Record<string, unknown> } {
+  if (!isReservedSignalEvent(input.event)) {
+    // Ordinary tenant telemetry is untouched. Their event vocabulary is their own, they chose every
+    // value in it, and redacting it would corrupt data they rely on.
+    return { tags: input.tags, metadata: input.metadata }
+  }
+
+  const scrubbed = scrubErrorPayload({
+    name: input.tags.name ?? input.tags.errorName ?? input.metadata.name,
+    message: input.tags.message ?? input.metadata.message,
+    stack: input.tags.stack ?? input.metadata.stack,
+    context: input.metadata.context ?? input.metadata,
+  })
+
+  return {
+    // The remaining caller-supplied tags are passed through scrubValue rather than dropped: a client
+    // may legitimately attach `release`, `route` or `buildId`, and those are useful evidence. They
+    // are still redacted, because "a field we did not think about" is exactly where a secret lands.
+    tags: {
+      ...(scrubValue(input.tags) as Record<string, unknown>),
+      name: scrubbed.name,
+      message: scrubbed.message,
+      stack: scrubbed.stack,
+    },
+    metadata: {
+      ...(scrubValue(input.metadata) as Record<string, unknown>),
+      context: scrubbed.context,
+    },
+  }
+}
 
 export type RecordSignalResult = {
   signalId: string
