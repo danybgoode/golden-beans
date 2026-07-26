@@ -202,6 +202,13 @@ jobs:
           # itself. Same arrangement, and the same reasoning, as CONNECTOR_ENABLED above. Deployment
           # remains born OFF.
           REPORT_SHARES_ENABLED: 'true'
+          # signals-loop Story 1.0 — the signals seam needs a live gate for the ingest→grouping and
+          # friction specs to exercise a real path. Same arrangement and same reasoning as every
+          # flag above: the DARK behaviour is covered without a second server boot (the specs assert
+          # gate-OFF only when the flag is off, and lib/flags.test.ts pins the predicates directly).
+          # Deployment remains born OFF. CONNECTOR_WRITES_ENABLED is deliberately NOT set here —
+          # the write surface stays dark even in CI until Sprint 3 builds it.
+          SIGNALS_ENABLED: 'true'
         run: |
           npm run start > /tmp/next-server.log 2>&1 &
           echo "Waiting for http://localhost:3000..."

@@ -6,6 +6,7 @@ import { normalizeEventContext, LEGACY_EVENT_CONTEXT } from '@/lib/event-context
 import { computePayloadFingerprint } from '@/lib/idempotency-fingerprint'
 import { checkIngestRate, checkMonthlyQuota, refundMonthlyQuota, MAX_TRACK_PAYLOAD_BYTES } from '@/lib/quota'
 import { trackSelfEvent, FIRST_EVENT_INGESTED_EVENT } from '@/lib/self-track'
+import { scheduleSignalGrouping, scrubReservedEventPayload } from '@/lib/signals'
 
 export async function POST(req: NextRequest) {
   const auth = await resolveProjectFromAuthHeader(req.headers.get('authorization'))
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (Number.isFinite(declaredLength) && declaredLength > MAX_TRACK_PAYLOAD_BYTES) {
     return NextResponse.json(
       { ok: false, error: `Payload too large (max ${MAX_TRACK_PAYLOAD_BYTES} bytes)` },
-      { status: 413 },
+      { status: 413 }
     )
   }
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     return read.tooLarge
       ? NextResponse.json(
           { ok: false, error: `Payload too large (max ${MAX_TRACK_PAYLOAD_BYTES} bytes)` },
-          { status: 413 },
+          { status: 413 }
         )
       : NextResponse.json({ ok: false, error: 'Could not read request body' }, { status: 400 })
   }
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: 'Malformed event', issues: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -73,9 +74,24 @@ export async function POST(req: NextRequest) {
   if (!eventContext.ok) {
     return NextResponse.json(
       { ok: false, error: 'Malformed event context', issues: eventContext.errors },
-      { status: 400 },
+      { status: 400 }
     )
   }
+
+  // ── signals-loop · Story 1.1 · redact a reserved $error payload BEFORE it is persisted ──────
+  // Cross-review (Codex) found, and a probe against a real database confirmed, that scrubbing only
+  // on the way into `signals` left the caller's RAW tags in `events` forever. This runs here — ahead
+  // of the idempotency fingerprint, the quota charge and ingest_event — so the unredacted payload
+  // never reaches storage, and so the fingerprint is computed over what we actually store.
+  //
+  // NOT gated by SIGNALS_ENABLED, deliberately: that flag decides whether we group signals, not
+  // whether we redact credentials. A kill switch that starts storing secrets when you pull it is
+  // worse than no kill switch.
+  const safePayload = scrubReservedEventPayload({
+    event: parsed.data.event,
+    tags: parsed.data.tags,
+    metadata: parsed.data.metadata,
+  })
 
   const supabase = getSupabaseServiceClient()
   const idempotencyKey = eventContext.context.idempotency_key
@@ -89,8 +105,8 @@ export async function POST(req: NextRequest) {
         event: parsed.data.event,
         userId: parsed.data.userId,
         featureId: parsed.data.featureId ?? null,
-        tags: parsed.data.tags,
-        metadata: parsed.data.metadata,
+        tags: safePayload.tags,
+        metadata: safePayload.metadata,
         context: {
           context_version: eventContext.context.context_version,
           actor_type: eventContext.context.actor_type,
@@ -171,8 +187,8 @@ export async function POST(req: NextRequest) {
       p_user_id: parsed.data.userId,
       p_event: parsed.data.event,
       p_feature_id: parsed.data.featureId ?? null,
-      p_tags: parsed.data.tags,
-      p_metadata: parsed.data.metadata,
+      p_tags: safePayload.tags,
+      p_metadata: safePayload.metadata,
       p_context_version: eventContext.context.context_version,
       p_actor_type: eventContext.context.actor_type,
       p_actor_id: eventContext.context.actor_id,
@@ -218,12 +234,31 @@ export async function POST(req: NextRequest) {
   }
 
   scheduleFirstEventActivation(supabase, auth)
+
+  // ── signals-loop · Story 1.2 · group a reserved `$error` event into its signal ───────────────
+  // Scheduled AFTER the event is committed and only on the fresh-insert path, never on a dedup: a
+  // replayed occurrence is the same occurrence, and counting it twice would inflate exactly the
+  // number the impact rank is built on.
+  //
+  // Deliberately fire-and-forget (see lib/signals.ts): grouping is a DERIVED projection of an event
+  // that is already stored, so its failure must cost a signal row and never the tenant's event. An
+  // ingest that could be failed by a projection has reintroduced the coupling the outbox exists to
+  // remove — the same rule isDestinationDeliveryEnabled's comment states for delivery.
+  scheduleSignalGrouping({
+    projectId: auth.projectId,
+    event: parsed.data.event,
+    userId: parsed.data.userId,
+    featureId: parsed.data.featureId ?? null,
+    tags: safePayload.tags,
+    metadata: safePayload.metadata,
+    occurredAt: eventContext.context.occurred_at,
+  })
+
   return NextResponse.json({ ok: true, id: ingest.event_id }, { status: 201 })
 }
 
 type IdempotencyLookup =
-  | { ok: true; existing: { id: string; fingerprint: string | null } | null }
-  | { ok: false } // an infrastructure failure — the caller must NOT treat this as "no such event"
+  { ok: true; existing: { id: string; fingerprint: string | null } | null } | { ok: false } // an infrastructure failure — the caller must NOT treat this as "no such event"
 
 // Looks up an existing event by its per-project idempotency key. The tenant scope is re-asserted
 // here, never assumed from the key — uniqueness is per (project_id, idempotency_key), so a lookup on
@@ -235,7 +270,7 @@ type IdempotencyLookup =
 async function findEventByIdempotencyKey(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   projectId: string,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<IdempotencyLookup> {
   const { data, error } = await supabase
     .from('events')
@@ -249,7 +284,9 @@ async function findEventByIdempotencyKey(
   }
   return {
     ok: true,
-    existing: data ? { id: data.id as string, fingerprint: (data.idempotency_fingerprint as string | null) ?? null } : null,
+    existing: data
+      ? { id: data.id as string, fingerprint: (data.idempotency_fingerprint as string | null) ?? null }
+      : null,
   }
 }
 
@@ -263,7 +300,7 @@ async function resolveIdempotent(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   auth: AuthSuccess,
   idempotencyKey: string,
-  fingerprint: string | null,
+  fingerprint: string | null
 ): Promise<NextResponse | null> {
   const lookup = await findEventByIdempotencyKey(supabase, auth.projectId, idempotencyKey)
   if (!lookup.ok) {
@@ -291,7 +328,7 @@ function conflictResponse(): NextResponse {
       error:
         'Idempotency key was already used for a different event. Reuse a key only to retry the identical request.',
     },
-    { status: 409 },
+    { status: 409 }
   )
 }
 
@@ -301,7 +338,7 @@ function conflictResponse(): NextResponse {
 function respondDeduplicated(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   auth: AuthSuccess,
-  existing: { id: string },
+  existing: { id: string }
 ): NextResponse {
   scheduleFirstEventActivation(supabase, auth)
   return NextResponse.json({ ok: true, id: existing.id, deduplicated: true }, { status: 200 })
@@ -320,7 +357,7 @@ function respondDeduplicated(
 // were never signups, so stamping them would inject a conversion nobody made.
 function scheduleFirstEventActivation(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
-  auth: AuthSuccess,
+  auth: AuthSuccess
 ): void {
   if (auth.firstEventAt !== null || !auth.createdBy) return
   const funnelUserId = auth.createdBy

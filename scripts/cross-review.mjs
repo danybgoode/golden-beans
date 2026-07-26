@@ -47,6 +47,7 @@ import {
   checkAgyVersion,
   loadPromptBody,
   runAntigravity,
+  runCodex,
   resolveCurrentPr,
   currentHeadSha,
   decideHeadGuard,
@@ -156,7 +157,25 @@ function agyArgv(prompt, diff) {
   return `${prompt}\n\n## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`;
 }
 
-function runReview(prompt, diff) {
+// ── This dispatches on `agent`, and did not until 2026-07-26 ─────────────────────────────────
+// It used to be `return runAntigravity(...)` unconditionally, which was harmless only while the
+// argument guard above rejected every value except 'antigravity'. The moment Codex was re-enabled
+// as a reviewer, `--agent codex` produced an AGY review posted under a comment header reading
+// "Cross-agent review (Codex)" — the label came from AGENTS[agent] while the text came from
+// whatever runReview felt like running.
+//
+// That is precisely the failure Roadmap/LEARNINGS.md records as "an audit label that can be chosen
+// by picking an endpoint is worse than no audit log", and it is worse here than in the original
+// incident: the entire value of this rail is model-FAMILY contrast, so a mislabeled review doesn't
+// just misfile a record, it silently reports two independent reads where only one happened. A
+// reviewer trusting the label would conclude the other family had cleared the diff.
+//
+// codex takes its context on STDIN and agy takes everything as one argv string — see
+// lib/cross-agent-cli.mjs. Keeping that difference in one place is why both wrappers live there.
+function runReview(agent, prompt, diff) {
+  if (agent === 'codex') {
+    return runCodex(prompt, `## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`);
+  }
   return runAntigravity(agyArgv(prompt, diff));
 }
 
@@ -185,8 +204,23 @@ function main() {
     process.exit(0);
   }
   if (pr !== null && !/^\d+$/.test(String(pr))) die(`PR number must be numeric, got '${pr}'.`);
-  if (agent !== 'antigravity') {
-    die(`reviewer '${agent}' is disabled by the current cadence; use antigravity (and add Devin for high-risk PRs)`);
+  // ── Codex re-enabled as a PRIMARY reviewer, 2026-07-26 ──────────────────────────────────────
+  // This guard dated from the 2026-07-23 cadence, when Codex was reserved for the builder/architect
+  // seat and Agy was the sole review rail. Two things changed it back.
+  //
+  // First, evidence: on PR #33 Codex opened with a BLOCKING finding on an auth/tenancy surface that
+  // four consecutive Agy rounds had read past and finally declared clean — plus two Should-fix the
+  // other family had also missed. Roadmap/LEARNINGS.md draws the conclusion: neither family is
+  // better, they are blind in different directions, and the rule is to stop when a round from the
+  // OTHER family comes back clean, not when your usual reviewer does. A guard that makes the other
+  // family unreachable defeats that rule by construction.
+  //
+  // Second, the constraint that motivated it (Codex quota) has lifted, and Roadmap/WAYS-OF-WORKING's
+  // routing table already lists Codex first in the review row. This script was the last place still
+  // enforcing the superseded cadence — the docs and the tool disagreed, and the tool won silently,
+  // which is exactly the drift class this repo keeps paying for.
+  if (!Object.prototype.hasOwnProperty.call(AGENTS, agent)) {
+    die(`unknown reviewer '${agent}'; expected one of ${Object.keys(AGENTS).join('|')}`);
   }
 
   ensureGh();
@@ -238,7 +272,7 @@ function main() {
       );
     }
   }
-  const findings = runReview(prompt, diff);
+  const findings = runReview(agent, prompt, diff);
   if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
   const body = buildComment(AGENTS[agent], findings);

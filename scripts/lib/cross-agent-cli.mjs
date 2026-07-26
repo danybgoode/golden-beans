@@ -116,6 +116,27 @@ export const AGY_MODELS_IN_USE = [
   { constant: 'PROSE_MODEL', value: PROSE_MODEL },
 ];
 
+// ── The CODEX pair, pinned here for the same reason the agy models are ───────────────────────────
+// Daniel's call (2026-07-26): codex reviews on **gpt-5.6-terra at HIGH reasoning effort**.
+//
+// Until now `execCodex` passed NO --model at all, so every codex review silently inherited whatever
+// `~/.codex/config.toml` happened to say. That is the identical shape as the PROSE_MODEL incident
+// documented above — a model choice that lives somewhere the repo never looks, changes without a
+// signal, and produces plausible output either way. It is arguably worse: an agy typo at least had a
+// constant in the repo to be wrong, whereas an ambient config has nothing to review at all, and the
+// value differs per machine, so CI and a laptop can disagree with no way to notice.
+//
+// Passing them explicitly makes the review's model a property of the REPO, and any future change a
+// diff. Env-overridable like its agy siblings, so a quota-exhausted day needs no commit.
+//
+// Verified live 2026-07-26 against codex-cli 0.144.6: `codex exec --model gpt-5.6-terra
+// -c model_reasoning_effort=high` reports `model: gpt-5.6-terra` / `reasoning effort: high` in its
+// own session banner and returns real output. Reasoning effort rides `-c` because `codex exec` has
+// no dedicated flag for it (checked with `codex exec --help`, not from memory — LEARNINGS: never
+// build against a documented flag from memory on a young foreign CLI).
+export const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.6-terra';
+export const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'high';
+
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.
 export const AGY_ARG_LIMIT = 256 * 1024;
@@ -369,11 +390,24 @@ function lastLine(stderr) {
 // Low-level codex exec: prompt rides as an argv string, context is piped on stdin (codex appends it as a
 // <stdin> block). Returns the raw spawn result — callers decide how to interpret status/stdout/stderr.
 function execCodex(prompt, stdin) {
-  return spawnSync('codex', ['exec', prompt], {
-    input: stdin,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  });
+  // --model and the reasoning-effort override are passed EXPLICITLY rather than inherited from
+  // ~/.codex/config.toml. See CODEX_MODEL's header comment: an ambient model choice is the same
+  // silent-rot surface that made every prose draft run on the wrong model for a release cycle, with
+  // the added problem that an ambient value differs per machine.
+  //
+  // Unlike agy, an unrecognized codex --model FAILS LOUD (non-zero exit with the model name in
+  // stderr) rather than substituting a default — verified 2026-07-26 — so a rotted pin here surfaces
+  // as a broken review rather than a quietly downgraded one. That is why this needs no doctor probe
+  // of its own, where the agy pins do.
+  return spawnSync(
+    'codex',
+    ['exec', '--model', CODEX_MODEL, '-c', `model_reasoning_effort=${CODEX_REASONING_EFFORT}`, prompt],
+    {
+      input: stdin,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    }
+  );
 }
 
 // codex exec wrapper preserving the original contract: returns trimmed stdout, or fail()s (die unless soft).

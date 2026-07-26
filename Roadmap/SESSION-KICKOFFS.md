@@ -36,6 +36,7 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 | **Close epic \<slug\>** | §6 — full epic Definition of Done |
 | **Clear to merge — LOW** / **product-owner-merge** | the risk-tier gate: reviewer auto-merges on green CI / product owner merges |
 | **Next** | proceed to the next story/sprint per the current `sprint-N.md` |
+| **Resume** | §8 — pick up a session that died mid-flight (`node scripts/session-trail.mjs --resume`) |
 
 ---
 
@@ -110,6 +111,42 @@ Owed to you (can't self-smoke): <money/auth/browser steps by name — or "none">
 Next:    <next story/sprint — or DECISION needed from you>
 Detail:  Roadmap/<NN-macro>/<epic>/sprint-<N>.md   ← source of truth, not repeated here
 ```
+
+## 8 · Resume a session that died mid-flight
+
+Hitting a session limit part-way through an epic is routine, not exceptional — the epic-sized
+handover (WAYS-OF-WORKING, "the default unit of work is now the EPIC") makes a multi-hour run the
+normal shape. The durable docs carry scope and outcomes; what dies with the session is the *in-flight*
+state: which story was half-built, which "it's green" was observed rather than assumed, which of the
+uncommitted files are finished.
+
+**Leaving the trail** — cheap, and worth doing at every natural boundary (a story lands, a gate goes
+green, a decision gets made):
+```bash
+node scripts/session-trail.mjs --checkpoint "<what you just did / what's next>" \
+  --verified "<command → the result you actually observed>"
+```
+
+**Picking it up:**
+```
+Resume: read <AGENTS-path> (Start here) + Roadmap/LEARNINGS.md, then run
+`node scripts/session-trail.mjs --resume` and follow its briefing.
+```
+
+**Why this is not just a handover note.** `--resume` does not ask you to trust the note. Every
+checkpoint captures branch, HEAD and the uncommitted file list *mechanically*, and re-entry **diffs
+that against the repository as it is now, leading with the disagreement**. This is the direct
+implementation of LEARNINGS' "re-derive a handover's status from the artifact, never from the
+previous session's summary" — the rule pod-report Sprint 2 paid for, where a good-faith close-out
+claimed four stories were built and two of those claims did not survive a check.
+
+Two conventions that keep it honest:
+- **`--verified` is for facts you OBSERVED**, and renders under its own heading, separate from the
+  note. A session's prose about what it did is a claim; a named command with its output is evidence.
+  Blurring them is how a confidently wrong handover survives into the next session.
+- **The trail lives in the epic folder** (`IN-FLIGHT.md`, inferred from a `feat/<epic-slug>` branch)
+  and is **deleted at epic close**, with anything durable promoted into `RETROSPECTIVE.md`. It is
+  working state, not a record.
 
 ---
 
