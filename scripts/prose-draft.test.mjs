@@ -12,7 +12,6 @@ import {
   buildPrompt,
   loadStylePrompt,
   PROSE_MODEL,
-  PROSE_FALLBACK_MODEL,
 } from './prose-draft.mjs';
 
 test('taskBlock: every kind has a task block that names its artifact', () => {
@@ -77,6 +76,8 @@ test('loadStylePrompt: strips the HTML-comment header above the first ---', () =
 
 test('model pair: cheap-fast primary, separate-quota fallback, env-overridable shape', () => {
   assert.notEqual(PROSE_MODEL, '');
-  assert.notEqual(PROSE_FALLBACK_MODEL, '');
-  assert.notEqual(PROSE_MODEL, PROSE_FALLBACK_MODEL);
+  // Single model by design (see PROSE_MODEL's note). The property worth pinning is that it is the
+  // GPT lineage — a Gemini slug here means the review model has leaked into prose and the register
+  // silently changed, which is the bug this constant's history is entirely about.
+  assert.match(PROSE_MODEL, /^gpt-oss/, 'prose runs the GPT lineage, never a Gemini review model');
 });

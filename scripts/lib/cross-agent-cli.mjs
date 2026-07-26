@@ -53,7 +53,10 @@ export const AGY_PINNED = '1.1.7';
 // which models review. The Gemini-family primary is what gives this gate its model-family contrast
 // with Codex; the GPT-OSS fallback is GPT-lineage (so it costs that contrast) and exists only
 // because it draws on a separate quota pool when Gemini is exhausted.
-export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.1-pro-high';
+// Daniel's call (2026-07-26): agy REVIEWS on **Gemini 3.6 at HIGH effort**. `gemini-3.6-flash-high`
+// is the only 3.6-high slug `agy models` lists. This was `gemini-3.1-pro-high` — an older generation
+// — and the drift was invisible because both slugs are valid, so nothing ever failed to tell us.
+export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.6-flash-high';
 export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120b-medium';
 
 // ── The PROSE pair lives HERE, not in prose-draft.mjs, and that move fixed a live silent bug ─────
@@ -74,15 +77,35 @@ export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120
 // Flash (not Pro) for prose is deliberate and unchanged in intent: prose doesn't need Pro-tier
 // reasoning and the coordinating agent is the editor. Moved 3.5 → 3.6 because 3.6 shipped and is
 // listed; same tier, current generation.
-export const PROSE_MODEL = process.env.PROSE_MODEL || 'gemini-3.6-flash-high';
-export const PROSE_FALLBACK_MODEL = process.env.PROSE_FALLBACK_MODEL || 'gpt-oss-120b-medium';
+// ── Prose: agy is the FALLBACK behind Devin, and when it runs it runs GPT-OSS only ─────────────
+// The division of labour (Daniel, 2026-07-26): **Devin is the dedicated, specialized prose writer**,
+// so agy's and Codex's quota stays free for review and building. agy is prose's fallback, and it runs
+// the GPT lineage — the register the brief asked for ("an executive-level product-manager report")
+// and the one both accepted drafts carried.
+//
+// ── Why there is NO model-level fallback here, deliberately ────────────────────────────────────
+// This used to be a pair: Gemini Flash primary, GPT-OSS fallback. Two silent consequences. Every
+// draft came from Gemini unless its quota happened to be exhausted — which is exactly when the two
+// drafts Daniel accepted were produced, so the output he liked was the ACCIDENT and the default was
+// the regression. And a fallback between two models with very different registers changed the voice
+// of the report with no error, no warning, and a footer that said only "agy".
+//
+// So prose has ONE model. The fallback that matters is at the WRITER level (Devin → agy), and that
+// one is named in the footer. A model-level fallback to a Gemini slug would also spend the review
+// quota this split exists to protect. If GPT-OSS is briefly unavailable, prose fails and is re-run —
+// an honest gap beats a silent change of voice.
+export const PROSE_MODEL = process.env.PROSE_MODEL || 'gpt-oss-120b-medium';
 
-// The commit-report rail (scripts/commit-report.mjs) writes an EXECUTIVE product summary of a
-// merge, and Daniel's call is that the GPT lineage handles that register best — so its pair is the
-// inverse of the prose pair: GPT primary, Gemini Flash as the separate-quota fallback.
-export const COMMIT_REPORT_MODEL = process.env.COMMIT_REPORT_MODEL || 'gpt-oss-120b-medium';
-export const COMMIT_REPORT_FALLBACK_MODEL =
-  process.env.COMMIT_REPORT_FALLBACK_MODEL || 'gemini-3.6-flash-high';
+// NOTE — there are deliberately NO commit-report-specific model constants. There were two,
+// COMMIT_REPORT_MODEL and COMMIT_REPORT_FALLBACK_MODEL, and NOTHING read them: `commit-report.mjs`
+// routes through prose-writer → runAgy → PROSE_MODEL. So the constants that appeared to configure the
+// commit report configured nothing, while their own comment correctly described the intent ("GPT
+// primary").
+//
+// That is the mechanism behind this whole incident. The documented intent said GPT, the dead constant
+// said GPT, and the constant actually in force said Gemini — so the rail could be read three times
+// and still misunderstood, and anyone "fixing" the register by editing COMMIT_REPORT_MODEL would have
+// seen no effect at all. Deleted rather than wired up: one prose model, in one place.
 
 // Every agy model name this repo pins, as {constant, value} — the list agy-doctor walks. Keeping it
 // adjacent to the declarations (rather than rebuilt in the doctor) means adding a model and
@@ -91,9 +114,6 @@ export const AGY_MODELS_IN_USE = [
   { constant: 'AGY_MODEL', value: AGY_MODEL },
   { constant: 'AGY_FALLBACK_MODEL', value: AGY_FALLBACK_MODEL },
   { constant: 'PROSE_MODEL', value: PROSE_MODEL },
-  { constant: 'PROSE_FALLBACK_MODEL', value: PROSE_FALLBACK_MODEL },
-  { constant: 'COMMIT_REPORT_MODEL', value: COMMIT_REPORT_MODEL },
-  { constant: 'COMMIT_REPORT_FALLBACK_MODEL', value: COMMIT_REPORT_FALLBACK_MODEL },
 ];
 
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
@@ -520,6 +540,12 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
     if (out) {
       if (model !== modelPair[0])
         warn(`⚠ agy "${modelPair[0]}" returned no output (quota/unavailable?) → used "${model}".`);
+      // Tell the caller WHICH model answered. Added because the prose rail's footer said "agy",
+      // which cannot distinguish the primary from the fallback — so a silent switch between two
+      // models with very different registers was unattributable in the channel, and that is exactly
+      // the confusion that took a human to notice. Optional and side-effect-only, so every existing
+      // caller keeps its byte-identical string return.
+      opts.onModel?.(model);
       return out;
     }
     tried.push(model);

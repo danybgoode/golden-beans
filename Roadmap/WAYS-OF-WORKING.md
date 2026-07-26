@@ -128,8 +128,8 @@ is mechanical — not to use one tier for everything.
 | A well-specified story with a clear acceptance check | **Mid** (Sonnet-class subagent) | Bounded, verifiable, cheap to re-run. |
 | Read-only research / data-availability reports over a large or foreign codebase | **Mid**, background, parallel | Fan-out with no write conflicts. Ask for an explicit "NOT DERIVABLE" list — an honest gap beats an optimistic guess. |
 | Money · auth · migrations · tenancy · concurrency | **Strongest**, never delegated | Same tier that decides who merges. |
-| Cold judgment-layer PR review | **Foreign family** (Agy; + Devin on high-risk) | Different-family contrast is the point — see *Review & merge*. |
-| File-derived prose: retro, poster entry, sprint wrap, the merge report | **Cheap foreign** (`scripts/prose-draft.mjs`, `scripts/commit-report.mjs`) | Inputs are files on disk; the architect edits. **Always read the draft** — see the warning in those scripts' headers. |
+| PR review — a PRIMARY gate, not advisory | **Codex** (model as-is) → **Agy on `gemini-3.6-flash-high`** → Agy `gpt-oss-120b-medium` → **Devin** third | Different-family contrast is the point. Blocking findings are resolved before merge; Codex found a Blocking issue four Agy rounds missed (PR #33). |
+| File-derived prose: retro, poster entry, sprint wrap, the merge report | **Devin — the dedicated prose writer**, with Agy `gpt-oss-120b-medium` as fallback | Devin owns prose so Codex/Agy quota stays free for review and building. **One** prose model, never a Gemini one — a model-level fallback between registers is what silently changed every report's voice (see `PROSE_MODEL`). **Always read the draft.** |
 
 ### Verifying delegated work — the rule that is not optional
 

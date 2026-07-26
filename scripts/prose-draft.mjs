@@ -18,7 +18,8 @@
 // the coordinating agent — same "advisory only" stance as cross-review).
 //
 // Model: agy with a cheap-fast pair by default (prose doesn't need Pro-tier reasoning; the
-// coordinating agent is the editor). Override via PROSE_MODEL / PROSE_FALLBACK_MODEL.
+// coordinating agent is the editor). Override via PROSE_MODEL. ONE model, no pair — a fallback
+// between two models with different registers is what silently changed every report's voice.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeSync } from 'node:fs';
@@ -32,7 +33,6 @@ import {
   need,
   AGY_ARG_LIMIT,
   PROSE_MODEL,
-  PROSE_FALLBACK_MODEL,
 } from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +43,7 @@ const REPO_ROOT = resolve(__dirname, '..');
 // agy's pre-1.1.5 display names, and agy silently substituted its own default for every draft
 // rather than erroring. `agy-doctor` only validated the review pair, so nothing caught it. All agy
 // model names now live in one file that the doctor checks in full (AGY_MODELS_IN_USE).
-export { PROSE_MODEL, PROSE_FALLBACK_MODEL };
+export { PROSE_MODEL };
 
 export const KINDS = ['retro', 'poster', 'sprint-wrap'];
 
@@ -102,7 +102,10 @@ export function gatherEpicSources(epicDir, { readFile = read, listDir = readdirS
   return `## Source material — epic directory ${epicDir}${parts.join('')}\n\n### GIT LOG (epic paths)\n${log([epicDir])}`;
 }
 
-export function gatherSprintSources(sprintPath, { readFile = read, log = gitLogFor, exists = existsSync } = {}) {
+export function gatherSprintSources(
+  sprintPath,
+  { readFile = read, log = gitLogFor, exists = existsSync } = {}
+) {
   const epicDir = dirname(sprintPath);
   const readme = join(epicDir, 'README.md');
   let out = `## Source material — sprint doc ${sprintPath}\n\n### FILE: ${sprintPath}\n\n${readFile(sprintPath)}`;
@@ -149,12 +152,17 @@ function main() {
 
   const prompt = buildPrompt({ style: loadStylePrompt(), kind, sources });
   if (Buffer.byteLength(prompt, 'utf8') > AGY_ARG_LIMIT) {
-    die(`gathered sources exceed the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — trim the epic dir or draft by hand.`);
+    die(
+      `gathered sources exceed the agy argv cap (${AGY_ARG_LIMIT / 1024} KB) — trim the epic dir or draft by hand.`
+    );
   }
 
-  const draft = runAntigravity(prompt, { models: [PROSE_MODEL, PROSE_FALLBACK_MODEL] });
+  const draft = runAntigravity(prompt, { models: [PROSE_MODEL] });
   // Advisory banner so a paste-without-reading is self-identifying in review.
-  writeSync(1, `<!-- draft: prose-draft.mjs --kind ${kind} · model pair ${PROSE_MODEL} → ${PROSE_FALLBACK_MODEL} · EDIT BEFORE COMMITTING -->\n${draft}\n`);
+  writeSync(
+    1,
+    `<!-- draft: prose-draft.mjs --kind ${kind} · model ${PROSE_MODEL} · EDIT BEFORE COMMITTING -->\n${draft}\n`
+  );
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
