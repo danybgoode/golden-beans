@@ -42,13 +42,19 @@ export async function resolveProjectFromAuthHeader(authHeader: string | null): P
   }
 
   const supabase = getSupabaseServiceClient()
+  // ── Reads the VIEW, not the table (pod-report S3, 20260803100000_report_shares.sql) ─────────
+  // `active_ingest_keys` has `scope = 'ingest' AND revoked_at IS NULL AND not expired` welded into
+  // its definition, and joins the project row. That is deliberate and it is the security property,
+  // not a tidiness preference: share-link tokens now live in this same `api_keys` table and travel
+  // in URLs — browser history, Referer headers, a screenshot in a chat thread. If the scope filter
+  // lived here as a `.eq('scope','ingest')` chain link, a refactor or a badly-resolved merge could
+  // drop it and turn every share link ever pasted anywhere into a write credential.
+  //
+  // There is no filter here to drop. Do not "optimise" this back onto `api_keys` directly.
   const { data, error } = await supabase
-    .from('api_keys')
-    .select(
-      'id, project_id, projects(monthly_event_quota, ingest_rate_per_min, created_by, first_event_at)',
-    )
+    .from('active_ingest_keys')
+    .select('id, project_id, monthly_event_quota, ingest_rate_per_min, created_by, first_event_at')
     .eq('key_hash', hashApiKey(key))
-    .is('revoked_at', null)
     .maybeSingle()
 
   if (error) {
@@ -56,32 +62,20 @@ export async function resolveProjectFromAuthHeader(authHeader: string | null): P
     return { ok: false, status: 500, error: 'Auth lookup failed' }
   }
   if (!data) {
-    return { ok: false, status: 401, error: 'Invalid API key' }
-  }
-
-  // supabase-js types a to-one embedded relation loosely without a generated Database type — the
-  // same cast lib/membership.ts / lib/connector-tokens.ts already use.
-  const project = data.projects as unknown as {
-    monthly_event_quota: number
-    ingest_rate_per_min: number
-    created_by: string | null
-    first_event_at: string | null
-  } | null
-  if (!project) {
-    // A key row whose project has vanished. The FK is ON DELETE CASCADE so this should be
-    // unreachable — but resolving it to "authorized, with default limits" would be an entirely
-    // unguarded ingest path, so deny instead of inventing limits.
-    console.error(`[auth] api key ${data.id} resolved no project row`)
+    // Covers all five rejections identically — unknown hash, revoked, expired, wrong scope, and a
+    // key whose project has vanished (the view's INNER JOIN drops it, which is what the old
+    // explicit orphan branch did by hand). One answer, so a caller cannot distinguish "revoked"
+    // from "never existed" by probing.
     return { ok: false, status: 401, error: 'Invalid API key' }
   }
 
   return {
     ok: true,
-    projectId: data.project_id,
+    projectId: data.project_id as string,
     apiKeyId: data.id as string,
-    monthlyEventQuota: project.monthly_event_quota,
-    ingestRatePerMin: project.ingest_rate_per_min,
-    createdBy: project.created_by,
-    firstEventAt: project.first_event_at,
+    monthlyEventQuota: data.monthly_event_quota as number,
+    ingestRatePerMin: data.ingest_rate_per_min as number,
+    createdBy: (data.created_by as string | null) ?? null,
+    firstEventAt: (data.first_event_at as string | null) ?? null,
   }
 }

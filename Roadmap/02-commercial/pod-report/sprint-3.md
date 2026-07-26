@@ -1,6 +1,42 @@
 # Pod Report + Roadmap Hub — Sprint 3: Share links + backfill (the flip)
 
-**Status:** ⬜ not started
+**Status:** 🔨 in progress (2026-07-26). Depends on Sprint 2.5 (the report surface) landing first —
+there is nothing to share until the Pod Report renders.
+
+## Design decisions recorded at build time (2026-07-26)
+
+### Share tokens are `api_keys` rows, and the scope filter lives in the DATABASE
+The epic's Platform-primitives note says share links "join E2's `api_keys` credential taxonomy as
+scoped revocable rows — one taxonomy, not a third system." Built literally: migration
+`20260803100000` adds `scope` (`ingest` | `share`), `share_lens` and `expires_at` to `api_keys`.
+Revocation reuses `revokeApiKey` — already project-scoped, already audited, already on the
+dashboard's key screen. A `report_shares` table would have duplicated the whole lifecycle, and the
+duplicate is the one that gets forgotten when a leaked link needs killing.
+
+**The risk that buys, and how it is paid for.** One table means a share token and an ingest key
+share one `key_hash` namespace — and a share token travels in a URL: browser history, `Referer`
+headers, a screenshot in a chat thread. An ingest key never does. If the ingest lookup ever stopped
+filtering by scope (a refactor, a badly-resolved merge), every share link ever pasted anywhere would
+become a **write credential** for that tenant.
+
+A `.eq('scope','ingest')` in `lib/auth.ts` was judged not good enough for that blast radius, because
+it is a line someone can delete. So the filter moved into the database object the hot path queries:
+`active_ingest_keys` is a view with `scope = 'ingest' AND revoked_at IS NULL AND not expired` baked
+into its definition, joined to `projects`, granted to `service_role` only. `lib/auth.ts` selects
+from the view. **There is no filter in application code to drop.** Same discipline as the write-cap
+and evidence-pointer guards elsewhere in this epic: make the failure unrepresentable rather than
+merely fixed.
+
+**Rollout order followed** (AGENTS rule #4 / LEARNINGS): migration applied to production **first**,
+verified that the view returns all 5 active keys and drops exactly the 3 revoked ones and **zero**
+active ones, *then* the code that reads it ships.
+
+### One hash, not two that agree
+Both credential kinds land in the same `UNIQUE` column, so they must hash identically. The first
+attempt was a test asserting the two hashers agreed — which could not run at all, because
+`lib/api-keys.ts` imports `server-only` (LEARNINGS: a pure helper cannot share a file with a
+runtime-only import). The obstacle produced the better design: both now delegate to
+`lib/credential-hash.ts`, so there is no second implementation to drift and nothing to assert.
 
 ## Stories
 

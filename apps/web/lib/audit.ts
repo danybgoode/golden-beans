@@ -21,6 +21,13 @@ export type AuditAction =
   | 'destination_deleted'
   // event-destination-router · Sprint 2, Story 2.2 — operator-initiated replay of a delivery.
   | 'delivery_replayed'
+  // pod-report · Sprint 3, Story 3.1 — the share-link lifecycle. These sit beside the api_key_*
+  // actions above rather than in a trail of their own, matching the decision one layer down: share
+  // links are rows in the same credential table with the same revoke path, so "who handed our
+  // delivery data to an outsider, and when was it killed?" is answered from one place.
+  // Metadata carries the row id, the lens and the label — never the token.
+  | 'report_share_minted'
+  | 'report_share_revoked'
 
 export type AuditEntry = {
   action: AuditAction

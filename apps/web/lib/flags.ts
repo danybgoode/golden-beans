@@ -63,6 +63,24 @@ export function isExperimentGovernanceEnabled(): boolean {
   return process.env.EXPERIMENT_GOVERNANCE_ENABLED === 'true'
 }
 
+// pod-report · Sprint 3, Story 3.1 — the share-link enablement gate. Sixth flag, same polarity and
+// same dark-by-default contract as its siblings (epic README, "Kill-switch"): born unset/OFF,
+// flipped deliberately at Story 3.3.
+//
+// Exactly `=== 'true'`, for the reason the others give: a gate that opens on a typo is not a gate.
+// This one is worth stating plainly, because of the five flags above it this is the only one whose
+// OFF state is protecting data from ANONYMOUS readers rather than protecting a feature from being
+// used early. While it is off, `/s/<token>` must 404 for every token — valid, revoked or invented —
+// so the flag is a real kill switch for the whole surface and not merely a feature toggle.
+//
+// The fine-grained kill is revoking the individual row (lib/report-shares.ts + revokeApiKey). The
+// two are independent by design: a revoked token must die while the flag is ON, and every token
+// must die while the flag is OFF, regardless of validity. Same two-independent-kill-switches shape
+// as the MCP connector (AGENTS rule #3).
+export function isReportSharesEnabled(): boolean {
+  return process.env.REPORT_SHARES_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

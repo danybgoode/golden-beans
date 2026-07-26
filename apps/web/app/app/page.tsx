@@ -97,6 +97,14 @@ export default async function AppHome({
                       <a href={`/app/destinations/${project.slug}`}>Destinations</a>{' '}
                       <small>— signed webhook delivery</small>
                     </li>
+                    {/* pod-report S3 — deliberately NOT wrapped in isReportSharesEnabled(). The
+                        flag gates whether a minted link SERVES; hiding the screen behind it too
+                        would mean the launch (Story 3.3) could not mint links before flipping,
+                        which is the order that lets a link be verified before it is sent. */}
+                    <li>
+                      <a href={`/app/shares/${project.slug}`}>Share links</a>{' '}
+                      <small>— scoped, revocable report links</small>
+                    </li>
                   </>
                 )}
               </ul>
