@@ -16,10 +16,7 @@ test('hashCredential is sha256-hex, pinned against known vectors', () => {
   // production and every share link ever handed out — and would surface as an unexplained wave of
   // 401s rather than as a failure anyone could trace back to this line.
   assert.equal(hashCredential('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
-  assert.equal(
-    hashCredential(''),
-    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-  )
+  assert.equal(hashCredential(''), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
 })
 
 test('the hash is deterministic, fixed-width, and not the input', () => {

@@ -35,8 +35,7 @@ export type PodReportPushValue = {
 }
 
 export type PodReportParseResult =
-  | { ok: true; value: PodReportPushValue }
-  | { ok: false; error: string; issues?: string[] }
+  { ok: true; value: PodReportPushValue } | { ok: false; error: string; issues?: string[] }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)

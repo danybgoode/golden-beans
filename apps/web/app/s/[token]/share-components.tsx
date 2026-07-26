@@ -67,8 +67,8 @@ export function ShareJourneyStrip({
     <section className={styles.shareStrip} data-testid="share-journey">
       <h2 className={styles.shareStripTitle}>Where the work is</h2>
       <p className={styles.shareStripLede}>
-        <b className="data">{counts.shippedEpics}</b> of <b className="data">{counts.epics}</b> epics
-        shipped, in build order.
+        <b className="data">{counts.shippedEpics}</b> of <b className="data">{counts.epics}</b> epics shipped,
+        in build order.
       </p>
       <ol className={styles.shareJourneyList}>
         {epics.map((epic, i) => (

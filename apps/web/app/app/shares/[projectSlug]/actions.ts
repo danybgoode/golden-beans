@@ -55,7 +55,12 @@ export async function mintShareAction(slug: unknown, lens: unknown, label: unkno
     action: 'report_share_minted',
     projectId,
     actorUserId: userId,
-    metadata: { shareId: result.id, lens: safeLens, label: safeLabel || 'untitled', expiresAt: expiresAt?.toISOString() ?? null },
+    metadata: {
+      shareId: result.id,
+      lens: safeLens,
+      label: safeLabel || 'untitled',
+      expiresAt: expiresAt?.toISOString() ?? null,
+    },
   })
 
   // Built through getSiteUrl(), never from a request Host header (AGENTS rule #5).

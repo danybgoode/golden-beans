@@ -73,8 +73,8 @@ export function ShareManager({
           difference. */}
       {!enabled && (
         <p role="status">
-          <strong>Share links are currently switched off for this deployment.</strong> You can mint
-          links now, but they will return 404 until <code>REPORT_SHARES_ENABLED</code> is turned on.
+          <strong>Share links are currently switched off for this deployment.</strong> You can mint links now,
+          but they will return 404 until <code>REPORT_SHARES_ENABLED</code> is turned on.
         </p>
       )}
 
@@ -83,8 +83,8 @@ export function ShareManager({
           <strong>Copy this link now — it won&apos;t be shown again:</strong>
           <pre style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{minted}</pre>
           <p>
-            Anyone with this URL can read the report through the <b>{lens}</b> lens. There is no
-            password on it — revoke it here when the conversation is over.
+            Anyone with this URL can read the report through the <b>{lens}</b> lens. There is no password on
+            it — revoke it here when the conversation is over.
           </p>
           <button type="button" onClick={() => setMinted(null)}>
             I&apos;ve saved it
@@ -97,13 +97,7 @@ export function ShareManager({
           <legend>Audience</legend>
           {POD_REPORT_LENSES.map((l) => (
             <label key={l} style={{ display: 'block' }}>
-              <input
-                type="radio"
-                name="lens"
-                value={l}
-                checked={lens === l}
-                onChange={() => setLens(l)}
-              />{' '}
+              <input type="radio" name="lens" value={l} checked={lens === l} onChange={() => setLens(l)} />{' '}
               <b>{l}</b> — {lensPolicy(l).audienceNote}
             </label>
           ))}

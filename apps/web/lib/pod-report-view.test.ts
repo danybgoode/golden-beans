@@ -184,7 +184,9 @@ const maturityArtifact = {
         reason: 'Never written into a commit or a PR.',
       },
     ],
-    notInstrumented: [{ key: 'auto_mode_state', label: 'Auto-mode state', reason: 'local setting', guardrail: 'OTel export' }],
+    notInstrumented: [
+      { key: 'auto_mode_state', label: 'Auto-mode state', reason: 'local setting', guardrail: 'OTel export' },
+    ],
   },
 }
 
@@ -235,10 +237,18 @@ test('the downgrade is toward the LESS flattering answer — the row is kept, no
 })
 
 test('a partial evidence pointer does not count as evidence', () => {
-  for (const ev of [{ pointerType: 'pr' }, { ref: 92 }, { pointerType: '', ref: 92 }, { pointerType: 'pr', ref: '' }]) {
+  for (const ev of [
+    { pointerType: 'pr' },
+    { ref: 92 },
+    { pointerType: '', ref: 92 },
+    { pointerType: 'pr', ref: '' },
+  ]) {
     const broken = {
       ...maturityArtifact,
-      maturity: { ...maturityArtifact.maturity, rows: [{ ...maturityArtifact.maturity.rows[0], evidence: ev }] },
+      maturity: {
+        ...maturityArtifact.maturity,
+        rows: [{ ...maturityArtifact.maturity.rows[0], evidence: ev }],
+      },
     }
     assert.equal(
       buildPodReportView(broken).maturity!.rows[0].status,
@@ -252,7 +262,12 @@ test('isHonest refuses a verdict whose ladder is not version-pinned', () => {
   // A score floating free of the rubric it was scored against. An old report must stay
   // interpretable, which means title + author + date, not just a name.
   assert.equal(isHonest(buildPodReportView(maturityArtifact)), true)
-  for (const partial of [{ title: 'x', author: 'y' }, { title: 'x', date: 'z' }, { author: 'y', date: 'z' }, {}]) {
+  for (const partial of [
+    { title: 'x', author: 'y' },
+    { title: 'x', date: 'z' },
+    { author: 'y', date: 'z' },
+    {},
+  ]) {
     const v = buildPodReportView({
       ...maturityArtifact,
       maturity: { ...maturityArtifact.maturity, ladder: partial },

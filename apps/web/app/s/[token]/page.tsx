@@ -125,8 +125,8 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
 
       <p className={styles.shareFooterNote}>
         This link was issued deliberately and can be revoked at any time. Every number on this page is
-        computed from the repository&apos;s own history — nothing here is estimated, and what could not
-        be measured says so.
+        computed from the repository&apos;s own history — nothing here is estimated, and what could not be
+        measured says so.
       </p>
     </ShareFrame>
   )

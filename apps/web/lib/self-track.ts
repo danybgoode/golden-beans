@@ -138,7 +138,12 @@ export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Pro
   if (!apiKey) return false // unset in CI/local-without-config — dogfooding is a prod-config concern
 
   try {
-    const engine = createGrowthEngineClient({ baseUrl: getSiteUrl(), apiKey, userId, fetchImpl: timeoutFetch })
+    const engine = createGrowthEngineClient({
+      baseUrl: getSiteUrl(),
+      apiKey,
+      userId,
+      fetchImpl: timeoutFetch,
+    })
     // featureId is REQUIRED for this event to appear in any funnel — see EVENT_FEATURE above.
     const result = await engine.track(event, { featureId: EVENT_FEATURE[event] })
     if (!result.ok) {

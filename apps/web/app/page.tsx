@@ -36,7 +36,11 @@ export default function Home() {
       <LiveProofSection />
       <OperateRoutes />
       <Teaser
-        title={<>The loop ends in <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your</em> agent.</>}
+        title={
+          <>
+            The loop ends in <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your</em> agent.
+          </>
+        }
         body="Signal → structured task → your agent, over MCP → a fix in your workflow. This section lights up in the same epic that ships the capability — or it doesn't light up at all."
         epic={getSection('inverted-loop').epic}
       />

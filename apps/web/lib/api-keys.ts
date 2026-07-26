@@ -56,7 +56,7 @@ export async function listProjectKeys(projectId: string): Promise<ApiKeyRow[]> {
 // authorized the acting user against `projectId` (see requireProjectMembership).
 export async function issueApiKey(
   projectId: string,
-  label: string,
+  label: string
 ): Promise<{ ok: true; plaintext: string; id: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
   const plaintext = generateApiKey()

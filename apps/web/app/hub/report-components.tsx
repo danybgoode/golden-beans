@@ -79,8 +79,8 @@ export function EmptyPodReportState({ projectSlug }: { projectSlug: string }) {
       <p className={styles.emptyStateKicker}>No pod report pushed yet</p>
       <h2>Beans in the hopper, nothing roasted.</h2>
       <p>
-        <code>{projectSlug}</code> has never pushed a <code>pod_report</code> artifact, so there is nothing
-        to render — an empty hopper, not a broken page and not a row of zeros.
+        <code>{projectSlug}</code> has never pushed a <code>pod_report</code> artifact, so there is nothing to
+        render — an empty hopper, not a broken page and not a row of zeros.
       </p>
       <p>Compute and push one from a checkout of the repo being measured:</p>
       <pre className={styles.emptyStateCmd}>
@@ -116,12 +116,12 @@ export function RefusedPodReport({ view, projectSlug }: { view: PodReportView; p
       <p>
         The latest <code>pod_report</code> artifact for <code>{projectSlug}</code> carries numbers but is
         missing {missing.length > 0 ? missing.join(' and ') : 'part of its honesty layer'}. A report that
-        shows speed without what is <em>not</em> measured beside it is the thing this surface was built
-        not to produce, so no number from this artifact is shown at all.
+        shows speed without what is <em>not</em> measured beside it is the thing this surface was built not to
+        produce, so no number from this artifact is shown at all.
       </p>
       <p className="note">
-        This is a data-integrity fault, not an empty state. Re-run the computation and push again — the
-        stored artifact is immutable, so the fix is a new version, never an edit.
+        This is a data-integrity fault, not an empty state. Re-run the computation and push again — the stored
+        artifact is immutable, so the fix is a new version, never an edit.
       </p>
     </div>
   )
@@ -192,8 +192,8 @@ export function MetricTable({
                   // than inventing a sentence the computation never stood behind.
                   <span className={styles.uninterpreted}>
                     The computation attached no reading to this number. Take it as a raw count over the
-                    measurement window — read it against the caveats and the not-instrumented rows on
-                    this page, never on its own.
+                    measurement window — read it against the caveats and the not-instrumented rows on this
+                    page, never on its own.
                   </span>
                 ) : null}
                 <BenchmarkLink benchmarkId={row.benchmarkId} benchmarks={benchmarks} />
@@ -255,8 +255,8 @@ function EvidenceCell({ row, repo }: { row: MaturityRowT; repo?: string }) {
   if (row.evidenceWithheld) {
     return (
       <span className={styles.evidenceWithheld} data-evidence="withheld">
-        Withheld by this view’s lens. A pointer <strong>does</strong> exist for this row — this audience
-        does not receive it. That is not the same as no evidence.
+        Withheld by this view’s lens. A pointer <strong>does</strong> exist for this row — this audience does
+        not receive it. That is not the same as no evidence.
       </span>
     )
   }
@@ -309,9 +309,9 @@ export function MaturityLadder({
         Where this pod sits on the ladder
       </h2>
       <p className={styles.reportLede}>
-        Scored criterion by criterion against a published external scale, from this repository’s own git
-        and pull-request history. No self-declared answers: what cannot be derived is marked not
-        instrumented rather than assumed.
+        Scored criterion by criterion against a published external scale, from this repository’s own git and
+        pull-request history. No self-declared answers: what cannot be derived is marked not instrumented
+        rather than assumed.
       </p>
 
       {verdict && (
@@ -333,7 +333,9 @@ export function MaturityLadder({
               <b className={`${styles.verdictBig} ${styles.verdictBigGap}`} data-testid="verdict-gaps">
                 {verdict.notInstrumentedCount} not instrumented
               </b>
-              <span className={styles.verdictCellLabel}>things this scale asks about that we cannot measure</span>
+              <span className={styles.verdictCellLabel}>
+                things this scale asks about that we cannot measure
+              </span>
             </span>
           </div>
           <p className={styles.verdictPairNote}>
@@ -346,8 +348,8 @@ export function MaturityLadder({
               Scored against <b>{ladder.title}</b> — {ladder.author}, {ladder.date}
               {ladder.source ? <> · source: {ladder.source}</> : null}
               <br />
-              Version-pinned on purpose: an old report stays interpretable against the ladder it was
-              scored on. Cited and linked, never republished wholesale.
+              Version-pinned on purpose: an old report stays interpretable against the ladder it was scored
+              on. Cited and linked, never republished wholesale.
             </p>
           )}
         </div>
@@ -389,8 +391,8 @@ export function MaturityLadder({
 
       {!showRows && rows.length === 0 && (
         <p className={styles.emptyStateInline} style={{ marginTop: 14 }}>
-          Criterion-by-criterion detail is not part of this view. The verdict and its coverage gap above
-          are shown in full.
+          Criterion-by-criterion detail is not part of this view. The verdict and its coverage gap above are
+          shown in full.
         </p>
       )}
 
@@ -421,8 +423,8 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
       </h2>
       <p className={styles.reportLede}>
         Delivery metrics say “shipped fast”. This half says whether anything moved, read live from the
-        engine’s own funnel and North-Star queries at the moment you loaded this page — not frozen into
-        the artifact at computation time.
+        engine’s own funnel and North-Star queries at the moment you loaded this page — not frozen into the
+        artifact at computation time.
       </p>
 
       {/* THREE states, not two — cross-review (Agy, PR #33). "Could not read" is not "nothing to
@@ -432,15 +434,14 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
       {outcome.unavailable ? (
         <p className={styles.emptyStateInline} data-testid="outcome-unavailable">
           <strong>The outcome layer could not be read just now.</strong> This is a failure to reach the
-          engine’s own funnel queries — <em>not</em> a report of zero adoption, and not “not
-          instrumented” either. The delivery half above is unaffected and still accurate; this half is
-          simply missing, and says so rather than showing you a zero.
+          engine’s own funnel queries — <em>not</em> a report of zero adoption, and not “not instrumented”
+          either. The delivery half above is unaffected and still accurate; this half is simply missing, and
+          says so rather than showing you a zero.
         </p>
       ) : outcome.rows.length === 0 ? (
         <p className={styles.emptyStateInline} data-testid="outcome-empty">
-          No features are registered for <code>{outcome.tenant}</code>, so there is no adoption to read.
-          That is “not instrumented”, not zero adoption — the two look nothing alike and must not render
-          alike.
+          No features are registered for <code>{outcome.tenant}</code>, so there is no adoption to read. That
+          is “not instrumented”, not zero adoption — the two look nothing alike and must not render alike.
         </p>
       ) : (
         <div className={styles.tableWrap}>
@@ -645,8 +646,8 @@ export function PodReportBody({
 
       {view.empty ? (
         <p className={styles.emptyStateInline} data-testid="pod-report-no-delivery" style={{ marginTop: 24 }}>
-          The latest pushed artifact carries no delivery section, so there are no delivery numbers to
-          render. Re-run <code>scripts/pod-report.mjs</code> against a real checkout and push again.
+          The latest pushed artifact carries no delivery section, so there are no delivery numbers to render.
+          Re-run <code>scripts/pod-report.mjs</code> against a real checkout and push again.
         </p>
       ) : (
         <>
@@ -659,9 +660,9 @@ export function PodReportBody({
               How fast — and what that does <em>not</em> tell you
             </h2>
             <p className={styles.reportLede}>
-              Every number here is computed from this repository’s own git and pull-request history.
-              Nothing is estimated, and nothing on the right-hand side is an apology: those are the
-              questions this dataset cannot answer, each with the guardrail that would close it.
+              Every number here is computed from this repository’s own git and pull-request history. Nothing
+              is estimated, and nothing on the right-hand side is an apology: those are the questions this
+              dataset cannot answer, each with the guardrail that would close it.
             </p>
             <div className={styles.pairing}>
               <MetricTable
@@ -684,8 +685,8 @@ export function PodReportBody({
                 Who wrote it
               </h2>
               <p className={styles.reportLede}>
-                A composition fact about how the work was produced. It is not a productivity claim and
-                cannot be read as one — a co-author trailer records participation, never contribution.
+                A composition fact about how the work was produced. It is not a productivity claim and cannot
+                be read as one — a co-author trailer records participation, never contribution.
               </p>
               <MetricTable
                 caption="Agent co-authorship by month"
@@ -698,11 +699,7 @@ export function PodReportBody({
       )}
 
       {view.maturity && (
-        <MaturityLadder
-          maturity={view.maturity}
-          repo={view.source.repo}
-          showRows={policy.showMaturityRows}
-        />
+        <MaturityLadder maturity={view.maturity} repo={view.source.repo} showRows={policy.showMaturityRows} />
       )}
 
       <OutcomeSectionView outcome={outcome} />
@@ -713,8 +710,8 @@ export function PodReportBody({
             The benchmarks these numbers are read against
           </h2>
           <p className={styles.reportLede}>
-            Our side is computed, not claimed. Their side is cited and linked, never republished
-            wholesale — follow the link for the published figures.
+            Our side is computed, not claimed. Their side is cited and linked, never republished wholesale —
+            follow the link for the published figures.
           </p>
           <ul className={styles.benchList} data-testid="pod-report-benchmarks">
             {view.benchmarks.map((b) => (

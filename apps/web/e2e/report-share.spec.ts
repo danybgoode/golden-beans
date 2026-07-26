@@ -29,7 +29,11 @@ const hash = (secret: string) => createHash('sha256').update(secret).digest('hex
 const newToken = () => `gbs_${randomBytes(32).toString('base64url')}`
 
 async function projectIdForKey(key: string): Promise<string> {
-  const { data, error } = await dbClient().from('api_keys').select('project_id').eq('key_hash', hash(key)).single()
+  const { data, error } = await dbClient()
+    .from('api_keys')
+    .select('project_id')
+    .eq('key_hash', hash(key))
+    .single()
   if (error || !data) throw new Error(`fixture key not found: ${error?.message}`)
   return data.project_id as string
 }
@@ -38,7 +42,7 @@ async function projectIdForKey(key: string): Promise<string> {
 async function mintShare(
   projectId: string,
   lens: 'team' | 'client' | 'investor',
-  over: Record<string, unknown> = {},
+  over: Record<string, unknown> = {}
 ): Promise<{ token: string; id: string }> {
   const token = newToken()
   const { data, error } = await dbClient()
@@ -135,7 +139,7 @@ test('a malformed token is 404, indistinguishable from a well-formed wrong guess
 test('while the gate is OFF, a PERFECTLY VALID token is still 404', async ({ request }) => {
   test.skip(
     await serverSharesEnabled(request),
-    'the server under test has the gate ON; dark-default is asserted when it is off',
+    'the server under test has the gate ON; dark-default is asserted when it is off'
   )
   const projectId = await projectIdForKey(LOCAL_ONLY)
   const { token } = await mintShare(projectId, 'investor')
@@ -298,15 +302,13 @@ test('the share revoke touches ONLY share rows, so the audit trail cannot be mis
   expect(touched ?? [], 'the share revoke must not reach an ingest key').toHaveLength(0)
 
   // And the ingest key is still live — proving the no-op was the predicate, not a failed statement.
-  const { data: still } = await dbClient()
-    .from('api_keys')
-    .select('revoked_at')
-    .eq('id', ingest!.id)
-    .single()
+  const { data: still } = await dbClient().from('api_keys').select('revoked_at').eq('id', ingest!.id).single()
   expect(still!.revoked_at).toBeNull()
 })
 
-test('a share token keeps following its tenant across a rename (does NOT reproduce the race — see note)', async ({ request }) => {
+test('a share token keeps following its tenant across a rename (does NOT reproduce the race — see note)', async ({
+  request,
+}) => {
   test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
 
   // ── What this spec does and does NOT prove — corrected after mutation-checking it ─────────────
@@ -361,7 +363,14 @@ test('a share token keeps following its tenant across a rename (does NOT reprodu
     expect(await before.text()).toContain(`MARKER-A-${suffix}`)
 
     // The reassignment. Free A's slug first, then give it to B — exactly the two-step a rename is.
-    expect((await db.from('projects').update({ slug: `${slugA}-renamed` }).eq('id', projectA)).error).toBeNull()
+    expect(
+      (
+        await db
+          .from('projects')
+          .update({ slug: `${slugA}-renamed` })
+          .eq('id', projectA)
+      ).error
+    ).toBeNull()
     expect((await db.from('projects').update({ slug: slugA }).eq('id', projectB)).error).toBeNull()
 
     const after = await request.get(`/s/${token}`)

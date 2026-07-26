@@ -298,7 +298,10 @@ test('gatherSourceRef returns null, never empty string, when git yields nothing'
   // null (not '' and not undefined) matches buildPushEnvelope's own `?? null` and
   // scripts/roadmap-push.mjs's stated reason: JSON.stringify drops undefined keys silently, and an
   // empty string is a value a caller could mistake for a real (if odd) ref.
-  assert.deepEqual(gatherSourceRef('/irrelevant', () => ''), { commit: null, ref: null });
+  assert.deepEqual(
+    gatherSourceRef('/irrelevant', () => ''),
+    { commit: null, ref: null }
+  );
 });
 
 test('resolvePushConfig prefers POD_REPORT_API_KEY over SELF_PROJECT_API_KEY', () => {
@@ -317,7 +320,7 @@ test('resolvePushConfig falls back to SELF_PROJECT_API_KEY when POD_REPORT_API_K
 test('resolvePushConfig yields a null apiKey when neither env var is set — the clean-skip signal', () => {
   const cfg = resolvePushConfig({});
   assert.equal(cfg.apiKey, null);
-  assert.equal(cfg.baseUrl, 'http://localhost:3000', 'matches roadmap-push.mjs\'s own default');
+  assert.equal(cfg.baseUrl, 'http://localhost:3000', "matches roadmap-push.mjs's own default");
 });
 
 test('resolvePushConfig reads GROWTH_ENGINE_URL when set', () => {
@@ -382,13 +385,10 @@ test('source.repo names the ANALYSED checkout, never a hardcoded dataset', () =>
   assert.equal(basename('/Users/someone/dobby/golden-beans'), 'golden-beans');
   assert.equal(basename('/Users/someone/dobby/medusa-bonsai'), 'medusa-bonsai');
   // And the constant is gone from the source — the assertion that would actually have caught it.
-  const src = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), 'pod-report.mjs'),
-    'utf8'
-  );
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'pod-report.mjs'), 'utf8');
   assert.equal(
     /repo:\s*'medusa-bonsai'/.test(src),
     false,
-    "source.repo must be derived from the checkout, not hardcoded"
+    'source.repo must be derived from the checkout, not hardcoded'
   );
 });

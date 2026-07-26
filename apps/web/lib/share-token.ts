@@ -41,5 +41,9 @@ export function generateShareToken(): string {
  * occasionally lets a doomed lookup through.
  */
 export function looksLikeShareToken(raw: unknown): raw is string {
-  return typeof raw === 'string' && raw.startsWith(SHARE_TOKEN_PREFIX) && raw.length >= SHARE_TOKEN_PREFIX.length + 32
+  return (
+    typeof raw === 'string' &&
+    raw.startsWith(SHARE_TOKEN_PREFIX) &&
+    raw.length >= SHARE_TOKEN_PREFIX.length + 32
+  )
 }

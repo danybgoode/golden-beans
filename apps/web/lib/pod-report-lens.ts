@@ -120,7 +120,13 @@ export type LensableView = {
   benchmarks: unknown[]
   source: Record<string, unknown>
   maturity: {
-    verdict: { step: number; stepLabel: string; metCriteria: number; totalCriteria: number; notInstrumentedCount: number } | null
+    verdict: {
+      step: number
+      stepLabel: string
+      metCriteria: number
+      totalCriteria: number
+      notInstrumentedCount: number
+    } | null
     rows: Array<Record<string, unknown>>
     notInstrumented: unknown[]
     ladder: Record<string, unknown> | null

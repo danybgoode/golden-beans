@@ -47,15 +47,14 @@ export async function PodsProofSection() {
       <div className="wrap">
         <p className="kicker">Pods &amp; proof</p>
         <h2>
-          Your dev team, as a{' '}
-          <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
+          Your dev team, as a <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
         </h2>
         <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 620 }}>
-          Computed, not claimed — every figure below comes from{' '}
-          <code>{repo ?? 'this repository'}</code>&apos;s own git and pull-request history, measured over{' '}
+          Computed, not claimed — every figure below comes from <code>{repo ?? 'this repository'}</code>
+          &apos;s own git and pull-request history, measured over{' '}
           <b className="data">{view.source.windowDays ?? '—'}</b> days and{' '}
-          <b className="data">{view.source.commits ?? '—'}</b> commits. Nothing here is estimated, and
-          the things we <em>cannot</em> measure are listed beside the things we can.
+          <b className="data">{view.source.commits ?? '—'}</b> commits. Nothing here is estimated, and the
+          things we <em>cannot</em> measure are listed beside the things we can.
         </p>
 
         <div className="statrow">
@@ -85,9 +84,7 @@ export async function PodsProofSection() {
               shown without its coverage is the single most misleading thing this section could do,
               and Story 2.4's acceptance names it explicitly for exactly this lens. */}
           <div className="stat stat-gap">
-            <b className="data">
-              {(verdict?.notInstrumentedCount ?? 0) + view.notInstrumented.length}
-            </b>
+            <b className="data">{(verdict?.notInstrumentedCount ?? 0) + view.notInstrumented.length}</b>
             <span>things we do not measure — and say so</span>
           </div>
         </div>
@@ -95,9 +92,9 @@ export async function PodsProofSection() {
         <p className="note" style={{ margin: '18px 0 0', fontSize: 12, maxWidth: 620 }}>
           {view.notInstrumented.length > 0 ? (
             <>
-              Not instrumented here:{' '}
-              {view.notInstrumented.map((row) => row.label.toLowerCase()).join(' · ')}. Each gap names
-              the guardrail that would close it — which is most of what a pods engagement installs.
+              Not instrumented here: {view.notInstrumented.map((row) => row.label.toLowerCase()).join(' · ')}.
+              Each gap names the guardrail that would close it — which is most of what a pods engagement
+              installs.
             </>
           ) : (
             <>Every gap this report can declare is declared inside the artifact itself.</>
@@ -131,10 +128,10 @@ function PodsProofFallback({ epic }: { epic: string }) {
               <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
             </h2>
             <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 560 }}>
-              The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and
-              an auditable position on the published AI-adoption ladder, computed from a real
-              repository&apos;s own history and read against published benchmarks. Computed, not
-              claimed: which is exactly why there are no numbers here until one is pushed.
+              The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and an
+              auditable position on the published AI-adoption ladder, computed from a real repository&apos;s
+              own history and read against published benchmarks. Computed, not claimed: which is exactly why
+              there are no numbers here until one is pushed.
             </p>
           </div>
           <span className="tag tag-next">🔜 LIGHTS UP · {epic}</span>

@@ -153,7 +153,11 @@ async function readOutcome(projectId: string, projectSlug: string): Promise<Outc
     })
   )
 
-  return buildOutcomeSection({ tenant: projectSlug, features: rows, northStar: await readNorthStar(projectId) })
+  return buildOutcomeSection({
+    tenant: projectSlug,
+    features: rows,
+    northStar: await readNorthStar(projectId),
+  })
 }
 
 /**
@@ -164,9 +168,7 @@ async function readOutcome(projectId: string, projectSlug: string): Promise<Outc
  * invent it. `latestValue` stays null when nothing has been recorded — distinct from a recorded
  * zero, which lib/pod-outcome.ts turns into two different sentences.
  */
-async function readNorthStar(
-  projectId: string
-): Promise<{
+async function readNorthStar(projectId: string): Promise<{
   metric: string | null
   inputCount: number | null
   latestValue: number | null

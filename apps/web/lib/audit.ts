@@ -7,8 +7,8 @@ import { getSupabaseServiceClient } from './supabase'
 // UPDATE/DELETE), so this module can only ever add to the record.
 
 export type AuditAction =
-  | 'signup_requested'      // a signup form submission passed the gate + guards (no account yet)
-  | 'tenant_provisioned'    // a confirmed user got a project + owner membership + first key
+  | 'signup_requested' // a signup form submission passed the gate + guards (no account yet)
+  | 'tenant_provisioned' // a confirmed user got a project + owner membership + first key
   | 'api_key_issued'
   | 'api_key_revoked'
   // event-destination-router · Sprint 2, Story 2.1 — the destination lifecycle. Same append-only

@@ -212,7 +212,13 @@ export function buildMaturitySection(raw: unknown): MaturitySection | null {
 
     const declared = String(row.status ?? '')
     const status: MaturityRow['status'] =
-      declared === 'met' ? (hasEvidence ? 'met' : 'not_instrumented') : declared === 'not_met' ? 'not_met' : 'not_instrumented'
+      declared === 'met'
+        ? hasEvidence
+          ? 'met'
+          : 'not_instrumented'
+        : declared === 'not_met'
+          ? 'not_met'
+          : 'not_instrumented'
 
     return {
       id: str(row.id) ?? 'unknown',
@@ -222,7 +228,11 @@ export function buildMaturitySection(raw: unknown): MaturitySection | null {
       isProxy: row.isProxy === true,
       proxyNote: str(row.proxyNote),
       evidence: hasEvidence
-        ? { pointerType: String(ev.pointerType), ref: ev.ref as string | number, detail: str(ev.detail) ?? '' }
+        ? {
+            pointerType: String(ev.pointerType),
+            ref: ev.ref as string | number,
+            detail: str(ev.detail) ?? '',
+          }
         : null,
       // Set by lib/pod-report-lens.ts when a lens withheld a pointer that DOES exist. Untouched
       // here, so "withheld from you" and "never existed" stay distinguishable on the page.

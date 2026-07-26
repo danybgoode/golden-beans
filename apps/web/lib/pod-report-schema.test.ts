@@ -109,7 +109,11 @@ test('a payload over the cap is rejected, and the cap measures what the read pat
   // accepted — and because `getLatestArtifact` returns `payload` and nothing derived, accepted
   // implies readable. Two layers measuring different bytes is how an immutable row becomes
   // permanently unreadable (Roadmap/LEARNINGS.md, experiment-governance-v2 S3).
-  const stored = { schemaVersion: POD_REPORT_SCHEMA_VERSION, generatedAt: '2026-07-26T00:00:00.000Z', delivery: { notInstrumented: [] as unknown[], filler: '' } }
+  const stored = {
+    schemaVersion: POD_REPORT_SCHEMA_VERSION,
+    generatedAt: '2026-07-26T00:00:00.000Z',
+    delivery: { notInstrumented: [] as unknown[], filler: '' },
+  }
   const overhead = Buffer.byteLength(JSON.stringify(stored), 'utf8')
   stored.delivery.filler = 'x'.repeat(POD_REPORT_MAX_PAYLOAD_BYTES - overhead)
   const near = parsePodReportPush(stored)
