@@ -100,8 +100,7 @@ const VALUE_RULES: Array<{ pattern: RegExp; replacement: string }> = [
 
   // Common third-party key prefixes (Stripe, OpenAI, GitHub, Slack, AWS, Supabase).
   {
-    pattern:
-      /\b(?:sk|pk|rk|whsec|sb)[-_](?:live|test|proj|secret|publishable)?[-_]?[A-Za-z0-9]{12,}\b/gi,
+    pattern: /\b(?:sk|pk|rk|whsec|sb)[-_](?:live|test|proj|secret|publishable)?[-_]?[A-Za-z0-9]{12,}\b/gi,
     replacement: REDACTED,
   },
   { pattern: /\bgh[pousr]_[A-Za-z0-9]{16,}\b/g, replacement: REDACTED },
@@ -112,7 +111,8 @@ const VALUE_RULES: Array<{ pattern: RegExp; replacement: string }> = [
   // NAME is kept and only the value dropped, so the reader still learns which field was involved.
   { pattern: /\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi, replacement: '$1 ' + REDACTED },
   {
-    pattern: /\b(password|passwd|secret|token|api[-_]?key|auth|credential)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&)}\]]+)/gi,
+    pattern:
+      /\b(password|passwd|secret|token|api[-_]?key|auth|credential)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&)}\]]+)/gi,
     replacement: '$1=' + REDACTED,
   },
 

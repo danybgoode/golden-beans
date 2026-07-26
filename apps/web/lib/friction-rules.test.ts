@@ -166,7 +166,7 @@ test('evaluateFriction output order is stable: funnel order, then rule order', (
       ['feature_one', 'rule_c'],
       ['feature_two', 'rule_a'],
       ['feature_two', 'rule_b'],
-    ],
+    ]
   )
 })
 

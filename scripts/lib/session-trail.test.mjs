@@ -111,10 +111,7 @@ test('detectDrift on a missing checkpoint is a clean no-op, not a crash', () => 
 });
 
 test('highestSeverity picks the worst, not the last', () => {
-  assert.equal(
-    highestSeverity([{ severity: 'low' }, { severity: 'high' }, { severity: 'medium' }]),
-    'high',
-  );
+  assert.equal(highestSeverity([{ severity: 'low' }, { severity: 'high' }, { severity: 'medium' }]), 'high');
   assert.equal(highestSeverity([]), 'none');
 });
 
@@ -169,7 +166,12 @@ test('a no-drift briefing still refuses to call the note correct', () => {
 });
 
 test('resume with no checkpoint tells you how to start one instead of erroring', () => {
-  const out = renderResume({ trail: 't', checkpoint: null, drift: detectDrift(null, state()), epicPath: null });
+  const out = renderResume({
+    trail: 't',
+    checkpoint: null,
+    drift: detectDrift(null, state()),
+    epicPath: null,
+  });
   assert.match(out, /No checkpoint recorded yet/);
   assert.match(out, /--checkpoint/);
 });

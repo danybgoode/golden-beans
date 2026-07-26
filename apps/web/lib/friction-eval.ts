@@ -75,7 +75,7 @@ export async function evaluateFrictionForProject(
   // pod-report S3 finding, where a route re-resolved its tenant from a mutable slug instead of
   // carrying the project_id its credential had already resolved.
   projectSlug: string,
-  options: { force?: boolean } = {},
+  options: { force?: boolean } = {}
 ): Promise<number | null> {
   if (!isSignalsEnabled()) return null
 

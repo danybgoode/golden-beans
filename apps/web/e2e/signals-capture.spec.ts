@@ -57,7 +57,7 @@ async function createTenant(db: SupabaseClient): Promise<Tenant> {
 async function captureError(
   request: APIRequestContext,
   tenant: Tenant,
-  payload: { userId: string; name: string; message: string; stack?: string; context?: unknown },
+  payload: { userId: string; name: string; message: string; stack?: string; context?: unknown }
 ) {
   return request.post('/api/v1/track', {
     headers: { Authorization: `Bearer ${tenant.plaintextKey}`, 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ async function captureError(
 async function waitFor<T>(
   read: () => Promise<T>,
   done: (value: T) => boolean,
-  timeoutMs = 10_000,
+  timeoutMs = 10_000
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs
   let latest = await read()
@@ -114,11 +114,11 @@ async function waitForSignals(db: SupabaseClient, projectId: string, expected: n
 async function waitForEventCount(
   db: SupabaseClient,
   projectId: string,
-  expected: number,
+  expected: number
 ): Promise<SignalRows> {
   return waitFor(
     readSignals(db, projectId),
-    (rows) => rows.length >= 1 && Number(rows[0].event_count) >= expected,
+    (rows) => rows.length >= 1 && Number(rows[0].event_count) >= expected
   )
 }
 
@@ -185,8 +185,18 @@ test.describe('signals capture + grouping', () => {
     const tenant = await createTenant(db)
     const stack = 'Error\n    at lookup (/app/lib/users.ts:12:5)'
 
-    await captureError(request, tenant, { userId: 'u1', name: 'NotFound', message: 'User 41 not found', stack })
-    await captureError(request, tenant, { userId: 'u2', name: 'NotFound', message: 'User 9182 not found', stack })
+    await captureError(request, tenant, {
+      userId: 'u1',
+      name: 'NotFound',
+      message: 'User 41 not found',
+      stack,
+    })
+    await captureError(request, tenant, {
+      userId: 'u2',
+      name: 'NotFound',
+      message: 'User 9182 not found',
+      stack,
+    })
 
     const rows = await waitForEventCount(db, tenant.projectId, 2)
     expect(rows).toHaveLength(1)

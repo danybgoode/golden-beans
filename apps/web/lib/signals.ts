@@ -224,14 +224,13 @@ export type SignalRow = {
  * a connector token, or a verified session) — never taken from a request body. Every query in this
  * module is scoped by it, with no code path that omits the filter.
  */
-export async function listSignalsByProjectId(
-  projectId: string,
-  limit = 50,
-): Promise<SignalRow[]> {
+export async function listSignalsByProjectId(projectId: string, limit = 50): Promise<SignalRow[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('signals')
-    .select('id, kind, fingerprint, title, feature_id, first_seen_at, last_seen_at, event_count, users_affected, sample')
+    .select(
+      'id, kind, fingerprint, title, feature_id, first_seen_at, last_seen_at, event_count, users_affected, sample'
+    )
     .eq('project_id', projectId)
     .order('users_affected', { ascending: false })
     .order('event_count', { ascending: false })

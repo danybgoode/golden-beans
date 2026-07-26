@@ -100,7 +100,7 @@ const SEVERITY_ORDER = { none: 0, low: 1, medium: 2, high: 3 };
 export function highestSeverity(reasons) {
   return reasons.reduce(
     (acc, r) => (SEVERITY_ORDER[r.severity] > SEVERITY_ORDER[acc] ? r.severity : acc),
-    'none',
+    'none'
   );
 }
 
@@ -175,7 +175,7 @@ export function renderResume({ trail, checkpoint, drift, epicPath }) {
     out.push(`⚠  THE REPOSITORY HAS MOVED SINCE THIS TRAIL WAS WRITTEN (${drift.severity} drift).`);
     out.push('   Read the note below as a description of an OLDER tree, and re-derive anything it');
     out.push('   claims before acting on it (Roadmap/LEARNINGS.md: re-derive a handover from the');
-    out.push('   artifact, never from the previous session\'s summary).');
+    out.push("   artifact, never from the previous session's summary).");
     out.push('');
     for (const r of drift.reasons) {
       out.push(`   [${r.severity}] ${r.kind}: ${r.detail}`);
@@ -192,8 +192,10 @@ export function renderResume({ trail, checkpoint, drift, epicPath }) {
   out.push(renderCheckpoint(checkpoint));
 
   out.push('─── suggested first moves ───', '');
-  out.push('1. `git status --short` and `git diff HEAD` — see the real tree, not this file\'s memory.');
-  out.push('2. Re-run the gate rather than trusting a "green" claim: `npm run typecheck && npm run test:unit`.');
+  out.push("1. `git status --short` and `git diff HEAD` — see the real tree, not this file's memory.");
+  out.push(
+    '2. Re-run the gate rather than trusting a "green" claim: `npm run typecheck && npm run test:unit`.'
+  );
   out.push('3. `git diff HEAD` for SOURCE files the last task had no business touching — a subagent that');
   out.push('   died mid-mutation leaves a real regression that reads as ordinary progress (LEARNINGS).');
   if (epicPath) out.push(`4. Read ${epicPath} for scope; this trail only covers what was IN FLIGHT.`);

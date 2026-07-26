@@ -72,7 +72,11 @@ export interface TrackEventProps {
 }
 
 export type TrackResult =
-  | { ok: true; id: string; /** True when an idempotencyKey matched an existing event — nothing was created. */ deduplicated?: boolean }
+  | {
+      ok: true
+      id: string
+      /** True when an idempotencyKey matched an existing event — nothing was created. */ deduplicated?: boolean
+    }
   | { ok: false; error: string; code?: string; issues?: unknown }
 
 // Sprint 2, Story 2.1: a feature registry entry pushed from the client's own live
@@ -89,15 +93,12 @@ export interface FeatureSyncEntry {
 }
 
 export type SyncResult =
-  | { ok: true; synced: number }
-  | { ok: false; error: string; code?: string; issues?: unknown }
+  { ok: true; synced: number } | { ok: false; error: string; code?: string; issues?: unknown }
 
 // Sprint 4, Story 4.1 (Roadmap/01-growth-engine/growth-engine-v1/sprint-4.md): deterministic
 // client-side bucketing — same envelope shape as TrackResult/SyncResult (never a bare string), so
 // v2 can extend it (e.g. a `reason` field) without a breaking change to callers.
-export type BucketResult =
-  | { ok: true; variant: string }
-  | { ok: false; error: string; code?: string }
+export type BucketResult = { ok: true; variant: string } | { ok: false; error: string; code?: string }
 
 export interface ExperimentGovernanceContext {
   /** Immutable registry version used to interpret this local assignment. */
@@ -145,7 +146,7 @@ export interface GrowthEngineClient {
   bucket(
     experimentKey: string,
     variants: BucketVariant[],
-    governance?: ExperimentGovernanceContext,
+    governance?: ExperimentGovernanceContext
   ): BucketResult
   /**
    * Fires an exposure event for a bucketed variant — the denominator for variant comparison
@@ -156,7 +157,7 @@ export interface GrowthEngineClient {
     experimentKey: string,
     variant: string,
     props?: Omit<TrackEventProps, 'featureId'>,
-    governance?: ExperimentGovernanceContext,
+    governance?: ExperimentGovernanceContext
   ): Promise<TrackResult>
   /**
    * signals-loop · Story 1.1 — report a runtime error as a reserved `$error` event.
@@ -196,10 +197,14 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
         body: JSON.stringify({ userId: config.userId, event, ...props }),
       })
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Unknown network error', code: 'NETWORK_ERROR' }
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Unknown network error',
+        code: 'NETWORK_ERROR',
+      }
     }
 
-    const body = await res.json().catch(() => null) as {
+    const body = (await res.json().catch(() => null)) as {
       ok?: boolean
       error?: string
       issues?: unknown
@@ -207,7 +212,12 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
       id: string
     } | null
     if (!res.ok || !body?.ok) {
-      return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
+      return {
+        ok: false,
+        error: body?.error ?? `HTTP ${res.status}`,
+        code: String(res.status),
+        issues: body?.issues,
+      }
     }
     // `deduplicated` rides along only when the server actually set it, so a caller that never uses
     // idempotency keys sees the exact same result object it saw before Story 1.1.
@@ -223,17 +233,26 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
         body: JSON.stringify({ features }),
       })
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Unknown network error', code: 'NETWORK_ERROR' }
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'Unknown network error',
+        code: 'NETWORK_ERROR',
+      }
     }
 
-    const body = await res.json().catch(() => null) as {
+    const body = (await res.json().catch(() => null)) as {
       ok?: boolean
       error?: string
       issues?: unknown
       synced: number
     } | null
     if (!res.ok || !body?.ok) {
-      return { ok: false, error: body?.error ?? `HTTP ${res.status}`, code: String(res.status), issues: body?.issues }
+      return {
+        ok: false,
+        error: body?.error ?? `HTTP ${res.status}`,
+        code: String(res.status),
+        issues: body?.issues,
+      }
     }
     return { ok: true, synced: body.synced }
   }
@@ -241,7 +260,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
   function bucket(
     experimentKey: string,
     variants: BucketVariant[],
-    governance?: ExperimentGovernanceContext,
+    governance?: ExperimentGovernanceContext
   ): BucketResult {
     const governed = governance !== undefined
     if (governed && !validGovernance(governance)) return invalidGovernanceResult()
@@ -251,7 +270,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
           governance.assignmentEntity.id,
           experimentKey,
           governance.definitionVersion,
-          variants,
+          variants
         )
       : resolveVariant(config.userId, experimentKey, variants)
     if (variant === null) {
@@ -264,7 +283,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     experimentKey: string,
     variant: string,
     props?: Omit<TrackEventProps, 'featureId'>,
-    governance?: ExperimentGovernanceContext,
+    governance?: ExperimentGovernanceContext
   ): Promise<TrackResult> {
     if (governance === undefined) {
       // Preserve the legacy request shape byte-for-byte: variant overrides a same-named caller tag,
@@ -401,8 +420,6 @@ function getErrorEventTarget(): ErrorEventTarget | null {
   }
   return g as unknown as ErrorEventTarget
 }
-
-
 
 const ENTITY_TYPE = /^[a-z][a-z0-9_]{0,63}$/
 const CONTROL_CHARS = /\p{Cc}/u

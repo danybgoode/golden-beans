@@ -175,13 +175,17 @@ function main() {
         checkpoint: last,
         drift,
         epicPath: args.epic || (inferEpicDir(state.branch) || '').replace(ROOT + '/', '') || null,
-      }) + '\n',
+      }) + '\n'
     );
     process.exit(0);
   }
 
   // checkpoint
-  const cp = buildCheckpoint({ note: args.note, state: { ...state, verified: args.verified }, now: new Date() });
+  const cp = buildCheckpoint({
+    note: args.note,
+    state: { ...state, verified: args.verified },
+    now: new Date(),
+  });
   const header = existsSync(trailFile)
     ? ''
     : `# In flight — session trail\n\n> Written by \`scripts/session-trail.mjs\`. Each entry records what a session had IN FLIGHT\n> (uncommitted) plus the mechanically-derived branch/HEAD/file state at that moment. On re-entry,\n> \`--resume\` diffs that against the repository now and leads with the disagreement — because a\n> handover's claims must be re-derived, never trusted (Roadmap/LEARNINGS.md).\n>\n> **Delete this file at epic close**, promoting anything durable into RETROSPECTIVE.md.\n\n`;
@@ -192,7 +196,9 @@ function main() {
 
   const rel = trailFile.replace(ROOT + '/', '');
   const count = parseCheckpoints(readFileSync(trailFile, 'utf8')).length;
-  process.stdout.write(`✓ checkpoint ${count} → ${rel}  (${cp.dirty.length} modified, ${cp.untracked.length} new)\n`);
+  process.stdout.write(
+    `✓ checkpoint ${count} → ${rel}  (${cp.dirty.length} modified, ${cp.untracked.length} new)\n`
+  );
 }
 
 const isMain = process.argv[1] && process.argv[1].endsWith('session-trail.mjs');

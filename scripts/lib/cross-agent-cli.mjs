@@ -406,7 +406,7 @@ function execCodex(prompt, stdin) {
       input: stdin,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
-    },
+    }
   );
 }
 

@@ -145,7 +145,7 @@ test('isConnectorWriteToolEnabled is ON for exactly one of the eight flag combin
               assert.equal(
                 isConnectorWriteToolEnabled(),
                 allOn,
-                `connector=${connector} signals=${signals} writes=${writes}`,
+                `connector=${connector} signals=${signals} writes=${writes}`
               )
               if (isConnectorWriteToolEnabled()) onCount += 1
             })

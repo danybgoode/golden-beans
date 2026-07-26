@@ -10,7 +10,10 @@ import assert from 'node:assert/strict'
 import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub.ts'
 
 test('an ingest key is redacted', () => {
-  const out = scrubClientText('Request failed with Authorization gb_key_AbCdEf0123456789xyzAB', SDK_MAX_MESSAGE)
+  const out = scrubClientText(
+    'Request failed with Authorization gb_key_AbCdEf0123456789xyzAB',
+    SDK_MAX_MESSAGE
+  )
   assert.ok(!out.includes('gb_key_AbCdEf0123456789xyzAB'), out)
   assert.ok(out.includes('[redacted]'), out)
 })
@@ -53,7 +56,10 @@ test('an email address is redacted', () => {
 })
 
 test('a URL keeps its origin and path and loses its query string', () => {
-  const out = scrubClientText('GET https://api.example.com/v1/orders?session=abc123&token=xyz 500', SDK_MAX_MESSAGE)
+  const out = scrubClientText(
+    'GET https://api.example.com/v1/orders?session=abc123&token=xyz 500',
+    SDK_MAX_MESSAGE
+  )
   assert.ok(!out.includes('abc123'), out)
   assert.ok(!out.includes('xyz'), out)
   assert.ok(out.includes('https://api.example.com/v1/orders'), out)

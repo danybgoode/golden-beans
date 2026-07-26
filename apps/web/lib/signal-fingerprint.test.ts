@@ -11,12 +11,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  computeSignalFingerprint,
-  normalizeMessage,
-  topAppFrame,
-  signalTitle,
-} from './signal-fingerprint.ts'
+import { computeSignalFingerprint, normalizeMessage, topAppFrame, signalTitle } from './signal-fingerprint.ts'
 
 const FP = /^[0-9a-f]{32}$/
 

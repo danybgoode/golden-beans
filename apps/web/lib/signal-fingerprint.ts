@@ -32,20 +32,22 @@ const STR = '<s>'
  * `<hex>-<hex>-…` by the hex rule underneath it.
  */
 export function normalizeMessage(message: string): string {
-  return message
-    .toLowerCase()
-    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g, UUID)
-    .replace(/\b0x[0-9a-f]+\b/g, HEX)
-    .replace(/\b[0-9a-f]{8,}\b/g, HEX)
-    // Quoted literals are almost always the varying datum ("could not find 'order_8821'").
-    .replace(/"[^"]*"/g, STR)
-    .replace(/'[^']*'/g, STR)
-    // Any remaining number, including decimals and negatives.
-    .replace(/-?\d+(?:\.\d+)?/g, NUM)
-    // Collapse whitespace last, so the replacements above can't leave ragged spacing that makes two
-    // identical messages hash differently.
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    message
+      .toLowerCase()
+      .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g, UUID)
+      .replace(/\b0x[0-9a-f]+\b/g, HEX)
+      .replace(/\b[0-9a-f]{8,}\b/g, HEX)
+      // Quoted literals are almost always the varying datum ("could not find 'order_8821'").
+      .replace(/"[^"]*"/g, STR)
+      .replace(/'[^']*'/g, STR)
+      // Any remaining number, including decimals and negatives.
+      .replace(/-?\d+(?:\.\d+)?/g, NUM)
+      // Collapse whitespace last, so the replacements above can't leave ragged spacing that makes two
+      // identical messages hash differently.
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**

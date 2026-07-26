@@ -157,7 +157,7 @@ function pct(value: number): string {
  */
 export function evaluateFriction(
   rules: readonly FrictionRule[],
-  funnels: readonly FunnelCounts[],
+  funnels: readonly FunnelCounts[]
 ): FrictionFinding[] {
   const findings: FrictionFinding[] = []
   for (const funnel of funnels) {

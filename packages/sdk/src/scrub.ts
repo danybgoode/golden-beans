@@ -28,7 +28,10 @@ const RULES: Array<[RegExp, string]> = [
   // Authorization headers quoted into a message.
   [/\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi, '$1 ' + REDACTED],
   // `password=…` / `token=…` in a URL or log line; the key name survives, the value does not.
-  [/\b(password|passwd|secret|token|api[-_]?key)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&)}\]]+)/gi, '$1=' + REDACTED],
+  [
+    /\b(password|passwd|secret|token|api[-_]?key)\s*[=:]\s*("[^"]*"|'[^']*'|[^\s,;&)}\]]+)/gi,
+    '$1=' + REDACTED,
+  ],
   // Email addresses.
   [/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, REDACTED],
   // A URL's query string — origin and path are the diagnostic value, query params carry sessions.

@@ -184,7 +184,15 @@ test('a sensitive key loses its value whatever the value looks like', () => {
 test('sensitive key matching survives spelling: apiKey, api_key, X-API-KEY, stripeApiKey', () => {
   // A deny-list of exact names would have to enumerate spellings, and the one it missed would be
   // the one that leaked. This pins the normalize-and-substring behaviour that avoids that.
-  for (const key of ['apiKey', 'api_key', 'API-KEY', 'X-Api-Key', 'stripeApiKey', 'Authorization', 'set-cookie']) {
+  for (const key of [
+    'apiKey',
+    'api_key',
+    'API-KEY',
+    'X-Api-Key',
+    'stripeApiKey',
+    'Authorization',
+    'set-cookie',
+  ]) {
     assert.equal(isSensitiveKey(key), true, `not treated as sensitive: ${key}`)
   }
   // The counter-list, widened after a cross-review finding (Agy, 2026-07-26): a bare `auth` entry
@@ -192,8 +200,17 @@ test('sensitive key matching survives spelling: apiKey, api_key, X-API-KEY, stri
   // telemetry fields, and silently redacting them corrupts a tenant's own data — a scrub that eats
   // real fields fails the product as surely as one that misses a secret, and does it invisibly.
   for (const key of [
-    'name', 'featureId', 'orderTotal', 'userId',
-    'author', 'authorId', 'author_name', 'ping', 'spin', 'shipping', 'campaign',
+    'name',
+    'featureId',
+    'orderTotal',
+    'userId',
+    'author',
+    'authorId',
+    'author_name',
+    'ping',
+    'spin',
+    'shipping',
+    'campaign',
   ]) {
     assert.equal(isSensitiveKey(key), false, `wrongly treated as sensitive: ${key}`)
   }
