@@ -351,15 +351,16 @@ function main() {
     skillsProvenance: undefined,
   });
 
+  // ONE clock read for the whole artifact. Two calls to `new Date()` — one inside computeDelivery,
+  // one at the top level — meant `artifact.generatedAt` and `artifact.delivery.generatedAt`
+  // disagreed by milliseconds on every default run: a single artifact quietly claiming two
+  // generation times. Harmless-looking, and wrong in a document whose headline property is that the
+  // same inputs produce the same output (cross-review round 7).
+  const stamp = generatedAt ?? new Date().toISOString();
+
   const artifact = buildArtifact({
     maturity,
-    delivery: computeDelivery({
-      prs,
-      epics,
-      commits,
-      windowDays: days,
-      generatedAt: generatedAt ?? new Date().toISOString(),
-    }),
+    delivery: computeDelivery({ prs, epics, commits, windowDays: days, generatedAt: stamp }),
     source: {
       repo: 'medusa-bonsai',
       commits: commits.length,
@@ -367,7 +368,7 @@ function main() {
       mergedPrs: prs.length,
       windowDays: days,
     },
-    generatedAt: generatedAt ?? new Date().toISOString(),
+    generatedAt: stamp,
   });
 
   const json = JSON.stringify(artifact, null, 2);
