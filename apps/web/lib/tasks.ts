@@ -415,6 +415,14 @@ export async function listTasksByProjectId(
 
   const { data, error } = await query
     .order('impact_rank', { ascending: false })
+    // Tie-breakers, and they matter more here than they look. Ranks collide readily — two signals
+    // with the same users × frequency produce the identical rounded score — and without a stable
+    // secondary sort the queue silently re-orders between two reads of unchanged data. That makes
+    // "is this list still the same?" unanswerable for a human, and breaks pagination for an agent
+    // walking the queue. Newest-first among equals, then id as the final deterministic arbiter
+    // (two rows can share a created_at at Postgres' resolution). Cross-review, Agy round 4.
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(Math.min(Math.max(options.limit ?? 50, 1), 200))
 
   if (error) {
@@ -483,10 +491,27 @@ export async function promoteEligibleSignals(projectId: string): Promise<number>
 
   if (error || !data) return 0
 
+  // ── Bounded CONCURRENCY, not a sequential walk ──────────────────────────────────────────────
+  // This runs on a read path — a dashboard render and an MCP `list_tasks` call — so its latency is
+  // a user-visible cost, and each signal costs several round trips (rule load, feature lookup, the
+  // promotion RPC). Sequentially that is up to 100 × N round trips before a page paints.
+  //
+  // Chunked rather than a single Promise.all over all 100: unbounded parallelism against Postgres
+  // trades a latency problem for a connection-pool problem, which is the worse one because it
+  // degrades every OTHER tenant's request rather than just this render. Eight is comfortably under
+  // the pool and turns the worst case into ~13 sequential batches.
+  //
+  // Order does not matter here — each promotion is independent, and the queue is sorted on read.
+  const CONCURRENCY = 8
   let created = 0
-  for (const row of data) {
-    const outcome = await promoteSignal(projectId, row.id as string)
-    if (outcome.promoted) created += 1
+  for (let i = 0; i < data.length; i += CONCURRENCY) {
+    const batch = data.slice(i, i + CONCURRENCY)
+    const outcomes = await Promise.all(
+      batch.map((row) =>
+        promoteSignal(projectId, row.id as string).catch(() => ({ promoted: false }) as const)
+      )
+    )
+    created += outcomes.filter((o) => o.promoted).length
   }
   return created
 }

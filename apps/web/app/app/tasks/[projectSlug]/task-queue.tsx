@@ -13,10 +13,22 @@ export function TaskQueue({ slug, tasks }: { slug: string; tasks: TaskRow[] }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
+  // The evidence pointer per task, so two rows being resolved in one session cannot pick up each
+  // other's value.
+  const [pointers, setPointers] = useState<Record<string, string>>({})
+
   function act(taskId: string, toStatus: string, resolution?: string) {
     setError(null)
     startTransition(async () => {
-      const result = await transitionTaskAction(slug, taskId, toStatus, resolution)
+      const result = await transitionTaskAction(
+        slug,
+        taskId,
+        toStatus,
+        resolution,
+        // Only sent on a resolve. A dismissal is explicitly NOT a fix, so attaching a commit to one
+        // would be a claim the action does not support.
+        toStatus === 'resolved' ? pointers[taskId] : undefined,
+      )
       if (!result.ok) setError(result.error)
       else router.refresh()
     })
@@ -103,6 +115,23 @@ export function TaskQueue({ slug, tasks }: { slug: string; tasks: TaskRow[] }) {
                           Claim
                         </button>
                       ) : null}
+                      {/* ── The evidence pointer (Amendment 4.2) ──────────────────────────────
+                          Cross-review (Agy round 4) caught that the action accepted this and the UI
+                          never offered it — so the human surface could only ever produce
+                          unevidenced resolutions, while an agent could attach a commit. That is
+                          backwards: the whole point of the pointer is that a resolution CLAIM is
+                          checkable, and the person clicking Resolve is the one most likely to know
+                          the PR number. Optional by design — a resolution with no pointer is
+                          recorded as resolved WITHOUT evidence, never silently as evidenced. */}
+                      <input
+                        type="text"
+                        value={pointers[task.id] ?? ''}
+                        onChange={(e) =>
+                          setPointers((prev) => ({ ...prev, [task.id]: e.target.value }))
+                        }
+                        placeholder="commit SHA, PR URL, or note (optional)"
+                        aria-label={`Evidence for ${task.title}`}
+                      />
                       <button
                         type="button"
                         disabled={pending}
