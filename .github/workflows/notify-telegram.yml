@@ -79,27 +79,49 @@ jobs:
           # Bash-only expansion sitting outside the one place that already owns payload assembly.
           # Cross-review flagged the inconsistency on PR #24: everything that shapes the message now
           # happens in jq, so there is a single place to read and a single place to get it wrong.
-          TEXT=$(jq -n \
+          # ── ONE jq call builds the whole body. This is the bug fix, not a tidy-up ──────────────
+          # The original built TEXT in one jq and then passed it to a SECOND jq as `--arg text`.
+          # `jq -n '...'` emits JSON — a *quoted* string with `\"` escapes — so the second call
+          # embedded those literally and Telegram received `<a href=\"https://…\">`. Every ping
+          # since this workflow shipped was rejected:
+          #   {"ok":false,"error_code":400,"description":"can't parse entities: Unexpected end of
+          #    name token at byte offset 158"}
+          # Byte 158 is exactly where `href=\"` begins.
+          #
+          # Building the payload in a single pass makes the double-encoding unrepresentable rather
+          # than merely fixed.
+          BODY=$(jq -n \
+            --arg chat_id "$CHAT_ID" \
             --arg repo "golden-beans" \
             --arg sha "$SHORT_SHA" \
             --arg message "$COMMIT_MSG" \
             --arg author "$AUTHOR" \
             --arg url "$DIFF_URL" \
             'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
-             ($repo + " · 📦 · <code>" + $sha + "</code>\n" +
-              (($message | split("\n")[0]) | esc) + "\n" +
-              "by @" + ($author | esc) + "\n" +
-              "<a href=\"" + $url + "\">view diff</a>")')
+             {
+               chat_id: $chat_id,
+               parse_mode: "HTML",
+               disable_web_page_preview: true,
+               text: ($repo + " · 📦 · <code>" + $sha + "</code>\n" +
+                      (($message | split("\n")[0]) | esc) + "\n" +
+                      "by @" + ($author | esc) + "\n" +
+                      "<a href=\"" + ($url | esc) + "\">view diff</a>")
+             }')
 
-          BODY=$(jq -n \
-            --arg chat_id "$CHAT_ID" \
-            --arg text "$TEXT" \
-            '{chat_id: $chat_id, text: $text, parse_mode: "HTML", disable_web_page_preview: true}')
-
-          curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+          # ── Verify DELIVERY, not just that curl ran ───────────────────────────────────────────
+          # `|| true` still means a Telegram outage never fails the build — that part was right.
+          # What was missing is that it also hid a REJECTED message behind a green check for this
+          # workflow's entire life. The response is now inspected and a failure raised as a warning
+          # annotation, so "the job succeeded" and "the message arrived" stop being the same signal.
+          RESPONSE=$(curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "$BODY" \
-            || true
+            -d "$BODY" || echo '{"ok":false,"description":"curl failed or timed out"}')
+
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo "✓ push ping delivered"
+          else
+            echo "::warning title=Telegram push ping not delivered::$RESPONSE"
+          fi
 
   deploy-notification:
     name: Production deploy-finish ping
@@ -151,23 +173,32 @@ jobs:
 
           [ -z "$DEPLOY_URL" ] && DEPLOY_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${DEPLOY_SHA}"
 
-          TEXT=$(jq -n \
+          # One jq call — see the push job above for why the two-step version silently broke every
+          # message this workflow has ever sent.
+          BODY=$(jq -n \
+            --arg chat_id "$CHAT_ID" \
             --arg repo "golden-beans" \
             --arg sha "$SHORT_SHA" \
             --arg header "$HEADER" \
             --arg status "$STATUS" \
             --arg url "$DEPLOY_URL" \
-            '($repo + " · 🚀 · <code>" + $sha + "</code>\n" +
-              ($header | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) + "\n" +
-              $status + "\n" +
-              "<a href=\"" + $url + "\">open deployment</a>")')
+            'def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+             {
+               chat_id: $chat_id,
+               parse_mode: "HTML",
+               disable_web_page_preview: true,
+               text: ($repo + " · 🚀 · <code>" + $sha + "</code>\n" +
+                      ($header | esc) + "\n" +
+                      $status + "\n" +
+                      "<a href=\"" + ($url | esc) + "\">open deployment</a>")
+             }')
 
-          BODY=$(jq -n \
-            --arg chat_id "$CHAT_ID" \
-            --arg text "$TEXT" \
-            '{chat_id: $chat_id, text: $text, parse_mode: "HTML", disable_web_page_preview: true}')
-
-          curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+          RESPONSE=$(curl -sS -m 10 -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "$BODY" \
-            || true
+            -d "$BODY" || echo '{"ok":false,"description":"curl failed or timed out"}')
+
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo "✓ deploy-finish ping delivered"
+          else
+            echo "::warning title=Telegram deploy ping not delivered::$RESPONSE"
+          fi

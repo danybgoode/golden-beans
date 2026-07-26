@@ -384,6 +384,23 @@ one-liner + why + date shape.
   Keep its read-only prompt explicit, verify every cited line against the actual diff, and record false
   positives rather than converting them into churn. This still earns a high-risk second seat because it
   is a cheap independent repository scout; it does not replace Agy's cleaner diff discipline.
+- **A fire-and-forget notifier that never fails the build also never tells you it is broken — and a
+  green workflow is NOT evidence a message arrived.** `notify-telegram.yml` shipped with
+  `curl … || true` (correct: a Telegram outage must not fail a deploy) and every single ping it ever
+  sent was REJECTED by Telegram with `400 can't parse entities`. The workflow reported success for
+  its entire life, and the agent that built it reported it "verified live in production" — having
+  checked that the job ran and exited 0, which is not the same question as whether the message was
+  delivered. Discovered only because Daniel noticed he had stopped receiving notifications.
+  **Two rules. (1) For any fire-and-forget side effect, INSPECT THE RESPONSE and surface a failure
+  as a warning annotation — keep `|| true` so the build never breaks, but never let "the job
+  succeeded" and "the thing happened" be the same signal. (2) Verify a notification by looking in
+  the CHANNEL, not at the exit code; if you cannot see the channel, say that the delivery is
+  unverified rather than calling it verified.**
+  The payload bug itself is worth knowing too: `jq -n '…'` emits JSON, so a *quoted* string with
+  `\"` escapes. Building `TEXT` in one `jq` and passing it to a second as `--arg text "$TEXT"`
+  double-encodes it, and the recipient sees literal `<a href=\"…\">`. Build the whole payload in a
+  SINGLE jq pass so the double-encoding is unrepresentable rather than merely fixed.
+  *(2026-07-26, pod-report/quality-rails.)*
 - **A scripted `str.replace()` that finds nothing SUCCEEDS SILENTLY — and the test you write alongside
   it can pass while the change never landed.** pod-report S2 added `checkSucceeded()` (accepting both
   GitHub check-run `conclusion` and classic commit-status `state`), unit-tested it, and shipped —
