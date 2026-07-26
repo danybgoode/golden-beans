@@ -199,7 +199,7 @@ export async function promoteSignal(projectId: string, signalId: string): Promis
   // to undo the write it describes.
   after(async () => {
     await emitTaskLifecycleEvent(projectId, data.task_id as string, 'open')
-    await maybeNotifyFirstTask(projectId)
+    await maybeNotifyFirstTask(projectId, data.task_id as string)
   })
 
   return { promoted: true, taskId: data.task_id as string }
@@ -300,18 +300,38 @@ async function recordEmitFailure(
 /**
  * One Telegram line the first time a project ever produces a task (Amendment 4.4).
  *
- * "Ever" is asked of the DATA — `count === 1` — rather than tracked in a flag somewhere, so it
- * cannot drift out of sync with reality and needs no migration to store. It is best-effort and
- * silent on failure: an operator convenience must never be able to affect a tenant's queue.
+ * ── Why "is this task the OLDEST?" and not "is the count 1?" ────────────────────────────────
+ * The first version asked `count === 1` after the fact, which cross-review (Codex round 2)
+ * correctly called race-prone: two promotions in the same pass both run their callback after both
+ * rows exist, both see a count above one, and NOBODY sends the notification. A first-task ping that
+ * silently never fires on a busy first day is worse than no ping, because its absence reads as
+ * "nothing happened yet".
+ *
+ * Asking whether THIS task is the project's oldest is race-free without a marker column, a
+ * migration, or a lock — because the question has exactly one answer no matter how many callbacks
+ * ask it concurrently. Only one row can be the oldest, so at most one caller matches, and any
+ * caller that runs later still gets the same answer rather than a different one. Idempotent by
+ * construction rather than by coordination.
+ *
+ * Ties are handled by ordering on `created_at` then `id`: two rows can share a timestamp at
+ * Postgres' resolution, and a bare timestamp sort would make "the oldest" ambiguous — which is the
+ * same non-determinism the count version had, just moved.
+ *
+ * Best-effort and silent on failure throughout: an operator convenience must never affect a
+ * tenant's queue.
  */
-async function maybeNotifyFirstTask(projectId: string): Promise<void> {
+async function maybeNotifyFirstTask(projectId: string, taskId: string): Promise<void> {
   try {
     const supabase = getSupabaseServiceClient()
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('tasks')
-      .select('id', { count: 'exact', head: true })
+      .select('id')
       .eq('project_id', projectId)
-    if (error || count !== 1) return
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (error || !data || data.id !== taskId) return
 
     const { data: project } = await supabase.from('projects').select('slug').eq('id', projectId).maybeSingle()
 

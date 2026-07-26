@@ -72,6 +72,12 @@ function humanReason(reason: string): string {
       return 'Someone else already claimed this task.'
     case 'already_terminal':
       return 'This task is already resolved or dismissed.'
+    case 'actor_required':
+      // Not reachable from the dashboard — the action always supplies `user:<id>`. Handled anyway
+      // because Sprint 3's connector writes pass an AGENT-supplied label, and a shared reason map
+      // that silently falls through to "Could not update" for a known refusal is how a caller ends
+      // up debugging the wrong thing.
+      return 'A claim needs an identified claimant.'
     default:
       return 'Could not update the task.'
   }
