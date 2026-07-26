@@ -1,7 +1,6 @@
 'use server'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { revokeApiKey } from '@/lib/api-keys'
-import { mintShareLink } from '@/lib/report-shares'
+import { mintShareLink, revokeShareLink } from '@/lib/report-shares'
 import { parseLens } from '@/lib/pod-report-lens'
 import { isReportSharesEnabled } from '@/lib/flags'
 import { getSiteUrl } from '@/lib/site-url'
@@ -68,9 +67,11 @@ export async function revokeShareAction(slug: unknown, shareId: unknown) {
   const safeShareId = requireString(shareId, 'share id')
 
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
-  // The SAME revoke used for ingest keys — one row-update, one code path, one thing to get right.
-  // A parallel revoke for share links is the one that would be forgotten at the moment it mattered.
-  const ok = await revokeApiKey(projectId, safeShareId)
+  // Scope-constrained (cross-review, Codex, PR #33). This called the generic `revokeApiKey`, so a
+  // forged request carrying an INGEST key's id revoked that key while the audit row said
+  // `report_share_revoked` — an incident responder searching `api_key_revoked` would never find it.
+  // Still one UPDATE on one table; the predicate just makes the endpoint and the audit label agree.
+  const ok = await revokeShareLink(projectId, safeShareId)
   if (ok) {
     await recordAudit({
       action: 'report_share_revoked',

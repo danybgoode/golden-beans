@@ -133,6 +133,43 @@ export async function mintShareLink(input: {
 }
 
 /**
+ * Revoke a SHARE row, and only a share row.
+ *
+ * ── Why this is not just `revokeApiKey` (cross-review, Codex, PR #33) ─────────────────────────
+ * `revokeApiKey` revokes any row in `api_keys` scoped to the project, which is correct for the key
+ * screen and wrong here. The share action accepted any row id, so an owner submitting a forged
+ * request with an INGEST key's id would have revoked that key — and the audit trail would record
+ * `report_share_revoked`. The key is one an owner may revoke anyway, so the privilege boundary held;
+ * what broke is the trail. An incident responder searching `api_key_revoked` for "why did ingest
+ * stop?" would find nothing, because the row describing it is filed under share links.
+ *
+ * An audit log whose entries can be mislabelled by choosing which endpoint to call is worse than no
+ * audit log, because it is read as authoritative. The scope predicate makes the mislabel impossible
+ * rather than merely unlikely.
+ *
+ * Returns true only when an ACTIVE share row was actually revoked — so the caller audits real
+ * events, never no-ops (the same rule lib/api-keys.ts's revoke already follows).
+ */
+export async function revokeShareLink(projectId: string, shareId: string): Promise<boolean> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('api_keys')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', shareId)
+    .eq('project_id', projectId)
+    // The predicate this function exists for. Without it, the id decides what gets revoked and the
+    // ENDPOINT decides what the audit says — two facts that must not be able to disagree.
+    .eq('scope', 'share')
+    .is('revoked_at', null)
+    .select('id')
+  if (error) {
+    console.error('[report-shares] revoke failed:', error)
+    return false
+  }
+  return (data ?? []).length > 0
+}
+
+/**
  * A project's share links. Throws on a query failure rather than returning [].
  *
  * An empty list renders as "no links exist", which during an outage would invite concluding that a

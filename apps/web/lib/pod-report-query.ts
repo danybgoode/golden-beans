@@ -53,8 +53,34 @@ export async function getPodReport(projectSlug: string, lens: PodReportLens): Pr
   }
   if (!project) return { ok: false, reason: 'project_not_found' }
 
-  const projectId = project.id as string
+  return getPodReportByProjectId(project.id as string, projectSlug, lens)
+}
 
+/**
+ * The same read, for a caller that ALREADY holds an immutable project id.
+ *
+ * ── Why this overload exists (cross-review, Codex — the one Blocking finding on PR #33) ────────
+ * The share route resolves its token to a `project_id` AND a slug, then called `getPodReport(slug)`,
+ * which threw the id away and re-derived a project from the slug. `projects.slug` is a MUTABLE
+ * natural key: if a tenant were renamed and its old slug reassigned between the token resolution and
+ * this read, a still-valid token would render a DIFFERENT tenant's report. Four review rounds by
+ * another model family read this code and did not see it.
+ *
+ * No slug rename path exists in the app today, so this was not exploitable — but "not currently
+ * reachable" is not the property a tenancy boundary should rest on, and the fix is free: the caller
+ * already had the id. The rule generalises: once a credential has resolved a tenant, carry the
+ * immutable id and never re-derive the tenant from anything a human can edit.
+ *
+ * Mirrors the shape lib/tars-query.ts and lib/north-star-query.ts already use for exactly this
+ * reason — `getFeatureFunnelByProjectId` exists because the authed API route must not re-trust a
+ * client-supplied project identifier. The `projectSlug` here is for DISPLAY and for the funnel
+ * queries' own signatures only; nothing resolves tenancy from it.
+ */
+export async function getPodReportByProjectId(
+  projectId: string,
+  projectSlug: string,
+  lens: PodReportLens
+): Promise<PodReportResult> {
   let artifact: ReportArtifact | null
   try {
     artifact = await getLatestArtifact(projectId, 'pod_report')

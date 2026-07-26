@@ -61,60 +61,11 @@ const REPO_ROOT = resolve(__dirname, '..');
 
 // Telegram's hard ceiling is 4096 characters per message. We budget well under it: the prose is
 // meant to be ~60 words, and the remaining headroom absorbs the commit header and the links.
-export const TELEGRAM_LIMIT = 4096;
-
-// ── Pure helpers (the unit-tested core) ──────────────────────────────────────────────────────
-
-/** HTML-escape for Telegram's `parse_mode: HTML`. Same three entities as lib/telegram.ts's esc(). */
-export function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-/**
- * Truncate to a hard character budget on a WORD boundary, with an ellipsis.
- *
- * Never call this on already-escaped text: cutting mid-entity ("&am") produces broken markup that
- * Telegram rejects with a 400 for the whole message, losing the prose entirely. Escaping is applied
- * afterwards, via escapeToFit below.
- */
-export function truncateWords(text, max) {
-  const s = String(text ?? '').trim();
-  if (s.length <= max) return s;
-  const cut = s.slice(0, max - 1);
-  const lastSpace = cut.lastIndexOf(' ');
-  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
-}
-
-/**
- * Escape `text` so that the ESCAPED result fits within `maxEscaped` characters.
- *
- * This exists because the obvious composition — `escapeHtml(truncateWords(t, budget))` — is wrong,
- * and its own unit test caught it on the first run. Escaping EXPANDS: every `&` becomes the five
- * characters `&amp;`. So text truncated to exactly the budget can be up to ~5x the budget once
- * escaped (a 3,696-character cut of ampersand-heavy prose came out at 11,231 characters, nearly
- * three times Telegram's 4,096 ceiling).
- *
- * Truncating the escaped string instead would fix the length and reintroduce the mid-entity cut.
- * The only correct order is: truncate raw → escape → if it still doesn't fit, shrink the RAW budget
- * and repeat. Halving converges in a handful of passes even for pathological input, and each pass
- * is a plain string operation on a few kilobytes.
- */
-export function escapeToFit(text, maxEscaped) {
-  let budget = maxEscaped;
-  for (let i = 0; i < 24; i++) {
-    const escaped = escapeHtml(truncateWords(text, budget));
-    if (escaped.length <= maxEscaped) return escaped;
-    // Scale the raw budget by the observed expansion ratio rather than halving blindly — for
-    // ordinary prose (almost no entities) this returns on the second pass instead of over-trimming.
-    const ratio = escaped.length / Math.max(1, maxEscaped);
-    budget = Math.max(1, Math.floor(budget / Math.max(1.25, ratio)));
-  }
-  // Unreachable for any real input; a hard floor beats an unbounded loop.
-  return escapeHtml(truncateWords(text, 40));
-}
+// The length/escaping rules live in lib/telegram-text.mjs — shared with the CI notification rail
+// (scripts/telegram-notify.mjs), because two implementations of `escapeToFit` is exactly one
+// too many. Re-exported here so this module's existing importers and tests are unaffected.
+export { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/telegram-text.mjs';
+import { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/telegram-text.mjs';
 
 /**
  * Which commit(s) to report on, from the parsed flags. Pure so the precedence is pinned by a test

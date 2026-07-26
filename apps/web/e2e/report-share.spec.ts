@@ -191,3 +191,91 @@ test('a token cannot be pointed at a project it was not minted for', async ({ re
   expect(res.status()).toBe(200)
   expect(new URL(res.url()).pathname).toBe(`/s/${token}`)
 })
+
+// ── Cross-review round 5, Codex (the second model family) — one Blocking, two Should-fix ───────
+// Four rounds by another family read this same surface and found none of these. Cross-family review
+// is a floor on high-risk work, not a formality (Roadmap/LEARNINGS.md).
+
+test('a lensless share row is REJECTED by the database, not merely ignored by the app', async () => {
+  // The migration's original CHECK evaluated to NULL for `scope='share', share_lens=NULL`, and
+  // PostgreSQL ACCEPTS a CHECK that returns NULL — only an explicit FALSE rejects. So a claim written
+  // in a migration comment ("neither can exist for application code to interpret") was false, and the
+  // app happened to fail closed for unrelated reasons. Verified against production before the fix:
+  // the row was accepted. Now it is not.
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const { error } = await dbClient()
+    .from('api_keys')
+    .insert({
+      project_id: projectId,
+      key_hash: hash(newToken()),
+      label: 'spec lensless share',
+      scope: 'share',
+      share_lens: null,
+    })
+  expect(error, 'a share row with no lens must violate a CHECK').not.toBeNull()
+  expect(error!.message).toMatch(/share_lens|check/i)
+})
+
+test('an ingest row cannot be UPDATEd into a share row without gaining a lens', async () => {
+  // The INSERT path was the obvious hole; the UPDATE path is the one a CHECK has to cover too,
+  // because nothing else prevents flipping `scope` on an existing credential.
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const { data: ingest } = await dbClient()
+    .from('api_keys')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('scope', 'ingest')
+    .is('revoked_at', null)
+    .limit(1)
+    .single()
+
+  const { error } = await dbClient().from('api_keys').update({ scope: 'share' }).eq('id', ingest!.id)
+  expect(error, 'flipping scope without a lens must be rejected').not.toBeNull()
+})
+
+test('a valid share row still inserts — the constraint rejects the hole, not the feature', async () => {
+  // The complement, and the one that catches an over-tight constraint. A guard that blocks the real
+  // path is a different outage with the same root cause.
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const { token } = await mintShare(projectId, 'investor')
+  expect(token).toMatch(/^gbs_/)
+})
+
+test('the share revoke touches ONLY share rows, so the audit trail cannot be mislabelled', async () => {
+  // revokeShareAction called the generic revokeApiKey, so a forged request carrying an INGEST key's
+  // id revoked that key while the audit row said `report_share_revoked`. An incident responder
+  // searching `api_key_revoked` for "why did ingest stop?" would find nothing. The privilege boundary
+  // held (an owner may revoke their own keys); the TRAIL did not.
+  //
+  // Asserted at the data layer, which is where the predicate lives — the Server Action itself needs a
+  // session this spec has no way to forge.
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const { data: ingest } = await dbClient()
+    .from('api_keys')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('scope', 'ingest')
+    .is('revoked_at', null)
+    .limit(1)
+    .single()
+
+  // Exactly the UPDATE lib/report-shares.ts's revokeShareLink issues, including the scope predicate.
+  const { data: touched } = await dbClient()
+    .from('api_keys')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', ingest!.id)
+    .eq('project_id', projectId)
+    .eq('scope', 'share')
+    .is('revoked_at', null)
+    .select('id')
+
+  expect(touched ?? [], 'the share revoke must not reach an ingest key').toHaveLength(0)
+
+  // And the ingest key is still live — proving the no-op was the predicate, not a failed statement.
+  const { data: still } = await dbClient()
+    .from('api_keys')
+    .select('revoked_at')
+    .eq('id', ingest!.id)
+    .single()
+  expect(still!.revoked_at).toBeNull()
+})

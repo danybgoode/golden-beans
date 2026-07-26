@@ -4,8 +4,8 @@ import { isReportSharesEnabled } from '@/lib/flags'
 import { trackSelfEvent, SHARE_VIEWED_EVENT } from '@/lib/self-track'
 import { resolveShareToken } from '@/lib/report-shares'
 import { looksLikeShareToken } from '@/lib/share-token'
-import { getPodReport } from '@/lib/pod-report-query'
-import { getHubRoadmap } from '@/lib/hub-query'
+import { getPodReportByProjectId } from '@/lib/pod-report-query'
+import { getHubRoadmapByProjectId } from '@/lib/hub-query'
 import { lensPolicy } from '@/lib/pod-report-lens'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { journeyMarkerIndex } from '@/lib/hub-journey'
@@ -65,7 +65,13 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
     notFound()
   }
 
-  const { projectSlug, lens } = share
+  // ── Carry the token's own project_id. Never re-derive the tenant from the slug ───────────────
+  // Cross-review's one Blocking finding (Codex, PR #33): this used `projectSlug` for both reads,
+  // which discarded the immutable id the credential resolved and re-derived a tenant from a MUTABLE
+  // natural key. A rename plus a slug reassignment between the two queries would have pointed a
+  // live token at a DIFFERENT tenant's report. The slug below is used for display and for the
+  // funnel queries' signatures only — nothing resolves tenancy from it.
+  const { projectId, projectSlug, lens } = share
   const policy = lensPolicy(lens)
 
   // Story 3.2 — keyed on the SHARE ROW, not on a person. A bearer URL can be forwarded to a room
@@ -74,7 +80,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   // not one. Never the token itself: that would write a live credential into the event stream.
   after(() => trackSelfEvent(SHARE_VIEWED_EVENT, `share:${share.shareId}`))
 
-  const report = await getPodReport(projectSlug, lens)
+  const report = await getPodReportByProjectId(projectId, projectSlug, lens)
   if (!report.ok) {
     if (report.reason === 'query_failed') throw new Error('Pod report lookup failed')
     // Cross-review round 2 (Agy): this fell through to the empty state, contradicting the contract
@@ -87,7 +93,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
 
   // The roadmap half is best-effort: a share link whose Pod Report renders should not 500 because
   // the tenant never pushed a roadmap artifact. `getHubRoadmap` already distinguishes the two.
-  const roadmap = policy.showJourney || policy.showHorizon ? await getHubRoadmap(projectSlug) : null
+  const roadmap = policy.showJourney || policy.showHorizon ? await getHubRoadmapByProjectId(projectId) : null
   if (roadmap && !roadmap.ok && roadmap.reason === 'query_failed') throw new Error('Roadmap lookup failed')
 
   return (
