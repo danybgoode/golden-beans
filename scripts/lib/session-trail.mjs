@@ -139,6 +139,88 @@ export function renderCheckpoint(cp) {
   return lines.join('\n');
 }
 
+// ── Finding the trail from the branch, and why this needed more than a branch match ────────────
+//
+// The original rule was one line: `feat/<epic-slug>` names its epic, so the trail finds its own
+// home. That is the convention WAYS-OF-WORKING mandates, and it is correct — but it silently fails
+// in the two situations a re-entering session is MOST likely to be in, which is how a cold session
+// on 2026-07-26 got told "No checkpoint recorded yet" while four checkpoints sat in the epic folder.
+//
+//   1. **On `main`.** LEARNINGS' squash-merge rule says a merged sprint branch is a dead end and the
+//      next sprint starts fresh off `main`. So the mandated state at the start of a new sprint is
+//      exactly the state where the branch names no epic at all. The rail's own worst case was
+//      guaranteed by the process it serves.
+//   2. **On a sprint-suffixed branch** (`feat/signals-loop-s3`). The slug is the epic's name plus a
+//      sprint suffix, so the directory lookup misses by three characters.
+//
+// Both degraded to the repo-root fallback trail, which does not exist, which renders as "no
+// checkpoint" — the one output that cannot be distinguished from a genuinely fresh start. A staleness
+// detector that reports "nothing here" when it simply looked in the wrong place is the failure this
+// whole file argues against, one level up: the next reader stops there.
+//
+// The fix is ordered candidates, not a looser match. Case 2 is solved by stripping known sprint
+// suffixes; case 1 cannot be solved from the branch at all and is handed to the caller as an
+// explicit "search for the newest trail" instruction — which the caller must LABEL when it uses it,
+// because a trail from the wrong epic is worse than no trail.
+
+/**
+ * Parse `git status --porcelain` into { dirty, untracked }.
+ *
+ * ── Why this is a tested function and not three lines at the call site ────────────────────────
+ * It was three lines at the call site, and they silently corrupted the FIRST filename in every
+ * checkpoint this rail has ever written. The caller's git helper ends with `.trim()` — reasonable
+ * for the one-line outputs it also serves (`rev-parse`, `log -1`) — but porcelain encodes status in
+ * fixed columns, and a modified-unstaged file is `" M path"` with a LEADING SPACE. Trimming the
+ * whole blob strips that one space from the first line only, so a `slice(3)` that is correct for
+ * every other line eats a character from the first: `scripts/…` was recorded as `cripts/…`,
+ * `Roadmap/…` as `oadmap/…`, `apps/web/…` as `pps/web/…`.
+ *
+ * Every symptom pointed away from the cause. The corruption hit exactly one file per checkpoint, so
+ * it read as a typo rather than a rule; and the drift detector compares recorded names against
+ * current ones, so a mangled name reports as BOTH a vanished file and a new one — noise in the
+ * section whose entire job is to be trusted. Four checkpoints in the live trail carry it.
+ *
+ * Kept as a pure function over the raw text so the fix has a test that fails against the old
+ * behaviour, rather than a corrected `slice` that looks identical to the broken one.
+ */
+export function parsePorcelain(raw) {
+  const dirty = [];
+  const untracked = [];
+  // Split on newlines only — never trim the blob. Each line is `XY<space>PATH`, so the path starts
+  // at index 3 and any leading space in XY is DATA, not whitespace to be cleaned up.
+  for (const line of String(raw ?? '').split('\n')) {
+    if (line.length < 4) continue; // '' and any short/garbage line — never a valid entry
+    const code = line.slice(0, 2);
+    // Rename/copy entries are `R  old -> new`; record the destination, which is the path that
+    // exists in the tree now and the one a later checkpoint will see.
+    const path = line.slice(3).replace(/^.* -> /, '');
+    if (!path) continue;
+    if (code === '??') untracked.push(path);
+    else dirty.push(path);
+  }
+  return { dirty, untracked };
+}
+
+/**
+ * Epic-slug candidates for a branch, most specific first.
+ *
+ * `feat/signals-loop-s3` → ['signals-loop-s3', 'signals-loop']. The unsuffixed slug comes second, so
+ * an epic genuinely named `...-s3` still wins over a coincidental prefix match.
+ *
+ * Returns [] when the branch names no epic (`main`, a detached HEAD) — the signal for the caller to
+ * fall back to searching, rather than a guess dressed up as a match.
+ */
+export function epicSlugCandidates(branch) {
+  const slug = (String(branch || '').match(/^(?:feat|fix|chore)\/(.+)$/) || [])[1];
+  if (!slug) return [];
+  const candidates = [slug];
+  // Sprint suffixes this repo actually uses: `-s3`, `-sprint-3`, `-sprint3`. Anchored to the END and
+  // requiring digits, so `feat/pod-report` is untouched and `feat/analytics` never becomes `analytic`.
+  const stripped = slug.replace(/-(?:s|sprint-?)\d+$/, '');
+  if (stripped !== slug && stripped) candidates.push(stripped);
+  return candidates;
+}
+
 /** Splits a trail file into its checkpoint blocks, newest last. */
 export function parseCheckpoints(markdown) {
   if (!markdown) return [];
@@ -156,18 +238,33 @@ export function parseCheckpoints(markdown) {
  * was written, that fact changes how everything below it should be read, and a reader who meets the
  * note first has already started trusting it.
  */
-export function renderResume({ trail, checkpoint, drift, epicPath }) {
+export function renderResume({ trail, checkpoint, drift, epicPath, inferred }) {
   const out = [];
   out.push('═══ SESSION TRAIL — re-entry briefing ═══', '');
 
   if (!checkpoint) {
     out.push('No checkpoint recorded yet.', '');
+    // Where it LOOKED matters as much as what it found. The bug this line exists for reported
+    // exactly this text while four checkpoints sat one directory away, and the reader had no way to
+    // see that the search had missed rather than that the trail was empty.
+    out.push(`(Looked in: ${trail})`, '');
     out.push(`Start one with:  node scripts/session-trail.mjs --checkpoint "<what you just did>"`);
     return out.join('\n');
   }
 
   out.push(`Trail:      ${trail}`);
   if (epicPath) out.push(`Epic:       ${epicPath}`);
+  // A trail found by recency is a GUESS — the branch named no epic (typically `main`, which the
+  // squash-merge rule makes the normal place to start a sprint), so this is the most recently
+  // written trail, not a match. Say so before the note, not after: a reader who meets the note
+  // first has already started trusting it, which is this whole file's founding argument.
+  if (inferred === 'recency') {
+    out.push('');
+    out.push('⚠  This trail was found by RECENCY, not by a branch match — the current branch names');
+    out.push('   no epic. It is the most recently written epic trail, which is usually right and is');
+    out.push('   not verified. Confirm it is the epic you meant before acting on anything below,');
+    out.push('   or re-run with --epic <slug>.');
+  }
   out.push(`Last mark:  ${checkpoint.at}  on \`${checkpoint.branch}\` @ ${short(checkpoint.head)}`);
   out.push('');
 

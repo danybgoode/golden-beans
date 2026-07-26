@@ -137,6 +137,64 @@ export const AGY_MODELS_IN_USE = [
 export const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.6-terra';
 export const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'high';
 
+// ── The BUILD tiers (2026-07-26) — Codex as a delegation target, not only a reviewer ────────────
+// Daniel moved Codex onto a paid account and asked for it to carry delegated BUILD work, so the
+// architect stays an architect. That makes "which model" a routing decision per task rather than
+// one constant, and routing decisions belong in the repo for the same reason the review pin does:
+// an ambient choice differs per machine and changes without a signal.
+//
+// ── The tier axis is EFFORT, not model — and the first draft of this table got that wrong ──────
+// Probed live 2026-07-26 against codex-cli 0.144.6 on Daniel's paid ChatGPT account. `codex models
+// list` does not exist in this version, so the roster had to be established by running it.
+//
+// **Exactly ONE model is entitled: `gpt-5.6-terra`.** Every other plausible slug —
+// `gpt-5.6`, `gpt-5.6-mini`, `gpt-5.6-codex`, `gpt-5.6-terra-codex`, `gpt-5.6-terra-mini`,
+// `codex-mini` — returns `400 … model is not supported when using Codex with a ChatGPT account`.
+//
+// This table's first draft listed four DIFFERENT models, because the probe that produced it scored
+// success by grepping the output for "OK" instead of checking the exit code, and codex prints its
+// session banner (and the model name) before failing. So every slug looked available. The error was
+// caught by the delegation rail's own evidence section — a `quick` run reported the task complete-
+// looking in its transcript and NOTHING written to the tree — which is precisely the check that rail
+// exists for, working on its first real use.
+//
+// LEARNINGS already carries this rule from the Devin trial: *"a model catalog is not an entitlement
+// list."* This is its second instance, with a sharper corollary: **score a CLI probe on its exit
+// code, never on a pattern in its output**, because a young CLI prints a plausible banner on the way
+// to failing. A bogus slug (`gpt-5.6-definitely-not-real-xyz`) was run as the discriminating case to
+// confirm the failure is loud and distinguishable — it is.
+//
+// So routing is by `model_reasoning_effort`, which is a real axis: `minimal` is rejected as invalid,
+// and low/medium/high/xhigh all run and are echoed back in codex's banner (verified per level, not
+// assumed). Depth costs latency and tokens, so matching it to the work is still a decision worth
+// making per task:
+//   deep     — xhigh. Hardest reasoning: gnarly architecture, a subtle concurrency or auth question.
+//   build    — high. Substantial multi-file stories. Same effort as the review pin above.
+//   standard — medium. The default for a bounded, well-specified LOW-risk story with clear
+//              acceptance — the shape WAYS-OF-WORKING calls delegable.
+//   quick    — low. Mechanical work: doc edits, scaffolding, a rename across files.
+//
+// HIGH-risk stories (credentials, migrations, a first mutation surface) are NOT on this table. They
+// are architect-only by the sprint doc, and a tier name would invite routing one here by accident.
+export const CODEX_BUILD_TIERS = {
+  deep: { model: 'gpt-5.6-terra', effort: 'xhigh' },
+  build: { model: 'gpt-5.6-terra', effort: 'high' },
+  standard: { model: 'gpt-5.6-terra', effort: 'medium' },
+  quick: { model: 'gpt-5.6-terra', effort: 'low' },
+};
+
+/** Resolve a tier name to {model, effort}, or die listing the valid ones. */
+export function resolveCodexTier(tier) {
+  const hit = CODEX_BUILD_TIERS[tier];
+  if (!hit) {
+    die(
+      `unknown codex tier "${tier}" — valid tiers: ${Object.keys(CODEX_BUILD_TIERS).join(', ')}. ` +
+        `Tiers are declared in scripts/lib/cross-agent-cli.mjs (CODEX_BUILD_TIERS).`
+    );
+  }
+  return hit;
+}
+
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.
 export const AGY_ARG_LIMIT = 256 * 1024;

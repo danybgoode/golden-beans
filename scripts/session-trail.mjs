@@ -27,7 +27,7 @@
 // promoted into RETROSPECTIVE.md. Otherwise it falls back to a repo-root trail.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -36,34 +36,38 @@ import {
   renderCheckpoint,
   renderResume,
   parseCheckpoints,
+  epicSlugCandidates,
+  parsePorcelain,
 } from './lib/session-trail.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FALLBACK_TRAIL = join(ROOT, 'Roadmap', 'IN-FLIGHT.md');
 
-function git(args, { allowFail = false } = {}) {
+// `trim: false` for any command whose output is COLUMN-encoded rather than a single value.
+// `git status --porcelain` is the case that matters: its leading space is data (see parsePorcelain),
+// and trimming the blob corrupted the first filename of every checkpoint this rail ever wrote.
+function git(args, { allowFail = false, trim = true } = {}) {
   const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
   if (r.status !== 0 && !allowFail) return '';
-  return (r.stdout || '').trim();
+  const out = r.stdout || '';
+  return trim ? out.trim() : out;
 }
 
 /** Everything derivable, derived. Nothing here is typed by a human, so nothing here can be wishful. */
 function observe(trailRelPath = null) {
-  const porcelain = git(['status', '--porcelain']);
-  const dirty = [];
-  const untracked = [];
-  for (const line of porcelain.split('\n').filter(Boolean)) {
-    const code = line.slice(0, 2);
-    const file = line.slice(3).trim();
-    // The trail file is excluded from its own snapshot. Writing a checkpoint necessarily modifies
-    // the trail AFTER the state was captured, so including it made every single `--resume` report
-    // drift — a false positive on every use, which is worse than no detector: this file's own unit
-    // tests argue that a drift section which cries wolf trains the reader to skip it, and the real
-    // drift then arrives invisibly inside the noise. Caught by running the tool, not by reading it.
-    if (trailRelPath && file === trailRelPath) continue;
-    if (code === '??') untracked.push(file);
-    else dirty.push(file);
-  }
+  // `-uall` for the same reason codex-task.mjs uses it: git collapses a wholly-untracked directory
+  // to one `?? dir/` entry, so a session whose in-flight work is six new files in a new folder would
+  // record ONE path that is not any of them — in the section whose entire purpose is telling the
+  // next session which files are half-built.
+  const parsed = parsePorcelain(git(['status', '--porcelain', '--untracked-files=all'], { trim: false }));
+  // The trail file is excluded from its own snapshot. Writing a checkpoint necessarily modifies
+  // the trail AFTER the state was captured, so including it made every single `--resume` report
+  // drift — a false positive on every use, which is worse than no detector: this file's own unit
+  // tests argue that a drift section which cries wolf trains the reader to skip it, and the real
+  // drift then arrives invisibly inside the noise. Caught by running the tool, not by reading it.
+  const keep = (f) => !(trailRelPath && f === trailRelPath);
+  const dirty = parsed.dirty.filter(keep);
+  const untracked = parsed.untracked.filter(keep);
   return {
     branch: git(['rev-parse', '--abbrev-ref', 'HEAD']) || '(detached)',
     head: git(['rev-parse', 'HEAD']),
@@ -73,26 +77,73 @@ function observe(trailRelPath = null) {
   };
 }
 
-// A `feat/<epic-slug>` branch names its epic, which is exactly the convention WAYS-OF-WORKING
-// mandates — so the trail can find its own home without being told. Falls back rather than guessing
-// wrong: a trail in the wrong epic folder is worse than one at the root.
-function inferEpicDir(branch) {
-  const slug = (branch.match(/^(?:feat|fix|chore)\/(.+)$/) || [])[1];
-  if (!slug) return null;
+// Every `Roadmap/<macro>/<epic>/` directory that looks like an epic (it has a README.md), as
+// absolute paths. One walk, reused by both the slug match and the newest-trail search.
+function epicDirs() {
   const roadmap = join(ROOT, 'Roadmap');
-  if (!existsSync(roadmap)) return null;
+  if (!existsSync(roadmap)) return [];
+  const out = [];
   for (const macro of readdirSync(roadmap, { withFileTypes: true })) {
     if (!macro.isDirectory()) continue;
-    const candidate = join(roadmap, macro.name, slug);
-    if (existsSync(join(candidate, 'README.md'))) return candidate;
+    const macroDir = join(roadmap, macro.name);
+    for (const epic of readdirSync(macroDir, { withFileTypes: true })) {
+      if (!epic.isDirectory()) continue;
+      const dir = join(macroDir, epic.name);
+      if (existsSync(join(dir, 'README.md'))) out.push(dir);
+    }
+  }
+  return out;
+}
+
+// A `feat/<epic-slug>` branch names its epic — the convention WAYS-OF-WORKING mandates — so the
+// trail usually finds its own home without being told. `epicSlugCandidates` handles the sprint
+// suffix (`feat/signals-loop-s3` → `signals-loop`); see its header for why that mattered.
+function inferEpicDir(branch) {
+  const dirs = epicDirs();
+  for (const slug of epicSlugCandidates(branch)) {
+    const hit = dirs.find((d) => d.endsWith(`/${slug}`));
+    if (hit) return hit;
   }
   return null;
 }
 
+// The `main` case (see epicSlugCandidates' header): the branch names no epic, and per the
+// squash-merge rule that is exactly where a new sprint starts. Rather than reporting "no
+// checkpoint" — indistinguishable from a fresh start — find the most recently WRITTEN epic trail.
+// Recency is the right key: the trail a session wants on re-entry is the one it last wrote.
+//
+// This is a guess, and it is returned as one. `trailPathFor` marks it `inferred: 'recency'` and the
+// briefing says so out loud, because a trail from the wrong epic read as authoritative is worse
+// than no trail at all — the same argument the drift detector is built on.
+function newestEpicTrail() {
+  const trails = epicDirs()
+    .map((dir) => join(dir, 'IN-FLIGHT.md'))
+    .filter((f) => existsSync(f))
+    .map((f) => ({ file: f, mtime: statSync(f).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime);
+  return trails.length > 0 ? trails[0].file : null;
+}
+
+// Returns { file, inferred } — `inferred` is 'explicit' | 'branch' | 'recency' | 'none', so the
+// caller can tell the reader HOW the trail was found. A path alone would lose that.
 function trailPathFor(state, explicitEpic) {
-  if (explicitEpic) return join(ROOT, explicitEpic, 'IN-FLIGHT.md');
+  if (explicitEpic) {
+    // Accept either a path (`Roadmap/01-growth-engine/signals-loop`) or a bare slug
+    // (`signals-loop`). The bare slug is what a human types and what this session tried first;
+    // resolving only the path form made `--epic signals-loop` silently produce an empty trail at
+    // `<root>/signals-loop/IN-FLIGHT.md` — a wrong answer that looked like a right one.
+    const asPath = join(ROOT, explicitEpic);
+    if (existsSync(join(asPath, 'README.md')))
+      return { file: join(asPath, 'IN-FLIGHT.md'), inferred: 'explicit' };
+    const bySlug = epicDirs().find((d) => d.endsWith(`/${explicitEpic}`));
+    if (bySlug) return { file: join(bySlug, 'IN-FLIGHT.md'), inferred: 'explicit' };
+    return { file: join(asPath, 'IN-FLIGHT.md'), inferred: 'explicit' };
+  }
   const dir = inferEpicDir(state.branch);
-  return dir ? join(dir, 'IN-FLIGHT.md') : FALLBACK_TRAIL;
+  if (dir) return { file: join(dir, 'IN-FLIGHT.md'), inferred: 'branch' };
+  const newest = newestEpicTrail();
+  if (newest) return { file: newest, inferred: 'recency' };
+  return { file: FALLBACK_TRAIL, inferred: 'none' };
 }
 
 // The trail file stores each checkpoint twice: once as human markdown, and once as a fenced JSON
@@ -162,7 +213,7 @@ function main() {
 
   // Two passes: the first only to learn where the trail lives (the path depends on the branch), the
   // second to snapshot the tree with that trail file excluded from its own record.
-  const trailFile = trailPathFor(observe(), args.epic);
+  const { file: trailFile, inferred } = trailPathFor(observe(), args.epic);
   const state = observe(trailFile.replace(ROOT + '/', ''));
   const last = readLastCheckpoint(trailFile);
 
@@ -175,6 +226,7 @@ function main() {
         checkpoint: last,
         drift,
         epicPath: args.epic || (inferEpicDir(state.branch) || '').replace(ROOT + '/', '') || null,
+        inferred,
       }) + '\n'
     );
     process.exit(0);
