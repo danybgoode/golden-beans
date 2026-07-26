@@ -1,6 +1,8 @@
 # Pod Report + Roadmap Hub — Sprint 2: The Pod Report (computed, not claimed)
 
-**Status:** ⬜ not started
+**Status:** 🟨 All four stories' logic BUILT and tested; the rendered page is the remaining gap.
+**2.1** (`8cc093b`) · **2.4** (`14202d5`) · **2.2** built against the real `miyagisanchez` tenant ·
+**2.3** has its view + honesty layer tested, but **no page component yet**.
 
 ## Stories
 
@@ -88,6 +90,22 @@ scoring — a truncated extraction is exactly what produced a wrong assessment o
 
 **Risk:** LOW — additive, read-only derivation over data Story 2.1 already loads. No table, no
 ingest, no credential surface, no money/auth path.
+
+### Follow-up owed — epic ship-date detection is exact-string, not robust
+Cross-review flagged that `readEpics` finds the shipped flip with `git log -S 'status: shipped'`, an
+EXACT-string search that a YAML variation (`status: "shipped"`, unusual spacing) would miss —
+silently dropping a genuinely shipped epic out of lead time. **The finding is correct and the
+obvious fix is wrong.** Two `-G` regex replacements were tried against the real dataset and both
+CHANGED verified numbers instead of preserving them: one returned zero measurable epics, the other
+123 with a 3.6-day median where the validated answer is ~47 and ~7.2 days.
+
+The cause is semantic. `-S` counts OCCURRENCES of a string, so it matches the commit where the count
+went 0→1 — the flip itself. `-G` matches any commit whose diff merely TOUCHES a matching line, and
+this dataset appends a growing changelog to the `status:` comment, so those edits are numerous.
+
+Doing it properly means parsing the frontmatter at each revision rather than pattern-matching the
+diff, with a fixture proving it reproduces the validated numbers first. Left as a follow-up rather
+than shipped as an unverified swap that silently moves a headline metric.
 
 ## Sprint QA
 - **api spec(s):** 2.1 → artifact determinism (same inputs ⇒ same output) · 2.2 → outcome rows
