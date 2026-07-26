@@ -135,7 +135,11 @@ test('the client lens does NOT claim evidence was withheld when there never was 
   // from them. That fabricates coverage in the one direction this epic cares most about — toward
   // the audience least able to check — and it broke an invariant lib/pod-report-view.ts's own
   // comment already declared: "withheld from you" and "never existed" must stay distinguishable.
-  const v = {
+  // `Record<string, unknown>[]` explicitly, matching LensableView's own row type. Without it TS
+  // narrows the literal to exactly the keys written here, and reading `evidenceWithheld` — a property
+  // `applyLens` ADDS — is a compile error. The fixture is deliberately loose because the real payload
+  // is loose: it comes from an immutable artifact that an older build may have written.
+  const v: LensableView = {
     ...baseView(),
     maturity: {
       ladder: { title: 'x', author: 'y', date: 'z' },
@@ -143,7 +147,7 @@ test('the client lens does NOT claim evidence was withheld when there never was 
       rows: [
         { id: 'has_evidence', status: 'met', evidence: { pointerType: 'pr', ref: 92, detail: 'd' } },
         { id: 'no_evidence', status: 'not_instrumented', evidence: null, reason: 'never measured' },
-      ],
+      ] as Record<string, unknown>[],
       notInstrumented: [],
     },
   }
