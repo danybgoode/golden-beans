@@ -46,6 +46,18 @@ export type LensPolicy = {
   showEvidencePointers: boolean
   /** Raw source counts (commit totals, epic totals, the measurement window). */
   showSourceCounts: boolean
+  /**
+   * The build-order journey — which epics shipped and which is in flight, epic by epic.
+   * The epic's Decision 3 gives this to team and client ("their pod's journey"), not to investors,
+   * for whom per-epic sequencing is per-story internals by another name.
+   */
+  showJourney: boolean
+  /**
+   * The horizon: destinations and how much of each is lit. Decision 3's investor scope
+   * ("portfolio horizon + momentum"). Shown to everyone — it is the least granular view there is,
+   * and it is the one that reads as progress-against-a-destination rather than as a backlog.
+   */
+  showHorizon: boolean
   /** A short line naming who this view was prepared for, rendered on the page. */
   audienceNote: string
 }
@@ -56,6 +68,8 @@ const POLICIES: Record<PodReportLens, LensPolicy> = {
     showMaturityRows: true,
     showEvidencePointers: true,
     showSourceCounts: true,
+    showJourney: true,
+    showHorizon: true,
     audienceNote: 'Team view — every row, every evidence pointer, nothing withheld.',
   },
   client: {
@@ -66,6 +80,8 @@ const POLICIES: Record<PodReportLens, LensPolicy> = {
     // the claim still arrives qualified — the pointer is dropped, the honesty is not.
     showEvidencePointers: false,
     showSourceCounts: true,
+    showJourney: true,
+    showHorizon: true,
     audienceNote: 'Client view — your pod, measured. Internal PR references are omitted.',
   },
   investor: {
@@ -75,6 +91,10 @@ const POLICIES: Record<PodReportLens, LensPolicy> = {
     showMaturityRows: false,
     showEvidencePointers: false,
     showSourceCounts: true,
+    // No epic-by-epic sequencing: which epic is in flight this week is exactly the per-story
+    // internals Decision 3 keeps out of this lens. The horizon carries the momentum instead.
+    showJourney: false,
+    showHorizon: true,
     audienceNote: 'Investor view — portfolio shape and momentum, without per-story internals.',
   },
 }

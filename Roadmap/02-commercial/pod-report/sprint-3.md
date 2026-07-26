@@ -31,6 +31,32 @@ merely fixed.
 verified that the view returns all 5 active keys and drops exactly the 3 revoked ones and **zero**
 active ones, *then* the code that reads it ships.
 
+### Amendment — every share-route rejection is 404, not 401 (2026-07-26)
+
+**Story 3.1's acceptance line says "revoked token → 401". Built as 404 instead, deliberately, and it
+is the stricter answer.** That line was written by analogy with the MCP connector — an API route,
+where 401 is natural. On an HTML page it is actively worse: **a 401 confirms the token was real
+once.** Revoking a leaked link would still tell whoever holds it that they had something valid — an
+oracle handed to the exact person you just cut off.
+
+404 for unknown, malformed, expired and revoked alike matches this repo's own doctrine:
+`lib/dashboard-auth.ts` returns 404 and never 403 for a foreign project, specifically "so we don't
+confirm a foreign project's existence". The *substance* of the criterion — a revoked link dies
+immediately, with no deploy — is unchanged and spec'd.
+
+### The property the whole design rests on, and the mutation that proves it
+
+`e2e/report-share.spec.ts` asserts a share token is rejected by **every** authed surface (`/track`,
+`/features/sync`, `/reports/pod/push`, `/north-star`), paired with a spec proving an ordinary ingest
+key still works — because the first assertion alone would pass just as happily against an auth layer
+that 401s everything.
+
+**Mutation-verified.** Pointing `lib/auth.ts` back at the `api_keys` table with a `revoked_at` filter
+and no scope condition — the exact regression the view exists to prevent — makes `POST
+/api/v1/track` answer **400 instead of 401**: the share token authenticated successfully and only
+failed body validation. That is the vulnerability, and the spec fails loudly on it. Reverted; the
+gate is green at 354 api specs.
+
 ### One hash, not two that agree
 Both credential kinds land in the same `UNIQUE` column, so they must hash identically. The first
 attempt was a test asserting the two hashers agreed — which could not run at all, because

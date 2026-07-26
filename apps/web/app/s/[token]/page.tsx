@@ -1,0 +1,111 @@
+import { notFound } from 'next/navigation'
+import { isReportSharesEnabled } from '@/lib/flags'
+import { resolveShareToken } from '@/lib/report-shares'
+import { looksLikeShareToken } from '@/lib/share-token'
+import { getPodReport } from '@/lib/pod-report-query'
+import { getHubRoadmap } from '@/lib/hub-query'
+import { lensPolicy } from '@/lib/pod-report-lens'
+import { formatFreshness } from '@/lib/hub-freshness'
+import { journeyMarkerIndex } from '@/lib/hub-journey'
+import { PodReportBody, EmptyPodReportState } from '../../hub/report-components'
+import { ShareJourneyStrip, ShareHorizonStrip, ShareFrame } from './share-components'
+import styles from '../../hub/hub.module.css'
+
+// pod-report · Sprint 3, Story 3.1 — the share surface. One opaque token in the path, no account.
+//
+// ── Everything meaningful about this route is what it refuses to accept ───────────────────────
+// The URL carries ONE segment and it is a bearer token. There is no project slug and no `?lens=`:
+// both the tenant and the audience come from the stored row (lib/report-shares.ts), so "show me
+// someone else's report" and "show me the wider lens" are not requests that can be expressed —
+// which is a stronger property than validating them and saying no (AGENTS: no request-derived read
+// path may cross projects).
+//
+// ── Two independent kill switches, same shape as the MCP connector (AGENTS rule #3) ───────────
+// REPORT_SHARES_ENABLED must be on AND the row must be live. The flag is checked FIRST and without
+// looking at the token at all, so while dark this route cannot be used as an oracle for whether a
+// given token exists.
+export const dynamic = 'force-dynamic'
+
+// Not indexable, not previewable, not cached by an intermediary. A share link's audience is the one
+// person it was sent to; a search engine following it out of a leaked referrer is a data leak with a
+// URL attached.
+export const metadata = {
+  title: 'Pod Report',
+  robots: { index: false, follow: false, nocache: true, noarchive: true, nosnippet: true },
+}
+
+export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
+  // Gate first, token second. Reversing these would make a dark deployment answer "is this token
+  // real?" through its timing and its logs.
+  if (!isReportSharesEnabled()) notFound()
+
+  const { token } = await params
+
+  // ── Why every rejection below is 404 and not 401 ─────────────────────────────────────────────
+  // sprint-3.md's acceptance line said "revoked token → 401". That line was written by analogy with
+  // the MCP connector, an API route where 401 is the natural answer. On an HTML page it is the wrong
+  // answer, and STRICTLY WEAKER: a 401 confirms "this token was real once", so revoking a leaked
+  // link would still tell whoever holds it that they had something valid — an oracle, handed to the
+  // exact person you just cut off.
+  //
+  // 404 for unknown, malformed, expired and revoked alike matches this repo's own established
+  // doctrine: lib/dashboard-auth.ts returns 404 and never 403 for a foreign project, deliberately,
+  // "so we don't confirm a foreign project's existence". Recorded as a dated amendment in
+  // sprint-3.md — this is a comment explaining a decision, not a comment making one.
+  if (!looksLikeShareToken(token)) notFound()
+
+  const share = await resolveShareToken(token)
+  if (!share.ok) {
+    // A database outage is NOT a dead link. Throwing surfaces it as a 500, so an operator sees an
+    // incident and the recipient is not told their link was revoked when it was not
+    // (Roadmap/LEARNINGS.md — a broken read must never render as an honest-looking empty one).
+    if (share.reason === 'query_failed') throw new Error('Share link lookup failed')
+    notFound()
+  }
+
+  const { projectSlug, lens } = share
+  const policy = lensPolicy(lens)
+
+  const report = await getPodReport(projectSlug, lens)
+  if (!report.ok && report.reason === 'query_failed') throw new Error('Pod report lookup failed')
+
+  // The roadmap half is best-effort: a share link whose Pod Report renders should not 500 because
+  // the tenant never pushed a roadmap artifact. `getHubRoadmap` already distinguishes the two.
+  const roadmap = policy.showJourney || policy.showHorizon ? await getHubRoadmap(projectSlug) : null
+  if (roadmap && !roadmap.ok && roadmap.reason === 'query_failed') throw new Error('Roadmap lookup failed')
+
+  return (
+    <ShareFrame lens={lens} audienceNote={policy.audienceNote}>
+      {report.ok ? (
+        <PodReportBody
+          projectSlug={projectSlug}
+          view={report.view}
+          outcome={report.outcome}
+          lens={lens}
+          artifactVersion={report.artifact.version}
+          freshness={formatFreshness(report.artifact.generatedAt, new Date(), report.artifact.sourceCommit)}
+        />
+      ) : (
+        <EmptyPodReportState projectSlug={projectSlug} />
+      )}
+
+      {roadmap?.ok && policy.showJourney && (
+        <ShareJourneyStrip
+          epics={roadmap.summary.epics}
+          markerIndex={journeyMarkerIndex(roadmap.summary.epics)}
+          counts={roadmap.summary.counts}
+        />
+      )}
+
+      {roadmap?.ok && policy.showHorizon && (
+        <ShareHorizonStrip counts={roadmap.summary.counts} seeds={roadmap.summary.seeds.length} />
+      )}
+
+      <p className={styles.shareFooterNote}>
+        This link was issued deliberately and can be revoked at any time. Every number on this page is
+        computed from the repository&apos;s own history — nothing here is estimated, and what could not
+        be measured says so.
+      </p>
+    </ShareFrame>
+  )
+}

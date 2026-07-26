@@ -937,3 +937,84 @@
     min-width: 120px;
   }
 }
+
+/* ── pod-report · Sprint 3, Story 3.1 — the share surface ──────────────────────────────────────
+   A shared report is the same document, framed for someone who does not work here: the audience is
+   stated on the page, and the roadmap arrives as a strip rather than as the navigable hub (its
+   drill-downs are authenticated, and a public link to a 404 reads as a broken report). Reuses the
+   report's own tokens throughout — a share link that looked like a different product would undercut
+   the "this is our actual working surface" claim it exists to make. */
+
+.shareAudience {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 26px;
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.shareStrip {
+  margin-top: 46px;
+  padding: 26px 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.shareStripTitle {
+  font-size: 20px;
+  margin: 0 0 6px;
+}
+
+.shareStripLede {
+  margin: 0 0 18px;
+  color: var(--dim);
+  font-size: 14px;
+}
+
+.shareJourneyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.shareJourneyList li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  /* `word-break` rather than a fixed height: an epic name is prose from someone else's roadmap and
+     can be arbitrarily long. Truncating it would hide the very thing the row exists to name. */
+  overflow-wrap: anywhere;
+}
+
+.shareJourneyShipped {
+  border-color: var(--green-line);
+}
+
+.shareJourneyAhead {
+  border-color: var(--next-line);
+  color: var(--dim);
+}
+
+.shareHere {
+  color: var(--gold);
+  font-style: normal;
+}
+
+.shareFooterNote {
+  margin: 46px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.65;
+}

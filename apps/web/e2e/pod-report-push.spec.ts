@@ -25,7 +25,10 @@ function dbClient() {
 const envelope = (over: Record<string, unknown> = {}) => ({
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
-  source: { commit: 'abc1234', ref: 'main' },
+  // `pushSource`, not `source`: the artifact's own `source` is Story 2.1's dataset provenance and
+  // stays in the payload. Sending git provenance under `source` is the bug the two keys prevent.
+  pushSource: { commit: 'abc1234', ref: 'main' },
+  source: { repo: 'medusa-bonsai', commits: 841, windowDays: 49 },
   delivery: { cycleTimeDays: null, notInstrumented: [] },
   caveats: ['Every number here is computed from real history. Nothing is estimated.'],
   ...over,
@@ -108,6 +111,24 @@ test('a real push → 200 with a new queryable version', async ({ request }) => 
   })
   const b = await second.json()
   expect(b.version).toBeGreaterThan(body.version)
+
+  // ── Provenance lands where the renderer expects, on BOTH sides of the split ─────────────────
+  // The regression this guards is silent and cosmetic-looking: git provenance and dataset
+  // provenance briefly shared the key `source`, so a push overwrote the counts and every stored
+  // report rendered "measured over ⟨nothing⟩" while a locally printed one looked perfect. Checked
+  // through the STORED ROW rather than the response body, because the response would have looked
+  // identical either way — which is exactly why the bug was invisible.
+  const stored = await dbClient()
+    .from('report_artifacts')
+    .select('source_commit, source_ref, payload')
+    .eq('id', body.artifactId)
+    .single()
+  expect(stored.error).toBeNull()
+  expect(stored.data!.source_commit).toBe('abc1234')
+  expect(stored.data!.source_ref).toBe('main')
+  const payload = stored.data!.payload as { source?: Record<string, unknown>; pushSource?: unknown }
+  expect(payload.source).toEqual({ repo: 'medusa-bonsai', commits: 841, windowDays: 49 })
+  expect(payload.pushSource).toBeUndefined()
 })
 
 test('a REAL foreign tenant key cannot read another tenant’s pod_report artifact', async ({ request }) => {
