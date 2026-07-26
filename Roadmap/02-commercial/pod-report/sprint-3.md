@@ -57,6 +57,28 @@ and no scope condition — the exact regression the view exists to prevent — m
 failed body validation. That is the vulnerability, and the spec fails loudly on it. Reverted; the
 gate is green at 354 api specs.
 
+### Cross-review: five rounds, and the one that mattered came from the other family
+
+**agy rounds 1–4** (2026-07-26): seven Should-fix, zero Blocking, round 4 — aimed specifically at the
+auth surface — came back **clean**. Round 2's most valuable finding was a bug round 1's own fix had
+introduced; round 3's was an arithmetic incoherence between two fields both earlier rounds had touched.
+
+**Codex round 5** then opened with a **Blocking** finding on the surface agy had just declared clean.
+Cross-family review is a floor on high-risk work, not a formality — the two families disagreed about
+what mattered, which is the entire reason for running both.
+
+| # | Finding | Severity as reported | What was actually true |
+|---|---|---|---|
+| 5a | The share route re-resolved its tenant from the mutable `slug` instead of carrying the credential's `project_id` | Blocking | **Real, but narrower than "Blocking" suggests.** `active_share_links` re-reads the slug through a live JOIN each request, so a rename-then-reassign resolves correctly. The exposure is a **TOCTOU window inside a single request**, milliseconds wide. Fixed by carrying the id (which also deletes a redundant query), so the window is closed by construction. |
+| 5b | The scope/lens CHECK evaluated to `NULL`, and Postgres accepts a `CHECK` returning NULL | Should-fix | **Real and verified in production** — the probe row was accepted. Fixed by `IS TRUE` + a second column-level CHECK; the identical probe and the `UPDATE` escalation are both now rejected, and a valid share row still inserts. |
+| 5c | `revokeShareAction` could revoke an ingest key and audit it as `report_share_revoked` | Should-fix | **Real.** The privilege boundary held (an owner may revoke their own keys); the **audit trail** did not. Fixed with a `scope='share'` predicate. |
+
+**A correction worth recording.** The spec written to pin 5a **passed against a deliberately
+re-broken build**, so it does not pin it — see the note in `e2e/report-share.spec.ts`. The finding is
+not HTTP-testable (a millisecond race), and the argument for the fix is construction, not coverage.
+This is the "a spec that passes is not a spec that can fail" trap, caught by mutation-checking a spec
+that had every appearance of being a teeth test.
+
 ### One hash, not two that agree
 Both credential kinds land in the same `UNIQUE` column, so they must hash identically. The first
 attempt was a test asserting the two hashers agreed — which could not run at all, because

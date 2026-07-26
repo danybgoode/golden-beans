@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type APIRequestContext } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { createHash, randomBytes } from 'node:crypto'
 
@@ -57,7 +57,30 @@ async function mintShare(
   return { token, id: data.id as string }
 }
 
-const sharesEnabled = process.env.REPORT_SHARES_ENABLED === 'true'
+// ── Whether the SERVER has the gate on — probed, not read from this process's env ──────────────
+// The first version read `process.env.REPORT_SHARES_ENABLED` in the TEST process. That is a different
+// process from the server under test, and the two can disagree: running `npx playwright test`
+// directly against an ON server (without exporting the var) made the gate-OFF spec run its
+// dark-default assertion against a live route and fail with a confusing 200. CI exports it to both,
+// so CI was fine — which is exactly the kind of coupling that only breaks for whoever runs the suite
+// by hand next.
+//
+// Probing the running server removes the coupling: mint a real token, ask for it once, let the status
+// code answer. 404 while the gate is off, 200 while it is on — the very behaviour the specs below are
+// about, so there is no third thing to keep in sync.
+let sharesEnabledCache: boolean | null = null
+async function serverSharesEnabled(request: APIRequestContext): Promise<boolean> {
+  if (sharesEnabledCache !== null) return sharesEnabledCache
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const { token, id } = await mintShare(projectId, 'team', { label: 'spec gate probe' })
+  try {
+    sharesEnabledCache = (await request.get(`/s/${token}`)).status() === 200
+    return sharesEnabledCache
+  } finally {
+    // Revoked either way — a spec must not leave a live share credential behind.
+    await dbClient().from('api_keys').update({ revoked_at: new Date().toISOString() }).eq('id', id)
+  }
+}
 
 // ── The property the whole design rests on ────────────────────────────────────────────────────
 
@@ -110,7 +133,10 @@ test('a malformed token is 404, indistinguishable from a well-formed wrong guess
 })
 
 test('while the gate is OFF, a PERFECTLY VALID token is still 404', async ({ request }) => {
-  test.skip(sharesEnabled, 'this asserts dark-default behaviour; the gate is on in this run')
+  test.skip(
+    await serverSharesEnabled(request),
+    'the server under test has the gate ON; dark-default is asserted when it is off',
+  )
   const projectId = await projectIdForKey(LOCAL_ONLY)
   const { token } = await mintShare(projectId, 'investor')
   const res = await request.get(`/s/${token}`)
@@ -120,7 +146,7 @@ test('while the gate is OFF, a PERFECTLY VALID token is still 404', async ({ req
 })
 
 test('a live token renders, and a REVOKED one dies immediately with no deploy', async ({ request }) => {
-  test.skip(!sharesEnabled, 'needs REPORT_SHARES_ENABLED=true on the server under test')
+  test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
   const projectId = await projectIdForKey(LOCAL_ONLY)
   const { token, id } = await mintShare(projectId, 'client')
 
@@ -151,7 +177,7 @@ test('a live token renders, and a REVOKED one dies immediately with no deploy', 
 })
 
 test('an EXPIRED token is dead without anyone revoking it', async ({ request }) => {
-  test.skip(!sharesEnabled, 'needs REPORT_SHARES_ENABLED=true on the server under test')
+  test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
   const projectId = await projectIdForKey(LOCAL_ONLY)
   const { token } = await mintShare(projectId, 'investor', {
     expires_at: new Date(Date.now() - 60_000).toISOString(),
@@ -161,7 +187,7 @@ test('an EXPIRED token is dead without anyone revoking it', async ({ request }) 
 })
 
 test('the lens comes from the ROW: two tokens on one project render different pages', async ({ request }) => {
-  test.skip(!sharesEnabled, 'needs REPORT_SHARES_ENABLED=true on the server under test')
+  test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
   const projectId = await projectIdForKey(LOCAL_ONLY)
   const team = await mintShare(projectId, 'team')
   const investor = await mintShare(projectId, 'investor')
@@ -181,7 +207,7 @@ test('the lens comes from the ROW: two tokens on one project render different pa
 })
 
 test('a token cannot be pointed at a project it was not minted for', async ({ request }) => {
-  test.skip(!sharesEnabled, 'needs REPORT_SHARES_ENABLED=true on the server under test')
+  test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
   // There is no project segment in the URL at all, so this asserts the shape rather than a filter:
   // the ONLY thing a caller supplies is the token, and the tenant is read from its row. A path that
   // accepted a slug would need a guard; this one has nothing to guard.
@@ -278,4 +304,74 @@ test('the share revoke touches ONLY share rows, so the audit trail cannot be mis
     .eq('id', ingest!.id)
     .single()
   expect(still!.revoked_at).toBeNull()
+})
+
+test('a share token keeps following its tenant across a rename (does NOT reproduce the race — see note)', async ({ request }) => {
+  test.skip(!(await serverSharesEnabled(request)), 'the server under test has the gate OFF')
+
+  // ── What this spec does and does NOT prove — corrected after mutation-checking it ─────────────
+  // It was written to pin cross-review round 5's Blocking finding (the share route re-resolving its
+  // tenant from the mutable slug). Mutation check: re-introducing the exact bug, rebuilding, and
+  // re-running this spec — IT STILL PASSED. So it does not pin that finding, and saying it did would
+  // be the "a spec that passes is not a spec that can fail" trap this repo has a LEARNINGS entry for.
+  //
+  // WHY it cannot: `active_share_links` returns `projects.slug` through a live JOIN, so every request
+  // re-reads the tenant's CURRENT slug. After a rename, the vulnerable code looked up A's new slug and
+  // correctly found A. The real exposure is a TOCTOU window INSIDE one request — between the token
+  // resolution and the second `projects` read — which is milliseconds wide and not reachable from an
+  // HTTP-level test. Carrying the credential's project_id closes the window by construction (and
+  // deletes a redundant query); that is the argument for the fix, not this test.
+  //
+  // Kept because it still asserts something real and regression-worthy: a live token survives a
+  // tenant rename and keeps rendering its own tenant. A future refactor that cached or stored the
+  // slug at mint time, instead of resolving the tenant per request, would break exactly this.
+  const db = dbClient()
+  const suffix = randomBytes(4).toString('hex')
+  const slugA = `spec-tenant-a-${suffix}`
+  const slugB = `spec-tenant-b-${suffix}`
+
+  const { data: a } = await db.from('projects').insert({ slug: slugA }).select('id').single()
+  const { data: b } = await db.from('projects').insert({ slug: slugB }).select('id').single()
+  const projectA = a!.id as string
+  const projectB = b!.id as string
+
+  try {
+    // Each tenant gets a DISTINCT pod_report artifact, so "which tenant am I looking at?" is
+    // observable in the rendered HTML rather than inferred.
+    for (const [id, marker] of [
+      [projectA, `MARKER-A-${suffix}`],
+      [projectB, `MARKER-B-${suffix}`],
+    ] as const) {
+      const { error } = await db.rpc('push_report_artifact', {
+        p_project_id: id,
+        p_kind: 'pod_report',
+        p_schema_version: 1,
+        p_payload: { delivery: { notInstrumented: [] }, caveats: [marker] },
+        p_generated_at: new Date().toISOString(),
+        p_source_commit: null,
+        p_source_ref: null,
+      })
+      expect(error).toBeNull()
+    }
+
+    const { token } = await mintShare(projectA, 'team')
+
+    const before = await request.get(`/s/${token}`)
+    expect(before.status()).toBe(200)
+    expect(await before.text()).toContain(`MARKER-A-${suffix}`)
+
+    // The reassignment. Free A's slug first, then give it to B — exactly the two-step a rename is.
+    expect((await db.from('projects').update({ slug: `${slugA}-renamed` }).eq('id', projectA)).error).toBeNull()
+    expect((await db.from('projects').update({ slug: slugA }).eq('id', projectB)).error).toBeNull()
+
+    const after = await request.get(`/s/${token}`)
+    expect(after.status()).toBe(200)
+    const html = await after.text()
+    expect(html, 'the token must still render the tenant it was minted for').toContain(`MARKER-A-${suffix}`)
+    expect(html, 'and never the tenant that inherited its old slug').not.toContain(`MARKER-B-${suffix}`)
+  } finally {
+    // Disposable fixtures, removed whichever way the assertions went. api_keys and report_artifacts
+    // both cascade from projects.
+    await db.from('projects').delete().in('id', [projectA, projectB])
+  }
 })
