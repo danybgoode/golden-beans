@@ -57,11 +57,22 @@ export function readCommits(repo, run = git) {
     .map((chunk) => {
       const [sha, date, ...rest] = chunk.split('\x1f');
       const body = rest.join('\x1f');
+      const subject = (body ?? '').split('\n')[0];
       return {
         sha,
         date,
         // Matches the trailer with or without a model name ("Co-Authored-By: Claude Opus 4.8").
         agentCoAuthored: /^Co-Authored-By:\s*(?:Claude|OpenAI|GPT|Devin)/im.test(body ?? ''),
+        // ── isRevert, which round 6 caught missing ────────────────────────────────────────────
+        // `scoreTrustedSelfVerificationLoop` filters on `c.isRevert`; leaving it undefined made
+        // revertCount 0 for EVERY repository — a 0% revert rate that means "never computed". It
+        // happened to match this dataset (medusa-bonsai genuinely has no reverts), which is exactly
+        // how it went unnoticed: accidentally right here, wrong everywhere else.
+        //
+        // Matched on the SUBJECT only. `git revert` writes "Revert \"original subject\"", but a
+        // commit BODY routinely mentions reverting in prose ("Revert path: git revert <sha>"), and
+        // this repo's own history contains exactly that false positive.
+        isRevert: /^Revert\s+"/i.test(subject) || /^Revert:/i.test(subject),
       };
     });
 }
@@ -87,9 +98,24 @@ export function readEpics(repo, run = git) {
         .split('\n')
         .filter(Boolean)[0] ?? null;
 
-    // Find the commit that INTRODUCED `status: shipped`. `-S` with the literal string finds commits
-    // where its occurrence count changed, which is exactly the flip we want — a plain `git log`
-    // over the file would return every edit.
+    // Find the commit that INTRODUCED `status: shipped`.
+    //
+    // ── Why this stays `-S` with a literal, despite a review finding ─────────────────────────
+    // Round 6 correctly noted that an exact-string search is fragile to YAML variation
+    // (`status: "shipped"`, unusual spacing). Both attempted `-G` regex replacements were tried
+    // against the real dataset and BOTH changed verified numbers rather than preserving them:
+    // one returned zero measurable epics, the other 123 with a 3.6-day median where the validated
+    // answer is 47 and 7.2 days.
+    //
+    // The cause is semantic, not a typo: `-S` counts OCCURRENCES of a string and so matches the
+    // commit where the count went 0→1 — the flip itself. `-G` matches any commit whose diff merely
+    // TOUCHES a line matching the pattern, which includes every later edit to that line (this repo
+    // appends a growing changelog to the `status:` comment, so those edits are numerous).
+    //
+    // So the finding is real and the obvious fix is wrong. Making it robust needs a different
+    // approach — parsing the frontmatter at each revision rather than pattern-matching the diff —
+    // with a fixture proving it reproduces the validated numbers first. Recorded as a follow-up in
+    // sprint-2.md rather than shipped as an unverified swap that silently moves a headline metric.
     const shippedAt =
       run(repo, ['log', '-S', 'status: shipped', '--format=%aI', '--reverse', '--', path])
         .split('\n')

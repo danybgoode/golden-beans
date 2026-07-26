@@ -12,6 +12,7 @@ import {
   normalisePrForLens,
   parseRiskTier,
   checkSucceeded,
+  readCommits,
   windowDays,
   BENCHMARKS,
   buildArtifact,
@@ -200,4 +201,40 @@ test('the ADAPTER honours a classic commit status, not just the helper in isolat
     statusCheckRollup: [{ conclusion: 'SUCCESS' }, { state: 'FAILURE' }],
   });
   assert.equal(mixedFail.ciPassedBeforeMerge, false, 'one failing classic status fails the whole gate');
+});
+
+// ── Regression from cross-review round 6 ────────────────────────────────────────────────────
+
+test('readCommits populates isRevert, and matches the SUBJECT not the body', () => {
+  // `scoreTrustedSelfVerificationLoop` filters on `c.isRevert`; leaving it undefined made
+  // revertCount 0 for EVERY repository — a 0% revert rate that means "never computed". It happened
+  // to match this dataset (medusa-bonsai genuinely has no reverts), which is exactly how it went
+  // unnoticed for six rounds: accidentally right here, wrong everywhere else.
+  const SEP = '\x1e';
+  const US = '\x1f';
+  const log = [
+    `abc${US}2026-07-01${US}Revert "feat: the thing"${SEP}`,
+    `def${US}2026-07-02${US}Revert: an older style${SEP}`,
+    `ghi${US}2026-07-03${US}feat: ordinary work${SEP}`,
+    // The false positive this repo's own history actually contains: a commit whose BODY explains
+    // how to revert. Matching the body would count it, and it is not a revert.
+    `jkl${US}2026-07-04${US}chore: adopt the plugin\n\nRevert path: git revert <sha> on main.${SEP}`,
+  ].join('');
+  const commits = readCommits('/irrelevant', () => log);
+
+  assert.deepEqual(
+    commits.map((c) => c.isRevert),
+    [true, true, false, false],
+    'only a genuine revert SUBJECT counts'
+  );
+});
+
+test('readCommits still parses sha, date and agent authorship from a multi-line body', () => {
+  const SEP = '\x1e';
+  const US = '\x1f';
+  const log = `abc${US}2026-07-01${US}feat: thing\n\nSome body.\n\nCo-Authored-By: Claude Opus 5 <x@y>${SEP}`;
+  const [c] = readCommits('/irrelevant', () => log);
+  assert.equal(c.sha, 'abc');
+  assert.equal(c.date, '2026-07-01');
+  assert.equal(c.agentCoAuthored, true, 'the trailer lives in the BODY, not the subject');
 });
