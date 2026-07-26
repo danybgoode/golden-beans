@@ -115,10 +115,22 @@ export async function recordErrorSignal(input: {
     kind: 'error',
     name: scrubbed.name,
     message: scrubbed.message,
-    // The RAW stack feeds the fingerprint, not the scrubbed one. Redaction collapses distinct
-    // secrets to one placeholder, so fingerprinting the scrubbed text would merge two genuinely
-    // different errors whose only difference was inside a redacted span. Nothing derived from the
-    // raw stack is stored — only the 32-hex digest, which is not reversible.
+    // ── This is the ALREADY-SCRUBBED stack, and that is now deliberate ──────────────────────
+    // An earlier version of this comment claimed the RAW stack fed the digest, on the reasoning
+    // that redaction collapses distinct secrets to one placeholder and could therefore merge two
+    // errors differing only inside a redacted span. That reasoning was sound; the comment stopped
+    // being TRUE the moment the leak fix moved redaction ahead of persistence, because the raw
+    // stack no longer exists by the time this runs. Cross-review (Agy, 2026-07-26) caught the
+    // contradiction — a comment asserting something the code does not do, which LEARNINGS rates as
+    // worse than no comment because a reviewer who reads a stated rationale spends their scrutiny
+    // elsewhere.
+    //
+    // Keeping the scrubbed input is the right resolution, not a concession: the alternative is
+    // threading an unredacted copy of customer runtime data through a second code path purely to
+    // hash it, which reintroduces exactly the exposure the fix removed. The theoretical cost —
+    // two errors that differ ONLY inside a redacted span merging into one signal — requires the
+    // difference to be entirely within a secret, in which case the two occurrences are the same
+    // code path failing on different credentials, which is one problem and should group.
     stack: typeof input.tags.stack === 'string' ? input.tags.stack : null,
     featureId: input.featureId,
   })

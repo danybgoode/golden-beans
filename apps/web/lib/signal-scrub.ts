@@ -40,6 +40,18 @@ export const MAX_STRING_CHARS = 256
  * `apiKey`, `api_key`, `API-KEY`, `x-api-key` and `stripeApiKey` all match the single entry `apikey`.
  * A deny-list of exact names would have to enumerate spellings, and the one it missed would be the
  * one that leaked.
+ *
+ * ── The cost of substring matching, and where the line is ───────────────────────────────────
+ * Cross-review (Agy, 2026-07-26) caught the other edge of that trade: a bare `auth` entry also
+ * matches `author`, `authorId` and `author_name`, and a bare `pin` matches `ping` and `spin`. Those
+ * are ordinary telemetry fields, and silently replacing their values with `[redacted]` corrupts a
+ * tenant's own data — a scrub that eats real fields fails the product just as surely as one that
+ * misses a secret, and it does so invisibly.
+ *
+ * So the broad entries are the ones whose substrings are themselves secret-ish (`token`, `secret`,
+ * `password`, `apikey`), and the ambiguous stems are spelled out instead (`authorization`,
+ * `authtoken`, `pincode`). Anything this list misses is still caught by the VALUE-shape rules
+ * below, which is the layer designed for the fields nobody thought to name.
  */
 const SENSITIVE_KEY_PARTS = [
   'password',
@@ -48,7 +60,9 @@ const SENSITIVE_KEY_PARTS = [
   'token',
   'apikey',
   'authorization',
-  'auth',
+  'authtoken',
+  'authkey',
+  'authsecret',
   'credential',
   'cookie',
   'session',
@@ -58,7 +72,7 @@ const SENSITIVE_KEY_PARTS = [
   'creditcard',
   'cardnumber',
   'cvv',
-  'pin',
+  'pincode',
 ] as const
 
 function normalizeKey(key: string): string {
@@ -110,7 +124,7 @@ const VALUE_RULES: Array<{ pattern: RegExp; replacement: string }> = [
 
   // A URL's QUERY STRING and fragment — origin and path are diagnostically valuable, query
   // parameters are where session ids and one-time tokens ride.
-  { pattern: /(\bhttps?:\/\/[^\s"'<>]*?)[?#][^\s"'<>]*/gi, replacement: '$1?' + REDACTED },
+  { pattern: /(\bhttps?:\/\/[^\s"'<>]*?)([?#])[^\s"'<>]*/gi, replacement: '$1$2' + REDACTED },
 
   // Payment-card-shaped digit runs (13–19 digits, optionally space/hyphen grouped).
   { pattern: /\b(?:\d[ -]?){13,19}\b/g, replacement: REDACTED },

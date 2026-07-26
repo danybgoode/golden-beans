@@ -187,9 +187,22 @@ test('sensitive key matching survives spelling: apiKey, api_key, X-API-KEY, stri
   for (const key of ['apiKey', 'api_key', 'API-KEY', 'X-Api-Key', 'stripeApiKey', 'Authorization', 'set-cookie']) {
     assert.equal(isSensitiveKey(key), true, `not treated as sensitive: ${key}`)
   }
-  for (const key of ['name', 'featureId', 'orderTotal', 'userId']) {
+  // The counter-list, widened after a cross-review finding (Agy, 2026-07-26): a bare `auth` entry
+  // matched `author`/`authorId`, and a bare `pin` matched `ping`/`spin`. Those are ordinary
+  // telemetry fields, and silently redacting them corrupts a tenant's own data — a scrub that eats
+  // real fields fails the product as surely as one that misses a secret, and does it invisibly.
+  for (const key of [
+    'name', 'featureId', 'orderTotal', 'userId',
+    'author', 'authorId', 'author_name', 'ping', 'spin', 'shipping', 'campaign',
+  ]) {
     assert.equal(isSensitiveKey(key), false, `wrongly treated as sensitive: ${key}`)
   }
+})
+
+test('a URL fragment keeps its # marker rather than becoming a query string', () => {
+  const out = scrubText('failed at https://example.com/docs#section-4')
+  assert.ok(out.includes('https://example.com/docs#'), out)
+  assert.ok(!out.includes('/docs?'), out)
 })
 
 test('a secret in a nested value is redacted at depth', () => {
