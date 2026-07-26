@@ -183,6 +183,14 @@ export function applyLens<T extends LensableView>(view: T, lens: PodReportLens):
  * qualified claim into a bare one purely by changing audience.
  */
 function stripEvidence(row: Record<string, unknown>): Record<string, unknown> {
-  const { evidence: _evidence, ...rest } = row
-  return { ...rest, evidence: null, evidenceWithheld: true }
+  const { evidence, ...rest } = row
+  // ── `evidenceWithheld` only when there was something TO withhold ─────────────────────────────
+  // Cross-review round 2 (Agy, PR #33) — and it is a bug this fix's own sibling comment in
+  // lib/pod-report-view.ts had already declared unacceptable: "withheld from you" and "never
+  // existed" must stay distinguishable. Setting the flag unconditionally told a client reader that
+  // a `not_met` or `not_instrumented` criterion had real evidence we chose not to show them, which
+  // is a fabricated claim in the one direction this epic cares most about — it makes our coverage
+  // look better than it is, to the audience least able to check.
+  const hadEvidence = evidence !== null && evidence !== undefined
+  return { ...rest, evidence: null, ...(hadEvidence ? { evidenceWithheld: true } : {}) }
 }

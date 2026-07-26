@@ -140,7 +140,12 @@ async function readOutcome(projectId: string, projectSlug: string): Promise<Outc
  */
 async function readNorthStar(
   projectId: string
-): Promise<{ metric: string | null; inputCount: number | null; latestValue: number | null } | null> {
+): Promise<{
+  metric: string | null
+  inputCount: number | null
+  latestValue: number | null
+  unavailable?: boolean
+} | null> {
   const supabase = getSupabaseServiceClient()
 
   const { data: metric, error } = await supabase
@@ -148,10 +153,15 @@ async function readNorthStar(
     .select('key')
     .eq('project_id', projectId)
     .maybeSingle()
-  if (error || !metric) {
-    if (error) console.error('[pod-report-query] north-star lookup failed:', error)
-    return null
+  if (error) {
+    // NOT `return null`. Cross-review round 2 (Agy): null means "no metric is registered", so
+    // collapsing an error into it renders a database failure as a truthful-sounding absence — the
+    // same defect fixed one round earlier in readOutcome, in its sibling function. Hardening one
+    // instance and leaving the other is precisely what a later review round finds.
+    console.error('[pod-report-query] north-star lookup failed:', error)
+    return { metric: null, inputCount: null, latestValue: null, unavailable: true }
   }
+  if (!metric) return null // genuinely none registered — a truthful answer, not a failure
 
   const { count, error: countError } = await supabase
     .from('leading_inputs')

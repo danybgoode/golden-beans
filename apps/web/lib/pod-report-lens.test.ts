@@ -39,6 +39,9 @@ function view(): LensableView {
   }
 }
 
+/** Alias so the round-2 tests below read as building on the same fixture. */
+const baseView = view
+
 test('parseLens refuses an unknown value instead of defaulting to the widest audience', () => {
   assert.equal(parseLens('investor'), 'investor')
   assert.equal(parseLens('team'), 'team')
@@ -122,4 +125,51 @@ test('every declared lens has a policy and an audience note', () => {
     assert.ok(p.audienceNote.length > 0, `${lens} has no audience note`)
     assert.equal(typeof p.showComposition, 'boolean')
   }
+})
+
+// ── Cross-review round 2 (Agy, PR #33) — a fix that introduced its own defect ──────────────────
+
+test('the client lens does NOT claim evidence was withheld when there never was any', () => {
+  // The bug: stripEvidence set `evidenceWithheld: true` unconditionally, so a `not_met` or
+  // `not_instrumented` criterion told a client reader that real evidence existed and was hidden
+  // from them. That fabricates coverage in the one direction this epic cares most about — toward
+  // the audience least able to check — and it broke an invariant lib/pod-report-view.ts's own
+  // comment already declared: "withheld from you" and "never existed" must stay distinguishable.
+  const v = {
+    ...baseView(),
+    maturity: {
+      ladder: { title: 'x', author: 'y', date: 'z' },
+      verdict: { step: 1, stepLabel: 'Assisted', metCriteria: 1, totalCriteria: 2, notInstrumentedCount: 1 },
+      rows: [
+        { id: 'has_evidence', status: 'met', evidence: { pointerType: 'pr', ref: 92, detail: 'd' } },
+        { id: 'no_evidence', status: 'not_instrumented', evidence: null, reason: 'never measured' },
+      ],
+      notInstrumented: [],
+    },
+  }
+  const rows = applyLens(v, 'client').maturity!.rows
+  const withEvidence = rows.find((r) => r.id === 'has_evidence')!
+  const withoutEvidence = rows.find((r) => r.id === 'no_evidence')!
+
+  // The row that HAD a pointer: pointer gone, and the page may honestly say it was withheld.
+  assert.equal(withEvidence.evidence, null)
+  assert.equal(withEvidence.evidenceWithheld, true)
+
+  // The row that never had one: must NOT claim a withheld pointer.
+  assert.equal(withoutEvidence.evidence, null)
+  assert.notEqual(withoutEvidence.evidenceWithheld, true)
+  assert.equal(withoutEvidence.reason, 'never measured', 'the real reason must survive')
+})
+
+test('the investor lens hides the rows entirely, so it cannot make either claim', () => {
+  const v = {
+    ...baseView(),
+    maturity: {
+      ladder: { title: 'x', author: 'y', date: 'z' },
+      verdict: { step: 1, stepLabel: 'Assisted', metCriteria: 1, totalCriteria: 2, notInstrumentedCount: 1 },
+      rows: [{ id: 'no_evidence', status: 'not_met', evidence: null }],
+      notInstrumented: [],
+    },
+  }
+  assert.deepEqual(applyLens(v, 'investor').maturity!.rows, [])
 })

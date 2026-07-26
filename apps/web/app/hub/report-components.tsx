@@ -484,7 +484,12 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
 
       {outcome.northStar && (
         <div className={styles.northStarCard} data-testid="outcome-north-star">
-          <h3>North Star — {outcome.northStar.metric ?? 'not registered'}</h3>
+          <h3>
+            North Star —{' '}
+            {outcome.northStar.unavailable
+              ? 'could not be read'
+              : (outcome.northStar.metric ?? 'not registered')}
+          </h3>
           <p>
             {/* A null count means the count QUERY failed, which must not print as "0 leading inputs
                 registered" — that asserts an absence on the strength of an answer we never got. */}

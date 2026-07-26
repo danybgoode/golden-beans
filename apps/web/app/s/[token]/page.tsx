@@ -75,7 +75,15 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   after(() => trackSelfEvent(SHARE_VIEWED_EVENT, `share:${share.shareId}`))
 
   const report = await getPodReport(projectSlug, lens)
-  if (!report.ok && report.reason === 'query_failed') throw new Error('Pod report lookup failed')
+  if (!report.ok) {
+    if (report.reason === 'query_failed') throw new Error('Pod report lookup failed')
+    // Cross-review round 2 (Agy): this fell through to the empty state, contradicting the contract
+    // lib/pod-report-query.ts documents ('project_not_found' → notFound()). Nearly unreachable —
+    // the token resolved through a view whose JOIN proves the project existed a moment ago — but
+    // "nearly unreachable" is how the slug-renamed-mid-request case gets rendered as "this tenant
+    // has not pushed a report yet", which is a statement about a tenant that no longer exists.
+    if (report.reason === 'project_not_found') notFound()
+  }
 
   // The roadmap half is best-effort: a share link whose Pod Report renders should not 500 because
   // the tenant never pushed a roadmap artifact. `getHubRoadmap` already distinguishes the two.
