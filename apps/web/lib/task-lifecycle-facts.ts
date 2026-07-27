@@ -55,9 +55,20 @@ export async function getTaskLifecycleFacts(projectId: string): Promise<TaskLife
   // row records that it was resolved; only the audit row records that the connector did it.
   const { data, error } = await supabase
     .from('audit_log')
-    .select('metadata')
+    .select('metadata, created_at')
     .eq('project_id', projectId)
     .eq('action', 'task_transitioned')
+    // ORDER BY is load-bearing, not tidiness (cross-review, Codex, PR #38). The loop below resolves
+    // duplicate rows for one task by "last write wins" — and without an explicit order, "last" is
+    // whatever order Postgres happened to return, which it guarantees nothing about. So the comment
+    // asserted a property the query did not provide: a re-resolved task could be scored from its
+    // OLDER pointer, changing an evidenced resolution back into an unevidenced one and moving the
+    // published maturity score. Same defect class as the audit-metadata finding beside it — prose
+    // promising what the code does not do.
+    .order('created_at', { ascending: true })
+    // Tie-break on the row id: two audit rows can share a timestamp at Postgres' resolution, which
+    // would leave "last" ambiguous again for exactly the case this ordering exists to settle.
+    .order('id', { ascending: true })
 
   if (error) {
     console.error('[task-lifecycle-facts] query failed:', error)

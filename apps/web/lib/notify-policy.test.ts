@@ -94,6 +94,21 @@ test('the escape hatch is opt-in, exact-match, and cannot be tripped by a typo',
   }
 })
 
+test('the escape hatch does NOT work on a deployed environment, only a local one', () => {
+  // Cross-review finding (Codex, PR #38): the hatch was checked before the production gate, so a
+  // PREVIEW deployment with the variable set could page a human — contradicting this module's own
+  // stated boundary. A deployed environment always carries VERCEL_ENV; a laptop never does.
+  const withHatch = {
+    TELEGRAM_BOT_TOKEN: 't',
+    TELEGRAM_CHAT_ID: 'c',
+    ALLOW_NOTIFY_OUTSIDE_PRODUCTION: 'true',
+  }
+  assert.equal(shouldSendOperatorNotification({ ...withHatch, VERCEL_ENV: 'preview' }).send, false)
+  assert.equal(shouldSendOperatorNotification({ ...withHatch, VERCEL_ENV: 'development' }).send, false)
+  // ...and it still works where it is meant to: a local shell, with no VERCEL_ENV at all.
+  assert.equal(shouldSendOperatorNotification(withHatch).send, true)
+})
+
 test('the escape hatch still cannot rescue a TEST runtime', () => {
   // Otherwise a spec that sets it would reintroduce the incident wholesale.
   const decision = shouldSendOperatorNotification({

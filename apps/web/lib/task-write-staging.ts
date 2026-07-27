@@ -224,6 +224,7 @@ export async function applyTaskChange(projectId: string, confirmationToken: stri
       actor: string | null
       resolution: string | null
       evidence_pointer: string | null
+      agent_key_id: string | null
     }>()
 
   if (error || !data) {
@@ -282,6 +283,13 @@ export async function applyTaskChange(projectId: string, confirmationToken: stri
       evidencePointer: data.evidence_pointer,
       evidenceKind: evidence.kind,
       evidenceRecorded: evidence.resolvable,
+      // The credential that actually performed it (cross-review, Codex, PR #38). The comment above
+      // promised this and the code did not deliver it — `consume_write_confirmation` stored
+      // `agent_key_id` at propose time and never returned it. An agent_write key is revocable per
+      // agent, so "which credential closed this wrongly, and do I revoke that one or all of them?"
+      // is precisely the question this trail exists to answer; without the id the honest answer was
+      // "some agent".
+      agentKeyId: data.agent_key_id,
     },
   })
 

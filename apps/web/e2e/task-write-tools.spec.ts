@@ -556,6 +556,10 @@ test.describe('connector staged write tools', () => {
     expect(meta.via).toBe('connector')
     expect(meta.toStatus).toBe('claimed')
     expect(meta.taskId).toBe(task.id)
+    // ...and WHICH credential did it (cross-review, Codex, PR #38). An agent_write key is revocable
+    // per agent, so "revoke that one or all of them?" is the question this row has to answer. The
+    // comment above the audit call promised this field before the code carried it.
+    expect(meta.agentKeyId).toBe(tenant.writeKeyId)
   })
 
   // ── Lifecycle refusals still apply through the staged path ───────────────────────────────────

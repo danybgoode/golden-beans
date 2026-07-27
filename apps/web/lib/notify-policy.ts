@@ -68,7 +68,18 @@ export function shouldSendOperatorNotification(env: NotifyEnv = process.env): No
     return { send: false, reason: 'test_runtime' }
   }
 
-  if (env.ALLOW_NOTIFY_OUTSIDE_PRODUCTION === 'true') {
+  // ── The escape hatch is for a LOCAL shell, not for a deployment ─────────────────────────────
+  // Cross-review finding (Codex, PR #38). This was checked before the production gate, which is the
+  // right shape for its purpose — the variable's whole job is to permit a send outside production —
+  // but it made the comment above false: that comment says preview deployments have no business
+  // messaging a person, and with this set, one could.
+  //
+  // The narrowing is `VERCEL_ENV` being ABSENT rather than merely non-production. A deployed
+  // environment always has it; a laptop never does. So a developer deliberately exercising the rail
+  // is still served, and no deployed environment can be talked into paging someone by adding one
+  // variable — which is exactly how the original incident happened, one layer down: a real
+  // credential reaching an environment nobody thought of as production.
+  if (env.ALLOW_NOTIFY_OUTSIDE_PRODUCTION === 'true' && !env.VERCEL_ENV) {
     return { send: true, reason: null }
   }
 
