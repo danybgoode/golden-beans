@@ -1,6 +1,8 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 1: Typed project flag control plane
 
-**Status:** ⬜ not started
+**Status:** ✅ Code merged, deployed and migrated — [PR #39](https://github.com/danybgoode/golden-beans/pull/39)
+(`bc1abba`, 2026-07-27). The owner-browser walkthrough is deliberately still owed before any
+Miyagi cutover; flag serving remains dark in production.
 
 ## Stories
 
@@ -81,3 +83,17 @@ Env: production · Golden Beans production URL
    → The exact flag/definition versions round-trip; an incompatible or cross-project bind fails.
 
 If any step fails, record the step, credential class, snapshot version and observed fallback.
+
+## Execution record — 2026-07-27
+
+- PR #39 passed the full GitHub static and Playwright gates, its Vercel preview, and the
+  Antigravity cross-family review with no findings before merge.
+- The seven additive migrations (`20260807100000` through `20260807160000`) were applied separately
+  to the linked production Supabase project and its migration ledger matches the repository.
+- Production smoke: `GET /api/v1/flags/snapshot` on
+  `https://golden-beans-gamma.vercel.app` returned the expected flat `404` while
+  `FLAG_SERVING_ENABLED` remains OFF. This proves the dark boundary only; it is not a Miyagi
+  migration or an owner UI proof.
+- `@golden-beans/sdk@0.1.0` was packed and publish-verified, but public npm release is blocked only
+  by the workstation lacking an npm login. Do not substitute a private registry or a copied SDK in
+  Miyagi; authenticate then publish the tested artifact.
