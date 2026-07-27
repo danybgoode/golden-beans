@@ -42,7 +42,12 @@ export async function tgNotify(text: string): Promise<void> {
     }
     return
   }
-  if (!BOT_TOKEN || !CHAT_ID) return // belt-and-braces; the policy already required both
+  // NOT redundant, though it reads that way (cross-review nit, Agy, PR #38). The policy reads
+  // `process.env` at CALL time; these two constants were captured at MODULE LOAD. In any runtime
+  // where the environment is populated after import, the policy can say "send" while the constants
+  // are still undefined — and `fetch` to `.../bot undefined/sendMessage` is a confusing failure to
+  // debug. Narrowing the types for the call below is the other half of its job.
+  if (!BOT_TOKEN || !CHAT_ID) return
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

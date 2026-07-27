@@ -1,6 +1,7 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import { classifyEvidencePointer } from './evidence-pointer'
+import { countAgentResolved } from './task-lifecycle-count'
 
 // signals-loop · Sprint 3, Story 3.3b — task-lifecycle facts as AI-adoption ladder evidence.
 //
@@ -75,35 +76,24 @@ export async function getTaskLifecycleFacts(projectId: string): Promise<TaskLife
     return null
   }
 
-  // De-duplicated by task id. A task can legitimately produce several `task_transitioned` rows
-  // (claimed, then resolved), and a task that was resolved, reopened and resolved again would
-  // otherwise count twice — inflating the very number this exists to make honest.
-  const resolvedByTask = new Map<string, string | null>()
-
-  for (const row of data ?? []) {
+  // The counting RULE lives in lib/task-lifecycle-count.ts — pure and zero-import, so it can be
+  // unit-tested directly (CODE-QUALITY rule 5). This module keeps the I/O and the shaping.
+  // Rows arrive oldest-first from the query above, which is what makes "latest" meaningful.
+  const rows = (data ?? []).map((row) => {
     const meta = (row.metadata ?? {}) as Record<string, unknown>
-    if (meta.via !== 'connector') continue
-    if (meta.toStatus !== 'resolved') continue
-    const taskId = typeof meta.taskId === 'string' ? meta.taskId : null
-    if (!taskId) continue
-    const pointer = typeof meta.evidencePointer === 'string' ? meta.evidencePointer : null
-    // Last write wins: if a task really was resolved twice, the most recent resolution is the
-    // current truth about it.
-    resolvedByTask.set(taskId, pointer)
-  }
+    return {
+      taskId: typeof meta.taskId === 'string' ? meta.taskId : '',
+      via: meta.via,
+      toStatus: meta.toStatus,
+      evidencePointer: typeof meta.evidencePointer === 'string' ? meta.evidencePointer : null,
+    }
+  })
 
-  let withEvidence = 0
-  let sample: string | null = null
-  for (const pointer of resolvedByTask.values()) {
-    const classified = classifyEvidencePointer(pointer)
-    if (!classified.resolvable) continue
-    withEvidence += 1
-    if (!sample) sample = classified.value
-  }
-
-  return {
-    agentResolvedTotal: resolvedByTask.size,
-    agentResolvedWithEvidence: withEvidence,
-    sampleEvidencePointer: sample,
-  }
+  // The SAME classifier the write path used, injected — so read and write cannot drift into
+  // disagreeing about what counts as evidence.
+  return countAgentResolved(
+    rows,
+    (pointer) => classifyEvidencePointer(pointer).resolvable,
+    (pointer) => classifyEvidencePointer(pointer).value
+  )
 }
