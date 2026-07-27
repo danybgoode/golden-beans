@@ -354,6 +354,47 @@ export function buildPushEnvelope(artifact, { commit, ref } = {}) {
   return { ...artifact, pushSource: { commit: commit ?? null, ref: ref ?? null } };
 }
 
+/**
+ * Fetch task-lifecycle facts from the engine — the ladder evidence for the step-4 criterion.
+ *
+ * signals-loop Story 3.3b (Amendment 4.3). This script analyses a git repository and has no database
+ * access, but "has an agent actually closed real feedback, with evidence?" is a fact only the engine
+ * holds. So it asks, using the credential it already carries for pushing the artifact.
+ *
+ * ── Returns undefined, never a zeroed object, on ANY failure ──────────────────────────────────
+ * `undefined` means "not measured" and the lens renders `not_instrumented`; a zeroed object would
+ * mean "measured, found none" and render `not_met` — a materially stronger claim, and one about
+ * ourselves. Exactly the distinction the surrounding code already makes for `skillsProvenance`.
+ *
+ * Never throws and never fails the report: an optional criterion that cannot be scored must degrade
+ * to "not instrumented", not take the whole artifact down with it.
+ */
+async function fetchTaskLifecycle({ baseUrl, apiKey }) {
+  if (!apiKey) return undefined;
+  try {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/v1/reports/pod/lifecycle`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      process.stderr.write(
+        `⚠ lifecycle facts unavailable (HTTP ${res.status}) — scoring as not instrumented.\n`
+      );
+      return undefined;
+    }
+    const body = await res.json();
+    // The endpoint distinguishes "the seam is dark / unreadable" (instrumented:false) from a real
+    // reading. Honour that rather than treating a null payload as a zero.
+    if (!body?.ok || !body.instrumented || !body.taskLifecycle) return undefined;
+    return body.taskLifecycle;
+  } catch (err) {
+    process.stderr.write(
+      `⚠ lifecycle facts unreachable (${err?.message ?? err}) — scoring as not instrumented.\n`
+    );
+    return undefined;
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   let repo = process.env.MEDUSA_BONSAI_PATH || `${process.env.HOME}/dobby/medusa-bonsai`;
@@ -393,9 +434,15 @@ async function main() {
   // No top-level `ciCheckNames`: the scorers read it PER PR (`input.prs[i].ciCheckNames`), which
   // normalisePrForLens sets. Passing it at the top level as well looked reassuring and did nothing
   // — cross-review caught the dead argument.
+  // signals-loop Story 3.3b — the one input that does NOT come from git. Fetched from the engine
+  // with the push credential, and `undefined` on any failure so the criterion degrades to
+  // "not instrumented" rather than to a zero we did not measure.
+  const taskLifecycle = await fetchTaskLifecycle(resolvePushConfig());
+
   const maturity = computeMaturityLens({
     prs: prs.map(normalisePrForLens),
     commits,
+    taskLifecycle,
     // BOTH, and each carries a distinct fact. `hasClaudeMd` is the measured-ness signal — a real
     // boolean means "we looked", and its absence means "we did not", which is the not_met vs
     // not_instrumented distinction this whole epic turns on. `standardsFile` names WHICH file was

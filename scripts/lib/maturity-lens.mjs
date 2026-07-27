@@ -523,6 +523,60 @@ export function scoreStandardsEncoded({ hasClaudeMd, standardsFile, skillsProven
   });
 }
 
+/**
+ * Feedback remediation loop — Step 4's "scaled automation of domain-specific use cases".
+ *
+ * PROXY: an agent-resolved task with a resolvable commit or URL pointer is a proxy for "the
+ * remediation loop closed", not proof that the remediation itself was correct.
+ */
+export function scoreFeedbackRemediationLoop({ taskLifecycle, feedbackLoopMinimum = 3 } = {}) {
+  const base = {
+    id: 'feedback_remediation_loop',
+    criterion: 'Agent-resolved feedback remediation loop',
+    ladderStep: 4,
+    proxyNote:
+      'An agent-resolved task with a commit or URL pointer is a proxy for "the remediation loop closed", not proof the fix was correct.',
+  };
+  if (!taskLifecycle || typeof taskLifecycle !== 'object' || Array.isArray(taskLifecycle)) {
+    return makeCriterionRow({
+      ...base,
+      notInstrumentedReason: 'No task-lifecycle data was supplied to the lens.',
+    });
+  }
+
+  const { agentResolvedTotal, agentResolvedWithEvidence, sampleEvidencePointer } = taskLifecycle;
+  if (!Number.isFinite(agentResolvedTotal) || !Number.isFinite(agentResolvedWithEvidence)) {
+    return makeCriterionRow({
+      ...base,
+      notInstrumentedReason:
+        'Task-lifecycle data did not contain numeric agent-resolved and evidenced-resolution counts.',
+    });
+  }
+
+  if (agentResolvedWithEvidence < feedbackLoopMinimum) {
+    const missingEvidence = agentResolvedTotal - agentResolvedWithEvidence;
+    const evidenceGap =
+      missingEvidence > 0
+        ? ` Agents resolved ${agentResolvedTotal} task(s), but ${missingEvidence} lack resolvable pointers; an unevidenced resolution is not counted.`
+        : '';
+    return makeCriterionRow({
+      ...base,
+      notMetReason:
+        `Only ${agentResolvedWithEvidence} agent-resolved task(s) have resolvable evidence, below the ${feedbackLoopMinimum} required for scaled automation.` +
+        evidenceGap,
+    });
+  }
+
+  return makeCriterionRow({
+    ...base,
+    evidence: {
+      pointerType: 'task_lifecycle',
+      ref: sampleEvidencePointer ?? `${agentResolvedWithEvidence} evidenced agent-resolved tasks`,
+      detail: `${agentResolvedWithEvidence} agent-resolved task(s) have resolvable evidence out of ${agentResolvedTotal} total; threshold: ${feedbackLoopMinimum}.`,
+    },
+  });
+}
+
 /** Every scoreable criterion, in the fixed order they render. */
 const SCORERS = [
   scoreAutomatedCodeReview,
@@ -532,6 +586,7 @@ const SCORERS = [
   scoreRiskTierMergeDiscipline,
   scoreTrustedSelfVerificationLoop,
   scoreStandardsEncoded,
+  scoreFeedbackRemediationLoop,
 ];
 
 /**
@@ -547,8 +602,8 @@ const SCORERS = [
  *   - For each higher step (2, 3, 4) that has at least one criterion assigned to it: the verdict
  *     only advances to that step if EVERY criterion assigned to it is `met`. The loop stops at the
  *     first step where that fails — a step is not "mostly" reached.
- *   - A step with zero assigned criteria is skipped without advancing or blocking (this lens simply
- *     has no evidence for it, e.g. step 4 — see the module header for what those criteria would be).
+ *   - A step with zero assigned criteria is skipped without advancing or blocking: this lens has
+ *     no evidence for that step yet.
  */
 export function scoreVerdict(rows, fixedNotInstrumentedCount = NOT_INSTRUMENTED.length) {
   const metCriteria = rows.filter((r) => r.status === 'met').length;
