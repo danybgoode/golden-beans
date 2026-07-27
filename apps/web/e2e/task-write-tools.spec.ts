@@ -126,7 +126,20 @@ async function callTool(
   const res = await rpc(request, token, 'tools/call', { name, arguments: args }, bearer)
   const body = await res.json()
   const text = body?.result?.content?.[0]?.text
-  return { status: res.status(), raw: body, parsed: text ? JSON.parse(text) : null }
+  // A tool result carries JSON in `content[0].text`. A PROTOCOL-level rejection (the MCP SDK
+  // refusing an argument against the tool's own zod schema, before the handler runs) instead comes
+  // back as an `error` with a plain-text message — parsing that as JSON throws, which made a spec
+  // fail for the wrong reason. Both shapes are legitimate refusals; the caller decides which it
+  // expected.
+  let parsed: Record<string, unknown> | null = null
+  if (text) {
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      parsed = null
+    }
+  }
+  return { status: res.status(), raw: body, parsed, protocolError: body?.error ?? null }
 }
 
 async function seedPromotableSignal(request: APIRequestContext, tenant: Tenant, marker: string) {
@@ -653,6 +666,42 @@ test.describe('connector staged write tools', () => {
 
     // ...and the task never moved.
     expect((await readTask(db, task.id as string)).status).toBe('open')
+  })
+
+  test('an INVALID resolution is refused at PROPOSE, before a token is issued', async ({ request }) => {
+    // Cross-review (Agy, PR #38): the last apply-time refusal that was invisible at propose time.
+    // The MCP schema restricts this enum, so this drives the staging layer directly through a raw
+    // JSON-RPC call with a value the schema would reject — the layer must not rely on its caller.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'badres')
+    const task = await seedTask(request, db, tenant, 'badres-marker')
+
+    const res = await callTool(
+      request,
+      tenant.connectorToken,
+      'propose_task_change',
+      { taskId: task.id, action: 'resolve', resolution: 'totally-made-up' },
+      tenant.writeKey
+    )
+
+    // TWO layers refuse this, and it matters which one answers first. The tool's own zod enum
+    // rejects it at the PROTOCOL level, before the handler runs — so that is what this asserts.
+    // `proposeTaskChange`'s preflight is the second layer and is deliberately unreachable through
+    // MCP: it exists for any non-MCP caller of the staging seam, which has no schema in front of it.
+    // Stating that rather than pretending this spec exercises the preflight — a spec that cannot
+    // reach what it claims to defend is the trap this repo has a LEARNINGS entry for.
+    // The zod refusal comes back as an isError result whose text is a plain "MCP error …" string,
+    // not JSON — so the assertion is that this was NOT a success, however it was refused.
+    expect(res.parsed?.ok).not.toBe(true)
+    expect(res.parsed?.confirmationToken).toBeFalsy()
+
+    // The property that actually matters either way: nothing was staged and nothing moved.
+    expect((await readTask(db, task.id as string)).status).toBe('open')
+    const { data: staged } = await db
+      .from('task_write_confirmations')
+      .select('id')
+      .eq('task_id', task.id as string)
+    expect(staged ?? []).toHaveLength(0)
   })
 
   test('a task that reached a terminal state between propose and apply refuses at APPLY', async ({

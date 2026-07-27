@@ -46,6 +46,9 @@ export const CONFIRMATION_TTL_MS = 5 * 60 * 1000
 export type TaskWriteAction = 'claim' | 'resolve' | 'dismiss'
 
 /** The action → target status map. The only place this correspondence is written down. */
+/** The resolution vocabulary `transition_task` enforces. Mirrored, never re-invented. */
+const VALID_RESOLUTIONS = ['fixed', 'wont_fix', 'duplicate', 'not_reproducible']
+
 const ACTION_TO_STATUS: Record<TaskWriteAction, TaskStatus> = {
   claim: 'claimed',
   resolve: 'resolved',
@@ -82,7 +85,13 @@ export type ProposeResult =
     }
   | {
       ok: false
-      reason: 'not_found' | 'already_terminal' | 'already_claimed' | 'actor_required' | 'stage_failed'
+      reason:
+        | 'not_found'
+        | 'already_terminal'
+        | 'already_claimed'
+        | 'actor_required'
+        | 'invalid_resolution'
+        | 'stage_failed'
     }
 
 /**
@@ -114,6 +123,17 @@ export async function proposeTaskChange(input: ProposeInput): Promise<ProposeRes
   // telling the agent something that is not true.
   if (input.action === 'claim' && task.status === 'claimed') {
     return { ok: false, reason: 'already_claimed' }
+  }
+  // The last apply-time refusal that was not visible at propose time (cross-review, Agy, PR #38).
+  // Same argument as `already_claimed` above: issuing a single-use token that is guaranteed to burn
+  // on apply is a preview making a promise the database will refuse. The vocabulary is the one
+  // `transition_task` enforces — kept in step with the CHECK constraint it mirrors, not invented here.
+  if (
+    input.action === 'resolve' &&
+    (input.resolution ?? '').trim() &&
+    !VALID_RESOLUTIONS.includes((input.resolution ?? '').trim())
+  ) {
+    return { ok: false, reason: 'invalid_resolution' }
   }
 
   const evidence = classifyEvidencePointer(input.evidencePointer)
@@ -223,7 +243,10 @@ export type ApplyResult =
 export async function applyTaskChange(
   projectId: string,
   confirmationToken: string,
-  applyingKeyId: string | null = null
+  // REQUIRED, deliberately — no default. See the binding check below: a default of `null` let a
+  // caller that simply forgot this argument bypass the credential binding silently, and a security
+  // check whose weak position is "argument omitted" is one refactor from being off.
+  applyingKeyId: string | null
 ): Promise<ApplyResult> {
   const supabase = getSupabaseServiceClient()
 
@@ -269,7 +292,17 @@ export async function applyTaskChange(
   // The token is already spent at this point, deliberately. A refusal here still burns it, which is
   // correct: the alternative is a token that survives a failed apply and can be retried by yet
   // another credential.
-  if (data.agent_key_id && applyingKeyId && data.agent_key_id !== applyingKeyId) {
+  //
+  // ── It FAILS CLOSED on a missing key, and the first version did not ─────────────────────────
+  // Cross-review (Agy, PR #38) on the round-3 fix itself: the condition was
+  // `data.agent_key_id && applyingKeyId && data.agent_key_id !== applyingKeyId`, so a null
+  // `applyingKeyId` made the whole expression falsy and skipped the guard — a keyless caller could
+  // spend a token staged by a specific credential. Not reachable through the MCP route (the write
+  // tools are not registered unless a key resolved, so the route always has one), but it is a
+  // security check whose weak position was "the argument was omitted", which is one careless caller
+  // from being off. Dropping the `applyingKeyId &&` term makes a missing key a MISMATCH rather than
+  // a bypass, and the parameter above is now required so it cannot be omitted at all.
+  if (data.agent_key_id && data.agent_key_id !== applyingKeyId) {
     console.warn('[task-write-staging] refused: confirmation belongs to a different write credential')
     return { ok: false, reason: 'wrong_credential' }
   }

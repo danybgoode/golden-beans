@@ -97,9 +97,12 @@ export function AgentKeyManager({
       )}
 
       <form onSubmit={onMint}>
-        <label>
+        {/* Explicit htmlFor/id rather than implicit wrapping (cross-review nit, Agy, PR #38):
+            resolves cleanly in the accessibility tree and gives browser tests a stable target. */}
+        <label htmlFor="agent-key-label">
           Label
           <input
+            id="agent-key-label"
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
@@ -107,9 +110,10 @@ export function AgentKeyManager({
           />
         </label>
 
-        <label>
+        <label htmlFor="agent-key-expiry">
           Expires
           <select
+            id="agent-key-expiry"
             value={expiryDays === null ? '' : String(expiryDays)}
             onChange={(e) => setExpiryDays(e.target.value === '' ? null : Number(e.target.value))}
           >
