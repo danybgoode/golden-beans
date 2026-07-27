@@ -1,6 +1,6 @@
 # Signals loop — Sprint 3: The closed loop (writes + flip)
 
-**Status:** ⬜ not started
+**Status:** 🟦 Built — PR [#38](https://github.com/danybgoode/golden-beans/pull/38), 8 cross-review rounds (alternating families) to a clean Blocking-free round. Both gates still OFF; Story 3.4 flips them.
 
 > Amended 2026-07-26 (see the epic README). The credential design changed materially (Amendment 2):
 > the connector's plaintext, publicly-displayed URL token may **not** authorize a mutation, so the
@@ -86,6 +86,53 @@ revocation verified live (the same call 401s after revoke).
 - **deterministic gate:** `npm run typecheck` + `lint` + `build` + `test:unit` + Playwright `api`
 - **review:** HIGH-risk PR → cross-family review is a **floor**, not a ceiling. Agy to clean, then
   Codex on the stabilized head; stop when a round from the *other* family comes back clean
+
+## Cross-review record (8 rounds, alternating families)
+
+Cross-family review is a **floor**, and this sprint is the sharpest evidence for it yet: every
+round found real defects in the *previous* round's fix, and the families kept catching each other's
+misses. The LEARNINGS entry about concurrency work ("most late findings are bugs in your own
+previous round's fix") generalises to credential work without modification.
+
+| # | Reviewer | Blocking | Should-fix | The one worth remembering |
+|---|---|---|---|---|
+| 1 | Codex | 1 | 2 | the audit row could not name the credential its own comment promised |
+| 2 | Agy | 1 | 1 | a task counted as agent-resolved forever, once it ever was |
+| 3 | Codex | 1 | 1 | a claim on a claimed task got a token it could never spend |
+| 4 | Agy | 1 | 1 | the round-3 credential binding **failed OPEN** on a missing key |
+| 5 | Codex | 1 | 1 | the wrong key **burned** the owner's confirmation — a DoS worse than the bug it fixed |
+| 6 | Agy | 1 | 1 | a stringified expiry silently minted an **unexpiring** write credential |
+| 7 | Codex | 1 | 2 | the UUID tie-break ordered nothing (random UUIDs are not temporal) |
+| 8 | Agy (scoped) | **0** | 1 | — clean on the security surface; the preview understated its own outcome |
+
+**The recurring defect, three times in one sprint:** a comment asserting a property the code does
+not provide — the audit's credential id, "last write wins" with no ordering, and a UUID tie-break
+that does not tie-break. Each was found by a reviewer, never by the author. This repo already had
+the LEARNINGS entry ("prose in a diff reads as evidence") and it still happened three times, which
+suggests the rule needs a mechanical check rather than another restatement.
+
+## Known limitations (recorded, not hidden)
+
+**1. The transition and its audit row are not atomic.** Reported as Blocking in round 7 and
+triaged rather than fixed. `recordAudit` is best-effort *by design* and has been since
+multi-tenant-activation — an audit write must never fail the action it describes. Making them
+atomic means moving the audit into `transition_task`, which the **dashboard** also uses: a redesign
+of shared lifecycle infrastructure to change a trade made deliberately elsewhere.
+
+What is genuinely new is that the maturity score now reads that trail, so a dropped row moves a
+published number. It moves it **down** — a missing row means fewer agent-resolved tasks counted,
+never more. For a metric whose purpose is refusing to over-claim, that is the safe direction. If
+the trail ever needs to be a ledger, that is its own story with its own review.
+
+**2. `requireString` throws on a non-string argument** (round 2, Agy). Real: a Server Action is a
+public HTTP surface, and a non-string yields a 500 rather than a clean `{ ok: false }`. Not fixed
+here because it is the established pattern in **six** action files, and changing one creates
+exactly the latent inconsistency LEARNINGS warns about. It throws before any auth or mutation, so
+nothing leaks and nothing half-applies. Worth its own change.
+
+**3. The fail-closed credential check has no test that can reach it** (round 4). The route cannot
+produce a null key, so no HTTP spec exercises it; the protection is the **required parameter** —
+i.e. the compiler, not a test. Stated because "mutation check passed" would have been false.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 _Written at sprint close (real URLs, one action + one expected result per step)._

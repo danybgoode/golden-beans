@@ -47,10 +47,7 @@ test('a CLAIM is not a resolution', () => {
 
 test('THE REGRESSION TEST: a task later DISMISSED stops counting', () => {
   // Oldest-first. The old implementation skipped the dismissal and kept the resolve forever.
-  const c = countAgentResolved(
-    [row(), row({ toStatus: 'dismissed', evidencePointer: null })],
-    isResolvable
-  )
+  const c = countAgentResolved([row(), row({ toStatus: 'dismissed', evidencePointer: null })], isResolvable)
   assert.equal(c.agentResolvedTotal, 0)
   assert.equal(c.agentResolvedWithEvidence, 0)
 })

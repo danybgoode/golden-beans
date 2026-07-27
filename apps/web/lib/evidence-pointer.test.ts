@@ -12,11 +12,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  classifyEvidencePointer,
-  describeEvidence,
-  MAX_EVIDENCE_POINTER_LENGTH,
-} from './evidence-pointer.ts'
+import { classifyEvidencePointer, describeEvidence, MAX_EVIDENCE_POINTER_LENGTH } from './evidence-pointer.ts'
 
 // ── The distinction the whole module exists for ────────────────────────────────────────────────
 
@@ -144,9 +140,7 @@ test('describeEvidence does NOT say "without evidence" when there is evidence', 
 
 test('every kind has a distinct, non-empty description', () => {
   const seen = new Set(
-    ['3b76d48', 'https://example.com/x', 'done', ''].map((p) =>
-      describeEvidence(classifyEvidencePointer(p))
-    )
+    ['3b76d48', 'https://example.com/x', 'done', ''].map((p) => describeEvidence(classifyEvidencePointer(p)))
   )
   assert.equal(seen.size, 4)
   for (const s of seen) assert.ok(s.length > 0)
