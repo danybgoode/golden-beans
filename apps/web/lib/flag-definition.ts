@@ -8,9 +8,4 @@ export {
   parseFlagDefinition,
   validateFlagKey,
 } from '@golden-beans/sdk'
-export type {
-  FlagDefinition,
-  FlagDefinitionResult,
-  FlagEnvironment,
-  FlagValueType,
-} from '@golden-beans/sdk'
+export type { FlagDefinition, FlagDefinitionResult, FlagEnvironment, FlagValueType } from '@golden-beans/sdk'

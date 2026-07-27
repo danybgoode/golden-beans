@@ -13,7 +13,10 @@ const definition: FlagDefinition = {
   valueType: 'boolean',
   description: 'Disposable flag-serving integration fixture.',
   defaultVariantKey: 'off',
-  variants: [{ key: 'off', value: false }, { key: 'on', value: true }],
+  variants: [
+    { key: 'off', value: false },
+    { key: 'on', value: true },
+  ],
   rules: [{ priority: 1, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' }],
   metadata: { criticality: 'low' },
 }
@@ -22,7 +25,10 @@ const experimentDefinition = {
   hypothesis: 'A compatible immutable flag version supports a governed experiment.',
   assignmentEntityType: 'merchant',
   eligibility: { description: 'All disposable integration fixtures.' },
-  variants: [{ key: 'off', weight: 1 }, { key: 'on', weight: 1 }],
+  variants: [
+    { key: 'off', weight: 1 },
+    { key: 'on', weight: 1 },
+  ],
   controlVariantKey: 'off',
   primaryMetric: { event: 'flag_binding_fixture_completed', direction: 'increase' as const },
   guardrailMetrics: [],
@@ -55,18 +61,29 @@ async function fixtureUser(client: SupabaseClient, label: string): Promise<strin
 async function fixtureProject(client: SupabaseClient, userId: string, label: string): Promise<string> {
   const { data, error } = await client
     .from('projects')
-    .insert({ slug: `flag-serving-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, api_key_hash: `h-${crypto.randomUUID()}` })
+    .insert({
+      slug: `flag-serving-${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      api_key_hash: `h-${crypto.randomUUID()}`,
+    })
     .select('id')
     .single()
   if (error || !data) throw new Error(`could not create flag fixture project: ${error?.message}`)
   const projectId = data.id as string
   projectIds.push(projectId)
-  const membership = await client.from('project_members').insert({ project_id: projectId, user_id: userId, role: 'owner' })
+  const membership = await client
+    .from('project_members')
+    .insert({ project_id: projectId, user_id: userId, role: 'owner' })
   if (membership.error) throw new Error(`could not make flag fixture owner: ${membership.error.message}`)
   return projectId
 }
 
-async function createVersion(client: SupabaseClient, projectId: string, userId: string, key: string, input: FlagDefinition = definition) {
+async function createVersion(
+  client: SupabaseClient,
+  projectId: string,
+  userId: string,
+  key: string,
+  input: FlagDefinition = definition
+) {
   const { data, error } = await client.rpc('create_flag_definition_version', {
     p_project_id: projectId,
     p_flag_key: key,
@@ -95,8 +112,13 @@ test.afterAll(async () => {
   for (const userId of userIds) await client.auth.admin.deleteUser(userId)
 })
 
-test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot cross project or scope', async ({ request }) => {
-  test.skip(process.env.FLAG_SERVING_ENABLED !== 'true', 'enabled snapshot assertions run only in the owned enabled-gate pass')
+test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot cross project or scope', async ({
+  request,
+}) => {
+  test.skip(
+    process.env.FLAG_SERVING_ENABLED !== 'true',
+    'enabled snapshot assertions run only in the owned enabled-gate pass'
+  )
   const client = db()
   const ownerA = await fixtureUser(client, 'a')
   const ownerB = await fixtureUser(client, 'b')
@@ -155,53 +177,109 @@ test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot
   // A different project's version cannot be used as A's activation pointer, and the stale expected
   // revision cannot win after A has moved once.
   const foreign = await client.rpc('set_flag_activation', {
-    p_project_id: projectA, p_environment: 'production', p_flag_id: aV1.flag_id,
-    p_version_id: bV1.version_id, p_expected_snapshot_version: 1, p_reason: 'cross-project attempt', p_actor_user_id: ownerA,
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_flag_id: aV1.flag_id,
+    p_version_id: bV1.version_id,
+    p_expected_snapshot_version: 1,
+    p_reason: 'cross-project attempt',
+    p_actor_user_id: ownerA,
   })
   expect(foreign.error).toBeNull()
   expect(foreign.data).toEqual([])
-  const aV2 = await createVersion(client, projectA, ownerA, 'checkout.fixture', { ...definition, description: 'Second immutable fixture version.' })
-  const stale = await client.rpc('set_flag_activation', {
-    p_project_id: projectA, p_environment: 'production', p_flag_id: aV1.flag_id,
-    p_version_id: aV2.version_id, p_expected_snapshot_version: 0, p_reason: 'stale attempt', p_actor_user_id: ownerA,
+  const aV2 = await createVersion(client, projectA, ownerA, 'checkout.fixture', {
+    ...definition,
+    description: 'Second immutable fixture version.',
   })
-  expect(stale.error?.code).toBe('40001')
+  const stale = await client.rpc('set_flag_activation', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_flag_id: aV1.flag_id,
+    p_version_id: aV2.version_id,
+    p_expected_snapshot_version: 0,
+    p_reason: 'stale attempt',
+    p_actor_user_id: ownerA,
+  })
+  // A stale revision is a normal application conflict. It must not use SQLSTATE 40001:
+  // PostgREST treats the retryable-transaction class specially and can hold the request open.
+  expect(stale.error?.code).toBe('P0001')
   const moved = await client.rpc('set_flag_activation', {
-    p_project_id: projectA, p_environment: 'production', p_flag_id: aV1.flag_id,
-    p_version_id: aV2.version_id, p_expected_snapshot_version: 1, p_reason: 'fixture version upgrade', p_actor_user_id: ownerA,
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_flag_id: aV1.flag_id,
+    p_version_id: aV2.version_id,
+    p_expected_snapshot_version: 1,
+    p_reason: 'fixture version upgrade',
+    p_actor_user_id: ownerA,
   })
   expect(moved.data?.[0]).toEqual({ snapshot_version: 2, changed: true })
 
-  const second = await request.get('/api/v1/flags/snapshot', { headers: { Authorization: `Bearer ${readKey}` } })
+  const second = await request.get('/api/v1/flags/snapshot', {
+    headers: { Authorization: `Bearer ${readKey}` },
+  })
   expect(second.headers().etag).toBe('"gbfs-2"')
   expect((await second.json()).flags[0].definitionVersion).toBe(2)
 
   const ingestKey = `gb_key_${crypto.randomUUID().replaceAll('-', '')}`
-  const inserted = await client.from('api_keys').insert({ project_id: projectA, key_hash: hashCredential(ingestKey), label: 'fixture ingest scope', scope: 'ingest' })
+  const inserted = await client.from('api_keys').insert({
+    project_id: projectA,
+    key_hash: hashCredential(ingestKey),
+    label: 'fixture ingest scope',
+    scope: 'ingest',
+  })
   expect(inserted.error).toBeNull()
-  const wrongScope = await request.get('/api/v1/flags/snapshot', { headers: { Authorization: `Bearer ${ingestKey}` } })
-  const unknown = await request.get('/api/v1/flags/snapshot', { headers: { Authorization: 'Bearer definitely-not-a-real-key' } })
+  const wrongScope = await request.get('/api/v1/flags/snapshot', {
+    headers: { Authorization: `Bearer ${ingestKey}` },
+  })
+  const unknown = await request.get('/api/v1/flags/snapshot', {
+    headers: { Authorization: 'Bearer definitely-not-a-real-key' },
+  })
   expect(wrongScope.status()).toBe(401)
   expect(await wrongScope.json()).toEqual(await unknown.json())
 
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
   try {
-    await expect(pg.query("UPDATE public.flag_definition_versions SET definition = jsonb_set(definition, '{description}', '\"rewritten\"'::jsonb) WHERE id = $1", [aV2.version_id])).rejects.toMatchObject({ code: '55000' })
-    await expect(pg.query('DELETE FROM public.flag_definition_versions WHERE id = $1', [aV2.version_id])).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      pg.query(
+        "UPDATE public.flag_definition_versions SET definition = jsonb_set(definition, '{description}', '\"rewritten\"'::jsonb) WHERE id = $1",
+        [aV2.version_id]
+      )
+    ).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      pg.query('DELETE FROM public.flag_definition_versions WHERE id = $1', [aV2.version_id])
+    ).rejects.toMatchObject({ code: '55000' })
   } finally {
     await pg.end()
   }
 
-  const audit = await client.from('flag_lifecycle_audit').select('action,old_version_id,new_version_id,actor_user_id,reason').eq('project_id', projectA).order('created_at')
+  const audit = await client
+    .from('flag_lifecycle_audit')
+    .select('action,old_version_id,new_version_id,actor_user_id,reason')
+    .eq('project_id', projectA)
+    .order('created_at')
   expect(audit.error).toBeNull()
-  expect(audit.data).toEqual(expect.arrayContaining([
-    expect.objectContaining({ action: 'activated', old_version_id: aV1.version_id, new_version_id: aV2.version_id, actor_user_id: ownerA, reason: 'fixture version upgrade' }),
-  ]))
+  expect(audit.data).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        action: 'activated',
+        old_version_id: aV1.version_id,
+        new_version_id: aV2.version_id,
+        actor_user_id: ownerA,
+        reason: 'fixture version upgrade',
+      }),
+    ])
+  )
 
-  const revoked = await client.rpc('revoke_flag_read_key', { p_project_id: projectA, p_key_id: keyId, p_actor_user_id: ownerA })
+  const revoked = await client.rpc('revoke_flag_read_key', {
+    p_project_id: projectA,
+    p_key_id: keyId,
+    p_actor_user_id: ownerA,
+  })
   expect(revoked.data).toBe(true)
-  const afterRevoke = await request.get('/api/v1/flags/snapshot', { headers: { Authorization: `Bearer ${readKey}` } })
+  const afterRevoke = await request.get('/api/v1/flags/snapshot', {
+    headers: { Authorization: `Bearer ${readKey}` },
+  })
   expect(afterRevoke.status()).toBe(401)
 })
 
@@ -216,7 +294,10 @@ test('an experiment binds one exact compatible same-project flag version with re
   const foreign = await createVersion(client, projectB, ownerB, 'bound.fixture')
   const incompatible = await createVersion(client, projectA, ownerA, 'incompatible.fixture', {
     ...definition,
-    variants: [{ key: 'off', value: false }, { key: 'other', value: true }],
+    variants: [
+      { key: 'off', value: false },
+      { key: 'other', value: true },
+    ],
     defaultVariantKey: 'off',
     rules: [],
   })
@@ -230,14 +311,16 @@ test('an experiment binds one exact compatible same-project flag version with re
     p_actor_user_id: ownerA,
   })
   expect(bound.error).toBeNull()
-  expect(bound.data?.[0]).toEqual(expect.objectContaining({
-    project_id: projectA,
-    experiment_id: experiment.experiment_id,
-    experiment_version_id: experiment.version_id,
-    flag_id: compatible.flag_id,
-    flag_version_id: compatible.version_id,
-    created: true,
-  }))
+  expect(bound.data?.[0]).toEqual(
+    expect.objectContaining({
+      project_id: projectA,
+      experiment_id: experiment.experiment_id,
+      experiment_version_id: experiment.version_id,
+      flag_id: compatible.flag_id,
+      flag_version_id: compatible.version_id,
+      created: true,
+    })
+  )
 
   const retry = await client.rpc('bind_experiment_flag_version', {
     p_project_id: projectA,
@@ -275,14 +358,15 @@ test('an experiment binds one exact compatible same-project flag version with re
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
   try {
-    await expect(pg.query(
-      'UPDATE public.experiment_flag_version_bindings SET created_by = $2 WHERE id = $1',
-      [bindingId, ownerB],
-    )).rejects.toMatchObject({ code: '55000' })
-    await expect(pg.query(
-      'DELETE FROM public.experiment_flag_version_bindings WHERE id = $1',
-      [bindingId],
-    )).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      pg.query('UPDATE public.experiment_flag_version_bindings SET created_by = $2 WHERE id = $1', [
+        bindingId,
+        ownerB,
+      ])
+    ).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      pg.query('DELETE FROM public.experiment_flag_version_bindings WHERE id = $1', [bindingId])
+    ).rejects.toMatchObject({ code: '55000' })
   } finally {
     await pg.end()
   }

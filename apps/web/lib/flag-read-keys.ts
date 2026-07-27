@@ -38,7 +38,11 @@ export async function mintFlagReadKey(input: {
   return { ok: true, id: row.id, plaintext }
 }
 
-export async function revokeFlagReadKey(projectId: string, keyId: string, actorUserId: string): Promise<boolean> {
+export async function revokeFlagReadKey(
+  projectId: string,
+  keyId: string,
+  actorUserId: string
+): Promise<boolean> {
   const { data, error } = await getSupabaseServiceClient().rpc('revoke_flag_read_key', {
     p_project_id: projectId,
     p_key_id: keyId,
@@ -60,14 +64,21 @@ export async function listFlagReadKeys(projectId: string): Promise<FlagReadKeyRo
     .order('created_at', { ascending: false })
   if (error) throw new Error('Could not load flag read keys')
   return (data ?? []).flatMap((row) => {
-    if (row.flag_environment !== 'development' && row.flag_environment !== 'preview' && row.flag_environment !== 'production') return []
-    return [{
-      id: row.id as string,
-      label: row.label as string,
-      environment: row.flag_environment,
-      createdAt: row.created_at as string,
-      expiresAt: (row.expires_at as string | null) ?? null,
-      revokedAt: (row.revoked_at as string | null) ?? null,
-    }]
+    if (
+      row.flag_environment !== 'development' &&
+      row.flag_environment !== 'preview' &&
+      row.flag_environment !== 'production'
+    )
+      return []
+    return [
+      {
+        id: row.id as string,
+        label: row.label as string,
+        environment: row.flag_environment,
+        createdAt: row.created_at as string,
+        expiresAt: (row.expires_at as string | null) ?? null,
+        revokedAt: (row.revoked_at as string | null) ?? null,
+      },
+    ]
   })
 }

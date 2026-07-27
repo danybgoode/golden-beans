@@ -23,7 +23,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Could not load flag snapshot' }, { status: 500 })
   }
   const row = data?.[0] as { environment?: string; snapshot_version?: number; flags?: unknown } | undefined
-  if (!row || typeof row.environment !== 'string' || typeof row.snapshot_version !== 'number' || !Array.isArray(row.flags)) {
+  if (
+    !row ||
+    typeof row.environment !== 'string' ||
+    typeof row.snapshot_version !== 'number' ||
+    !Array.isArray(row.flags)
+  ) {
     return unauthorized()
   }
 
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest) {
       snapshotVersion: row.snapshot_version,
       flags: row.flags,
     },
-    { headers: snapshotHeaders(etag) },
+    { headers: snapshotHeaders(etag) }
   )
 }
 
@@ -53,5 +58,8 @@ function snapshotHeaders(etag: string): HeadersInit {
 
 function ifNoneMatchIncludes(header: string | null, etag: string): boolean {
   if (!header) return false
-  return header.split(',').map((value) => value.trim()).some((value) => value === etag || value === '*')
+  return header
+    .split(',')
+    .map((value) => value.trim())
+    .some((value) => value === etag || value === '*')
 }

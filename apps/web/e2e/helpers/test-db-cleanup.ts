@@ -5,12 +5,12 @@ const LOCAL_SUPABASE_API_PORT = '54321'
 const LOCAL_SUPABASE_DB_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 export function requireTestDatabaseUrl(
-  environment: Record<string, string | undefined> = process.env,
+  environment: Record<string, string | undefined> = process.env
 ): string {
   const url = environment.SUPABASE_DB_URL
   if (!url) {
     throw new Error(
-      'SUPABASE_DB_URL must be set for database-backed specs (export DB_URL from `supabase status -o env`)',
+      'SUPABASE_DB_URL must be set for database-backed specs (export DB_URL from `supabase status -o env`)'
     )
   }
 
@@ -33,7 +33,7 @@ export function requireTestDatabaseUrl(
     // cannot override the actual migration-owner destination.
     // Never echo the supplied connection string: it normally contains the database password.
     throw new Error(
-      `SUPABASE_DB_URL must target local Supabase on loopback port ${LOCAL_SUPABASE_DB_PORT} without connection options`,
+      `SUPABASE_DB_URL must target local Supabase on loopback port ${LOCAL_SUPABASE_DB_PORT} without connection options`
     )
   }
 
@@ -41,7 +41,7 @@ export function requireTestDatabaseUrl(
 }
 
 export function requireLocalSupabaseApiUrl(
-  environment: Record<string, string | undefined> = process.env,
+  environment: Record<string, string | undefined> = process.env
 ): string {
   const url = environment.SUPABASE_URL
   if (!url) {
@@ -66,7 +66,7 @@ export function requireLocalSupabaseApiUrl(
     parsed.hash !== ''
   ) {
     throw new Error(
-      `SUPABASE_URL must target the local Supabase API on loopback port ${LOCAL_SUPABASE_API_PORT}`,
+      `SUPABASE_URL must target the local Supabase API on loopback port ${LOCAL_SUPABASE_API_PORT}`
     )
   }
 
@@ -83,10 +83,9 @@ export async function cleanupJourneyProjects(projectIds: string[]): Promise<void
   await client.connect()
   try {
     await client.query('BEGIN')
-    await client.query(
-      'DELETE FROM public.journey_definition_audit WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
-    )
+    await client.query('DELETE FROM public.journey_definition_audit WHERE project_id = ANY($1::uuid[])', [
+      projectIds,
+    ])
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
     await client.query('COMMIT')
   } catch (error) {
@@ -109,17 +108,15 @@ export async function cleanupExperimentProjects(projectIds: string[]): Promise<v
     await client.query('BEGIN')
     await client.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
-    await client.query(
-      'DELETE FROM public.experiment_decision_records WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
-    )
-    await client.query(
-      'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
-    )
+    await client.query('DELETE FROM public.experiment_decision_records WHERE project_id = ANY($1::uuid[])', [
+      projectIds,
+    ])
+    await client.query('DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [
+      projectIds,
+    ])
     await client.query(
       'DELETE FROM public.experiment_flag_binding_audit WHERE project_id = ANY($1::uuid[])',
-      [projectIds],
+      [projectIds]
     )
     await client.query('COMMIT')
   } catch (error) {
@@ -139,8 +136,13 @@ export async function cleanupFlagProjects(projectIds: string[]): Promise<void> {
     await client.query('BEGIN')
     await client.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
-    await client.query('DELETE FROM public.flag_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [projectIds])
-    await client.query('DELETE FROM public.experiment_flag_binding_audit WHERE project_id = ANY($1::uuid[])', [projectIds])
+    await client.query('DELETE FROM public.flag_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [
+      projectIds,
+    ])
+    await client.query(
+      'DELETE FROM public.experiment_flag_binding_audit WHERE project_id = ANY($1::uuid[])',
+      [projectIds]
+    )
     await client.query('COMMIT')
   } catch (error) {
     await client.query('ROLLBACK')

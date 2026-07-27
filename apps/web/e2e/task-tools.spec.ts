@@ -100,7 +100,12 @@ async function waitForTasks(db: SupabaseClient, projectId: string, timeoutMs = 1
   return rows
 }
 
-async function waitForOpenedTaskEvent(db: SupabaseClient, projectId: string, taskId: string, timeoutMs = 10_000) {
+async function waitForOpenedTaskEvent(
+  db: SupabaseClient,
+  projectId: string,
+  taskId: string,
+  timeoutMs = 10_000
+) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const { data } = await db

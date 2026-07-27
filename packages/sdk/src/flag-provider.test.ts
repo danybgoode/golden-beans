@@ -5,7 +5,11 @@ import { test } from 'node:test'
 // SDK source intentionally uses extensionless imports for the bundled package. Node's native
 // TypeScript loader requires the extension, so resolve only this test's two local SDK seams while
 // executing the unmodified production source.
-type ResolveHook = (specifier: string, context: unknown, nextResolve: (specifier: string, context: unknown) => unknown) => unknown
+type ResolveHook = (
+  specifier: string,
+  context: unknown,
+  nextResolve: (specifier: string, context: unknown) => unknown
+) => unknown
 type HookRegistrar = (hooks: { resolve: ResolveHook }) => void
 const registerHooks = (Module as unknown as { registerHooks?: HookRegistrar }).registerHooks
 if (!registerHooks) throw new Error('Native module hooks are required to test the SDK source.')
@@ -104,7 +108,12 @@ test('loads a typed snapshot once and evaluates synchronously without exposing t
   assert.equal((await provider.initialize()).ok, true)
   assert.equal(calls.length, 1)
   assert.equal(calls[0].input, 'https://golden.example/api/v1/flags/snapshot')
-  assert.equal(calls[0].init?.headers instanceof Headers ? calls[0].init.headers.get('Authorization') : (calls[0].init?.headers as Record<string, string>).Authorization, 'Bearer read-key-must-not-appear-in-errors')
+  assert.equal(
+    calls[0].init?.headers instanceof Headers
+      ? calls[0].init.headers.get('Authorization')
+      : (calls[0].init?.headers as Record<string, string>).Authorization,
+    'Bearer read-key-must-not-appear-in-errors'
+  )
 
   assert.deepEqual(provider.resolveBooleanEvaluation('checkout.enabled', false, { plan: 'pro' }), {
     value: true,
@@ -115,7 +124,9 @@ test('loads a typed snapshot once and evaluates synchronously without exposing t
   })
   assert.equal(provider.resolveStringEvaluation('notice.copy', 'safe').value, 'Golden copy')
   assert.equal(provider.resolveNumberEvaluation('retries.maximum', 0).value, 3)
-  assert.deepEqual(provider.resolveObjectEvaluation('layout.config', { compact: false }).value, { compact: true })
+  assert.deepEqual(provider.resolveObjectEvaluation('layout.config', { compact: false }).value, {
+    compact: true,
+  })
   assert.deepEqual(provider.resolveNumberEvaluation('notice.copy', 7), {
     value: 7,
     reason: 'DEFAULT',
@@ -137,7 +148,9 @@ test('deduplicates concurrent refreshes and accepts a matching ETag 304 as a fre
       calls += 1
       lastInit = init
       if (calls === 1) return new Response(JSON.stringify(snapshot()), { headers: { ETag: '"v1"' } })
-      await new Promise<void>((resolve) => { release = resolve })
+      await new Promise<void>((resolve) => {
+        release = resolve
+      })
       return new Response(null, { status: 304 })
     },
   })
@@ -150,7 +163,12 @@ test('deduplicates concurrent refreshes and accepts a matching ETag 304 as a fre
   assert.equal(calls, 2)
   release?.()
   assert.deepEqual(await first, { ok: true, changed: false, notModified: true, snapshotVersion: 1 })
-  assert.equal(lastInit?.headers instanceof Headers ? lastInit.headers.get('If-None-Match') : (lastInit?.headers as Record<string, string>)['If-None-Match'], '"v1"')
+  assert.equal(
+    lastInit?.headers instanceof Headers
+      ? lastInit.headers.get('If-None-Match')
+      : (lastInit?.headers as Record<string, string>)['If-None-Match'],
+    '"v1"'
+  )
   assert.equal(provider.getStatus().state, 'READY')
   provider.shutdown()
 })
@@ -158,7 +176,14 @@ test('deduplicates concurrent refreshes and accepts a matching ETag 304 as a fre
 test('rejects malformed or environment-mismatched updates while retaining the last known good snapshot', async () => {
   const replies = [
     new Response(JSON.stringify(snapshot(1))),
-    new Response(JSON.stringify({ contractVersion: 1, environment: 'production', snapshotVersion: 2, flags: [{ key: 'broken' }] })),
+    new Response(
+      JSON.stringify({
+        contractVersion: 1,
+        environment: 'production',
+        snapshotVersion: 2,
+        flags: [{ key: 'broken' }],
+      })
+    ),
     new Response(JSON.stringify(snapshot(3, 'preview'))),
     new Response(JSON.stringify(snapshot(0))),
   ]
@@ -170,11 +195,23 @@ test('rejects malformed or environment-mismatched updates while retaining the la
   })
 
   await provider.initialize()
-  assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'PARSE_ERROR', errorMessage: 'Flag snapshot was rejected.' })
+  assert.deepEqual(await provider.refresh(), {
+    ok: false,
+    errorCode: 'PARSE_ERROR',
+    errorMessage: 'Flag snapshot was rejected.',
+  })
   assert.equal(provider.resolveBooleanEvaluation('checkout.enabled', false, { plan: 'pro' }).value, true)
-  assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'PARSE_ERROR', errorMessage: 'Flag snapshot was rejected.' })
+  assert.deepEqual(await provider.refresh(), {
+    ok: false,
+    errorCode: 'PARSE_ERROR',
+    errorMessage: 'Flag snapshot was rejected.',
+  })
   assert.equal(provider.getSnapshot()?.snapshotVersion, 1)
-  assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'PARSE_ERROR', errorMessage: 'Flag snapshot was rejected.' })
+  assert.deepEqual(await provider.refresh(), {
+    ok: false,
+    errorCode: 'PARSE_ERROR',
+    errorMessage: 'Flag snapshot was rejected.',
+  })
   assert.equal(provider.getSnapshot()?.snapshotVersion, 1)
   provider.shutdown()
 })
@@ -207,11 +244,19 @@ test('times out, honors the stale bound, and makes shutdown final without throwi
     errorCode: 'PROVIDER_NOT_READY',
     errorMessage: 'Flag snapshot is stale.',
   })
-  assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'GENERAL', errorMessage: 'Flag snapshot refresh failed.' })
+  assert.deepEqual(await provider.refresh(), {
+    ok: false,
+    errorCode: 'GENERAL',
+    errorMessage: 'Flag snapshot refresh failed.',
+  })
   // The timed-out request rejects after its bounded caller has moved on. Node's test runner would
   // fail this test on an unhandled rejection if the provider did not retain a rejection handler.
   await new Promise((resolve) => setTimeout(resolve, 10))
   provider.shutdown()
-  assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'PROVIDER_FATAL', errorMessage: 'Flag provider has been shut down.' })
+  assert.deepEqual(await provider.refresh(), {
+    ok: false,
+    errorCode: 'PROVIDER_FATAL',
+    errorMessage: 'Flag provider has been shut down.',
+  })
   assert.equal(provider.resolveBooleanEvaluation('checkout.enabled', true).value, true)
 })

@@ -17,16 +17,23 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
     getFlagRegistryView(membership.projectId),
     canManage ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
   ])
-  return <main>
-    <h1>Feature flags — {projectSlug}</h1>
-    <p><a href="/app">← Your projects</a></p>
-    <p>Definitions, immutable versions and their audit remain visible while flag serving is dark. Activating or deactivating a flag changes one environment snapshot with optimistic revision protection.</p>
-    <FlagManager
-      slug={projectSlug}
-      {...registry}
-      keys={keys}
-      canManage={canManage}
-      servingEnabled={isFlagServingEnabled()}
-    />
-  </main>
+  return (
+    <main>
+      <h1>Feature flags — {projectSlug}</h1>
+      <p>
+        <a href="/app">← Your projects</a>
+      </p>
+      <p>
+        Definitions, immutable versions and their audit remain visible while flag serving is dark. Activating
+        or deactivating a flag changes one environment snapshot with optimistic revision protection.
+      </p>
+      <FlagManager
+        slug={projectSlug}
+        {...registry}
+        keys={keys}
+        canManage={canManage}
+        servingEnabled={isFlagServingEnabled()}
+      />
+    </main>
+  )
 }

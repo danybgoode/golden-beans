@@ -38,7 +38,11 @@ export type FlagProviderResolutionDetails<T> = Omit<FlagResolutionDetails<T>, 'e
 
 export type FlagProviderRefreshResult =
   | { ok: true; changed: boolean; notModified: boolean; snapshotVersion: number }
-  | { ok: false; errorCode: 'PARSE_ERROR' | 'PROVIDER_NOT_READY' | 'GENERAL' | 'PROVIDER_FATAL'; errorMessage: string }
+  | {
+      ok: false
+      errorCode: 'PARSE_ERROR' | 'PROVIDER_NOT_READY' | 'GENERAL' | 'PROVIDER_FATAL'
+      errorMessage: string
+    }
 
 export type FlagProviderStatus = {
   state: 'NOT_READY' | 'READY' | 'STALE' | 'SHUTDOWN'
@@ -82,22 +86,22 @@ export interface FlagProvider {
   resolveBooleanEvaluation(
     flagKey: string,
     defaultValue: boolean,
-    context?: FlagEvaluationContext,
+    context?: FlagEvaluationContext
   ): FlagProviderResolutionDetails<boolean>
   resolveStringEvaluation(
     flagKey: string,
     defaultValue: string,
-    context?: FlagEvaluationContext,
+    context?: FlagEvaluationContext
   ): FlagProviderResolutionDetails<string>
   resolveNumberEvaluation(
     flagKey: string,
     defaultValue: number,
-    context?: FlagEvaluationContext,
+    context?: FlagEvaluationContext
   ): FlagProviderResolutionDetails<number>
   resolveObjectEvaluation<T extends JsonValue[] | Record<string, JsonValue>>(
     flagKey: string,
     defaultValue: T,
-    context?: FlagEvaluationContext,
+    context?: FlagEvaluationContext
   ): FlagProviderResolutionDetails<T>
 }
 
@@ -118,7 +122,7 @@ function safeNow(now: () => number): number {
 
 function providerFailure(
   errorCode: Extract<FlagProviderErrorCode, 'PROVIDER_NOT_READY' | 'GENERAL' | 'PROVIDER_FATAL'>,
-  errorMessage: string,
+  errorMessage: string
 ): FlagProviderRefreshResult {
   return { ok: false, errorCode, errorMessage }
 }
@@ -142,9 +146,16 @@ function mapEvaluation<T>(details: FlagResolutionDetails<T>): FlagProviderResolu
  * bounded by `maxStaleMs`, and never throws.
  */
 export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
-  const refreshIntervalMs = boundedMilliseconds(config.refreshIntervalMs, DEFAULT_REFRESH_INTERVAL_MS, MAX_REFRESH_INTERVAL_MS)
+  const refreshIntervalMs = boundedMilliseconds(
+    config.refreshIntervalMs,
+    DEFAULT_REFRESH_INTERVAL_MS,
+    MAX_REFRESH_INTERVAL_MS
+  )
   const maxStaleMs = boundedMilliseconds(config.maxStaleMs, DEFAULT_MAX_STALE_MS, MAX_MAX_STALE_MS)
-  const refreshTimeoutMs = Math.max(1, boundedMilliseconds(config.refreshTimeoutMs, DEFAULT_REFRESH_TIMEOUT_MS, MAX_REFRESH_TIMEOUT_MS))
+  const refreshTimeoutMs = Math.max(
+    1,
+    boundedMilliseconds(config.refreshTimeoutMs, DEFAULT_REFRESH_TIMEOUT_MS, MAX_REFRESH_TIMEOUT_MS)
+  )
   const fetchFn = config.fetchImpl ?? globalThis.fetch
   const now = config.now ?? Date.now
   const flagsByKey = new Map<string, FlagSnapshot['flags'][number]>()
@@ -175,7 +186,12 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
     }, refreshIntervalMs)
     // Do not keep a Node application alive merely because its flag cache exists. Browser timer
     // handles are numbers, so feature-detect rather than importing Node timer types.
-    if (typeof refreshTimer === 'object' && refreshTimer !== null && 'unref' in refreshTimer && typeof refreshTimer.unref === 'function') {
+    if (
+      typeof refreshTimer === 'object' &&
+      refreshTimer !== null &&
+      'unref' in refreshTimer &&
+      typeof refreshTimer.unref === 'function'
+    ) {
       refreshTimer.unref()
     }
   }
@@ -202,19 +218,18 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
       // Keep a rejection handler on the request after the timeout wins. Aborting is advisory:
       // runtimes may reject the detached fetch later, and that must not become an unhandled
       // rejection in a caller that already received its bounded fallback.
-      const request = Promise.resolve().then(() => fetchFn(url, {
+      const request = Promise.resolve().then(() =>
+        fetchFn(url, {
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${config.flagReadKey}`,
             ...(etag ? { 'If-None-Match': etag } : {}),
           },
           signal: controller.signal,
-        }))
+        })
+      )
       void request.catch(() => undefined)
-      const response = await Promise.race([
-        request,
-        timeoutResult,
-      ])
+      const response = await Promise.race([request, timeoutResult])
 
       if (shutDown) return providerFailure('PROVIDER_FATAL', 'Flag provider has been shut down.')
       if (response.status === 304) {
@@ -237,10 +252,9 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
       if (
         !parsed.ok ||
         (config.environment !== undefined && parsed.snapshot.environment !== config.environment) ||
-        (snapshot && (
-          parsed.snapshot.environment !== snapshot.environment ||
-          parsed.snapshot.snapshotVersion < snapshot.snapshotVersion
-        ))
+        (snapshot &&
+          (parsed.snapshot.environment !== snapshot.environment ||
+            parsed.snapshot.snapshotVersion < snapshot.snapshotVersion))
       ) {
         const failure = rejectedSnapshot()
         lastRefreshError = failure
@@ -255,7 +269,10 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
       lastRefreshError = undefined
       return { ok: true, changed: true, notModified: false, snapshotVersion: snapshot.snapshotVersion }
     } catch {
-      const failure = providerFailure(shutDown ? 'PROVIDER_FATAL' : 'GENERAL', shutDown ? 'Flag provider has been shut down.' : 'Flag snapshot refresh failed.')
+      const failure = providerFailure(
+        shutDown ? 'PROVIDER_FATAL' : 'GENERAL',
+        shutDown ? 'Flag provider has been shut down.' : 'Flag snapshot refresh failed.'
+      )
       lastRefreshError = failure
       return failure
     } finally {
@@ -276,20 +293,51 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
 
   function fallback<T>(defaultValue: T): FlagProviderResolutionDetails<T> {
     if (shutDown) {
-      return { value: defaultValue, reason: 'ERROR', flagMetadata: {}, errorCode: 'PROVIDER_FATAL', errorMessage: 'Flag provider has been shut down.' }
+      return {
+        value: defaultValue,
+        reason: 'ERROR',
+        flagMetadata: {},
+        errorCode: 'PROVIDER_FATAL',
+        errorMessage: 'Flag provider has been shut down.',
+      }
     }
     if (snapshot && !isFresh()) {
-      return { value: defaultValue, reason: 'ERROR', flagMetadata: {}, errorCode: 'PROVIDER_NOT_READY', errorMessage: 'Flag snapshot is stale.' }
+      return {
+        value: defaultValue,
+        reason: 'ERROR',
+        flagMetadata: {},
+        errorCode: 'PROVIDER_NOT_READY',
+        errorMessage: 'Flag snapshot is stale.',
+      }
     }
-    return { value: defaultValue, reason: 'ERROR', flagMetadata: {}, errorCode: 'PROVIDER_NOT_READY', errorMessage: 'Flag provider has no fresh snapshot.' }
+    return {
+      value: defaultValue,
+      reason: 'ERROR',
+      flagMetadata: {},
+      errorCode: 'PROVIDER_NOT_READY',
+      errorMessage: 'Flag provider has no fresh snapshot.',
+    }
   }
 
-  function resolve<T>(flagKey: string, defaultValue: T, expectedType: FlagValueType, context?: FlagEvaluationContext): FlagProviderResolutionDetails<T> {
+  function resolve<T>(
+    flagKey: string,
+    defaultValue: T,
+    expectedType: FlagValueType,
+    context?: FlagEvaluationContext
+  ): FlagProviderResolutionDetails<T> {
     try {
       if (!isFresh()) return fallback(defaultValue)
-      return mapEvaluation(evaluateFlag({ flag: flagsByKey.get(flagKey), defaultValue, expectedType, context }))
+      return mapEvaluation(
+        evaluateFlag({ flag: flagsByKey.get(flagKey), defaultValue, expectedType, context })
+      )
     } catch {
-      return { value: defaultValue, reason: 'ERROR', flagMetadata: {}, errorCode: 'GENERAL', errorMessage: 'Flag evaluation failed.' }
+      return {
+        value: defaultValue,
+        reason: 'ERROR',
+        flagMetadata: {},
+        errorCode: 'GENERAL',
+        errorMessage: 'Flag evaluation failed.',
+      }
     }
   }
 
@@ -312,7 +360,15 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
       abortController?.abort()
     },
     getStatus(): FlagProviderStatus {
-      if (shutDown) return { state: 'SHUTDOWN', ...(snapshot ? { snapshotVersion: snapshot.snapshotVersion, environment: snapshot.environment } : {}), ...(acceptedAt !== undefined ? { lastRefreshAt: acceptedAt } : {}), ...(lastRefreshError ? { lastRefreshError } : {}) }
+      if (shutDown)
+        return {
+          state: 'SHUTDOWN',
+          ...(snapshot
+            ? { snapshotVersion: snapshot.snapshotVersion, environment: snapshot.environment }
+            : {}),
+          ...(acceptedAt !== undefined ? { lastRefreshAt: acceptedAt } : {}),
+          ...(lastRefreshError ? { lastRefreshError } : {}),
+        }
       if (!snapshot) return { state: 'NOT_READY', ...(lastRefreshError ? { lastRefreshError } : {}) }
       return {
         state: isFresh() ? 'READY' : 'STALE',
@@ -334,7 +390,11 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
     resolveNumberEvaluation(flagKey, defaultValue, context) {
       return resolve(flagKey, defaultValue, 'number', context)
     },
-    resolveObjectEvaluation<T extends JsonValue[] | Record<string, JsonValue>>(flagKey: string, defaultValue: T, context?: FlagEvaluationContext) {
+    resolveObjectEvaluation<T extends JsonValue[] | Record<string, JsonValue>>(
+      flagKey: string,
+      defaultValue: T,
+      context?: FlagEvaluationContext
+    ) {
       return resolve(flagKey, defaultValue, 'json', context)
     },
   }

@@ -7,7 +7,14 @@
 
 export const FLAG_CONTRACT_VERSION = 1 as const
 export const FLAG_ENVIRONMENTS = ['development', 'preview', 'production'] as const
-export const FLAG_CONTEXT_FIELDS = ['targetingKey', 'source', 'channel', 'campaign', 'plan', 'region'] as const
+export const FLAG_CONTEXT_FIELDS = [
+  'targetingKey',
+  'source',
+  'channel',
+  'campaign',
+  'plan',
+  'region',
+] as const
 
 export const MAX_FLAG_DEFINITION_BYTES = 32 * 1024
 export const MAX_FLAG_KEY_LENGTH = 128
@@ -86,12 +93,8 @@ export type FlagResolutionDetails<T> = {
   flagVersion?: number
   errorCode?: 'FLAG_NOT_FOUND' | 'TYPE_MISMATCH' | 'INVALID_CONTEXT' | 'INVALID_DEFINITION'
 }
-export type FlagDefinitionResult =
-  | { ok: true; definition: FlagDefinition }
-  | { ok: false; errors: string[] }
-export type FlagSnapshotResult =
-  | { ok: true; snapshot: FlagSnapshot }
-  | { ok: false; errors: string[] }
+export type FlagDefinitionResult = { ok: true; definition: FlagDefinition } | { ok: false; errors: string[] }
+export type FlagSnapshotResult = { ok: true; snapshot: FlagSnapshot } | { ok: false; errors: string[] }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -130,7 +133,12 @@ function sameScalar(left: FlagScalar, right: FlagScalar): boolean {
   return typeof left === typeof right && left === right
 }
 
-function rejectUnknownKeys(value: Record<string, unknown>, allowed: readonly string[], path: string, errors: string[]) {
+function rejectUnknownKeys(
+  value: Record<string, unknown>,
+  allowed: readonly string[],
+  path: string,
+  errors: string[]
+) {
   const allowedSet = new Set(allowed)
   for (const key of Object.keys(value)) {
     if (!allowedSet.has(key)) errors.push(`${path}.${key} is not allowed`)
@@ -142,16 +150,23 @@ function validJsonContainer(value: unknown, depth = 0): value is JsonValue {
   if (value === null || typeof value === 'boolean') return true
   if (typeof value === 'string') return validText(value, 4096, false)
   if (typeof value === 'number') return Number.isFinite(value) && Math.abs(value) <= 1_000_000_000_000_000
-  if (Array.isArray(value)) return value.length <= 100 && value.every((item) => validJsonContainer(item, depth + 1))
+  if (Array.isArray(value))
+    return value.length <= 100 && value.every((item) => validJsonContainer(item, depth + 1))
   if (!isRecord(value) || Object.keys(value).length > 100) return false
-  return Object.entries(value).every(([key, item]) => validText(key, 128, false) && validJsonContainer(item, depth + 1))
+  return Object.entries(value).every(
+    ([key, item]) => validText(key, 128, false) && validJsonContainer(item, depth + 1)
+  )
 }
 
 function validValueForType(value: unknown, type: FlagValueType): boolean {
   if (type === 'boolean') return typeof value === 'boolean'
   if (type === 'string') return validText(value, 4096, false)
   if (type === 'number') return typeof value === 'number' && Number.isFinite(value)
-  return (Array.isArray(value) || isRecord(value)) && validJsonContainer(value) && byteLength(value) <= MAX_FLAG_JSON_BYTES
+  return (
+    (Array.isArray(value) || isRecord(value)) &&
+    validJsonContainer(value) &&
+    byteLength(value) <= MAX_FLAG_JSON_BYTES
+  )
 }
 
 export function validateFlagKey(value: unknown): value is string {
@@ -181,12 +196,22 @@ function parseClause(value: unknown, path: string, errors: string[]): FlagClause
   }
   if (value.operator === 'one_of') {
     const values = value.values
-    if ('value' in value || !Array.isArray(values) || values.length < 1 || values.length > 20 || !values.every((item) => validScalar(item))) {
+    if (
+      'value' in value ||
+      !Array.isArray(values) ||
+      values.length < 1 ||
+      values.length > 20 ||
+      !values.every((item) => validScalar(item))
+    ) {
       errors.push(`${path}.one_of needs 1-20 bounded scalar values and no value`)
       return null
     }
     const scalarValues = values as FlagScalar[]
-    if (scalarValues.some((candidate, index) => scalarValues.slice(0, index).some((previous) => sameScalar(previous, candidate)))) {
+    if (
+      scalarValues.some((candidate, index) =>
+        scalarValues.slice(0, index).some((previous) => sameScalar(previous, candidate))
+      )
+    ) {
       errors.push(`${path}.one_of values must be unique`)
       return null
     }
@@ -199,18 +224,34 @@ function parseClause(value: unknown, path: string, errors: string[]): FlagClause
 export function parseFlagDefinition(input: unknown): FlagDefinitionResult {
   const errors: string[] = []
   if (!isRecord(input)) return { ok: false, errors: ['definition must be an object'] }
-  if (byteLength(input) > MAX_FLAG_DEFINITION_BYTES) return { ok: false, errors: ['definition exceeds 32 KiB'] }
+  if (byteLength(input) > MAX_FLAG_DEFINITION_BYTES)
+    return { ok: false, errors: ['definition exceeds 32 KiB'] }
 
-  rejectUnknownKeys(input, ['valueType', 'description', 'defaultVariantKey', 'variants', 'rules', 'metadata'], 'definition', errors)
-  if (input.valueType !== 'boolean' && input.valueType !== 'string' && input.valueType !== 'number' && input.valueType !== 'json') {
+  rejectUnknownKeys(
+    input,
+    ['valueType', 'description', 'defaultVariantKey', 'variants', 'rules', 'metadata'],
+    'definition',
+    errors
+  )
+  if (
+    input.valueType !== 'boolean' &&
+    input.valueType !== 'string' &&
+    input.valueType !== 'number' &&
+    input.valueType !== 'json'
+  ) {
     errors.push('definition.valueType must be boolean, string, number, or json')
   }
   const valueType = input.valueType as FlagValueType
-  if (!validText(input.description, 500)) errors.push('definition.description must be a non-blank string up to 500 characters')
+  if (!validText(input.description, 500))
+    errors.push('definition.description must be a non-blank string up to 500 characters')
 
   const variants: FlagVariant[] = []
   const variantKeys = new Set<string>()
-  if (!Array.isArray(input.variants) || input.variants.length < 1 || input.variants.length > MAX_FLAG_VARIANTS) {
+  if (
+    !Array.isArray(input.variants) ||
+    input.variants.length < 1 ||
+    input.variants.length > MAX_FLAG_VARIANTS
+  ) {
     errors.push(`definition.variants must contain 1-${MAX_FLAG_VARIANTS} variants`)
   } else {
     input.variants.forEach((raw, index) => {
@@ -253,7 +294,12 @@ export function parseFlagDefinition(input: unknown): FlagDefinitionResult {
         return
       }
       rejectUnknownKeys(raw, ['priority', 'clauses', 'rollout', 'variantKey'], path, errors)
-      if (typeof raw.priority !== 'number' || !Number.isInteger(raw.priority) || raw.priority < 0 || raw.priority > 1_000_000) {
+      if (
+        typeof raw.priority !== 'number' ||
+        !Number.isInteger(raw.priority) ||
+        raw.priority < 0 ||
+        raw.priority > 1_000_000
+      ) {
         errors.push(`${path}.priority must be an integer from 0 to 1000000`)
       } else if (priorities.has(raw.priority)) {
         errors.push(`${path}.priority duplicates ${raw.priority}`)
@@ -275,7 +321,12 @@ export function parseFlagDefinition(input: unknown): FlagDefinitionResult {
           errors.push(`${path}.rollout must be an object`)
         } else {
           rejectUnknownKeys(raw.rollout, ['basisPoints'], `${path}.rollout`, errors)
-          if (typeof raw.rollout.basisPoints !== 'number' || !Number.isInteger(raw.rollout.basisPoints) || raw.rollout.basisPoints < 0 || raw.rollout.basisPoints > 10_000) {
+          if (
+            typeof raw.rollout.basisPoints !== 'number' ||
+            !Number.isInteger(raw.rollout.basisPoints) ||
+            raw.rollout.basisPoints < 0 ||
+            raw.rollout.basisPoints > 10_000
+          ) {
             errors.push(`${path}.rollout.basisPoints must be an integer from 0 to 10000`)
           } else {
             rollout = { basisPoints: raw.rollout.basisPoints }
@@ -286,11 +337,22 @@ export function parseFlagDefinition(input: unknown): FlagDefinitionResult {
         errors.push(`${path}.variantKey must name exactly one variant`)
       }
       if (
-        typeof raw.priority === 'number' && Number.isInteger(raw.priority) && raw.priority >= 0 && raw.priority <= 1_000_000 &&
-        Array.isArray(raw.clauses) && raw.clauses.length <= MAX_FLAG_CLAUSES && clauses.length === raw.clauses.length &&
-        validateFlagKey(raw.variantKey) && variantKeys.has(raw.variantKey)
+        typeof raw.priority === 'number' &&
+        Number.isInteger(raw.priority) &&
+        raw.priority >= 0 &&
+        raw.priority <= 1_000_000 &&
+        Array.isArray(raw.clauses) &&
+        raw.clauses.length <= MAX_FLAG_CLAUSES &&
+        clauses.length === raw.clauses.length &&
+        validateFlagKey(raw.variantKey) &&
+        variantKeys.has(raw.variantKey)
       ) {
-        rules.push({ priority: raw.priority, clauses, ...(rollout ? { rollout } : {}), variantKey: raw.variantKey })
+        rules.push({
+          priority: raw.priority,
+          clauses,
+          ...(rollout ? { rollout } : {}),
+          variantKey: raw.variantKey,
+        })
       }
     })
   }
@@ -331,7 +393,11 @@ export function parseFlagSnapshot(input: unknown): FlagSnapshotResult {
   rejectUnknownKeys(input, ['contractVersion', 'environment', 'snapshotVersion', 'flags'], 'snapshot', errors)
   if (input.contractVersion !== FLAG_CONTRACT_VERSION) errors.push('snapshot.contractVersion is unsupported')
   if (!isFlagEnvironment(input.environment)) errors.push('snapshot.environment is invalid')
-  if (typeof input.snapshotVersion !== 'number' || !Number.isSafeInteger(input.snapshotVersion) || input.snapshotVersion < 0) {
+  if (
+    typeof input.snapshotVersion !== 'number' ||
+    !Number.isSafeInteger(input.snapshotVersion) ||
+    input.snapshotVersion < 0
+  ) {
     errors.push('snapshot.snapshotVersion must be a non-negative safe integer')
   }
   const flags: FlagSnapshotFlag[] = []
@@ -353,31 +419,58 @@ export function parseFlagSnapshot(input: unknown): FlagSnapshotResult {
       } else {
         keys.add(rawKey)
       }
-      if (typeof raw.definitionVersion !== 'number' || !Number.isSafeInteger(raw.definitionVersion) || raw.definitionVersion < 1) {
+      if (
+        typeof raw.definitionVersion !== 'number' ||
+        !Number.isSafeInteger(raw.definitionVersion) ||
+        raw.definitionVersion < 1
+      ) {
         errors.push(`${path}.definitionVersion must be a positive safe integer`)
       }
       const checked = parseFlagDefinition(raw.definition)
       if (!checked.ok) errors.push(...checked.errors.map((error) => `${path}.${error}`))
-      if (validKey && checked.ok && typeof raw.definitionVersion === 'number' && Number.isSafeInteger(raw.definitionVersion) && raw.definitionVersion > 0) {
+      if (
+        validKey &&
+        checked.ok &&
+        typeof raw.definitionVersion === 'number' &&
+        Number.isSafeInteger(raw.definitionVersion) &&
+        raw.definitionVersion > 0
+      ) {
         flags.push({ key: rawKey, definitionVersion: raw.definitionVersion, definition: checked.definition })
       }
     })
   }
   if (errors.length > 0) return { ok: false, errors }
-  return { ok: true, snapshot: { contractVersion: FLAG_CONTRACT_VERSION, environment: input.environment as FlagEnvironment, snapshotVersion: input.snapshotVersion as number, flags } }
+  return {
+    ok: true,
+    snapshot: {
+      contractVersion: FLAG_CONTRACT_VERSION,
+      environment: input.environment as FlagEnvironment,
+      snapshotVersion: input.snapshotVersion as number,
+      flags,
+    },
+  }
 }
 
-function matchesRule(rule: FlagRule, flagKey: string, definitionVersion: number, context: FlagEvaluationContext): boolean {
+function matchesRule(
+  rule: FlagRule,
+  flagKey: string,
+  definitionVersion: number,
+  context: FlagEvaluationContext
+): boolean {
   for (const clause of rule.clauses) {
     const actual = context[clause.field]
     if (!validScalar(actual)) return false
     if (clause.operator === 'equals' && !sameScalar(actual, clause.value)) return false
-    if (clause.operator === 'one_of' && !clause.values.some((value) => sameScalar(actual, value))) return false
+    if (clause.operator === 'one_of' && !clause.values.some((value) => sameScalar(actual, value)))
+      return false
   }
   if (!rule.rollout) return true
   const targetingKey = context.targetingKey
   if (typeof targetingKey !== 'string' || !validText(targetingKey, 256)) return false
-  return rolloutFraction(JSON.stringify([targetingKey, flagKey, definitionVersion, rule.priority])) < rule.rollout.basisPoints / 10_000
+  return (
+    rolloutFraction(JSON.stringify([targetingKey, flagKey, definitionVersion, rule.priority])) <
+    rule.rollout.basisPoints / 10_000
+  )
 }
 
 export function evaluateFlag<T>(input: {
@@ -386,7 +479,9 @@ export function evaluateFlag<T>(input: {
   defaultValue: T
   expectedType: FlagValueType
 }): FlagResolutionDetails<T> {
-  const fallback = (errorCode: NonNullable<FlagResolutionDetails<T>['errorCode']>): FlagResolutionDetails<T> => ({
+  const fallback = (
+    errorCode: NonNullable<FlagResolutionDetails<T>['errorCode']>
+  ): FlagResolutionDetails<T> => ({
     value: input.defaultValue,
     reason: 'DEFAULT',
     flagMetadata: {},
@@ -395,14 +490,21 @@ export function evaluateFlag<T>(input: {
   if (!input.flag) return fallback('FLAG_NOT_FOUND')
   if (!validValueForType(input.defaultValue, input.expectedType)) return fallback('TYPE_MISMATCH')
   const checked = parseFlagDefinition(input.flag.definition)
-  if (!checked.ok || checked.definition.valueType !== input.expectedType) return fallback('INVALID_DEFINITION')
+  if (!checked.ok || checked.definition.valueType !== input.expectedType)
+    return fallback('INVALID_DEFINITION')
   const context = input.context ?? {}
-  if (!isRecord(context) || Object.keys(context).some((key) => !(FLAG_CONTEXT_FIELDS as readonly string[]).includes(key)) || Object.values(context).some((value) => !validScalar(value))) {
+  if (
+    !isRecord(context) ||
+    Object.keys(context).some((key) => !(FLAG_CONTEXT_FIELDS as readonly string[]).includes(key)) ||
+    Object.values(context).some((value) => !validScalar(value))
+  ) {
     return fallback('INVALID_CONTEXT')
   }
   const chosen = [...checked.definition.rules]
     .sort((left, right) => left.priority - right.priority)
-    .find((rule) => matchesRule(rule, input.flag!.key, input.flag!.definitionVersion, context as FlagEvaluationContext))
+    .find((rule) =>
+      matchesRule(rule, input.flag!.key, input.flag!.definitionVersion, context as FlagEvaluationContext)
+    )
   const variantKey = chosen?.variantKey ?? checked.definition.defaultVariantKey
   const variant = checked.definition.variants.find((candidate) => candidate.key === variantKey)
   if (!variant || !validValueForType(variant.value, input.expectedType)) return fallback('INVALID_DEFINITION')

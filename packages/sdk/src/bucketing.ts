@@ -34,7 +34,11 @@ export function deterministicFraction(input: string): number {
  * Variants are sorted by key before the cumulative-weight walk so the result never depends on the
  * order the caller happened to pass them in.
  */
-export function resolveVariant(userId: string, experimentKey: string, variants: BucketVariant[]): string | null {
+export function resolveVariant(
+  userId: string,
+  experimentKey: string,
+  variants: BucketVariant[]
+): string | null {
   return resolveVariantForAssignment(`${userId}:${experimentKey}`, variants)
 }
 
@@ -47,11 +51,11 @@ export function resolveGovernedVariant(
   assignmentEntityId: string,
   experimentKey: string,
   definitionVersion: number,
-  variants: BucketVariant[],
+  variants: BucketVariant[]
 ): string | null {
   return resolveVariantForAssignment(
     JSON.stringify([assignmentEntityType, assignmentEntityId, experimentKey, definitionVersion]),
-    variants,
+    variants
   )
 }
 

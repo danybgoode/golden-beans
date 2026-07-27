@@ -21,63 +21,129 @@ function parseRevision(value: unknown): number | null {
 function parseEnvironment(value: unknown): FlagEnvironment | null {
   return value === 'development' || value === 'preview' || value === 'production' ? value : null
 }
-function revalidate(slug: string) { revalidatePath(`/app/flags/${slug}`) }
+function revalidate(slug: string) {
+  revalidatePath(`/app/flags/${slug}`)
+}
 
-export async function createFlagDefinitionVersionAction(slug: unknown, flagKey: unknown, definitionJson: unknown, reason: unknown) {
+export async function createFlagDefinitionVersionAction(
+  slug: unknown,
+  flagKey: unknown,
+  definitionJson: unknown,
+  reason: unknown
+) {
   const safeSlug = requireString(slug, 'project')
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
-  if (!validateFlagKey(flagKey)) return { ok: false as const, error: 'Invalid flag key.' }
+  const safeFlagKey = typeof flagKey === 'string' && validateFlagKey(flagKey) ? flagKey : null
+  if (!safeFlagKey) return { ok: false as const, error: 'Invalid flag key.' }
   const safeReason = parseReason(reason)
   if (!safeReason) return { ok: false as const, error: 'A 1–500 character reason is required.' }
   let rawDefinition: unknown
-  try { rawDefinition = typeof definitionJson === 'string' ? JSON.parse(definitionJson) : definitionJson } catch { return { ok: false as const, error: 'Definition must be valid JSON.' } }
+  try {
+    rawDefinition = typeof definitionJson === 'string' ? JSON.parse(definitionJson) : definitionJson
+  } catch {
+    return { ok: false as const, error: 'Definition must be valid JSON.' }
+  }
   const parsed = parseFlagDefinition(rawDefinition)
   if (!parsed.ok) return { ok: false as const, error: parsed.errors[0] ?? 'Invalid flag definition.' }
-  const result = await createFlagDefinitionVersion({ projectId, flagKey, definition: parsed.definition, reason: safeReason, actorUserId: userId })
+  const result = await createFlagDefinitionVersion({
+    projectId,
+    flagKey: safeFlagKey,
+    definition: parsed.definition,
+    reason: safeReason,
+    actorUserId: userId,
+  })
   if (result.ok) revalidate(safeSlug)
   return result
 }
 
-export async function activateFlagAction(slug: unknown, environment: unknown, flagId: unknown, versionId: unknown, expectedSnapshotVersion: unknown, reason: unknown) {
+export async function activateFlagAction(
+  slug: unknown,
+  environment: unknown,
+  flagId: unknown,
+  versionId: unknown,
+  expectedSnapshotVersion: unknown,
+  reason: unknown
+) {
   // The operational gate is checked first so an OFF deployment cannot perform an activation.
   // Inspection and draft creation deliberately remain available while serving is dark.
-  if (!isFlagServingEnabled()) return { ok: false as const, error: 'Flag serving is unavailable in this deployment.' }
+  if (!isFlagServingEnabled())
+    return { ok: false as const, error: 'Flag serving is unavailable in this deployment.' }
   const safeSlug = requireString(slug, 'project')
   // Resolve ownership before lifecycle payload validation to avoid a foreign-project management oracle.
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeEnvironment = parseEnvironment(environment)
-  if (!safeEnvironment || typeof flagId !== 'string' || typeof versionId !== 'string') return { ok: false as const, error: 'Invalid flag activation command.' }
+  if (!safeEnvironment || typeof flagId !== 'string' || typeof versionId !== 'string')
+    return { ok: false as const, error: 'Invalid flag activation command.' }
   const revision = parseRevision(expectedSnapshotVersion)
   const safeReason = parseReason(reason)
-  if (revision === null || !safeReason) return { ok: false as const, error: 'Invalid flag activation command.' }
-  const result = await setFlagActivation({ projectId, environment: safeEnvironment, flagId, versionId, expectedSnapshotVersion: revision, reason: safeReason, actorUserId: userId })
+  if (revision === null || !safeReason)
+    return { ok: false as const, error: 'Invalid flag activation command.' }
+  const result = await setFlagActivation({
+    projectId,
+    environment: safeEnvironment,
+    flagId,
+    versionId,
+    expectedSnapshotVersion: revision,
+    reason: safeReason,
+    actorUserId: userId,
+  })
   if (result.ok) revalidate(safeSlug)
   return result
 }
 
-export async function deactivateFlagAction(slug: unknown, environment: unknown, flagId: unknown, expectedSnapshotVersion: unknown, reason: unknown) {
-  if (!isFlagServingEnabled()) return { ok: false as const, error: 'Flag serving is unavailable in this deployment.' }
+export async function deactivateFlagAction(
+  slug: unknown,
+  environment: unknown,
+  flagId: unknown,
+  expectedSnapshotVersion: unknown,
+  reason: unknown
+) {
+  if (!isFlagServingEnabled())
+    return { ok: false as const, error: 'Flag serving is unavailable in this deployment.' }
   const safeSlug = requireString(slug, 'project')
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeEnvironment = parseEnvironment(environment)
-  if (!safeEnvironment || typeof flagId !== 'string') return { ok: false as const, error: 'Invalid flag deactivation command.' }
+  if (!safeEnvironment || typeof flagId !== 'string')
+    return { ok: false as const, error: 'Invalid flag deactivation command.' }
   const revision = parseRevision(expectedSnapshotVersion)
   const safeReason = parseReason(reason)
-  if (revision === null || !safeReason) return { ok: false as const, error: 'Invalid flag deactivation command.' }
-  const result = await deactivateFlag({ projectId, environment: safeEnvironment, flagId, expectedSnapshotVersion: revision, reason: safeReason, actorUserId: userId })
+  if (revision === null || !safeReason)
+    return { ok: false as const, error: 'Invalid flag deactivation command.' }
+  const result = await deactivateFlag({
+    projectId,
+    environment: safeEnvironment,
+    flagId,
+    expectedSnapshotVersion: revision,
+    reason: safeReason,
+    actorUserId: userId,
+  })
   if (result.ok) revalidate(safeSlug)
   return result
 }
 
-export async function mintFlagReadKeyAction(slug: unknown, environment: unknown, label: unknown, expiryDays: unknown) {
+export async function mintFlagReadKeyAction(
+  slug: unknown,
+  environment: unknown,
+  label: unknown,
+  expiryDays: unknown
+) {
   const safeSlug = requireString(slug, 'project')
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeEnvironment = parseEnvironment(environment)
-  if (!safeEnvironment || typeof label !== 'string' || label.length > 120) return { ok: false as const, error: 'Invalid flag read key command.' }
-  if (expiryDays !== null && expiryDays !== undefined && typeof expiryDays !== 'number') return { ok: false as const, error: 'Unsupported expiry.' }
+  if (!safeEnvironment || typeof label !== 'string' || label.length > 120)
+    return { ok: false as const, error: 'Invalid flag read key command.' }
+  if (expiryDays !== null && expiryDays !== undefined && typeof expiryDays !== 'number')
+    return { ok: false as const, error: 'Unsupported expiry.' }
   const days = typeof expiryDays === 'number' ? expiryDays : null
-  if (days !== null && ![1, 7, 30, 90].includes(days)) return { ok: false as const, error: 'Unsupported expiry.' }
-  const result = await mintFlagReadKey({ projectId, environment: safeEnvironment, label: label.trim(), expiresAt: days === null ? null : new Date(Date.now() + days * 86_400_000), actorUserId: userId })
+  if (days !== null && ![1, 7, 30, 90].includes(days))
+    return { ok: false as const, error: 'Unsupported expiry.' }
+  const result = await mintFlagReadKey({
+    projectId,
+    environment: safeEnvironment,
+    label: label.trim(),
+    expiresAt: days === null ? null : new Date(Date.now() + days * 86_400_000),
+    actorUserId: userId,
+  })
   if (result.ok) revalidate(safeSlug)
   return result
 }
