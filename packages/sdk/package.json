@@ -1,12 +1,29 @@
 {
   "name": "@golden-beans/sdk",
-  "private": true,
+  "private": false,
   "version": "0.1.0",
-  "description": "Golden Beans Growth Engine — TS SDK (track, trackAdoption, bucket).",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "description": "Golden Beans Growth Engine TypeScript SDK for telemetry, experiments, and local feature-flag evaluation.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "typescript": "^5.5.4"
