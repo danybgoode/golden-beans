@@ -54,6 +54,8 @@ import {
   decideTrivialSkip,
   stripGeneratedFileDiffs,
   shortSha,
+  checkReviewerPairing,
+  reviewersFor,
 } from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -74,7 +76,9 @@ Usage:
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: antigravity (default: antigravity)
+  --agent <name>       reviewer CLI: antigravity | codex (default: antigravity)
+  --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
+                       same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
   --force              proceed even when local HEAD differs from the resolved PR head (auto-resolve only)
   --skip-trivial       skip (exit 0, no comment) when the PR is docs-only or under --min-lines changed lines
@@ -93,6 +97,7 @@ function parseArgs(argv) {
   const out = {
     pr: null,
     agent: 'antigravity',
+    builder: process.env.CROSS_REVIEW_BUILDER || '',
     repo: null,
     force: false,
     dryRun: false,
@@ -110,6 +115,8 @@ function parseArgs(argv) {
     else if (a === '--include-lockfiles') out.includeLockfiles = true;
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
+    else if (a === '--builder') out.builder = need(argv[++i], '--builder');
+    else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
     else if (a.startsWith('--agent=')) out.agent = a.slice('--agent='.length);
     else if (a === '--repo') out.repo = need(argv[++i], '--repo');
@@ -196,7 +203,7 @@ function postComment(pr, repo, body) {
 }
 
 function main() {
-  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help } = parseArgs(
+  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help, builder } = parseArgs(
     process.argv.slice(2)
   );
   if (help) {
@@ -221,6 +228,19 @@ function main() {
   // which is exactly the drift class this repo keeps paying for.
   if (!Object.prototype.hasOwnProperty.call(AGENTS, agent)) {
     die(`unknown reviewer '${agent}'; expected one of ${Object.keys(AGENTS).join('|')}`);
+  }
+
+  // ── Builder family ≠ reviewer family (Daniel, 2026-07-26) ───────────────────────────────────
+  // Newly reachable now that Codex BUILDS here as well as reviews: `--agent codex` on a Codex-built
+  // diff is same-family self-review wearing a cross-review label, which is worse than no review
+  // because it gets recorded as one. A hard refusal rather than a warning — the output looks
+  // identical either way, so a warning is a thing nobody notices. See reviewersFor().
+  const pairingError = checkReviewerPairing(builder, agent);
+  if (pairingError) die(pairingError);
+  if (builder) {
+    process.stderr.write(
+      `Builder: ${builder} → reviewer '${agent}' OK (eligible: ${reviewersFor(builder).join(', ')}).\n`
+    );
   }
 
   ensureGh();

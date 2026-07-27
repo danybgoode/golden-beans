@@ -71,6 +71,71 @@ function snapshot() {
   };
 }
 
+// ── The standing preamble every delegated brief inherits ────────────────────────────────────────
+// Daniel's framing (2026-07-26) is the right one: a delegate is a new external dev joining the
+// team, and onboarding is not something you redo per ticket. Two facts shape what goes here.
+//
+// FIRST: `AGENTS.md` is already loaded. Codex reads a repo-root AGENTS.md into its initial context
+// by convention, and this repo happens to use that exact filename for its agent index — verified
+// live by asking a cold `codex exec` to recite rule #2 without reading files, which it did. So the
+// INVARIANTS arrive for free and repeating them here would be waste.
+//
+// SECOND: nothing else does. `CODE-QUALITY.md` (the house style) and `Roadmap/LEARNINGS.md` (669
+// lines of war stories) are not auto-loaded. LEARNINGS is far too long to inject per task and is
+// mostly narrative; CODE-QUALITY exists precisely because it is the short, injectable distillation.
+// So the preamble injects the house style in full and POINTS at the rest.
+//
+// The behavioural rules below are not style — they are the ones whose absence produced a real
+// incident in this repo: a delegate that commits, one that wanders outside its brief, one that
+// leaves a mutation in the tree, and one that reports a gate it never ran. Each is stated as a
+// hard rule rather than a preference, because a preference is what a model trades away under
+// pressure to finish.
+function standingPreamble() {
+  const qualityPath = join(ROOT, 'CODE-QUALITY.md');
+  const houseStyle = existsSync(qualityPath) ? readFileSync(qualityPath, 'utf8').trim() : null;
+
+  return [
+    '# Standing rules for delegated work in this repository',
+    '',
+    'You are building inside an existing, production codebase with a human architect working in',
+    'parallel. `AGENTS.md` is already in your context — its "rules that cannot be violated" are',
+    'binding, and the invariants there outrank anything in the task brief below.',
+    '',
+    '## Hard rules (violating any of these fails the task)',
+    '',
+    '1. **Do NOT run any `git` command that writes** — no commit, add, checkout, stash, branch, or',
+    '   push. Leave your work uncommitted in the working tree. The architect reviews the diff.',
+    '2. **Stay inside the files the brief names.** A human is editing other files right now. If the',
+    '   task genuinely cannot be done within them, STOP and say so in your report rather than',
+    '   widening the blast radius.',
+    '3. **If your method mutates code, revert it and verify the tree is clean before finishing.**',
+    '   This repo lost a timing-attack protection exactly that way: an agent died between breaking a',
+    '   line and restoring it, and its transcript read as ordinary progress.',
+    '4. **Never report a gate you did not run.** Run it, paste its real output. "Should pass" is not',
+    '   a result. A false green is the most expensive thing you can hand back.',
+    '5. **Do not add dependencies** or edit `package.json` unless the brief explicitly says to.',
+    '',
+    '## Report back in exactly these sections',
+    '',
+    '- **DONE** — what you built, file by file.',
+    '- **NOT DONE / NOT DERIVABLE** — what you could not determine or deliberately skipped, and why.',
+    '  Be blunt. An honest gap is far more useful than an optimistic guess, and it is not a failure',
+    '  to report one — it is the most valuable thing in your report.',
+    '- **GATE** — the literal output of the commands you ran.',
+    '',
+    houseStyle
+      ? `---
+
+${houseStyle}`
+      : '(CODE-QUALITY.md not found — proceed on AGENTS.md alone.)',
+    '',
+    '---',
+    '',
+    '# Your task',
+    '',
+  ].join('\n');
+}
+
 function parseArgs(argv) {
   const out = { tier: null, brief: null, label: null, dryRun: false, timeoutMs: 45 * 60 * 1000 };
   for (let i = 0; i < argv.length; i += 1) {
@@ -156,7 +221,7 @@ function main() {
     ],
     {
       cwd: ROOT,
-      input: brief,
+      input: `${standingPreamble()}\n${brief}`,
       encoding: 'utf8',
       maxBuffer: 128 * 1024 * 1024,
       timeout: args.timeoutMs,

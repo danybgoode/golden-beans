@@ -195,6 +195,69 @@ export function resolveCodexTier(tier) {
   return hit;
 }
 
+// ── WHO MAY REVIEW WHAT: builder family ≠ reviewer family ───────────────────────────────────────
+// Daniel's rule (2026-07-26), and it is a sharpening of what LEARNINGS already argues rather than a
+// new policy: *"if a builder was from codex then reviewers could be from claude or agy; if the
+// builder was claude then reviewers would be codex and/or agy."*
+//
+// The evidence behind it is this repo's own. pod-report S3 ran FOUR agy rounds on a new credential
+// surface and the fourth, aimed deliberately at the auth/tenancy surface, came back CLEAN. Codex
+// then opened with a Blocking finding on that same surface. Neither family is better; they are
+// blind in different directions, which is the entire reason to run both — and it is why a family
+// clearing its own work is the one arrangement that buys nothing.
+//
+// Now that Codex BUILDS here (scripts/codex-task.mjs) and not only reviews, that failure mode is
+// newly reachable: the obvious `--agent codex` on a Codex-built diff is same-family self-review
+// wearing a cross-review label, which is worse than no review because it is recorded as one.
+//
+// Encoded as a REFUSAL rather than a convention, because a convention drifts and this one would
+// drift silently — the output looks identical either way. `reviewersFor` is pure and tested.
+//
+// Cost note (Daniel's standing preference): Claude's tokens go to security/money/architecture and to
+// BUILDING, not to routine PR review. So Claude is deliberately NOT in either default reviewer set;
+// it is the escalation, named explicitly when a diff earns it, not the baseline.
+export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
+
+/**
+ * Which reviewer agents may review a diff built by `builder`.
+ *
+ * `human` and an unknown/unstated builder both get the full set: a human-written diff has no model
+ * family to collide with, and refusing to review an unlabelled diff would make the safe path the
+ * annoying one, which is how a check gets bypassed.
+ */
+export function reviewersFor(builder) {
+  const b = String(builder || '').toLowerCase();
+  if (b === 'codex') return ['antigravity'];
+  if (b === 'agy') return ['codex'];
+  if (b === 'claude') return ['codex', 'antigravity'];
+  return ['codex', 'antigravity'];
+}
+
+/** Normalise the reviewer CLI name to the family it belongs to. */
+function reviewerFamily(agent) {
+  return agent === 'antigravity' ? 'agy' : agent;
+}
+
+/**
+ * Refuse a same-family review. Returns null when the pairing is fine, or an explanatory message.
+ *
+ * Deliberately returns the reason instead of dying here, so the caller can decide between a hard
+ * failure (an interactive run) and a warning (a batch), and so this stays pure and testable.
+ */
+export function checkReviewerPairing(builder, agent) {
+  const b = String(builder || '').toLowerCase();
+  if (!b || b === 'human') return null;
+  if (reviewerFamily(agent) !== b) return null;
+  const allowed = reviewersFor(b).join(', ');
+  return (
+    `refusing a SAME-FAMILY review: this diff was built by "${b}" and "${agent}" is the same model ` +
+    `family. A family clearing its own work is the one arrangement that buys nothing — the two ` +
+    `families are blind in different directions, which is the whole point of the gate ` +
+    `(Roadmap/LEARNINGS.md). Use --agent ${allowed} instead, or pass --builder human if a person ` +
+    `wrote this diff.`
+  );
+}
+
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.
 export const AGY_ARG_LIMIT = 256 * 1024;

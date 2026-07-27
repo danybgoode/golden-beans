@@ -66,6 +66,12 @@ Before planning or building, read these — they are the source of truth and cha
   — the product poster: every feature by domain, current status.
 - **`Roadmap/WAYS-OF-WORKING.md`** — how we plan/build/ship: the cadence, gitflow, Definition of Done
   (story **and** epic), QA/smoke-test rules, the test harness. Follow it.
+- **`CODE-QUALITY.md`** (repo root) — the house style: what "good" looks like here, as opposed to
+  what is *forbidden* (that's the rules below). Short by design, one rule per thing that has
+  actually cost us something. **Read it before writing code**; it is the review you would otherwise
+  get. Note for agent tooling: this file (`AGENTS.md`) is auto-loaded into Codex's context by
+  convention, `CODE-QUALITY.md` is not — `scripts/codex-task.mjs` injects it into every delegated
+  brief, and a human-driven session should open it explicitly.
 - **`Roadmap/LEARNINGS.md`** — the distilled, cross-cutting wisdom from past epics' retrospectives
   (multi-agent + async-deploy coordination, tooling gotchas, what's worked). **Read it** — it's how a
   past retro reaches you instead of dying in its epic folder. You feed it at epic close (see the epic

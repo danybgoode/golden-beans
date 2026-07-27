@@ -196,3 +196,35 @@ S3 shared surface committed (7811682): codex-task delegation rail + tier table (
 }
 ```
 
+## 2026-07-26T22:54:33.132Z — `feat/signals-loop-s3` @ 3c5190fb
+
+_HEAD: feat(signals-loop): Story 3.2 — staged write tools, the engine's first public mutation surface_
+
+S3: 3.1 (agent_write scope) + 3.3a (landing S4, delegated to Codex) + 3.2 (staged write tools) all COMMITTED. NEXT: 3.3b ladder evidence, then cross-family review, then 3.4 launch (flip BOTH gates - Daniel wants it live, not dark).
+
+**Verified by running (observed output, not believed):**
+- 17/17 write-tool specs green (gate ON) + dark polarity green (gate OFF)
+- 657 unit tests; typecheck 4 projects; lint clean
+- full api suite: 6 failures, identical 6 on a stashed clean tree = pre-existing local-env, zero regressions
+- mutation checks: same-project check deleted -> only cross-project spec red; token not spent -> single-use + expiry red; both reverted clean
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-26T22:54:33.132Z",
+  "note": "S3: 3.1 (agent_write scope) + 3.3a (landing S4, delegated to Codex) + 3.2 (staged write tools) all COMMITTED. NEXT: 3.3b ladder evidence, then cross-family review, then 3.4 launch (flip BOTH gates - Daniel wants it live, not dark).",
+  "branch": "feat/signals-loop-s3",
+  "head": "3c5190fbe9a7a4be1ef51d73df59c729b7b5a4a7",
+  "headSubject": "feat(signals-loop): Story 3.2 — staged write tools, the engine's first public mutation surface",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "17/17 write-tool specs green (gate ON) + dark polarity green (gate OFF)",
+    "657 unit tests; typecheck 4 projects; lint clean",
+    "full api suite: 6 failures, identical 6 on a stashed clean tree = pre-existing local-env, zero regressions",
+    "mutation checks: same-project check deleted -> only cross-project spec red; token not spent -> single-use + expiry red; both reverted clean"
+  ]
+}
+```
+

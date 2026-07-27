@@ -17,7 +17,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTransientAgyError } from './cross-agent-cli.mjs';
+import { isTransientAgyError, checkReviewerPairing, reviewersFor } from './cross-agent-cli.mjs';
 
 test('transient: the exact live message that motivated this classifier', () => {
   assert.equal(
@@ -92,4 +92,57 @@ test('transient: the signal is found anywhere in MULTI-LINE output, not just on 
   // …and the same when the notice arrives on stdout while stderr carries only the trailing status,
   // which is how the caller concatenates the two streams.
   assert.equal(isTransientAgyError('exit status 1\n\nupstream returned 503\n'), true);
+});
+
+// ── Builder family ≠ reviewer family (2026-07-26) ──────────────────────────────────────────────
+// Newly load-bearing now that Codex builds here as well as reviews. The property: a family may
+// never clear its own work, and the refusal must be a refusal rather than a warning, because the
+// review output looks identical either way.
+
+test('a codex-built diff may NOT be reviewed by codex', () => {
+  const msg = checkReviewerPairing('codex', 'codex');
+  assert.ok(msg, 'expected a refusal');
+  assert.match(msg, /SAME-FAMILY/);
+  // The message must name the way out, or the next person works around it instead of complying.
+  assert.match(msg, /--agent antigravity/);
+});
+
+test('an agy-built diff may NOT be reviewed by antigravity (the name differs from the family)', () => {
+  // The trap: the CLI is 'antigravity' and the family is 'agy'. A naive string compare passes this
+  // pairing straight through, which is exactly the silent same-family review the guard exists for.
+  assert.ok(checkReviewerPairing('agy', 'antigravity'), 'expected a refusal');
+});
+
+test('the cross-family pairings are all permitted', () => {
+  assert.equal(checkReviewerPairing('codex', 'antigravity'), null);
+  assert.equal(checkReviewerPairing('agy', 'codex'), null);
+  assert.equal(checkReviewerPairing('claude', 'codex'), null);
+  assert.equal(checkReviewerPairing('claude', 'antigravity'), null);
+});
+
+test('an unstated or human builder is never refused', () => {
+  // Refusing an unlabelled diff would make the safe path the annoying one, which is how a check
+  // gets bypassed rather than followed.
+  for (const b of ['', null, undefined, 'human', 'HUMAN']) {
+    assert.equal(checkReviewerPairing(b, 'codex'), null);
+    assert.equal(checkReviewerPairing(b, 'antigravity'), null);
+  }
+});
+
+test('builder is matched case-insensitively', () => {
+  assert.ok(checkReviewerPairing('CODEX', 'codex'), 'expected a refusal for CODEX/codex');
+});
+
+test('reviewersFor never returns the builder own family', () => {
+  for (const b of ['claude', 'codex', 'agy']) {
+    const family = (a) => (a === 'antigravity' ? 'agy' : a);
+    assert.ok(reviewersFor(b).length > 0, `${b} must have an eligible reviewer`);
+    for (const r of reviewersFor(b)) {
+      assert.notEqual(family(r), b, `${b} must not be eligible to review its own work`);
+    }
+  }
+});
+
+test('claude gets BOTH other families — the cost preference is about review, not coverage', () => {
+  assert.deepEqual(reviewersFor('claude').sort(), ['antigravity', 'codex']);
 });
