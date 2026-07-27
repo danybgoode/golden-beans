@@ -121,6 +121,7 @@ async function main() {
     REPORT_SHARES_ENABLED: 'true',
     SIGNALS_ENABLED: 'true',
     CONNECTOR_WRITES_ENABLED: 'false',
+    FLAG_SERVING_ENABLED: 'true',
     SELF_PROJECT_API_KEY: randomBytes(24).toString('hex'),
   }
 
@@ -133,11 +134,13 @@ async function main() {
     ...shared,
     JOURNEY_PROJECTIONS_ENABLED: 'false',
     EXPERIMENT_GOVERNANCE_ENABLED: 'false',
+    FLAG_SERVING_ENABLED: 'false',
   }
   await withServer({ port: darkPort, env: dark, label: 'dark-gate' }, async () => {
     runPlaywright(dark, darkPort, [
       'apps/web/e2e/journey-dark.spec.ts',
       'apps/web/e2e/experiment-governance-dark.spec.ts',
+      'apps/web/e2e/flag-serving-dark.spec.ts',
     ])
   })
 

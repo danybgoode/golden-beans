@@ -47,6 +47,15 @@ export type {
   FlagVariant,
   JsonValue,
 } from './flags'
+export { createFlagProvider } from './flag-provider'
+export type {
+  FlagProvider,
+  FlagProviderConfig,
+  FlagProviderErrorCode,
+  FlagProviderRefreshResult,
+  FlagProviderResolutionDetails,
+  FlagProviderStatus,
+} from './flag-provider'
 
 /**
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.

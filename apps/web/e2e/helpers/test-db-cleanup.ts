@@ -107,6 +107,7 @@ export async function cleanupExperimentProjects(projectIds: string[]): Promise<v
   await client.connect()
   try {
     await client.query('BEGIN')
+    await client.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
     await client.query(
       'DELETE FROM public.experiment_decision_records WHERE project_id = ANY($1::uuid[])',
@@ -116,6 +117,25 @@ export async function cleanupExperimentProjects(projectIds: string[]): Promise<v
       'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
       [projectIds],
     )
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    await client.end()
+  }
+}
+
+/** Flag lifecycle evidence intentionally outlives operational registry rows; fixtures clean it last. */
+export async function cleanupFlagProjects(projectIds: string[]): Promise<void> {
+  if (projectIds.length === 0) return
+  const client = new Client({ connectionString: requireTestDatabaseUrl() })
+  await client.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
+    await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
+    await client.query('DELETE FROM public.flag_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('COMMIT')
   } catch (error) {
     await client.query('ROLLBACK')

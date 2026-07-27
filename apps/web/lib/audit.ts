@@ -45,6 +45,8 @@ export type AuditAction =
   // in the UPDATE, so the endpoint cannot decide what the record says.
   | 'agent_write_key_minted'
   | 'agent_write_key_revoked'
+  | 'flag_read_key_minted'
+  | 'flag_read_key_revoked'
   // A lifecycle event that could not be emitted. The task row still holds the truth; this records
   // that a tenant's automation was never told, so the gap is queryable rather than only a log line.
   | 'task_event_emit_failed'
