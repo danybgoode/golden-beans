@@ -53,5 +53,5 @@ function snapshotHeaders(etag: string): HeadersInit {
 
 function ifNoneMatchIncludes(header: string | null, etag: string): boolean {
   if (!header) return false
-  return header.split(',').map((value) => value.trim()).includes(etag) || header.trim() === '*'
+  return header.split(',').map((value) => value.trim()).some((value) => value === etag || value === '*')
 }

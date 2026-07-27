@@ -199,15 +199,20 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
           reject(new Error('refresh timed out'))
         }, refreshTimeoutMs)
       })
-      const response = await Promise.race([
-        Promise.resolve().then(() => fetchFn(url, {
+      // Keep a rejection handler on the request after the timeout wins. Aborting is advisory:
+      // runtimes may reject the detached fetch later, and that must not become an unhandled
+      // rejection in a caller that already received its bounded fallback.
+      const request = Promise.resolve().then(() => fetchFn(url, {
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${config.flagReadKey}`,
             ...(etag ? { 'If-None-Match': etag } : {}),
           },
           signal: controller.signal,
-        })),
+        }))
+      void request.catch(() => undefined)
+      const response = await Promise.race([
+        request,
         timeoutResult,
       ])
 

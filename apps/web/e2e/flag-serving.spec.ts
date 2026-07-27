@@ -147,6 +147,10 @@ test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot
     headers: { Authorization: `Bearer ${readKey}`, 'If-None-Match': '"other", "gbfs-1"' },
   })
   expect(notModified.status()).toBe(304)
+  const wildcardNotModified = await request.get('/api/v1/flags/snapshot', {
+    headers: { Authorization: `Bearer ${readKey}`, 'If-None-Match': '"other", *' },
+  })
+  expect(wildcardNotModified.status()).toBe(304)
 
   // A different project's version cannot be used as A's activation pointer, and the stale expected
   // revision cannot win after A has moved once.

@@ -51,7 +51,11 @@ function sameVariantKeys(
 ): boolean {
   if (experiment.variants.length !== flag.variants.length) return false
   const experimentKeys = new Set(experiment.variants.map((variant) => variant.key))
-  return flag.variants.every((variant) => experimentKeys.has(variant.key))
+  const flagKeys = new Set(flag.variants.map((variant) => variant.key))
+  return experimentKeys.size === experiment.variants.length &&
+    flagKeys.size === flag.variants.length &&
+    flagKeys.size === experimentKeys.size &&
+    [...flagKeys].every((key) => experimentKeys.has(key))
 }
 
 export function ExperimentManager({

@@ -192,7 +192,9 @@ test('times out, honors the stale bound, and makes shutdown final without throwi
     fetchImpl: async () => {
       calls += 1
       if (calls === 1) return new Response(JSON.stringify(snapshot()))
-      return new Promise<Response>(() => undefined)
+      return new Promise<Response>((_resolve, reject) => {
+        setTimeout(() => reject(new Error('late transport rejection')), 5)
+      })
     },
   })
 
@@ -206,6 +208,9 @@ test('times out, honors the stale bound, and makes shutdown final without throwi
     errorMessage: 'Flag snapshot is stale.',
   })
   assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'GENERAL', errorMessage: 'Flag snapshot refresh failed.' })
+  // The timed-out request rejects after its bounded caller has moved on. Node's test runner would
+  // fail this test on an unhandled rejection if the provider did not retain a rejection handler.
+  await new Promise((resolve) => setTimeout(resolve, 10))
   provider.shutdown()
   assert.deepEqual(await provider.refresh(), { ok: false, errorCode: 'PROVIDER_FATAL', errorMessage: 'Flag provider has been shut down.' })
   assert.equal(provider.resolveBooleanEvaluation('checkout.enabled', true).value, true)
