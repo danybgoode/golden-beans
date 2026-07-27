@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: signals-loop
 ---
 
@@ -136,7 +136,13 @@ polarities of the same shape, both born OFF.
 |---|---|---|
 | 1 | [Signals in (capture + grouping)](sprint-1.md) | SDK `captureError` + `$error` ingest (scrubbed, capped) · deterministic grouping into `signals` + impact rank · derived friction detectors (rules as data, lazily evaluated) |
 | 2 | [Tasks out (structuring + read surface)](sprint-2.md) | signal→task promotion + evidence bundle · router fan-out + first-task ping · dashboard task views · connector read tools (`list_tasks`/`get_task`) |
-| 3 | [The closed loop (writes + flip)](sprint-3.md) | `agent_write` credential scope · staged write tools (dark) · landing §4 backfill + dogfood loop + ladder evidence · launch |
+| 3 | [The closed loop (writes + flip)](sprint-3.md) | `agent_write` credential scope · staged write tools · landing §4 backfill + ladder evidence · launch |
+
+**Shipped 2026-07-27** — PR [#38](https://github.com/danybgoode/golden-beans/pull/38), merged after
+**eight** cross-review rounds alternating between families, stopping on a Blocking-free round from
+the other family. Migrations applied to production and verified there by property, not by the push
+command's output: `agent_key_id` NOT NULL, the credential bound inside the atomic consume, zero
+`anon`/`authenticated` grants on the credential view.
 
 **Ship shape (Daniel, 2026-07-26):** one PR per sprint, three PRs, all gates OFF until the whole
 loop is provable end to end, then one deliberate flip. Migrations apply as they land.
