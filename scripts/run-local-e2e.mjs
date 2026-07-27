@@ -72,6 +72,9 @@ function localSupabaseEnv() {
     NEXT_PUBLIC_SUPABASE_URL: values.API_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: values.ANON_KEY,
     SUPABASE_DB_URL: values.DB_URL,
+    // Absolute URLs are a deployment property, never inferred from a request Host header. Point
+    // the owned test server at itself so llms/install tests cannot inherit localhost from .env.local.
+    SITE_URL: `http://127.0.0.1:${normalPort}`,
   }
 }
 
