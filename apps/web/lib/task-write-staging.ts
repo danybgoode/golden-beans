@@ -62,7 +62,8 @@ export type ProposeInput = {
   actor?: string | null
   resolution?: string | null
   evidencePointer?: string | null
-  agentKeyId?: string | null
+  /** REQUIRED: a confirmation is a capability minted FOR a credential (see the migration). */
+  agentKeyId: string
 }
 
 export type ProposeResult =
@@ -152,7 +153,7 @@ export async function proposeTaskChange(input: ProposeInput): Promise<ProposeRes
     resolution,
     // Stored as classified, so the value the preview showed is byte-identical to the value applied.
     evidence_pointer: evidence.value,
-    agent_key_id: input.agentKeyId ?? null,
+    agent_key_id: input.agentKeyId,
     expires_at: expiresAt.toISOString(),
   })
 

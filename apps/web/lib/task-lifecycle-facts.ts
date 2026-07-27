@@ -67,9 +67,16 @@ export async function getTaskLifecycleFacts(projectId: string): Promise<TaskLife
     // published maturity score. Same defect class as the audit-metadata finding beside it — prose
     // promising what the code does not do.
     .order('created_at', { ascending: true })
-    // Tie-break on the row id: two audit rows can share a timestamp at Postgres' resolution, which
-    // would leave "last" ambiguous again for exactly the case this ordering exists to settle.
-    .order('id', { ascending: true })
+  // NO tie-break on `id`, and the removal is the point (cross-review, Codex, PR #38). This used to
+  // order by id as well, with a comment claiming that settled same-timestamp ambiguity. It does
+  // not: `audit_log.id` is a random UUID, so ordering by it is arbitrary rather than chronological
+  // — the comment asserted a property the column does not have. Third instance of that same class
+  // in this PR, which is itself the lesson.
+  //
+  // Nothing replaces it because nothing needs to. Ties only matter between two transitions of the
+  // SAME task, and those are serialized by the row lock in `transition_task` across separate
+  // requests — two rows for one task sharing a microsecond is not a state this system produces.
+  // An arbitrary order between DIFFERENT tasks is irrelevant: they are counted independently.
 
   if (error) {
     console.error('[task-lifecycle-facts] query failed:', error)
