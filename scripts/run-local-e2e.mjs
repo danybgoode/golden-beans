@@ -19,6 +19,9 @@ const next = join(root, 'node_modules/.bin/next')
 const playwright = join(root, 'node_modules/.bin/playwright')
 const normalPort = 3110
 const darkPort = 3111
+// Optional file arguments keep focused local investigation hermetic too. The dark-gate tripwire
+// still always runs because a focused enabled spec must not accidentally skip the OFF boundary.
+const requestedFiles = process.argv.slice(2)
 
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`)
@@ -160,7 +163,7 @@ async function main() {
       quiet: true,
     })
     process.stdout.write('local-e2e: seeded disposable demo and self fixtures.\n')
-    runPlaywright(shared, normalPort)
+    runPlaywright(shared, normalPort, requestedFiles)
   })
 }
 

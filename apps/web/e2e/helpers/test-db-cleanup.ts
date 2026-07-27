@@ -117,6 +117,10 @@ export async function cleanupExperimentProjects(projectIds: string[]): Promise<v
       'DELETE FROM public.experiment_lifecycle_audit WHERE project_id = ANY($1::uuid[])',
       [projectIds],
     )
+    await client.query(
+      'DELETE FROM public.experiment_flag_binding_audit WHERE project_id = ANY($1::uuid[])',
+      [projectIds],
+    )
     await client.query('COMMIT')
   } catch (error) {
     await client.query('ROLLBACK')
@@ -136,6 +140,7 @@ export async function cleanupFlagProjects(projectIds: string[]): Promise<void> {
     await client.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
     await client.query('DELETE FROM public.flag_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [projectIds])
+    await client.query('DELETE FROM public.experiment_flag_binding_audit WHERE project_id = ANY($1::uuid[])', [projectIds])
     await client.query('COMMIT')
   } catch (error) {
     await client.query('ROLLBACK')

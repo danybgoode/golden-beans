@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { listExperimentRegistries } from '@/lib/experiments'
+import { listExperimentFlagBindings } from '@/lib/experiment-flag-bindings'
+import { getFlagRegistryView } from '@/lib/flag-registry'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { ExperimentManager } from './experiment-manager'
@@ -16,7 +18,11 @@ export default async function ExperimentGovernancePage({
   if (!isExperimentGovernanceEnabled()) notFound()
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
-  const experiments = await listExperimentRegistries(membership.projectId)
+  const [experiments, flagRegistry, bindings] = await Promise.all([
+    listExperimentRegistries(membership.projectId),
+    getFlagRegistryView(membership.projectId),
+    listExperimentFlagBindings(membership.projectId),
+  ])
 
   return (
     <main>
@@ -30,6 +36,8 @@ export default async function ExperimentGovernancePage({
       <ExperimentManager
         slug={projectSlug}
         experiments={experiments}
+        flags={flagRegistry.flags}
+        bindings={bindings}
         canManage={isOwner({ projectId: membership.projectId, role: membership.role })}
       />
     </main>

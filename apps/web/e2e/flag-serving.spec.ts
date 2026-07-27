@@ -18,6 +18,19 @@ const definition: FlagDefinition = {
   metadata: { criticality: 'low' },
 }
 
+const experimentDefinition = {
+  hypothesis: 'A compatible immutable flag version supports a governed experiment.',
+  assignmentEntityType: 'merchant',
+  eligibility: { description: 'All disposable integration fixtures.' },
+  variants: [{ key: 'off', weight: 1 }, { key: 'on', weight: 1 }],
+  controlVariantKey: 'off',
+  primaryMetric: { event: 'flag_binding_fixture_completed', direction: 'increase' as const },
+  guardrailMetrics: [],
+  segmentFields: [],
+  plannedWindow: { startAt: '2026-07-01T00:00:00Z', endAt: '2026-08-01T00:00:00Z' },
+  minimumSamplePerVariant: 1,
+}
+
 const projectIds: string[] = []
 const userIds: string[] = []
 
@@ -63,6 +76,17 @@ async function createVersion(client: SupabaseClient, projectId: string, userId: 
   })
   if (error || !data?.[0]) throw new Error(`could not create flag version: ${error?.message}`)
   return data[0] as { flag_id: string; version_id: string; version: number }
+}
+
+async function createExperimentVersion(client: SupabaseClient, projectId: string, userId: string) {
+  const { data, error } = await client.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: 'flag-binding-fixture',
+    p_definition: experimentDefinition,
+    p_actor_user_id: userId,
+  })
+  if (error || !data?.[0]) throw new Error(`could not create experiment fixture: ${error?.message}`)
+  return data[0] as { experiment_id: string; version_id: string }
 }
 
 test.afterAll(async () => {
@@ -175,4 +199,100 @@ test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot
   expect(revoked.data).toBe(true)
   const afterRevoke = await request.get('/api/v1/flags/snapshot', { headers: { Authorization: `Bearer ${readKey}` } })
   expect(afterRevoke.status()).toBe(401)
+})
+
+test('an experiment binds one exact compatible same-project flag version with retained evidence', async () => {
+  const client = db()
+  const ownerA = await fixtureUser(client, 'binding-a')
+  const ownerB = await fixtureUser(client, 'binding-b')
+  const projectA = await fixtureProject(client, ownerA, 'binding-a')
+  const projectB = await fixtureProject(client, ownerB, 'binding-b')
+  const experiment = await createExperimentVersion(client, projectA, ownerA)
+  const compatible = await createVersion(client, projectA, ownerA, 'bound.fixture')
+  const foreign = await createVersion(client, projectB, ownerB, 'bound.fixture')
+  const incompatible = await createVersion(client, projectA, ownerA, 'incompatible.fixture', {
+    ...definition,
+    variants: [{ key: 'off', value: false }, { key: 'other', value: true }],
+    defaultVariantKey: 'off',
+    rules: [],
+  })
+
+  const bound = await client.rpc('bind_experiment_flag_version', {
+    p_project_id: projectA,
+    p_experiment_id: experiment.experiment_id,
+    p_experiment_version_id: experiment.version_id,
+    p_flag_id: compatible.flag_id,
+    p_flag_version_id: compatible.version_id,
+    p_actor_user_id: ownerA,
+  })
+  expect(bound.error).toBeNull()
+  expect(bound.data?.[0]).toEqual(expect.objectContaining({
+    project_id: projectA,
+    experiment_id: experiment.experiment_id,
+    experiment_version_id: experiment.version_id,
+    flag_id: compatible.flag_id,
+    flag_version_id: compatible.version_id,
+    created: true,
+  }))
+
+  const retry = await client.rpc('bind_experiment_flag_version', {
+    p_project_id: projectA,
+    p_experiment_id: experiment.experiment_id,
+    p_experiment_version_id: experiment.version_id,
+    p_flag_id: compatible.flag_id,
+    p_flag_version_id: compatible.version_id,
+    p_actor_user_id: ownerA,
+  })
+  expect(retry.error).toBeNull()
+  expect(retry.data?.[0]?.created).toBe(false)
+
+  const crossProject = await client.rpc('bind_experiment_flag_version', {
+    p_project_id: projectA,
+    p_experiment_id: experiment.experiment_id,
+    p_experiment_version_id: experiment.version_id,
+    p_flag_id: foreign.flag_id,
+    p_flag_version_id: foreign.version_id,
+    p_actor_user_id: ownerA,
+  })
+  expect(crossProject.error).toBeNull()
+  expect(crossProject.data).toEqual([])
+
+  const incompatibleResult = await client.rpc('bind_experiment_flag_version', {
+    p_project_id: projectA,
+    p_experiment_id: experiment.experiment_id,
+    p_experiment_version_id: experiment.version_id,
+    p_flag_id: incompatible.flag_id,
+    p_flag_version_id: incompatible.version_id,
+    p_actor_user_id: ownerA,
+  })
+  expect(incompatibleResult.error?.code).toBe('22023')
+
+  const bindingId = bound.data?.[0]?.binding_id as string
+  const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
+  await pg.connect()
+  try {
+    await expect(pg.query(
+      'UPDATE public.experiment_flag_version_bindings SET created_by = $2 WHERE id = $1',
+      [bindingId, ownerB],
+    )).rejects.toMatchObject({ code: '55000' })
+    await expect(pg.query(
+      'DELETE FROM public.experiment_flag_version_bindings WHERE id = $1',
+      [bindingId],
+    )).rejects.toMatchObject({ code: '55000' })
+  } finally {
+    await pg.end()
+  }
+
+  const audit = await client
+    .from('experiment_flag_binding_audit')
+    .select('project_id,experiment_version_id,flag_version_id,actor_user_id')
+    .eq('project_id', projectA)
+    .single()
+  expect(audit.error).toBeNull()
+  expect(audit.data).toEqual({
+    project_id: projectA,
+    experiment_version_id: experiment.version_id,
+    flag_version_id: compatible.version_id,
+    actor_user_id: ownerA,
+  })
 })
