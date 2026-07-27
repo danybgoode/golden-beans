@@ -338,6 +338,47 @@ export function isDocFile(path) {
   return DOC_FILE_RE.test(path || '') || /(^|\/)docs\//i.test(path || '');
 }
 
+/**
+ * Drop documentation/text file hunks from a diff, leaving only code.
+ *
+ * ── Why this exists, and why the SCOPE has to be reported ─────────────────────────────────────
+ * agy takes its whole prompt as one argv string (stdin is not the prompt), so it is bounded by
+ * AGY_ARG_LIMIT — and a sprint-sized PR crosses it. signals-loop Sprint 3 hit 259 KB against a
+ * 256 KB cap and the review simply refused to run, which on a HIGH-risk credential surface is the
+ * worst possible time to lose the second family's read.
+ *
+ * This repo's PRs are comment-dense by house style and carry sprint docs, so prose is usually the
+ * majority of the bytes and dropping it is enough. The reviewer then sees every line of code and
+ * none of the documentation.
+ *
+ * **That is a REAL reduction in scope, not a formatting detail.** A reviewer who cannot see the
+ * sprint doc cannot check the code against its stated acceptance criteria, and one who cannot see a
+ * migration's comment cannot catch a comment asserting a property the SQL does not enforce — a
+ * defect class this repo has hit repeatedly. So callers must state the subset in the posted comment
+ * (cross-review.mjs does), because a review labelled as covering a PR while having seen two thirds
+ * of it is worse than an absent review: the next reader stops there.
+ */
+export function stripDocFileDiffs(diffText) {
+  if (!diffText) return { diff: diffText, strippedFiles: [] };
+  const chunks = diffText.split(/(?=^diff --git )/m);
+  const strippedFiles = [];
+  const kept = [];
+  for (const chunk of chunks) {
+    const header = chunk.match(/^diff --git a\/(\S+) b\/(\S+)/);
+    if (!header) {
+      kept.push(chunk);
+      continue;
+    }
+    const path = header[2] || header[1];
+    if (isDocFile(path)) {
+      strippedFiles.push(path);
+      continue;
+    }
+    kept.push(chunk);
+  }
+  return { diff: kept.join(''), strippedFiles };
+}
+
 export function decideTrivialSkip({ files, minLines = 10 } = {}) {
   if (!Array.isArray(files) || files.length === 0) return { skip: true, reason: 'empty diff' };
   if (files.every((f) => isDocFile(f.path))) return { skip: true, reason: 'docs-only diff' };

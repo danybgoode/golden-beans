@@ -53,6 +53,8 @@ import {
   decideHeadGuard,
   decideTrivialSkip,
   stripGeneratedFileDiffs,
+  stripDocFileDiffs,
+  AGY_ARG_LIMIT,
   shortSha,
   checkReviewerPairing,
   reviewersFor,
@@ -77,6 +79,8 @@ Usage:
 
 Flags:
   --agent <name>       reviewer CLI: antigravity | codex (default: antigravity)
+  --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
+                       The reduced scope is STATED in the posted comment.
   --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
                        same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
@@ -98,6 +102,7 @@ function parseArgs(argv) {
     pr: null,
     agent: 'antigravity',
     builder: process.env.CROSS_REVIEW_BUILDER || '',
+    codeOnly: false,
     repo: null,
     force: false,
     dryRun: false,
@@ -115,6 +120,7 @@ function parseArgs(argv) {
     else if (a === '--include-lockfiles') out.includeLockfiles = true;
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
+    else if (a === '--code-only') out.codeOnly = true;
     else if (a === '--builder') out.builder = need(argv[++i], '--builder');
     else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
@@ -292,10 +298,29 @@ function main() {
       );
     }
   }
+  // ── The code-only subset, and its honesty requirement ───────────────────────────────────────
+  // agy takes its prompt in argv, so a sprint-sized PR can exceed AGY_ARG_LIMIT and the review
+  // refuses to run — which on a high-risk diff is exactly when losing the second family hurts most.
+  // Dropping prose usually fits it. But a reviewer who cannot see the sprint doc cannot check the
+  // code against its acceptance criteria, so the reduced scope is recorded and posted with the
+  // findings rather than left implicit.
+  let scopeNote = null;
+  if (codeOnly) {
+    const codeOnlyDiff = stripDocFileDiffs(diff);
+    diff = codeOnlyDiff.diff;
+    scopeNote =
+      `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
+      `withheld from this reviewer to fit agy's ${AGY_ARG_LIMIT / 1024} KB argv limit, so it did ` +
+      `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
+      `code against its own stated acceptance criteria. Withheld: ` +
+      `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
+    process.stderr.write(`Code-only: withheld ${codeOnlyDiff.strippedFiles.length} doc file(s).\n`);
+  }
+
   const findings = runReview(agent, prompt, diff);
   if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
-  const body = buildComment(AGENTS[agent], findings);
+  const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings);
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
