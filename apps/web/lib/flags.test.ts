@@ -21,6 +21,10 @@ import {
   isExperimentGovernanceMcpToolEnabled,
   isSignalsEnabled,
   isConnectorWritesEnabled,
+  isFlagServingEnabled,
+  isResilienceScenariosEnabled,
+  isSecuritySimulationsEnabled,
+  isAutomaticCircuitBreakersEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -50,6 +54,10 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   // predicted-but-unguarded failure is one registry the checker walks, not a re-typing).
   ['SIGNALS_ENABLED', isSignalsEnabled],
   ['CONNECTOR_WRITES_ENABLED', isConnectorWritesEnabled],
+  ['FLAG_SERVING_ENABLED', isFlagServingEnabled],
+  ['RESILIENCE_SCENARIOS_ENABLED', isResilienceScenariosEnabled],
+  ['SECURITY_SIMULATIONS_ENABLED', isSecuritySimulationsEnabled],
+  ['AUTOMATIC_CIRCUIT_BREAKERS_ENABLED', isAutomaticCircuitBreakersEnabled],
 ]
 
 for (const [envKey, gate] of singleFlagGates) {
