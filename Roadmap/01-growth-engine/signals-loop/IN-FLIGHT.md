@@ -288,3 +288,35 @@ signals-loop EPIC SHIPPED. PR #38 merged (8 cross-review rounds), 5 migrations a
 }
 ```
 
+## 2026-07-27T14:02:28.555Z — `main` @ 4c110bb4
+
+_HEAD: docs(signals-loop): the production write smoke, run end to end_
+
+EPIC COMPLETE. Production write smoke run end-to-end and passed: 2 disposable creds minted in SQL, used, revoked (0 live SMOKE keys). Prose rail diagnosed + fixed (post-checkout trigger) and all 6 owed reports flushed. Nothing owed.
+
+**Verified by running (observed output, not believed):**
+- prod smoke: 7 tools without write key / 9 with; propose left row untouched (checked in DB); apply moved it; replay=already_used; resolved with real SHA, evidenceRecorded=true
+- audit: 2 task_transitioned rows, via=connector, both naming the agentKeyId
+- ladder endpoint: agentResolvedTotal=1 withEvidence=1, real commit pointer
+- revoke → write tools gone, reads unaffected; 0 live SMOKE credentials remain
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-27T14:02:28.555Z",
+  "note": "EPIC COMPLETE. Production write smoke run end-to-end and passed: 2 disposable creds minted in SQL, used, revoked (0 live SMOKE keys). Prose rail diagnosed + fixed (post-checkout trigger) and all 6 owed reports flushed. Nothing owed.",
+  "branch": "main",
+  "head": "4c110bb46c7cf9b00e7f0b293e433b746239107e",
+  "headSubject": "docs(signals-loop): the production write smoke, run end to end",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "prod smoke: 7 tools without write key / 9 with; propose left row untouched (checked in DB); apply moved it; replay=already_used; resolved with real SHA, evidenceRecorded=true",
+    "audit: 2 task_transitioned rows, via=connector, both naming the agentKeyId",
+    "ladder endpoint: agentResolvedTotal=1 withEvidence=1, real commit pointer",
+    "revoke → write tools gone, reads unaffected; 0 live SMOKE credentials remain"
+  ]
+}
+```
+
