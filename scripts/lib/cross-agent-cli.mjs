@@ -247,6 +247,18 @@ function reviewerFamily(agent) {
 export function checkReviewerPairing(builder, agent) {
   const b = String(builder || '').toLowerCase();
   if (!b || b === 'human') return null;
+  // An UNRECOGNISED explicit builder is a refusal, not a shrug (cross-review, Codex, PR #38).
+  // Unknown values used to fall through to the same "no constraint" branch as an unstated builder,
+  // so `--builder codez --agent codex` — a typo — silently disabled the same-family guard and
+  // produced a review that looked exactly like a valid one. A guard that a typo can switch off is
+  // not a guard; an omitted builder is still permitted, because that is an honest "unstated".
+  if (!BUILDER_FAMILIES.includes(b)) {
+    return (
+      `unknown --builder "${builder}" — expected one of ${BUILDER_FAMILIES.join(', ')}. ` +
+      `Refusing rather than defaulting: an unrecognised builder would silently disable the ` +
+      `same-family review guard, and the output looks identical either way.`
+    );
+  }
   if (reviewerFamily(agent) !== b) return null;
   const allowed = reviewersFor(b).join(', ');
   return (

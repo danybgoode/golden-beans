@@ -17,7 +17,12 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTransientAgyError, checkReviewerPairing, reviewersFor } from './cross-agent-cli.mjs';
+import {
+  isTransientAgyError,
+  checkReviewerPairing,
+  reviewersFor,
+  BUILDER_FAMILIES,
+} from './cross-agent-cli.mjs';
 
 test('transient: the exact live message that motivated this classifier', () => {
   assert.equal(
@@ -145,4 +150,29 @@ test('reviewersFor never returns the builder own family', () => {
 
 test('claude gets BOTH other families — the cost preference is about review, not coverage', () => {
   assert.deepEqual(reviewersFor('claude').sort(), ['antigravity', 'codex']);
+});
+
+test('an UNKNOWN explicit builder is REFUSED, not treated as human', () => {
+  // Cross-review (Codex, PR #38): unknown values fell through to the same "no constraint" branch as
+  // an unstated builder, so `--builder codez --agent codex` — a typo — silently disabled the
+  // same-family guard and produced a review indistinguishable from a valid one.
+  const msg = checkReviewerPairing('codez', 'codex');
+  assert.ok(msg, 'expected a refusal for an unknown builder');
+  assert.match(msg, /unknown --builder/);
+});
+
+test('...but an OMITTED builder is still permitted — that is an honest "unstated"', () => {
+  assert.equal(checkReviewerPairing('', 'codex'), null);
+  assert.equal(checkReviewerPairing(undefined, 'codex'), null);
+});
+
+test('every declared builder family is accepted by the pairing check', () => {
+  // Guards against BUILDER_FAMILIES and the pairing logic drifting apart: a family listed as valid
+  // that the checker rejects would make the correct invocation the one that fails.
+  for (const b of BUILDER_FAMILIES) {
+    const eligible = reviewersFor(b);
+    for (const r of eligible) {
+      assert.equal(checkReviewerPairing(b, r), null, `${b} should permit reviewer ${r}`);
+    }
+  }
 });

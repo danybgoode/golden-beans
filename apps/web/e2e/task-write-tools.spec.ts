@@ -131,7 +131,9 @@ async function callTool(
   // back as an `error` with a plain-text message — parsing that as JSON throws, which made a spec
   // fail for the wrong reason. Both shapes are legitimate refusals; the caller decides which it
   // expected.
-  let parsed: Record<string, unknown> | null = null
+  // Deliberately loose: this is arbitrary JSON-RPC payload, exactly as `JSON.parse` returned
+  // before this helper learned to tolerate a protocol error.
+  let parsed: any = null
   if (text) {
     try {
       parsed = JSON.parse(text)
@@ -666,6 +668,21 @@ test.describe('connector staged write tools', () => {
 
     // ...and the task never moved.
     expect((await readTask(db, task.id as string)).status).toBe('open')
+
+    // THE PROPERTY THAT COSTS A ROUND TO GET RIGHT (cross-review, Codex, PR #38): the wrong key
+    // must not BURN the token. The first version compared credentials in application code, after
+    // the RPC had already spent it — so any same-project key could destroy another's confirmation
+    // and accomplish nothing, a denial-of-service that was worse than the bug it fixed. The
+    // legitimate proposer must still be able to apply.
+    const rescued = await callTool(
+      request,
+      tenant.connectorToken,
+      'apply_task_change',
+      { confirmationToken: proposed.parsed.confirmationToken },
+      tenant.writeKey
+    )
+    expect(rescued.parsed?.ok).toBe(true)
+    expect((await readTask(db, task.id as string)).status).toBe('claimed')
   })
 
   test('an INVALID resolution is refused at PROPOSE, before a token is issued', async ({ request }) => {

@@ -254,6 +254,12 @@ export async function applyTaskChange(
     .rpc('consume_write_confirmation', {
       p_token_hash: hashCredential(confirmationToken ?? ''),
       p_project_id: projectId,
+      // The credential joins the ATOMIC gate (migration 20260806130000). It used to be compared
+      // here, after the RPC had already spent the token — so a wrong key burned the owner's
+      // confirmation and accomplished nothing, a denial-of-service by any same-project credential.
+      // An authorization condition evaluated after the state change is not an authorization
+      // condition.
+      p_agent_key_id: applyingKeyId,
     })
     .single<{
       ok: boolean
@@ -272,7 +278,14 @@ export async function applyTaskChange(
   }
   if (!data.ok) {
     const reason = data.reason
-    if (reason === 'not_found' || reason === 'already_used' || reason === 'expired') {
+    if (
+      reason === 'not_found' ||
+      reason === 'already_used' ||
+      reason === 'expired' ||
+      // Decided in the database now, not here: a mismatched key matches no row, so it consumes
+      // nothing and the legitimate proposer's token stays spendable.
+      reason === 'wrong_credential'
+    ) {
       return { ok: false, reason }
     }
     return { ok: false, reason: 'apply_failed' }
@@ -292,20 +305,6 @@ export async function applyTaskChange(
   // The token is already spent at this point, deliberately. A refusal here still burns it, which is
   // correct: the alternative is a token that survives a failed apply and can be retried by yet
   // another credential.
-  //
-  // ── It FAILS CLOSED on a missing key, and the first version did not ─────────────────────────
-  // Cross-review (Agy, PR #38) on the round-3 fix itself: the condition was
-  // `data.agent_key_id && applyingKeyId && data.agent_key_id !== applyingKeyId`, so a null
-  // `applyingKeyId` made the whole expression falsy and skipped the guard — a keyless caller could
-  // spend a token staged by a specific credential. Not reachable through the MCP route (the write
-  // tools are not registered unless a key resolved, so the route always has one), but it is a
-  // security check whose weak position was "the argument was omitted", which is one careless caller
-  // from being off. Dropping the `applyingKeyId &&` term makes a missing key a MISMATCH rather than
-  // a bypass, and the parameter above is now required so it cannot be omitted at all.
-  if (data.agent_key_id && data.agent_key_id !== applyingKeyId) {
-    console.warn('[task-write-staging] refused: confirmation belongs to a different write credential')
-    return { ok: false, reason: 'wrong_credential' }
-  }
 
   const action = data.action as TaskWriteAction
   const taskId = data.task_id as string
