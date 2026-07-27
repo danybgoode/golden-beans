@@ -18,6 +18,8 @@ import {
   renderResume,
   parseCheckpoints,
   highestSeverity,
+  epicSlugCandidates,
+  parsePorcelain,
 } from './session-trail.mjs';
 
 const NOW = new Date('2026-07-26T12:00:00.000Z');
@@ -181,4 +183,106 @@ test('parseCheckpoints counts blocks and survives an empty trail', () => {
   assert.equal(parseCheckpoints(undefined).length, 0);
   const two = `# header\n\n## 2026-01-01 — a\n\nbody\n\n## 2026-01-02 — b\n\nbody\n`;
   assert.equal(parseCheckpoints(two).length, 2);
+});
+
+// ── parsePorcelain — the leading space is DATA ────────────────────────────────────────────────
+// These pin the bug that corrupted the first filename of every checkpoint this rail wrote before
+// 2026-07-26. The first case is the whole story: a modified-unstaged entry begins with a space, and
+// any caller that trims the blob before splitting loses it from line one only.
+
+test('a modified-unstaged path survives intact — the leading space is not whitespace to clean up', () => {
+  const { dirty, untracked } = parsePorcelain(' M scripts/lib/session-trail.mjs\n');
+  assert.deepEqual(dirty, ['scripts/lib/session-trail.mjs']);
+  assert.deepEqual(untracked, []);
+});
+
+test('the FIRST entry is not truncated when it is the one carrying the leading space', () => {
+  // The exact shape that produced `cripts/…`, `oadmap/…`, `pps/web/…` in the live trail: the bug
+  // hit line one only, so a fixture with a single leading-space line first is what has teeth.
+  const raw = ' M Roadmap/01-growth-engine/signals-loop/sprint-2.md\n?? apps/web/lib/signals.ts\n';
+  const { dirty, untracked } = parsePorcelain(raw);
+  assert.deepEqual(dirty, ['Roadmap/01-growth-engine/signals-loop/sprint-2.md']);
+  assert.deepEqual(untracked, ['apps/web/lib/signals.ts']);
+});
+
+test('staged, unstaged and untracked codes are classified, not just sliced', () => {
+  const { dirty, untracked } = parsePorcelain('M  a.ts\n M b.ts\nMM c.ts\n?? d.ts\nA  e.ts\n');
+  assert.deepEqual(dirty, ['a.ts', 'b.ts', 'c.ts', 'e.ts']);
+  assert.deepEqual(untracked, ['d.ts']);
+});
+
+test('a rename records the DESTINATION — the path that exists in the tree now', () => {
+  const { dirty } = parsePorcelain('R  old/name.ts -> new/name.ts\n');
+  assert.deepEqual(dirty, ['new/name.ts']);
+});
+
+test('empty and short lines are skipped rather than recorded as empty paths', () => {
+  assert.deepEqual(parsePorcelain(''), { dirty: [], untracked: [] });
+  assert.deepEqual(parsePorcelain('\n\n'), { dirty: [], untracked: [] });
+  assert.deepEqual(parsePorcelain(null), { dirty: [], untracked: [] });
+});
+
+// ── epicSlugCandidates — finding the trail from the branch ────────────────────────────────────
+// The rail's two blind spots, both hit live: a sprint-suffixed branch, and `main` (which the
+// squash-merge rule makes the NORMAL place to start a sprint).
+
+test('a plain feat branch yields its slug', () => {
+  assert.deepEqual(epicSlugCandidates('feat/signals-loop'), ['signals-loop']);
+});
+
+test('a sprint-suffixed branch falls back to the unsuffixed epic slug, most specific first', () => {
+  assert.deepEqual(epicSlugCandidates('feat/signals-loop-s3'), ['signals-loop-s3', 'signals-loop']);
+  assert.deepEqual(epicSlugCandidates('feat/pod-report-sprint-2'), ['pod-report-sprint-2', 'pod-report']);
+  assert.deepEqual(epicSlugCandidates('feat/pod-report-sprint3'), ['pod-report-sprint3', 'pod-report']);
+});
+
+test('a branch that names no epic yields NO candidates — the caller must fall back, not guess', () => {
+  // `main` returning [] is what makes the recency search a deliberate, labelled fallback rather
+  // than a slug match that happens to miss.
+  assert.deepEqual(epicSlugCandidates('main'), []);
+  assert.deepEqual(epicSlugCandidates('(detached)'), []);
+  assert.deepEqual(epicSlugCandidates(''), []);
+});
+
+test('the suffix strip requires digits, so a real slug ending in -s or a word is untouched', () => {
+  assert.deepEqual(epicSlugCandidates('feat/metrics'), ['metrics']);
+  assert.deepEqual(epicSlugCandidates('feat/analytics'), ['analytics']);
+  assert.deepEqual(epicSlugCandidates('feat/growth-engine-v1'), ['growth-engine-v1']);
+});
+
+test('a recency-found trail announces itself as a guess, above the note', () => {
+  const cp = buildCheckpoint({ note: 'mid-story', state: state(), now: NOW });
+  const out = renderResume({
+    trail: 'Roadmap/01-growth-engine/signals-loop/IN-FLIGHT.md',
+    checkpoint: cp,
+    drift: detectDrift(cp, state()),
+    epicPath: null,
+    inferred: 'recency',
+  });
+  assert.match(out, /found by RECENCY, not by a branch match/);
+  // Above the note, for the same reason the drift section is: a reader who meets the note first
+  // has already started trusting it.
+  assert.ok(out.indexOf('RECENCY') < out.indexOf('mid-story'));
+});
+
+test('a branch-matched trail carries no recency warning', () => {
+  const cp = buildCheckpoint({ note: 'mid-story', state: state(), now: NOW });
+  const out = renderResume({
+    trail: 'x/IN-FLIGHT.md',
+    checkpoint: cp,
+    drift: detectDrift(cp, state()),
+    epicPath: 'x',
+    inferred: 'branch',
+  });
+  assert.doesNotMatch(out, /RECENCY/);
+});
+
+test('an empty briefing says WHERE it looked — "nothing here" and "looked in the wrong place" must be distinguishable', () => {
+  const out = renderResume({
+    trail: 'Roadmap/IN-FLIGHT.md',
+    checkpoint: null,
+    drift: { hasDrift: false, reasons: [] },
+  });
+  assert.match(out, /No checkpoint recorded yet/);
+  assert.match(out, /Looked in: Roadmap\/IN-FLIGHT\.md/);
 });

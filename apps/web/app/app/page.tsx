@@ -97,6 +97,14 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
                       <a href={`/app/shares/${project.slug}`}>Share links</a>{' '}
                       <small>— scoped, revocable report links</small>
                     </li>
+                    {/* signals-loop S3.1 — same reasoning as the share screen above: the flag gates
+                        whether a minted key can WRITE, not whether an owner may prepare one. Story
+                        3.4's launch mints a real credential and then flips, which is the rollout
+                        order that lets the credential be verified before the surface is live. */}
+                    <li>
+                      <a href={`/app/agent-keys/${project.slug}`}>Agent write keys</a>{' '}
+                      <small>— let your own agent claim and resolve tasks</small>
+                    </li>
                   </>
                 )}
               </ul>

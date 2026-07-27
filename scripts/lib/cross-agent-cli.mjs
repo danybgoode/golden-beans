@@ -137,6 +137,139 @@ export const AGY_MODELS_IN_USE = [
 export const CODEX_MODEL = process.env.CODEX_MODEL || 'gpt-5.6-terra';
 export const CODEX_REASONING_EFFORT = process.env.CODEX_REASONING_EFFORT || 'high';
 
+// ── The BUILD tiers (2026-07-26) — Codex as a delegation target, not only a reviewer ────────────
+// Daniel moved Codex onto a paid account and asked for it to carry delegated BUILD work, so the
+// architect stays an architect. That makes "which model" a routing decision per task rather than
+// one constant, and routing decisions belong in the repo for the same reason the review pin does:
+// an ambient choice differs per machine and changes without a signal.
+//
+// ── The tier axis is EFFORT, not model — and the first draft of this table got that wrong ──────
+// Probed live 2026-07-26 against codex-cli 0.144.6 on Daniel's paid ChatGPT account. `codex models
+// list` does not exist in this version, so the roster had to be established by running it.
+//
+// **Exactly ONE model is entitled: `gpt-5.6-terra`.** Every other plausible slug —
+// `gpt-5.6`, `gpt-5.6-mini`, `gpt-5.6-codex`, `gpt-5.6-terra-codex`, `gpt-5.6-terra-mini`,
+// `codex-mini` — returns `400 … model is not supported when using Codex with a ChatGPT account`.
+//
+// This table's first draft listed four DIFFERENT models, because the probe that produced it scored
+// success by grepping the output for "OK" instead of checking the exit code, and codex prints its
+// session banner (and the model name) before failing. So every slug looked available. The error was
+// caught by the delegation rail's own evidence section — a `quick` run reported the task complete-
+// looking in its transcript and NOTHING written to the tree — which is precisely the check that rail
+// exists for, working on its first real use.
+//
+// LEARNINGS already carries this rule from the Devin trial: *"a model catalog is not an entitlement
+// list."* This is its second instance, with a sharper corollary: **score a CLI probe on its exit
+// code, never on a pattern in its output**, because a young CLI prints a plausible banner on the way
+// to failing. A bogus slug (`gpt-5.6-definitely-not-real-xyz`) was run as the discriminating case to
+// confirm the failure is loud and distinguishable — it is.
+//
+// So routing is by `model_reasoning_effort`, which is a real axis: `minimal` is rejected as invalid,
+// and low/medium/high/xhigh all run and are echoed back in codex's banner (verified per level, not
+// assumed). Depth costs latency and tokens, so matching it to the work is still a decision worth
+// making per task:
+//   deep     — xhigh. Hardest reasoning: gnarly architecture, a subtle concurrency or auth question.
+//   build    — high. Substantial multi-file stories. Same effort as the review pin above.
+//   standard — medium. The default for a bounded, well-specified LOW-risk story with clear
+//              acceptance — the shape WAYS-OF-WORKING calls delegable.
+//   quick    — low. Mechanical work: doc edits, scaffolding, a rename across files.
+//
+// HIGH-risk stories (credentials, migrations, a first mutation surface) are NOT on this table. They
+// are architect-only by the sprint doc, and a tier name would invite routing one here by accident.
+export const CODEX_BUILD_TIERS = {
+  deep: { model: 'gpt-5.6-terra', effort: 'xhigh' },
+  build: { model: 'gpt-5.6-terra', effort: 'high' },
+  standard: { model: 'gpt-5.6-terra', effort: 'medium' },
+  quick: { model: 'gpt-5.6-terra', effort: 'low' },
+};
+
+/** Resolve a tier name to {model, effort}, or die listing the valid ones. */
+export function resolveCodexTier(tier) {
+  const hit = CODEX_BUILD_TIERS[tier];
+  if (!hit) {
+    die(
+      `unknown codex tier "${tier}" — valid tiers: ${Object.keys(CODEX_BUILD_TIERS).join(', ')}. ` +
+        `Tiers are declared in scripts/lib/cross-agent-cli.mjs (CODEX_BUILD_TIERS).`
+    );
+  }
+  return hit;
+}
+
+// ── WHO MAY REVIEW WHAT: builder family ≠ reviewer family ───────────────────────────────────────
+// Daniel's rule (2026-07-26), and it is a sharpening of what LEARNINGS already argues rather than a
+// new policy: *"if a builder was from codex then reviewers could be from claude or agy; if the
+// builder was claude then reviewers would be codex and/or agy."*
+//
+// The evidence behind it is this repo's own. pod-report S3 ran FOUR agy rounds on a new credential
+// surface and the fourth, aimed deliberately at the auth/tenancy surface, came back CLEAN. Codex
+// then opened with a Blocking finding on that same surface. Neither family is better; they are
+// blind in different directions, which is the entire reason to run both — and it is why a family
+// clearing its own work is the one arrangement that buys nothing.
+//
+// Now that Codex BUILDS here (scripts/codex-task.mjs) and not only reviews, that failure mode is
+// newly reachable: the obvious `--agent codex` on a Codex-built diff is same-family self-review
+// wearing a cross-review label, which is worse than no review because it is recorded as one.
+//
+// Encoded as a REFUSAL rather than a convention, because a convention drifts and this one would
+// drift silently — the output looks identical either way. `reviewersFor` is pure and tested.
+//
+// Cost note (Daniel's standing preference): Claude's tokens go to security/money/architecture and to
+// BUILDING, not to routine PR review. So Claude is deliberately NOT in either default reviewer set;
+// it is the escalation, named explicitly when a diff earns it, not the baseline.
+export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
+
+/**
+ * Which reviewer agents may review a diff built by `builder`.
+ *
+ * `human` and an unknown/unstated builder both get the full set: a human-written diff has no model
+ * family to collide with, and refusing to review an unlabelled diff would make the safe path the
+ * annoying one, which is how a check gets bypassed.
+ */
+export function reviewersFor(builder) {
+  const b = String(builder || '').toLowerCase();
+  if (b === 'codex') return ['antigravity'];
+  if (b === 'agy') return ['codex'];
+  if (b === 'claude') return ['codex', 'antigravity'];
+  return ['codex', 'antigravity'];
+}
+
+/** Normalise the reviewer CLI name to the family it belongs to. */
+function reviewerFamily(agent) {
+  return agent === 'antigravity' ? 'agy' : agent;
+}
+
+/**
+ * Refuse a same-family review. Returns null when the pairing is fine, or an explanatory message.
+ *
+ * Deliberately returns the reason instead of dying here, so the caller can decide between a hard
+ * failure (an interactive run) and a warning (a batch), and so this stays pure and testable.
+ */
+export function checkReviewerPairing(builder, agent) {
+  const b = String(builder || '').toLowerCase();
+  if (!b || b === 'human') return null;
+  // An UNRECOGNISED explicit builder is a refusal, not a shrug (cross-review, Codex, PR #38).
+  // Unknown values used to fall through to the same "no constraint" branch as an unstated builder,
+  // so `--builder codez --agent codex` — a typo — silently disabled the same-family guard and
+  // produced a review that looked exactly like a valid one. A guard that a typo can switch off is
+  // not a guard; an omitted builder is still permitted, because that is an honest "unstated".
+  if (!BUILDER_FAMILIES.includes(b)) {
+    return (
+      `unknown --builder "${builder}" — expected one of ${BUILDER_FAMILIES.join(', ')}. ` +
+      `Refusing rather than defaulting: an unrecognised builder would silently disable the ` +
+      `same-family review guard, and the output looks identical either way.`
+    );
+  }
+  if (reviewerFamily(agent) !== b) return null;
+  const allowed = reviewersFor(b).join(', ');
+  return (
+    `refusing a SAME-FAMILY review: this diff was built by "${b}" and "${agent}" is the same model ` +
+    `family. A family clearing its own work is the one arrangement that buys nothing — the two ` +
+    `families are blind in different directions, which is the whole point of the gate ` +
+    `(Roadmap/LEARNINGS.md). Use --agent ${allowed} instead, or pass --builder human if a person ` +
+    `wrote this diff.`
+  );
+}
+
 // agy takes the prompt+context as a single `-p` argv string (stdin is not the prompt). Guard well under the
 // OS limit (macOS ARG_MAX is 1 MB incl. env) so a huge input fails clearly instead of an opaque E2BIG.
 export const AGY_ARG_LIMIT = 256 * 1024;
@@ -215,6 +348,85 @@ const DOC_FILE_RE = /(\.(md|mdx|txt|rst)$)|(^|\/)(LICENSE|CODEOWNERS|\.gitignore
 
 export function isDocFile(path) {
   return DOC_FILE_RE.test(path || '') || /(^|\/)docs\//i.test(path || '');
+}
+
+/**
+ * Drop documentation/text file hunks from a diff, leaving only code.
+ *
+ * ── Why this exists, and why the SCOPE has to be reported ─────────────────────────────────────
+ * agy takes its whole prompt as one argv string (stdin is not the prompt), so it is bounded by
+ * AGY_ARG_LIMIT — and a sprint-sized PR crosses it. signals-loop Sprint 3 hit 259 KB against a
+ * 256 KB cap and the review simply refused to run, which on a HIGH-risk credential surface is the
+ * worst possible time to lose the second family's read.
+ *
+ * This repo's PRs are comment-dense by house style and carry sprint docs, so prose is usually the
+ * majority of the bytes and dropping it is enough. The reviewer then sees every line of code and
+ * none of the documentation.
+ *
+ * **That is a REAL reduction in scope, not a formatting detail.** A reviewer who cannot see the
+ * sprint doc cannot check the code against its stated acceptance criteria, and one who cannot see a
+ * migration's comment cannot catch a comment asserting a property the SQL does not enforce — a
+ * defect class this repo has hit repeatedly. So callers must state the subset in the posted comment
+ * (cross-review.mjs does), because a review labelled as covering a PR while having seen two thirds
+ * of it is worse than an absent review: the next reader stops there.
+ */
+export function stripDocFileDiffs(diffText) {
+  if (!diffText) return { diff: diffText, strippedFiles: [] };
+  const chunks = diffText.split(/(?=^diff --git )/m);
+  const strippedFiles = [];
+  const kept = [];
+  for (const chunk of chunks) {
+    const header = chunk.match(/^diff --git a\/(\S+) b\/(\S+)/);
+    if (!header) {
+      kept.push(chunk);
+      continue;
+    }
+    const path = header[2] || header[1];
+    if (isDocFile(path)) {
+      strippedFiles.push(path);
+      continue;
+    }
+    kept.push(chunk);
+  }
+  return { diff: kept.join(''), strippedFiles };
+}
+
+/**
+ * Keep only the diff hunks whose path matches one of `patterns` (substring match).
+ *
+ * ── Why a targeted subset is sometimes the ONLY way to get the second family ──────────────────
+ * agy takes its prompt in argv, so it is bounded by AGY_ARG_LIMIT. A long-running PR grows past
+ * that even after `stripDocFileDiffs` — signals-loop Sprint 3 reached 270 KB of pure code across
+ * seven review rounds — and at that point the choice is a scoped review or none at all.
+ *
+ * Scoping is the better answer for a HIGH-risk PR specifically, because the risk is concentrated:
+ * a credential surface and a mutation path are worth a full read from both families, while a
+ * landing-page component is not what the second opinion is for.
+ *
+ * It is still a REDUCTION, and callers must say so in the posted comment — a review that appears to
+ * cover a PR while having seen four files is worse than an absent one.
+ */
+export function filterDiffToPaths(diffText, patterns) {
+  if (!diffText || !patterns?.length) return { diff: diffText, keptFiles: [], droppedFiles: [] };
+  const chunks = diffText.split(/(?=^diff --git )/m);
+  const keptFiles = [];
+  const droppedFiles = [];
+  const kept = [];
+  for (const chunk of chunks) {
+    const header = chunk.match(/^diff --git a\/(\S+) b\/(\S+)/);
+    if (!header) {
+      kept.push(chunk);
+      continue;
+    }
+    const path = header[2] || header[1];
+    if (patterns.some((pat) => path.includes(pat))) {
+      keptFiles.push(path);
+      kept.push(chunk);
+    } else {
+      droppedFiles.push(path);
+    }
+  }
+  return { diff: kept.join(''), keptFiles, droppedFiles };
 }
 
 export function decideTrivialSkip({ files, minLines = 10 } = {}) {

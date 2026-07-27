@@ -28,7 +28,11 @@ export const LANDING_SECTIONS: LandingSection[] = [
     status: 'live',
     note: '① connector URL and ③ npx wizard only — ② the pod plugin lands with multi-tenant-activation',
   },
-  { id: 'inverted-loop', title: 'The inverted loop', epic: 'signals-loop', status: 'next' },
+  // signals-loop · Sprint 3, Story 3.3 — flipped 'next' -> 'live': InvertedLoopSection.tsx now
+  // explains the deterministic signal → task → customer-agent loop and its explicit enablement
+  // state, rather than advertising a task count before the two born-OFF gates are deliberately
+  // flipped.
+  { id: 'inverted-loop', title: 'The inverted loop', epic: 'signals-loop', status: 'live' },
   // pod-report · Sprint 3, Story 3.2 — flipped 'next' -> 'live': PodsProofSection.tsx now renders a
   // real, computed Pod Report (the demo tenant's artifact, computed from golden-beans' OWN repo —
   // never a client's, which stays behind auth and share links). This entry is the static "the

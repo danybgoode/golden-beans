@@ -166,3 +166,93 @@ Sprint 2 MERGED (3b76d48) + migrations applied to prod. Both gates OFF. NEXT: Sp
 }
 ```
 
+## 2026-07-26T22:23:13.600Z — `feat/signals-loop-s3` @ 7811682b
+
+_HEAD: chore(process): Codex becomes a build delegate, and the session trail stops losing its own trail_
+
+S3 shared surface committed (7811682): codex-task delegation rail + tier table (ONE entitled model, effort-based tiers), session-trail epic resolution + parsePorcelain fix. NEXT: Story 3.1 agent_write credential scope (architect-only).
+
+**Verified by running (observed output, not believed):**
+- 213 script unit tests green
+- codex-task live smoke wrote a real file; bogus model + bad tier both fail loud
+- mutation check: reintroducing the porcelain .trim() turns 2 specs red, reverted clean
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-26T22:23:13.600Z",
+  "note": "S3 shared surface committed (7811682): codex-task delegation rail + tier table (ONE entitled model, effort-based tiers), session-trail epic resolution + parsePorcelain fix. NEXT: Story 3.1 agent_write credential scope (architect-only).",
+  "branch": "feat/signals-loop-s3",
+  "head": "7811682b10e011bca5577e03fbb545e37ccd2b38",
+  "headSubject": "chore(process): Codex becomes a build delegate, and the session trail stops losing its own trail",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "213 script unit tests green",
+    "codex-task live smoke wrote a real file; bogus model + bad tier both fail loud",
+    "mutation check: reintroducing the porcelain .trim() turns 2 specs red, reverted clean"
+  ]
+}
+```
+
+## 2026-07-26T22:54:33.132Z — `feat/signals-loop-s3` @ 3c5190fb
+
+_HEAD: feat(signals-loop): Story 3.2 — staged write tools, the engine's first public mutation surface_
+
+S3: 3.1 (agent_write scope) + 3.3a (landing S4, delegated to Codex) + 3.2 (staged write tools) all COMMITTED. NEXT: 3.3b ladder evidence, then cross-family review, then 3.4 launch (flip BOTH gates - Daniel wants it live, not dark).
+
+**Verified by running (observed output, not believed):**
+- 17/17 write-tool specs green (gate ON) + dark polarity green (gate OFF)
+- 657 unit tests; typecheck 4 projects; lint clean
+- full api suite: 6 failures, identical 6 on a stashed clean tree = pre-existing local-env, zero regressions
+- mutation checks: same-project check deleted -> only cross-project spec red; token not spent -> single-use + expiry red; both reverted clean
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-26T22:54:33.132Z",
+  "note": "S3: 3.1 (agent_write scope) + 3.3a (landing S4, delegated to Codex) + 3.2 (staged write tools) all COMMITTED. NEXT: 3.3b ladder evidence, then cross-family review, then 3.4 launch (flip BOTH gates - Daniel wants it live, not dark).",
+  "branch": "feat/signals-loop-s3",
+  "head": "3c5190fbe9a7a4be1ef51d73df59c729b7b5a4a7",
+  "headSubject": "feat(signals-loop): Story 3.2 — staged write tools, the engine's first public mutation surface",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "17/17 write-tool specs green (gate ON) + dark polarity green (gate OFF)",
+    "657 unit tests; typecheck 4 projects; lint clean",
+    "full api suite: 6 failures, identical 6 on a stashed clean tree = pre-existing local-env, zero regressions",
+    "mutation checks: same-project check deleted -> only cross-project spec red; token not spent -> single-use + expiry red; both reverted clean"
+  ]
+}
+```
+
+## 2026-07-27T02:09:52.144Z — `feat/signals-loop-s3` @ e6246c72
+
+_HEAD: feat(signals-loop): Story 3.3b — the loop feeds the AI-adoption ladder_
+
+3.1/3.2/3.3a/3.3b all committed + telegram fix + codex onboarding (CODE-QUALITY.md, standing preamble, builder!=reviewer routing). NEXT: cross-family review, then 3.4 LAUNCH — Daniel wants gates LIVE not dark.
+
+**Verified by running (observed output, not believed):**
+- 679 unit tests, typecheck 4 projects, lint clean
+- codex delegated 3.3a + 3.3b, both stayed in-brief, both mutation-checked by architect
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-27T02:09:52.144Z",
+  "note": "3.1/3.2/3.3a/3.3b all committed + telegram fix + codex onboarding (CODE-QUALITY.md, standing preamble, builder!=reviewer routing). NEXT: cross-family review, then 3.4 LAUNCH — Daniel wants gates LIVE not dark.",
+  "branch": "feat/signals-loop-s3",
+  "head": "e6246c729410639e079884cd1dc6aaaf42b01e18",
+  "headSubject": "feat(signals-loop): Story 3.3b — the loop feeds the AI-adoption ladder",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "679 unit tests, typecheck 4 projects, lint clean",
+    "codex delegated 3.3a + 3.3b, both stayed in-brief, both mutation-checked by architect"
+  ]
+}
+```
+

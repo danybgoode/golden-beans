@@ -43,3 +43,6 @@ npm-debug.log*
 
 # Playwright authed-fixture state (contains a real, disposable session token)
 apps/web/e2e/.auth/
+
+# codex-task delegation transcripts — run artifacts, not source
+.codex-runs/

@@ -11,7 +11,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeMaturityLens, scoreVerdict, NOT_INSTRUMENTED, LADDER_CITATION } from './maturity-lens.mjs';
+import {
+  computeMaturityLens,
+  scoreFeedbackRemediationLoop,
+  scoreVerdict,
+  NOT_INSTRUMENTED,
+  LADDER_CITATION,
+} from './maturity-lens.mjs';
 
 /** A repo doing essentially everything: reviewed, gated, parallel, agent-written, disciplined. */
 const HIGH = {
@@ -171,6 +177,59 @@ test('scoreVerdict never reports a step above what the evidence supports', () =>
   ];
   assert.equal(scoreVerdict(allUnmet).step, 0);
   assert.ok(scoreVerdict(allUnmet).notInstrumentedCount >= NOT_INSTRUMENTED.length);
+});
+
+// ── Feedback remediation loop — signals-loop Story 3.3b ─────────────────────────────────────
+
+test('feedback remediation reaches Step 4 exactly at the scaled-evidence threshold', () => {
+  const row = scoreFeedbackRemediationLoop({
+    taskLifecycle: {
+      agentResolvedTotal: 3,
+      agentResolvedWithEvidence: 3,
+      sampleEvidencePointer: 'https://github.com/golden-beans/golden-beans/commit/abc123',
+    },
+  });
+  assert.equal(row.status, 'met');
+  assert.equal(row.evidence.ref, 'https://github.com/golden-beans/golden-beans/commit/abc123');
+  assert.match(row.evidence.detail, /3 agent-resolved task\(s\).*3 total; threshold: 3/);
+  assert.equal(
+    computeMaturityLens({ taskLifecycle: { agentResolvedTotal: 3, agentResolvedWithEvidence: 3 } }).rows.at(
+      -1
+    ).id,
+    'feedback_remediation_loop'
+  );
+});
+
+test('feedback remediation is not met one evidenced resolution below the scaled threshold', () => {
+  const row = scoreFeedbackRemediationLoop({
+    taskLifecycle: { agentResolvedTotal: 3, agentResolvedWithEvidence: 2 },
+  });
+  assert.equal(row.status, 'not_met');
+  assert.match(row.reason, /2 agent-resolved task\(s\).*below the 3 required/);
+  assert.match(row.reason, /1 lack resolvable pointers; an unevidenced resolution is not counted/);
+});
+
+test('feedback remediation is not instrumented when task-lifecycle data is absent, malformed, or non-numeric', () => {
+  for (const taskLifecycle of [
+    undefined,
+    'not an object',
+    { agentResolvedTotal: '3', agentResolvedWithEvidence: 3 },
+  ]) {
+    const row = scoreFeedbackRemediationLoop({ taskLifecycle });
+    assert.equal(row.status, 'not_instrumented');
+    assert.equal(row.evidence, null);
+  }
+});
+
+test('ACCEPTANCE: an unevidenced agent resolution can never produce a met feedback-remediation row', () => {
+  // A free-text "done" note is real work, but it is not auditable remediation evidence. Counting
+  // it would let an unverifiable closure move the public maturity claim to Step 4.
+  const row = scoreFeedbackRemediationLoop({
+    taskLifecycle: { agentResolvedTotal: 3, agentResolvedWithEvidence: 0 },
+  });
+  assert.equal(row.status, 'not_met');
+  assert.equal(row.evidence, null);
+  assert.match(row.reason, /3 lack resolvable pointers; an unevidenced resolution is not counted/);
 });
 
 // ── Regression from cross-review round 3 ────────────────────────────────────────────────────

@@ -53,7 +53,12 @@ import {
   decideHeadGuard,
   decideTrivialSkip,
   stripGeneratedFileDiffs,
+  stripDocFileDiffs,
+  filterDiffToPaths,
+  AGY_ARG_LIMIT,
   shortSha,
+  checkReviewerPairing,
+  reviewersFor,
 } from './lib/cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -74,7 +79,13 @@ Usage:
 [PR#] is optional — omit it to review the open PR for the CURRENT branch.
 
 Flags:
-  --agent <name>       reviewer CLI: antigravity (default: antigravity)
+  --agent <name>       reviewer CLI: antigravity | codex (default: antigravity)
+  --paths a,b,c        review ONLY files whose path contains one of these. The reduced
+                       scope is STATED in the posted comment.
+  --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
+                       The reduced scope is STATED in the posted comment.
+  --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
+                       same-family review (a family cannot clear its own work).
   --repo  owner/repo   target a specific repo (default: the repo of the current directory)
   --force              proceed even when local HEAD differs from the resolved PR head (auto-resolve only)
   --skip-trivial       skip (exit 0, no comment) when the PR is docs-only or under --min-lines changed lines
@@ -93,6 +104,9 @@ function parseArgs(argv) {
   const out = {
     pr: null,
     agent: 'antigravity',
+    builder: process.env.CROSS_REVIEW_BUILDER || '',
+    codeOnly: false,
+    paths: [],
     repo: null,
     force: false,
     dryRun: false,
@@ -110,6 +124,14 @@ function parseArgs(argv) {
     else if (a === '--include-lockfiles') out.includeLockfiles = true;
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
+    else if (a === '--code-only') out.codeOnly = true;
+    else if (a === '--paths')
+      out.paths = need(argv[++i], '--paths')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
+    else if (a === '--builder') out.builder = need(argv[++i], '--builder');
+    else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
     else if (a.startsWith('--agent=')) out.agent = a.slice('--agent='.length);
     else if (a === '--repo') out.repo = need(argv[++i], '--repo');
@@ -196,9 +218,20 @@ function postComment(pr, repo, body) {
 }
 
 function main() {
-  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help } = parseArgs(
-    process.argv.slice(2)
-  );
+  let {
+    pr,
+    agent,
+    repo,
+    force,
+    dryRun,
+    skipTrivial,
+    minLines,
+    includeLockfiles,
+    help,
+    builder,
+    codeOnly,
+    paths,
+  } = parseArgs(process.argv.slice(2));
   if (help) {
     process.stdout.write(HELP + '\n');
     process.exit(0);
@@ -221,6 +254,19 @@ function main() {
   // which is exactly the drift class this repo keeps paying for.
   if (!Object.prototype.hasOwnProperty.call(AGENTS, agent)) {
     die(`unknown reviewer '${agent}'; expected one of ${Object.keys(AGENTS).join('|')}`);
+  }
+
+  // ── Builder family ≠ reviewer family (Daniel, 2026-07-26) ───────────────────────────────────
+  // Newly reachable now that Codex BUILDS here as well as reviews: `--agent codex` on a Codex-built
+  // diff is same-family self-review wearing a cross-review label, which is worse than no review
+  // because it gets recorded as one. A hard refusal rather than a warning — the output looks
+  // identical either way, so a warning is a thing nobody notices. See reviewersFor().
+  const pairingError = checkReviewerPairing(builder, agent);
+  if (pairingError) die(pairingError);
+  if (builder) {
+    process.stderr.write(
+      `Builder: ${builder} → reviewer '${agent}' OK (eligible: ${reviewersFor(builder).join(', ')}).\n`
+    );
   }
 
   ensureGh();
@@ -272,10 +318,44 @@ function main() {
       );
     }
   }
+  // ── The code-only subset, and its honesty requirement ───────────────────────────────────────
+  // agy takes its prompt in argv, so a sprint-sized PR can exceed AGY_ARG_LIMIT and the review
+  // refuses to run — which on a high-risk diff is exactly when losing the second family hurts most.
+  // Dropping prose usually fits it. But a reviewer who cannot see the sprint doc cannot check the
+  // code against its acceptance criteria, so the reduced scope is recorded and posted with the
+  // findings rather than left implicit.
+  let scopeNote = null;
+  if (codeOnly) {
+    const codeOnlyDiff = stripDocFileDiffs(diff);
+    diff = codeOnlyDiff.diff;
+    scopeNote =
+      `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
+      `withheld from this reviewer to fit agy's ${AGY_ARG_LIMIT / 1024} KB argv limit, so it did ` +
+      `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
+      `code against its own stated acceptance criteria. Withheld: ` +
+      `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
+    process.stderr.write(`Code-only: withheld ${codeOnlyDiff.strippedFiles.length} doc file(s).\n`);
+  }
+
+  if (paths.length > 0) {
+    const scoped = filterDiffToPaths(diff, paths);
+    diff = scoped.diff;
+    const note =
+      `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
+      `subset of the PR — the diff exceeds agy's ${AGY_ARG_LIMIT / 1024} KB argv limit in full, so ` +
+      `the alternative was no second-family review at all. It saw: ` +
+      `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
+      `file(s), and could not check any of this against the sprint docs.`;
+    scopeNote = scopeNote ? `${scopeNote}\n\n${note}` : note;
+    process.stderr.write(
+      `Scoped to ${scoped.keptFiles.length} file(s), dropped ${scoped.droppedFiles.length}.\n`
+    );
+  }
+
   const findings = runReview(agent, prompt, diff);
   if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
-  const body = buildComment(AGENTS[agent], findings);
+  const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings);
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
