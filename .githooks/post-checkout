@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# post-checkout — the SECOND trigger for the 📝 product report. See .githooks/post-merge for the
+# full reasoning; the short version is that the report's retry used to depend on an event that had
+# largely stopped happening.
+#
+# `post-merge` covers `git pull`/`git merge`. It does NOT cover the two ways main actually moves in
+# this project: a squash merge performed server-side by `gh pr merge`, and a docs commit pushed
+# straight to main. `git checkout main` is what follows the first of those, so this closes the gap.
+#
+# Over-triggering is safe and deliberate: report-new-commits.mjs owns the once-per-commit guarantee
+# through its state file, is silent when there is nothing to do, and cannot post the same commit
+# twice. The failure this prevents — a transient writer outage stalling the rail forever — is far
+# more expensive than an extra no-op run.
+#
+# Same three properties as post-merge: never block git, never post twice, be silent when idle.
+
+# git passes: $1 = previous HEAD, $2 = new HEAD, $3 = 1 for a branch checkout / 0 for a file checkout.
+# A file checkout (`git checkout -- some/file`) is not main moving, so ignore it.
+[ "$3" = "1" ] || exit 0
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+[ "$branch" = "main" ] || exit 0
+
+[ -n "$GB_SKIP_COMMIT_REPORT" ] && exit 0
+command -v node >/dev/null 2>&1 || exit 0
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || echo '')"
+[ -n "$root" ] || exit 0
+[ -f "$root/scripts/report-new-commits.mjs" ] || exit 0
+
+(
+  node "$root/scripts/report-new-commits.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
+) &
+
+exit 0

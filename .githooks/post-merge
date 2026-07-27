@@ -16,6 +16,22 @@
 # 2. NEVER post twice for the same commit — report-new-commits.mjs owns that via its state file.
 # 3. Be silent when there is nothing to do, so a normal pull looks normal.
 
+# ── Why this ALSO runs from post-checkout (added 2026-07-27) ───────────────────────────────────
+# The rail stalled for a full day and the cause was not the hook or the writers, it was the RETRY
+# TRIGGER. On 2026-07-26 both prose writers were transiently unavailable at the same moment, the
+# reporter correctly left its baseline where it was and logged "it will be retried on the next run"
+# — and then no next run came. Four shipped commits went unreported.
+#
+# `post-merge` fires on `git pull`/`git merge`. But main moves here two ways that never produce a
+# local merge: a squash merge performed SERVER-side via `gh pr merge`, and a docs commit pushed
+# straight to main. So the retry depended on an event that had largely stopped happening.
+#
+# **A retry whose trigger may never recur is not a retry.** The same script is therefore invoked from
+# `post-checkout` as well: `git checkout main` is the other reliable "I am now on main and it may
+# have moved" moment, and it is exactly what follows a `gh pr merge`. Both are safe to over-trigger —
+# report-new-commits.mjs owns the once-per-commit guarantee via its state file, prints nothing when
+# there is nothing to do, and cannot post twice.
+
 # Only when `main` is the branch that just moved. The hook also fires on feature-branch merges, and a
 # feature commit is not something to report.
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
