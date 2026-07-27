@@ -100,6 +100,23 @@ async function waitForTasks(db: SupabaseClient, projectId: string, timeoutMs = 1
   return rows
 }
 
+async function waitForOpenedTaskEvent(db: SupabaseClient, projectId: string, taskId: string, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const { data } = await db
+      .from('events')
+      .select('event, subject_type, subject_id, idempotency_key, idempotency_fingerprint')
+      .eq('project_id', projectId)
+      .eq('event', 'task_opened')
+      .eq('subject_type', 'task')
+      .eq('subject_id', taskId)
+      .maybeSingle()
+    if (data) return data as Record<string, unknown>
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  return null
+}
+
 test.describe('connector task read tools', () => {
   test.skip(!isTaskMcpToolEnabled(), 'connector or signals gate is off — tools are dark by design')
 
@@ -120,6 +137,15 @@ test.describe('connector task read tools', () => {
     expect(task.evidence?.signal?.eventCount).toBeGreaterThanOrEqual(5)
     expect(task.evidence?.signal?.usersAffected).toBeGreaterThanOrEqual(5)
     expect(task.evidence?.capturedAt).toBeTruthy()
+
+    // Promotion returns before its lifecycle fan-out finishes, so wait for the actual canonical
+    // event instead of mistaking the task row for proof that a tenant's automation heard about it.
+    // This fails if the emit loses either half of its idempotency pair — the prior production-shaped
+    // failure that logged and dropped every task_opened event.
+    const emitted = await waitForOpenedTaskEvent(db, tenant.projectId, task.id)
+    expect(emitted).not.toBeNull()
+    expect(emitted?.idempotency_key).toBe(`task:${task.id}:open`)
+    expect(emitted?.idempotency_fingerprint).toMatch(/^[0-9a-f]{64}$/)
   })
 
   test('get_task returns one task, and 404-equivalent for another tenant task id', async ({ request }) => {

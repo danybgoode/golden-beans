@@ -9,6 +9,7 @@ import { taskEventForStatus, TASK_SUBJECT_TYPE, TASK_OPENED_EVENT, type TaskStat
 import { tgNotify } from './telegram'
 import { isTaskAlertEnabled } from './notify-policy'
 import { recordAudit } from './audit'
+import { computePayloadFingerprint } from './idempotency-fingerprint'
 
 // signals-loop · Sprint 2, Story 2.1 — signal → task promotion, the evidence bundle, and the
 // lifecycle fan-out.
@@ -239,6 +240,18 @@ export async function emitTaskLifecycleEvent(
 ): Promise<void> {
   try {
     const supabase = getSupabaseServiceClient()
+    const event = taskEventForStatus(status)
+    const tags = actor ? { actor } : {}
+    const context = {
+      context_version: 1,
+      actor_type: 'system',
+      actor_id: 'signals-loop',
+      subject_type: TASK_SUBJECT_TYPE,
+      subject_id: taskId,
+      correlation_id: null,
+      occurred_at: null,
+    }
+    const idempotencyKey = `task:${taskId}:${status}`
     const { error } = await supabase.rpc('ingest_event', {
       p_project_id: projectId,
       // The ENGINE is the actor, not a tenant user. Using the claiming agent's opaque label here
@@ -246,23 +259,34 @@ export async function emitTaskLifecycleEvent(
       // — with non-user values, which is the "honest-looking zero" failure this repo has hit three
       // times. The agent's identity travels in tags, where it belongs.
       p_user_id: 'golden-beans-engine',
-      p_event: taskEventForStatus(status),
+      p_event: event,
       p_feature_id: null,
-      p_tags: actor ? { actor } : {},
+      p_tags: tags,
       p_metadata: {},
-      p_context_version: 1,
-      p_actor_type: 'system',
-      p_actor_id: 'signals-loop',
-      p_subject_type: TASK_SUBJECT_TYPE,
-      p_subject_id: taskId,
-      p_correlation_id: null,
-      p_occurred_at: null,
+      p_context_version: context.context_version,
+      p_actor_type: context.actor_type,
+      p_actor_id: context.actor_id,
+      p_subject_type: context.subject_type,
+      p_subject_id: context.subject_id,
+      p_correlation_id: context.correlation_id,
+      p_occurred_at: context.occurred_at,
       // A stable idempotency key per (task, status): a retried emit returns the original event
       // rather than delivering the same transition twice to a tenant's automation. `task_opened`
       // fires once per task by construction, and a re-emitted claim/resolve is the retry case this
       // guards. Uses the engine's existing dedupe rather than inventing a second one.
-      p_idempotency_key: `task:${taskId}:${status}`,
-      p_idempotency_fingerprint: null,
+      p_idempotency_key: idempotencyKey,
+      // The ingest RPC rejects a half-pair, and more importantly a bare stable key would turn a
+      // future lifecycle-payload change into silent loss on retry. Reuse the exact canonical
+      // fingerprint used by /track so this emitted fact has the same conflict semantics as every
+      // caller-supplied one.
+      p_idempotency_fingerprint: computePayloadFingerprint({
+        event,
+        userId: 'golden-beans-engine',
+        featureId: null,
+        tags,
+        metadata: {},
+        context,
+      }),
     })
     if (error) {
       console.error('[tasks] lifecycle emit failed:', error)
