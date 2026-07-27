@@ -49,6 +49,9 @@ export type TaskWriteAction = 'claim' | 'resolve' | 'dismiss'
 /** The resolution vocabulary `transition_task` enforces. Mirrored, never re-invented. */
 const VALID_RESOLUTIONS = ['fixed', 'wont_fix', 'duplicate', 'not_reproducible']
 
+/** What `transition_task` COALESCEs an omitted resolution to. Mirrored for the PREVIEW only. */
+const DEFAULT_RESOLUTION = 'fixed'
+
 const ACTION_TO_STATUS: Record<TaskWriteAction, TaskStatus> = {
   claim: 'claimed',
   resolve: 'resolved',
@@ -173,7 +176,14 @@ export async function proposeTaskChange(input: ProposeInput): Promise<ProposeRes
       fromStatus: task.status,
       toStatus: ACTION_TO_STATUS[input.action],
       actor,
-      resolution,
+      // The EFFECTIVE resolution, not the raw input (cross-review, Agy, PR #38). `transition_task`
+      // applies `COALESCE(v_resolution, 'fixed')`, so an omitted resolution has always RESOLVED as
+      // 'fixed' — the finding was wrong that the outcome was null. What was wrong is narrower and
+      // still worth fixing: the PREVIEW said `null` while the tool's own schema said "Defaults to
+      // fixed", so the one artifact whose entire job is to state what will happen disagreed with
+      // both the schema and the outcome. Computed here rather than duplicated as a literal, so it
+      // cannot drift from the SQL that decides it.
+      resolution: input.action === 'resolve' ? (resolution ?? DEFAULT_RESOLUTION) : resolution,
       evidencePointer: evidence.value,
       evidenceKind: evidence.kind,
       // The honesty rule, surfaced in the PREVIEW and not only in the result: an agent about to

@@ -685,6 +685,39 @@ test.describe('connector staged write tools', () => {
     expect((await readTask(db, task.id as string)).status).toBe('claimed')
   })
 
+  test('the preview states the EFFECTIVE resolution, matching what the database will apply', async ({
+    request,
+  }) => {
+    // Cross-review (Agy, PR #38). The tool schema says "Defaults to fixed" and `transition_task`
+    // applies COALESCE(resolution, 'fixed') — but the preview showed null, so the one artifact whose
+    // job is to state what will happen disagreed with both.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'preview-res')
+    const task = await seedTask(request, db, tenant, 'preview-res-marker')
+
+    const proposed = await callTool(
+      request,
+      tenant.connectorToken,
+      'propose_task_change',
+      { taskId: task.id, action: 'resolve' },
+      tenant.writeKey
+    )
+    expect(proposed.parsed?.ok).toBe(true)
+    expect(proposed.parsed?.preview?.resolution).toBe('fixed')
+
+    // ...and the preview told the truth: applying really does produce `fixed`.
+    await callTool(
+      request,
+      tenant.connectorToken,
+      'apply_task_change',
+      { confirmationToken: proposed.parsed.confirmationToken },
+      tenant.writeKey
+    )
+    const after = await readTask(db, task.id as string)
+    expect(after.status).toBe('resolved')
+    expect(after.resolution).toBe('fixed')
+  })
+
   test('an INVALID resolution is refused at PROPOSE, before a token is issued', async ({ request }) => {
     // Cross-review (Agy, PR #38): the last apply-time refusal that was invisible at propose time.
     // The MCP schema restricts this enum, so this drives the staging layer directly through a raw
