@@ -14,9 +14,10 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (0)
+## 📋 Ready to build (scaffolded, not started) (2)
 
-_None._
+- [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low · #6
+- [Flag control plane + Miyagi migration + resilience/SecOps](../../01-growth-engine/flag-serving-and-prd-g/README.md) — 01 Growth Engine · 0/15 stories · risk: High · #5
 
 ## ✅ Shipped (8)
 
@@ -29,10 +30,9 @@ _None._
 - [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High · #2
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High · #3
 
-## ⬜ Funnel — seeds not yet scaffolded (2)
+## ⬜ Funnel — seeds not yet scaffolded (0)
 
-- [E5 — a) Flag-serving migration · b) PRD-G chaos/SecOps + circuit breakers](seeds/flag-serving-and-prd-g.md) — Raw · Feature · #5
-- [E6 — CMS integration spike (Payload): integrate-don't-own, go/no-go](seeds/cms-integration-spike.md) — Raw · Spike · #6
+_None._
 
 ## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
 
@@ -45,4 +45,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 8 · seeds in funnel: 2 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 10 · seeds in funnel: 0 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
