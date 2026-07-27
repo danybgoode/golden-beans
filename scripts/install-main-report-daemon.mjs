@@ -33,6 +33,12 @@ function usage() {
   );
 }
 
+function assertMacLaunchd() {
+  if (process.platform !== 'darwin' || uid === undefined) {
+    throw new Error('the local report runner uses macOS launchd and must be managed on macOS.');
+  }
+}
+
 function status() {
   const result = command(['print', `gui/${uid}/${LABEL}`], { quiet: true });
   process.stdout.write(result.status === 0 ? '✓ launchd runner is loaded.\n' : '○ launchd runner is not loaded.\n');
@@ -42,9 +48,7 @@ function status() {
 }
 
 function install() {
-  if (process.platform !== 'darwin' || uid === undefined) {
-    throw new Error('the local report runner uses macOS launchd and must be installed on macOS.');
-  }
+  assertMacLaunchd();
   const template = readFileSync(join(__dirname, 'launchd', `${LABEL}.plist.template`), 'utf8');
   const contents = template
     .replaceAll('__NODE_PATH__', xml(process.execPath))
@@ -63,6 +67,7 @@ function install() {
 }
 
 function uninstall() {
+  assertMacLaunchd();
   command(['bootout', `gui/${uid}`, target], { quiet: true });
   if (existsSync(target)) rmSync(target);
   process.stdout.write(`✓ removed ${LABEL}. Logs and report history were preserved.\n`);

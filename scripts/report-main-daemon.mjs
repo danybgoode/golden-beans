@@ -7,7 +7,16 @@
 // leaves that reporter's baseline untouched, so the next interval retries rather than losing a report.
 
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
 const STATUS_PATH = join(REPO_ROOT, '.git', 'gb-main-report-status.json');
 const LOCK_PATH = join(REPO_ROOT, '.git', 'gb-main-report.lock');
+const INITIALIZING_LOCK_GRACE_MS = 60 * 1000;
 
 function git(args) {
   return spawnSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 1024 * 1024 });
@@ -41,6 +51,18 @@ function readStatus() {
  * of leaving a permanent dead lock. A skipped overlapping run is harmless: the current owner will
  * either deliver and advance state or fail and leave it pending for the next interval.
  */
+export function lockDecision({ raw, ageMs, ownerAlive }) {
+  try {
+    const { pid } = JSON.parse(raw);
+    return Number.isInteger(pid) && ownerAlive ? 'held' : 'recover';
+  } catch {
+    // `open(..., wx)` makes the filename visible a few instructions before its JSON owner metadata
+    // is written. Treat that short window as HELD, never as a dead lock: unlinking it would allow a
+    // hook and launchd invocation to both post. A genuinely abandoned empty/malformed lock expires.
+    return ageMs < INITIALIZING_LOCK_GRACE_MS ? 'held' : 'recover';
+  }
+}
+
 function acquireLock() {
   try {
     const fd = openSync(LOCK_PATH, 'wx');
@@ -48,15 +70,26 @@ function acquireLock() {
     return fd;
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
+    const raw = readFileSync(LOCK_PATH, 'utf8');
+    const ageMs = Date.now() - statSync(LOCK_PATH).mtimeMs;
+    let ownerAlive = false;
     try {
-      const { pid } = JSON.parse(readFileSync(LOCK_PATH, 'utf8'));
+      const { pid } = JSON.parse(raw);
       process.kill(pid, 0);
-      return null;
+      ownerAlive = true;
     } catch {
-      // The owner died (or wrote a malformed lock). Recover only this private lock file.
-      unlinkSync(LOCK_PATH);
-      return acquireLock();
+      /* invalid owner metadata or a dead PID is handled by lockDecision */
     }
+    if (lockDecision({ raw, ageMs, ownerAlive }) === 'held') return null;
+    try {
+      // The owner died or its never-finished initialization grace elapsed. Recover only this
+      // private lock file, then contend normally again.
+      unlinkSync(LOCK_PATH);
+    } catch (unlinkError) {
+      if (unlinkError.code === 'ENOENT') return acquireLock();
+      throw unlinkError;
+    }
+    return acquireLock();
   }
 }
 
@@ -136,7 +169,7 @@ function run(args) {
     state,
     head: head.stdout.trim(),
     exitCode: reported.status,
-    detail: (reported.stderr || '').trim().split('\n').at(-1) || null,
+    detail: (reported.stderr || '').trim().split('\n').at(-1) || reported.error?.message || null,
   });
   if (reported.status !== 0) process.exitCode = 1;
 }
