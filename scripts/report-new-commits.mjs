@@ -8,6 +8,7 @@
 //   node scripts/report-new-commits.mjs              # post reports for anything unreported
 //   node scripts/report-new-commits.mjs --dry-run    # list what WOULD be posted, post nothing
 //   node scripts/report-new-commits.mjs --limit 3    # bound a large catch-up
+//   node scripts/report-new-commits.mjs --ref origin/main # report the deployed remote branch
 //   node scripts/report-new-commits.mjs --mark-only  # accept current main as reported, post nothing
 //
 // ── Why a state file and not "report HEAD on every hook fire" ──────────────────────────────────
@@ -75,29 +76,54 @@ export function planReports({ lastReported, commits, limit = DEFAULT_LIMIT }) {
   return { adoptOnly: false, shas: pending.slice(0, limit), skipped: Math.max(0, pending.length - limit) };
 }
 
+/**
+ * Pick the source of truth for shipped commits.
+ *
+ * A local `main` can be days behind while a feature branch is checked out; that is the exact
+ * failure that left production prose reports stranded. Prefer the tracking ref whenever it is
+ * available. The local branch remains a deliberate offline fallback for a developer who has just
+ * merged locally and has not pushed yet.
+ */
+export function resolveMainRef({ requestedRef, hasOriginMain, hasLocalMain }) {
+  if (requestedRef) return requestedRef;
+  if (hasOriginMain) return 'origin/main';
+  if (hasLocalMain) return 'main';
+  return null;
+}
+
 function main() {
   const args = process.argv.slice(2);
   let dryRun = false;
   let markOnly = false;
+  let requestedRef;
+  let status = false;
   let limit = DEFAULT_LIMIT;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--dry-run') dryRun = true;
     else if (args[i] === '--mark-only') markOnly = true;
+    else if (args[i] === '--ref') requestedRef = need(args[++i], '--ref');
+    else if (args[i] === '--status') status = true;
     else if (args[i] === '--limit') limit = Number(need(args[++i], '--limit'));
     else die(`unknown arg ${args[i]}`);
   }
 
   // `main` specifically, never HEAD: the hook can fire while a feature branch is checked out, and a
-  // feature commit is not something to report. Prefer the local ref and fall back to the remote one
-  // so this works whether or not `main` is checked out.
-  const mainRef = git(['rev-parse', '--verify', 'main'], { allowFail: true })
-    ? 'main'
-    : git(['rev-parse', '--verify', 'origin/main'], { allowFail: true })
-      ? 'origin/main'
-      : die('neither `main` nor `origin/main` resolves — nothing to report against.');
+  // feature commit is not something to report. `origin/main` wins over a stale local checkout.
+  const mainRef = resolveMainRef({
+    requestedRef,
+    hasOriginMain: Boolean(git(['rev-parse', '--verify', 'origin/main'], { allowFail: true })),
+    hasLocalMain: Boolean(git(['rev-parse', '--verify', 'main'], { allowFail: true })),
+  }) ?? die('neither `main` nor `origin/main` resolves — nothing to report against.');
 
   const head = git(['rev-parse', mainRef]);
   const last = readState();
+
+  if (status) {
+    process.stdout.write(
+      JSON.stringify({ ref: mainRef, head, lastReported: last, pending: last === head ? 0 : 'unknown' }) + '\n'
+    );
+    return;
+  }
 
   if (markOnly) {
     writeState(head);
@@ -111,7 +137,7 @@ function main() {
   }
 
   const commits = last
-    ? git(['rev-list', '--no-merges', `${last}..${head}`], { allowFail: true })
+    ? git(['rev-list', '--first-parent', `${last}..${head}`], { allowFail: true })
         .split('\n')
         .filter(Boolean)
     : [];

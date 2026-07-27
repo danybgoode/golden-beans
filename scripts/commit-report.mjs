@@ -49,8 +49,8 @@
 // an unreviewed claim is at least self-identifying in the channel.
 //
 // Telegram credentials come from the environment or `.env.local` (TELEGRAM_BOT_TOKEN +
-// TELEGRAM_CICD_CHAT_ID). Missing credentials with --post is a clean skip, never a crash — same
-// fire-and-forget stance as apps/web/lib/telegram.ts and the workflow.
+// TELEGRAM_CICD_CHAT_ID). A --post delivery failure is an ERROR: the exactly-once runner must keep
+// its baseline behind a report that was not actually delivered, so the next interval can retry it.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync, writeSync } from 'node:fs';
@@ -354,6 +354,7 @@ function main() {
   // Attributed to 'reviewed by hand' so the channel distinguishes it from a raw machine draft.
   let prose = text;
   let attribution = 'reviewed by hand';
+  let guardPassed = true;
 
   if (!prose) {
     // Devin writes, agy falls back, and every draft passes the mechanical guard before a human sees
@@ -378,6 +379,7 @@ function main() {
     attribution = result.ok ? `drafted by ${result.model}` : `FLAGGED draft · ${result.model}`;
 
     if (!result.ok) {
+      guardPassed = false;
       // Surface the findings on stderr so the draft on stdout can never be mistaken for a clean
       // one. It is still emitted: a flawed draft a human can correct beats no output at all.
       process.stderr.write(
@@ -393,6 +395,9 @@ function main() {
   writeSync(1, `${prose}\n`);
 
   if (post) {
+    if (!guardPassed) {
+      die('the prose guard rejected this draft — refusing to auto-post an unsupported claim.');
+    }
     const url = `https://github.com/danybgoode/golden-beans/commit/${fullSha}`;
     const sent = postToTelegram(
       buildTelegramMessage({
@@ -403,7 +408,8 @@ function main() {
         model: attribution,
       })
     );
-    process.stderr.write(sent ? '✓ posted to the CI/CD Telegram channel.\n' : '');
+    if (!sent) die('Telegram did not accept the report; the caller must retry delivery.');
+    process.stderr.write('✓ posted to the CI/CD Telegram channel.\n');
   }
 }
 
