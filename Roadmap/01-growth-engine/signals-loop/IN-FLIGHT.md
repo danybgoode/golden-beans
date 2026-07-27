@@ -228,3 +228,31 @@ S3: 3.1 (agent_write scope) + 3.3a (landing S4, delegated to Codex) + 3.2 (stage
 }
 ```
 
+## 2026-07-27T02:09:52.144Z — `feat/signals-loop-s3` @ e6246c72
+
+_HEAD: feat(signals-loop): Story 3.3b — the loop feeds the AI-adoption ladder_
+
+3.1/3.2/3.3a/3.3b all committed + telegram fix + codex onboarding (CODE-QUALITY.md, standing preamble, builder!=reviewer routing). NEXT: cross-family review, then 3.4 LAUNCH — Daniel wants gates LIVE not dark.
+
+**Verified by running (observed output, not believed):**
+- 679 unit tests, typecheck 4 projects, lint clean
+- codex delegated 3.3a + 3.3b, both stayed in-brief, both mutation-checked by architect
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-27T02:09:52.144Z",
+  "note": "3.1/3.2/3.3a/3.3b all committed + telegram fix + codex onboarding (CODE-QUALITY.md, standing preamble, builder!=reviewer routing). NEXT: cross-family review, then 3.4 LAUNCH — Daniel wants gates LIVE not dark.",
+  "branch": "feat/signals-loop-s3",
+  "head": "e6246c729410639e079884cd1dc6aaaf42b01e18",
+  "headSubject": "feat(signals-loop): Story 3.3b — the loop feeds the AI-adoption ladder",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "679 unit tests, typecheck 4 projects, lint clean",
+    "codex delegated 3.3a + 3.3b, both stayed in-brief, both mutation-checked by architect"
+  ]
+}
+```
+
