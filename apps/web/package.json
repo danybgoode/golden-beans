@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build --workspace=@golden-beans/sdk && next build",
     "start": "next start",
     "test:e2e": "playwright test --project=api",
     "test:e2e:browser": "playwright test --project=browser",
