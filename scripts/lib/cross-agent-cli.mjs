@@ -391,6 +391,44 @@ export function stripDocFileDiffs(diffText) {
   return { diff: kept.join(''), strippedFiles };
 }
 
+/**
+ * Keep only the diff hunks whose path matches one of `patterns` (substring match).
+ *
+ * ── Why a targeted subset is sometimes the ONLY way to get the second family ──────────────────
+ * agy takes its prompt in argv, so it is bounded by AGY_ARG_LIMIT. A long-running PR grows past
+ * that even after `stripDocFileDiffs` — signals-loop Sprint 3 reached 270 KB of pure code across
+ * seven review rounds — and at that point the choice is a scoped review or none at all.
+ *
+ * Scoping is the better answer for a HIGH-risk PR specifically, because the risk is concentrated:
+ * a credential surface and a mutation path are worth a full read from both families, while a
+ * landing-page component is not what the second opinion is for.
+ *
+ * It is still a REDUCTION, and callers must say so in the posted comment — a review that appears to
+ * cover a PR while having seen four files is worse than an absent one.
+ */
+export function filterDiffToPaths(diffText, patterns) {
+  if (!diffText || !patterns?.length) return { diff: diffText, keptFiles: [], droppedFiles: [] };
+  const chunks = diffText.split(/(?=^diff --git )/m);
+  const keptFiles = [];
+  const droppedFiles = [];
+  const kept = [];
+  for (const chunk of chunks) {
+    const header = chunk.match(/^diff --git a\/(\S+) b\/(\S+)/);
+    if (!header) {
+      kept.push(chunk);
+      continue;
+    }
+    const path = header[2] || header[1];
+    if (patterns.some((pat) => path.includes(pat))) {
+      keptFiles.push(path);
+      kept.push(chunk);
+    } else {
+      droppedFiles.push(path);
+    }
+  }
+  return { diff: kept.join(''), keptFiles, droppedFiles };
+}
+
 export function decideTrivialSkip({ files, minLines = 10 } = {}) {
   if (!Array.isArray(files) || files.length === 0) return { skip: true, reason: 'empty diff' };
   if (files.every((f) => isDocFile(f.path))) return { skip: true, reason: 'docs-only diff' };

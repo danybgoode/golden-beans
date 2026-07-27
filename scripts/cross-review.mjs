@@ -54,6 +54,7 @@ import {
   decideTrivialSkip,
   stripGeneratedFileDiffs,
   stripDocFileDiffs,
+  filterDiffToPaths,
   AGY_ARG_LIMIT,
   shortSha,
   checkReviewerPairing,
@@ -79,6 +80,8 @@ Usage:
 
 Flags:
   --agent <name>       reviewer CLI: antigravity | codex (default: antigravity)
+  --paths a,b,c        review ONLY files whose path contains one of these. The reduced
+                       scope is STATED in the posted comment.
   --code-only          drop doc/markdown hunks so a big diff fits agy's 256 KB argv cap.
                        The reduced scope is STATED in the posted comment.
   --builder <family>   who WROTE this diff: claude | codex | agy | human. Refuses a
@@ -103,6 +106,7 @@ function parseArgs(argv) {
     agent: 'antigravity',
     builder: process.env.CROSS_REVIEW_BUILDER || '',
     codeOnly: false,
+    paths: [],
     repo: null,
     force: false,
     dryRun: false,
@@ -121,6 +125,11 @@ function parseArgs(argv) {
     else if (a === '--min-lines') out.minLines = parseMinLines(need(argv[++i], '--min-lines'));
     else if (a.startsWith('--min-lines=')) out.minLines = parseMinLines(a.slice('--min-lines='.length));
     else if (a === '--code-only') out.codeOnly = true;
+    else if (a === '--paths')
+      out.paths = need(argv[++i], '--paths')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
     else if (a === '--builder') out.builder = need(argv[++i], '--builder');
     else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
@@ -209,8 +218,20 @@ function postComment(pr, repo, body) {
 }
 
 function main() {
-  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help, builder, codeOnly } =
-    parseArgs(process.argv.slice(2));
+  let {
+    pr,
+    agent,
+    repo,
+    force,
+    dryRun,
+    skipTrivial,
+    minLines,
+    includeLockfiles,
+    help,
+    builder,
+    codeOnly,
+    paths,
+  } = parseArgs(process.argv.slice(2));
   if (help) {
     process.stdout.write(HELP + '\n');
     process.exit(0);
@@ -314,6 +335,21 @@ function main() {
       `code against its own stated acceptance criteria. Withheld: ` +
       `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
     process.stderr.write(`Code-only: withheld ${codeOnlyDiff.strippedFiles.length} doc file(s).\n`);
+  }
+
+  if (paths.length > 0) {
+    const scoped = filterDiffToPaths(diff, paths);
+    diff = scoped.diff;
+    const note =
+      `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
+      `subset of the PR — the diff exceeds agy's ${AGY_ARG_LIMIT / 1024} KB argv limit in full, so ` +
+      `the alternative was no second-family review at all. It saw: ` +
+      `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
+      `file(s), and could not check any of this against the sprint docs.`;
+    scopeNote = scopeNote ? `${scopeNote}\n\n${note}` : note;
+    process.stderr.write(
+      `Scoped to ${scoped.keptFiles.length} file(s), dropped ${scoped.droppedFiles.length}.\n`
+    );
   }
 
   const findings = runReview(agent, prompt, diff);
