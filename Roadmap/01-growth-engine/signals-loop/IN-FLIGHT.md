@@ -256,3 +256,35 @@ _HEAD: feat(signals-loop): Story 3.3b — the loop feeds the AI-adoption ladder_
 }
 ```
 
+## 2026-07-27T13:06:39.307Z — `main` @ 06c5f053
+
+_HEAD: docs(signals-loop): epic SHIPPED — and the commit that carries the launch flags into a build_
+
+signals-loop EPIC SHIPPED. PR #38 merged (8 cross-review rounds), 5 migrations applied to prod + verified by property, BOTH gates flipped LIVE and verified by exercising surfaces. OWED: prod write smoke needs a minted agent_write credential — NOT pre-authorized, needs Daniel by name.
+
+**Verified by running (observed output, not believed):**
+- prod schema: agent_key_id NOT NULL, key bound in atomic consume, 0 anon grants on credential view
+- live /install renders the writes-ENABLED branch; landing S4 renders 'Running today: signals are captured'
+- live connector tools/list = 7 tools incl list_tasks+get_task; write tools correctly ABSENT without a Bearer key
+- live list_tasks returns ok:true (0 tasks, honest empty)
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-07-27T13:06:39.307Z",
+  "note": "signals-loop EPIC SHIPPED. PR #38 merged (8 cross-review rounds), 5 migrations applied to prod + verified by property, BOTH gates flipped LIVE and verified by exercising surfaces. OWED: prod write smoke needs a minted agent_write credential — NOT pre-authorized, needs Daniel by name.",
+  "branch": "main",
+  "head": "06c5f053b27f5d7bbeb3f991053457679fa914ac",
+  "headSubject": "docs(signals-loop): epic SHIPPED — and the commit that carries the launch flags into a build",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "prod schema: agent_key_id NOT NULL, key bound in atomic consume, 0 anon grants on credential view",
+    "live /install renders the writes-ENABLED branch; landing S4 renders 'Running today: signals are captured'",
+    "live connector tools/list = 7 tools incl list_tasks+get_task; write tools correctly ABSENT without a Bearer key",
+    "live list_tasks returns ok:true (0 tasks, honest empty)"
+  ]
+}
+```
+
