@@ -209,9 +209,8 @@ function postComment(pr, repo, body) {
 }
 
 function main() {
-  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help, builder } = parseArgs(
-    process.argv.slice(2)
-  );
+  let { pr, agent, repo, force, dryRun, skipTrivial, minLines, includeLockfiles, help, builder, codeOnly } =
+    parseArgs(process.argv.slice(2));
   if (help) {
     process.stdout.write(HELP + '\n');
     process.exit(0);
