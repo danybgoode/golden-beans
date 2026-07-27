@@ -80,7 +80,10 @@ export type ProposeResult =
         evidenceNote: string
       }
     }
-  | { ok: false; reason: 'not_found' | 'already_terminal' | 'actor_required' | 'stage_failed' }
+  | {
+      ok: false
+      reason: 'not_found' | 'already_terminal' | 'already_claimed' | 'actor_required' | 'stage_failed'
+    }
 
 /**
  * Stage a proposed change. **Mutates nothing about the task.**
@@ -104,6 +107,14 @@ export async function proposeTaskChange(input: ProposeInput): Promise<ProposeRes
   }
   const actor = (input.actor ?? '').trim() || null
   if (input.action === 'claim' && !actor) return { ok: false, reason: 'actor_required' }
+  // Cross-review (Codex, PR #38): `already_claimed` was the one lifecycle refusal NOT preflighted,
+  // so proposing a claim on a claimed task issued a token, showed a preview reading
+  // "claimed → claimed", and then burned the token on an apply that could only fail. Every refusal
+  // the database can give at apply time should be visible at propose time, or the preview is
+  // telling the agent something that is not true.
+  if (input.action === 'claim' && task.status === 'claimed') {
+    return { ok: false, reason: 'already_claimed' }
+  }
 
   const evidence = classifyEvidencePointer(input.evidencePointer)
   const resolution = (input.resolution ?? '').trim() || null
@@ -171,6 +182,7 @@ export type ApplyFailureReason =
   | 'already_claimed'
   | 'invalid_resolution'
   | 'actor_required'
+  | 'wrong_credential'
   | 'apply_failed'
 
 const LIFECYCLE_REFUSALS: readonly ApplyFailureReason[] = [
@@ -208,7 +220,11 @@ export type ApplyResult =
  * between the two leave a spent-looking mutation with a still-spendable token, which is a DOUBLE
  * APPLY. Losing a token is recoverable; applying twice is not.
  */
-export async function applyTaskChange(projectId: string, confirmationToken: string): Promise<ApplyResult> {
+export async function applyTaskChange(
+  projectId: string,
+  confirmationToken: string,
+  applyingKeyId: string | null = null
+): Promise<ApplyResult> {
   const supabase = getSupabaseServiceClient()
 
   const { data, error } = await supabase
@@ -237,6 +253,25 @@ export async function applyTaskChange(projectId: string, confirmationToken: stri
       return { ok: false, reason }
     }
     return { ok: false, reason: 'apply_failed' }
+  }
+
+  // ── A confirmation is bound to the credential that PROPOSED it ──────────────────────────────
+  // Cross-review (Codex, PR #38). The project check inside `consume_write_confirmation` meant any
+  // valid same-project write key could spend any other key's token — so the audit row named the
+  // PROPOSING credential while a different one performed the mutation. That is the exact question
+  // the field was added to answer ("which key did this, do I revoke that one?"), answered wrongly.
+  //
+  // Binding is the stronger of the two available fixes (the other being to record both ids): a
+  // confirmation is a capability minted for one credential, and a second key riding another's
+  // proposal has no legitimate flow — the agent that proposed is the agent that applies, inside a
+  // five-minute window. So a lesser or newly-minted key cannot complete a mutation it did not stage.
+  //
+  // The token is already spent at this point, deliberately. A refusal here still burns it, which is
+  // correct: the alternative is a token that survives a failed apply and can be retried by yet
+  // another credential.
+  if (data.agent_key_id && applyingKeyId && data.agent_key_id !== applyingKeyId) {
+    console.warn('[task-write-staging] refused: confirmation belongs to a different write credential')
+    return { ok: false, reason: 'wrong_credential' }
   }
 
   const action = data.action as TaskWriteAction

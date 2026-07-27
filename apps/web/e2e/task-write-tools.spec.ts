@@ -404,10 +404,7 @@ test.describe('connector staged write tools', () => {
       'propose_task_change'
     )
 
-    await db
-      .from('api_keys')
-      .update({ revoked_at: new Date().toISOString() })
-      .eq('id', tenant.writeKeyId)
+    await db.from('api_keys').update({ revoked_at: new Date().toISOString() }).eq('id', tenant.writeKeyId)
 
     expect(await listToolNames(request, tenant.connectorToken, tenant.writeKey)).not.toContain(
       'propose_task_change'
@@ -564,9 +561,7 @@ test.describe('connector staged write tools', () => {
 
   // ── Lifecycle refusals still apply through the staged path ───────────────────────────────────
 
-  test('a claim with no actor is refused at PROPOSE time, before a token is issued', async ({
-    request,
-  }) => {
+  test('a claim with no actor is refused at PROPOSE time, before a token is issued', async ({ request }) => {
     const db = dbClient()
     const tenant = await createTenant(db, 'noactor')
     const task = await seedTask(request, db, tenant, 'noactor-marker')
@@ -581,6 +576,83 @@ test.describe('connector staged write tools', () => {
     expect(res.parsed?.ok).toBe(false)
     expect(res.parsed?.reason).toBe('actor_required')
     expect(res.parsed?.confirmationToken).toBeFalsy()
+  })
+
+  test('proposing a CLAIM on an already-claimed task is refused at PROPOSE, before a token is issued', async ({
+    request,
+  }) => {
+    // Cross-review (Codex, PR #38): this was the one lifecycle refusal not preflighted, so the agent
+    // got a token plus a preview reading "claimed → claimed", then burned it on an apply that could
+    // only fail.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'reclaim')
+    const task = await seedTask(request, db, tenant, 'reclaim-marker')
+
+    const first = await callTool(
+      request,
+      tenant.connectorToken,
+      'propose_task_change',
+      { taskId: task.id, action: 'claim', actor: 'agent-one' },
+      tenant.writeKey
+    )
+    await callTool(
+      request,
+      tenant.connectorToken,
+      'apply_task_change',
+      { confirmationToken: first.parsed.confirmationToken },
+      tenant.writeKey
+    )
+
+    const second = await callTool(
+      request,
+      tenant.connectorToken,
+      'propose_task_change',
+      { taskId: task.id, action: 'claim', actor: 'agent-two' },
+      tenant.writeKey
+    )
+    expect(second.parsed?.ok).toBe(false)
+    expect(second.parsed?.reason).toBe('already_claimed')
+    expect(second.parsed?.confirmationToken).toBeFalsy()
+  })
+
+  test('a confirmation is BOUND to the credential that proposed it', async ({ request }) => {
+    // Cross-review (Codex, PR #38). Both keys are valid and belong to the SAME project, so the
+    // project check cannot catch this — a second credential could spend the first one's token, and
+    // the audit row would then name the proposer while a different key did the mutation.
+    const db = dbClient()
+    const tenant = await createTenant(db, 'keybind')
+    const task = await seedTask(request, db, tenant, 'keybind-marker')
+
+    const secondKey = `gb_key_spec_${randomBytes(24).toString('base64url')}`
+    const { error: keyErr } = await db.from('api_keys').insert({
+      project_id: tenant.projectId,
+      key_hash: sha256(secondKey),
+      label: 'second agent key',
+      scope: 'agent_write',
+    })
+    expect(keyErr).toBeNull()
+
+    const proposed = await callTool(
+      request,
+      tenant.connectorToken,
+      'propose_task_change',
+      { taskId: task.id, action: 'claim', actor: 'agent-one' },
+      tenant.writeKey
+    )
+    expect(proposed.parsed?.ok).toBe(true)
+
+    const applied = await callTool(
+      request,
+      tenant.connectorToken,
+      'apply_task_change',
+      { confirmationToken: proposed.parsed.confirmationToken },
+      secondKey
+    )
+    expect(applied.parsed?.ok).toBe(false)
+    expect(applied.parsed?.reason).toBe('wrong_credential')
+
+    // ...and the task never moved.
+    expect((await readTask(db, task.id as string)).status).toBe('open')
   })
 
   test('a task that reached a terminal state between propose and apply refuses at APPLY', async ({

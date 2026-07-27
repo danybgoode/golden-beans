@@ -471,7 +471,9 @@ function buildMcpServer(projectId: string, projectSlug: string, writeKeyId: stri
         },
       },
       async ({ confirmationToken }) => {
-        const result = await applyTaskChange(projectId, confirmationToken)
+        // The APPLYING credential, so the staging layer can refuse a token proposed by a
+        // different key (cross-review, Codex, PR #38).
+        const result = await applyTaskChange(projectId, confirmationToken, writeKeyId)
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],
           ...(!result.ok ? { isError: true } : {}),
