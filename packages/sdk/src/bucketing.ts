@@ -22,6 +22,11 @@ function fnv1a(input: string): number {
   return hash >>> 0
 }
 
+/** A stable fraction in [0, 1), shared by weighted bucketing and flag-rollout evaluation. */
+export function deterministicFraction(input: string): number {
+  return fnv1a(input) / 0x100000000
+}
+
 /**
  * Deterministically resolves a userId + experimentKey to one of the given variants, weighted.
  * Returns `null` if `variants` is empty or every weight resolves to <= 0 — callers decide how to
@@ -29,7 +34,11 @@ function fnv1a(input: string): number {
  * Variants are sorted by key before the cumulative-weight walk so the result never depends on the
  * order the caller happened to pass them in.
  */
-export function resolveVariant(userId: string, experimentKey: string, variants: BucketVariant[]): string | null {
+export function resolveVariant(
+  userId: string,
+  experimentKey: string,
+  variants: BucketVariant[]
+): string | null {
   return resolveVariantForAssignment(`${userId}:${experimentKey}`, variants)
 }
 
@@ -42,11 +51,11 @@ export function resolveGovernedVariant(
   assignmentEntityId: string,
   experimentKey: string,
   definitionVersion: number,
-  variants: BucketVariant[],
+  variants: BucketVariant[]
 ): string | null {
   return resolveVariantForAssignment(
     JSON.stringify([assignmentEntityType, assignmentEntityId, experimentKey, definitionVersion]),
-    variants,
+    variants
   )
 }
 
@@ -59,12 +68,12 @@ function resolveVariantForAssignment(assignmentKey: string, variants: BucketVari
   const totalWeight = normalized.reduce((sum, v) => sum + v.weight, 0)
   if (normalized.length === 0 || totalWeight <= 0) return null
 
-  const hash = fnv1a(assignmentKey)
+  const fraction = deterministicFraction(assignmentKey)
   // Map the hash into [0, totalWeight) and walk cumulative weights to find the bucket. Divide by
   // 2^32 (not 2^32 - 1) so `point` never reaches `totalWeight` even for the max hash value —
   // otherwise it falls out of every `point < cumulative` check and has to be caught by the
   // post-loop fallback instead of resolving through the loop like every other hash does.
-  const point = (hash / 0x100000000) * totalWeight
+  const point = fraction * totalWeight
   let cumulative = 0
   for (const variant of normalized) {
     cumulative += variant.weight

@@ -132,6 +132,33 @@ export function isConnectorWritesEnabled(): boolean {
   return process.env.CONNECTOR_WRITES_ENABLED === 'true'
 }
 
+// flag-serving-and-prd-g · root bootstrap gate for the operational serving plane. Definitions and
+// their immutable audit remain inspectable while this is OFF; only snapshot serving and activation
+// are dark. The control plane must not be able to lock itself out of inspection or rollback.
+export function isFlagServingEnabled(): boolean {
+  return process.env.FLAG_SERVING_ENABLED === 'true'
+}
+
+// flag-serving-and-prd-g · scenario execution is deliberately independent from definition and
+// evidence inspection. Turning it OFF stops fault payload delivery but preserves the record needed
+// to understand and safely stop an already-created scenario.
+export function isResilienceScenariosEnabled(): boolean {
+  return process.env.RESILIENCE_SCENARIOS_ENABLED === 'true'
+}
+
+// flag-serving-and-prd-g · defensive-simulation runner gate. It is separate from resilience
+// scenarios because a production owner may allow an internal fault drill without authorizing an
+// active security probe.
+export function isSecuritySimulationsEnabled(): boolean {
+  return process.env.SECURITY_SIMULATIONS_ENABLED === 'true'
+}
+
+// flag-serving-and-prd-g · automatic breakers may only make their pre-authorized protective
+// transition while this is explicitly enabled. Manual, staged breaker actions remain available.
+export function isAutomaticCircuitBreakersEnabled(): boolean {
+  return process.env.AUTOMATIC_CIRCUIT_BREAKERS_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

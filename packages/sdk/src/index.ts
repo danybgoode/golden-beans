@@ -19,6 +19,43 @@ import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub'
 
 export type { BucketVariant } from './bucketing'
 export { ERROR_EVENT } from './capture'
+export {
+  FLAG_CONTRACT_VERSION,
+  FLAG_CONTEXT_FIELDS,
+  FLAG_ENVIRONMENTS,
+  MAX_FLAG_DEFINITION_BYTES,
+  evaluateFlag,
+  isFlagEnvironment,
+  parseFlagDefinition,
+  parseFlagSnapshot,
+  validateFlagKey,
+} from './flags'
+export type {
+  FlagClause,
+  FlagContextField,
+  FlagDefinition,
+  FlagDefinitionResult,
+  FlagEnvironment,
+  FlagEvaluationContext,
+  FlagMetadataValue,
+  FlagResolutionDetails,
+  FlagResolutionReason,
+  FlagRule,
+  FlagSnapshot,
+  FlagSnapshotFlag,
+  FlagValueType,
+  FlagVariant,
+  JsonValue,
+} from './flags'
+export { createFlagProvider } from './flag-provider'
+export type {
+  FlagProvider,
+  FlagProviderConfig,
+  FlagProviderErrorCode,
+  FlagProviderRefreshResult,
+  FlagProviderResolutionDetails,
+  FlagProviderStatus,
+} from './flag-provider'
 
 /**
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.

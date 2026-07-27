@@ -9,8 +9,10 @@
 #
 # tsc + build always run (cheap, no external deps). The e2e suite only runs if a local Supabase
 # instance already looks up (best-effort — this hook does NOT spin up Docker/Supabase itself;
-# doing that from a git hook would make every push unpredictably slow). No local Supabase up?
-# Skips with a message; ci.yml's own e2e job is still the real gate for that path.
+# doing that from a git hook would make every push unpredictably slow). The runner derives its own
+# local credentials and starts owned ports: a stale server on :3000 or inherited production env
+# must never turn the advisory hook into a misleading failed suite. No local Supabase up? Skips
+# with a message; ci.yml's own e2e job is still the real gate for that path.
 
 if ! command -v node >/dev/null 2>&1; then
   exit 0
@@ -30,8 +32,8 @@ if ! npm run build; then
 fi
 
 if command -v supabase >/dev/null 2>&1 && (cd apps/web && supabase status >/dev/null 2>&1); then
-  echo "pre-push: local Supabase detected — running e2e suite..." >&2
-  if ! npm run test:e2e; then
+  echo "pre-push: local Supabase detected — running hermetic local e2e suite..." >&2
+  if ! npm run test:e2e:local; then
     echo "pre-push: e2e failed — advisory only, push proceeding. ci.yml will also catch this." >&2
   fi
 else

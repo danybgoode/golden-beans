@@ -16,6 +16,7 @@ import {
 } from '@/lib/experiments'
 import { validateExperimentKey } from '@/lib/experiment-definition'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
+import { bindExperimentFlagVersion } from '@/lib/experiment-flag-bindings'
 
 function requireGate() {
   if (!isExperimentGovernanceEnabled()) notFound()
@@ -29,18 +30,13 @@ function requireString(value: unknown, field: string): string {
 export async function createExperimentVersionAction(
   slug: unknown,
   experimentKey: unknown,
-  definitionJson: unknown,
+  definitionJson: unknown
 ) {
   requireGate()
-  const command = await createExperimentVersionAfterGate(
-    slug,
-    experimentKey,
-    definitionJson,
-    {
-      requireOwnership: requireProjectOwnership,
-      createVersion: createExperimentVersion,
-    },
-  )
+  const command = await createExperimentVersionAfterGate(slug, experimentKey, definitionJson, {
+    requireOwnership: requireProjectOwnership,
+    createVersion: createExperimentVersion,
+  })
   if (command.result.ok) revalidatePath(`/app/experiments/${command.slug}`)
   return command.result
 }
@@ -49,7 +45,7 @@ export async function transitionExperimentVersionAction(
   slug: unknown,
   experimentId: unknown,
   versionId: unknown,
-  targetStatus: unknown,
+  targetStatus: unknown
 ) {
   requireGate()
   const safeSlug = requireString(slug, 'project')
@@ -65,8 +61,40 @@ export async function transitionExperimentVersionAction(
     safeExperimentId,
     safeVersionId,
     targetStatus as ExperimentTransitionTarget,
-    userId,
+    userId
   )
+  if (result.ok) revalidatePath(`/app/experiments/${safeSlug}`)
+  return result
+}
+
+export async function bindExperimentFlagVersionAction(
+  slug: unknown,
+  experimentId: unknown,
+  experimentVersionId: unknown,
+  flagId: unknown,
+  flagVersionId: unknown
+) {
+  requireGate()
+  const safeSlug = requireString(slug, 'project')
+  // Ownership comes before opaque identifiers so a foreign-project attempt never becomes a
+  // registry-discovery oracle.
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
+  if (
+    typeof experimentId !== 'string' ||
+    typeof experimentVersionId !== 'string' ||
+    typeof flagId !== 'string' ||
+    typeof flagVersionId !== 'string'
+  ) {
+    return { ok: false as const, error: 'Invalid experiment flag binding command.' }
+  }
+  const result = await bindExperimentFlagVersion({
+    projectId,
+    experimentId,
+    experimentVersionId,
+    flagId,
+    flagVersionId,
+    actorUserId: userId,
+  })
   if (result.ok) revalidatePath(`/app/experiments/${safeSlug}`)
   return result
 }
@@ -80,7 +108,7 @@ export async function recordExperimentDecisionAction(
   outcome: unknown,
   chosenVariantKey: unknown,
   rationale: unknown,
-  idempotencyKey: unknown,
+  idempotencyKey: unknown
 ) {
   requireGate()
   const safeSlug = requireString(slug, 'project')
@@ -90,9 +118,7 @@ export async function recordExperimentDecisionAction(
   if (!validateExperimentKey(experimentKey)) {
     return { ok: false as const, error: 'Invalid experiment key.' }
   }
-  const version = typeof definitionVersion === 'number'
-    ? definitionVersion
-    : Number(definitionVersion)
+  const version = typeof definitionVersion === 'number' ? definitionVersion : Number(definitionVersion)
   if (!Number.isSafeInteger(version) || version < 1 || version > 1_000_000) {
     return { ok: false as const, error: 'Invalid experiment definition version.' }
   }
@@ -100,12 +126,10 @@ export async function recordExperimentDecisionAction(
   // Snapshot evidence is always recomputed inside this trusted server action. The browser supplies
   // only the human choice and stable identifiers; it can never forge plan or analysis evidence.
   const capturedAt = new Date().toISOString()
-  const governed = await getExperimentAnalysisByProjectId(
-    projectId,
-    safeSlug,
-    experimentKey,
-    { version, asOf: capturedAt },
-  )
+  const governed = await getExperimentAnalysisByProjectId(projectId, safeSlug, experimentKey, {
+    version,
+    asOf: capturedAt,
+  })
   if (!governed.ok) {
     return { ok: false as const, error: 'Could not capture governed analysis for this decision.' }
   }
@@ -122,7 +146,7 @@ export async function recordExperimentDecisionAction(
       definition: governed.experiment.definition,
       lifecycle: governed.experiment.lifecycle,
       currentDecisionId: governed.decisions.current?.id ?? null,
-    },
+    }
   )
   if (!parsed.ok) return parsed
 
@@ -139,7 +163,7 @@ export async function recordExperimentDecisionAction(
     governed.experiment.versionId,
     userId,
     parsed.command,
-    analysisSnapshot,
+    analysisSnapshot
   )
   if (result.ok) {
     revalidatePath(`/app/experiments/${safeSlug}`)
