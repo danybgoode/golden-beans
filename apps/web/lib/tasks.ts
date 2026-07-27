@@ -7,6 +7,7 @@ import { impactRank } from './signal-rank'
 import { DEFAULT_PROMOTION_RULE, shouldPromote, type PromotionRule } from './task-promotion'
 import { taskEventForStatus, TASK_SUBJECT_TYPE, TASK_OPENED_EVENT, type TaskStatus } from './task-events'
 import { tgNotify } from './telegram'
+import { isTaskAlertEnabled } from './notify-policy'
 import { recordAudit } from './audit'
 
 // signals-loop · Sprint 2, Story 2.1 — signal → task promotion, the evidence bundle, and the
@@ -335,6 +336,18 @@ async function recordEmitFailure(
  */
 async function maybeNotifyFirstTask(projectId: string, taskId: string): Promise<void> {
   try {
+    // ── Born OFF (2026-07-26) ─────────────────────────────────────────────────────────────────
+    // Daniel asked for this alert to be switched off after receiving 100+ of them. The reasoning
+    // above is still correct and is left intact — the notification fires once per PROJECT and is
+    // race-free. What it never accounted for is that "once per project" is only a BOUND if projects
+    // are scarce, and the e2e suite creates a disposable tenant per test.
+    //
+    // Two independent guards now, because they answer different questions. This one is "does anyone
+    // want this alert" (born OFF, like every gate in this codebase). lib/notify-policy.ts answers
+    // "may this runtime message a human at all" and is enforced inside tgNotify, so every present
+    // and future notification inherits it rather than each caller re-deriving it.
+    if (!isTaskAlertEnabled()) return
+
     const supabase = getSupabaseServiceClient()
     const { data, error } = await supabase
       .from('tasks')
