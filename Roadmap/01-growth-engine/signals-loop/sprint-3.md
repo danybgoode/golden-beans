@@ -1,6 +1,6 @@
 # Signals loop — Sprint 3: The closed loop (writes + flip)
 
-**Status:** 🟦 Built — PR [#38](https://github.com/danybgoode/golden-beans/pull/38), 8 cross-review rounds (alternating families) to a clean Blocking-free round. Both gates still OFF; Story 3.4 flips them.
+**Status:** ✅ SHIPPED & LIVE (2026-07-27) — full production write smoke run end-to-end, see below. PR [#38](https://github.com/danybgoode/golden-beans/pull/38), 8 cross-review rounds (alternating families) to a clean Blocking-free round. Both gates still OFF; Story 3.4 flips them.
 
 > Amended 2026-07-26 (see the epic README). The credential design changed materially (Amendment 2):
 > the connector's plaintext, publicly-displayed URL token may **not** authorize a mutation, so the
@@ -134,5 +134,42 @@ nothing leaks and nothing half-applies. Worth its own change.
 produce a null key, so no HTTP spec exercises it; the protection is the **required parameter** —
 i.e. the compiler, not a test. Stated because "mutation check passed" would have been false.
 
-## Sprint 3 — Smoke walkthrough (do these in order)
-_Written at sprint close (real URLs, one action + one expected result per step)._
+## Sprint 3 — Smoke walkthrough (RUN IN PRODUCTION 2026-07-27, every step observed)
+
+_Run end-to-end against `https://golden-beans-gamma.vercel.app` with both gates live. Two disposable
+credentials were minted inside SQL (so no plaintext was constructed in a shell), used, and revoked;
+`select count(*) … where label like 'SMOKE%' and revoked_at is null` returns **0**._
+
+1. **Capture real errors.** `POST /api/v1/track` × 5 distinct `userId`s with a `$error` event.
+   → all **201**. Nothing appears on the queue yet — promotion is lazy, by design (Amendment 3).
+2. **The agent presents BOTH credentials.** `tools/list` with the connector URL **and** an
+   `agent_write` Bearer key.
+   → **9 tools**, including `propose_task_change` + `apply_task_change`.
+   With the connector token *alone*, the same call returns **7** — the write tools are absent, not
+   erroring. That is Amendment 2 proven in production.
+3. **Pull the queue.** `list_tasks`.
+   → 1 task, `TypeError: prod smoke…`, evidence bundle showing **5 users / 5 events**. This call is
+   what promoted the signal.
+4. **Propose a claim.** `propose_task_change` (`action: claim`).
+   → preview `open → claimed`, a confirmation token, and *"NOTHING HAS CHANGED YET"*.
+   **Then read the row in the database:** `status=open`, `claimed_by=null`. The preview told the
+   truth and nothing moved — asserted against the row, never against the response.
+5. **Apply.** `apply_task_change`.
+   → `open → claimed`. Replaying the same token → `already_used`. Single-use holds in production.
+6. **Resolve with real evidence.** `propose` + `apply` with this repo's actual HEAD SHA.
+   → preview `evidenceKind: commit`, applied with `evidenceRecorded: true`. The row now reads
+   `status=resolved`, `resolution=fixed`, `evidence_pointer=f386032…`.
+7. **The audit trail names the credential.** Two `task_transitioned` rows, both `via=connector`,
+   both carrying the `agentKeyId` of the exact key used — so *"which credential closed this, and do
+   I revoke that one?"* is answerable from one place.
+8. **The ladder evidence computes.** `GET /api/v1/reports/pod/lifecycle` →
+   `{ instrumented: true, agentResolvedTotal: 1, agentResolvedWithEvidence: 1,
+   sampleEvidencePointer: "f386032…" }`. Landing §5's step claim is now computed from a real
+   agent-resolved task rather than asserted (Amendment 4.3). One is honestly below the "scaled"
+   threshold of 3, so the criterion reads `not_met` with a reason — which is the point.
+9. **Revoke, and confirm dead.** Revoke the write key, repeat step 2 with the *same* key and token.
+   → write tools **gone**; `list_tasks`/`get_task` still present. Instant, no deploy.
+
+**The acceptance criterion for the whole epic — a signal became a task, the customer's own agent
+claimed and resolved it over MCP with checkable evidence, and the loop is auditable — is met in
+production.**
