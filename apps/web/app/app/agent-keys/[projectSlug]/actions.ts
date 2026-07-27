@@ -36,6 +36,19 @@ export async function mintAgentKeyAction(slug: unknown, label: unknown, expiryDa
   const safeSlug = requireString(slug, 'project')
   const safeLabel = requireString(label ?? '', 'label').slice(0, MAX_LABEL_LENGTH)
 
+  // ── "Not a number" must not mean "never expires" (cross-review, Agy, PR #38) ────────────────
+  // This read `typeof expiryDays === 'number' ? expiryDays : null`, and `null` is the encoding for
+  // "until revoked". So any non-number — a stringified "7" from a hand-rolled client, a form
+  // payload, a typo — silently skipped the ALLOWED_EXPIRY_DAYS check and minted a credential that
+  // never expires. A Server Action is a public HTTP surface and TypeScript types are erased at
+  // runtime, so "the UI always sends a number" is not a guarantee about callers.
+  //
+  // Only an explicitly ABSENT value now means "until revoked". Anything present must be a valid
+  // number from the allow-list, or the request is refused — the failure direction that matters,
+  // because the silent one hands out a longer-lived credential than anyone asked for.
+  if (expiryDays !== null && expiryDays !== undefined && typeof expiryDays !== 'number') {
+    return { ok: false as const, error: 'Unsupported expiry.' }
+  }
   const days = typeof expiryDays === 'number' ? expiryDays : null
   if (days !== null && !ALLOWED_EXPIRY_DAYS.includes(days as (typeof ALLOWED_EXPIRY_DAYS)[number])) {
     return { ok: false as const, error: 'Unsupported expiry.' }

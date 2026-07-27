@@ -474,9 +474,13 @@ function buildMcpServer(projectId: string, projectSlug: string, writeKeyId: stri
         // The APPLYING credential, so the staging layer can refuse a token proposed by a
         // different key (cross-review, Codex, PR #38).
         const result = await applyTaskChange(projectId, confirmationToken, writeKeyId)
+        // `isError` stated unconditionally, matching propose_task_change (cross-review, Agy,
+        // PR #38): two tools on the same surface returning differently-SHAPED payloads for the same
+        // outcome is a thing a client has to special-case, and the conditional spread made the
+        // difference invisible in review.
         return {
           content: [{ type: 'text', text: JSON.stringify(result) }],
-          ...(!result.ok ? { isError: true } : {}),
+          isError: !result.ok,
         }
       }
     )
