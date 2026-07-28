@@ -199,6 +199,51 @@ export async function createFlagDefinitionVersion(input: {
   return { ok: true as const, flagId: row.flag_id, versionId: row.version_id, version: Number(row.version) }
 }
 
+/**
+ * Imports a checked catalog atomically. The database rejects any semantic drift
+ * from an existing immutable version and this function never activates a flag.
+ */
+export async function importFlagDefinitionCatalog(input: {
+  projectId: string
+  entries: Array<{ key: string; definition: FlagDefinition }>
+  reason: string
+  actorUserId: string
+}) {
+  const { data, error } = await getSupabaseServiceClient().rpc('import_flag_definition_catalog', {
+    p_project_id: input.projectId,
+    p_entries: input.entries,
+    p_reason: input.reason,
+    p_actor_user_id: input.actorUserId,
+  })
+  const rows = (data ?? []) as Array<{
+    flag_key?: string
+    flag_id?: string
+    version_id?: string
+    version?: number
+    created?: boolean
+  }>
+  if (
+    error ||
+    rows.length !== input.entries.length ||
+    rows.some(
+      (row) => !row.flag_key || !row.flag_id || !row.version_id || !Number.isSafeInteger(Number(row.version))
+    )
+  ) {
+    console.error('[flag-registry] catalog import failed:', error)
+    return { ok: false as const, error: 'Could not import this flag catalog.' }
+  }
+  return {
+    ok: true as const,
+    entries: rows.map((row) => ({
+      key: row.flag_key!,
+      flagId: row.flag_id!,
+      versionId: row.version_id!,
+      version: Number(row.version),
+      created: row.created === true,
+    })),
+  }
+}
+
 async function changeActivation(
   functionName: 'set_flag_activation' | 'deactivate_flag',
   input: {

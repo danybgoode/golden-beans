@@ -95,6 +95,21 @@ async function createVersion(
   return data[0] as { flag_id: string; version_id: string; version: number }
 }
 
+async function importCatalog(
+  client: SupabaseClient,
+  projectId: string,
+  userId: string,
+  entries: Array<{ key: string; definition: FlagDefinition }>
+) {
+  const { data, error } = await client.rpc('import_flag_definition_catalog', {
+    p_project_id: projectId,
+    p_entries: entries,
+    p_reason: 'fixture catalog import',
+    p_actor_user_id: userId,
+  })
+  return { data: data as Array<{ flag_key: string; version: number; created: boolean }> | null, error }
+}
+
 async function createExperimentVersion(client: SupabaseClient, projectId: string, userId: string) {
   const { data, error } = await client.rpc('create_experiment_version', {
     p_project_id: projectId,
@@ -110,6 +125,50 @@ test.afterAll(async () => {
   await cleanupFlagProjects(projectIds)
   const client = db()
   for (const userId of userIds) await client.auth.admin.deleteUser(userId)
+})
+
+test('catalog import is owner-scoped, idempotent, atomic on drift, and never activates a snapshot', async () => {
+  const client = db()
+  const owner = await fixtureUser(client, 'catalog-owner')
+  const stranger = await fixtureUser(client, 'catalog-stranger')
+  const project = await fixtureProject(client, owner, 'catalog')
+  const entries = [
+    { key: 'miyagi.checkout', definition },
+    { key: 'miyagi.shipping', definition: { ...definition, description: 'Second disposable import flag.' } },
+  ]
+
+  const first = await importCatalog(client, project, owner, entries)
+  expect(first.error).toBeNull()
+  expect(first.data?.map((row) => row.created)).toEqual([true, true])
+
+  const second = await importCatalog(client, project, owner, entries)
+  expect(second.error).toBeNull()
+  expect(second.data?.map((row) => row.created)).toEqual([false, false])
+  expect(second.data?.map((row) => row.version)).toEqual([1, 1])
+
+  const states = await client.from('flag_environment_states').select('environment').eq('project_id', project)
+  const activations = await client
+    .from('flag_environment_activations')
+    .select('environment')
+    .eq('project_id', project)
+  expect(states.data).toEqual([])
+  expect(activations.data).toEqual([])
+
+  const drift = await importCatalog(client, project, owner, [
+    entries[0],
+    { key: 'miyagi.shipping', definition: { ...definition, description: 'Conflicting immutable meaning.' } },
+  ])
+  expect(drift.error).not.toBeNull()
+  const versions = await client
+    .from('flag_definition_versions')
+    .select('version')
+    .eq('project_id', project)
+    .order('version')
+  expect(versions.data).toHaveLength(2)
+  expect(versions.data?.map((row) => row.version)).toEqual([1, 1])
+
+  const foreign = await importCatalog(client, project, stranger, entries)
+  expect(foreign.error).not.toBeNull()
 })
 
 test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot cross project or scope', async ({
