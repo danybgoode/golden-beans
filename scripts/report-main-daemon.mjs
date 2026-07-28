@@ -70,8 +70,17 @@ function acquireLock() {
     return fd;
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
-    const raw = readFileSync(LOCK_PATH, 'utf8');
-    const ageMs = Date.now() - statSync(LOCK_PATH).mtimeMs;
+    let raw;
+    let ageMs;
+    try {
+      raw = readFileSync(LOCK_PATH, 'utf8');
+      ageMs = Date.now() - statSync(LOCK_PATH).mtimeMs;
+    } catch (readError) {
+      // The holder can finish between `open(..., wx)` observing EEXIST and this inspection. That
+      // is successful contention, not a daemon failure: contend again against the now-absent file.
+      if (readError.code === 'ENOENT') return acquireLock();
+      throw readError;
+    }
     let ownerAlive = false;
     try {
       const { pid } = JSON.parse(raw);
