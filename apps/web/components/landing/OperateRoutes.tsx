@@ -1,3 +1,5 @@
+import { Binary, Cable, PanelsTopLeft } from 'lucide-react'
+
 // Section 3 — Three operate routes. ① connector URL (Story 2.1/2.2) and ③ the SDK import are
 // E1-live; ② the pod plugin is E2 (multi-tenant-activation) — rendered dimmed/dashed per the
 // design system's own "unlit card" pattern (references/design/e1.html), not a full Teaser (it's
@@ -75,4 +77,3 @@ export function OperateRoutes() {
     </>
   )
 }
-import { Binary, Cable, PanelsTopLeft } from 'lucide-react'
