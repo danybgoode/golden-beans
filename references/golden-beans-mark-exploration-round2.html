@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — Mark exploration, round 1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root{
+    --roast:#16120d; --espresso:#0f0c08; --card:#241d14; --line:#3a3023;
+    --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+    --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+    --kraft:#c29c6a; --kraft-deep:#9d7b4c; --stamp:#3a2a16; --stamp-dim:#6b4f2a;
+    --foil:linear-gradient(105deg,#7a5c1a 0%,#ffd45e 35%,#e8b93c 55%,#8a6a1e 100%);
+    --kraft-fibers:repeating-linear-gradient(0deg,rgba(60,42,22,.05) 0 1px,transparent 1px 3px),
+                   repeating-linear-gradient(90deg,rgba(255,244,220,.05) 0 2px,transparent 2px 5px);
+    --sans:Archivo,system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;box-sizing:border-box}
+  body{background:var(--roast);color:var(--crema);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+  section{padding:36px 0}
+  code{font-family:var(--mono)}
+  .display{font-weight:900;font-stretch:112%;letter-spacing:-.02em;line-height:1.05}
+  .note{font:italic 400 13px var(--mono);color:var(--dim);max-width:64ch}
+
+  .sheet-head{margin-top:20px;background:var(--kraft);background-image:var(--kraft-fibers);
+              border-radius:6px;padding:26px 20px;color:var(--stamp)}
+  .sheet-head .kicker{font:600 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--stamp-dim)}
+  .sheet-head h1{margin-top:8px;font-size:28px}
+  .sheet-head p{margin-top:10px;font:500 13px var(--sans);color:var(--stamp-dim);max-width:70ch}
+
+  .divider{background:var(--kraft);background-image:var(--kraft-fibers);
+           border-top:2px dashed var(--stamp-dim);border-bottom:2px dashed var(--stamp-dim);color:var(--stamp)}
+  .divider .wrap{display:flex;align-items:center;gap:10px;padding:10px 18px;flex-wrap:wrap}
+  .divider .num{font:700 12px var(--mono);letter-spacing:.1em}
+  .divider .stamp-title{font-weight:900;font-stretch:112%;text-transform:uppercase;letter-spacing:.1em;font-size:12px}
+
+  h2.section-title{font-size:20px;font-weight:800;letter-spacing:-.01em}
+  .section-sub{margin-top:6px;color:var(--dim);font-size:14px;max-width:62ch}
+
+  /* ---------- bean shapes (CSS organic-blob technique: fast to iterate, deterministic to render — the
+     winning direction gets redrawn as a real SVG path for production once it's picked) ---------- */
+  .bean-row{display:flex;gap:34px;flex-wrap:wrap;margin-top:22px;align-items:flex-end}
+  .bean-slot{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .bean-slot .cap{font:600 11px var(--mono);letter-spacing:.06em;color:var(--dim);text-align:center;max-width:150px}
+
+  .bean{position:relative;width:96px;height:132px;overflow:visible}
+  .bean .fill{position:absolute;inset:0;overflow:hidden}
+  .bean.ingot .fill{border-radius:46% 54% 58% 42% / 58% 52% 48% 42%;background:var(--gold)}
+  .bean.sprout .fill{border-radius:44% 56% 60% 40% / 56% 50% 50% 44%;background:var(--gold)}
+  .bean.folded .fill{border-radius:50% 50% 55% 45% / 55% 55% 45% 45%;background:var(--gold)}
+  .bean.stamped .fill{border-radius:48% 52% 50% 50% / 52% 55% 48% 45%;background:var(--gold)}
+
+  .sprout-tendril{position:absolute;top:-16px;left:38px;width:7px;height:26px;
+                  border-radius:50% 50% 50% 0 / 60% 60% 40% 40%;background:var(--gold-hot);
+                  transform:rotate(-24deg);transform-origin:bottom center}
+
+  .fold-line{position:absolute;height:2px;width:140%;left:-20%;background:rgba(20,14,6,.35);
+            box-shadow:0 1px 0 rgba(255,244,220,.25)}
+  .fold-line.a{top:38%;transform:rotate(-16deg)}
+  .fold-line.b{top:62%;transform:rotate(-16deg)}
+
+  .assay{position:absolute;left:50%;bottom:22%;transform:translateX(-50%);width:26px;height:26px;
+        border-radius:50%;border:1.5px solid var(--stamp);display:flex;align-items:center;justify-content:center}
+  .assay span{font:700 8px var(--mono);color:var(--stamp);letter-spacing:.02em}
+
+  /* ---------- material treatments (applied to the "ingot" form) ---------- */
+  .material-row{display:flex;gap:40px;flex-wrap:wrap;margin-top:22px;align-items:flex-start}
+  .mat-slot{display:flex;flex-direction:column;align-items:center;gap:12px;width:180px}
+  .mat-cap{font:700 12px var(--mono);color:var(--crema)}
+  .mat-desc{font:400 12px var(--sans);color:var(--dim);text-align:center;line-height:1.5}
+
+  .bean-lg{position:relative;width:140px;height:190px}
+  .bean-lg .fill{position:absolute;inset:0;border-radius:46% 54% 58% 42% / 58% 52% 48% 42%;overflow:hidden}
+
+  .mat-bullion .fill{
+    background:linear-gradient(100deg,#6b5018 0%,#e8b93c 12%,#ffe9a8 24%,#c99a2e 34%,#8a6a1e 45%,
+               #ffd45e 58%,#c99a2e 70%,#6b5018 82%,#a3801f 100%);
+    box-shadow:inset 3px 3px 7px rgba(255,244,220,.4), inset -5px -5px 12px rgba(0,0,0,.5);
+  }
+  .mat-foil .fill{
+    background:var(--foil);
+    box-shadow:inset -3px -3px 9px rgba(0,0,0,.35), 0 10px 22px rgba(0,0,0,.4);
+  }
+  .mat-foil .fill::before, .mat-foil .fill::after{content:'';position:absolute;height:1.5px;width:160%;left:-30%;
+    background:rgba(255,244,220,.3)}
+  .mat-foil .fill::before{top:30%;transform:rotate(-12deg)}
+  .mat-foil .fill::after{top:64%;transform:rotate(9deg);background:rgba(20,14,6,.3)}
+  .mat-flat .fill{background:var(--gold)}
+
+  .stamp-mark{position:absolute;left:50%;bottom:18%;transform:translateX(-50%);font:700 8px var(--mono);
+             letter-spacing:.08em;color:rgba(20,14,6,.55)}
+
+  /* ---------- scale test ---------- */
+  .scale-row{display:flex;gap:36px;align-items:center;flex-wrap:wrap;margin-top:22px}
+  .scale-slot{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .scale-slot .cap{font:600 11px var(--mono);color:var(--dim)}
+  .tile{background:var(--espresso);border-radius:16px;display:flex;align-items:center;justify-content:center}
+  .tile.lg{width:180px;height:180px}
+  .tile.md{width:96px;height:96px;border-radius:22px}
+  .tile.sm{width:48px;height:48px;border-radius:12px}
+  .mini-bean{border-radius:46% 54% 58% 42% / 58% 52% 48% 42%;
+             background:linear-gradient(100deg,#6b5018,#ffe9a8 30%,#8a6a1e 60%,#ffd45e 85%,#6b5018)}
+  .tile.lg .mini-bean{width:110px;height:150px}
+  .tile.md .mini-bean{width:52px;height:70px}
+  .tile.sm .mini-bean{width:24px;height:32px}
+
+  /* ---------- loader demo ---------- */
+  .loader-panel{margin-top:18px;background:var(--espresso);border:1px solid var(--line);border-radius:12px;
+               padding:22px 24px;display:flex;align-items:center;gap:12px;max-width:380px}
+  .loader-dot{width:9px;height:9px;border-radius:50%;background:var(--gold-hot);flex:none;
+             animation:pulse 1.3s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+  #loader-text{font:600 15px var(--mono);color:var(--crema);letter-spacing:.01em}
+  #loader-text .dots{color:var(--dim)}
+  @media (prefers-reduced-motion: reduce){ .loader-dot{animation:none} }
+
+  footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--dim-2);font:400 12px var(--mono)}
+</style>
+</head>
+<body>
+
+
+<div class="divider"><div class="wrap"><span class="num">④</span><span class="stamp-title">Loader phrases</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">A handful in motion</h2>
+    <p class="section-sub">Full list is in the chat — these six are just running here so you can feel
+      the rhythm, same cadence as Claude Code's status line.</p>
+    <div class="loader-panel">
+      <div class="loader-dot"></div>
+      <div id="loader-text">Percolating<span class="dots">…</span></div>
+    </div>
+  </div>
+</section>
+
+
+
+<script>
+  var words = ["Percolating","Bean-counting","Spilling the beans","North-Star-gazing","Overcaffeinating","Blooming"];
+  var i = 0;
+  var el = document.getElementById('loader-text');
+  setInterval(function(){
+    i = (i + 1) % words.length;
+    el.innerHTML = words[i] + '<span class="dots">…</span>';
+  }, 1500);
+</script>
+
+</body>
+</html>

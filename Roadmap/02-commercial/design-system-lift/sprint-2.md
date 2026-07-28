@@ -17,9 +17,9 @@ forms, empty states, and responsive behavior without weakening any existing auth
 > product feels alive without inventing progress or data.
 
 **Acceptance:** Client navigation and form submission use the approved phrase list, a
-growing/gilded bean animation, `aria-live`, deterministic hydration-safe phrase selection, and
-reduced-motion behavior. The loader must not introduce a streamed route boundary that changes a
-feature-gated 404 into a 200.
+pulsing gold status dot, `aria-live`, sequential 1.5-second phrase rotation, and reduced-motion
+behavior. The loader must not introduce a streamed route boundary that changes a feature-gated 404
+into a 200.
 
 ## Story 2.3 — Representative browser proof
 
@@ -28,3 +28,12 @@ feature-gated 404 into a 200.
 
 **Acceptance:** Browser smoke covers public, auth, install, and product-shell states at desktop and
 mobile widths, including focus visibility and horizontal overflow.
+
+## Story 2.4 — The rails fail closed on drift
+
+> **As a** future builder, **I want** design-system drift rejected automatically, **so that** a new
+> page cannot silently reintroduce inline landing styles, UI emoji, or raw color literals.
+
+**Acceptance:** A zero-dependency guard scans `landing/` and `app/`, is unit-tested, runs in
+pre-commit for relevant paths, and has a dedicated CI workflow. The landing contains no
+`style={{}}` declarations.

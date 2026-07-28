@@ -13,7 +13,7 @@
 ## 🏗️ Building now (3)
 
 - [Flag control plane + Miyagi migration + resilience/SecOps](../../01-growth-engine/flag-serving-and-prd-g/README.md) — 01 Growth Engine · 4/15 stories · risk: High · #5
-- [Design system lift — the limitless golden-bean brand](../../02-commercial/design-system-lift/README.md) — 02 Commercial · 0/6 stories
+- [Design system lift — the limitless golden-bean brand](../../02-commercial/design-system-lift/README.md) — 02 Commercial · 0/7 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 0/3 stories
 
 ## 📋 Ready to build (scaffolded, not started) (1)

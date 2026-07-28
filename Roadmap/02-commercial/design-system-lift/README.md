@@ -5,15 +5,17 @@ slug: design-system-lift
 
 # Epic: Design system lift — the limitless golden-bean brand
 
-> **Area:** 02-commercial · **Risk:** low · **Source:** Daniel’s 2026-07-28 design handoff and mark direction
+> **Area:** 02-commercial · **Risk:** low · **Source:** Daniel’s 2026-07-28 approved handoff in
+> `references/golden-beans-design-system-proposal/` and
+> `references/golden-beans-mark-exploration-round2.html`
 
 ## Why
 
-Golden Beans has a coherent dark product shell, but too many signed-in screens still inherit bare
-browser HTML and the public face still reads as a coffee roastery. The product is a working version
-of the magic-beans tale: familiar Mexican beans transformed into polished gold, planted as a small
-primitive and compounding without an artificial ceiling. This epic makes that metaphor visible and
-turns it into reusable product rails rather than a one-page skin.
+The supplied visual system already defines the product: dark-roast software, kraft packaging, foil
+highlights, and brass instruments. The implementation had drifted into inline page styling and
+literal pictographs, so the approved finish was not reliably reaching the site. This epic applies
+the handoff as reusable rails. Its bean is a familiar food bean transformed into a polished gold
+ingot—the working magic bean that grows without an artificial ceiling.
 
 ## Scope
 
@@ -21,18 +23,22 @@ turns it into reusable product rails rather than a one-page skin.
 |---|---|---|
 | 1 | 1.1 Gold-ingot bean mark and reusable asset pack | LOW |
 | 1 | 1.2 Shared tokens, primitives, focus/motion/accessibility rails | LOW |
-| 1 | 1.3 Public landing and auth/install surface lift | LOW |
+| 1 | 1.3 Public landing and auth/install consumption | LOW |
 | 2 | 2.1 Signed-in shell and inherited styling for existing dashboard pages | LOW |
-| 2 | 2.2 Branded route loaders with the approved phrase rotation | LOW |
+| 2 | 2.2 Restrained route loader with the complete approved phrase rotation | LOW |
 | 2 | 2.3 Responsive browser QA across public and signed-in representative routes | LOW |
+| 2 | 2.4 Automated token/icon/inline-style drift guard | LOW |
 
 ## Design contract
 
 - The canonical interface mark is Lucide’s `Bean`, rendered with a `#FFD700` material-gold finish.
-- Beans are food beans / magic beans, never coffee beans. Copy uses planting, climbing,
-  compounding, gilding, and limitless growth—not roasting or brewing.
+- The global accent remains `--gold: #e8b93c`; `#FFD700` is reserved for the canonical mark.
+- The approved materials stay dark roast, kraft, foil, and brass. Beans are food/magic beans, not
+  coffee beans; brew language may appear only where the supplied voice intentionally uses it.
 - Product code consumes shared brand/UI components and tokens; no page creates a second logo,
   loader, button, input, card, or shell treatment.
+- The loader is the approved pulsing gold status dot and one sequential phrase at a time. It never
+  adds a bean, sprout, or decorative spectacle that was absent from the handoff.
 - Motion obeys `prefers-reduced-motion`, focus is always visible, and all normal text clears WCAG AA
   against its surface.
 - Loaders are client-side navigation/submission feedback, not an App Router `loading.tsx` boundary:
@@ -41,6 +47,7 @@ turns it into reusable product rails rather than a one-page skin.
 ## Verification
 
 - Deterministic gate: `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run build`.
+- Drift gate: `npm run check:design-drift`; canonical tokens are imported directly by the app.
 - Browser gate: desktop and mobile screenshots of `/`, `/login`, `/install`, and a representative
   signed-in shell or its loading state; verify no horizontal overflow and visible keyboard focus.
 - Asset check: every SVG in `apps/web/public/brand` parses and the React mark uses Lucide’s `Bean`.

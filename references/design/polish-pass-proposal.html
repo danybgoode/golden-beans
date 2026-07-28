@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — UI polish pass, proposal v1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  /* ===== tokens — copied verbatim from references/design/assets/tokens.css ===== */
+  :root{
+    --roast:#16120d; --roast-2:#221b13; --card:#241d14; --espresso:#0f0c08;
+    --line:#3a3023; --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+    --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+    --kraft:#c29c6a; --kraft-deep:#9d7b4c; --stamp:#3a2a16; --stamp-dim:#6b4f2a;
+    --foil:linear-gradient(105deg,#7a5c1a 0%,#ffd45e 35%,#e8b93c 55%,#8a6a1e 100%);
+    --kraft-fibers:repeating-linear-gradient(0deg,rgba(60,42,22,.05) 0 1px,transparent 1px 3px),
+                   repeating-linear-gradient(90deg,rgba(255,244,220,.05) 0 2px,transparent 2px 5px);
+    --green:#7fd069; --green-line:#3a5c33; --red:#e86a5e;
+    --next-line:#6b5620;
+    --sans:Archivo,system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  *{margin:0;box-sizing:border-box}
+  body{background:var(--roast);color:var(--crema);font:16px/1.55 var(--sans);
+       -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+  a{color:var(--gold)}
+  code{font-family:var(--mono)}
+
+  /* mobile-first base: everything below is the ≤600px design by default */
+  section{padding:36px 0}
+  .display{font-weight:900;font-stretch:112%;letter-spacing:-.02em;line-height:1.04}
+  .foil{background:var(--foil);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .note{font:italic 400 12.5px var(--mono);color:var(--dim)}
+  .eyebrow{font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim-2)}
+
+  /* header sheet */
+  .sheet-head{margin-top:20px;background:var(--kraft);background-image:var(--kraft-fibers);
+              border-radius:6px;padding:26px 20px;color:var(--stamp)}
+  .sheet-head .kicker{font:600 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--stamp-dim)}
+  .sheet-head h1{margin-top:8px;font-size:30px}
+  .sheet-head .meta{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font:500 11px var(--mono);letter-spacing:.06em}
+
+  h2.section-title{font-size:22px;font-weight:800;letter-spacing:-.01em}
+  .section-sub{margin-top:6px;color:var(--dim);font-size:14px;max-width:60ch}
+
+  /* divider, matches the live pattern */
+  .divider{margin-top:0;background:var(--kraft);background-image:var(--kraft-fibers);
+           border-top:2px dashed var(--stamp-dim);border-bottom:2px dashed var(--stamp-dim);color:var(--stamp)}
+  .divider .wrap{display:flex;align-items:center;gap:10px;padding:10px 18px;flex-wrap:wrap}
+  .divider .num{font:700 12px var(--mono);letter-spacing:.1em}
+  .divider .stamp-title{font-weight:900;font-stretch:112%;text-transform:uppercase;letter-spacing:.1em;font-size:12px}
+
+  /* ---------- hero ---------- */
+  .hero-grid{display:grid;grid-template-columns:1fr;gap:26px}
+  .hero h1{font-size:32px}
+  .hero p.sub{margin:16px 0 22px;font-size:16px;color:var(--dim);max-width:52ch}
+  .hero .gold-em{color:var(--gold)}
+
+  .btn{border:none;border-radius:10px;padding:14px 20px;font:700 15px var(--sans);cursor:pointer;
+       display:inline-flex;align-items:center;gap:8px;justify-content:center}
+  .btn-gold{background:var(--gold);color:var(--roast);box-shadow:0 3px 0 var(--gold-deep);
+            transition:transform .08s ease, box-shadow .08s ease, background .15s ease}
+  .btn-gold:hover{background:var(--gold-hot)}
+  .btn-gold:active{transform:translateY(2px);box-shadow:0 1px 0 var(--gold-deep)}
+  .btn-gold:focus-visible{outline:2px solid var(--gold-hot);outline-offset:3px}
+
+  .btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:13px 20px;
+             transition:transform .08s ease, color .15s ease, border-color .15s ease}
+  .btn-ghost:hover{color:var(--gold-hot);border-color:var(--gold-hot)}
+  .btn-ghost:active{transform:translateY(1px)}
+  .btn-ghost:focus-visible{outline:2px solid var(--gold-hot);outline-offset:3px}
+
+  .cta-row{display:flex;gap:10px;flex-wrap:wrap;width:100%}
+  .cta-row .btn{width:100%}
+
+  .urlfield{margin-top:14px;display:flex;align-items:center;gap:8px;background:var(--card);
+            border:1px solid var(--line);border-radius:10px;color:var(--dim-2);font:500 13px var(--mono);
+            padding:13px 14px}
+  .tag{display:inline-flex;align-items:center;gap:5px;font:600 10px var(--mono);letter-spacing:.06em;
+       padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .tag-live{color:var(--green);border-color:var(--green-line)}
+  .tag-next{color:var(--gold);border-color:var(--next-line)}
+  .tag svg{width:11px;height:11px;flex:none}
+
+  .agent-win{background:var(--espresso);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+             box-shadow:0 20px 46px rgba(0,0,0,.5)}
+  .agent-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;
+             background:linear-gradient(180deg,#2a2218,#1c1610);border-bottom:1px solid var(--line);
+             font:600 12px var(--mono);color:var(--dim)}
+  .agent-dots{display:flex;gap:6px}
+  .agent-dots span{width:9px;height:9px;border-radius:50%;background:#8a6a2e}
+  .agent-dots span:nth-child(2){background:#6b5220}.agent-dots span:nth-child(3){background:#4a3a18}
+  .agent-chip{margin-left:auto;font:500 10px var(--mono);color:var(--green);border:1px solid var(--green-line);
+              border-radius:99px;padding:3px 8px}
+  .agent-body{padding:16px 16px;display:flex;flex-direction:column;gap:12px;font:500 13px var(--mono)}
+  .you b{color:var(--gold);font-weight:600}
+  .tool{border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:8px;padding:9px 12px;
+        background:var(--roast);font-size:12px;color:var(--dim);display:flex;align-items:center;gap:7px}
+  .tool svg{flex:none;width:13px;height:13px;color:var(--gold)}
+
+  /* ---------- panels / swatches ---------- */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .panel-label{font:600 11px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .row2{display:grid;grid-template-columns:1fr;gap:16px}
+  .swatch-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:14px}
+
+  .before-after{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+  .ba-card{border:1px dashed var(--line);border-radius:12px;padding:16px}
+  .ba-card .ba-label{font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim-2)}
+  .ba-card.before .ba-label{color:var(--red)}
+  .ba-card.after .ba-label{color:var(--green)}
+
+  .icon-map{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}
+  .icon-row{display:flex;align-items:center;gap:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  .icon-row .old{font-size:18px;width:26px;text-align:center}
+  .icon-row .arrow{color:var(--dim-2)}
+  .icon-row svg{width:18px;height:18px;color:var(--gold-hot);flex:none}
+  .icon-row .label{font:500 13px var(--mono);color:var(--dim);margin-left:4px}
+
+  .flat-btn{border:none;border-radius:8px;padding:12px 18px;font:700 14px var(--sans);
+            background:var(--gold);color:var(--roast);cursor:default}
+
+  .mobile-note{margin-top:16px;padding:14px 16px;border:1px dashed var(--gold);border-radius:10px;
+               font:500 13px var(--mono);color:var(--dim)}
+  .mobile-note b{color:var(--gold-hot)}
+
+  footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--dim-2);font:400 12px var(--mono)}
+
+  /* ---------- min-width layer-ups (mobile is the base above; this ADDS complexity for wider screens) ---------- */
+  @media (min-width:640px){
+    .wrap{padding:0 32px}
+    section{padding:56px 0}
+    .hero h1{font-size:46px}
+    .cta-row{width:auto}
+    .cta-row .btn{width:auto}
+    .row2{grid-template-columns:1fr 1fr;gap:20px}
+    .before-after{grid-template-columns:1fr 1fr}
+    .icon-map{grid-template-columns:1fr 1fr}
+  }
+  @media (min-width:900px){
+    .hero-grid{grid-template-columns:1.15fr .85fr;align-items:center;gap:40px}
+    .hero h1{font-size:54px}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn-gold, .btn-ghost{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet-head wrap" style="margin-left:auto;margin-right:auto;max-width:1080px">
+  <div class="kicker">Golden Beans · UI polish pass · proposal v1 — for visual sign-off, nothing wired in yet</div>
+  <h1 class="display">Foil gradient, tactile buttons, icons instead of emoji</h1>
+  <div class="meta">
+    <span>DRAFT · 2026-07-23</span><span>SOURCE: brand-system.html + tokens.css</span><span>STATUS: awaiting your review</span>
+  </div>
+</div>
+
+<div class="divider"><div class="wrap"><span class="num">①</span><span class="stamp-title">Hero — foil gradient wired to the real headline</span><span class="tag tag-live" style="margin-left:auto">proposed</span></div></div>
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <h1 class="display">The growth engine <em class="foil" style="font-style:normal">your agent</em> operates.</h1>
+      <p class="sub">Telemetry, TARS funnels, North Star metrics and A/B experiments — as primitives.
+        Others close the signal loop with <i>their</i> AI. Golden Beans closes it with
+        <b style="color:var(--crema)">yours</b>, over MCP.</p>
+      <div class="cta-row">
+        <button class="btn btn-gold">Start free</button>
+      </div>
+      <div class="urlfield">
+        Connector URL — lights up next
+        <span class="tag tag-next" style="margin-left:auto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>
+          Sprint 2
+        </span>
+      </div>
+      <p class="note" style="margin-top:14px">works on the Claude free tier · your data, your Supabase, your agent</p>
+    </div>
+    <div class="agent-win">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>claude<span class="agent-chip">connected</span></div>
+      <div class="agent-body">
+        <div class="you"><b>you ▸</b> add golden-beans</div>
+        <div class="tool">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.6" stroke-dasharray="2.6 2.8"/></svg>
+          handshake → 6 tools
+        </div>
+        <div style="font:400 13px var(--sans);color:var(--crema);line-height:1.55">Connected to <b>golden-beans-demo</b>. Ask me for the funnel — or bring your PM, no SQL required.</div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap">
+    <p class="note" style="margin-top:16px">Only the emphasized phrase gets the foil treatment, not the whole
+      headline — brand-system.html applies it to a short punchy label ("BRAND SYSTEM SHEET"); a full sentence of
+      body-size copy loses legibility at the gradient's darker end, and one accent per element keeps it feeling
+      earned rather than decorative.</p>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">②</span><span class="stamp-title">Buttons — the push actually pays off now</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Tactile, made literal</h2>
+    <p class="section-sub">The gold under-shadow already implies a pushable button. Right now nothing happens
+      when you press it — the promise goes unpaid. Click both buttons below and feel the difference.</p>
+    <div class="before-after">
+      <div class="ba-card before">
+        <div class="ba-label">Before — live today</div>
+        <div class="swatch-row">
+          <button class="flat-btn">Start free</button>
+        </div>
+        <p class="note" style="margin-top:10px">Shadow is static. Clicking gives no physical feedback.</p>
+      </div>
+      <div class="ba-card after">
+        <div class="ba-label">After — proposed (try it)</div>
+        <div class="swatch-row">
+          <button class="btn btn-gold">Start free</button>
+          <button class="btn btn-ghost">Join the waitlist</button>
+        </div>
+        <p class="note" style="margin-top:10px">Press and hold: the shadow collapses, the button drops ~2px
+          into it, and springs back on release. Same idea already used for the brass lever toggle — now every
+          button gets it, consistently.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">③</span><span class="stamp-title">Honesty badges &amp; tool calls — icons instead of emoji</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Same meaning, consistent rendering</h2>
+    <p class="section-sub">Emoji render differently per OS/browser and break the kraft-stamp/brass restraint
+      the rest of the system holds to. These are concept icons (simple stroke shapes) — swap for the real
+      <code>iconoir-react</code> set or a small vendored SVG file at build time; the mapping is what matters here.</p>
+    <div class="icon-map">
+      <div class="icon-row"><span class="old">✅</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg>
+        <span class="label">shipped / live</span></div>
+      <div class="icon-row"><span class="old">🔜</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>
+        <span class="label">not yet shipped</span></div>
+      <div class="icon-row"><span class="old">⚙</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.6" stroke-dasharray="2.6 2.8"/></svg>
+        <span class="label">tool call</span></div>
+      <div class="icon-row"><span class="old">⚠</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 L22 20 H2 Z"/><line x1="12" y1="9.5" x2="12" y2="14"/><circle cx="12" cy="17" r=".9" fill="currentColor" stroke="none"/></svg>
+        <span class="label">warning</span></div>
+      <div class="icon-row"><span class="old">✓</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/></svg>
+        <span class="label">copied (icon swaps in place, label still says "Copied")</span></div>
+      <div class="icon-row"><span class="old">↗ / ↘</span><span class="arrow">→</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,17 10,10 14,14 21,6"/><polyline points="15,6 21,6 21,12"/></svg>
+        <span class="label">trend delta</span></div>
+    </div>
+
+    <div class="panel" style="margin-top:22px">
+      <div class="panel-label">In context — same badge, new render</div>
+      <div class="swatch-row">
+        <span class="tag tag-live">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg>
+          SHIPPED
+        </span>
+        <span class="tag tag-next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 16,14"/></svg>
+          Sprint 2 · connector
+        </span>
+      </div>
+      <p class="note" style="margin-top:12px">The badge component takes a <code>status</code> prop (live / next /
+        blocked), not a raw character — the honesty-badge rule becomes something the guard script can actually
+        check, instead of hoping every future emoji is used correctly.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">④</span><span class="stamp-title">Mobile-first, demonstrated not claimed</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">This whole sheet is authored mobile-first</h2>
+    <p class="section-sub">Not a screenshot of a phone — resize this window (or open on your phone) and watch
+      the hero go from two columns to one, the CTA go from inline to full-width, and the badges wrap. The base
+      CSS above is the &lt;640px design; two <code>min-width</code> queries layer up complexity from there. No
+      <code>!important</code>, no fighting a desktop-first default.</p>
+    <div class="mobile-note">
+      <b>Try it:</b> drag this artifact panel narrower, or open the link on your phone. Nothing here is a
+      static mockup of mobile — it's the actual responsive behavior.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Proposal only — none of this is wired into apps/web yet. Once you've reacted to this, next step is either a
+    patch file against the live components, or handing the same brief to Claude Code to apply directly in the
+    repo (see the chat for the tradeoffs).
+  </div>
+</footer>
+
+</body>
+</html>
