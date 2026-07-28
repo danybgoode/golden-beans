@@ -470,6 +470,16 @@ one-liner + why + date shape.
   Share the tested function instead of porting it. And measure the real payloads before believing a
   length theory: the live pings are 232 and 261 characters against a 4,096 limit.
   *(2026-07-26, pod-report/quality-rails.)*
+- **A multi-channel observer needs independent delivery steps and one upstream resolution step.**
+  Exporting deploy metadata to `$GITHUB_ENV` at the *end* of the first channel’s send step looks
+  shared, but Actions stops that shell as soon as the notifier exits non-zero—so the export never
+  happens and every later channel is skipped. Resolve the commit header/status/url first, export
+  once, then let each channel send in its own step; later channels use `if: always()` so one outage
+  cannot suppress the other while the observer job still finishes red. For local prose, persist the
+  exact reviewed text and a per-destination success checkpoint before the first POST; otherwise a
+  partial retry either duplicates the successful channel or asks the writer for different prose.
+  Slack’s Incoming Webhook response is plain text (`ok` or an error token), not Telegram JSON—read
+  it as text and pin both branches in tests. *(2026-07-28, notification-rails.)*
 - **A scripted `str.replace()` that finds nothing SUCCEEDS SILENTLY — and the test you write alongside
   it can pass while the change never landed.** pod-report S2 added `checkSucceeded()` (accepting both
   GitHub check-run `conclusion` and classic commit-status `state`), unit-tested it, and shipped —
@@ -624,6 +634,13 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **A Next App Router `loading.tsx` or parent layout can change the HTTP semantics of a guarded
+  child page by starting the response stream first.** During the design-system lift, both a shared
+  `/app` layout and then the root loader made `notFound()` content look correct in a browser while
+  the dark-path API contract regressed from 404 to 200. Keep feature/auth guards above any shared
+  shell that can stream; render the shell inside the page after the guard, and use client-side
+  navigation/submission feedback when the status code itself is part of the contract. Pin it with
+  request-level status tests, not screenshots alone. *(2026-07-28.)*
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
   state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
   sprint/PR boundary, and for big epics consider a fresh session per sprint.

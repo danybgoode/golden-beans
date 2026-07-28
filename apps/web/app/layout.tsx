@@ -1,14 +1,15 @@
 import type { Metadata } from 'next'
 import { Archivo, IBM_Plex_Mono } from 'next/font/google'
 import { getSiteUrl } from '@/lib/site-url'
+import { NavigationLoader } from '@/components/brand/NavigationLoader'
 import './globals.css'
 
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })
 
-const TITLE = 'Golden Beans — the growth engine your agent operates'
+const TITLE = 'Golden Beans — plant signals, grow outcomes'
 const DESCRIPTION =
-  'Telemetry ingest, TARS funnels, North Star metrics, and A/B experiments — as primitives your agent can operate over MCP.'
+  'A unified growth engine for telemetry, TARS funnels, North Star metrics, and experiments — one primitive set your agent operates over MCP.'
 
 // Story 3.2 (commercial-shell/sprint-3.md) — real OG/Twitter metadata, so a pasted landing link
 // unfurls with a correct card in a chat app instead of the platform's generic fallback. `async
@@ -45,7 +46,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <NavigationLoader />
+        {children}
+      </body>
     </html>
   )
 }

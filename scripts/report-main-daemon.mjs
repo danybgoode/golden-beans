@@ -3,7 +3,7 @@
 //
 // GitHub Actions cannot run the interactive OAuth-backed Devin/Agy writers. This process is run by
 // the user's launchd agent instead: fetch the deployed branch without changing the checkout, then
-// delegate exactly-once delivery to report-new-commits.mjs. A failed fetch, writer, or Telegram send
+// delegate exactly-once-per-channel delivery to report-new-commits.mjs. A failed fetch, writer, or channel send
 // leaves that reporter's baseline untouched, so the next interval retries rather than losing a report.
 
 import { spawnSync } from 'node:child_process';
@@ -108,7 +108,7 @@ function acquireLock() {
 function usage() {
   process.stdout.write(
     'Usage: node scripts/report-main-daemon.mjs [--dry-run|--status]\n' +
-      '  --dry-run  fetch and show pending reports without invoking writers or Telegram\n' +
+      '  --dry-run  fetch and show pending reports without invoking writers or notification channels\n' +
       '  --status   print the last local runner result\n'
   );
 }

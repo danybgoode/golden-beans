@@ -24,9 +24,12 @@ import {
   extractStoryContext,
   buildPrompt,
   buildTelegramMessage,
+  buildSlackReportMessage,
+  planReportDeliveries,
   deriveEvidence,
   TELEGRAM_LIMIT,
 } from './commit-report.mjs';
+import { SLACK_LIMIT } from './lib/slack-text.mjs';
 
 test('escapeHtml covers exactly the three entities Telegram HTML mode needs', () => {
   assert.equal(escapeHtml('a & b < c > d'), 'a &amp; b &lt; c &gt; d');
@@ -107,6 +110,35 @@ test('buildTelegramMessage escapes a hostile commit subject rather than emitting
   });
   assert.ok(!msg.includes('<script>'), 'raw <script> must never reach the payload');
   assert.ok(msg.includes('&lt;script&gt;'));
+});
+
+test('the Slack prose payload carries the same report and converges after entity expansion', () => {
+  const prose = `${'& '.repeat(4000)}end`;
+  const msg = buildSlackReportMessage({
+    shortSha: 'abc1234',
+    subject: 'feat: <grow> & compound',
+    prose,
+    url: 'https://example.com/c/abc?a=1&b=2',
+    model: 'reviewed <by> hand',
+  });
+  assert.ok(msg.length <= SLACK_LIMIT, `message must fit Slack's cap, got ${msg.length}`);
+  assert.match(msg, /feat: &lt;grow&gt; &amp; compound/);
+  assert.match(msg, /<https:\/\/example\.com\/c\/abc\?a=1&amp;b=2\|view diff>/);
+  assert.match(msg, /_reviewed &lt;by&gt; hand_/);
+  assert.equal(msg.match(/&(?!amp;|lt;|gt;)/g), null, 'no half-written entity');
+});
+
+test('partial prose delivery retries only the destination that has not accepted it', () => {
+  assert.deepEqual(planReportDeliveries([]), ['telegram', 'slack']);
+  assert.deepEqual(planReportDeliveries(['telegram']), ['slack']);
+  assert.deepEqual(planReportDeliveries(['slack']), ['telegram']);
+  assert.deepEqual(planReportDeliveries(['telegram', 'slack']), []);
+  assert.deepEqual(planReportDeliveries(['telegram', 'telegram']), ['slack']);
+  assert.deepEqual(
+    planReportDeliveries([], ['telegram']),
+    ['telegram'],
+    'an unconfigured Slack webhook must not trap the local daemon'
+  );
 });
 
 test('resolveTarget precedence: range beats sha beats HEAD', () => {

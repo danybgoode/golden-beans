@@ -2,6 +2,7 @@ import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { listDestinations } from '@/lib/destinations'
 import { listRecentDeliveries, listRecentAttempts, getDeliveryHealth } from '@/lib/deliveries'
 import { DestinationManager } from './destination-manager'
+import { ProductShell } from '@/components/product/ProductShell'
 
 // event-destination-router · Sprint 2, Story 2.1 — the per-project destination dashboard. OWNER-only,
 // like API keys: a destination mints a signing secret and points our servers at an outbound URL, so
@@ -24,7 +25,8 @@ export default async function DestinationsPage({
   ])
 
   return (
-    <main>
+    <ProductShell>
+      <main>
       <h1>Destinations — {projectSlug}</h1>
       <p>
         <a href="/app">← Your projects</a>
@@ -130,6 +132,7 @@ export default async function DestinationsPage({
           )}
         </tbody>
       </table>
-    </main>
+      </main>
+    </ProductShell>
   )
 }

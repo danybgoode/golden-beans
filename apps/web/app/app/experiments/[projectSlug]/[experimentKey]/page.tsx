@@ -7,6 +7,7 @@ import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import type { GovernedExperimentAnalysisResult } from '@/lib/experiment-analysis-query'
 import { DecisionRecorder } from './decision-recorder'
+import { ProductShell } from '@/components/product/ProductShell'
 
 type GovernedSuccess = Extract<GovernedExperimentAnalysisResult, { ok: true }>
 type GovernedMetric = GovernedSuccess['analysis']['primaryMetric']
@@ -82,7 +83,8 @@ function GovernedAnalysis({
 }) {
   const { experiment, analysis, decisions } = result
   return (
-    <main>
+    <ProductShell>
+      <main>
       <h1>
         Governed experiment — {experiment.key}{' '}
         <small>v{experiment.definitionVersion} ({result.project.slug})</small>
@@ -227,7 +229,8 @@ function GovernedAnalysis({
           stop this experiment, or change a product flag.
         </em>
       </p>
-    </main>
+      </main>
+    </ProductShell>
   )
 }
 
@@ -256,7 +259,14 @@ export default async function ExperimentComparisonPage({
       segmentValue: scalar(raw.segmentValue),
     })
     if (!parsed.ok) {
-      return <main><h1>Invalid experiment analysis request</h1><p>{parsed.error}</p></main>
+      return (
+        <ProductShell>
+          <main>
+            <h1>Invalid experiment analysis request</h1>
+            <p>{parsed.error}</p>
+          </main>
+        </ProductShell>
+      )
     }
     const result = await getExperimentAnalysisByProjectId(
       membership.projectId,
@@ -267,10 +277,24 @@ export default async function ExperimentComparisonPage({
     if (!result.ok) {
       if (result.reason === 'query_failed') throw new Error('Experiment analysis lookup failed')
       if (result.reason === 'resource_limit') {
-        return <main><h1>Experiment analysis is too large</h1><p>The bounded query limit was exceeded.</p></main>
+        return (
+          <ProductShell>
+            <main>
+              <h1>Experiment analysis is too large</h1>
+              <p>The bounded query limit was exceeded.</p>
+            </main>
+          </ProductShell>
+        )
       }
       if (result.reason === 'invalid_request' || result.reason === 'lifecycle_unavailable') {
-        return <main><h1>Experiment analysis unavailable</h1><p>This version has no valid observation window at the requested snapshot.</p></main>
+        return (
+          <ProductShell>
+            <main>
+              <h1>Experiment analysis unavailable</h1>
+              <p>This version has no valid observation window at the requested snapshot.</p>
+            </main>
+          </ProductShell>
+        )
       }
       notFound()
     }
@@ -287,15 +311,17 @@ export default async function ExperimentComparisonPage({
 
   if (!metricEvent) {
     return (
-      <main>
-        <h1>
-          Experiment — {experimentKey} <small>({projectSlug})</small>
-        </h1>
-        <p>
-          Add a <code>?metricEvent=&lt;event name&gt;</code> query param naming the event that
-          counts as a conversion for this experiment.
-        </p>
-      </main>
+      <ProductShell>
+        <main>
+          <h1>
+            Experiment — {experimentKey} <small>({projectSlug})</small>
+          </h1>
+          <p>
+            Add a <code>?metricEvent=&lt;event name&gt;</code> query param naming the event that
+            counts as a conversion for this experiment.
+          </p>
+        </main>
+      </ProductShell>
     )
   }
 
@@ -308,7 +334,8 @@ export default async function ExperimentComparisonPage({
   const { comparison } = result
 
   return (
-    <main>
+    <ProductShell>
+      <main>
       <h1>
         Experiment — {experimentKey} <small>({projectSlug})</small>
       </h1>
@@ -347,6 +374,7 @@ export default async function ExperimentComparisonPage({
       <p>
         <em>Basic lift only — no statistical-significance engine (that&rsquo;s a later epic).</em>
       </p>
-    </main>
+      </main>
+    </ProductShell>
   )
 }

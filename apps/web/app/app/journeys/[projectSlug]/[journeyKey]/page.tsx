@@ -7,6 +7,7 @@ import {
   getActiveJourneyVersionByProjectId,
   getJourneyCohortByProjectId,
 } from '@/lib/journey-query'
+import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,11 +50,19 @@ export default async function JourneyCohortPage({
   })
   if (!parsed.ok) {
     return (
-      <main>
-        <h1>Journey cohort — {journeyKey}</h1>
-        <p role="alert">{parsed.error}</p>
-        <p><a href={`/app/journeys/${encodeURIComponent(projectSlug)}/${encodeURIComponent(journeyKey)}`}>Reset the cohort window</a></p>
-      </main>
+      <ProductShell>
+        <main>
+          <h1>Journey cohort — {journeyKey}</h1>
+          <p role="alert">{parsed.error}</p>
+          <p>
+            <a
+              href={`/app/journeys/${encodeURIComponent(projectSlug)}/${encodeURIComponent(journeyKey)}`}
+            >
+              Reset the cohort window
+            </a>
+          </p>
+        </main>
+      </ProductShell>
     )
   }
 
@@ -66,10 +75,27 @@ export default async function JourneyCohortPage({
   if (!result.ok) {
     if (result.reason === 'query_failed') throw new Error('Journey cohort lookup failed')
     if (result.reason === 'invalid_request') {
-      return <main><h1>Journey cohort — {journeyKey}</h1><p role="alert">That drilldown is not valid for this journey definition.</p></main>
+      return (
+        <ProductShell>
+          <main>
+            <h1>Journey cohort — {journeyKey}</h1>
+            <p role="alert">That drilldown is not valid for this journey definition.</p>
+          </main>
+        </ProductShell>
+      )
     }
     if (result.reason === 'resource_limit') {
-      return <main><h1>Journey cohort — {journeyKey}</h1><p role="alert">This journey exceeds the query-time raw-fact safety limit. Reduce matching history or split the definition before retrying.</p></main>
+      return (
+        <ProductShell>
+          <main>
+            <h1>Journey cohort — {journeyKey}</h1>
+            <p role="alert">
+              This journey exceeds the query-time raw-fact safety limit. Reduce matching history or
+              split the definition before retrying.
+            </p>
+          </main>
+        </ProductShell>
+      )
     }
     notFound()
   }
@@ -92,7 +118,8 @@ export default async function JourneyCohortPage({
   }
 
   return (
-    <main>
+    <ProductShell>
+      <main>
       <h1>Journey cohort — {journey.key} <small>({projectSlug})</small></h1>
       <p><a href={`/app/journeys/${encodeURIComponent(projectSlug)}`}>← Journey definitions</a></p>
       <dl>
@@ -185,7 +212,8 @@ export default async function JourneyCohortPage({
           )}
         </section>
       )}
-    </main>
+      </main>
+    </ProductShell>
   )
 }
 

@@ -65,6 +65,10 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- 🚧 [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
+  limitless magic-beans story · reusable public/product rails · branded route loaders) — building
+  on `feat/design-system-slack-rails`; replaces the coffee-roastery metaphor and gives every
+  signed-in route a shared responsive shell.
 - ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
   self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
   per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
@@ -101,6 +105,12 @@ independently shippable slice of value.
   itself as a real tenant (visitor→waitlist funnel via the actual SDK), serves real OG cards +
   `/llms.txt`, and the read-only MCP connector is **enabled** (`CONNECTOR_ENABLED` flipped ON
   2026-07-20) with a live demo token on `/install`. Staying on the `vercel.app` domain for v1.
+
+### 09 · Platform & Infra
+- 🚧 [Notification rails](09-platform-infra/notification-rails/README.md) (Telegram + Slack
+  mechanical push/deploy pings · identical reviewed prose reports · per-channel retry checkpoints)
+  — building on `feat/design-system-slack-rails`; Slack uses a channel-scoped Incoming Webhook and
+  plain-text response handling.
 
 ---
 

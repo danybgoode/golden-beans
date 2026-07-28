@@ -1,5 +1,6 @@
 import { WaitlistForm } from './WaitlistForm'
 import { isSignupEnabled } from '@/lib/flags'
+import { Sprout, WandSparkles } from 'lucide-react'
 
 // Section 1 — Hero. Per references/landing-end-state.md's own section table, this section's
 // "Lights up" column reads "E1 (waitlist CTA) → E2 (real signup CTA)" — the connector CTA
@@ -20,19 +21,25 @@ export function Hero() {
     <section>
       <div className="wrap hero-grid" style={{ display: 'grid', gridTemplateColumns: '1.15fr .85fr', gap: 48, alignItems: 'center' }}>
         <div>
+          <p className="kicker" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Sprout size={16} aria-hidden="true" /> The magic beans that actually work
+          </p>
           <h1 className="display" style={{ fontSize: 'clamp(38px,5vw,62px)' }}>
-            The growth engine <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your agent</em> operates.
+            Plant a signal.{' '}
+            <em className="foil" style={{ fontStyle: 'normal' }}>
+              Grow without a ceiling.
+            </em>
           </h1>
           <p style={{ margin: '20px 0 30px', fontSize: 19, color: 'var(--dim)', maxWidth: 560 }}>
-            Telemetry, TARS funnels, North Star metrics and A/B experiments — as primitives. Others
-            close the signal loop with <i>their</i> AI. Golden Beans closes it with{' '}
-            <b style={{ color: 'var(--crema)' }}>yours</b>, over MCP.
+            Telemetry, TARS funnels, North Star metrics and experiments become one set of working
+            primitives. Golden Beans plants the facts; <b style={{ color: 'var(--crema)' }}>your agent</b>{' '}
+            climbs the evidence and brings back the next move.
           </p>
           <div style={{ display: 'flex', gap: 10, maxWidth: 600, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div style={{ flex: '1 1 260px', minWidth: 260 }}>
               {signupEnabled ? (
                 <a href="/signup" className="btn btn-gold" style={{ display: 'inline-block' }}>
-                  Start free
+                  <WandSparkles size={17} aria-hidden="true" /> Plant your first bean
                 </a>
               ) : (
                 <WaitlistForm compact />

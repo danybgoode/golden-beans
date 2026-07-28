@@ -30,7 +30,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <label>
         Email
         <input

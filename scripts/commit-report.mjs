@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // commit-report.mjs — an EXECUTIVE, product-level report on what a merge means, drafted by a
-// cheaper foreign model and posted to the CI/CD Telegram channel beside the mechanical push ping.
+// cheaper foreign model and posted to the CI/CD Telegram + Slack channels beside the mechanical ping.
 //
 // ── What this is for ──────────────────────────────────────────────────────────────────────────
 // `.github/workflows/notify-telegram.yml` already pings on every push to `main`: repo, SHA, commit
@@ -30,7 +30,7 @@
 //   node scripts/commit-report.mjs                    # HEAD, print to stdout
 //   node scripts/commit-report.mjs --sha <sha>        # one specific commit
 //   node scripts/commit-report.mjs --range a..b       # a span (e.g. a whole merged sprint)
-//   node scripts/commit-report.mjs --post             # also send it to the CI/CD Telegram channel
+//   node scripts/commit-report.mjs --post             # send to the CI/CD Telegram + Slack channels
 //   node scripts/commit-report.mjs --dry-run          # print the assembled PROMPT, call no model
 //   node scripts/commit-report.mjs --text "…" --post  # post REVIEWED prose, skipping the model
 //
@@ -48,12 +48,12 @@
 // of re-rolling the model. The posted message is always labelled with the model that drafted it, so
 // an unreviewed claim is at least self-identifying in the channel.
 //
-// Telegram credentials come from the environment or `.env.local` (TELEGRAM_BOT_TOKEN +
-// TELEGRAM_CICD_CHAT_ID). A --post delivery failure is an ERROR: the exactly-once runner must keep
-// its baseline behind a report that was not actually delivered, so the next interval can retry it.
+// Channel credentials come from the environment or `.env.local` (TELEGRAM_BOT_TOKEN +
+// TELEGRAM_CICD_CHAT_ID + SLACK_WEBHOOK_URL). A --post delivery failure is an ERROR. Accepted
+// destinations are checkpointed per commit, so a retry sends the same prose only to missing channels.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync, writeSync } from 'node:fs';
+import { readFileSync, existsSync, writeSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need, loadPromptBody } from './lib/cross-agent-cli.mjs';
@@ -72,6 +72,7 @@ export { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/te
 // `truncateWords` is part of the public surface (its own tests import it from here) but is not used
 // in this module, and importing it purely to re-export it trips no-unused-vars.
 import { TELEGRAM_LIMIT, escapeHtml, escapeToFit } from './lib/telegram-text.mjs';
+import { SLACK_LIMIT, escapeMrkdwn, escapeToFit as escapeSlackToFit } from './lib/slack-text.mjs';
 
 /**
  * Which commit(s) to report on, from the parsed flags. Pure so the precedence is pinned by a test
@@ -217,6 +218,27 @@ export function buildTelegramMessage({ shortSha, subject, prose, url, model }) {
   );
 }
 
+/** Slack's mrkdwn-shaped rendering of the exact same reviewed prose report. */
+export function buildSlackReportMessage({ shortSha, subject, prose, url, model }) {
+  const safeSubject = escapeSlackToFit(subject, 200);
+  const chrome = 360;
+  const body = escapeSlackToFit(prose, SLACK_LIMIT - chrome - safeSubject.length);
+  return (
+    `golden-beans · 📝 · \`${escapeMrkdwn(shortSha)}\`\n` +
+    `${safeSubject}\n\n` +
+    `${body}\n\n` +
+    `<${escapeMrkdwn(url)}|view diff> · _${escapeMrkdwn(model)}_`
+  );
+}
+
+export const REPORT_DESTINATIONS = ['telegram', 'slack'];
+
+/** A persisted channel success is never sent again, even when another channel needs a retry. */
+export function planReportDeliveries(completed = [], configured = REPORT_DESTINATIONS) {
+  const done = new Set(completed);
+  return configured.filter((destination) => !done.has(destination));
+}
+
 // ── I/O ──────────────────────────────────────────────────────────────────────────────────────
 
 function git(args, { allowFail = false } = {}) {
@@ -249,6 +271,19 @@ function telegramCreds() {
     }
   }
   return { token, chat };
+}
+
+function slackCreds() {
+  let webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  const envFile = join(REPO_ROOT, '.env.local');
+  if (!webhookUrl && existsSync(envFile)) {
+    for (const line of readFileSync(envFile, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+      if (!m) continue;
+      if (m[1] === 'SLACK_WEBHOOK_URL') webhookUrl = m[2].replace(/^["']|["']$/g, '');
+    }
+  }
+  return { webhookUrl: webhookUrl?.trim() };
 }
 
 function postToTelegram(text) {
@@ -292,6 +327,75 @@ function postToTelegram(text) {
     );
   }
   return ok;
+}
+
+function postToSlack(text) {
+  const { webhookUrl } = slackCreds();
+  if (!webhookUrl) {
+    process.stderr.write(
+      '⚠ SLACK_WEBHOOK_URL not set (env or .env.local) — Slack did NOT receive the report.\n' +
+        '  The GitHub Secret powers CI pings only; the local prose runner needs the same URL in .env.local.\n'
+    );
+    return false;
+  }
+  const body = JSON.stringify({ text, unfurl_links: false, unfurl_media: false });
+  const r = spawnSync(
+    'curl',
+    [
+      '-sS',
+      '-m',
+      '10',
+      '-X',
+      'POST',
+      webhookUrl,
+      '-H',
+      'Content-Type: application/json',
+      '--data-binary',
+      '@-',
+    ],
+    { input: body, encoding: 'utf8' }
+  );
+  // Incoming Webhooks return plain text: exactly `ok` when accepted, an error token otherwise.
+  const ok = r.status === 0 && (r.stdout || '').trim() === 'ok';
+  if (!ok) {
+    process.stderr.write(
+      `⚠ Slack post failed — the draft above was NOT sent there.\n  ${(r.stdout || r.stderr || '').trim()}\n`
+    );
+  }
+  return ok;
+}
+
+function deliveryCheckpointPath(sha) {
+  const gitDir = resolve(REPO_ROOT, git(['rev-parse', '--git-dir']));
+  return join(gitDir, 'gb-report-deliveries', `${sha}.json`);
+}
+
+function readDeliveryCheckpoint(sha) {
+  const path = deliveryCheckpointPath(sha);
+  if (!existsSync(path)) return null;
+  try {
+    const value = JSON.parse(readFileSync(path, 'utf8'));
+    if (
+      value?.version !== 1 ||
+      value?.sha !== sha ||
+      typeof value?.prose !== 'string' ||
+      typeof value?.attribution !== 'string' ||
+      !Array.isArray(value?.completed)
+    ) {
+      die(`invalid prose delivery checkpoint: ${path}`);
+    }
+    return value;
+  } catch (error) {
+    die(`unable to read prose delivery checkpoint ${path}: ${error?.message ?? error}`);
+  }
+}
+
+function writeDeliveryCheckpoint(checkpoint) {
+  const path = deliveryCheckpointPath(checkpoint.sha);
+  mkdirSync(dirname(path), { recursive: true });
+  const temporary = `${path}.tmp-${process.pid}`;
+  writeFileSync(temporary, `${JSON.stringify(checkpoint, null, 2)}\n`, 'utf8');
+  renameSync(temporary, path);
 }
 
 function main() {
@@ -352,8 +456,13 @@ function main() {
 
   // --text is the reviewed-prose path: skip the model entirely and post what the caller wrote.
   // Attributed to 'reviewed by hand' so the channel distinguishes it from a raw machine draft.
-  let prose = text;
-  let attribution = 'reviewed by hand';
+  const checkpoint = post ? readDeliveryCheckpoint(fullSha) : null;
+  if (checkpoint && text && checkpoint.prose !== text) {
+    die('this commit already has a partially-delivered report with different prose; retry it unchanged.');
+  }
+
+  let prose = checkpoint?.prose ?? text;
+  let attribution = checkpoint?.attribution ?? 'reviewed by hand';
   let guardPassed = true;
 
   if (!prose) {
@@ -399,17 +508,66 @@ function main() {
       die('the prose guard rejected this draft — refusing to auto-post an unsupported claim.');
     }
     const url = `https://github.com/danybgoode/golden-beans/commit/${fullSha}`;
-    const sent = postToTelegram(
-      buildTelegramMessage({
+    const report = checkpoint ?? {
+      version: 1,
+      sha: fullSha,
+      prose,
+      attribution,
+      completed: [],
+    };
+    // Persist the reviewed/model-guarded prose BEFORE the first external write. If one destination
+    // fails, its retry uses these exact words and skips any destination that already accepted them.
+    writeDeliveryCheckpoint(report);
+
+    const messages = {
+      telegram: buildTelegramMessage({
         shortSha: fullSha.slice(0, 7),
         subject: message.split('\n')[0],
         prose,
         url,
         model: attribution,
-      })
-    );
-    if (!sent) die('Telegram did not accept the report; the caller must retry delivery.');
-    process.stderr.write('✓ posted to the CI/CD Telegram channel.\n');
+      }),
+      slack: buildSlackReportMessage({
+        shortSha: fullSha.slice(0, 7),
+        subject: message.split('\n')[0],
+        prose,
+        url,
+        model: attribution,
+      }),
+    };
+    const senders = { telegram: postToTelegram, slack: postToSlack };
+    const failed = [];
+    // Telegram is the established local rail and remains required. Slack becomes a required peer
+    // only once this machine has its webhook; GitHub's Actions secret cannot be read here.
+    const configuredDestinations = ['telegram'];
+    if (slackCreds().webhookUrl) {
+      configuredDestinations.push('slack');
+    } else {
+      process.stderr.write(
+        '⚠ SLACK_WEBHOOK_URL is not configured locally — skipping Slack for this report.\n' +
+          '  Add the existing webhook to the ignored root .env.local to enable prose parity.\n'
+      );
+    }
+
+    for (const destination of planReportDeliveries(report.completed, configuredDestinations)) {
+      const sent = senders[destination](messages[destination]);
+      if (!sent) {
+        failed.push(destination);
+        continue;
+      }
+      report.completed.push(destination);
+      writeDeliveryCheckpoint(report);
+      process.stderr.write(
+        `✓ posted to the CI/CD ${destination === 'slack' ? 'Slack' : 'Telegram'} channel.\n`
+      );
+    }
+
+    if (failed.length) {
+      die(`${failed.join(' and ')} did not accept the report; successful channels are checkpointed.`);
+    }
+    if (planReportDeliveries(report.completed, configuredDestinations).length === 0) {
+      process.stderr.write('✓ all configured report destinations accepted this exact prose.\n');
+    }
   }
 }
 

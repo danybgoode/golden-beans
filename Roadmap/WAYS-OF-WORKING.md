@@ -160,14 +160,18 @@ node scripts/install-main-report-daemon.mjs --status
 
 It fetches `origin/main` every five minutes without changing the checked-out branch, reports only
 first-parent mainline commits (one merged PR, not every commit inside it), and advances its local
-baseline only after Telegram accepts the report. A failed writer, fetch, or post is visible in
+baseline only after Telegram **and Slack** accept the same report. Each accepted destination is
+checkpointed per commit, so a partial failure retries only the missing channel with the exact same
+prose. A failed writer, fetch, or post is visible in
 `~/Library/Logs/golden-beans-main-report.log` and is retried on the next interval. Credentials remain
-in the ignored root `.env.local` (`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CICD_CHAT_ID`); they are never put
-in the plist. Git hooks remain an immediate best-effort trigger, but the runner is the durable retry
-path even when merges happen on GitHub and this checkout stays on a feature branch.
+in the ignored root `.env.local` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CICD_CHAT_ID`, and
+`SLACK_WEBHOOK_URL`); they are never put in the plist. The GitHub `SLACK_WEBHOOK_URL` secret powers
+the Actions workflow but cannot be read back by this local runner, so the local env entry is a
+separate required setup step. Git hooks remain an immediate best-effort trigger, but the runner is
+the durable retry path even when merges happen on GitHub and this checkout stays on a feature branch.
 
 Use `node scripts/report-main-daemon.mjs --dry-run` to see pending reports without calling a writer or
-Telegram. The guard still labels its model and blocks known unsupported claims before delivery.
+either channel. The guard still labels its model and blocks known unsupported claims before delivery.
 
 ## Review & merge — cross-agent
 With multiple agents potentially running in parallel, the agent that **builds** a PR is not the one

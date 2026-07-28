@@ -1,4 +1,4 @@
-# Telegram CI/CD pings — same shape as danybgoode/miyagisanchezcommerce &
+# Telegram + Slack CI/CD pings — same event and the same resolved facts in both channels.
 # medusa-bonsai-backend's `notify-telegram.yml`
 # (see miyagi-product-management/Roadmap/09-platform-infra/cicd-telegram-notifications/).
 #
@@ -19,9 +19,8 @@
 #      warning about: it capped the RAW subject, and 3,500 `>` characters escape to 14,129 — far past
 #      Telegram's 4,096 ceiling.
 #
-# Two implementations of one escaping/length rule is one too many. The rule now lives in
-# `scripts/lib/telegram-text.mjs`, shared with `scripts/commit-report.mjs` and unit-tested once
-# (`scripts/telegram-notify.test.mjs`, including the entity-heavy input that broke the jq version).
+# Two implementations of one escaping/length rule is one too many. The byte-identical entity rule
+# lives in `scripts/lib/notification-text.mjs`; channel modules keep their own public name and limit.
 #
 # ── A rejected ping now turns this workflow RED, and that is deliberate ────────────────────────
 # The inline version ended in `|| true`, so a Telegram outage could never fail a deploy. Sound
@@ -67,7 +66,7 @@
 # WAYS-OF-WORKING.md → "Shipping a merge". These pings stay mechanical and always-on; the prose is a
 # separate local rail and consumes no Actions minutes.
 
-name: Notify Telegram
+name: Notify Telegram and Slack
 
 on:
   push:
@@ -102,6 +101,26 @@ jobs:
             --url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}" \
             --link-label "view diff"
 
+      # Same event, same job, same GITHUB_SHA/COMMIT_MSG/AUTHOR — kept in this job (rather than a
+      # separate workflow) so the two channels can't drift out of lockstep on trigger conditions.
+      # A repo with SLACK_WEBHOOK_URL unset gets a clean skip (see slack-notify.mjs), not a failure.
+      - name: Send Slack push notification
+        # A failed Telegram post must not prevent Slack from receiving the same event. The observer
+        # job still finishes red because always() changes scheduling, not the earlier step's verdict.
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          AUTHOR: ${{ github.event.head_commit.author.username || github.actor }}
+        run: |
+          node scripts/slack-notify.mjs \
+            --icon 📦 \
+            --sha "$GITHUB_SHA" \
+            --subject "$COMMIT_MSG" \
+            --meta "by @$AUTHOR" \
+            --url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}" \
+            --link-label "view diff"
+
   deploy-notification:
     name: Production deploy-finish ping
     # Three filters, all load-bearing:
@@ -121,10 +140,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Send Telegram deploy-finish notification
+      # Resolve once, before either delivery. Putting this inside the Telegram step made the Slack
+      # handoff depend on Telegram succeeding: Actions stops a `run` script at the failed node call,
+      # before later `$GITHUB_ENV` writes execute. A destination outage must not erase another
+      # destination's payload.
+      - name: Resolve production deploy details
+        id: resolve-deploy
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CICD_CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
           GH_TOKEN: ${{ github.token }}
           DEPLOY_STATE: ${{ github.event.deployment_status.state }}
           DEPLOY_SHA: ${{ github.event.deployment.sha }}
@@ -149,10 +171,36 @@ jobs:
 
           [ -z "$DEPLOY_URL" ] && DEPLOY_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${DEPLOY_SHA}"
 
+          echo "DEPLOY_HEADER=$HEADER" >> "$GITHUB_ENV"
+          echo "DEPLOY_STATUS_LABEL=$STATUS" >> "$GITHUB_ENV"
+          echo "DEPLOY_URL_RESOLVED=$DEPLOY_URL" >> "$GITHUB_ENV"
+
+      - name: Send Telegram deploy-finish notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CICD_CHAT_ID: ${{ secrets.TELEGRAM_CICD_CHAT_ID }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: |
           node scripts/telegram-notify.mjs \
             --icon 🚀 \
             --sha "$DEPLOY_SHA" \
-            --subject "$HEADER" \
-            --status "$STATUS" \
-            --url "$DEPLOY_URL" \
+            --subject "$DEPLOY_HEADER" \
+            --status "$DEPLOY_STATUS_LABEL" \
+            --url "$DEPLOY_URL_RESOLVED" \
+            --link-label "open deployment"
+
+      - name: Send Slack deploy-finish notification
+        # `always()` keeps Slack independent of Telegram. The outcome check prevents an upstream
+        # checkout/setup/resolve failure from posting a payload whose three resolved values are empty.
+        if: ${{ always() && steps.resolve-deploy.outcome == 'success' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DEPLOY_SHA: ${{ github.event.deployment.sha }}
+        run: |
+          node scripts/slack-notify.mjs \
+            --icon 🚀 \
+            --sha "$DEPLOY_SHA" \
+            --subject "$DEPLOY_HEADER" \
+            --status "$DEPLOY_STATUS_LABEL" \
+            --url "$DEPLOY_URL_RESOLVED" \
             --link-label "open deployment"

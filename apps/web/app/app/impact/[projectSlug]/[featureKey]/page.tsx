@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getFeatureImpact } from '@/lib/north-star-query'
 import { requireDashboardAccess } from '@/lib/dashboard-auth'
+import { ProductShell } from '@/components/product/ProductShell'
 
 // Growth Engine v1 · Sprint 3, Story 3.4 — the per-feature input-impact report (v1's
 // headline case: /impact/miyagisanchez/setup_guide). Behind per-tenant authorization
@@ -22,37 +23,39 @@ export default async function ImpactPage({
   const { feature, inputs } = result
 
   return (
-    <main>
-      <h1>
-        Impact — {feature.key} <small>({projectSlug})</small>
-      </h1>
-      {inputs.map((input) => (
-        <section key={input.key}>
-          <h2>
-            {input.name} <small>({input.valueSource})</small>
-          </h2>
-          {input.series.length === 0 ? (
-            <p>No data yet.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {input.series.map((point) => (
-                  <tr key={point.date}>
-                    <td>{point.date}</td>
-                    <td>{point.value}</td>
+    <ProductShell>
+      <main>
+        <h1>
+          Impact — {feature.key} <small>({projectSlug})</small>
+        </h1>
+        {inputs.map((input) => (
+          <section key={input.key}>
+            <h2>
+              {input.name} <small>({input.valueSource})</small>
+            </h2>
+            {input.series.length === 0 ? (
+              <p>No data yet.</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Value</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      ))}
-    </main>
+                </thead>
+                <tbody>
+                  {input.series.map((point) => (
+                    <tr key={point.date}>
+                      <td>{point.date}</td>
+                      <td>{point.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        ))}
+      </main>
+    </ProductShell>
   )
 }

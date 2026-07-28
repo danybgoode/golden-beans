@@ -77,10 +77,10 @@ export function EmptyPodReportState({ projectSlug }: { projectSlug: string }) {
   return (
     <div className={styles.emptyState} data-testid="pod-report-empty-state">
       <p className={styles.emptyStateKicker}>No pod report pushed yet</p>
-      <h2>Beans in the hopper, nothing roasted.</h2>
+      <h2>The beans are ready; no report is planted yet.</h2>
       <p>
         <code>{projectSlug}</code> has never pushed a <code>pod_report</code> artifact, so there is nothing to
-        render — an empty hopper, not a broken page and not a row of zeros.
+        render — an unplanted plot, not a broken page and not a row of zeros.
       </p>
       <p>Compute and push one from a checkout of the repo being measured:</p>
       <pre className={styles.emptyStateCmd}>

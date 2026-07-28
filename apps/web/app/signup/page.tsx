@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { isSignupEnabled } from '@/lib/flags'
+import { BrandLockup } from '@/components/brand/BrandLockup'
 import { SignupForm } from './signup-form'
 
 // multi-tenant-activation · Sprint 3, Story 3.1/3.2 — the self-serve front door the flipped hero
@@ -15,18 +16,22 @@ export default function SignupPage() {
   if (!isSignupEnabled()) notFound()
 
   return (
-    <main className="wrap" style={{ maxWidth: 480, padding: '72px 32px' }}>
-      <h1 className="display" style={{ fontSize: 32 }}>
-        Start free
-      </h1>
-      <p style={{ margin: '12px 0 28px', color: 'var(--dim)' }}>
-        Instant tenant, your own API key, the full engine. No credit card, no payment rail in this
-        release.
-      </p>
-      <SignupForm />
-      <p className="note" style={{ margin: '22px 0 0' }}>
-        Already have an account? <a href="/login">Sign in</a>
-      </p>
+    <main className="auth-shell">
+      <BrandLockup />
+      <section className="auth-shell__card">
+        <p className="kicker">Plant your first signal</p>
+        <h1 className="display" style={{ fontSize: 34 }}>
+          Start free
+        </h1>
+        <p style={{ margin: '12px 0 28px', color: 'var(--dim)' }}>
+          Instant tenant, your own API key, the full engine. One small primitive set, no artificial
+          ceiling. No credit card.
+        </p>
+        <SignupForm />
+        <p className="note" style={{ margin: '22px 0 0' }}>
+          Already have an account? <a href="/login">Sign in</a>
+        </p>
+      </section>
     </main>
   )
 }

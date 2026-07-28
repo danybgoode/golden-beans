@@ -1,4 +1,4 @@
-// Section 6 — Primitives grid, the "bag label." Rows mirror what growth-engine-v1 actually
+// Section 6 — Primitives grid, the seed-ledger label. Rows mirror what growth-engine-v1 actually
 // shipped (Roadmap/01-growth-engine/growth-engine-v1/README.md) — every ✅ row here is curl-able
 // today against the demo project; rows flip as later epics ship (Story 1.4's registry drives the
 // section-level badge, not these per-row facts, which are a fixed historical record of S1-S4).
@@ -8,7 +8,7 @@ export function PrimitivesGrid() {
       <div className="divider">
         <div className="wrap">
           <span className="num">⑥</span>
-          <span className="stamp-title">What&apos;s in the bag</span>
+          <span className="stamp-title">What&apos;s in the handful</span>
           <span className="tag tag-stamp">LIVE — rows flip as epics ship</span>
         </div>
       </div>
@@ -25,12 +25,12 @@ export function PrimitivesGrid() {
             </p>
           </div>
           <div className="baglabel">
-            <div className="roundstamp">SMALL<br />BATCH<br />★★★</div>
+            <div className="roundstamp">PLANT<br />GROW<br />★★★</div>
             <div className="brand">
               <b>GOLDEN BEANS</b>
-              <small>SINGLE-ORIGIN GROWTH PRIMITIVES</small>
+              <small>LIMITLESS GROWTH PRIMITIVES</small>
             </div>
-            <div className="netwt"><span>NET WT.</span><span>6 primitives shipped · 4 roasting</span></div>
+            <div className="netwt"><span>YIELD</span><span>6 primitives shipped · 4 climbing</span></div>
             <div className="row"><span>schema-validated telemetry ingest · tenant-scoped</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>TypeScript SDK · track / trackAdoption / bucket</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>feature registry + TARS funnels</span><b className="ok">✅ SHIPPED</b></div>
@@ -43,7 +43,7 @@ export function PrimitivesGrid() {
                 deliveries. An owner can create a signed destination at /app/destinations today and
                 receive their project's events — so the ✅ is honest (curl-able today).
                 Wording stays "at-least-once", never exactly-once — delivery is at-least-once by
-                contract and claiming otherwise on the bag label would be a lie the architecture
+                contract and claiming otherwise on the ledger would be a lie the architecture
                 cannot back. */}
             <div className="row"><span>signed event destinations · at-least-once, with retries</span><b className="ok">✅ SHIPPED</b></div>
             <div className="row"><span>read-only MCP connector</span><b>🔜 Sprint 2</b></div>
@@ -51,7 +51,7 @@ export function PrimitivesGrid() {
             <div className="row"><span>pod report (velocity, DORA, cost per point)</span><b>🔜 pod-report</b></div>
             <div className="row"><span>the inverted loop (signal → your agent → fix)</span><b>🔜 signals-loop</b></div>
             <div className="foot"><span>INTEGRATED AI</span><span>0g (0% DV)</span></div>
-            <div className="motto">ROASTED IN SMALL BATCHES · BEST SERVED THROUGH YOUR OWN AGENT</div>
+            <div className="motto">PLANT ONE FACT · GROW THE NEXT MOVE THROUGH YOUR OWN AGENT</div>
           </div>
         </div>
       </section>

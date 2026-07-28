@@ -4,6 +4,7 @@ import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { FlagManager } from './flag-manager'
+import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,22 +19,25 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
     canManage ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
   ])
   return (
-    <main>
-      <h1>Feature flags — {projectSlug}</h1>
-      <p>
-        <a href="/app">← Your projects</a>
-      </p>
-      <p>
-        Definitions, immutable versions and their audit remain visible while flag serving is dark. Activating
-        or deactivating a flag changes one environment snapshot with optimistic revision protection.
-      </p>
-      <FlagManager
-        slug={projectSlug}
-        {...registry}
-        keys={keys}
-        canManage={canManage}
-        servingEnabled={isFlagServingEnabled()}
-      />
-    </main>
+    <ProductShell>
+      <main>
+        <h1>Feature flags — {projectSlug}</h1>
+        <p>
+          <a href="/app">← Your projects</a>
+        </p>
+        <p>
+          Definitions, immutable versions and their audit remain visible while flag serving is
+          dark. Activating or deactivating a flag changes one environment snapshot with optimistic
+          revision protection.
+        </p>
+        <FlagManager
+          slug={projectSlug}
+          {...registry}
+          keys={keys}
+          canManage={canManage}
+          servingEnabled={isFlagServingEnabled()}
+        />
+      </main>
+    </ProductShell>
   )
 }
