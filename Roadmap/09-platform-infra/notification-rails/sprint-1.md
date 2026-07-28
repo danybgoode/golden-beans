@@ -28,4 +28,3 @@ The exactly-once runner therefore retries partial delivery instead of silently a
 **Acceptance:** Slack mirrors Telegram’s convergence and delivery tests; shared text behavior has
 one implementation; workflow handoff has a structural test; the roadmap and ways-of-working name
 both destinations and the live channel check still owed after merge.
-

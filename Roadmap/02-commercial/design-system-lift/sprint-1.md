@@ -25,4 +25,3 @@ focus, and motion rules live in shared seams and are documented close to the imp
 
 **Acceptance:** Coffee/roastery marketing copy is removed from current product surfaces, the public
 routes use the new mark and components, and capability honesty badges remain driven by shipped state.
-

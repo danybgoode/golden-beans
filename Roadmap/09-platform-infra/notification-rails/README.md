@@ -28,4 +28,3 @@ state.
 ## Sprint
 
 See [sprint-1.md](sprint-1.md).
-
