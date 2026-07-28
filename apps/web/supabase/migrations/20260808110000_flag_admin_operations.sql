@@ -276,7 +276,7 @@ BEGIN
   SET version_id = v_new_version_id, updated_by = v_key.flag_actor_user_id, updated_at = now()
   WHERE project_id = v_key.project_id AND environment = v_key.flag_environment AND flag_id = v_flag_id;
   UPDATE public.flag_environment_states
-  SET snapshot_version = snapshot_version + 1, updated_at = now()
+  SET snapshot_version = public.flag_environment_states.snapshot_version + 1, updated_at = now()
   WHERE project_id = v_key.project_id AND environment = v_key.flag_environment
   RETURNING * INTO v_state;
   INSERT INTO public.flag_lifecycle_audit(
