@@ -326,8 +326,10 @@ body {
   gap: 28px;
 }
 
-.funnel .bar > div {
-  height: var(--bar-height);
+.funnel-fill {
+  width: 100%;
+  height: 140px;
+  overflow: visible;
 }
 
 .funnel-summary {

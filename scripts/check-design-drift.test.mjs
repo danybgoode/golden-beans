@@ -16,6 +16,19 @@ test('rendered pictographs, raw hex and landing inline styles are rejected', () 
   );
 });
 
+test('multi-line and computed style props cannot bypass the landing rail', () => {
+  const source = `<div\n  style={\n    dynamicStyle\n  }\n/>`;
+  assert.deepEqual(
+    inspectDesignSource(source, { disallowInlineStyle: true }).map((finding) => finding.rule),
+    ['landing-inline-style']
+  );
+});
+
+test('URL fragments that happen to look hexadecimal are not colors', () => {
+  const source = `<><a href="#dead">Jump</a><a href="/proof#c001">Proof</a></>`;
+  assert.deepEqual(inspectDesignSource(source), []);
+});
+
 test('token classes and accessible icon components are accepted', () => {
   const source = `<Badge status="live"><Icon name="check" />LIVE</Badge>`;
   assert.deepEqual(inspectDesignSource(source, { disallowInlineStyle: true }), []);

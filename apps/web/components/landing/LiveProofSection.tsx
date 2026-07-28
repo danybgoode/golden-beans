@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getFeatureFunnel } from '@/lib/tars-query'
 import { getFeatureImpact } from '@/lib/north-star-query'
@@ -12,8 +11,6 @@ const FEATURE_KEY = 'setup_guide'
 const INPUT_KEY = 'setup_guide_completions'
 const EXPERIMENT_KEY = 'quick-upload-ui'
 const CONVERSION_EVENT = 'upload_completed'
-const MAX_BAR_HEIGHT = 140
-
 // Presentation-layer helper over an already-fetched series — sum of the last 7 days vs. the 7
 // before that. Not a new query function; the series itself comes from getFeatureImpact.
 function weekOverWeek(series: { date: string; value: number }[]) {
@@ -89,18 +86,36 @@ export async function LiveProofSection() {
                     ['Targeted', tars.targeted],
                     ['Adopted', tars.adopted],
                     ['Retained', tars.retained],
-                  ].map(([label, value]) => (
-                    <div className="bar" key={label}>
-                      <div
-                        style={
-                          {
-                            '--bar-height': `${(Number(value) / maxCount) * MAX_BAR_HEIGHT}px`,
-                          } as CSSProperties
-                        }
-                      />
-                      {label} · {Number(value).toLocaleString('en-US')}
-                    </div>
-                  ))}
+                  ].map(([label, value]) => {
+                    const height = Math.max(0, Math.min(100, (Number(value) / maxCount) * 100))
+                    const gradientId = `funnel-${String(label).toLowerCase()}`
+                    return (
+                      <div className="bar" key={label}>
+                        <svg
+                          className="funnel-fill"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
+                        >
+                          <defs>
+                            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stopColor="var(--gold-hot)" />
+                              <stop offset="1" stopColor="var(--gold-deep)" />
+                            </linearGradient>
+                          </defs>
+                          <rect
+                            x="0"
+                            y={100 - height}
+                            width="100"
+                            height={height}
+                            rx="5"
+                            fill={`url(#${gradientId})`}
+                          />
+                        </svg>
+                        {label} · {Number(value).toLocaleString('en-US')}
+                      </div>
+                    )
+                  })}
                 </div>
                 <div className="funnel-summary">
                   Adoption <b className="data">{adoptionRate}%</b>, retention{' '}

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Enforces the approved UI rails where drift previously accumulated fastest.
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,7 +10,8 @@ const repoRoot = join(scriptDir, '..');
 
 const PICTOGRAPH = /\p{Extended_Pictographic}|[✓★↗↘⚙]/u;
 const RAW_HEX = /#[\da-f]{3,8}\b/i;
-const INLINE_STYLE = /style=\{\{/;
+const INLINE_STYLE = /\bstyle\s*=\s*\{/;
+const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 
 function sourceFiles(root) {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
@@ -29,10 +30,11 @@ export function inspectDesignSource(source, { disallowInlineStyle = false } = {}
   const violations = [];
 
   liveSource.split('\n').forEach((line, index) => {
+    const lineWithoutUrlFragments = line.replace(URL_WITH_HEX_FRAGMENT, '');
     if (PICTOGRAPH.test(line)) {
       violations.push({ line: index + 1, rule: 'ui-pictograph', content: line.trim() });
     }
-    if (RAW_HEX.test(line)) {
+    if (RAW_HEX.test(lineWithoutUrlFragments)) {
       violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
     }
     if (disallowInlineStyle && INLINE_STYLE.test(line)) {
@@ -76,7 +78,16 @@ export function inspectRepository(root = repoRoot) {
   ];
 
   handoffMirrors.forEach(([source, mirror]) => {
-    if (readFileSync(join(root, source), 'utf8') !== readFileSync(join(root, mirror), 'utf8')) {
+    const sourcePath = join(root, source);
+    const mirrorPath = join(root, mirror);
+    if (!existsSync(sourcePath) || !existsSync(mirrorPath)) {
+      violations.push({
+        path: mirror,
+        line: 1,
+        rule: 'handoff-mirror',
+        content: `both this file and ${source} must exist`,
+      });
+    } else if (readFileSync(sourcePath, 'utf8') !== readFileSync(mirrorPath, 'utf8')) {
       violations.push({
         path: mirror,
         line: 1,
