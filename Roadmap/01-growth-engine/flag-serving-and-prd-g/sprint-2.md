@@ -1,6 +1,6 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 2: Complete Miyagi migration
 
-**Status:** ⬜ not started
+**Status:** 🟡 in progress — catalog imported and adapters are dark; shadow parity/cutover remain
 
 ## Stories
 
@@ -16,6 +16,24 @@ Golden and default result plus snapshot version without PII; every mismatch is r
 cutover.
 
 **Risk:** high
+
+**Evidence (2026-07-28):**
+
+- Golden PRs [#43](https://github.com/danybgoode/golden-beans/pull/43) and
+  [#45](https://github.com/danybgoode/golden-beans/pull/45) merged. The additive catalog-import
+  migration `20260808100000_idempotent_flag_catalog_import.sql` is applied to the linked remote
+  database.
+- The live Miyagi `platform_flags` source was validated as the complete 40-key catalog (12 keys
+  enforced by both frontend and backend). The existing remote Golden tenant is `miyagi`; its
+  owner-gated atomic import created 40 immutable version-one definitions, then a replay returned
+  40 unchanged definitions. Current effective defaults are 39 on / 1 off
+  (`shipping.envia_enabled`).
+- Postconditions are intentionally dark: 0 environment states, 0 activations and no flag-read
+  credential. The import has not changed Miyagi runtime behavior or selected a provider mode.
+- Miyagi's frontend adapter PR [#318](https://github.com/danybgoode/miyagisanchezcommerce/pull/318)
+  and Medusa backend adapter PR [#117](https://github.com/danybgoode/medusa-bonsai-backend/pull/117)
+  are merged in `local` mode. They retain their existing `isEnabled()` seams and are ready for the
+  separate shadow-parity proof.
 
 ### Story 2.2 — Preserve both `isEnabled()` seams with Golden primary
 
