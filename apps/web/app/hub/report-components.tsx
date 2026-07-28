@@ -59,9 +59,9 @@ export function evidenceHref(
 }
 
 const STATUS_LABEL = {
-  met: '✅ met',
-  not_met: '✕ not met',
-  not_instrumented: '◻ not instrumented',
+  met: 'met',
+  not_met: 'not met',
+  not_instrumented: 'not instrumented',
 } as const
 
 const STATUS_CLASS = {
@@ -140,7 +140,7 @@ function BenchmarkLink({
   if (!bench) return null
   return (
     <a className={styles.benchLink} href={bench.url} target="_blank" rel="noreferrer">
-      read against: {bench.label} ↗
+      read against: {bench.label}
     </a>
   )
 }
@@ -274,7 +274,7 @@ function EvidenceCell({ row, repo }: { row: MaturityRowT; repo?: string }) {
     <span data-evidence={href ? 'link' : 'text'}>
       {href ? (
         <a className={styles.evidencePointer} href={href} target="_blank" rel="noreferrer">
-          PR #{row.evidence.ref} ↗
+          PR #{row.evidence.ref}
         </a>
       ) : (
         <span className={styles.evidencePointer}>{label}</span>
@@ -581,7 +581,7 @@ export function PodReportBody({
             <b>you ▸</b> how is the {projectSlug} pod actually performing?
           </p>
           <div className="tool">
-            <b>⚙ getPodReport</b> report_artifacts · kind=pod_report · v{artifactVersion} · lens={lens}
+            <b>getPodReport</b> report_artifacts · kind=pod_report · v{artifactVersion} · lens={lens}
           </div>
           {verdict ? (
             <p data-testid="agent-headline">
@@ -717,7 +717,7 @@ export function PodReportBody({
             {view.benchmarks.map((b) => (
               <li key={b.id} className={styles.benchItem}>
                 <a href={b.url} target="_blank" rel="noreferrer">
-                  {b.label} ↗
+                  {b.label}
                 </a>
                 <p className={styles.benchNote}>{b.note}</p>
               </li>

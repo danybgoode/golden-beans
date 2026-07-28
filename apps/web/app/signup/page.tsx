@@ -20,15 +20,13 @@ export default function SignupPage() {
       <BrandLockup />
       <section className="auth-shell__card">
         <p className="kicker">Plant your first signal</p>
-        <h1 className="display" style={{ fontSize: 34 }}>
-          Start free
-        </h1>
-        <p style={{ margin: '12px 0 28px', color: 'var(--dim)' }}>
-          Instant tenant, your own API key, the full engine. One small primitive set, no artificial
-          ceiling. No credit card.
+        <h1 className="display auth-shell__title">Start free</h1>
+        <p className="auth-shell__intro">
+          Instant tenant, your own API key, the full engine. One small primitive set, no artificial ceiling.
+          No credit card.
         </p>
         <SignupForm />
-        <p className="note" style={{ margin: '22px 0 0' }}>
+        <p className="note auth-shell__foot">
           Already have an account? <a href="/login">Sign in</a>
         </p>
       </section>

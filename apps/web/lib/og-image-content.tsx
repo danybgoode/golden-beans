@@ -1,7 +1,7 @@
 // Story 3.2 (commercial-shell/sprint-3.md) — shared JSX for the generated OG/Twitter card, so
 // app/opengraph-image.tsx and app/twitter-image.tsx (two separate Next.js file-convention routes,
 // each with its own required default-export shape) don't duplicate the same markup. Colors are
-// lifted directly from app/globals.css's design tokens (obsidian garden + ingot gold). Kept to
+// lifted directly from the canonical dark-roast, kraft and foil design tokens. Kept to
 // next/og's (Satori's) supported CSS subset: solid colors + one linear-gradient, explicit
 // `display: flex` on every multi-child node, no external font/image fetch (system sans is fine
 // for a generated share card, this isn't a design deliverable).
@@ -13,7 +13,7 @@ export function ogImageContent() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: '#0c110a' /* --roast */,
+        background: '#16120d' /* --roast */,
         padding: '72px 88px',
         position: 'relative',
       }}
@@ -28,7 +28,7 @@ export function ogImageContent() {
           height: 14,
           display: 'flex',
           background:
-            'linear-gradient(90deg, #8b5d00 0%, #ffd700 32%, #fff3a1 48%, #d99d00 70%, #744900 100%)' /* --foil */,
+            'linear-gradient(90deg, #7a5c1a 0%, #ffd45e 35%, #e8b93c 55%, #8a6a1e 100%)' /* --foil */,
         }}
       />
 
@@ -56,7 +56,7 @@ export function ogImageContent() {
             fontSize: 74,
             fontWeight: 900,
             letterSpacing: '-0.02em',
-            color: '#fff9e8' /* --crema */,
+            color: '#f5ead6' /* --crema */,
           }}
         >
           Golden Beans
@@ -66,18 +66,18 @@ export function ogImageContent() {
             display: 'flex',
             fontSize: 34,
             fontWeight: 600,
-            color: '#ffd700' /* --gold */,
+            color: '#e8b93c' /* --gold */,
             marginTop: 22,
             maxWidth: 920,
           }}
         >
-          Plant signals. Grow outcomes.
+          The growth engine your agent operates
         </div>
         <div
           style={{
             display: 'flex',
             fontSize: 22,
-            color: '#b9c5ae' /* --dim */,
+            color: '#b8a888' /* --dim */,
             marginTop: 30,
             letterSpacing: '0.06em',
             fontFamily: 'monospace',

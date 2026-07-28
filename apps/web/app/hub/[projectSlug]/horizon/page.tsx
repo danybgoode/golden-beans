@@ -4,6 +4,8 @@ import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { deriveHorizon, type DestinationStatus } from '@/lib/horizon-destinations'
 import { FreshnessStamp, EmptyHubState } from '../../hub-components'
+import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
 import styles from '../../hub.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -20,9 +22,9 @@ export const dynamic = 'force-dynamic'
 // unshipped work" holds by construction rather than by this file remembering to check.
 
 const STATUS_LABEL: Record<DestinationStatus, string> = {
-  lit: '✅ lit',
-  partial: '🌗 partly lit',
-  coming: '🔜 on the way',
+  lit: 'lit',
+  partial: 'partly lit',
+  coming: 'on the way',
 }
 
 const STATUS_CLASS: Record<DestinationStatus, string> = {
@@ -77,7 +79,8 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
               <b>you ▸</b> how much of the destination is lit?
             </p>
             <div className="tool">
-              <b>⚙ deriveHorizon</b> report_artifacts · kind=roadmap · v{artifact.version}
+              <Icon name="settings" />
+              <b>deriveHorizon</b> report_artifacts · kind=roadmap · v{artifact.version}
             </div>
             <p>
               <b className="data">{litCount}</b>/<b className="data">{destinations.length}</b> destinations
@@ -92,9 +95,14 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
             <li key={d.id} className={`${styles.destCard} ${STATUS_CLASS[d.status]}`} data-status={d.status}>
               <div className={styles.destHead}>
                 <h2 className={styles.destTitle}>{d.title}</h2>
-                <span className={styles.destBadge} data-testid={`dest-badge-${d.id}`}>
+                <Badge
+                  className={styles.destBadge}
+                  status={d.status === 'lit' ? 'live' : 'next'}
+                  data-testid={`dest-badge-${d.id}`}
+                  aria-label={STATUS_LABEL[d.status]}
+                >
                   {STATUS_LABEL[d.status]}
-                </span>
+                </Badge>
               </div>
               <p className={styles.destDesc}>{d.description}</p>
 
@@ -103,7 +111,8 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
                   {d.litBy.map((e) => (
                     <li key={e.slug} className={e.shipped ? styles.destEpicShipped : styles.destEpicPending}>
                       <a href={`/hub/${encodeURIComponent(projectSlug)}/epic/${encodeURIComponent(e.slug)}`}>
-                        {e.shipped ? '✅' : '🔜'} {e.name}
+                        <Badge status={e.shipped ? 'live' : 'next'}>{e.shipped ? 'shipped' : 'next'}</Badge>{' '}
+                        {e.name}
                       </a>
                     </li>
                   ))}

@@ -6,7 +6,7 @@ export function BrandLockup({ compact = false, href = '/' }: { compact?: boolean
       <GoldenBeanMark size={compact ? 25 : 31} />
       <span className="brand-lockup__type">
         <strong>golden beans</strong>
-        {!compact && <small>plant signals · grow outcomes</small>}
+        {!compact && <small>the growth engine your agent operates</small>}
       </span>
     </a>
   )

@@ -1,93 +1,59 @@
-import { WaitlistForm } from './WaitlistForm'
 import { isSignupEnabled } from '@/lib/flags'
-import { Sprout, WandSparkles } from 'lucide-react'
+import { AgentWindow } from '@/components/ui/AgentWindow'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
+import { WaitlistForm } from './WaitlistForm'
 
-// Section 1 — Hero. Per references/landing-end-state.md's own section table, this section's
-// "Lights up" column reads "E1 (waitlist CTA) → E2 (real signup CTA)" — the connector CTA
-// (copy-URL + "Add to Claude") is NOT E1 scope; it ships dark in Sprint 2, Story 2.1
-// (CONNECTOR_ENABLED, HIGH risk). Per the project's own honesty-badge rule ("capability badges
-// never claim ✅ for unshipped work"), the connector slot stays in its designed position but
-// renders as a non-interactive block — no <button>/<a href>, no fabricated key string — while
-// the primary CTA is the real, working thing.
-//
-// multi-tenant-activation · Sprint 3, Story 3.1 — the E2 half of that "Lights up" arrow: once
-// SIGNUP_ENABLED is on, the waitlist form is replaced by a direct link to the real /signup page
-// and the footnote tags stop claiming "waitlist" is the live path. Decided server-side (this is
-// still a Server Component — `isSignupEnabled()` is safe to call directly, see lib/flags.ts) so
-// there is exactly one render per request, never a client-side re-branch on the same flag.
+// The connector slot remains visibly NEXT until its independent gate is live. The hero's primary
+// action follows the real signup flag, so the visual lift cannot accidentally advertise a dark path.
 export function Hero() {
   const signupEnabled = isSignupEnabled()
+
   return (
-    <section>
-      <div className="wrap hero-grid" style={{ display: 'grid', gridTemplateColumns: '1.15fr .85fr', gap: 48, alignItems: 'center' }}>
+    <section className="hero">
+      <div className="wrap hero-grid">
         <div>
-          <p className="kicker" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Sprout size={16} aria-hidden="true" /> The magic beans that actually work
-          </p>
-          <h1 className="display" style={{ fontSize: 'clamp(38px,5vw,62px)' }}>
-            Plant a signal.{' '}
-            <em className="foil" style={{ fontStyle: 'normal' }}>
-              Grow without a ceiling.
-            </em>
+          <h1 className="display">
+            The growth engine <em className="foil">your agent</em> operates.
           </h1>
-          <p style={{ margin: '20px 0 30px', fontSize: 19, color: 'var(--dim)', maxWidth: 560 }}>
-            Telemetry, TARS funnels, North Star metrics and experiments become one set of working
-            primitives. Golden Beans plants the facts; <b style={{ color: 'var(--crema)' }}>your agent</b>{' '}
-            climbs the evidence and brings back the next move.
+          <p className="hero-copy">
+            Telemetry, TARS funnels, North Star metrics and A/B experiments — as primitives. Others close the
+            signal loop with <i>their</i> AI. Golden Beans closes it with <b>yours</b>, over MCP.
           </p>
-          <div style={{ display: 'flex', gap: 10, maxWidth: 600, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 260px', minWidth: 260 }}>
-              {signupEnabled ? (
-                <a href="/signup" className="btn btn-gold" style={{ display: 'inline-block' }}>
-                  <WandSparkles size={17} aria-hidden="true" /> Plant your first bean
-                </a>
-              ) : (
-                <WaitlistForm compact />
-              )}
-            </div>
-          </div>
-          <div
-            className="urlfield"
-            aria-disabled="true"
-            style={{ maxWidth: 600, marginTop: 14, color: 'var(--dim-2)' }}
-          >
-            Connector URL — lights up next
-            <span className="tag tag-next" style={{ marginLeft: 'auto' }}>🔜 Sprint 2</span>
-          </div>
-          <p style={{ margin: '16px 0 0', font: '400 13px var(--mono)', color: 'var(--dim)' }}>
-            works on the Claude free tier · your data, your Supabase, your agent
+
+          <div className="hero-cta">
             {signupEnabled ? (
-              <>
-                <span className="tag tag-live" style={{ marginLeft: 8 }}>LIVE · signup</span>{' '}
-                <span className="tag tag-next">🔜 connector</span>
-              </>
+              <Button href="/signup">
+                Start free
+                <Icon name="arrow-right" />
+              </Button>
             ) : (
-              <>
-                <span className="tag tag-live" style={{ marginLeft: 8 }}>LIVE · waitlist</span>{' '}
-                <span className="tag tag-next">🔜 signup · connector</span>
-              </>
+              <WaitlistForm compact />
             )}
+          </div>
+
+          <div className="urlfield" aria-disabled="true">
+            Connector URL — lights up next
+            <Badge status="next">Sprint 2</Badge>
+          </div>
+          <p className="note hero-note">
+            works on the Claude free tier · your data, your Supabase, your agent
           </p>
         </div>
-        <div className="agent-win">
-          <div className="agent-bar">
-            <span className="agent-dots"><span /><span /><span /></span>
-            claude<span className="agent-chip">connected</span>
+
+        <AgentWindow>
+          <div className="you">
+            <b>you ▸</b> add golden-beans
           </div>
-          <div className="agent-body" style={{ font: '500 13px var(--mono)' }}>
-            <div className="you"><b>you ▸</b> add golden-beans</div>
-            <div className="tool" style={{ lineHeight: 1.7 }}>
-              <b>⚙ handshake</b> → 6 tools<br />
-              get_tars_funnel · get_north_star<br />
-              compare_experiment · sync_features<br />
-              track · bucket
-            </div>
-            <div style={{ color: 'var(--crema)', font: '400 13px var(--sans)', lineHeight: 1.55 }}>
-              Connected to <b>golden-beans-demo</b>. Ask me for the funnel — or bring your PM, no
-              SQL required.<span className="cursor" />
-            </div>
+          <div className="tool">
+            <Icon name="settings" />
+            handshake → 6 tools
           </div>
-        </div>
+          <div className="agent-result">
+            Connected to <b>golden-beans-demo</b>. Ask me for the funnel — or bring your PM, no SQL required.
+          </div>
+        </AgentWindow>
       </div>
     </section>
   )
