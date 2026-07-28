@@ -134,6 +134,11 @@ test('partial prose delivery retries only the destination that has not accepted 
   assert.deepEqual(planReportDeliveries(['slack']), ['telegram']);
   assert.deepEqual(planReportDeliveries(['telegram', 'slack']), []);
   assert.deepEqual(planReportDeliveries(['telegram', 'telegram']), ['slack']);
+  assert.deepEqual(
+    planReportDeliveries([], ['telegram']),
+    ['telegram'],
+    'an unconfigured Slack webhook must not trap the local daemon'
+  );
 });
 
 test('resolveTarget precedence: range beats sha beats HEAD', () => {

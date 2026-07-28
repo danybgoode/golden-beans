@@ -72,11 +72,7 @@ export { TELEGRAM_LIMIT, escapeHtml, truncateWords, escapeToFit } from './lib/te
 // `truncateWords` is part of the public surface (its own tests import it from here) but is not used
 // in this module, and importing it purely to re-export it trips no-unused-vars.
 import { TELEGRAM_LIMIT, escapeHtml, escapeToFit } from './lib/telegram-text.mjs';
-import {
-  SLACK_LIMIT,
-  escapeMrkdwn,
-  escapeToFit as escapeSlackToFit,
-} from './lib/slack-text.mjs';
+import { SLACK_LIMIT, escapeMrkdwn, escapeToFit as escapeSlackToFit } from './lib/slack-text.mjs';
 
 /**
  * Which commit(s) to report on, from the parsed flags. Pure so the precedence is pinned by a test
@@ -238,9 +234,9 @@ export function buildSlackReportMessage({ shortSha, subject, prose, url, model }
 export const REPORT_DESTINATIONS = ['telegram', 'slack'];
 
 /** A persisted channel success is never sent again, even when another channel needs a retry. */
-export function planReportDeliveries(completed = []) {
+export function planReportDeliveries(completed = [], configured = REPORT_DESTINATIONS) {
   const done = new Set(completed);
-  return REPORT_DESTINATIONS.filter((destination) => !done.has(destination));
+  return configured.filter((destination) => !done.has(destination));
 }
 
 // ── I/O ──────────────────────────────────────────────────────────────────────────────────────
@@ -541,8 +537,19 @@ function main() {
     };
     const senders = { telegram: postToTelegram, slack: postToSlack };
     const failed = [];
+    // Telegram is the established local rail and remains required. Slack becomes a required peer
+    // only once this machine has its webhook; GitHub's Actions secret cannot be read here.
+    const configuredDestinations = ['telegram'];
+    if (slackCreds().webhookUrl) {
+      configuredDestinations.push('slack');
+    } else {
+      process.stderr.write(
+        '⚠ SLACK_WEBHOOK_URL is not configured locally — skipping Slack for this report.\n' +
+          '  Add the existing webhook to the ignored root .env.local to enable prose parity.\n'
+      );
+    }
 
-    for (const destination of planReportDeliveries(report.completed)) {
+    for (const destination of planReportDeliveries(report.completed, configuredDestinations)) {
       const sent = senders[destination](messages[destination]);
       if (!sent) {
         failed.push(destination);
@@ -550,13 +557,15 @@ function main() {
       }
       report.completed.push(destination);
       writeDeliveryCheckpoint(report);
-      process.stderr.write(`✓ posted to the CI/CD ${destination === 'slack' ? 'Slack' : 'Telegram'} channel.\n`);
+      process.stderr.write(
+        `✓ posted to the CI/CD ${destination === 'slack' ? 'Slack' : 'Telegram'} channel.\n`
+      );
     }
 
     if (failed.length) {
       die(`${failed.join(' and ')} did not accept the report; successful channels are checkpointed.`);
     }
-    if (planReportDeliveries(report.completed).length === 0) {
+    if (planReportDeliveries(report.completed, configuredDestinations).length === 0) {
       process.stderr.write('✓ all configured report destinations accepted this exact prose.\n');
     }
   }

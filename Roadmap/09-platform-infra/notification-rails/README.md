@@ -21,9 +21,10 @@ state.
 - Slack webhook responses are plain text (`ok` or an error token), not Telegram-shaped JSON.
 - Shared truncation operates on raw text before platform escaping. Platform limits remain separate.
 - Deploy metadata is resolved once in a dedicated workflow step and exported via `$GITHUB_ENV` for
-  both delivery steps.
+  both delivery steps. A failed resolve suppresses both payloads rather than emitting empty facts.
 - A product report counts as delivered only when every configured destination accepts it. The local
-  mainline baseline never advances past a failed Slack or Telegram post.
+  mainline baseline never advances past a failed Slack or Telegram post. Slack becomes configured
+  for that local rail only when its webhook exists in the ignored root `.env.local`.
 
 ## Sprint
 

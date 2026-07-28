@@ -34,6 +34,18 @@ test('the auth rail is branded, keyboard-visible, and mobile-clean', async ({ pa
   await email.focus()
   expect(await email.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none')
 
+  await page.evaluate(() => {
+    const cancelled = document.createElement('a')
+    cancelled.id = 'cancelled-navigation'
+    cancelled.href = '/install'
+    cancelled.textContent = 'Stay here'
+    cancelled.addEventListener('click', (event) => event.preventDefault())
+    document.body.append(cancelled)
+  })
+  await page.locator('#cancelled-navigation').click()
+  await expect(page.locator('.navigation-loader')).toHaveCount(0)
+  await expect(page).toHaveURL(/\/login$/)
+
   const [scrollWidth, clientWidth] = await page.evaluate(() => [
     document.documentElement.scrollWidth,
     document.documentElement.clientWidth,

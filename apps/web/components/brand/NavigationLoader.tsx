@@ -68,11 +68,14 @@ export function NavigationLoader() {
       if (!event.defaultPrevented) show()
     }
 
-    document.addEventListener('click', onClick, true)
-    document.addEventListener('submit', onSubmit, true)
+    // Bubble at document level so target/React handlers get the first chance to prevent a
+    // navigation. Capture would inspect defaultPrevented too early and show a loader for actions
+    // that deliberately stay on the current page.
+    document.addEventListener('click', onClick)
+    document.addEventListener('submit', onSubmit)
     return () => {
-      document.removeEventListener('click', onClick, true)
-      document.removeEventListener('submit', onSubmit, true)
+      document.removeEventListener('click', onClick)
+      document.removeEventListener('submit', onSubmit)
     }
   }, [])
 

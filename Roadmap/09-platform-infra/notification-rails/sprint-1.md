@@ -16,9 +16,11 @@ drift between channels.
 > **As a** product stakeholder, **I want** the reviewed merge report in Slack too, **so that** the
 > product meaning accompanies the mechanical deployment facts.
 
-**Acceptance:** `commit-report --post` sends the same prose to every configured channel, records
-plain-text Slack failures, and returns failure unless all configured destinations accept the report.
-The exactly-once runner therefore retries partial delivery instead of silently advancing.
+**Acceptance:** `commit-report --post` sends the same prose to every locally configured channel,
+records plain-text Slack failures, and returns failure unless all configured destinations accept
+the report. Missing local Slack configuration warns and skips cleanly; a configured webhook that
+rejects the post remains a hard failure. The exactly-once runner therefore retries partial delivery
+instead of silently advancing.
 
 ## Story 1.3 — Regression and operating notes
 

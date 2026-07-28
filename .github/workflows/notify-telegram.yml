@@ -145,6 +145,7 @@ jobs:
       # before later `$GITHUB_ENV` writes execute. A destination outage must not erase another
       # destination's payload.
       - name: Resolve production deploy details
+        id: resolve-deploy
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_STATE: ${{ github.event.deployment_status.state }}
@@ -189,7 +190,9 @@ jobs:
             --link-label "open deployment"
 
       - name: Send Slack deploy-finish notification
-        if: always()
+        # `always()` keeps Slack independent of Telegram. The outcome check prevents an upstream
+        # checkout/setup/resolve failure from posting a payload whose three resolved values are empty.
+        if: ${{ always() && steps.resolve-deploy.outcome == 'success' }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           DEPLOY_SHA: ${{ github.event.deployment.sha }}

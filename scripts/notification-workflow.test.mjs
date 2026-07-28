@@ -28,5 +28,6 @@ test('a first-channel failure does not suppress Slack delivery', () => {
   const pushSlack = workflow.slice(workflow.indexOf('- name: Send Slack push notification'));
   const deploySlack = workflow.slice(workflow.indexOf('- name: Send Slack deploy-finish notification'));
   assert.match(pushSlack, /^\s+if: always\(\)/m);
-  assert.match(deploySlack, /^\s+if: always\(\)/m);
+  assert.match(deploySlack, /^\s+if: \$\{\{ always\(\) && steps\.resolve-deploy\.outcome == 'success' \}\}/m);
+  assert.match(workflow, /- name: Resolve production deploy details\n\s+id: resolve-deploy/);
 });
