@@ -361,6 +361,27 @@ one-liner + why + date shape.
   on an optional column, the very next thing to check is whether the WRITE path actually sets it —
   and any dashboard whose "correct" empty state is indistinguishable from its broken state needs one
   end-to-end check that produces a NON-zero number. *(2026-07-21, multi-tenant-activation S2/S3.)*
+  **FOURTH instance — and the first one the SYSTEM caught instead of a human.** The
+  experiment-governance-v2 Miyagi dogfood registered a plan whose `eligibility.tags` declared
+  `{campaign: "vende_fundadoras"}`; `tagsMatch` requires every declared eligibility tag to be present
+  on the exposure, and the emitter had no reason to send a `campaign` tag. All 24 production exposures
+  were rejected. The difference from the previous three: the governed report did **not** show a
+  plausible zero — it returned `decisionReady: false`, `blockers: ["srm_not_evaluable",
+  "eligibility_mismatch"]` and `integrity: [{code: "eligibility_mismatch", count: 24, severity:
+  "blocker"}]`, naming the cause and the count. **A declared predicate is a JOIN CONDITION, not
+  documentation** — anything you assert in a plan (eligibility tags, a metric name, an entity type)
+  must be something the real emitter actually sends, and the cheapest way to find out is one live
+  event read back through the real analysis path before you trust the plan. *(2026-07-28,
+  experiment-governance-v2 S3.3.)*
+- **A corrected experiment version must fix the WINDOW as well as the predicate, or the old version's
+  exposures block the new one.** The first correction (v2) removed the bad eligibility predicate but
+  kept v1's planned window, which still contained the 24 exposures v1 had already emitted — and
+  `version_mismatch` is a **blocker** (only `duplicate_exposure` and `out_of_window_exposure` are
+  warnings), so v2 would have started blocked by its own predecessor's data. v3 moved
+  `plannedWindow.startAt` past the last v1 exposure, which drops those rows from the SQL fact
+  selection entirely instead of counting them as mismatches. **When you supersede an immutable
+  definition, ask what the PREVIOUS version already wrote into the new one's window.**
+  *(2026-07-28, experiment-governance-v2 S3.3.)*
 - **Two different non-Claude model families, single-pass each, can replace a same-family fresh-
   reviewer subagent for ordinary PRs — not just supplement it as advisory noise.** commercial-shell
   Sprint 3 ran Codex + Agy (Antigravity) as the judgment-layer review instead of also spawning a

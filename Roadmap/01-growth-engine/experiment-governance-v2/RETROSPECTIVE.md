@@ -61,8 +61,24 @@ route now 401/needs-auth instead of the OFF-state 404) · README/poster/build-or
 deleted · **production decision round-trip validated on the UI by Daniel** (create → stop → record decision →
 read back → append correction). The ledger's functional correctness is also covered by the 307-spec CI/local gate.
 
-**Deferred follow-up (one, not a code gap):**
+**Done on 2026-07-28 — Story 3.3 live Miyagi dogfood. The epic owes nothing.**
 
-1. **Story 3.3 live Miyagi dogfood** — drive Tiendas Fundadoras exposure through *Miyagi's own* feature flag and
-   record the production human decision (cross-repo). Golden Beans never reads or changes Miyagi's flag. A dogfood
-   on top of the now-live governance capability. Deferred to a later session pending Miyagi repo/flag access.
+Miyagi wired the campaign up in `miyagisanchezcommerce` #316/#317 (local deterministic assignment ported from the
+SDK, HttpOnly `fnd_sid` visitor subject minted in middleware, exposure + subject context on every campaign event,
+definition version 3). Exposure was driven solely by Miyagi's own flags; Golden Beans never read or changed one,
+and never served an assignment.
+
+The run proved both halves against real production traffic: a **clean** 12/12 fixture was `decisionReady: true`
+with SRM clear (χ²=0) and measured control 25.0% vs treatment 58.3% (+133.3%, `favorable`) at metric
+addressability coverage 1.0 — conversions joined by opaque subject id with **no experiment tag**; a
+**deliberately skewed** 12/30 fixture flipped it to `blockers: ["srm_detected"]` (χ²=7.71, p=0.0055 < α=0.01)
+while keeping every metric visible. An intermediate 12/24 skew correctly did *not* flag (p=0.046 > the
+predeclared α=0.01). Close-out decision recorded as **`invalid`** on definition v3, `stopped→decided` atomic,
+snapshot frozen, no product flag touched. The temporary analysis key was revoked and verified 401.
+
+**What the dogfood actually bought us** — three defects that each would have produced a silent, plausible zero:
+metrics join by `context.subject` (Miyagi sent none); the conversion lived in a different id space from the
+exposure; and the v1 registry plan declared an eligibility tag the emitter never sends. The first two were caught
+by reading the analysis contract before shipping; the third was caught **by the governance layer itself**, in
+production, naming the cause and the count instead of reporting zero. That is the whole thesis of this epic
+demonstrated on its first real customer surface.

@@ -77,15 +77,17 @@ two-project isolation and synthetic clean/SRM fixtures pass; real Miyagi traffic
 > Sprints 1–2 merged (#19, #22); Sprint 3 merged (#23). Migration applied to production and
 > `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON in production (2026-07-23), flag flip verified live (governed
 > routes now authenticate instead of 404), and the authenticated production decision round-trip validated on
-> the UI by Daniel. The live Miyagi (Tiendas Fundadoras) dogfood decision is deferred to a later session.
+> the UI by Daniel. The live Miyagi (Tiendas Fundadoras) dogfood ran end to end on 2026-07-28 (clean fixture
+> decision-ready, deliberately skewed fixture SRM-detected, close-out decision `invalid` recorded on definition
+> v3). **The epic is complete — nothing is owed.**
 
-- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *prod decision round-trip validated on UI; live Miyagi dogfood deferred*
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — *prod decision round-trip validated on UI; live Miyagi dogfood complete*
 - [x] Each sprint walkthrough contains real deployed URLs and disposable experiment data — *S3 prod decision round-trip validated on the UI (Daniel)*
 - [x] Existing local bucketing/exposure/v1 comparison remain compatible with governance OFF — *dark-state pass green*
 - [x] Realistic untagged conversions, SRM and exposure-integrity fixtures pass deterministically
 - [x] UI/API/MCP share one resolver and pass two-project + connector-gate isolation
 - [x] Decisions are immutable, allow invalid/inconclusive and cannot mutate a product flag
-- [x] Tiendas Fundadoras proof is PII-free and uses Miyagi's own flag for exposure — *fixtures/contract shipped; live traffic follows*
+- [x] Tiendas Fundadoras proof is PII-free and uses Miyagi's own flag for exposure — *proven on live production traffic 2026-07-28*
 - [x] `EXPERIMENT_GOVERNANCE_ENABLED` exists born OFF; flip includes a new deployment and live verification
 - [x] This README marked shipped; sprint headings carry commit refs
 - [x] `RETROSPECTIVE.md`, product poster and durable learnings updated

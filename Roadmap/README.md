@@ -128,8 +128,16 @@ independently shippable slice of value.
   mutation-verified); Agy + Devin reviewed clean. Rolled out 2026-07-23: migration applied to prod,
   `EXPERIMENT_GOVERNANCE_ENABLED` flipped ON, flag flip verified live (governed routes now authenticate
   instead of 404); the ledger's behaviour is covered by the 307-spec gate, and the authenticated
-  prod decision round-trip validated on the UI. Deferred follow-up: the live Miyagi (Tiendas Fundadoras)
-  dogfood decision.
+  prod decision round-trip validated on the UI.
+- **2026-07-28** — `experiment-governance-v2` **proven on its first real customer surface**: the Tiendas
+  Fundadoras promise/CTA test ran end to end through Miyagi's own flags (`miyagisanchezcommerce` #316/#317),
+  with assignment staying local and Golden Beans never reading or changing a Miyagi flag. A clean 12/12 fixture
+  was decision-ready with SRM clear and measured control 25.0% vs treatment 58.3% at metric addressability 1.0;
+  a deliberately skewed 12/30 fixture flipped it to `srm_detected` (χ²=7.71, p=0.0055 < α=0.01) with every
+  metric still visible. Close-out decision recorded as `invalid`. The dogfood paid for itself three times over:
+  metrics join by `context.subject` (Miyagi sent none), the conversion lived in a different id space from the
+  exposure, and the v1 plan declared an eligibility tag the emitter never sends — the last of which **the
+  governance layer caught itself in production**, naming the cause instead of reporting a plausible zero.
 - **2026-07-23** — `entity-journeys-projections` **epic shipped**: a tenant can define an ordered
   lifecycle beyond fixed TARS and read deterministic subject history plus cohort conversion, aging,
   drop-off and retention through one project-scoped UI/API/MCP resolver. The live
