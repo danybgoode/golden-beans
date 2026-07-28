@@ -15,10 +15,20 @@
 // and `fetch`, which the e2e suite covers end to end.
 import { resolveGovernedVariant, resolveVariant, type BucketVariant } from './bucketing'
 import { normalizeError, normalizeSampleRate, ERROR_EVENT } from './capture'
+import {
+  FLAG_EVALUATED_EVENT,
+  flagEvaluationFingerprint,
+  normalizeFlagEvaluationSampleRate,
+  shouldSampleFlagEvaluation,
+  validateFlagEvaluationTelemetry,
+  type FlagEvaluationTelemetryInput,
+} from './flag-telemetry'
 import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub'
 
 export type { BucketVariant } from './bucketing'
 export { ERROR_EVENT } from './capture'
+export { FLAG_EVALUATED_EVENT } from './flag-telemetry'
+export type { FlagEvaluationTelemetryInput } from './flag-telemetry'
 export {
   FLAG_CONTRACT_VERSION,
   FLAG_CONTEXT_FIELDS,
@@ -162,6 +172,8 @@ export interface GrowthEngineClientConfig {
    * dedupe, so a rare error is still virtually certain to be reported at least once.
    */
   errorSampleRate?: number
+  /** Fraction of non-experiment flag evaluations to retain, defaulting to 1. */
+  flagEvaluationSampleRate?: number
 }
 
 /** signals-loop · Story 1.1 — what `captureError` accepts alongside the error itself. */
@@ -196,6 +208,12 @@ export interface GrowthEngineClient {
     props?: Omit<TrackEventProps, 'featureId'>,
     governance?: ExperimentGovernanceContext
   ): Promise<TrackResult>
+  /**
+   * Emits a bounded flag decision through canonical ingest. A bound experiment
+   * deliberately reuses `experiment_exposed`, the existing comparison denominator;
+   * ordinary evaluations use the reserved `flag_evaluated` event. Never throws.
+   */
+  trackFlagEvaluation(input: FlagEvaluationTelemetryInput): Promise<TrackResult>
   /**
    * signals-loop · Story 1.1 — report a runtime error as a reserved `$error` event.
    *
@@ -365,6 +383,52 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     })
   }
 
+  const flagEvaluationSampleRate = normalizeFlagEvaluationSampleRate(config.flagEvaluationSampleRate)
+
+  async function trackFlagEvaluation(input: FlagEvaluationTelemetryInput): Promise<TrackResult> {
+    try {
+      if (!validateFlagEvaluationTelemetry(input)) {
+        return { ok: false, error: 'Invalid flag evaluation telemetry', code: 'INVALID_FLAG_EVALUATION' }
+      }
+      // An experiment's exposure stream is its comparison denominator. Sampling it
+      // would bias every downstream conversion rate, so only ordinary evaluation
+      // facts are sampled; bound experiments always reuse the complete exposure seam.
+      if (!input.experiment && !shouldSampleFlagEvaluation(input, flagEvaluationSampleRate)) {
+        return { ok: false, error: 'Sampled out', code: 'SAMPLED_OUT' }
+      }
+
+      const idempotencyKey = `flag_eval:${flagEvaluationFingerprint(input)}`
+      const props: Omit<TrackEventProps, 'featureId'> = {
+        tags: {
+          flag_key: input.flagKey,
+          flag_definition_version: input.flagVersion,
+          variant: input.variant,
+          reason: input.reason,
+          snapshot_version: input.snapshotVersion,
+          environment: input.environment,
+        },
+        context: {
+          version: 1,
+          subject: input.subject,
+          idempotencyKey,
+        },
+      }
+      if (input.experiment) {
+        return await trackExposure(input.experiment.key, input.variant, props, {
+          definitionVersion: input.experiment.definitionVersion,
+          assignmentEntity: input.subject,
+        })
+      }
+      return await track(FLAG_EVALUATED_EVENT, { ...props, featureId: input.flagKey })
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'flag evaluation telemetry failed',
+        code: 'FLAG_EVALUATION_FAILED',
+      }
+    }
+  }
+
   // ── signals-loop · Story 1.1 · error capture ─────────────────────────────────────────────────
 
   const sampleRate = normalizeSampleRate(config.errorSampleRate)
@@ -431,6 +495,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     syncFeatures,
     bucket,
     trackExposure,
+    trackFlagEvaluation,
     captureError,
     captureGlobalErrors,
   }
