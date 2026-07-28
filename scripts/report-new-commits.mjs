@@ -18,9 +18,9 @@
 // "already reported" a fact on disk rather than an inference.
 //
 // ── The invariant ─────────────────────────────────────────────────────────────────────────────
-// A commit is reported AT MOST ONCE. The state file advances only for commits whose report actually
-// posted, so a failed post is retried next run rather than silently skipped — and a successful post is
-// never repeated even if the hook fires ten times.
+// A commit is reported AT MOST ONCE PER DESTINATION. commit-report.mjs checkpoints each accepted
+// channel independently; this mainline state advances only when every required destination accepted
+// the exact same prose. A partial failure retries only the missing channel.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
