@@ -6,6 +6,7 @@ import { getFlagRegistryView } from '@/lib/flag-registry'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { ExperimentManager } from './experiment-manager'
+import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,8 @@ export default async function ExperimentGovernancePage({
   ])
 
   return (
-    <main>
+    <ProductShell>
+      <main>
       <h1>Experiment governance — {projectSlug}</h1>
       <p>
         <a href="/app">← Your projects</a>
@@ -41,6 +43,7 @@ export default async function ExperimentGovernancePage({
         bindings={bindings}
         canManage={isOwner({ projectId: membership.projectId, role: membership.role })}
       />
-    </main>
+      </main>
+    </ProductShell>
   )
 }

@@ -4,6 +4,7 @@ import { isSignalsEnabled } from '@/lib/flags'
 import { listTasksByProjectId, promoteEligibleSignals } from '@/lib/tasks'
 import { evaluateFrictionForProject } from '@/lib/friction-eval'
 import { TaskQueue } from './task-queue'
+import { ProductShell } from '@/components/product/ProductShell'
 
 // signals-loop · Sprint 2, Story 2.2 — the task queue, for humans.
 //
@@ -43,17 +44,19 @@ export default async function TasksPage({
   const tasks = await listTasksByProjectId(membership.projectId, { limit: 100 })
 
   return (
-    <main>
-      <h1>Tasks — {projectSlug}</h1>
-      <p>
-        <a href="/app">← Your projects</a>
-      </p>
-      <p>
-        Errors and friction the engine grouped, ranked by <strong>users affected × frequency</strong>{' '}
-        and decayed by recency. Every field of every evidence bundle is computed from your own
-        events — no model wrote any of it.
-      </p>
-      <TaskQueue slug={projectSlug} tasks={tasks} />
-    </main>
+    <ProductShell>
+      <main>
+        <h1>Tasks — {projectSlug}</h1>
+        <p>
+          <a href="/app">← Your projects</a>
+        </p>
+        <p>
+          Errors and friction the engine grouped, ranked by{' '}
+          <strong>users affected × frequency</strong> and decayed by recency. Every field of every
+          evidence bundle is computed from your own events — no model wrote any of it.
+        </p>
+        <TaskQueue slug={projectSlug} tasks={tasks} />
+      </main>
+    </ProductShell>
   )
 }

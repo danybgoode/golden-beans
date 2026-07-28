@@ -6,6 +6,7 @@ import { isConnectorEnabled } from '@/lib/flags'
 import { getSiteUrl } from '@/lib/site-url'
 import { CopyUrlField } from '@/components/landing/CopyUrlField'
 import { STARTER_FEATURE_KEY, STARTER_TARGET_EVENT } from '@/lib/provisioning'
+import { ProductShell } from '@/components/product/ProductShell'
 
 // multi-tenant-activation · Sprint 2, Story 2.3 — the first-run screen a freshly confirmed
 // signup lands on: the one-time key reveal, a ≤5-line SDK snippet pre-filled with it, and (gated)
@@ -68,7 +69,8 @@ export default async function OnboardingPage({
   const apiKeyExpr = plaintextKey ? `'${plaintextKey}'` : 'process.env.GROWTH_ENGINE_API_KEY'
 
   return (
-    <main className="wrap" style={{ padding: '56px 0 80px' }}>
+    <ProductShell>
+      <main className="wrap" style={{ padding: '56px 0 80px' }}>
       <p style={{ marginBottom: 24 }}>
         <a href="/app">&larr; Your projects</a>
       </p>
@@ -189,6 +191,7 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
       <p style={{ marginTop: 10 }}>
         <a href="/app">&larr; Back to your projects</a>
       </p>
-    </main>
+      </main>
+    </ProductShell>
   )
 }

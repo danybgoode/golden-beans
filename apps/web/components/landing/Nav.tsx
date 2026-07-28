@@ -1,10 +1,10 @@
+import { ArrowUpRight, Sparkles } from 'lucide-react'
+import { BrandLockup } from '@/components/brand/BrandLockup'
+
 export function Nav() {
   return (
     <nav className="gb">
-      <span className="logo">
-        <span className="bean" />
-        golden beans
-      </span>
+      <BrandLockup compact />
       <div className="nav-links" style={{ display: 'flex', gap: 22, fontSize: 14 }}>
         <a href="#live-proof" style={{ color: 'var(--dim)' }}>Product</a>
         <a href="/install" style={{ color: 'var(--dim)' }}>Install</a>
@@ -16,7 +16,9 @@ export function Nav() {
         className="btn btn-ghost"
         style={{ marginLeft: 'auto', padding: '9px 18px', fontSize: 14 }}
       >
-        Join the waitlist
+        <Sparkles size={15} aria-hidden="true" />
+        Start growing
+        <ArrowUpRight size={14} aria-hidden="true" />
       </a>
     </nav>
   )

@@ -52,7 +52,7 @@ export async function LiveProofSection() {
       <div className="divider">
         <div className="wrap">
           <span className="num">②</span>
-          <span className="stamp-title">Live proof — straight from the roaster</span>
+          <span className="stamp-title">Live proof — straight from the vine</span>
           <span className="tag tag-stamp">LIVE</span>
         </div>
       </div>

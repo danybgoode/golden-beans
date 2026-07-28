@@ -47,10 +47,10 @@ export function EmptyHubState({ projectSlug }: { projectSlug: string }) {
   return (
     <div className={styles.emptyState} data-testid="hub-empty-state">
       <p className={styles.emptyStateKicker}>No roadmap pushed yet</p>
-      <h2>This hub is warmed up and waiting on a roast.</h2>
+      <h2>This garden is ready for its first roadmap.</h2>
       <p>
         <code>{projectSlug}</code> has never pushed a roadmap artifact, so there is nothing to show — this is
-        an empty hopper, not a broken page and not a zero.
+        an unplanted plot, not a broken page and not a zero.
       </p>
       <p>Push one from a checkout of that roadmap:</p>
       <pre className={styles.emptyStateCmd}>

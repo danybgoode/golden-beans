@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import { isExperimentGovernanceEnabled, isJourneyProjectionsEnabled, isSignupEnabled } from '@/lib/flags'
 import { SignOutButton } from './sign-out-button'
+import { ProductShell } from '@/components/product/ProductShell'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — the authed shell. Unauthed → /login; a signed-in
 // member sees EXACTLY their own projects (getUserProjects is a service-role read of the
@@ -37,25 +38,26 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   }
 
   return (
-    <main>
-      <header>
-        <h1>Your projects</h1>
-        <p>
-          Signed in as {user.email} · <SignOutButton />
-        </p>
-      </header>
+    <ProductShell>
+      <main>
+        <header>
+          <h1>Your projects</h1>
+          <p>
+            Signed in as {user.email} · <SignOutButton />
+          </p>
+        </header>
 
-      {projects.length === 0 ? (
-        <p>
-          You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve signup is
-          live) create one.
-        </p>
-      ) : (
-        <ul>
-          {projects.map((project) => (
-            <li key={project.id}>
-              <strong>{project.slug}</strong> <small>({project.role})</small>
-              <ul>
+        {projects.length === 0 ? (
+          <p>
+            You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve
+            signup is live) create one.
+          </p>
+        ) : (
+          <ul>
+            {projects.map((project) => (
+              <li key={project.id}>
+                <strong>{project.slug}</strong> <small>({project.role})</small>
+                <ul>
                 {/* The dashboards are per-feature/per-experiment, so these link to the project's
                     entry points rather than a single page — a member shouldn't have to guess URLs
                     (cross-review round 2, Gemini/Agy 2026-07-20). */}
@@ -107,11 +109,12 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
                     </li>
                   </>
                 )}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </ProductShell>
   )
 }

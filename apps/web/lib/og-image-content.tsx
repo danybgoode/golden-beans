@@ -1,8 +1,7 @@
 // Story 3.2 (commercial-shell/sprint-3.md) — shared JSX for the generated OG/Twitter card, so
 // app/opengraph-image.tsx and app/twitter-image.tsx (two separate Next.js file-convention routes,
 // each with its own required default-export shape) don't duplicate the same markup. Colors are
-// lifted directly from app/globals.css's design tokens (dark-roast family) — see
-// references/design-direction.md for the roastery brand direction this pass follows. Kept to
+// lifted directly from app/globals.css's design tokens (obsidian garden + ingot gold). Kept to
 // next/og's (Satori's) supported CSS subset: solid colors + one linear-gradient, explicit
 // `display: flex` on every multi-child node, no external font/image fetch (system sans is fine
 // for a generated share card, this isn't a design deliverable).
@@ -14,7 +13,7 @@ export function ogImageContent() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: '#16120d' /* --roast */,
+        background: '#0c110a' /* --roast */,
         padding: '72px 88px',
         position: 'relative',
       }}
@@ -29,28 +28,35 @@ export function ogImageContent() {
           height: 14,
           display: 'flex',
           background:
-            'linear-gradient(90deg, #7a5c1a 0%, #ffd45e 35%, #e8b93c 55%, #8a6a1e 100%)' /* --foil */,
+            'linear-gradient(90deg, #8b5d00 0%, #ffd700 32%, #fff3a1 48%, #d99d00 70%, #744900 100%)' /* --foil */,
         }}
       />
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
-        <div
-          style={{
-            display: 'flex',
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
-            background: '#e8b93c' /* --gold */,
-            marginBottom: 40,
-          }}
-        />
+        <svg
+          width="82"
+          height="82"
+          viewBox="0 0 24 24"
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ marginBottom: 40, filter: 'drop-shadow(0 5px 4px rgba(0,0,0,.5))' }}
+        >
+          <path
+            d="M10.165 6.598C9.954 7.478 9.64 8.36 9 9c-.64.64-1.521.954-2.402 1.165A6 6 0 0 0 8 22c7.732 0 14-6.268 14-14a6 6 0 0 0-11.835-1.402Z"
+            fill="#FFD700"
+            stroke="#FFF38A"
+            strokeWidth="1.35"
+          />
+          <path d="M5.341 10.62a4 4 0 1 0 5.279-5.28" stroke="#7A5200" strokeWidth="1.55" />
+        </svg>
         <div
           style={{
             display: 'flex',
             fontSize: 74,
             fontWeight: 900,
             letterSpacing: '-0.02em',
-            color: '#f5ead6' /* --crema */,
+            color: '#fff9e8' /* --crema */,
           }}
         >
           Golden Beans
@@ -60,18 +66,18 @@ export function ogImageContent() {
             display: 'flex',
             fontSize: 34,
             fontWeight: 600,
-            color: '#e8b93c' /* --gold */,
+            color: '#ffd700' /* --gold */,
             marginTop: 22,
             maxWidth: 920,
           }}
         >
-          The growth engine your agent operates
+          Plant signals. Grow outcomes.
         </div>
         <div
           style={{
             display: 'flex',
             fontSize: 22,
-            color: '#b8a888' /* --dim */,
+            color: '#b9c5ae' /* --dim */,
             marginTop: 30,
             letterSpacing: '0.06em',
             fontFamily: 'monospace',

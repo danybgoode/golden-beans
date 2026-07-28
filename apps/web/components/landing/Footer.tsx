@@ -1,15 +1,17 @@
+import { GitFork, ScrollText } from 'lucide-react'
+import { BrandLockup } from '@/components/brand/BrandLockup'
+
 export function Footer() {
   return (
     <footer style={{ borderTop: '1px solid var(--line)' }}>
       <div className="wrap" style={{ paddingTop: 48, paddingBottom: 48 }}>
         <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', alignItems: 'center', color: 'var(--dim)', fontSize: 13.5 }}>
-          <span className="logo" style={{ fontSize: 16 }}>
-            <span className="bean" style={{ width: 15, height: 20 }} />
-            golden beans
-          </span>
-          <a href="https://github.com/danybgoode" style={{ color: 'var(--dim)' }}>GitHub</a>
+          <BrandLockup compact />
+          <a className="icon-link" href="https://github.com/danybgoode">
+            <GitFork size={15} aria-hidden="true" /> GitHub
+          </a>
           <span style={{ marginLeft: 'auto', font: '500 12px var(--mono)' }}>
-            agent-readable manifest: 🔜 Sprint 3
+            <ScrollText size={14} aria-hidden="true" /> agent-readable: <a href="/llms.txt">/llms.txt</a>
           </span>
         </div>
         <p style={{ margin: '22px 0 0', font: '400 12px var(--mono)', color: '#6d6250', lineHeight: 1.8 }}>

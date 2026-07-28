@@ -21,6 +21,7 @@ export function OperateRoutes() {
           <div className="cards3" style={{ marginTop: 28 }}>
             <a href="/install" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 10, textDecoration: 'none', color: 'inherit' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Cable size={18} color="var(--gold)" aria-hidden="true" />
                 <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>① CONNECTOR URL</span>
                 <span className="tag tag-live">✅ LIVE</span>
               </div>
@@ -35,6 +36,7 @@ export function OperateRoutes() {
             </a>
             <div className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 10, borderStyle: 'dashed', borderColor: '#4a3f2d', opacity: 0.6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <PanelsTopLeft size={18} color="var(--gold)" aria-hidden="true" />
                 <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>② THE POD PLUGIN</span>
                 <span className="tag tag-next">🔜 multi-tenant-activation</span>
               </div>
@@ -49,6 +51,7 @@ export function OperateRoutes() {
             </div>
             <a href="/install" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: 10, textDecoration: 'none', color: 'inherit' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Binary size={18} color="var(--gold)" aria-hidden="true" />
                 <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>③ SDK IMPORT</span>
                 <span className="tag tag-live">✅ LIVE</span>
               </div>
@@ -72,3 +75,4 @@ export function OperateRoutes() {
     </>
   )
 }
+import { Binary, Cable, PanelsTopLeft } from 'lucide-react'

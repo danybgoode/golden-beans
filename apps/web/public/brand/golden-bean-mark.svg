@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Golden Beans mark</title>
+  <defs>
+    <linearGradient id="gold" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF7A8"/>
+      <stop offset=".25" stop-color="#FFD700"/>
+      <stop offset=".58" stop-color="#E0A800"/>
+      <stop offset=".82" stop-color="#FFD700"/>
+      <stop offset="1" stop-color="#8B5D00"/>
+    </linearGradient>
+    <filter id="lift" x="-30%" y="-30%" width="170%" height="180%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#070900" flood-opacity=".72"/>
+    </filter>
+  </defs>
+  <g transform="translate(6 6) scale(2.15)" filter="url(#lift)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.165 6.598C9.954 7.478 9.64 8.36 9 9c-.64.64-1.521.954-2.402 1.165A6 6 0 0 0 8 22c7.732 0 14-6.268 14-14a6 6 0 0 0-11.835-1.402Z" fill="url(#gold)" stroke="#FFF075" stroke-width="1.35"/>
+    <path d="M5.341 10.62a4 4 0 1 0 5.279-5.28" fill="none" stroke="#815300" stroke-width="1.55"/>
+    <path d="M12.3 5.6c2.4-1.15 5-.55 6.4 1.25" fill="none" stroke="#FFF9C7" stroke-width=".8" opacity=".88"/>
+  </g>
+</svg>
+

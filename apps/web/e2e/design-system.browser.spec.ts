@@ -1,0 +1,44 @@
+import { test, expect } from '@playwright/test'
+
+test('the landing renders the ingot bean and limitless-growth story', async ({ page }, testInfo) => {
+  const consoleErrors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+
+  const response = await page.goto('/')
+  expect(response?.status()).toBe(200)
+  await expect(page.locator('.brand-lockup').first()).toBeVisible()
+  await expect(page.locator('.golden-bean-mark__face').first()).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Grow without a ceiling')
+  await expect(page.getByText('The magic beans that actually work')).toBeVisible()
+
+  const beanFill = await page
+    .locator('.golden-bean-mark__face')
+    .first()
+    .evaluate((element) => getComputedStyle(element).fill)
+  expect(beanFill).toBe('rgb(255, 215, 0)')
+
+  await page.screenshot({ path: testInfo.outputPath('landing-desktop.png'), fullPage: true })
+  expect(consoleErrors).toEqual([])
+})
+
+test('the auth rail is branded, keyboard-visible, and mobile-clean', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const response = await page.goto('/login')
+  expect(response?.status()).toBe(200)
+
+  await expect(page.locator('.auth-shell__card')).toBeVisible()
+  await expect(page.locator('.brand-lockup')).toBeVisible()
+  const email = page.getByLabel('Email')
+  await email.focus()
+  expect(await email.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none')
+
+  const [scrollWidth, clientWidth] = await page.evaluate(() => [
+    document.documentElement.scrollWidth,
+    document.documentElement.clientWidth,
+  ])
+  expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+
+  await page.screenshot({ path: testInfo.outputPath('login-mobile.png') })
+})
