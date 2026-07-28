@@ -36,8 +36,23 @@ cutover.
   and Medusa backend adapter PR [#117](https://github.com/danybgoode/medusa-bonsai-backend/pull/117)
   preserve their existing `isEnabled()` seams. Both production Cloud Run revisions now run
   `shadow` mode with a dedicated, revocable 30-day `flag_read` credential; local
-  `platform_flags` remains authoritative. `FLAG_SERVING_ENABLED` is set for the next
-  Git-tracked Golden deployment, after which the parity evidence run begins.
+  `platform_flags` remains authoritative. Golden's `FLAG_SERVING_ENABLED` gate is live through
+  a Git-tracked deployment, but only the scoped snapshot endpoint is exposed.
+- Frontend PR [#319](https://github.com/danybgoode/miyagisanchezcommerce/pull/319) and backend
+  PR [#118](https://github.com/danybgoode/medusa-bonsai-backend/pull/118) corrected the parity
+  observer for production builds: Sentry removes `console.info`, so its already-bounded,
+  PII-free control-plane record writes to stdout inside the existing never-throw guard. Both
+  PRs had focused local tests and clean Antigravity reviews; the frontend's unrelated pre-existing
+  supply-importer preview assertion was explicitly triaged before its authorized merge.
+- The regional frontend and backend push-to-`main` Cloud Build triggers were found disabled after
+  the GCP migration and restored with their documented dedicated CI/CD service accounts. The
+  automatic deployments from the two merges succeeded, proving the tracked `main` → Cloud Build
+  → Cloud Run rail again (frontend `miyagi-web-00101-rk6`; backend `medusa-web-00178-7kv`).
+- Production shadow proof is now real, not just configuration: a warmed frontend instance recorded
+  `promoter.enabled` and `content.overrides_enabled`, and the Medusa catalog read recorded
+  `catalog.inventory_channels_enabled`. Every record used Golden snapshot version 40, immutable
+  flag version 1 and `STATIC` resolution; Golden and local values matched. No request telemetry,
+  subject data or behavior-changing `golden` mode was used.
 
 ### Story 2.2 — Preserve both `isEnabled()` seams with Golden primary
 
