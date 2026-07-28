@@ -28,12 +28,16 @@ cutover.
   owner-gated atomic import created 40 immutable version-one definitions, then a replay returned
   40 unchanged definitions. Current effective defaults are 39 on / 1 off
   (`shipping.envia_enabled`).
-- Postconditions are intentionally dark: 0 environment states, 0 activations and no flag-read
-  credential. The import has not changed Miyagi runtime behavior or selected a provider mode.
+- The import initially created no environment state or activation, preserving a fully dark control
+  plane. That baseline was then deliberately activated for `production`: snapshot version 40 has
+  all 40 version-one definitions (39 on / `shipping.envia_enabled` off), verified exact and
+  distinct. Snapshot serving remains credential-scoped.
 - Miyagi's frontend adapter PR [#318](https://github.com/danybgoode/miyagisanchezcommerce/pull/318)
   and Medusa backend adapter PR [#117](https://github.com/danybgoode/medusa-bonsai-backend/pull/117)
-  are merged in `local` mode. They retain their existing `isEnabled()` seams and are ready for the
-  separate shadow-parity proof.
+  preserve their existing `isEnabled()` seams. Both production Cloud Run revisions now run
+  `shadow` mode with a dedicated, revocable 30-day `flag_read` credential; local
+  `platform_flags` remains authoritative. `FLAG_SERVING_ENABLED` is set for the next
+  Git-tracked Golden deployment, after which the parity evidence run begins.
 
 ### Story 2.2 — Preserve both `isEnabled()` seams with Golden primary
 
