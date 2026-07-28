@@ -147,24 +147,27 @@ trusting a claim that they were run.
 
 ## Shipping a merge
 
-Merging to `main` is the deploy. Two pings fire automatically from
-`.github/workflows/notify-telegram.yml` — 📦 on the push, 🚀 ✅/❌ when Vercel's **production** deploy
-reaches a terminal state (previews stay silent). Neither needs anything from you.
+Merging to `main` is the deploy. The GitHub workflow continues to send its mechanical 📦/🚀 pings when
+Actions capacity is available; it is not the prose rail.
 
-The **product report** is the one manual step, because `agy` has no headless auth and cannot run in a
-runner:
+The **product report** runs locally because Devin and Agy use interactive OAuth and cannot run in a
+GitHub runner. Install the user-scoped runner once on the always-on Mac:
 
 ```bash
-node scripts/commit-report.mjs                 # read the draft FIRST
-node scripts/commit-report.mjs --post          # send it as-is
-node scripts/commit-report.mjs --text "…" --post   # send corrected prose
+node scripts/install-main-report-daemon.mjs
+node scripts/install-main-report-daemon.mjs --status
 ```
 
-**Read it before you post it.** On its first three live runs a cheap model fabricated material facts
-twice — inventing customer impact for internal tooling, and claiming a commit had fixed an
-open-redirect bug when it had only added tests for a fix that shipped weeks earlier. The prompt now
-names both failures explicitly, which reduces them and does not eliminate them. The Telegram footer
-distinguishes `unreviewed draft · <model>` from `reviewed by hand`; keep that distinction honest.
+It fetches `origin/main` every five minutes without changing the checked-out branch, reports only
+first-parent mainline commits (one merged PR, not every commit inside it), and advances its local
+baseline only after Telegram accepts the report. A failed writer, fetch, or post is visible in
+`~/Library/Logs/golden-beans-main-report.log` and is retried on the next interval. Credentials remain
+in the ignored root `.env.local` (`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CICD_CHAT_ID`); they are never put
+in the plist. Git hooks remain an immediate best-effort trigger, but the runner is the durable retry
+path even when merges happen on GitHub and this checkout stays on a feature branch.
+
+Use `node scripts/report-main-daemon.mjs --dry-run` to see pending reports without calling a writer or
+Telegram. The guard still labels its model and blocks known unsupported claims before delivery.
 
 ## Review & merge — cross-agent
 With multiple agents potentially running in parallel, the agent that **builds** a PR is not the one

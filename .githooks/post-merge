@@ -13,7 +13,8 @@
 # ── Three properties this hook must have, in order of importance ───────────────────────────────
 # 1. NEVER block or fail a git operation. A prose model being slow or down must not make `git pull`
 #    look broken. Every path exits 0.
-# 2. NEVER post twice for the same commit — report-new-commits.mjs owns that via its state file.
+# 2. NEVER post twice — report-main-daemon.mjs owns the shared lock and delegates the per-commit
+#    baseline to report-new-commits.mjs.
 # 3. Be silent when there is nothing to do, so a normal pull looks normal.
 
 # ── Why this ALSO runs from post-checkout (added 2026-07-27) ───────────────────────────────────
@@ -29,8 +30,8 @@
 # **A retry whose trigger may never recur is not a retry.** The same script is therefore invoked from
 # `post-checkout` as well: `git checkout main` is the other reliable "I am now on main and it may
 # have moved" moment, and it is exactly what follows a `gh pr merge`. Both are safe to over-trigger —
-# report-new-commits.mjs owns the once-per-commit guarantee via its state file, prints nothing when
-# there is nothing to do, and cannot post twice.
+# report-main-daemon.mjs owns the cross-trigger lock; report-new-commits.mjs owns the per-commit
+# baseline, so this trigger cannot post twice.
 
 # Only when `main` is the branch that just moved. The hook also fires on feature-branch merges, and a
 # feature commit is not something to report.
@@ -44,13 +45,13 @@ command -v node >/dev/null 2>&1 || exit 0
 
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo '')"
 [ -n "$root" ] || exit 0
-[ -f "$root/scripts/report-new-commits.mjs" ] || exit 0
+[ -f "$root/scripts/report-main-daemon.mjs" ] || exit 0
 
 # Backgrounded and fully detached: a prose model can take a minute, and property 1 says `git pull`
 # must not wait for it. Output goes to a log rather than the terminal so a pull stays readable, and
 # `|| true` means even a crash in the reporter cannot affect git's exit status.
 (
-  node "$root/scripts/report-new-commits.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
+  node "$root/scripts/report-main-daemon.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
 ) &
 
 exit 0

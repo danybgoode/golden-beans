@@ -63,8 +63,9 @@
 # `scripts/commit-report.mjs` drafts the executive/product summary of a merge via the `agy` CLI.
 # agy authenticates through an interactive OAuth login with no headless credential path, so it
 # cannot run in a runner (Roadmap/LEARNINGS.md → "A CLI authed by an interactive/OAuth login is
-# NOT free to run in CI"). It is a LOCAL post-merge step — see WAYS-OF-WORKING.md → "Shipping a
-# merge". These pings stay mechanical and always-on; the prose is a separate, human-triggered rail.
+# NOT free to run in CI"). It is a LOCAL launchd-backed rail that follows origin/main — see
+# WAYS-OF-WORKING.md → "Shipping a merge". These pings stay mechanical and always-on; the prose is a
+# separate local rail and consumes no Actions minutes.
 
 name: Notify Telegram
 

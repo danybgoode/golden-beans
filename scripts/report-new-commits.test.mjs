@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planReports } from './report-new-commits.mjs';
+import { planReports, resolveMainRef } from './report-new-commits.mjs';
 
 // `rev-list` returns newest-first; the plan must hand back oldest-first so the channel reads in the
 // order things actually shipped.
@@ -47,4 +47,17 @@ test('the limit never returns more than the commits available', () => {
   const plan = planReports({ lastReported: 'zzz', commits: ['aaa'], limit: 10 });
   assert.deepEqual(plan.shas, ['aaa']);
   assert.equal(plan.skipped, 0);
+});
+
+test('the deployed tracking ref wins over a stale local main branch', () => {
+  assert.equal(resolveMainRef({ hasOriginMain: true, hasLocalMain: true }), 'origin/main');
+  assert.equal(resolveMainRef({ hasOriginMain: false, hasLocalMain: true }), 'main');
+  assert.equal(resolveMainRef({ hasOriginMain: false, hasLocalMain: false }), null);
+});
+
+test('an explicit ref is honored for the local daemon', () => {
+  assert.equal(
+    resolveMainRef({ requestedRef: 'origin/main', hasOriginMain: false, hasLocalMain: false }),
+    'origin/main'
+  );
 });
