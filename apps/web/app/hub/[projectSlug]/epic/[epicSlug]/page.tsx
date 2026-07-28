@@ -4,6 +4,7 @@ import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { isRoadmapStatusShipped } from '@/lib/roadmap-artifact-schema'
 import { FreshnessStamp, EmptyHubState } from '../../../hub-components'
+import { Badge } from '@/components/ui/Badge'
 import styles from '../../../hub.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -70,9 +71,9 @@ export default async function HubEpicDrilldownPage({
             </p>
             <h1>{epic.name}</h1>
             <p>
-              <span className={`tag ${epic.shipped ? 'tag-live' : 'tag-next'}`}>
-                {epic.shipped ? '✅ shipped' : '🔜 in progress'}
-              </span>
+              <Badge status={epic.shipped ? 'live' : 'next'}>
+                {epic.shipped ? 'shipped' : 'in progress'}
+              </Badge>
               {risk && (
                 <span className={styles.riskTag} data-risk={risk.toLowerCase()}>
                   {risk} risk
@@ -92,7 +93,7 @@ export default async function HubEpicDrilldownPage({
               const shipped = isRoadmapStatusShipped(sprint.status)
               return (
                 <li key={sprint.slug} className={styles.sprintRow}>
-                  <span className={`tag ${shipped ? 'tag-live' : 'tag-next'}`}>{shipped ? '✅' : '🔜'}</span>
+                  <Badge status={shipped ? 'live' : 'next'}>{shipped ? 'shipped' : 'in progress'}</Badge>
                   <span className={styles.sprintName}>{sprint.name}</span>
                   <span className={styles.sprintProgress}>{sprint.sprint_progress ?? '—'}</span>
                   <span className={styles.sprintStatus}>{sprint.status}</span>

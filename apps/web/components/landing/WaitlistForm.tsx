@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import { Button } from '@/components/ui/Button'
 
 // The one interactive/client piece on an otherwise server-rendered landing. Posts to
 // /api/v1/public/waitlist (Story 1.3 — apps/web/app/api/v1/public/waitlist/route.ts), which
@@ -35,14 +36,15 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
   }
 
   if (status === 'success') {
-    return <p className="note" style={{ margin: compact ? '16px 0 0' : '18px auto 0' }}>You&apos;re on the list — we&apos;ll reach out to provision a pilot.</p>
+    return (
+      <p className="note waitlist-form__message waitlist-form__message--success">
+        You&apos;re on the list — we&apos;ll reach out to provision a pilot.
+      </p>
+    )
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      style={{ display: 'flex', gap: 10, maxWidth: compact ? 600 : 520, flexWrap: 'wrap', ...(compact ? {} : { margin: '28px auto 0', justifyContent: 'center' }) }}
-    >
+    <form className={`waitlist-form${compact ? ' waitlist-form--compact' : ''}`} onSubmit={onSubmit}>
       <input
         className="gb"
         type="email"
@@ -50,7 +52,6 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
         placeholder="you@company.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        style={{ flex: 1, minWidth: 240 }}
       />
       {/* Honeypot — visually off-screen (not display:none, which some bots skip filling) */}
       <input
@@ -61,13 +62,15 @@ export function WaitlistForm({ compact = false }: { compact?: boolean }) {
         tabIndex={-1}
         autoComplete="off"
         aria-hidden="true"
-        style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }}
+        className="waitlist-form__honeypot"
       />
-      <button className="btn btn-gold" type="submit" disabled={status === 'submitting'}>
+      <Button type="submit" disabled={status === 'submitting'}>
         {status === 'submitting' ? 'Joining…' : 'Join the waitlist'}
-      </button>
+      </Button>
       {status === 'error' && (
-        <p className="note" style={{ width: '100%', color: 'var(--red)' }}>Something went wrong — try again.</p>
+        <p className="note waitlist-form__message waitlist-form__message--error" role="alert">
+          Something went wrong — try again.
+        </p>
       )}
     </form>
   )

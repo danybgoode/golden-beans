@@ -4,6 +4,8 @@ import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { journeyMarkerIndex } from '@/lib/hub-journey'
 import { FreshnessStamp, EmptyHubState } from '../hub-components'
+import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
 import styles from '../hub.module.css'
 
 export const dynamic = 'force-dynamic'
@@ -60,7 +62,8 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
               <b>you ▸</b> where are we on the road, {projectSlug}?
             </p>
             <div className="tool">
-              <b>⚙ getLatestArtifact</b> report_artifacts · kind=roadmap · v{artifact.version}
+              <Icon name="settings" />
+              <b>getLatestArtifact</b> report_artifacts · kind=roadmap · v{artifact.version}
             </div>
             <p>
               <b className="data">{summary.counts.shippedEpics}</b>/
@@ -102,21 +105,27 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
                   key={epic.slug}
                   className={`${styles.epicNode} ${epic.shipped ? styles.epicNodeShipped : styles.epicNodeUpcoming}`}
                 >
-                  {i === markerIndex && <span className={styles.marker}>📍 you are here</span>}
+                  {i === markerIndex && (
+                    <span className={styles.marker}>
+                      <Icon name="map-pin" /> you are here
+                    </span>
+                  )}
                   <a
                     href={`/hub/${encodeURIComponent(projectSlug)}/epic/${encodeURIComponent(epic.slug)}`}
                     className={styles.epicLink}
                   >
                     <span className={styles.epicDot} aria-hidden="true" />
                     <span className={styles.epicLabel}>{epic.name}</span>
-                    <span className={`tag ${epic.shipped ? 'tag-live' : 'tag-next'}`}>
-                      {epic.shipped ? '✅ shipped' : i === markerIndex ? '🔨 building' : '🔜 next'}
-                    </span>
+                    <Badge status={epic.shipped ? 'live' : 'next'}>
+                      {epic.shipped ? 'shipped' : i === markerIndex ? 'building' : 'next'}
+                    </Badge>
                   </a>
                 </li>
               ))}
               {destinationReached && (
-                <li className={styles.markerFlag}>📍 you are here — 🏁 destination reached</li>
+                <li className={styles.markerFlag}>
+                  <Icon name="map-pin" /> you are here — <Icon name="flag" /> destination reached
+                </li>
               )}
             </ol>
           </nav>

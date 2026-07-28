@@ -31,6 +31,13 @@ if echo "$changed" | grep -qE '^scripts/'; then
   fi
 fi
 
+if echo "$changed" | grep -qE '^(apps/web/(app|components)/|references/(design/|ux-guidelines\.md|golden-beans-design-system-proposal/|golden-beans-mark-exploration-round2\.html)|scripts/check-design-drift\.mjs)'; then
+  if ! node scripts/check-design-drift.mjs; then
+    echo "pre-commit: design-drift failed — use shared tokens/primitives and SVG icons." >&2
+    fail=1
+  fi
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "pre-commit: one or more checks failed. Fix and re-stage, or 'git commit --no-verify' to bypass." >&2
   exit 1

@@ -2,13 +2,15 @@ import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getFeatureFunnel } from '@/lib/tars-query'
 import { getFeatureImpact } from '@/lib/north-star-query'
 import { getExperimentComparison } from '@/lib/ab-query'
+import { AgentWindow } from '@/components/ui/AgentWindow'
+import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
+import { SectionDivider } from '@/components/ui/SectionDivider'
 
 const FEATURE_KEY = 'setup_guide'
 const INPUT_KEY = 'setup_guide_completions'
 const EXPERIMENT_KEY = 'quick-upload-ui'
 const CONVERSION_EVENT = 'upload_completed'
-const MAX_BAR_HEIGHT = 140
-
 // Presentation-layer helper over an already-fetched series — sum of the last 7 days vs. the 7
 // before that. Not a new query function; the series itself comes from getFeatureImpact.
 function weekOverWeek(series: { date: string; value: number }[]) {
@@ -49,143 +51,157 @@ export async function LiveProofSection() {
 
   return (
     <>
-      <div className="divider">
-        <div className="wrap">
-          <span className="num">②</span>
-          <span className="stamp-title">Live proof — straight from the vine</span>
-          <span className="tag tag-stamp">LIVE</span>
-        </div>
-      </div>
+      <SectionDivider number="②" title="Live proof — straight from the vine">
+        <Badge status="live" onKraft>
+          LIVE
+        </Badge>
+      </SectionDivider>
       <section className="band" id="live-proof">
         <div className="wrap">
-          <h2 style={{ fontSize: 34 }}>Not screenshots. The actual engine, live.</h2>
-          <p style={{ margin: '12px 0 28px', color: 'var(--dim)', maxWidth: 640 }}>
-            Everything below is rendered from the synthetic{' '}
-            <b style={{ color: 'var(--crema)' }}>{DEMO_PROJECT_SLUG}</b> project by the same
+          <h2 className="section-title">Not screenshots. The actual engine, live.</h2>
+          <p className="live-proof__intro">
+            Everything below is rendered from the synthetic <b>{DEMO_PROJECT_SLUG}</b> project by the same
             queries your agent would run.* No client data appears on this page, ever.
           </p>
-          <div className="agent-win" style={{ borderRadius: 16 }}>
-            <div className="agent-bar">
-              <span className="agent-dots"><span /><span /><span /></span>
-              claude — connected: golden-beans · {DEMO_PROJECT_SLUG}
-              <span className="agent-chip">revocable</span>
+          <AgentWindow
+            className="live-proof__window"
+            title={`claude — connected: golden-beans · ${DEMO_PROJECT_SLUG}`}
+            status="revocable"
+          >
+            <div className="you">
+              <b>you ▸</b> how&apos;s the setup-guide funnel?
             </div>
-            <div className="agent-body" style={{ padding: '24px 26px', gap: 18 }}>
-              <div className="you"><b>you ▸</b> how&apos;s the setup-guide funnel?</div>
-              <div className="tool">
-                <b>⚙ get_tars_funnel</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot;, feature: &quot;{FEATURE_KEY}&quot; {'}'} →{' '}
-                {tars
-                  ? `{ targeted: ${tars.targeted}, adopted: ${tars.adopted}, retained: ${tars.retained} }`
-                  : '{ no data yet — run npm run seed:demo }'}
-              </div>
-              {tars && (
-                <div className="row2" style={{ gridTemplateColumns: '1fr 340px', gap: 28, alignItems: 'end' }}>
-                  <div className="funnel">
-                    <div className="bar">
-                      <div style={{ height: (tars.targeted / maxCount) * MAX_BAR_HEIGHT }} />
-                      Targeted · {tars.targeted.toLocaleString('en-US')}
-                    </div>
-                    <div className="bar">
-                      <div style={{ height: (tars.adopted / maxCount) * MAX_BAR_HEIGHT }} />
-                      Adopted · {tars.adopted.toLocaleString('en-US')}
-                    </div>
-                    <div className="bar">
-                      <div style={{ height: (tars.retained / maxCount) * MAX_BAR_HEIGHT }} />
-                      Retained · {tars.retained.toLocaleString('en-US')}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.6, paddingBottom: 8 }}>
-                    Adoption <b className="data">{adoptionRate}%</b>, retention{' '}
-                    <b className="data">{retentionRate}%</b>.{' '}
-                    <span className="note" style={{ fontSize: 12 }}>
-                      Targeted is registry-declared, not gateway-observed — the engine tells you so itself.
-                    </span>
-                  </div>
-                </div>
-              )}
-              <hr />
-              <div className="you"><b>you ▸</b> and the north star?</div>
-              <div className="tool">
-                <b>⚙ get_north_star</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot; {'}'} →{' '}
-                {northStar
-                  ? `{ metric: "payable_sellers", value: ${northStar.current}, wow: ${northStar.wow !== null ? northStar.wow.toFixed(3) : 'n/a'} }`
-                  : '{ no data yet — run npm run seed:demo }'}
-              </div>
-              {northStar && (
-                <div style={{ display: 'flex', gap: 28, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div>
-                    <div className="data" style={{ fontSize: 40, fontWeight: 600, lineHeight: 1 }}>
-                      {northStar.current}{' '}
-                      {northStar.wow !== null && (
-                        <span style={{ fontSize: 16, color: northStar.wow >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                          {northStar.wow >= 0 ? '+' : ''}
-                          {(northStar.wow * 100).toFixed(1)}% {northStar.wow >= 0 ? '↗' : '↘'}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ font: '500 12.5px var(--mono)', color: 'var(--dim)', marginTop: 8 }}>
-                      payable_sellers · setup_guide_completions linked · per-feature impact report
-                    </div>
-                  </div>
-                </div>
-              )}
-              <hr />
-              <div className="you"><b>you ▸</b> is quick-upload winning?</div>
-              <div className="tool">
-                <b>⚙ compare_experiment</b> {'{'} experiment: &quot;{EXPERIMENT_KEY}&quot;, metricEvent: &quot;{CONVERSION_EVENT}&quot; {'}'}
-              </div>
-              {comparison && comparison.variants.length > 0 && (
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  {comparison.variants.map((v) => {
-                    const isBaseline = v.key === comparison.baseline
+            <div className="tool">
+              <Icon name="settings" />
+              <b>get_tars_funnel</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot;, feature: &quot;
+              {FEATURE_KEY}&quot; {'}'} →{' '}
+              {tars
+                ? `{ targeted: ${tars.targeted}, adopted: ${tars.adopted}, retained: ${tars.retained} }`
+                : '{ no data yet — run npm run seed:demo }'}
+            </div>
+            {tars && (
+              <div className="row2 funnel-layout">
+                <div className="funnel">
+                  {[
+                    ['Targeted', tars.targeted],
+                    ['Adopted', tars.adopted],
+                    ['Retained', tars.retained],
+                  ].map(([label, value]) => {
+                    const height = Math.max(0, Math.min(100, (Number(value) / maxCount) * 100))
+                    const gradientId = `funnel-${String(label).toLowerCase()}`
                     return (
-                      <div
-                        key={v.key}
-                        style={{
-                          flex: '1 1 220px',
-                          minWidth: 220,
-                          background: 'var(--roast)',
-                          border: `1px solid ${isBaseline ? 'var(--line)' : 'var(--gold)'}`,
-                          borderRadius: 10,
-                          padding: 16,
-                          font: '500 13px var(--mono)',
-                          color: 'var(--dim)',
-                        }}
-                      >
-                        {v.key} {isBaseline ? '(baseline)' : ''}
-                        <b
-                          style={{
-                            display: 'block',
-                            fontSize: 26,
-                            color: isBaseline ? 'var(--crema)' : 'var(--gold-hot)',
-                            margin: '6px 0 2px',
-                          }}
+                      <div className="bar" key={label}>
+                        <svg
+                          className="funnel-fill"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
                         >
-                          {(v.conversionRate * 100).toFixed(1)}%
-                        </b>
-                        {v.exposures.toLocaleString('en-US')} exposed · {v.conversions.toLocaleString('en-US')} converted
-                        {!isBaseline && v.lift !== null && (
-                          <>
-                            {' '}
-                            <span style={{ color: v.lift >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
-                              {v.lift >= 0 ? '+' : ''}
-                              {(v.lift * 100).toFixed(1)}%
-                            </span>
-                          </>
-                        )}
+                          <defs>
+                            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0" stopColor="var(--gold-hot)" />
+                              <stop offset="1" stopColor="var(--gold-deep)" />
+                            </linearGradient>
+                          </defs>
+                          <rect
+                            x="0"
+                            y={100 - height}
+                            width="100"
+                            height={height}
+                            rx="5"
+                            fill={`url(#${gradientId})`}
+                          />
+                        </svg>
+                        {label} · {Number(value).toLocaleString('en-US')}
                       </div>
                     )
                   })}
                 </div>
-              )}
-              <div className="note" style={{ fontSize: 12 }}>
-                deterministic client-side bucketing · basic lift only — no significance engine yet, and we won&apos;t pretend otherwise.
+                <div className="funnel-summary">
+                  Adoption <b className="data">{adoptionRate}%</b>, retention{' '}
+                  <b className="data">{retentionRate}%</b>.{' '}
+                  <span className="note">
+                    Targeted is registry-declared, not gateway-observed — the engine tells you so itself.
+                  </span>
+                </div>
               </div>
+            )}
+
+            <hr />
+            <div className="you">
+              <b>you ▸</b> and the north star?
             </div>
-          </div>
-          <p className="note" style={{ margin: '18px 0 0' }}>
-            * These numbers are independently checkable: /api/v1/public/north-star is public for
-            the demo project and returns the same underlying data. Curl it mid-meeting.
+            <div className="tool">
+              <Icon name="settings" />
+              <b>get_north_star</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot; {'}'} →{' '}
+              {northStar
+                ? `{ metric: "payable_sellers", value: ${northStar.current}, wow: ${northStar.wow !== null ? northStar.wow.toFixed(3) : 'n/a'} }`
+                : '{ no data yet — run npm run seed:demo }'}
+            </div>
+            {northStar && (
+              <div className="north-star">
+                <div>
+                  <div className="north-star__value">
+                    {northStar.current}{' '}
+                    {northStar.wow !== null && (
+                      <span className={`trend trend--${northStar.wow >= 0 ? 'up' : 'down'}`}>
+                        {northStar.wow >= 0 ? '+' : ''}
+                        {(northStar.wow * 100).toFixed(1)}%
+                        <Icon name={northStar.wow >= 0 ? 'trend-up' : 'trend-down'} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="north-star__meta">
+                    payable_sellers · setup_guide_completions linked · per-feature impact report
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <hr />
+            <div className="you">
+              <b>you ▸</b> is quick-upload winning?
+            </div>
+            <div className="tool">
+              <Icon name="settings" />
+              <b>compare_experiment</b> {'{'} experiment: &quot;{EXPERIMENT_KEY}&quot;, metricEvent: &quot;
+              {CONVERSION_EVENT}&quot; {'}'}
+            </div>
+            {comparison && comparison.variants.length > 0 && (
+              <div className="experiment-grid">
+                {comparison.variants.map((variant) => {
+                  const isBaseline = variant.key === comparison.baseline
+                  return (
+                    <div
+                      className={`experiment-variant${isBaseline ? ' experiment-variant--baseline' : ''}`}
+                      key={variant.key}
+                    >
+                      {variant.key} {isBaseline ? '(baseline)' : ''}
+                      <b>{(variant.conversionRate * 100).toFixed(1)}%</b>
+                      {variant.exposures.toLocaleString('en-US')} exposed ·{' '}
+                      {variant.conversions.toLocaleString('en-US')} converted
+                      {!isBaseline && variant.lift !== null && (
+                        <span
+                          className={`experiment-variant__lift lift--${variant.lift >= 0 ? 'up' : 'down'}`}
+                        >
+                          {' '}
+                          {variant.lift >= 0 ? '+' : ''}
+                          {(variant.lift * 100).toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="note">
+              deterministic client-side bucketing · basic lift only — no significance engine yet, and we
+              won&apos;t pretend otherwise.
+            </div>
+          </AgentWindow>
+          <p className="note live-proof__footnote">
+            * These numbers are independently checkable: /api/v1/public/north-star is public for the demo
+            project and returns the same underlying data. Curl it mid-meeting.
           </p>
         </div>
       </section>

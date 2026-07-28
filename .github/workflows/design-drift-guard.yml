@@ -1,0 +1,29 @@
+name: design-drift-guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/app/**'
+      - 'apps/web/components/**'
+      - 'references/design/assets/tokens.css'
+      - 'scripts/check-design-drift.mjs'
+      - '.github/workflows/design-drift-guard.yml'
+  pull_request:
+    paths:
+      - 'apps/web/app/**'
+      - 'apps/web/components/**'
+      - 'references/design/assets/tokens.css'
+      - 'scripts/check-design-drift.mjs'
+      - '.github/workflows/design-drift-guard.yml'
+
+jobs:
+  design-system-fresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify approved design rails
+        run: node scripts/check-design-drift.mjs

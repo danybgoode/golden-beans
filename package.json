@@ -22,7 +22,8 @@
     "test:e2e:authed": "npm run test:e2e:authed --workspace=apps/web",
     "seed:demo": "node scripts/seed-demo-project.mjs",
     "seed:self": "node scripts/seed-self-project.mjs",
-    "check:template-drift": "node scripts/check-template-drift.mjs"
+    "check:template-drift": "node scripts/check-template-drift.mjs",
+    "check:design-drift": "node scripts/check-design-drift.mjs"
   },
   "dependencies": {
     "pg": "^8.22.0"

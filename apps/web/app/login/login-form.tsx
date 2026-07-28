@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { createAuthBrowserClient } from '@/lib/supabase-browser'
+import { Button } from '@/components/ui/Button'
 
 // multi-tenant-activation · Sprint 1, Story 1.1 — SIGN-IN ONLY. Self-serve sign-up is Sprint 2
 // (Story 2.1: signup → instant tenant), and it ships DARK behind SIGNUP_ENABLED — so Sprint 1
@@ -30,8 +31,8 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <label>
+    <form className="auth-form" onSubmit={onSubmit}>
+      <label className="auth-form__label">
         Email
         <input
           type="email"
@@ -41,7 +42,7 @@ export function LoginForm() {
           required
         />
       </label>
-      <label>
+      <label className="auth-form__label">
         Password
         <input
           type="password"
@@ -51,10 +52,14 @@ export function LoginForm() {
           required
         />
       </label>
-      <button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy}>
         {busy ? 'Signing in…' : 'Sign in'}
-      </button>
-      {status && <p role="status">{status}</p>}
+      </Button>
+      {status && (
+        <p className="auth-form__message auth-form__message--error" role="status">
+          {status}
+        </p>
+      )}
     </form>
   )
 }

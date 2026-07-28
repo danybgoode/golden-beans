@@ -4,6 +4,7 @@
 // app/hub/hub-components.tsx and app/hub/report-components.tsx.
 import type { ReactNode } from 'react'
 import type { PodReportLens } from '@/lib/pod-report-lens'
+import { Badge } from '@/components/ui/Badge'
 import styles from '../../hub/hub.module.css'
 
 // pod-report · Sprint 3, Story 3.1 — the share surface's own chrome and its two roadmap strips.
@@ -76,9 +77,9 @@ export function ShareJourneyStrip({
             key={epic.slug}
             className={epic.shipped ? styles.shareJourneyShipped : styles.shareJourneyAhead}
           >
-            <span className={`tag ${epic.shipped ? 'tag-live' : 'tag-next'}`}>
-              {epic.shipped ? '✅' : i === markerIndex ? '🔨' : '🔜'}
-            </span>{' '}
+            <Badge status={epic.shipped ? 'live' : 'next'}>
+              {epic.shipped ? 'shipped' : i === markerIndex ? 'building' : 'next'}
+            </Badge>{' '}
             {epic.name || epic.slug}
             {i === markerIndex && !epic.shipped && <em className={styles.shareHere}> — in flight</em>}
           </li>

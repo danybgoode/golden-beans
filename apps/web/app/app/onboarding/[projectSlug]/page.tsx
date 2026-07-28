@@ -7,6 +7,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import { CopyUrlField } from '@/components/landing/CopyUrlField'
 import { STARTER_FEATURE_KEY, STARTER_TARGET_EVENT } from '@/lib/provisioning'
 import { ProductShell } from '@/components/product/ProductShell'
+import { Badge } from '@/components/ui/Badge'
 
 // multi-tenant-activation · Sprint 2, Story 2.3 — the first-run screen a freshly confirmed
 // signup lands on: the one-time key reveal, a ≤5-line SDK snippet pre-filled with it, and (gated)
@@ -156,7 +157,7 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
             <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
               ③ OPTIONAL — BRING YOUR AGENT
             </span>
-            <span className="tag tag-live">✅ LIVE</span>
+            <Badge status="live">LIVE</Badge>
           </div>
           <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Paste it into Claude</h2>
           <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>

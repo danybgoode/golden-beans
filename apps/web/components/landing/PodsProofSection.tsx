@@ -1,6 +1,7 @@
 import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getPodReport } from '@/lib/pod-report-query'
 import { getSection } from '@/lib/landing-sections'
+import { Badge } from '@/components/ui/Badge'
 
 // Section 5 — Pods & proof (ROI). pod-report · Sprint 3, Story 3.2.
 //
@@ -51,13 +52,13 @@ export async function PodsProofSection() {
   const repo = view.source.repo
 
   return (
-    <section className="band" style={{ padding: '44px 0' }} id="pods-proof">
+    <section className="band section-compact" id="pods-proof">
       <div className="wrap">
         <p className="kicker">Pods &amp; proof</p>
         <h2>
-          Your dev team, as a <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
+          Your dev team, as a <em className="gold-em">revenue engine</em>.
         </h2>
-        <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 620 }}>
+        <p className="section-copy">
           Computed, not claimed — every figure below comes from <code>{repo ?? 'this repository'}</code>
           &apos;s own git and pull-request history, measured over{' '}
           <b className="data">{view.source.windowDays ?? '—'}</b> days and{' '}
@@ -97,7 +98,7 @@ export async function PodsProofSection() {
           </div>
         </div>
 
-        <p className="note" style={{ margin: '18px 0 0', fontSize: 12, maxWidth: 620 }}>
+        <p className="note live-proof__footnote">
           {view.notInstrumented.length > 0 ? (
             <>
               Not instrumented here: {view.notInstrumented.map((row) => row.label.toLowerCase()).join(' · ')}.
@@ -109,8 +110,8 @@ export async function PodsProofSection() {
           )}
         </p>
 
-        <p style={{ margin: '18px 0 0', fontSize: 13 }}>
-          <span className="tag tag-live">✅ LIVE · {section.epic}</span>
+        <p className="section-status">
+          <Badge status="live">LIVE · {section.epic}</Badge>
         </p>
       </div>
     </section>
@@ -127,22 +128,21 @@ export async function PodsProofSection() {
  */
 function PodsProofFallback({ epic }: { epic: string }) {
   return (
-    <section className="band" style={{ padding: '44px 0' }} id="pods-proof">
+    <section className="band section-compact" id="pods-proof">
       <div className="wrap">
         <div className="teaser">
-          <div style={{ flex: '1 1 320px', minWidth: 320 }}>
+          <div className="teaser__copy">
             <h2>
-              Your dev team, as a{' '}
-              <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>revenue engine</em>.
+              Your dev team, as a <em className="gold-em">revenue engine</em>.
             </h2>
-            <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 560 }}>
+            <p>
               The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and an
               auditable position on the published AI-adoption ladder, computed from a real repository&apos;s
               own history and read against published benchmarks. Computed, not claimed: which is exactly why
               there are no numbers here until one is pushed.
             </p>
           </div>
-          <span className="tag tag-next">🔜 LIGHTS UP · {epic}</span>
+          <Badge status="next">LIGHTS UP · {epic}</Badge>
         </div>
       </div>
     </section>

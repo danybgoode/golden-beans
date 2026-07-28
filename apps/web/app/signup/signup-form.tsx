@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import { Button } from '@/components/ui/Button'
 
 // multi-tenant-activation · Sprint 3, Story 3.1/3.2 — posts to /api/v1/public/signup (Sprint 2,
 // Story 2.1). The honeypot + submit-state + error-handling idiom is lifted from
@@ -50,16 +51,16 @@ export function SignupForm() {
   // visitor where to go next.
   if (status === 'success') {
     return (
-      <p role="status" className="note" style={{ fontSize: 15 }}>
-        Check your email for a confirmation link — click it and your tenant + API key are ready,
-        no manual steps.
+      <p role="status" className="auth-form__message auth-form__message--success">
+        Check your email for a confirmation link — click it and your tenant + API key are ready, no manual
+        steps.
       </p>
     )
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--dim)' }}>
+    <form className="auth-form" onSubmit={onSubmit}>
+      <label className="auth-form__label">
         Email
         <input
           className="gb"
@@ -70,7 +71,7 @@ export function SignupForm() {
           required
         />
       </label>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--dim)' }}>
+      <label className="auth-form__label">
         Password
         <input
           className="gb"
@@ -92,13 +93,13 @@ export function SignupForm() {
         tabIndex={-1}
         autoComplete="off"
         aria-hidden="true"
-        style={{ position: 'absolute', left: -9999, width: 1, height: 1, opacity: 0 }}
+        className="form-honeypot"
       />
-      <button className="btn btn-gold" type="submit" disabled={status === 'submitting'}>
+      <Button type="submit" disabled={status === 'submitting'}>
         {status === 'submitting' ? 'Starting…' : 'Start free'}
-      </button>
+      </Button>
       {status === 'error' && (
-        <p role="status" className="note" style={{ color: 'var(--red)' }}>
+        <p role="status" className="auth-form__message auth-form__message--error">
           {error}
         </p>
       )}

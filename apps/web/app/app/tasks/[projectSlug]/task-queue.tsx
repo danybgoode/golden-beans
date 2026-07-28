@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
 import type { TaskRow } from '@/lib/tasks'
 import { transitionTaskAction } from './actions'
+import { Icon } from '@/components/ui/Icon'
 
 // signals-loop · Sprint 2, Story 2.2 — the queue and the evidence drawer.
 
@@ -57,7 +58,11 @@ export function TaskQueue({ slug, tasks }: { slug: string; tasks: TaskRow[] }) {
 
   return (
     <section>
-      {error ? <p role="alert">⚠ {error}</p> : null}
+      {error ? (
+        <p role="alert">
+          <Icon name="warning" /> {error}
+        </p>
+      ) : null}
       <table>
         <caption>
           {tasks.length} task{tasks.length === 1 ? '' : 's'}, most impactful first

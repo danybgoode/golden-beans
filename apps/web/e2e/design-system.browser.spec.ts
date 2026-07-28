@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('the landing renders the ingot bean and limitless-growth story', async ({ page }, testInfo) => {
+test('the landing renders the approved roast, foil, icon, and tactile system', async ({ page }, testInfo) => {
   const consoleErrors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -10,14 +10,35 @@ test('the landing renders the ingot bean and limitless-growth story', async ({ p
   expect(response?.status()).toBe(200)
   await expect(page.locator('.brand-lockup').first()).toBeVisible()
   await expect(page.locator('.golden-bean-mark__face').first()).toBeVisible()
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Grow without a ceiling')
-  await expect(page.getByText('The magic beans that actually work')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'The growth engine your agent operates.'
+  )
+  await expect(page.locator('h1 .foil')).toHaveText('your agent')
+  await expect(page.locator('.tag svg').first()).toBeVisible()
 
   const beanFill = await page
     .locator('.golden-bean-mark__face')
     .first()
     .evaluate((element) => getComputedStyle(element).fill)
   expect(beanFill).toBe('rgb(255, 215, 0)')
+
+  for (const width of [360, 640, 900]) {
+    await page.setViewportSize({ width, height: 844 })
+    const [scrollWidth, clientWidth] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ])
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+  }
+
+  const primary = page.locator('.btn-gold').first()
+  await expect(primary).toBeVisible()
+  expect(await primary.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(
+    44
+  )
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(await primary.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s')
 
   await page.screenshot({ path: testInfo.outputPath('landing-desktop.png'), fullPage: true })
   expect(consoleErrors).toEqual([])

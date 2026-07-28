@@ -1,5 +1,5 @@
-import { BookOpenText, Cable, Orbit, Telescope } from 'lucide-react'
 import { BrandLockup } from '@/components/brand/BrandLockup'
+import { Icon } from '@/components/ui/Icon'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -15,21 +15,21 @@ export function ProductShell({ children }: { children: React.ReactNode }) {
         <BrandLockup compact href="/app" />
         <nav aria-label="Product">
           <a href="/app">
-            <Orbit size={17} aria-hidden="true" />
-            Garden
+            <Icon name="panels" />
+            Projects
           </a>
           <a href="/install">
-            <Cable size={17} aria-hidden="true" />
+            <Icon name="cable" />
             Connect
           </a>
           <a href="/llms.txt">
-            <BookOpenText size={17} aria-hidden="true" />
+            <Icon name="book" />
             Agent notes
           </a>
         </nav>
         <span className="product-shell__signal">
-          <Telescope size={16} aria-hidden="true" />
-          Watching growth
+          <Icon name="gauge" />
+          Engine ready
         </span>
       </header>
       <div className="product-shell__body">{children}</div>

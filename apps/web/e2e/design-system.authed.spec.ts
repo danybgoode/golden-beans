@@ -15,7 +15,7 @@ test('signed-in pages inherit the responsive Golden Beans product shell', async 
 
   await expect(page.locator('.product-shell__header')).toBeVisible()
   await expect(page.locator('.product-shell__header .brand-lockup')).toBeVisible()
-  await expect(page.getByText('Watching growth')).toBeAttached()
+  await expect(page.getByText('Engine ready')).toBeAttached()
   await expect(page.locator('main')).toContainText(tenantSlug())
 
   const [scrollWidth, clientWidth] = await page.evaluate(() => [

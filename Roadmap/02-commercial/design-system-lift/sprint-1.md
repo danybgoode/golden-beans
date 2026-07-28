@@ -15,13 +15,15 @@ finish, has a reduced/monochrome fallback, and ships as a reusable SVG asset pac
 > **As a** builder, **I want** shared tokens and components, **so that** every new page starts inside
 > the same visual, responsive, accessible system.
 
-**Acceptance:** Brand, spacing, radius, type, elevation, state, form, button, card, navigation,
-focus, and motion rules live in shared seams and are documented close to the implementation.
+**Acceptance:** `references/design/assets/tokens.css` is the canonical imported token/skin file;
+typed `Button`, `Badge`, `Panel`, `SectionDivider`, `AgentWindow`, and `Icon` primitives carry the
+approved interaction and state vocabulary into React.
 
 ## Story 1.3 — The story reads as magic beans
 
 > **As a** buyer, **I want** the landing, install, and auth surfaces to communicate compounding
 > growth, **so that** the brand promise and the product’s real capabilities reinforce each other.
 
-**Acceptance:** Coffee/roastery marketing copy is removed from current product surfaces, the public
-routes use the new mark and components, and capability honesty badges remain driven by shipped state.
+**Acceptance:** The public, install, and auth routes consume the supplied dark-roast/kraft/foil
+system; the hero reads “The growth engine your agent operates.” with foil on `your agent` only; and
+capability honesty remains represented by typed `live` / `next` / `blocked` badges.

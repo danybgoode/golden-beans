@@ -66,9 +66,9 @@ independently shippable slice of value.
 
 ### 02 · Commercial
 - 🚧 [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
-  limitless magic-beans story · reusable public/product rails · branded route loaders) — building
-  on `feat/design-system-slack-rails`; replaces the coffee-roastery metaphor and gives every
-  signed-in route a shared responsive shell.
+  approved dark-roast/kraft/foil system · reusable public/product rails · restrained route loaders
+  · automated drift guard) — corrective implementation on `fix/apply-approved-design-handoff`,
+  sourced directly from the supplied proposal folder and round-two mark exploration.
 - ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
   self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
   per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
@@ -109,8 +109,7 @@ independently shippable slice of value.
 ### 09 · Platform & Infra
 - 🚧 [Notification rails](09-platform-infra/notification-rails/README.md) (Telegram + Slack
   mechanical push/deploy pings · identical reviewed prose reports · per-channel retry checkpoints)
-  — building on `feat/design-system-slack-rails`; Slack uses a channel-scoped Incoming Webhook and
-  plain-text response handling.
+  — merged in PR #51; Slack uses a channel-scoped Incoming Webhook and plain-text response handling.
 
 ---
 

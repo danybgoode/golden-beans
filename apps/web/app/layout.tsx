@@ -7,9 +7,9 @@ import './globals.css'
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })
 
-const TITLE = 'Golden Beans — plant signals, grow outcomes'
+const TITLE = 'Golden Beans — the growth engine your agent operates'
 const DESCRIPTION =
-  'A unified growth engine for telemetry, TARS funnels, North Star metrics, and experiments — one primitive set your agent operates over MCP.'
+  'Telemetry, TARS funnels, North Star metrics, and A/B experiments — as primitives your agent can operate over MCP.'
 
 // Story 3.2 (commercial-shell/sprint-3.md) — real OG/Twitter metadata, so a pasted landing link
 // unfurls with a correct card in a chat app instead of the platform's generic fallback. `async

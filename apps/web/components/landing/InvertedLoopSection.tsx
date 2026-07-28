@@ -1,5 +1,9 @@
 import { getSection } from '@/lib/landing-sections'
 import { isSignalsEnabled, isConnectorWritesEnabled } from '@/lib/flags'
+import { AgentWindow } from '@/components/ui/AgentWindow'
+import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
+import { Panel } from '@/components/ui/Panel'
 
 // Section 4 — The inverted loop. signals-loop · Sprint 3, Story 3.3 (part A).
 //
@@ -24,66 +28,62 @@ export function InvertedLoopSection() {
   const writesLive = isConnectorWritesEnabled()
 
   return (
-    <section className="band" style={{ padding: '44px 0' }} id="inverted-loop">
+    <section className="band section-compact" id="inverted-loop">
       <div className="wrap">
         <p className="kicker">The inverted loop</p>
         <h2>
-          The loop ends in <em style={{ fontStyle: 'normal', color: 'var(--gold)' }}>your</em> agent.
+          The loop ends in <em className="gold-em">your</em> agent.
         </h2>
-        <p style={{ margin: '10px 0 0', fontSize: 13.5, maxWidth: 660 }}>
+        <p className="section-copy">
           A signal becomes a structured task with product context. Your agent pulls it over MCP, fixes it in
           your workflow, then resolves it with an evidence pointer — a commit, pull request, or note you can
           inspect.
         </p>
 
-        <div className="agent-win" style={{ borderRadius: 16, marginTop: 24 }}>
-          <div className="agent-bar">
-            <span className="agent-dots">
-              <span />
-              <span />
-              <span />
-            </span>
-            golden-beans — the task stays in your workflow
+        <AgentWindow
+          className="loop-window"
+          title="golden-beans — the task stays in your workflow"
+          status="evidenced"
+        >
+          <div className="tool">
+            <Icon name="arrow-right" /> 1. signal → grouped into a structured task with product context
           </div>
-          <div className="agent-body" style={{ padding: '22px 26px', gap: 14 }}>
-            <div className="tool">① signal → grouped into a structured task with product context</div>
-            <div className="tool">② your agent → pulls the ranked task over MCP</div>
-            <div className="tool">③ your workflow → fix, then resolve with an evidence pointer</div>
-            <p className="note" style={{ margin: '2px 0 0', fontSize: 12, maxWidth: 620 }}>
-              Grouping, impact ranking, and the evidence bundle are computed deterministically. No model
-              writes any field of a task.
-            </p>
+          <div className="tool">
+            <Icon name="arrow-right" /> 2. your agent → pulls the ranked task over MCP
           </div>
-        </div>
+          <div className="tool">
+            <Icon name="arrow-right" /> 3. your workflow → fix, then resolve with an evidence pointer
+          </div>
+          <p className="note">
+            Grouping, impact ranking, and the evidence bundle are computed deterministically. No model writes
+            any field of a task.
+          </p>
+        </AgentWindow>
 
-        <div className="cards3" style={{ marginTop: 24 }}>
-          <div className="panel">
-            <p className="kicker" style={{ marginBottom: 8 }}>
-              Golden Beans
-            </p>
-            <h3 style={{ fontSize: 18 }}>Your agent owns the last mile.</h3>
-            <p style={{ fontSize: 14, color: 'var(--dim)' }}>
+        <div className="row2 comparison-grid">
+          <Panel>
+            <p className="kicker">Golden Beans</p>
+            <h3>Your agent owns the last mile.</h3>
+            <p>
               {signalsLive && writesLive
                 ? 'Running today: signals are captured and grouped, the read tools serve a ranked queue, and the staged write tools let your agent claim and resolve — each write confirmed before it applies.'
                 : signalsLive
                   ? 'Running today: signals are captured and grouped, and your agent can pull a ranked queue over MCP. The staged write tools stay switched off until the whole loop is verified end to end.'
                   : 'The loop is built and deliberately switched off until it is verified end to end — so this page does not claim a live task queue before there is one.'}
             </p>
-          </div>
-          <div className="panel" style={{ borderStyle: 'dashed', borderColor: '#4a3f2d' }}>
-            <p className="kicker" style={{ marginBottom: 8 }}>
-              PostHog Desktop
-            </p>
-            <h3 style={{ fontSize: 18 }}>Announced, not shipped.</h3>
-            <p style={{ fontSize: 14, color: 'var(--dim)' }}>
+          </Panel>
+          <Panel className="panel--next">
+            <p className="kicker">PostHog Desktop</p>
+            <h3>Announced, not shipped.</h3>
+            <p>
               PostHog Desktop is announced for Summer 2026, not a released product today. Its proposed
               integrated-AI loop is therefore not presented here as a live like-for-like comparison.
             </p>
-          </div>
+          </Panel>
         </div>
 
-        <p style={{ margin: '18px 0 0', fontSize: 13 }}>
-          <span className="tag tag-live">✅ LIVE · {section.epic}</span>
+        <p className="section-status">
+          <Badge status="live">LIVE · {section.epic}</Badge>
         </p>
       </div>
     </section>

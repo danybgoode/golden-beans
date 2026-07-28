@@ -16,9 +16,7 @@ export default async function LoginPage() {
       <section className="auth-shell__card">
         <p className="kicker">Welcome back, climber</p>
         <h1>Sign in</h1>
-        <p style={{ color: 'var(--dim)', marginBottom: 24 }}>
-          Your signals are planted. Pick up where the growth left off.
-        </p>
+        <p className="auth-shell__intro">Your signals are planted. Pick up where the growth left off.</p>
         <LoginForm />
       </section>
     </main>
