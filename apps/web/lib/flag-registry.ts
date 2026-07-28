@@ -40,6 +40,8 @@ export type FlagLifecycleAuditRow = {
   newVersionId: string | null
   action: 'definition_created' | 'activated' | 'deactivated'
   actorUserId: string
+  /** Verified caller identity from a scoped external control-plane adapter (e.g. Miyagi Clerk). */
+  externalActorId: string | null
   reason: string
   createdAt: string
 }
@@ -69,6 +71,7 @@ type RawAudit = {
   new_version_id: string | null
   action: FlagLifecycleAuditRow['action']
   actor_user_id: string
+  external_actor_id: string | null
   reason: string
   created_at: string
 }
@@ -112,7 +115,9 @@ export async function getFlagRegistryView(projectId: string): Promise<{
       .order('environment'),
     supabase
       .from('flag_lifecycle_audit')
-      .select('id,environment,flag_id,old_version_id,new_version_id,action,actor_user_id,reason,created_at')
+      .select(
+        'id,environment,flag_id,old_version_id,new_version_id,action,actor_user_id,external_actor_id,reason,created_at'
+      )
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(200),
@@ -171,6 +176,7 @@ export async function getFlagRegistryView(projectId: string): Promise<{
       newVersionId: row.new_version_id,
       action: row.action,
       actorUserId: row.actor_user_id,
+      externalActorId: row.external_actor_id,
       reason: row.reason,
       createdAt: row.created_at,
     })),

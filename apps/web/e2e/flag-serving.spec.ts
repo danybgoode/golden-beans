@@ -21,6 +21,18 @@ const definition: FlagDefinition = {
   metadata: { criticality: 'low' },
 }
 
+const miyagiDefinition: FlagDefinition = {
+  valueType: 'boolean',
+  description: 'Disposable static Miyagi control-plane flag.',
+  defaultVariantKey: 'off',
+  variants: [
+    { key: 'off', value: false },
+    { key: 'on', value: true },
+  ],
+  rules: [],
+  metadata: { source: 'miyagi', polarity: 'enablement', criticality: 'high', enforcement: 'both' },
+}
+
 const experimentDefinition = {
   hypothesis: 'A compatible immutable flag version supports a governed experiment.',
   assignmentEntityType: 'merchant',
@@ -169,6 +181,202 @@ test('catalog import is owner-scoped, idempotent, atomic on drift, and never act
 
   const foreign = await importCatalog(client, project, stranger, entries)
   expect(foreign.error).not.toBeNull()
+})
+
+test('flag_admin credentials bind a Miyagi operation to one project/environment and preserve its Clerk actor', async ({
+  request,
+}) => {
+  const client = db()
+  const owner = await fixtureUser(client, 'flag-admin-owner')
+  const project = await fixtureProject(client, owner, 'flag-admin')
+  const version = await createVersion(client, project, owner, 'checkout.fixture', miyagiDefinition)
+  const activation = await client.rpc('set_flag_activation', {
+    p_project_id: project,
+    p_environment: 'production',
+    p_flag_id: version.flag_id,
+    p_version_id: version.version_id,
+    p_expected_snapshot_version: 0,
+    p_reason: 'fixture activation',
+    p_actor_user_id: owner,
+  })
+  expect(activation.data?.[0]).toEqual({ snapshot_version: 1, changed: true })
+
+  // A perfectly valid static boolean with a missing source is intentionally absent from this
+  // credential's admin snapshot. Required-field checks must be NULL-safe: `<> 'miyagi'` alone
+  // evaluates to NULL for this definition and would let it through. The mutation RPC rejects the
+  // same class, so the UI can never show a control that it cannot operate.
+  const generic = await createVersion(client, project, owner, 'generic.fixture', {
+    ...miyagiDefinition,
+    description: 'Static generic boolean that Miyagi must not operate.',
+    metadata: { criticality: 'high' },
+  })
+  const genericActivation = await client.rpc('set_flag_activation', {
+    p_project_id: project,
+    p_environment: 'production',
+    p_flag_id: generic.flag_id,
+    p_version_id: generic.version_id,
+    p_expected_snapshot_version: 1,
+    p_reason: 'generic fixture activation',
+    p_actor_user_id: owner,
+  })
+  expect(genericActivation.data?.[0]).toEqual({ snapshot_version: 2, changed: true })
+
+  const adminKey = `gb_key_${crypto.randomUUID().replaceAll('-', '')}`
+  const minted = await client.rpc('create_flag_admin_key', {
+    p_project_id: project,
+    p_environment: 'production',
+    p_key_hash: hashCredential(adminKey),
+    p_label: 'fixture Miyagi server',
+    p_expires_at: null,
+    p_actor_user_id: owner,
+  })
+  expect(minted.error).toBeNull()
+
+  const before = await client.rpc('get_flag_admin_snapshot', { p_key_hash: hashCredential(adminKey) })
+  expect(before.error).toBeNull()
+  expect(before.data?.[0]).toMatchObject({
+    environment: 'production',
+    snapshot_version: 2,
+    flags: [
+      {
+        key: 'checkout.fixture',
+        value: false,
+        definitionVersion: 1,
+        criticality: 'high',
+        polarity: 'enablement',
+        description: 'Disposable static Miyagi control-plane flag.',
+        reason: 'STATIC',
+      },
+    ],
+  })
+  // Pin the supported, owner-created missing-source exclusion independently of the snapshot's
+  // other fields. `flag_definition_versions` is intentionally immutable and globally validated.
+  expect(before.data?.[0]?.flags).toHaveLength(1)
+  expect(before.data?.[0]?.flags?.[0]).toMatchObject({
+    key: 'checkout.fixture',
+    value: false,
+    description: 'Disposable static Miyagi control-plane flag.',
+  })
+  if (process.env.FLAG_SERVING_ENABLED === 'true') {
+    const httpBefore = await request.get('/api/v1/flags/admin', {
+      headers: { Authorization: `Bearer ${adminKey}` },
+    })
+    expect(httpBefore.status()).toBe(200)
+    expect(httpBefore.headers()['cache-control']).toBe('no-store')
+    expect((await httpBefore.json()).flags).toEqual(before.data?.[0]?.flags)
+  }
+
+  // The normal creation path correctly rejects these legacy/corrupt shapes (and the immutable
+  // table denies direct rewrites), so exercise the shared predicate without mutating a version.
+  // Compatibility metadata/description is harmless; a non-array variants property fails closed
+  // before the snapshot's LATERAL jsonb_array_elements expansion can run.
+  const compatibleLegacyDefinition = {
+    valueType: 'boolean',
+    defaultVariantKey: 'off',
+    variants: [
+      { key: 'off', value: false, presentation: { label: 'Disabled' } },
+      { key: 'on', value: true, presentation: { label: 'Enabled' } },
+    ],
+    rules: [],
+    metadata: { source: 'miyagi', polarity: null, criticality: 'legacy-unknown' },
+  }
+  const malformedVariantsDefinition = {
+    valueType: 'boolean',
+    description: 'Malformed historical fixture that Miyagi must not operate.',
+    defaultVariantKey: 'off',
+    variants: null,
+    rules: [],
+    metadata: { source: 'miyagi', polarity: 'enablement', criticality: 'high' },
+  }
+  const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
+  await pg.connect()
+  try {
+    const predicate = await pg.query<{ compatible: boolean; malformed: boolean }>(
+      `SELECT private.is_static_miyagi_boolean_definition($1::jsonb) AS compatible,
+              private.is_static_miyagi_boolean_definition($2::jsonb) AS malformed`,
+      [JSON.stringify(compatibleLegacyDefinition), JSON.stringify(malformedVariantsDefinition)]
+    )
+    expect(predicate.rows[0]).toEqual({ compatible: true, malformed: false })
+  } finally {
+    await pg.end()
+  }
+
+  const nonOperable = await client.rpc('set_flag_admin_boolean', {
+    p_key_hash: hashCredential(adminKey),
+    p_flag_key: 'generic.fixture',
+    p_enabled: true,
+    p_expected_snapshot_version: 2,
+    p_reason: 'generic mutation must be rejected',
+    p_external_actor_id: 'user_FixtureClerkActor',
+  })
+  // The Golden route maps this command-class error to HTTP 400. The database assertion pins the
+  // source error too, so a future wrapper cannot mistake a non-operable generic flag for an outage.
+  expect(nonOperable.error?.code).toBe('22023')
+
+  const changed = await client.rpc('set_flag_admin_boolean', {
+    p_key_hash: hashCredential(adminKey),
+    p_flag_key: 'checkout.fixture',
+    p_enabled: true,
+    p_expected_snapshot_version: 2,
+    p_reason: 'Miyagi admin fixture flip',
+    p_external_actor_id: 'user_FixtureClerkActor',
+  })
+  expect(changed.error).toBeNull()
+  expect(changed.data?.[0]).toEqual({ snapshot_version: 3, definition_version: 2, changed: true })
+
+  const after = await client.rpc('get_flag_admin_snapshot', { p_key_hash: hashCredential(adminKey) })
+  expect(after.error).toBeNull()
+  // The snapshot contract must faithfully expose BOTH default variants: `off` before this mutation
+  // and `on` after it. A JSONB array index derived from WITH ORDINALITY would invert/break this.
+  expect(after.data?.[0]?.flags).toEqual([
+    expect.objectContaining({
+      key: 'checkout.fixture',
+      value: true,
+      definitionVersion: 2,
+      criticality: 'high',
+      polarity: 'enablement',
+      reason: 'STATIC',
+    }),
+  ])
+
+  const stale = await client.rpc('set_flag_admin_boolean', {
+    p_key_hash: hashCredential(adminKey),
+    p_flag_key: 'checkout.fixture',
+    p_enabled: false,
+    p_expected_snapshot_version: 2,
+    p_reason: 'deliberately stale fixture flip',
+    p_external_actor_id: 'user_FixtureClerkActor',
+  })
+  expect(stale.error?.code).toBe('P0001')
+
+  const audit = await client
+    .from('flag_lifecycle_audit')
+    .select('action,actor_user_id,external_actor_id,new_version_id')
+    .eq('project_id', project)
+    .eq('action', 'activated')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  expect(audit.error).toBeNull()
+  expect(audit.data).toMatchObject({
+    actor_user_id: owner,
+    external_actor_id: 'user_FixtureClerkActor',
+  })
+  expect(audit.data?.new_version_id).toBeTruthy()
+
+  const readKey = `gb_key_${crypto.randomUUID().replaceAll('-', '')}`
+  const readMint = await client.rpc('create_flag_read_key', {
+    p_project_id: project,
+    p_environment: 'production',
+    p_key_hash: hashCredential(readKey),
+    p_label: 'wrong credential class',
+    p_expires_at: null,
+    p_actor_user_id: owner,
+  })
+  expect(readMint.error).toBeNull()
+  const wrongScope = await client.rpc('get_flag_admin_snapshot', { p_key_hash: hashCredential(readKey) })
+  expect(wrongScope.error).toBeNull()
+  expect(wrongScope.data).toEqual([])
 })
 
 test('credential-scoped snapshot is ETagged, monotonic, audit-backed, and cannot cross project or scope', async ({
