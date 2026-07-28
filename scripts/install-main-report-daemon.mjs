@@ -15,6 +15,9 @@ const LABEL = 'com.golden-beans.main-report';
 const uid = process.getuid?.();
 const target = join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
 const logPath = join(homedir(), 'Library', 'Logs', 'golden-beans-main-report.log');
+const runnerPath = [dirname(process.execPath), join(homedir(), '.local', 'bin'), process.env.PATH]
+  .filter(Boolean)
+  .join(':');
 
 function command(args, { quiet = false } = {}) {
   return spawnSync('launchctl', args, { encoding: 'utf8', stdio: quiet ? 'pipe' : 'inherit' });
@@ -58,6 +61,7 @@ function install() {
   const contents = template
     .replaceAll('__NODE_PATH__', xml(process.execPath))
     .replaceAll('__REPO_ROOT__', xml(REPO_ROOT))
+    .replaceAll('__RUNNER_PATH__', xml(runnerPath))
     .replaceAll('__LOG_PATH__', xml(logPath));
   mkdirSync(dirname(target), { recursive: true });
   mkdirSync(dirname(logPath), { recursive: true });
