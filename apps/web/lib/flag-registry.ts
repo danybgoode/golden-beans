@@ -225,7 +225,9 @@ export async function importFlagDefinitionCatalog(input: {
   if (
     error ||
     rows.length !== input.entries.length ||
-    rows.some((row) => !row.flag_key || !row.flag_id || !row.version_id || !Number.isSafeInteger(Number(row.version)))
+    rows.some(
+      (row) => !row.flag_key || !row.flag_id || !row.version_id || !Number.isSafeInteger(Number(row.version))
+    )
   ) {
     console.error('[flag-registry] catalog import failed:', error)
     return { ok: false as const, error: 'Could not import this flag catalog.' }

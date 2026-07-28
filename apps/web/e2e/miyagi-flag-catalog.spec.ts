@@ -25,14 +25,23 @@ test('Miyagi import is complete, typed, and preserves current effective values',
   expect(result.ok).toBe(true)
   if (!result.ok) return
   expect(result.entries).toHaveLength(40)
-  expect(result.entries.every((entry) => entry.definition.defaultVariantKey === (entry.effectiveValue ? 'on' : 'off'))).toBe(true)
+  expect(
+    result.entries.every(
+      (entry) => entry.definition.defaultVariantKey === (entry.effectiveValue ? 'on' : 'off')
+    )
+  ).toBe(true)
   expect(result.entries.every((entry) => entry.definition.valueType === 'boolean')).toBe(true)
 })
 
 test('Miyagi import rejects an incomplete, duplicate, or unknown source export', () => {
   expect(buildMiyagiFlagImport(rows().slice(1)).ok).toBe(false)
   expect(buildMiyagiFlagImport([...rows(), rows()[0]]).ok).toBe(false)
-  expect(buildMiyagiFlagImport([...rows(), { key: 'unknown.flag', enabled: true, polarity: 'enablement', description: 'x' }]).ok).toBe(false)
+  expect(
+    buildMiyagiFlagImport([
+      ...rows(),
+      { key: 'unknown.flag', enabled: true, polarity: 'enablement', description: 'x' },
+    ]).ok
+  ).toBe(false)
 })
 
 test('Miyagi import gives a deterministic description to a legacy null source row', () => {

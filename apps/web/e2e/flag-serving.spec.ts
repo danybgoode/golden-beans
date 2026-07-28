@@ -147,7 +147,10 @@ test('catalog import is owner-scoped, idempotent, atomic on drift, and never act
   expect(second.data?.map((row) => row.version)).toEqual([1, 1])
 
   const states = await client.from('flag_environment_states').select('environment').eq('project_id', project)
-  const activations = await client.from('flag_environment_activations').select('environment').eq('project_id', project)
+  const activations = await client
+    .from('flag_environment_activations')
+    .select('environment')
+    .eq('project_id', project)
   expect(states.data).toEqual([])
   expect(activations.data).toEqual([])
 

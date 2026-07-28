@@ -132,9 +132,9 @@ function isRow(value: unknown): value is Record<string, unknown> {
  * Converts a complete Miyagi platform_flags export into Golden definitions.
  * Unknown/duplicate/malformed inputs are failures, never a silent partial import.
  */
-export function buildMiyagiFlagImport(input: unknown):
-  | { ok: true; entries: MiyagiFlagImportEntry[] }
-  | { ok: false; errors: string[] } {
+export function buildMiyagiFlagImport(
+  input: unknown
+): { ok: true; entries: MiyagiFlagImportEntry[] } | { ok: false; errors: string[] } {
   if (!Array.isArray(input)) return { ok: false, errors: ['platform flag export must be an array'] }
   const errors: string[] = []
   const rows = new Map<string, MiyagiPlatformFlagRow>()
