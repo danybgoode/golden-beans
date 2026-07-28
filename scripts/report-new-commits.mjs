@@ -81,8 +81,8 @@ export function planReports({ lastReported, commits, limit = DEFAULT_LIMIT }) {
  *
  * A local `main` can be days behind while a feature branch is checked out; that is the exact
  * failure that left production prose reports stranded. Prefer the tracking ref whenever it is
- * available. The local branch remains a deliberate offline fallback for a developer who has just
- * merged locally and has not pushed yet.
+ * available. The local branch remains an offline fallback only when this clone has no remote
+ * tracking ref; unpushed work is not deployed and must not produce a production report.
  */
 export function resolveMainRef({ requestedRef, hasOriginMain, hasLocalMain }) {
   if (requestedRef) return requestedRef;

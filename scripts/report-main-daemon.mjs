@@ -54,7 +54,10 @@ function readStatus() {
 export function lockDecision({ raw, ageMs, ownerAlive }) {
   try {
     const { pid } = JSON.parse(raw);
-    return Number.isInteger(pid) && ownerAlive ? 'held' : 'recover';
+    if (Number.isInteger(pid)) return ownerAlive ? 'held' : 'recover';
+    // Valid JSON without the owner PID is still an incomplete lock initialization. It must receive
+    // the same grace as invalid/empty JSON; otherwise a concurrent trigger can unlink it mid-write.
+    return ageMs < INITIALIZING_LOCK_GRACE_MS ? 'held' : 'recover';
   } catch {
     // `open(..., wx)` makes the filename visible a few instructions before its JSON owner metadata
     // is written. Treat that short window as HELD, never as a dead lock: unlinking it would allow a
