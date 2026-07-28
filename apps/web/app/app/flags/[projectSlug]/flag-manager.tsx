@@ -345,6 +345,12 @@ export function FlagManager({
                 <td>{entry.reason}</td>
                 <td>
                   <code>{entry.actorUserId}</code>
+                  {entry.externalActorId && (
+                    <>
+                      {' '}
+                      via <code>{entry.externalActorId}</code>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
