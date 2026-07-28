@@ -116,6 +116,7 @@ export const MIYAGI_FLAG_CATALOG: readonly MiyagiFlagCatalogEntry[] = Object.ent
   .sort((left, right) => left.key.localeCompare(right.key))
 
 const CATALOG_BY_KEY = new Map(MIYAGI_FLAG_CATALOG.map((entry) => [entry.key, entry]))
+const MAX_FLAG_DESCRIPTION_CHARACTERS = 500
 
 export type MiyagiFlagImportEntry = {
   key: string
@@ -126,6 +127,18 @@ export type MiyagiFlagImportEntry = {
 
 function isRow(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The database and SDK both cap operational descriptions at 500 Unicode characters. Keep a
+ * live-source editorial expansion from making an otherwise safe catalog import all-or-nothing. */
+function boundedDescription(description: string | null, key: string): string {
+  const normalized = description?.trim() || `Miyagi platform flag: ${key}.`
+  const characters = Array.from(normalized)
+  if (characters.length <= MAX_FLAG_DESCRIPTION_CHARACTERS) return normalized
+  return `${characters
+    .slice(0, MAX_FLAG_DESCRIPTION_CHARACTERS - 1)
+    .join('')
+    .trimEnd()}…`
 }
 
 /**
@@ -170,7 +183,7 @@ export function buildMiyagiFlagImport(
 
   const entries: MiyagiFlagImportEntry[] = MIYAGI_FLAG_CATALOG.map((catalog) => {
     const row = rows.get(catalog.key)!
-    const description = row.description?.trim() || `Miyagi platform flag: ${catalog.key}.`
+    const description = boundedDescription(row.description, catalog.key)
     const definition: FlagDefinition = {
       valueType: 'boolean',
       description,

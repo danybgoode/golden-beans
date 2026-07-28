@@ -55,3 +55,15 @@ test('Miyagi import gives a deterministic description to a legacy null source ro
     'Miyagi platform flag: growth.telemetry_enabled.'
   )
 })
+
+test('Miyagi import bounds an overlong live description to the shared SDK and database limit', () => {
+  const input = rows()
+  const portfolio = input.find((row) => row.key === 'promoter.partner_portfolio_enabled')!
+  portfolio.description = `${'x'.repeat(499)}🇲🇽 extra`
+  const result = buildMiyagiFlagImport(input)
+  expect(result.ok).toBe(true)
+  if (!result.ok) return
+  const description = result.entries.find((entry) => entry.key === portfolio.key)?.definition.description
+  expect(Array.from(description ?? '')).toHaveLength(500)
+  expect(description?.endsWith('…')).toBe(true)
+})
