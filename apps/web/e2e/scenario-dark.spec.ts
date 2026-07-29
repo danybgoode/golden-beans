@@ -70,6 +70,10 @@ test('security runner is a flat 404 before body or credential work while OFF', a
 test('automatic breaker is a flat 404 before body or credential work while OFF', async ({
   request,
 }) => {
+  test.skip(
+    process.env.AUTOMATIC_CIRCUIT_BREAKERS_ENABLED === 'true',
+    'dedicated dark-path pass requires AUTOMATIC_CIRCUIT_BREAKERS_ENABLED=false'
+  )
   for (const options of [
     {},
     { headers: { Authorization: 'Bearer invalid' }, data: { malformed: true } },
