@@ -28,9 +28,21 @@ const MAX_ERROR_CHARS = 500
 // waiting for an endless one. The default Node sender also drains body-forbidden statuses so their
 // sockets are released without constructing an invalid Response.
 const MAX_RESPONSE_BODY_BYTES = 0
+const OWNERSHIP_PROOF_HEADER = 'x-golden-beans-ownership-proof'
+const OWNERSHIP_PROOF = /^[0-9a-f]{64}$/
 
 export type GuardedHttpFailure =
   'invalid_target' | 'blocked_target' | 'dns_failure' | 'timeout' | 'network_error'
+
+type GuardedHttpFailureResult = {
+  outcome: 'failure'
+  classification: GuardedHttpFailure
+  /** Lets a caller apply its own bounded retry policy without parsing error prose. */
+  retryable: boolean
+  status: null
+  latencyMs: number
+  error: string
+}
 
 export type GuardedHttpResult =
   | {
@@ -38,15 +50,17 @@ export type GuardedHttpResult =
       status: number
       latencyMs: number
     }
+  | GuardedHttpFailureResult
+
+export type GuardedHttpOwnershipProofResult =
   | {
-      outcome: 'failure'
-      classification: GuardedHttpFailure
-      /** Lets a caller apply its own bounded retry policy without parsing error prose. */
-      retryable: boolean
-      status: null
+      outcome: 'response'
+      status: number
       latencyMs: number
-      error: string
+      /** The one allow-listed response header, only when it is exactly a SHA-256 hex proof. */
+      proof: string | null
     }
+  | GuardedHttpFailureResult
 
 export type GuardedHttpPost = {
   targetUrl: string
@@ -157,15 +171,18 @@ function pinnedFetch(
       (response) => {
         try {
           const status = response.statusCode ?? 0
+          const rawProof = response.headers[OWNERSHIP_PROOF_HEADER]
+          const proof = typeof rawProof === 'string' && OWNERSHIP_PROOF.test(rawProof) ? rawProof : undefined
+          const headers = proof ? { [OWNERSHIP_PROOF_HEADER]: proof } : undefined
           // 204/205/304 forbid a Response body. Draining is safe here because a compliant HTTP
           // parser exposes no message body for these statuses; constructing Response(stream) would
           // throw and used to strand a claimed delivery.
           if (status === 204 || status === 205 || status === 304) {
             response.resume()
-            resolve(new Response(null, { status }))
+            resolve(new Response(null, { status, headers }))
           } else {
             const webBody = Readable.toWeb(response) as unknown as ReadableStream<Uint8Array>
-            resolve(new Response(webBody, { status }))
+            resolve(new Response(webBody, { status, headers }))
           }
         } catch (error) {
           reject(error instanceof Error ? error : new Error(String(error)))
@@ -288,6 +305,17 @@ export async function guardedHttpPost(input: GuardedHttpPost): Promise<GuardedHt
 }
 
 /**
+ * Ownership-verification variant. It returns only one exact 64-hex proof header; every other
+ * header and all response bytes remain unavailable. Security simulations use guardedHttpPost(),
+ * never this narrower registration-only seam.
+ */
+export async function guardedHttpOwnershipProofPost(
+  input: GuardedHttpPost
+): Promise<GuardedHttpOwnershipProofResult> {
+  return runGuardedHttpPost(input, {}, true)
+}
+
+/**
  * Test-only dependency injection. Production callers use guardedHttpPost(), whose signature makes
  * replacing the pinned sender impossible. This remains separate rather than an optional argument
  * on the reusable API so a later caller cannot casually pass global fetch and reopen DNS rebinding.
@@ -299,10 +327,28 @@ export async function guardedHttpPostForTest(
   return runGuardedHttpPost(input, dependencies)
 }
 
+export async function guardedHttpOwnershipProofPostForTest(
+  input: GuardedHttpPost,
+  dependencies: GuardedHttpDependencies
+): Promise<GuardedHttpOwnershipProofResult> {
+  return runGuardedHttpPost(input, dependencies, true)
+}
+
+function runGuardedHttpPost(
+  input: GuardedHttpPost,
+  dependencies?: GuardedHttpDependencies,
+  captureOwnershipProof?: false
+): Promise<GuardedHttpResult>
+function runGuardedHttpPost(
+  input: GuardedHttpPost,
+  dependencies: GuardedHttpDependencies,
+  captureOwnershipProof: true
+): Promise<GuardedHttpOwnershipProofResult>
 async function runGuardedHttpPost(
   input: GuardedHttpPost,
-  dependencies: GuardedHttpDependencies = {}
-): Promise<GuardedHttpResult> {
+  dependencies: GuardedHttpDependencies = {},
+  captureOwnershipProof = false
+): Promise<GuardedHttpResult | GuardedHttpOwnershipProofResult> {
   const target = await guardTarget(input.targetUrl, dependencies.resolveHost ?? defaultResolveHost)
   if (!target.ok) {
     return {
@@ -338,6 +384,15 @@ async function runGuardedHttpPost(
     // durable error/audit record. Ignore cancellation errors exactly as the shipped webhook path did.
     if (MAX_RESPONSE_BODY_BYTES === 0) await response.body?.cancel().catch(() => {})
 
+    if (captureOwnershipProof) {
+      const value = response.headers.get(OWNERSHIP_PROOF_HEADER)
+      return {
+        outcome: 'response',
+        status: response.status,
+        latencyMs,
+        proof: value !== null && OWNERSHIP_PROOF.test(value) ? value : null,
+      }
+    }
     return { outcome: 'response', status: response.status, latencyMs }
   } catch (error) {
     const latencyMs = Date.now() - startedAt

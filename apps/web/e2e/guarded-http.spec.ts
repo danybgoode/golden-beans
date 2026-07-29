@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { test } from '@playwright/test'
-import { guardedHttpPost, guardedHttpPostForTest, type GuardedHttpPost } from '@/lib/guarded-http'
+import {
+  guardedHttpOwnershipProofPostForTest,
+  guardedHttpPost,
+  guardedHttpPostForTest,
+  type GuardedHttpPost,
+} from '@/lib/guarded-http'
 import { deliverWebhook } from '@/lib/webhook-delivery'
 import type { DeliverableDestination } from '@/lib/destinations'
 
@@ -217,6 +222,42 @@ test('redirects are returned as status-only responses and are never followed', a
   assert.equal(webhookResult.disposition, 'permanent')
   assert.equal(webhookResult.status, 302)
   assert.equal(webhookResult.error, 'HTTP 302')
+})
+
+test('ownership verification exposes only one exact proof header and never response bytes', async () => {
+  const proof = 'a'.repeat(64)
+  const accepted = await guardedHttpOwnershipProofPostForTest(REQUEST, {
+    resolveHost: PUBLIC_RESOLVE,
+    fetchImpl: (async () =>
+      new Response('discarded', {
+        status: 200,
+        headers: {
+          'x-golden-beans-ownership-proof': proof,
+          'x-private-diagnostic': 'must-not-escape',
+        },
+      })) as typeof fetch,
+  })
+  assert.deepEqual(accepted, {
+    outcome: 'response',
+    status: 200,
+    latencyMs: accepted.latencyMs,
+    proof,
+  })
+  assert.equal('body' in accepted, false)
+  assert.equal('headers' in accepted, false)
+
+  for (const invalid of ['A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65), 'not-a-proof']) {
+    const rejected = await guardedHttpOwnershipProofPostForTest(REQUEST, {
+      resolveHost: PUBLIC_RESOLVE,
+      fetchImpl: (async () =>
+        new Response(null, {
+          status: 204,
+          headers: { 'x-golden-beans-ownership-proof': invalid },
+        })) as typeof fetch,
+    })
+    assert.equal(rejected.outcome, 'response')
+    if (rejected.outcome === 'response') assert.equal(rejected.proof, null)
+  }
 })
 
 test('the request deadline aborts an in-flight sender and reports a retryable timeout', async () => {
