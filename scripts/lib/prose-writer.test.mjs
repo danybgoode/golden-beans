@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planWriters, writeProse, buildWriterPrompt } from './prose-writer.mjs';
+import { planWriters, writeProse, buildWriterPrompt, runCodex } from './prose-writer.mjs';
 
 const CLEAN =
   'Whoever ships next gets faster feedback, and a whole class of mistake is caught before it lands.';
@@ -23,6 +23,17 @@ test('planWriters: DEVIN leads, agy follows — the division of labour, expresse
   // It was briefly reversed while diagnosing a lost register — the cause turned out to be PROSE_MODEL
   // pointing at a Gemini slug, not the router, so the order is back where it was designed.
   assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true }), ['devin', 'agy']);
+});
+
+test('planWriters: codex is the third and last quota pool', () => {
+  assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true, codexAvailable: true }), [
+    'devin',
+    'agy',
+    'codex',
+  ]);
+  assert.deepEqual(planWriters({ devinAvailable: false, agyAvailable: false, codexAvailable: true }), [
+    'codex',
+  ]);
 });
 
 test('planWriters: devin carries it alone when agy is missing (a real, separate quota pool)', () => {
@@ -118,12 +129,39 @@ test('a draft that never satisfies the guard is STILL RETURNED, flagged, never s
   // it, with ok:false and the findings attached, and let the caller surface them.
   const r = writeProse(
     { prompt: 'p', evidence: {} },
-    { devin: okWriter(DIRTY), agy: okWriter(DIRTY), has: () => true, warn: silent }
+    {
+      devin: okWriter(DIRTY),
+      agy: okWriter(DIRTY),
+      codex: okWriter(DIRTY),
+      has: () => true,
+      warn: silent,
+    }
   );
   assert.equal(r.ok, false);
   assert.equal(r.text, DIRTY, 'the draft must be handed back for a human to fix');
   assert.ok(r.guard.findings.length > 0, 'and it must carry the reasons');
   assert.ok(r.guard.findings.some((f) => f.code === 'invented-beneficiary'));
+});
+
+test('runCodex sends the evidence prompt on stdin and trims its result', () => {
+  let call;
+  const r = runCodex('the full evidence pack', {
+    run: (directive, stdin) => {
+      call = { directive, stdin };
+      return { ok: true, text: '  Finished report.  ' };
+    },
+  });
+  assert.equal(call.stdin, 'the full evidence pack');
+  assert.ok(call.directive.length < 200);
+  assert.deepEqual(r, { ok: true, text: 'Finished report.', model: 'codex' });
+});
+
+test('runCodex does not retry an authentication lapse', () => {
+  const r = runCodex('p', {
+    run: () => ({ ok: false, text: '', authFailed: true, stderr: 'session ended' }),
+  });
+  assert.equal(r.ok, false);
+  assert.equal(r.retryable, false);
 });
 
 test('no writer available is an honest failure, not an empty success', () => {

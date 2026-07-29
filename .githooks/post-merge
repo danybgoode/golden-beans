@@ -5,7 +5,7 @@
 # moment new shipped commits arrive in this checkout, so it is when a report is owed. No schedule to
 # interpret, no cloud runner, no model deciding when to fire.
 #
-# Why a hook and not CI: the prose writers (`devin`, `agy`) authenticate through interactive OAuth and
+# Why a hook and not CI: the prose writers authenticate through interactive local credentials and
 # expose no headless credential path, so a GitHub Actions runner cannot produce prose at all
 # (Roadmap/LEARNINGS.md). The mechanical 📦/🚀 pings stay in the workflow where they belong; the prose
 # is local by necessity, and this makes it automatic rather than remembered.
@@ -46,12 +46,18 @@ command -v node >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo '')"
 [ -n "$root" ] || exit 0
 [ -f "$root/scripts/report-main-daemon.mjs" ] || exit 0
+gitdir="$(git rev-parse --git-common-dir 2>/dev/null || echo '')"
+[ -n "$gitdir" ] || exit 0
+case "$gitdir" in
+  /*) ;;
+  *) gitdir="$root/$gitdir" ;;
+esac
 
 # Backgrounded and fully detached: a prose model can take a minute, and property 1 says `git pull`
 # must not wait for it. Output goes to a log rather than the terminal so a pull stays readable, and
 # `|| true` means even a crash in the reporter cannot affect git's exit status.
 (
-  node "$root/scripts/report-main-daemon.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
+  node "$root/scripts/report-main-daemon.mjs" >>"$gitdir/gb-commit-report.log" 2>&1 || true
 ) &
 
 exit 0
