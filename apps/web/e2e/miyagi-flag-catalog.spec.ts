@@ -14,9 +14,12 @@ function rows(): MiyagiPlatformFlagRow[] {
   }))
 }
 
-test('Miyagi catalog contains the complete 40-key inventory with exactly 12 backend enforcement keys', () => {
+test('Miyagi catalog contains 40 keys with 11 shared and one backend-only enforcement seam', () => {
   expect(MIYAGI_FLAG_CATALOG).toHaveLength(40)
-  expect(MIYAGI_FLAG_CATALOG.filter((entry) => entry.enforcement === 'both')).toHaveLength(12)
+  expect(MIYAGI_FLAG_CATALOG.filter((entry) => entry.enforcement === 'both')).toHaveLength(11)
+  expect(MIYAGI_FLAG_CATALOG.filter((entry) => entry.enforcement === 'backend')).toEqual([
+    expect.objectContaining({ key: 'ml.orders_enabled' }),
+  ])
   expect(new Set(MIYAGI_FLAG_CATALOG.map((entry) => entry.key)).size).toBe(40)
 })
 

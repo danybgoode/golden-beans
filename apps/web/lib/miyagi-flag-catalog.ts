@@ -31,6 +31,7 @@ const BACKEND_KEYS = new Set([
   'catalog.inventory_channels_enabled',
   'catalog.bulk_enabled',
 ])
+const BACKEND_ONLY_KEYS = new Set(['ml.orders_enabled'])
 
 const HIGH_CRITICALITY = new Set([
   'checkout.stripe_enabled',
@@ -111,7 +112,7 @@ export const MIYAGI_FLAG_CATALOG: readonly MiyagiFlagCatalogEntry[] = Object.ent
     key,
     compileDefault,
     criticality: HIGH_CRITICALITY.has(key) ? 'high' : MEDIUM_CRITICALITY.has(key) ? 'medium' : 'low',
-    enforcement: BACKEND_KEYS.has(key) ? 'both' : 'frontend',
+    enforcement: BACKEND_ONLY_KEYS.has(key) ? 'backend' : BACKEND_KEYS.has(key) ? 'both' : 'frontend',
   }))
   .sort((left, right) => left.key.localeCompare(right.key))
 
