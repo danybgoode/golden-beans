@@ -167,7 +167,7 @@ export function runCodex(prompt, deps = {}) {
     ok: false,
     text: '',
     model: 'codex',
-    error: `codex returned no output${result.stderr ? `: ${String(result.stderr).trim().split('\n').at(-1)}` : ''}`,
+    error: `codex failed or returned no output${result.stderr ? `: ${String(result.stderr).trim().split('\n').at(-1)}` : ''}`,
     retryable: true,
   };
 }

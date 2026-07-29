@@ -132,7 +132,7 @@ const BENEFICIARY_PATTERNS = [
  * disclosure made the guard contradict its own brief and caused the docs-only report retry loop.
  */
 const NO_IMPACT_PATTERNS = [
-  /\bno (?:user|customer|tenant|merchant|buyer)[- ]visible\b/i,
+  /\bno (?:user|customer|tenant|merchant|buyer|client|shopper|subscriber)[- ]visible\b/i,
   /\b(?:nothing|none|no)\b[^.]{0,40}\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:see|saw|notice|noticed|observe)\b/i,
   /\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:are|is|were|was)\s+(?:not|un)(?:affected|changed|impacted)\b/i,
   /\bunaffected\b/i,
