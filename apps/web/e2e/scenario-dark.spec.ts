@@ -12,6 +12,13 @@ test('resilience snapshot is a flat 404 before credential work while its root ga
   })
   expect(response.status()).toBe(404)
   expect(await response.text()).toBe('')
+
+  const execution = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: 'Bearer deliberately-invalid' },
+    data: 'not-json',
+  })
+  expect(execution.status()).toBe(404)
+  expect(await execution.text()).toBe('')
 })
 
 test('execution stays dark while emergency stop remains reachable with both scenario gates OFF', async ({

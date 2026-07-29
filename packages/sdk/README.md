@@ -66,6 +66,19 @@ await scenarios.initialize()
 const resolution = scenarios.resolveScenario('miyagi.internal.probe', {
   targetingKey: 'synthetic:readiness-check',
 })
+
+if (resolution.runId && resolution.runRevision) {
+  const reservation = await scenarios.reserveExecution(resolution.runId, resolution.runRevision)
+  if (reservation.ok && reservation.admitted) {
+    let succeeded = false
+    try {
+      // Apply the closed resolution.value at this one instrumented target seam.
+      succeeded = true
+    } finally {
+      await scenarios.settleExecution(resolution.runId, reservation.leaseId, succeeded)
+    }
+  }
+}
 ```
 
 After the target reserves and settles a server-issued execution lease, record the canonical

@@ -362,7 +362,9 @@ async function cleanupFixtures() {
 
 test.afterAll(cleanupFixtures)
 
-test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and globally capped', async () => {
+test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and globally capped', async ({
+  request,
+}) => {
   const client = db()
   const ownerA = await fixtureUser(client, 'lifecycle-a')
   const ownerB = await fixtureUser(client, 'lifecycle-b')
@@ -471,19 +473,55 @@ test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and glo
     p_key_hash: hashCredential(credentialsB.readKey),
   })
   expect(foreignSnapshot.data?.[0]?.scenarios).toEqual([])
-  const foreignReserve = await client.rpc('reserve_scenario_execution', {
-    p_key_hash: hashCredential(credentialsB.readKey),
-    p_run_id: draft.run_id,
-    p_expected_run_revision: 2,
+  const foreignReserve = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: `Bearer ${credentialsB.readKey}` },
+    data: {
+      operation: 'reserve',
+      runId: draft.run_id,
+      expectedRunRevision: 2,
+    },
   })
-  expect(foreignReserve.error).toBeNull()
-  expect(foreignReserve.data).toEqual([])
+  expect(foreignReserve.status()).toBe(401)
+  expect(await foreignReserve.json()).toEqual({
+    ok: false,
+    error: 'Invalid scenario execution credential',
+  })
+  const wrongScope = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: `Bearer ${credentialsA.adminKey}` },
+    data: {
+      operation: 'reserve',
+      runId: draft.run_id,
+      expectedRunRevision: 2,
+    },
+  })
+  expect(wrongScope.status()).toBe(401)
+  const callerExpanded = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: `Bearer ${credentialsA.readKey}` },
+    data: {
+      operation: 'reserve',
+      runId: draft.run_id,
+      expectedRunRevision: 2,
+      projectId: projectA,
+    },
+  })
+  expect(callerExpanded.status()).toBe(400)
 
-  const first = await client.rpc('reserve_scenario_execution', {
-    p_key_hash: hashCredential(credentialsA.readKey),
-    p_run_id: draft.run_id,
-    p_expected_run_revision: 2,
+  const firstResponse = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: `Bearer ${credentialsA.readKey}` },
+    data: {
+      operation: 'reserve',
+      runId: draft.run_id,
+      expectedRunRevision: 2,
+    },
   })
+  expect(firstResponse.status()).toBe(200)
+  expect(firstResponse.headers()['cache-control']).toBe('no-store')
+  const first = (await firstResponse.json()) as {
+    leaseId: string
+    runRevision: number
+    admitted: boolean
+    reason: string
+  }
   const second = await client.rpc('reserve_scenario_execution', {
     p_key_hash: hashCredential(credentialsA.readKey),
     p_run_id: draft.run_id,
@@ -494,20 +532,30 @@ test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and glo
     p_run_id: draft.run_id,
     p_expected_run_revision: 2,
   })
-  expect(first.data?.[0]).toMatchObject({ admitted: true, reason: 'ADMITTED' })
+  expect(first).toMatchObject({
+    operation: 'reserve',
+    runRevision: 2,
+    admitted: true,
+    reason: 'ADMITTED',
+  })
   expect(second.data?.[0]).toMatchObject({ admitted: true, reason: 'ADMITTED' })
   expect(concurrent.data?.[0]).toMatchObject({ admitted: false, reason: 'CONCURRENCY_CAP' })
 
-  const settledFirst = await client.rpc('settle_scenario_execution', {
-    p_key_hash: hashCredential(credentialsA.readKey),
-    p_run_id: draft.run_id,
-    p_lease_id: first.data?.[0]?.lease_id,
-    p_succeeded: true,
+  const settledFirstResponse = await request.post('/api/v1/scenarios/execution', {
+    headers: { Authorization: `Bearer ${credentialsA.readKey}` },
+    data: {
+      operation: 'settle',
+      runId: draft.run_id,
+      leaseId: first.leaseId,
+      succeeded: true,
+    },
   })
-  expect(settledFirst.data?.[0]).toMatchObject({
+  expect(settledFirstResponse.status()).toBe(200)
+  expect(await settledFirstResponse.json()).toMatchObject({
+    operation: 'settle',
     settled: true,
-    run_status: 'running',
-    success_count: 1,
+    runStatus: 'running',
+    successCount: 1,
   })
   const third = await client.rpc('reserve_scenario_execution', {
     p_key_hash: hashCredential(credentialsA.readKey),

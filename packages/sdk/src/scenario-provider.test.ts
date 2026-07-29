@@ -161,3 +161,110 @@ test('stale, shutdown, timeout and 304-without-baseline all fail to control with
   })
   assert.equal((await timeout.initialize()).ok, false)
 })
+
+test('reserves and settles database-enforced leases through the scoped execution endpoint', async () => {
+  const requests: Array<{ url: string; authorization: string; body: unknown }> = []
+  const provider = createScenarioProvider({
+    baseUrl: 'https://golden.example/',
+    flagReadKey: 'secret-read-key',
+    refreshIntervalMs: 0,
+    fetchImpl: async (input, init) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>
+      requests.push({
+        url: String(input),
+        authorization: (init?.headers as Record<string, string>).Authorization,
+        body,
+      })
+      if (body.operation === 'reserve') {
+        return Response.json({
+          operation: 'reserve',
+          leaseId: '22222222-2222-4222-8222-222222222222',
+          runRevision: 3,
+          expiresAt: '2026-07-29T02:00:10.000Z',
+          admitted: true,
+          reason: 'ADMITTED',
+        })
+      }
+      return Response.json({
+        operation: 'settle',
+        leaseId: '22222222-2222-4222-8222-222222222222',
+        runRevision: 3,
+        runStatus: 'running',
+        activeLeaseCount: 0,
+        successCount: 1,
+        failureCount: 0,
+        settled: true,
+        reason: 'SETTLED',
+      })
+    },
+  })
+
+  const reserved = await provider.reserveExecution('11111111-1111-4111-8111-111111111111', 3)
+  assert.equal(reserved.ok, true)
+  if (!reserved.ok || !reserved.admitted) assert.fail('expected admitted reservation')
+  const settled = await provider.settleExecution(
+    '11111111-1111-4111-8111-111111111111',
+    reserved.leaseId,
+    true
+  )
+  assert.equal(settled.ok, true)
+  assert.deepEqual(requests, [
+    {
+      url: 'https://golden.example/api/v1/scenarios/execution',
+      authorization: 'Bearer secret-read-key',
+      body: {
+        operation: 'reserve',
+        runId: '11111111-1111-4111-8111-111111111111',
+        expectedRunRevision: 3,
+      },
+    },
+    {
+      url: 'https://golden.example/api/v1/scenarios/execution',
+      authorization: 'Bearer secret-read-key',
+      body: {
+        operation: 'settle',
+        runId: '11111111-1111-4111-8111-111111111111',
+        leaseId: '22222222-2222-4222-8222-222222222222',
+        succeeded: true,
+      },
+    },
+  ])
+})
+
+test('execution rejects invalid input and malformed or failed responses without throwing', async () => {
+  let calls = 0
+  let response = new Response('unavailable', { status: 503 })
+  const provider = createScenarioProvider({
+    baseUrl: 'https://golden.example',
+    flagReadKey: 'read-key',
+    refreshIntervalMs: 0,
+    fetchImpl: async () => {
+      calls += 1
+      return response
+    },
+  })
+
+  const invalid = await provider.reserveExecution('not-a-uuid', 1)
+  assert.deepEqual(invalid, {
+    ok: false,
+    errorCode: 'INVALID_ARGUMENT',
+    errorMessage: 'Invalid scenario execution reservation.',
+  })
+  assert.equal(calls, 0)
+
+  const unavailable = await provider.reserveExecution('11111111-1111-4111-8111-111111111111', 1)
+  assert.equal(unavailable.ok, false)
+  assert.equal(calls, 1)
+
+  response = Response.json({
+    operation: 'reserve',
+    leaseId: null,
+    runRevision: 1,
+    expiresAt: null,
+    admitted: true,
+    reason: 'ADMITTED',
+  })
+  const malformed = await provider.reserveExecution('11111111-1111-4111-8111-111111111111', 1)
+  assert.equal(malformed.ok, false)
+  assert.equal(calls, 2)
+})

@@ -109,6 +109,9 @@ export type {
 } from './scenarios'
 export { createScenarioProvider } from './scenario-provider'
 export type {
+  ScenarioExecutionFailure,
+  ScenarioExecutionReservation,
+  ScenarioExecutionSettlement,
   ScenarioProvider,
   ScenarioProviderConfig,
   ScenarioProviderRefreshResult,
