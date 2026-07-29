@@ -1,7 +1,7 @@
 {
   "name": "@golden-beans/sdk",
   "private": false,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Golden Beans Growth Engine TypeScript SDK for telemetry, experiments, and local feature-flag evaluation.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
