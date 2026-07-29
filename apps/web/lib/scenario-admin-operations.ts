@@ -78,6 +78,7 @@ type ScenarioAuditEntry = {
     | 'execution_settled'
     | 'execution_lease_expired'
     | 'security_result_recorded'
+    | 'impact_evidence_recorded'
   actorUserId: string
   externalActorId: string | null
   reason: string
@@ -199,6 +200,7 @@ function validAuditEntry(value: unknown): value is ScenarioAuditEntry {
       'execution_settled',
       'execution_lease_expired',
       'security_result_recorded',
+      'impact_evidence_recorded',
     ].includes(String(value.action)) &&
     typeof value.actorUserId === 'string' &&
     stringOrNull(value.externalActorId) &&

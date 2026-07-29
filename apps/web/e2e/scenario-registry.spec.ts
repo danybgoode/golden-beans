@@ -102,6 +102,60 @@ async function fixtureFlag(client: SupabaseClient, projectId: string, ownerId: s
   return data[0] as { flag_id: string; version_id: string; version: number }
 }
 
+async function fixtureExperiment(
+  client: SupabaseClient,
+  projectId: string,
+  ownerId: string,
+  key: string,
+  flag: { flag_id: string; version_id: string }
+) {
+  const now = Date.now()
+  const { data, error } = await client.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: key,
+    p_definition: {
+      hypothesis: 'A bounded resilience fault changes the internal probe outcome.',
+      assignmentEntityType: 'probe',
+      eligibility: { description: 'Synthetic internal resilience subjects only.' },
+      variants: [
+        { key: 'control', weight: 1 },
+        { key: 'delay', weight: 1 },
+        { key: 'synthetic_error', weight: 1 },
+      ],
+      controlVariantKey: 'control',
+      primaryMetric: { event: 'probe_completed', direction: 'increase' },
+      guardrailMetrics: [{ event: 'probe_failed', direction: 'decrease' }],
+      segmentFields: [],
+      plannedWindow: {
+        startAt: new Date(now - 60_000).toISOString(),
+        endAt: new Date(now + 30 * 60_000).toISOString(),
+      },
+      minimumSamplePerVariant: 1,
+    },
+    p_actor_user_id: ownerId,
+  })
+  if (error || !data?.[0]) throw new Error(`could not create scenario experiment: ${error?.message}`)
+  const version = data[0] as { experiment_id: string; version_id: string; version: number }
+  const binding = await client.rpc('bind_experiment_flag_version', {
+    p_project_id: projectId,
+    p_experiment_id: version.experiment_id,
+    p_experiment_version_id: version.version_id,
+    p_flag_id: flag.flag_id,
+    p_flag_version_id: flag.version_id,
+    p_actor_user_id: ownerId,
+  })
+  if (binding.error) throw new Error(`could not bind scenario experiment: ${binding.error.message}`)
+  const started = await client.rpc('transition_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_id: version.experiment_id,
+    p_version_id: version.version_id,
+    p_target_status: 'running',
+    p_actor_user_id: ownerId,
+  })
+  if (started.error) throw new Error(`could not start scenario experiment: ${started.error.message}`)
+  return version
+}
+
 async function fixtureTarget(client: SupabaseClient, adminKey: string, label: string) {
   const challengeHash = hashCredential(`challenge-${crypto.randomUUID()}`)
   const targetKey = `miyagi.${label}.probe`
@@ -144,6 +198,7 @@ function scenarioDefinition({
   abortAfterFailures = 1,
   maxErrorRateBasisPoints = 10_000,
   securityTemplate = 'malformed_payload_v1',
+  experiment,
 }: {
   targetKey: string
   flagKey: string
@@ -158,6 +213,7 @@ function scenarioDefinition({
   maxErrorRateBasisPoints?: number
   securityTemplate?:
     'malformed_payload_v1' | 'rate_limit_v1' | 'invalid_credential_v1' | 'revoked_credential_v1'
+  experiment?: { key: string; definitionVersion: number }
 }) {
   return {
     contractVersion: 1,
@@ -170,6 +226,7 @@ function scenarioDefinition({
     limits: { requestCap, concurrencyCap, leaseTtlSeconds },
     guardrails: { abortAfterFailures, maxErrorRateBasisPoints },
     flag: { key: flagKey, definitionVersion: 1 },
+    ...(experiment ? { experiment } : {}),
     ...(kind === 'security' ? { securityTemplate } : {}),
   }
 }
@@ -214,6 +271,9 @@ async function cleanupFixtures() {
       await pg.query('BEGIN')
       await pg.query('DELETE FROM public.audit_log WHERE project_id = ANY($1::uuid[])', [projectIds])
       await pg.query('DELETE FROM public.projects WHERE id = ANY($1::uuid[])', [projectIds])
+      await pg.query('DELETE FROM public.scenario_impact_evidence WHERE project_id = ANY($1::uuid[])', [
+        projectIds,
+      ])
       await pg.query('DELETE FROM public.scenario_lifecycle_audit WHERE project_id = ANY($1::uuid[])', [
         projectIds,
       ])
@@ -780,6 +840,186 @@ test('expired leases are reclaimed and scenario TTL lazily resolves to control',
   })
 })
 
+test('impact capture persists one immutable tenant-bound canonical evidence snapshot', async ({
+  request,
+}) => {
+  const client = db()
+  const owner = await fixtureUser(client, 'impact')
+  const project = await fixtureProject(client, owner, 'impact')
+  const credentials = await fixtureCredentials(client, project, owner, 'impact')
+  const flag = await fixtureFlag(client, project, owner, 'scenario.impact_probe')
+  const experimentKey = `scenario_impact_${Date.now()}`
+  const experiment = await fixtureExperiment(client, project, owner, experimentKey, flag)
+  const target = await fixtureTarget(client, credentials.adminKey, 'impact')
+  const version = await createScenario(
+    client,
+    credentials.adminKey,
+    'impact_probe',
+    scenarioDefinition({
+      targetKey: target.targetKey,
+      flagKey: 'scenario.impact_probe',
+      experiment: { key: experimentKey, definitionVersion: experiment.version },
+      abortAfterFailures: 10,
+    })
+  )
+  const run = await createRun(client, credentials.adminKey, version.scenario_version_id)
+  const started = await client.rpc('start_scenario_run', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: run.run_id,
+    p_expected_revision: 1,
+    p_reason: 'start impact fixture',
+    p_external_actor_id: ACTOR,
+  })
+  expect(started.data?.[0]?.revision).toBe(2)
+
+  const facts = [
+    {
+      project_id: project,
+      user_id: 'impact-executor',
+      event: 'experiment_exposed',
+      feature_id: experimentKey,
+      tags: { variant: 'control', experiment_definition_version: experiment.version },
+      context_version: 1,
+      subject_type: 'probe',
+      subject_id: 'impact-control-1',
+    },
+    {
+      project_id: project,
+      user_id: 'impact-executor',
+      event: 'experiment_exposed',
+      feature_id: experimentKey,
+      tags: { variant: 'delay', experiment_definition_version: experiment.version },
+      context_version: 1,
+      subject_type: 'probe',
+      subject_id: 'impact-fault-1',
+    },
+    {
+      project_id: project,
+      user_id: 'impact-executor',
+      event: 'probe_completed',
+      tags: {},
+      context_version: 1,
+      subject_type: 'probe',
+      subject_id: 'impact-control-1',
+    },
+    {
+      project_id: project,
+      user_id: 'impact-executor',
+      event: 'scenario_executed',
+      feature_id: 'impact_probe',
+      tags: {
+        scenario_definition_version: version.version,
+        run_id: run.run_id,
+        arm: 'control',
+        failed: false,
+        latency_ms: 10,
+      },
+      context_version: 1,
+      subject_type: 'probe',
+      subject_id: 'impact-control-1',
+    },
+    {
+      project_id: project,
+      user_id: 'impact-executor',
+      event: 'scenario_executed',
+      feature_id: 'impact_probe',
+      tags: {
+        scenario_definition_version: version.version,
+        run_id: run.run_id,
+        arm: 'fault',
+        failed: true,
+        latency_ms: 50,
+      },
+      context_version: 1,
+      subject_type: 'probe',
+      subject_id: 'impact-fault-1',
+    },
+  ]
+  expect((await client.from('events').insert(facts)).error).toBeNull()
+  const asOf = new Date().toISOString()
+  const idempotencyKey = crypto.randomUUID()
+  const capture = await request.post('/api/v1/scenarios/impact', {
+    headers: {
+      Authorization: `Bearer ${credentials.adminKey}`,
+      'x-miyagi-clerk-actor': ACTOR,
+    },
+    data: {
+      runId: run.run_id,
+      asOf,
+      idempotencyKey,
+      reason: 'Capture immutable internal impact evidence.',
+    },
+  })
+  expect(capture.status()).toBe(200)
+  const body = await capture.json()
+  expect(body).toMatchObject({
+    ok: true,
+    created: true,
+    evidence: {
+      contractVersion: 1,
+      cohort: 'internal',
+      scenario: { key: 'impact_probe', definitionVersion: 1, runId: run.run_id },
+      technical: {
+        control: { attempts: 1, failures: 0, latencyP95Ms: 10 },
+        fault: { attempts: 1, failures: 1, latencyP95Ms: 50 },
+        nonZeroDifference: true,
+      },
+      claim: { causal: false },
+    },
+  })
+
+  const replay = await request.post('/api/v1/scenarios/impact', {
+    headers: {
+      Authorization: `Bearer ${credentials.adminKey}`,
+      'x-miyagi-clerk-actor': ACTOR,
+    },
+    data: {
+      runId: run.run_id,
+      asOf,
+      idempotencyKey,
+      reason: 'Capture immutable internal impact evidence.',
+    },
+  })
+  expect(await replay.json()).toMatchObject({
+    ok: true,
+    evidenceId: body.evidenceId,
+    created: false,
+  })
+  const listed = await request.get('/api/v1/scenarios/impact', {
+    headers: { Authorization: `Bearer ${credentials.adminKey}` },
+  })
+  expect((await listed.json()).evidence[0]).toMatchObject({
+    id: body.evidenceId,
+    runId: run.run_id,
+    scenarioKey: 'impact_probe',
+  })
+  const foreignOwner = await fixtureUser(client, 'impact-foreign')
+  const foreignProject = await fixtureProject(client, foreignOwner, 'impact-foreign')
+  const foreignCredentials = await fixtureCredentials(
+    client,
+    foreignProject,
+    foreignOwner,
+    'impact-foreign'
+  )
+  const foreign = await request.get('/api/v1/scenarios/impact', {
+    headers: { Authorization: `Bearer ${foreignCredentials.adminKey}` },
+  })
+  expect((await foreign.json()).evidence).toEqual([])
+
+  const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
+  await pg.connect()
+  try {
+    await expect(
+      pg.query(
+        'UPDATE public.scenario_impact_evidence SET reason = $1 WHERE id = $2',
+        ['rewritten', body.evidenceId]
+      )
+    ).rejects.toMatchObject({ code: '55000' })
+  } finally {
+    await pg.end()
+  }
+})
+
 test('every scenario RPC denies anon/authenticated at the function boundary', async () => {
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
@@ -800,6 +1040,9 @@ test('every scenario RPC denies anon/authenticated at the function boundary', as
       'public.reserve_security_scenario_execution(text,uuid,bigint)',
       'public.settle_security_scenario_execution(text,uuid,uuid,smallint[],integer)',
       'public.get_scenario_security_results(text)',
+      'public.get_scenario_impact_source(text,uuid,timestamp with time zone)',
+      'public.record_scenario_impact_evidence(text,uuid,jsonb,text,text,uuid)',
+      'public.get_scenario_impact_evidence(text)',
     ]
     for (const signature of signatures) {
       const privilege = await pg.query<{
