@@ -25,8 +25,6 @@ function exactReferences(policy: BreakerPolicyDefinition, evidence: ScenarioImpa
   return (
     evidence.scenario.key === policy.evidence.scenario.key &&
     evidence.scenario.definitionVersion === policy.evidence.scenario.definitionVersion &&
-    evidence.flag.key === policy.flag.key &&
-    evidence.flag.definitionVersion === policy.flag.definitionVersion &&
     evidence.experiment.key === policy.evidence.experiment.key &&
     evidence.experiment.definitionVersion === policy.evidence.experiment.definitionVersion
   )

@@ -8,7 +8,7 @@ const NOW = Date.parse('2026-07-29T02:00:00.000Z')
 const POLICY: BreakerPolicyDefinition = {
   contractVersion: 1,
   flag: {
-    key: 'resilience.disposable_safe_flag',
+    key: 'disposable.safe_flag',
     definitionVersion: 2,
     protectiveVariantKey: 'off',
     protectiveDirection: 'disable',
@@ -41,7 +41,9 @@ function evidence(delta = 0.15): ScenarioImpactEvidence {
       runId: '11111111-1111-4111-8111-111111111111',
       runRevision: 5,
     },
-    flag: { key: 'resilience.disposable_safe_flag', definitionVersion: 2 },
+    // This is the scenario's closed fault-payload flag, not the business flag the breaker
+    // protects. The immutable scenario version binds it independently.
+    flag: { key: 'resilience.probe_payload', definitionVersion: 7 },
     experiment: { key: 'probe_impact', definitionVersion: 1 },
     cohort: 'internal',
     technical: {
@@ -147,9 +149,15 @@ test('an exact, fresh, integrity-valid threshold crossing is eligible even when 
   })
 })
 
+test('the breaker flag is independent from the scenario fault-payload flag', () => {
+  const result = evidence()
+  result.flag = { key: 'resilience.another_payload', definitionVersion: 9 }
+  assert.equal(resolveBreakerEvidence(POLICY, result, NOW).reason, 'threshold_crossed')
+})
+
 test('reference, freshness, integrity, sample and metric checks independently fail closed', () => {
   const mismatched = evidence()
-  mismatched.flag.definitionVersion = 99
+  mismatched.scenario.definitionVersion = 99
   assert.equal(resolveBreakerEvidence(POLICY, mismatched, NOW).reason, 'reference_mismatch')
 
   assert.equal(resolveBreakerEvidence(POLICY, evidence(), NOW + 901_000).reason, 'evidence_expired')
