@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: shipped
 slug: design-system-lift
 ---
 
@@ -51,3 +51,12 @@ ingot—the working magic bean that grows without an artificial ceiling.
 - Browser gate: desktop and mobile screenshots of `/`, `/login`, `/install`, and a representative
   signed-in shell or its loading state; verify no horizontal overflow and visible keyboard focus.
 - Asset check: every SVG in `apps/web/public/brand` parses and the React mark uses Lucide’s `Bean`.
+
+## Shipped
+
+The full lift shipped in Golden Beans PR [#51](https://github.com/danybgoode/golden-beans/pull/51)
+and its corrective handoff follow-up [#53](https://github.com/danybgoode/golden-beans/pull/53) on
+2026-07-28. The approved visual system now covers public, auth, install, and signed-in routes;
+the navigation loader and route safeguards are in place; and the drift guard runs locally and in
+CI. The post-handoff review also preserved feature-gated 404 semantics by keeping guards above
+streaming shell/loading boundaries.
