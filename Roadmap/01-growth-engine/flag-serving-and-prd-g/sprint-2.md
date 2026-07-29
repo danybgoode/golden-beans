@@ -1,7 +1,8 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 2: Complete Miyagi migration
 
-**Status:** 🟡 in progress — catalog and Golden-backed admin operations are live; adapters remain
-in shadow and parity/cutover remain deliberately incomplete
+**Status:** 🟡 in progress — catalog and Golden-backed admin operations are live; adapters retain
+shadow capability but the active production services currently default to `local`, so fresh shadow
+parity and staged cutover remain deliberately incomplete
 
 ## Stories
 
@@ -35,10 +36,10 @@ cutover.
   distinct. Snapshot serving remains credential-scoped.
 - Miyagi's frontend adapter PR [#318](https://github.com/danybgoode/miyagisanchezcommerce/pull/318)
   and Medusa backend adapter PR [#117](https://github.com/danybgoode/medusa-bonsai-backend/pull/117)
-  preserve their existing `isEnabled()` seams. Both production Cloud Run revisions now run
-  `shadow` mode with a dedicated, revocable 30-day `flag_read` credential; local
-  `platform_flags` remains authoritative. Golden's `FLAG_SERVING_ENABLED` gate is live through
-  a Git-tracked deployment, but only the scoped snapshot endpoint is exposed.
+  preserve their existing `isEnabled()` seams. They established `shadow` capability with a
+  dedicated, revocable 30-day `flag_read` credential while local `platform_flags` remained
+  authoritative. Golden's `FLAG_SERVING_ENABLED` gate is live through a Git-tracked deployment,
+  but only the scoped snapshot endpoint is exposed.
 - Frontend PR [#319](https://github.com/danybgoode/miyagisanchezcommerce/pull/319) and backend
   PR [#118](https://github.com/danybgoode/medusa-bonsai-backend/pull/118) corrected the parity
   observer for production builds: Sentry removes `console.info`, so its already-bounded,
@@ -49,7 +50,7 @@ cutover.
   the GCP migration and restored with their documented dedicated CI/CD service accounts. The
   automatic deployments from the two merges succeeded, proving the tracked `main` → Cloud Build
   → Cloud Run rail again (frontend `miyagi-web-00101-rk6`; backend `medusa-web-00178-7kv`).
-- Production shadow proof is now real, not just configuration: a warmed frontend instance recorded
+- Historical production shadow proof is real, not just configuration: a warmed frontend instance recorded
   `promoter.enabled` and `content.overrides_enabled`, and the Medusa catalog read recorded
   `catalog.inventory_channels_enabled`. Every record used Golden snapshot version 40, immutable
   flag version 1 and `STATIC` resolution; Golden and local values matched. No request telemetry,
@@ -91,7 +92,9 @@ Miyagi actor and Golden version; frontend/backend converge within the bounded re
 - Miyagi frontend PR [#322](https://github.com/danybgoode/miyagisanchezcommerce/pull/322) merged with
   all required CI and preview checks green. `/admin/flags` now uses the Golden server seam with a
   verified Clerk actor, scoped credential, reason, and optimistic snapshot version; it has no
-  local operational read/write fallback. Provider runtime mode remains `shadow`.
+  local operational read/write fallback. The active production services currently default to
+  `local`: their provider mode/read-key/environment variables are absent, so their parser fails
+  safely to local. Re-establish and prove `shadow` before any cutover.
 - A new revocable `flag_admin` credential is pinned to the Golden `miyagi` project and
   `production` environment. Its opaque value is stored only in the `miyagisanchez-prod` Secret
   Manager and is accessible only to `miyagi-web`'s runtime service account; no browser variable or
