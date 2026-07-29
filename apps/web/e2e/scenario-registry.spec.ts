@@ -8,6 +8,10 @@ const ACTOR = 'user_ScenarioFixture'
 const projectIds: string[] = []
 const userIds: string[] = []
 
+// These DB fixtures create auth users through one local GoTrue admin endpoint. Parallel creation
+// intermittently exhausts that tiny local service before a test reaches the scenario code at all.
+test.describe.configure({ mode: 'serial' })
+
 const closedFaultFlag = {
   valueType: 'json',
   description: 'Disposable closed resilience payload.',
@@ -37,14 +41,19 @@ function db(): SupabaseClient {
 }
 
 async function fixtureUser(client: SupabaseClient, label: string): Promise<string> {
-  const { data, error } = await client.auth.admin.createUser({
-    email: `scenario-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`,
-    password: 'local-only-scenario-password',
-    email_confirm: true,
-  })
-  if (error || !data.user) throw new Error(`could not create scenario user: ${error?.message}`)
-  userIds.push(data.user.id)
-  return data.user.id
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    const { data, error } = await client.auth.admin.createUser({
+      email: `scenario-${label}-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`,
+      password: 'local-only-scenario-password',
+      email_confirm: true,
+    })
+    if (!error && data.user) {
+      userIds.push(data.user.id)
+      return data.user.id
+    }
+    if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, attempt * 250))
+  }
+  throw new Error('could not create scenario user after bounded local-auth retries')
 }
 
 async function fixtureProject(client: SupabaseClient, userId: string, label: string): Promise<string> {
@@ -154,6 +163,62 @@ async function fixtureExperiment(
   })
   if (started.error) throw new Error(`could not start scenario experiment: ${started.error.message}`)
   return version
+}
+
+async function fixtureProtectedFlag(
+  client: SupabaseClient,
+  projectId: string,
+  ownerId: string,
+  key: string,
+  expectedSnapshotVersion: number
+) {
+  const definition = (defaultVariantKey: 'on' | 'off') => ({
+    valueType: 'boolean',
+    description: 'Disposable breaker-protected static flag.',
+    defaultVariantKey,
+    variants: [
+      { key: 'on', value: true },
+      { key: 'off', value: false },
+    ],
+    rules: [],
+    metadata: { source: 'breaker_fixture' },
+  })
+  const unsafe = await client.rpc('create_flag_definition_version', {
+    p_project_id: projectId,
+    p_flag_key: key,
+    p_definition: definition('on'),
+    p_reason: 'create disposable unsafe flag version',
+    p_actor_user_id: ownerId,
+  })
+  const safe = await client.rpc('create_flag_definition_version', {
+    p_project_id: projectId,
+    p_flag_key: key,
+    p_definition: definition('off'),
+    p_reason: 'create disposable protective flag version',
+    p_actor_user_id: ownerId,
+  })
+  if (unsafe.error || safe.error || !unsafe.data?.[0] || !safe.data?.[0]) {
+    throw new Error(`could not create breaker flag: ${unsafe.error?.message ?? safe.error?.message}`)
+  }
+  const activated = await client.rpc('set_flag_activation', {
+    p_project_id: projectId,
+    p_environment: 'production',
+    p_flag_id: unsafe.data[0].flag_id,
+    p_version_id: unsafe.data[0].version_id,
+    p_expected_snapshot_version: expectedSnapshotVersion,
+    p_reason: 'activate disposable unsafe fixture version',
+    p_actor_user_id: ownerId,
+  })
+  if (activated.error || !activated.data?.[0]) {
+    throw new Error(`could not activate breaker fixture: ${activated.error?.message}`)
+  }
+  return {
+    flagId: unsafe.data[0].flag_id as string,
+    unsafeVersionId: unsafe.data[0].version_id as string,
+    safeVersionId: safe.data[0].version_id as string,
+    safeVersion: Number(safe.data[0].version),
+    snapshotVersion: Number(activated.data[0].snapshot_version),
+  }
 }
 
 async function fixtureTarget(client: SupabaseClient, adminKey: string, label: string) {
@@ -872,36 +937,33 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   })
   expect(started.data?.[0]?.revision).toBe(2)
 
-  const facts = [
-    {
-      project_id: project,
-      user_id: 'impact-executor',
-      event: 'experiment_exposed',
-      feature_id: experimentKey,
-      tags: { variant: 'control', experiment_definition_version: experiment.version },
-      context_version: 1,
-      subject_type: 'probe',
-      subject_id: 'impact-control-1',
-    },
-    {
-      project_id: project,
-      user_id: 'impact-executor',
-      event: 'experiment_exposed',
-      feature_id: experimentKey,
-      tags: { variant: 'delay', experiment_definition_version: experiment.version },
-      context_version: 1,
-      subject_type: 'probe',
-      subject_id: 'impact-fault-1',
-    },
-    {
-      project_id: project,
-      user_id: 'impact-executor',
-      event: 'probe_completed',
-      tags: {},
-      context_version: 1,
-      subject_type: 'probe',
-      subject_id: 'impact-control-1',
-    },
+  const facts: Array<Record<string, unknown>> = []
+  for (const variant of ['control', 'delay', 'synthetic_error']) {
+    for (let index = 0; index < 5; index += 1) {
+      facts.push({
+        project_id: project,
+        user_id: 'impact-executor',
+        event: 'experiment_exposed',
+        feature_id: experimentKey,
+        tags: { variant, experiment_definition_version: experiment.version },
+        context_version: 1,
+        subject_type: 'probe',
+        subject_id: `impact-${variant}-${index}`,
+      })
+      if (variant === 'control') {
+        facts.push({
+          project_id: project,
+          user_id: 'impact-executor',
+          event: 'probe_completed',
+          tags: {},
+          context_version: 1,
+          subject_type: 'probe',
+          subject_id: `impact-${variant}-${index}`,
+        })
+      }
+    }
+  }
+  facts.push(
     {
       project_id: project,
       user_id: 'impact-executor',
@@ -934,7 +996,7 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
       subject_type: 'probe',
       subject_id: 'impact-fault-1',
     },
-  ]
+  )
   expect((await client.from('events').insert(facts)).error).toBeNull()
   const asOf = new Date().toISOString()
   const idempotencyKey = crypto.randomUUID()
@@ -1006,6 +1068,195 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   })
   expect((await foreign.json()).evidence).toEqual([])
 
+  const headers = {
+    Authorization: `Bearer ${credentials.adminKey}`,
+    'x-miyagi-clerk-actor': ACTOR,
+  }
+  const policyDefinition = (
+    flagKey: string,
+    safeVersion: number,
+    confirmationMode: 'manual' | 'owner_preapproved_emergency',
+    riskClass: 'standard' | 'money_auth_checkout'
+  ) => ({
+    contractVersion: 1,
+    flag: {
+      key: flagKey,
+      definitionVersion: safeVersion,
+      protectiveVariantKey: 'off',
+      protectiveDirection: 'disable',
+    },
+    evidence: {
+      resolver: 'scenario_impact_v1',
+      scenario: { key: 'impact_probe', definitionVersion: version.version },
+      experiment: { key: experimentKey, definitionVersion: experiment.version },
+      metricRole: 'primary',
+      metricEvent: 'probe_completed',
+      adverseDirection: 'decrease',
+      thresholdBasisPoints: 1_000,
+      minimumSamplePerVariant: 1,
+      requiredIntegrity: 'valid',
+    },
+    windowSeconds: 3_600,
+    cooldownSeconds: 60,
+    maxTrips: 2,
+    riskClass,
+    confirmationMode,
+  })
+
+  const manualFlag = await fixtureProtectedFlag(
+    client,
+    project,
+    owner,
+    'breaker.manual_probe',
+    0
+  )
+  const manualPolicyResponse = await request.post('/api/v1/breakers/admin', {
+    headers,
+    data: {
+      operation: 'create_policy',
+      policyKey: 'manual_probe',
+      definition: policyDefinition(
+        'breaker.manual_probe',
+        manualFlag.safeVersion,
+        'manual',
+        'standard'
+      ),
+      reason: 'Create a staged manual breaker fixture.',
+    },
+  })
+  expect(manualPolicyResponse.status()).toBe(200)
+  const manualPolicy = await manualPolicyResponse.json()
+  const preparedResponse = await request.post('/api/v1/breakers/admin', {
+    headers,
+    data: {
+      operation: 'prepare_manual',
+      policyId: manualPolicy.policy_id,
+      evidenceId: body.evidenceId,
+      expectedPolicyRevision: 1,
+      expectedSnapshotVersion: manualFlag.snapshotVersion,
+      reason: 'Prepare the reviewed manual protective transition.',
+    },
+  })
+  expect(preparedResponse.status()).toBe(200)
+  const prepared = await preparedResponse.json()
+  expect(prepared.confirmationPhrase).toMatch(/^TRIP-/)
+  const manualTripResponse = await request.post('/api/v1/breakers/admin', {
+    headers,
+    data: {
+      operation: 'trip_manual',
+      policyId: manualPolicy.policy_id,
+      evidenceId: body.evidenceId,
+      expectedPolicyRevision: 1,
+      expectedSnapshotVersion: manualFlag.snapshotVersion,
+      confirmationId: prepared.confirmation_id,
+      confirmationPhrase: prepared.confirmationPhrase,
+      reason: 'Apply the confirmed manual protective transition.',
+    },
+  })
+  expect(manualTripResponse.status()).toBe(200)
+  const manualTrip = await manualTripResponse.json()
+  expect(manualTrip).toMatchObject({
+    policy_revision: 2,
+    snapshot_version: manualFlag.snapshotVersion + 1,
+    trip_count: 1,
+    changed: true,
+  })
+  expect(
+    (
+      await client
+        .from('flag_environment_activations')
+        .select('version_id')
+        .eq('project_id', project)
+        .eq('environment', 'production')
+        .eq('flag_id', manualFlag.flagId)
+        .single()
+    ).data?.version_id
+  ).toBe(manualFlag.safeVersionId)
+
+  const autoFlag = await fixtureProtectedFlag(
+    client,
+    project,
+    owner,
+    'breaker.auto_probe',
+    manualTrip.snapshot_version
+  )
+  const autoPolicyResponse = await request.post('/api/v1/breakers/admin', {
+    headers,
+    data: {
+      operation: 'create_policy',
+      policyKey: 'auto_probe',
+      definition: policyDefinition(
+        'breaker.auto_probe',
+        autoFlag.safeVersion,
+        'owner_preapproved_emergency',
+        'money_auth_checkout'
+      ),
+      reason: 'Create a disposable emergency auto-breaker fixture.',
+    },
+  })
+  expect(autoPolicyResponse.status()).toBe(200)
+  const autoPolicy = await autoPolicyResponse.json()
+  const automaticCommand = {
+    policyId: autoPolicy.policy_id,
+    evidenceId: body.evidenceId,
+    expectedPolicyRevision: 1,
+    expectedSnapshotVersion: autoFlag.snapshotVersion,
+    reason: 'Apply the owner-approved automatic protective transition.',
+  }
+  const unapproved = await request.post('/api/v1/breakers/automatic', {
+    headers: { Authorization: `Bearer ${credentials.adminKey}` },
+    data: automaticCommand,
+  })
+  expect(unapproved.status()).toBe(403)
+  const approval = await request.post('/api/v1/breakers/admin', {
+    headers,
+    data: {
+      operation: 'approve_automatic',
+      policyId: autoPolicy.policy_id,
+      reason: 'Explicitly pre-authorize this disposable emergency policy.',
+    },
+  })
+  expect(approval.status()).toBe(200)
+  const automatic = await request.post('/api/v1/breakers/automatic', {
+    headers: { Authorization: `Bearer ${credentials.adminKey}` },
+    data: automaticCommand,
+  })
+  expect(automatic.status()).toBe(200)
+  const automaticTrip = await automatic.json()
+  expect(automaticTrip).toMatchObject({
+    policy_revision: 2,
+    snapshot_version: autoFlag.snapshotVersion + 1,
+    trip_count: 1,
+    changed: true,
+  })
+  const repeat = await request.post('/api/v1/breakers/automatic', {
+    headers: { Authorization: `Bearer ${credentials.adminKey}` },
+    data: {
+      ...automaticCommand,
+      expectedPolicyRevision: automaticTrip.policy_revision,
+      expectedSnapshotVersion: automaticTrip.snapshot_version,
+    },
+  })
+  expect(repeat.status()).toBe(409)
+  expect(
+    (
+      await client
+        .from('flag_environment_activations')
+        .select('version_id')
+        .eq('project_id', project)
+        .eq('environment', 'production')
+        .eq('flag_id', autoFlag.flagId)
+        .single()
+    ).data?.version_id
+  ).toBe(autoFlag.safeVersionId)
+  const breakerSnapshot = await request.get('/api/v1/breakers/admin', { headers })
+  const breakerBody = await breakerSnapshot.json()
+  expect(breakerBody.trips).toHaveLength(2)
+  expect(breakerBody.trips.map((trip: { mode: string }) => trip.mode).sort()).toEqual([
+    'automatic',
+    'manual',
+  ])
+
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
   try {
@@ -1014,6 +1265,12 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
         'UPDATE public.scenario_impact_evidence SET reason = $1 WHERE id = $2',
         ['rewritten', body.evidenceId]
       )
+    ).rejects.toMatchObject({ code: '55000' })
+    await expect(
+      pg.query('UPDATE public.breaker_trip_records SET reason = $1 WHERE id = $2', [
+        'rewritten',
+        automaticTrip.trip_id,
+      ])
     ).rejects.toMatchObject({ code: '55000' })
   } finally {
     await pg.end()
@@ -1043,6 +1300,11 @@ test('every scenario RPC denies anon/authenticated at the function boundary', as
       'public.get_scenario_impact_source(text,uuid,timestamp with time zone)',
       'public.record_scenario_impact_evidence(text,uuid,jsonb,text,text,uuid)',
       'public.get_scenario_impact_evidence(text)',
+      'public.create_breaker_policy(text,text,jsonb,text,text)',
+      'public.approve_breaker_automatic(text,uuid,text,text)',
+      'public.prepare_breaker_confirmation(text,uuid,uuid,bigint,bigint,text,text,text)',
+      'public.trip_breaker_policy(text,uuid,uuid,bigint,bigint,text,uuid,text,text,text)',
+      'public.get_breaker_admin_snapshot(text)',
     ]
     for (const signature of signatures) {
       const privilege = await pg.query<{

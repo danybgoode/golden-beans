@@ -66,3 +66,16 @@ test('security runner is a flat 404 before body or credential work while OFF', a
   expect(response.status()).toBe(404)
   expect(await response.text()).toBe('')
 })
+
+test('automatic breaker is a flat 404 before body or credential work while OFF', async ({
+  request,
+}) => {
+  for (const options of [
+    {},
+    { headers: { Authorization: 'Bearer invalid' }, data: { malformed: true } },
+  ]) {
+    const response = await request.post('/api/v1/breakers/automatic', options)
+    expect(response.status()).toBe(404)
+    expect(await response.text()).toBe('')
+  }
+})
