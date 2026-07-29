@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: shipped
 slug: notification-rails
 ---
 
@@ -29,3 +29,11 @@ state.
 ## Sprint
 
 See [sprint-1.md](sprint-1.md).
+
+## Shipped
+
+Sprint 1 shipped in Golden Beans PR [#51](https://github.com/danybgoode/golden-beans/pull/51)
+on 2026-07-28. It added Slack delivery for the mechanical push/deploy rail and the local reviewed
+prose rail, with shared bounded text handling, plain-text webhook verdicts, and retry-safe
+per-destination delivery state. The remaining live-channel configuration check is an operating
+follow-up, not unshipped product scope.

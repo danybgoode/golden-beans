@@ -65,10 +65,11 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
-- 🚧 [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
+- ✅ [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
   approved dark-roast/kraft/foil system · reusable public/product rails · restrained route loaders
-  · automated drift guard) — corrective implementation on `fix/apply-approved-design-handoff`,
-  sourced directly from the supplied proposal folder and round-two mark exploration.
+  · automated drift guard) — **shipped 2026-07-28** (PRs #51/#53), sourced directly from the
+  supplied proposal folder and round-two mark exploration; the visual rails now cover public,
+  auth, install, and signed-in routes without weakening gated-route HTTP semantics.
 - ✅ [Multi-tenant activation](02-commercial/multi-tenant-activation/README.md) (auth hardening ·
   self-serve tenants · pod trials) — **Sprint 1 live in production** (2026-07-21): Supabase Auth +
   per-tenant membership, dashboards behind real authorization (slug-guessing returns 404, no
@@ -107,9 +108,11 @@ independently shippable slice of value.
   2026-07-20) with a live demo token on `/install`. Staying on the `vercel.app` domain for v1.
 
 ### 09 · Platform & Infra
-- 🚧 [Notification rails](09-platform-infra/notification-rails/README.md) (Telegram + Slack
+- ✅ [Notification rails](09-platform-infra/notification-rails/README.md) (Telegram + Slack
   mechanical push/deploy pings · identical reviewed prose reports · per-channel retry checkpoints)
-  — merged in PR #51; Slack uses a channel-scoped Incoming Webhook and plain-text response handling.
+  — **shipped 2026-07-28** (PR #51); Slack uses a channel-scoped Incoming Webhook and plain-text
+  response handling, while the local report checkpoint advances only after every configured channel
+  accepts the reviewed prose.
 
 ---
 

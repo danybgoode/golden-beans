@@ -1,6 +1,7 @@
 # Sprint 2 — Product shell and loaders
 
-**Status:** 🟨 In progress
+**Status:** ✅ Shipped — Golden Beans PRs [#51](https://github.com/danybgoode/golden-beans/pull/51)
+and [#53](https://github.com/danybgoode/golden-beans/pull/53), 2026-07-28
 
 ## Story 2.1 — A product shell instead of bare HTML
 
@@ -37,3 +38,12 @@ mobile widths, including focus visibility and horizontal overflow.
 **Acceptance:** A zero-dependency guard scans `landing/` and `app/`, is unit-tested, runs in
 pre-commit for relevant paths, and has a dedicated CI workflow. The landing contains no
 `style={{}}` declarations.
+
+## Shipped evidence
+
+- Signed-in routes share the branded shell, resilient component defaults, and responsive layout
+  rails without changing their authorization or tenancy boundaries.
+- The approved navigation/submission loader provides the gold status dot, sequential phrases,
+  accessible live region, and reduced-motion behavior without adding a streamed route boundary.
+- Desktop/mobile browser coverage and the tested design-drift guard protect the representative
+  public, auth, install, and signed-in surfaces in CI and pre-commit.

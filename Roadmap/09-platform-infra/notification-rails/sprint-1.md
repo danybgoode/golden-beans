@@ -1,6 +1,7 @@
 # Sprint 1 — Slack parity
 
-**Status:** 🟨 In progress
+**Status:** ✅ Shipped — Golden Beans PR [#51](https://github.com/danybgoode/golden-beans/pull/51),
+2026-07-28
 
 ## Story 1.1 — Mechanical CI/CD pings
 
@@ -30,3 +31,13 @@ instead of silently advancing.
 **Acceptance:** Slack mirrors Telegram’s convergence and delivery tests; shared text behavior has
 one implementation; workflow handoff has a structural test; the roadmap and ways-of-working name
 both destinations and the live channel check still owed after merge.
+
+## Shipped evidence
+
+- Mechanical push and production-deploy notifications now resolve one set of deployment facts and
+  send bounded channel-specific payloads to Telegram and Slack.
+- Reviewed local merge prose uses one rendered message and advances its checkpoint only after every
+  configured destination accepts it; a rejected Slack webhook remains a hard failure.
+- The Slack webhook's `ok`/error-token response contract, escaping, truncation, workflow handoff,
+  and retry semantics are covered by focused scripts tests. A real configured-channel acceptance
+  check remains an operator follow-up.

@@ -1,6 +1,7 @@
 # Sprint 1 — Brand foundation and public lift
 
-**Status:** 🟨 In progress
+**Status:** ✅ Shipped — Golden Beans PRs [#51](https://github.com/danybgoode/golden-beans/pull/51)
+and [#53](https://github.com/danybgoode/golden-beans/pull/53), 2026-07-28
 
 ## Story 1.1 — A bean that looks worth planting
 
@@ -27,3 +28,11 @@ approved interaction and state vocabulary into React.
 **Acceptance:** The public, install, and auth routes consume the supplied dark-roast/kraft/foil
 system; the hero reads “The growth engine your agent operates.” with foil on `your agent` only; and
 capability honesty remains represented by typed `live` / `next` / `blocked` badges.
+
+## Shipped evidence
+
+- The reusable Lucide `Bean` mark, asset pack, tokens, and shared UI primitives are in the app.
+- Public, install, login, signup, and landing surfaces consume the approved material system and
+  retain typed capability badges.
+- The approved handoff follow-up corrected visual drift and formalized the canonical reference
+  sources so the implementation has one durable visual contract.
