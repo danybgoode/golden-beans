@@ -14,21 +14,96 @@ BEGIN
     p_definition IS NOT NULL
     AND jsonb_typeof(p_definition) = 'object'
     AND octet_length(p_definition::TEXT) <= 32768
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_definition) AS key
+      WHERE key NOT IN (
+        'contractVersion', 'flag', 'evidence', 'windowSeconds', 'cooldownSeconds',
+        'maxTrips', 'riskClass', 'confirmationMode'
+      )
+    )
+    AND p_definition ?& ARRAY[
+      'contractVersion', 'flag', 'evidence', 'windowSeconds', 'cooldownSeconds',
+      'maxTrips', 'riskClass', 'confirmationMode'
+    ]
     AND p_definition->>'contractVersion' = '1'
+    AND jsonb_typeof(p_definition->'contractVersion') = 'number'
     AND jsonb_typeof(p_definition->'flag') = 'object'
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_definition->'flag') AS key
+      WHERE key NOT IN (
+        'key', 'definitionVersion', 'protectiveVariantKey', 'protectiveDirection'
+      )
+    )
+    AND (p_definition->'flag') ?& ARRAY[
+      'key', 'definitionVersion', 'protectiveVariantKey', 'protectiveDirection'
+    ]
+    AND jsonb_typeof(p_definition#>'{flag,key}') = 'string'
+    AND p_definition#>>'{flag,key}' ~ '^[a-z][a-z0-9_.-]{0,127}$'
+    AND jsonb_typeof(p_definition#>'{flag,definitionVersion}') = 'number'
+    AND p_definition#>>'{flag,definitionVersion}' ~ '^[0-9]+$'
+    AND (p_definition#>>'{flag,definitionVersion}')::NUMERIC BETWEEN 1 AND 2147483647
+    AND jsonb_typeof(p_definition#>'{flag,protectiveVariantKey}') = 'string'
+    AND p_definition#>>'{flag,protectiveVariantKey}' ~ '^[a-z][a-z0-9_-]{0,63}$'
+    AND p_definition#>>'{flag,protectiveDirection}' IN ('enable', 'disable', 'replace')
     AND jsonb_typeof(p_definition->'evidence') = 'object'
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_definition->'evidence') AS key
+      WHERE key NOT IN (
+        'resolver', 'scenario', 'experiment', 'metricRole', 'metricEvent',
+        'adverseDirection', 'thresholdBasisPoints', 'minimumSamplePerVariant',
+        'requiredIntegrity'
+      )
+    )
+    AND (p_definition->'evidence') ?& ARRAY[
+      'resolver', 'scenario', 'experiment', 'metricRole', 'metricEvent',
+      'adverseDirection', 'thresholdBasisPoints', 'minimumSamplePerVariant',
+      'requiredIntegrity'
+    ]
     AND p_definition#>>'{evidence,resolver}' = 'scenario_impact_v1'
     AND jsonb_typeof(p_definition#>'{evidence,scenario}') = 'object'
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_definition#>'{evidence,scenario}') AS key
+      WHERE key NOT IN ('key', 'definitionVersion')
+    )
+    AND (p_definition#>'{evidence,scenario}') ?& ARRAY['key', 'definitionVersion']
+    AND p_definition#>>'{evidence,scenario,key}' ~ '^[a-z][a-z0-9_-]{0,63}$'
+    AND jsonb_typeof(p_definition#>'{evidence,scenario,definitionVersion}') = 'number'
+    AND p_definition#>>'{evidence,scenario,definitionVersion}' ~ '^[0-9]+$'
+    AND (p_definition#>>'{evidence,scenario,definitionVersion}')::NUMERIC
+      BETWEEN 1 AND 2147483647
     AND jsonb_typeof(p_definition#>'{evidence,experiment}') = 'object'
+    AND NOT EXISTS (
+      SELECT 1 FROM jsonb_object_keys(p_definition#>'{evidence,experiment}') AS key
+      WHERE key NOT IN ('key', 'definitionVersion')
+    )
+    AND (p_definition#>'{evidence,experiment}') ?& ARRAY['key', 'definitionVersion']
+    AND p_definition#>>'{evidence,experiment,key}' ~ '^[a-z][a-z0-9_-]{0,63}$'
+    AND jsonb_typeof(p_definition#>'{evidence,experiment,definitionVersion}') = 'number'
+    AND p_definition#>>'{evidence,experiment,definitionVersion}' ~ '^[0-9]+$'
+    AND (p_definition#>>'{evidence,experiment,definitionVersion}')::NUMERIC
+      BETWEEN 1 AND 2147483647
     AND p_definition#>>'{evidence,metricRole}' IN ('primary', 'guardrail')
+    AND jsonb_typeof(p_definition#>'{evidence,metricEvent}') = 'string'
+    AND char_length(p_definition#>>'{evidence,metricEvent}') BETWEEN 1 AND 128
+    AND btrim(p_definition#>>'{evidence,metricEvent}') = p_definition#>>'{evidence,metricEvent}'
     AND p_definition#>>'{evidence,adverseDirection}' IN ('increase', 'decrease')
+    AND jsonb_typeof(p_definition#>'{evidence,thresholdBasisPoints}') = 'number'
+    AND p_definition#>>'{evidence,thresholdBasisPoints}' ~ '^[0-9]+$'
+    AND (p_definition#>>'{evidence,thresholdBasisPoints}')::INTEGER BETWEEN 1 AND 100000
+    AND jsonb_typeof(p_definition#>'{evidence,minimumSamplePerVariant}') = 'number'
+    AND p_definition#>>'{evidence,minimumSamplePerVariant}' ~ '^[0-9]+$'
+    AND (p_definition#>>'{evidence,minimumSamplePerVariant}')::INTEGER
+      BETWEEN 1 AND 1000000
     AND p_definition#>>'{evidence,requiredIntegrity}' = 'valid'
     AND p_definition->>'riskClass' IN ('standard', 'money_auth_checkout')
     AND p_definition->>'confirmationMode' IN ('manual', 'owner_preapproved_emergency')
+    AND jsonb_typeof(p_definition->'windowSeconds') = 'number'
     AND (p_definition->>'windowSeconds') ~ '^[0-9]+$'
     AND (p_definition->>'windowSeconds')::INTEGER BETWEEN 1 AND 86400
+    AND jsonb_typeof(p_definition->'cooldownSeconds') = 'number'
     AND (p_definition->>'cooldownSeconds') ~ '^[0-9]+$'
     AND (p_definition->>'cooldownSeconds')::INTEGER BETWEEN 1 AND 604800
+    AND jsonb_typeof(p_definition->'maxTrips') = 'number'
     AND (p_definition->>'maxTrips') ~ '^[0-9]+$'
     AND (p_definition->>'maxTrips')::INTEGER BETWEEN 1 AND 10,
     false
@@ -397,6 +472,7 @@ DECLARE
   v_metric JSONB;
   v_observed INTEGER;
   v_min_sample INTEGER;
+  v_generated_at TIMESTAMPTZ;
 BEGIN
   SELECT policy.* INTO v_policy FROM public.breaker_policies policy
   WHERE policy.project_id = p_project_id AND policy.id = p_policy_id;
@@ -411,8 +487,9 @@ BEGIN
      OR v_evidence.experiment_version_id <> v_policy.experiment_version_id THEN
     RETURN QUERY SELECT false, 'reference_mismatch'::TEXT, NULL::INTEGER; RETURN;
   END IF;
-  IF (v_evidence.evidence->>'generatedAt')::TIMESTAMPTZ > p_now
-     OR p_now - (v_evidence.evidence->>'generatedAt')::TIMESTAMPTZ >
+  v_generated_at := (v_evidence.evidence->>'generatedAt')::TIMESTAMPTZ;
+  IF p_now IS NULL OR v_generated_at IS NULL OR v_generated_at > p_now
+     OR p_now - v_generated_at >
         make_interval(secs => (v_policy.definition->>'windowSeconds')::INTEGER) THEN
     RETURN QUERY SELECT false, 'evidence_expired'::TEXT, NULL::INTEGER; RETURN;
   END IF;

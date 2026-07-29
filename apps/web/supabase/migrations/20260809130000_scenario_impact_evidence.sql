@@ -15,6 +15,8 @@ BEGIN
     AND jsonb_typeof(p_evidence) = 'object'
     AND octet_length(p_evidence::TEXT) <= 524288
     AND p_evidence->>'contractVersion' = '1'
+    AND jsonb_typeof(p_evidence->'generatedAt') = 'string'
+    AND (p_evidence->>'generatedAt')::TIMESTAMPTZ IS NOT NULL
     AND jsonb_typeof(p_evidence->'scenario') = 'object'
     AND jsonb_typeof(p_evidence->'flag') = 'object'
     AND jsonb_typeof(p_evidence->'experiment') = 'object'
@@ -363,7 +365,7 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'invalid scenario impact timestamp' USING ERRCODE = '22023';
   END;
-  IF v_generated_at > statement_timestamp() OR v_run.started_at IS NULL
+  IF v_generated_at IS NULL OR v_generated_at > statement_timestamp() OR v_run.started_at IS NULL
      OR v_generated_at < v_run.started_at THEN
     RAISE EXCEPTION 'invalid scenario impact timestamp' USING ERRCODE = '22023';
   END IF;

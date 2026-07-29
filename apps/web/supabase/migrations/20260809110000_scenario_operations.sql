@@ -703,17 +703,18 @@ BEGIN
   WHERE run.project_id = v_key.project_id AND run.id = p_run_id
   FOR UPDATE;
   IF NOT FOUND THEN RETURN; END IF;
-  IF v_run.revision <> p_expected_revision THEN
-    -- P0001 is an application conflict. SQLSTATE 40001 makes PostgREST treat a stale browser
-    -- revision as a retryable transaction and can hold the request open.
-    RAISE EXCEPTION 'scenario run revision conflict' USING ERRCODE = 'P0001';
-  END IF;
   IF v_run.status = 'running' THEN
     SELECT state.snapshot_version INTO v_snapshot_version
     FROM public.scenario_environment_states state
     WHERE state.project_id = v_key.project_id AND state.environment = v_run.environment;
     RETURN QUERY SELECT v_run.id, v_run.revision, v_snapshot_version, false;
     RETURN;
+  END IF;
+  IF v_run.revision <> p_expected_revision THEN
+    -- P0001 is an application conflict. SQLSTATE 40001 makes PostgREST treat a stale browser
+    -- revision as a retryable transaction and can hold the request open. Check after the
+    -- idempotent running-state return so a lost successful response can be retried safely.
+    RAISE EXCEPTION 'scenario run revision conflict' USING ERRCODE = 'P0001';
   END IF;
   IF v_run.status <> 'draft' THEN
     RAISE EXCEPTION 'scenario run cannot be restarted' USING ERRCODE = '55000';
@@ -860,15 +861,17 @@ BEGIN
   WHERE run.project_id = v_key.project_id AND run.id = p_run_id
   FOR UPDATE;
   IF NOT FOUND THEN RETURN; END IF;
-  IF v_run.revision <> p_expected_revision THEN
-    RAISE EXCEPTION 'scenario run revision conflict' USING ERRCODE = 'P0001';
-  END IF;
   IF v_run.status IN ('stopped', 'aborted', 'expired') THEN
     SELECT state.snapshot_version INTO v_snapshot_version
     FROM public.scenario_environment_states state
     WHERE state.project_id = v_key.project_id AND state.environment = v_run.environment;
     RETURN QUERY SELECT v_run.id, v_run.revision, v_snapshot_version, false;
     RETURN;
+  END IF;
+  IF v_run.revision <> p_expected_revision THEN
+    -- Terminal-state retries are idempotent even when the successful first transition advanced
+    -- the revision beyond the caller's last observed value.
+    RAISE EXCEPTION 'scenario run revision conflict' USING ERRCODE = 'P0001';
   END IF;
   IF v_run.status <> 'running' THEN
     RAISE EXCEPTION 'scenario run is not active' USING ERRCODE = '55000';

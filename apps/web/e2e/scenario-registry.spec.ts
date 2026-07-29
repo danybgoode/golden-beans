@@ -389,6 +389,15 @@ test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and glo
   })
   expect(started.error).toBeNull()
   expect(started.data?.[0]).toMatchObject({ revision: 2, changed: true })
+  const startRetry = await client.rpc('start_scenario_run', {
+    p_key_hash: hashCredential(credentialsA.adminKey),
+    p_run_id: draft.run_id,
+    p_expected_revision: draft.revision,
+    p_reason: 'retry a start whose response was lost',
+    p_external_actor_id: ACTOR,
+  })
+  expect(startRetry.error).toBeNull()
+  expect(startRetry.data?.[0]).toMatchObject({ revision: 2, changed: false })
 
   const stale = await client.rpc('transition_scenario_run', {
     p_key_hash: hashCredential(credentialsA.adminKey),
@@ -534,6 +543,16 @@ test('scenario lifecycle is tenant-bound, snapshot-safe, CAS-controlled, and glo
     failure_count: 1,
   })
   expect(tripped.data?.[0]?.run_revision).toBe(3)
+  const transitionRetry = await client.rpc('transition_scenario_run', {
+    p_key_hash: hashCredential(credentialsA.adminKey),
+    p_run_id: draft.run_id,
+    p_expected_revision: 2,
+    p_transition: 'abort',
+    p_reason: 'retry an abort whose response was lost',
+    p_external_actor_id: ACTOR,
+  })
+  expect(transitionRetry.error).toBeNull()
+  expect(transitionRetry.data?.[0]).toMatchObject({ revision: 3, changed: false })
 
   const afterAbort = await client.rpc('get_scenario_read_snapshot', {
     p_key_hash: hashCredential(credentialsA.readKey),
@@ -1029,6 +1048,17 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
       claim: { causal: false },
     },
   })
+  const missingGeneratedAt = structuredClone(body.evidence) as Record<string, unknown>
+  delete missingGeneratedAt.generatedAt
+  const undated = await client.rpc('record_scenario_impact_evidence', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: run.run_id,
+    p_evidence: missingGeneratedAt,
+    p_reason: 'Undated evidence must be rejected.',
+    p_external_actor_id: ACTOR,
+    p_idempotency_key: crypto.randomUUID(),
+  })
+  expect(undated.error?.code).toBe('22023')
 
   const replay = await request.post('/api/v1/scenarios/impact', {
     headers: {
@@ -1260,6 +1290,15 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
   try {
+    const incompletePolicy = structuredClone(
+      policyDefinition('breaker.manual_probe', manualFlag.safeVersion, 'manual', 'standard')
+    ) as { evidence: Record<string, unknown> }
+    delete incompletePolicy.evidence.thresholdBasisPoints
+    const validation = await pg.query<{ valid: boolean }>(
+      'SELECT private.breaker_policy_definition_is_valid($1::jsonb) AS valid',
+      [JSON.stringify(incompletePolicy)]
+    )
+    expect(validation.rows[0]?.valid).toBe(false)
     await expect(
       pg.query(
         'UPDATE public.scenario_impact_evidence SET reason = $1 WHERE id = $2',
