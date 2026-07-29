@@ -51,7 +51,9 @@ function assertMacLaunchd() {
 
 function status() {
   const result = command(['print', `gui/${uid}/${LABEL}`], { quiet: true });
-  process.stdout.write(result.status === 0 ? '✓ launchd runner is loaded.\n' : '○ launchd runner is not loaded.\n');
+  process.stdout.write(
+    result.status === 0 ? '✓ launchd runner is loaded.\n' : '○ launchd runner is not loaded.\n'
+  );
   const statusPath = join(GIT_COMMON_DIR, 'gb-main-report-status.json');
   if (existsSync(statusPath)) process.stdout.write(readFileSync(statusPath, 'utf8'));
   else process.stdout.write('No runner execution has been recorded yet.\n');
@@ -74,7 +76,9 @@ function install() {
   const loaded = command(['bootstrap', `gui/${uid}`, target], { quiet: true });
   if (loaded.status !== 0) throw new Error(`launchctl could not load ${target}`);
   process.stdout.write(`✓ installed ${LABEL}; it runs now and every five minutes.\n`);
-  process.stdout.write(`  logs: ${logPath}\n  status: node scripts/install-main-report-daemon.mjs --status\n`);
+  process.stdout.write(
+    `  logs: ${logPath}\n  status: node scripts/install-main-report-daemon.mjs --status\n`
+  );
 }
 
 function uninstall() {

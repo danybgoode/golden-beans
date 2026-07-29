@@ -26,14 +26,14 @@ test('planWriters: DEVIN leads, agy follows — the division of labour, expresse
 });
 
 test('planWriters: codex is the third and last quota pool', () => {
-  assert.deepEqual(
-    planWriters({ devinAvailable: true, agyAvailable: true, codexAvailable: true }),
-    ['devin', 'agy', 'codex']
-  );
-  assert.deepEqual(
-    planWriters({ devinAvailable: false, agyAvailable: false, codexAvailable: true }),
-    ['codex']
-  );
+  assert.deepEqual(planWriters({ devinAvailable: true, agyAvailable: true, codexAvailable: true }), [
+    'devin',
+    'agy',
+    'codex',
+  ]);
+  assert.deepEqual(planWriters({ devinAvailable: false, agyAvailable: false, codexAvailable: true }), [
+    'codex',
+  ]);
 });
 
 test('planWriters: devin carries it alone when agy is missing (a real, separate quota pool)', () => {

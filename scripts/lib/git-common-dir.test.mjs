@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveGitCommonDir } from './git-common-dir.mjs';
 
-const result = (stdout, status = 0, stderr = '') => () => ({ stdout, status, stderr });
+const result =
+  (stdout, status = 0, stderr = '') =>
+  () => ({ stdout, status, stderr });
 
 test('resolveGitCommonDir resolves a normal checkout relative to its root', () => {
   assert.equal(resolveGitCommonDir('/repo', result('.git\n')), '/repo/.git');

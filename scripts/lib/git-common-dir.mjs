@@ -14,7 +14,11 @@ export function resolveGitCommonDir(repoRoot, run = spawnSync) {
     encoding: 'utf8',
   });
   if (result.status !== 0) {
-    const detail = String(result.stderr || '').trim().split('\n').at(-1) || 'unknown error';
+    const detail =
+      String(result.stderr || '')
+        .trim()
+        .split('\n')
+        .at(-1) || 'unknown error';
     throw new Error(`could not resolve Git common directory: ${detail}`);
   }
   const value = String(result.stdout || '').trim();

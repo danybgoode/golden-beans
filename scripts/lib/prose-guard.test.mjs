@@ -42,16 +42,14 @@ test('…but a REAL customer-facing change may name customers', () => {
 
 test('an explicit no-impact disclosure is allowed for internal work', () => {
   for (const beneficiary of ['customer', 'client', 'shopper', 'subscriber']) {
-    const draft =
-      `The roadmap now records the agreed operating boundary. There was no ${beneficiary}-visible effect.`;
+    const draft = `The roadmap now records the agreed operating boundary. There was no ${beneficiary}-visible effect.`;
     const r = checkProse(draft, { allowsBeneficiary: false });
     assert.ok(!codes(r).includes('invented-beneficiary'), `${beneficiary}: ${JSON.stringify(r.findings)}`);
   }
 });
 
 test('a no-impact sentence does not launder a separate positive beneficiary claim', () => {
-  const draft =
-    'There was no customer-visible effect. Users now benefit from faster and safer publishing.';
+  const draft = 'There was no customer-visible effect. Users now benefit from faster and safer publishing.';
   const r = checkProse(draft, { allowsBeneficiary: false });
   assert.ok(codes(r).includes('invented-beneficiary'));
 });

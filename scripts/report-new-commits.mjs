@@ -111,18 +111,20 @@ function main() {
 
   // `main` specifically, never HEAD: the hook can fire while a feature branch is checked out, and a
   // feature commit is not something to report. `origin/main` wins over a stale local checkout.
-  const mainRef = resolveMainRef({
-    requestedRef,
-    hasOriginMain: Boolean(git(['rev-parse', '--verify', 'origin/main'], { allowFail: true })),
-    hasLocalMain: Boolean(git(['rev-parse', '--verify', 'main'], { allowFail: true })),
-  }) ?? die('neither `main` nor `origin/main` resolves — nothing to report against.');
+  const mainRef =
+    resolveMainRef({
+      requestedRef,
+      hasOriginMain: Boolean(git(['rev-parse', '--verify', 'origin/main'], { allowFail: true })),
+      hasLocalMain: Boolean(git(['rev-parse', '--verify', 'main'], { allowFail: true })),
+    }) ?? die('neither `main` nor `origin/main` resolves — nothing to report against.');
 
   const head = git(['rev-parse', mainRef]);
   const last = readState();
 
   if (status) {
     process.stdout.write(
-      JSON.stringify({ ref: mainRef, head, lastReported: last, pending: last === head ? 0 : 'unknown' }) + '\n'
+      JSON.stringify({ ref: mainRef, head, lastReported: last, pending: last === head ? 0 : 'unknown' }) +
+        '\n'
     );
     return;
   }
