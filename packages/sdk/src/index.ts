@@ -100,6 +100,14 @@ export type {
   ScenarioSnapshotEntry,
   ScenarioSnapshotResult,
 } from './scenarios'
+export { createScenarioProvider } from './scenario-provider'
+export type {
+  ScenarioProvider,
+  ScenarioProviderConfig,
+  ScenarioProviderRefreshResult,
+  ScenarioProviderResolution,
+  ScenarioProviderStatus,
+} from './scenario-provider'
 
 /**
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.
