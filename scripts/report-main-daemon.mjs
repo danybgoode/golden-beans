@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // report-main-daemon.mjs — local, retrying delivery trigger for production prose reports.
 //
-// GitHub Actions cannot run the interactive OAuth-backed Devin/Agy writers. This process is run by
+// GitHub Actions cannot run the interactive OAuth-backed local writer chain. This process is run by
 // the user's launchd agent instead: fetch the deployed branch without changing the checkout, then
 // delegate exactly-once-per-channel delivery to report-new-commits.mjs. A failed fetch, writer, or channel send
 // leaves that reporter's baseline untouched, so the next interval retries rather than losing a report.
@@ -19,11 +19,13 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveGitCommonDir } from './lib/git-common-dir.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
-const STATUS_PATH = join(REPO_ROOT, '.git', 'gb-main-report-status.json');
-const LOCK_PATH = join(REPO_ROOT, '.git', 'gb-main-report.lock');
+const GIT_COMMON_DIR = resolveGitCommonDir(REPO_ROOT);
+const STATUS_PATH = join(GIT_COMMON_DIR, 'gb-main-report-status.json');
+const LOCK_PATH = join(GIT_COMMON_DIR, 'gb-main-report.lock');
 const INITIALIZING_LOCK_GRACE_MS = 60 * 1000;
 
 function git(args) {

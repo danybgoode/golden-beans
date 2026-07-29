@@ -27,14 +27,16 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need } from './lib/cross-agent-cli.mjs';
+import { resolveGitCommonDir } from './lib/git-common-dir.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
+const GIT_COMMON_DIR = resolveGitCommonDir(REPO_ROOT);
 
 // Inside .git/ on purpose: this is per-checkout operational state, not project content. It must never
 // be committed (it would post a different set of reports on every machine) and .git/ is already
 // outside the working tree, so there is nothing to add to .gitignore and nothing to accidentally stage.
-const STATE_PATH = join(REPO_ROOT, '.git', 'gb-reported-commits');
+const STATE_PATH = join(GIT_COMMON_DIR, 'gb-reported-commits');
 
 /** How many commits a single catch-up run will report before stopping. */
 const DEFAULT_LIMIT = 5;

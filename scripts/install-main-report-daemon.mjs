@@ -8,9 +8,11 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveGitCommonDir } from './lib/git-common-dir.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
+const GIT_COMMON_DIR = resolveGitCommonDir(REPO_ROOT);
 const LABEL = 'com.golden-beans.main-report';
 const uid = process.getuid?.();
 const target = join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
@@ -50,7 +52,7 @@ function assertMacLaunchd() {
 function status() {
   const result = command(['print', `gui/${uid}/${LABEL}`], { quiet: true });
   process.stdout.write(result.status === 0 ? '✓ launchd runner is loaded.\n' : '○ launchd runner is not loaded.\n');
-  const statusPath = join(REPO_ROOT, '.git', 'gb-main-report-status.json');
+  const statusPath = join(GIT_COMMON_DIR, 'gb-main-report-status.json');
   if (existsSync(statusPath)) process.stdout.write(readFileSync(statusPath, 'utf8'));
   else process.stdout.write('No runner execution has been recorded yet.\n');
 }

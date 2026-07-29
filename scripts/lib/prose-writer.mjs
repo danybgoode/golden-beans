@@ -1,7 +1,7 @@
 // prose-writer.mjs — the one rail every prose surface in this repo writes through.
 //
 // ── The router (Daniel's call, confirmed 2026-07-26) ──────────────────────────────────────────
-// **Devin is the DEDICATED prose writer; agy on `gpt-oss-120b-medium` is the fallback.**
+// **Devin is the DEDICATED prose writer; agy is the fallback; Codex is the last-resort third pool.**
 //
 // This is a division of LABOUR, not a ranking. Codex and agy are the primary code reviewers and the
 // builders lean on them, so their quota is the scarce resource; Devin was installed as a third review
@@ -17,7 +17,7 @@
 // (now GPT-OSS, single, no Gemini fallback) and in the footer (which now names the model rather than
 // just "agy"). Devin leads, as designed.
 //
-// The fallback is not decoration: agy carries a genuinely separate quota pool, and this repo has
+// The fallback chain is not decoration: agy and Codex carry separate quota pools, and this repo has
 // already been bitten by a single-provider rail going quiet mid-session (Roadmap/LEARNINGS.md —
 // wire the fallback to the CONDITION, not to one of its signatures).
 //
@@ -37,7 +37,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkProse, findingsToRevisionNote } from './prose-guard.mjs';
-import { runAntigravity, hasCmd, PROSE_MODEL, AGY_ARG_LIMIT } from './cross-agent-cli.mjs';
+import { runAntigravity, tryCodex, hasCmd, PROSE_MODEL, AGY_ARG_LIMIT } from './cross-agent-cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LESSONS_PATH = join(__dirname, '..', 'prose-lessons.md');
@@ -141,6 +141,37 @@ export function runAgy(prompt, deps = {}) {
     : { ok: false, text: '', error: 'agy returned no output' };
 }
 
+export const CODEX_DIRECTIVE =
+  'Follow the instructions provided on stdin exactly. Output only the finished text — no preamble, no commentary, no code fences.';
+
+/**
+ * Last-resort writer on a third independent quota pool. The material rides stdin so a large evidence
+ * pack cannot hit argv limits; authentication failures are non-retryable because another identical
+ * call cannot repair a lapsed login.
+ */
+export function runCodex(prompt, deps = {}) {
+  const { run = tryCodex, directive = CODEX_DIRECTIVE } = deps;
+  const result = run(directive, String(prompt));
+  const text = String(result.text ?? '').trim();
+  if (result.ok && text) return { ok: true, text, model: 'codex' };
+  if (result.authFailed) {
+    return {
+      ok: false,
+      text: '',
+      model: 'codex',
+      error: 'codex authentication has lapsed — run `codex login`',
+      retryable: false,
+    };
+  }
+  return {
+    ok: false,
+    text: '',
+    model: 'codex',
+    error: `codex returned no output${result.stderr ? `: ${String(result.stderr).trim().split('\n').at(-1)}` : ''}`,
+    retryable: true,
+  };
+}
+
 /**
  * Pure routing decision — which writers to try, in order.
  *
@@ -148,12 +179,13 @@ export function runAgy(prompt, deps = {}) {
  * below. `preferred` lets a caller force one writer (useful when diagnosing which one produced a
  * bad draft) without editing the rail.
  */
-export function planWriters({ devinAvailable, agyAvailable, preferred }) {
+export function planWriters({ devinAvailable, agyAvailable, codexAvailable, preferred }) {
   // ORDER IS THE POLICY. Devin first — see the router note at the top of this file. Changing this
   // array changes who writes every report in the repo, so it is the one line to read.
   const all = [
     { name: 'devin', available: devinAvailable },
     { name: 'agy', available: agyAvailable },
+    { name: 'codex', available: codexAvailable },
   ];
   if (preferred) {
     const chosen = all.find((w) => w.name === preferred);
@@ -174,6 +206,7 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
   const {
     devin = runDevin,
     agy = runAgy,
+    codex = runCodex,
     has = hasCmd,
     guard = checkProse,
     warn = (m) => process.stderr.write(`${m}\n`),
@@ -182,6 +215,7 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
   const writers = planWriters({
     devinAvailable: has('devin'),
     agyAvailable: has('agy'),
+    codexAvailable: has('codex'),
     preferred,
   });
   if (writers.length === 0) {
@@ -195,7 +229,7 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
     };
   }
 
-  const runners = { devin, agy };
+  const runners = { devin, agy, codex };
   let attempts = 0;
   let best = null;
 
@@ -211,9 +245,9 @@ export function writeProse({ prompt, evidence, preferred }, deps = {}) {
       // Observed live (2026-07-25): devin returned exit 0 with empty stdout on a 9 KB prompt, and
       // the identical prompt succeeded moments later — a transient, not a broken CLI. Falling
       // straight through to the fallback on that costs the better writer for no reason, and the
-      // quality gap between the two is visible in the output. A genuine outage still fails on the
+      // quality gap between writers is visible in the output. A genuine outage still fails on the
       // second attempt and demotes as before, so this buys resilience without hiding a real break.
-      if (!result.ok && /no output|empty stdout/i.test(result.error ?? '')) {
+      if (!result.ok && (result.retryable || /no output|empty stdout/i.test(result.error ?? ''))) {
         warn(`⚠ ${name} returned empty — retrying once before falling back.`);
         attempts++;
         result = runners[name](currentPrompt);

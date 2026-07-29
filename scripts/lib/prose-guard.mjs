@@ -126,6 +126,19 @@ const BENEFICIARY_PATTERNS = [
 ];
 
 /**
+ * Beneficiary mentions that explicitly deny customer-visible impact.
+ *
+ * The lessons tell writers to say "no user-visible effect" for internal work. Rejecting that exact
+ * disclosure made the guard contradict its own brief and caused the docs-only report retry loop.
+ */
+const NO_IMPACT_PATTERNS = [
+  /\bno (?:user|customer|tenant|merchant|buyer)[- ]visible\b/i,
+  /\b(?:nothing|none|no)\b[^.]{0,40}\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:see|saw|notice|noticed|observe)\b/i,
+  /\b(?:customers?|tenants?|users?|clients?|buyers?|merchants?|shoppers?|subscribers?)\b[^.]{0,40}\b(?:are|is|were|was)\s+(?:not|un)(?:affected|changed|impacted)\b/i,
+  /\bunaffected\b/i,
+];
+
+/**
  * Sentence-final punctuation, or a close-paren/quote after it. Used to detect a draft that ran out
  * of room mid-clause — a trailing fragment reads as a broken tool, not as brevity.
  */
@@ -238,7 +251,13 @@ export function checkProse(draft, evidence = {}) {
   }
 
   if (!allowsBeneficiary) {
-    const named = BENEFICIARY_PATTERNS.some((re) => re.test(text));
+    const named = text
+      .split(/(?<=[.!?])\s+/)
+      .some(
+        (sentence) =>
+          BENEFICIARY_PATTERNS.some((re) => re.test(sentence)) &&
+          !NO_IMPACT_PATTERNS.some((re) => re.test(sentence))
+      );
     if (named) {
       findings.push({
         code: 'invented-beneficiary',

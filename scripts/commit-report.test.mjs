@@ -249,6 +249,20 @@ test('buildPrompt states the no-files rule beside the area list', () => {
   assert.match(p, /do NOT name files/i);
 });
 
+test('buildPrompt gives documentation-only changes an honest, bounded reporting rule', () => {
+  const p = buildPrompt({
+    style: 's',
+    meta: { ref: 'a', author: 'b', date: 'c', message: 'docs: record status' },
+    areas: ['product planning docs (2 files)'],
+    storyContext: [],
+    stat: '2 files changed',
+    docsOnly: true,
+  });
+  assert.match(p, /documentation-only/i);
+  assert.match(p, /no customer-visible effect/i);
+  assert.match(p, /do not claim runtime behaviour changed/i);
+});
+
 // ── deriveEvidence ──────────────────────────────────────────────────────────────────────────
 // This decides what the draft is ALLOWED to claim, so it is the gate behind both measured
 // hallucinations. Both permissions default to FALSE and must be earned by evidence — a guard that
@@ -301,4 +315,22 @@ test('deriveEvidence carries the length budget the guard enforces', () => {
   const e = deriveEvidence({ message: 'feat: x', paths: [] });
   assert.equal(e.maxWords, 60);
   assert.ok(e.minWords > 0);
+});
+
+test('deriveEvidence identifies all-doc changes without misclassifying mixed commits', () => {
+  assert.equal(
+    deriveEvidence({
+      message: 'docs: record status',
+      paths: ['Roadmap/README.md', 'references/decision.md'],
+    }).docsOnly,
+    true
+  );
+  assert.equal(
+    deriveEvidence({
+      message: 'feat: change behaviour and docs',
+      paths: ['Roadmap/README.md', 'apps/web/lib/flags.ts'],
+    }).docsOnly,
+    false
+  );
+  assert.equal(deriveEvidence({ message: 'chore: empty', paths: [] }).docsOnly, false);
 });

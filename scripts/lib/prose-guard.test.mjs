@@ -40,6 +40,20 @@ test('…but a REAL customer-facing change may name customers', () => {
   assert.ok(!codes(r).includes('invented-beneficiary'));
 });
 
+test('an explicit no-impact disclosure is allowed for internal work', () => {
+  const draft =
+    'The roadmap now records the agreed operating boundary. There was no customer-visible effect.';
+  const r = checkProse(draft, { allowsBeneficiary: false });
+  assert.ok(!codes(r).includes('invented-beneficiary'), JSON.stringify(r.findings));
+});
+
+test('a no-impact sentence does not launder a separate positive beneficiary claim', () => {
+  const draft =
+    'There was no customer-visible effect. Users now benefit from faster and safer publishing.';
+  const r = checkProse(draft, { allowsBeneficiary: false });
+  assert.ok(codes(r).includes('invented-beneficiary'));
+});
+
 test('MEASURED FAILURE 2: an unsupported fix claim is flagged', () => {
   // Verbatim shape of the real run: a commit that only ADDED TESTS claiming it closed the bug.
   const draft =

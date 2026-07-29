@@ -12,7 +12,8 @@
 //
 // So this rail hands the commit's own data to a dedicated prose writer with a product-manager brief.
 // The writer is DEVIN (specialized for prose, so agy/Codex quota stays free for review and building);
-// agy on `gpt-oss-120b-medium` is the fallback. Both are routed by scripts/lib/prose-writer.mjs.
+// agy on `gpt-oss-120b-medium` is the fallback; Codex is the last-resort third pool. All are routed
+// by scripts/lib/prose-writer.mjs.
 //
 // This comment used to name COMMIT_REPORT_MODEL, which nothing read — the rail has always routed
 // through PROSE_MODEL. See cross-agent-cli.mjs for why those dead constants are now deleted.
@@ -56,7 +57,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync, writeSync, writeFileSync, mkdirSync, renameSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { die, need, loadPromptBody } from './lib/cross-agent-cli.mjs';
+import { die, need, loadPromptBody, isDocFile } from './lib/cross-agent-cli.mjs';
 import { writeProse, buildWriterPrompt, loadLessons } from './lib/prose-writer.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -172,11 +173,12 @@ export function deriveEvidence({ message, paths }) {
     /^apps\/web\/supabase\/migrations\//,
   ];
   const allowsBeneficiary = (paths ?? []).some((p) => customerFacing.some((re) => re.test(p)));
+  const docsOnly = (paths ?? []).length > 0 && paths.every((path) => isDocFile(path));
 
-  return { allowsFixClaim, allowsBeneficiary, maxWords: 60, minWords: 8 };
+  return { allowsFixClaim, allowsBeneficiary, docsOnly, maxWords: 60, minWords: 8 };
 }
 
-export function buildPrompt({ style, meta, areas, storyContext, stat }) {
+export function buildPrompt({ style, meta, areas, storyContext, stat, docsOnly = false }) {
   const parts = [
     style,
     '\n\n## The change\n',
@@ -188,6 +190,13 @@ export function buildPrompt({ style, meta, areas, storyContext, stat }) {
     `\nWhere the change landed (shape only — do NOT name files in your report):\n${areas.map((a) => `- ${a}`).join('\n') || '- (no files changed)'}`,
     `\nSize: ${stat}`,
   ];
+  if (docsOnly) {
+    parts.push(
+      '\nThis is a documentation-only change. Report the recorded decision or status plainly. ' +
+        'Do not claim runtime behaviour changed, a defect was fixed or prevented, or a customer gained a benefit. ' +
+        'If useful, state explicitly that there was no customer-visible effect and name the next recorded step.'
+    );
+  }
   if (storyContext.length) {
     parts.push(
       `\nProduct intent, taken from the roadmap/sprint documents this commit itself edited. This is` +
@@ -411,7 +420,7 @@ function main() {
     else if (args[i] === '--dry-run') dryRun = true;
     // Force one writer. `writeProse` has always accepted `preferred`; there was no way to reach it
     // from the CLI, which made "which writer produced this bad draft?" unanswerable without editing
-    // the rail. Diagnosing a two-writer router needs a way to run one writer at a time.
+    // the rail. Diagnosing a multi-writer router needs a way to run one writer at a time.
     else if (args[i] === '--writer') writer = need(args[++i], '--writer');
     else die(`unknown arg ${args[i]}`);
   }
@@ -447,6 +456,7 @@ function main() {
     areas: summarizeAreas(paths),
     storyContext: extractStoryContext(roadmapDiff),
     stat,
+    docsOnly: evidence.docsOnly,
   });
 
   if (dryRun) {

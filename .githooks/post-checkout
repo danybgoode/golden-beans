@@ -26,9 +26,15 @@ command -v node >/dev/null 2>&1 || exit 0
 root="$(git rev-parse --show-toplevel 2>/dev/null || echo '')"
 [ -n "$root" ] || exit 0
 [ -f "$root/scripts/report-main-daemon.mjs" ] || exit 0
+gitdir="$(git rev-parse --git-common-dir 2>/dev/null || echo '')"
+[ -n "$gitdir" ] || exit 0
+case "$gitdir" in
+  /*) ;;
+  *) gitdir="$root/$gitdir" ;;
+esac
 
 (
-  node "$root/scripts/report-main-daemon.mjs" >>"$root/.git/gb-commit-report.log" 2>&1 || true
+  node "$root/scripts/report-main-daemon.mjs" >>"$gitdir/gb-commit-report.log" 2>&1 || true
 ) &
 
 exit 0
