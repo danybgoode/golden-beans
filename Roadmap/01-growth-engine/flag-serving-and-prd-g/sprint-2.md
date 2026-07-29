@@ -1,6 +1,7 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 2: Complete Miyagi migration
 
-**Status:** 🟡 in progress — catalog imported and adapters are dark; shadow parity/cutover remain
+**Status:** 🟡 in progress — catalog and Golden-backed admin operations are live; adapters remain
+in shadow and parity/cutover remain deliberately incomplete
 
 ## Stories
 
@@ -79,6 +80,31 @@ Miyagi actor and Golden version; frontend/backend converge within the bounded re
 
 **Risk:** high
 
+**Evidence (2026-07-28):**
+
+- Golden PR [#50](https://github.com/danybgoode/golden-beans/pull/50) merged after its migration-applied
+  API suite, build gate, Vercel preview and Antigravity review were clean. Its additive production
+  migration `20260808110000_flag_admin_operations.sql` is applied and recorded: anonymous and
+  authenticated roles cannot execute the admin read/write functions, service role can, and every
+  security-definer function pins `search_path`. The migration's version prefix establishes its
+  ordering; this evidence date records when it was applied, not a filename rename candidate.
+- Miyagi frontend PR [#322](https://github.com/danybgoode/miyagisanchezcommerce/pull/322) merged with
+  all required CI and preview checks green. `/admin/flags` now uses the Golden server seam with a
+  verified Clerk actor, scoped credential, reason, and optimistic snapshot version; it has no
+  local operational read/write fallback. Provider runtime mode remains `shadow`.
+- A new revocable `flag_admin` credential is pinned to the Golden `miyagi` project and
+  `production` environment. Its opaque value is stored only in the `miyagisanchez-prod` Secret
+  Manager and is accessible only to `miyagi-web`'s runtime service account; no browser variable or
+  second GCP project was added.
+- The normal `main` → `us-east4` Cloud Build → `miyagi-web` rail deployed merge `3daf54a` as
+  revision `miyagi-web-00045-f9l` at 100% traffic. The deployed server rejects an unauthenticated
+  admin API request (401), while the scoped server credential reaches Golden's admin snapshot
+  endpoint successfully (200).
+- An unauthenticated production browser smoke of `/admin/flags` passed its redirect/access
+  boundary. It recorded one 400 resource console error, so this is not claimed as a console-clean
+  smoke. A real authenticated production admin walkthrough remains owed to Daniel: the test-token
+  harness cannot sign into the production Clerk instance by design.
+
 ### Story 2.4 — Staged full-inventory cutover
 
 **As the** product owner, **I want** a reversible cutover from safe to critical flags, **so that**
@@ -103,6 +129,12 @@ idempotency prevent duplicate hot-path noise; experiment-bound flags use the exi
 denominator; analytics failure cannot fail a flag check.
 
 **Risk:** high
+
+**Foundation evidence (2026-07-28):** Golden PR
+[#49](https://github.com/danybgoode/golden-beans/pull/49) is merged and deployed with the bounded
+SDK `trackFlagEvaluation()` primitive: it reuses canonical `/api/v1/track`, samples ordinary
+evaluations, preserves experiment exposure semantics and never affects a flag decision. Miyagi
+has not yet adopted this SDK release, so this story is not complete.
 
 ## Sprint QA
 
