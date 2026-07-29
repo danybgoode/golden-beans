@@ -1014,7 +1014,7 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
       context_version: 1,
       subject_type: 'probe',
       subject_id: 'impact-fault-1',
-    },
+    }
   )
   expect((await client.from('events').insert(facts)).error).toBeNull()
   const asOf = new Date().toISOString()
@@ -1087,12 +1087,7 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   })
   const foreignOwner = await fixtureUser(client, 'impact-foreign')
   const foreignProject = await fixtureProject(client, foreignOwner, 'impact-foreign')
-  const foreignCredentials = await fixtureCredentials(
-    client,
-    foreignProject,
-    foreignOwner,
-    'impact-foreign'
-  )
+  const foreignCredentials = await fixtureCredentials(client, foreignProject, foreignOwner, 'impact-foreign')
   const foreign = await request.get('/api/v1/scenarios/impact', {
     headers: { Authorization: `Bearer ${foreignCredentials.adminKey}` },
   })
@@ -1133,24 +1128,13 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
     confirmationMode,
   })
 
-  const manualFlag = await fixtureProtectedFlag(
-    client,
-    project,
-    owner,
-    'breaker.manual_probe',
-    0
-  )
+  const manualFlag = await fixtureProtectedFlag(client, project, owner, 'breaker.manual_probe', 0)
   const manualPolicyResponse = await request.post('/api/v1/breakers/admin', {
     headers,
     data: {
       operation: 'create_policy',
       policyKey: 'manual_probe',
-      definition: policyDefinition(
-        'breaker.manual_probe',
-        manualFlag.safeVersion,
-        'manual',
-        'standard'
-      ),
+      definition: policyDefinition('breaker.manual_probe', manualFlag.safeVersion, 'manual', 'standard'),
       reason: 'Create a staged manual breaker fixture.',
     },
   })
@@ -1282,10 +1266,7 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   const breakerSnapshot = await request.get('/api/v1/breakers/admin', { headers })
   const breakerBody = await breakerSnapshot.json()
   expect(breakerBody.trips).toHaveLength(2)
-  expect(breakerBody.trips.map((trip: { mode: string }) => trip.mode).sort()).toEqual([
-    'automatic',
-    'manual',
-  ])
+  expect(breakerBody.trips.map((trip: { mode: string }) => trip.mode).sort()).toEqual(['automatic', 'manual'])
 
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
@@ -1300,10 +1281,10 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
     )
     expect(validation.rows[0]?.valid).toBe(false)
     await expect(
-      pg.query(
-        'UPDATE public.scenario_impact_evidence SET reason = $1 WHERE id = $2',
-        ['rewritten', body.evidenceId]
-      )
+      pg.query('UPDATE public.scenario_impact_evidence SET reason = $1 WHERE id = $2', [
+        'rewritten',
+        body.evidenceId,
+      ])
     ).rejects.toMatchObject({ code: '55000' })
     await expect(
       pg.query('UPDATE public.breaker_trip_records SET reason = $1 WHERE id = $2', [

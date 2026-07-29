@@ -10,17 +10,11 @@ const request = {
 }
 
 test('impact capture accepts one exact bounded command and canonicalizes time', () => {
-  assert.deepEqual(
-    parseScenarioImpactCaptureRequest(request, '2026-07-29T12:01:00.000Z'),
-    request
-  )
+  assert.deepEqual(parseScenarioImpactCaptureRequest(request, '2026-07-29T12:01:00.000Z'), request)
 })
 
 test('impact capture rejects future timestamps and caller-selected evidence', () => {
-  assert.equal(
-    parseScenarioImpactCaptureRequest(request, '2026-07-29T11:59:00.000Z'),
-    null
-  )
+  assert.equal(parseScenarioImpactCaptureRequest(request, '2026-07-29T11:59:00.000Z'), null)
   assert.equal(
     parseScenarioImpactCaptureRequest(
       { ...request, technical: { fault: { attempts: 999 } } },

@@ -1,14 +1,10 @@
 import 'server-only'
 import { createHash, randomBytes } from 'node:crypto'
-import type {
-  BreakerAdminOperation,
-  BreakerAutomaticOperation,
-} from './breaker-admin-operation'
+import type { BreakerAdminOperation, BreakerAutomaticOperation } from './breaker-admin-operation'
 import { getSupabaseServiceClient } from './supabase'
 
 type OperationResult =
-  | ({ ok: true } & Record<string, unknown>)
-  | { ok: false; status: 400 | 401 | 403 | 409 | 500 }
+  ({ ok: true } & Record<string, unknown>) | { ok: false; status: 400 | 401 | 403 | 409 | 500 }
 
 function status(code: string | undefined): 400 | 403 | 409 | 500 {
   if (code === '22023') return 400
@@ -25,11 +21,12 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<Operati
   const { data, error } = await getSupabaseServiceClient().rpc(name, args)
   if (error) {
     const mapped = status(error.code)
-    if (mapped === 500) console.error('[breaker-admin] operation failed', {
-      operation: name,
-      code: error.code,
-      message: error.message,
-    })
+    if (mapped === 500)
+      console.error('[breaker-admin] operation failed', {
+        operation: name,
+        code: error.code,
+        message: error.message,
+      })
     return { ok: false, status: mapped }
   }
   const row = data?.[0]
@@ -125,7 +122,8 @@ export async function getBreakerAdminSnapshot(keyHash: string): Promise<Record<s
     row.trips.length > 100 ||
     !Array.isArray(row.audit) ||
     row.audit.length > 100
-  ) throw new Error('Malformed breaker snapshot')
+  )
+    throw new Error('Malformed breaker snapshot')
   return {
     environment: row.environment,
     snapshotVersion: row.snapshot_version,

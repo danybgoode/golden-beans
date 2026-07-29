@@ -74,7 +74,8 @@ function mapSource(row: unknown): Source | null {
     !stringArray(row.related_evidence.errorSignalIds) ||
     !stringArray(row.related_evidence.frictionSignalIds) ||
     !stringArray(row.related_evidence.taskIds)
-  ) return null
+  )
+    return null
   const strings = [
     'project_id',
     'project_slug',
@@ -95,7 +96,8 @@ function mapSource(row: unknown): Source | null {
     !Number.isSafeInteger(row.flag_definition_version) ||
     !Number.isSafeInteger(row.experiment_definition_version) ||
     (row.cohort !== 'synthetic' && row.cohort !== 'internal' && row.cohort !== 'external')
-  ) return null
+  )
+    return null
   return {
     projectId: row.project_id as string,
     projectSlug: row.project_slug as string,
@@ -169,7 +171,8 @@ export async function captureScenarioImpactEvidence(input: {
   if (
     analysis.experiment.id !== source.experimentId ||
     analysis.experiment.versionId !== source.experimentVersionId
-  ) return { ok: false, status: 409 }
+  )
+    return { ok: false, status: 409 }
 
   const evidence = buildScenarioImpactEvidence({
     generatedAt: input.request.asOf,
@@ -211,7 +214,8 @@ export async function captureScenarioImpactEvidence(input: {
     typeof row.evidence_id !== 'string' ||
     typeof row.created_at !== 'string' ||
     typeof row.created !== 'boolean'
-  ) return { ok: false, status: row ? 500 : 401 }
+  )
+    return { ok: false, status: row ? 500 : 401 }
   return {
     ok: true,
     evidenceId: row.evidence_id,
@@ -244,7 +248,8 @@ export async function getScenarioImpactEvidence(
       typeof item.reason !== 'string' ||
       typeof item.external_actor_id !== 'string' ||
       typeof item.created_at !== 'string'
-    ) throw new Error('Malformed scenario impact evidence')
+    )
+      throw new Error('Malformed scenario impact evidence')
     result.push({
       id: item.id,
       runId: item.run_id,

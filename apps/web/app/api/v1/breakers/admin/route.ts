@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  executeBreakerAdminOperation,
-  getBreakerAdminSnapshot,
-} from '@/lib/breaker-admin-operations'
+import { executeBreakerAdminOperation, getBreakerAdminSnapshot } from '@/lib/breaker-admin-operations'
 import { parseBreakerAdminOperation } from '@/lib/breaker-admin-operation'
 import { hashCredential } from '@/lib/credential-hash'
 import { isVerifiedMiyagiActor } from '@/lib/flag-admin-operation'
@@ -14,9 +11,12 @@ function credential(req: NextRequest): string | null {
 }
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: 'Invalid breaker administration credential' }, {
-    status: 401,
-  })
+  return NextResponse.json(
+    { ok: false, error: 'Invalid breaker administration credential' },
+    {
+      status: 401,
+    }
+  )
 }
 
 export async function GET(req: NextRequest) {
@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
       ? NextResponse.json(snapshot, { headers: { 'Cache-Control': 'no-store' } })
       : unauthorized()
   } catch {
-    return NextResponse.json({ ok: false, error: 'Could not load breaker snapshot' }, {
-      status: 500,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Could not load breaker snapshot' },
+      {
+        status: 500,
+      }
+    )
   }
 }
 
@@ -64,8 +67,11 @@ export async function POST(req: NextRequest) {
     } as const
     return NextResponse.json({ ok: false, error: messages[result.status] }, { status: result.status })
   } catch {
-    return NextResponse.json({ ok: false, error: 'Could not apply breaker operation' }, {
-      status: 500,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Could not apply breaker operation' },
+      {
+        status: 500,
+      }
+    )
   }
 }

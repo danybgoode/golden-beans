@@ -483,9 +483,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     }
   }
 
-  async function trackScenarioExecution(
-    input: ScenarioExecutionTelemetryInput
-  ): Promise<TrackResult> {
+  async function trackScenarioExecution(input: ScenarioExecutionTelemetryInput): Promise<TrackResult> {
     try {
       if (!validateScenarioExecutionTelemetry(input)) {
         return {

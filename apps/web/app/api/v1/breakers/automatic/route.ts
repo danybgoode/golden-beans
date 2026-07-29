@@ -17,21 +17,30 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ ok: false, error: 'Invalid automatic breaker command' }, {
-      status: 400,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Invalid automatic breaker command' },
+      {
+        status: 400,
+      }
+    )
   }
   const operation = parseBreakerAutomaticOperation(body)
   if (!operation) {
-    return NextResponse.json({ ok: false, error: 'Invalid automatic breaker command' }, {
-      status: 400,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Invalid automatic breaker command' },
+      {
+        status: 400,
+      }
+    )
   }
   const rawKey = credential(req)
   if (!rawKey) {
-    return NextResponse.json({ ok: false, error: 'Invalid breaker administration credential' }, {
-      status: 401,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Invalid breaker administration credential' },
+      {
+        status: 401,
+      }
+    )
   }
   try {
     const result = await executeAutomaticBreaker({
@@ -48,8 +57,11 @@ export async function POST(req: NextRequest) {
     } as const
     return NextResponse.json({ ok: false, error: messages[result.status] }, { status: result.status })
   } catch {
-    return NextResponse.json({ ok: false, error: 'Could not apply automatic breaker' }, {
-      status: 500,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Could not apply automatic breaker' },
+      {
+        status: 500,
+      }
+    )
   }
 }

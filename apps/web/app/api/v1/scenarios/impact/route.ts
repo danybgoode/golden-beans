@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hashCredential } from '@/lib/credential-hash'
 import { isVerifiedMiyagiActor } from '@/lib/flag-admin-operation'
-import {
-  captureScenarioImpactEvidence,
-  getScenarioImpactEvidence,
-} from '@/lib/scenario-impact-operations'
+import { captureScenarioImpactEvidence, getScenarioImpactEvidence } from '@/lib/scenario-impact-operations'
 import { parseScenarioImpactCaptureRequest } from '@/lib/scenario-impact-request'
 
 function credential(req: NextRequest): string | null {
@@ -14,9 +11,12 @@ function credential(req: NextRequest): string | null {
 }
 
 function unauthorized() {
-  return NextResponse.json({ ok: false, error: 'Invalid scenario administration credential' }, {
-    status: 401,
-  })
+  return NextResponse.json(
+    { ok: false, error: 'Invalid scenario administration credential' },
+    {
+      status: 401,
+    }
+  )
 }
 
 export async function GET(req: NextRequest) {
@@ -28,9 +28,12 @@ export async function GET(req: NextRequest) {
       ? unauthorized()
       : NextResponse.json({ evidence }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
-    return NextResponse.json({ ok: false, error: 'Could not load scenario impact evidence' }, {
-      status: 500,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Could not load scenario impact evidence' },
+      {
+        status: 500,
+      }
+    )
   }
 }
 
@@ -63,8 +66,11 @@ export async function POST(req: NextRequest) {
     } as const
     return NextResponse.json({ ok: false, error: messages[result.status] }, { status: result.status })
   } catch {
-    return NextResponse.json({ ok: false, error: 'Could not capture scenario impact evidence' }, {
-      status: 500,
-    })
+    return NextResponse.json(
+      { ok: false, error: 'Could not capture scenario impact evidence' },
+      {
+        status: 500,
+      }
+    )
   }
 }

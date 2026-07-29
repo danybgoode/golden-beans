@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import {
-  SCENARIO_EXECUTED_EVENT,
-  validateScenarioExecutionTelemetry,
-} from './scenario-telemetry.ts'
+import { SCENARIO_EXECUTED_EVENT, validateScenarioExecutionTelemetry } from './scenario-telemetry.ts'
 
 const execution = {
   scenarioKey: 'checkout_probe',
@@ -40,10 +37,7 @@ test('scenario execution telemetry is a closed scalar-only contract', () => {
     validateScenarioExecutionTelemetry({ ...execution, subject: { type: 'probe', id: 'x@y.z' } }),
     false
   )
-  assert.equal(
-    validateScenarioExecutionTelemetry({ ...execution, latencyMs: 300_001 }),
-    false
-  )
+  assert.equal(validateScenarioExecutionTelemetry({ ...execution, latencyMs: 300_001 }), false)
 })
 
 test('control and fault arms cannot contradict the closed fault kind', () => {
@@ -51,12 +45,6 @@ test('control and fault arms cannot contradict the closed fault kind', () => {
     validateScenarioExecutionTelemetry({ ...execution, arm: 'control', faultKind: 'delay' }),
     false
   )
-  assert.equal(
-    validateScenarioExecutionTelemetry({ ...execution, arm: 'control', faultKind: 'none' }),
-    true
-  )
-  assert.equal(
-    validateScenarioExecutionTelemetry({ ...execution, arm: 'fault', faultKind: 'none' }),
-    false
-  )
+  assert.equal(validateScenarioExecutionTelemetry({ ...execution, arm: 'control', faultKind: 'none' }), true)
+  assert.equal(validateScenarioExecutionTelemetry({ ...execution, arm: 'fault', faultKind: 'none' }), false)
 })

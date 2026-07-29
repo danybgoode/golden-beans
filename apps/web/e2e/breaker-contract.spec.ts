@@ -1,8 +1,5 @@
 import { expect, test } from '@playwright/test'
-import {
-  parseBreakerAdminOperation,
-  parseBreakerAutomaticOperation,
-} from '@/lib/breaker-admin-operation'
+import { parseBreakerAdminOperation, parseBreakerAutomaticOperation } from '@/lib/breaker-admin-operation'
 
 const policyId = '018f0d3a-2577-7a53-8d41-b7c189e23f30'
 const evidenceId = '018f0d3a-2655-7d97-816f-33d7b8df7281'

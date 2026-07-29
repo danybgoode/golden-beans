@@ -295,9 +295,7 @@ test('generic transport failures cannot echo a target origin into durable error 
   const result = await guardedHttpPostForTest(REQUEST, {
     resolveHost: PUBLIC_RESOLVE,
     fetchImpl: (async () => {
-      throw new Error(
-        'connect ECONNREFUSED https://receiver.example.test/hook?token=must-not-survive'
-      )
+      throw new Error('connect ECONNREFUSED https://receiver.example.test/hook?token=must-not-survive')
     }) as typeof fetch,
   })
 

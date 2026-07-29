@@ -68,7 +68,8 @@ export function parseBreakerAdminOperation(input: unknown): BreakerAdminOperatio
       !exact(input, ['operation', 'policyKey', 'definition', 'reason']) ||
       typeof input.policyKey !== 'string' ||
       !KEY.test(input.policyKey)
-    ) return null
+    )
+      return null
     const parsed = parseBreakerPolicy(input.definition)
     return parsed.ok
       ? {
@@ -102,7 +103,8 @@ export function parseBreakerAdminOperation(input: unknown): BreakerAdminOperatio
       !UUID.test(input.evidenceId) ||
       !positive(input.expectedPolicyRevision) ||
       !snapshot(input.expectedSnapshotVersion)
-    ) return null
+    )
+      return null
     return {
       operation: 'prepare_manual',
       policyId: input.policyId,
@@ -135,7 +137,8 @@ export function parseBreakerAdminOperation(input: unknown): BreakerAdminOperatio
       input.confirmationPhrase.length > 128 ||
       !positive(input.expectedPolicyRevision) ||
       !snapshot(input.expectedSnapshotVersion)
-    ) return null
+    )
+      return null
     return {
       operation: 'trip_manual',
       policyId: input.policyId,
@@ -153,14 +156,9 @@ export function parseBreakerAdminOperation(input: unknown): BreakerAdminOperatio
 export function parseBreakerAutomaticOperation(input: unknown): BreakerAutomaticOperation | null {
   if (
     !record(input) ||
-    !exact(input, [
-      'policyId',
-      'evidenceId',
-      'expectedPolicyRevision',
-      'expectedSnapshotVersion',
-      'reason',
-    ])
-  ) return null
+    !exact(input, ['policyId', 'evidenceId', 'expectedPolicyRevision', 'expectedSnapshotVersion', 'reason'])
+  )
+    return null
   const normalizedReason = reason(input.reason)
   if (
     !normalizedReason ||
@@ -170,7 +168,8 @@ export function parseBreakerAutomaticOperation(input: unknown): BreakerAutomatic
     !UUID.test(input.evidenceId) ||
     !positive(input.expectedPolicyRevision) ||
     !snapshot(input.expectedSnapshotVersion)
-  ) return null
+  )
+    return null
   return {
     policyId: input.policyId,
     evidenceId: input.evidenceId,

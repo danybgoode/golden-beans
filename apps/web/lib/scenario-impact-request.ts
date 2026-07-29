@@ -30,7 +30,8 @@ export function parseScenarioImpactCaptureRequest(
     typeof value.asOf !== 'string' ||
     reason.length < 1 ||
     reason.length > 500
-  ) return null
+  )
+    return null
   if (!CANONICAL_INSTANT.test(value.asOf) || !CANONICAL_INSTANT.test(now)) return null
   const asOfMs = Date.parse(value.asOf)
   const nowMs = Date.parse(now)
@@ -39,7 +40,8 @@ export function parseScenarioImpactCaptureRequest(
     !Number.isFinite(nowMs) ||
     new Date(asOfMs).toISOString() !== value.asOf ||
     asOfMs > nowMs
-  ) return null
+  )
+    return null
   return {
     runId: value.runId,
     asOf: value.asOf,

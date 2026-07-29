@@ -57,9 +57,7 @@ function validVersion(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 2_147_483_647
 }
 
-export function validateScenarioExecutionTelemetry(
-  input: unknown
-): input is ScenarioExecutionTelemetryInput {
+export function validateScenarioExecutionTelemetry(input: unknown): input is ScenarioExecutionTelemetryInput {
   if (input === null || typeof input !== 'object' || Array.isArray(input)) return false
   const value = input as Partial<ScenarioExecutionTelemetryInput>
   if (
@@ -80,7 +78,8 @@ export function validateScenarioExecutionTelemetry(
       'flag',
       'experiment',
     ])
-  ) return false
+  )
+    return false
   if (
     !validText(value.scenarioKey) ||
     !validVersion(value.scenarioVersion) ||
@@ -93,15 +92,14 @@ export function validateScenarioExecutionTelemetry(
       value.environment !== 'preview' &&
       value.environment !== 'production') ||
     (value.arm !== 'control' && value.arm !== 'fault') ||
-    (value.faultKind !== 'none' &&
-      value.faultKind !== 'delay' &&
-      value.faultKind !== 'synthetic_error') ||
+    (value.faultKind !== 'none' && value.faultKind !== 'delay' && value.faultKind !== 'synthetic_error') ||
     typeof value.failed !== 'boolean' ||
     typeof value.latencyMs !== 'number' ||
     !Number.isInteger(value.latencyMs) ||
     value.latencyMs < 0 ||
     value.latencyMs > MAX_LATENCY_MS
-  ) return false
+  )
+    return false
   if (value.arm === 'control' && value.faultKind !== 'none') return false
   if (value.arm === 'fault' && value.faultKind === 'none') return false
 
@@ -113,7 +111,8 @@ export function validateScenarioExecutionTelemetry(
     !onlyKeys(subject, ['type', 'id']) ||
     !validText(subject.type, ENTITY_TYPE) ||
     !validText(subject.id, OPAQUE_ID)
-  ) return false
+  )
+    return false
 
   const flag = value.flag
   if (
@@ -126,7 +125,8 @@ export function validateScenarioExecutionTelemetry(
     !validText(flag.variant, SCALAR_TEXT) ||
     !validText(flag.reason, SCALAR_TEXT) ||
     !validVersion(flag.snapshotVersion)
-  ) return false
+  )
+    return false
 
   if (value.experiment === undefined) return true
   const experiment = value.experiment
