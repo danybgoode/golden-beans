@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   createScenarioTargetChallenge,
+  createScenarioTargetRegistrationChallenge,
   createScenarioTargetRequestSignature,
   createScenarioTargetResponseProof,
   hashScenarioTargetChallenge,
@@ -16,6 +17,10 @@ const INPUT = {
 }
 
 test('target proof domains request and response signatures and pins stable vectors', () => {
+  assert.equal(
+    createScenarioTargetRegistrationChallenge(INPUT),
+    'cab33f14049126d83a565df91c22720dd8955c9e0f1067c3c4440c0347bebf8c'
+  )
   assert.equal(
     createScenarioTargetRequestSignature(INPUT),
     'da5bba67b8dd10fed378030a3822ff14d1ec9a3a8679508292cf3df7ab68536d'

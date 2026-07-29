@@ -32,6 +32,18 @@ export function createScenarioTargetChallenge(): string {
   return randomBytes(SCENARIO_TARGET_CHALLENGE_BYTES).toString('hex')
 }
 
+/** Stable per credential/target so a lost registration response can be retried idempotently. */
+export function createScenarioTargetRegistrationChallenge(input: {
+  secret: string
+  targetKey: string
+  origin: string
+}): string {
+  return hmac(
+    input.secret,
+    `golden-beans-target-registration-v1\n${canonicalTarget(input.targetKey, input.origin)}`
+  )
+}
+
 export function hashScenarioTargetChallenge(challenge: string): string {
   if (!HEX_64.test(challenge)) throw new Error('Invalid scenario target challenge')
   return createHash('sha256').update(challenge, 'utf8').digest('hex')

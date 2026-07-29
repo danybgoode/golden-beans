@@ -13,3 +13,40 @@ test('resilience snapshot is a flat 404 before credential work while its root ga
   expect(response.status()).toBe(404)
   expect(await response.text()).toBe('')
 })
+
+test('execution stays dark while emergency stop remains reachable with both scenario gates OFF', async ({
+  request,
+}) => {
+  test.skip(
+    process.env.RESILIENCE_SCENARIOS_ENABLED === 'true' ||
+      process.env.SECURITY_SIMULATIONS_ENABLED === 'true',
+    'dedicated execution-dark pass requires both scenario gates OFF'
+  )
+  const headers = {
+    Authorization: 'Bearer deliberately-invalid',
+    'x-miyagi-clerk-actor': 'user_fixture',
+  }
+  const start = await request.post('/api/v1/scenarios/admin', {
+    headers,
+    data: {
+      operation: 'start_run',
+      runId: '11111111-1111-4111-8111-111111111111',
+      expectedRevision: 1,
+      reason: 'dark-path assertion',
+    },
+  })
+  expect(start.status()).toBe(404)
+  expect(await start.text()).toBe('')
+
+  const stop = await request.post('/api/v1/scenarios/admin', {
+    headers,
+    data: {
+      operation: 'transition_run',
+      runId: '11111111-1111-4111-8111-111111111111',
+      expectedRevision: 1,
+      transition: 'abort',
+      reason: 'emergency stop must stay reachable',
+    },
+  })
+  expect(stop.status()).toBe(401)
+})
