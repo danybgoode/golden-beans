@@ -57,6 +57,32 @@ type ScenarioRun = {
   stoppedAt: string | null
   stopReason: string | null
 }
+type ScenarioAuditEntry = {
+  id: string
+  scenarioId: string | null
+  scenarioVersionId: string | null
+  runId: string | null
+  targetId: string | null
+  action:
+    | 'target_registered'
+    | 'target_verified'
+    | 'target_revoked'
+    | 'version_created'
+    | 'owner_approved'
+    | 'run_created'
+    | 'run_started'
+    | 'run_stopped'
+    | 'run_aborted'
+    | 'run_expired'
+    | 'execution_reserved'
+    | 'execution_settled'
+    | 'execution_lease_expired'
+  actorUserId: string
+  externalActorId: string | null
+  reason: string
+  metadata: Record<string, unknown>
+  createdAt: string
+}
 
 export type ScenarioAdminSnapshot = {
   environment: Environment
@@ -66,6 +92,7 @@ export type ScenarioAdminSnapshot = {
   versions: ScenarioVersion[]
   approvals: ScenarioApproval[]
   runs: ScenarioRun[]
+  audit: ScenarioAuditEntry[]
 }
 
 type OperationResult<T extends Record<string, unknown>> =
@@ -148,6 +175,40 @@ function validRun(value: unknown): value is ScenarioRun {
   )
 }
 
+function validAuditEntry(value: unknown): value is ScenarioAuditEntry {
+  if (!isRecord(value)) return false
+  return (
+    typeof value.id === 'string' &&
+    stringOrNull(value.scenarioId) &&
+    stringOrNull(value.scenarioVersionId) &&
+    stringOrNull(value.runId) &&
+    stringOrNull(value.targetId) &&
+    [
+      'target_registered',
+      'target_verified',
+      'target_revoked',
+      'version_created',
+      'owner_approved',
+      'run_created',
+      'run_started',
+      'run_stopped',
+      'run_aborted',
+      'run_expired',
+      'execution_reserved',
+      'execution_settled',
+      'execution_lease_expired',
+    ].includes(String(value.action)) &&
+    typeof value.actorUserId === 'string' &&
+    stringOrNull(value.externalActorId) &&
+    typeof value.reason === 'string' &&
+    isRecord(value.metadata) &&
+    typeof value.createdAt === 'string' &&
+    !('ownershipChallengeHash' in value) &&
+    !('credential' in value) &&
+    !('keyHash' in value)
+  )
+}
+
 function mutationStatus(code: string | undefined): 400 | 403 | 409 | 500 {
   if (code === '22023') return 400
   if (code === '42501') return 403
@@ -181,7 +242,10 @@ export async function getScenarioAdminSnapshot(keyHash: string): Promise<Scenari
     !Array.isArray(row.approvals) ||
     !row.approvals.every(validApproval) ||
     !Array.isArray(row.runs) ||
-    !row.runs.every(validRun)
+    !row.runs.every(validRun) ||
+    !Array.isArray(row.audit) ||
+    row.audit.length > 100 ||
+    !row.audit.every(validAuditEntry)
   ) {
     throw new Error('Malformed scenario administration snapshot')
   }
@@ -193,6 +257,7 @@ export async function getScenarioAdminSnapshot(keyHash: string): Promise<Scenari
     versions: row.versions,
     approvals: row.approvals,
     runs: row.runs,
+    audit: row.audit,
   }
 }
 
