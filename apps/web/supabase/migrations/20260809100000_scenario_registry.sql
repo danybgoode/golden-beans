@@ -643,13 +643,13 @@ BEGIN
   INSERT INTO public.projects(slug, api_key_hash)
   VALUES (
     'scenario-migration-assertion-a-' || left(v_fixture_suffix, 12),
-    encode(gen_random_bytes(32), 'hex')
+    v_fixture_suffix || v_fixture_suffix
   )
   RETURNING id INTO v_project_a;
   INSERT INTO public.projects(slug, api_key_hash)
   VALUES (
     'scenario-migration-assertion-b-' || left(v_fixture_suffix, 12),
-    encode(gen_random_bytes(32), 'hex')
+    reverse(v_fixture_suffix) || reverse(v_fixture_suffix)
   )
   RETURNING id INTO v_project_b;
   INSERT INTO public.scenario_targets(
