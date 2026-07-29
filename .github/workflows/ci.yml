@@ -130,6 +130,10 @@ jobs:
         env:
           JOURNEY_PROJECTIONS_ENABLED: 'false'
           EXPERIMENT_GOVERNANCE_ENABLED: 'false'
+          FLAG_SERVING_ENABLED: 'false'
+          RESILIENCE_SCENARIOS_ENABLED: 'false'
+          SECURITY_SIMULATIONS_ENABLED: 'false'
+          AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false'
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
         run: |
           set -euo pipefail
@@ -166,6 +170,8 @@ jobs:
             --config=apps/web/playwright.config.ts \
             apps/web/e2e/journey-dark.spec.ts \
             apps/web/e2e/experiment-governance-dark.spec.ts \
+            apps/web/e2e/flag-serving-dark.spec.ts \
+            apps/web/e2e/scenario-dark.spec.ts \
             --project=api; then
             cat /tmp/journey-dark-server.log
             exit 1
@@ -196,6 +202,12 @@ jobs:
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
           EXPERIMENT_GOVERNANCE_ENABLED: 'true'
+          # flag-serving-and-prd-g. The four rails run live in this disposable CI process, while
+          # the dedicated differently-enved server above proves every route is absent while dark.
+          FLAG_SERVING_ENABLED: 'true'
+          RESILIENCE_SCENARIOS_ENABLED: 'true'
+          SECURITY_SIMULATIONS_ENABLED: 'true'
+          AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
           # pod-report Story 3.1 — the share route needs a live gate for its render/revoke/expiry
           # specs. Its DARK behaviour is covered without a second server boot: e2e/report-share.spec.ts
           # asserts gate-OFF-404 only when the flag is off, and lib/flags.test.ts pins the predicate
@@ -251,6 +263,10 @@ jobs:
           # test disagree about what they are testing.
           CONNECTOR_ENABLED: 'true'
           SIGNALS_ENABLED: 'true'
+          FLAG_SERVING_ENABLED: 'true'
+          RESILIENCE_SCENARIOS_ENABLED: 'true'
+          SECURITY_SIMULATIONS_ENABLED: 'true'
+          AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
         run: npm run test:e2e
 
       - name: Dump Next.js server log (diagnostics)
