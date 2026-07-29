@@ -20,7 +20,7 @@ import {
 /** A DNS pre-check that stalls must fail closed before the request deadline is consumed. */
 const RESOLVE_TIMEOUT_MS = 3_000
 
-/** Error text may be logged by a caller, so an attacker-controlled network error stays bounded. */
+/** Only fixed, transport-owned error text may reach a caller's durable delivery record. */
 const MAX_ERROR_CHARS = 500
 
 // The caller needs only the status. Reading zero response bytes is the tightest possible body bound:
@@ -423,6 +423,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 function boundedError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error)
-  return message.slice(0, MAX_ERROR_CHARS)
+  // GuardedTargetError messages are fixed strings created in this module. Native and injected
+  // transport errors can echo a target origin, path, query or resolver diagnostic, none of which
+  // belongs in durable delivery/audit state.
+  if (error instanceof GuardedTargetError) return error.message.slice(0, MAX_ERROR_CHARS)
+  return 'network request failed'
 }

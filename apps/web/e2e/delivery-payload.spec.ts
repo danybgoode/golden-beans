@@ -123,12 +123,12 @@ test('a 5xx is RETRYABLE; a 4xx (not 408/429) is PERMANENT; 429 is retryable', a
 
 test('a network error is retryable and never throws', async () => {
   const exploding = (async () => {
-    throw new Error('ECONNREFUSED')
+    throw new Error('ECONNREFUSED https://receiver.example.test/hook?token=must-not-survive')
   }) as unknown as typeof fetch
   const result = await deliverWebhook(DEST, 'x', { fetchImpl: exploding, resolveHost: PUBLIC_RESOLVE })
   expect(result.disposition).toBe('retryable')
   expect(result.status).toBeNull()
-  expect(result.error).toContain('ECONNREFUSED')
+  expect(result.error).toBe('network request failed')
 })
 
 test('a timeout aborts and is reported as retryable', async () => {

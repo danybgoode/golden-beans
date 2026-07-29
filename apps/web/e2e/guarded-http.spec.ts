@@ -291,6 +291,26 @@ test('the request deadline aborts an in-flight sender and reports a retryable ti
   }
 })
 
+test('generic transport failures cannot echo a target origin into durable error text', async () => {
+  const result = await guardedHttpPostForTest(REQUEST, {
+    resolveHost: PUBLIC_RESOLVE,
+    fetchImpl: (async () => {
+      throw new Error(
+        'connect ECONNREFUSED https://receiver.example.test/hook?token=must-not-survive'
+      )
+    }) as typeof fetch,
+  })
+
+  assert.deepEqual(result, {
+    outcome: 'failure',
+    classification: 'network_error',
+    retryable: true,
+    status: null,
+    latencyMs: result.latencyMs,
+    error: 'network request failed',
+  })
+})
+
 for (const status of [200, 503]) {
   test(`status ${status}: response bytes are never read or returned, and the stream is cancelled`, async () => {
     let cancelled = 0

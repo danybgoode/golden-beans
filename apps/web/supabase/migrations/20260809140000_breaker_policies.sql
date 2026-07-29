@@ -895,3 +895,51 @@ GRANT EXECUTE ON FUNCTION
   trip_breaker_policy(TEXT,UUID,UUID,BIGINT,BIGINT,TEXT,UUID,TEXT,TEXT,TEXT),
   get_breaker_admin_snapshot(TEXT)
   TO service_role;
+
+-- Prove the effective boundary while the migration is being applied. PostgreSQL grants new
+-- functions PUBLIC EXECUTE by default, so the REVOKE statements above are not sufficient evidence
+-- by themselves. Breaker state is read through the bounded RPC and can only be mutated inside the
+-- SECURITY DEFINER functions; service_role deliberately has no direct table-write privilege.
+DO $$
+DECLARE
+  v_signature TEXT;
+  v_table TEXT;
+BEGIN
+  FOREACH v_signature IN ARRAY ARRAY[
+    'public.create_breaker_policy(text,text,jsonb,text,text)',
+    'public.approve_breaker_automatic(text,uuid,text,text)',
+    'public.prepare_breaker_confirmation(text,uuid,uuid,bigint,bigint,text,text,text)',
+    'public.trip_breaker_policy(text,uuid,uuid,bigint,bigint,text,uuid,text,text,text)',
+    'public.get_breaker_admin_snapshot(text)'
+  ]
+  LOOP
+    IF has_function_privilege('anon', v_signature, 'EXECUTE')
+       OR has_function_privilege('authenticated', v_signature, 'EXECUTE')
+       OR NOT has_function_privilege('service_role', v_signature, 'EXECUTE')
+    THEN
+      RAISE EXCEPTION 'breaker function privilege boundary failed for %', v_signature;
+    END IF;
+  END LOOP;
+
+  FOREACH v_table IN ARRAY ARRAY[
+    'public.breaker_policies',
+    'public.breaker_policy_states',
+    'public.breaker_owner_approvals',
+    'public.breaker_confirmations',
+    'public.breaker_trip_records',
+    'public.breaker_audit'
+  ]
+  LOOP
+    IF has_table_privilege('anon', v_table, 'SELECT')
+       OR has_table_privilege('authenticated', v_table, 'SELECT')
+       OR has_table_privilege('service_role', v_table, 'INSERT')
+       OR has_table_privilege('service_role', v_table, 'UPDATE')
+       OR has_table_privilege('service_role', v_table, 'DELETE')
+       OR has_table_privilege('service_role', v_table, 'TRUNCATE')
+       OR NOT has_table_privilege('service_role', v_table, 'SELECT')
+    THEN
+      RAISE EXCEPTION 'breaker table privilege boundary failed for %', v_table;
+    END IF;
+  END LOOP;
+END;
+$$;
