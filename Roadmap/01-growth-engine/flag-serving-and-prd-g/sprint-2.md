@@ -86,7 +86,8 @@ Miyagi actor and Golden version; frontend/backend converge within the bounded re
   API suite, build gate, Vercel preview and Antigravity review were clean. Its additive production
   migration `20260808110000_flag_admin_operations.sql` is applied and recorded: anonymous and
   authenticated roles cannot execute the admin read/write functions, service role can, and every
-  security-definer function pins `search_path`.
+  security-definer function pins `search_path`. The migration's version prefix establishes its
+  ordering; this evidence date records when it was applied, not a filename rename candidate.
 - Miyagi frontend PR [#322](https://github.com/danybgoode/miyagisanchezcommerce/pull/322) merged with
   all required CI and preview checks green. `/admin/flags` now uses the Golden server seam with a
   verified Clerk actor, scoped credential, reason, and optimistic snapshot version; it has no
