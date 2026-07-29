@@ -49,8 +49,8 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
 
         {projects.length === 0 ? (
           <p>
-            You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve
-            signup is live) create one.
+            You&apos;re not a member of any project yet. Ask an owner to add you, or (once self-serve signup
+            is live) create one.
           </p>
         ) : (
           <ul>
@@ -58,57 +58,61 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
               <li key={project.id}>
                 <strong>{project.slug}</strong> <small>({project.role})</small>
                 <ul>
-                {/* The dashboards are per-feature/per-experiment, so these link to the project's
+                  {/* The dashboards are per-feature/per-experiment, so these link to the project's
                     entry points rather than a single page — a member shouldn't have to guess URLs
                     (cross-review round 2, Gemini/Agy 2026-07-20). */}
-                <li>
-                  <a href={`/app/funnel/${project.slug}/${DEFAULT_FEATURE_HINT}`}>Funnel</a>{' '}
-                  <small>— swap the feature key in the URL</small>
-                </li>
-                <li>
-                  <a href={`/app/impact/${project.slug}/${DEFAULT_FEATURE_HINT}`}>Impact</a>{' '}
-                  <small>— swap the feature key in the URL</small>
-                </li>
-                {isJourneyProjectionsEnabled() && (
                   <li>
-                    <a href={`/app/journeys/${project.slug}`}>Journeys</a>{' '}
-                    <small>— {project.role === 'owner' ? 'define and activate' : 'read-only'}</small>
+                    <a href={`/app/funnel/${project.slug}/${DEFAULT_FEATURE_HINT}`}>Funnel</a>{' '}
+                    <small>— swap the feature key in the URL</small>
                   </li>
-                )}
-                {isExperimentGovernanceEnabled() && (
                   <li>
-                    <a href={`/app/experiments/${project.slug}`}>Experiment governance</a>{' '}
-                    <small>— {project.role === 'owner' ? 'plan and operate' : 'read-only'}</small>
+                    <a href={`/app/impact/${project.slug}/${DEFAULT_FEATURE_HINT}`}>Impact</a>{' '}
+                    <small>— swap the feature key in the URL</small>
                   </li>
-                )}
-                {project.role === 'owner' && (
-                  <>
+                  {isJourneyProjectionsEnabled() && (
                     <li>
-                      <a href={`/app/keys/${project.slug}`}>API keys</a>{' '}
-                      <small>— issue, rotate, revoke</small>
+                      <a href={`/app/journeys/${project.slug}`}>Journeys</a>{' '}
+                      <small>— {project.role === 'owner' ? 'define and activate' : 'read-only'}</small>
                     </li>
+                  )}
+                  {isExperimentGovernanceEnabled() && (
                     <li>
-                      <a href={`/app/destinations/${project.slug}`}>Destinations</a>{' '}
-                      <small>— signed webhook delivery</small>
+                      <a href={`/app/experiments/${project.slug}`}>Experiment governance</a>{' '}
+                      <small>— {project.role === 'owner' ? 'plan and operate' : 'read-only'}</small>
                     </li>
-                    {/* pod-report S3 — deliberately NOT wrapped in isReportSharesEnabled(). The
+                  )}
+                  <li>
+                    <a href={`/app/scenarios/${project.slug}`}>Scenarios &amp; breakers</a>{' '}
+                    <small>— read-only drills, impact evidence and protective trips</small>
+                  </li>
+                  {project.role === 'owner' && (
+                    <>
+                      <li>
+                        <a href={`/app/keys/${project.slug}`}>API keys</a>{' '}
+                        <small>— issue, rotate, revoke</small>
+                      </li>
+                      <li>
+                        <a href={`/app/destinations/${project.slug}`}>Destinations</a>{' '}
+                        <small>— signed webhook delivery</small>
+                      </li>
+                      {/* pod-report S3 — deliberately NOT wrapped in isReportSharesEnabled(). The
                         flag gates whether a minted link SERVES; hiding the screen behind it too
                         would mean the launch (Story 3.3) could not mint links before flipping,
                         which is the order that lets a link be verified before it is sent. */}
-                    <li>
-                      <a href={`/app/shares/${project.slug}`}>Share links</a>{' '}
-                      <small>— scoped, revocable report links</small>
-                    </li>
-                    {/* signals-loop S3.1 — same reasoning as the share screen above: the flag gates
+                      <li>
+                        <a href={`/app/shares/${project.slug}`}>Share links</a>{' '}
+                        <small>— scoped, revocable report links</small>
+                      </li>
+                      {/* signals-loop S3.1 — same reasoning as the share screen above: the flag gates
                         whether a minted key can WRITE, not whether an owner may prepare one. Story
                         3.4's launch mints a real credential and then flips, which is the rollout
                         order that lets the credential be verified before the surface is live. */}
-                    <li>
-                      <a href={`/app/agent-keys/${project.slug}`}>Agent write keys</a>{' '}
-                      <small>— let your own agent claim and resolve tasks</small>
-                    </li>
-                  </>
-                )}
+                      <li>
+                        <a href={`/app/agent-keys/${project.slug}`}>Agent write keys</a>{' '}
+                        <small>— let your own agent claim and resolve tasks</small>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </li>
             ))}

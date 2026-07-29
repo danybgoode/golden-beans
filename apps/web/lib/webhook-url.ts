@@ -14,7 +14,7 @@
 //
 // SCOPE OF THIS FILE: it classifies a LITERAL host (or hostname) at create/rotate time. A hostname
 // that RESOLVES to a private IP is caught elsewhere, by the two send-time layers in
-// lib/webhook-delivery.ts: a fail-CLOSED DNS pre-check, and — the airtight one — a connection-PINNED
+// lib/guarded-http.ts: a fail-CLOSED DNS pre-check, and — the airtight one — a connection-PINNED
 // sender whose custom `lookup` re-runs THIS classifier on the resolved address and pins the socket to
 // it, so there is no second resolution for a DNS-rebinding attacker to flip. Redirects are never
 // followed (`redirect: 'manual'`), so a 3xx cannot pivot around the pin either.
@@ -40,7 +40,7 @@ export function localhostWebhooksAllowed(): boolean {
 }
 
 // True only when the raw URL is the localhost test target AND the opt-in above is on. Exported so the
-// send-time SSRF guard (lib/webhook-delivery.ts) grants the SAME exception the create-time guard does
+// send-time SSRF guard (lib/guarded-http.ts) grants the SAME exception the create-time guard does
 // — kept consistent end-to-end so the documented dev receiver can actually be delivered to.
 export function isLocalTestTarget(raw: string): boolean {
   return IS_LOCAL_TARGET.test(raw) && localhostWebhooksAllowed()

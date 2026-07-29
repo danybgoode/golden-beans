@@ -23,12 +23,19 @@ import {
   validateFlagEvaluationTelemetry,
   type FlagEvaluationTelemetryInput,
 } from './flag-telemetry'
+import {
+  SCENARIO_EXECUTED_EVENT,
+  validateScenarioExecutionTelemetry,
+  type ScenarioExecutionTelemetryInput,
+} from './scenario-telemetry'
 import { scrubClientText, SDK_MAX_MESSAGE, SDK_MAX_STACK } from './scrub'
 
 export type { BucketVariant } from './bucketing'
 export { ERROR_EVENT } from './capture'
 export { FLAG_EVALUATED_EVENT } from './flag-telemetry'
 export type { FlagEvaluationTelemetryInput } from './flag-telemetry'
+export { SCENARIO_EXECUTED_EVENT } from './scenario-telemetry'
+export type { ScenarioExecutionTelemetryInput } from './scenario-telemetry'
 export {
   FLAG_CONTRACT_VERSION,
   FLAG_CONTEXT_FIELDS,
@@ -66,6 +73,51 @@ export type {
   FlagProviderResolutionDetails,
   FlagProviderStatus,
 } from './flag-provider'
+export {
+  MAX_SCENARIO_ABORT_FAILURES,
+  MAX_SCENARIO_CONCURRENCY_CAP,
+  MAX_SCENARIO_DEFINITION_BYTES,
+  MAX_SCENARIO_DELAY_MS,
+  MAX_SCENARIO_DURATION_SECONDS,
+  MAX_SCENARIO_LEASE_TTL_SECONDS,
+  MAX_SCENARIO_REQUEST_CAP,
+  MAX_SCENARIO_SNAPSHOT_BYTES,
+  MAX_SCENARIOS_PER_SNAPSHOT,
+  SCENARIO_COHORTS,
+  SCENARIO_CONTRACT_VERSION,
+  SCENARIO_SECURITY_TEMPLATES,
+  evaluateScenario,
+  parseScenarioDefinition,
+  parseScenarioFault,
+  parseScenarioSnapshot,
+} from './scenarios'
+export type {
+  ScenarioCohort,
+  ScenarioDefinition,
+  ScenarioDefinitionResult,
+  ScenarioExperimentReference,
+  ScenarioFault,
+  ScenarioFlagReference,
+  ScenarioGuardrails,
+  ScenarioKind,
+  ScenarioLimits,
+  ScenarioResolution,
+  ScenarioSecurityTemplate,
+  ScenarioSnapshot,
+  ScenarioSnapshotEntry,
+  ScenarioSnapshotResult,
+} from './scenarios'
+export { createScenarioProvider } from './scenario-provider'
+export type {
+  ScenarioExecutionFailure,
+  ScenarioExecutionReservation,
+  ScenarioExecutionSettlement,
+  ScenarioProvider,
+  ScenarioProviderConfig,
+  ScenarioProviderRefreshResult,
+  ScenarioProviderResolution,
+  ScenarioProviderStatus,
+} from './scenario-provider'
 
 /**
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.
@@ -214,6 +266,11 @@ export interface GrowthEngineClient {
    * ordinary evaluations use the reserved `flag_evaluated` event. Never throws.
    */
   trackFlagEvaluation(input: FlagEvaluationTelemetryInput): Promise<TrackResult>
+  /**
+   * Emits the exact flag assignment followed by one canonical, lease-idempotent scenario fact.
+   * A bound experiment therefore reuses `experiment_exposed`; no parallel denominator exists.
+   */
+  trackScenarioExecution(input: ScenarioExecutionTelemetryInput): Promise<TrackResult>
   /**
    * signals-loop · Story 1.1 — report a runtime error as a reserved `$error` event.
    *
@@ -429,6 +486,67 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     }
   }
 
+  async function trackScenarioExecution(input: ScenarioExecutionTelemetryInput): Promise<TrackResult> {
+    try {
+      if (!validateScenarioExecutionTelemetry(input)) {
+        return {
+          ok: false,
+          error: 'Invalid scenario execution telemetry',
+          code: 'INVALID_SCENARIO_EXECUTION',
+        }
+      }
+      const assignment = await trackFlagEvaluation({
+        flagKey: input.flag.key,
+        flagVersion: input.flag.definitionVersion,
+        variant: input.flag.variant,
+        reason: input.flag.reason,
+        snapshotVersion: input.flag.snapshotVersion,
+        environment: input.environment,
+        subject: input.subject,
+        ...(input.experiment ? { experiment: input.experiment } : {}),
+      })
+      if (!assignment.ok) return assignment
+
+      return await track(SCENARIO_EXECUTED_EVENT, {
+        featureId: input.scenarioKey,
+        tags: {
+          scenario_definition_version: input.scenarioVersion,
+          run_id: input.runId,
+          run_revision: input.runRevision,
+          target_key: input.targetKey,
+          lease_id: input.leaseId,
+          cohort: input.cohort,
+          environment: input.environment,
+          arm: input.arm,
+          fault_kind: input.faultKind,
+          failed: input.failed,
+          latency_ms: input.latencyMs,
+          flag_key: input.flag.key,
+          flag_definition_version: input.flag.definitionVersion,
+          flag_variant: input.flag.variant,
+          ...(input.experiment
+            ? {
+                experiment_key: input.experiment.key,
+                experiment_definition_version: input.experiment.definitionVersion,
+              }
+            : {}),
+        },
+        context: {
+          version: 1,
+          subject: input.subject,
+          correlationId: input.runId,
+          idempotencyKey: `scenario_exec:${input.leaseId}`,
+        },
+      })
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : 'scenario execution telemetry failed',
+        code: 'SCENARIO_EXECUTION_FAILED',
+      }
+    }
+  }
+
   // ── signals-loop · Story 1.1 · error capture ─────────────────────────────────────────────────
 
   const sampleRate = normalizeSampleRate(config.errorSampleRate)
@@ -496,6 +614,7 @@ export function createGrowthEngineClient(config: GrowthEngineClientConfig): Grow
     bucket,
     trackExposure,
     trackFlagEvaluation,
+    trackScenarioExecution,
     captureError,
     captureGlobalErrors,
   }

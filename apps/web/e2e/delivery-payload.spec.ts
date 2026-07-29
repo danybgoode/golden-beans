@@ -24,7 +24,7 @@ test('serializeEnvelope emits a FIXED key order — the signed bytes are determi
     data: { userId: 'u1' },
   })
   expect(body).toBe(
-    '{"id":"evt_1","type":"order_placed","occurredAt":"2026-07-22T00:00:00.000Z","data":{"userId":"u1"}}',
+    '{"id":"evt_1","type":"order_placed","occurredAt":"2026-07-22T00:00:00.000Z","data":{"userId":"u1"}}'
   )
 })
 
@@ -33,7 +33,11 @@ test('the test envelope carries test:true; a real event envelope never does', ()
   expect(testBody.test).toBe(true)
   expect(String(testBody.id)).toMatch(/^evt_test_/)
 
-  const realRow: CanonicalEventRow = { id: 'evt_real', event: 'order_placed', occurred_at: '2026-07-22T00:00:00.000Z' }
+  const realRow: CanonicalEventRow = {
+    id: 'evt_real',
+    event: 'order_placed',
+    occurred_at: '2026-07-22T00:00:00.000Z',
+  }
   const realBody = JSON.parse(serializeEnvelope(buildEventEnvelope(realRow)))
   // Absent, not `false` — a field only ever present-when-true can't be mistaken for a real event by
   // a receiver that checks truthiness.
@@ -74,7 +78,12 @@ test('a PARTIAL actor omits the missing half rather than emitting null (contract
 })
 
 test('occurredAt falls back to created_at when the event asserted no occurred_at', () => {
-  const env = buildEventEnvelope({ id: 'e', event: 'x', occurred_at: null, created_at: '2026-01-01T00:00:00.000Z' })
+  const env = buildEventEnvelope({
+    id: 'e',
+    event: 'x',
+    occurred_at: null,
+    created_at: '2026-01-01T00:00:00.000Z',
+  })
   expect(env.occurredAt).toBe('2026-01-01T00:00:00.000Z')
 })
 
@@ -90,7 +99,10 @@ const DEST: DeliverableDestination = {
 // the unit suite stays hermetic (no real DNS). A separate test injects a PRIVATE-resolving one.
 const PUBLIC_RESOLVE = async () => ['93.184.216.34']
 
-function stubFetch(status: number, body = 'ok'): { impl: typeof fetch; seen: { url: string; signature: string; body: string }[] } {
+function stubFetch(
+  status: number,
+  body = 'ok'
+): { impl: typeof fetch; seen: { url: string; signature: string; body: string }[] } {
   const seen: { url: string; signature: string; body: string }[] = []
   const impl = (async (url: string | URL | Request, init?: RequestInit) => {
     const headers = new Headers(init?.headers)
@@ -104,7 +116,11 @@ test('a 2xx is delivered, and the delivered request carries a VERIFIABLE signatu
   const { impl, seen } = stubFetch(200)
   const body = serializeEnvelope(buildTestEnvelope())
   const T = 1_800_000_000
-  const result = await deliverWebhook(DEST, body, { fetchImpl: impl, timestampSeconds: T, resolveHost: PUBLIC_RESOLVE })
+  const result = await deliverWebhook(DEST, body, {
+    fetchImpl: impl,
+    timestampSeconds: T,
+    resolveHost: PUBLIC_RESOLVE,
+  })
   expect(result.disposition).toBe('delivered')
   expect(result.status).toBe(200)
   // The receiver verifies exactly what we sent — same secret, same body, the header we signed.
@@ -114,30 +130,51 @@ test('a 2xx is delivered, and the delivered request carries a VERIFIABLE signatu
 
 test('a 5xx is RETRYABLE; a 4xx (not 408/429) is PERMANENT; 429 is retryable', async () => {
   const b = 'x'
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(503).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(400).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('permanent')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(404).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('permanent')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(429).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
-  expect((await deliverWebhook(DEST, b, { fetchImpl: stubFetch(408).impl, resolveHost: PUBLIC_RESOLVE })).disposition).toBe('retryable')
+  expect(
+    (await deliverWebhook(DEST, b, { fetchImpl: stubFetch(503).impl, resolveHost: PUBLIC_RESOLVE }))
+      .disposition
+  ).toBe('retryable')
+  expect(
+    (await deliverWebhook(DEST, b, { fetchImpl: stubFetch(400).impl, resolveHost: PUBLIC_RESOLVE }))
+      .disposition
+  ).toBe('permanent')
+  expect(
+    (await deliverWebhook(DEST, b, { fetchImpl: stubFetch(404).impl, resolveHost: PUBLIC_RESOLVE }))
+      .disposition
+  ).toBe('permanent')
+  expect(
+    (await deliverWebhook(DEST, b, { fetchImpl: stubFetch(429).impl, resolveHost: PUBLIC_RESOLVE }))
+      .disposition
+  ).toBe('retryable')
+  expect(
+    (await deliverWebhook(DEST, b, { fetchImpl: stubFetch(408).impl, resolveHost: PUBLIC_RESOLVE }))
+      .disposition
+  ).toBe('retryable')
 })
 
 test('a network error is retryable and never throws', async () => {
   const exploding = (async () => {
-    throw new Error('ECONNREFUSED')
+    throw new Error('ECONNREFUSED https://receiver.example.test/hook?token=must-not-survive')
   }) as unknown as typeof fetch
   const result = await deliverWebhook(DEST, 'x', { fetchImpl: exploding, resolveHost: PUBLIC_RESOLVE })
   expect(result.disposition).toBe('retryable')
   expect(result.status).toBeNull()
-  expect(result.error).toContain('ECONNREFUSED')
+  expect(result.error).toBe('network request failed')
 })
 
 test('a timeout aborts and is reported as retryable', async () => {
   // A fetch that never resolves until aborted — the AbortController fires our timeout.
   const hang = ((_url: unknown, init?: RequestInit) =>
     new Promise((_resolve, reject) => {
-      init?.signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+      init?.signal?.addEventListener('abort', () =>
+        reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))
+      )
     })) as unknown as typeof fetch
-  const result = await deliverWebhook(DEST, 'x', { fetchImpl: hang, timeoutMs: 20, resolveHost: PUBLIC_RESOLVE })
+  const result = await deliverWebhook(DEST, 'x', {
+    fetchImpl: hang,
+    timeoutMs: 20,
+    resolveHost: PUBLIC_RESOLVE,
+  })
   expect(result.disposition).toBe('retryable')
   expect(result.error).toContain('timed out')
 })
@@ -170,7 +207,10 @@ test('send-time SSRF: the http://localhost TEST receiver is EXEMPT when opted in
     const localDest: DeliverableDestination = { ...DEST, targetUrl: 'http://localhost:4000/hook' }
     const { impl, seen } = stubFetch(200)
     // A resolver that WOULD flag loopback — proving the carve-out short-circuits BEFORE resolution.
-    const result = await deliverWebhook(localDest, 'x', { fetchImpl: impl, resolveHost: async () => ['127.0.0.1'] })
+    const result = await deliverWebhook(localDest, 'x', {
+      fetchImpl: impl,
+      resolveHost: async () => ['127.0.0.1'],
+    })
     expect(result.disposition).toBe('delivered')
     expect(seen).toHaveLength(1)
   } finally {

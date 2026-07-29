@@ -128,6 +128,9 @@ async function main() {
     SIGNALS_ENABLED: 'true',
     CONNECTOR_WRITES_ENABLED: 'false',
     FLAG_SERVING_ENABLED: 'true',
+    RESILIENCE_SCENARIOS_ENABLED: 'true',
+    SECURITY_SIMULATIONS_ENABLED: 'true',
+    AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
     SELF_PROJECT_API_KEY: randomBytes(24).toString('hex'),
   };
 
@@ -141,12 +144,16 @@ async function main() {
     JOURNEY_PROJECTIONS_ENABLED: 'false',
     EXPERIMENT_GOVERNANCE_ENABLED: 'false',
     FLAG_SERVING_ENABLED: 'false',
+    RESILIENCE_SCENARIOS_ENABLED: 'false',
+    SECURITY_SIMULATIONS_ENABLED: 'false',
+    AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
   };
   await withServer({ port: darkPort, env: dark, label: 'dark-gate' }, async () => {
     runPlaywright(dark, darkPort, [
       'apps/web/e2e/journey-dark.spec.ts',
       'apps/web/e2e/experiment-governance-dark.spec.ts',
       'apps/web/e2e/flag-serving-dark.spec.ts',
+      'apps/web/e2e/scenario-dark.spec.ts',
     ]);
   });
 

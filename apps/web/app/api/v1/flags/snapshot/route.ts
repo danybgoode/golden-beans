@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hashCredential } from '@/lib/credential-hash'
 import { isFlagServingEnabled } from '@/lib/flags'
+import { ifNoneMatchIncludes } from '@/lib/http-etag'
 import { getSupabaseServiceClient } from '@/lib/supabase'
 
 // Operational snapshot route. Its caller cannot supply a project or environment: both are derived
@@ -54,12 +55,4 @@ function unauthorized() {
 
 function snapshotHeaders(etag: string): HeadersInit {
   return { ETag: etag, 'Cache-Control': 'private, max-age=0, must-revalidate' }
-}
-
-function ifNoneMatchIncludes(header: string | null, etag: string): boolean {
-  if (!header) return false
-  return header
-    .split(',')
-    .map((value) => value.trim())
-    .some((value) => value === etag || value === '*')
 }
