@@ -27,6 +27,7 @@ export type BreakerPolicyDefinition = {
     scenario: { key: string; definitionVersion: number }
     experiment: { key: string; definitionVersion: number }
     metricRole: 'primary' | 'guardrail'
+    metricEvent: string
     adverseDirection: 'increase' | 'decrease'
     thresholdBasisPoints: number
     minimumSamplePerVariant: number
@@ -159,6 +160,7 @@ export function parseBreakerPolicy(input: unknown): BreakerPolicyResult {
         'scenario',
         'experiment',
         'metricRole',
+        'metricEvent',
         'adverseDirection',
         'thresholdBasisPoints',
         'minimumSamplePerVariant',
@@ -198,6 +200,15 @@ export function parseBreakerPolicy(input: unknown): BreakerPolicyResult {
     if (input.evidence.metricRole !== 'primary' && input.evidence.metricRole !== 'guardrail') {
       errors.push('definition.evidence.metricRole must be primary or guardrail')
     }
+    if (
+      typeof input.evidence.metricEvent !== 'string' ||
+      input.evidence.metricEvent.length < 1 ||
+      input.evidence.metricEvent.length > 128 ||
+      input.evidence.metricEvent.trim() !== input.evidence.metricEvent ||
+      /[\u0000-\u001f\u007f]/u.test(input.evidence.metricEvent)
+    ) {
+      errors.push('definition.evidence.metricEvent must be a bounded event name')
+    }
     if (input.evidence.adverseDirection !== 'increase' && input.evidence.adverseDirection !== 'decrease') {
       errors.push('definition.evidence.adverseDirection must be increase or decrease')
     }
@@ -222,6 +233,11 @@ export function parseBreakerPolicy(input: unknown): BreakerPolicyResult {
       validateExperimentKey(experiment.key) &&
       positiveVersion(experiment.definitionVersion) &&
       (input.evidence.metricRole === 'primary' || input.evidence.metricRole === 'guardrail') &&
+      typeof input.evidence.metricEvent === 'string' &&
+      input.evidence.metricEvent.length >= 1 &&
+      input.evidence.metricEvent.length <= 128 &&
+      input.evidence.metricEvent.trim() === input.evidence.metricEvent &&
+      !/[\u0000-\u001f\u007f]/u.test(input.evidence.metricEvent) &&
       (input.evidence.adverseDirection === 'increase' || input.evidence.adverseDirection === 'decrease') &&
       boundedInteger(input.evidence.thresholdBasisPoints, 1, 100_000) &&
       boundedInteger(input.evidence.minimumSamplePerVariant, 1, MAX_BREAKER_SAMPLE_PER_VARIANT) &&
@@ -238,6 +254,7 @@ export function parseBreakerPolicy(input: unknown): BreakerPolicyResult {
           definitionVersion: experiment.definitionVersion,
         },
         metricRole: input.evidence.metricRole,
+        metricEvent: input.evidence.metricEvent,
         adverseDirection: input.evidence.adverseDirection,
         thresholdBasisPoints: input.evidence.thresholdBasisPoints,
         minimumSamplePerVariant: input.evidence.minimumSamplePerVariant,

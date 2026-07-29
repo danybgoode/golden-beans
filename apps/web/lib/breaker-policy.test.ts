@@ -43,6 +43,7 @@ const POLICY = {
     scenario: { key: 'checkout_probe', definitionVersion: 3 },
     experiment: { key: 'checkout_probe_impact', definitionVersion: 1 },
     metricRole: 'guardrail',
+    metricEvent: 'checkout_failed',
     adverseDirection: 'increase',
     thresholdBasisPoints: 1_000,
     minimumSamplePerVariant: 10,
