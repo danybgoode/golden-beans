@@ -50,3 +50,19 @@ test('execution stays dark while emergency stop remains reachable with both scen
   })
   expect(stop.status()).toBe(401)
 })
+
+test('security runner is a flat 404 before body or credential work while OFF', async ({ request }) => {
+  test.skip(
+    process.env.SECURITY_SIMULATIONS_ENABLED === 'true',
+    'dedicated dark-path pass requires SECURITY_SIMULATIONS_ENABLED=false'
+  )
+  const response = await request.post('/api/v1/scenarios/security', {
+    headers: {
+      Authorization: 'Bearer deliberately-invalid',
+      'Content-Type': 'application/json',
+    },
+    data: 'not-json',
+  })
+  expect(response.status()).toBe(404)
+  expect(await response.text()).toBe('')
+})

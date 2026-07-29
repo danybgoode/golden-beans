@@ -147,6 +147,7 @@ async function main() {
       'apps/web/e2e/journey-dark.spec.ts',
       'apps/web/e2e/experiment-governance-dark.spec.ts',
       'apps/web/e2e/flag-serving-dark.spec.ts',
+      'apps/web/e2e/scenario-dark.spec.ts',
     ]);
   });
 

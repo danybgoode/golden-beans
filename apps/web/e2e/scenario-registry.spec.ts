@@ -143,6 +143,7 @@ function scenarioDefinition({
   leaseTtlSeconds = 10,
   abortAfterFailures = 1,
   maxErrorRateBasisPoints = 10_000,
+  securityTemplate = 'malformed_payload_v1',
 }: {
   targetKey: string
   flagKey: string
@@ -155,6 +156,8 @@ function scenarioDefinition({
   leaseTtlSeconds?: number
   abortAfterFailures?: number
   maxErrorRateBasisPoints?: number
+  securityTemplate?:
+    'malformed_payload_v1' | 'rate_limit_v1' | 'invalid_credential_v1' | 'revoked_credential_v1'
 }) {
   return {
     contractVersion: 1,
@@ -167,7 +170,7 @@ function scenarioDefinition({
     limits: { requestCap, concurrencyCap, leaseTtlSeconds },
     guardrails: { abortAfterFailures, maxErrorRateBasisPoints },
     flag: { key: flagKey, definitionVersion: 1 },
-    ...(kind === 'security' ? { securityTemplate: 'malformed_payload_v1' } : {}),
+    ...(kind === 'security' ? { securityTemplate } : {}),
   }
 }
 
@@ -505,6 +508,85 @@ test('external production security needs both immutable owner approvals', async 
         external.data?.[0]?.approval_id,
       ])
     ).rejects.toMatchObject({ code: '55000' })
+
+    const readCredentialCannotRun = await client.rpc('reserve_security_scenario_execution', {
+      p_key_hash: hashCredential(credentials.readKey),
+      p_run_id: run.run_id,
+      p_expected_run_revision: 2,
+    })
+    expect(readCredentialCannotRun.error).toBeNull()
+    expect(readCredentialCannotRun.data).toEqual([])
+
+    const reserved = await client.rpc('reserve_security_scenario_execution', {
+      p_key_hash: hashCredential(credentials.adminKey),
+      p_run_id: run.run_id,
+      p_expected_run_revision: 2,
+    })
+    expect(reserved.data?.[0]).toMatchObject({
+      admitted: true,
+      reason: 'ADMITTED',
+      target_key: target.targetKey,
+      target_origin: 'https://security.example.test',
+      template: 'malformed_payload_v1',
+      request_units: 1,
+    })
+    const settled = await client.rpc('settle_security_scenario_execution', {
+      p_key_hash: hashCredential(credentials.adminKey),
+      p_run_id: run.run_id,
+      p_lease_id: reserved.data?.[0]?.lease_id,
+      p_observed_statuses: [400],
+      p_latency_ms: 25,
+    })
+    expect(settled.data?.[0]).toMatchObject({
+      observed_outcome: 'validation_rejected',
+      succeeded: true,
+      settled: true,
+      reason: 'SETTLED',
+    })
+    const duplicateSettlement = await client.rpc('settle_security_scenario_execution', {
+      p_key_hash: hashCredential(credentials.adminKey),
+      p_run_id: run.run_id,
+      p_lease_id: reserved.data?.[0]?.lease_id,
+      p_observed_statuses: [500],
+      p_latency_ms: 50,
+    })
+    expect(duplicateSettlement.data?.[0]).toMatchObject({
+      result_id: settled.data?.[0]?.result_id,
+      observed_outcome: 'validation_rejected',
+      succeeded: true,
+      settled: false,
+      reason: 'ALREADY_SETTLED',
+    })
+    const cooldown = await client.rpc('reserve_security_scenario_execution', {
+      p_key_hash: hashCredential(credentials.adminKey),
+      p_run_id: run.run_id,
+      p_expected_run_revision: 2,
+    })
+    expect(cooldown.data?.[0]).toMatchObject({
+      admitted: false,
+      reason: 'COOLDOWN',
+    })
+    const results = await client.rpc('get_scenario_security_results', {
+      p_key_hash: hashCredential(credentials.adminKey),
+    })
+    expect(results.data?.[0]?.results?.[0]).toMatchObject({
+      id: settled.data?.[0]?.result_id,
+      scenarioVersionId: version.scenario_version_id,
+      runId: run.run_id,
+      template: 'malformed_payload_v1',
+      expectedOutcome: 'validation_rejected',
+      observedOutcome: 'validation_rejected',
+      observedStatuses: [400],
+      succeeded: true,
+      latencyMs: 25,
+    })
+    expect(JSON.stringify(results.data?.[0])).not.toContain('https://security.example.test')
+    expect(JSON.stringify(results.data?.[0])).not.toContain(target.challengeHash)
+    await expect(
+      pg.query('UPDATE public.scenario_security_results SET latency_ms = 1 WHERE id = $1', [
+        settled.data?.[0]?.result_id,
+      ])
+    ).rejects.toMatchObject({ code: '55000' })
   } finally {
     await pg.end()
   }
@@ -517,6 +599,76 @@ test('external production security needs both immutable owner approvals', async 
     p_external_actor_id: ACTOR,
   })
   expect(stopped.data?.[0]).toMatchObject({ revision: 3, changed: true })
+
+  const rateVersion = await createScenario(
+    client,
+    credentials.adminKey,
+    'security_rate_probe',
+    scenarioDefinition({
+      targetKey: target.targetKey,
+      flagKey: 'scenario.security_probe',
+      kind: 'security',
+      cohort: 'internal',
+      securityTemplate: 'rate_limit_v1',
+      requestCap: 3,
+      abortAfterFailures: 10,
+    })
+  )
+  const rateApproval = await client.rpc('approve_scenario_definition', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_scenario_version_id: rateVersion.scenario_version_id,
+    p_approval_kind: 'production_security',
+    p_reason: 'explicit rate-template fixture approval',
+    p_external_actor_id: ACTOR,
+  })
+  expect(rateApproval.data?.[0]?.created).toBe(true)
+  const rateRun = await createRun(client, credentials.adminKey, rateVersion.scenario_version_id)
+  const rateStart = await client.rpc('start_scenario_run', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: rateRun.run_id,
+    p_expected_revision: 1,
+    p_reason: 'start bounded rate fixture',
+    p_external_actor_id: ACTOR,
+  })
+  expect(rateStart.data?.[0]?.revision).toBe(2)
+  const rateReserve = await client.rpc('reserve_security_scenario_execution', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: rateRun.run_id,
+    p_expected_run_revision: 2,
+  })
+  expect(rateReserve.data?.[0]).toMatchObject({
+    admitted: true,
+    template: 'rate_limit_v1',
+    request_units: 3,
+  })
+  const rateCapped = await client.rpc('reserve_security_scenario_execution', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: rateRun.run_id,
+    p_expected_run_revision: 2,
+  })
+  expect(rateCapped.data?.[0]).toMatchObject({
+    admitted: false,
+    reason: 'REQUEST_CAP',
+  })
+  const rateSettled = await client.rpc('settle_security_scenario_execution', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: rateRun.run_id,
+    p_lease_id: rateReserve.data?.[0]?.lease_id,
+    p_observed_statuses: [204, 204, 429],
+    p_latency_ms: 75,
+  })
+  expect(rateSettled.data?.[0]).toMatchObject({
+    observed_outcome: 'rate_limited',
+    succeeded: true,
+  })
+  await client.rpc('transition_scenario_run', {
+    p_key_hash: hashCredential(credentials.adminKey),
+    p_run_id: rateRun.run_id,
+    p_expected_revision: 2,
+    p_transition: 'stop',
+    p_reason: 'rate fixture cleanup',
+    p_external_actor_id: ACTOR,
+  })
 })
 
 test('expired leases are reclaimed and scenario TTL lazily resolves to control', async () => {
@@ -645,6 +797,9 @@ test('every scenario RPC denies anon/authenticated at the function boundary', as
       'public.get_scenario_read_snapshot(text)',
       'public.reserve_scenario_execution(text,uuid,bigint)',
       'public.settle_scenario_execution(text,uuid,uuid,boolean)',
+      'public.reserve_security_scenario_execution(text,uuid,bigint)',
+      'public.settle_security_scenario_execution(text,uuid,uuid,smallint[],integer)',
+      'public.get_scenario_security_results(text)',
     ]
     for (const signature of signatures) {
       const privilege = await pg.query<{
