@@ -1,0 +1,36 @@
+// Server-side boundary for the resilience/security scenario registry. The public SDK owns the
+// import-safe contract so Golden validates exactly what scenario consumers parse and evaluate.
+export {
+  MAX_SCENARIO_ABORT_FAILURES,
+  MAX_SCENARIO_CONCURRENCY_CAP,
+  MAX_SCENARIO_DEFINITION_BYTES,
+  MAX_SCENARIO_DELAY_MS,
+  MAX_SCENARIO_DURATION_SECONDS,
+  MAX_SCENARIO_LEASE_TTL_SECONDS,
+  MAX_SCENARIO_REQUEST_CAP,
+  MAX_SCENARIO_SNAPSHOT_BYTES,
+  MAX_SCENARIOS_PER_SNAPSHOT,
+  SCENARIO_COHORTS,
+  SCENARIO_CONTRACT_VERSION,
+  SCENARIO_SECURITY_TEMPLATES,
+  evaluateScenario,
+  parseScenarioDefinition,
+  parseScenarioFault,
+  parseScenarioSnapshot,
+} from '@golden-beans/sdk'
+export type {
+  ScenarioCohort,
+  ScenarioDefinition,
+  ScenarioDefinitionResult,
+  ScenarioExperimentReference,
+  ScenarioFault,
+  ScenarioFlagReference,
+  ScenarioGuardrails,
+  ScenarioKind,
+  ScenarioLimits,
+  ScenarioResolution,
+  ScenarioSecurityTemplate,
+  ScenarioSnapshot,
+  ScenarioSnapshotEntry,
+  ScenarioSnapshotResult,
+} from '@golden-beans/sdk'
