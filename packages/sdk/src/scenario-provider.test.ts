@@ -268,3 +268,29 @@ test('execution rejects invalid input and malformed or failed responses without 
   assert.equal(malformed.ok, false)
   assert.equal(calls, 2)
 })
+
+test('shutdown aborts an in-flight execution request instead of waiting for its timeout', async () => {
+  let markStarted: (() => void) | undefined
+  const started = new Promise<void>((resolve) => {
+    markStarted = resolve
+  })
+  const provider = createScenarioProvider({
+    baseUrl: 'https://golden.example',
+    flagReadKey: 'read-key',
+    refreshIntervalMs: 0,
+    executionTimeoutMs: 30_000,
+    fetchImpl: async (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+        markStarted?.()
+      }),
+  })
+  const reservation = provider.reserveExecution('11111111-1111-4111-8111-111111111111', 1)
+  await started
+  provider.shutdown()
+  assert.deepEqual(await reservation, {
+    ok: false,
+    errorCode: 'PROVIDER_FATAL',
+    errorMessage: 'Scenario provider has been shut down.',
+  })
+})

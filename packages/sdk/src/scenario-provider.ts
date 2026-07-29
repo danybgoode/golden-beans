@@ -272,6 +272,7 @@ export function createScenarioProvider(config: ScenarioProviderConfig): Scenario
   let refreshInFlight: Promise<ScenarioProviderRefreshResult> | undefined
   let refreshTimer: ReturnType<typeof setInterval> | undefined
   let abortController: AbortController | undefined
+  const executionControllers = new Set<AbortController>()
   let initialized = false
   let shutDown = false
 
@@ -301,6 +302,7 @@ export function createScenarioProvider(config: ScenarioProviderConfig): Scenario
       return executionFailure('PROVIDER_NOT_READY', 'Scenario provider is not configured for execution.')
     }
     const controller = new AbortController()
+    executionControllers.add(controller)
     let timeout: ReturnType<typeof setTimeout> | undefined
     try {
       const timeoutResult = new Promise<never>((_resolve, reject) => {
@@ -334,6 +336,7 @@ export function createScenarioProvider(config: ScenarioProviderConfig): Scenario
       )
     } finally {
       if (timeout !== undefined) clearTimeout(timeout)
+      executionControllers.delete(controller)
     }
   }
 
@@ -456,6 +459,8 @@ export function createScenarioProvider(config: ScenarioProviderConfig): Scenario
       if (refreshTimer !== undefined) clearInterval(refreshTimer)
       refreshTimer = undefined
       abortController?.abort()
+      for (const controller of executionControllers) controller.abort()
+      executionControllers.clear()
     },
     getStatus() {
       if (shutDown) {
