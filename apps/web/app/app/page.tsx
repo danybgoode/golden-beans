@@ -81,6 +81,10 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
                     <small>— {project.role === 'owner' ? 'plan and operate' : 'read-only'}</small>
                   </li>
                 )}
+                <li>
+                  <a href={`/app/scenarios/${project.slug}`}>Scenarios &amp; breakers</a>{' '}
+                  <small>— read-only drills, impact evidence and protective trips</small>
+                </li>
                 {project.role === 'owner' && (
                   <>
                     <li>
