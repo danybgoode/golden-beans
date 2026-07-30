@@ -18,6 +18,8 @@ test('normalizes non-UTC offsets to canonical UTC', () => {
 
 test('leaves malformed and non-string values for the contract parser to reject', () => {
   assert.equal(canonicalizeDatabaseInstant('not-an-instant'), 'not-an-instant')
+  assert.equal(canonicalizeDatabaseInstant('Jan 1 2026'), 'Jan 1 2026')
+  assert.equal(canonicalizeDatabaseInstant('2026-07-30'), '2026-07-30')
   assert.equal(canonicalizeDatabaseInstant(null), null)
   assert.equal(canonicalizeDatabaseInstant(1_785_373_579_934), 1_785_373_579_934)
 })
