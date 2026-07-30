@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { hashCredential } from '@/lib/credential-hash'
+import { canonicalizeDatabaseInstant } from '@/lib/database-instant'
 import { isResilienceScenariosEnabled } from '@/lib/flags'
 import { ifNoneMatchIncludes } from '@/lib/http-etag'
 import { parseScenarioSnapshot } from '@/lib/scenario-definition'
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
     contractVersion: 1,
     environment: row.environment,
     revision: row.snapshot_version,
-    generatedAt: row.generated_at,
+    generatedAt: canonicalizeDatabaseInstant(row.generated_at),
     scenarios: row.scenarios,
   })
   if (!parsed.ok) {
