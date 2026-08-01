@@ -102,3 +102,25 @@ change a serving snapshot, so enabling this route cannot darken an already-live 
 After this deployment succeeds, the two service-owned catalogs are synchronized explicitly and the
 resulting 41-key union, idempotent second run, unchanged production snapshot, and live owned-shop
 resolution are appended here before removing the obsolete Golden-side Miyagi importer.
+
+## 2026-08-01 — generic catalog sync and owned-shop activation
+
+The live runtime tenant is Golden project `miyagi`. The similarly named `miyagisanchez` project is a
+dormant duplicate and was not used for the production cutover. The live service-owned publishers were
+corrected to preserve the exact immutable definitions already present in `miyagi` before syncing:
+
+- Frontend: `40 definitions (1 created, 39 unchanged)`; rerun `0 created, 40 unchanged`.
+- Backend: `13 definitions (0 created)`; rerun `0 created`.
+- The sync route remained additive-only: omitted keys were not deleted or deactivated, and no Golden
+  whitelist was edited.
+
+The existing live production read credential then proved the owned-shop definition at snapshot `47`:
+definition version `1`, default `on`, polarity `killswitch`, criticality `high`, enforcement `both`.
+The owner lifecycle activation changed the snapshot `46 → 47` and did not perform an OFF transition.
+The feature therefore remained live throughout; an explicit OFF value is its deliberate protective
+rollback.
+
+The obsolete Golden-side importer was a one-time snapshot mechanism, not the ongoing registration
+rail. It is removed after this parity and activation proof. Future Golden-powered projects publish
+their typed catalogs through the generic project-scoped SDK route with a dedicated revocable
+`flag_sync` credential.

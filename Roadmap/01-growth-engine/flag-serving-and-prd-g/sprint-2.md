@@ -139,7 +139,11 @@ SDK `trackFlagEvaluation()` primitive: it reuses canonical `/api/v1/track`, samp
 evaluations, preserves experiment exposure semantics and never affects a flag decision. Miyagi
 adopted the released `sdk-v0.2.0` primitive in the completed cutover described below.
 
-## Cutover completion evidence — 2026-08-01 re-entry audit
+## Historical cutover completion evidence — 2026-08-01 re-entry audit (pre-Sprint 4)
+
+> This section records the state at the end of the original cutover audit. Sprint 4 subsequently
+> registered and activated the catalog through Golden's generic sync rail, superseding the
+> pre-registration statements below with live definition version 1 at snapshot 47.
 
 - Frontend PRs [#325](https://github.com/danybgoode/miyagisanchezcommerce/pull/325) and
   [#326](https://github.com/danybgoode/miyagisanchezcommerce/pull/326), plus backend PRs
@@ -149,17 +153,18 @@ adopted the released `sdk-v0.2.0` primitive in the completed cutover described b
 - Both active Cloud Run services are configured with `GOLDEN_BEANS_FLAG_CUTOVER=*=golden`,
   `GOLDEN_BEANS_FLAG_ENVIRONMENT=production`, a scoped read-key secret and
   `GROWTH_ENGINE_URL=https://golden-beans-gamma.vercel.app`. Evaluation sampling is `0.1`.
-- Current PII-free authority logs from both services report snapshot `46`, Golden live authority
+- Current PII-free authority logs from both services reported snapshot `46`, Golden live authority
   during normal refresh and Golden durable authority during bounded fallback. Registered keys agree
   on immutable flag version `1` and the local/Golden values match.
 - The approved Stripe rollback drill exposed timer-only refresh in a serverless runtime: backend
   advanced before frontend. PRs #326/#126 moved refresh onto the request path, after which both
   services converged on snapshot `46`. The never-throw and durable/default fallback contract stayed
   intact during the drill.
-- The imported catalog remains the exact 40-key inventory captured on 2026-07-28. The later
-  `catalog.owned_shop_only_enabled` key intentionally resolves from its default-ON local kill-switch
-  and has no Golden definition, per the explicit product decision recorded in frontend #332 and
-  backend #132. Its `DEFAULT` evaluation reason is expected; it is not misrepresented as migrated.
+- The imported catalog remained the exact 40-key inventory captured on 2026-07-28. At that point the
+  later `catalog.owned_shop_only_enabled` key intentionally resolved from its default-ON local
+  kill-switch and had no Golden definition, per the then-current product decision recorded in
+  frontend #332 and backend #132. Sprint 4 replaced that temporary local-only state with the live
+  Golden definition and activation documented in the epic closeout.
 
 ## Sprint QA
 

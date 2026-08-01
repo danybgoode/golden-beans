@@ -1,6 +1,6 @@
 # Sprint 4 — Evergreen catalog sync + discoverable operations
 
-**Status:** 🟦 Approved — 2026-08-01
+**Status:** ✅ shipped — 2026-08-01
 
 ## Outcome
 
@@ -12,6 +12,24 @@ remains the operational writer; application defaults remain the never-throw fall
 This sprint also makes the already-live Flags and Tasks surfaces discoverable from `/app`. Tasks is
 an active product surface, not a permanently dark preview; its existing `SIGNALS_ENABLED` safety
 gate remains available as a kill switch and must be ON in Production before closeout.
+
+## Closeout evidence — 2026-08-01
+
+- Golden PR #64 (`f1bd1f51e8076da6f79f8c2644464c416ccea699`) shipped the generic sync route, SDK
+  publisher and Flags/Tasks navigation. The additive migration `20260810100000` is applied.
+- Rollout PR #65 (`e9be164ffa3cd8e1ab51465ecde6302b487056e`) made
+  `FLAG_DEFINITION_SYNC_ENABLED=true` live through a tracked deployment. The gate probe changed from
+  the OFF `404` to the expected auth-boundary `401`.
+- Frontend parity PR #335 merged at `309e04c`; backend parity PR #134 merged at `b9df31b`.
+- Against the live Golden project `miyagi`, frontend sync returned `1 created / 39 unchanged` and
+  backend sync returned `0 created`; idempotent reruns returned `0 created / 40 unchanged` and
+  `0 created`, respectively.
+- The owned-shop definition was activated ON through the normal lifecycle path, advancing Production
+  snapshot `46 → 47`. It remains default `on`, polarity `killswitch`, enforcement `both`; no OFF
+  transition occurred.
+- `/app`, `/app/flags/miyagisanchez` and `/app/tasks/miyagisanchez` return the authenticated-path
+  `307 /login`, proving the surfaces exist and are not dark. A connected authenticated browser was
+  unavailable for this closeout, so that stronger product-owner confirmation is not claimed.
 
 ## Story 4.1 — Find the operating surfaces
 

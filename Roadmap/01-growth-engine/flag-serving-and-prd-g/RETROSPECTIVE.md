@@ -24,6 +24,10 @@ _API/proof close: 2026-08-01 · final epic close awaits product-owner browser co
   no automatic reenable exists.
 - All scenario runs are terminal, the target is revoked, and reviewed merge `e37db4f` returned the
   resilience, security and automatic-breaker routes to flat `404`. Golden flag serving remains ON.
+- Sprint 4 added the generic project-scoped definition-sync rail and made Flags and Tasks discoverable
+  from `/app`. The live `miyagi` tenant synced its frontend and backend fragments idempotently, and
+  `catalog.owned_shop_only_enabled` was activated ON at Production snapshot `47` as a normal Golden
+  managed killswitch. The feature never went dark and no production OFF transition was used.
 
 ## What went well
 
@@ -60,6 +64,9 @@ _API/proof close: 2026-08-01 · final epic close awaits product-owner browser co
   not being rewritten as passed.
 - External cohorts remain intentionally unapproved and OFF. Activating them is a future product
   decision under the existing owner/cohort/cap/abort contract, not unfinished scope in this epic.
-- `catalog.owned_shop_only_enabled` remains a post-cutover default-ON kill-switch and its feature is
-  live. Sprint 4 operationalizes it through Golden without changing that state and removes the need
-  for a project-specific importer on future flags.
+- A complete initial catalog import is not an ongoing registration workflow. Sprint 4 replaced the
+  one-time Miyagi importer with a generic project-scoped sync rail. The `miyagi` tenant—not the dormant
+  `miyagisanchez` duplicate—must be the runtime identity used for future publisher credentials.
+- `catalog.owned_shop_only_enabled` is a normal Golden-managed default-ON killswitch and its feature is
+  live at snapshot `47`. Local defaults remain resilience; permanent control-plane absence is not an
+  accepted exception.
