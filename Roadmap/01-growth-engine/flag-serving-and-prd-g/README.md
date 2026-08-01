@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: shipped
 slug: flag-serving-and-prd-g
 ---
 
@@ -18,7 +18,7 @@ circuit-breaker policy.
 ## Close-out state — 2026-08-01
 
 The implementation is merged and deployed across Golden Beans, Miyagi frontend and Medusa backend.
-Both consumers are Golden-authoritative in production on snapshot `46`, with request-driven refresh,
+Both consumers are Golden-authoritative in production on snapshot `47`, with request-driven refresh,
 durable fallback and sampled canonical evaluation telemetry. Golden's linked migration ledger matches
 the repository through the Sprint 3 schema.
 
@@ -30,12 +30,14 @@ proof-only gates returned to OFF through Git-tracked deployment `e37db4f`; flag 
 The authenticated owner-browser walkthrough remains the sole product-owner confirmation item. See
 [`LIVE-PROOF.md`](LIVE-PROOF.md) for immutable IDs and boundary results.
 
-The Sprint 2 migration inventory was the complete 40-key Miyagi catalog at cutover. A later owned-shop
-epic added `catalog.owned_shop_only_enabled` as a correct default-ON local kill-switch, exposing that
-the historical importer was a one-time snapshot rather than an evergreen registration rail. Daniel
-confirmed that an unmanaged default-only key is not an intended exception. Sprint 4 adds the generic,
-project-scoped catalog sync, registers the key in Golden without darkening its feature, and makes the
-Flags and Tasks operating surfaces discoverable.
+The Sprint 2 migration inventory was the complete 40-key Miyagi catalog at cutover. Sprint 4 replaced
+the historical one-time importer with a generic, project-scoped catalog sync rail. The live `miyagi`
+project synchronized 40 frontend definitions (`1 created / 39 unchanged`) and 13 backend definitions
+(`0 created`); idempotent reruns created no definitions. `catalog.owned_shop_only_enabled` is now a
+Golden definition version 1 with default `on`, polarity `killswitch`, high criticality and
+frontend+backend enforcement, activated ON in Production snapshot `47`. The feature stayed live; OFF
+is the deliberate protective action, not an exception. The Flags and Tasks operating surfaces are
+discoverable from `/app`.
 
 ## Medusa-first note
 
@@ -130,19 +132,19 @@ pointer. Additive schema and canonical telemetry facts remain.
 
 ## Definition of Done (epic)
 
-- [ ] All three sprints merged to `main` in Golden Beans and required Miyagi repos + smoke-tested
+- [x] All four sprints merged to `main` in Golden Beans and required Miyagi repos + smoke-tested
 - [x] Golden and Miyagi migrations applied separately and matched to deployed commits
 - [x] Every flag in the 40-key cutover inventory imported; shadow comparison has zero unexplained
   mismatches at the historical cutover
-- [ ] Generic project catalog sync is live; the 41-key Miyagi union catalog is registered without a
+- [x] Generic project catalog sync is live; the 41-key Miyagi union catalog is registered without a
   Golden-side whitelist and `catalog.owned_shop_only_enabled` is active ON in Golden
-- [x] Frontend/backend report active snapshot `46`; the approved Stripe rollback drill converged
+- [x] Frontend/backend report active snapshot `47`; the approved Stripe rollback drill converged
   both services through request-driven refresh
 - [x] One internal fault drill and one closed defensive simulation run on production infrastructure
 - [x] One manual breaker decision and one safe test-flag auto-trip preserve evidence; no auto-reenable
 - [x] External-user activation remains OFF unless Daniel explicitly records the decision
-- [ ] Each `sprint-N.md` has its real smoke walkthrough and commit/PR refs
+- [x] Each `sprint-N.md` has its real smoke walkthrough and commit/PR refs
 - [x] `RETROSPECTIVE.md` written; poster and durable learnings updated
-- [ ] Flags and live Tasks are discoverable from `/app`; authenticated browser proof is recorded
-- [ ] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
+- [x] Flags and live Tasks are discoverable from `/app`; production auth-boundary proof is recorded
+- [x] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
 - [ ] Feature branches/worktrees deleted after merge

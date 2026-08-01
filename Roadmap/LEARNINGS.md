@@ -652,7 +652,9 @@ one-liner + why + date shape.
   was correct; treating permanent control-plane absence as an exception was not. A project declares
   the typed default once, then a generic project-scoped sync rail must register it without a
   Golden-side whitelist. Local defaults are resilience, not the operational writer. Never call the
-  original inventory evergreen. *(2026-08-01, flag-serving / owned-shop.)*
+  original inventory evergreen. The live runtime tenant is `miyagi`; a similarly named dormant
+  `miyagisanchez` project must not receive production publisher credentials by analogy. *(2026-08-01,
+  flag-serving / owned-shop.)*
 - **A Next App Router `loading.tsx` or parent layout can change the HTTP semantics of a guarded
   child page by starting the response stream first.** During the design-system lift, both a shared
   `/app` layout and then the root loader made `notFound()` content look correct in a browser while
