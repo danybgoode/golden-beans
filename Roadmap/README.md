@@ -48,6 +48,11 @@ independently shippable slice of value.
      `### <NN> · <name>` heading per macro-section row above. -->
 
 ### 01 · Growth Engine
+- 🚧 [Flag control plane + Miyagi migration + resilience/SecOps](01-growth-engine/flag-serving-and-prd-g/README.md)
+  (typed/versioned flag registry · local snapshot provider · complete 40-key Miyagi cutover · closed
+  resilience/security scenarios · policy-bound circuit breakers) — Golden authority is live in both
+  Miyagi services on snapshot `46`; the internal production exercise, breaker evidence and return of
+  the three proof-only gates to OFF remain before epic close.
 - ✅ [Growth Engine v1](01-growth-engine/growth-engine-v1/README.md) (telemetry ingest · SDK · TARS
   funnel · North Star metric · A/B bucketing) — live in production at
   `https://golden-beans-gamma.vercel.app`, dogfooded against Miyagi's real setup-guide funnel.

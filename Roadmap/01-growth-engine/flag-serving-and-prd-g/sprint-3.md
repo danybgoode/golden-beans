@@ -1,6 +1,28 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 3: Resilience, SecOps and circuit breakers
 
-**Status:** ⬜ not started
+**Status:** 🟡 implementation deployed and migrated; controlled production proof and gate cleanup
+remain open
+
+## Implementation evidence — 2026-08-01 re-entry audit
+
+- Golden PR [#58](https://github.com/danybgoode/golden-beans/pull/58) merged the governed scenario
+  registry, closed fault/security executors, canonical impact lens and policy-bound manual/automatic
+  breakers. Its enabled-gate API suite covered 428 cases with 31 deliberate skips; the dark-gate
+  suite, typecheck, lint and production build were also green.
+- Golden PR [#59](https://github.com/danybgoode/golden-beans/pull/59) fixed migration-fixture entropy
+  and tagged `sdk-v0.2.0`. PR [#61](https://github.com/danybgoode/golden-beans/pull/61) canonicalized
+  PostgREST timestamps after the first controlled start exposed the offset-format mismatch.
+- All five additive Sprint 3 migrations (`20260809100000` through `20260809140000`) are present in
+  the linked production migration ledger. The current production deployment is commit `6118402`.
+- Miyagi frontend #325 contains the fixed internal probe target and closed scenario executor;
+  frontend #326 makes snapshot refresh request-driven. No caller can choose an arbitrary URL,
+  payload, header or fault template.
+- PR [#60](https://github.com/danybgoode/golden-beans/pull/60) recorded the prepared internal target
+  and two run IDs, proved the OFF boundary, and supplied the Git-tracked deployment after enabling
+  the three proof gates. It did not claim completed run, breaker or cleanup evidence.
+- Re-entry boundary probes show resilience, security and automatic-breaker routes are currently
+  enabled. The prepared runs, manual transition, safe auto-trip, stop/revoke cleanup and tracked
+  return of all three proof-only gates to OFF are therefore the remaining Story 3.6 work.
 
 ## Stories
 
