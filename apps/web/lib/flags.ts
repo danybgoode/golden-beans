@@ -139,6 +139,14 @@ export function isFlagServingEnabled(): boolean {
   return process.env.FLAG_SERVING_ENABLED === 'true'
 }
 
+// flag-serving-and-prd-g · Sprint 4 — definition synchronization is an independently removable
+// control-plane WRITE seam.  It is deliberately separate from FLAG_SERVING_ENABLED: an owner may
+// prepare immutable drafts while serving is dark, and an incident may stop publishers without
+// interrupting the already-serving snapshots.
+export function isFlagDefinitionSyncEnabled(): boolean {
+  return process.env.FLAG_DEFINITION_SYNC_ENABLED === 'true'
+}
+
 // flag-serving-and-prd-g · scenario execution is deliberately independent from definition and
 // evidence inspection. Turning it OFF stops fault payload delivery but preserves the record needed
 // to understand and safely stop an already-created scenario.

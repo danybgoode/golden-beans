@@ -5,6 +5,9 @@ import { isFlagServingEnabled } from '@/lib/flags'
 import { parseFlagDefinition, validateFlagKey, type FlagEnvironment } from '@/lib/flag-definition'
 import { createFlagDefinitionVersion, deactivateFlag, setFlagActivation } from '@/lib/flag-registry'
 import { mintFlagReadKey, revokeFlagReadKey } from '@/lib/flag-read-keys'
+import { mintFlagSyncKey, revokeFlagSyncKey } from '@/lib/flag-sync-keys'
+
+const FLAG_SYNC_SOURCE = /^[a-z][a-z0-9_-]{0,63}$/
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== 'string') throw new Error(`Invalid ${field}`)
@@ -153,6 +156,47 @@ export async function revokeFlagReadKeyAction(slug: unknown, keyId: unknown) {
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   if (typeof keyId !== 'string') return { ok: false as const, error: 'Invalid key id.' }
   const ok = await revokeFlagReadKey(projectId, keyId, userId)
+  if (ok) revalidate(safeSlug)
+  return ok ? { ok: true as const } : { ok: false as const, error: 'Could not revoke that key.' }
+}
+
+export async function mintFlagSyncKeyAction(
+  slug: unknown,
+  label: unknown,
+  source: unknown,
+  expiryDays: unknown
+) {
+  const safeSlug = requireString(slug, 'project')
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
+  const safeLabel = typeof label === 'string' ? label.trim() : ''
+  if (safeLabel.length < 1 || safeLabel.length > 120)
+    return { ok: false as const, error: 'Label must use 1–120 characters.' }
+  if (typeof source !== 'string' || !FLAG_SYNC_SOURCE.test(source))
+    return {
+      ok: false as const,
+      error: 'Source must use 1–64 lowercase letters, numbers, underscores or hyphens.',
+    }
+  if (expiryDays !== null && expiryDays !== undefined && typeof expiryDays !== 'number')
+    return { ok: false as const, error: 'Unsupported expiry.' }
+  const days = typeof expiryDays === 'number' ? expiryDays : null
+  if (days !== null && ![1, 7, 30, 90].includes(days))
+    return { ok: false as const, error: 'Unsupported expiry.' }
+  const result = await mintFlagSyncKey({
+    projectId,
+    label: safeLabel,
+    source,
+    expiresAt: days === null ? null : new Date(Date.now() + days * 86_400_000),
+    actorUserId: userId,
+  })
+  if (result.ok) revalidate(safeSlug)
+  return result
+}
+
+export async function revokeFlagSyncKeyAction(slug: unknown, keyId: unknown) {
+  const safeSlug = requireString(slug, 'project')
+  const { projectId, userId } = await requireProjectOwnership(safeSlug)
+  if (typeof keyId !== 'string') return { ok: false as const, error: 'Invalid key id.' }
+  const ok = await revokeFlagSyncKey(projectId, keyId, userId)
   if (ok) revalidate(safeSlug)
   return ok ? { ok: true as const } : { ok: false as const, error: 'Could not revoke that key.' }
 }

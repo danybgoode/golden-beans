@@ -74,6 +74,25 @@ export type {
   FlagProviderStatus,
 } from './flag-provider'
 export {
+  FLAG_DEFINITION_SYNC_CONTRACT_VERSION,
+  MAX_FLAG_DEFINITION_SYNC_BODY_BYTES,
+  MAX_FLAG_DEFINITION_SYNC_ENTRIES,
+  createFlagDefinitionSyncClient,
+  isFlagDefinitionSyncBodyWithinLimit,
+  parseFlagDefinitionSyncRequest,
+} from './flag-sync'
+export type {
+  FlagDefinitionSyncClient,
+  FlagDefinitionSyncClientConfig,
+  FlagDefinitionSyncEntry,
+  FlagDefinitionSyncEntryResult,
+  FlagDefinitionSyncFailure,
+  FlagDefinitionSyncRequest,
+  FlagDefinitionSyncRequestResult,
+  FlagDefinitionSyncResult,
+  FlagDefinitionSyncSuccess,
+} from './flag-sync'
+export {
   MAX_SCENARIO_ABORT_FAILURES,
   MAX_SCENARIO_CONCURRENCY_CAP,
   MAX_SCENARIO_DEFINITION_BYTES,

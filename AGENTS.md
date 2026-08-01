@@ -228,6 +228,8 @@ supabase link --project-ref <ref> && supabase migration list && supabase db push
   `JOURNEY_PROJECTIONS_ENABLED` (`lib/flags.ts`, journey registry/read/UI kill-switch, **born OFF**), and
   `EXPERIMENT_GOVERNANCE_ENABLED` (`lib/flags.ts`, experiment registry/lifecycle/UI enablement gate,
   **born OFF**; legacy local bucketing, exposure ingest and v1 comparison do not read it), and
+  `FLAG_DEFINITION_SYNC_ENABLED` (`lib/flags.ts`, project catalog-registration write gate,
+  **born OFF**; definition inspection, activation and snapshot serving do not read it), and
   `SIGNUP_ENABLED` (`lib/flags.ts`, self-serve signup enablement gate, **born OFF**; gates the
   `/signup` page, `POST /api/v1/public/signup`, tenant provisioning in `/auth/callback`, and the
   landing's §1/§7 CTA flip — all four read it fresh per request, but every env change still needs a
