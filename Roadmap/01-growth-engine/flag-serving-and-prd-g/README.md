@@ -22,11 +22,13 @@ Both consumers are Golden-authoritative in production on snapshot `46`, with req
 durable fallback and sampled canonical evaluation telemetry. Golden's linked migration ledger matches
 the repository through the Sprint 3 schema.
 
-The epic is not yet marked shipped because the controlled production-infrastructure exercise is still
-open: the prepared internal resilience/security runs have not been completed, the manual and automatic
-breaker evidence has not been captured, and the three proof-only execution gates have not been returned
-to OFF through a Git-tracked deployment. The authenticated owner-browser walkthrough also remains a
-named product-owner smoke item. See [`LIVE-PROOF.md`](LIVE-PROOF.md) for the exact handoff state.
+The controlled production-infrastructure exercise is complete. The internal resilience run produced a
+non-zero canonical technical delta, the closed defensive simulation observed its expected guard, and
+the staged manual plus owner-preapproved automatic breaker transitions moved separate disposable flags
+to their safe versions without reenable. All runs are terminal, the target is revoked, and the three
+proof-only gates returned to OFF through Git-tracked deployment `e37db4f`; flag serving remains ON.
+The authenticated owner-browser walkthrough remains the sole product-owner confirmation item. See
+[`LIVE-PROOF.md`](LIVE-PROOF.md) for immutable IDs and boundary results.
 
 The Sprint 2 migration inventory was the complete 40-key Miyagi catalog at cutover. A later owned-shop
 epic added `catalog.owned_shop_only_enabled`; Daniel explicitly approved it as a default-ON local
@@ -134,10 +136,10 @@ pointer. Additive schema and canonical telemetry facts remain.
   mismatches (the later default-only owned-shop exception is recorded above)
 - [x] Frontend/backend report active snapshot `46`; the approved Stripe rollback drill converged
   both services through request-driven refresh
-- [ ] One internal fault drill and one closed defensive simulation run on production infrastructure
-- [ ] One manual breaker decision and one safe test-flag auto-trip preserve evidence; no auto-reenable
+- [x] One internal fault drill and one closed defensive simulation run on production infrastructure
+- [x] One manual breaker decision and one safe test-flag auto-trip preserve evidence; no auto-reenable
 - [x] External-user activation remains OFF unless Daniel explicitly records the decision
 - [ ] Each `sprint-N.md` has its real smoke walkthrough and commit/PR refs
-- [ ] `RETROSPECTIVE.md` written; poster and durable learnings updated
+- [x] `RETROSPECTIVE.md` written; poster and durable learnings updated
 - [ ] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
 - [ ] Feature branches/worktrees deleted after merge

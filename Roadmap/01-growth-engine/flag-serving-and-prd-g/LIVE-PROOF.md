@@ -18,41 +18,70 @@ available to running functions. It is not a manual Vercel deployment. The comple
 breaker transitions, stop/revoke cleanup, and gate-disable deployment are appended before epic
 close.
 
-## 2026-08-01 — re-entry audit and exact handoff
+## 2026-07-30 — completed internal production proof
 
-No missing feature branch was found: the implementation commits are already merged. Golden production
-is on commit `6118402`; the linked Supabase migration ledger matches all Sprint 3 migrations. Local
-re-verification passed typecheck, lint, 834 unit tests, the 8-case dark-gate API suite, 429 enabled
-API tests (31 deliberate skips), and the production build.
+The immutable tenant-scoped admin/evidence snapshots show that the proof was completed after the
+activation record, although the roadmap ledger was not updated at the time. External cohorts remained
+unapproved and OFF throughout.
 
-Safe public-boundary probes establish the current execution-gate state without reading tenant data or
-running a scenario:
+### Resilience and canonical impact
 
-| Boundary | Observed response | Meaning |
+- The originally prepared resilience run `187c663c-74da-4000-b31c-a5a20b58be94` finished `stopped`
+  at revision `3`: two requests, two successful settlements, zero failures and zero active leases.
+- The final integrity-valid evidence run `67ee5a3a-f984-41c0-86b7-605cd11d9754` also finished
+  `stopped` at revision `3`, with the same bounded two-request/zero-active-lease result.
+- Immutable impact record `630aae77-91f2-4266-99db-ec398ec0c426` labels the cohort `internal` and
+  refuses a causal customer claim. Its technical lens measured control p95 `1 ms` versus fault p95
+  `126 ms`, a non-zero `125 ms` difference. Canonical experiment analysis was integrity-ready,
+  decision-ready and sample-met; the adverse primary-metric difference was `-10,000` basis points.
+
+### Closed defensive simulation
+
+- Prepared security run `8324a5d2-1ff2-4aef-808d-4a32ceb369c1` finished `stopped` at revision `3`:
+  one request, one success, zero failures and zero active leases.
+- Result `f6133b38-2317-4975-9789-bcea31728380` ran only the stored
+  `malformed_payload_v1` template against `miyagi.internal.probe`. The registered target returned
+  `400`; expected and observed outcomes both equal `validation_rejected`.
+
+### Manual and automatic protective transitions
+
+| Mode | Policy | Trip record | Snapshot | Protective flag |
+|---|---|---|---:|---|
+| manual | `manual_prd_g_20260729` | `499acb56-537c-45d0-888b-01e2e16fb43e` | `44 → 45` | `breaker.manual_prd_g_20260729` v2, default `off` |
+| automatic | `auto_prd_g_20260729` | `3d2ca151-e35c-4ae4-9941-4e2580bad19c` | `45 → 46` | `breaker.auto_prd_g_20260729` v2, default `off` |
+
+Both policies used the same immutable impact record. The automatic transition had the required
+owner-preapproved emergency approval and recorded `system:automatic_breaker`; the manual transition
+recorded the real Clerk actor. The current read snapshot is still version `46`, last updated by the
+automatic trip, and both disposable flags still resolve to their protective `off` version. No later
+activation or automatic reenable exists.
+
+### Fixture cleanup
+
+- Every scenario run is terminal with zero active leases.
+- The registered proof target is `revoked`.
+- Definitions, results, impact evidence, approvals, trip records and audit remain immutable by design.
+- The live Miyagi `flag_read` and `flag_admin` credentials were existing operational credentials, not
+  disposable proof keys, and remain in their server-only stores. No credential value was printed or
+  persisted during the re-entry audit.
+
+## 2026-08-01 — gate cleanup and re-entry verification
+
+No missing implementation branch was found. Local re-verification passed typecheck, lint, 834 unit
+tests, the 8-case dark-gate API suite, 429 enabled API tests (31 deliberate skips), and the production
+build. The linked Supabase migration ledger matches all Sprint 3 migrations.
+
+Daniel explicitly authorized the scoped proof inspection and gate cleanup. The three proof-only
+Production variables were set to `false` using explicit Vercel CLI values; no manual deployment ran.
+Agy-reviewed PR [#63](https://github.com/danybgoode/golden-beans/pull/63) merged as commit `e37db4f`,
+and GitHub deployment `5705293596` completed successfully, causing Vercel to snapshot the new values.
+
+| Boundary after deployment | Response | State |
 |---|---:|---|
-| `GET /api/v1/flags/snapshot` without a credential | `401` | flag serving ON |
-| `GET /api/v1/scenarios/snapshot` without a credential | `401` | resilience scenarios ON |
-| `POST /api/v1/scenarios/security` with an empty body | `400` | security simulations ON |
-| `POST /api/v1/breakers/automatic` with an empty body | `400` | automatic breakers ON |
+| `GET /api/v1/scenarios/snapshot` without a credential | `404` | resilience scenarios OFF |
+| `POST /api/v1/scenarios/security` with an empty body | `404` | security simulations OFF |
+| `POST /api/v1/breakers/automatic` with an empty body | `404` | automatic breakers OFF |
+| `GET /api/v1/flags/snapshot` without a credential | `401` | flag serving remains ON |
 
-The three proof-only gates must not remain ON after the exercise. Their current state is recorded as an
-open operational risk, not as completed acceptance.
-
-The remaining authorized sequence is deliberately narrow:
-
-1. Read the prepared run records and their real owner/actor through the scoped admin seam.
-2. Start the short-TTL internal resilience run and exercise only `miyagi.internal.probe`; capture the
-   control/fault technical delta and canonical product-impact state.
-3. Run the prepared closed defensive simulation against the same verified target under its stored caps;
-   capture the expected validation/rate/auth guard result.
-4. Record one staged manual breaker decision and one automatic trip on the disposable safe test flag;
-   verify neither path reenables it.
-5. Stop/expire both runs, revoke disposable proof credentials/fixtures, and verify the normal Miyagi path.
-6. Set `RESILIENCE_SCENARIOS_ENABLED`, `SECURITY_SIMULATIONS_ENABLED`, and
-   `AUTOMATIC_CIRCUIT_BREAKERS_ENABLED` OFF in Production, then merge a Git-tracked cleanup commit so the
-   new deployment snapshots those values. Re-probe all three routes for flat `404`.
-
-This sequence performs production mutations and reads scoped credentials. It requires Daniel's explicit
-authorization naming the proof runs, breaker transitions, credential access and Production gate changes;
-the broad instruction to wrap the epic is not used as substitute authority. The signed-in owner UI smoke
-also remains pending because no production Clerk browser session was connected during this audit.
+The API-level production proof and cleanup are complete. The product-owner Clerk browser walkthrough
+remains the only real-session confirmation because no browser was connected to this agent session.

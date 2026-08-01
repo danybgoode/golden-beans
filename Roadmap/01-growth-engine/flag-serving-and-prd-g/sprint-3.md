@@ -1,7 +1,7 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 3: Resilience, SecOps and circuit breakers
 
-**Status:** 🟡 implementation deployed and migrated; controlled production proof and gate cleanup
-remain open
+**Status:** ✅ implementation, production API proof and gate cleanup complete; product-owner Clerk
+browser confirmation remains owed
 
 ## Implementation evidence — 2026-08-01 re-entry audit
 
@@ -20,9 +20,24 @@ remain open
 - PR [#60](https://github.com/danybgoode/golden-beans/pull/60) recorded the prepared internal target
   and two run IDs, proved the OFF boundary, and supplied the Git-tracked deployment after enabling
   the three proof gates. It did not claim completed run, breaker or cleanup evidence.
-- Re-entry boundary probes show resilience, security and automatic-breaker routes are currently
-  enabled. The prepared runs, manual transition, safe auto-trip, stop/revoke cleanup and tracked
-  return of all three proof-only gates to OFF are therefore the remaining Story 3.6 work.
+- The immutable production ledger shows the proof subsequently completed on 2026-07-30. Re-entry on
+  2026-08-01 recovered that evidence and returned the three proof-only gates to OFF through tracked
+  deployment `e37db4f`; see [`LIVE-PROOF.md`](LIVE-PROOF.md).
+
+## Production proof evidence
+
+- Internal resilience run `67ee5a3a-f984-41c0-86b7-605cd11d9754` stopped cleanly after two bounded
+  executions. Canonical impact evidence `630aae77-91f2-4266-99db-ec398ec0c426` measured control p95
+  `1 ms` versus fault p95 `126 ms` and labelled the result internal/non-causal.
+- Closed security run `8324a5d2-1ff2-4aef-808d-4a32ceb369c1` sent only its stored malformed-payload
+  template to the verified Miyagi target. Result `f6133b38-2317-4975-9789-bcea31728380` observed the
+  expected `400` / `validation_rejected` guard.
+- Manual trip `499acb56-537c-45d0-888b-01e2e16fb43e` advanced snapshot `44 → 45`; automatic trip
+  `3d2ca151-e35c-4ae4-9941-4e2580bad19c` advanced it `45 → 46`. Separate disposable flags remain on
+  immutable protective version `2` (`off`), with no later snapshot or reenable.
+- All runs are terminal with zero active leases and the registered proof target is revoked. Deployment
+  `e37db4f` then returned resilience, security and automatic-breaker routes to flat `404`, while the
+  Golden flag snapshot continues to return `401` without a credential and serve Miyagi normally.
 
 ## Stories
 
