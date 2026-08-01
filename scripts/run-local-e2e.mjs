@@ -19,6 +19,7 @@ const next = join(root, 'node_modules/.bin/next');
 const playwright = join(root, 'node_modules/.bin/playwright');
 const normalPort = 3110;
 const darkPort = 3111;
+const syncWithoutServingPort = 3112;
 // Optional file arguments keep focused local investigation hermetic too. The dark-gate tripwire
 // still always runs because a focused enabled spec must not accidentally skip the OFF boundary.
 const requestedFiles = process.argv.slice(2);
@@ -128,6 +129,7 @@ async function main() {
     SIGNALS_ENABLED: 'true',
     CONNECTOR_WRITES_ENABLED: 'false',
     FLAG_SERVING_ENABLED: 'true',
+    FLAG_DEFINITION_SYNC_ENABLED: 'true',
     RESILIENCE_SCENARIOS_ENABLED: 'true',
     SECURITY_SIMULATIONS_ENABLED: 'true',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
@@ -144,6 +146,7 @@ async function main() {
     JOURNEY_PROJECTIONS_ENABLED: 'false',
     EXPERIMENT_GOVERNANCE_ENABLED: 'false',
     FLAG_SERVING_ENABLED: 'false',
+    FLAG_DEFINITION_SYNC_ENABLED: 'false',
     RESILIENCE_SCENARIOS_ENABLED: 'false',
     SECURITY_SIMULATIONS_ENABLED: 'false',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
@@ -153,8 +156,17 @@ async function main() {
       'apps/web/e2e/journey-dark.spec.ts',
       'apps/web/e2e/experiment-governance-dark.spec.ts',
       'apps/web/e2e/flag-serving-dark.spec.ts',
+      'apps/web/e2e/flag-catalog-sync-dark.spec.ts',
       'apps/web/e2e/scenario-dark.spec.ts',
     ]);
+  });
+
+  // Catalog registration is a draft-only control-plane write. It must remain independently
+  // operable when the serving kill switch is off, so an owner can prepare recovery definitions
+  // without restoring snapshot delivery first.
+  const syncWithoutServing = { ...shared, FLAG_SERVING_ENABLED: 'false' };
+  await withServer({ port: syncWithoutServingPort, env: syncWithoutServing, label: 'sync-with-serving-off' }, async () => {
+    runPlaywright(syncWithoutServing, syncWithoutServingPort, ['apps/web/e2e/flag-catalog-sync.spec.ts']);
   });
 
   await withServer({ port: normalPort, env: shared, label: 'enabled-gate' }, async () => {
