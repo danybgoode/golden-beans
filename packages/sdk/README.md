@@ -47,6 +47,43 @@ const checkoutEnabled = flags.resolveBooleanEvaluation('checkout.enabled', false
 Do not expose `flagReadKey` or telemetry API keys to browser bundles. Golden Beans derives tenant
 and environment from the credential; callers never send either in a snapshot request.
 
+## Server-side flag-definition catalog sync
+
+Applications declare their typed catalog in source control, then an explicit operator/deployment
+command registers new definitions with Golden. This is not a build side effect and does not affect
+runtime flag evaluation. Use a dedicated, revocable `flag_sync` credential — never an ingest or
+`flag_read` key — and keep it server-side.
+
+```ts
+import { createFlagDefinitionSyncClient, type FlagDefinitionSyncEntry } from '@golden-beans/sdk'
+
+const catalog: FlagDefinitionSyncEntry[] = [
+  {
+    key: 'checkout.enabled',
+    definition: {
+      valueType: 'boolean',
+      description: 'Enables the checkout fixture.',
+      defaultVariantKey: 'off',
+      variants: [{ key: 'off', value: false }, { key: 'on', value: true }],
+      rules: [],
+    },
+  },
+]
+
+const sync = createFlagDefinitionSyncClient({
+  baseUrl: process.env.GROWTH_ENGINE_URL!,
+  flagSyncKey: process.env.GOLDEN_BEANS_FLAG_SYNC_KEY!,
+})
+const result = await sync.syncFlagDefinitions(catalog)
+
+if (!result.ok) throw new Error(`${result.kind}: ${result.error}`)
+```
+
+The v1 request is bounded to 100 definitions and a 4 MiB JSON body. A new key creates immutable
+version 1; an identical definition returns `created: false`; semantic drift is an HTTP `409` for an
+owner to resolve through the normal version lifecycle. Sync never activates, deactivates or deletes
+a flag.
+
 ## Bounded scenario provider
 
 Scenario evaluation is also synchronous and local. It returns only the closed `none`, capped
