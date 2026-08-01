@@ -1,8 +1,8 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 1: Typed project flag control plane
 
 **Status:** ✅ Code merged, deployed and migrated — [PR #39](https://github.com/danybgoode/golden-beans/pull/39)
-(`bc1abba`, 2026-07-27). The owner-browser walkthrough is deliberately still owed before any
-Miyagi cutover; flag serving remains dark in production.
+(`bc1abba`, 2026-07-27). Flag serving was subsequently enabled through the tracked Sprint 2 cutover;
+the authenticated owner-browser walkthrough remains a named close-out smoke item.
 
 ## Stories
 
@@ -97,3 +97,11 @@ If any step fails, record the step, credential class, snapshot version and obser
 - `@golden-beans/sdk@0.1.0` was packed and publish-verified, but public npm release is blocked only
   by the workstation lacking an npm login. Do not substitute a private registry or a copied SDK in
   Miyagi; authenticate then publish the tested artifact.
+
+## Re-entry note — 2026-08-01
+
+- The dark-boundary statement above is the Sprint 1 historical state, not the current runtime state.
+  `FLAG_SERVING_ENABLED` is now ON and both Miyagi services consume the Golden production snapshot.
+- The later SDK work shipped as tag `sdk-v0.2.0` and is adopted by the Miyagi frontend and backend.
+- The owner UI remains protected by Clerk. An unauthenticated redirect/access check passed, but the
+  real signed-in lifecycle/audit walkthrough still requires Daniel's production browser session.

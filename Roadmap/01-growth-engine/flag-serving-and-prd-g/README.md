@@ -15,6 +15,28 @@ Miyagi migrates its complete current flag inventory without behavior drift, then
 resilience and defensive-security scenarios whose product cost can trigger explicit, auditable
 circuit-breaker policy.
 
+## Close-out state — 2026-08-01
+
+The implementation is merged and deployed across Golden Beans, Miyagi frontend and Medusa backend.
+Both consumers are Golden-authoritative in production on snapshot `46`, with request-driven refresh,
+durable fallback and sampled canonical evaluation telemetry. Golden's linked migration ledger matches
+the repository through the Sprint 3 schema.
+
+The controlled production-infrastructure exercise is complete. The internal resilience run produced a
+non-zero canonical technical delta, the closed defensive simulation observed its expected guard, and
+the staged manual plus owner-preapproved automatic breaker transitions moved separate disposable flags
+to their safe versions without reenable. All runs are terminal, the target is revoked, and the three
+proof-only gates returned to OFF through Git-tracked deployment `e37db4f`; flag serving remains ON.
+The authenticated owner-browser walkthrough remains the sole product-owner confirmation item. See
+[`LIVE-PROOF.md`](LIVE-PROOF.md) for immutable IDs and boundary results.
+
+The Sprint 2 migration inventory was the complete 40-key Miyagi catalog at cutover. A later owned-shop
+epic added `catalog.owned_shop_only_enabled` as a correct default-ON local kill-switch, exposing that
+the historical importer was a one-time snapshot rather than an evergreen registration rail. Daniel
+confirmed that an unmanaged default-only key is not an intended exception. Sprint 4 adds the generic,
+project-scoped catalog sync, registers the key in Golden without darkening its feature, and makes the
+Flags and Tasks operating surfaces discoverable.
+
 ## Medusa-first note
 
 Medusa and Miyagi continue to own commerce enforcement and safe fallbacks. The frontend and backend
@@ -59,6 +81,7 @@ but Medusa remains the final enforcement point.
 | 1 | Typed project flag control plane and local evaluation provider | high |
 | 2 | Complete behavior-preserving Miyagi migration and dogfood | high |
 | 3 | Live-capable resilience/SecOps scenarios and policy-bound circuit breakers | high |
+| 4 | Evergreen project catalog sync, owned-shop activation and discoverable Flags/Tasks | high |
 
 ## Runtime gates
 
@@ -108,13 +131,18 @@ pointer. Additive schema and canonical telemetry facts remain.
 ## Definition of Done (epic)
 
 - [ ] All three sprints merged to `main` in Golden Beans and required Miyagi repos + smoke-tested
-- [ ] Golden and Miyagi migrations applied separately and matched to deployed commits
-- [ ] Every current Miyagi flag imported; shadow comparison has zero unexplained mismatches
-- [ ] Frontend/backend report the same active snapshot; critical-path rollback smoke passes
-- [ ] One internal fault drill and one closed defensive simulation run on production infrastructure
-- [ ] One manual breaker decision and one safe test-flag auto-trip preserve evidence; no auto-reenable
-- [ ] External-user activation remains OFF unless Daniel explicitly records the decision
+- [x] Golden and Miyagi migrations applied separately and matched to deployed commits
+- [x] Every flag in the 40-key cutover inventory imported; shadow comparison has zero unexplained
+  mismatches at the historical cutover
+- [ ] Generic project catalog sync is live; the 41-key Miyagi union catalog is registered without a
+  Golden-side whitelist and `catalog.owned_shop_only_enabled` is active ON in Golden
+- [x] Frontend/backend report active snapshot `46`; the approved Stripe rollback drill converged
+  both services through request-driven refresh
+- [x] One internal fault drill and one closed defensive simulation run on production infrastructure
+- [x] One manual breaker decision and one safe test-flag auto-trip preserve evidence; no auto-reenable
+- [x] External-user activation remains OFF unless Daniel explicitly records the decision
 - [ ] Each `sprint-N.md` has its real smoke walkthrough and commit/PR refs
-- [ ] `RETROSPECTIVE.md` written; poster and durable learnings updated
+- [x] `RETROSPECTIVE.md` written; poster and durable learnings updated
+- [ ] Flags and live Tasks are discoverable from `/app`; authenticated browser proof is recorded
 - [ ] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
 - [ ] Feature branches/worktrees deleted after merge

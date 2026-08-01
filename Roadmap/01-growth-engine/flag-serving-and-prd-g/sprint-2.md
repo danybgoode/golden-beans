@@ -1,8 +1,8 @@
 # Flag control plane + Miyagi migration + resilience/SecOps — Sprint 2: Complete Miyagi migration
 
-**Status:** 🟡 in progress — catalog and Golden-backed admin operations are live; adapters retain
-shadow capability but the active production services currently default to `local`, so fresh shadow
-parity and staged cutover remain deliberately incomplete
+**Status:** ✅ implementation and cutover complete — the 40-key migration inventory is
+Golden-authoritative in both production services on snapshot `46`; the authenticated owner-browser
+walkthrough remains an epic close-out smoke item
 
 ## Stories
 
@@ -137,7 +137,29 @@ denominator; analytics failure cannot fail a flag check.
 [#49](https://github.com/danybgoode/golden-beans/pull/49) is merged and deployed with the bounded
 SDK `trackFlagEvaluation()` primitive: it reuses canonical `/api/v1/track`, samples ordinary
 evaluations, preserves experiment exposure semantics and never affects a flag decision. Miyagi
-has not yet adopted this SDK release, so this story is not complete.
+adopted the released `sdk-v0.2.0` primitive in the completed cutover described below.
+
+## Cutover completion evidence — 2026-08-01 re-entry audit
+
+- Frontend PRs [#325](https://github.com/danybgoode/miyagisanchezcommerce/pull/325) and
+  [#326](https://github.com/danybgoode/miyagisanchezcommerce/pull/326), plus backend PRs
+  [#125](https://github.com/danybgoode/medusa-bonsai-backend/pull/125) and
+  [#126](https://github.com/danybgoode/medusa-bonsai-backend/pull/126), are merged. They complete
+  the Golden authority seam, durable mirror, SDK telemetry and request-driven serverless refresh.
+- Both active Cloud Run services are configured with `GOLDEN_BEANS_FLAG_CUTOVER=*=golden`,
+  `GOLDEN_BEANS_FLAG_ENVIRONMENT=production`, a scoped read-key secret and
+  `GROWTH_ENGINE_URL=https://golden-beans-gamma.vercel.app`. Evaluation sampling is `0.1`.
+- Current PII-free authority logs from both services report snapshot `46`, Golden live authority
+  during normal refresh and Golden durable authority during bounded fallback. Registered keys agree
+  on immutable flag version `1` and the local/Golden values match.
+- The approved Stripe rollback drill exposed timer-only refresh in a serverless runtime: backend
+  advanced before frontend. PRs #326/#126 moved refresh onto the request path, after which both
+  services converged on snapshot `46`. The never-throw and durable/default fallback contract stayed
+  intact during the drill.
+- The imported catalog remains the exact 40-key inventory captured on 2026-07-28. The later
+  `catalog.owned_shop_only_enabled` key intentionally resolves from its default-ON local kill-switch
+  and has no Golden definition, per the explicit product decision recorded in frontend #332 and
+  backend #132. Its `DEFAULT` evaluation reason is expected; it is not misrepresented as migrated.
 
 ## Sprint QA
 

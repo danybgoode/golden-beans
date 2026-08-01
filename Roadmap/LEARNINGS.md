@@ -634,6 +634,25 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **A sandboxed authentication check can be a false negative when the credential lives in an OS
+  keyring.** `gh auth status` inside the filesystem sandbox reported an invalid default token while
+  Git push through the macOS credential manager succeeded; the same `gh auth status` with keyring
+  access correctly reported the logged-in `danybgoode` account and scopes. Treat contradictory
+  evidence as a rail mismatch to investigate, not a reason to tell the owner to log in again. Verify
+  on the credential-owning rail and test the intended operation. *(2026-08-01, flag-serving closeout.)*
+- **A live-proof handoff is not proof that the live proof is still pending — read the scoped immutable
+  ledger before repeating production work.** The activation doc ended at "gates ON," so re-entry
+  initially concluded the two runs and breaker transitions were missing. Tenant-scoped scenario,
+  impact and breaker snapshots showed they had already completed: terminal runs, expected security
+  guard, non-zero canonical impact, two protective trips and a revoked target. The read prevented a
+  duplicate production exercise. *(2026-08-01, flag-serving closeout.)*
+- **A complete flag import is a snapshot, not an ongoing registration rail.** After Miyagi cut over
+  with `*=golden`, a later `catalog.owned_shop_only_enabled` key had no Golden definition and resolved
+  safely from its explicit local default with reason `DEFAULT`. The default-ON kill-switch contract
+  was correct; treating permanent control-plane absence as an exception was not. A project declares
+  the typed default once, then a generic project-scoped sync rail must register it without a
+  Golden-side whitelist. Local defaults are resilience, not the operational writer. Never call the
+  original inventory evergreen. *(2026-08-01, flag-serving / owned-shop.)*
 - **A Next App Router `loading.tsx` or parent layout can change the HTTP semantics of a guarded
   child page by starting the response stream first.** During the design-system lift, both a shared
   `/app` layout and then the root loader made `notFound()` content look correct in a browser while
