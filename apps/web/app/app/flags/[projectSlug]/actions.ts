@@ -168,12 +168,9 @@ export async function mintFlagSyncKeyAction(
 ) {
   const safeSlug = requireString(slug, 'project')
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
-  if (
-    typeof label !== 'string' ||
-    label.length > 120 ||
-    typeof source !== 'string' ||
-    !FLAG_SYNC_SOURCE.test(source)
-  )
+  if (typeof label !== 'string' || label.length > 120)
+    return { ok: false as const, error: 'Label must be no more than 120 characters.' }
+  if (typeof source !== 'string' || !FLAG_SYNC_SOURCE.test(source))
     return { ok: false as const, error: 'Source must use 1–64 lowercase letters, numbers, underscores or hyphens.' }
   if (expiryDays !== null && expiryDays !== undefined && typeof expiryDays !== 'number')
     return { ok: false as const, error: 'Unsupported expiry.' }
