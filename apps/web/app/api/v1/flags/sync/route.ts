@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   FLAG_DEFINITION_SYNC_CONTRACT_VERSION,
   MAX_FLAG_DEFINITION_SYNC_BODY_BYTES,
-  isFlagDefinitionSyncBodyWithinLimit,
   parseFlagDefinitionSyncRequest,
 } from '@golden-beans/sdk'
 import { hashCredential } from '@/lib/credential-hash'
@@ -43,7 +42,9 @@ async function readBoundedBody(
   } catch {
     return { ok: false, reason: 'invalid' }
   } finally {
-    reader.releaseLock()
+    // cancel() retains the reader lock in the WHATWG/Node implementation, but keep cleanup safe
+    // if another runtime has already released it while aborting an oversized upload.
+    if (req.body.locked) reader.releaseLock()
   }
 
   const bytes = new Uint8Array(total)
@@ -54,7 +55,7 @@ async function readBoundedBody(
   }
   try {
     const body = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
-    return isFlagDefinitionSyncBodyWithinLimit(body) ? { ok: true, body } : { ok: false, reason: 'too_large' }
+    return { ok: true, body }
   } catch {
     return { ok: false, reason: 'invalid' }
   }
