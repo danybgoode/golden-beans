@@ -47,8 +47,8 @@ _API/proof close: 2026-08-01 · final epic close awaits product-owner browser co
   could not read the macOS keyring and falsely looked unauthenticated even though Git push worked;
   the same check with keyring access correctly identified the logged-in account.
 - A complete initial catalog import is not an ongoing registration workflow. A later Miyagi flag can
-  resolve from its explicit local default under `*=golden`; that must be either a deliberate recorded
-  exception or a new Golden definition, never silently counted as managed.
+  resolve safely from its explicit local default under `*=golden`, but that is resilience rather than
+  an intended managed state. Sprint 4 adds the missing generic registration rail.
 - An environment-variable change is pending configuration, not a live gate transition. The cleanup
   was complete only after a reviewed `main` merge deployed and the edge routes returned `404`.
 
@@ -60,6 +60,6 @@ _API/proof close: 2026-08-01 · final epic close awaits product-owner browser co
   not being rewritten as passed.
 - External cohorts remain intentionally unapproved and OFF. Activating them is a future product
   decision under the existing owner/cohort/cap/abort contract, not unfinished scope in this epic.
-- `catalog.owned_shop_only_enabled` is an explicit post-cutover default-ON local kill-switch. If it
-  later needs operational control, create a Golden definition deliberately rather than treating the
-  40-key historical import as an evergreen sync rail.
+- `catalog.owned_shop_only_enabled` remains a post-cutover default-ON kill-switch and its feature is
+  live. Sprint 4 operationalizes it through Golden without changing that state and removes the need
+  for a project-specific importer on future flags.

@@ -31,12 +31,11 @@ The authenticated owner-browser walkthrough remains the sole product-owner confi
 [`LIVE-PROOF.md`](LIVE-PROOF.md) for immutable IDs and boundary results.
 
 The Sprint 2 migration inventory was the complete 40-key Miyagi catalog at cutover. A later owned-shop
-epic added `catalog.owned_shop_only_enabled`; Daniel explicitly approved it as a default-ON local
-kill-switch rather than a Golden-managed definition in Miyagi frontend
-[#332](https://github.com/danybgoode/miyagisanchezcommerce/pull/332) and backend
-[#132](https://github.com/danybgoode/medusa-bonsai-backend/pull/132). That post-cutover exception is not
-silently counted as a migrated flag. A future decision to operationalize it must create a Golden
-definition deliberately.
+epic added `catalog.owned_shop_only_enabled` as a correct default-ON local kill-switch, exposing that
+the historical importer was a one-time snapshot rather than an evergreen registration rail. Daniel
+confirmed that an unmanaged default-only key is not an intended exception. Sprint 4 adds the generic,
+project-scoped catalog sync, registers the key in Golden without darkening its feature, and makes the
+Flags and Tasks operating surfaces discoverable.
 
 ## Medusa-first note
 
@@ -82,6 +81,7 @@ but Medusa remains the final enforcement point.
 | 1 | Typed project flag control plane and local evaluation provider | high |
 | 2 | Complete behavior-preserving Miyagi migration and dogfood | high |
 | 3 | Live-capable resilience/SecOps scenarios and policy-bound circuit breakers | high |
+| 4 | Evergreen project catalog sync, owned-shop activation and discoverable Flags/Tasks | high |
 
 ## Runtime gates
 
@@ -133,7 +133,9 @@ pointer. Additive schema and canonical telemetry facts remain.
 - [ ] All three sprints merged to `main` in Golden Beans and required Miyagi repos + smoke-tested
 - [x] Golden and Miyagi migrations applied separately and matched to deployed commits
 - [x] Every flag in the 40-key cutover inventory imported; shadow comparison has zero unexplained
-  mismatches (the later default-only owned-shop exception is recorded above)
+  mismatches at the historical cutover
+- [ ] Generic project catalog sync is live; the 41-key Miyagi union catalog is registered without a
+  Golden-side whitelist and `catalog.owned_shop_only_enabled` is active ON in Golden
 - [x] Frontend/backend report active snapshot `46`; the approved Stripe rollback drill converged
   both services through request-driven refresh
 - [x] One internal fault drill and one closed defensive simulation run on production infrastructure
@@ -141,5 +143,6 @@ pointer. Additive schema and canonical telemetry facts remain.
 - [x] External-user activation remains OFF unless Daniel explicitly records the decision
 - [ ] Each `sprint-N.md` has its real smoke walkthrough and commit/PR refs
 - [x] `RETROSPECTIVE.md` written; poster and durable learnings updated
+- [ ] Flags and live Tasks are discoverable from `/app`; authenticated browser proof is recorded
 - [ ] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
 - [ ] Feature branches/worktrees deleted after merge

@@ -648,10 +648,11 @@ one-liner + why + date shape.
   duplicate production exercise. *(2026-08-01, flag-serving closeout.)*
 - **A complete flag import is a snapshot, not an ongoing registration rail.** After Miyagi cut over
   with `*=golden`, a later `catalog.owned_shop_only_enabled` key had no Golden definition and resolved
-  from its explicit local default with reason `DEFAULT`. That was a deliberate product-owner
-  kill-switch decision, but the general failure mode is silent: every later flag must either create a
-  Golden definition or record an explicit default-only exception. Never call the original inventory
-  evergreen. *(2026-08-01, flag-serving / owned-shop.)*
+  safely from its explicit local default with reason `DEFAULT`. The default-ON kill-switch contract
+  was correct; treating permanent control-plane absence as an exception was not. A project declares
+  the typed default once, then a generic project-scoped sync rail must register it without a
+  Golden-side whitelist. Local defaults are resilience, not the operational writer. Never call the
+  original inventory evergreen. *(2026-08-01, flag-serving / owned-shop.)*
 - **A Next App Router `loading.tsx` or parent layout can change the HTTP semantics of a guarded
   child page by starting the response stream first.** During the design-system lift, both a shared
   `/app` layout and then the root loader made `notFound()` content look correct in a browser while

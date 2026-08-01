@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Flag control plane + Miyagi migration + resilience/SecOps](../../01-growth-engine/flag-serving-and-prd-g/README.md) — 01 Growth Engine · 15/15 stories · risk: High · #5
+- [Flag control plane + Miyagi migration + resilience/SecOps](../../01-growth-engine/flag-serving-and-prd-g/README.md) — 01 Growth Engine · 15/20 stories · risk: High · #5
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
