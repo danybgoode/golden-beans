@@ -5,11 +5,7 @@
 
 export type ProjectSurfaceAudience = 'member' | 'owner'
 export type ProjectSurfaceGate =
-  | 'always'
-  | 'experiment-governance'
-  | 'flag-serving'
-  | 'journey-projections'
-  | 'signals'
+  'always' | 'experiment-governance' | 'flag-serving' | 'journey-projections' | 'signals'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 type ProjectSurface = {

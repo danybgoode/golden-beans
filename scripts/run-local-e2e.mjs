@@ -165,9 +165,12 @@ async function main() {
   // operable when the serving kill switch is off, so an owner can prepare recovery definitions
   // without restoring snapshot delivery first.
   const syncWithoutServing = { ...shared, FLAG_SERVING_ENABLED: 'false' };
-  await withServer({ port: syncWithoutServingPort, env: syncWithoutServing, label: 'sync-with-serving-off' }, async () => {
-    runPlaywright(syncWithoutServing, syncWithoutServingPort, ['apps/web/e2e/flag-catalog-sync.spec.ts']);
-  });
+  await withServer(
+    { port: syncWithoutServingPort, env: syncWithoutServing, label: 'sync-with-serving-off' },
+    async () => {
+      runPlaywright(syncWithoutServing, syncWithoutServingPort, ['apps/web/e2e/flag-catalog-sync.spec.ts']);
+    }
+  );
 
   await withServer({ port: normalPort, env: shared, label: 'enabled-gate' }, async () => {
     // Seed scripts intentionally print newly minted credentials for an interactive operator.

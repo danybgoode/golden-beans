@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-test('flag catalog sync is a flat 404 before credential or body work while its root gate is OFF', async ({ request }) => {
+test('flag catalog sync is a flat 404 before credential or body work while its root gate is OFF', async ({
+  request,
+}) => {
   test.skip(
     process.env.FLAG_DEFINITION_SYNC_ENABLED === 'true',
     'dedicated dark-path pass requires FLAG_DEFINITION_SYNC_ENABLED=false'

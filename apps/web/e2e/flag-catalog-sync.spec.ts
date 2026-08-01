@@ -2,10 +2,7 @@ import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hashCredential } from '@/lib/credential-hash'
 import type { FlagDefinition } from '@/lib/flag-definition'
-import {
-  FLAG_DEFINITION_SYNC_CONTRACT_VERSION,
-  type FlagDefinitionSyncRequest,
-} from '@golden-beans/sdk'
+import { FLAG_DEFINITION_SYNC_CONTRACT_VERSION, type FlagDefinitionSyncRequest } from '@golden-beans/sdk'
 import {
   cleanupFlagProjects,
   requireLocalSupabaseApiUrl,
@@ -63,7 +60,8 @@ async function fixtureProject(client: SupabaseClient, userId: string, label: str
   const membership = await client
     .from('project_members')
     .insert({ project_id: data.id, user_id: userId, role: 'owner' })
-  if (membership.error) throw new Error(`could not create flag-sync fixture owner: ${membership.error.message}`)
+  if (membership.error)
+    throw new Error(`could not create flag-sync fixture owner: ${membership.error.message}`)
   return data.id as string
 }
 
@@ -105,26 +103,40 @@ test.afterAll(async () => {
 test('scoped fragments create drafts, no-op when identical, retain omissions, and reject drift atomically', async ({
   request,
 }) => {
-  test.skip(process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true', 'sync enabled assertions need the owned gate pass')
+  test.skip(
+    process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true',
+    'sync enabled assertions need the owned gate pass'
+  )
   const client = db()
   const owner = await fixtureUser(client, 'owner')
   const project = await fixtureProject(client, owner, 'catalog')
   const frontend = await mintSyncKey(client, project, owner, 'frontend')
   const backend = await mintSyncKey(client, project, owner, 'backend')
   const frontendEntries = [{ key: 'catalog.checkout', definition }]
-  const backendEntries = [{ key: 'catalog.checkout', definition }, { key: 'catalog.shipping', definition }]
+  const backendEntries = [
+    { key: 'catalog.checkout', definition },
+    { key: 'catalog.shipping', definition },
+  ]
 
   const first = await sync(request, frontend.plaintext, frontendEntries)
   expect(first.status()).toBe(200)
-  expect(await first.json()).toMatchObject({ ok: true, entries: [{ key: 'catalog.checkout', definitionVersion: 1, created: true }] })
+  expect(await first.json()).toMatchObject({
+    ok: true,
+    entries: [{ key: 'catalog.checkout', definitionVersion: 1, created: true }],
+  })
   const states = await client.from('flag_environment_states').select('environment').eq('project_id', project)
-  const activations = await client.from('flag_environment_activations').select('environment').eq('project_id', project)
+  const activations = await client
+    .from('flag_environment_activations')
+    .select('environment')
+    .eq('project_id', project)
   expect(states.data).toEqual([])
   expect(activations.data).toEqual([])
 
   const repeat = await sync(request, frontend.plaintext, frontendEntries)
   expect(repeat.status()).toBe(200)
-  expect((await repeat.json()).entries).toEqual([{ key: 'catalog.checkout', definitionVersion: 1, created: false }])
+  expect((await repeat.json()).entries).toEqual([
+    { key: 'catalog.checkout', definitionVersion: 1, created: false },
+  ])
   const additive = await sync(request, backend.plaintext, backendEntries)
   expect(additive.status()).toBe(200)
   expect((await additive.json()).entries).toEqual([
@@ -155,8 +167,13 @@ test('scoped fragments create drafts, no-op when identical, retain omissions, an
   ])
 })
 
-test('the sync route accepts only one active flag_sync credential and never trusts a body tenant', async ({ request }) => {
-  test.skip(process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true', 'sync enabled assertions need the owned gate pass')
+test('the sync route accepts only one active flag_sync credential and never trusts a body tenant', async ({
+  request,
+}) => {
+  test.skip(
+    process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true',
+    'sync enabled assertions need the owned gate pass'
+  )
   const client = db()
   const ownerA = await fixtureUser(client, 'scope-a')
   const ownerB = await fixtureUser(client, 'scope-b')
@@ -170,37 +187,46 @@ test('the sync route accepts only one active flag_sync credential and never trus
   const agentWrite = key()
   const share = key()
   const expiredSync = key()
-  const inserted = await client
-    .from('api_keys')
-    .insert([
-      { project_id: projectA, key_hash: hashCredential(ingest), label: 'wrong ingest scope', scope: 'ingest' },
-      {
-        project_id: projectA,
-        key_hash: hashCredential(flagRead),
-        label: 'wrong read scope',
-        scope: 'flag_read',
-        flag_environment: 'production',
-      },
-      {
-        project_id: projectA,
-        key_hash: hashCredential(flagAdmin),
-        label: 'wrong admin scope',
-        scope: 'flag_admin',
-        flag_environment: 'production',
-        flag_actor_user_id: ownerA,
-      },
-      { project_id: projectA, key_hash: hashCredential(agentWrite), label: 'wrong write scope', scope: 'agent_write' },
-      { project_id: projectA, key_hash: hashCredential(share), label: 'wrong share scope', scope: 'share', share_lens: 'team' },
-      {
-        project_id: projectA,
-        key_hash: hashCredential(expiredSync),
-        label: 'expired sync scope',
-        scope: 'flag_sync',
-        flag_actor_user_id: ownerA,
-        flag_sync_source: 'expired',
-        expires_at: new Date(Date.now() - 60_000).toISOString(),
-      },
-    ])
+  const inserted = await client.from('api_keys').insert([
+    { project_id: projectA, key_hash: hashCredential(ingest), label: 'wrong ingest scope', scope: 'ingest' },
+    {
+      project_id: projectA,
+      key_hash: hashCredential(flagRead),
+      label: 'wrong read scope',
+      scope: 'flag_read',
+      flag_environment: 'production',
+    },
+    {
+      project_id: projectA,
+      key_hash: hashCredential(flagAdmin),
+      label: 'wrong admin scope',
+      scope: 'flag_admin',
+      flag_environment: 'production',
+      flag_actor_user_id: ownerA,
+    },
+    {
+      project_id: projectA,
+      key_hash: hashCredential(agentWrite),
+      label: 'wrong write scope',
+      scope: 'agent_write',
+    },
+    {
+      project_id: projectA,
+      key_hash: hashCredential(share),
+      label: 'wrong share scope',
+      scope: 'share',
+      share_lens: 'team',
+    },
+    {
+      project_id: projectA,
+      key_hash: hashCredential(expiredSync),
+      label: 'expired sync scope',
+      scope: 'flag_sync',
+      flag_actor_user_id: ownerA,
+      flag_sync_source: 'expired',
+      expires_at: new Date(Date.now() - 60_000).toISOString(),
+    },
+  ])
   expect(inserted.error).toBeNull()
 
   const own = await sync(request, keyA.plaintext, [{ key: 'catalog.scope-a', definition }])
@@ -230,8 +256,13 @@ test('the sync route accepts only one active flag_sync credential and never trus
   expect(revoked.status()).toBe(401)
 })
 
-test('invalid catalog commands and a genuinely oversized body leave no definition behind', async ({ request }) => {
-  test.skip(process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true', 'sync enabled assertions need the owned gate pass')
+test('invalid catalog commands and a genuinely oversized body leave no definition behind', async ({
+  request,
+}) => {
+  test.skip(
+    process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true',
+    'sync enabled assertions need the owned gate pass'
+  )
   const client = db()
   const owner = await fixtureUser(client, 'invalid')
   const project = await fixtureProject(client, owner, 'invalid')
@@ -266,7 +297,9 @@ test('invalid catalog commands and a genuinely oversized body leave no definitio
   expect(states.data).toEqual([])
 })
 
-test('flag catalog sync remains available while flag snapshot serving is switched off', async ({ request }) => {
+test('flag catalog sync remains available while flag snapshot serving is switched off', async ({
+  request,
+}) => {
   test.skip(
     process.env.FLAG_DEFINITION_SYNC_ENABLED !== 'true' || process.env.FLAG_SERVING_ENABLED !== 'false',
     'independence proof runs only with sync ON and flag serving OFF'
@@ -305,7 +338,10 @@ test('database constraints and grants keep flag_sync credentials narrow', async 
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!anon) throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY must be set')
   const anonymous = createClient(requireLocalSupabaseApiUrl(), anon, { auth: { persistSession: false } })
-  const denied = await anonymous.rpc('sync_flag_definition_catalog', { p_key_hash: 'a'.repeat(64), p_entries: [] })
+  const denied = await anonymous.rpc('sync_flag_definition_catalog', {
+    p_key_hash: 'a'.repeat(64),
+    p_entries: [],
+  })
   expect(denied.error).not.toBeNull()
   expect(denied.error?.code).toMatch(/42501|PGRST202/)
   expect(denied.error?.message ?? '').toMatch(/function|permission/i)

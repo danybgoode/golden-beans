@@ -28,9 +28,9 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
           <a href="/app">← Your projects</a>
         </p>
         <p>
-          Definitions, immutable versions and their audit remain visible while flag serving is
-          dark. Activating or deactivating a flag changes one environment snapshot with optimistic
-          revision protection.
+          Definitions, immutable versions and their audit remain visible while flag serving is dark.
+          Activating or deactivating a flag changes one environment snapshot with optimistic revision
+          protection.
         </p>
         <FlagManager
           slug={projectSlug}

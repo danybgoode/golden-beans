@@ -10,9 +10,8 @@ type ResolveHook = (
   context: Record<string, unknown>,
   nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
 ) => unknown
-const registerHooks = (
-  Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void }
-).registerHooks
+const registerHooks = (Module as typeof Module & { registerHooks: (hooks: { resolve: ResolveHook }) => void })
+  .registerHooks
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (specifier === './flags') return nextResolve('./flags.ts', context)
@@ -78,7 +77,10 @@ test('catalog-sync parser rejects an oversize entry list and body guard is byte-
   if (!parsed.ok) assert.ok(parsed.errors.some((error) => error.includes('1-100')))
 
   assert.equal(isFlagDefinitionSyncBodyWithinLimit('x'.repeat(MAX_FLAG_DEFINITION_SYNC_BODY_BYTES)), true)
-  assert.equal(isFlagDefinitionSyncBodyWithinLimit(`x${'x'.repeat(MAX_FLAG_DEFINITION_SYNC_BODY_BYTES)}`), false)
+  assert.equal(
+    isFlagDefinitionSyncBodyWithinLimit(`x${'x'.repeat(MAX_FLAG_DEFINITION_SYNC_BODY_BYTES)}`),
+    false
+  )
 })
 
 test('catalog-sync client sends the dedicated key and returns typed created/no-op entries', async () => {
@@ -97,7 +99,7 @@ test('catalog-sync client sends the dedicated key and returns typed created/no-o
             { key: 'shipping.fixture', definitionVersion: 2, created: false },
           ],
         }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
     },
   })
@@ -115,7 +117,12 @@ test('catalog-sync client sends the dedicated key and returns typed created/no-o
     ],
   })
   assert.equal(request?.url, 'https://golden.example/api/v1/flags/sync')
-  assert.equal(request?.init?.headers instanceof Headers ? request.init.headers.get('Authorization') : (request?.init?.headers as Record<string, string>).Authorization, 'Bearer dedicated-sync-key')
+  assert.equal(
+    request?.init?.headers instanceof Headers
+      ? request.init.headers.get('Authorization')
+      : (request?.init?.headers as Record<string, string>).Authorization,
+    'Bearer dedicated-sync-key'
+  )
   assert.deepEqual(JSON.parse(String(request?.init?.body)), {
     contractVersion: 1,
     entries: [
@@ -132,10 +139,13 @@ test('catalog-sync client surfaces conflict as typed HTTP 409 and does not send 
     flagSyncKey: 'dedicated-sync-key',
     fetchImpl: async () => {
       calls += 1
-      return new Response(JSON.stringify({ ok: false, error: 'Catalog semantic drift', issues: ['checkout.fixture'] }), {
-        status: 409,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Catalog semantic drift', issues: ['checkout.fixture'] }),
+        {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     },
   })
 
@@ -149,9 +159,7 @@ test('catalog-sync client surfaces conflict as typed HTTP 409 and does not send 
   })
   assert.equal(calls, 1)
 
-  const invalid = await client.syncFlagDefinitions([
-    { key: 'Checkout Invalid', definition },
-  ])
+  const invalid = await client.syncFlagDefinitions([{ key: 'Checkout Invalid', definition }])
   assert.equal(invalid.ok, false)
   if (!invalid.ok) {
     assert.equal(invalid.kind, 'validation')

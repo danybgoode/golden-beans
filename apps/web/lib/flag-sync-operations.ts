@@ -41,10 +41,7 @@ function parseRows(rows: SyncRow[] | null, entries: readonly FlagDefinitionSyncE
 export async function syncFlagDefinitionCatalog(input: {
   keyHash: string
   entries: readonly FlagDefinitionSyncEntry[]
-}): Promise<
-  | { ok: true; entries: SyncEntry[] }
-  | { ok: false; status: 400 | 401 | 409 | 500 }
-> {
+}): Promise<{ ok: true; entries: SyncEntry[] } | { ok: false; status: 400 | 401 | 409 | 500 }> {
   const { data, error } = await getSupabaseServiceClient().rpc('sync_flag_definition_catalog', {
     p_key_hash: input.keyHash,
     p_entries: input.entries,

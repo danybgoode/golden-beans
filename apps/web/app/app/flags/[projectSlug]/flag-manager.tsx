@@ -270,8 +270,8 @@ export function FlagManager({
         </>
       ) : (
         <p>
-          <strong>Read-only access.</strong> A project owner creates versions, manages scoped snapshot
-          and catalog sync credentials, and changes environment activations.
+          <strong>Read-only access.</strong> A project owner creates versions, manages scoped snapshot and
+          catalog sync credentials, and changes environment activations.
         </p>
       )}
       {error && <p role="alert">{error}</p>}

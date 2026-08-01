@@ -7,7 +7,9 @@ function tenantSlug(): string {
   return slug
 }
 
-test('a project member can discover the live Flags and Tasks operating surfaces from /app', async ({ page }) => {
+test('a project member can discover the live Flags and Tasks operating surfaces from /app', async ({
+  page,
+}) => {
   const slug = tenantSlug()
   await page.goto('/app')
 

@@ -2,7 +2,11 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
-import { getProjectSurfaceLinks, PROJECT_ROUTE_INVENTORY, type ProjectSurfaceGates } from './project-route-inventory.ts'
+import {
+  getProjectSurfaceLinks,
+  PROJECT_ROUTE_INVENTORY,
+  type ProjectSurfaceGates,
+} from './project-route-inventory.ts'
 
 const allGatesOpen: ProjectSurfaceGates = {
   'experiment-governance': true,
@@ -36,7 +40,7 @@ test('members see every live member surface but never owner-only or flow-only ro
 
   assert.deepEqual(
     links.map(({ routeSegment }) => routeSegment),
-    ['funnel', 'impact', 'journeys', 'experiments', 'flags', 'tasks', 'scenarios'],
+    ['funnel', 'impact', 'journeys', 'experiments', 'flags', 'tasks', 'scenarios']
   )
   assert.deepEqual(
     links.find((link) => link.routeSegment === 'flags'),
@@ -46,7 +50,7 @@ test('members see every live member surface but never owner-only or flow-only ro
       status: 'gated',
       href: '/app/flags/project-one',
       description: 'read-only',
-    },
+    }
   )
 })
 
@@ -61,7 +65,20 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
 
   assert.deepEqual(
     links.map(({ routeSegment }) => routeSegment),
-    ['funnel', 'impact', 'journeys', 'experiments', 'scenarios', 'keys', 'destinations', 'shares', 'agent-keys'],
+    [
+      'funnel',
+      'impact',
+      'journeys',
+      'experiments',
+      'scenarios',
+      'keys',
+      'destinations',
+      'shares',
+      'agent-keys',
+    ]
   )
-  assert.equal(links.some((link) => link.routeSegment === 'onboarding'), false)
+  assert.equal(
+    links.some((link) => link.routeSegment === 'onboarding'),
+    false
+  )
 })

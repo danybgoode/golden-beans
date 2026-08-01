@@ -24,8 +24,7 @@ export type FlagDefinitionSyncRequest = {
 }
 
 export type FlagDefinitionSyncRequestResult =
-  | { ok: true; request: FlagDefinitionSyncRequest }
-  | { ok: false; errors: string[] }
+  { ok: true; request: FlagDefinitionSyncRequest } | { ok: false; errors: string[] }
 
 export type FlagDefinitionSyncEntryResult = {
   key: string
@@ -149,7 +148,11 @@ export function parseFlagDefinitionSyncRequest(input: unknown): FlagDefinitionSy
 }
 
 function parseSuccess(input: unknown): FlagDefinitionSyncSuccess | null {
-  if (!isRecord(input) || input.ok !== true || input.contractVersion !== FLAG_DEFINITION_SYNC_CONTRACT_VERSION) {
+  if (
+    !isRecord(input) ||
+    input.ok !== true ||
+    input.contractVersion !== FLAG_DEFINITION_SYNC_CONTRACT_VERSION
+  ) {
     return null
   }
   if (!Array.isArray(input.entries)) return null
@@ -186,7 +189,9 @@ export function createFlagDefinitionSyncClient(
   const fetchFn = config.fetchImpl ?? fetch
 
   return {
-    async syncFlagDefinitions(entries: readonly FlagDefinitionSyncEntry[]): Promise<FlagDefinitionSyncResult> {
+    async syncFlagDefinitions(
+      entries: readonly FlagDefinitionSyncEntry[]
+    ): Promise<FlagDefinitionSyncResult> {
       const checked = parseFlagDefinitionSyncRequest({
         contractVersion: FLAG_DEFINITION_SYNC_CONTRACT_VERSION,
         entries: [...entries],

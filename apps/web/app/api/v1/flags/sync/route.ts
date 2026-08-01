@@ -80,7 +80,13 @@ export async function POST(req: NextRequest) {
   const rawBody = await readBoundedBody(req)
   if (!rawBody.ok) {
     return NextResponse.json(
-      { ok: false, error: rawBody.reason === 'too_large' ? 'Flag catalog sync payload is too large' : 'Invalid flag definition sync payload' },
+      {
+        ok: false,
+        error:
+          rawBody.reason === 'too_large'
+            ? 'Flag catalog sync payload is too large'
+            : 'Invalid flag definition sync payload',
+      },
       { status: rawBody.reason === 'too_large' ? 413 : 400 }
     )
   }
