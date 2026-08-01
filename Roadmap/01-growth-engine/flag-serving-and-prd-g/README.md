@@ -147,4 +147,4 @@ pointer. Additive schema and canonical telemetry facts remain.
 - [x] `RETROSPECTIVE.md` written; poster and durable learnings updated
 - [x] Flags and live Tasks are discoverable from `/app`; production auth-boundary proof is recorded
 - [x] This README frontmatter set to `status: shipped`; run `node scripts/build-order.mjs`
-- [ ] Feature branches/worktrees deleted after merge
+- [x] Feature branches/worktrees deleted after merge
