@@ -44,7 +44,11 @@ async function readBoundedBody(
   } finally {
     // cancel() retains the reader lock in the WHATWG/Node implementation, but keep cleanup safe
     // if another runtime has already released it while aborting an oversized upload.
-    if (req.body.locked) reader.releaseLock()
+    try {
+      if (req.body.locked) reader.releaseLock()
+    } catch {
+      // Cleanup is best-effort; an aborted body must retain the 400/413 response chosen above.
+    }
   }
 
   const bytes = new Uint8Array(total)
