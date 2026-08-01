@@ -85,3 +85,20 @@ and GitHub deployment `5705293596` completed successfully, causing Vercel to sna
 
 The API-level production proof and cleanup are complete. The product-owner Clerk browser walkthrough
 remains the only real-session confirmation because no browser was connected to this agent session.
+
+## 2026-08-01 — evergreen catalog-sync activation record
+
+The generic, tenant-scoped definition-sync route and its additive migration shipped first with
+`FLAG_DEFINITION_SYNC_ENABLED` OFF in commit `f1bd1f5`. The Miyagi frontend and backend publishers
+then passed their deterministic gates and independent Agy reviews before merging as `4e070cf` and
+`6630c50` respectively.
+
+`FLAG_DEFINITION_SYNC_ENABLED=true` is now present in Golden's Production environment. This commit is
+the required Git-tracked deployment that makes the value visible to running Vercel functions; no
+manual Vercel deployment is part of the rollout. Definition sync can only create or no-op immutable
+drafts through a project-scoped, revocable `flag_sync` credential. It cannot activate a version or
+change a serving snapshot, so enabling this route cannot darken an already-live feature.
+
+After this deployment succeeds, the two service-owned catalogs are synchronized explicitly and the
+resulting 41-key union, idempotent second run, unchanged production snapshot, and live owned-shop
+resolution are appended here before removing the obsolete Golden-side Miyagi importer.
