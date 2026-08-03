@@ -145,6 +145,56 @@ progress. `git diff HEAD` found it in seconds. **After any subagent batch, diff 
 files it should not have touched**, and re-run at least one mutation check yourself rather than
 trusting a claim that they were run.
 
+## Betting & appetite — the economics layer (adopted 2026-08-03)
+
+A ticket board without economics is a sausage machine: work goes through it, and nothing records
+what budget it drew from or what it displaced. This layer makes **opportunity cost** — *what else
+could we be building?* — the visible, guiding question. Principles adapted from Shape Up
+(`references/shapeup/`) for an agent-speed operation.
+
+**Appetite, not estimates.** Shaping fixes the budget before the solution: fixed appetite,
+variable scope. An agent will eventually build anything if allowed to tokenmaxx; the appetite is
+what makes it stop, zoom out, and hammer scope instead. Appetite is denominated in **sessions** —
+the binding constraints are product-owner attention and session context (LEARNINGS), with review
+rounds close behind — each tier carrying an implied token band:
+
+| Appetite | Buys | Circuit breaker |
+|---|---|---|
+| **S** | one builder session; fixed scope (a bug, a chore, a clear story) | escalate-don't-guess (2+ failed attempts) — no hard breaker |
+| **M** | one wave: an architect session + builder fan-out + review rounds | appetite exhausted → stop, back to shaping |
+| **L** | a multi-wave epic | per-wave: each wave is re-bet at the boundary |
+
+**The circuit breaker is the default, not the exception.** When an M/L bet exhausts its appetite,
+work *stops and returns to shaping* — never extended in flight. Repeated hammering on one problem
+signals the work is uphill (unknowns), not that it needs more tokens.
+
+**Underwriting.** Nothing reaches `status: queued` without `appetite:` set — `build-order.mjs`
+hard-fails otherwise — and a wave underwriting it (`underwritten_by:`). `underwritten_by: null` is
+the honest state of an idea nobody has paid for yet: fine in the funnel, impossible on the board.
+
+**Betting at wave boundaries (no fixed calendar).** Before a new wave starts, the betting table —
+product owner + architect agent, with `cross-panel.mjs` available for an advisory different-family
+read — picks bets from `ready` seeds and records them in `Roadmap/bets/<wave>.md`: each bet, its
+appetite, and **what it displaced**. Three lines per bet, not a ceremony. An unpicked pitch is let
+go, not backlogged — if it matters, it resurfaces.
+
+**Lanes — not everything earns the betting table.** The groom skill classifies each ask into:
+
+- **Shaped bet** (genuinely-new / strategic) → full pitch (problem · appetite · bill of materials ·
+  rabbit holes · no-gos) → betting table.
+- **Fixed scope** (bug, chore, well-specified story) → default appetite S, straight to a builder.
+- **Reactive/ops** (incidents, launch support) → no shaping, but logged against the current wave's
+  budget so the economics stay visible.
+
+**Hill routing.** Uphill work (unknowns being figured out) stays on the strongest model and is
+never delegated; downhill work (known execution) routes to builder tier — this names what the
+routing table above already does. A scope that stops moving is a raised hand: escalate, don't
+hammer.
+
+**Reporting register.** Close-out prose walks the ladder **outcome → behavior → implementation**:
+lead with what's now true and why it was worth the bet, support with observable behavior,
+implementation detail only where the mode asks. The SSOT is `scripts/prose-draft.prompt.md`.
+
 ## Shipping a merge
 
 Merging to `main` is the deploy. The GitHub workflow continues to send its mechanical 📦/🚀 pings when
@@ -288,6 +338,8 @@ project's `apps/*/e2e/README.md` for a worked example):
   board (`node scripts/build-order.mjs`), **never hand-edited**. See `00-ideas/README.md`. **Status
   SSOT = each epic README's frontmatter `status:`** (seed frontmatter owns only the un-scaffolded
   funnel); `BUILD-ORDER.md` is a *derived view* of it — regenerated, not maintained.
+- **`Roadmap/bets/`** — one file per wave: the bets placed, their appetite, and what each displaced.
+  Written at the wave boundary (see *Betting & appetite*).
 - **`tasks/`** — engineering delivery log: what was built, decisions, commit hashes, runbooks, known
   limitations.
 - **Team memory** — durable cross-session facts and pointers, if your tooling keeps one.

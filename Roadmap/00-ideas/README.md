@@ -23,6 +23,8 @@ status: raw                          # raw | ready | queued | scaffolded | in-pr
 area: "01"                           # macro-section number, matching Roadmap/README.md's table
 type: feature                        # feature | spike | chore | epic
 priority: null                       # a wave/priority label, or null
+appetite: null                       # S | M | L — the budget, set at shaping; REQUIRED before `queued`
+underwritten_by: null                # wave that pays for this (a Roadmap/bets/<wave>.md), or null
 risk: low                            # low | high
 epic: null                           # path to the scaffolded epic, or null until scaffolded
 build_order: null                    # BUILD-ORDER id, or null
@@ -58,12 +60,24 @@ One field is authoritative at each stage — they never both drive the board:
   no longer read for the board, so it can't drift it. **`BUILD-ORDER.md` is a generated view — never
   hand-edit it; change the README `status:` and run `node scripts/build-order.mjs`.**
 
+### appetite & underwriting — the economics fields
+
+`appetite` (S | M | L) is the **budget the idea is worth**, fixed at shaping *before* the solution
+is designed — sessions + an implied token band, never a time estimate (see WAYS-OF-WORKING →
+*Betting & appetite*). `underwritten_by` names the **wave that pays for it** (a
+`Roadmap/bets/<wave>.md` file), set at the betting table. `null` means nobody has paid for it yet —
+fine in the funnel, impossible on the board: `build-order.mjs` **hard-fails** a `queued` seed with
+no `appetite`, and flags a missing `underwritten_by` as drift. Like `status`, `appetite` is an
+enforced enum — a present-but-unrecognized value fails the board, it never falls back silently.
+
 ## How seeds flow (no file moves)
 
 1. **Capture** — drop a raw idea as `seeds/<slug>.md` with `status: raw` (the `groom` skill does this
    from a brain-dump).
-2. **Scope** — `groom` fills out the Definition-of-Ready and flips `status: ready`.
-3. **Queue** — add it to `BUILD-ORDER.md`; `status: queued`.
+2. **Scope** — `groom` fills out the Definition-of-Ready (appetite included) and flips
+   `status: ready`.
+3. **Queue** — bet on it at a wave boundary (`appetite:` + `underwritten_by:` set, the wave's
+   `Roadmap/bets/` file records what it displaced); `status: queued`.
 4. **Scaffold** — on approval, `groom` runs its own `scaffold-epic.mjs` (ships inside the `groom`
    skill, `ways-of-work` plugin) to create the epic/sprint docs, then sets the seed's `epic:` +
    `status: scaffolded`. **No file ever moves between folders** — the frontmatter carries the state.

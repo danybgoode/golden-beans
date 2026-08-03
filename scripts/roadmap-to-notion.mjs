@@ -94,6 +94,7 @@ function readSeeds() {
   return readdirSync(SEEDS).filter((f) => f.endsWith('.md')).map((f) => {
     const fm = parseFrontmatter(readFileSync(join(SEEDS, f), 'utf8'));
     seedStatusLabel(fm.status, `Roadmap/00-ideas/seeds/${f}`); // hard-fail on an invalid enum value
+    seedAppetite(fm.appetite, `Roadmap/00-ideas/seeds/${f}`);  // hard-fail on an invalid appetite
     return { ...fm, _file: `Roadmap/00-ideas/seeds/${f}` };
   });
 }
@@ -109,6 +110,20 @@ export function seedStatusLabel(status, file = 'seed') {
     throw new Error(`${file}: unrecognized seed frontmatter status "${status}" — valid values: ${Object.keys(SEED_STATUS_LABEL).join(' | ')}`);
   }
   return label;
+}
+
+// Seed frontmatter `appetite:` — the economics enum (WAYS-OF-WORKING → Betting & appetite).
+// Absent → null (the funnel tolerates unshaped ideas); a PRESENT but unrecognized value THROWS,
+// same rationale as the status enum — a typo'd appetite must not silently pass for funded work.
+// Whether an appetite is REQUIRED (at `status: queued`) is build-order.mjs's enforcement; this
+// only guards the vocabulary.
+const APPETITES = new Set(['S', 'M', 'L']);
+export function seedAppetite(appetite, file = 'seed') {
+  if (appetite == null) return null;
+  if (!APPETITES.has(appetite)) {
+    throw new Error(`${file}: unrecognized seed frontmatter appetite "${appetite}" — valid values: S | M | L`);
+  }
+  return appetite;
 }
 
 function listEpicDirs() {
@@ -413,6 +428,8 @@ function buildRows() {
       priority: s.priority ? PRIORITY_LABEL[s.priority] || s.priority : null,
       type: TYPE_LABEL[s.type] || 'Feature',
       risk: s.risk ? (s.risk === 'high' ? 'High' : 'Low') : null,
+      appetite: s.appetite || null,
+      underwritten_by: s.underwritten_by || null,
       sprint_progress: null,
       build_order: s.build_order || null,
       build_order_num: buildOrderNum(s.build_order),

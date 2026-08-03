@@ -93,8 +93,12 @@ function render(rows) {
   out.push(`## ⬜ Funnel — seeds not yet scaffolded (${funnel.length})`);
   out.push('');
   out.push(funnel.length ? funnel.map((s) => {
-    const meta = [s.status, s.type, s.priority].filter(Boolean).join(' · ');
-    return `- [${s.name}](seeds/${s.slug}.md)${meta ? ` — ${meta}` : ''}`;
+    const meta = [s.status, s.type, s.appetite ? `appetite ${s.appetite}` : null, s.priority]
+      .filter(Boolean).join(' · ');
+    // A queued seed without an underwriter is funded-but-unowned — advisory drift, loud on the board.
+    const warn = s.status === 'Queued' && !s.underwritten_by
+      ? ' — ⚠️ no underwriter (set `underwritten_by:` at the betting table)' : '';
+    return `- [${s.name}](seeds/${s.slug}.md)${meta ? ` — ${meta}` : ''}${warn}`;
   }).join('\n') : '_None._');
   out.push('');
 
@@ -118,6 +122,17 @@ function render(rows) {
 }
 
 const rows = extract();
+
+// Underwriting enforcement (WAYS-OF-WORKING → Betting & appetite): a QUEUED seed is a bet — it
+// must carry an `appetite:`. Hard fail, not advisory: the board physically rejects unfunded work
+// (the same enforced-not-advisory stance as the status enum).
+const unfunded = rows.filter((r) => r.grain === 'Seed' && r.status === 'Queued' && !r.appetite);
+if (unfunded.length) {
+  console.error('Queued seeds missing `appetite:` frontmatter (S | M | L — set at shaping, bet at the wave boundary):');
+  for (const s of unfunded) console.error(`  - ${s.doc_link}`);
+  process.exit(1);
+}
+
 const content = render(rows);
 
 if (process.argv.includes('--check')) {
