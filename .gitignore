@@ -41,6 +41,11 @@ npm-debug.log*
 .idea/
 .vercel
 
+# Local Claude Code state — personal permission allowlist, never shared.
+# (Ours currently embeds a live connector token inside a Bash(...) permission
+# string, so this is a secrets concern, not just noise.)
+.claude/settings.local.json
+
 # Playwright authed-fixture state (contains a real, disposable session token)
 apps/web/e2e/.auth/
 
