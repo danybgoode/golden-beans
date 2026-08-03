@@ -11,12 +11,27 @@ agent re-orients from the same docs. It also sidesteps the biggest hidden cost i
 > `AGENTS.md` "Start here" already chains to `WAYS-OF-WORKING.md` + `LEARNINGS.md` + team memory, so
 > naming **AGENTS + the one sprint/scope doc** is usually all the orientation an agent needs.
 
+**The three stages.** Since the economics layer landed (WAYS-OF-WORKING → *Betting & appetite*),
+every kickoff below sits in one of three stages — say which one you're in and the rest follows:
+
+| Stage | Question it answers | Kickoffs |
+|---|---|---|
+| **Shape** | *What is this worth, and what's the smallest thing that delivers it?* | §1 (groom → a pitch), §3 (spike), §10 (re-shape after a breaker) |
+| **Bet** | *What are we funding this wave, and what does it displace?* | §9 (the betting table) |
+| **Build** | *Execute the approved plan.* | §2, §4, §6, §7, §8 |
+
+Shaping without a bet produces plans nobody funds; betting without shaping funds work nobody sized.
+A **fixed-scope** ask (bug, chore, clear story) skips Bet by design — see §1.
+
 ## Fill-in values
 - `<ask>` — the raw one-line request
 - `<epic-slug>` — e.g. `discovery-polish`
 - `<NN-macro>` — macro-section folder, e.g. `01-onboarding-and-auth`
 - `<N>` — sprint number
 - `<risk>` — **LOW** (reviewer may auto-merge on green CI) / **HIGH** (product owner merges)
+- `<appetite>` — **S** (one builder session) / **M** (one wave) / **L** (multi-wave) — the budget, fixed before the solution
+- `<lane>` — **shaped bet** (→ the table) / **fixed scope** (→ straight to a builder) / **reactive** (logged against the wave)
+- `<wave>` — the wave file under `Roadmap/bets/`, e.g. `wave-2026-08-03-harness-portability.md`
 - `<AGENTS-path>` — this project's `AGENTS.md` (or the app-specific one, if it's a monorepo)
 
 ## Command shorthands
@@ -26,7 +41,9 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 
 | Say this | Expands to |
 |---|---|
-| **Groom: \<ask\>** | §1 — groom a raw ask |
+| **Groom: \<ask\>** / **Shape: \<ask\>** | §1 — groom a raw ask into a shaped pitch (synonyms; "Shape" just names the stage) |
+| **Bet** / **Bet the wave** | §9 — run the betting table at a wave boundary, write `Roadmap/bets/<wave>.md` |
+| **Re-shape \<slug\>** | §10 — an M/L bet hit its circuit breaker; back to shaping, never extended in flight |
 | **Build S\<N\> of \<epic\>** | §2 — build a sprint |
 | **Spike \<name\>** | §3 — run a spike |
 | **Review PR #\<N\>** | §4 — fresh-reviewer single pass |
@@ -40,14 +57,30 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 
 ---
 
-## 1 · Groom a raw ask — strong model
+## 1 · Groom a raw ask into a shaped pitch — strong model *(the Shape stage)*
 ```
 Groom: <ask>.
-Read <AGENTS-path> (Start here) + Roadmap/LEARNINGS.md; skim team memory + Roadmap/00-ideas/BUILD-ORDER.md.
-Use the groom skill — planning only, no code. Orient → classify → "can we already do this?" → disambiguate
-→ platform-primitives-first reframe → slice into sprints. Land the scope doc; on my approval, scaffold the
-epic + sprint docs (commit path-scoped) and emit the per-sprint kickoffs. Never assume — validate at each gate.
+Read <AGENTS-path> (Start here) + Roadmap/LEARNINGS.md; skim team memory, Roadmap/00-ideas/BUILD-ORDER.md
+and the latest Roadmap/bets/ wave file (what's already funded, and what it displaced).
+Use the groom skill — planning only, no code. Orient → SET THE APPETITE BEFORE ANY SOLUTIONING → classify
+class + lane → "can we already do this?" → disambiguate → platform-primitives-first reframe → bill of
+materials → slice into sprints. Land the pitch in Roadmap/00-ideas/seeds/ with appetite: set and
+underwritten_by: null. Never assume — validate at each gate.
 ```
+**The appetite is a creative constraint, not a forecast.** It is fixed *before* the solution is
+designed; if the solution won't fit, narrow the problem or cut scope — never grow the appetite
+mid-shaping. An agent will build anything if allowed to tokenmaxx; the appetite is what makes it
+stop and hammer scope instead.
+
+**Then the lane decides what happens next — say which one at the end of the groom:**
+
+| Lane | Tell | What follows |
+|---|---|---|
+| **Shaped bet** | genuinely-new / strategic | pitch is complete (problem · appetite · bill of materials · rabbit holes · no-gos) → stops at `status: ready`, waits for §9. **No scaffolding yet** — an unfunded epic is a plan nobody paid for. |
+| **Fixed scope** | bug, chore, well-specified story | default `appetite: S`, **skip §9 entirely** → on my approval scaffold the epic + sprint docs (commit path-scoped) and emit the per-sprint kickoffs |
+| **Reactive / ops** | incident, launch support, can't wait | no shaping — do it, then log it against the current wave's budget so the economics stay visible |
+
+*Add for a shaped bet:* `"Stop at the pitch. Do not scaffold — this goes to the betting table."`
 
 ## 2 · Build a sprint — plan on strong model → execute
 ```
@@ -82,8 +115,8 @@ Re-review substantive fixes; use targeted validation for docs/presentation-only 
 
 ## 5 · Strategy / process work — strong model
 ```
-Read <AGENTS-path> (Start here), Roadmap/WAYS-OF-WORKING.md, Roadmap/LEARNINGS.md; skim team memory +
-Roadmap/00-ideas/BUILD-ORDER.md.
+Read <AGENTS-path> (Start here), Roadmap/WAYS-OF-WORKING.md, Roadmap/LEARNINGS.md; skim team memory,
+Roadmap/00-ideas/BUILD-ORDER.md and the latest Roadmap/bets/ wave file.
 <task>. Docs/planning only. Never assume — validate before editing any canonical doc. No git commits (flag
 the changed files for me to review + commit).
 ```
@@ -148,7 +181,59 @@ Two conventions that keep it honest:
   and is **deleted at epic close**, with anything durable promoted into `RETROSPECTIVE.md`. It is
   working state, not a record.
 
+## 9 · Bet a wave boundary — strong model *(the Bet stage)*
+
+Run at a **wave boundary, not on a calendar**: the previous wave's bets landed (or hit their
+breaker), and nothing should start until we've said what we're funding and what it costs us.
+
+```
+Bet the wave.
+Read <AGENTS-path> (Start here), Roadmap/WAYS-OF-WORKING.md (Betting & appetite), and every wave file in
+Roadmap/bets/. Then read every seed in Roadmap/00-ideas/seeds/ with status: ready.
+Run the betting table with me: for each candidate, state its appetite and — the part that matters — what
+funding it DISPLACES. Recommend a slate that fits one wave; I decide. Then write
+Roadmap/bets/wave-<date-or-slug>.md (bet · appetite · displaced, three lines each), set each funded seed's
+underwritten_by: to that path and status: queued, and regenerate the board (node scripts/build-order.mjs —
+never hand-edit BUILD-ORDER.md). Planning only, no code.
+```
+
+Three rules that keep this from becoming a ceremony:
+
+- **An unpicked pitch is let go, not backlogged.** Note it in the wave file only if it was seriously
+  considered. If it matters, it resurfaces — that's cheaper than maintaining a graveyard.
+- **"What did it displace?" is the whole point.** A bet with no named opportunity cost hasn't been
+  bet on; it's been waved through. A ticket board can show you what's queued and never what it cost.
+- **`underwritten_by: null` is the honest state of an idea nobody has paid for.** Fine in the funnel,
+  impossible on the board — `build-order.mjs` hard-fails a `queued` seed with no `appetite:` and
+  flags a missing underwriter as drift.
+
+Advisory second opinion available before you commit the slate: `node scripts/cross-panel.mjs
+Roadmap/bets/<wave>.md --lens both --agent codex|antigravity` — print-only, never gates.
+
+## 10 · Re-shape a bet that hit its circuit breaker — strong model
+
+**The breaker is the default, not the exception.** When an M/L bet exhausts its appetite, work
+*stops and returns to shaping* — it is never extended in flight. Repeated hammering on one problem
+means the work is uphill (unknowns), not that it needs more tokens. A scope that stops moving is a
+raised hand.
+
+```
+Re-shape <slug> — it hit its appetite breaker.
+Read <AGENTS-path> (Start here) + Roadmap/LEARNINGS.md, Roadmap/bets/<wave>.md, the seed
+Roadmap/00-ideas/seeds/<slug>.md, and whatever the epic actually produced before it stalled.
+Do NOT propose more budget. Answer three questions in writing: (1) what did we learn that the original
+shaping didn't know? (2) what is the smaller problem that fits the SAME appetite? (3) if there isn't one,
+what's the case for dropping it — and what did the spend buy us anyway? Update the seed's pitch in place;
+land it at status: ready so it re-enters at the next betting table. Planning only, no code.
+```
+
+Record the outcome as a dated line in the wave file that funded it — a bet that stopped is a result,
+not a failure to hide. The seed keeps its history; a re-shaped pitch that wins the next table is the
+system working.
+
 ---
 
-*These mirror what the `groom` skill emits (Stage 8) — keep the two in sync. Conventions baked in: own
-worktree + path-scoped commits, risk tier, single-pass review, strong-model planning.*
+*§1–§8 mirror what the `groom` skill emits (Stage 8) — keep the two in sync. §9–§10 mirror
+WAYS-OF-WORKING → *Betting & appetite* (the SSOT for appetite tiers, lanes and the breaker; don't
+fork a second copy here). Conventions baked in: appetite before solution, own worktree + path-scoped
+commits, risk tier, single-pass review, strong-model planning.*
