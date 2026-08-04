@@ -1,36 +1,48 @@
 #!/bin/sh
-# Local-first pre-commit gate — BLOCKING. Auto-enabled via package.json's "prepare" script
-# (git config core.hooksPath .githooks), so this runs for every clone with no manual step.
-# Same pattern adopted in the root miyagi-product-management repo 2026-07-16 (GitHub Actions
-# minutes offload) — mirrors build-order-guard.yml + scripts-guard.yml locally, both cheap
-# pure-node checks that used to fire on every push. GH Actions (guards.yml equivalent here:
-# build-order-guard.yml / scripts-guard.yml) stays as the PR-triggered fallback safety net.
+# Local-first pre-commit gate — BLOCKING, budgeted at UNDER 2 SECONDS. Auto-enabled via
+# package.json's "prepare" script (git config core.hooksPath .githooks).
+#
+# ── The budget, and why it is the rule ───────────────────────────────────────────────────────────
+# Three stages, and COST decides which stage a check belongs to — not how important the check is:
+#
+#   pre-commit   < 2s       Cheap, ideally scoped to the STAGED files. Runs many times an hour.
+#   pre-push     < 30s      Whole-repo checks that are cheap. Runs a few times a day.
+#   CI           unbounded  Everything: full-corpus walks, integration tests, cross-file drift.
+#
+# ── Why this file changed while nothing here was slow (2026-08-03) ───────────────────────────────
+# This repo's numbers are healthy: 84 Roadmap docs, `build-order --check` ~1s, the whole 269-test
+# suite ~345ms. The change is INOCULATION, not repair.
+#
+# The sibling repo (medusa-bonsai) had this exact structure — a full-corpus check plus the whole
+# test suite, both in pre-commit — and grew into 860 docs. Measured there on 2026-08-03: a single
+# commit took **119.7 seconds**, of which ~119s was the same corpus walk repeated eight times and
+# ~0.6s was the actual tests. Nothing about that structure was wrong at 84 docs either; it just
+# doesn't survive growth, and the failure is gradual enough that no single commit ever feels like
+# the one that broke it.
+#
+# So: the check that scales with the corpus (`build-order`) moves to pre-push, and the discipline is
+# written down here rather than rediscovered at 800 docs.
+#
+# ── The economics error worth naming ─────────────────────────────────────────────────────────────
+# Checks get pulled local to save CI minutes. That reasoning has a hole: a CI minute is ASYNCHRONOUS
+# and PARALLEL — nobody waits for it. A local minute is SERIAL and BLOCKING — a human waits, every
+# commit. Trading minutes of human wait to save billed minutes is a bad trade in every direction.
+# Keep local checks fast; let CI be slow.
 #
 # Bypass with `git commit --no-verify` if you genuinely need to.
 
-changed=$(git diff --cached --name-only)
+changed=$(git diff --cached --name-only --diff-filter=ACMR)
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "pre-commit: node not found — skipping local guards (GH Actions PR check still applies)." >&2
+  echo "pre-commit: node not found — skipping local guards (CI still applies)." >&2
   exit 0
 fi
 
 fail=0
 
-if echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-to-notion\.mjs)'; then
-  if ! node scripts/build-order.mjs --check; then
-    echo "pre-commit: build-order failed — BUILD-ORDER.md is stale. Run 'node scripts/build-order.mjs' and stage it." >&2
-    fail=1
-  fi
-fi
-
-if echo "$changed" | grep -qE '^scripts/'; then
-  if ! node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'; then
-    echo "pre-commit: scripts/ node:test failed — see output above." >&2
-    fail=1
-  fi
-fi
-
+# Design-drift: ~75ms, and path-gated to the surfaces it actually governs. Cheap enough to belong
+# here, and it catches exactly the class of mistake that is expensive to unpick after the fact
+# (hardcoded values instead of shared tokens/primitives spreading across components).
 if echo "$changed" | grep -qE '^(apps/web/(app|components)/|references/(design/|ux-guidelines\.md|golden-beans-design-system-proposal/|golden-beans-mark-exploration-round2\.html)|scripts/check-design-drift\.mjs)'; then
   if ! node scripts/check-design-drift.mjs; then
     echo "pre-commit: design-drift failed — use shared tokens/primitives and SVG icons." >&2

@@ -18,6 +18,45 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
+# ── BLOCKING section (added 2026-08-03) — cheap, deterministic, whole-repo ───────────────────────
+# Everything below this block is advisory by design (it can fail for environmental reasons: no local
+# Supabase, a cold build). These two cannot: they are pure node, sub-second, and a failure is
+# unambiguous. They moved here from pre-commit under the stage budget documented in that file —
+# pre-commit is for the files you staged, pre-push is for cheap whole-repo checks.
+#
+# `build-order` in particular is the check that scales with the Roadmap corpus, and corpus growth is
+# what turned the sibling repo's commit hook into a 2-minute wait. Keeping it at push means it costs
+# ~1s a few times a day instead of ~1s many times an hour, and it stays affordable as the roadmap grows.
+push_fail=0
+
+changed=$(git diff --name-only '@{upstream}'...HEAD 2>/dev/null)
+[ -z "$changed" ] && changed=$(git diff --name-only origin/main...HEAD 2>/dev/null)
+
+if echo "$changed" | grep -qE '^(Roadmap/|scripts/build-order\.mjs|scripts/roadmap-to-notion\.mjs)'; then
+  echo "pre-push: build-order freshness..." >&2
+  if ! node scripts/build-order.mjs --check; then
+    echo "pre-push: BUILD-ORDER.md is STALE — it is DERIVED, never hand-edited." >&2
+    echo "          Run:  node scripts/build-order.mjs" >&2
+    echo "          Then: git add Roadmap/00-ideas/BUILD-ORDER.md && git commit --amend --no-edit" >&2
+    push_fail=1
+  fi
+fi
+
+if echo "$changed" | grep -qE '^scripts/'; then
+  echo "pre-push: scripts/ unit tests..." >&2
+  if ! node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'; then
+    echo "pre-push: scripts/ node:test failed — see output above." >&2
+    push_fail=1
+  fi
+fi
+
+if [ "$push_fail" -ne 0 ]; then
+  echo "pre-push: a blocking check failed. Fix and re-push, or 'git push --no-verify' to bypass." >&2
+  exit 1
+fi
+
+# ── ADVISORY section — never blocks (exits 0 regardless), see the header ─────────────────────────
+
 echo "pre-push: template-drift guard..." >&2
 if ! node scripts/check-template-drift.mjs; then
   echo "pre-push: template-drift guard failed — advisory only, push proceeding. ci.yml will also catch this." >&2
