@@ -48,6 +48,9 @@ import {
   loadPromptBody,
   runAntigravity,
   runCodex,
+  runVibe,
+  runClaudeCode,
+  AGENT_BIN,
   resolveCurrentPr,
   currentHeadSha,
   decideHeadGuard,
@@ -192,13 +195,21 @@ function agyArgv(prompt, diff) {
 // just misfile a record, it silently reports two independent reads where only one happened. A
 // reviewer trusting the label would conclude the other family had cleared the diff.
 //
-// codex takes its context on STDIN and agy takes everything as one argv string — see
-// lib/cross-agent-cli.mjs. Keeping that difference in one place is why both wrappers live there.
+// Each CLI takes its context differently — codex and claude on STDIN, agy and vibe as one argv string.
+// See lib/cross-agent-cli.mjs; keeping that difference in one place is why the wrappers live there.
+//
+// Note the explicit `die` on an unknown agent. This used to end in a bare `return runAntigravity(...)`,
+// i.e. "anything that isn't codex is agy". That was harmless while the roster was two families, and
+// became a real bug the moment it grew: `--agent vibe` would have run AGY and posted the findings under
+// a Mistral label. A cross-family review that names the wrong family is worse than none — a later
+// reviewer trusting the label would conclude a family had cleared the diff when it never read it.
 function runReview(agent, prompt, diff) {
-  if (agent === 'codex') {
-    return runCodex(prompt, `## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`);
-  }
-  return runAntigravity(agyArgv(prompt, diff));
+  const stdinContext = `## PR diff to review\n\n\`\`\`diff\n${diff}\n\`\`\`\n`;
+  if (agent === 'codex') return runCodex(prompt, stdinContext);
+  if (agent === 'antigravity') return runAntigravity(agyArgv(prompt, diff));
+  if (agent === 'vibe') return runVibe(agyArgv(prompt, diff));
+  if (agent === 'claude') return runClaudeCode(prompt, stdinContext);
+  die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
 }
 
 function buildComment(agentLabel, findings) {
@@ -302,8 +313,20 @@ function main() {
     }
   }
 
-  ensureCmd('agy', 'agy not found — install the Antigravity CLI and authenticate it, then retry.');
-  checkAgyVersion();
+  // Presence-check the CLI we're ACTUALLY about to run. This used to hard-require `agy` on every run
+  // regardless of --agent, which was a harmless quirk while agy was the default and codex the only
+  // alternative — and becomes a wrong failure now that the roster is four families: without this,
+  // `--agent claude` on a machine with no Antigravity installed would die complaining about agy.
+  if (agent === 'antigravity') {
+    ensureCmd('agy', 'agy not found — install the Antigravity CLI and authenticate it, then retry.');
+    checkAgyVersion();
+  } else if (agent === 'codex') {
+    ensureCmd('codex', 'codex not found — install Codex CLI (https://github.com/openai/codex) and `codex login`.');
+  } else if (agent === 'vibe') {
+    ensureCmd(AGENT_BIN.vibe, 'vibe not found — install the Mistral Vibe CLI (`uv tool install mistral-vibe`) and authenticate it, then retry.');
+  } else if (agent === 'claude') {
+    ensureCmd(AGENT_BIN.claude, 'claude not found — install Claude Code (https://claude.com/claude-code) and run `claude auth login`, then retry.');
+  }
 
   const prompt = loadPromptBody(PROMPT_PATH);
   const rawDiff = ghDiff(pr, repo);

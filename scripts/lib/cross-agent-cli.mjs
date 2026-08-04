@@ -22,7 +22,11 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 
 // label per agent. Drives both the CLI dispatch and the human-readable header.
-export const AGENTS = { codex: 'Codex', antigravity: 'Antigravity' };
+export const AGENTS = { codex: 'Codex', antigravity: 'Antigravity', vibe: 'Mistral Vibe', claude: 'Claude Code' };
+
+// The binary each --agent value dispatches to — `antigravity` → `agy` is the one place the flag
+// value and the executable name genuinely differ.
+export const AGENT_BIN = { codex: 'codex', antigravity: 'agy', devin: 'devin', vibe: 'vibe', claude: 'claude' };
 
 // Antigravity's headless CLI is new and its print contract shifts between releases — pin the known-good
 // version and FAIL LOUD on a mismatch (checkAgyVersion). 1.0.7→1.0.10 silently changed `--print` so it
@@ -802,4 +806,137 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
       `("RESOURCE_EXHAUSTED 429") or an unavailable model. Set AGY_MODEL / AGY_FALLBACK_MODEL to a model ` +
       `\`agy models\` lists with remaining quota, or use --agent codex.`
   );
+}
+
+// ── Mistral Vibe (`vibe`) ────────────────────────────────────────────────────────────────────────────────
+// Vibe's non-interactive path is `--prompt` ("programmatic mode"): it skips the Textual chat UI, disables
+// interactive tools, and exits when done. Three flags matter for a reviewer and each is deliberate:
+//
+//   --agent plan   Vibe ships several approval agents (default · plan · accept-edits · auto-approve) and
+//                  programmatic mode DEFAULTS TO `auto-approve` — i.e. a reviewer that could silently edit
+//                  the working tree. `plan` is the read-only one. This is not a nicety: an advisory review
+//                  that mutates the repo it is reviewing is the exact failure the "advisory only" contract
+//                  exists to prevent, so the flag is passed unconditionally and is not overridable by env.
+//   --max-turns    Vibe's own docs recommend bounding run length. A single-pass review needs very few.
+//   --output text  json/streaming are for structured consumers; we want the prose findings on stdout.
+//   --trust        Programmatic mode still ENFORCES folder trust but cannot show the confirmation prompt,
+//                  so an untrusted directory would otherwise stall or refuse. `--trust` grants trust for
+//                  this invocation only (it does not write ~/.vibe/trusted_folders.toml).
+//
+// ⚠ CONTRACT NOT YET PROBED AGAINST A LIVE BINARY. Everything above comes from Mistral's published CLI
+// docs, not from a run on this machine — and this repo's own rule is that a roster is PROBED, never
+// assumed (a CLI that self-reports a capability it does not have has burned us before; see the agy
+// version pin above, where a silent `--print` contract change shipped empty reviews for weeks). Before
+// relying on vibe in a real review, run the probe once and record the result here:
+//
+//   node scripts/cross-review.mjs <PR#> --agent vibe --dry-run
+//
+// A green probe prints real findings. An EMPTY result is a FAILURE, not a pass — see runVibe below, which
+// treats empty stdout as an error exactly like the agy path does, for the same reason (a quota-capped or
+// misconfigured CLI can exit 0 with nothing).
+// vibe-probe: NOT YET VERIFIED — replace this line with `vibe-probe: verified <date> against <version>`.
+//
+// `vibe-acp` is the WRONG entry point for this use case and is deliberately not wired: it starts a
+// JSON-RPC server that speaks the Agent Client Protocol over stdio for IDE extensions (Zed et al.). It
+// expects a long-lived client session, not a one-shot prompt, so a script would have to implement an ACP
+// client to get a single review out of it. `vibe --prompt` is the scripting/CI path, and it is the one
+// Mistral documents for exactly this.
+export const VIBE_ARG_LIMIT = 256 * 1024;
+export const VIBE_MAX_TURNS = process.env.VIBE_MAX_TURNS || '4';
+// Optional: pin a model with `VIBE_MODEL`. Left unset by default so vibe uses the account's configured
+// default — unlike agy, an unset model here is not known to blank the output.
+export const VIBE_MODEL = process.env.VIBE_MODEL || null;
+
+// ── Claude Code (`claude`) as a plain CLI reviewer ───────────────────────────────────────────────────────
+// Sonnet by default: review is a single read of a bounded diff, and the routing policy reserves the
+// strongest model for the *fresh subagent* pass on high-risk work (see review-route.mjs). Override with
+// CLAUDE_REVIEW_MODEL.
+//
+// The invocation is deliberately tool-less. `--tools ""` removes every built-in tool and
+// `--strict-mcp-config` (with no `--mcp-config`) loads no MCP servers, so the reviewer can do exactly one
+// thing: read the diff piped to it on stdin and write findings to stdout. It cannot edit the tree it is
+// reviewing, cannot shell out, and cannot wander into unrelated files — the same "single pass, advisory,
+// no writes" contract the other three CLIs get, enforced by flags rather than by hope.
+// `--bare` skips hook/skill/plugin/MCP/CLAUDE.md auto-discovery so a scripted call starts fast and, more
+// importantly, so the review is not silently reshaped by whatever config the host repo happens to carry.
+export const CLAUDE_REVIEW_MODEL = process.env.CLAUDE_REVIEW_MODEL || 'sonnet';
+
+// One `vibe --prompt "<prompt+context>" --agent plan --output text` invocation. Like agy, vibe takes the
+// whole thing as an argv string, so the same size cap applies (and for the same reason: a clear message
+// beats an opaque E2BIG). `--agent plan` is NOT optional — see the header block: programmatic mode
+// otherwise defaults to `auto-approve`, and an advisory reviewer must not be able to write.
+//
+// Empty stdout is treated as a FAILURE, not as "no findings". Every CLI on this roster can exit 0 having
+// produced nothing when it is quota-capped or misconfigured, and a review that silently becomes empty is
+// worse than one that errors — it reads as a clean pass. `deps.spawn` is injectable for tests.
+export function runVibe(fullArgv, opts = {}, deps = {}) {
+  const { spawn = spawnSync } = deps;
+  if (Buffer.byteLength(fullArgv, 'utf8') > VIBE_ARG_LIMIT) {
+    return fail(
+      opts.soft,
+      `input too large for vibe (${Math.round(Buffer.byteLength(fullArgv) / 1024)} KB > ` +
+        `${VIBE_ARG_LIMIT / 1024} KB; vibe takes the prompt in argv, not stdin) — use --agent codex instead.`
+    );
+  }
+
+  const args = ['--prompt', fullArgv, '--agent', 'plan', '--output', 'text', '--max-turns', String(VIBE_MAX_TURNS), '--trust'];
+  if (VIBE_MODEL) args.push('--model', VIBE_MODEL);
+
+  const r = spawn('vibe', args, { input: '', encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (r.error)
+    return fail(
+      opts.soft,
+      `vibe not found or failed to spawn (${r.error.message}) — install the Mistral Vibe CLI ` +
+        `(\`uv tool install mistral-vibe\`) and authenticate it, or use --agent codex/antigravity.`
+    );
+  if (r.status !== 0) return fail(opts.soft, `vibe --prompt failed: ${lastLine(r.stderr)}`);
+
+  const out = (r.stdout || '').trim();
+  if (!out)
+    return fail(
+      opts.soft,
+      `vibe returned no output — likely a quota cap, an auth lapse, or an untrusted folder. Verify with ` +
+        `\`vibe --prompt "say OK" --output text --trust\`; if that is empty too, re-authenticate. ` +
+        `(An empty result is a failure, never "no findings" — see runVibe's header.)`
+    );
+  return out;
+}
+
+// One `claude -p "<prompt>"` invocation with the context piped on stdin (same shape as codex, which is why
+// cross-review can hand both runners the identical prompt/stdin pair). Tool-less and MCP-less by
+// construction — see CLAUDE_REVIEW_MODEL's header for why each flag is there.
+//
+// NOTE ON SAME-FAMILY REVIEW: nothing in this function knows or cares who built the diff. Routing a
+// Claude-built diff to a Claude reviewer would be a same-family pass wearing a cross-family label, and
+// preventing that is `review-route.mjs`'s job (rule 1: a family never reviews its own diff). Calling this
+// directly with `--agent claude` on a Claude-authored PR is a deliberate act, and the caller owns it.
+export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
+  const { spawn = spawnSync } = deps;
+  const args = [
+    '-p', prompt,
+    '--model', CLAUDE_REVIEW_MODEL,
+    '--tools', '',
+    '--strict-mcp-config',
+    '--output-format', 'text',
+    '--no-session-persistence',
+    '--bare',
+  ];
+
+  const r = spawn('claude', args, { input: stdin, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (r.error)
+    return fail(
+      opts.soft,
+      `claude not found or failed to spawn (${r.error.message}) — install Claude Code ` +
+        `(https://claude.com/claude-code) and run \`claude auth login\`, or use --agent codex/antigravity.`
+    );
+  if (r.status !== 0) return fail(opts.soft, `claude -p failed: ${lastLine(r.stderr)}`);
+
+  const out = (r.stdout || '').trim();
+  if (!out)
+    return fail(
+      opts.soft,
+      `claude returned no output — likely a usage cap or an expired session. Check \`claude auth status\`, ` +
+        `or use --agent codex/antigravity/vibe. (An empty result is a failure, never "no findings".)`
+    );
+  return out;
 }

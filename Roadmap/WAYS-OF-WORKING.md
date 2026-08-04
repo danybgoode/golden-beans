@@ -116,6 +116,27 @@ What that changes, concretely:
    "human-baseline vs agent-augmented eras" spine, which the dataset could not support — amended
    2026-07-25 to published-benchmark baselines.
 
+Four additions to this SOP (2026-08-03), all of them things the epic-sized shape makes easy to lose:
+
+5. **Lock the architecture before any builder starts.** Before delegating, the coordinating agent writes
+   numbered decisions `D1…Dn` into the epic `README.md`, each **verified against the live code and live
+   data** — not inferred from the plan — plus a per-sprint **"Build contract (locked by the architect
+   before the builder started)"**. Builders *cite* those decisions; they never re-derive them, because a
+   paraphrased contract drifts permissive. The locking pass must **disprove scope**: an acceptance
+   criterion describing a guard, a table or a flag state the live system doesn't have is fiction —
+   correct the doc, with the reasoning, out loud.
+6. **Stack the branches.** `feat/<slug>` → `-s2` → `-s3`, each cut from the previous, one PR per sprint,
+   merged in order. Sprints in one epic share hot files by construction; siblings cut off one base pay a
+   per-merge conflict tax. Stack or pay.
+7. **Generate the kickoff, don't compose it.** `node skills/groom/emit-epic-kickoff.mjs --epic <slug>`
+   (the `groom` skill, `ways-of-work` plugin) reads the epic README + every sprint file and prints the
+   whole-epic orchestrator prompt. Hand-composing it is how the architecture-lock pass gets summarised
+   away and the review policy silently reverts to whatever the composing agent remembered.
+8. **Done means shipped, not merged.** A merged PR that hasn't deployed, a migration written but not
+   applied, a flag that exists in code but not in the flag provider — none of those are done. Where the
+   work includes a migration, apply it **before** merging (merging deploys), verify live, then merge,
+   then confirm the deploy actually succeeded.
+
 ### Routing a build by model tier
 
 The point is to spend the expensive model where judgment compounds and the cheap one where the work
@@ -128,7 +149,7 @@ is mechanical — not to use one tier for everything.
 | A well-specified story with a clear acceptance check | **Mid** (Sonnet-class subagent) | Bounded, verifiable, cheap to re-run. |
 | Read-only research / data-availability reports over a large or foreign codebase | **Mid**, background, parallel | Fan-out with no write conflicts. Ask for an explicit "NOT DERIVABLE" list — an honest gap beats an optimistic guess. |
 | Money · auth · migrations · tenancy · concurrency | **Strongest**, never delegated | Same tier that decides who merges. |
-| PR review — a PRIMARY gate, not advisory | **Codex** (model as-is) → **Agy on `gemini-3.6-flash-high`** → Agy `gpt-oss-120b-medium` → **Devin** third | Different-family contrast is the point. Blocking findings are resolved before merge; Codex found a Blocking issue four Agy rounds missed (PR #33). |
+| PR review — a PRIMARY gate, not advisory | **TWO cross-family passes, routed** by `review-route.mjs` from codex → agy → vibe → claude, excluding whoever built it. Plus the fresh reviewer subagent on HIGH tier only. | Different-family contrast is the point, and *two* passes give a finding corroboration — Codex found a Blocking issue four Agy rounds missed (PR #33). Blocking findings are resolved before merge. See *Review & merge* for the full policy and the refund rule. |
 | File-derived prose: retro, poster entry, sprint wrap, the merge report | **Devin — the dedicated prose writer**, with Agy `gpt-oss-120b-medium` as fallback | Devin owns prose so Codex/Agy quota stays free for review and building. **One** prose model, never a Gemini one — a model-level fallback between registers is what silently changed every report's voice (see `PROSE_MODEL`). **Always read the draft.** |
 
 ### Verifying delegated work — the rule that is not optional
@@ -232,29 +253,51 @@ author's context-bias hides. Two layers do this, and they're complementary:
   preview (if your rail has one) is the minimum shape; adapt to your actual stack. If a repo has no
   per-branch preview (deploys post-merge only), there is correspondingly no e2e-vs-preview step in its
   gate — that's correct, not a gap.
-- **Reviewer (judgment) — externally routed by risk (updated 2026-07-23):** the builder remains the
-  architect and does not approve its own diff or spawn an internal same-family reviewer. Ordinary PRs
-  receive one cold **Agy/Antigravity** pass:
-  `node scripts/cross-review.mjs <PR#> --agent antigravity`. High-risk PRs (money, auth, DB
-  migrations, tenancy, concurrency or shared infrastructure) add an independent **Devin** CLI pass.
-  **Cursor CLI Auto** is a quota-aware specialist/tie-breaker for SQL, Unicode/boundary contracts or
-  disagreement—not a mandatory third read. OpenAI/Codex models are not used for code review under
-  this cadence; the coordinating Codex stays on architecture, implementation and orchestration.
+- **Cross-family review (judgment) — TWO routed passes on every PR (updated 2026-08-03):** the builder
+  remains the architect and does not approve its own diff. **Route the reviewers; never hand-pick
+  `--agent`:**
+
+  ```
+  node scripts/review-route.mjs --builder <who-wrote-it> --tier <low|high> <PR#>
+  ```
+
+  Four families are wired — `codex`, `antigravity` (agy), `vibe` (Mistral) and `claude` (Claude Code as a
+  plain CLI reviewer). The router applies four rules and prints the exact commands:
+
+  1. **A family never reviews its own diff.** With a coordinating Codex orchestrating builds, the old
+     default would have been Codex reviewing Codex — a same-family pass wearing a cross-family label.
+     This is why the previous "OpenAI/Codex models are not used for code review here" blanket rule is
+     replaced: the constraint was never about Codex being a bad reviewer, it was about *who built it*,
+     and the router encodes that precisely instead of banning a whole family.
+  2. **Two passes, from the top of the order that did not build.** Order: codex → agy → vibe → claude.
+     `claude` is last deliberately — Claude capacity is usually the thing building; it rotates in when
+     one of the three ahead of it caps. `claude` is on the roster specifically so a **non-Claude
+     orchestrator** (this project's usual case) can get a Claude read without a Claude host to spawn a
+     subagent.
+  3. **A fresh reviewer subagent on HIGH tier only** — money, auth, DB migrations, tenancy, concurrency,
+     shared infrastructure. **Not spawned on LOW**: two cross-family passes plus the deterministic gate
+     are the whole layer there.
+  4. **A capped family is a REFUND ASK, not a licence to substitute.** External quota is refundable in
+     minutes; orchestrator subagent tokens come out of the build budget. The router prints the ask and
+     the window (`--fallback-after`, default 30 min); after it, proceed and **record the downgrade in the
+     PR body**. A short or DARK layer that reads like a clean one is worse than no layer.
+
+  **Devin is retired from the review rotation** — it keeps its prose duty (see the prose table above),
+  which is the better use of its pool. **Cursor CLI Auto** remains unwired (paywalled models on the free
+  plan).
+
   Every reviewer reads the diff cold in a **single pass** (no debate/iterate-to-convergence loop).
   A **Blocking** finding must be resolved or explicitly triaged before merge. This still is not a
   second deterministic gate: CI decides green/red mechanically, reviewer judgment decides whether
   the diff holds up, and the risk-tier rule decides who clicks merge.
 
-  **Re-review only when the review target materially changed.** For high-risk work, run Agy early,
-  resolve/triage its findings and rerun it to clean, then give the stabilized exact head one Devin pass.
-  A substantive fix reruns the reviewer that found it; rerun the other reviewer too only when that fix
-  crosses a security/data/architecture boundary the other one previously reviewed. A docs, wording or
-  presentation-only follow-up gets targeted typecheck/render/diff validation and does not automatically
-  spend two more full-model passes. Escalate to Cursor when the first reads disagree or the change has a
-  specialist boundary it has demonstrated value on.
+  **Re-review only when the review target materially changed.** A substantive fix reruns the reviewer
+  that found it; rerun the other reviewer too only when that fix crosses a security/data/architecture
+  boundary the other one previously reviewed. A docs, wording or presentation-only follow-up gets
+  targeted typecheck/render/diff validation and does not automatically spend two more full-model passes.
   `--skip-trivial` skips docs-only / tiny diffs. Fill in your project's own driving-a-young-foreign-CLI
-  gotchas here as you hit them (version pinning, `--help` quirks, headless-auth limits) — see the origin
-  project's LEARNINGS.md "Tooling gotchas" section for a worked example set.
+  gotchas here as you hit them (version pinning, `--help` quirks, headless-auth limits) — the failure
+  shape to watch for is a run that exits 0 with **empty output**, which reads as a clean review.
 
 **Every PR declares a risk tier** (in the PR body); that tier decides who may merge:
 - **Low-risk → reviewer may auto-merge** once CI is green and the review is clean: docs/copy,

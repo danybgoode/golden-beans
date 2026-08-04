@@ -44,10 +44,12 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 | **Groom: \<ask\>** / **Shape: \<ask\>** | §1 — groom a raw ask into a shaped pitch (synonyms; "Shape" just names the stage) |
 | **Bet** / **Bet the wave** | §9 — run the betting table at a wave boundary, write `Roadmap/bets/<wave>.md` |
 | **Re-shape \<slug\>** | §10 — an M/L bet hit its circuit breaker; back to shaping, never extended in flight |
-| **Build S\<N\> of \<epic\>** | §2 — build a sprint |
+| **Build epic \<epic\>** | §2 — build a WHOLE epic in one orchestrated run (**the default**). Generate the prompt: `node skills/groom/emit-epic-kickoff.mjs --epic <slug>` |
+| **Build S\<N\> of \<epic\>** | §2 — build a single sprint (the exception: one-sprint epic, or the next sprint's scope genuinely isn't knowable yet) |
 | **Spike \<name\>** | §3 — run a spike |
-| **Review PR #\<N\>** | §4 — fresh-reviewer single pass |
-| **Cross-review PR #\<N\>** | §4 judgment line — Agy baseline; add Devin for high-risk PRs, Cursor as specialist/tie-breaker |
+| **Review PR #\<N\>** | §4 — route it: `node scripts/review-route.mjs --builder <who> --tier <low\|high> <N>` → **two** cross-family passes |
+| **Cross-review PR #\<N\>** | §4 — synonym. Always route it; hand-picking `--agent` is how a family reviews its own diff. Fresh reviewer subagent on HIGH only, **never on LOW** |
+| **Refund \<tool\>** | a reviewer family is capped — top up the quota so the external layer stays lit instead of being replaced by orchestrator subagents |
 | **Panel: \<scope-doc \| ask\>** | advisory second opinion on a *plan* — `node scripts/cross-panel.mjs <doc> --lens both --agent codex\|antigravity` (single-pass, print-only, never gates; surfaced at groom Stage 2/4) |
 | **Wrap S\<N\>** | tick the sprint doc status + emit the §7 sprint-wrap terminal summary |
 | **Close epic \<slug\>** | §6 — full epic Definition of Done |
@@ -104,12 +106,18 @@ already-possible / light-enhancement / genuinely-new; end with Go / No-go / Go-w
 I sign off the decision before anything gets groomed.
 ```
 
-## 4 · Review a PR — external reviewer (NOT the builder)
+## 4 · Review a PR — two cross-family passes, routed (NOT the builder)
 ```
 Review PR #<N> cold after the deterministic gate. The builder stays architect/coordinator and does not
-approve its own diff. Run Agy once via `node scripts/cross-review.mjs <N> --agent antigravity`; add
-Devin for money/auth/DB/tenancy/concurrency/shared-infra risk, and Cursor only as a specialist or
-tie-breaker. Check correctness + AGENTS.md, post findings, and resolve every Blocking item.
+approve its own diff. Route it FIRST — never hand-pick --agent:
+  node scripts/review-route.mjs --builder <who-wrote-it> --tier <low|high> <N>
+Run the TWO cross-family passes it prints (a family never reviews its own diff — with a coordinating
+Codex, `--agent codex` on a Codex-built diff is a same-family pass wearing a cross-family label).
+On a LOW PR those two plus green CI are the WHOLE layer — do NOT also spawn your own reviewer subagents.
+On HIGH, add the fresh reviewer subagent on top. If a family is quota-capped, STOP AND ASK FOR A REFUND
+before substituting subagents; proceed only after the window review-route states, and record the
+downgrade in the PR body.
+Check correctness + AGENTS.md, post findings, and resolve every Blocking item.
 Re-review substantive fixes; use targeted validation for docs/presentation-only deltas.
 ```
 
@@ -208,7 +216,7 @@ Three rules that keep this from becoming a ceremony:
   flags a missing underwriter as drift.
 
 Advisory second opinion available before you commit the slate: `node scripts/cross-panel.mjs
-Roadmap/bets/<wave>.md --lens both --agent codex|antigravity` — print-only, never gates.
+Roadmap/bets/<wave>.md --lens both --agent codex|antigravity|vibe|claude` — print-only, never gates.
 
 ## 10 · Re-shape a bet that hit its circuit breaker — strong model
 
