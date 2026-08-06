@@ -634,6 +634,32 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **Cowork's sandbox can CREATE inside `.git` but not DELETE or RENAME — so it cannot commit, and
+  every git command it runs leaves a lock behind.** Git writes are create-lock → write →
+  rename/unlink, so `git add`, `git status`, `git checkout -b` and `git commit` each half-complete:
+  the operation may succeed while `.git/index.lock` (and `HEAD.lock`, `refs/heads/<b>.lock`) survive
+  and block the *next* one, including the product owner's own. A `git checkout -b` fails with
+  "unable to update HEAD" **after already creating the branch ref**, so a naive retry then dies on
+  "branch already exists". There is also no author identity in the sandbox.
+  **The rule: in Cowork, never drive git directly — write an idempotent script for the product owner
+  to run on the host.** Make it (a) `rm -f` the known lock paths first, (b) create-or-switch the
+  branch rather than assuming it is absent, and (c) skip any commit whose paths are already clean, so
+  a partial run is re-runnable. Claude Code has none of this problem — it runs git on the host — which
+  is why it had never come up before. *(2026-08-06, the first session to run the Cowork half of the
+  workflow in Cowork.)*
+- **The "Cowork plans, Claude Code builds" split has a hole exactly at the handoff: the groom skill's
+  Stage 7 says *scaffold + COMMIT the docs*, and Cowork cannot commit.** Same session, same root
+  cause as above. Worth designing around deliberately rather than rediscovering: either the planning
+  commit is always a script handed to the product owner, or the scaffold step ends at "files written,
+  commit owed". *(2026-08-06.)*
+- **A plugin enabled in a project's `.claude/settings.json` reaches Claude Code and NOT Cowork.**
+  `extraKnownMarketplaces` + `enabledPlugins` is Claude Code's mechanism; Cowork loads its own
+  installed-skill set from the desktop app. So a skill can be enabled in a repo for months, work in
+  every Claude Code session, and be silently absent in Cowork — which is what happened to `groom`,
+  the one skill explicitly written *for* Cowork. Install it there separately (a `.skill` archive,
+  built by the `ways-of-work` repo's `scripts/pack-skills.mjs`). **Symptom to recognise: an agent
+  says a skill "isn't loaded" while you can see it enabled in the repo — check WHICH host you are in
+  before concluding the plugin is broken.** *(2026-08-06.)*
 - **A sandboxed authentication check can be a false negative when the credential lives in an OS
   keyring.** `gh auth status` inside the filesystem sandbox reported an invalid default token while
   Git push through the macOS credential manager succeeded; the same `gh auth status` with keyring
