@@ -634,24 +634,23 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
-- **Cowork's sandbox can CREATE inside `.git` but not DELETE or RENAME — so it cannot commit, and
-  every git command it runs leaves a lock behind.** Git writes are create-lock → write →
-  rename/unlink, so `git add`, `git status`, `git checkout -b` and `git commit` each half-complete:
-  the operation may succeed while `.git/index.lock` (and `HEAD.lock`, `refs/heads/<b>.lock`) survive
-  and block the *next* one, including the product owner's own. A `git checkout -b` fails with
-  "unable to update HEAD" **after already creating the branch ref**, so a naive retry then dies on
-  "branch already exists". There is also no author identity in the sandbox.
-  **The rule: in Cowork, never drive git directly — write an idempotent script for the product owner
-  to run on the host.** Make it (a) `rm -f` the known lock paths first, (b) create-or-switch the
-  branch rather than assuming it is absent, and (c) skip any commit whose paths are already clean, so
-  a partial run is re-runnable. Claude Code has none of this problem — it runs git on the host — which
-  is why it had never come up before. *(2026-08-06, the first session to run the Cowork half of the
-  workflow in Cowork.)*
-- **The "Cowork plans, Claude Code builds" split has a hole exactly at the handoff: the groom skill's
-  Stage 7 says *scaffold + COMMIT the docs*, and Cowork cannot commit.** Same session, same root
-  cause as above. Worth designing around deliberately rather than rediscovering: either the planning
-  commit is always a script handed to the product owner, or the scaffold step ends at "files written,
-  commit owed". *(2026-08-06.)*
+- **A git command that FAILS in the Cowork sandbox strands a `.git/*.lock` the sandbox cannot delete,
+  and that one stale lock blocks every later git command — including the product owner's.** The
+  sandbox can create files under `.git` but not unlink them, so the losing command's cleanup never
+  runs. Two rules, in order of leverage: **(1) don't run a git command that is going to fail** —
+  check preconditions first (`git ls-files --error-unmatch <path>` before `git mv`, which is the one
+  that started this); **(2) set `GIT_INDEX_FILE` to a temp path** (`cp .git/index /tmp/i; export
+  GIT_INDEX_FILE=/tmp/i`) so the index lock lands somewhere removable — with that, add/status/commit
+  work normally from the sandbox. Also set `user.name` AND `user.email` locally; the sandbox has no
+  global identity and a missing *name* fails commits with a message about the *email*.
+  **Committing from Cowork is normal and expected — handing the product owner a shell script to do
+  it is a REGRESSION, not a workaround.** Only `push` routinely needs them. *(2026-08-06.)*
+- **Don't theorise a capability wall from a single failure — probe the boundary, then act.** Same
+  session: one stranded lock (self-inflicted, above) was read as "the sandbox cannot commit", and a
+  whole hand-the-owner-a-script workflow got built on that premise before anything was tested. Thirty
+  seconds of probing found `GIT_INDEX_FILE` and a missing `user.name`. This is the same failure shape
+  as the auto-mode-classifier entry below, which already says it: map what actually passes vs blocks
+  before building a theory on top of a wall. *(2026-08-06.)*
 - **A plugin enabled in a project's `.claude/settings.json` reaches Claude Code and NOT Cowork.**
   `extraKnownMarketplaces` + `enabledPlugins` is Claude Code's mechanism; Cowork loads its own
   installed-skill set from the desktop app. So a skill can be enabled in a repo for months, work in
