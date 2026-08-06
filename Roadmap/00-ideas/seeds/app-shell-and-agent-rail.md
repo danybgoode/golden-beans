@@ -1,22 +1,33 @@
 ---
 title: "App shell and agent rail — make the signed-in product show the agent it sells"
 slug: app-shell-and-agent-rail
-status: ready
+status: queued
 area: "02"
 type: feature
-priority: null
+priority: "#1"
 appetite: M
-underwritten_by: null
+underwritten_by: "Roadmap/bets/wave-2026-08-06.md"
 risk: high
-epic: null
+epic: "02-commercial/app-shell-and-agent-rail"
 build_order: null
-updated: 2026-08-05
+updated: 2026-08-06
 ---
+
+<!-- SCAFFOLDED 2026-08-06. The epic README's frontmatter `status:` is now the SSOT for the board;
+     this seed is funnel-only from here and its `status:` no longer drives anything. Architecture
+     decisions D1–D10 and the per-sprint build contracts live in the epic, not here. -->
+
+> **Scaffolded → [`Roadmap/02-commercial/app-shell-and-agent-rail/`](../../02-commercial/app-shell-and-agent-rail/README.md).**
+> The scaffolding pass verified this pitch against live code again and found one material
+> simplification: **`lib/project-route-inventory.ts` already is the nav's SSOT** — every surface with
+> a label, audience and gate, unit-tested and already consumed by `/app/page.tsx`. The audit's §6.1
+> reads as though the IA had to be invented; it only has to be rendered. Recorded as decision **D1**.
 
 # Pitch — the app shell and the agent rail
 
-> **Lane: shaped bet.** Stops here at `status: ready`. It does **not** scaffold until a betting
-> table funds it (`SESSION-KICKOFFS` §9) — an unfunded epic is a plan nobody paid for.
+> **Lane: shaped bet. Funded 2026-08-06** at the betting table
+> (`Roadmap/bets/wave-2026-08-06.md`) — it displaced the E4 signals-loop follow-ups and the E6 CMS
+> spike for a third consecutive wave. `status: queued`; scaffolding follows.
 >
 > **Source:** `Roadmap/00-ideas/audits/app-ux-audit-2026-08-01.md` §0, §2.1, §2.5, §6.1, §6.2, §6.5,
 > §6.7, §7 (P0), plus that document's §10 verification pass against live `main` (`36aceba`).
@@ -177,7 +188,7 @@ the already-loaded `.funnel` CSS; no new runtime dependency was added.
 - **No new event pipeline or bespoke analytics route** (AGENTS rule #1) and **no widening of
   `/api/v1/public/*`** (rule #2).
 
-## Open decision — owed before this is bet
+## Decided at the betting table, 2026-08-06 — was: open, owed before this is bet
 
 **How far does propose → confirm go?** Audit §8, narrowed by the §10.4 verification:
 
@@ -186,11 +197,12 @@ the already-loaded `.funnel` CSS; no new runtime dependency was added.
 - Still open: do **owner-initiated UI actions** — activate a flag, trip a breaker, revoke a key —
   adopt the same staged shape, or does a `ConfirmDialog` suffice for them?
 
-**Recommendation: `ConfirmDialog` for owner-initiated actions; staging stays agent-only.** An owner
-confirming their own action a second time through a staging table is ceremony, not accountability —
-the owner *is* the authority the staging step exists to defer to. It also keeps the rail's meaning
-sharp: everything in the pending list is something an agent wants and a human hasn't yet allowed.
-Restricting staging to agent writes keeps S2's scope honest at M.
+**DECISION (product owner, 2026-08-06): `ConfirmDialog` for owner-initiated actions; staging stays
+agent-only.** An owner confirming their own action a second time through a staging table is
+ceremony, not accountability — the owner *is* the authority the staging step exists to defer to. It
+also keeps the rail's meaning sharp: everything in the pending list is something an agent wants and
+a human hasn't yet allowed. Restricting staging to agent writes keeps S2's scope honest at M, and
+defuses the circuit-breaker trigger named under *Rabbit holes* before a builder starts.
 
 ## Success — what is true when this ships
 
