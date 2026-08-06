@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — /app redesign concept, v1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ===== tokens — copied verbatim from references/design/assets/tokens.css ===== */
+:root{
+  --roast:#16120d; --roast-2:#221b13; --card:#241d14; --espresso:#0f0c08;
+  --line:#3a3023; --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+  --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+  --kraft:#c29c6a; --kraft-deep:#9d7b4c; --stamp:#3a2a16; --stamp-dim:#6b4f2a;
+  --foil:linear-gradient(105deg,#7a5c1a 0%,#ffd45e 35%,#e8b93c 55%,#8a6a1e 100%);
+  --kraft-fibers:repeating-linear-gradient(0deg,rgba(60,42,22,.05) 0 1px,transparent 1px 3px),
+                 repeating-linear-gradient(90deg,rgba(255,244,220,.05) 0 2px,transparent 2px 5px);
+  --green:#7fd069; --green-line:#3a5c33; --green-stamp:#2c5e22;
+  --red:#e86a5e; --red-line:#7a3a32; --blue:#6db3e8; --blue-line:#2e4f6b;
+  --next-line:#6b5620;
+  --sans:Archivo,system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --bar:linear-gradient(180deg,var(--gold-hot),#9c7a1e);
+}
+*{margin:0;box-sizing:border-box}
+body{background:var(--roast);color:var(--crema);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+a{color:var(--gold)}
+code{font-family:var(--mono)}
+section{padding:36px 0}
+.display{font-weight:900;font-stretch:112%;letter-spacing:-.02em;line-height:1.04}
+.foil{background:var(--foil);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.note{font:italic 400 12.5px var(--mono);color:var(--dim)}
+.eyebrow{font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim-2)}
+
+/* header sheet — matches references/design/polish-pass-proposal.html */
+.sheet-head{margin-top:20px;background:var(--kraft);background-image:var(--kraft-fibers);border-radius:6px;padding:26px 20px;color:var(--stamp)}
+.sheet-head .kicker{font:600 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--stamp-dim)}
+.sheet-head h1{margin-top:8px;font-size:28px}
+.sheet-head p.dek{margin-top:10px;font:500 14px/1.5 var(--sans);color:var(--stamp);max-width:64ch}
+.sheet-head .meta{margin-top:14px;display:flex;gap:14px;flex-wrap:wrap;font:500 11px var(--mono);letter-spacing:.06em}
+
+h2.section-title{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.section-sub{margin-top:6px;color:var(--dim);font-size:14px;max-width:66ch}
+
+/* divider */
+.divider{background:var(--kraft);background-image:var(--kraft-fibers);border-top:2px dashed var(--stamp-dim);border-bottom:2px dashed var(--stamp-dim);color:var(--stamp)}
+.divider .wrap{display:flex;align-items:center;gap:10px;padding:10px 18px;flex-wrap:wrap}
+.divider .num{font:700 12px var(--mono);letter-spacing:.1em}
+.divider .stamp-title{font-weight:900;font-stretch:112%;text-transform:uppercase;letter-spacing:.1em;font-size:12px}
+
+/* buttons */
+.btn{border:none;border-radius:10px;padding:12px 18px;font:700 14px var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:7px;justify-content:center;min-height:40px}
+.btn-gold{background:var(--gold);color:var(--roast);box-shadow:0 3px 0 var(--gold-deep);transition:transform .08s ease,box-shadow .08s ease,background .15s ease}
+.btn-gold:hover{background:var(--gold-hot)}
+.btn-gold:active{transform:translateY(2px);box-shadow:0 1px 0 var(--gold-deep)}
+.btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:11px 17px}
+.btn-ghost:hover{color:var(--gold-hot);border-color:var(--gold-hot)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-line);padding:11px 17px}
+.btn-danger:hover{background:rgba(232,106,94,.1)}
+.btn-mini{border:none;background:var(--line);color:var(--crema);font:700 11px var(--sans);border-radius:6px;padding:6px 11px;cursor:pointer}
+.btn-mini:hover{background:#4a3f2d}
+.btn svg{width:14px;height:14px;flex:none}
+
+/* tags */
+.tag{display:inline-flex;align-items:center;gap:5px;font:600 10px var(--mono);letter-spacing:.06em;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.tag-live{color:var(--green);border-color:var(--green-line)}
+.tag-next{color:var(--gold);border-color:var(--next-line)}
+.tag-blocked{color:var(--red);border-color:var(--red-line)}
+.tag-agent{color:var(--blue);border-color:var(--blue-line)}
+.tag svg{width:11px;height:11px;flex:none}
+
+/* panels */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+.panel-label{font:600 11px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+
+/* before/after */
+.before-after{display:grid;grid-template-columns:1fr;gap:14px;margin-top:16px}
+.ba-card{border:1px dashed var(--line);border-radius:12px;padding:16px;overflow:auto}
+.ba-card .ba-label{font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim-2);display:block;margin-bottom:12px}
+.ba-card.before .ba-label{color:var(--red)}
+.ba-card.after .ba-label{color:var(--green)}
+.ba-card.before{background:var(--roast-2)}
+
+/* raw/unstyled mock — how the live product actually renders today */
+.raw h1{font-size:19px;font-weight:700;margin-bottom:10px;font-family:var(--sans)}
+.raw p{color:var(--dim);font-size:13px;margin-bottom:12px}
+.raw table{width:100%;border-collapse:collapse;font:13px var(--mono);margin-bottom:14px}
+.raw th,.raw td{border:1px solid var(--line);padding:6px 8px;text-align:left;color:var(--dim)}
+.raw th{color:var(--dim-2);font-weight:600}
+.raw ul{list-style:none;padding:0}
+.raw li{border:1px solid var(--line);padding:8px 10px;margin-bottom:6px;font:13px var(--mono);color:var(--dim)}
+.raw dl{font:13px var(--mono);color:var(--dim)}
+.raw dt{color:var(--dim-2);margin-top:8px}
+.raw dd{color:var(--crema);margin-left:0}
+.raw details{font:12px var(--mono);color:var(--dim-2);margin-top:6px}
+.raw a{font:12px var(--mono)}
+
+/* ---------- app shell: sidebar + main + agent rail (§1) ---------- */
+.app-shell{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--roast-2)}
+.shell-sidebar{background:var(--card);border-bottom:1px solid var(--line);padding:14px}
+.shell-sidebar .brand-row{display:flex;align-items:center;gap:8px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line);font:800 14px var(--sans);color:var(--gold)}
+.shell-sidebar .brand-row svg{width:16px;height:16px}
+.nav-section{margin-bottom:12px}
+.nav-label{font:700 9.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim-2);padding:0 8px;margin-bottom:5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font:500 12.5px var(--sans);color:var(--dim)}
+.nav-item svg{width:14px;height:14px;flex:none;color:var(--dim-2)}
+.nav-item.active{background:rgba(232,185,60,.12);color:var(--crema)}
+.nav-item.active svg{color:var(--gold)}
+.shell-main{padding:16px;background:var(--roast);min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--dim-2);font:500 12.5px var(--mono);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.shell-rail{background:var(--espresso);padding:14px;display:flex;flex-direction:column;gap:11px}
+.rail-head{display:flex;align-items:center;gap:8px;font:700 11px var(--mono);color:var(--dim);letter-spacing:.06em;text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.rail-head .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(127,208,105,.15)}
+.activity-item{display:flex;gap:8px;font:12px var(--mono);color:var(--dim);padding-bottom:9px;border-bottom:1px dashed var(--line)}
+.activity-item:last-of-type{border-bottom:none;padding-bottom:0}
+.activity-item .actor{flex:none;width:19px;height:19px;border-radius:6px;display:flex;align-items:center;justify-content:center;font:700 9px var(--mono)}
+.activity-item .actor.agent{background:rgba(109,179,232,.15);color:var(--blue)}
+.activity-item .actor.human{background:rgba(232,185,60,.15);color:var(--gold)}
+.activity-item .abody b{color:var(--crema);font-weight:600}
+.activity-item .ts{display:block;color:var(--dim-2);margin-top:2px;font-size:10.5px}
+.propose-card{background:var(--card);border:1px solid var(--gold-deep);border-radius:10px;padding:11px}
+.propose-card .plabel{font:700 10px var(--mono);color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.propose-card .plabel svg{width:12px;height:12px}
+.propose-card p{font:12px var(--sans);color:var(--crema);line-height:1.5;margin-bottom:9px}
+.propose-actions{display:flex;gap:7px}
+.propose-actions .btn{padding:7px 11px;font-size:11.5px;min-height:30px}
+@media (min-width:900px){
+  .app-shell{flex-direction:row;align-items:stretch}
+  .shell-sidebar{width:190px;flex:none;border-bottom:none;border-right:1px solid var(--line)}
+  .shell-main{flex:1;border-top:none;border-bottom:none}
+  .shell-rail{width:230px;flex:none}
+}
+
+/* ---------- command center: stat strip + funnel (§2) ---------- */
+.stat-strip{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.stat-card .slabel{font:700 9.5px var(--mono);color:var(--dim-2);text-transform:uppercase;letter-spacing:.07em}
+.stat-card .sval{font:800 22px var(--sans);color:var(--crema);margin-top:6px;display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.stat-card .sdelta{font:700 11px var(--mono)}
+.sdelta.up{color:var(--green)} .sdelta.down{color:var(--red)}
+.funnel-wrap{margin-top:18px}
+.funnel{display:flex;gap:12px;align-items:flex-end;height:150px}
+.funnel .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;font:500 11.5px var(--mono);color:var(--dim);gap:6px;height:100%}
+.funnel .bar>div{background:var(--bar);border-radius:8px 8px 0 0}
+.funnel .bar b{color:var(--crema);font-size:13px;display:block}
+.funnel .bar .dropoff{color:var(--dim-2);font-size:10px}
+.quick-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.quick-actions .btn{padding:9px 14px;font-size:12.5px;min-height:36px}
+
+/* ---------- flags: rule builder + rollout (§3) ---------- */
+.field{background:var(--roast);border:1px solid var(--line);border-radius:8px;color:var(--crema);font:500 12.5px var(--mono);padding:9px 10px;outline:none;width:100%}
+.field:focus{border-color:var(--gold)}
+.rule-builder{display:flex;flex-direction:column;gap:8px}
+.rule-row{display:grid;grid-template-columns:1fr;gap:7px;background:var(--roast);border:1px solid var(--line);border-radius:10px;padding:10px}
+.rule-row .rm{background:transparent;border:none;color:var(--dim-2);cursor:pointer;font-size:12px;text-align:left;padding:2px 0}
+.rollout-panel{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:6px}
+.env-list{width:100%;display:flex;flex-direction:column;gap:9px}
+.env-row{display:flex;align-items:center;gap:9px;font:600 12px var(--mono);color:var(--dim)}
+.env-row .ename{width:82px;flex:none;color:var(--crema)}
+.mini-bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;flex:1}
+.mini-bar>div{height:100%;background:var(--bar)}
+@media (min-width:640px){
+  .rule-row{grid-template-columns:1.1fr .8fr 1.1fr auto;align-items:center}
+}
+@media (min-width:900px){
+  .flags-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}
+}
+
+/* ---------- scenarios: define/launch + kill switch + comparison (§4) ---------- */
+.scenario-form{display:flex;flex-direction:column;gap:9px}
+.scenario-form .frow{display:grid;grid-template-columns:1fr;gap:8px}
+.scenario-form label{font:700 10px var(--mono);color:var(--dim-2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:block}
+.live-scenario-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:16px}
+.lsc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lsc-head b{font-size:14px;color:var(--crema)}
+.lsc-head .btn-danger{margin-left:auto;padding:8px 13px;font-size:12px;min-height:32px}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,12,8,.72);align-items:center;justify-content:center;padding:20px;z-index:80}
+.modal-box{background:var(--card);border:1px solid var(--red-line);border-radius:14px;padding:20px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.modal-box h3{color:var(--crema);font-size:16px;margin-bottom:9px}
+.modal-box p{color:var(--dim);font-size:13px;line-height:1.55;margin-bottom:16px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.modal-actions .btn{padding:9px 14px;font-size:12.5px;min-height:36px}
+.cmp-metric{margin-bottom:14px}
+.cmp-metric:last-child{margin-bottom:0}
+.cmp-metric .cname{font:600 12px var(--mono);color:var(--crema);display:flex;justify-content:space-between}
+.cmp-metric .cdelta{font-weight:700}
+.cmp-metric .cdelta.good{color:var(--green)} .cmp-metric .cdelta.bad{color:var(--red)}
+.cmp-bar-row{display:flex;align-items:center;gap:7px;margin-top:5px}
+.cmp-bar-row .clabel{width:58px;flex:none;font-size:9.5px;color:var(--dim-2);font-family:var(--mono)}
+.cmp-bar-row .cbar{flex:1;height:7px;border-radius:99px;background:var(--roast);overflow:hidden}
+.cmp-bar-row .cbar>div{height:100%}
+.cmp-bar-row .cbar.control>div{background:var(--dim-2)}
+.cmp-bar-row .cbar.treatment>div{background:var(--bar)}
+@media (min-width:640px){
+  .scenario-form .frow{grid-template-columns:1.4fr 1fr 1fr auto;align-items:end}
+}
+@media (min-width:900px){
+  .scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+}
+
+/* ---------- git & releases: plain-language timeline (§5) ---------- */
+.git-timeline{position:relative;padding-left:22px;margin-top:14px}
+.git-timeline::before{content:'';position:absolute;left:5px;top:5px;bottom:5px;width:2px;background:var(--line)}
+.git-node{position:relative;padding-bottom:20px}
+.git-node:last-child{padding-bottom:0}
+.git-node::before{content:'';position:absolute;left:-22px;top:4px;width:11px;height:11px;border-radius:50%;background:var(--green);border:2px solid var(--roast-2)}
+.git-node.pending::before{background:var(--gold);animation:none}
+.git-node.blocked::before{background:var(--red)}
+.git-node .gtitle{font:700 13.5px var(--sans);color:var(--crema)}
+.git-node .gmeta{font:11.5px var(--mono);color:var(--dim);margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.git-node .gsummary{font:12.5px var(--sans);color:var(--dim);margin-top:6px;line-height:1.55;max-width:60ch}
+.git-node .gactor{flex:none;width:16px;height:16px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font:700 8px var(--mono)}
+.git-node .gactor.agent{background:rgba(109,179,232,.15);color:var(--blue)}
+
+/* ---------- new primitives needed (§6) ---------- */
+.primitive-grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:16px}
+.primitive-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.primitive-card .pname{font:700 10.5px var(--mono);color:var(--dim-2);text-transform:uppercase;letter-spacing:.07em}
+.primitive-card .pdemo{flex:1;display:flex;align-items:center;justify-content:center;min-height:64px}
+.data-table{width:100%;border-collapse:collapse;font:11.5px var(--mono)}
+.data-table th{text-align:left;color:var(--dim-2);font-weight:600;padding:6px 7px;border-bottom:1px solid var(--line)}
+.data-table td{padding:6px 7px;border-bottom:1px solid var(--line);color:var(--crema)}
+.data-table tr:last-child td{border-bottom:none}
+@media (min-width:640px){ .primitive-grid{grid-template-columns:1fr 1fr} }
+@media (min-width:900px){ .primitive-grid{grid-template-columns:repeat(3,1fr)} }
+
+footer{border-top:1px solid var(--line);padding:28px 0 44px;color:var(--dim-2);font:400 12px var(--mono)}
+footer a{color:var(--gold)}
+
+@media (min-width:640px){
+  .wrap{padding:0 32px}
+  section{padding:52px 0}
+  .before-after{grid-template-columns:1fr 1fr}
+  .sheet-head h1{font-size:36px}
+}
+@media (min-width:900px){
+  .sheet-head h1{font-size:42px}
+}
+@media (prefers-reduced-motion:reduce){
+  .btn-gold,.btn-ghost{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="sheet-head wrap" style="margin-left:auto;margin-right:auto;max-width:1180px">
+  <div class="kicker">Golden Beans · /app redesign concept · first pass — reaction, not sign-off</div>
+  <h1 class="display">The engine already thinks like a PM's co-pilot. The screen doesn't, yet.</h1>
+  <p class="dek">Six proposals, each paired with an honest before — built on the real product data model
+    (flags, experiments, scenarios, TARS, North Star) and the existing token system, not a new brand.
+    Full findings and rationale: <code>app-ux-brand-audit-and-proposal.md</code>.</p>
+  <div class="meta">
+    <span>DRAFT · 2026-08-02</span><span>SOURCE: apps/web/app/app/** + tokens.css</span><span>STATUS: awaiting your reaction</span>
+  </div>
+</div>
+
+<div class="divider"><div class="wrap"><span class="num">①</span><span class="stamp-title">Shell &amp; navigation — the agent gets a seat in the product</span><span class="tag tag-next" style="margin-left:auto">proposed</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">From a 3-link header to an actual application shell</h2>
+    <p class="section-sub">Today's <code>ProductShell</code> gives every one of the eleven feature areas the
+      same three links — Projects, Connect, Agent notes — and nothing else. There's no section nav and, more to
+      the brief, no agent presence anywhere once you're signed in. The fix below does two things at once: a
+      real sidebar for the eleven areas, and a persistent <b style="color:var(--crema)">agent activity rail</b>
+      — the single highest-leverage change in this pass, because it's what turns "your agent validates with
+      you" from a landing-page line into something that happens on screen.</p>
+
+    <div class="ba-card before" style="margin-bottom:16px">
+      <span class="ba-label">Before — live today</span>
+      <div class="raw" style="border:1px solid var(--line);border-radius:10px;padding:12px 16px">
+        <div style="display:flex;gap:18px;align-items:center;font:600 13px var(--sans);color:var(--dim)">
+          <span style="color:var(--gold);font-weight:800">golden beans</span>
+          <a href="#">Projects</a><a href="#">Connect</a><a href="#">Agent notes</a>
+          <span class="tag tag-live" style="margin-left:auto">Engine ready</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top:10px">The entire persistent chrome, for all eleven feature areas —
+        <code>apps/web/components/product/ProductShell.tsx</code>. No section nav, no agent presence.</p>
+    </div>
+
+    <div class="ba-card after">
+      <span class="ba-label">After — proposed</span>
+      <div class="app-shell">
+        <div class="shell-sidebar">
+          <div class="brand-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/></svg>
+            golden beans
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Workspace</div>
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              Command Center
+            </div>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Growth engine</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16v4H4zM4 10h10v4H4zM4 16h6v4H4z"/></svg>Flags</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>Experiments</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 8 8"/><path d="M4 12v6h6"/></svg>Journeys</div>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Resilience</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v6c0 5 4 8.5 9 9 5-.5 9-4 9-9V7z"/></svg>Scenarios</div>
+          </div>
+          <div class="nav-section">
+            <div class="nav-label">Delivery</div>
+            <div class="nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M6 8.5V15M8.3 7.2 15.7 10.8M8.3 16.8 15.7 13.2"/></svg>Git &amp; Releases</div>
+          </div>
+        </div>
+        <div class="shell-main">↑ each section mocked in ②–⑤ below</div>
+        <div class="shell-rail">
+          <div class="rail-head"><span class="dot"></span>Agent activity</div>
+          <div class="activity-item">
+            <span class="actor agent">A</span>
+            <div class="abody"><b>Agent</b> launched scenario <b>black-friday-load</b> on 5% / EU<span class="ts">14m ago</span></div>
+          </div>
+          <div class="activity-item">
+            <span class="actor human">D</span>
+            <div class="abody">You recorded decision <b>ship</b> on <code>checkout-v2</code><span class="ts">1h ago</span></div>
+          </div>
+          <div class="propose-card">
+            <div class="plabel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Awaiting your validation</div>
+            <p>Agent proposes activating <b>checkout-v2</b> at 25% rollout in <b>production</b>. No live traffic affected yet.</p>
+            <div class="propose-actions">
+              <button class="btn btn-gold">Approve</button>
+              <button class="btn btn-ghost">Decline</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:12px">The rail reads directly off the audit trail that already exists
+        (<code>audit.ts</code>, <code>agent-write-keys.ts</code>) — nothing new to compute, just something new
+        to look at. The propose/confirm card is the "PM feels alone → agent validates with them" interaction
+        made literal, styled after the Claude Code Plan Mode bar your own <code>ux-guidelines.md</code> already names.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">②</span><span class="stamp-title">Command Center — the front door gets something to say</span><span class="tag tag-next" style="margin-left:auto">proposed</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Real North Star, real revenue, a funnel that looks like one</h2>
+    <p class="section-sub">The North Star's real Medusa revenue linkage — a genuine differentiator, per the
+      audit — is currently invisible unless you already know the URL. TARS, the product's namesake
+      framework, is a three-line definition list. Both are real data; neither looks like it.</p>
+
+    <div class="before-after">
+      <div class="ba-card before">
+        <span class="ba-label">Before — live today</span>
+        <div class="raw">
+          <h1>Your projects</h1>
+          <ul>
+            <li>golden-beans-demo
+              <ul style="margin-top:6px;margin-left:14px">
+                <li><a href="#">Flags</a></li>
+                <li><a href="#">Experiments</a></li>
+                <li><a href="#">Scenarios</a></li>
+                <li><a href="#">Funnel</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <p class="note">The entire signed-in home screen — <code>apps/web/app/app/page.tsx</code>.</p>
+      </div>
+      <div class="ba-card after">
+        <span class="ba-label">After — proposed</span>
+        <div class="stat-strip">
+          <div class="stat-card">
+            <div class="slabel">North Star · weekly actives</div>
+            <div class="sval">42,180 <span class="sdelta up">↗ +6.2%</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="slabel">Revenue impact · Medusa</div>
+            <div class="sval">$18,240 <span class="sdelta up">↗ +3.1%</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="slabel">Experiments running</div>
+            <div class="sval">3 <span class="sdelta" style="color:var(--dim-2)">1 awaiting decision</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="slabel">Breaker trips · 24h</div>
+            <div class="sval">0 <span class="sdelta up">contained</span></div>
+          </div>
+        </div>
+        <div class="funnel-wrap">
+          <div class="panel-label">TARS · checkout-v2</div>
+          <div class="funnel" style="margin-top:10px">
+            <div class="bar"><div style="height:100%"></div><b>18,420</b>Targeted</div>
+            <div class="bar"><div style="height:33%"></div><b>6,050</b>Adopted<span class="dropoff">33% of targeted</span></div>
+            <div class="bar"><div style="height:12%"></div><b>2,140</b>Retained<span class="dropoff">35% of adopted</span></div>
+          </div>
+        </div>
+        <div class="quick-actions">
+          <button class="btn btn-gold">+ New flag</button>
+          <button class="btn btn-ghost">+ Launch scenario</button>
+          <button class="btn btn-ghost">View journeys</button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:12px">Same data, both cases — the values above are illustrative, wired to
+      the real North Star / TARS / breaker-trip endpoints the backend already computes. Nothing here requires
+      new backend work.</p>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">③</span><span class="stamp-title">Flags — from a JSON textarea to a rule builder</span><span class="tag tag-next" style="margin-left:auto">proposed</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Same immutable-version model. No JSON required to use it.</h2>
+    <p class="section-sub">The version history and immutability are a real strength — keep them. What's
+      missing is a way to build a rule without hand-typing it, borrowed from the mechanic (not the visuals) of
+      GrowthBook's targeting UI: attribute → operator → value rows that build the same payload your backend
+      already validates. The JSON stays one click away for anyone who wants it.</p>
+
+    <div class="before-after">
+      <div class="ba-card before">
+        <span class="ba-label">Before — live today</span>
+        <div class="raw">
+          <p style="margin-bottom:8px">Create a new flag version — <code>flag-manager.tsx</code></p>
+          <pre style="border:1px solid var(--line);border-radius:8px;padding:10px;font:11.5px var(--mono);color:var(--dim);overflow:auto;white-space:pre-wrap">{
+  "valueType": "boolean",
+  "variants": { "on": true, "off": false },
+  "rules": [
+    { "attribute": "plan", "operator": "eq",
+      "value": "enterprise", "serve": "on" }
+  ],
+  "rollout": { "default": "off", "percent": 25 }
+}</pre>
+          <button class="btn-mini" style="margin-top:8px">Create version</button>
+          <details style="margin-top:10px"><summary>Inspect immutable JSON (v4)</summary></details>
+        </div>
+        <p class="note">A PM writes this by hand, in a <code>&lt;textarea&gt;</code>, to change targeting.</p>
+      </div>
+      <div class="ba-card after">
+        <span class="ba-label">After — proposed</span>
+        <div class="flags-grid">
+          <div>
+            <div class="panel-label">Targeting rules — checkout-v2</div>
+            <div class="rule-builder" style="margin-top:10px">
+              <div class="rule-row">
+                <select class="field"><option>plan</option></select>
+                <select class="field"><option>equals</option></select>
+                <input class="field" value="enterprise">
+                <button class="rm">✕ remove</button>
+              </div>
+              <div class="rule-row">
+                <select class="field"><option>country</option></select>
+                <select class="field"><option>is one of</option></select>
+                <input class="field" value="EU, UK">
+                <button class="rm">✕ remove</button>
+              </div>
+            </div>
+            <button class="btn btn-ghost" style="margin-top:10px;padding:9px 14px;font-size:12.5px;min-height:34px">+ Add rule</button>
+            <div style="margin-top:16px;display:flex;gap:9px">
+              <button class="btn btn-gold" style="padding:9px 16px;font-size:12.5px;min-height:34px">Save as new version</button>
+              <button class="btn btn-ghost" style="padding:9px 14px;font-size:12.5px;min-height:34px">Preview for a user…</button>
+            </div>
+          </div>
+          <div class="rollout-panel">
+            <svg viewBox="0 0 100 100" width="118" height="118">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" stroke-width="9"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--gold-hot)" stroke-width="9"
+                stroke-dasharray="66 198" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+              <text x="50" y="47" text-anchor="middle" font-size="20" font-weight="800" fill="var(--crema)" font-family="Archivo">25%</text>
+              <text x="50" y="63" text-anchor="middle" font-size="7.5" fill="var(--dim)" font-family="IBM Plex Mono">production</text>
+            </svg>
+            <div class="env-list">
+              <div class="env-row"><span class="ename">staging</span><div class="mini-bar"><div style="width:100%"></div></div><span class="tag tag-live">100%</span></div>
+              <div class="env-row"><span class="ename">dev</span><div class="mini-bar"><div style="width:100%"></div></div><span class="tag tag-live">100%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">④</span><span class="stamp-title">Scenarios — from a read-only log to the tool PRD-G described</span><span class="tag tag-blocked" style="margin-left:auto">highest priority</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Chaos engineering &amp; secops: your clearest whitespace, currently your least PM-usable screen</h2>
+    <p class="section-sub">Neither PostHog nor GrowthBook has this category at all — it's the strongest claim
+      in the positioning doc. Today it's seven stacked read-only tables with no launch flow and no kill switch.
+      This proposal is close to a literal read of PRD-G's Requirement E1–E3: define a scenario, watch it run,
+      get an auto-generated business post-mortem — and a kill switch that's an actual button.</p>
+
+    <div class="ba-card before" style="margin-bottom:16px">
+      <span class="ba-label">Before — live today</span>
+      <div class="raw">
+        <p style="margin-bottom:6px"><code>apps/web/app/app/scenarios/[projectSlug]/page.tsx</code> — "Read-only operating evidence. Runtime gates may stay OFF."</p>
+        <table>
+          <tr><th>targets</th></tr>
+          <tr><td>checkout-latency-injection · staging · OFF</td></tr>
+        </table>
+        <table>
+          <tr><th>runs</th></tr>
+          <tr><td>run_9f2a · completed · 2026-07-30</td></tr>
+        </table>
+        <p class="note">…plus five more stacked tables below: defensive-simulation results, impact evidence,
+          breaker policies, breaker trips. No form to define a run. No button to stop one.</p>
+      </div>
+    </div>
+
+    <div class="ba-card after">
+      <span class="ba-label">After — proposed</span>
+      <div class="scenario-grid">
+        <div>
+          <div class="panel-label">Define a scenario</div>
+          <div class="scenario-form" style="margin-top:10px">
+            <div class="frow">
+              <div><label>Name</label><input class="field" value="black-friday-load"></div>
+              <div><label>Blast radius</label><input class="field" value="5% · EU"></div>
+              <div><label>Fault</label><select class="field"><option>latency +400ms</option></select></div>
+              <button class="btn btn-gold" style="padding:9px 16px;font-size:12.5px;min-height:38px">Hand to agent</button>
+            </div>
+          </div>
+          <p class="note" style="margin-top:9px">Reuses the same attribute/operator targeting pattern as Flags
+            (§③) — a PM learns the shape once, not per feature area.</p>
+
+          <div class="live-scenario-card">
+            <div class="lsc-head">
+              <span class="tag tag-live"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>running</span>
+              <b>black-friday-load</b>
+              <button class="btn btn-danger" onclick="document.getElementById('killModal').style.display='flex'">Kill switch</button>
+            </div>
+            <p class="note" style="margin-top:9px">Wired to the existing circuit-breaker backend
+              (<code>breaker-admin-operations.ts</code>) — try the button.</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">Business-impact evidence — control vs. treatment</div>
+          <div style="margin-top:14px">
+            <div class="cmp-metric">
+              <div class="cname">Checkout p95 latency <span class="cdelta bad">+180ms</span></div>
+              <div class="cmp-bar-row"><span class="clabel">control</span><div class="cbar control"><div style="width:52%"></div></div></div>
+              <div class="cmp-bar-row"><span class="clabel">treatment</span><div class="cbar treatment"><div style="width:74%"></div></div></div>
+            </div>
+            <div class="cmp-metric">
+              <div class="cname">Error rate <span class="cdelta bad">+0.4pp</span></div>
+              <div class="cmp-bar-row"><span class="clabel">control</span><div class="cbar control"><div style="width:18%"></div></div></div>
+              <div class="cmp-bar-row"><span class="clabel">treatment</span><div class="cbar treatment"><div style="width:26%"></div></div></div>
+            </div>
+            <div class="cmp-metric">
+              <div class="cname">Conversion <span class="cdelta good">−0.2pp (n.s.)</span></div>
+              <div class="cmp-bar-row"><span class="clabel">control</span><div class="cbar control"><div style="width:64%"></div></div></div>
+              <div class="cmp-bar-row"><span class="clabel">treatment</span><div class="cbar treatment"><div style="width:61%"></div></div></div>
+            </div>
+          </div>
+          <p class="note" style="margin-top:12px">Same "no causal customer claim without a caveat" discipline as
+            today — this is Requirement E3's business post-mortem, charted instead of tabled.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="killModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-box">
+    <h3>Stop black-friday-load?</h3>
+    <p>This trips the breaker immediately for all 5% / EU traffic currently in the scenario. Requests fall back
+      to baseline within ~30s. The run is marked <b style="color:var(--crema)">stopped</b> in the immutable log —
+      this cannot be undone or resumed from this point.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('killModal').style.display='none'">Cancel</button>
+      <button class="btn btn-danger" style="border-color:var(--red);color:var(--red)" onclick="document.getElementById('killModal').style.display='none'">Stop scenario now</button>
+    </div>
+  </div>
+</div>
+
+<div class="divider"><div class="wrap"><span class="num">⑤</span><span class="stamp-title">Git &amp; Releases — legibility, not git education</span><span class="tag tag-next" style="margin-left:auto">new surface</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Not "Graphite for PMs." A translator that sits on top of it.</h2>
+    <p class="section-sub">Graphite's real lesson is turning a confusing DAG into a clean, linear,
+      status-at-a-glance picture — pointed at "is my stack mergeable." A PM doesn't need that question
+      answered; they need a simpler one: what did my agent ship, in what order, and is any of it still waiting
+      on something. Buzz's lesson layers on top: every entry is attributed to an accountable actor, agent or
+      human, the same way the audit trail already tags every write. No rebase, no branch management exposed —
+      that stays the agent's job.</p>
+
+    <div class="before-after">
+      <div class="ba-card before">
+        <span class="ba-label">Before — the only view today</span>
+        <pre style="font:11px var(--mono);color:var(--dim);line-height:1.7;overflow:auto">* a91f3c2 (HEAD -&gt; main) Merge pull request #482
+|\
+| * 7cd12aa feat(flags): rollout rule, enterprise plan
+| * 118e0f9 fix(flags): SRM edge case
+|/
+* 5b7e001 chore: bump SDK version
+* e2a9f14 Merge pull request #479</pre>
+        <p class="note" style="margin-top:10px">The actual shape of <code>git log</code> on this repo — and per
+          your own note, not a language PMs and git tend to get along in.</p>
+      </div>
+      <div class="ba-card after">
+        <span class="ba-label">After — proposed</span>
+        <div class="git-timeline">
+          <div class="git-node">
+            <div class="gmeta"><span class="gactor agent">A</span><span class="tag tag-live">live</span>PR #482 · 2h ago</div>
+            <div class="gtitle">Enterprise rollout rule shipped to production</div>
+            <div class="gsummary">Agent added a targeting rule for the enterprise plan and raised the rollout
+              from 10% to 25%. No change to traffic below that threshold.</div>
+          </div>
+          <div class="git-node">
+            <div class="gmeta"><span class="gactor agent">A</span><span class="tag tag-live">live</span>PR #480 · 6h ago</div>
+            <div class="gtitle">SRM diagnostic edge case fixed</div>
+            <div class="gsummary">Corrected a sample-ratio-mismatch calculation that could under-count a
+              rejected cohort. No experiments were re-scored.</div>
+          </div>
+          <div class="git-node pending">
+            <div class="gmeta"><span class="gactor agent">A</span><span class="tag tag-next">pending</span>14m ago</div>
+            <div class="gtitle">Scenario black-friday-load — awaiting your validation</div>
+            <div class="gsummary">Same proposal shown in the agent rail (§①) — this is where it lives once
+              you're looking at releases instead of the rail.</div>
+          </div>
+          <div class="git-node blocked">
+            <div class="gmeta"><span class="gactor" style="background:rgba(232,185,60,.15);color:var(--gold)">D</span><span class="tag tag-blocked">blocked</span>PR #478</div>
+            <div class="gtitle">Breaker policy update — awaiting security review</div>
+            <div class="gsummary">You flagged this for a second look before it merges. Nothing ships until you
+              clear it.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:12px">Storage layer (GitHub, a self-hosted Gitea, or both) is a separate
+      decision from this screen — the legibility problem is the same regardless of where the data lives, per
+      §8 of the write-up.</p>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑥</span><span class="stamp-title">Net-new primitives — what the system needs to grow</span><span class="tag" style="margin-left:auto">reference</span></div></div>
+<section>
+  <div class="wrap">
+    <h2 class="section-title">Extending the kit, not replacing it</h2>
+    <p class="section-sub"><code>Panel</code>, <code>Button</code>, <code>Badge</code>, <code>Icon</code>,
+      <code>AgentWindow</code>, and <code>SectionDivider</code> already exist and work — the onboarding page
+      proves it. Everything above is built from those plus this small, genuinely new set.</p>
+    <div class="primitive-grid">
+      <div class="primitive-card">
+        <div class="pname">DataTable</div>
+        <div class="pdemo">
+          <table class="data-table" style="width:100%">
+            <tr><th>flag</th><th>state</th></tr>
+            <tr><td>checkout-v2</td><td><span class="tag tag-live">active</span></td></tr>
+            <tr><td>upsell-banner</td><td><span class="tag tag-next">draft</span></td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="primitive-card">
+        <div class="pname">StatCard</div>
+        <div class="pdemo" style="width:100%">
+          <div class="stat-card" style="width:100%">
+            <div class="slabel">Sample</div>
+            <div class="sval">1,204 <span class="sdelta up">↗ +4%</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="primitive-card">
+        <div class="pname">RuleBuilderRow</div>
+        <div class="pdemo" style="width:100%">
+          <div class="rule-row" style="grid-template-columns:1fr .7fr 1fr">
+            <select class="field"><option>country</option></select>
+            <select class="field"><option>is</option></select>
+            <input class="field" value="MX">
+          </div>
+        </div>
+      </div>
+      <div class="primitive-card">
+        <div class="pname">ActivityFeedItem</div>
+        <div class="pdemo" style="width:100%">
+          <div class="activity-item" style="border-bottom:none">
+            <span class="actor agent">A</span>
+            <div class="abody">Agent rotated webhook key<span class="ts">3d ago</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="primitive-card">
+        <div class="pname">ConfirmDialog</div>
+        <div class="pdemo" style="width:100%">
+          <div class="modal-box" style="max-width:none;box-shadow:none;padding:14px">
+            <h3 style="font-size:13px">Revoke agent key?</h3>
+            <p style="font-size:11.5px;margin-bottom:10px">Named consequence, always — per <code>ux-guidelines.md</code>.</p>
+            <div class="modal-actions"><button class="btn btn-ghost" style="padding:6px 10px;font-size:11px;min-height:26px">Cancel</button><button class="btn btn-danger" style="padding:6px 10px;font-size:11px;min-height:26px">Revoke</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="primitive-card">
+        <div class="pname">Chart primitives</div>
+        <div class="pdemo" style="width:100%">
+          <div class="funnel" style="height:60px;gap:8px">
+            <div class="bar"><div style="height:100%"></div></div>
+            <div class="bar"><div style="height:55%"></div></div>
+            <div class="bar"><div style="height:20%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:14px">No chart library is installed today (<code>apps/web/package.json</code>
+      has none) — the funnel/comparison bars above are hand-rolled CSS/SVG on the existing token system, which is
+      probably the right call for a while longer rather than adding a dependency for six chart shapes.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Proposal only — nothing here is wired into apps/web yet. Where a section shows real product data
+    shapes (flag versions, TARS stages, breaker trips), the fields match the actual API responses in
+    the repo, not invented ones. Next step once you've reacted: pick one section and we go to a patch
+    file against the live components, same workflow as the polish-pass proposal.
+  </div>
+</footer>
+
+</body>
+</html>
