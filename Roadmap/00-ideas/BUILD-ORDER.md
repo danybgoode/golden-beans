@@ -14,9 +14,10 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (1)
+## 📋 Ready to build (scaffolded, not started) (2)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low · #6
+- [App shell and agent rail — make the signed-in product show the agent it sells](../../02-commercial/app-shell-and-agent-rail/README.md) — 02 Commercial · 0/10 stories · risk: High · #1
 
 ## ✅ Shipped (11)
 
@@ -32,9 +33,13 @@ _None._
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High · #3
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
-## ⬜ Funnel — seeds not yet scaffolded (0)
+## ⬜ Funnel — seeds not yet scaffolded (5)
 
-_None._
+- [Analytics visualization layer — charts for funnel, North Star, impact and experiment lift](seeds/analytics-visualization-layer.md) — Raw · Feature
+- [Component-kit adoption sweep — bring the remaining /app routes onto the design system](seeds/app-component-kit-adoption.md) — Raw · Chore
+- [Flags — a visual rule builder, rollout viz, and a version diff instead of a JSON dump](seeds/flags-visual-rule-builder.md) — Raw · Feature
+- [Git & Releases — a PM-legible picture of what the agent shipped, with no git operations](seeds/git-and-releases-legibility.md) — Raw · Feature
+- [Scenarios made PM-operable — define, launch, and kill a chaos/secops scenario from the UI](seeds/scenarios-pm-operable.md) — Raw · Feature
 
 ## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
 
@@ -47,4 +52,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 12 · seeds in funnel: 0 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 13 · seeds in funnel: 5 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
