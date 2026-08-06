@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-08-03 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-08-06 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -32,9 +32,9 @@ _None._
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High · #3
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
-## ⬜ Funnel — seeds not yet scaffolded (1)
+## ⬜ Funnel — seeds not yet scaffolded (0)
 
-- [Harness portability — clear the origin-project residue from the ways-of-work plugin](seeds/harness-portability-residue.md) — Queued · Chore · appetite S · #S1
+_None._
 
 ## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
 
@@ -47,4 +47,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 12 · seeds in funnel: 1 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 12 · seeds in funnel: 0 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._

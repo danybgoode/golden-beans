@@ -1,7 +1,7 @@
 ---
 title: "Harness portability — clear the origin-project residue from the ways-of-work plugin"
 slug: harness-portability-residue
-status: queued
+status: archived
 area: "09"
 type: chore
 priority: "#S1"
@@ -10,7 +10,7 @@ underwritten_by: "Roadmap/bets/wave-2026-08-03-harness-portability.md"
 risk: low
 epic: null
 build_order: "#S1"
-updated: 2026-08-03
+updated: 2026-08-05
 ---
 
 # Scope — harness portability: the de-Miyagification residue
@@ -152,6 +152,23 @@ is exactly the size that invites a rewrite.
 5. Open a fresh Claude Code session in golden-beans; `/groom` a throwaway ask → **Stage 1.5 asks for
    an appetite** and Stage 2 names a lane. That is the proof the current plugin is live.
 
+## Closure — shipped and verified 2026-08-05
+
+- [`dobby-foundation` PR #7](https://github.com/danybgoode/dobby-foundation/pull/7) merged on
+  2026-08-03 as `3627aff`; it shipped the scoped portability sweep and pushed `145ec73` to
+  `origin/main` first.
+- [`dobby-foundation` PR #8](https://github.com/danybgoode/dobby-foundation/pull/8) merged the
+  deliberately deferred leak guard and a real CI gate as `1da0ee1`.
+- Re-verification against current `dobby-foundation/main` found the repo clean and synchronized
+  (`origin/main..main` = `0`), only the three deliberate README provenance matches, no personal-name
+  matches under `plugins/` or `template/`, no `Medusa` match in groom templates, and 24/24 kickoff
+  generator tests passing.
+- Golden Beans' active Codex cache is byte-for-byte identical to the current
+  `plugins/ways-of-work` tree, and this groom used the live Stage 1.5 appetite + Stage 2 lane flow.
+
+Per the rule at the top of this seed, `epic:` remains `null`: the shipped record belongs to the
+plugin repository, while `status: archived` closes this Golden Beans funnel item.
+
 ## Open risks
 
 - Genericizing `live-smoke` without a second real consuming project to test against means we find
@@ -162,7 +179,7 @@ is exactly the size that invites a rewrite.
 
 ---
 
-## Build handoff — paste into a fresh Claude Code session in `~/dobby/dobby-foundation`
+## Historical build handoff — completed by `dobby-foundation` PR #7
 
 ```
 Read AGENTS.md if present, then README.md and plugins/ways-of-work/skills/groom/SKILL.md (the
