@@ -1,6 +1,6 @@
 # App shell and agent rail — Sprint 1: The read seam and the shell
 
-**Status:** 🟨 in progress
+**Status:** ✅ complete — `b9ff9d6` (1.1) · `14fd94c` (1.2) · `49cd746` (1.3) · `06a2031` (1.4) · `9bcef1f` (QA)
 
 > **Build contract (locked by the architect before the builder started).** Cite the epic README's
 > decisions; do not re-derive them. Binding here: **D1** (render `PROJECT_ROUTE_INVENTORY`, never a
@@ -87,3 +87,35 @@ Env: the branch preview (pre-merge) · production `https://golden-beans-gamma.ve
    → You see only your own projects, and nothing referencing the other tenant.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+## Sprint 1 — what actually happened
+
+**Both new seams are TWO modules, not one.** `lib/agent-activity.ts` and
+`lib/pending-confirmations.ts` are `server-only` wrappers over
+`*-read.ts` modules that take their Supabase client as a parameter. That was not the plan; it is
+what the QA requirement forced, and it turned out to be the right shape. A `server-only` import
+throws in plain Node, so a Playwright spec cannot reach those modules — and a spec that
+re-implemented the query to check tenancy would prove nothing about the query the product runs. The
+split lets `e2e/agent-activity.spec.ts` exercise the REAL function against two real tenants. Same
+arrangement, same reason, as `task-lifecycle-facts.ts` + `task-lifecycle-count.ts`.
+
+**Mutation check, both directions** (the sprint asked for one): dropping
+`.eq('project_id', projectId)` from `readAgentActivity` turns 3 specs red; dropping it from
+`readPendingConfirmations` turns 2 red. Restored, re-verified 6/6 green.
+
+**`agentKeyId` is NOT NULL, not nullable.** The plan assumed it could be null (the original
+migration's `ON DELETE SET NULL` comment says so). Migration `20260806140000` made it NOT NULL after
+a Codex finding — so the type is non-nullable and no UI can grow a "proposed by nobody" branch.
+
+**The section nav is a `<details>` disclosure at both widths, not an inline row on desktop.**
+Revealing a closed `<details>`' content with CSS is not reliable across engines (the content lives
+in an unassigned shadow slot), and rendering the list twice to work around that would read every
+section name twice to a screen reader. Stated here because the sprint brief implied an inline row.
+
+**Diff-size note:** `format:changed` reformats any file a change touches, and several `/app` pages
+carried pre-existing Prettier drift. Adding one `projectSlug` prop reformatted them whole. The
+functional change to each is one line.
+
+**Gate, in CI's order:** `format:changed` · `lint` · `typecheck` (4 tsconfigs) · `test:unit` (869) ·
+`build` · `check:design-drift` (67 files) · Playwright `api` **431 passed / 36 skipped / 0 failed**.
+

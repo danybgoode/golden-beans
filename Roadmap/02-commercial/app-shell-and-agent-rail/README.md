@@ -62,8 +62,9 @@ surface is added. **If the nav needs a grouping the inventory can't express, ext
 (with its test) — never inline a list in the shell.**
 
 **D2 — `lib/agent-activity.ts` renders an explicit allow-list of `AuditAction` values, never `select *`.**
-`AuditAction` is a growing union (23 values today, spanning credentials, destinations, shares, tasks
-and flags). A feed that renders whatever it finds will surface a new action the day someone adds one,
+`AuditAction` is a growing union (**21** values today — the groom said 23; counted at build, and the
+allow-list's 19 plus the two documented exclusions is exactly all of them — spanning credentials,
+destinations, shares, tasks and flags). A feed that renders whatever it finds will surface a new action the day someone adds one,
 unreviewed and unlabelled. The allow-list is the review gate.
 
 **D3 — Agent attribution comes from `metadata.via === 'connector'`, never from an actor string.**
@@ -86,8 +87,8 @@ landing callers onto it in the same sprint.** The tool-call vocabulary lives ad-
 devices for one brand promise.
 
 **D6 — `AGENT_RAIL_ENABLED`: enablement gate ⇒ default `false`, born OFF, created disabled.**
-Exact `=== 'true'`, matching all thirteen existing gates. It gates the rail and Command Center's
-agent strip. It explicitly does **not** gate the section nav — a nav that vanishes with a flag is a
+Exact `=== 'true'`, matching all thirteen existing gates. It gates the rail. It explicitly does
+**not** gate the section nav — a nav that vanishes with a flag is a
 worse failure than no flag. A `*-dark.spec.ts` sibling asserts the OFF path, matching
 `flag-serving-dark.spec.ts` / `scenario-dark.spec.ts` / `journey-dark.spec.ts`.
 
@@ -112,6 +113,21 @@ a human has not yet allowed.
 rather than chronological. `task-lifecycle-facts.ts` carries a cross-review scar for exactly this.
 Order by `created_at`; the index `audit_log_project_created_idx (project_id, created_at DESC)`
 already backs it.
+
+## Amendment 1 (2026-08-07) — D6 covers ONE surface, not two
+
+D6 said the flag gates "the rail and Command Center's agent strip". **Sprint 3 shipped Command
+Center without an agent strip, deliberately.** The rail already answers *what did my agent do*, on
+every `/app` route including this one, and a second copy of the same feed on the same page would be
+two devices for one promise — which is D5's own rule, one layer up.
+
+So the gate covers `components/product/AgentRail.tsx` and nothing else, and the decision above is
+corrected to say so rather than left describing a surface that was never built. `lib/flags.ts`
+carried the original wording for a while and was corrected in the same pass; the fresh-reviewer
+found the two files asserting opposite things, which is the tell.
+
+**If an agent strip is ever added to Command Center it reads the same two seams and must check this
+gate.** That sentence survives the amendment; the claim that it already does is what was wrong.
 
 ## Scope — stories
 
