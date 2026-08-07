@@ -905,6 +905,116 @@ body {
   padding: 40px 0 96px;
 }
 
+/* app-shell-and-agent-rail S2.2 — the agent rail.
+   Narrow width: a pull-up sheet, server-rendered CLOSED, sitting above the bottom tab bar. Wide:
+   a fixed sidebar, opened once at mount by components/product/RailDisclosure.tsx. The 1100px
+   breakpoint below is written down in that file too — matchMedia cannot read a custom property. */
+.agent-rail {
+  position: fixed;
+  right: 12px;
+  bottom: 78px;
+  left: 12px;
+  z-index: 55;
+}
+
+.agent-rail__panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--espresso);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+}
+
+.agent-rail__panel summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--dim);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-rail__panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.agent-rail__count {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--gold);
+  border-radius: 99px;
+  color: var(--gold-hot);
+  font: 600 10px var(--mono);
+}
+
+.agent-rail__body {
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  padding: 0 14px 14px;
+  display: grid;
+  /* Sections size to their content and stack from the top. Without this the grid stretches its
+     rows to fill the max-height, which on a near-empty rail opens a hand-width gap between
+     "waiting on you" and "lately" and reads as a rendering failure rather than a quiet day. */
+  align-content: start;
+  gap: 18px;
+}
+
+/* tokens.css sets `section { padding: 36px 0 }` for the landing's page bands. Inside a 320px rail
+   that is 72px of dead air per section, which reads as a rendering failure rather than a quiet
+   day — caught by looking at the screenshot, not by any assertion. The rail's grid gap is the
+   spacing here. */
+.agent-rail__section {
+  padding: 0;
+}
+
+.agent-rail__section h2 {
+  margin-bottom: 8px;
+  color: var(--dim-2);
+  font: 600 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.agent-rail__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The rail's lines are denser than the landing's: it is a glance, not a demo. Same component,
+   same classes — only the surrounding scale changes (D5: one device, two contexts). */
+.agent-rail .tool {
+  align-items: flex-start;
+  padding: 8px 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.agent-rail .tool small {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--dim-2);
+  white-space: nowrap;
+}
+
+.agent-rail__scope,
+.agent-rail__caveat {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.agent-rail__caveat {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--dim-2);
+}
+
 .product-shell main > h1,
 .product-shell main > header h1 {
   font-size: clamp(30px, 7vw, 48px);
@@ -1097,6 +1207,41 @@ body {
 
   .proof-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* app-shell-and-agent-rail S2.2 — the rail becomes a sidebar. This breakpoint is duplicated in
+   components/product/RailDisclosure.tsx, which opens the panel once at this width; matchMedia
+   cannot read a custom property, so the two are kept in step by hand. Below 1100px the rail stays
+   the pull-up sheet defined above: a squeezed desktop rail on a phone is worse than a sheet. */
+@media (min-width: 1100px) {
+  /* ONE source for where the rail sits and how much room the page must leave it. Two independent
+     numbers is how the first version of this shipped a rail sitting on top of the project card:
+     the rail was inset by the header's own gutter while the page reserved only the rail's width,
+     so everything past ~1080px was covered. Derived once, consumed twice. */
+  .product-shell:has(.agent-rail) {
+    --rail-gutter: max(12px, calc((100vw - 1180px) / 2));
+    --rail-width: 320px;
+  }
+
+  .agent-rail {
+    top: 84px;
+    right: var(--rail-gutter);
+    bottom: auto;
+    left: auto;
+    width: var(--rail-width);
+  }
+
+  .agent-rail__body {
+    max-height: calc(100vh - 190px);
+  }
+
+  /* Padding on the body rather than a margin on main: main keeps its `margin: 0 auto` and centres
+     inside the narrower box, so the column stays centred instead of being shoved right. `:has()`
+     scopes this to renders that actually HAVE a rail — with the flag OFF the rail is not in the DOM
+     at all and the page must be byte-identical to today. */
+  .product-shell:has(.agent-rail) .product-shell__body {
+    padding-right: calc(var(--rail-gutter) + var(--rail-width) + 24px);
   }
 }
 
