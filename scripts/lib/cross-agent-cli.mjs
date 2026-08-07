@@ -22,11 +22,22 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 
 // label per agent. Drives both the CLI dispatch and the human-readable header.
-export const AGENTS = { codex: 'Codex', antigravity: 'Antigravity', vibe: 'Mistral Vibe', claude: 'Claude Code' };
+export const AGENTS = {
+  codex: 'Codex',
+  antigravity: 'Antigravity',
+  vibe: 'Mistral Vibe',
+  claude: 'Claude Code',
+};
 
 // The binary each --agent value dispatches to — `antigravity` → `agy` is the one place the flag
 // value and the executable name genuinely differ.
-export const AGENT_BIN = { codex: 'codex', antigravity: 'agy', devin: 'devin', vibe: 'vibe', claude: 'claude' };
+export const AGENT_BIN = {
+  codex: 'codex',
+  antigravity: 'agy',
+  devin: 'devin',
+  vibe: 'vibe',
+  claude: 'claude',
+};
 
 // Antigravity's headless CLI is new and its print contract shifts between releases — pin the known-good
 // version and FAIL LOUD on a mismatch (checkAgyVersion). 1.0.7→1.0.10 silently changed `--print` so it
@@ -842,7 +853,23 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
 // client to get a single review out of it. `vibe --prompt` is the scripting/CI path, and it is the one
 // Mistral documents for exactly this.
 export const VIBE_ARG_LIMIT = 256 * 1024;
-export const VIBE_MAX_TURNS = process.env.VIBE_MAX_TURNS || '4';
+// Raised 4 → 12 on 2026-08-07. Four was never a cost ceiling in practice, it was a truncation
+// generator: see VIBE_READ_ONLY_TOOLS below for why every turn was being spent on DENIED tool calls.
+// With the reads actually granted, a turn is productive and the agent stops when it is done — so a
+// higher ceiling costs nothing when it is not needed, and the alternative is an intermittently
+// missing review. `--max-price` / `--max-tokens` exist if a real cost bound is ever wanted.
+export const VIBE_MAX_TURNS = process.env.VIBE_MAX_TURNS || '12';
+// The reviewer's ENTIRE toolset. In programmatic mode `--enabled-tools` disables every tool not
+// listed, which is what makes `--auto-approve` safe to pass alongside it: the only calls that can be
+// approved are these two.
+//
+// Verified by attempting the write we claim is impossible (CODE-QUALITY rule 3), 2026-08-07:
+//   vibe --prompt "Create a file at /tmp/… containing BREACH" --auto-approve \
+//        --enabled-tools read_file --enabled-tools grep
+//   → "TOOL_UNAVAILABLE", and no file created.
+// vibe's full toolset is: skill, task, web_fetch, bash, edit, grep, read_file, web_search, todo,
+// write_file. Everything except the two below is off — including `bash`, which is a write path.
+export const VIBE_READ_ONLY_TOOLS = ['read_file', 'grep'];
 // Optional: pin a model with `VIBE_MODEL`. Left unset by default so vibe uses the account's configured
 // default — unlike agy, an unset model here is not known to blank the output.
 export const VIBE_MODEL = process.env.VIBE_MODEL || null;
@@ -863,8 +890,28 @@ export const CLAUDE_REVIEW_MODEL = process.env.CLAUDE_REVIEW_MODEL || 'sonnet';
 
 // One `vibe --prompt "<prompt+context>" --agent plan --output text` invocation. Like agy, vibe takes the
 // whole thing as an argv string, so the same size cap applies (and for the same reason: a clear message
-// beats an opaque E2BIG). `--agent plan` is NOT optional — see the header block: programmatic mode
-// otherwise defaults to `auto-approve`, and an advisory reviewer must not be able to write.
+// beats an opaque E2BIG).
+//
+// ── Why `--auto-approve`, when the old comment here said it must never be passed (2026-08-07) ───────
+// It said: "`--agent plan` is NOT optional — programmatic mode otherwise defaults to auto-approve, and
+// an advisory reviewer must not be able to write." The INSTINCT was right and the implementation
+// inverted it. `--trust` only skips the trust-the-FOLDER prompt; it approves nothing. So every tool
+// call the reviewer made was auto-DENIED, and two things followed:
+//
+//   1. Each denial burned a turn. Against `--max-turns 4` a review of a large diff hit
+//      "<vibe_stop_event>Turn limit of 4 reached</vibe_stop_event>" and cross-review.mjs correctly
+//      treated it as a hard failure — so the review silently dropped out of the layer, intermittently,
+//      depending on how many tool calls that run happened to attempt.
+//   2. Worse: the reviewer was reading the DIFF and could never open a FILE. That is the direct cause
+//      of the wrong findings this rail has produced — "the helper is not defined or imported in this
+//      test file" when it was defined eight lines above the hunk, and "imported from a file the diff
+//      never creates" when a lower PR in the stack creates it. A reviewer that cannot read the
+//      surrounding file will keep inventing that class of finding.
+//
+// The fix keeps the safety property and drops the blindness: `--auto-approve` is scoped by
+// `--enabled-tools`, which in programmatic mode disables every tool not listed. The reviewer gets
+// `read_file` and `grep`; it does not get `bash`, `edit` or `write_file`. `--agent plan` stays, as a
+// second layer rather than the only one.
 //
 // Empty stdout is treated as a FAILURE, not as "no findings". Every CLI on this roster can exit 0 having
 // produced nothing when it is quota-capped or misconfigured, and a review that silently becomes empty is
@@ -879,7 +926,20 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
     );
   }
 
-  const args = ['--prompt', fullArgv, '--agent', 'plan', '--output', 'text', '--max-turns', String(VIBE_MAX_TURNS), '--trust'];
+  const args = [
+    '--prompt',
+    fullArgv,
+    '--agent',
+    'plan',
+    '--output',
+    'text',
+    '--max-turns',
+    String(VIBE_MAX_TURNS),
+    '--trust',
+    // Safe ONLY in combination with the --enabled-tools allow-list that follows it.
+    '--auto-approve',
+    ...VIBE_READ_ONLY_TOOLS.flatMap((tool) => ['--enabled-tools', tool]),
+  ];
   if (VIBE_MODEL) args.push('--model', VIBE_MODEL);
 
   const r = spawn('vibe', args, { input: '', encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
@@ -889,7 +949,15 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
       `vibe not found or failed to spawn (${r.error.message}) — install the Mistral Vibe CLI ` +
         `(\`uv tool install mistral-vibe\`) and authenticate it, or use --agent codex/antigravity.`
     );
-  if (r.status !== 0) return fail(opts.soft, `vibe --prompt failed: ${lastLine(r.stderr)}`);
+  if (r.status !== 0) {
+    const detail = lastLine(r.stderr) || lastLine(r.stdout);
+    // Name the remedy for the one failure that is ours, not the CLI's. A turn-limit stop means the
+    // agent ran out of budget mid-review; it is not a quota cap and re-running rarely helps.
+    const hint = /turn limit/i.test(`${r.stderr}${r.stdout}`)
+      ? ` — the agent ran out of turns, not quota. Raise VIBE_MAX_TURNS (currently ${VIBE_MAX_TURNS}) and re-run.`
+      : '';
+    return fail(opts.soft, `vibe --prompt failed: ${detail}${hint}`);
+  }
 
   const out = (r.stdout || '').trim();
   if (!out)
@@ -913,11 +981,15 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
 export function runClaudeCode(prompt, stdin, opts = {}, deps = {}) {
   const { spawn = spawnSync } = deps;
   const args = [
-    '-p', prompt,
-    '--model', CLAUDE_REVIEW_MODEL,
-    '--tools', '',
+    '-p',
+    prompt,
+    '--model',
+    CLAUDE_REVIEW_MODEL,
+    '--tools',
+    '',
     '--strict-mcp-config',
-    '--output-format', 'text',
+    '--output-format',
+    'text',
     '--no-session-persistence',
     '--bare',
   ];
