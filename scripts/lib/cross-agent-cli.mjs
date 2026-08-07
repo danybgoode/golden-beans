@@ -746,6 +746,94 @@ function execAgy(fullArgv, model, spawn) {
   });
 }
 
+// ── Whole-file context for the diff-only reviewers ───────────────────────────────────────────────────────
+// Both agy and vibe are handed a DIFF. A diff shows changed lines and a few of context, which is why
+// this rail has produced the same wrong finding three times in two days: "the helper is not defined
+// in this test file" (defined eight lines above the hunk), "an audit action carries no project_id"
+// (the source passes one), "imported from a file the diff never creates" (a lower PR creates it).
+// Every one is a reviewer reasoning about code it could not see.
+//
+// vibe got repo ACCESS instead (read_file + grep, scoped by --enabled-tools). **agy cannot have the
+// same treatment**: its only permission lever is `--dangerously-skip-permissions`, which is
+// all-or-nothing — there is no --enabled-tools equivalent to scope it to reads — and without it agy
+// simply BLOCKS in `-p` mode waiting for an approval that never comes (measured: no output after
+// 9 minutes, with and without `--mode plan`). Granting an external CLI blanket tool approval in this
+// repo would also be strictly worse than what vibe got, because a permission skip covers shell and
+// network too, not just file writes.
+//
+// So the missing context is ATTACHED instead of fetched. It is deterministic, needs no permission
+// grant, cannot hang, and puts exactly the thing the reviewer kept guessing about in front of it.
+//
+// ── The byte budget is not optional, and neither is the manifest ────────────────────────────────
+// agy's argv cap is 256 KB. Measured on real PRs from this repo: a small PR is ~35 KB with full text
+// attached, a sprint-sized one is ~302 KB — over the cap. So attachment is BOUNDED, smallest files
+// first (more files for the same bytes), and every file that did not fit is NAMED.
+//
+// Naming them matters more than including them. A reviewer given some files and not others, with no
+// list, would conclude an unattached file does not exist — which is the exact failure this function
+// exists to fix, made worse. The manifest says what was attached, what was not, and why.
+export function buildFileContext(paths, readFile, budgetBytes, opts = {}) {
+  const { maxFiles = 40 } = opts;
+  const seen = new Set();
+  const candidates = [];
+  for (const path of paths) {
+    if (seen.has(path)) continue;
+    seen.add(path);
+    let text = null;
+    try {
+      text = readFile(path);
+    } catch {
+      // Deleted by the PR, or renamed away. Not an error: the diff already shows the removal, and a
+      // file that no longer exists has no "current contents" to attach.
+      continue;
+    }
+    if (typeof text === 'string') candidates.push({ path, text, bytes: Buffer.byteLength(text, 'utf8') });
+  }
+
+  // Smallest first: for a fixed budget this attaches the most FILES, and the finding class being
+  // fixed is "the reviewer could not see file X at all" — breadth beats depth.
+  candidates.sort((a, b) => a.bytes - b.bytes || a.path.localeCompare(b.path));
+
+  const attached = [];
+  const omitted = [];
+  let used = 0;
+  for (const file of candidates) {
+    const framed = file.bytes + file.path.length + 24; // fence + heading overhead
+    if (attached.length >= maxFiles || used + framed > budgetBytes) {
+      omitted.push(file.path);
+      continue;
+    }
+    attached.push(file);
+    used += framed;
+  }
+
+  return { attached, omitted, bytes: used };
+}
+
+/** Render what buildFileContext selected, including the honest manifest. Empty string when nothing fit. */
+export function renderFileContext({ attached, omitted }) {
+  if (attached.length === 0 && omitted.length === 0) return '';
+  const lines = [
+    '## Current full contents of the files this diff touches',
+    '',
+    'A diff shows changed lines and a few of context. These are the COMPLETE current files, so you',
+    'can check whether a symbol is defined elsewhere in the file, or imported from somewhere the',
+    'diff does not show, before reporting it as missing.',
+    '',
+  ];
+  if (omitted.length) {
+    lines.push(
+      `**${omitted.length} file(s) did NOT fit the size budget and are not below. Their absence here says` +
+        ` nothing about whether they exist:** ${omitted.join(', ')}.`,
+      ''
+    );
+  }
+  for (const file of attached) {
+    lines.push(`### ${file.path}`, '', '```', file.text, '```', '');
+  }
+  return lines.join('\n');
+}
+
 // agy 1.0.10 print mode: --model is REQUIRED (or `--print` exits 0 with NO output), and a quota-exhausted /
 // unreachable model ALSO exits 0 with empty stdout (the 429 lands only in agy's log). So an empty result is a
 // real failure, not success — we try AGY_MODEL first and, on empty, retry once with AGY_FALLBACK_MODEL (a
@@ -953,7 +1041,7 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
     const detail = lastLine(r.stderr) || lastLine(r.stdout);
     // Name the remedy for the one failure that is ours, not the CLI's. A turn-limit stop means the
     // agent ran out of budget mid-review; it is not a quota cap and re-running rarely helps.
-    const hint = /turn limit/i.test(`${r.stderr}${r.stdout}`)
+    const hint = /turn limit/i.test(`${r.stderr || ''}${r.stdout || ''}`)
       ? ` — the agent ran out of turns, not quota. Raise VIBE_MAX_TURNS (currently ${VIBE_MAX_TURNS}) and re-run.`
       : '';
     return fail(opts.soft, `vibe --prompt failed: ${detail}${hint}`);
