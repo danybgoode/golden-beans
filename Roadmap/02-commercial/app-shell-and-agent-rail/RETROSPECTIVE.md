@@ -100,15 +100,20 @@ record — two cross-family rounds and the responses — is still the authoritat
 
 **Owed to the product owner:**
 
-- **`AGENT_RAIL_ENABLED` does not exist in Vercel.** Absent reads as OFF (exact `=== 'true'`), so
-  the polarity is correct and the rail is dark in production right now — but the DoD's *"exists in
-  every env with the stated polarity"* line is not literally satisfied. Creating it born `false` is
-  pre-authorized; **flipping it ON in production is a separate decision and needs its own deployment**
-  (Vercel snapshots env vars at build time — AGENTS rule #4). Verify by exercising the rail, never
-  by `vercel env ls`.
-- **The production smoke walkthroughs have not been run.** Every sprint's walkthrough was exercised
-  against a local server with a real database and a real signed-in session, and the authed browser
-  suite passes 14/14 — but nobody has opened `golden-beans-gamma.vercel.app` and read the pages.
+- ~~**`AGENT_RAIL_ENABLED` does not exist in Vercel.**~~ **DONE 2026-08-07.** Created born `false`
+  in Production, Preview and Development. Two things worth recording: the outdated CLI (52.2.1)
+  loops on the Preview scope — it suggests the exact command being run — so that one went in through
+  the REST API; and `--no-sensitive` did not make the CLI-created rows plain, so all three were
+  converted to `type: plain` afterwards. **That conversion is the point, not tidiness:** an encrypted
+  value cannot be read back, so "is the kill switch really `false`?" would have been unanswerable.
+  All three now read `'false'` on inspection. **Flipping it ON remains a separate decision and needs
+  its own deployment** (Vercel snapshots env vars at build time — AGENTS rule #4); verify by
+  exercising the rail, never by `vercel env ls`.
+- **The SIGNED-IN production walkthrough has not been run.** The anonymous half was verified in
+  production against `102f494` on 2026-08-07: all routes healthy, `/app` 307s to login, the rail
+  markers are **absent** from both anonymously-readable demo dashboards (the dark spec's property,
+  live), and the landing renders through `ActivityFeedItem` with zero `▸` glyphs left. What is still
+  owed is logging in and reading `/app`, the section nav, and Command Center's real numbers.
 
 **Known and deliberate:**
 
@@ -121,14 +126,29 @@ record — two cross-family rounds and the responses — is still the authoritat
 - **The rail's pending list is legitimately empty in production**, because `CONNECTOR_WRITES_ENABLED`
   has never been ON there. The copy says what it covers rather than implying otherwise.
 
-**Coverage stated rather than implied:**
+**Coverage stated rather than implied — BOTH CLOSED as fast-follows (2026-08-07, PR #78):**
 
-- The rail's `catch`-to-null on a *throwing* read has **no spec** — the failure needs a broken
-  service-role client, which the harness cannot produce without breaking every other spec in the run.
-- The 72px section-padding fix has **no assertion**. It was found by eye and could regress by eye.
+- ~~The rail's `catch`-to-null on a *throwing* read has no spec.~~ Extracted as `settleRailRead`,
+  which takes a **thunk** so it can be handed a rejecting — or synchronously throwing — read
+  directly. Four tests; mutation-checked. The thunk shape came from cross-review: with a promise
+  parameter the caller evaluates first, so a synchronous throw escapes the `try`. Not reachable
+  through today's `async` callers, but the guarantee no longer depends on them keeping that keyword.
+- ~~The 72px section-padding fix has no assertion.~~ The authed smoke now reads the computed padding.
+  Mutation-checked by **reintroducing the exact defect that shipped** — `padding: 36px 0` back on
+  `.agent-rail__section` — and watching it go red.
+
+**Both were findable because the retro named them.** That is the argument for writing "this is not
+covered" down instead of letting it be implied: an unstated gap is indistinguishable from an
+oversight, and nobody schedules a fast-follow for something they do not know is missing.
 
 **Review layer, for the record:** Codex was out of quota for the whole epic (until Aug 8) and vibe
-hit turn limits mid-review twice. Every PR still got a cross-family pass plus the mandatory
+hit turn limits mid-review twice — **and the vibe failures turned out to be ours, not Mistral's**
+(PR #77, fast-follow). `--trust` only skips the trust-the-folder prompt; it approves no tool calls,
+so every file read the reviewer attempted was auto-denied, each denial burned a turn against
+`--max-turns 4`, and the reviewer was judging a diff it could never open a file of. That is the
+direct cause of the wrong findings below. Fixed with `--auto-approve` scoped by `--enabled-tools`
+to `read_file` and `grep` — verified by attempting a write under those flags and getting
+`TOOL_UNAVAILABLE`. Every PR still got a cross-family pass plus the mandatory
 fresh-reviewer subagent, and every PR ended on a **clean** round — Sprint 3 took four. The
 fresh-reviewer pass alone produced nine real findings after two external rounds had already run,
 which is the strongest argument yet for keeping context independence mandatory on HIGH tier.

@@ -165,11 +165,12 @@ setting the var is half the job. Verify by exercising the rail, never by `vercel
       found. S3 surfaced no claim the landing makes.
 - [x] Team memory + `MEMORY.md` index updated
 - [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped — sharpened, not appended)
-- [ ] **Kill-switch (planned at grooming — D6):** `AGENT_RAIL_ENABLED` **does not exist in Vercel**.
-      Absent reads as OFF (exact `=== 'true'`), so the rail is dark in production right now and the
-      polarity is correct — but the "exists in every env" line is not literally satisfied. Creating
-      it born `false` is pre-authorized; **flipping it ON is a separate decision and needs its own
+- [x] **Kill-switch (planned at grooming — D6):** `AGENT_RAIL_ENABLED` exists in Vercel in
+      **Production, Preview and Development**, born `false` (2026-08-07). Stored as `type: plain`
+      deliberately — an encrypted value cannot be read back, which would make "is the kill switch
+      really `false`?" unanswerable; all three inspect as `'false'`. Exact `=== 'true'` means that,
+      and any typo, reads as OFF. **Flipping it ON is a separate decision and needs its own
       deployment** (Vercel snapshots env vars at build time — AGENTS rule #4). Verify by exercising
-      the rail, never by `vercel env ls`. **Owed to the product owner.**
+      the rail, never by `vercel env ls`.
 - [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board
       & Notion derive from it; `node scripts/build-order.mjs` re-run)
