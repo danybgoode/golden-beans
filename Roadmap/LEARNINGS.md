@@ -757,6 +757,26 @@ one-liner + why + date shape.
   responses) was stranded on a closed thread and the work needed a fresh PR pointing back at it.
   **Merge a stack without `--delete-branch` until the last one, or retarget each PR to `main` before
   merging the one below it.** *(2026-08-07, app-shell-and-agent-rail.)*
+- **A review CLI that cannot open a file will invent "this is missing" findings — check what your
+  reviewer can actually READ before blaming the model.** Three confidently-wrong findings across one
+  epic ("the helper is not defined in this test file" — defined eight lines above the hunk; "an audit
+  action carries no project_id" — the source passes one explicitly; "imported from a file the diff
+  never creates" — a lower PR in the stack creates it) all shared one cause: the reviewer was handed
+  a DIFF and no repo access. For vibe specifically the cause was ours — `--trust` only skips the
+  trust-the-FOLDER prompt and approves no tool calls, so every read was auto-denied AND each denial
+  burned a turn against `--max-turns 4`, producing intermittent "Turn limit reached" failures that
+  looked like a quota problem. The fix is `--auto-approve` **scoped by** `--enabled-tools` to
+  `read_file` and `grep`, which in programmatic mode disables everything else — reads granted, writes
+  still impossible, verified by attempting the write and getting `TOOL_UNAVAILABLE`. **The general
+  rule: a truncation or an odd finding from a review CLI is a question about its INVOCATION before it
+  is a question about its quota, and the diagnostic is one `--output json` run to see whether its
+  tool calls are being approved or denied.** *(2026-08-07, PR #77.)*
+- **Write down what is NOT covered, or nobody will schedule the fast-follow.** app-shell-and-agent-rail
+  shipped two guarantees without tests and said so in the retro under "coverage stated rather than
+  implied": a rail catch-to-null that needed a broken service-role client to exercise, and a CSS fix
+  found by eye. Both were closed the next day precisely because they were named. **An unstated gap is
+  indistinguishable from an oversight** — and the honest sentence costs one line, while the
+  alternative is a reader who assumes the green gate covered it. *(2026-08-07, app-shell-and-agent-rail.)*
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
   state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
   sprint/PR boundary, and for big epics consider a fresh session per sprint.
