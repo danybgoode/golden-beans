@@ -167,6 +167,28 @@ export function isAutomaticCircuitBreakersEnabled(): boolean {
   return process.env.AUTOMATIC_CIRCUIT_BREAKERS_ENABLED === 'true'
 }
 
+// app-shell-and-agent-rail · Sprint 2, Story 2.2 — the agent rail's enablement gate. Fourteenth
+// flag, same polarity and same dark-by-default contract as every one above (epic README, D6): born
+// unset/OFF, created disabled, flipped deliberately once the rail has been exercised.
+//
+// Exactly `=== 'true'`, for the reason all thirteen give: a gate that opens on a typo is not a gate.
+//
+// WHAT IT GATES, PRECISELY: the recent-activity rail and Command Center's agent strip — the two
+// surfaces that RENDER lib/agent-activity.ts and lib/pending-confirmations.ts. It explicitly does
+// NOT gate the section nav (lib/shell-nav.ts, ProductShell), and it does not gate Command Center's
+// stat strip or funnel. A rail can be born off and switched on; navigation that vanishes with a
+// flag is a worse failure than no flag, and a front door that half-renders is worse than either.
+//
+// Note what this flag is NOT: it is not a tenancy control. Both reads are project-scoped
+// server-side whether it is on or off, and turning it ON grants no one access to anything they
+// could not already see on the surface the data came from. It decides whether a SURFACE exists.
+//
+// Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isAgentRailEnabled(): boolean {
+  return process.env.AGENT_RAIL_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

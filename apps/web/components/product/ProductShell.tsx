@@ -2,6 +2,7 @@ import 'server-only'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
+import { AgentRail } from './AgentRail'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -109,7 +110,19 @@ export async function ProductShell({
           </span>
         )}
       </header>
-      <div className="product-shell__body">{children}</div>
+      <div className="product-shell__body">
+        {children}
+        {/*
+          Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app
+          route rather than on whichever pages someone remembered to add it to. It renders nothing
+          at all unless AGENT_RAIL_ENABLED is exactly 'true' AND a membership was resolved; see
+          lib/agent-rail-visibility.ts for why both conditions are spelled out in one place.
+
+          It sits after {children} in the DOM on purpose: a screen reader and a keyboard user reach
+          the page's own content first, and the rail is positioned into the sidebar by CSS.
+        */}
+        {activeProject && <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />}
+      </div>
     </div>
   )
 }
