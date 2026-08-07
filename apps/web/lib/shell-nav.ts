@@ -49,6 +49,19 @@ export const DEFAULT_FEATURE_HINT = 'your-feature-key'
  * that could throw would be able to turn a working page into a crash — the shell is the one
  * component in the tree with no useful failure mode of its own. A read failure degrades to the
  * static links (Home / Connect / Agent notes), which is honest: we could not list your sections.
+ *
+ * ── Why swallowing getUserProjects' throw here is NOT the bug that function exists to prevent ──
+ * (cross-review, Mistral Vibe, PR #71.) `getUserProjects` throws rather than returning [] on a
+ * query failure, deliberately: an empty list renders as "you're not a member of any project" and
+ * would read as an AUTHORIZATION answer when it is really an outage. That reasoning is about the
+ * PROJECT LIST, and it is untouched — app/app/page.tsx still calls `getUserProjects` directly and
+ * still lets the throw surface as an error page.
+ *
+ * What degrades here is only the NAV, whose honest failure is "we could not list your sections"
+ * rather than "you have none": the shell renders no `<details>` at all in that case, so nothing
+ * asserts an absence. The failure is logged loudly below. If this ever starts hiding a real
+ * misconfiguration, the fix is a louder log — never a throw from the component that wraps every
+ * page in the product.
  */
 export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
   try {

@@ -23,6 +23,11 @@ import type { AuditAction } from './audit'
  * row here is the review gate: you cannot show a new action without also writing the sentence that
  * describes it in `describeAgentActivity` below, because the type will not let you.
  *
+ * `tenant_provisioned` IS project-scoped and does belong here, despite the name (cross-review,
+ * Mistral Vibe, PR #71, asked whether it could ever match): lib/provisioning.ts passes `projectId`
+ * on both of its `recordAudit` calls — the project row is created BEFORE the audit row, and the
+ * audit is what records that it happened. It is usually the first line a new tenant's rail shows.
+ *
  * Two members of the union are deliberately ABSENT:
  *   • `signup_requested`   — emitted before a project exists, so it carries no `project_id` and can
  *                            never be scoped to a tenant's rail in the first place.

@@ -1,3 +1,4 @@
+import 'server-only'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
