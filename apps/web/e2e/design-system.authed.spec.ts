@@ -15,7 +15,11 @@ test('signed-in pages inherit the responsive Golden Beans product shell', async 
 
   await expect(page.locator('.product-shell__header')).toBeVisible()
   await expect(page.locator('.product-shell__header .brand-lockup')).toBeVisible()
-  await expect(page.getByText('Engine ready')).toBeAttached()
+  // app-shell-and-agent-rail S1.3 — this used to assert the static "Engine ready" pill. For a
+  // signed-in member the same slot now names the project whose sections the nav is showing, which
+  // is the whole point of the change: the shell says WHICH tenant you are looking at. "Engine
+  // ready" survives for the anonymous demo-project case, where there is no project to name.
+  await expect(page.locator('.product-shell__signal')).toContainText(tenantSlug())
   await expect(page.locator('main')).toContainText(tenantSlug())
 
   const [scrollWidth, clientWidth] = await page.evaluate(() => [
