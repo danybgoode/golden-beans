@@ -66,12 +66,16 @@ test.describe('command center', () => {
   // Serial: both tests read the same seeded funnel, and the seeding is done once in beforeAll.
   test.describe.configure({ mode: 'serial' })
 
-  let pg: PgClient
+  // Null until `connect()` actually succeeds. Assigning the instance before connecting meant a failed
+  // connection left `afterAll` calling `.query()` on a dead client, so the teardown threw and buried
+  // the real failure underneath it (cross-review round 2, Agy on PR #73).
+  let pg: PgClient | null = null
 
   test.beforeAll(async ({ playwright }) => {
     const { projectId, slug } = tenant()
-    pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
-    await pg.connect()
+    const client = new PgClient({ connectionString: requireTestDatabaseUrl() })
+    await client.connect()
+    pg = client
 
     const key = await mintIngestKey(pg, projectId)
     const request = await playwright.request.newContext({
@@ -112,7 +116,7 @@ test.describe('command center', () => {
 
     // Sanity: the seed must actually be in the tenant we are about to look at. Without this, a
     // mis-scoped insert would surface as an empty dashboard and read as a UI bug.
-    const seeded = await pg.query('SELECT count(*)::int AS n FROM public.events WHERE project_id = $1', [
+    const seeded = await client.query('SELECT count(*)::int AS n FROM public.events WHERE project_id = $1', [
       projectId,
     ])
     expect(seeded.rows[0].n, `events must exist for ${slug}`).toBeGreaterThanOrEqual(

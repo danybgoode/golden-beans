@@ -37,8 +37,8 @@ export type StatCardProps = StatCardBase &
       }
     | {
         value: null
-        /** Required: a null figure must say WHICH kind of nothing it is. */
-        caveat: ReactNode
+        /** Required, and NOT nullable: a null figure must say WHICH kind of nothing it is. */
+        caveat: NonNullable<ReactNode>
       }
   )
 

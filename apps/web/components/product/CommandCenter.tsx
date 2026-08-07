@@ -90,9 +90,15 @@ export async function CommandCenter({
             caveat={
               outcome.unavailable
                 ? 'The adoption layer could not be read.'
-                : headline
-                  ? headline.caveat
-                  : 'No feature is registered on this project yet, so there is no funnel to read. Register one and the numbers appear here.'
+                : // `OutcomeRow.caveat` is optional on the type even though lib/pod-outcome.ts sets it
+                  // on every branch today. The fallback is not decoration: StatCard's null variant
+                  // now REQUIRES a non-nullable caveat (cross-review round 2, Agy on PR #73 — a
+                  // `caveat: ReactNode` accepted `undefined` and rendered an empty span, which is the
+                  // "unreadable looks like nothing" state this whole component exists to prevent).
+                  (headline?.caveat ??
+                  (headline
+                    ? 'This feature has no readable funnel yet.'
+                    : 'No feature is registered on this project yet, so there is no funnel to read. Register one and the numbers appear here.'))
             }
           />
         )}
