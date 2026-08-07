@@ -1043,13 +1043,6 @@ body {
   margin-top: 28px;
 }
 
-.product-shell main > ul {
-  display: grid;
-  gap: 18px;
-  padding: 0;
-  list-style: none;
-}
-
 /* app-shell-and-agent-rail S3 — Command Center. One block per project the member belongs to. */
 .command-center {
   display: grid;
@@ -1211,25 +1204,11 @@ a.stat-card:hover {
   background: var(--roast-2);
 }
 
-.product-shell main > ul > li,
 .auth-shell__card {
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-}
-
-.product-shell main > ul > li > ul {
-  display: grid;
-  gap: 8px;
-  padding: 18px 0 0;
-  list-style: none;
-}
-
-.product-shell main > ul > li > ul li {
-  padding: 11px 12px;
-  border-radius: 8px;
-  background: var(--roast-2);
 }
 
 :where(.product-shell, .auth-shell) :where(input, textarea, select) {
@@ -1364,10 +1343,6 @@ a.stat-card:hover {
 
   .product-shell main {
     padding: 52px 0 88px;
-  }
-
-  .product-shell main > ul > li > ul {
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   }
 }
 
