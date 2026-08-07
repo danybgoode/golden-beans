@@ -69,6 +69,15 @@ test('an undefined RATE is not 0% — the denominator being zero is not a failur
   assert.equal(realZero.value, '0%')
 })
 
+test('the rate is ROUNDED, not truncated', () => {
+  // Pinned because 0.62 → "62%" is satisfied by Math.floor as well as Math.round, so the existing
+  // assertion could not tell them apart (fresh-reviewer finding). 5/8 = 0.625 is the real fixture
+  // the browser smoke drives, and it is exactly the value the two disagree on.
+  assert.equal(rateFigure(0.625, 'adoption').value, '63%')
+  assert.equal(rateFigure(0.624, 'adoption').value, '62%')
+  assert.equal(rateFigure(0.4, 'retention').value, '40%')
+})
+
 test('a readable rate still carries the registry-declared caveat', () => {
   // Targeted/adopted/retained count the events a tenant MAPPED to each stage. Every other surface
   // in this product says so, and the front door is the last place that should quietly disappear.

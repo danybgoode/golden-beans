@@ -189,7 +189,7 @@ async function readNorthStar(projectId: string): Promise<{
   if (error) {
     // NOT `return null`. Cross-review round 2 (Agy): null means "no metric is registered", so
     // collapsing an error into it renders a database failure as a truthful-sounding absence — the
-    // same defect fixed one round earlier in readOutcome, in its sibling function. Hardening one
+    // same defect fixed one round earlier in getProjectOutcome, in its sibling function. Hardening one
     // instance and leaving the other is precisely what a later review round finds.
     console.error('[pod-report-query] north-star lookup failed:', error)
     return { metric: null, inputCount: null, latestValue: null, unavailable: true }

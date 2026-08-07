@@ -146,10 +146,17 @@ test.describe('command center', () => {
     // Story 3.3 — no bare <ul> of slugs. The page leads with the numbers.
     await expect(center.locator('.command-center__stats')).toBeVisible()
 
-    // THE non-zero check. 5 adopted of 8 targeted is 63%; a broken read renders "no rate to
-    // compute", and a silently-zero read renders "0%". Neither passes this line.
-    await expect(center).toContainText(`Adoption · ${FEATURE_KEY}`)
-    await expect(center).toContainText('63%')
+    // THE non-zero check — scoped to the stat card, not to the whole Command Center.
+    //
+    // It used to assert `center` contained "63%", which the funnel's own "63% of previous" label
+    // ALSO satisfies (fresh-reviewer finding). So the comment's claim — that a broken read could not
+    // pass this line — was false: with `rateFigure` returning null the card renders its caveat
+    // sentence and the assertion still passed on the drop-off label two elements away.
+    const adoption = center.locator('.stat-card', { hasText: `Adoption · ${FEATURE_KEY}` })
+    await expect(adoption).toBeVisible()
+    await expect(adoption.locator('.stat-card__value')).toHaveText('63%')
+    // ...and the card is NOT in its unreadable state, which is the other way this could go wrong.
+    await expect(adoption).not.toHaveAttribute('data-unreadable', 'true')
 
     const bars = page.locator('.funnel-bars .bar')
     await expect(bars).toHaveCount(3)
