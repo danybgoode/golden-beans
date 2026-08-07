@@ -1,6 +1,6 @@
 # App shell and agent rail — Sprint 1: The read seam and the shell
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress
 
 > **Build contract (locked by the architect before the builder started).** Cite the epic README's
 > decisions; do not re-derive them. Binding here: **D1** (render `PROJECT_ROUTE_INVENTORY`, never a

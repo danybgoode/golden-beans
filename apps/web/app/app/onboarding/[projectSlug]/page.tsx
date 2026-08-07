@@ -38,11 +38,7 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 // it explicitly, so the acceptance ("the funnel page shows it") is true for the pasted snippet,
 // not merely for a hand-tuned one.
 
-export default async function OnboardingPage({
-  params,
-}: {
-  params: Promise<{ projectSlug: string }>
-}) {
+export default async function OnboardingPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
 
   // MEMBER gate, not the demo-carve-out dashboard gate (lib/dashboard-auth.ts): this page renders
@@ -70,128 +66,127 @@ export default async function OnboardingPage({
   const apiKeyExpr = plaintextKey ? `'${plaintextKey}'` : 'process.env.GROWTH_ENGINE_API_KEY'
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main className="wrap" style={{ padding: '56px 0 80px' }}>
-      <p style={{ marginBottom: 24 }}>
-        <a href="/app">&larr; Your projects</a>
-      </p>
+        <p style={{ marginBottom: 24 }}>
+          <a href="/app">&larr; Your projects</a>
+        </p>
 
-      <h1 className="display" style={{ fontSize: 34, maxWidth: 640 }}>
-        You&apos;re live, {projectSlug}.
-      </h1>
-      <p style={{ margin: '14px 0 36px', color: 'var(--dim)', maxWidth: 600 }}>
-        Three steps stand between here and your first ingested event — copy your key, paste the
-        snippet, watch it land. No CLI, no config file.
-      </p>
+        <h1 className="display" style={{ fontSize: 34, maxWidth: 640 }}>
+          You&apos;re live, {projectSlug}.
+        </h1>
+        <p style={{ margin: '14px 0 36px', color: 'var(--dim)', maxWidth: 600 }}>
+          Three steps stand between here and your first ingested event — copy your key, paste the snippet,
+          watch it land. No CLI, no config file.
+        </p>
 
-      {/* Step 1 — the key. This is the ONLY render of the plaintext this tenant will ever get. */}
-      <div className="panel" style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-            ① YOUR API KEY
-          </span>
-          {plaintextKey && (
-            <span className="tag" style={{ color: 'var(--red)', borderColor: 'var(--red)' }}>
-              COPY IT NOW
+        {/* Step 1 — the key. This is the ONLY render of the plaintext this tenant will ever get. */}
+        <div className="panel" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
+              ① YOUR API KEY
             </span>
+            {plaintextKey && (
+              <span className="tag" style={{ color: 'var(--red)', borderColor: 'var(--red)' }}>
+                COPY IT NOW
+              </span>
+            )}
+          </div>
+          {plaintextKey ? (
+            <>
+              <p style={{ fontSize: 14, color: 'var(--red)', fontWeight: 700, margin: '0 0 16px' }}>
+                Copy this now. It is visible on this page for a few more minutes and then never again — we
+                store only its one-way hash, so this isn&apos;t a &quot;we&apos;ll email it to you&quot;
+                situation. If it&apos;s lost, the only recovery is issuing a new one. Hit the button below the
+                moment you&apos;ve saved it.
+              </p>
+              <CopyUrlField url={plaintextKey} />
+              <DismissKeyButton slug={projectSlug} />
+            </>
+          ) : (
+            <p style={{ fontSize: 14, color: 'var(--dim)' }}>
+              The one-time reveal window has passed (or this is a revisit) — nothing was silently hidden, and
+              nothing below is a real key. Head to <a href={`/app/keys/${projectSlug}`}>API keys</a> and issue
+              a new one; it will show once, exactly like this would have.
+            </p>
           )}
         </div>
-        {plaintextKey ? (
-          <>
-            <p style={{ fontSize: 14, color: 'var(--red)', fontWeight: 700, margin: '0 0 16px' }}>
-              Copy this now. It is visible on this page for a few more minutes and then never
-              again — we store only its one-way hash, so this isn&apos;t a &quot;we&apos;ll email
-              it to you&quot; situation. If it&apos;s lost, the only recovery is issuing a new one.
-              Hit the button below the moment you&apos;ve saved it.
-            </p>
-            <CopyUrlField url={plaintextKey} />
-            <DismissKeyButton slug={projectSlug} />
-          </>
-        ) : (
-          <p style={{ fontSize: 14, color: 'var(--dim)' }}>
-            The one-time reveal window has passed (or this is a revisit) — nothing was silently
-            hidden, and nothing below is a real key. Head to{' '}
-            <a href={`/app/keys/${projectSlug}`}>API keys</a> and issue a new one; it will show
-            once, exactly like this would have.
-          </p>
-        )}
-      </div>
 
-      {/* Step 2 — the SDK snippet. ≤5 lines of actual code per the story's acceptance bar: a
+        {/* Step 2 — the SDK snippet. ≤5 lines of actual code per the story's acceptance bar: a
           working import, client construction, and one track() call — nothing decorative. */}
-      <div className="panel" style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-            ② PASTE THIS
-          </span>
-        </div>
-        <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Your first event</h2>
-        <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
-          Drop this into a scratch script or an existing route. It genuinely fires an event —
-          nothing to fill in{plaintextKey ? '' : " once GROWTH_ENGINE_API_KEY is set"}.
-        </p>
-        <pre
-          style={{
-            background: 'var(--roast)',
-            border: '1px solid var(--line)',
-            borderRadius: 8,
-            padding: '14px 16px',
-            font: '500 12.5px var(--mono)',
-            color: 'var(--crema)',
-            overflowX: 'auto',
-          }}
-        >
-{`import { createGrowthEngineClient } from '@golden-beans/sdk'
+        <div className="panel" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
+              ② PASTE THIS
+            </span>
+          </div>
+          <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Your first event</h2>
+          <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
+            Drop this into a scratch script or an existing route. It genuinely fires an event — nothing to
+            fill in{plaintextKey ? '' : ' once GROWTH_ENGINE_API_KEY is set'}.
+          </p>
+          <pre
+            style={{
+              background: 'var(--roast)',
+              border: '1px solid var(--line)',
+              borderRadius: 8,
+              padding: '14px 16px',
+              font: '500 12.5px var(--mono)',
+              color: 'var(--crema)',
+              overflowX: 'auto',
+            }}
+          >
+            {`import { createGrowthEngineClient } from '@golden-beans/sdk'
 
 const engine = createGrowthEngineClient({ baseUrl: '${siteUrl}', apiKey: ${apiKeyExpr}, userId: 'me' })
 
 await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KEY}' })`}
-        </pre>
-      </div>
-
-      {/* Step 3 — the connector, only when BOTH gates are open (AGENTS rule #3). No flag-off or
-          not-yet-provisioned placeholder section — absence here IS the correct dark-default UI. */}
-      {isConnectorEnabled() && connectorUrl && (
-        <div className="panel" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-              ③ OPTIONAL — BRING YOUR AGENT
-            </span>
-            <Badge status="live">LIVE</Badge>
-          </div>
-          <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Paste it into Claude</h2>
-          <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
-            Your tokenized MCP URL for <b style={{ color: 'var(--crema)' }}>{projectSlug}</b> —
-            read-only, revocable, no deploy required to rotate it.
-          </p>
-          <CopyUrlField url={connectorUrl} />
-          <a
-            href={ADD_TO_CLAUDE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-gold"
-            style={{ display: 'inline-block', marginTop: 16, textDecoration: 'none' }}
-          >
-            Add to Claude
-          </a>
+          </pre>
         </div>
-      )}
 
-      {/* Closing — where to actually watch the event land, and the way back. */}
-      <p style={{ marginTop: 8, color: 'var(--dim)' }}>
-        Fired the snippet?{' '}
-        <a href={`/app/funnel/${projectSlug}/${STARTER_FEATURE_KEY}`}>Watch it land on your funnel</a>{' '}
-        <small className="note">
-          — the &quot;{STARTER_FEATURE_KEY}&quot; feature is registered for you at signup so the
-          snippet above lands somewhere with nothing else to set up. If the funnel reads zero after
-          your event lands, that registration didn&apos;t complete: re-send it via features/sync (or
-          register your own feature and swap the key in this URL). We&apos;d rather tell you that
-          than have you stare at a zero wondering which half broke.
-        </small>
-      </p>
-      <p style={{ marginTop: 10 }}>
-        <a href="/app">&larr; Back to your projects</a>
-      </p>
+        {/* Step 3 — the connector, only when BOTH gates are open (AGENTS rule #3). No flag-off or
+          not-yet-provisioned placeholder section — absence here IS the correct dark-default UI. */}
+        {isConnectorEnabled() && connectorUrl && (
+          <div className="panel" style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
+                ③ OPTIONAL — BRING YOUR AGENT
+              </span>
+              <Badge status="live">LIVE</Badge>
+            </div>
+            <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Paste it into Claude</h2>
+            <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
+              Your tokenized MCP URL for <b style={{ color: 'var(--crema)' }}>{projectSlug}</b> — read-only,
+              revocable, no deploy required to rotate it.
+            </p>
+            <CopyUrlField url={connectorUrl} />
+            <a
+              href={ADD_TO_CLAUDE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-gold"
+              style={{ display: 'inline-block', marginTop: 16, textDecoration: 'none' }}
+            >
+              Add to Claude
+            </a>
+          </div>
+        )}
+
+        {/* Closing — where to actually watch the event land, and the way back. */}
+        <p style={{ marginTop: 8, color: 'var(--dim)' }}>
+          Fired the snippet?{' '}
+          <a href={`/app/funnel/${projectSlug}/${STARTER_FEATURE_KEY}`}>Watch it land on your funnel</a>{' '}
+          <small className="note">
+            — the &quot;{STARTER_FEATURE_KEY}&quot; feature is registered for you at signup so the snippet
+            above lands somewhere with nothing else to set up. If the funnel reads zero after your event
+            lands, that registration didn&apos;t complete: re-send it via features/sync (or register your own
+            feature and swap the key in this URL). We&apos;d rather tell you that than have you stare at a
+            zero wondering which half broke.
+          </small>
+        </p>
+        <p style={{ marginTop: 10 }}>
+          <a href="/app">&larr; Back to your projects</a>
+        </p>
       </main>
     </ProductShell>
   )

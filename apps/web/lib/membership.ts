@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { getSupabaseServiceClient } from './supabase'
 import type { Membership } from './roles'
 
@@ -6,6 +7,13 @@ export type { Membership } from './roles'
 export { isOwner } from './roles'
 
 // multi-tenant-activation · Sprint 1 — the authorization primitives (Stories 1.1 + 1.2).
+//
+// ── React `cache()` on the two reads (app-shell-and-agent-rail, fresh-reviewer finding) ───────
+// Both are now called twice per signed-in render: the page's own guard calls one, and ProductShell's
+// section nav calls the other through lib/shell-nav.ts. `cache()` is per-REQUEST — React clears it
+// between renders — so it removes the duplicate query without ever serving one visitor's membership
+// to another. A module-level cache on an authorization lookup would be a tenancy bug; this is not
+// that, and the distinction is the reason to write it down.
 //
 // project_members is readable ONLY by the service-role client (RLS on, no policies), so these run
 // server-side after the session user is resolved (lib/supabase-auth.ts). They never trust a
@@ -16,7 +24,7 @@ export type MemberProject = { id: string; slug: string; role: string }
 // Every project a user belongs to — backs the /app shell's project list. Throws on a query failure
 // rather than returning [], which would render as "you're not a member of any project" and read as
 // an authorization answer when it's really an outage (cross-review catch, Codex 2026-07-20).
-export async function getUserProjects(userId: string): Promise<MemberProject[]> {
+export const getUserProjects = cache(async (userId: string): Promise<MemberProject[]> => {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('project_members')
@@ -32,7 +40,7 @@ export async function getUserProjects(userId: string): Promise<MemberProject[]> 
     const project = row.projects as unknown as { id: string; slug: string } | null
     return project ? [{ id: project.id, slug: project.slug, role: String(row.role) }] : []
   })
-}
+})
 
 // The core authorization lookup: the project_id `userId` may act on for `slug`, or null if they're
 // not a member (or the slug is unknown). Resolved in two explicit steps (slug → project_id →
@@ -43,7 +51,7 @@ export async function getUserProjects(userId: string): Promise<MemberProject[]> 
 // DELIBERATE asymmetry with getUserProjects above: this one returns null (not throws) on a query
 // error, because it is an AUTHORIZATION decision — it must FAIL CLOSED (deny access) rather than
 // propagate. A denied request is safe; a thrown one that some caller catches into an allow is not.
-export async function getMembership(userId: string, slug: string): Promise<Membership | null> {
+export const getMembership = cache(async (userId: string, slug: string): Promise<Membership | null> => {
   const supabase = getSupabaseServiceClient()
   const { data: project, error: projectError } = await supabase
     .from('projects')
@@ -68,7 +76,7 @@ export async function getMembership(userId: string, slug: string): Promise<Membe
   }
   if (!membership) return null
   return { projectId: project.id as string, role: String(membership.role) }
-}
+})
 
 export async function getMemberProjectId(userId: string, slug: string): Promise<string | null> {
   return (await getMembership(userId, slug))?.projectId ?? null

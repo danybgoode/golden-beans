@@ -45,10 +45,29 @@ export function inspectDesignSource(source, { disallowInlineStyle = false } = {}
   return violations;
 }
 
+// app-shell-and-agent-rail · Sprint 1, Story 1.4 — the roots this guard sweeps.
+//
+// `components/ui` and `components/product` were added because that is where the shell, the rail and
+// the stat/funnel primitives land. Until now the guard watched the two directories where drift had
+// already happened (the landing page and the app routes) and not the one the app routes were about
+// to start importing FROM — so a raw hex or a pictograph could enter the product simply by being
+// written one directory over. `components/brand` is deliberately included too: it is imported by
+// both roots and has the same exposure.
+//
+// The INLINE-STYLE rule stays landing-only (see the `disallowInlineStyle` argument below). /app
+// needs dynamic bar widths for the funnel, which is a computed geometry, not a colour drifting away
+// from the tokens.
+const SWEPT_ROOTS = [
+  'apps/web/components/landing',
+  'apps/web/components/ui',
+  'apps/web/components/product',
+  'apps/web/components/brand',
+  'apps/web/app',
+];
+
 export function inspectRepository(root = repoRoot) {
   const landing = join(root, 'apps/web/components/landing');
-  const app = join(root, 'apps/web/app');
-  const files = [...sourceFiles(landing), ...sourceFiles(app)];
+  const files = SWEPT_ROOTS.flatMap((relativeRoot) => sourceFiles(join(root, relativeRoot)));
   const violations = files.flatMap((path) =>
     inspectDesignSource(readFileSync(path, 'utf8'), {
       disallowInlineStyle: path.startsWith(`${landing}/`),

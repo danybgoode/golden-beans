@@ -7,6 +7,12 @@ import { ProductShell } from '@/components/product/ProductShell'
 // headline case: /impact/miyagisanchez/setup_guide). Behind per-tenant authorization
 // (multi-tenant-activation Story 1.2) — same gate as /funnel: demo is anonymous, every other
 // slug requires a signed-in member.
+// ProductShell now reads the session cookie on every render (lib/shell-nav.ts), so this route is
+// request-time by nature. Declared rather than inferred: LEARNINGS records a feature gate's required
+// 404 turning into a 200 when a parent streamed, and an implicit-dynamic route is the same class of
+// surprise — the behaviour should be in the file, not in a rule about generateStaticParams.
+export const dynamic = 'force-dynamic'
+
 export default async function ImpactPage({
   params,
 }: {
@@ -23,7 +29,7 @@ export default async function ImpactPage({
   const { feature, inputs } = result
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>
           Impact — {feature.key} <small>({projectSlug})</small>

@@ -19,7 +19,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
   const policyKeys = new Map(view.policies.map((policy) => [policy.id, policy.key]))
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>Scenarios &amp; breakers — {projectSlug}</h1>
         <p>

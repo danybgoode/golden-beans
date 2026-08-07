@@ -16,21 +16,20 @@ export default async function SharesPage({ params }: { params: Promise<{ project
   const shares = await listShareLinks(projectId)
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>Share links — {projectSlug}</h1>
         <p>
           <a href="/app">← Your projects</a>
         </p>
         <p>
-          A share link renders this project&apos;s Pod Report at a public URL, through one audience
-          lens. It is a bearer token: anyone holding the URL can read it, so treat it like a
-          password and revoke it when the conversation ends. Revocation takes effect on the next
-          request, no deploy needed.
+          A share link renders this project&apos;s Pod Report at a public URL, through one audience lens. It
+          is a bearer token: anyone holding the URL can read it, so treat it like a password and revoke it
+          when the conversation ends. Revocation takes effect on the next request, no deploy needed.
         </p>
         <p>
-          Every lens keeps the report&apos;s caveats and its &ldquo;not instrumented&rdquo; rows — a
-          narrower lens shows less <em>detail</em>, never less honesty.
+          Every lens keeps the report&apos;s caveats and its &ldquo;not instrumented&rdquo; rows — a narrower
+          lens shows less <em>detail</em>, never less honesty.
         </p>
         <ShareManager slug={projectSlug} shares={shares} enabled={isReportSharesEnabled()} />
       </main>

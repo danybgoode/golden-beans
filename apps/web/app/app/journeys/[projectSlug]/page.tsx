@@ -8,11 +8,7 @@ import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
 
-export default async function JourneysPage({
-  params,
-}: {
-  params: Promise<{ projectSlug: string }>
-}) {
+export default async function JourneysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   // Dark means nonexistent, before auth or project lookup. Old surfaces remain untouched.
   if (!isJourneyProjectionsEnabled()) notFound()
   const { projectSlug } = await params
@@ -20,16 +16,15 @@ export default async function JourneysPage({
   const journeys = await listJourneyRegistries(membership.projectId)
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>Journey definitions — {projectSlug}</h1>
         <p>
           <a href="/app">← Your projects</a>
         </p>
         <p>
-          Definitions turn canonical subject events into an ordered lifecycle. Versions are
-          immutable: create a new draft for every change, then activate it when its meaning is
-          ready to use.
+          Definitions turn canonical subject events into an ordered lifecycle. Versions are immutable: create
+          a new draft for every change, then activate it when its meaning is ready to use.
         </p>
         <JourneyManager
           slug={projectSlug}

@@ -26,23 +26,24 @@ export default async function ExperimentGovernancePage({
   ])
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
-      <h1>Experiment governance — {projectSlug}</h1>
-      <p>
-        <a href="/app">← Your projects</a>
-      </p>
-      <p>
-        Declare hypothesis, assignment, metrics, direction, planned window and minimum sample per variant
-        before exposure. Assignment remains local in the SDK; this registry governs trust, not feature flags.
-      </p>
-      <ExperimentManager
-        slug={projectSlug}
-        experiments={experiments}
-        flags={flagRegistry.flags}
-        bindings={bindings}
-        canManage={isOwner({ projectId: membership.projectId, role: membership.role })}
-      />
+        <h1>Experiment governance — {projectSlug}</h1>
+        <p>
+          <a href="/app">← Your projects</a>
+        </p>
+        <p>
+          Declare hypothesis, assignment, metrics, direction, planned window and minimum sample per variant
+          before exposure. Assignment remains local in the SDK; this registry governs trust, not feature
+          flags.
+        </p>
+        <ExperimentManager
+          slug={projectSlug}
+          experiments={experiments}
+          flags={flagRegistry.flags}
+          bindings={bindings}
+          canManage={isOwner({ projectId: membership.projectId, role: membership.role })}
+        />
       </main>
     </ProductShell>
   )
