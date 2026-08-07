@@ -2,6 +2,7 @@ import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getFeatureFunnel } from '@/lib/tars-query'
 import { getFeatureImpact } from '@/lib/north-star-query'
 import { getExperimentComparison } from '@/lib/ab-query'
+import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
@@ -68,17 +69,14 @@ export async function LiveProofSection() {
             title={`claude — connected: golden-beans · ${DEMO_PROJECT_SLUG}`}
             status="revocable"
           >
-            <div className="you">
-              <b>you ▸</b> how&apos;s the setup-guide funnel?
-            </div>
-            <div className="tool">
-              <Icon name="settings" />
-              <b>get_tars_funnel</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot;, feature: &quot;
+            <ActivityFeedItem actor="human">how&apos;s the setup-guide funnel?</ActivityFeedItem>
+            <ActivityFeedItem actor="agent" name="get_tars_funnel">
+              {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot;, feature: &quot;
               {FEATURE_KEY}&quot; {'}'} →{' '}
               {tars
                 ? `{ targeted: ${tars.targeted}, adopted: ${tars.adopted}, retained: ${tars.retained} }`
                 : '{ no data yet — run npm run seed:demo }'}
-            </div>
+            </ActivityFeedItem>
             {tars && (
               <div className="row2 funnel-layout">
                 <div className="funnel">
@@ -128,16 +126,13 @@ export async function LiveProofSection() {
             )}
 
             <hr />
-            <div className="you">
-              <b>you ▸</b> and the north star?
-            </div>
-            <div className="tool">
-              <Icon name="settings" />
-              <b>get_north_star</b> {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot; {'}'} →{' '}
+            <ActivityFeedItem actor="human">and the north star?</ActivityFeedItem>
+            <ActivityFeedItem actor="agent" name="get_north_star">
+              {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot; {'}'} →{' '}
               {northStar
                 ? `{ metric: "payable_sellers", value: ${northStar.current}, wow: ${northStar.wow !== null ? northStar.wow.toFixed(3) : 'n/a'} }`
                 : '{ no data yet — run npm run seed:demo }'}
-            </div>
+            </ActivityFeedItem>
             {northStar && (
               <div className="north-star">
                 <div>
@@ -159,14 +154,11 @@ export async function LiveProofSection() {
             )}
 
             <hr />
-            <div className="you">
-              <b>you ▸</b> is quick-upload winning?
-            </div>
-            <div className="tool">
-              <Icon name="settings" />
-              <b>compare_experiment</b> {'{'} experiment: &quot;{EXPERIMENT_KEY}&quot;, metricEvent: &quot;
+            <ActivityFeedItem actor="human">is quick-upload winning?</ActivityFeedItem>
+            <ActivityFeedItem actor="agent" name="compare_experiment">
+              {'{'} experiment: &quot;{EXPERIMENT_KEY}&quot;, metricEvent: &quot;
               {CONVERSION_EVENT}&quot; {'}'}
-            </div>
+            </ActivityFeedItem>
             {comparison && comparison.variants.length > 0 && (
               <div className="experiment-grid">
                 {comparison.variants.map((variant) => {
