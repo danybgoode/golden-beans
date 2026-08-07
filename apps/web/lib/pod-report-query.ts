@@ -92,13 +92,18 @@ export async function getPodReportByProjectId(
   if (!artifact) return { ok: false, reason: 'no_artifact' }
 
   const view = applyLens(buildPodReportView(artifact.payload), lens)
-  const outcome = await readOutcome(projectId, projectSlug)
+  const outcome = await getProjectOutcome(projectId, projectSlug)
 
   return { ok: true, artifact, view, outcome, lens }
 }
 
 /**
- * The live outcome half.
+ * The live outcome half — ALSO the Command Center's stat strip and funnel (app-shell-and-agent-rail
+ * S3.1/S3.2). Exported rather than private for that second caller: the Pod Report and the signed-in
+ * front door must not disagree about a tenant's adoption numbers, and two implementations that
+ * currently agree are two implementations (CODE-QUALITY rule 2). The honesty rules below — a failed
+ * read is `unavailable`, never an empty list; a null value is never a zero — are exactly what the
+ * front door needed and would otherwise have had to re-derive.
  *
  * Reads the tenant's REGISTERED features and asks lib/tars-query.ts for each one's funnel — the
  * canonical read path, never a fresh query against `events` (AGENTS rule #1). A feature whose
@@ -109,7 +114,7 @@ export async function getPodReportByProjectId(
  * instrumented". That is the truthful answer for a pod that has not wired the engine to its
  * product yet, and it is a far better sales artifact than three confident zeros.
  */
-async function readOutcome(projectId: string, projectSlug: string): Promise<OutcomeSection> {
+export async function getProjectOutcome(projectId: string, projectSlug: string): Promise<OutcomeSection> {
   const supabase = getSupabaseServiceClient()
 
   const { data: features, error } = await supabase
