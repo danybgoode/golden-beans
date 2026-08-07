@@ -6,7 +6,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { shouldRenderAgentRail, pendingChipState } from './agent-rail-visibility.ts'
+import { shouldRenderAgentRail, pendingChipState, settleRailRead } from './agent-rail-visibility.ts'
 
 test('D6 — the rail does not render while the gate is OFF, member or not', () => {
   assert.equal(shouldRenderAgentRail({ enabled: false, projectId: 'a-real-project-id' }), false)
@@ -46,4 +46,37 @@ test('the three states are mutually exclusive — no input yields two, and none 
   const kinds = [null, [], [{}]].map((input) => pendingChipState(input as readonly unknown[] | null).kind)
   assert.deepEqual(kinds, ['unreadable', 'empty', 'count'])
   assert.equal(new Set(kinds).size, 3)
+})
+
+// ── The rail must never be the reason a page is gone ──────────────────────────────────────────
+// The epic shipped this guarantee STATED and untested: a throwing read inside AgentRail, which sits
+// in ProductShell, would fail the render of EVERY signed-in route rather than one sidebar. The
+// browser harness cannot produce a broken service-role client without breaking every other spec in
+// the run — so the wrapper takes the promise, and the test hands it a rejecting one.
+
+test('a THROWING read becomes null, not an exception that takes down the page', async () => {
+  const logged: string[] = []
+  const result = await settleRailRead(
+    Promise.reject(new Error('Missing required env var: SUPABASE_URL')),
+    'activity',
+    (message) => logged.push(message)
+  )
+  assert.equal(result, null)
+  // Not swallowed: null is the input the "we couldn't read this" copy is written for, and the throw
+  // is still reported.
+  assert.equal(logged.length, 1)
+  assert.match(logged[0], /agent-rail.*activity read threw/)
+})
+
+test('a successful read passes through untouched, including a legitimate empty list', async () => {
+  assert.deepEqual(await settleRailRead(Promise.resolve([1, 2]), 'activity', () => {}), [1, 2])
+  // [] must survive as [] — "nothing happened" and "we could not look" are the distinction the whole
+  // rail is built around, and a wrapper that normalised one into the other would erase it here.
+  assert.deepEqual(await settleRailRead(Promise.resolve([]), 'activity', () => {}), [])
+})
+
+test('a read that already resolved to null stays null, and logs nothing', async () => {
+  const logged: string[] = []
+  assert.equal(await settleRailRead(Promise.resolve(null), 'pending', (m) => logged.push(m)), null)
+  assert.equal(logged.length, 0, 'a handled query error is not an exception and must not be logged twice')
 })
