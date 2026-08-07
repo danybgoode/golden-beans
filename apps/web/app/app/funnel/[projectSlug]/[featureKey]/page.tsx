@@ -23,7 +23,7 @@ export default async function FunnelPage({
   const { feature, tars } = result
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>
           Funnel — {feature.key} <small>({projectSlug})</small>
@@ -42,8 +42,8 @@ export default async function FunnelPage({
         </dl>
         <p>
           <em>
-            Targeted/Adopted/Retained are registry-declared, not gateway-observed — flags are
-            served by Miyagi, not this engine.
+            Targeted/Adopted/Retained are registry-declared, not gateway-observed — flags are served by
+            Miyagi, not this engine.
           </em>
         </p>
       </main>

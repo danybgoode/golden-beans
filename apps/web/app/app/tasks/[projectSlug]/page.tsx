@@ -44,7 +44,7 @@ export default async function TasksPage({
   const tasks = await listTasksByProjectId(membership.projectId, { limit: 100 })
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>Tasks — {projectSlug}</h1>
         <p>

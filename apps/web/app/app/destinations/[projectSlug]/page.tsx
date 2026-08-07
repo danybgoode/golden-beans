@@ -10,11 +10,7 @@ import { ProductShell } from '@/components/product/ProductShell'
 // can otherwise read (requireProjectOwnership).
 export const dynamic = 'force-dynamic'
 
-export default async function DestinationsPage({
-  params,
-}: {
-  params: Promise<{ projectSlug: string }>
-}) {
+export default async function DestinationsPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
   const [destinations, deliveries, attempts, health] = await Promise.all([
@@ -25,113 +21,113 @@ export default async function DestinationsPage({
   ])
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
-      <h1>Destinations — {projectSlug}</h1>
-      <p>
-        <a href="/app">← Your projects</a>
-      </p>
-      <p>
-        A destination reliably delivers this project&apos;s events to an external webhook. Each
-        delivery is signed (HMAC-SHA256) so your receiver can verify it came from Golden Beans. New
-        destinations start <strong>disabled</strong> — configure it, send a test, then enable it.
-      </p>
-      {/* event-destination-router · Sprint 3, Story 3.3 — the delivery operating view. Read-only, so
+        <h1>Destinations — {projectSlug}</h1>
+        <p>
+          <a href="/app">← Your projects</a>
+        </p>
+        <p>
+          A destination reliably delivers this project&apos;s events to an external webhook. Each delivery is
+          signed (HMAC-SHA256) so your receiver can verify it came from Golden Beans. New destinations start{' '}
+          <strong>disabled</strong> — configure it, send a test, then enable it.
+        </p>
+        {/* event-destination-router · Sprint 3, Story 3.3 — the delivery operating view. Read-only, so
           it renders server-side here rather than travelling through the client manager component.
           Shows enabled sinks, success/failure/retry counts and the last delivery — and deliberately
           NO signing secret, NO target URL and no event payload: this answers "is delivery working?",
           which needs none of those. */}
-      <h2>Delivery health</h2>
-      {health.length === 0 ? (
-        <p>No destinations configured yet.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Destination</th>
-              <th>State</th>
-              <th>Delivered</th>
-              <th>Failed attempts</th>
-              <th>Awaiting retry</th>
-              <th>Dead-lettered</th>
-              <th>Queued</th>
-              <th>Total attempts</th>
-              <th>Last delivery</th>
-            </tr>
-          </thead>
-          <tbody>
-            {health.map((h) => (
-              <tr key={h.destinationId}>
-                <td>{h.name}</td>
-                <td>{h.enabled ? 'enabled' : 'disabled'}</td>
-                {/* "Delivered" and "Failed attempts" are CUMULATIVE (from the attempt log, survive
-                    replay); "Awaiting retry", "Dead-lettered" and "Queued" are CURRENT row state. */}
-                <td>{h.delivered}</td>
-                <td>{h.failedAttempts}</td>
-                <td>{h.awaitingRetry}</td>
-                <td>{h.dead}</td>
-                <td>{h.pending + h.inFlight}</td>
-                <td>{h.totalAttempts}</td>
-                <td>
-                  {h.lastDeliveryAt
-                    ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`
-                    : 'never'}
-                </td>
+        <h2>Delivery health</h2>
+        {health.length === 0 ? (
+          <p>No destinations configured yet.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Destination</th>
+                <th>State</th>
+                <th>Delivered</th>
+                <th>Failed attempts</th>
+                <th>Awaiting retry</th>
+                <th>Dead-lettered</th>
+                <th>Queued</th>
+                <th>Total attempts</th>
+                <th>Last delivery</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {health.map((h) => (
+                <tr key={h.destinationId}>
+                  <td>{h.name}</td>
+                  <td>{h.enabled ? 'enabled' : 'disabled'}</td>
+                  {/* "Delivered" and "Failed attempts" are CUMULATIVE (from the attempt log, survive
+                    replay); "Awaiting retry", "Dead-lettered" and "Queued" are CURRENT row state. */}
+                  <td>{h.delivered}</td>
+                  <td>{h.failedAttempts}</td>
+                  <td>{h.awaitingRetry}</td>
+                  <td>{h.dead}</td>
+                  <td>{h.pending + h.inFlight}</td>
+                  <td>{h.totalAttempts}</td>
+                  <td>
+                    {h.lastDeliveryAt
+                      ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`
+                      : 'never'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
-      <DestinationManager slug={projectSlug} destinations={destinations} deliveries={deliveries} />
+        <DestinationManager slug={projectSlug} destinations={destinations} deliveries={deliveries} />
 
-      {/* The APPEND-ONLY attempt log — the immutable record of what actually happened, per attempt.
+        {/* The APPEND-ONLY attempt log — the immutable record of what actually happened, per attempt.
           Distinct from "Recent deliveries" above, which is CURRENT delivery state (a replay resets
           that row's attempt count; these rows are never rewritten). Read-only, so it renders here
           server-side rather than travelling through the client manager. */}
-      <h2>Attempt log</h2>
-      <p>
-        <small>
-          Every send attempt, append-only — including attempts a later replay superseded. This is the
-          record; the table above is current state.
-        </small>
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>When</th>
-            <th>Event</th>
-            <th>Destination</th>
-            <th>Attempt</th>
-            <th>Outcome</th>
-            <th>HTTP</th>
-            <th>Latency</th>
-            <th>Error</th>
-          </tr>
-        </thead>
-        <tbody>
-          {attempts.length === 0 ? (
+        <h2>Attempt log</h2>
+        <p>
+          <small>
+            Every send attempt, append-only — including attempts a later replay superseded. This is the
+            record; the table above is current state.
+          </small>
+        </p>
+        <table>
+          <thead>
             <tr>
-              <td colSpan={8}>No attempts yet.</td>
+              <th>When</th>
+              <th>Event</th>
+              <th>Destination</th>
+              <th>Attempt</th>
+              <th>Outcome</th>
+              <th>HTTP</th>
+              <th>Latency</th>
+              <th>Error</th>
             </tr>
-          ) : (
-            attempts.map((a) => (
-              <tr key={a.id}>
-                <td>{new Date(a.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
-                <td>{a.eventName ?? '—'}</td>
-                <td>{a.destinationName ?? '—'}</td>
-                <td>#{a.attemptNo}</td>
-                <td>{a.outcome}</td>
-                <td>{a.httpStatus ?? '—'}</td>
-                <td>{a.latencyMs != null ? `${a.latencyMs}ms` : '—'}</td>
-                <td>
-                  <small>{a.error ?? '—'}</small>
-                </td>
+          </thead>
+          <tbody>
+            {attempts.length === 0 ? (
+              <tr>
+                <td colSpan={8}>No attempts yet.</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              attempts.map((a) => (
+                <tr key={a.id}>
+                  <td>{new Date(a.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
+                  <td>{a.eventName ?? '—'}</td>
+                  <td>{a.destinationName ?? '—'}</td>
+                  <td>#{a.attemptNo}</td>
+                  <td>{a.outcome}</td>
+                  <td>{a.httpStatus ?? '—'}</td>
+                  <td>{a.latencyMs != null ? `${a.latencyMs}ms` : '—'}</td>
+                  <td>
+                    <small>{a.error ?? '—'}</small>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </main>
     </ProductShell>
   )

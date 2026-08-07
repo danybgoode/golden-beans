@@ -8,25 +8,21 @@ import { ProductShell } from '@/components/product/ProductShell'
 // here even for a project they can otherwise read (cross-review round 2, 2026-07-20).
 export const dynamic = 'force-dynamic'
 
-export default async function KeysPage({
-  params,
-}: {
-  params: Promise<{ projectSlug: string }>
-}) {
+export default async function KeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
   const keys = await listProjectKeys(projectId)
 
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>API keys — {projectSlug}</h1>
         <p>
           <a href="/app">← Your projects</a>
         </p>
         <p>
-          Keys authorize <code>POST /api/v1/track</code> and the SDK. Issue one per integration;
-          revoke a leaked key instantly (revocation takes effect on the next request, no deploy).
+          Keys authorize <code>POST /api/v1/track</code> and the SDK. Issue one per integration; revoke a
+          leaked key instantly (revocation takes effect on the next request, no deploy).
         </p>
         <KeyManager slug={projectSlug} keys={keys} />
       </main>

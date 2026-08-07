@@ -21,7 +21,7 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
     canManage ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
   ])
   return (
-    <ProductShell>
+    <ProductShell projectSlug={projectSlug}>
       <main>
         <h1>Feature flags — {projectSlug}</h1>
         <p>
