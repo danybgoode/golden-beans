@@ -71,12 +71,16 @@ test.describe('agent rail', () => {
       'the page content must end before the rail begins'
     ).toBeLessThanOrEqual(railBox!.x)
 
+    const panel = page.locator('.agent-rail__panel')
+    // RailDisclosure opens it once at this width; the body is what actually shows or hides. This is
+    // also the precondition for the padding measurement below — the section has to be laid out.
+    await expect(panel).toHaveAttribute('open', '')
+
     // The section-padding regression, made assertable (retro fast-follow). `tokens.css` sets
     // `section { padding: 36px 0 }` for the landing's page bands; inside a 320px rail that was 72px
     // of dead air PER SECTION, which reads as a rendering failure rather than a quiet day. It was
     // found by eye and could have regressed by eye — anything that reintroduces the landing's
     // section padding here now fails.
-    await expect(page.locator('.agent-rail__panel')).toHaveAttribute('open', '')
     const sectionPadding = await page
       .locator('.agent-rail__section')
       .first()
@@ -89,9 +93,6 @@ test.describe('agent rail', () => {
       bottom: '0px',
     })
 
-    const panel = page.locator('.agent-rail__panel')
-    // RailDisclosure opens it once at this width; the body is what actually shows or hides.
-    await expect(panel).toHaveAttribute('open', '')
     await panel.locator('summary').click()
     await expect(panel).not.toHaveAttribute('open', '')
     await panel.locator('summary').click()

@@ -73,16 +73,28 @@ export function pendingChipState(pending: readonly unknown[] | null): PendingChi
  * Here rather than inline in the component because the epic shipped this guarantee STATED and
  * untested — the failure needs a broken service-role client, which the browser harness cannot
  * produce without breaking every other spec in the run. A pure wrapper can be handed a rejecting
- * promise directly (CODE-QUALITY rule 5: when a guard sits behind state the harness cannot reach,
+ * read directly (CODE-QUALITY rule 5: when a guard sits behind state the harness cannot reach,
  * extract it and assert it).
+ *
+ * ── Why it takes a THUNK and not a promise (cross-review, Agy on PR #78) ──────────────────────
+ * The first version took `Promise<T | null>`, which meant the call was evaluated by the CALLER
+ * before this function was entered — so a SYNCHRONOUS throw would sail straight past the try/catch
+ * and crash the render this exists to protect.
+ *
+ * Not reachable today: both reads are `async function`s, and an async function returns a rejected
+ * promise rather than throwing. But that makes the guarantee depend on those two keeping the
+ * `async` keyword, which nothing enforces — turn either into a plain function returning a promise
+ * and the protection silently disappears. "Not currently reachable" is not the property to rest a
+ * guarantee on; the thunk makes it independent of the callee's shape.
  */
 export async function settleRailRead<T>(
-  read: Promise<T | null>,
+  read: () => Promise<T | null>,
   label: string,
   onError: (message: string, error: unknown) => void = console.error
 ): Promise<T | null> {
   try {
-    return await read
+    // Invoked INSIDE the try, which is the whole point — see the thunk note above.
+    return await read()
   } catch (error) {
     onError(`[agent-rail] ${label} read threw:`, error)
     return null

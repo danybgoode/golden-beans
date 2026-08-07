@@ -57,7 +57,7 @@ test('the three states are mutually exclusive — no input yields two, and none 
 test('a THROWING read becomes null, not an exception that takes down the page', async () => {
   const logged: string[] = []
   const result = await settleRailRead(
-    Promise.reject(new Error('Missing required env var: SUPABASE_URL')),
+    () => Promise.reject(new Error('Missing required env var: SUPABASE_URL')),
     'activity',
     (message) => logged.push(message)
   )
@@ -69,14 +69,52 @@ test('a THROWING read becomes null, not an exception that takes down the page', 
 })
 
 test('a successful read passes through untouched, including a legitimate empty list', async () => {
-  assert.deepEqual(await settleRailRead(Promise.resolve([1, 2]), 'activity', () => {}), [1, 2])
+  assert.deepEqual(
+    await settleRailRead(
+      () => Promise.resolve([1, 2]),
+      'activity',
+      () => {}
+    ),
+    [1, 2]
+  )
   // [] must survive as [] — "nothing happened" and "we could not look" are the distinction the whole
   // rail is built around, and a wrapper that normalised one into the other would erase it here.
-  assert.deepEqual(await settleRailRead(Promise.resolve([]), 'activity', () => {}), [])
+  assert.deepEqual(
+    await settleRailRead(
+      () => Promise.resolve([]),
+      'activity',
+      () => {}
+    ),
+    []
+  )
 })
 
 test('a read that already resolved to null stays null, and logs nothing', async () => {
   const logged: string[] = []
-  assert.equal(await settleRailRead(Promise.resolve(null), 'pending', (m) => logged.push(m)), null)
+  assert.equal(
+    await settleRailRead(
+      () => Promise.resolve(null),
+      'pending',
+      (m) => logged.push(m)
+    ),
+    null
+  )
   assert.equal(logged.length, 0, 'a handled query error is not an exception and must not be logged twice')
+})
+
+test('a SYNCHRONOUS throw is caught too — the reason this takes a thunk', () => {
+  // A promise argument would have been evaluated by the CALLER, so a sync throw would sail past the
+  // try/catch and crash the render (cross-review, Agy on PR #78). Not reachable through today's two
+  // `async` reads, but the thunk makes the guarantee independent of them keeping that keyword.
+  const logged: string[] = []
+  return settleRailRead(
+    () => {
+      throw new Error('threw before returning a promise')
+    },
+    'activity',
+    (message) => logged.push(message)
+  ).then((result) => {
+    assert.equal(result, null)
+    assert.equal(logged.length, 1)
+  })
 })

@@ -56,8 +56,8 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
   // `settleRailRead` lives in lib/agent-rail-visibility.ts, where a REJECTING read can be handed to
   // it directly — the epic shipped this guarantee stated and untested, which is the gap this closes.
   const [activity, pending] = await Promise.all([
-    settleRailRead(getRecentAgentActivity(projectId, ACTIVITY_LIMIT), 'activity'),
-    settleRailRead(getPendingConfirmations(projectId, PENDING_LIMIT), 'pending-confirmations'),
+    settleRailRead(() => getRecentAgentActivity(projectId, ACTIVITY_LIMIT), 'activity'),
+    settleRailRead(() => getPendingConfirmations(projectId, PENDING_LIMIT), 'pending-confirmations'),
   ])
 
   // One clock for the whole render, so two lines written a millisecond apart cannot disagree about
