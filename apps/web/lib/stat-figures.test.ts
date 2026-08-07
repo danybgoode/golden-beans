@@ -78,6 +78,17 @@ test('the rate is ROUNDED, not truncated', () => {
   assert.equal(rateFigure(0.4, 'retention').value, '40%')
 })
 
+test('a non-finite rate is a nothing, never "NaN%"', () => {
+  // A number-shaped nothing is the worst output this module can produce: it looks like a
+  // measurement and is not one. Guarded here for the same reason funnel-geometry.ts guards its
+  // arithmetic, even though pod-outcome.ts' rate() already returns null for these.
+  for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    const figure = rateFigure(bad, 'adoption')
+    assert.equal(figure.value, null)
+    assert.ok(figure.caveat)
+  }
+})
+
 test('a readable rate still carries the registry-declared caveat', () => {
   // Targeted/adopted/retained count the events a tenant MAPPED to each stage. Every other surface
   // in this product says so, and the front door is the last place that should quietly disappear.
