@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { isAgentRailEnabled } from '@/lib/flags'
-import { shouldRenderAgentRail, pendingChipState } from '@/lib/agent-rail-visibility'
+import { shouldRenderAgentRail, pendingChipState, settleRailRead } from '@/lib/agent-rail-visibility'
 import { getRecentAgentActivity } from '@/lib/agent-activity'
 import { getPendingConfirmations } from '@/lib/pending-confirmations'
 import { formatFreshness } from '@/lib/hub-freshness'
@@ -53,15 +53,11 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
   //
   // Catching to null lands in exactly the copy that is already written for an unreadable read. The
   // rail is an annotation on the page; it must never be the reason the page is gone.
+  // `settleRailRead` lives in lib/agent-rail-visibility.ts, where a REJECTING read can be handed to
+  // it directly — the epic shipped this guarantee stated and untested, which is the gap this closes.
   const [activity, pending] = await Promise.all([
-    getRecentAgentActivity(projectId, ACTIVITY_LIMIT).catch((error) => {
-      console.error('[agent-rail] activity read threw:', error)
-      return null
-    }),
-    getPendingConfirmations(projectId, PENDING_LIMIT).catch((error) => {
-      console.error('[agent-rail] pending-confirmations read threw:', error)
-      return null
-    }),
+    settleRailRead(() => getRecentAgentActivity(projectId, ACTIVITY_LIMIT), 'activity'),
+    settleRailRead(() => getPendingConfirmations(projectId, PENDING_LIMIT), 'pending-confirmations'),
   ])
 
   // One clock for the whole render, so two lines written a millisecond apart cannot disagree about
