@@ -17,7 +17,7 @@ _None._
 ## 📋 Ready to build (scaffolded, not started) (2)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low · #6
-- [App shell and agent rail — make the signed-in product show the agent it sells](../../02-commercial/app-shell-and-agent-rail/README.md) — 02 Commercial · 0/10 stories · risk: High · #1
+- [App shell and agent rail — make the signed-in product show the agent it sells](../../02-commercial/app-shell-and-agent-rail/README.md) — 02 Commercial · 10/10 stories · risk: High · #1
 
 ## ✅ Shipped (11)
 
@@ -50,7 +50,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Epic | frontmatter (used) | sprint/retro-derived |
 |---|---|---|
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
-| App shell and agent rail — make the signed-in product show the agent it sells | Scaffolded | In progress |
+| App shell and agent rail — make the signed-in product show the agent it sells | Scaffolded | Shipped |
 
 ---
 _Epics: 13 · seeds in funnel: 5 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._

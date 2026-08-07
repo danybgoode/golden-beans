@@ -1,6 +1,6 @@
 # App shell and agent rail — Sprint 3: Command Center
 
-**Status:** ⬜ not started
+**Status:** ✅ complete — `4ee6242` (3.1 + 3.2 + 3.3)
 
 > **Build contract (locked by the architect before the builder started).** Binding: **no new runtime
 > dependency** (the bet's headline constraint), **D6** (the agent strip is gated; the page is not),
@@ -83,3 +83,31 @@ Env: the branch preview (pre-merge) · production `https://golden-beans-gamma.ve
      zeroes at someone with nothing yet.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+## Sprint 3 — what actually happened
+
+**No new query was written.** `readOutcome` in `lib/pod-report-query.ts` already did exactly this
+rollup for the client-facing Pod Report — registered features → their funnels through
+`lib/tars-query.ts`, plus the North Star metric, with every not-zero rule already enforced. It is now
+exported as `getProjectOutcome` and shared. The owner's front door and the client's shared report
+cannot disagree about a tenant's adoption numbers, because there is one implementation.
+
+**`StatCard`'s props are a union, so a null value cannot be constructed without its caveat.** The
+epic's honesty requirement is enforced by the type rather than by a reviewer noticing. Four North
+Star states — no metric / unreadable / registered-but-never-recorded / a real value including a real
+0 — are four different sentences (`lib/stat-figures.ts`, unit-tested). An undefined RATE is not 0%:
+"nobody was targeted" and "a thousand targeted, none adopted" are opposite facts.
+
+**The non-zero check found nothing broken, and was still worth every minute.** It is the only check
+in the sprint that could distinguish a working funnel from a silently-empty one:
+`e2e/command-center.authed.spec.ts` drives a lopsided 8 → 5 → 2 funnel through the REAL ingest path
+and asserts 63% reaches the screen, the bars descend in RENDERED pixel height, the drop-off labels
+read 63%/40% of previous, and the figures match `/app/funnel` for the same feature.
+
+**`apps/web/package.json` is untouched.** The circuit breaker was never approached — three bars are
+not a charting problem.
+
+**Gate:** unit 894 · typecheck · lint · build · `check:design-drift` (73 files) · api **435 passed /
+36 skipped / 0 failed** · authed **14 passed / 2 skipped** (the rail specs skip themselves when the
+gate is dark, and say why).
+

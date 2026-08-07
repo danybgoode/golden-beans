@@ -1,6 +1,6 @@
 # App shell and agent rail — Sprint 2: The agent rail
 
-**Status:** ⬜ not started
+**Status:** ✅ complete — `87f2948` (2.1) · `8ba7438` (2.2 + 2.3) · `36c4e69` (QA)
 
 > **Build contract (locked by the architect before the builder started).** Binding: **D4** (caption
 > it *recent activity*, never a complete ledger), **D5** (extract `ActivityFeedItem`; refactor the
@@ -86,3 +86,41 @@ Env: the branch preview (pre-merge) · production once merged and the flag flipp
    → The rail shows that project's activity only.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+## Sprint 2 — what actually happened
+
+**The dark spec cannot be what this sprint's brief assumed, and says so out loud.** The rail renders
+on signed-in `/app` routes only. The always-on `api` project has no session, so with the gate ON
+*or* OFF an anonymous request sees no rail — there is no resolved membership to render one for. A
+spec asserting "absent while dark" there would pass for the wrong reason and would keep passing if
+the flag were hardwired to `true`. The work is split four ways instead:
+
+| Property | Where |
+|---|---|
+| Flag polarity (born OFF, exact `=== 'true'`, near-miss matrix) | `lib/flags.test.ts` — added to the SHARED table so it inherits the whole matrix |
+| The render decision | `lib/agent-rail-visibility.ts` + its unit test — **mutation-checked** |
+| The anonymous boundary (a real security property, genuinely reachable) | `e2e/agent-rail-dark.spec.ts` |
+| Rendered behaviour, copy, geometry | `e2e/agent-rail.authed.spec.ts` (opt-in) |
+
+**Mutation check:** making `shouldRenderAgentRail` ignore the gate turns BOTH the unit test and
+`e2e/agent-rail-dark.spec.ts` red. Restored, re-verified green.
+
+**Two existing authed specs went red, and both were real.** `design-system.authed` asserted the
+static "Engine ready" pill, which for a signed-in member is now the project the nav is showing —
+updated to assert the stronger thing. `project-navigation.authed` hit a strict-mode violation
+because `/app` now has two links to the task queue (the inventory link and the rail's shortcut); the
+ambiguity was in the locator, so it got `exact: true` rather than renaming a legitimate entry point.
+
+**Two layout defects were found by LOOKING at a screenshot, not by an assertion.** The fixed rail
+sat on top of the project card from ~1080px (the page reserved the rail's width but not the gutter
+it is inset by — now one custom property feeds both), and `tokens.css`' `section { padding: 36px 0 }`
+opened 72px of dead air per rail section. The overlap now has a geometry assertion; the padding does
+not. **A UI sprint needs someone to open the page.** That is the durable lesson.
+
+**Story 2.1 was delegated** to a Sonnet-tier agent against a locked component API and a file
+allow-list, and verified here by diffing the tree — a clean 1:1 extraction, zero `▸` left.
+
+**Gate:** unit 883 · typecheck · lint · build · `check:design-drift` (70 files) · api **435 passed /
+36 skipped / 0 failed** (rail flag unset, as CI runs it) · authed **14/14** with
+`AGENT_RAIL_ENABLED=true`.
+
