@@ -167,6 +167,41 @@ export function isAutomaticCircuitBreakersEnabled(): boolean {
   return process.env.AUTOMATIC_CIRCUIT_BREAKERS_ENABLED === 'true'
 }
 
+// app-shell-and-agent-rail · Sprint 2, Story 2.2 — the agent rail's enablement gate. Fourteenth
+// flag, same polarity and same dark-by-default contract as every one above (epic README, D6): born
+// unset/OFF, created disabled, flipped deliberately once the rail has been exercised.
+//
+// Exactly `=== 'true'`, for the reason all thirteen give: a gate that opens on a typo is not a gate.
+//
+// WHAT IT GATES, PRECISELY: components/product/AgentRail.tsx, and nothing else. That is the ONE
+// surface which renders lib/agent-activity.ts and lib/pending-confirmations.ts.
+//
+// The epic's D6 named a second surface — "Command Center's agent strip" — and this comment used to
+// name it too. Sprint 3 shipped Command Center WITHOUT one: the rail already answers "what did my
+// agent do", and a second copy of the same feed on the same page would have been two devices for
+// one promise (the epic's own D5, one layer up). So the strip does not exist, and describing a gate
+// over a surface that was never built is the exact failure CODE-QUALITY rule 3 names — a comment
+// asserting a property the code does not have. Corrected after the fresh-reviewer pass caught this
+// file and components/product/CommandCenter.tsx saying opposite things.
+//
+// If an agent strip is ever added to Command Center, it reads these same two seams and MUST check
+// this gate. That is the sentence to keep; the claim that it already does is the one that was wrong.
+//
+// It explicitly does NOT gate the section nav (lib/shell-nav.ts, ProductShell), and it does not
+// gate Command Center's stat strip or funnel. A rail can be born off and switched on; navigation
+// that vanishes with a flag is a worse failure than no flag, and a front door that half-renders is
+// worse than either.
+//
+// Note what this flag is NOT: it is not a tenancy control. Both reads are project-scoped
+// server-side whether it is on or off, and turning it ON grants no one access to anything they
+// could not already see on the surface the data came from. It decides whether a SURFACE exists.
+//
+// Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isAgentRailEnabled(): boolean {
+  return process.env.AGENT_RAIL_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

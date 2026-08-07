@@ -1,8 +1,8 @@
 import { getSection } from '@/lib/landing-sections'
 import { isSignalsEnabled, isConnectorWritesEnabled } from '@/lib/flags'
+import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
-import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
 
 // Section 4 — The inverted loop. signals-loop · Sprint 3, Story 3.3 (part A).
@@ -45,15 +45,15 @@ export function InvertedLoopSection() {
           title="golden-beans — the task stays in your workflow"
           status="evidenced"
         >
-          <div className="tool">
-            <Icon name="arrow-right" /> 1. signal → grouped into a structured task with product context
-          </div>
-          <div className="tool">
-            <Icon name="arrow-right" /> 2. your agent → pulls the ranked task over MCP
-          </div>
-          <div className="tool">
-            <Icon name="arrow-right" /> 3. your workflow → fix, then resolve with an evidence pointer
-          </div>
+          <ActivityFeedItem actor="agent" icon="arrow-right">
+            1. signal → grouped into a structured task with product context
+          </ActivityFeedItem>
+          <ActivityFeedItem actor="agent" icon="arrow-right">
+            2. your agent → pulls the ranked task over MCP
+          </ActivityFeedItem>
+          <ActivityFeedItem actor="agent" icon="arrow-right">
+            3. your workflow → fix, then resolve with an evidence pointer
+          </ActivityFeedItem>
           <p className="note">
             Grouping, impact ranking, and the evidence bundle are computed deterministically. No model writes
             any field of a task.

@@ -26,6 +26,7 @@ import {
   isResilienceScenariosEnabled,
   isSecuritySimulationsEnabled,
   isAutomaticCircuitBreakersEnabled,
+  isAgentRailEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -60,6 +61,7 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['RESILIENCE_SCENARIOS_ENABLED', isResilienceScenariosEnabled],
   ['SECURITY_SIMULATIONS_ENABLED', isSecuritySimulationsEnabled],
   ['AUTOMATIC_CIRCUIT_BREAKERS_ENABLED', isAutomaticCircuitBreakersEnabled],
+  ['AGENT_RAIL_ENABLED', isAgentRailEnabled],
 ]
 
 for (const [envKey, gate] of singleFlagGates) {

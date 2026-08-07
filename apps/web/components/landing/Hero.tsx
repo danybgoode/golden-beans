@@ -1,4 +1,5 @@
 import { isSignupEnabled } from '@/lib/flags'
+import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -43,13 +44,8 @@ export function Hero() {
         </div>
 
         <AgentWindow>
-          <div className="you">
-            <b>you ▸</b> add golden-beans
-          </div>
-          <div className="tool">
-            <Icon name="settings" />
-            handshake → 6 tools
-          </div>
+          <ActivityFeedItem actor="human">add golden-beans</ActivityFeedItem>
+          <ActivityFeedItem actor="agent">handshake → 6 tools</ActivityFeedItem>
           <div className="agent-result">
             Connected to <b>golden-beans-demo</b>. Ask me for the funnel — or bring your PM, no SQL required.
           </div>

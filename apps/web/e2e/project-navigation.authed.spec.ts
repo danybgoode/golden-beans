@@ -13,8 +13,18 @@ test('a project member can discover the live Flags and Tasks operating surfaces 
   const slug = tenantSlug()
   await page.goto('/app')
 
-  await expect(page.getByRole('link', { name: 'Flags' })).toHaveAttribute('href', `/app/flags/${slug}`)
-  await expect(page.getByRole('link', { name: 'Tasks' })).toHaveAttribute('href', `/app/tasks/${slug}`)
+  // `exact` because /app now carries more than one link per surface: the shell's section nav plus,
+  // when the rail is on, its "Open tasks" shortcut. Both point at the same href — the ambiguity is
+  // in the locator, not in the page — so the fix is to name the inventory link precisely rather
+  // than to rename a legitimate second entry point (app-shell-and-agent-rail S2.3).
+  await expect(page.getByRole('link', { name: 'Flags', exact: true })).toHaveAttribute(
+    'href',
+    `/app/flags/${slug}`
+  )
+  await expect(page.getByRole('link', { name: 'Tasks', exact: true })).toHaveAttribute(
+    'href',
+    `/app/tasks/${slug}`
+  )
 
   const flagsResponse = await page.goto(`/app/flags/${slug}`)
   expect(flagsResponse?.status()).toBe(200)
