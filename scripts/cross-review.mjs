@@ -36,6 +36,7 @@
 // lockfile itself.
 
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
@@ -57,6 +58,8 @@ import {
   decideTrivialSkip,
   stripGeneratedFileDiffs,
   stripDocFileDiffs,
+  buildFileContext,
+  renderFileContext,
   filterDiffToPaths,
   AGY_ARG_LIMIT,
   shortSha,
@@ -321,11 +324,20 @@ function main() {
     ensureCmd('agy', 'agy not found — install the Antigravity CLI and authenticate it, then retry.');
     checkAgyVersion();
   } else if (agent === 'codex') {
-    ensureCmd('codex', 'codex not found — install Codex CLI (https://github.com/openai/codex) and `codex login`.');
+    ensureCmd(
+      'codex',
+      'codex not found — install Codex CLI (https://github.com/openai/codex) and `codex login`.'
+    );
   } else if (agent === 'vibe') {
-    ensureCmd(AGENT_BIN.vibe, 'vibe not found — install the Mistral Vibe CLI (`uv tool install mistral-vibe`) and authenticate it, then retry.');
+    ensureCmd(
+      AGENT_BIN.vibe,
+      'vibe not found — install the Mistral Vibe CLI (`uv tool install mistral-vibe`) and authenticate it, then retry.'
+    );
   } else if (agent === 'claude') {
-    ensureCmd(AGENT_BIN.claude, 'claude not found — install Claude Code (https://claude.com/claude-code) and run `claude auth login`, then retry.');
+    ensureCmd(
+      AGENT_BIN.claude,
+      'claude not found — install Claude Code (https://claude.com/claude-code) and run `claude auth login`, then retry.'
+    );
   }
 
   const prompt = loadPromptBody(PROMPT_PATH);
@@ -375,7 +387,30 @@ function main() {
     );
   }
 
-  const findings = runReview(agent, prompt, diff);
+  // ── Attach the full current text of the files this diff touches ─────────────────────────────
+  // Only for the two DIFF-ONLY reviewers. `claude` runs deliberately tool-less over stdin and
+  // `codex` takes context on stdin without an argv cap, so neither needs (or is helped by) this.
+  //
+  // Three wrong findings in two days came from a reviewer reasoning about code it could not see —
+  // a helper "not defined" that was defined eight lines above the hunk being the clearest. See
+  // buildFileContext's header for why agy gets attachment rather than the repo access vibe got.
+  let fileContext = '';
+  if (agent === 'antigravity' || agent === 'vibe') {
+    // Whatever argv budget the diff has not already spent, less a margin for the prompt and the
+    // fences. Under-filling is the safe direction: a review that runs on less context still runs.
+    const budget = Math.max(0, AGY_ARG_LIMIT - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
+    const touched = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1]);
+    const selection = buildFileContext(touched, (path) => readFileSync(path, 'utf8'), budget);
+    fileContext = renderFileContext(selection);
+    if (selection.attached.length || selection.omitted.length) {
+      process.stderr.write(
+        `Attached ${selection.attached.length} whole file(s) (${Math.round(selection.bytes / 1024)} KB); ` +
+          `${selection.omitted.length} did not fit the budget.\n`
+      );
+    }
+  }
+
+  const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
   if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
   const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings);
