@@ -146,6 +146,35 @@ export function bumpPinnedSource(source, newVersion, date) {
 }
 
 // ── I/O helpers (thin, injectable-free — the decision core above is what tests exercise) ─────────────
+/**
+ * The model IDs from `agy models`, one per line.
+ *
+ * agy 1.1.11 prints `<id>\t<Human Label>` after a `Fetching available models...` preamble — so a
+ * parser that kept the whole trimmed line matched NOTHING, and the doctor reported every configured
+ * model as "NOT LISTED" while `agy models` listed all of them. That is the worst possible failure
+ * for this file: it is the gate that decides whether the cross-agent review layer may run, and it
+ * failed CLOSED on a cosmetic output change, blocking review on an epic with nothing wrong with it.
+ *
+ * Extracted and exported so the format is pinned by a test rather than re-discovered the next time
+ * the CLI adds a column.
+ *
+ * Accepts both shapes deliberately: `<id>\t<Label>` (take the id) and a bare `<id>` line (the older
+ * format). Anything else — the preamble, a blank line, a future prose line — is dropped, which is
+ * why the bare-line branch insists on something that LOOKS like a model id (a hyphen, no spaces)
+ * rather than accepting the first word of any sentence. `Fetching` is not a model.
+ */
+export function parseModelList(raw) {
+  return (raw || '')
+    .split('\n')
+    .flatMap((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return [];
+      const tab = trimmed.indexOf('\t');
+      if (tab > 0) return [trimmed.slice(0, tab).trim()];
+      return /^[a-z0-9][a-z0-9.]*(?:-[a-z0-9.]+)+$/i.test(trimmed) ? [trimmed] : [];
+    });
+}
+
 function agy(args, input) {
   return spawnSync('agy', args, { encoding: 'utf8', input: input ?? '', maxBuffer: 16 * 1024 * 1024 });
 }
@@ -162,10 +191,7 @@ function observe() {
   const help = (helpR.stdout || '') + (helpR.stderr || '');
   const helpOk = /^\s*-p\b/m.test(help) && /--model\b/.test(help);
   const modelsR = agy(['models']);
-  const models = ((modelsR.stdout || '') + (modelsR.stderr || ''))
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const models = parseModelList((modelsR.stdout || '') + (modelsR.stderr || ''));
   const probe = (model) => {
     const r = agy(['-p', 'Reply with exactly: OK', '--model', model]);
     if (r.status !== 0) return 'error';
