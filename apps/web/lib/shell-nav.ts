@@ -73,7 +73,18 @@ export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
     const projects = await getUserProjects(user.id)
     if (projects.length === 0) return EMPTY
 
-    const activeProject = (projectSlug && projects.find((p) => p.slug === projectSlug)) || projects[0]
+    // A slug the caller supplied that the viewer is NOT a member of does not silently fall back to
+    // their first project (fresh-reviewer finding). The two anonymously-readable demo dashboards
+    // are exactly this case: a member of `acme` opening /app/funnel/golden-beans-demo/setup_guide
+    // is allowed to (lib/dashboard-auth.ts' allow-list) — and would have got `acme`'s sections and
+    // `acme`'s activity rail wrapped around the DEMO project's numbers. Not a leak, since it is the
+    // viewer's own data, but the chrome and the <main> would name different tenants, which is the
+    // kind of quiet mismatch a person acts on without noticing.
+    //
+    // No slug at all (the /app home) still defaults to the first project: there is nothing to
+    // contradict there.
+    const activeProject = projectSlug ? (projects.find((p) => p.slug === projectSlug) ?? null) : projects[0]
+    if (!activeProject) return EMPTY
 
     return {
       activeProject,

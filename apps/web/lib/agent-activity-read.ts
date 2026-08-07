@@ -197,8 +197,11 @@ export async function readAgentActivity(
     .from('audit_log')
     .select('id, action, created_at, metadata')
     .eq('project_id', projectId)
-    // D2 — the allow-list is applied IN the query, not after it. Filtering in JS would mean the
-    // rows still crossed the wire and a `limit` below would be spent on rows nobody can render.
+    // D2 — the allow-list is applied IN the query, not after it. Filtering in JS would mean the rows
+    // still crossed the wire and, worse, that `limit` was spent on rows nobody can render: a
+    // destination outage writes one excluded `task_event_emit_failed` row per undelivered event, and
+    // a page of those would bury real activity below the cut while the rail read "nothing recently".
+    // e2e/agent-activity.spec.ts has the spec that dies when this line is removed.
     .in('action', AGENT_ACTIVITY_ACTIONS as unknown as string[])
     // D10 — order by `created_at`, NEVER by `id`. `audit_log.id` is `gen_random_uuid()`, so
     // ordering by it is arbitrary rather than chronological; lib/task-lifecycle-facts.ts carries a

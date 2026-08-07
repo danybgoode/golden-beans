@@ -262,6 +262,12 @@ function GovernedAnalysis({ result, canManage }: { result: GovernedSuccess; canM
 // headline case: /experiments/miyagisanchez/checkout-cta-copy?metricEvent=checkout_completed).
 // Behind per-tenant authorization (multi-tenant-activation Story 1.2) — same gate as /funnel and
 // /impact: demo is anonymous, every other slug requires a signed-in member.
+// ProductShell now reads the session cookie on every render (lib/shell-nav.ts), so this route is
+// request-time by nature. Declared rather than inferred: LEARNINGS records a feature gate's required
+// 404 turning into a 200 when a parent streamed, and an implicit-dynamic route is the same class of
+// surprise — the behaviour should be in the file, not in a rule about generateStaticParams.
+export const dynamic = 'force-dynamic'
+
 export default async function ExperimentComparisonPage({
   params,
   searchParams,

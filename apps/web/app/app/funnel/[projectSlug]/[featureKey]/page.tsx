@@ -7,6 +7,12 @@ import { ProductShell } from '@/components/product/ProductShell'
 // (v1's headline case: /funnel/miyagisanchez/setup_guide). Behind per-tenant authorization
 // (multi-tenant-activation Story 1.2): the demo project renders anonymously; every other slug
 // requires a signed-in member (unauthed → /login, non-member → 404).
+// ProductShell now reads the session cookie on every render (lib/shell-nav.ts), so this route is
+// request-time by nature. Declared rather than inferred: LEARNINGS records a feature gate's required
+// 404 turning into a 200 when a parent streamed, and an implicit-dynamic route is the same class of
+// surprise — the behaviour should be in the file, not in a rule about generateStaticParams.
+export const dynamic = 'force-dynamic'
+
 export default async function FunnelPage({
   params,
 }: {

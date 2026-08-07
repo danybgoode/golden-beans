@@ -187,6 +187,38 @@ test('D2 — an action outside the allow-list is not returned even though the ro
   expect(AGENT_ACTIVITY_ACTIONS).not.toContain('task_event_emit_failed')
 })
 
+test('D2 — the allow-list is applied IN the query, so the limit is not spent on excluded rows', async () => {
+  const project = await fixtureProject('limit')
+
+  // The mutation this exists to kill: delete `.in('action', AGENT_ACTIVITY_ACTIONS)` from
+  // readAgentActivity. Every other spec in this file stays green, because the flatMap at the bottom
+  // of that function re-applies the allow-list in JS — so the ROWS are still correct and only the
+  // LIMIT is wrong. The previous version of this file asserted the rows and nothing else, which
+  // meant its D2 test defended the JS half of a rule whose whole point is the SQL half.
+  //
+  // The scenario is real, not contrived: a destination outage writes one `task_event_emit_failed`
+  // row per undelivered lifecycle event, all project-scoped, all excluded from the rail. With the
+  // filter in JS, `limit` is spent on them and the rail renders "Nothing recorded on this project
+  // recently" while the tenant's actual activity sits one row below the cut.
+  const limit = 3
+  for (let i = 0; i < limit + 2; i += 1) {
+    await seedAudit(project, 'task_event_emit_failed', { taskId: crypto.randomUUID(), detail: `boom ${i}` })
+  }
+  // Newest, so an ordered read reaches it FIRST — which means a JS-side filter would still return
+  // it. It has to be the OLDEST row for the limit to bury it.
+  await seedAudit(project, 'api_key_issued', { keyId: crypto.randomUUID(), label: 'buried' })
+  const client = await pgClient()
+  await client.query(
+    `UPDATE public.audit_log SET created_at = now() - interval '1 hour'
+     WHERE project_id = $1 AND action = 'api_key_issued'`,
+    [project]
+  )
+
+  const rows = await readAgentActivity(db(), project, limit)
+  expect(rows).not.toBeNull()
+  expect(rows!.map((row) => row.summary)).toEqual([expect.stringContaining('buried')])
+})
+
 test('D3 — attribution comes from metadata.via, not from a caller-supplied actor label', async () => {
   const project = await fixtureProject('attribution')
 
