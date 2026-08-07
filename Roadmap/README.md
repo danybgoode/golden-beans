@@ -73,6 +73,21 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [App shell and agent rail](02-commercial/app-shell-and-agent-rail/README.md) (section nav over
+  the route inventory · the agent's activity rail · Command Center) — **merged to `main` 2026-08-07**
+  (PRs #71/#75/#73). The backend had modelled the agent as an accountable actor since signals-loop —
+  scoped revocable credentials, staged writes bound to the credential that proposed them, an
+  append-only trail — and **none of it reached a screen**. Now it does: a rail on every `/app` route
+  showing what your agent and your team actually did, and what your agent has staged and is waiting
+  on you to allow. `/app` stopped being a bulleted list of project slugs and became a front door that
+  answers *did anything need me today* — North Star, adoption and retention, the TARS funnel drawn as
+  a funnel over CSS that already shipped, and an explicit list of what this project is **not**
+  measuring (including the Medusa-truth revenue boundary) so "where's my revenue number?" is answered
+  with a reason rather than a plausible figure. No migration, no new query, **no new dependency**:
+  the nav renders the inventory `project-route-inventory.ts` already carried, and the stat strip
+  reuses the same `getProjectOutcome` the client-facing Pod Report reads, so an owner's numbers and a
+  client's cannot drift. The rail is **dark in production** behind `AGENT_RAIL_ENABLED`, born OFF —
+  and the var does not exist in Vercel yet, which is the one item owed.
 - ✅ [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
   approved dark-roast/kraft/foil system · reusable public/product rails · restrained route loaders
   · automated drift guard) — **shipped 2026-07-28** (PRs #51/#53), sourced directly from the

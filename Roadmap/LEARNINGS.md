@@ -373,6 +373,26 @@ one-liner + why + date shape.
   must be something the real emitter actually sends, and the cheapest way to find out is one live
   event read back through the real analysis path before you trust the plan. *(2026-07-28,
   experiment-governance-v2 S3.3.)*
+
+  **FIFTH and SIXTH instances — same class, found in the SAME pull request, by review rather than by
+  the gate.** app-shell-and-agent-rail's `StatCard` exists *specifically* to make an unreadable
+  figure unrepresentable, and its docblock said the caveat was "REQUIRED alongside a null value at
+  the type level." **`ReactNode` includes `undefined`**, so `caveat: ReactNode` accepted
+  `caveat={undefined}` and rendered an empty `<span>` — a number-shaped nothing, in the component
+  whose entire subject is that distinction. `NonNullable<ReactNode>` fixed it and failed the build
+  immediately at the one call site that could reach the hole. Separately, the agent rail's summary
+  chip was `pending?.length ?? 0` rendered only when `> 0`, so a FAILED read produced the same
+  silent chip as an empty one.
+
+  **Two rules generalise, and the second is new:** (1) a type that *reads* as if it forbids a state
+  may not actually forbid it — `ReactNode`, `unknown`, and any union that quietly admits `undefined`
+  are where "make it unrepresentable" becomes "make it look unrepresentable"; verify by attempting
+  the construction you claim is impossible, the same way CODE-QUALITY rule 3 asks you to attempt the
+  write. (2) **An honest empty state that is not visible in the COLLAPSED view is not an honest empty
+  state.** The rail's panel is server-rendered closed and only opens on a wide viewport, so on a
+  phone the chip was the only thing a reader saw — the honest sentence was there, behind a disclosure
+  nobody has a reason to open. Ask where the message renders when the component is in its smallest
+  state. *(2026-08-07, app-shell-and-agent-rail S2/S3.)*
 - **A corrected experiment version must fix the WINDOW as well as the predicate, or the old version's
   exposures block the new one.** The first correction (v2) removed the bad eligibility predicate but
   kept v1's planned window, which still contained the 24 exposures v1 had already emitted — and
@@ -508,6 +528,18 @@ one-liner + why + date shape.
   of reaching it — extract the guard into a **pure, zero-import module** and assert it directly (the
   `lib/flags.ts` precedent already in this repo), rather than assuming end-to-end coverage implies
   branch coverage. *(2026-07-20, multi-tenant-activation S1.)*
+
+  **A spec can also defend exactly HALF of the rule it is named after, and look complete.**
+  app-shell-and-agent-rail's `e2e/agent-activity.spec.ts` claimed to cover the decision "the
+  allow-list is applied in the QUERY, never `select *`". Deleting `.in('action', …)` from the query
+  left every test green — because the module also re-applies the allow-list in JS, so the returned
+  ROWS stayed correct and only the `limit` was wrong. The hidden failure is concrete: a destination
+  outage writes one excluded row per undelivered event, a page of those consumes the limit, and the
+  rail renders "nothing recorded recently" while real activity sits one row below the cut. **When a
+  rule is enforced in two places for two different reasons — correctness AND efficiency — a spec that
+  only observes the output tests the second-to-last layer. Ask which mutation would go undetected,
+  not whether the assertions pass.** That question came from a fresh reviewer, not from the gate.
+  *(2026-08-07, app-shell-and-agent-rail S1.)*
 - **When a migration changes what the CODE READS, the rollout has a mandatory order: env vars →
   migration → merge/deploy. Getting it backwards is an outage, not a hiccup.** multi-tenant-activation
   S1 switched `lib/auth.ts` from `projects.api_key_hash` to a new `api_keys` table; deploying that code
@@ -705,6 +737,26 @@ one-liner + why + date shape.
   shell that can stream; render the shell inside the page after the guard, and use client-side
   navigation/submission feedback when the status code itself is part of the contract. Pin it with
   request-level status tests, not screenshots alone. *(2026-07-28.)*
+- **On a UI sprint, someone has to OPEN THE PAGE. A full green gate does not see layout.**
+  app-shell-and-agent-rail S2 shipped two real defects past typecheck, lint, 883 unit tests, build,
+  the drift guard, 435 api specs and 14 authed browser specs — both found by looking at a screenshot
+  the browser smoke had already produced and nobody had read: (1) the fixed rail sat ON TOP of the
+  page content from ~1080px, because the layout reserved the rail's WIDTH but not the GUTTER it was
+  inset by — two numbers where there should have been one derived value; (2) `tokens.css`'
+  `section { padding: 36px 0 }`, written for the landing's page bands, opened **72px of dead air per
+  section** inside a 320px sidebar, which reads as a rendering failure rather than a quiet day.
+  Neither is expressible as "the element exists" or "no horizontal overflow", which is what the
+  specs asserted. **Assertions cover the properties you thought to name; a screenshot covers the ones
+  you did not.** Take one per viewport on any sprint that moves pixels, look at it, and convert what
+  you find into geometry assertions (`boundingBox()` comparisons) so the SPECIFIC regression cannot
+  return — while accepting that the next unnamed one still needs an eye. *(2026-08-07,
+  app-shell-and-agent-rail S2.)*
+- **Deleting a stacked PR's base branch on merge CLOSES it, irreversibly.** Merging the bottom of a
+  three-PR stack with `gh pr merge --delete-branch` auto-closed the PR above it, and GitHub will not
+  reopen *or* retarget a PR closed that way — the review record (two cross-family rounds and the
+  responses) was stranded on a closed thread and the work needed a fresh PR pointing back at it.
+  **Merge a stack without `--delete-branch` until the last one, or retarget each PR to `main` before
+  merging the one below it.** *(2026-08-07, app-shell-and-agent-rail.)*
 - **Running a whole multi-sprint epic in one session is the main context-cost driver.** The durable
   state (the plan file, sprint docs, team memory) makes re-entry cheap by design — compact at each
   sprint/PR boundary, and for big epics consider a fresh session per sprint.
