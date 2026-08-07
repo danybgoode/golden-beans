@@ -32,3 +32,27 @@ export type AgentRailVisibility = {
 export function shouldRenderAgentRail({ enabled, projectId }: AgentRailVisibility): boolean {
   return enabled && Boolean(projectId)
 }
+
+/**
+ * What the rail's summary chip must say about staged proposals.
+ *
+ * Three states, because two of them look identical if you let them (fresh-reviewer finding). The
+ * first version of this was `pending?.length ?? 0` with a chip rendered only when `> 0`, so an
+ * UNREADABLE proposals table and an empty one produced the same silent summary.
+ *
+ * That matters more here than anywhere else in the epic: `RailDisclosure` server-renders the panel
+ * CLOSED, and only opens it via JS at >=1100px. On a phone, and everywhere before hydration, the
+ * summary chip is the ONLY thing the reader sees — the honest "couldn't read staged proposals"
+ * sentence is behind a disclosure they have no reason to open. A count that quietly reads as zero
+ * is therefore a claim that nothing is waiting, made on the strength of a query that never answered.
+ *
+ * Pure and here rather than in the component so all three states are assertable directly; a failing
+ * Supabase read is not something the browser harness can produce.
+ */
+export type PendingChip = { kind: 'unreadable' } | { kind: 'empty' } | { kind: 'count'; value: number }
+
+export function pendingChipState(pending: readonly unknown[] | null): PendingChip {
+  if (pending === null) return { kind: 'unreadable' }
+  if (pending.length === 0) return { kind: 'empty' }
+  return { kind: 'count', value: pending.length }
+}

@@ -55,14 +55,14 @@ test.describe('agent rail — anonymous boundary', () => {
     })
   }
 
-  test('/app itself never renders a rail to an anonymous caller', async ({ request }) => {
+  test('/app itself is a redirect to login, not a page with an empty rail on it', async ({ request }) => {
+    // Asserted as a REDIRECT rather than "200 without markers" (fresh-reviewer finding): the old
+    // version returned early on a 3xx and therefore asserted nothing at all on the only status this
+    // route actually produces. If /app ever starts serving 200 to an anonymous caller that is a
+    // finding in itself, and this fails loudly instead of quietly skipping.
     const response = await request.get('/app', { maxRedirects: 0 })
-    expect([200, 302, 303, 307]).toContain(response.status())
-    if (response.status() !== 200) return
-    const body = await response.text()
-    for (const marker of RAIL_MARKERS) {
-      expect(body).not.toContain(marker)
-    }
+    expect([302, 303, 307]).toContain(response.status())
+    expect(response.headers()['location']).toContain('/login')
   })
 })
 
@@ -76,7 +76,9 @@ test('the render decision requires BOTH the gate and a resolved membership', () 
   // flipping the switch safe, and the one the anonymous specs above exercise end to end.
   expect(shouldRenderAgentRail({ enabled, projectId: null })).toBe(false)
 
-  // ...and the gate itself, in the direction this environment can prove.
+  // ...and the gate itself. Only the OFF direction is asserted: the ON case would be
+  // `toBe(enabled)`, which is `f(enabled) === enabled` — a tautology that holds for any
+  // implementation returning its own argument (fresh-reviewer finding). The OFF direction is the
+  // one this switch exists for, and it is provable in every environment.
   expect(shouldRenderAgentRail({ enabled: false, projectId: 'resolved-server-side' })).toBe(false)
-  expect(shouldRenderAgentRail({ enabled, projectId: 'resolved-server-side' })).toBe(enabled)
 })

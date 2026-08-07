@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { isAgentRailEnabled } from '@/lib/flags'
-import { shouldRenderAgentRail } from '@/lib/agent-rail-visibility'
+import { shouldRenderAgentRail, pendingChipState } from '@/lib/agent-rail-visibility'
 import { getRecentAgentActivity } from '@/lib/agent-activity'
 import { getPendingConfirmations } from '@/lib/pending-confirmations'
 import { formatFreshness } from '@/lib/hub-freshness'
@@ -67,7 +67,6 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
   // One clock for the whole render, so two lines written a millisecond apart cannot disagree about
   // what "now" was.
   const now = new Date()
-  const pendingCount = pending?.length ?? 0
 
   return (
     <aside className="agent-rail" aria-label="Recent activity">
@@ -76,11 +75,15 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
           <>
             <Icon name="sparkles" />
             Recent activity
-            {pendingCount > 0 && (
-              <span className="agent-rail__count" aria-label={`${pendingCount} awaiting you`}>
-                {pendingCount}
-              </span>
-            )}
+            {/*
+              The count chip carries the null-vs-zero distinction, and it has to (fresh-reviewer
+              finding). `pending?.length ?? 0` was here, and 0 rendered no chip — so an UNREADABLE
+              proposals table looked exactly like an empty one. That is the epic's own bug class on
+              the epic's own surface, and worse here than elsewhere: the panel is server-rendered
+              CLOSED, so on a phone (and everywhere pre-hydration) the honest sentence inside is
+              behind a disclosure nobody has a reason to open. The summary is the whole message.
+            */}
+            <PendingChip pending={pending} />
           </>
         }
       >
@@ -156,5 +159,28 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
         </p>
       </RailDisclosure>
     </aside>
+  )
+}
+
+/** The summary chip. Its three states live in lib/agent-rail-visibility.ts, where they are tested. */
+function PendingChip({ pending }: { pending: Awaited<ReturnType<typeof getPendingConfirmations>> }) {
+  const chip = pendingChipState(pending)
+  if (chip.kind === 'empty') return null
+  if (chip.kind === 'unreadable') {
+    return (
+      <span
+        className="agent-rail__count"
+        data-unreadable="true"
+        aria-label="staged proposals could not be read"
+      >
+        <Icon name="warning" size={12} />
+        unread
+      </span>
+    )
+  }
+  return (
+    <span className="agent-rail__count" aria-label={`${chip.value} awaiting you`}>
+      {chip.value}
+    </span>
   )
 }
