@@ -6,7 +6,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { shouldRenderAgentRail } from './agent-rail-visibility.ts'
+import { shouldRenderAgentRail, pendingChipState } from './agent-rail-visibility.ts'
 
 test('D6 — the rail does not render while the gate is OFF, member or not', () => {
   assert.equal(shouldRenderAgentRail({ enabled: false, projectId: 'a-real-project-id' }), false)
@@ -22,4 +22,28 @@ test('a resolved membership is required even when the gate is ON', () => {
 
 test('both conditions together are what turns it on', () => {
   assert.equal(shouldRenderAgentRail({ enabled: true, projectId: 'a-real-project-id' }), true)
+})
+
+// ── The summary chip's three states ───────────────────────────────────────────────────────────
+// The rail's panel is server-rendered closed, so on a phone the chip is the ONLY thing a reader
+// sees. An unreadable proposals table must not produce the same summary as an empty one.
+
+test('an unreadable read is its own state, never a zero', () => {
+  assert.deepEqual(pendingChipState(null), { kind: 'unreadable' })
+})
+
+test('a genuine empty is distinct from unreadable, and from a count', () => {
+  assert.deepEqual(pendingChipState([]), { kind: 'empty' })
+})
+
+test('a real count carries its number', () => {
+  assert.deepEqual(pendingChipState([{}, {}, {}]), { kind: 'count', value: 3 })
+})
+
+test('the three states are mutually exclusive — no input yields two, and none yields none', () => {
+  // The mutation this kills: `pending?.length ?? 0` followed by `> 0`, which collapses `null` and
+  // `[]` into one branch. Under that implementation the first assertion below returns 'empty'.
+  const kinds = [null, [], [{}]].map((input) => pendingChipState(input as readonly unknown[] | null).kind)
+  assert.deepEqual(kinds, ['unreadable', 'empty', 'count'])
+  assert.equal(new Set(kinds).size, 3)
 })

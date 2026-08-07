@@ -950,6 +950,16 @@ body {
   font: 600 10px var(--mono);
 }
 
+/* An unreadable count is styled as a WARNING, not as a number — the chip is the only part of the
+   rail visible while the panel is closed, so it has to carry the distinction on its own. */
+.agent-rail__count[data-unreadable='true'] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--red);
+  color: var(--red);
+}
+
 .agent-rail__body {
   max-height: min(60vh, 520px);
   overflow-y: auto;
