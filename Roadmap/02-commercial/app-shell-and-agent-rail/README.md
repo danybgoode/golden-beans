@@ -129,6 +129,26 @@ found the two files asserting opposite things, which is the tell.
 **If an agent strip is ever added to Command Center it reads the same two seams and must check this
 gate.** That sentence survives the amendment; the claim that it already does is what was wrong.
 
+## Amendment 2 (2026-08-07) — the rail is ON in production
+
+D6 specified the gate as *born OFF, created disabled*, and it was. **Product-owner decision the same
+day: there is no reason for it to be off, so it is on.** `AGENT_RAIL_ENABLED=true` in Production,
+Preview and Development.
+
+The born-OFF design is not thereby wasted, and this is worth being precise about: born-OFF is what
+let the three sprints merge and deploy to production *before* anyone had decided the rail was ready,
+with no coordination between the merge and the decision. The switch existing is what made turning it
+on a one-line change rather than a release.
+
+**Setting the value was half the job.** Vercel snapshots env vars into a deployment at build time
+(AGENTS rule #4), so the running functions kept serving `false` until this commit's merge produced a
+new deployment. That is why this amendment and the flip are the same commit.
+
+**Still owed:** the signed-in production walkthrough. Turning the rail on means production is now the
+first place a signed-in human will see it — the local authed suite passes 16/16 against a real
+database and a real session, and the anonymous production smoke passed, but neither is a person
+reading the page.
+
 ## Scope — stories
 
 | Sprint | Story | Risk |
@@ -166,11 +186,9 @@ setting the var is half the job. Verify by exercising the rail, never by `vercel
 - [x] Team memory + `MEMORY.md` index updated
 - [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped — sharpened, not appended)
 - [x] **Kill-switch (planned at grooming — D6):** `AGENT_RAIL_ENABLED` exists in Vercel in
-      **Production, Preview and Development**, born `false` (2026-08-07). Stored as `type: plain`
-      deliberately — an encrypted value cannot be read back, which would make "is the kill switch
-      really `false`?" unanswerable; all three inspect as `'false'`. Exact `=== 'true'` means that,
-      and any typo, reads as OFF. **Flipping it ON is a separate decision and needs its own
-      deployment** (Vercel snapshots env vars at build time — AGENTS rule #4). Verify by exercising
-      the rail, never by `vercel env ls`.
+      **Production, Preview and Development**. Created born `false` (2026-08-07), then **switched ON
+      the same day** — see Amendment 2. Stored as `type: plain` deliberately: an encrypted value
+      cannot be read back, which would make "is the switch really set to what I think?" unanswerable.
+      All three inspect as `'true'`. Verify by exercising the rail, never by `vercel env ls`.
 - [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board
       & Notion derive from it; `node scripts/build-order.mjs` re-run)
