@@ -43,9 +43,25 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
   // Both reads return null — never [] — when they fail, and that distinction is carried all the way
   // into the copy below. "We could not read this" and "nothing is happening" are opposite messages;
   // rendering them identically would turn an outage into a calm, wrong reassurance.
+  //
+  // ── Why the try/catch, when both functions already return null on a query error ──────────────
+  // (cross-review round 1, Agy on PR #72.) They return null for a *Postgrest* error. They can still
+  // THROW: `getSupabaseServiceClient()` throws when SUPABASE_URL or the service-role key is missing,
+  // and supabase-js can reject on a transport failure. An uncaught throw in a server component
+  // fails the whole render — and this component sits in ProductShell, so one missing env var would
+  // take down EVERY signed-in route rather than one sidebar.
+  //
+  // Catching to null lands in exactly the copy that is already written for an unreadable read. The
+  // rail is an annotation on the page; it must never be the reason the page is gone.
   const [activity, pending] = await Promise.all([
-    getRecentAgentActivity(projectId, ACTIVITY_LIMIT),
-    getPendingConfirmations(projectId, PENDING_LIMIT),
+    getRecentAgentActivity(projectId, ACTIVITY_LIMIT).catch((error) => {
+      console.error('[agent-rail] activity read threw:', error)
+      return null
+    }),
+    getPendingConfirmations(projectId, PENDING_LIMIT).catch((error) => {
+      console.error('[agent-rail] pending-confirmations read threw:', error)
+      return null
+    }),
   ])
 
   // One clock for the whole render, so two lines written a millisecond apart cannot disagree about
