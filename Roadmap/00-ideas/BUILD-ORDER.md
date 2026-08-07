@@ -14,12 +14,11 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low · #6
-- [App shell and agent rail — make the signed-in product show the agent it sells](../../02-commercial/app-shell-and-agent-rail/README.md) — 02 Commercial · 10/10 stories · risk: High · #1
 
-## ✅ Shipped (11)
+## ✅ Shipped (12)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High · #2b
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High · #2a
@@ -27,6 +26,7 @@ _None._
 - [Flag control plane + Miyagi migration + resilience/SecOps](../../01-growth-engine/flag-serving-and-prd-g/README.md) — 01 Growth Engine · 20/20 stories · risk: High · #5
 - [Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped](../../01-growth-engine/growth-engine-v1/README.md) — 01 Growth Engine · 13/13 stories · risk: Low
 - [Signals loop — error/friction signals → structured tasks → the customer's own agent](../../01-growth-engine/signals-loop/README.md) — 01 Growth Engine · 11/11 stories · risk: High · #4
+- [App shell and agent rail — make the signed-in product show the agent it sells](../../02-commercial/app-shell-and-agent-rail/README.md) — 02 Commercial · 10/10 stories · risk: High · #1
 - [Commercial shell — Golden Beans landing, waitlist, connector install page](../../02-commercial/commercial-shell/README.md) — 02 Commercial · 10/10 stories · risk: High · #1
 - [Design system lift — the limitless golden-bean brand](../../02-commercial/design-system-lift/README.md) — 02 Commercial · 7/7 stories
 - [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High · #2
@@ -41,7 +41,7 @@ _None._
 - [Git & Releases — a PM-legible picture of what the agent shipped, with no git operations](seeds/git-and-releases-legibility.md) — Raw · Feature
 - [Scenarios made PM-operable — define, launch, and kill a chaos/secops scenario from the UI](seeds/scenarios-pm-operable.md) — Raw · Feature
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (1)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -50,7 +50,6 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Epic | frontmatter (used) | sprint/retro-derived |
 |---|---|---|
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
-| App shell and agent rail — make the signed-in product show the agent it sells | Scaffolded | Shipped |
 
 ---
-_Epics: 13 · seeds in funnel: 5 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 13 · seeds in funnel: 5 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._

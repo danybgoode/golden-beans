@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: app-shell-and-agent-rail
 ---
 
@@ -153,16 +153,23 @@ it ON requires a new deployment** — Vercel snapshots env vars at build time (A
 setting the var is half the job. Verify by exercising the rail, never by `vercel env ls`.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Landing backfill check — this epic is signed-in only and changes no public claim, so none is
-      expected; if S3 surfaces a claim the landing makes, that is a dated amendment here, never a
-      silent reinterpretation
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — D6):** `AGENT_RAIL_ENABLED` exists in Vercel in every env
-      with the stated polarity (born OFF), and the dark spec proves the OFF path. *Verify-only.*
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — S1 `3b99fed` (#71), S2 `883a37b`
+      (#75, review record on #72), S3 `102f494` (#73). **Gap, stated:** every walkthrough was
+      exercised against a local server with a real database and a real signed-in session, and the
+      authed browser suite passes 14/14 — but nobody has opened production and read the pages.
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs) + a "what actually happened" section
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Landing backfill check — signed-in only, no public claim changed, none expected and none
+      found. S3 surfaced no claim the landing makes.
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped — sharpened, not appended)
+- [ ] **Kill-switch (planned at grooming — D6):** `AGENT_RAIL_ENABLED` **does not exist in Vercel**.
+      Absent reads as OFF (exact `=== 'true'`), so the rail is dark in production right now and the
+      polarity is correct — but the "exists in every env" line is not literally satisfied. Creating
+      it born `false` is pre-authorized; **flipping it ON is a separate decision and needs its own
+      deployment** (Vercel snapshots env vars at build time — AGENTS rule #4). Verify by exercising
+      the rail, never by `vercel env ls`. **Owed to the product owner.**
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board
+      & Notion derive from it; `node scripts/build-order.mjs` re-run)
