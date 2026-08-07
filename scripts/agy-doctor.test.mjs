@@ -11,7 +11,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decideDoctorAction, bumpPinnedSource } from './agy-doctor.mjs';
+import { decideDoctorAction, bumpPinnedSource, parseModelList } from './agy-doctor.mjs';
 
 const base = {
   installed: '1.0.16',
@@ -155,4 +155,40 @@ test('bumpPinnedSource round-trips against the REAL lib source (anchors exist ex
   const out = bumpPinnedSource(lib, '9.9.9', '2099-01-01');
   assert.match(out, /export const AGY_PINNED = '9\.9\.9';/);
   assert.match(out, /agy-doctor: last verified 2099-01-01 against 9\.9\.9\./);
+});
+
+// ── `agy models` output format ────────────────────────────────────────────────────────────────
+// Pinned by a test because getting this wrong fails CLOSED on the gate that decides whether the
+// cross-agent review layer may run at all. agy 1.1.11 added a human-readable label column and a
+// "Fetching…" preamble; the previous parser kept whole lines, matched nothing, and reported every
+// configured model as NOT LISTED while `agy models` was listing all of them.
+
+test('parseModelList: the 1.1.11 tab-separated format, preamble dropped', () => {
+  const raw = [
+    'Fetching available models...',
+    'gemini-3.6-flash-high\tGemini 3.6 Flash (High)',
+    'gpt-oss-120b-medium\tGPT-OSS 120B (Medium)',
+    'claude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)',
+    '',
+  ].join('\n');
+  assert.deepEqual(parseModelList(raw), [
+    'gemini-3.6-flash-high',
+    'gpt-oss-120b-medium',
+    'claude-opus-4-6-thinking',
+  ]);
+});
+
+test('parseModelList: the older bare-id format still parses', () => {
+  assert.deepEqual(parseModelList('gemini-3.6-flash-high\nclaude-sonnet-4-6\n'), [
+    'gemini-3.6-flash-high',
+    'claude-sonnet-4-6',
+  ]);
+});
+
+test('parseModelList: prose is never mistaken for a model id', () => {
+  // The bug this replaced went the other way — everything was junk. Guard the opposite direction
+  // too: a preamble word must not become a model that then "matches" nothing downstream.
+  assert.deepEqual(parseModelList('Fetching available models...\n\nSomething went wrong\n'), []);
+  assert.deepEqual(parseModelList(''), []);
+  assert.deepEqual(parseModelList(null), []);
 });
