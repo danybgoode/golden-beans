@@ -25,6 +25,10 @@
   frozen for the sprint, and a third route needing an option is a finding to log, not a change to
   make silently (D3).
 - Line count for both routes goes **down**.
+- **Carried in from Sprint 1's review (Codex, PR #82):** `DataTable` merged with no call site and no
+  *rendered* coverage — by design (D3), but it is a real gap and this story is where it closes.
+  `design-system.authed.spec.ts` gains rendered assertions for the sort control, the filter, and
+  **both** empty states (no rows at all vs. no rows matching the query), each observed failing.
 **Risk:** low
 
 ### Story 2.2 — Convert `destinations` and `experiments`
