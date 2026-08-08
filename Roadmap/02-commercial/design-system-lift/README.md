@@ -1,6 +1,7 @@
 ---
 status: shipped
 slug: design-system-lift
+build_order: 9
 ---
 
 # Epic: Design system lift — the limitless golden-bean brand

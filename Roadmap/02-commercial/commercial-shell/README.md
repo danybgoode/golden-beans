@@ -1,6 +1,7 @@
 ---
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: commercial-shell
+build_order: 2
 ---
 
 # Epic: Commercial shell — Golden Beans landing, waitlist, connector install page

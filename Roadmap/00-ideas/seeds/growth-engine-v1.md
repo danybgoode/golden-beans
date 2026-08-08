@@ -7,7 +7,7 @@ type: feature
 priority: null
 risk: low
 epic: "01-growth-engine/growth-engine-v1"
-build_order: null
+build_order: 1
 updated: 2026-07-13
 ---
 

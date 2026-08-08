@@ -4,10 +4,10 @@ slug: flag-serving-and-prd-g
 status: scaffolded
 area: "01"
 type: feature
-priority: "#5"
+priority: null
 risk: high
 epic: "01-growth-engine/flag-serving-and-prd-g"
-build_order: "#5"
+build_order: 11
 updated: 2026-07-27
 ---
 

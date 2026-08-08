@@ -4,10 +4,10 @@ slug: ai-adoption-maturity-lens
 status: scaffolded
 area: "02"
 type: feature
-priority: "#3 (rides E3)"
+priority: null
 risk: low
 epic: "02-commercial/pod-report"
-build_order: null
+build_order: 7
 updated: 2026-07-20
 ---
 

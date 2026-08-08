@@ -4,10 +4,10 @@ slug: entity-journeys-projections
 status: scaffolded
 area: "01"
 type: feature
-priority: "#2b"
+priority: null
 risk: high
 epic: "01-growth-engine/entity-journeys-projections"
-build_order: "#2b"
+build_order: 5
 updated: 2026-07-21
 ---
 

@@ -22,12 +22,12 @@ slug: example-feature-idea          # kebab; matches the filename
 status: raw                          # raw | ready | queued | scaffolded | in-progress | shipped | archived
 area: "01"                           # macro-section number, matching Roadmap/README.md's table
 type: feature                        # feature | spike | chore | epic
-priority: null                       # a wave/priority label, or null
+priority: null                       # the wave this is SLATED for (intent), or null — see Ordering
 appetite: null                       # S | M | L — the budget, set at shaping; REQUIRED before `queued`
-underwritten_by: null                # wave that pays for this (a Roadmap/bets/<wave>.md), or null
+underwritten_by: null                # wave that PAID for it (a Roadmap/bets/<wave>.md), or null
 risk: low                            # low | high
 epic: null                           # path to the scaffolded epic, or null until scaffolded
-build_order: null                    # BUILD-ORDER id, or null
+build_order: null                    # integer position in the one global sequence — see Ordering
 updated: <date>
 ---
 ```
@@ -59,6 +59,40 @@ One field is authoritative at each stage — they never both drive the board:
   close: `scaffolded` → `in-progress` → `shipped`). The seed is now **funnel-only** — its `status:` is
   no longer read for the board, so it can't drift it. **`BUILD-ORDER.md` is a generated view — never
   hand-edit it; change the README `status:` and run `node scripts/build-order.mjs`.**
+
+### Ordering — `build_order` sequences, `priority` labels the wave (adopted 2026-08-08)
+
+Two fields had been carrying overlapping halves of "what comes next", and the board rendered the
+*wrong one*. Corrected — each now has exactly one job:
+
+| Field | Job | Values | Who owns it |
+|---|---|---|---|
+| `build_order` | **Position in the one global sequence.** The answer to *"what is next?"* | a **plain integer**, monotonic, never reused | **the epic README frontmatter** once `epic:` is set; the seed until then |
+| `priority` | The wave this is **slated for** — intent, set before a bet exists | a wave label (`wave-2026-08-08`), or null | the seed, always |
+
+`priority` is *intent* and `underwritten_by` is the *record*: the first says which wave we mean to
+spend this in, the second names the `Roadmap/bets/<wave>.md` that actually paid. They agree once a
+bet is placed; before that only `priority` is set. Neither is the sequence — that is `build_order`
+alone.
+
+**Plain integers, no letter suffixes.** The old scheme used `#1`, `#2a`, `#2b`. Three problems, all
+of them live when this was corrected: `#1` was held by *two* epics (`commercial-shell` and
+`app-shell-and-agent-rail`); `buildOrderNum()` in `roadmap-to-notion.mjs` reduces `#2` and `#2a` to
+the same `2`, so the Notion numeric sort tied; and the `#`-prefixed string sorts `#10` before `#2`,
+which is the bug the numeric property was added to fix in the first place. An integer has none of
+these failure modes. To insert between 14 and 15, renumber — the sequence is cheap to rewrite and
+expensive to read wrong.
+
+**`build_order` is a sequence, not a priority score.** Shipped epics keep their number: `1…12` is
+the ship history, in the order it actually happened, and the queue continues from there. That makes
+the board readable as one list from "the first thing we built" to "the last thing we plan to" —
+which is the whole point of having the field.
+
+> **Known gap (owed to Claude Code, 2026-08-08):** `scripts/build-order.mjs` renders `r.priority`
+> in its meta line, not `r.build_order` — which is why the board has been showing `#1`, `#2a` from
+> the seed's `priority` while every epic README's `build_order` sat empty. The exact patch is in
+> `Roadmap/00-ideas/seeds/build-order-render-fix.md`. Until it lands, the board's `·` badges show
+> the wave label rather than the sequence.
 
 ### appetite & underwriting — the economics fields
 

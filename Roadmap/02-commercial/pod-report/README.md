@@ -1,6 +1,7 @@
 ---
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: pod-report
+build_order: 7
 ---
 
 # Epic: Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views

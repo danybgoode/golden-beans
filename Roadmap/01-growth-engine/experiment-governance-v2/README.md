@@ -1,6 +1,7 @@
 ---
 status: shipped
 slug: experiment-governance-v2
+build_order: 6
 ---
 
 # Epic: Experiment governance v2 — registry, metrics, guardrails and decision record

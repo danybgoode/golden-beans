@@ -4,10 +4,10 @@ slug: experiment-governance-v2
 status: scaffolded
 area: "01"
 type: feature
-priority: "#2c"
+priority: null
 risk: high
 epic: "01-growth-engine/experiment-governance-v2"
-build_order: "#2c"
+build_order: 6
 updated: 2026-07-21
 ---
 

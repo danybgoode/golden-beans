@@ -4,10 +4,10 @@ slug: cms-integration-spike
 status: scaffolded
 area: "01"
 type: spike
-priority: "#6"
+priority: null
 risk: low
 epic: "01-growth-engine/cms-integration-spike"
-build_order: "#6"
+build_order: 18
 updated: 2026-07-27
 ---
 

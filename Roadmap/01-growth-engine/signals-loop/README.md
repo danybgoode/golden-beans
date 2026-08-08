@@ -1,6 +1,7 @@
 ---
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: signals-loop
+build_order: 8
 ---
 
 # Epic: Signals loop — error/friction signals → structured tasks → the customer's own agent

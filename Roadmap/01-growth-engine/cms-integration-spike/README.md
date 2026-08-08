@@ -1,6 +1,7 @@
 ---
 status: scaffolded
 slug: cms-integration-spike
+build_order: 18
 ---
 
 # Epic: CMS-neutral experiment integration + Payload go/no-go

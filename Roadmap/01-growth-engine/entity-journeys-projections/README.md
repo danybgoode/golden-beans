@@ -1,6 +1,7 @@
 ---
 status: shipped
 slug: entity-journeys-projections
+build_order: 5
 ---
 
 # Epic: Entity journeys — configurable lifecycle projections beyond fixed TARS

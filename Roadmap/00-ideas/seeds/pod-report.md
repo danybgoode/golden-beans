@@ -4,10 +4,10 @@ slug: pod-report
 status: scaffolded
 area: "02"
 type: feature
-priority: "#3"
+priority: null
 risk: high
 epic: "02-commercial/pod-report"
-build_order: "#3"
+build_order: 7
 updated: 2026-07-15
 ---
 

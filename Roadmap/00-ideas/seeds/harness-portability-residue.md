@@ -4,12 +4,12 @@ slug: harness-portability-residue
 status: archived
 area: "09"
 type: chore
-priority: "#S1"
+priority: "wave-2026-08-03-harness-portability"
 appetite: S
 underwritten_by: "Roadmap/bets/wave-2026-08-03-harness-portability.md"
 risk: low
 epic: null
-build_order: "#S1"
+build_order: null
 updated: 2026-08-05
 ---
 

@@ -1,6 +1,7 @@
 ---
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: growth-engine-v1
+build_order: 1
 ---
 
 # Epic: Growth Engine v1 — telemetry ingest, SDK, TARS funnel, North Star, A/B bucketing — ✅ shipped

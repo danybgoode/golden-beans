@@ -4,10 +4,10 @@ slug: event-destination-router
 status: scaffolded
 area: "01"
 type: feature
-priority: "#2a"
+priority: null
 risk: high
 epic: "01-growth-engine/event-destination-router"
-build_order: "#2a"
+build_order: 4
 updated: 2026-07-20
 ---
 

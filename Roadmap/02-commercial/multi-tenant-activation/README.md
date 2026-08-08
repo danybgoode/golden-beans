@@ -1,6 +1,7 @@
 ---
 status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: multi-tenant-activation
+build_order: 3
 ---
 
 # Epic: Multi-tenant activation — auth hardening, self-serve tenants, pod trials

@@ -1,6 +1,7 @@
 ---
 status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: app-shell-and-agent-rail
+build_order: 12
 ---
 
 # Epic: App shell and agent rail — make the signed-in product show the agent it sells

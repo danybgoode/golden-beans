@@ -4,10 +4,10 @@ slug: commercial-shell
 status: scaffolded
 area: "02"
 type: feature
-priority: "#1"
+priority: null
 risk: high
 epic: "02-commercial/commercial-shell"
-build_order: "#1"
+build_order: 2
 updated: 2026-07-15
 ---
 

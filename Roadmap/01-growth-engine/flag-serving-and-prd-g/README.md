@@ -1,6 +1,7 @@
 ---
 status: shipped
 slug: flag-serving-and-prd-g
+build_order: 11
 ---
 
 # Epic: Flag control plane + Miyagi migration + resilience/SecOps
