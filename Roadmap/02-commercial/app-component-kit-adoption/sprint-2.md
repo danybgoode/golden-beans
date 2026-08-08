@@ -7,6 +7,11 @@
 > converted route that shows different information is a bug in the conversion. Cite D2, D3, D4, D6.
 > **Scenarios is not in this sprint** (D6) — `scenarios-pm-operable` rewrites that page.
 > Branch `feat/app-component-kit-adoption-s2`, cut from `-s1` after it merges.
+>
+> **Added at kickoff:** also cite **D9** (the routes' *existing* specs are the parity proof and must
+> pass unchanged) and **D11** (each converted manager deletes its private `formatUtc` copy and
+> imports `lib/format-utc.ts` — part of the line-count reduction 2.1 requires, and a real fix: the
+> private copies throw on an unparseable timestamp where the seam returns `UNKNOWN_UTC_TIME`).
 
 ## Stories
 
@@ -20,6 +25,10 @@
   frozen for the sprint, and a third route needing an option is a finding to log, not a change to
   make silently (D3).
 - Line count for both routes goes **down**.
+- **Carried in from Sprint 1's review (Codex, PR #82):** `DataTable` merged with no call site and no
+  *rendered* coverage — by design (D3), but it is a real gap and this story is where it closes.
+  `design-system.authed.spec.ts` gains rendered assertions for the sort control, the filter, and
+  **both** empty states (no rows at all vs. no rows matching the query), each observed failing.
 **Risk:** low
 
 ### Story 2.2 — Convert `destinations` and `experiments`
@@ -60,7 +69,9 @@
 **Risk:** low
 
 ## Sprint QA
-- **api spec(s):** `e2e/design-system.authed.spec.ts` — one assertion per converted route.
+- **Specs (corrected at kickoff — D9):** `e2e/design-system.authed.spec.ts` is the **authed browser**
+  rail, not an api spec; it is excluded from the merge gate by `playwright.config.ts`. One assertion
+  per converted route lands there and is run locally + observed failing.
   Regression cover for behaviour parity comes from the routes' **existing** specs
   (`api-keys.spec.ts`, `destinations.spec.ts`, `experiments.spec.ts`, `flag-serving.spec.ts`,
   `experiment-decisions.spec.ts`) — they must pass **unchanged**. A spec that needed editing to

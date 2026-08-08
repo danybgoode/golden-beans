@@ -7,6 +7,19 @@
 > behaviour" is deliberately suspended, and only in the direction of adding a confirmation step.
 > Nothing here removes a capability or changes what an action does once confirmed. Cite D5.
 > Branch `feat/app-component-kit-adoption-s3`, cut from `-s2`.
+>
+> **Corrected at kickoff (2026-08-08) — D5 rested on a false premise.** The agent rail has **no**
+> confirm affordance to leave alone: `AgentRail.tsx` is a read-only server component with no
+> `'use client'`, no `<button>`, no `onClick`. Two consequences for this sprint:
+> 1. The rail is out of scope because there is **nothing on it to confirm**, not because it already
+>    confirms. A staged `task_write_confirmations` row is a durable authorization the *agent* spends
+>    via `consume_write_confirmation`; a `ConfirmDialog` is a question asked of the *human* at click
+>    time. Different actors, different questions. Story 3.1 lists it as **out-of-scope (no control)**,
+>    not as "already-confirmed-elsewhere".
+> 2. The product's one real pre-existing UI confirmation is `destination-manager.tsx`'s two-click
+>    *"Click again to confirm"* on Remove. This sprint **converges it onto `ConfirmDialog`** — the
+>    original D5's actual goal (one pattern, not two) applied to the file that actually has one.
+>    `window.confirm` stays banned: it blocks the page and the automation harness.
 
 ## Stories
 
@@ -18,9 +31,10 @@
 - A list in this sprint doc names every destructive/irreversible control across the converted
   routes: revoke (keys, agent-keys), deactivate/delete (destinations, experiments), and any flag or
   breaker operation reachable today.
-- Each is marked **confirmed / unconfirmed / already-confirmed-elsewhere**.
-- The agent rail's pending-proposal actions are listed as **already-confirmed-elsewhere** and
-  explicitly out of scope (D5).
+- Each is marked **confirmed / unconfirmed / converged / out-of-scope**.
+- The agent rail is listed as **out-of-scope — no control exists** (D5, corrected), with the
+  actor/lifetime distinction stated in one line so the next reader doesn't re-open it.
+- `destinations`' two-click Remove is listed as **converged** (D5, corrected), not as already-done.
 **Risk:** low
 
 ### Story 3.2 — Wire `ConfirmDialog` to every unconfirmed action
@@ -77,8 +91,10 @@ Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel
    test destination.
    → Same shape of dialog, same position, same wording pattern as step 2.
 6. Go to https://golden-beans-gamma.vercel.app/app and open the agent rail.
-   → Pending-proposal actions confirm using the **rail's own** affordance, unchanged by this epic
-     (D5). Two patterns coexist and that is the recorded decision, not a miss.
+   → It still **reads only** — a list of staged proposals with no buttons, unchanged by this epic.
+     Corrected D5: there was never a rail confirmation to preserve. The one pre-existing UI
+     confirmation (destinations' two-click Remove) has been converged onto `ConfirmDialog` in step 5,
+     so the product now ships **one** confirmation pattern, not two.
 7. Read each consequence sentence you saw and ask: would a PM who didn't build this know what they
    were losing?
    → If any answer is no, that's the bug report for this sprint.
