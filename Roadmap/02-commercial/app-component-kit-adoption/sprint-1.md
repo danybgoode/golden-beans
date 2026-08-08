@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 1: The three missing primitives
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — `eb266d3` (primitives + proof of use), `46b4b9e` (spec corrections)
 
 > **Build contract (locked by the architect before the builder started).**
 > This sprint ships **only** the three components, their styling and their specs. No route
@@ -81,12 +81,29 @@
     confirm-cancels-without-acting, focus trap, `Esc`). Opt-in Chromium; run locally against local
     Supabase and **observed failing**. Not the gate — but per WAYS-OF-WORKING a browser spec
     *discharges* a browser smoke otherwise owed to the product owner.
-- **browser smoke owed:** yes, one item to the product owner — **keyboard behaviour of
-  `ConfirmDialog`** (focus trap, `Esc`, default focus). An api spec cannot see it.
+- **browser smoke owed:** ~~yes, one item to the product owner — **keyboard behaviour of
+  `ConfirmDialog`** (focus trap, `Esc`, default focus)~~ → **DISCHARGED by automation.**
+  `design-system.authed.spec.ts` now asserts all three in a real browser (`:modal`, the full tab
+  cycle, `Esc`-does-not-act, Cancel-is-default-focus), which is exactly the case WAYS-OF-WORKING
+  describes: a browser spec replaces a browser smoke previously owed. What remains for the product
+  owner is judgement, not mechanism — **is the consequence sentence any good** (Sprint 3, Story 3.3)
+  and does the dialog *look* right.
+- **Two authed specs fail on this branch and on clean `main` alike** — `command-center.authed`
+  (needs `SUPABASE_DB_URL`, which the authed rail does not inject, unlike `test:e2e:local`) and
+  `project-navigation.authed` (Flags link). Measured on `aead6bf` before claiming green; both are
+  pre-existing and neither is in the merge gate. Not this epic's to fix, stated rather than glossed.
 - **Every new spec observed failing at least once** — for 1.2, the mutation is making the dialog's
   cancel path call the action; the spec must go red.
 - **deterministic gate:** `npm run typecheck` (all four projects — not `tsc -p apps/web`) +
-  `npm run build` + Playwright `api` green before merge.
+  `npm run lint` + `npm run build` + `npm run test:unit` + Playwright `api` + `check:design-drift`.
+  **All green** — Playwright via `npm run test:e2e:local` (439 passed, 0 failed), measured against
+  the same command on `aead6bf` (439 passed, 0 failed). Identical.
+- **⚠️ Local gate gotcha, cost an hour, worth recording.** `npm run test:e2e:local` **builds into
+  `apps/web/.next`**. A `next dev` server left running in the same worktree writes that directory
+  concurrently and corrupts the build — every page route then 404s with *"Cannot append headers
+  after they are sent to the client"*, which looks exactly like a real regression (12 failures,
+  including `/app` → `/login`). Kill the dev server before running the local gate. Promoted to
+  `LEARNINGS.md`.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel.app
