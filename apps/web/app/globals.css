@@ -1211,6 +1211,270 @@ a.stat-card:hover {
   background: var(--card);
 }
 
+/* ── app-component-kit-adoption S1 — the first table, form and dialog styling in the repo ──────
+   Not an oversight being corrected: before this epic there was NO rule anywhere for `table`, `th`,
+   `td`, `form`, `label` or `dialog`, in globals.css OR tokens.css. Every /app table rendered at
+   browser defaults on a dark background. The epic's premise — "the paint is consistent; the
+   meaning is not" — understates it for tables: there was no paint either.
+
+   These live here and not in tokens.css because tokens.css is one half of a byte-identical handoff
+   mirror that check-design-drift.mjs enforces (D8). Tokens are consumed, never extended.
+
+   This is ADDITIVE and is not the teardown D4 forbids: D4 bans REMOVING the generic tag selectors
+   while unconverted routes still depend on them, which nothing here does. Every rule below is
+   scoped to a component class, so an unconverted route's raw <table> renders exactly as it did
+   yesterday. ── */
+
+.data-table {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.data-table__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.data-table__filter {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
+.data-table__filter-label,
+.data-table__count {
+  color: var(--dim);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.data-table__count {
+  margin: 0;
+  padding-bottom: 12px;
+}
+
+/* The table scrolls inside its own box rather than widening the page. ux-guidelines' practical bar
+   is "nothing needs a horizontal scrollbar at 360px" — that is about the PAGE; a wide table is
+   legitimately wide, and the alternative (truncating columns on a phone) hides data. */
+.data-table__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.data-table caption {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table thead th {
+  border-bottom: 1px solid var(--line);
+  color: var(--dim-2);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.data-table tbody tr + tr td {
+  border-top: 1px solid var(--line);
+}
+
+.data-table tbody tr:hover td {
+  background: var(--roast-2);
+}
+
+.data-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.data-table__sort:hover {
+  color: var(--gold);
+}
+
+/* A sorted column stays legible as sorted after the pointer leaves — the arrow is the signal, the
+   colour is the reinforcement. Never colour alone (ux-guidelines: state is never colour-only). */
+.data-table th[aria-sort='ascending'] .data-table__sort,
+.data-table th[aria-sort='descending'] .data-table__sort {
+  color: var(--gold-hot);
+}
+
+.data-table__empty {
+  padding: 22px 14px;
+  color: var(--dim);
+  line-height: 1.6;
+}
+
+/* ── The confirmation ── */
+
+.confirm-dialog {
+  width: min(430px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--crema);
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+}
+
+.confirm-dialog__question {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.confirm-dialog__question strong {
+  color: var(--gold-hot);
+  font-family: var(--mono);
+  word-break: break-word;
+}
+
+.confirm-dialog__consequence {
+  display: flex;
+  align-items: start;
+  gap: 7px;
+  margin: 12px 0 0;
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.confirm-dialog__consequence svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--red);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirm-dialog__actions .btn {
+  width: auto;
+  flex: 1 1 0;
+}
+
+/* The destructive control reads as destructive. It keeps .btn-gold's geometry — one press
+   behaviour across the product (ux-guidelines: restraint) — and changes only what it says about
+   consequence. */
+.confirm-dialog__confirm {
+  /* The under-shadow is DERIVED from --red rather than written as a second hex, for the same reason
+     .btn-gold uses --gold-deep: a hand-picked shade is a token that nobody knows is a token, and it
+     drifts the moment --red is retuned. There is no --red-deep in tokens.css, and tokens.css is a
+     byte-mirrored handoff artifact this epic must not edit (D8) — so it is computed here. */
+  --confirm-red-deep: color-mix(in srgb, var(--red) 62%, black);
+  background: var(--red);
+  box-shadow: 0 3px 0 var(--confirm-red-deep);
+  color: var(--espresso);
+}
+
+.confirm-dialog__confirm:active {
+  box-shadow: 0 1px 0 var(--confirm-red-deep);
+}
+
+/* ── Forms ── */
+
+.form-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.form-section__title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.form-section__description {
+  margin: -6px 0 0;
+  max-width: 62ch;
+  color: var(--dim);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.form-section__fields {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field__hint {
+  margin: 0;
+  color: var(--dim-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The no-reflow guarantee, and the only rule in this block that is an acceptance criterion rather
+   than a look: the error slot occupies one line's height whether or not it has text, so validating
+   a form never moves the submit button out from under a cursor already travelling towards it. */
+.field__error {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--red);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.field[data-invalid='true'] :where(input, textarea, select) {
+  border-color: var(--red);
+}
+
 :where(.product-shell, .auth-shell) :where(input, textarea, select) {
   width: 100%;
   min-height: 44px;

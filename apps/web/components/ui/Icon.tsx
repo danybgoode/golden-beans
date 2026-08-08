@@ -1,5 +1,7 @@
 import {
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   Binary,
   BookOpenText,
   Cable,
@@ -21,7 +23,12 @@ import {
 } from 'lucide-react'
 
 export const ICON_NAMES = [
+  // app-component-kit-adoption S1.1 — DataTable's sort indicator. Added here rather than drawn as a
+  // ▲/▼ glyph so the direction stays an SVG like every other mark in the system, and so the drift
+  // guard's no-pictograph rule has nothing to catch.
+  'arrow-down',
   'arrow-right',
+  'arrow-up',
   'binary',
   'book',
   'cable',
@@ -44,7 +51,9 @@ export const ICON_NAMES = [
 export type IconName = (typeof ICON_NAMES)[number]
 
 const icons: Record<IconName, LucideIcon> = {
+  'arrow-down': ArrowDown,
   'arrow-right': ArrowRight,
+  'arrow-up': ArrowUp,
   binary: Binary,
   book: BookOpenText,
   cable: Cable,

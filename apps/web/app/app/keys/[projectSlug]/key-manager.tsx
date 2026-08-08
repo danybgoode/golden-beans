@@ -2,31 +2,49 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ApiKeyRow } from '@/lib/api-keys'
+import { formatUtc } from '@/lib/format-utc'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Field, FormSection } from '@/components/ui/FormSection'
 import { issueKeyAction, revokeKeyAction } from './actions'
 
 // multi-tenant-activation · Sprint 1, Story 1.3 — issue / rotate / revoke UI. The key list renders
 // straight from the `keys` prop (refreshed by router.refresh() after each mutation, since the
 // server actions revalidate the path). Only the just-issued plaintext lives in local state — it's
 // shown ONCE and never re-fetchable.
-// Timezone-stable rendering. `toLocaleString()` without a fixed zone formats in the SERVER's zone
-// during SSR and the BROWSER's zone on hydration — a guaranteed React hydration mismatch (flagged
-// by BOTH cross-review families, 2026-07-20). UTC is explicit, deterministic, and honest about
-// what the timestamp actually is.
-function formatUtc(iso: string): string {
-  return `${new Date(iso).toISOString().slice(0, 16).replace('T', ' ')} UTC`
-}
+//
+// app-component-kit-adoption · Sprint 1, Stories 1.2 + 1.3 — this file is the PROOF OF USE for
+// `ConfirmDialog` and `FormSection`/`Field`. Two downstream epics consume both from `main`, so the
+// APIs are validated by a real caller before anything depends on them. The key TABLE is not
+// converted here; that is Sprint 2, Story 2.1.
+//
+// The private four-line `formatUtc` copy that used to live here is gone in favour of
+// `lib/format-utc.ts` (D11). Same output on every valid timestamp; the seam additionally returns
+// UNKNOWN_UTC_TIME where the copy threw a RangeError.
 
 export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) {
   const router = useRouter()
   const [label, setLabel] = useState('')
   const [issued, setIssued] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldError, setFieldError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  // The key awaiting confirmation, held as the ROW rather than the id: the dialog has to name the
+  // specific key, and re-deriving the label from an id at render time is how a dialog ends up
+  // asking about the wrong one after a refresh.
+  const [confirming, setConfirming] = useState<ApiKeyRow | null>(null)
 
   function onIssue(event: FormEvent) {
     event.preventDefault()
     setError(null)
-    const desired = label
+    const desired = label.trim()
+    // Client-side, so the reader sees the error against the field. The server action remains the
+    // authority — this only saves a round-trip, it does not replace a check.
+    if (desired === '') {
+      setFieldError('Give the key a label so you can tell it apart from the others later.')
+      return
+    }
+    setFieldError(null)
     startTransition(async () => {
       const result = await issueKeyAction(slug, desired)
       if (result.ok) {
@@ -39,10 +57,11 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
     })
   }
 
-  function onRevoke(keyId: string) {
+  function onRevoke(key: ApiKeyRow) {
     setError(null)
+    setConfirming(null)
     startTransition(async () => {
-      const { ok } = await revokeKeyAction(slug, keyId)
+      const { ok } = await revokeKeyAction(slug, key.id)
       if (!ok) setError('Could not revoke that key (already revoked?).')
       router.refresh()
     })
@@ -51,28 +70,48 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
   return (
     <section>
       {issued && (
-        <div role="alert" style={{ border: '1px solid', padding: '0.75rem', margin: '0.75rem 0' }}>
+        <div className="panel" role="alert">
           <strong>Copy your new key now — it won&apos;t be shown again:</strong>
-          <pre>{issued}</pre>
-          <button type="button" onClick={() => setIssued(null)}>
+          <pre className="panel-code">{issued}</pre>
+          <button type="button" className="btn btn-ghost" onClick={() => setIssued(null)}>
             I&apos;ve saved it
           </button>
         </div>
       )}
 
       <form onSubmit={onIssue}>
-        <label>
-          New key label
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="e.g. production, ci, rotated-2026-07"
-          />
-        </label>
-        <button type="submit" disabled={pending}>
-          {pending ? 'Working…' : 'Issue key'}
-        </button>
+        <FormSection
+          title="Issue a key"
+          description={
+            <>
+              One key per integration. The plaintext is shown once, at issue time, and is never
+              recoverable afterwards — only its hash is stored.
+            </>
+          }
+        >
+          <Field
+            label="New key label"
+            hint="e.g. production, ci, rotated-2026-07"
+            error={fieldError}
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                value={label}
+                onChange={(e) => {
+                  setLabel(e.target.value)
+                  if (fieldError) setFieldError(null)
+                }}
+              />
+            )}
+          </Field>
+          <div>
+            <button type="submit" className="btn btn-gold" disabled={pending}>
+              {pending ? 'Working…' : 'Issue key'}
+            </button>
+          </div>
+        </FormSection>
       </form>
 
       {error && <p role="status">{error}</p>}
@@ -99,7 +138,7 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
                 <td>{key.revokedAt ? `revoked ${formatUtc(key.revokedAt)}` : 'active'}</td>
                 <td>
                   {!key.revokedAt && (
-                    <button type="button" onClick={() => onRevoke(key.id)} disabled={pending}>
+                    <button type="button" onClick={() => setConfirming(key)} disabled={pending}>
                       Revoke
                     </button>
                   )}
@@ -109,6 +148,23 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
           )}
         </tbody>
       </table>
+
+      {/*
+        The click no longer revokes — it opens the question. `onCancel` closes and does nothing
+        else: there is exactly ONE call site of revokeKeyAction in this file and it is inside
+        onRevoke, which only the confirm button reaches. That is the property
+        design-system.authed.spec.ts asserts, and the mutation it was observed failing under.
+      */}
+      <ConfirmDialog
+        open={confirming !== null}
+        verb="Revoke"
+        noun="key"
+        subject={confirming?.label ?? ''}
+        consequence="Anything still using this key — the SDK, POST /api/v1/track, a CI job — starts getting 401s on its next request. Revoking cannot be undone; issue a new key instead."
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => confirming && onRevoke(confirming)}
+      />
     </section>
   )
 }
