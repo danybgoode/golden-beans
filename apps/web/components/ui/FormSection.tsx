@@ -72,10 +72,13 @@ export function Field({
 
       {children({
         id,
-        // Both ids unconditionally: an id pointing at an element that is not currently in the DOM
-        // is ignored by assistive technology, whereas recomputing this string as the error comes
-        // and goes is a re-announcement of the hint every time someone fixes a typo.
-        'aria-describedby': `${hintId} ${errorId}`,
+        // The ERROR id is always listed, because the error element is always in the DOM (see
+        // below) — recomputing this string as the error comes and goes would re-announce the field
+        // every time someone fixes a typo. The HINT id is listed only when a hint was actually
+        // passed: unlike the error slot, an absent hint renders no element, and pointing at an id
+        // that does not exist is a dangling ARIA reference that accessibility auditors flag.
+        // (Cross-review, Agy, PR #82.)
+        'aria-describedby': hint ? `${hintId} ${errorId}` : errorId,
         'aria-invalid': Boolean(error),
       })}
 

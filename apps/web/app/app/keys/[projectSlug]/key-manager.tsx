@@ -59,10 +59,16 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
 
   function onRevoke(key: ApiKeyRow) {
     setError(null)
-    setConfirming(null)
+    // The dialog stays OPEN across the transition and closes when the action settles. Clearing
+    // `confirming` first (as this did) hid the dialog the instant Confirm was clicked, which made
+    // its `pending` state unreachable — the "Working…" label could never render, and the window
+    // between click and result was a silent no-op, the exact thing ux-guidelines names as a state
+    // we must never ship. Keeping it open also means the confirm button is `disabled` for that
+    // window, so the action cannot be fired twice. (Cross-review, Agy, PR #82.)
     startTransition(async () => {
       const { ok } = await revokeKeyAction(slug, key.id)
       if (!ok) setError('Could not revoke that key (already revoked?).')
+      setConfirming(null)
       router.refresh()
     })
   }

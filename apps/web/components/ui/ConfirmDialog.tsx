@@ -82,10 +82,18 @@ export function ConfirmDialog({
     const element = dialog.current
     if (!element) return
     if (open && !element.open) element.showModal()
+    // Closing must go through the native `close()`, which is why this component does NOT unmount
+    // itself when `open` goes false.
+    //
+    // It used to: `if (!open) return null` sat right here. React then removed the <dialog> node
+    // before this effect could run, so `close()` was never called and the browser never performed
+    // its focus restoration — the user was left on <body> with no way back to the control they came
+    // from, which is worst for exactly the keyboard and screen-reader users this component exists
+    // to serve. Found by cross-review (Agy, PR #82, Blocking); the focus-trap spec did not catch it
+    // because it only looked at focus WHILE the dialog was open. There is now a spec for the
+    // restoration too.
     if (!open && element.open) element.close()
   }, [open])
-
-  if (!open) return null
 
   return (
     <dialog

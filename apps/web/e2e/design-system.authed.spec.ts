@@ -107,16 +107,25 @@ test('ConfirmDialog names the specific object, traps focus, and cancels without 
   // ...and focus genuinely cycles back in, rather than being lost on the document for good.
   expect(visited.filter((where) => where === 'dialog').length).toBeGreaterThan(4)
 
+  // Focus comes BACK to the control that opened the dialog. This is the finding cross-review
+  // caught (Agy, Blocking): the first version unmounted the <dialog> when `open` went false, so
+  // native close() never ran, the browser never restored focus, and a keyboard user was left on
+  // <body> with no way back to the row they were operating on. The trap spec above could not see
+  // it — it only looked at focus while the dialog was OPEN.
+  const trigger = keyRow(page, label).getByRole('button', { name: 'Revoke' })
+
   // Esc dismisses AND does not act — the property the mutation check was run against.
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(keyRow(page, label)).toContainText('active')
+  await expect(trigger).toBeFocused()
 
-  // ...and so does the Cancel button, by the same handler.
-  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  // ...and so does the Cancel button, by the same handler — including the focus restoration.
+  await trigger.click()
   await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Cancel' }).click()
   await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
   await expect(keyRow(page, label)).toContainText('active')
+  await expect(trigger).toBeFocused()
 
   // Confirming still performs exactly the operation the bare button used to.
   await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
@@ -155,6 +164,17 @@ test('Field announces its error against the control and does not reflow the form
   await expect(input).toHaveAttribute('aria-invalid', 'true')
   const describedBy = await input.getAttribute('aria-describedby')
   expect(describedBy).toBeTruthy()
+
+  // EVERY id it names must resolve to an element that is actually in the DOM. Cross-review (Agy,
+  // PR #82) found `Field` listing its hint id unconditionally, so a field with no hint pointed at
+  // an element that was never rendered — a dangling ARIA reference reads to a screen reader as
+  // nothing at all, silently. Asserting the general property rather than the one instance means the
+  // next describedby id added here cannot reintroduce it.
+  const dangling = await page.evaluate(
+    (ids: string[]) => ids.filter((id) => !document.getElementById(id)),
+    describedBy!.split(' ').filter(Boolean)
+  )
+  expect(dangling, 'aria-describedby must not name elements that do not exist').toEqual([])
   const errorId = describedBy!.split(' ').find((id) => id.endsWith('-error'))
   expect(errorId, 'the field must describe itself with an error element').toBeTruthy()
   // An attribute selector rather than `#id`: React's useId emits ids containing characters that
