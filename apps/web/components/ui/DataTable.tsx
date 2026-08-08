@@ -1,13 +1,7 @@
 'use client'
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { Icon } from './Icon'
-import {
-  filterRows,
-  nextSortState,
-  sortRows,
-  type CellValue,
-  type SortState,
-} from '@/lib/data-table'
+import { filterRows, nextSortState, sortRows, type CellValue, type SortState } from '@/lib/data-table'
 
 // app-component-kit-adoption · Sprint 1, Story 1.1 — the one table in the product.
 //
@@ -79,11 +73,7 @@ export function DataTable<T>({
   const searchable = useMemo(() => columns.filter((column) => column.value), [columns])
 
   const visible = useMemo(() => {
-    const matched = filterRows(
-      rows,
-      (row) => searchable.map((column) => column.value?.(row) ?? null),
-      query
-    )
+    const matched = filterRows(rows, (row) => searchable.map((column) => column.value?.(row) ?? null), query)
     if (sort === null) return matched
     const column = columns.find((candidate) => candidate.key === sort.columnKey)
     if (!column?.value) return matched
@@ -126,9 +116,7 @@ export function DataTable<T>({
                     scope="col"
                     // The assistive-technology half of the sort indicator. The arrow below is the
                     // sighted half; neither is sufficient alone.
-                    aria-sort={
-                      sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'
-                    }
+                    aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none'}
                   >
                     {column.value ? (
                       <button
@@ -176,9 +164,7 @@ export function DataTable<T>({
               visible.map((row) => (
                 <tr key={rowKey(row)}>
                   {columns.map((column) => (
-                    <td key={column.key}>
-                      {column.cell ? column.cell(row) : (column.value?.(row) ?? null)}
-                    </td>
+                    <td key={column.key}>{column.cell ? column.cell(row) : (column.value?.(row) ?? null)}</td>
                   ))}
                 </tr>
               ))

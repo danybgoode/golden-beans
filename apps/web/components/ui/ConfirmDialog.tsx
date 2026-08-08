@@ -122,13 +122,7 @@ export function ConfirmDialog({
           key is a one-keystroke accident wearing the costume of a safety feature — and the muscle
           memory of dismissing a dialog with Enter is universal.
         */}
-        <button
-          type="button"
-          className="btn btn-ghost"
-          autoFocus
-          disabled={pending}
-          onClick={onCancel}
-        >
+        <button type="button" className="btn btn-ghost" autoFocus disabled={pending} onClick={onCancel}>
           Cancel
         </button>
         <button

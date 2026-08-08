@@ -47,7 +47,7 @@ async function issueKey(page: import('@playwright/test').Page, slug: string, lab
   await page.goto(`/app/keys/${slug}`)
   await page.getByLabel('New key label').fill(label)
   await page.getByRole('button', { name: 'Issue key' }).click()
-  const notice = page.getByRole('alert').filter({ hasText: "Copy your new key now" })
+  const notice = page.getByRole('alert').filter({ hasText: 'Copy your new key now' })
   await expect(notice).toBeVisible()
   await notice.getByRole('button', { name: "I've saved it" }).click()
 }
@@ -56,9 +56,7 @@ function keyRow(page: import('@playwright/test').Page, label: string) {
   return page.getByRole('row').filter({ hasText: label })
 }
 
-test('ConfirmDialog names the specific object, traps focus, and cancels without acting', async ({
-  page,
-}) => {
+test('ConfirmDialog names the specific object, traps focus, and cancels without acting', async ({ page }) => {
   const slug = tenantSlug()
   const label = `confirm-smoke-${Date.now()}`
   await issueKey(page, slug, label)
@@ -133,9 +131,7 @@ test('ConfirmDialog names the specific object, traps focus, and cancels without 
   await expect(keyRow(page, label)).toContainText('revoked')
 })
 
-test('Field announces its error against the control and does not reflow the form', async ({
-  page,
-}) => {
+test('Field announces its error against the control and does not reflow the form', async ({ page }) => {
   const slug = tenantSlug()
   await page.goto(`/app/keys/${slug}`)
 
@@ -150,8 +146,7 @@ test('Field announces its error against the control and does not reflow the form
   // DOCUMENT coordinates, not `boundingBox()`. boundingBox() is viewport-relative, and clicking the
   // button scrolls the page — which read as the button moving UP by 25px, i.e. as a reflow no error
   // slot could possibly cause. Adding scrollY measures layout rather than scroll position.
-  const submitTop = () =>
-    submit.evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
+  const submitTop = () => submit.evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
   const before = await submitTop()
 
   const input = page.getByLabel('New key label')

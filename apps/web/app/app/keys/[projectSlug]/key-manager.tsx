@@ -90,16 +90,12 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
           title="Issue a key"
           description={
             <>
-              One key per integration. The plaintext is shown once, at issue time, and is never
-              recoverable afterwards — only its hash is stored.
+              One key per integration. The plaintext is shown once, at issue time, and is never recoverable
+              afterwards — only its hash is stored.
             </>
           }
         >
-          <Field
-            label="New key label"
-            hint="e.g. production, ci, rotated-2026-07"
-            error={fieldError}
-          >
+          <Field label="New key label" hint="e.g. production, ci, rotated-2026-07" error={fieldError}>
             {(control) => (
               <input
                 {...control}

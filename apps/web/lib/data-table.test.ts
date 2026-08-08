@@ -103,7 +103,10 @@ test('a null value never matches — absent is not the empty string', () => {
 test('an empty or whitespace-only query shows every row, untouched', () => {
   const rows = filterRows(keys, (key) => [key.label], '   ')
   assert.equal(rows, keys)
-  assert.deepEqual(filterRows(keys, (key) => [key.label], ''), keys)
+  assert.deepEqual(
+    filterRows(keys, (key) => [key.label], ''),
+    keys
+  )
 })
 
 test('filtering narrows to the matching rows and keeps their order', () => {
@@ -117,5 +120,8 @@ test('filtering narrows to the matching rows and keeps their order', () => {
 test('a query matching nothing yields no rows rather than falling back to all of them', () => {
   // A filter that silently shows everything when it matches nothing is indistinguishable from a
   // filter that is broken. The component renders a distinct "nothing matched" sentence for this.
-  assert.deepEqual(filterRows(keys, (key) => [key.label], 'nonexistent'), [])
+  assert.deepEqual(
+    filterRows(keys, (key) => [key.label], 'nonexistent'),
+    []
+  )
 })
