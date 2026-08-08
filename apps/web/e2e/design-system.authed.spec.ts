@@ -81,17 +81,31 @@ test('ConfirmDialog names the specific object, traps focus, and cancels without 
   // irreversible button under the return key is a one-keystroke accident.
   await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
 
-  // Focus stays inside. Ten tabs is comfortably more than the dialog has focusable children, so a
-  // trap that leaks would have leaked well before the loop ends.
+  // The dialog is genuinely modal, which is what makes the page behind it inert. Asserted directly
+  // rather than inferred, because every keyboard guarantee below is a consequence of it.
+  await expect(dialog).toHaveJSProperty('open', true)
+  expect(await dialog.evaluate((element) => element.matches(':modal'))).toBe(true)
+
+  // ── Focus stays in the dialog. Ten tabs is several times its focusable count. ────────────────
+  // The property asserted is "focus never reaches an interactive element behind the dialog", NOT
+  // "activeElement is always a descendant". Those differ, and the difference cost a debugging pass
+  // worth recording: Chromium's tab cycle inside a modal dialog passes through the DOCUMENT — the
+  // observed cycle is Cancel → Confirm → <body> → Cancel → …. That `<body>` step is the wrap point,
+  // not an escape; nothing behind the dialog is reachable from it, and the next Tab re-enters. A
+  // spec that banned it would have failed a component that is behaving correctly.
+  const visited: string[] = []
   for (let press = 0; press < 10; press += 1) {
     await page.keyboard.press('Tab')
-    const inside = await page.evaluate(() => {
+    const where = await page.evaluate(() => {
       const active = document.activeElement
-      const modal = document.querySelector('dialog.confirm-dialog')
-      return Boolean(active && modal && modal.contains(active))
+      if (!active || active === document.body) return 'body'
+      return active.closest('dialog.confirm-dialog') ? 'dialog' : `ESCAPED:${active.tagName}`
     })
-    expect(inside, `focus escaped the dialog after ${press + 1} tabs`).toBe(true)
+    visited.push(where)
   }
+  expect(visited.filter((where) => where.startsWith('ESCAPED'))).toEqual([])
+  // ...and focus genuinely cycles back in, rather than being lost on the document for good.
+  expect(visited.filter((where) => where === 'dialog').length).toBeGreaterThan(4)
 
   // Esc dismisses AND does not act — the property the mutation check was run against.
   await page.keyboard.press('Escape')
@@ -121,8 +135,15 @@ test('Field announces its error against the control and does not reflow the form
   await expect(section.getByRole('heading', { name: 'Issue a key' })).toBeVisible()
   await expect(section).toContainText('shown once')
 
+  await page.evaluate(() => document.fonts.ready)
+
   const submit = page.getByRole('button', { name: 'Issue key' })
-  const before = await submit.boundingBox()
+  // DOCUMENT coordinates, not `boundingBox()`. boundingBox() is viewport-relative, and clicking the
+  // button scrolls the page — which read as the button moving UP by 25px, i.e. as a reflow no error
+  // slot could possibly cause. Adding scrollY measures layout rather than scroll position.
+  const submitTop = () =>
+    submit.evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
+  const before = await submitTop()
 
   const input = page.getByLabel('New key label')
   await expect(input).toHaveAttribute('aria-invalid', 'false')
@@ -142,6 +163,5 @@ test('Field announces its error against the control and does not reflow the form
 
   // ...and nothing moved. The error slot's height is reserved whether or not it has text, so the
   // submit button a cursor is already travelling towards stays where it was.
-  const after = await submit.boundingBox()
-  expect(after?.y).toBeCloseTo(before?.y ?? 0, 0)
+  expect(await submitTop()).toBeCloseTo(before, 0)
 })
