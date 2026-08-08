@@ -3,10 +3,17 @@
 **Status:** ⬜ not started
 
 > **Build contract (locked by the architect before the builder started).**
-> This sprint ships **only** the three components and their specs. No route conversion, no
-> `globals.css` change. It merges before Sprint 2 opens (D1) because `flags-visual-rule-builder`
-> and `scenarios-pm-operable` both consume `ConfirmDialog` and `FormSection` from `main`.
-> Cite D1–D3 and D7; do not re-derive them.
+> This sprint ships **only** the three components, their styling and their specs. No route
+> conversion beyond the single proof-of-use in 1.3. It merges before Sprint 2 opens (D1) because
+> `flags-visual-rule-builder` and `scenarios-pm-operable` both consume `ConfirmDialog` and
+> `FormSection` from `main`. Cite D1–D3, D7, **D8, D9**; do not re-derive them.
+>
+> **Corrected at kickoff (2026-08-08):** the original line *"no `globals.css` change"* was written
+> against the assumption that the primitives could style themselves from existing rules. They
+> cannot — the repo has **no table, form or dialog CSS at all**, and `tokens.css` is a byte-mirrored
+> handoff artifact the drift guard forbids editing. So this sprint **does** add classes to
+> `globals.css`. That is additive and is *not* the teardown D4 bans: D4 forbids **removing** the
+> generic selectors mid-sweep, which this sprint still does not do. See **D8**.
 
 ## Stories
 
@@ -31,13 +38,22 @@
 
 **Acceptance:**
 - A `ConfirmDialog` exists in `components/ui`, satisfying the requirement already written in
-  `references/ux-guidelines.md`.
+  `references/ux-guidelines.md` ("a second, explicit confirmation naming what's about to happen and
+  that it can't be undone — never a bare *Are you sure?*"; the guidelines name the behaviour, not a
+  component — see the corrected reuse table).
+- **Proof of use, same argument as 1.3 (added at kickoff):** `key-manager.tsx`'s Revoke is wired to
+  it in this sprint. Two downstream epics consume this API from `main`; validating it with a real
+  caller costs one call site now and is unrecoverable later. It is also what the Sprint 1 smoke
+  walkthrough (steps 3–5) already assumes. The *remaining* destructive actions, and the consequence
+  copy for all of them, stay in Sprint 3.
 - It takes the **specific object's key or label** and renders it in the confirmation sentence —
   "Revoke key `flag_sync_prod`?", never "Are you sure?"
 - Focus is trapped while open; `Esc` and the cancel control both dismiss without acting; the
   destructive control is not the default-focused one.
-- It does **not** wrap the agent rail's existing pending-proposal confirmation (D5) — a spec or a
-  code comment records that boundary.
+- It is **not** wired to the agent rail's pending-proposal list (D5, corrected). The rail has no
+  control to wrap — it is a read-only server component — and a staged-write row is a durable
+  authorization consumed by the *agent*, not a question asked of the human at click time. A code
+  comment on `ConfirmDialog` records that boundary.
 **Risk:** low
 
 ### Story 1.3 — `FormSection` / `Field`
@@ -55,9 +71,16 @@
 **Risk:** low
 
 ## Sprint QA
-- **api spec(s):** `e2e/design-system.authed.spec.ts` — one assertion per primitive (renders, empty
-  state, confirm-cancels-without-acting). Pure-logic parts of `DataTable`'s sort/filter extracted to
-  a `lib/` seam and unit-tested — free coverage, no browser.
+- **Specs — corrected at kickoff, see D9.** The line below said "api spec(s):
+  `design-system.authed.spec.ts`". That file is **not** an api spec: `playwright.config.ts` gives the
+  `api` project `testIgnore: /.*\.(browser|authed)\.spec\.ts/`, so nothing in it runs in the merge
+  gate. The split that actually holds:
+  - **`apps/web/lib/data-table.ts` + `data-table.test.ts`** — sort/filter as pure functions,
+    `npm run test:unit`. This IS in the gate. Free coverage, no browser.
+  - **`e2e/design-system.authed.spec.ts`** — one assertion per primitive (renders, empty state,
+    confirm-cancels-without-acting, focus trap, `Esc`). Opt-in Chromium; run locally against local
+    Supabase and **observed failing**. Not the gate — but per WAYS-OF-WORKING a browser spec
+    *discharges* a browser smoke otherwise owed to the product owner.
 - **browser smoke owed:** yes, one item to the product owner — **keyboard behaviour of
   `ConfirmDialog`** (focus trap, `Esc`, default focus). An api spec cannot see it.
 - **Every new spec observed failing at least once** — for 1.2, the mutation is making the dialog's
