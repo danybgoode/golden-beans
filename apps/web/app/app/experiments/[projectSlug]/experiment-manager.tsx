@@ -2,6 +2,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Field, FormSection } from '@/components/ui/FormSection'
 import { allowedExperimentTargets } from '@/lib/experiment-registry-view'
 import type { ExperimentRegistryRow, ExperimentTransitionTarget } from '@/lib/experiments'
@@ -52,6 +53,23 @@ const TARGET_LABEL: Record<ExperimentTransitionTarget, string> = {
   invalid: 'Mark invalid',
 }
 
+// app-component-kit-adoption · Sprint 3, Story 3.3 — what actually STOPS, in plain language, per
+// lifecycle target. Kept beside TARGET_LABEL so a future target cannot be added with a verb and no
+// consequence: the Record type makes the compiler ask for both.
+//
+// All three are one-way in the sense that matters, and the copy says so rather than leaning on the
+// word "irreversible". `allowedExperimentTargets` only offers `running` to a draft whose version is
+// higher than any that ever started, so a stopped version can never run again — and `invalid` has
+// no onward transitions at all.
+const TARGET_CONSEQUENCE: Record<ExperimentTransitionTarget, string> = {
+  running:
+    'Real users start being assigned to variants and their exposures are recorded from this moment. You can stop it later, but you can never start this version again — only a higher version can run after it.',
+  stopped:
+    'Assignment stops and no further exposures are recorded. This version can never be started again; continuing the test means creating a new version.',
+  invalid:
+    'The version is marked as not producing trustworthy evidence, permanently. It can never be started, stopped or re-judged afterwards — this is the end of its lifecycle.',
+}
+
 function sameVariantKeys(
   experiment: { variants: Array<{ key: string }> },
   flag: { variants: Array<{ key: string }> }
@@ -86,6 +104,15 @@ export function ExperimentManager({
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Carries the experiment KEY as well as the ids, because the dialog has to name the specific
+  // version — "Stop experiment checkout-copy v3?", never "Stop this experiment?".
+  const [confirming, setConfirming] = useState<{
+    experimentKey: string
+    experimentId: string
+    versionId: string
+    version: number
+    target: ExperimentTransitionTarget
+  } | null>(null)
 
   function onCreate(event: FormEvent) {
     event.preventDefault()
@@ -104,12 +131,11 @@ export function ExperimentManager({
     })
   }
 
-  function onTransition(
-    experimentId: string,
-    versionId: string,
-    version: number,
-    target: ExperimentTransitionTarget
-  ) {
+  // Sprint 3 — the button opens the question; only Confirm reaches the action. `pending` keeps the
+  // dialog's confirm button disabled across the transition, so a lifecycle change cannot fire twice.
+  function onTransition() {
+    if (!confirming) return
+    const { experimentId, versionId, version, target } = confirming
     setError(null)
     setNotice(null)
     startTransition(async () => {
@@ -126,6 +152,7 @@ export function ExperimentManager({
       } catch {
         setError('Could not change this experiment lifecycle. Try again.')
       }
+      setConfirming(null)
     })
   }
 
@@ -307,7 +334,15 @@ export function ExperimentManager({
                             key={target}
                             type="button"
                             disabled={pending}
-                            onClick={() => onTransition(experiment.id, version.id, version.version, target)}
+                            onClick={() =>
+                              setConfirming({
+                                experimentKey: experiment.key,
+                                experimentId: experiment.id,
+                                versionId: version.id,
+                                version: version.version,
+                                target,
+                              })
+                            }
                           >
                             {TARGET_LABEL[target]} v{version.version}
                           </button>
@@ -320,6 +355,17 @@ export function ExperimentManager({
           </article>
         ))
       )}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        verb={confirming ? TARGET_LABEL[confirming.target] : ''}
+        noun="experiment"
+        subject={confirming ? `${confirming.experimentKey} v${confirming.version}` : ''}
+        consequence={confirming ? TARGET_CONSEQUENCE[confirming.target] : ''}
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={onTransition}
+      />
     </section>
   )
 }

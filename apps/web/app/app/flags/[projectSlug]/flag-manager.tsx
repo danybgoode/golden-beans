@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import type { FlagReadKeyRow } from '@/lib/flag-read-keys'
 import type { FlagSyncKeyRow } from '@/lib/flag-sync-keys'
@@ -67,6 +68,9 @@ export function FlagManager({
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [confirming, setConfirming] = useState<
+    { kind: 'snapshot'; row: FlagReadKeyRow } | { kind: 'sync'; row: FlagSyncKeyRow } | null
+  >(null)
   const stateByEnvironment = new Map(environments.map((state) => [state.environment, state]))
 
   // Stable, so the two revoke callbacks below (and through them the column memos) can list their
@@ -130,6 +134,7 @@ export function FlagManager({
   const onRevoke = useCallback(
     (keyId: string) => {
       run(() => revokeFlagReadKeyAction(slug, keyId), 'Flag read key revoked.')
+      setConfirming(null)
     },
     [slug, run]
   )
@@ -153,6 +158,7 @@ export function FlagManager({
   const onRevokeSync = useCallback(
     (keyId: string) => {
       run(() => revokeFlagSyncKeyAction(slug, keyId), 'Catalog sync key revoked.')
+      setConfirming(null)
     },
     [slug, run]
   )
@@ -169,6 +175,8 @@ export function FlagManager({
   // The flag authoring <textarea> is untouched. Replacing it is flags-visual-rule-builder's entire
   // epic (#15); touching it here would collide with a stacked branch and pre-empt a decision this
   // epic has not made.
+  // app-component-kit-adoption · Sprint 3 — both credential revocations confirm. One piece of state
+  // for two tables, discriminated by `kind`, so the two dialogs cannot drift apart in wording.
   const statusOf = useCallback((key: { revokedAt: string | null; expiresAt: string | null }) => {
     if (key.revokedAt) return `revoked ${formatUtc(key.revokedAt)}`
     return key.expiresAt !== null && new Date(key.expiresAt) <= new Date() ? 'expired' : 'active'
@@ -191,13 +199,17 @@ export function FlagManager({
         header: 'Actions',
         cell: (key) =>
           key.revokedAt ? null : (
-            <button type="button" disabled={pending} onClick={() => onRevoke(key.id)}>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setConfirming({ kind: 'snapshot', row: key })}
+            >
               Revoke
             </button>
           ),
       },
     ],
-    [pending, onRevoke, statusOf]
+    [pending, statusOf]
   )
 
   const syncKeyColumns = useMemo<DataTableColumn<FlagSyncKeyRow>[]>(
@@ -222,13 +234,17 @@ export function FlagManager({
         header: 'Actions',
         cell: (key) =>
           key.revokedAt ? null : (
-            <button type="button" disabled={pending} onClick={() => onRevokeSync(key.id)}>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setConfirming({ kind: 'sync', row: key })}
+            >
               Revoke
             </button>
           ),
       },
     ],
-    [pending, onRevokeSync, statusOf]
+    [pending, statusOf]
   )
 
   const auditColumns = useMemo<DataTableColumn<FlagLifecycleAuditRow>[]>(
@@ -493,6 +509,25 @@ export function FlagManager({
         rowKey={(entry) => entry.id}
         filterLabel="Filter audit"
         empty="No lifecycle actions recorded yet. Activating or deactivating a version in an environment is recorded here."
+      />
+
+      <ConfirmDialog
+        open={confirming !== null}
+        verb="Revoke"
+        noun={confirming?.kind === 'sync' ? 'catalog sync key' : 'snapshot key'}
+        subject={confirming?.row.label ?? ''}
+        consequence={
+          confirming?.kind === 'sync'
+            ? `Catalog publishes from ${confirming.row.source} start failing on the next sync — flag definitions from that publisher stop reaching this project until someone mints a new key and redeploys it. Revoking cannot be undone.`
+            : 'Any client reading the flag snapshot with this key starts getting 401s on its next poll, and falls back to whatever defaults it was built with. Revoking cannot be undone — mint a replacement first if this key is in production.'
+        }
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          if (!confirming) return
+          if (confirming.kind === 'sync') onRevokeSync(confirming.row.id)
+          else onRevoke(confirming.row.id)
+        }}
       />
     </section>
   )

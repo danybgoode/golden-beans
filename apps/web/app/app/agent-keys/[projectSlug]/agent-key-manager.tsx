@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState, useTransition, type FormEvent } from 'r
 import { useRouter } from 'next/navigation'
 import type { AgentWriteKeyRow } from '@/lib/agent-write-keys'
 import { formatUtc } from '@/lib/format-utc'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import { Field, FormSection } from '@/components/ui/FormSection'
 import { mintAgentKeyAction, revokeAgentKeyAction } from './actions'
@@ -48,6 +49,9 @@ export function AgentKeyManager({
   const [minted, setMinted] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // The ROW awaiting confirmation, not its id: the dialog has to name the specific key, and
+  // re-deriving a label from an id at render time is how a dialog asks about the wrong one.
+  const [confirming, setConfirming] = useState<AgentWriteKeyRow | null>(null)
 
   function onMint(event: FormEvent) {
     event.preventDefault()
@@ -67,12 +71,16 @@ export function AgentKeyManager({
   // `useCallback` rather than a plain function, so the column memo below can list it honestly
   // instead of suppressing the lint rule: a new function identity every render would rebuild the
   // columns every render and make the memo decorative.
+  // app-component-kit-adoption · Sprint 3 — the click opens the question; only Confirm acts. The
+  // dialog stays open across the transition so `pending` is reachable and the action cannot fire
+  // twice.
   const onRevoke = useCallback(
     (keyId: string) => {
       setError(null)
       startTransition(async () => {
         const { ok } = await revokeAgentKeyAction(slug, keyId)
         if (!ok) setError('Could not revoke that key (already revoked?).')
+        setConfirming(null)
         router.refresh()
       })
     },
@@ -108,13 +116,13 @@ export function AgentKeyManager({
         header: 'Actions',
         cell: (key) =>
           key.revokedAt ? null : (
-            <button type="button" onClick={() => onRevoke(key.id)} disabled={pending}>
+            <button type="button" onClick={() => setConfirming(key)} disabled={pending}>
               Revoke
             </button>
           ),
       },
     ],
-    [pending, onRevoke]
+    [pending]
   )
 
   return (
@@ -192,6 +200,17 @@ export function AgentKeyManager({
         rowKey={(key) => key.id}
         filterLabel="Filter keys"
         empty="No agent write keys yet. Mint one above to let an agent stage task actions on this project."
+      />
+
+      <ConfirmDialog
+        open={confirming !== null}
+        verb="Revoke"
+        noun="agent write key"
+        subject={confirming?.label ?? ''}
+        consequence="The agent holding this key stops being able to stage or apply task actions on its very next call, mid-session if one is running. Revoking cannot be undone — mint a new key and hand it over instead."
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => confirming && onRevoke(confirming.id)}
       />
     </section>
   )

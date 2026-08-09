@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 3: Confirm every destructive action
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 > **Build contract (locked by the architect before the builder started).**
 > This sprint changes **behaviour** — it is the one place in the epic where Sweeper's "same
@@ -62,13 +62,54 @@
 - Reviewed against `references/ux-guidelines.md`; no consequence sentence is left as the default verb.
 **Risk:** low
 
+## Story 3.1 — the inventory (every one-click action in `/app`, enumerated from the code)
+
+*Derived by reading every `actions.ts` under `apps/web/app/app`, not from memory. 29 server actions
+exist; the ones below are the ones a human can fire from a converted surface.*
+
+### Confirmed — `ConfirmDialog`, with a consequence sentence
+
+| Route | Control | Action | Why it's irreversible |
+|---|---|---|---|
+| `keys` | Revoke | `revokeKeyAction` | Confirmed in **Sprint 1** as the proof-of-use. |
+| `agent-keys` | Revoke | `revokeAgentKeyAction` | The agent loses write access on its very next call, mid-session. |
+| `destinations` | Remove | `deleteDestinationAction` | **Converged** from the two-click pattern. Signing secret gone; can never be re-enabled. |
+| `destinations` | Rotate secret | `rotateSecretAction` | The previous secret stops verifying immediately. Reads as routine beside Remove and is not. |
+| `flags` | Revoke snapshot key | `revokeFlagReadKeyAction` | Clients polling the snapshot fall back to build-time defaults. |
+| `flags` | Revoke sync key | `revokeFlagSyncKeyAction` | Catalog publishes from that source start failing. |
+| `experiments` | Start / Stop / Mark invalid | `transitionExperimentVersionAction` | All three are one-way. `allowedExperimentTargets` only offers `running` to a draft above every version that ever started, so a stopped version can never run again; `invalid` has no onward transitions at all. |
+| `experiments/[experimentKey]` | Record decision / Append correction | `recordExperimentDecisionAction` | **The most irreversible control in the product.** Append-only immutable ledger: no edit, no delete, your name on it permanently. Confirmed even though its route was carry-over in Sprint 2 — a confirmation is not a conversion, so the D3 finding that kept that route out does not apply. |
+
+### Deliberately NOT confirmed — with the reasoning
+
+| Control | Why no dialog |
+|---|---|
+| `destinations` → **Enable / Disable** | Reversible by the same control, one click, same place. A dialog here would train people to dismiss dialogs. |
+| `destinations` → **Send test** | Sends one real HTTP POST to the customer's own endpoint. Outward-facing, but it destroys nothing and is idempotent from our side. |
+| `destinations` → **Replay** | Re-queues a settled delivery. Delivery is **at-least-once by contract** and the page says so — receivers already deduplicate on the event id, so a replay is a supported operation, not an accident. |
+| `flags` → **Activate / Deactivate** | Changes production serving, which is significant — but it is reversible by the same control **and already carries a required `reason` field**, which is a deliberation step of its own. A second one would be ceremony. |
+| `experiments` → **Bind flag version** | Additive and immutable; binding does not start anything. |
+| Every **mint / issue / create** control | Additive. Nothing is lost. |
+
+### Out of scope — with the reason
+
+| Surface | Why |
+|---|---|
+| **The agent rail** | **No control exists.** `AgentRail.tsx` is a read-only server component — no `'use client'`, no `<button>`, no `onClick`. The corrected D5: a staged `task_write_confirmations` row is a *durable authorization the agent spends later via `consume_write_confirmation`*, under the credential it was bound to; `ConfirmDialog` is a *transient question asked of the human at click time*. Different actor, different lifetime. Not two implementations of one idea. |
+| `shares` → Revoke, `journeys` → Activate | Real irreversible actions on routes this epic did not convert. **Named carry-over**, not a miss — `shares` revocation kills a live share link, and it is the strongest candidate for the next wave. |
+| `tasks` → Resolve / Dismiss | State transitions on a queue, reversible by an agent or an operator. |
+
 ## Sprint QA
 - **api spec(s):** `e2e/design-system.authed.spec.ts` — cancel-performs-no-mutation, asserted at the
   API level (the operation's endpoint is not called). Each existing route spec
   (`api-keys.spec.ts`, `destinations.spec.ts`, `experiments.spec.ts`) must still pass **unchanged**:
   the confirmed path is the same operation.
 - **browser smoke owed:** yes, to the product owner — **the consequence copy**. Whether a sentence
-  actually tells a PM what they're about to lose is a judgement no spec makes.
+  actually tells a PM what they're about to lose is a judgement no spec makes, and it is the one
+  thing in this epic automation genuinely cannot discharge. Step 7 of the walkthrough is that ask.
+- **cancel-performs-no-network-call is asserted on the WIRE**, not on the outcome. Counting POSTs
+  during a dismissal is the actual acceptance criterion; asserting "the row still says active" is
+  weaker than it sounds, because it also passes if the revoke fired and merely failed.
 - **Mutation check:** wire one cancel handler to the action, watch the spec go red, revert.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` +
   `check:design-drift` green before merge.

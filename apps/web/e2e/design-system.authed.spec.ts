@@ -341,3 +341,86 @@ test('impact renders its headline figures as StatCards, and never as an invented
   // decision and #16's work, so a future chart must consciously delete this line.
   await expect(page.locator('.data-table tbody tr')).toHaveCount(IMPACT_SERIES.length)
 })
+
+// ── app-component-kit-adoption · Sprint 3 — confirm every destructive action ─────────────────────
+
+test('cancelling a confirmation performs no network call at all', async ({ page }) => {
+  const slug = tenantSlug()
+  const label = `cancel-nonet-${Date.now()}`
+  await issueKey(page, slug, label)
+
+  // Watching the WIRE, not the outcome. Story 3.2's acceptance is "cancelling performs no network
+  // call", and asserting the row still reads "active" is weaker than that sounds: it would also
+  // pass if the revoke fired and merely failed. Counting POSTs is the actual property. Server
+  // actions post back to the page's own URL, so any mutation attempt shows up here.
+  let posts = 0
+  const countPosts = (request: import('@playwright/test').Request) => {
+    if (request.method() === 'POST') posts += 1
+  }
+
+  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  await expect(page.locator('dialog.confirm-dialog')).toBeVisible()
+
+  page.on('request', countPosts)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
+
+  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
+
+  // Give anything in flight a chance to appear before concluding nothing was sent.
+  await page.waitForTimeout(500)
+  page.off('request', countPosts)
+  expect(posts, 'dismissing a confirmation must not talk to the server').toBe(0)
+  await expect(keyRow(page, label)).toContainText('active')
+
+  // ...and confirming does exactly what the bare button used to.
+  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Revoke' }).click()
+  await expect(keyRow(page, label)).toContainText('revoked')
+})
+
+test('destinations Remove confirms through ONE dialog — the two-click pattern is gone', async ({ page }) => {
+  const slug = tenantSlug()
+  const name = `dest-confirm-${Date.now()}`
+
+  await page.goto(`/app/destinations/${slug}`)
+  await page.getByLabel('Name').fill(name)
+  await page.getByLabel('Webhook URL').fill(`https://example.invalid/hooks/${name}`)
+  await page.getByRole('button', { name: 'Add destination' }).click()
+  const secretNotice = page.getByRole('alert').filter({ hasText: 'Copy this signing secret now' })
+  await expect(secretNotice).toBeVisible()
+  await secretNotice.getByRole('button', { name: "I've saved it" }).click()
+
+  // Scoped to the DESTINATIONS table specifically. `page.getByRole('row')` spans both tables on
+  // this page (destinations and delivery history), and the delivery table has a Destination column,
+  // so an unscoped filter matches twice the moment a delivery exists.
+  const table = page.locator('.data-table').filter({ has: page.getByText('Destinations', { exact: true }) })
+  const row = table.getByRole('row').filter({ hasText: name })
+  await expect(row).toBeVisible()
+
+  // The corrected D5: the product ships ONE confirmation pattern. The bespoke two-click affordance
+  // that used to live here is gone, and this assertion is what stops it coming back.
+  await expect(page.getByText('Click again to confirm')).toHaveCount(0)
+
+  await row.getByRole('button', { name: 'Remove' }).click()
+  const dialog = page.locator('dialog.confirm-dialog')
+  await expect(dialog).toContainText(`Remove destination ${name}?`)
+  // Story 3.3 — a consequence, not a restatement of the verb.
+  await expect(dialog).toContainText('never be re-enabled')
+
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(row).toBeVisible()
+
+  // Rotate is confirmed too, and says something DIFFERENT — it reads as routine beside Remove and
+  // is not: the old secret stops verifying immediately.
+  await row.getByRole('button', { name: 'Rotate secret' }).click()
+  await expect(dialog).toContainText(`Rotate the signing secret for ${name}?`)
+  await expect(dialog).toContainText('stops verifying')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+  await row.getByRole('button', { name: 'Remove' }).click()
+  await dialog.getByRole('button', { name: 'Remove' }).click()
+  await expect(table.getByRole('row').filter({ hasText: name })).toHaveCount(0)
+})

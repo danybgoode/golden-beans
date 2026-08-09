@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import type { DestinationRow } from '@/lib/destinations'
 import type { DeliveryHistoryRow } from '@/lib/deliveries'
 import { formatUtc } from '@/lib/format-utc'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import { Field, FormSection } from '@/components/ui/FormSection'
 import {
@@ -23,10 +24,16 @@ import {
 // app-component-kit-adoption · Sprint 2, Story 2.2 — converted to DataTable + FormSection/Field.
 // The private `formatUtc` copy that lived here is gone in favour of `lib/format-utc.ts` (D11).
 //
-// The two-click "Click again to confirm" on Remove is DELIBERATELY untouched in this sprint:
-// Sprint 2 is presentation-only, and converging it onto `ConfirmDialog` is Sprint 3's job (the
-// corrected D5). It is the product's only pre-existing UI confirmation, and the grooming docs
-// misattributed it to the agent rail.
+// app-component-kit-adoption · Sprint 3 — the two-click "Click again to confirm" on Remove is GONE,
+// converged onto `ConfirmDialog` (the corrected D5). It was the product's only pre-existing UI
+// confirmation and the grooming docs misattributed it to the agent rail, which has no controls at
+// all. Two confirmation patterns for one job is what D5 was written to avoid; it just named the
+// wrong file. `window.confirm` stays banned for the reason recorded when the two-click was added:
+// it blocks the page and the automation harness, so the cancel path could never be spec'd.
+//
+// Rotate is confirmed too. It reads as routine next to Remove and is not: the previous signing
+// secret stops verifying the moment it completes, so every receiver still using it starts rejecting
+// deliveries until someone redeploys with the new one.
 
 type TestState = { destinationId: string; message: string; ok: boolean }
 
@@ -46,8 +53,12 @@ export function DestinationManager({
   const [secret, setSecret] = useState<{ id: string; value: string; rotated: boolean } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<TestState | null>(null)
-  // Which destination is awaiting a second Remove click (the in-UI confirm step).
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  // The destination awaiting confirmation, and WHICH question is being asked about it. Held as the
+  // row so the dialog can name it, and as a discriminated pair so one dialog serves both the
+  // irreversible operations this table offers.
+  const [confirming, setConfirming] = useState<{ row: DestinationRow; intent: 'remove' | 'rotate' } | null>(
+    null
+  )
   const [pending, startTransition] = useTransition()
 
   function onCreate(event: FormEvent) {
@@ -80,6 +91,7 @@ export function DestinationManager({
         } else {
           setError(result.error)
         }
+        setConfirming(null)
       })
     },
     [slug, router]
@@ -129,18 +141,14 @@ export function DestinationManager({
     (id: string) => {
       setError(null)
       setTestResult(null)
-      if (confirmDelete !== id) {
-        setConfirmDelete(id)
-        return
-      }
-      setConfirmDelete(null)
       startTransition(async () => {
         const { ok } = await deleteDestinationAction(slug, id)
         if (!ok) setError('Could not remove that destination.')
+        setConfirming(null)
         router.refresh()
       })
     },
-    [slug, router, confirmDelete]
+    [slug, router]
   )
 
   // Story 2.2 — re-queue a settled delivery. The dispatcher picks it up on its next pass, so the
@@ -191,21 +199,26 @@ export function DestinationManager({
             <button type="button" onClick={() => onToggle(d.id, !d.enabled)} disabled={pending}>
               {d.enabled ? 'Disable' : 'Enable'}
             </button>{' '}
-            <button type="button" onClick={() => onRotate(d.id)} disabled={pending}>
+            <button
+              type="button"
+              onClick={() => setConfirming({ row: d, intent: 'rotate' })}
+              disabled={pending}
+            >
               Rotate secret
             </button>{' '}
-            <button type="button" onClick={() => onDelete(d.id)} disabled={pending}>
-              {confirmDelete === d.id ? 'Click again to confirm' : 'Remove'}
+            <button
+              type="button"
+              onClick={() => setConfirming({ row: d, intent: 'remove' })}
+              disabled={pending}
+            >
+              Remove
             </button>
-            {confirmDelete === d.id && (
-              <small> — the signing secret is lost and this cannot be undone.</small>
-            )}
             {testResult && testResult.destinationId === d.id && <p role="status">{testResult.message}</p>}
           </>
         ),
       },
     ],
-    [pending, confirmDelete, testResult, onSendTest, onToggle, onRotate, onDelete]
+    [pending, testResult, onSendTest, onToggle]
   )
 
   const deliveryColumns = useMemo<DataTableColumn<DeliveryHistoryRow>[]>(
@@ -349,6 +362,30 @@ export function DestinationManager({
         rowKey={(d) => d.id}
         filterLabel="Filter deliveries"
         empty="No deliveries yet — they appear once an enabled destination matches an incoming event."
+      />
+
+      {/*
+        ONE dialog for both irreversible operations on this table, driven by `confirming.intent`.
+        Two dialog components would be two places for the copy to drift apart, which is the same
+        failure mode at a smaller scale as the two confirmation patterns D5 was written about.
+      */}
+      <ConfirmDialog
+        open={confirming !== null}
+        verb={confirming?.intent === 'rotate' ? 'Rotate' : 'Remove'}
+        noun={confirming?.intent === 'rotate' ? 'the signing secret for' : 'destination'}
+        subject={confirming?.row.name ?? ''}
+        consequence={
+          confirming?.intent === 'rotate'
+            ? 'The current signing secret stops verifying the moment this completes. Any receiver still checking signatures with it will reject every delivery until you redeploy it with the new secret — which is shown once, here, and never again.'
+            : 'Deliveries to this endpoint stop immediately and the signing secret is gone for good, so this destination can never be re-enabled. Delivery history is kept. Removing cannot be undone — disable it instead if you only want to pause it.'
+        }
+        pending={pending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          if (!confirming) return
+          if (confirming.intent === 'rotate') onRotate(confirming.row.id)
+          else onDelete(confirming.row.id)
+        }}
       />
     </section>
   )

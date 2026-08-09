@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Component-kit adoption sweep — bring the remaining /app routes onto the design system](../../02-commercial/app-component-kit-adoption/README.md) — 02 Commercial · 0/11 stories · risk: Low · wave-2026-08-08
+- [Component-kit adoption sweep — bring the remaining /app routes onto the design system](../../02-commercial/app-component-kit-adoption/README.md) — 02 Commercial · 0/12 stories · risk: Low · wave-2026-08-08
 
 ## 📋 Ready to build (scaffolded, not started) (3)
 
