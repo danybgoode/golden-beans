@@ -1,8 +1,17 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { test as setup, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { AUTHED_STATE_PATH, TEST_USER, TENANT_RECORD_PATH, type TenantRecord } from './helpers/authed-fixture'
+import {
+  AUTHED_STATE_PATH,
+  IMPACT_FEATURE_KEY,
+  IMPACT_INPUT_KEY,
+  IMPACT_SERIES,
+  TEST_USER,
+  TENANT_RECORD_PATH,
+  type TenantRecord,
+} from './helpers/authed-fixture'
 
 // Authed browser smoke — the setup half.
 //
@@ -126,5 +135,62 @@ setup('provision a disposable tenant and sign in through the real form', async (
   // teardown — see the note on TenantRecord.
   writeRecord({ userId, projectId: membership.project_id as string, slug, email: TEST_USER.email })
 
+  await seedImpactFixture(db, membership.project_id as string)
+
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed exactly enough for `/app/impact/<slug>/<featureKey>` to render.
+ *
+ * Added by app-component-kit-adoption Sprint 2: that route was the one converted surface the authed
+ * rail could not assert, because a bare tenant has no feature with a linked input and the page 500s
+ * without one (cross-review, Agy, PR #83).
+ *
+ * Written through the service client rather than the public API, because the seeding path needs a
+ * project API key and the fixture never captures one — provisioning shows the plaintext once, in the
+ * onboarding UI, and never again.
+ *
+ * No teardown counterpart is needed: every table here is `REFERENCES projects(id) ON DELETE
+ * CASCADE`, and auth.teardown.ts already deletes the project.
+ */
+async function seedImpactFixture(db: SupabaseClient, projectId: string) {
+  const { data: metric, error: metricError } = await db
+    .from('north_star_metrics')
+    .insert({ project_id: projectId, key: 'gb-e2e-impact-metric', name: 'Impact fixture metric' })
+    .select('id')
+    .single()
+  if (metricError || !metric) throw new Error(`could not seed the impact metric: ${metricError?.message}`)
+
+  const { data: input, error: inputError } = await db
+    .from('leading_inputs')
+    .insert({
+      project_id: projectId,
+      metric_id: metric.id,
+      key: IMPACT_INPUT_KEY,
+      name: 'Revenue (fixture)',
+      value_source: 'external_push',
+    })
+    .select('id')
+    .single()
+  if (inputError || !input) throw new Error(`could not seed the impact input: ${inputError?.message}`)
+
+  const { error: linkError } = await db
+    .from('feature_inputs')
+    .insert({ project_id: projectId, feature_key: IMPACT_FEATURE_KEY, input_id: input.id })
+  if (linkError) throw new Error(`could not link the impact input to a feature: ${linkError.message}`)
+
+  // `dedupe_key` is GLOBALLY unique, not per project — so it is keyed by the project id, which is
+  // unique per run. A fixed string would collide with the previous run's leftover row on the second
+  // execution and fail a fixture for a reason that has nothing to do with the code under test.
+  const { error: valuesError } = await db.from('input_values').insert(
+    IMPACT_SERIES.map((point) => ({
+      project_id: projectId,
+      input_id: input.id,
+      occurred_on: point.occurredOn,
+      value: point.value,
+      dedupe_key: `gb-e2e-impact:${projectId}:${point.occurredOn}`,
+    }))
+  )
+  if (valuesError) throw new Error(`could not seed the impact series: ${valuesError.message}`)
+}

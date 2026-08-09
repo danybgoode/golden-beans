@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import { IMPACT_FEATURE_KEY, IMPACT_SERIES, readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug() {
   const slug = readTenantRecord()?.slug
@@ -249,9 +249,15 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
   await expect(emptyCell).toContainText('no-such-key-anywhere')
   await expect(emptyCell).not.toContainText('No keys yet')
 
-  // Clearing restores every row — both of this run's, plus the provisioned one it was hiding.
+  // Clearing restores every row — both of this run's, plus the key provisioning issued, which the
+  // filter was hiding. Asserted per row rather than as an array: Playwright's array form of
+  // toContainText couples the assertion to the exact number of matched elements, so it would
+  // silently depend on how many keys the fixture tenant happens to arrive with. Measured: it
+  // arrives with one. (Cross-review, Codex, PR #83 — Blocking.)
   await filter.fill('')
-  await expect(labelCells()).toContainText([second, first])
+  await expect(labelCells().filter({ hasText: first })).toHaveCount(1)
+  await expect(labelCells().filter({ hasText: second })).toHaveCount(1)
+  await expect(await labelCells().count()).toBeGreaterThanOrEqual(3)
   await expect(table.locator('.data-table__count')).not.toContainText('of')
 })
 
@@ -269,6 +275,15 @@ const CONVERTED_ROUTES: Array<{ name: string; path: (slug: string) => string; ex
   // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
   { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.form-section'] },
   { name: 'flags', path: (s) => `/app/flags/${s}`, expect: ['.data-table'] },
+  // The sixth route. It needs a feature with a linked input and a recorded series, so auth.setup.ts
+  // now seeds one (cross-review, Agy, PR #83 — the fixture provisioned a bare tenant and the page
+  // 500s without data). Worth closing rather than deferring: `impact.spec.ts` does NOT cover this,
+  // because for a signed-in member it only asserts the /login redirect, never the rendered page.
+  {
+    name: 'impact',
+    path: (s) => `/app/impact/${s}/${IMPACT_FEATURE_KEY}`,
+    expect: ['.stat-card', '.data-table'],
+  },
 ]
 
 for (const route of CONVERTED_ROUTES) {
@@ -293,3 +308,36 @@ for (const route of CONVERTED_ROUTES) {
     }
   })
 }
+
+test('impact renders its headline figures as StatCards, and never as an invented zero', async ({ page }) => {
+  const response = await page.goto(`/app/impact/${tenantSlug()}/${IMPACT_FEATURE_KEY}`)
+  expect(response?.status()).toBe(200)
+
+  const cards = page.locator('.stat-card')
+  await expect(cards).toHaveCount(3)
+
+  // The figures are the seeded ones, computed — not placeholders. "Latest" is the LAST point
+  // because both paths that build the series sort ascending; if that ever stops being true this
+  // assertion is what notices.
+  const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
+  const total = IMPACT_SERIES.reduce((sum, point) => sum + point.value, 0)
+
+  // Matched on the LABEL element with an exact string, not on the card's whole text. A substring
+  // match over the card body also matches another card's provenance line — which is how this spec
+  // found that two tiles were both saying "3 days recorded", one fact rendered twice. The copy was
+  // fixed; the locator stays precise so the next duplicate is a failure rather than a coincidence.
+  const card = (label: string) =>
+    page.locator('.stat-card').filter({ has: page.getByText(label, { exact: true }) })
+
+  await expect(card('Latest').locator('.stat-card__value')).toHaveText(String(latest.value))
+  await expect(card('Total in window').locator('.stat-card__value')).toHaveText(String(total))
+  await expect(card('Days recorded').locator('.stat-card__value')).toHaveText(String(IMPACT_SERIES.length))
+
+  // No card is in the unreadable state — these are real readings, and StatCard marks the
+  // difference in the DOM rather than only in the copy.
+  await expect(page.locator('.stat-card[data-unreadable="true"]')).toHaveCount(0)
+
+  // The series is still a TABLE. Story 2.3 is explicit that turning it into a chart is #14's
+  // decision and #16's work, so a future chart must consciously delete this line.
+  await expect(page.locator('.data-table tbody tr')).toHaveCount(IMPACT_SERIES.length)
+})

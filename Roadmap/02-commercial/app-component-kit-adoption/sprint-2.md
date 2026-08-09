@@ -119,7 +119,7 @@ list rather than a feeling.*
 | `scenarios/[projectSlug]/page.tsx` | **D6.** 287 lines, six stacked tables, and `scenarios-pm-operable` (#16) rewrites the page. Converting then rewriting is paid-for work thrown away. |
 | `flags/…/flag-manager.tsx` — the **definitions** table | **D3 finding** (below). One small table per flag. |
 | `experiments/…/experiment-manager.tsx` — the **version** tables | **D3 finding** (below). One small table per experiment. |
-| `experiments/[projectSlug]/[experimentKey]/page.tsx` | **D3 finding.** Its three tables are per-variant: 2–4 fixed rows each. A filter box above a two-row table is worse than the plain table. Story 2.2 asked for this route and it is a deliberate, reasoned miss — not an oversight. |
+| `experiments/[projectSlug]/[experimentKey]/page.tsx` | **D3 finding**, and the epic README's **Amendment 1** — product owner approved this as carry-over on 2026-08-08 after cross-review flagged it. Its three tables are per-variant: 2–4 fixed rows each. A filter box above a two-row table is worse than the plain table. |
 | `experiments/…/[experimentKey]/decision-recorder.tsx` | A form, but the append-only decision ledger is `experiment-governance-v2`'s surface and Sprint 3 touches its *confirmation*, not its layout. Converting the form here would collide with that. |
 | `shares/[projectSlug]/*`, `journeys/[projectSlug]/*`, `funnel/…`, `tasks/[projectSlug]/page.tsx`, `app/page.tsx`, `sign-out-button.tsx`, `dismiss-key-button.tsx` | **Accretes.** Beyond the seven owner-operated surfaces this epic bet on. `shares` and `journeys` are the strongest next candidates: both are flat list + form, i.e. the shape `DataTable` already fits. |
 
@@ -155,7 +155,13 @@ conversion, and it is squarely `flags-visual-rule-builder`'s (#15) territory.
   `experiment-decisions.spec.ts`) — they must pass **unchanged**. A spec that needed editing to
   survive a conversion is a behaviour change; stop and report it.
 - **browser smoke owed:** yes, to the product owner — **visual parity** across the six converted
-  routes. An api spec cannot see that a table still looks right.
+  routes. An api spec cannot see that a table still looks right. Everything mechanical is now
+  automated: `design-system.authed.spec.ts` asserts all six routes render through the kit, plus the
+  sort control's three states, the filter, both empty states, and impact's StatCard figures.
+  `auth.setup.ts` seeds a feature + input + series so `/impact` is reachable at all — added after
+  cross-review (Agy, PR #83) pointed out it was the one converted route with no rendered coverage,
+  and that `impact.spec.ts` does not close the gap because for a signed-in member it only asserts
+  the `/login` redirect.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` + `npm run
   check:design-drift` green before merge.
 

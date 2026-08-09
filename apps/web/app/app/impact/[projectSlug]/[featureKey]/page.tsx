@@ -65,17 +65,21 @@ export default async function ImpactPage({
                     icon="gauge"
                     provenance={`on ${latest.date}`}
                   />
+                  {/* Each card's provenance says something the OTHER two don't. The first draft had
+                      "Total in window" provenanced as "3 days recorded", which restated the third
+                      card word for word — two tiles carrying one fact, and a reader has to check
+                      whether they disagree. Caught by a spec locator matching two cards. */}
                   <StatCard
                     label="Total in window"
                     value={String(total)}
                     icon="trend-up"
-                    provenance={`${input.series.length} ${input.series.length === 1 ? 'day' : 'days'} recorded`}
+                    provenance={`${input.series[0].date} → ${latest.date}`}
                   />
                   <StatCard
                     label="Days recorded"
                     value={String(input.series.length)}
                     icon="clock"
-                    provenance={`${input.series[0].date} → ${latest.date}`}
+                    provenance="days with a value, not calendar days"
                   />
                 </div>
               ) : null}
