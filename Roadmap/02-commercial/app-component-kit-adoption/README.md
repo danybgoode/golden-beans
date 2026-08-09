@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: app-component-kit-adoption
 build_order: 13
 ---
@@ -204,15 +204,35 @@ is a presentation refactor of already-gated surfaces. Each converted route keeps
 already had. Risk tier is low throughout; the reviewer may auto-merge on a green gate and a clean
 review.
 
-## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** n/a — carve-out recorded above (no runtime seam; presentation only)
-- [ ] **Carry-over stated:** which routes were *not* converted, named individually, so the remaining
-      debt is a list rather than a feeling
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+## Definition of Done (epic) — ✅ complete 2026-08-09
+
+- [x] All sprints merged to `main` + smoke-tested (gaps stated) — `0e54414` (#82), `997fc93` (#83),
+      `b0aa85e` (#84). Production deploy of `b0aa85e` confirmed; API-level prod smoke green on the
+      public/auth surfaces. The signed-in walkthrough is credential-gated and owed to the product
+      owner (the documented split).
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped — sharpened, not appended)
+- [x] **Kill-switch:** n/a — carve-out recorded above (no runtime seam; presentation only)
+- [x] **Carry-over stated:** every unconverted `/app` route named individually with a reason each —
+      `sprint-2.md` → Story 2.4. Plus the open **D3 finding** (`DataTable`'s filter is unconditional,
+      which is wrong for small fixed-cardinality tables) and two irreversible actions left
+      unconfirmed on unconverted routes (`shares` → Revoke, `journeys` → Activate).
+- [x] Feature branches deleted; **frontmatter `status: shipped`** (the SSOT — board & Notion derive
+      from it; `node scripts/build-order.mjs` re-run)
+
+## What this epic decided that outlives it
+
+Four things a later reader should not have to re-derive:
+
+1. **The rail reads.** `AgentRail.tsx` has no interactive controls, and a staged
+   `task_write_confirmations` row is a durable authorization the *agent* spends — not a UI
+   confirmation. The two are never merged. (Corrected D5.)
+2. **One confirmation pattern.** `ConfirmDialog`, a native `<dialog>`. `window.confirm` stays banned
+   because it blocks the page and the automation harness, and the two-click affordance is gone.
+3. **`DataTable` never fetches, and can only be called from a client component** — its `columns`
+   carry accessor functions, which cannot cross the server→client boundary. (D2, plus the finding.)
+4. **`tokens.css` is a byte-mirrored handoff artifact.** New CSS goes in `globals.css`. (D8.)

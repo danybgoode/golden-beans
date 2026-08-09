@@ -88,6 +88,19 @@ independently shippable slice of value.
   reuses the same `getProjectOutcome` the client-facing Pod Report reads, so an owner's numbers and a
   client's cannot drift. The rail is **dark in production** behind `AGENT_RAIL_ENABLED`, born OFF —
   and the var does not exist in Vercel yet, which is the one item owed.
+- ✅ [Component-kit adoption sweep](02-commercial/app-component-kit-adoption/README.md) (`DataTable`
+  · `ConfirmDialog` · `FormSection`/`Field` · six converted routes · every irreversible action
+  confirmed) — **shipped & live 2026-08-09** (PRs #82/#83/#84). `app-shell-and-agent-rail` shipped a
+  nine-component kit that **2 of 26** `/app` route files used; this closed the gap for the surfaces a
+  PM actually operates. Every list in the product now sorts, filters, and tells *"you have none"*
+  apart from *"none match what you typed"* — and nine irreversible controls ask first and **say what
+  stops**, in a sentence, naming the specific object. The lock pass found the epic's own D5 was
+  false: the agent rail was documented as "already confirming" and has no interactive controls at
+  all, while the product's one real confirmation — a bespoke two-click in `destinations` — went
+  unmentioned. That one is now converged onto `ConfirmDialog`, so the product ships **one**
+  confirmation pattern. Also the first `table`, `form` and `dialog` CSS the repo has ever had: before
+  this, every `/app` table rendered at browser defaults. No migration, no new route, no new
+  dependency.
 - ✅ [Design system lift](02-commercial/design-system-lift/README.md) (gold-ingot Lucide bean mark ·
   approved dark-roast/kraft/foil system · reusable public/product rails · restrained route loaders
   · automated drift guard) — **shipped 2026-07-28** (PRs #51/#53), sourced directly from the
@@ -141,6 +154,22 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-09** — `app-component-kit-adoption` **epic shipped & LIVE** (PRs #82/#83/#84): the kit
+  finally reached the routes, and nothing irreversible is one click away any more. The
+  architecture-lock pass earned its keep before a line was written — it read the code instead of the
+  plan and found **D5, a locked decision the whole of Sprint 3 rested on, described a component that
+  does not exist as described**: `AgentRail.tsx` "already confirms" was false (it is read-only, zero
+  controls), and the real pre-existing confirmation sat unmentioned in `destinations`. Unchecked,
+  Sprint 3 would have shipped the second confirmation pattern D5 existed to prevent. Cross-review
+  then caught what CI cannot: a green PR whose `ConfirmDialog` **stranded keyboard users on
+  `<body>`** because it unmounted itself instead of calling native `close()` — the focus-trap spec
+  passed it, having only ever examined focus *while the dialog was open*. A spec that watches a
+  mechanism running will not notice it never puts anything back. Two other "regressions" turned out
+  to be the environment, disproved by running the identical command on clean `main` rather than
+  reasoning about the diff: a `next dev` server corrupting the local gate's own build output, and a
+  spec failing on accumulated fixture data. And "less code", the Sweeper prior, was measured and is
+  simply **false** for table conversions (136→135, 152→163) — the acceptance that survives is *same
+  behaviour, no regressions*, which is falsifiable.
 - **2026-07-26** — `pod-report` **epic shipped & LIVE** (PRs #30/#32/#33/#34): the Pod Report and the
   Roadmap Hub, both rendered from the same versioned immutable artifact primitive. Sprint 2 had
   computed every number and shipped none of the surface — a re-derivation against production found

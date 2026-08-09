@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 3: Confirm every destructive action
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR [#84](https://github.com/danybgoode/golden-beans/pull/84), merged as `b0aa85e`. Live in production.
 
 > **Build contract (locked by the architect before the builder started).**
 > This sprint changes **behaviour** — it is the one place in the epic where Sweeper's "same

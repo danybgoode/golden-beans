@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 1: The three missing primitives
 
-**Status:** 🟦 In review — `eb266d3` (primitives + proof of use), `46b4b9e` (spec corrections)
+**Status:** ✅ Shipped — PR [#82](https://github.com/danybgoode/golden-beans/pull/82), merged as `0e54414`. Live in production.
 
 > **Build contract (locked by the architect before the builder started).**
 > This sprint ships **only** the three components, their styling and their specs. No route
