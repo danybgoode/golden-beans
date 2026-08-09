@@ -124,3 +124,23 @@ The obsolete Golden-side importer was a one-time snapshot mechanism, not the ong
 rail. It is removed after this parity and activation proof. Future Golden-powered projects publish
 their typed catalogs through the generic project-scoped SDK route with a dedicated revocable
 `flag_sync` credential.
+
+## 2026-08-09 — owner-project identity correction
+
+The current owner UI exposes `/app/flags/miyagisanchez` and no owner-visible `miyagi` project. The
+2026-08-01 statement above that called `miyagi` live and `miyagisanchez` dormant must therefore not be
+used to choose a new credential; it is retained only as the historical claim being corrected here.
+
+A fresh, project-scoped `frontend` catalog-sync credential minted from
+`/app/flags/miyagisanchez` reached an existing immutable catalog. The whole 41-definition Miyagi
+publisher stopped atomically on HTTP `409` because at least one existing definition had semantic drift.
+The operator did not bypass that conflict. A narrowed publish of the already-reviewed
+`partners.recruiting_v3_enabled` entry returned `v1 created`, and an immediate identical rerun returned
+`v1 unchanged`. Catalog sync cannot activate a version or change a serving snapshot, so registration
+left the new definition dark and default-OFF. Its `source=miyagi` metadata names the publishing service;
+it is not a Golden project identifier.
+
+This proves `miyagisanchez` is the current owner-operated catalog. It does not by itself expose which
+project the storefront's server-only production read credential resolves; the authenticated production
+smoke owns that final binding proof. Revoke the temporary sync credential after owner inspection, and do
+not infer a project slug from either name by analogy again.
