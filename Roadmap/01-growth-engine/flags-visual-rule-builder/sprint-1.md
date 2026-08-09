@@ -3,12 +3,15 @@
 **Status:** ⬜ not started
 
 > **Build contract (locked by the architect before the builder started).**
-> Cite D1, D2, D3, D5, D6, D7, D9, D10 — do not re-derive them.
-> **Before writing a line:** confirm against live `main` that `FLAG_CONTEXT_FIELDS` still has
-> exactly 6 values and `FlagClause` exactly 2 operators. Every acceptance criterion below assumes
-> it. If it has changed, correct this doc first, out loud.
+> Cite D1, D2, D3, D5, D6, D7, D9, D10 and **A1, A2** — do not re-derive them.
+> **Verified at lock, 2026-08-09 @ `db95b5e`:** `FLAG_CONTEXT_FIELDS` has exactly 6 values and
+> `FlagClause` exactly 2 operators. Limits are as D5 states. `FormSection`/`Field`/`ConfirmDialog`
+> are on `main` — **the #13 dependency is met.** Do not re-verify; build.
 > `FLAG_RULE_BUILDER_ENABLED` must exist **DISABLED in every environment before this merges.**
-> **Blocked by:** #13 Sprint 1 (`FormSection`/`Field`) on `main`.
+> **A1 — the write seam:** post through `createFlagDefinitionVersionAction` (`./actions.ts:31`),
+> which already validates server-side and already returns the parser's error. **Not**
+> `lib/flag-admin-operations.ts` — that is Miyagi's boolean-toggle adapter and cannot create a
+> definition version. No new route, no new action.
 
 ## Stories
 
@@ -58,7 +61,8 @@ serves, **so that** I can read the rule as one thing instead of four fields.
 
 **Acceptance:**
 - With `FLAG_RULE_BUILDER_ENABLED=true`, the flags page offers the builder; the definition posts
-  through the **existing** admin write path (`lib/flag-admin-operations.ts`) with no new route.
+  through the **existing** server action `createFlagDefinitionVersionAction` (A1) with no new route
+  and no second validation path.
 - A server-side rejection from `parseFlagDefinition` is **displayed to the PM**, not swallowed (D2).
 - With the gate **unset**, the page renders exactly as it does today — the existing textarea,
   unchanged. A dark spec asserts it.
