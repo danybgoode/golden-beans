@@ -103,11 +103,13 @@ After this deployment succeeds, the two service-owned catalogs are synchronized 
 resulting 41-key union, idempotent second run, unchanged production snapshot, and live owned-shop
 resolution are appended here before removing the obsolete Golden-side Miyagi importer.
 
-## 2026-08-01 — generic catalog sync and owned-shop activation
+## 2026-08-01 — generic catalog sync and owned-shop activation (historical)
 
-The live runtime tenant is Golden project `miyagi`. The similarly named `miyagisanchez` project is a
-dormant duplicate and was not used for the production cutover. The live service-owned publishers were
-corrected to preserve the exact immutable definitions already present in `miyagi` before syncing:
+This section preserves the evidence as it was recorded on 2026-08-01. Its project-identity claim is
+superseded by the 2026-08-09 correction below and must not be used to choose a current credential. At
+the time, the runtime tenant was recorded as Golden project `miyagi`, while `miyagisanchez` was recorded
+as a dormant duplicate not used for that cutover. The service-owned publishers were corrected to
+preserve the exact immutable definitions then observed in `miyagi` before syncing:
 
 - Frontend: `40 definitions (1 created, 39 unchanged)`; rerun `0 created, 40 unchanged`.
 - Backend: `13 definitions (0 created)`; rerun `0 created`.
@@ -127,9 +129,9 @@ their typed catalogs through the generic project-scoped SDK route with a dedicat
 
 ## 2026-08-09 — owner-project identity correction
 
-The current owner UI exposes `/app/flags/miyagisanchez` and no owner-visible `miyagi` project. The
-2026-08-01 statement above that called `miyagi` live and `miyagisanchez` dormant must therefore not be
-used to choose a new credential; it is retained only as the historical claim being corrected here.
+The current owner UI exposes `/app/flags/miyagisanchez` and no owner-visible `miyagi` project. This
+entry supersedes the 2026-08-01 project-identity claim above: that historical claim must not be used to
+choose a new credential.
 
 A fresh, project-scoped `frontend` catalog-sync credential minted from
 `/app/flags/miyagisanchez` reached an existing immutable catalog. The whole 41-definition Miyagi
