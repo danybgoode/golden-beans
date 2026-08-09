@@ -67,8 +67,15 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
     // we must never ship. Keeping it open also means the confirm button is `disabled` for that
     // window, so the action cannot be fired twice. (Cross-review, Agy, PR #82.)
     startTransition(async () => {
-      const { ok } = await revokeKeyAction(slug, key.id)
-      if (!ok) setError('Could not revoke that key (already revoked?).')
+      // Same shape as every other confirmed action: the close sits after the try/catch, so a thrown
+      // action cannot leave the dialog open and unanswerable. Agy raised this on agent-keys and
+      // destinations in PR #84; it was true here too, from Sprint 1.
+      try {
+        const { ok } = await revokeKeyAction(slug, key.id)
+        if (!ok) setError('Could not revoke that key (already revoked?).')
+      } catch {
+        setError('Could not revoke that key. It is still active.')
+      }
       setConfirming(null)
       router.refresh()
     })

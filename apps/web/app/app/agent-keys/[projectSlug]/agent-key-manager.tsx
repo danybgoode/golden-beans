@@ -78,8 +78,16 @@ export function AgentKeyManager({
     (keyId: string) => {
       setError(null)
       startTransition(async () => {
-        const { ok } = await revokeAgentKeyAction(slug, keyId)
-        if (!ok) setError('Could not revoke that key (already revoked?).')
+        // try/catch, and `setConfirming(null)` AFTER it rather than inside the happy path. A throw
+        // here — a dropped connection mid-transition — would otherwise skip the close and strand
+        // the dialog open with no error on it, asking a question whose answer already failed.
+        // (Cross-review, Agy, PR #84.)
+        try {
+          const { ok } = await revokeAgentKeyAction(slug, keyId)
+          if (!ok) setError('Could not revoke that key (already revoked?).')
+        } catch {
+          setError('Could not revoke that key. Try again.')
+        }
         setConfirming(null)
         router.refresh()
       })

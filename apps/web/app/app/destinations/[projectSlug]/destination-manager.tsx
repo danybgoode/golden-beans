@@ -84,12 +84,18 @@ export function DestinationManager({
       setError(null)
       setTestResult(null)
       startTransition(async () => {
-        const result = await rotateSecretAction(slug, id)
-        if (result.ok) {
-          setSecret({ id, value: result.signingSecret, rotated: true })
-          router.refresh()
-        } else {
-          setError(result.error)
+        // The close is after the try/catch so a thrown action cannot strand the dialog open with no
+        // error on it (cross-review, Agy, PR #84).
+        try {
+          const result = await rotateSecretAction(slug, id)
+          if (result.ok) {
+            setSecret({ id, value: result.signingSecret, rotated: true })
+            router.refresh()
+          } else {
+            setError(result.error)
+          }
+        } catch {
+          setError('Could not rotate that signing secret. The previous one is still valid.')
         }
         setConfirming(null)
       })
@@ -142,8 +148,12 @@ export function DestinationManager({
       setError(null)
       setTestResult(null)
       startTransition(async () => {
-        const { ok } = await deleteDestinationAction(slug, id)
-        if (!ok) setError('Could not remove that destination.')
+        try {
+          const { ok } = await deleteDestinationAction(slug, id)
+          if (!ok) setError('Could not remove that destination.')
+        } catch {
+          setError('Could not remove that destination. It is still receiving deliveries.')
+        }
         setConfirming(null)
         router.refresh()
       })

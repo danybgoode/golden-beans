@@ -76,7 +76,7 @@ export function FlagManager({
   // Stable, so the two revoke callbacks below (and through them the column memos) can list their
   // real dependencies instead of suppressing the exhaustive-deps rule.
   const run = useCallback(
-    (work: () => Promise<{ ok: boolean; error?: string }>, success: string) => {
+    (work: () => Promise<{ ok: boolean; error?: string }>, success: string, onSettled?: () => void) => {
       setError(null)
       setNotice(null)
       startTransition(async () => {
@@ -89,6 +89,14 @@ export function FlagManager({
         } catch {
           setError('The change could not be applied. Try again.')
         }
+        // Runs whatever happened, INSIDE the transition. The confirmed revocations below use it to
+        // close their dialog, and both parts matter: calling setConfirming(null) after `run()`
+        // returns would fire synchronously — `run` only SCHEDULES the transition — so the dialog
+        // would vanish the instant Confirm was clicked and its `pending` state would be
+        // unreachable, which is precisely the defect cross-review caught on key-manager in PR #82.
+        // Putting it after the try/catch also means a thrown action cannot strand the dialog open
+        // (the same class Agy raised on agent-keys and destinations in PR #84).
+        onSettled?.()
       })
     },
     [router]
@@ -133,8 +141,11 @@ export function FlagManager({
   }
   const onRevoke = useCallback(
     (keyId: string) => {
-      run(() => revokeFlagReadKeyAction(slug, keyId), 'Flag read key revoked.')
-      setConfirming(null)
+      run(
+        () => revokeFlagReadKeyAction(slug, keyId),
+        'Flag read key revoked.',
+        () => setConfirming(null)
+      )
     },
     [slug, run]
   )
@@ -157,8 +168,11 @@ export function FlagManager({
   }
   const onRevokeSync = useCallback(
     (keyId: string) => {
-      run(() => revokeFlagSyncKeyAction(slug, keyId), 'Catalog sync key revoked.')
-      setConfirming(null)
+      run(
+        () => revokeFlagSyncKeyAction(slug, keyId),
+        'Catalog sync key revoked.',
+        () => setConfirming(null)
+      )
     },
     [slug, run]
   )
