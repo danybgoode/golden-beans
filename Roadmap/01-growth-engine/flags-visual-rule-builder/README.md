@@ -200,6 +200,30 @@ page already passes**. A builder adding a Supabase call in Sprint 2 has taken a 
   Story 3.2 must state this as its own outcome — a PM who leaves the targeting key blank and sees
   "no rule matched" has been told something misleading.
 
+### A6 — D5 was unbuildable as written: three of its four constants were not exported. *(found during Sprint 1, 2026-08-09)*
+
+The "Limits" row of the table above says "Nothing" is missing and D5 says every limit is **read from
+the SDK constant**. `MAX_FLAG_RULES`, `MAX_FLAG_CLAUSES` and `MAX_FLAG_VARIANTS` are declared in
+`packages/sdk/src/flags.ts` — and **were never re-exported from `packages/sdk/src/index.ts`**. Only
+`MAX_FLAG_DEFINITION_BYTES` was, which is why `lib/flag-definition.ts` re-exports exactly that one
+and no other. Every consumer outside the SDK had no choice but to hardcode the numbers.
+
+So D5 could not be obeyed; a builder following it would have hit the wall mid-story and, under
+pressure, written the literal `20` that D5 exists to forbid. **Fixed by adding the three names to
+the existing export block** — purely additive, no behaviour change, and it is what makes "read the
+constant" possible at all. The cap test asserts the bound *against the constant*, so the mutation
+sprint-1.md names (hardcode 20, change the constant) now goes red as designed. Verified: it does.
+
+### A7 — A git worktree with no `node_modules` silently tests the ROOT checkout's SDK
+
+Not a scope finding, but it cost real time and will cost the next agent the same. This worktree
+resolved `@golden-beans/sdk` to **`/Users/cosmo/dobby/golden-beans/packages/sdk/dist`** — the root
+checkout, on `main`, without the branch's changes. `npm run build --workspace=@golden-beans/sdk`
+wrote to the worktree's `dist/`, which nothing imported, so an SDK edit appeared to have no effect
+and the unit tests were quietly asserting against `main`'s code. **`npm install` inside the worktree
+first**, and confirm with `node -e "console.log(require.resolve('@golden-beans/sdk'))"` before
+trusting a single SDK-touching test result. Promote to `LEARNINGS.md` at epic close.
+
 ### The seams this epic creates (named once, here)
 
 | Seam | Purpose | Sprint | Pure? |

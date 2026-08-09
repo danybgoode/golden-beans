@@ -41,6 +41,14 @@ export {
   FLAG_CONTEXT_FIELDS,
   FLAG_ENVIRONMENTS,
   MAX_FLAG_DEFINITION_BYTES,
+  // flags-visual-rule-builder (A6). These three were declared in ./flags but never re-exported, so
+  // every consumer outside the SDK had to hardcode the numbers the parser enforces — which is the
+  // precise failure D5 forbids. A rule builder that caps at a literal 20 disagrees with the parser
+  // the first time the parser changes, and it disagrees SILENTLY, by refusing input the backend
+  // would have accepted. Exporting them is what makes "read the constant" possible at all.
+  MAX_FLAG_CLAUSES,
+  MAX_FLAG_RULES,
+  MAX_FLAG_VARIANTS,
   evaluateFlag,
   isFlagEnvironment,
   parseFlagDefinition,
