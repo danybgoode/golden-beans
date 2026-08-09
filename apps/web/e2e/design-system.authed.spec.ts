@@ -254,3 +254,42 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
   await expect(labelCells()).toContainText([second, first])
   await expect(table.locator('.data-table__count')).not.toContainText('of')
 })
+
+// Story 2.4 — one assertion per converted route. Deliberately thin: the point is that each surface
+// now renders THROUGH the kit rather than as bare markup, which is the whole claim of the epic and
+// the thing that silently regresses when a later change reverts a route to a hand-rolled table.
+// Behaviour parity is proven elsewhere and better — by each route's EXISTING api spec passing
+// unchanged (api-keys, destinations, experiments, flag-serving, experiment-decisions, impact).
+const CONVERTED_ROUTES: Array<{ name: string; path: (slug: string) => string; expect: string[] }> = [
+  { name: 'keys', path: (s) => `/app/keys/${s}`, expect: ['.data-table', '.form-section'] },
+  { name: 'agent-keys', path: (s) => `/app/agent-keys/${s}`, expect: ['.data-table', '.form-section'] },
+  { name: 'destinations', path: (s) => `/app/destinations/${s}`, expect: ['.data-table', '.form-section'] },
+  // Experiments converts its FORM only — its version tables are per-experiment and 1-5 rows each, so
+  // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
+  // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
+  { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.form-section'] },
+  { name: 'flags', path: (s) => `/app/flags/${s}`, expect: ['.data-table'] },
+]
+
+for (const route of CONVERTED_ROUTES) {
+  test(`${route.name} renders through the component kit`, async ({ page }) => {
+    const response = await page.goto(route.path(tenantSlug()))
+    // A named failure rather than a bare status assertion. `/app/experiments` 404s when
+    // EXPERIMENT_GOVERNANCE_ENABLED is unset — it is ON in production, so a local run without it
+    // would otherwise report a conversion regression that is really a missing env var. Stated, not
+    // skipped: a silently skipped route reads exactly like a covered one.
+    expect(
+      response?.status(),
+      `${route.name} did not render. If this is 404, check the route's gate is enabled on the ` +
+        `server under test (EXPERIMENT_GOVERNANCE_ENABLED for experiments) — it is ON in production.`
+    ).toBe(200)
+    for (const selector of route.expect) {
+      await expect(page.locator(selector).first()).toBeVisible()
+    }
+    // Every converted table carries its sort/filter affordances, not just the class name.
+    if (route.expect.includes('.data-table')) {
+      await expect(page.locator('.data-table__filter').first()).toBeVisible()
+      await expect(page.locator('.data-table thead th').first()).toBeVisible()
+    }
+  })
+}

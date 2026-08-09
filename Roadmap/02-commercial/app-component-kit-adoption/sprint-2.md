@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 2: Convert the owner-operated routes
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review
 
 > **Build contract (locked by the architect before the builder started).**
 > Sweeper acceptance governs every story here: **less code, same behaviour, no regressions.** A
@@ -95,6 +95,57 @@
   its conversion landed.
 **Risk:** low
 
+## Story 2.4 — the route-conversion inventory (the carry-over, named)
+
+*Every `.tsx` under `apps/web/app/app` — 27 files after this sprint. "The sweep is partly done" as a
+list rather than a feeling.*
+
+### Converted (this epic)
+
+| Route / file | What it now renders through |
+|---|---|
+| `keys/[projectSlug]/key-manager.tsx` | `DataTable` · `FormSection`/`Field` · `ConfirmDialog` |
+| `agent-keys/[projectSlug]/agent-key-manager.tsx` | `DataTable` · `FormSection`/`Field` |
+| `destinations/[projectSlug]/destination-manager.tsx` | `DataTable` ×2 (destinations + deliveries) · `FormSection`/`Field` |
+| `experiments/[projectSlug]/experiment-manager.tsx` | `FormSection`/`Field` — **form only**, see the D3 finding |
+| `flags/[projectSlug]/flag-manager.tsx` | `DataTable` ×3 (snapshot keys, sync keys, audit) |
+| `impact/[projectSlug]/[featureKey]/page.tsx` + `series-table.tsx` | `StatCard` ×3 · `DataTable` |
+| `onboarding/[projectSlug]/page.tsx`, `tasks/[projectSlug]/task-queue.tsx` | already consumed `Icon`/`Panel` before this epic |
+
+### NOT converted — with the reason each
+
+| Route / file | Why not |
+|---|---|
+| `scenarios/[projectSlug]/page.tsx` | **D6.** 287 lines, six stacked tables, and `scenarios-pm-operable` (#16) rewrites the page. Converting then rewriting is paid-for work thrown away. |
+| `flags/…/flag-manager.tsx` — the **definitions** table | **D3 finding** (below). One small table per flag. |
+| `experiments/…/experiment-manager.tsx` — the **version** tables | **D3 finding** (below). One small table per experiment. |
+| `experiments/[projectSlug]/[experimentKey]/page.tsx` | **D3 finding.** Its three tables are per-variant: 2–4 fixed rows each. A filter box above a two-row table is worse than the plain table. Story 2.2 asked for this route and it is a deliberate, reasoned miss — not an oversight. |
+| `experiments/…/[experimentKey]/decision-recorder.tsx` | A form, but the append-only decision ledger is `experiment-governance-v2`'s surface and Sprint 3 touches its *confirmation*, not its layout. Converting the form here would collide with that. |
+| `shares/[projectSlug]/*`, `journeys/[projectSlug]/*`, `funnel/…`, `tasks/[projectSlug]/page.tsx`, `app/page.tsx`, `sign-out-button.tsx`, `dismiss-key-button.tsx` | **Accretes.** Beyond the seven owner-operated surfaces this epic bet on. `shares` and `journeys` are the strongest next candidates: both are flat list + form, i.e. the shape `DataTable` already fits. |
+
+### 🔎 The D3 finding — logged, not silently fixed
+
+**`DataTable`'s filter is unconditional, and that is wrong for small fixed-cardinality tables.**
+
+D3 says the API freezes after the two founding conversions and *"a third route needing an option is
+a finding to log, not a change to make silently."* Three surfaces hit it, which is corroboration
+rather than a one-off:
+
+- `flags` — the definitions table, rendered **once per flag**
+- `experiments` — the version table, rendered **once per experiment**
+- `experiments/[experimentKey]` — three per-variant tables of **2–4 fixed rows**
+
+Converting these would stack a filter box above every flag/experiment/metric on the page. The
+option needed is a way to suppress the filter — either an explicit prop, or auto-suppression below a
+row threshold (which D7 would require reading from somewhere rather than hardcoding). **Deciding
+which is the next wave's call, not this sprint's**, and the API stays frozen meanwhile.
+
+There is a second, sharper question underneath it, worth putting to the product owner rather than
+answering unilaterally: *is a per-row-group table the right shape at all?* Both `flags` and
+`experiments` might be better as one flat table of versions with the flag/experiment as a column —
+which would make them `DataTable`'s exact case. That is an information-architecture change, not a
+conversion, and it is squarely `flags-visual-rule-builder`'s (#15) territory.
+
 ## Sprint QA
 - **Specs (corrected at kickoff — D9):** `e2e/design-system.authed.spec.ts` is the **authed browser**
   rail, not an api spec; it is excluded from the merge gate by `playwright.config.ts`. One assertion
@@ -120,10 +171,16 @@ Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel
    → The destinations table sorts and filters **the same way**, with the same control in the same
      place.
 4. Go to https://golden-beans-gamma.vercel.app/app/experiments/<projectSlug> and open one experiment.
-   → Both the list and the detail page use the converted layout — no mismatch between them.
+   → The **create-a-draft form** is converted (heading, labelled fields, hints). The per-experiment
+     version tables and the detail page's per-variant tables are **unchanged** — a deliberate,
+     reasoned miss, not an oversight: see the D3 finding in Story 2.4. Story 2.2 asked for the
+     detail route and this sprint is not delivering it; that is the one acceptance criterion this
+     sprint knowingly does not meet.
 5. Go to https://golden-beans-gamma.vercel.app/app/flags/<projectSlug>
-   → The flag list is converted. **The JSON textarea for creating a flag is unchanged** — this epic
-     deliberately does not touch it.
+   → **Snapshot keys**, **catalog sync keys** and the **lifecycle audit** each sort and filter.
+     The **definitions** table (one per flag) is unchanged — D3 finding, Story 2.4.
+     **The JSON textarea for creating a flag is unchanged** — this epic deliberately does not touch
+     it; replacing it is `flags-visual-rule-builder`'s entire epic.
 6. Go to https://golden-beans-gamma.vercel.app/app/impact/<projectSlug>/<featureKey>
    → Headline numbers render as stat cards. The time-series table is still a table.
 7. Open any converted page for a project with no data yet.
