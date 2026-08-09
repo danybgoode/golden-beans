@@ -180,3 +180,77 @@ test('Field announces its error against the control and does not reflow the form
   // submit button a cursor is already travelling towards stays where it was.
   expect(await submitTop()).toBeCloseTo(before, 0)
 })
+
+// ── app-component-kit-adoption · Sprint 2 — the converted routes ────────────────────────────────
+//
+// Story 2.1 carries a finding from Sprint 1's cross-review (Codex, PR #82): `DataTable` merged with
+// no call site and no RENDERED coverage. Its logic was gate-covered by lib/data-table.test.ts, but
+// nothing had ever asserted that the sort control, the filter or the empty states reach a screen.
+// This is that coverage, on the first of the two founding call sites.
+
+test('DataTable sorts, filters, and tells the two kinds of empty apart', async ({ page }) => {
+  const slug = tenantSlug()
+
+  // The FIRST empty state — no rows at all — is asserted on `agent-keys` rather than `keys`,
+  // because provisioning issues a project's first API key, so a fresh tenant's key table is never
+  // actually empty. It must be the CALLER's sentence: a blank <tbody> or a generic "No results" is
+  // the thing this epic exists to remove.
+  await page.goto(`/app/agent-keys/${slug}`)
+  await expect(page.locator('.data-table__empty')).toContainText('No agent write keys yet')
+
+  await page.goto(`/app/keys/${slug}`)
+  const table = page.locator('.data-table')
+
+  // Two rows whose ALPHABETICAL order is the reverse of their creation order, so a passing sort
+  // assertion cannot be satisfied by the server's newest-first ordering.
+  const stamp = Date.now()
+  const first = `zz-first-${stamp}`
+  const second = `aa-second-${stamp}`
+  await issueKey(page, slug, first)
+  await issueKey(page, slug, second)
+
+  const labelCells = () => table.locator('tbody tr td:first-child')
+  const header = table.getByRole('button', { name: 'Label' })
+  const sortState = () => table.getByRole('columnheader', { name: /Label/ })
+  const filter = page.getByLabel('Filter keys')
+
+  // Narrow to just this run's two rows first. The tenant also holds the key provisioning issued,
+  // and a sort assertion that has to account for rows it did not create is a spec that breaks for
+  // reasons unrelated to sorting. Filtering and sorting compose, which is itself worth exercising.
+  await filter.fill(String(stamp))
+  await expect(labelCells()).toHaveText([second, first])
+  await expect(table.locator('.data-table__count')).toContainText('of')
+
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'ascending')
+  await expect(labelCells()).toHaveText([second, first])
+
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'descending')
+  await expect(labelCells()).toHaveText([first, second])
+
+  // The third click returns to the server's order rather than cycling asc/desc forever — the
+  // behaviour lib/data-table.ts calls out and the reason `SortState` has a null case.
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'none')
+  await expect(labelCells()).toHaveText([second, first])
+
+  // Narrowing further still works.
+  await filter.fill(`zz-first-${stamp}`)
+  await expect(labelCells()).toHaveText([first])
+
+  // ...and a query matching nothing gets the OTHER empty state, naming the query. This is the
+  // distinction the component exists to preserve: "you have no keys" and "none of your keys match
+  // what you typed" are different facts, and a PM who sees the first when the second is true
+  // concludes their credentials are gone.
+  await filter.fill('no-such-key-anywhere')
+  const emptyCell = table.locator('.data-table__empty')
+  await expect(emptyCell).toContainText('Nothing matches')
+  await expect(emptyCell).toContainText('no-such-key-anywhere')
+  await expect(emptyCell).not.toContainText('No keys yet')
+
+  // Clearing restores every row — both of this run's, plus the provisioned one it was hiding.
+  await filter.fill('')
+  await expect(labelCells()).toContainText([second, first])
+  await expect(table.locator('.data-table__count')).not.toContainText('of')
+})

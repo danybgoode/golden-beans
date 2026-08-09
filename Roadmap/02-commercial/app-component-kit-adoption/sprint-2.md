@@ -24,7 +24,34 @@
 - Any `DataTable` change needed to make them work is made **now**; after this story the API is
   frozen for the sprint, and a third route needing an option is a finding to log, not a change to
   make silently (D3).
-- Line count for both routes goes **down**.
+- ~~Line count for both routes goes **down**.~~ **Measured, and it does not. Amended 2026-08-08 with
+  the numbers rather than quietly reinterpreted.**
+
+  | File | code lines before | after |
+  |---|---|---|
+  | `key-manager.tsx` | 136 | **135** |
+  | `agent-key-manager.tsx` | 152 | **163** |
+
+  (Code lines = non-blank, non-comment, so the explanatory comments this repo favours don't flatter
+  or penalise the count.)
+
+  Two reasons, and neither is a conversion done badly:
+
+  1. **A column definition is not shorter than the `<tr>`/`<td>` markup it replaces** for a
+     four-column table. It is *more* than the markup was — the same cells, plus a sort accessor, a
+     filter accessor, and a null-vs-absent decision per column. The table half came out roughly
+     line-neutral. What the conversion buys is sorting, filtering, two distinct empty states and
+     `aria-sort` on every table at once — capability and consistency, not brevity.
+  2. **`agent-keys`' form grew because it now says more.** `FormSection`/`Field` carry a
+     description and per-field hints that the bare `<label>`-wrapped inputs did not have. Those are
+     lines of *content*, and deleting them to make a number go down would be the tail wagging the
+     dog.
+
+  **The Sweeper acceptance that does hold, and is the one worth keeping:** *same behaviour, no
+  regressions* — proven by the routes' existing specs passing unchanged. "Less code" was a
+  reasonable prior at grooming and is simply wrong for table conversions at this width; the
+  remaining stories are measured but not held to it. Genuine deletions are still taken where they
+  exist: four private `formatUtc` copies (D11) and, in Sprint 3, the bespoke two-click confirm.
 - **Carried in from Sprint 1's review (Codex, PR #82):** `DataTable` merged with no call site and no
   *rendered* coverage — by design (D3), but it is a real gap and this story is where it closes.
   `design-system.authed.spec.ts` gains rendered assertions for the sort control, the filter, and
