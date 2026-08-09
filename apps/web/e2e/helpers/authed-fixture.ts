@@ -59,3 +59,25 @@ export function readTenantRecord(): TenantRecord | null {
     return null
   }
 }
+
+// app-component-kit-adoption · Sprint 2 — the impact fixture.
+//
+// `/app/impact/[projectSlug]/[featureKey]` is the one converted route the authed rail could not
+// reach, because the page needs a feature with a linked input and a recorded series and the fixture
+// provisioned a bare tenant (cross-review, Agy, PR #83). auth.setup.ts now seeds exactly enough for
+// the page to render: one metric, one `external_push` input, the feature link, and three days of
+// values.
+//
+// `external_push` rather than `telemetry_event` on purpose — a pushed series is written directly and
+// is deterministic, where a telemetry series would depend on ingesting events and would bucket by
+// TODAY, making the row count depend on when the suite runs.
+//
+// Nothing extra is needed in auth.teardown.ts: every one of these tables is
+// `REFERENCES projects(id) ON DELETE CASCADE`, and teardown already deletes the project.
+export const IMPACT_FEATURE_KEY = 'gb-e2e-impact-feature'
+export const IMPACT_INPUT_KEY = 'gb-e2e-impact-revenue'
+export const IMPACT_SERIES: ReadonlyArray<{ occurredOn: string; value: number }> = [
+  { occurredOn: '2026-03-01', value: 120.5 },
+  { occurredOn: '2026-03-02', value: 80 },
+  { occurredOn: '2026-03-03', value: 240.25 },
+]

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import { IMPACT_FEATURE_KEY, IMPACT_SERIES, readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug() {
   const slug = readTenantRecord()?.slug
@@ -179,4 +179,165 @@ test('Field announces its error against the control and does not reflow the form
   // ...and nothing moved. The error slot's height is reserved whether or not it has text, so the
   // submit button a cursor is already travelling towards stays where it was.
   expect(await submitTop()).toBeCloseTo(before, 0)
+})
+
+// ── app-component-kit-adoption · Sprint 2 — the converted routes ────────────────────────────────
+//
+// Story 2.1 carries a finding from Sprint 1's cross-review (Codex, PR #82): `DataTable` merged with
+// no call site and no RENDERED coverage. Its logic was gate-covered by lib/data-table.test.ts, but
+// nothing had ever asserted that the sort control, the filter or the empty states reach a screen.
+// This is that coverage, on the first of the two founding call sites.
+
+test('DataTable sorts, filters, and tells the two kinds of empty apart', async ({ page }) => {
+  const slug = tenantSlug()
+
+  // The FIRST empty state — no rows at all — is asserted on `agent-keys` rather than `keys`,
+  // because provisioning issues a project's first API key, so a fresh tenant's key table is never
+  // actually empty. It must be the CALLER's sentence: a blank <tbody> or a generic "No results" is
+  // the thing this epic exists to remove.
+  await page.goto(`/app/agent-keys/${slug}`)
+  await expect(page.locator('.data-table__empty')).toContainText('No agent write keys yet')
+
+  await page.goto(`/app/keys/${slug}`)
+  const table = page.locator('.data-table')
+
+  // Two rows whose ALPHABETICAL order is the reverse of their creation order, so a passing sort
+  // assertion cannot be satisfied by the server's newest-first ordering.
+  const stamp = Date.now()
+  const first = `zz-first-${stamp}`
+  const second = `aa-second-${stamp}`
+  await issueKey(page, slug, first)
+  await issueKey(page, slug, second)
+
+  const labelCells = () => table.locator('tbody tr td:first-child')
+  const header = table.getByRole('button', { name: 'Label' })
+  const sortState = () => table.getByRole('columnheader', { name: /Label/ })
+  const filter = page.getByLabel('Filter keys')
+
+  // Narrow to just this run's two rows first. The tenant also holds the key provisioning issued,
+  // and a sort assertion that has to account for rows it did not create is a spec that breaks for
+  // reasons unrelated to sorting. Filtering and sorting compose, which is itself worth exercising.
+  await filter.fill(String(stamp))
+  await expect(labelCells()).toHaveText([second, first])
+  await expect(table.locator('.data-table__count')).toContainText('of')
+
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'ascending')
+  await expect(labelCells()).toHaveText([second, first])
+
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'descending')
+  await expect(labelCells()).toHaveText([first, second])
+
+  // The third click returns to the server's order rather than cycling asc/desc forever — the
+  // behaviour lib/data-table.ts calls out and the reason `SortState` has a null case.
+  await header.click()
+  await expect(sortState()).toHaveAttribute('aria-sort', 'none')
+  await expect(labelCells()).toHaveText([second, first])
+
+  // Narrowing further still works.
+  await filter.fill(`zz-first-${stamp}`)
+  await expect(labelCells()).toHaveText([first])
+
+  // ...and a query matching nothing gets the OTHER empty state, naming the query. This is the
+  // distinction the component exists to preserve: "you have no keys" and "none of your keys match
+  // what you typed" are different facts, and a PM who sees the first when the second is true
+  // concludes their credentials are gone.
+  await filter.fill('no-such-key-anywhere')
+  const emptyCell = table.locator('.data-table__empty')
+  await expect(emptyCell).toContainText('Nothing matches')
+  await expect(emptyCell).toContainText('no-such-key-anywhere')
+  await expect(emptyCell).not.toContainText('No keys yet')
+
+  // Clearing restores every row — both of this run's, plus the key provisioning issued, which the
+  // filter was hiding. Asserted per row rather than as an array: Playwright's array form of
+  // toContainText couples the assertion to the exact number of matched elements, so it would
+  // silently depend on how many keys the fixture tenant happens to arrive with. Measured: it
+  // arrives with one. (Cross-review, Codex, PR #83 — Blocking.)
+  await filter.fill('')
+  await expect(labelCells().filter({ hasText: first })).toHaveCount(1)
+  await expect(labelCells().filter({ hasText: second })).toHaveCount(1)
+  await expect(await labelCells().count()).toBeGreaterThanOrEqual(3)
+  await expect(table.locator('.data-table__count')).not.toContainText('of')
+})
+
+// Story 2.4 — one assertion per converted route. Deliberately thin: the point is that each surface
+// now renders THROUGH the kit rather than as bare markup, which is the whole claim of the epic and
+// the thing that silently regresses when a later change reverts a route to a hand-rolled table.
+// Behaviour parity is proven elsewhere and better — by each route's EXISTING api spec passing
+// unchanged (api-keys, destinations, experiments, flag-serving, experiment-decisions, impact).
+const CONVERTED_ROUTES: Array<{ name: string; path: (slug: string) => string; expect: string[] }> = [
+  { name: 'keys', path: (s) => `/app/keys/${s}`, expect: ['.data-table', '.form-section'] },
+  { name: 'agent-keys', path: (s) => `/app/agent-keys/${s}`, expect: ['.data-table', '.form-section'] },
+  { name: 'destinations', path: (s) => `/app/destinations/${s}`, expect: ['.data-table', '.form-section'] },
+  // Experiments converts its FORM only — its version tables are per-experiment and 1-5 rows each, so
+  // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
+  // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
+  { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.form-section'] },
+  { name: 'flags', path: (s) => `/app/flags/${s}`, expect: ['.data-table'] },
+  // The sixth route. It needs a feature with a linked input and a recorded series, so auth.setup.ts
+  // now seeds one (cross-review, Agy, PR #83 — the fixture provisioned a bare tenant and the page
+  // 500s without data). Worth closing rather than deferring: `impact.spec.ts` does NOT cover this,
+  // because for a signed-in member it only asserts the /login redirect, never the rendered page.
+  {
+    name: 'impact',
+    path: (s) => `/app/impact/${s}/${IMPACT_FEATURE_KEY}`,
+    expect: ['.stat-card', '.data-table'],
+  },
+]
+
+for (const route of CONVERTED_ROUTES) {
+  test(`${route.name} renders through the component kit`, async ({ page }) => {
+    const response = await page.goto(route.path(tenantSlug()))
+    // A named failure rather than a bare status assertion. `/app/experiments` 404s when
+    // EXPERIMENT_GOVERNANCE_ENABLED is unset — it is ON in production, so a local run without it
+    // would otherwise report a conversion regression that is really a missing env var. Stated, not
+    // skipped: a silently skipped route reads exactly like a covered one.
+    expect(
+      response?.status(),
+      `${route.name} did not render. If this is 404, check the route's gate is enabled on the ` +
+        `server under test (EXPERIMENT_GOVERNANCE_ENABLED for experiments) — it is ON in production.`
+    ).toBe(200)
+    for (const selector of route.expect) {
+      await expect(page.locator(selector).first()).toBeVisible()
+    }
+    // Every converted table carries its sort/filter affordances, not just the class name.
+    if (route.expect.includes('.data-table')) {
+      await expect(page.locator('.data-table__filter').first()).toBeVisible()
+      await expect(page.locator('.data-table thead th').first()).toBeVisible()
+    }
+  })
+}
+
+test('impact renders its headline figures as StatCards, and never as an invented zero', async ({ page }) => {
+  const response = await page.goto(`/app/impact/${tenantSlug()}/${IMPACT_FEATURE_KEY}`)
+  expect(response?.status()).toBe(200)
+
+  const cards = page.locator('.stat-card')
+  await expect(cards).toHaveCount(3)
+
+  // The figures are the seeded ones, computed — not placeholders. "Latest" is the LAST point
+  // because both paths that build the series sort ascending; if that ever stops being true this
+  // assertion is what notices.
+  const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
+  const total = IMPACT_SERIES.reduce((sum, point) => sum + point.value, 0)
+
+  // Matched on the LABEL element with an exact string, not on the card's whole text. A substring
+  // match over the card body also matches another card's provenance line — which is how this spec
+  // found that two tiles were both saying "3 days recorded", one fact rendered twice. The copy was
+  // fixed; the locator stays precise so the next duplicate is a failure rather than a coincidence.
+  const card = (label: string) =>
+    page.locator('.stat-card').filter({ has: page.getByText(label, { exact: true }) })
+
+  await expect(card('Latest').locator('.stat-card__value')).toHaveText(String(latest.value))
+  await expect(card('Total in window').locator('.stat-card__value')).toHaveText(String(total))
+  await expect(card('Days recorded').locator('.stat-card__value')).toHaveText(String(IMPACT_SERIES.length))
+
+  // No card is in the unreadable state — these are real readings, and StatCard marks the
+  // difference in the DOM rather than only in the copy.
+  await expect(page.locator('.stat-card[data-unreadable="true"]')).toHaveCount(0)
+
+  // The series is still a TABLE. Story 2.3 is explicit that turning it into a chart is #14's
+  // decision and #16's work, so a future chart must consciously delete this line.
+  await expect(page.locator('.data-table tbody tr')).toHaveCount(IMPACT_SERIES.length)
 })

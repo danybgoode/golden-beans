@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { getFeatureImpact } from '@/lib/north-star-query'
 import { requireDashboardAccess } from '@/lib/dashboard-auth'
 import { ProductShell } from '@/components/product/ProductShell'
+import { StatCard } from '@/components/ui/StatCard'
+import { ImpactSeriesTable } from './series-table'
 
 // Growth Engine v1 · Sprint 3, Story 3.4 — the per-feature input-impact report (v1's
 // headline case: /impact/miyagisanchez/setup_guide). Behind per-tenant authorization
@@ -34,33 +36,58 @@ export default async function ImpactPage({
         <h1>
           Impact — {feature.key} <small>({projectSlug})</small>
         </h1>
-        {inputs.map((input) => (
-          <section key={input.key}>
-            <h2>
-              {input.name} <small>({input.valueSource})</small>
-            </h2>
-            {input.series.length === 0 ? (
-              <p>No data yet.</p>
-            ) : (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {input.series.map((point) => (
-                    <tr key={point.date}>
-                      <td>{point.date}</td>
-                      <td>{point.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </section>
-        ))}
+        {inputs.map((input) => {
+          // Both paths that build `series` emit it sorted ascending by date — `computeDailySeries`
+          // sorts explicitly and the pushed-value path uses `.order('occurred_on')` — so the last
+          // element is the most recent day. Stated here because "latest" silently becoming
+          // "whichever row the database returned first" is the kind of thing that reads fine
+          // forever and is wrong once.
+          const latest = input.series.at(-1) ?? null
+          const total = input.series.reduce((sum, point) => sum + point.value, 0)
+
+          return (
+            <section key={input.key}>
+              <h2>
+                {input.name} <small>({input.valueSource})</small>
+              </h2>
+
+              {/*
+                StatCards are rendered ONLY when there is a reading. An empty series is not a zero:
+                a card reading "0" for a metric nobody has recorded is precisely the honest-looking
+                zero this repo has shipped to production before and that StatCard's own null case
+                exists to prevent. With no data, the table's empty sentence is the whole message.
+              */}
+              {input.series.length > 0 && latest ? (
+                <div className="command-center__stats">
+                  <StatCard
+                    label="Latest"
+                    value={String(latest.value)}
+                    icon="gauge"
+                    provenance={`on ${latest.date}`}
+                  />
+                  {/* Each card's provenance says something the OTHER two don't. The first draft had
+                      "Total in window" provenanced as "3 days recorded", which restated the third
+                      card word for word — two tiles carrying one fact, and a reader has to check
+                      whether they disagree. Caught by a spec locator matching two cards. */}
+                  <StatCard
+                    label="Total in window"
+                    value={String(total)}
+                    icon="trend-up"
+                    provenance={`${input.series[0].date} → ${latest.date}`}
+                  />
+                  <StatCard
+                    label="Days recorded"
+                    value={String(input.series.length)}
+                    icon="clock"
+                    provenance="days with a value, not calendar days"
+                  />
+                </div>
+              ) : null}
+
+              <ImpactSeriesTable inputName={input.name} series={input.series} />
+            </section>
+          )
+        })}
       </main>
     </ProductShell>
   )

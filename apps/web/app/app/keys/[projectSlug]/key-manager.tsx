@@ -1,9 +1,10 @@
 'use client'
-import { useState, useTransition, type FormEvent } from 'react'
+import { useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ApiKeyRow } from '@/lib/api-keys'
 import { formatUtc } from '@/lib/format-utc'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import { Field, FormSection } from '@/components/ui/FormSection'
 import { issueKeyAction, revokeKeyAction } from './actions'
 
@@ -73,6 +74,40 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
     })
   }
 
+  // Memoised so `DataTable`'s sort/filter memo is a real cache rather than a per-render recompute:
+  // an inline array is a new identity every render. Cheap here, and the pattern the remaining
+  // conversions copy.
+  //
+  // Each column's `value` is the string the reader actually SEES, not the underlying field. That
+  // makes "what I typed into the filter" and "what is on screen" the same thing — filtering for
+  // `07-01` finds the row whose Created cell reads `2026-07-01 …`. For these columns it also keeps
+  // the sort honest: an ISO-derived `YYYY-MM-DD HH:MM UTC` string sorts lexicographically in
+  // chronological order.
+  const columns = useMemo<DataTableColumn<ApiKeyRow>[]>(
+    () => [
+      { key: 'label', header: 'Label', value: (key) => key.label },
+      { key: 'created', header: 'Created', value: (key) => formatUtc(key.createdAt) },
+      {
+        key: 'status',
+        header: 'Status',
+        value: (key) => (key.revokedAt ? `revoked ${formatUtc(key.revokedAt)}` : 'active'),
+      },
+      {
+        // No `value`: the actions column is neither sortable nor searchable, and omitting the
+        // accessor is how that is expressed (DataTable, D3).
+        key: 'actions',
+        header: 'Actions',
+        cell: (key) =>
+          key.revokedAt ? null : (
+            <button type="button" onClick={() => setConfirming(key)} disabled={pending}>
+              Revoke
+            </button>
+          ),
+      },
+    ],
+    [pending]
+  )
+
   return (
     <section>
       {issued && (
@@ -118,38 +153,14 @@ export function KeyManager({ slug, keys }: { slug: string; keys: ApiKeyRow[] }) 
 
       {error && <p role="status">{error}</p>}
 
-      <table>
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>Created</th>
-            <th>Status</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {keys.length === 0 ? (
-            <tr>
-              <td colSpan={4}>No keys yet — issue one above.</td>
-            </tr>
-          ) : (
-            keys.map((key) => (
-              <tr key={key.id}>
-                <td>{key.label}</td>
-                <td>{formatUtc(key.createdAt)}</td>
-                <td>{key.revokedAt ? `revoked ${formatUtc(key.revokedAt)}` : 'active'}</td>
-                <td>
-                  {!key.revokedAt && (
-                    <button type="button" onClick={() => setConfirming(key)} disabled={pending}>
-                      Revoke
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <DataTable
+        caption="API keys"
+        columns={columns}
+        rows={keys}
+        rowKey={(key) => key.id}
+        filterLabel="Filter keys"
+        empty="No keys yet — issue one above. Until you do, the SDK and POST /api/v1/track have nothing to authenticate with."
+      />
 
       {/*
         The click no longer revokes — it opens the question. `onCancel` closes and does nothing

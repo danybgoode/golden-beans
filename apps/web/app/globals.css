@@ -1475,6 +1475,16 @@ a.stat-card:hover {
   border-color: var(--red);
 }
 
+/* A textarea holding JSON, not prose. Replaces an inline `style` that set the same three things on
+   the experiments plan editor; the flag authoring textarea gets it in Sprint 2 Story 2.3 WITHOUT
+   otherwise being touched, since replacing that control is flags-visual-rule-builder's whole epic. */
+.code-input {
+  display: block;
+  width: 100%;
+  font-family: var(--mono);
+  white-space: pre;
+}
+
 :where(.product-shell, .auth-shell) :where(input, textarea, select) {
   width: 100%;
   min-height: 44px;

@@ -159,6 +159,32 @@ away. Treat it as the deliberate carry-over and say so in the PR.
 **D7 — Every new limit or constant is read, never hardcoded.**
 Applies weakly here and strongly downstream; stated so the habit starts in this epic.
 
+## Amendment 1 — 2026-08-08 · the experiments detail route is carry-over (product owner approved)
+
+*Raised by cross-review (Codex, PR #83, Blocking): Sprint 2 had dropped a Story 2.2 acceptance
+criterion and rewritten a Story 2.1 one without asking. Correctly flagged — an epic-sized handover
+makes exactly this easy to do by accident. Put to the product owner as an either/or with a
+recommendation; **answered: accept the gap and ship.** Recorded here rather than left as a silent
+reinterpretation.*
+
+**What changed, and why.**
+
+1. **Story 2.2's "the detail route is included" is not delivered.** `experiments/[experimentKey]`
+   renders three per-variant tables of **2–4 fixed rows**, and `experiments`'s list page renders one
+   version table *per experiment*. `DataTable`'s frozen API always renders a filter box, so
+   converting would put a filter above a two-row table on three surfaces — visibly worse than the
+   plain tables there today. D3 says a third route needing an option is a finding to **log**, not a
+   change to make silently; the finding, the option needed, and the sharper IA question underneath
+   it are in `sprint-2.md` → Story 2.4. The route joins the named carry-over list.
+2. **Story 2.1's "line count for both routes goes down" is false, and is amended with the
+   measurement** (136→135 and 152→163 code lines). A column definition is not shorter than the
+   markup it replaces at four columns — it is the same cells plus a sort accessor, a filter accessor
+   and a null-vs-absent decision each. The Sweeper acceptance that survives is **same behaviour, no
+   regressions**, which is proven by every converted route's existing specs passing unchanged.
+
+**What did not change:** no route lost behaviour, no gate was skipped, and the carry-over is a named
+list rather than a feeling — which is what Story 2.4 exists to produce.
+
 ## Scope — stories
 
 | Sprint | Story | Risk |

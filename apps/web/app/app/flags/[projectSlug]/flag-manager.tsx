@@ -1,7 +1,8 @@
 'use client'
-import { useState, useTransition, type FormEvent } from 'react'
+import { useCallback, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
+import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import type { FlagReadKeyRow } from '@/lib/flag-read-keys'
 import type { FlagSyncKeyRow } from '@/lib/flag-sync-keys'
 import type { FlagEnvironment } from '@/lib/flag-definition'
@@ -68,21 +69,26 @@ export function FlagManager({
   const [pending, startTransition] = useTransition()
   const stateByEnvironment = new Map(environments.map((state) => [state.environment, state]))
 
-  function run(work: () => Promise<{ ok: boolean; error?: string }>, success: string) {
-    setError(null)
-    setNotice(null)
-    startTransition(async () => {
-      try {
-        const result = await work()
-        if (result.ok) {
-          setNotice(success)
-          router.refresh()
-        } else setError(result.error ?? 'The change could not be applied.')
-      } catch {
-        setError('The change could not be applied. Try again.')
-      }
-    })
-  }
+  // Stable, so the two revoke callbacks below (and through them the column memos) can list their
+  // real dependencies instead of suppressing the exhaustive-deps rule.
+  const run = useCallback(
+    (work: () => Promise<{ ok: boolean; error?: string }>, success: string) => {
+      setError(null)
+      setNotice(null)
+      startTransition(async () => {
+        try {
+          const result = await work()
+          if (result.ok) {
+            setNotice(success)
+            router.refresh()
+          } else setError(result.error ?? 'The change could not be applied.')
+        } catch {
+          setError('The change could not be applied. Try again.')
+        }
+      })
+    },
+    [router]
+  )
   function onCreate(event: FormEvent) {
     event.preventDefault()
     run(
@@ -121,9 +127,12 @@ export function FlagManager({
       }
     })
   }
-  function onRevoke(keyId: string) {
-    run(() => revokeFlagReadKeyAction(slug, keyId), 'Flag read key revoked.')
-  }
+  const onRevoke = useCallback(
+    (keyId: string) => {
+      run(() => revokeFlagReadKeyAction(slug, keyId), 'Flag read key revoked.')
+    },
+    [slug, run]
+  )
   function onMintSync(event: FormEvent) {
     event.preventDefault()
     setError(null)
@@ -141,9 +150,118 @@ export function FlagManager({
       }
     })
   }
-  function onRevokeSync(keyId: string) {
-    run(() => revokeFlagSyncKeyAction(slug, keyId), 'Catalog sync key revoked.')
-  }
+  const onRevokeSync = useCallback(
+    (keyId: string) => {
+      run(() => revokeFlagSyncKeyAction(slug, keyId), 'Catalog sync key revoked.')
+    },
+    [slug, run]
+  )
+
+  // app-component-kit-adoption · Sprint 2, Story 2.3.
+  //
+  // THREE of this page's four tables are converted: snapshot keys, catalog sync keys and the
+  // lifecycle audit are all flat, variable-length lists — exactly DataTable's case. The DEFINITIONS
+  // table is not, and deliberately: it renders one small table PER FLAG, and DataTable's frozen API
+  // always shows a filter box, so converting would stack a filter above every flag on the page. Same
+  // D3 finding as the experiments manager, logged in sprint-2.md rather than fixed by quietly adding
+  // a prop mid-sprint.
+  //
+  // The flag authoring <textarea> is untouched. Replacing it is flags-visual-rule-builder's entire
+  // epic (#15); touching it here would collide with a stacked branch and pre-empt a decision this
+  // epic has not made.
+  const statusOf = useCallback((key: { revokedAt: string | null; expiresAt: string | null }) => {
+    if (key.revokedAt) return `revoked ${formatUtc(key.revokedAt)}`
+    return key.expiresAt !== null && new Date(key.expiresAt) <= new Date() ? 'expired' : 'active'
+  }, [])
+
+  const snapshotKeyColumns = useMemo<DataTableColumn<FlagReadKeyRow>[]>(
+    () => [
+      { key: 'label', header: 'Label', value: (key) => key.label },
+      { key: 'environment', header: 'Environment', value: (key) => key.environment },
+      { key: 'created', header: 'Created', value: (key) => formatUtc(key.createdAt) },
+      {
+        key: 'expires',
+        header: 'Expires',
+        value: (key) => (key.expiresAt ? formatUtc(key.expiresAt) : null),
+        cell: (key) => (key.expiresAt ? formatUtc(key.expiresAt) : '—'),
+      },
+      { key: 'status', header: 'Status', value: statusOf },
+      {
+        key: 'actions',
+        header: 'Actions',
+        cell: (key) =>
+          key.revokedAt ? null : (
+            <button type="button" disabled={pending} onClick={() => onRevoke(key.id)}>
+              Revoke
+            </button>
+          ),
+      },
+    ],
+    [pending, onRevoke, statusOf]
+  )
+
+  const syncKeyColumns = useMemo<DataTableColumn<FlagSyncKeyRow>[]>(
+    () => [
+      { key: 'label', header: 'Label', value: (key) => key.label },
+      {
+        key: 'source',
+        header: 'Source',
+        value: (key) => key.source,
+        cell: (key) => <code>{key.source}</code>,
+      },
+      { key: 'created', header: 'Created', value: (key) => formatUtc(key.createdAt) },
+      {
+        key: 'expires',
+        header: 'Expires',
+        value: (key) => (key.expiresAt ? formatUtc(key.expiresAt) : null),
+        cell: (key) => (key.expiresAt ? formatUtc(key.expiresAt) : '—'),
+      },
+      { key: 'status', header: 'Status', value: statusOf },
+      {
+        key: 'actions',
+        header: 'Actions',
+        cell: (key) =>
+          key.revokedAt ? null : (
+            <button type="button" disabled={pending} onClick={() => onRevokeSync(key.id)}>
+              Revoke
+            </button>
+          ),
+      },
+    ],
+    [pending, onRevokeSync, statusOf]
+  )
+
+  const auditColumns = useMemo<DataTableColumn<FlagLifecycleAuditRow>[]>(
+    () => [
+      { key: 'when', header: 'When', value: (entry) => formatUtc(entry.createdAt) },
+      { key: 'action', header: 'Action', value: (entry) => entry.action },
+      {
+        key: 'environment',
+        header: 'Environment',
+        value: (entry) => entry.environment,
+        cell: (entry) => entry.environment ?? '—',
+      },
+      { key: 'reason', header: 'Reason', value: (entry) => entry.reason },
+      {
+        key: 'actor',
+        header: 'Actor',
+        value: (entry) =>
+          entry.externalActorId ? `${entry.actorUserId} via ${entry.externalActorId}` : entry.actorUserId,
+        cell: (entry) => (
+          <>
+            <code>{entry.actorUserId}</code>
+            {entry.externalActorId && (
+              <>
+                {' '}
+                via <code>{entry.externalActorId}</code>
+              </>
+            )}
+          </>
+        ),
+      },
+    ],
+    []
+  )
 
   return (
     <section>
@@ -344,140 +462,38 @@ export function FlagManager({
       {canManage && (
         <>
           <h2>Snapshot keys</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Environment</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {keys.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>No snapshot keys yet.</td>
-                </tr>
-              ) : (
-                keys.map((key) => {
-                  const expired = key.expiresAt !== null && new Date(key.expiresAt) <= new Date()
-                  return (
-                    <tr key={key.id}>
-                      <td>{key.label}</td>
-                      <td>{key.environment}</td>
-                      <td>{formatUtc(key.createdAt)}</td>
-                      <td>{key.expiresAt ? formatUtc(key.expiresAt) : '—'}</td>
-                      <td>
-                        {key.revokedAt
-                          ? `revoked ${formatUtc(key.revokedAt)}`
-                          : expired
-                            ? 'expired'
-                            : 'active'}
-                      </td>
-                      <td>
-                        {!key.revokedAt && (
-                          <button type="button" disabled={pending} onClick={() => onRevoke(key.id)}>
-                            Revoke
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            caption="Snapshot keys"
+            columns={snapshotKeyColumns}
+            rows={keys}
+            rowKey={(key) => key.id}
+            filterLabel="Filter snapshot keys"
+            empty="No snapshot keys yet. Mint one above to let a client read this project's flag snapshot."
+          />
           <h2>Catalog sync keys</h2>
           <p>
             Each service publisher has a separately revocable credential. These keys create or no-op drafts;
             they never activate a version or change a snapshot.
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Source</th>
-                <th>Created</th>
-                <th>Expires</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {syncKeys.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>No catalog sync keys yet.</td>
-                </tr>
-              ) : (
-                syncKeys.map((key) => {
-                  const expired = key.expiresAt !== null && new Date(key.expiresAt) <= new Date()
-                  return (
-                    <tr key={key.id}>
-                      <td>{key.label}</td>
-                      <td>
-                        <code>{key.source}</code>
-                      </td>
-                      <td>{formatUtc(key.createdAt)}</td>
-                      <td>{key.expiresAt ? formatUtc(key.expiresAt) : '—'}</td>
-                      <td>
-                        {key.revokedAt
-                          ? `revoked ${formatUtc(key.revokedAt)}`
-                          : expired
-                            ? 'expired'
-                            : 'active'}
-                      </td>
-                      <td>
-                        {!key.revokedAt && (
-                          <button type="button" disabled={pending} onClick={() => onRevokeSync(key.id)}>
-                            Revoke
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            caption="Catalog sync keys"
+            columns={syncKeyColumns}
+            rows={syncKeys}
+            rowKey={(key) => key.id}
+            filterLabel="Filter sync keys"
+            empty="No catalog sync keys yet. Each service publisher gets its own separately revocable credential."
+          />
         </>
       )}
       <h2>Lifecycle audit</h2>
-      {audit.length === 0 ? (
-        <p>No lifecycle actions recorded yet.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Action</th>
-              <th>Environment</th>
-              <th>Reason</th>
-              <th>Actor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {audit.map((entry) => (
-              <tr key={entry.id}>
-                <td>{formatUtc(entry.createdAt)}</td>
-                <td>{entry.action}</td>
-                <td>{entry.environment ?? '—'}</td>
-                <td>{entry.reason}</td>
-                <td>
-                  <code>{entry.actorUserId}</code>
-                  {entry.externalActorId && (
-                    <>
-                      {' '}
-                      via <code>{entry.externalActorId}</code>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <DataTable
+        caption="Lifecycle audit"
+        columns={auditColumns}
+        rows={audit}
+        rowKey={(entry) => entry.id}
+        filterLabel="Filter audit"
+        empty="No lifecycle actions recorded yet. Activating or deactivating a version in an environment is recorded here."
+      />
     </section>
   )
 }

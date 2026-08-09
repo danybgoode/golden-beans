@@ -2,6 +2,7 @@
 import { useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
+import { Field, FormSection } from '@/components/ui/FormSection'
 import { allowedExperimentTargets } from '@/lib/experiment-registry-view'
 import type { ExperimentRegistryRow, ExperimentTransitionTarget } from '@/lib/experiments'
 import type { ExperimentFlagBinding } from '@/lib/experiment-flag-bindings'
@@ -11,6 +12,13 @@ import {
   createExperimentVersionAction,
   transitionExperimentVersionAction,
 } from './actions'
+
+// app-component-kit-adoption · Sprint 2, Story 2.2 — the FORM is converted to FormSection/Field.
+// The per-experiment version tables are deliberately NOT converted to DataTable. See the D3 finding
+// in sprint-2.md: this page renders one small table per experiment (1–5 rows each), and DataTable's
+// frozen API always renders a filter box — so converting would put a filter above every one of them.
+// D3 says a third route needing an API option is a finding to LOG, not a change to make silently,
+// and this is that log entry rather than a quiet `showFilter` prop.
 
 const EXAMPLE = JSON.stringify(
   {
@@ -153,29 +161,37 @@ export function ExperimentManager({
     <section>
       {canManage ? (
         <form onSubmit={onCreate}>
-          <h2>Create a draft version</h2>
-          <p>
-            Plans are immutable. Reuse a stable key to create the next version; starting and stopping are
-            separate audited actions.
-          </p>
-          <label>
-            Experiment key
-            <input value={key} onChange={(event) => setKey(event.target.value)} required />
-          </label>
-          <label>
-            Definition JSON
-            <textarea
-              value={definition}
-              onChange={(event) => setDefinition(event.target.value)}
-              rows={24}
-              spellCheck={false}
-              required
-              style={{ display: 'block', width: '100%', fontFamily: 'monospace' }}
-            />
-          </label>
-          <button type="submit" disabled={pending}>
-            {pending ? 'Working…' : 'Create draft'}
-          </button>
+          <FormSection
+            title="Create a draft version"
+            description="Plans are immutable. Reuse a stable key to create the next version; starting and stopping are separate audited actions."
+          >
+            <Field label="Experiment key" hint="Stable across versions — reusing it creates v2, v3, …">
+              {(control) => (
+                <input {...control} value={key} onChange={(event) => setKey(event.target.value)} required />
+              )}
+            </Field>
+            <Field
+              label="Definition JSON"
+              hint="The immutable plan: variants, primary metric, guardrails, minimum sample."
+            >
+              {(control) => (
+                <textarea
+                  {...control}
+                  value={definition}
+                  onChange={(event) => setDefinition(event.target.value)}
+                  rows={24}
+                  spellCheck={false}
+                  required
+                  className="code-input"
+                />
+              )}
+            </Field>
+            <div>
+              <button type="submit" className="btn btn-gold" disabled={pending}>
+                {pending ? 'Working…' : 'Create draft'}
+              </button>
+            </div>
+          </FormSection>
         </form>
       ) : (
         <p>
