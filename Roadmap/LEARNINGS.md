@@ -513,6 +513,20 @@ one-liner + why + date shape.
   invisible in a green test run; (2) when you extract a helper, test it THROUGH its caller with an
   input whose result DIFFERS between the old and new implementations, or you have tested the helper
   and not the integration.** *(2026-07-25, pod-report S2.)*
+- **A spec that watches a mechanism RUNNING will not notice it never puts anything back.** The
+  `ConfirmDialog` focus-trap spec asserted the tab cycle never escaped the dialog, ran green, and
+  passed a component that stranded keyboard users on `<body>` the moment it closed — it unmounted
+  itself instead of calling native `close()`, so the browser never performed focus restoration.
+  Cross-review found it; CI could not, and neither could the spec, because it only ever examined
+  focus **while the dialog was open**. Whenever you spec a thing that opens/acquires/locks, spec the
+  close/release/unlock as a separate assertion — coverage of the happy path is not coverage of the
+  exit. *(2026-08-09, app-component-kit-adoption S1.)*
+- **A cross-family finding is a SAMPLE, not the population — grep for the class before calling it
+  fixed.** Agy reported a missing `try/catch` on two managers; the same shape was in a third from an
+  earlier sprint, and searching for the *class* turned up a fourth variant no reviewer flagged — one
+  that had already been fixed once, two PRs earlier, and reintroduced one file over. Both times this
+  epic, the reported file was one instance of a pattern. Fix the pattern, then say in the reply how
+  much wider you applied it. *(2026-08-09, app-component-kit-adoption S3.)*
 - **A spec can be unreachable-by-construction and still pass — the mutation check is what proves a
   spec has teeth, and it must mutate the EXACT line the spec claims to defend.** multi-tenant-activation
   S1 fixed a real open redirect in an auth callback (cross-review caught `/\evil.example`: it defeats a
@@ -666,6 +680,22 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **Before believing a local test failure is your diff, run the identical command on clean `main`.**
+  Two "regressions" in one epic were the environment: `npm run test:e2e:local` BUILDS into
+  `apps/web/.next`, so a `next dev` server left running in the same worktree corrupts it and every
+  page route 404s with *"Cannot append headers after they are sent to the client"* — twelve failures
+  that look exactly like a real break, including `/app` → `/login`. The other was a spec failing on
+  accumulated local fixture data while green on CI's fresh DB. A checkout of the merge base and one
+  re-run settles it in minutes and is far cheaper than reasoning about the diff. Kill the dev server
+  before the local gate; `rm -rf apps/web/.next` if you already crossed them.
+  *(2026-08-09, app-component-kit-adoption.)*
+- **Amending a locked acceptance criterion is a product-owner decision, not a documentation task.**
+  Writing the reasoning down is necessary and not sufficient — cross-review correctly flagged an
+  amendment as Blocking scope change even though it was recorded with measurements and a rationale.
+  Put it as an explicit either/or **with a recommendation**, then record the answer as a dated
+  amendment. Distinguish the two kinds: a *prediction falsified by measurement* ("less code") drops
+  no work and only needs recording; *dropped scope* ("this route is included") needs the ask.
+  *(2026-08-09, app-component-kit-adoption S2.)*
 - **Cowork's folder mounts deny `unlink` by default, so ANY lock-taking git command can strand a
   `.git/*.lock` — the command does not have to fail.** The mount permits create and write but not
   delete, anywhere in the tree (not just under `.git`), so git's normal lock cleanup is what breaks.

@@ -1,6 +1,6 @@
 # Component-kit adoption sweep — Sprint 2: Convert the owner-operated routes
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR [#83](https://github.com/danybgoode/golden-beans/pull/83), merged as `997fc93`. Live in production.
 
 > **Build contract (locked by the architect before the builder started).**
 > Sweeper acceptance governs every story here: **less code, same behaviour, no regressions.** A
