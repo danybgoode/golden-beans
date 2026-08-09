@@ -28,7 +28,7 @@ import {
   type FlagValueType,
   type FlagVariant,
 } from '@golden-beans/sdk'
-import { basisPointsToPercent, percentToBasisPoints } from './rollout-percent.ts'
+import { basisPointsToPercent, percentToBasisPoints } from './rollout-percent'
 
 /**
  * The clause grammar's operators, derived from `FlagClause` rather than listed.

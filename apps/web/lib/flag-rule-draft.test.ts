@@ -7,13 +7,51 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import * as Module from 'node:module'
 import {
   MAX_FLAG_CLAUSES,
   MAX_FLAG_RULES,
   FLAG_CONTEXT_FIELDS,
   parseFlagDefinition,
 } from '@golden-beans/sdk'
-import {
+import type { DefinitionDraft } from './flag-rule-draft.ts'
+
+// ── Why this hook, verbatim from breaker-policy.test.ts ───────────────────────────────────────
+// Source files under apps/web must import EXTENSIONLESS (.github/workflows/ci.yml records the
+// reason: enabling `allowImportingTsExtensions` so source could use `.ts` would also let app code
+// do it, trading a caught type error for an uncaught build break). Node's native TS loader wants
+// the extension. So a pure lib module that imports another pure lib module — here,
+// flag-rule-draft → rollout-percent, which is D3's single-conversion rule expressed as a
+// dependency — is unrunnable under `node --test` without teaching the resolver the repo's
+// convention. breaker-policy.test.ts hit this first; this is the same hook, and the alternative
+// was inlining the basis-points arithmetic into a second file, which is the exact thing D3 forbids.
+type ResolveHook = (
+  specifier: string,
+  context: Record<string, unknown>,
+  nextResolve: (specifier: string, context: Record<string, unknown>) => unknown
+) => unknown
+
+const registerHooks = (
+  Module as typeof Module & {
+    registerHooks: (hooks: { resolve: ResolveHook }) => void
+  }
+).registerHooks
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (
+      typeof context.parentURL === 'string' &&
+      context.parentURL.includes('/apps/web/lib/') &&
+      specifier.startsWith('./') &&
+      !specifier.endsWith('.ts')
+    ) {
+      return nextResolve(`${specifier}.ts`, context)
+    }
+    return nextResolve(specifier, context)
+  },
+})
+
+const {
   canAddClause,
   canAddRule,
   definitionFromDraft,
@@ -21,10 +59,12 @@ import {
   emptyClauseDraft,
   emptyRuleDraft,
   FLAG_CLAUSE_OPERATORS,
-} from './flag-rule-draft.ts'
+} = await import('./flag-rule-draft.ts')
 
-const draft = () => ({
-  valueType: 'boolean' as const,
+// Annotated, not inferred: without it every literal narrows to itself and a test that flips an
+// operator or sets a rollout stops compiling for a reason that has nothing to do with the claim.
+const draft = (): DefinitionDraft => ({
+  valueType: 'boolean',
   description: 'Reveal the new product details layout.',
   defaultVariantKey: 'off',
   variants: [
@@ -34,7 +74,7 @@ const draft = () => ({
   rules: [
     {
       priority: 1,
-      clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: 'pro', values: [] }],
+      clauses: [{ field: 'plan', operator: 'equals', value: 'pro', values: [] }],
       rolloutPercent: null,
       variantKey: 'on',
     },

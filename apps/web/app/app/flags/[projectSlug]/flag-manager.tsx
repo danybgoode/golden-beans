@@ -8,6 +8,7 @@ import type { FlagReadKeyRow } from '@/lib/flag-read-keys'
 import type { FlagSyncKeyRow } from '@/lib/flag-sync-keys'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagEnvironmentStateRow, FlagLifecycleAuditRow, FlagRegistryRow } from '@/lib/flag-registry'
+import { RuleBuilder } from './rule-builder'
 import {
   activateFlagAction,
   createFlagDefinitionVersionAction,
@@ -45,6 +46,7 @@ export function FlagManager({
   syncKeys,
   canManage,
   servingEnabled,
+  ruleBuilderEnabled,
 }: {
   slug: string
   flags: FlagRegistryRow[]
@@ -54,6 +56,8 @@ export function FlagManager({
   syncKeys: FlagSyncKeyRow[]
   canManage: boolean
   servingEnabled: boolean
+  /** D6 — the epic's enablement gate, resolved server-side in page.tsx. */
+  ruleBuilderEnabled: boolean
 }) {
   const router = useRouter()
   const [key, setKey] = useState('new-product-details')
@@ -304,6 +308,23 @@ export function FlagManager({
       )}
       {canManage ? (
         <>
+          {/* flags-visual-rule-builder · Story 1.4 (D6/D7). The builder is ADDITIVE: it renders
+              alongside the textarea, never instead of it. With the gate unset this whole block is
+              absent and the page below is byte-for-byte what it was before the epic — which is the
+              polarity argument in lib/flags.ts made concrete. It posts through the same action the
+              textarea does (A1), so there is one write path and one validator. */}
+          {ruleBuilderEnabled && (
+            <RuleBuilder
+              disabled={pending}
+              serverError={error}
+              onSubmit={(builtKey, builtDefinition, builtReason) =>
+                run(
+                  async () => createFlagDefinitionVersionAction(slug, builtKey, builtDefinition, builtReason),
+                  `Created ${builtKey} as an immutable draft version.`
+                )
+              }
+            />
+          )}
           <form onSubmit={onCreate}>
             <h2>Create an immutable definition version</h2>
             <label htmlFor="flag-key">
