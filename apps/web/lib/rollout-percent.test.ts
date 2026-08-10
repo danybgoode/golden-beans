@@ -8,7 +8,12 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { basisPointsToPercent, formatRolloutPercent, percentToBasisPoints } from './rollout-percent.ts'
+import {
+  basisPointsToPercent,
+  formatRolloutPercent,
+  percentToBasisPoints,
+  rolloutBarPercent,
+} from './rollout-percent.ts'
 
 test('the epic-defining case: 10 percent is 1000 basis points', () => {
   // Sprint 1's smoke walkthrough step 4 is this number and nothing else. Not 10, not 100000.
@@ -107,4 +112,27 @@ test('a rollout that is absent is not a rollout of zero', () => {
 test('an uninterpretable stored value is labelled unreadable, never guessed', () => {
   assert.equal(formatRolloutPercent(10_001), 'unreadable')
   assert.equal(formatRolloutPercent(Number.NaN), 'unreadable')
+})
+
+test('the bar and its label agree about what is unreadable', () => {
+  // Cross-review (Codex): rolloutBarPercent used to return 0 for a corrupt stored value while
+  // formatRolloutPercent called the same value "unreadable" — so one half of the component drew an
+  // empty bar meaning "reaching nobody" while the other half said it could not read the number.
+  // Corrupt data must never render as a deliberate 0% rollout. The two are pinned together here.
+  for (const corrupt of [10_001, -1, 1.5, Number.NaN]) {
+    assert.equal(rolloutBarPercent(corrupt), null, `${corrupt} should be unreadable, not a bar`)
+    assert.equal(formatRolloutPercent(corrupt), 'unreadable')
+  }
+})
+
+test('an unset rollout fills the bar, matching its "everyone" label', () => {
+  assert.equal(rolloutBarPercent(undefined), 100)
+  assert.equal(rolloutBarPercent(null), 100)
+  assert.equal(formatRolloutPercent(undefined), 'everyone')
+})
+
+test('a real rollout draws the percent it says', () => {
+  assert.equal(rolloutBarPercent(1000), 10)
+  assert.equal(rolloutBarPercent(0), 0)
+  assert.equal(rolloutBarPercent(10_000), 100)
 })

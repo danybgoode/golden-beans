@@ -31,14 +31,29 @@ import {
 import { basisPointsToPercent, percentToBasisPoints } from './rollout-percent'
 
 /**
- * The clause grammar's operators, derived from `FlagClause` rather than listed.
+ * The clause grammar's operators.
  *
- * The `satisfies` is doing real work: `FlagClause['operator']` is the union the parser switches on,
- * so if the SDK ever adds a third operator this stops compiling instead of silently offering two.
- * That is the difference between importing the enum and copying it (D1).
+ * ── Why the `satisfies` alone was not enough (cross-review, Codex) ────────────────────────────
+ * This file first carried `['equals','one_of'] as const satisfies readonly FlagClause['operator'][]`
+ * with a comment claiming that adding a third operator to the SDK would stop this compiling. **That
+ * was false.** `satisfies` checks that every element IS an operator; it does not check that every
+ * operator is an element, so `['equals']` would have satisfied it just as happily. The builder would
+ * have silently under-offered the grammar and D1 would have been broken by the one line written to
+ * uphold it — a comment asserting a property the code did not have, which is exactly what
+ * CODE-QUALITY rule 3 exists to catch.
+ *
+ * `MissingOperator` is the real guard: it resolves to `never` only when the list covers the union,
+ * so the assignment below fails to compile the moment the SDK grows an operator this list lacks.
+ * The runtime list stays hand-written because a TypeScript union has no runtime representation to
+ * derive it from — so the type system is made to police the copy instead.
  */
 export const FLAG_CLAUSE_OPERATORS = ['equals', 'one_of'] as const satisfies readonly FlagClause['operator'][]
 export type FlagClauseOperator = (typeof FLAG_CLAUSE_OPERATORS)[number]
+
+type MissingOperator = Exclude<FlagClause['operator'], FlagClauseOperator>
+/** Compile-time exhaustiveness: `never` iff FLAG_CLAUSE_OPERATORS covers every clause operator. */
+const _everyOperatorIsOffered: MissingOperator extends never ? true : never = true
+void _everyOperatorIsOffered
 
 export type ClauseDraft = {
   field: FlagContextField

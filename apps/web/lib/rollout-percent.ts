@@ -68,13 +68,21 @@ export function formatRolloutPercent(basisPoints: number | null | undefined): st
 }
 
 /**
- * The proportion of the bar to fill, 0–100, for a rollout that may not be set.
+ * The proportion of the bar to fill, 0–100 — or `null` when the stored value cannot be read.
  *
  * An absent rollout fills the bar completely, because "no rollout" means every matching context is
- * served — see `formatRolloutPercent`. Sprint 2's `RolloutBar` pairs this with that label so the
+ * served (see `formatRolloutPercent`). Sprint 2's `RolloutBar` pairs this with that label so the
  * geometry and the words can never disagree about what an unset rollout means.
+ *
+ * ── Why `null` and not `0` for a corrupt value (cross-review, Codex) ──────────────────────────
+ * This returned `?? 0`, which drew an EMPTY bar for a basis-points value the label beside it was
+ * simultaneously calling "unreadable". An empty bar reads as "0% — reaching nobody", so corrupt data
+ * would have been presented as a real, deliberate targeting decision, with the two halves of the
+ * same component contradicting each other. `null` forces the caller to render the unreadable state
+ * the label already uses — the same rule `funnel-geometry.ts` applies to a stage it could not read,
+ * and the CODE-QUALITY rule 8 case where a broken read must not look like a legitimate zero.
  */
-export function rolloutBarPercent(basisPoints: number | null | undefined): number {
+export function rolloutBarPercent(basisPoints: number | null | undefined): number | null {
   if (basisPoints === null || basisPoints === undefined) return 100
-  return basisPointsToPercent(basisPoints) ?? 0
+  return basisPointsToPercent(basisPoints)
 }

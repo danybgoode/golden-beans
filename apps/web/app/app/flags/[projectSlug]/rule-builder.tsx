@@ -127,7 +127,14 @@ function RuleBuilderRow({
             <input
               {...control}
               disabled={disabled}
-              value={clause.values.join(', ')}
+              // `join(',')` with NO space, deliberately. Cross-review (Agy) caught the version that
+              // joined with ', ': the split preserves each element's own leading space, so rejoining
+              // with another one grew a space per keystroke and walked the cursor away from where
+              // the reader was typing. Joining on the exact character we split on makes the round
+              // trip through this control the identity function, so the field holds precisely what
+              // was typed. Trimming and de-duplication happen once, at serialisation, in
+              // flag-rule-draft.ts — not on every render.
+              value={clause.values.join(',')}
               onChange={(event) => onChange({ ...clause, values: event.target.value.split(',') })}
             />
           )}
@@ -180,8 +187,18 @@ function RuleCard({
             min={0}
             step={1}
             disabled={disabled}
-            value={rule.priority}
-            onChange={(event) => onChange({ ...rule, priority: Number(event.target.value) })}
+            // An emptied field must stay empty while it is being retyped. `Number('')` is 0, so the
+            // obvious version snapped the priority to zero on the first backspace and made the
+            // control fight the reader (cross-review, Agy). NaN is carried instead: the input
+            // renders blank and `definitionFromDraft` reports "priority must be a whole number",
+            // which is the honest state of a rule whose priority has not been chosen yet.
+            value={Number.isNaN(rule.priority) ? '' : rule.priority}
+            onChange={(event) =>
+              onChange({
+                ...rule,
+                priority: event.target.value === '' ? Number.NaN : Number(event.target.value),
+              })
+            }
           />
         )}
       </Field>
@@ -293,6 +310,17 @@ export function RuleBuilder({
   const variantKeys = useMemo(() => draft.variants.map((variant) => variant.key), [draft.variants])
   const built = useMemo(() => definitionFromDraft(draft), [draft])
   const ruleRoom = canAddRule(draft.rules)
+
+  // The flag key and the reason are NOT part of the definition — they are arguments to the version
+  // that wraps it — so `definitionFromDraft` cannot see them and `built.ok` alone was letting the
+  // submit button fire with either one blank (cross-review, Agy). The server action rejects both,
+  // so nothing invalid could ever have been stored; what was wrong is that the reader had to make a
+  // round trip to learn something this form already knew. Listed with the definition's own problems
+  // so there is one place to look.
+  const argumentProblems: string[] = []
+  if (flagKey.trim().length === 0) argumentProblems.push('Give the flag a key.')
+  if (reason.trim().length === 0) argumentProblems.push('Say why this version is being created.')
+  const problems = [...(built.ok ? [] : built.errors), ...argumentProblems]
 
   // The JSON disclosure renders what WOULD be stored, formatted exactly as the action will send it.
   // Story 1.4 requires it to be read-only and byte-identical to what is stored — so it is derived
@@ -406,10 +434,10 @@ export function RuleBuilder({
 
         {/* Local problems, listed. These are the ones the form can see without a round trip; they
             are NOT the authority on validity (D2). */}
-        {!built.ok && (
+        {problems.length > 0 && (
           <ul role="status" className="rule-builder__problems">
-            {built.errors.map((error) => (
-              <li key={error}>{error}</li>
+            {problems.map((problem) => (
+              <li key={problem}>{problem}</li>
             ))}
           </ul>
         )}
@@ -420,8 +448,8 @@ export function RuleBuilder({
 
         <button
           type="button"
-          disabled={disabled || !built.ok}
-          onClick={() => definitionJson && onSubmit(flagKey, definitionJson, reason)}
+          disabled={disabled || problems.length > 0}
+          onClick={() => definitionJson && onSubmit(flagKey.trim(), definitionJson, reason.trim())}
         >
           Create immutable version
         </button>
