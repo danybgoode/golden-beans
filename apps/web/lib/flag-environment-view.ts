@@ -23,7 +23,6 @@
 import {
   FLAG_ENVIRONMENTS,
   evaluateFlag,
-  parseFlagDefinition,
   type FlagDefinition,
   type FlagEnvironment,
   type FlagRule,
@@ -106,7 +105,23 @@ const PROBE_VALUE: Record<FlagValueType, unknown> = {
   json: {},
 }
 
-function baselineVariantKey(flagKey: string, version: FlagVersionView): string | null {
+/**
+ * Ask the evaluator the one question a definition alone can answer, and let its verdict on the
+ * definition stand as this seam's readability check.
+ *
+ * ── Why this is ONE call and not a parse plus a call ──────────────────────────────────────────
+ * `evaluateFlag` already runs `parseFlagDefinition` internally and reports `INVALID_DEFINITION` when
+ * it refuses — so calling the parser separately would validate the same bytes twice, per
+ * environment, on a render path (raised in review). Reading the errorCode is the same authority for
+ * half the work, and it is strictly broader in the right direction: it also refuses a version whose
+ * `defaultVariantKey` names a variant that does not exist, or whose variant value disagrees with the
+ * declared type. Every one of those is a version that will serve nothing, which is exactly what the
+ * bar must not look confident about.
+ *
+ * The other error codes cannot occur here by construction: a flag is always passed, the context is
+ * always `{}`, and `PROBE_VALUE` always matches `expectedType`.
+ */
+function evaluateBaseline(flagKey: string, version: FlagVersionView) {
   const expectedType = version.definition.valueType
   const resolved = evaluateFlag({
     flag: { key: flagKey, definitionVersion: version.version, definition: version.definition },
@@ -114,7 +129,7 @@ function baselineVariantKey(flagKey: string, version: FlagVersionView): string |
     defaultValue: PROBE_VALUE[expectedType],
     expectedType,
   })
-  return resolved.variant ?? null
+  return { readable: resolved.errorCode === undefined, variantKey: resolved.variant ?? null }
 }
 
 /**
@@ -241,11 +256,11 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
   // four review findings across three rounds were each one more shape this file failed to guard —
   // a corrupt basis-points value, a rule with no `clauses` array, a `rollout: null`, a missing
   // `rules` array. Guarding them one at a time builds exactly the second validator D2 forbids, and
-  // it would still be one finding behind. `parseFlagDefinition` is the authority on what a valid
-  // definition is; a row it rejects is a row nothing will serve, and the honest thing for the bar to
-  // say about it is "unreadable" — never a confident percentage.
-  const checked = parseFlagDefinition(version.definition)
-  if (!checked.ok) {
+  // it would still be one finding behind. The evaluator is the authority on whether a version can
+  // serve anything; a version it refuses is described as unreadable and draws no bar, rather than a
+  // confident percentage over rules nothing will ever consult.
+  const baseline = evaluateBaseline(flag.key, version)
+  if (!baseline.readable) {
     return {
       environment,
       active: true,
@@ -258,8 +273,10 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
     }
   }
 
-  const { reach, deadAfter } = reachOf(checked.definition.rules)
-  const variantKey = baselineVariantKey(flag.key, version)
+  // Safe by the gate above, not by the type: a definition the evaluator accepted has parsed, so
+  // every rule has a `clauses` array, a unique integer priority and a rollout of 0–10000 or none.
+  const { reach, deadAfter } = reachOf(version.definition.rules)
+  const variantKey = baseline.variantKey
   const serves =
     variantKey === null
       ? 'this version cannot be evaluated'
