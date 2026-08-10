@@ -378,6 +378,25 @@ test('a null rollout and a missing rules array are unreadable, not "everyone" an
   assert.equal(missing.fillPercent, null)
 })
 
+test('a null definition column is unreadable, not a crash on the way to asking', () => {
+  // Cross-review round 6, Codex. Asking the evaluator still requires reading ONE field first — it
+  // needs an `expectedType` — so a null JSONB column threw on the dereference before the graceful
+  // path could run. An absent `valueType` now makes the probe value `undefined`, which the evaluator
+  // refuses as TYPE_MISMATCH before it touches the definition at all.
+  for (const broken of [null, undefined, 'not an object', 42, [], {}]) {
+    const summary = summariseFlagEnvironments(
+      flag([broken as unknown as FlagDefinition], { production: 1 })
+    ).production
+    assert.deepEqual(
+      summary.reach,
+      { kind: 'unreadable' },
+      `crashed or mis-read on ${JSON.stringify(broken)}`
+    )
+    assert.equal(summary.fillPercent, null)
+    assert.equal(summary.label, 'unreadable')
+  }
+})
+
 test('a stored rule with no clauses array is unreadable, not a crash', () => {
   // The bar reads JSONB straight out of the database. Round 3 introduced the first read of
   // `rule.clauses.length` in this seam, which threw on such a row BEFORE the graceful

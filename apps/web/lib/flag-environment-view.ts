@@ -118,11 +118,17 @@ const PROBE_VALUE: Record<FlagValueType, unknown> = {
  * declared type. Every one of those is a version that will serve nothing, which is exactly what the
  * bar must not look confident about.
  *
- * The other error codes cannot occur here by construction: a flag is always passed, the context is
- * always `{}`, and `PROBE_VALUE` always matches `expectedType`.
+ * ── Why `valueType` is read with an optional chain, and why that is not a fifth shape guard ────
+ * Asking the authority still requires reading ONE field first: `evaluateFlag` needs an
+ * `expectedType`, and the only place to get it is the definition. So a `null` JSONB column — or any
+ * non-object corruption — threw on the dereference, before the graceful path could run (cross-review,
+ * Codex, round 6). The fix is not a validator: an absent or unrecognised `valueType` makes
+ * `PROBE_VALUE[…]` `undefined`, which `evaluateFlag` refuses as `TYPE_MISMATCH` before it touches
+ * the definition at all. The corruption still gets its verdict from the SDK; this only stops us
+ * crashing on the way to asking.
  */
 function evaluateBaseline(flagKey: string, version: FlagVersionView) {
-  const expectedType = version.definition.valueType
+  const expectedType = (version.definition as FlagDefinition | null | undefined)?.valueType as FlagValueType
   const resolved = evaluateFlag({
     flag: { key: flagKey, definitionVersion: version.version, definition: version.definition },
     context: {},

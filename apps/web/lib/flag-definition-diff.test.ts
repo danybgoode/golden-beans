@@ -483,6 +483,14 @@ test('a row the parser rejects is not diffed at all — the JSON is the only hon
 
   const noRules = { ...base(), rules: undefined } as unknown as FlagDefinition
   assert.deepEqual(diffFlagDefinitions(noRules, base()), { changes: [], unexplained: true })
+
+  // The column itself, not just its contents (cross-review round 6). The gate runs before anything
+  // indexes into either side, so a null never reaches `Object.keys`.
+  for (const broken of [null, undefined, 'not an object', 42, []]) {
+    const value = broken as unknown as FlagDefinition
+    assert.deepEqual(diffFlagDefinitions(base(), value), { changes: [], unexplained: true })
+    assert.deepEqual(diffFlagDefinitions(value, base()), { changes: [], unexplained: true })
+  }
 })
 
 test('duplicate priorities cannot be paired, so the diff refuses rather than guesses', () => {
