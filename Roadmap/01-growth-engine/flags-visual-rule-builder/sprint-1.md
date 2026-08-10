@@ -1,7 +1,9 @@
 # Flags — a visual rule builder — Sprint 1: The rule builder
 
-**Status:** 🟦 In review — PR [#87](https://github.com/danybgoode/golden-beans/pull/87)
-· `ae8189f` (1.1 + gate + A6) · `4e2cd36` (1.2–1.4) · `daf5b34` (browser smoke)
+**Status:** ✅ Shipped — PR [#87](https://github.com/danybgoode/golden-beans/pull/87) squash-merged
+2026-08-09 as `92e24b3`, deployed to production **dark** (`FLAG_RULE_BUILDER_ENABLED=false` in every
+environment). CI green; 2 cross-family reviewers × 2 rounds, round 2 zero Blocking.
+**Owed to the product owner:** the signed-in walkthrough below, once the gate is flipped in preview.
 
 > **Build contract (locked by the architect before the builder started).**
 > Cite D1, D2, D3, D5, D6, D7, D9, D10 and **A1, A2** — do not re-derive them.

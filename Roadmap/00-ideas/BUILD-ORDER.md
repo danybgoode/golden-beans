@@ -12,7 +12,7 @@
 
 ## 🏗️ Building now (1)
 
-- [Flags — a visual rule builder, rollout viz, and a plain-language version diff](../../01-growth-engine/flags-visual-rule-builder/README.md) — 01 Growth Engine · 0/10 stories · risk: High · wave-2026-08-08
+- [Flags — a visual rule builder, rollout viz, and a plain-language version diff](../../01-growth-engine/flags-visual-rule-builder/README.md) — 01 Growth Engine · 4/10 stories · risk: High · wave-2026-08-08
 
 ## 📋 Ready to build (scaffolded, not started) (2)
 

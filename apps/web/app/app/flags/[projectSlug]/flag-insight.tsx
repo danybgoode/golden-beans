@@ -1,0 +1,151 @@
+'use client'
+// flags-visual-rule-builder · Sprint 2 — the flag, read rather than inspected.
+//
+// ── D7, still ─────────────────────────────────────────────────────────────────────────────────
+// `flag-manager.tsx` gains a mount and nothing else. Sprint 1 put the authoring surface in its own
+// component for this reason; the reading surface gets the same treatment rather than pushing a
+// 583-line file past 700.
+//
+// ── A4: this component adds no query ──────────────────────────────────────────────────────────
+// Everything it renders is derived from the `FlagRegistryRow` the page already passes — every
+// version with its full definition, plus the per-environment activations. Nothing is fetched.
+//
+// ── What is deliberately NOT here ─────────────────────────────────────────────────────────────
+// No formatting, no arithmetic, no diffing. The prose comes from `flag-definition-diff` and the
+// numbers from `flag-environment-view`, both pure and both unit-tested against the real parser and
+// the real evaluator. This file chooses which two versions to compare and where the JSON goes.
+
+import { useMemo, useState } from 'react'
+import { RolloutBar } from '@/components/ui/RolloutBar'
+import { diffFlagDefinitions, UNEXPLAINED_DIFF_TEXT } from '@/lib/flag-definition-diff'
+import { summariseFlagEnvironments } from '@/lib/flag-environment-view'
+import type { FlagRegistryRow } from '@/lib/flag-registry'
+
+export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
+  const summaries = useMemo(() => summariseFlagEnvironments(flag), [flag])
+
+  // The two most recent versions, which is the comparison a PM wants nine times out of ten: what
+  // did the change I just made do. `versions` arrives ordered ascending by version number.
+  const versions = flag.versions
+  const latest = versions[versions.length - 1]
+  const previous = versions[versions.length - 2]
+  const defaultFromId = previous?.id ?? latest?.id ?? ''
+  const defaultToId = latest?.id ?? ''
+
+  const [fromId, setFromId] = useState(defaultFromId)
+  const [toId, setToId] = useState(defaultToId)
+
+  // ── Why the selection is reset during render, and not left alone ──────────────────────────────
+  // Cross-review (Codex, Blocking) caught this: initialising from props ONCE meant that saving a new
+  // version — which calls `router.refresh()` and re-renders this component with a longer `versions`
+  // list — left both selects pointing at the old latest. The reader would create v2, look down, and
+  // be told "Choose two different versions" instead of the diff they had just earned. It is the
+  // smoke walkthrough's step 4 path exactly, and the one moment the whole story exists for.
+  //
+  // The reset is keyed on THIS flag's version identities, not on any render: refreshing after an
+  // unrelated write (minting a key, activating another flag) leaves a deliberate comparison alone,
+  // because that flag's list did not change. React's documented "adjust state when props change"
+  // pattern — a set during render re-renders this component only, before anything is painted.
+  const versionIds = versions.map((version) => version.id).join(',')
+  const [comparedList, setComparedList] = useState(versionIds)
+  if (comparedList !== versionIds) {
+    setComparedList(versionIds)
+    setFromId(defaultFromId)
+    setToId(defaultToId)
+  }
+
+  const from = versions.find((version) => version.id === fromId)
+  const to = versions.find((version) => version.id === toId)
+  const diff = useMemo(
+    () => (from && to && from.id !== to.id ? diffFlagDefinitions(from.definition, to.definition) : null),
+    [from, to]
+  )
+
+  return (
+    <div className="flag-insight">
+      <RolloutBar
+        summaries={summaries}
+        caption="Rollout reach is the share of the contexts a rule already matches — not a share of your users."
+      />
+
+      {versions.length < 2 ? (
+        // CODE-QUALITY rule 8 — an honest empty state. One version is not a shortcoming; it means
+        // nothing has changed yet, and saying that beats an empty pair of selects. Worded so it is
+        // true of an EMPTY list too: every write path creates v1 in the same statement as the flag,
+        // so zero versions is unreachable today — but a sentence that would become false the moment
+        // it was reachable is not worth the two words it saves (fresh review, PR #88).
+        <p className="flag-insight__empty">
+          There is nothing to compare yet. Create another version and the change will be described here.
+        </p>
+      ) : (
+        <div className="flag-insight__diff">
+          {/* Wrapped controls, so each select's accessible name is the words beside it. Both say
+              "version" rather than leaving the second one named "with", which reads as nothing at
+              all to anyone hearing the controls one at a time. */}
+          <label>
+            Compare version
+            <select value={fromId} onChange={(event) => setFromId(event.target.value)}>
+              {versions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  v{version.version}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            with version
+            <select value={toId} onChange={(event) => setToId(event.target.value)}>
+              {versions.map((version) => (
+                <option key={version.id} value={version.id}>
+                  v{version.version}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {diff === null ? (
+            <p role="status">Choose two different versions.</p>
+          ) : (
+            <div role="status">
+              {diff.changes.length > 0 && (
+                <ul className="flag-insight__changes">
+                  {diff.changes.map((change, index) => (
+                    <li key={index}>{change}</li>
+                  ))}
+                </ul>
+              )}
+              {/* D8's bound, rendered. The fallback appears ALONGSIDE whatever was describable, so a
+                  version that changed both a rollout and its description shows both facts — the
+                  story's "never guesses, never silently omits", as two separate obligations. */}
+              {diff.unexplained && <p className="flag-insight__unexplained">{UNEXPLAINED_DIFF_TEXT}</p>}
+              {/* "behave identically", not "are identical". Two versions whose `rules` or `variants`
+                  arrays differ only in ORDER resolve the same way — the evaluator sorts rules by
+                  priority and finds variants by key — but their stored JSON is not the same bytes,
+                  and this page's whole subject is an immutable version model. Claiming byte equality
+                  about two distinct rows would be false (fresh review, PR #88). */}
+              {diff.changes.length === 0 && !diff.unexplained && (
+                <p>These two versions behave identically.</p>
+              )}
+            </div>
+          )}
+
+          {/* The JSON, one click away — required by Story 2.3 whenever the diff falls back, and
+              harmless when it does not. Both sides, because a fallback that shows only the new
+              version leaves the reader diffing against memory.
+
+              Gated on `diff` rather than on `from && to`: with the same version chosen twice the
+              panel already says "Choose two different versions", and offering the same JSON printed
+              twice under it is an answer to a question nobody asked (cross-review, Agy, round 7). */}
+          {diff !== null && from && to && (
+            <details className="flag-insight__json">
+              <summary>Show JSON</summary>
+              <pre>
+                {`v${from.version}\n${JSON.stringify(from.definition, null, 2)}\n\nv${to.version}\n${JSON.stringify(to.definition, null, 2)}`}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

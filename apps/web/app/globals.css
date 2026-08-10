@@ -1475,9 +1475,142 @@ a.stat-card:hover {
   border-color: var(--red);
 }
 
-/* A textarea holding JSON, not prose. Replaces an inline `style` that set the same three things on
-   the experiments plan editor; the flag authoring textarea gets it in Sprint 2 Story 2.3 WITHOUT
-   otherwise being touched, since replacing that control is flags-visual-rule-builder's whole epic. */
+/* flags-visual-rule-builder · Sprint 2, Stories 2.1 and 2.2 — the rollout bars.
+   Same rails as `.funnel`: a token gradient for the data, a token hairline for the track, and the
+   number written beside the bar so the picture is never the only evidence. No new dependency. */
+.rollout-bar {
+  margin: 0 0 16px;
+}
+
+.rollout-bar__rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rollout-bar__row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 4.5rem;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 10px;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  font: 500 12px var(--mono);
+  color: var(--dim);
+}
+
+/* Story 2.2 — production is the consequential row and must not be scannable as one of three
+   identical ones. The distinction is a border and an ink weight, not a colour with a meaning: a red
+   or green production row would say something about health that this component cannot know. */
+.rollout-bar__row[data-production='true'] {
+  border-left-color: var(--gold);
+  background: var(--roast-2);
+  color: var(--crema);
+}
+
+.rollout-bar__environment {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.rollout-bar__track {
+  display: block;
+  height: 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--espresso);
+  overflow: hidden;
+}
+
+.rollout-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--bar);
+}
+
+.rollout-bar__label {
+  text-align: right;
+  color: var(--crema);
+}
+
+/* The detail line spans the full row under the bar, so a long "3 rules, not all reaching the same
+   share" never squeezes the track it is explaining. */
+.rollout-bar__detail {
+  grid-column: 1 / -1;
+  color: var(--dim-2);
+  font-size: 11px;
+}
+
+.rollout-bar__row[data-active='false'] .rollout-bar__label {
+  color: var(--dim-2);
+}
+
+/* Sprint 2, Story 2.3 — the version diff. */
+.flag-insight__diff {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.flag-insight__diff > label {
+  display: grid;
+  gap: 4px;
+  font: 600 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.flag-insight__diff > label select {
+  min-width: 7rem;
+}
+
+.flag-insight__diff > [role='status'],
+.flag-insight__json,
+.flag-insight__empty {
+  flex-basis: 100%;
+}
+
+.flag-insight__changes {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--crema);
+  font-size: 13px;
+}
+
+/* The fallback is quieter than the sentences it sits beside, because it is an admission rather than
+   a finding — but it is never hidden, and the JSON disclosure is always the next element. */
+.flag-insight__unexplained {
+  margin-top: 6px;
+  color: var(--dim);
+  font: italic 400 12.5px var(--mono);
+}
+
+.flag-insight__empty {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.flag-insight__json pre {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+/* A textarea holding JSON, not prose. Replaces an inline `style` on the experiments plan editor.
+
+   This comment used to say the flag authoring textarea would take the class in
+   flags-visual-rule-builder's Sprint 2. **It did not, and it should not** — that decision was made
+   and reversed in PR #88 (cross-review, Codex). The flags textarea renders when
+   FLAG_RULE_BUILDER_ENABLED is OFF, and that epic's D6 promises the page is byte-for-byte
+   pre-epic while the gate is down; this class also sets `white-space: pre`, so long JSON lines
+   would stop wrapping. Whoever eventually replaces that control owns the swap. The note is
+   retired here rather than left as an unfinished task the next kit-adoption pass would pick up. */
 .code-input {
   display: block;
   width: 100%;
