@@ -224,6 +224,47 @@ and the unit tests were quietly asserting against `main`'s code. **`npm install`
 first**, and confirm with `node -e "console.log(require.resolve('@golden-beans/sdk'))"` before
 trusting a single SDK-touching test result. Promote to `LEARNINGS.md` at epic close.
 
+### A8 — Story 2.1's bar is a ROLLOUT bar, not a coverage bar. *(found during Sprint 2, 2026-08-10)*
+
+Story 2.1 asks for "what proportion of users a flag is reaching in each environment". **A definition
+cannot answer that.** Reach depends on the population — how many of your users are on the pro plan,
+in Mexico — and the flags page has no population and no way to get one. A bar drawn as if it did
+would be the most confident wrong number on the screen, and it would be wrong in the direction that
+matters: a `plan is pro` rule at 100% would render as "everyone".
+
+**Locked: the bar shows the ROLLOUT, of the contexts a rule already matches**, and the caption says
+exactly that. Three consequences, each unit-tested in `lib/flag-environment-view.test.ts`:
+
+- **No rollout on any rule → a full bar labelled "everyone"**, never an empty bar. `0%` is a
+  different, valid, opposite statement and the two are one keystroke apart in the definition.
+- **Rules with different rollouts → "up to 50% · 2 rules carry different rollouts".** One bar cannot
+  represent two rollouts, and picking the highest silently is how a PM reads 50% off a flag that is
+  also serving a second variant to everyone who matches a different rule.
+- **Nothing activated → no bar at all**, with the row saying so. An inactive environment drawn as a
+  zero-length bar reads as "0% of users", which is a targeting decision nobody made.
+
+Story 2.2's "matches what the evaluator would return" is kept literally: the variant beside each bar
+is `evaluateFlag`'s own answer for a context with no attributes — the question behind "is this live
+in production" — and a spec re-asks the evaluator and compares. This is D4 applied a sprint early,
+and it is why the derivation lives in a `lib/` seam (added to the table below) instead of inside the
+component, where nothing but a signed-in browser could reach it.
+
+### A9 — Sprint 1's authed spec had a locator that pointed at the wrong button. *(found during Sprint 2, 2026-08-10)*
+
+`flag-rule-builder.authed.spec.ts`'s rejection probe used `getByRole('button', { name: 'Create
+immutable version' }).first()`. The builder and the textarea form carry the **same words** on their
+submit buttons and the builder renders first — so `.first()` was the builder's button, which is
+disabled whenever its form has problems, which an untouched form always has. The probe would have
+waited on an unclickable element instead of testing the textarea.
+
+It was never caught because **the `authed` Playwright project does not run in CI** (see
+`playwright.config.ts`; the deterministic gate is the `api` project) and Sprint 1's signed-in
+walkthrough is still owed to the product owner. Fixed by scoping both forms' submits through the
+control that distinguishes them, and the same class of positional locator was removed from the
+stored-definition assertion, which Sprint 2's second `<pre>` in the same article would have
+re-pointed. **The general lesson for `LEARNINGS.md`: a positional locator over two identically
+worded controls is a spec that will silently start testing something else.**
+
 ### The seams this epic creates (named once, here)
 
 | Seam | Purpose | Sprint | Pure? |
@@ -234,6 +275,7 @@ trusting a single SDK-touching test result. Promote to `LEARNINGS.md` at epic cl
 | `apps/web/app/app/flags/[projectSlug]/rule-builder.tsx` | **D7.** the builder, a new client component | 1 | no |
 | `apps/web/components/ui/RolloutBar.tsx` | token-system bars, `FunnelBars` precedent | 2 | no |
 | `apps/web/lib/flag-definition-diff.ts` | **D8.** the six-part bounded diff + fallback | 2 | yes |
+| `apps/web/lib/flag-environment-view.ts` | per-environment reach + the evaluator's own answer (A8) | 2 | yes |
 | `explainFlagEvaluation()` in `packages/sdk/src/flags.ts` | **A3.** the one matcher, made explicable | 3 | yes |
 
 Every pure seam above is unit-tested with `node --test` and mutation-checked. The impure ones are

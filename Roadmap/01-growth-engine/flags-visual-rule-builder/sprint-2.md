@@ -1,6 +1,25 @@
 # Flags — a visual rule builder — Sprint 2: Rollout visualization and the version diff
 
-**Status:** ⬜ not started
+**Status:** 🟡 built, in review — branch `feat/flags-visual-rule-builder-s2`.
+
+> **What was built, and the two decisions the build forced.**
+>
+> - **Seams:** `lib/flag-definition-diff.ts` (D8, pure, 13 unit tests), `lib/flag-environment-view.ts`
+>   (the per-environment derivation, 11 unit tests, **added to the epic's seam table** — see A8 for
+>   why it is a seam and not component-internal), `components/ui/RolloutBar.tsx`, and a new client
+>   component `flag-insight.tsx` mounted from `flag-manager.tsx` in six lines (D7 holds).
+> - **A8 — the bar shows the ROLLOUT, not user coverage.** Story 2.1's "proportion of users" is not
+>   computable from a definition; the caption says what the bar actually means. No rollout → a full
+>   bar labelled "everyone"; several rollouts → "up to 50% · 2 rules carry different rollouts";
+>   nothing activated → no bar and a row that says so.
+> - **A9 — Sprint 1's authed spec pointed at the wrong button.** A positional `.first()` over two
+>   identically-worded submit buttons resolved to the builder's *disabled* one. Fixed here, with the
+>   stored-definition locator that Sprint 2's second `<pre>` would also have re-pointed.
+> - **Gated with the builder.** Everything in this sprint renders only under
+>   `FLAG_RULE_BUILDER_ENABLED`, so D6's "with it off the page is byte-for-byte pre-epic" still holds
+>   for the whole epic, not just Sprint 1.
+> - **A4 held:** no query was added. Every number comes from props `getFlagRegistryView()` already
+>   returned.
 
 > **Build contract (locked by the architect before the builder started).**
 > Cite D3, D5, D8. **D8 is the appetite guard**: the diff is bounded to six parts and falls back to

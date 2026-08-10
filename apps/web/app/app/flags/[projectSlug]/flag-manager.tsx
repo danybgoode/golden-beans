@@ -9,6 +9,7 @@ import type { FlagSyncKeyRow } from '@/lib/flag-sync-keys'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagEnvironmentStateRow, FlagLifecycleAuditRow, FlagRegistryRow } from '@/lib/flag-registry'
 import { RuleBuilder } from './rule-builder'
+import { FlagInsight } from './flag-insight'
 import {
   activateFlagAction,
   createFlagDefinitionVersionAction,
@@ -468,6 +469,12 @@ export function FlagManager({
             <h3>
               <code>{flag.key}</code>
             </h3>
+            {/* flags-visual-rule-builder · Sprint 2 (Stories 2.1–2.3). Behind the SAME gate as the
+                builder, for the same reason D6 gives: with FLAG_RULE_BUILDER_ENABLED unset this
+                page is byte-for-byte what it was before the epic. The bars and the diff read
+                nothing the table below does not already have — A4, no query added — so this is
+                additive to the version table, never a replacement for it. */}
+            {ruleBuilderEnabled && <FlagInsight flag={flag} />}
             <table>
               <thead>
                 <tr>

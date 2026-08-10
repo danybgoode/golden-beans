@@ -22,7 +22,7 @@
 // check, which is the one step the epic README calls the most important in the whole build.
 
 import { test, expect } from '@playwright/test'
-import { MAX_FLAG_CLAUSES } from '@golden-beans/sdk'
+import { FLAG_ENVIRONMENTS, MAX_FLAG_CLAUSES, type FlagDefinition } from '@golden-beans/sdk'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug(): string {
@@ -32,6 +32,28 @@ function tenantSlug(): string {
 }
 
 const flagKey = () => `builder.smoke_${Date.now().toString(36)}`
+
+/**
+ * The TEXTAREA form's submit button, scoped by the control only that form contains.
+ *
+ * ── Why this helper exists (found while building Sprint 2) ────────────────────────────────────
+ * Sprint 1's rejection probe below reached for `getByRole('button', { name: 'Create immutable
+ * version' }).first()`. The builder and the textarea form use the same words on their submit
+ * buttons, and the builder renders FIRST — so `.first()` was the BUILDER's button, which is
+ * disabled whenever its form has problems, which an untouched form always does. The probe would
+ * have hung on an unclickable element rather than testing the textarea. It was never caught because
+ * the `authed` Playwright project does not run in CI (see playwright.config.ts) and Sprint 1's
+ * signed-in walkthrough is still owed to the product owner.
+ *
+ * Positional locators over two identically-worded buttons are the defect; scoping by the control
+ * that distinguishes the two forms is the fix, and it cannot silently re-point if a third form with
+ * the same verb ever lands on this page.
+ */
+const textareaSubmit = (page: import('@playwright/test').Page) =>
+  page
+    .locator('form')
+    .filter({ has: page.locator('#flag-definition') })
+    .getByRole('button', { name: 'Create immutable version' })
 
 test.describe('the visual rule builder', () => {
   test.skip(
@@ -76,17 +98,17 @@ test.describe('the visual rule builder', () => {
     await builder.getByRole('button', { name: 'Create immutable version' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
 
-    // Stored → re-read → same. The immutable version's own JSON, not the builder's preview of it.
-    const storedDefinition = page
+    // Stored → re-read → same. The immutable version's own JSON, not the builder's preview of it —
+    // so the locator is scoped to the VERSIONS TABLE rather than to the first `pre` in the flag's
+    // article. Sprint 2 adds a second disclosure to that article (the version diff's "Show JSON"),
+    // and a positional `.first()` would have started reading the wrong one the moment a flag had
+    // two versions.
+    const versions = page
       .locator('article')
       .filter({ has: page.getByRole('heading', { name: key }) })
-      .locator('pre')
-      .first()
-    await page
-      .locator('article')
-      .filter({ has: page.getByRole('heading', { name: key }) })
-      .getByText('Inspect immutable JSON')
-      .click()
+      .locator('table')
+    const storedDefinition = versions.locator('pre').first()
+    await versions.getByText('Inspect immutable JSON').click()
     await expect(storedDefinition).toContainText('"basisPoints": 1000')
     await expect(storedDefinition).toContainText('"operator": "equals"')
   })
@@ -122,8 +144,116 @@ test.describe('the visual rule builder', () => {
     await page.locator('#flag-key').fill('builder.invalid_probe')
     await page.locator('#flag-definition').fill('{"valueType":"boolean"}')
     await page.locator('#flag-reason').fill('Deliberate rejection probe.')
-    await page.getByRole('button', { name: 'Create immutable version' }).first().click()
+    await textareaSubmit(page).click()
 
     await expect(page.getByRole('alert').first()).toBeVisible()
+  })
+})
+
+// ── Sprint 2 · Stories 2.1, 2.2 and 2.3 ───────────────────────────────────────────────────────
+//
+// The integration claim only, as sprint-2.md asks. The arithmetic and the prose are pure functions
+// with their own unit tests (lib/flag-environment-view.test.ts pins the evaluator agreement,
+// lib/flag-definition-diff.test.ts the four diff cases and the fallback); what neither of them can
+// see is whether those sentences and those bars actually REACH the page. That is this block.
+//
+// Both versions below are created through the JSON textarea rather than the builder, deliberately:
+// it is the surface that can express a metadata entry, which is what Story 2.3's fallback case
+// needs, and it keeps these assertions independent of the builder's own controls.
+test.describe('rollout bars and the version diff', () => {
+  test.skip(
+    process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
+    'Sprint 2 renders behind the same gate as the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
+  )
+
+  function definition(overrides: Partial<FlagDefinition> = {}): FlagDefinition {
+    return {
+      valueType: 'boolean',
+      description: 'Rollout visualisation smoke.',
+      defaultVariantKey: 'off',
+      variants: [
+        { key: 'off', value: false },
+        { key: 'on', value: true },
+      ],
+      rules: [
+        {
+          priority: 10,
+          clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+          rollout: { basisPoints: 1000 },
+          variantKey: 'on',
+        },
+      ],
+      ...overrides,
+    }
+  }
+
+  async function createVersion(
+    page: import('@playwright/test').Page,
+    key: string,
+    value: FlagDefinition,
+    reason: string
+  ) {
+    await page.locator('#flag-key').fill(key)
+    await page.locator('#flag-definition').fill(JSON.stringify(value, null, 2))
+    await page.locator('#flag-reason').fill(reason)
+    await textareaSubmit(page).click()
+    await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
+  }
+
+  const flagOf = (page: import('@playwright/test').Page, key: string) =>
+    page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
+
+  test('every environment gets a bar and production is set apart', async ({ page }) => {
+    const slug = tenantSlug()
+    const key = flagKey()
+    await page.goto(`/app/flags/${slug}`)
+    await createVersion(page, key, definition(), 'Rollout bar smoke.')
+
+    const rows = flagOf(page, key).locator('.rollout-bar__row')
+    // Driven from the constant, not from a literal 3: the component reads FLAG_ENVIRONMENTS and so
+    // does this assertion, so a page that quietly renders two bars fails here rather than passing a
+    // hardcoded expectation that happens to agree with it.
+    await expect(rows).toHaveCount(FLAG_ENVIRONMENTS.length)
+    for (const environment of FLAG_ENVIRONMENTS) {
+      await expect(rows.filter({ hasText: environment })).toHaveCount(1)
+    }
+    await expect(rows.filter({ hasText: 'production' })).toHaveAttribute('data-production', 'true')
+    await expect(rows.filter({ hasText: 'development' })).toHaveAttribute('data-production', 'false')
+  })
+
+  test('the diff describes a rollout change in percent on both sides', async ({ page }) => {
+    // Smoke walkthrough steps 3 and 4. 1000 → 5000 is what the database stores; "10% → 50%" is the
+    // only true statement about what the PM did, and this asserts it survives the whole stack.
+    const slug = tenantSlug()
+    const key = flagKey()
+    await page.goto(`/app/flags/${slug}`)
+    await createVersion(page, key, definition(), 'Initial 10% rollout.')
+
+    const widened = definition()
+    widened.rules[0].rollout = { basisPoints: 5000 }
+    await createVersion(page, key, widened, 'Widen the rollout to half.')
+
+    // The two most recent versions are compared by default, which is the comparison this walkthrough
+    // is about — no selection needed.
+    const flag = flagOf(page, key)
+    await expect(flag.locator('.flag-insight__changes')).toContainText('rollout 10% → 50%')
+    await expect(flag.locator('.flag-insight__changes')).not.toContainText('1000')
+    await expect(flag.locator('.flag-insight__changes')).not.toContainText('5000')
+    await expect(flag.locator('.flag-insight__unexplained')).toHaveCount(0)
+  })
+
+  test('a change outside the six diffed parts says so, with the JSON one click away', async ({ page }) => {
+    // Smoke walkthrough step 5, and D8's bound rendered: metadata is a real, valid change this diff
+    // deliberately does not describe. It must not invent a description and must not show nothing.
+    const slug = tenantSlug()
+    const key = flagKey()
+    await page.goto(`/app/flags/${slug}`)
+    await createVersion(page, key, definition(), 'Initial 10% rollout.')
+    await createVersion(page, key, definition({ metadata: { owner: 'growth' } }), 'Record the owner.')
+
+    const flag = flagOf(page, key)
+    await expect(flag.locator('.flag-insight__unexplained')).toHaveText('definition changed — show JSON')
+    await flag.locator('.flag-insight__json').getByText('Show JSON').click()
+    await expect(flag.locator('.flag-insight__json pre')).toContainText('"owner": "growth"')
   })
 })
