@@ -22,6 +22,7 @@
 // check, which is the one step the epic README calls the most important in the whole build.
 
 import { test, expect } from '@playwright/test'
+import { MAX_FLAG_CLAUSES } from '@golden-beans/sdk'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug(): string {
@@ -98,12 +99,17 @@ test.describe('the visual rule builder', () => {
     const builder = page.locator('.rule-builder')
     await builder.getByRole('button', { name: 'Add a rule' }).click()
 
+    // Driven from the constant, not from a literal 5 (cross-review, Codex): a spec that hardcodes
+    // the cap it claims to derive would keep passing while the UI and the SDK drifted apart, which
+    // is the exact failure D5 exists to prevent.
     const addCondition = builder.getByRole('button', { name: 'Add a condition' })
-    for (let added = 1; added < 5; added++) await addCondition.click()
+    for (let added = 1; added < MAX_FLAG_CLAUSES; added++) await addCondition.click()
 
-    await expect(builder.getByLabel(/^Condition \d+ — field$/)).toHaveCount(5)
+    await expect(builder.getByLabel(/^Condition \d+ — field$/)).toHaveCount(MAX_FLAG_CLAUSES)
     await expect(addCondition).toBeDisabled()
-    await expect(builder.getByRole('status').filter({ hasText: 'at most 5 conditions' })).toBeVisible()
+    await expect(
+      builder.getByRole('status').filter({ hasText: `at most ${MAX_FLAG_CLAUSES} conditions` })
+    ).toBeVisible()
   })
 
   test('a server-side rejection is shown on screen, never swallowed', async ({ page }) => {

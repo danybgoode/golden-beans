@@ -114,7 +114,15 @@ export function emptyClauseDraft(): ClauseDraft {
  * if the default spacing does not force it.
  */
 export function emptyRuleDraft(existing: readonly RuleDraft[], variantKey: string): RuleDraft {
-  const highest = existing.reduce((max, rule) => Math.max(max, rule.priority), 0)
+  // Only FINITE priorities count toward the next default. Both review families caught the same bug
+  // here independently: a priority mid-edit is NaN (see RuleCard — an emptied number field must stay
+  // empty rather than snap to 0), and `Math.max(anything, NaN)` is NaN, so one half-typed rule made
+  // every rule added afterwards NaN too. The corruption spread from a field the reader was still
+  // in the middle of using.
+  const highest = existing
+    .map((rule) => rule.priority)
+    .filter((priority) => Number.isFinite(priority))
+    .reduce((max, priority) => Math.max(max, priority), 0)
   return { priority: highest + 10, clauses: [emptyClauseDraft()], rolloutPercent: null, variantKey }
 }
 
@@ -183,6 +191,21 @@ export function definitionFromDraft(draft: DefinitionDraft): DefinitionDraftResu
 
     if (!draft.variants.some((variant) => variant.key === rule.variantKey)) {
       errors.push(`${path}: choose which variant this rule serves.`)
+    }
+
+    // A rule with no conditions matches EVERY context — the evaluator's clause loop simply never
+    // runs — so it serves its variant to everyone and makes every lower-priority rule below it
+    // dead code. The parser accepts that, and a PM who deleted their last condition did not mean it.
+    //
+    // Cross-review (Agy) proposed requiring at least one clause. That would be too strict: a rule
+    // with NO clauses but WITH a rollout is "serve this variant to X% of everyone", which is one of
+    // the most common things a flag is for. So the guard is the narrower one — a rule must say
+    // something, either a condition or a rollout. A rule with neither is not targeting; it is just
+    // `defaultVariantKey` written in a more confusing place.
+    if (rule.clauses.length === 0 && rule.rolloutPercent === null) {
+      errors.push(
+        `${path}: add a condition or a rollout. A rule with neither serves ${rule.variantKey} to everyone and hides every rule below it.`
+      )
     }
 
     if (clauses.length === rule.clauses.length && rule.clauses.length <= MAX_FLAG_CLAUSES) {

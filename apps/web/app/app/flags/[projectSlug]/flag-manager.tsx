@@ -70,6 +70,12 @@ export function FlagManager({
   const [syncKeySource, setSyncKeySource] = useState('frontend')
   const [mintedSync, setMintedSync] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Which surface produced `error`. Cross-review (Agy) caught the same message rendering twice —
+  // once inside the builder's save section and once in this component's own alert below — because
+  // the builder was handed this shared state unconditionally. One failure, two alerts, and a reader
+  // checking whether they had made two mistakes. The error still always renders; this only decides
+  // which of the two places shows it, so nothing is suppressed (D2).
+  const [errorFromBuilder, setErrorFromBuilder] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [confirming, setConfirming] = useState<
@@ -107,12 +113,14 @@ export function FlagManager({
   )
   function onCreate(event: FormEvent) {
     event.preventDefault()
+    setErrorFromBuilder(false)
     run(
       async () => createFlagDefinitionVersionAction(slug, key, definition, reason),
       `Created ${key} as an immutable draft version.`
     )
   }
   function onActivate(flagId: string, versionId: string, version: number, environment: FlagEnvironment) {
+    setErrorFromBuilder(false)
     const revision = stateByEnvironment.get(environment)?.snapshotVersion ?? 0
     run(
       async () => activateFlagAction(slug, environment, flagId, versionId, revision, reason),
@@ -120,6 +128,7 @@ export function FlagManager({
     )
   }
   function onDeactivate(flagId: string, environment: FlagEnvironment) {
+    setErrorFromBuilder(false)
     const revision = stateByEnvironment.get(environment)?.snapshotVersion ?? 0
     run(
       async () => deactivateFlagAction(slug, environment, flagId, revision, reason),
@@ -127,6 +136,7 @@ export function FlagManager({
     )
   }
   function onMint(event: FormEvent) {
+    setErrorFromBuilder(false)
     event.preventDefault()
     setError(null)
     setNotice(null)
@@ -145,6 +155,7 @@ export function FlagManager({
   }
   const onRevoke = useCallback(
     (keyId: string) => {
+      setErrorFromBuilder(false)
       run(
         () => revokeFlagReadKeyAction(slug, keyId),
         'Flag read key revoked.',
@@ -154,6 +165,7 @@ export function FlagManager({
     [slug, run]
   )
   function onMintSync(event: FormEvent) {
+    setErrorFromBuilder(false)
     event.preventDefault()
     setError(null)
     setNotice(null)
@@ -172,6 +184,7 @@ export function FlagManager({
   }
   const onRevokeSync = useCallback(
     (keyId: string) => {
+      setErrorFromBuilder(false)
       run(
         () => revokeFlagSyncKeyAction(slug, keyId),
         'Catalog sync key revoked.',
@@ -316,13 +329,14 @@ export function FlagManager({
           {ruleBuilderEnabled && (
             <RuleBuilder
               disabled={pending}
-              serverError={error}
-              onSubmit={(builtKey, builtDefinition, builtReason) =>
+              serverError={errorFromBuilder ? error : null}
+              onSubmit={(builtKey, builtDefinition, builtReason) => {
+                setErrorFromBuilder(true)
                 run(
                   async () => createFlagDefinitionVersionAction(slug, builtKey, builtDefinition, builtReason),
                   `Created ${builtKey} as an immutable draft version.`
                 )
-              }
+              }}
             />
           )}
           <form onSubmit={onCreate}>
@@ -443,7 +457,7 @@ export function FlagManager({
           catalog sync credentials, and changes environment activations.
         </p>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && !errorFromBuilder && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <h2>Definitions</h2>
       {flags.length === 0 ? (

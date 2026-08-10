@@ -14,7 +14,7 @@ import {
   FLAG_CONTEXT_FIELDS,
   parseFlagDefinition,
 } from '@golden-beans/sdk'
-import type { DefinitionDraft } from './flag-rule-draft.ts'
+import type { DefinitionDraft, RuleDraft } from './flag-rule-draft.ts'
 
 // ── Why this hook, verbatim from breaker-policy.test.ts ───────────────────────────────────────
 // Source files under apps/web must import EXTENSIONLESS (.github/workflows/ci.yml records the
@@ -237,6 +237,43 @@ test('a new rule draft starts at a priority that does not collide', () => {
   const second = emptyRuleDraft([first], 'off')
   assert.notEqual(first.priority, second.priority)
   assert.ok(second.priority > first.priority)
+})
+
+test('a half-typed priority does not poison every rule added after it', () => {
+  // Both review families found this independently, which is the corroboration two passes exist for.
+  // An emptied priority field is NaN by design (so backspacing does not snap it to 0), and
+  // Math.max(n, NaN) is NaN — so one rule mid-edit made every subsequent rule's default NaN too.
+  const beingEdited: RuleDraft = {
+    priority: Number.NaN,
+    clauses: [emptyClauseDraft()],
+    rolloutPercent: null,
+    variantKey: 'off',
+  }
+  const settled: RuleDraft = { ...beingEdited, priority: 30 }
+  const next = emptyRuleDraft([settled, beingEdited], 'off')
+  assert.equal(Number.isFinite(next.priority), true)
+  assert.equal(next.priority, 40)
+})
+
+test('every rule must say something — a condition or a rollout', () => {
+  // A rule with no clauses matches EVERY context (the evaluator's clause loop never runs), so it
+  // serves its variant to everyone and makes every lower-priority rule dead. The parser allows it.
+  const bare = draft()
+  bare.rules[0].clauses = []
+  bare.rules[0].rolloutPercent = null
+  assert.equal(definitionFromDraft(bare).ok, false)
+})
+
+test('but a rollout with no conditions IS valid — "X% of everyone" is the common case', () => {
+  // The narrower guard matters: cross-review proposed requiring at least one clause, which would
+  // have deleted one of the things flags are most used for.
+  const percentOfEveryone = draft()
+  percentOfEveryone.rules[0].clauses = []
+  percentOfEveryone.rules[0].rolloutPercent = 10
+  const result = definitionFromDraft(percentOfEveryone)
+  assert.equal(result.ok, true, JSON.stringify(result))
+  assert.equal(result.ok && result.definition.rules[0].rollout?.basisPoints, 1000)
+  assert.equal(parseFlagDefinition(result.ok && result.definition).ok, true)
 })
 
 test('a new clause draft is a valid starting shape for the first field in the enum', () => {
