@@ -1,6 +1,24 @@
 # Flags — a visual rule builder — Sprint 3: Preview as a user
 
-**Status:** ⬜ not started
+**Status:** 🟡 built, in review — branch `feat/flags-visual-rule-builder-s3`, stacked on `-s2`.
+
+> **What was built.**
+>
+> - **A3 delivered as locked.** `packages/sdk/src/flags.ts` splits the private `matchesRule` into
+>   `clausesMatch` + `rolloutAdmits` (the latter over a four-outcome `rolloutOutcome`), and
+>   `matchesRule` is redefined as their conjunction — so `evaluateFlag` is unchanged **by
+>   construction**. `explainFlagEvaluation()` is built from the same two predicates. One matcher, as
+>   the epic requires; no change to the grammar, the parser, the stored shape or
+>   `FLAG_CONTRACT_VERSION`.
+> - **The parity pin** is in `flags.test.ts` over 13 contexts, following this module's existing
+>   FNV-fraction pin against `bucketing.ts`. **Mutation check observed:** drop `rolloutAdmits` from
+>   `matchesRule` and the pin goes red (along with an existing rollout spec).
+> - **Story 3.2's wording is on a pure seam**, `lib/flag-explanation-prose.ts`, because the wording
+>   *is* the acceptance criterion — 9 unit tests, including a sweep asserting no sentence anywhere
+>   can render basis points. Clauses are described by `describeFlagClause`, the same function the
+>   Sprint 2 diff uses, so a condition reads identically on both panels.
+> - **Read-only, and asserted as such:** the action creates nothing, and the browser spec counts the
+>   flag's versions before and after three evaluations.
 
 > **Build contract (locked by the architect before the builder started).**
 > **D4 is the whole sprint**: evaluation happens through the SDK's own evaluator, server-side,
