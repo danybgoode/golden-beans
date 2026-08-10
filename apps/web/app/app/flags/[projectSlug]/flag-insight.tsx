@@ -131,8 +131,12 @@ export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
 
           {/* The JSON, one click away — required by Story 2.3 whenever the diff falls back, and
               harmless when it does not. Both sides, because a fallback that shows only the new
-              version leaves the reader diffing against memory. */}
-          {from && to && (
+              version leaves the reader diffing against memory.
+
+              Gated on `diff` rather than on `from && to`: with the same version chosen twice the
+              panel already says "Choose two different versions", and offering the same JSON printed
+              twice under it is an answer to a question nobody asked (cross-review, Agy, round 7). */}
+          {diff !== null && from && to && (
             <details className="flag-insight__json">
               <summary>Show JSON</summary>
               <pre>
