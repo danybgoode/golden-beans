@@ -1,9 +1,21 @@
 'use server'
 import { revalidatePath } from 'next/cache'
-import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isFlagServingEnabled } from '@/lib/flags'
-import { parseFlagDefinition, validateFlagKey, type FlagEnvironment } from '@/lib/flag-definition'
-import { createFlagDefinitionVersion, deactivateFlag, setFlagActivation } from '@/lib/flag-registry'
+import { requireProjectMembership, requireProjectOwnership } from '@/lib/dashboard-auth'
+import { isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
+import {
+  FLAG_CONTEXT_FIELDS,
+  explainFlagEvaluation,
+  parseFlagDefinition,
+  validateFlagKey,
+  type FlagEnvironment,
+  type FlagEvaluationContext,
+} from '@/lib/flag-definition'
+import {
+  createFlagDefinitionVersion,
+  deactivateFlag,
+  getFlagRegistryView,
+  setFlagActivation,
+} from '@/lib/flag-registry'
 import { mintFlagReadKey, revokeFlagReadKey } from '@/lib/flag-read-keys'
 import { mintFlagSyncKey, revokeFlagSyncKey } from '@/lib/flag-sync-keys'
 
@@ -199,4 +211,88 @@ export async function revokeFlagSyncKeyAction(slug: unknown, keyId: unknown) {
   const ok = await revokeFlagSyncKey(projectId, keyId, userId)
   if (ok) revalidate(safeSlug)
   return ok ? { ok: true as const } : { ok: false as const, error: 'Could not revoke that key.' }
+}
+
+// ── flags-visual-rule-builder · Sprint 3, Stories 3.1 and 3.2 — preview as a user ──────────────
+
+/**
+ * The six-field context, taken from the SDK's own enum and nothing else.
+ *
+ * Blank is ABSENT, not empty-string. That distinction is the whole of A5 on this screen: a rollout
+ * with no `targetingKey` in context excludes its rule outright, so submitting `targetingKey: ''`
+ * instead of omitting it would produce a different — and wrong — explanation of why nothing matched.
+ *
+ * Values are strings because the form holds strings. The evaluator's `sameScalar` compares `typeof`
+ * too, so a clause storing the NUMBER 5 will not match `"5"` from this form; the screen says so
+ * rather than silently disagreeing with production.
+ */
+function parseEvaluationContext(value: unknown): FlagEvaluationContext | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
+  const entries = value as Record<string, unknown>
+  if (Object.keys(entries).some((key) => !(FLAG_CONTEXT_FIELDS as readonly string[]).includes(key)))
+    return null
+  const context: Record<string, string> = {}
+  for (const field of FLAG_CONTEXT_FIELDS) {
+    const raw = entries[field]
+    if (raw === undefined || raw === null || raw === '') continue
+    if (typeof raw !== 'string' || raw.length > 256) return null
+    context[field] = raw
+  }
+  return context as FlagEvaluationContext
+}
+
+/**
+ * What this context would see — answered by the SDK's evaluator, server-side, against the version
+ * actually activated in that environment (D4).
+ *
+ * **Read-only.** It creates no version, touches no activation, and writes no audit row; there is no
+ * `revalidate` call below for the same reason. Story 3.1's last acceptance criterion is that using
+ * the preview leaves the control plane exactly as it found it, and the absence of a write here is
+ * the whole of that claim.
+ *
+ * Membership, not ownership: the flags page already shows definitions and audit to any member, and
+ * this answers a question about data they can already read. Owner-only credential enumeration stays
+ * where it is.
+ */
+export async function previewFlagEvaluationAction(
+  slug: unknown,
+  flagId: unknown,
+  environment: unknown,
+  context: unknown
+) {
+  // The gate first, and server-side: with FLAG_RULE_BUILDER_ENABLED unset the surface is not
+  // rendered AND the action refuses, so an unreachable button is not the only thing holding it shut.
+  if (!isFlagRuleBuilderEnabled())
+    return { ok: false as const, error: 'The rule builder is unavailable in this deployment.' }
+  const safeSlug = requireString(slug, 'project')
+  const { projectId } = await requireProjectMembership(safeSlug)
+  const safeEnvironment = parseEnvironment(environment)
+  if (!safeEnvironment || typeof flagId !== 'string')
+    return { ok: false as const, error: 'Invalid preview command.' }
+  const safeContext = parseEvaluationContext(context)
+  if (!safeContext)
+    return { ok: false as const, error: 'A preview context accepts only the six targeting fields.' }
+
+  const registry = await getFlagRegistryView(projectId)
+  const flag = registry.flags.find((row) => row.id === flagId)
+  if (!flag) return { ok: false as const, error: 'That flag is not in this project.' }
+
+  const versionId = flag.activations.find((row) => row.environment === safeEnvironment)?.versionId ?? null
+  const version = versionId ? flag.versions.find((row) => row.id === versionId) : undefined
+  if (!version)
+    return {
+      ok: false as const,
+      error: `Nothing is activated in ${safeEnvironment}, so there is nothing to preview there yet.`,
+    }
+
+  return {
+    ok: true as const,
+    version: version.version,
+    // The SDK's answer, handed through unchanged. No matching logic exists in this file — grep the
+    // diff for a clause comparison and there is none to find (D4).
+    explanation: explainFlagEvaluation({
+      flag: { key: flag.key, definitionVersion: version.version, definition: version.definition },
+      context: safeContext,
+    }),
+  }
 }

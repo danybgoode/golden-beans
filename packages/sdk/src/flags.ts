@@ -451,26 +451,82 @@ export function parseFlagSnapshot(input: unknown): FlagSnapshotResult {
   }
 }
 
+// ── flags-visual-rule-builder · Sprint 3 (A3) — one matcher, made explicable ───────────────────
+//
+// `matchesRule` used to be a single function returning one boolean, and it collapsed two entirely
+// different outcomes into that boolean: *a clause did not match* and *the rollout excluded this
+// context*. A PM told only "no rule matched" when the second one happened has been told something
+// misleading — it is, per sprint-3.md, the single most confusing outcome and the one most likely to
+// be reported as a bug.
+//
+// The epic's D4 forbids the obvious workaround: a second matcher in the app would agree with
+// production right up until someone relied on it. So the private predicate is split in two here and
+// `matchesRule` is redefined as their conjunction — **`evaluateFlag`'s behaviour is unchanged by
+// construction, not by assertion** — and the exported explanation is built from the same two
+// predicates. There is still exactly one implementation of matching in this repository.
+//
+// Nothing about the wire contract moves: no new clause field, no new operator, no change to
+// FLAG_CONTRACT_VERSION, the parser or the stored shape. That is why A3 is not a D10 violation.
+
+/** The first clause this context fails, or `null` when every clause matches. */
+function firstFailingClause(rule: FlagRule, context: FlagEvaluationContext): FlagClause | null {
+  for (const clause of rule.clauses) {
+    const actual = context[clause.field]
+    if (!validScalar(actual)) return clause
+    if (clause.operator === 'equals' && !sameScalar(actual, clause.value)) return clause
+    if (clause.operator === 'one_of' && !clause.values.some((value) => sameScalar(actual, value)))
+      return clause
+  }
+  return null
+}
+
+function clausesMatch(rule: FlagRule, context: FlagEvaluationContext): boolean {
+  return firstFailingClause(rule, context) === null
+}
+
+/**
+ * What the rollout did to this context — four outcomes, not one boolean.
+ *
+ * `missing_targeting_key` is its own answer deliberately (A5). If a rule carries a rollout and the
+ * context has no usable `targetingKey`, the rule cannot match AT ALL — there is nothing to hash — so
+ * a PM who left the field blank and was told "no rule matched" would go looking for a mistake in
+ * their conditions. The bucketing itself is untouched: same FNV-1a fraction, same tuple, same
+ * comparison, still parity-pinned to bucketing.ts.
+ */
+type FlagRolloutOutcome = 'no_rollout' | 'admitted' | 'excluded' | 'missing_targeting_key'
+
+function rolloutOutcome(
+  rule: FlagRule,
+  flagKey: string,
+  definitionVersion: number,
+  context: FlagEvaluationContext
+): FlagRolloutOutcome {
+  if (!rule.rollout) return 'no_rollout'
+  const targetingKey = context.targetingKey
+  if (typeof targetingKey !== 'string' || !validText(targetingKey, 256)) return 'missing_targeting_key'
+  return rolloutFraction(JSON.stringify([targetingKey, flagKey, definitionVersion, rule.priority])) <
+    rule.rollout.basisPoints / 10_000
+    ? 'admitted'
+    : 'excluded'
+}
+
+function rolloutAdmits(
+  rule: FlagRule,
+  flagKey: string,
+  definitionVersion: number,
+  context: FlagEvaluationContext
+): boolean {
+  const outcome = rolloutOutcome(rule, flagKey, definitionVersion, context)
+  return outcome === 'no_rollout' || outcome === 'admitted'
+}
+
 function matchesRule(
   rule: FlagRule,
   flagKey: string,
   definitionVersion: number,
   context: FlagEvaluationContext
 ): boolean {
-  for (const clause of rule.clauses) {
-    const actual = context[clause.field]
-    if (!validScalar(actual)) return false
-    if (clause.operator === 'equals' && !sameScalar(actual, clause.value)) return false
-    if (clause.operator === 'one_of' && !clause.values.some((value) => sameScalar(actual, value)))
-      return false
-  }
-  if (!rule.rollout) return true
-  const targetingKey = context.targetingKey
-  if (typeof targetingKey !== 'string' || !validText(targetingKey, 256)) return false
-  return (
-    rolloutFraction(JSON.stringify([targetingKey, flagKey, definitionVersion, rule.priority])) <
-    rule.rollout.basisPoints / 10_000
-  )
+  return clausesMatch(rule, context) && rolloutAdmits(rule, flagKey, definitionVersion, context)
 }
 
 export function evaluateFlag<T>(input: {
@@ -514,5 +570,139 @@ export function evaluateFlag<T>(input: {
     reason: chosen ? 'TARGETING_MATCH' : 'STATIC',
     flagMetadata: checked.definition.metadata ?? {},
     flagVersion: input.flag.definitionVersion,
+  }
+}
+
+// ── flags-visual-rule-builder · Sprint 3 (A3) — the explanation ────────────────────────────────
+
+/** What one rule did when the evaluator consulted it — or that it never got the chance. */
+export type FlagRuleOutcome =
+  | 'matched'
+  | 'clause_failed'
+  | 'rollout_excluded'
+  | 'rollout_missing_targeting_key'
+  /** Evaluation stops at the first match, so a lower-priority rule below it is never consulted. */
+  | 'not_reached'
+
+export type FlagRuleExplanation = {
+  priority: number
+  variantKey: string
+  outcome: FlagRuleOutcome
+  /** Every clause on the rule, in stored order — the conditions a reader is being told about. */
+  clauses: FlagClause[]
+  /** Present only for `clause_failed`: the first clause this context did not satisfy. */
+  failedClause?: FlagClause
+  /** Present when the rule carries one, whatever the outcome. Basis points, as stored. */
+  rolloutBasisPoints?: number
+}
+
+export type FlagEvaluationExplanation = {
+  /** The variant this context resolves to, or `null` when the flag or definition was refused. */
+  variantKey: string | null
+  /** Identical to `evaluateFlag`'s: TARGETING_MATCH, STATIC when no rule matched, DEFAULT on error. */
+  reason: FlagResolutionReason
+  errorCode?: 'FLAG_NOT_FOUND' | 'INVALID_DEFINITION' | 'INVALID_CONTEXT'
+  /** The rule that decided it, or `null` when the default variant applied. */
+  matched: FlagRuleExplanation | null
+  /** Every rule, in evaluation order (ascending priority), each with what it did. */
+  rules: FlagRuleExplanation[]
+  /** The variant served when no rule matches. Named even when a rule DID match, for contrast. */
+  defaultVariantKey: string | null
+}
+
+/**
+ * Why this context resolves to the variant it does.
+ *
+ * ── The contract, and how it is enforced ──────────────────────────────────────────────────────
+ * `variantKey` equals `evaluateFlag(...).variant` for the same flag, context and snapshot whenever
+ * the caller passes `expectedType: definition.valueType` and a default value of that type. That is
+ * asserted directly, across the same fixtures, in flags.test.ts — the precedent being this module's
+ * existing parity pin against bucketing.ts. Both answers come from the same two predicates, so the
+ * spec is checking that they stay wired together, not that two implementations agree.
+ *
+ * ── What it deliberately does NOT do ──────────────────────────────────────────────────────────
+ * No type checking. `evaluateFlag` refuses a `defaultValue` that disagrees with `expectedType`, and
+ * a variant whose value disagrees with the declared type; both are questions about the CALLER, not
+ * about targeting, and a preview screen has no default value to offer. A definition the parser
+ * rejects is still refused here, because targeting cannot be explained over rules that may not
+ * exist.
+ */
+export function explainFlagEvaluation(input: {
+  flag: FlagSnapshotFlag | undefined
+  context?: FlagEvaluationContext
+}): FlagEvaluationExplanation {
+  const refused = (
+    errorCode: NonNullable<FlagEvaluationExplanation['errorCode']>
+  ): FlagEvaluationExplanation => ({
+    variantKey: null,
+    reason: 'DEFAULT',
+    errorCode,
+    matched: null,
+    rules: [],
+    defaultVariantKey: null,
+  })
+
+  if (!input.flag) return refused('FLAG_NOT_FOUND')
+  const checked = parseFlagDefinition(input.flag.definition)
+  if (!checked.ok) return refused('INVALID_DEFINITION')
+
+  const context = input.context ?? {}
+  if (
+    !isRecord(context) ||
+    Object.keys(context).some((key) => !(FLAG_CONTEXT_FIELDS as readonly string[]).includes(key)) ||
+    Object.values(context).some((value) => !validScalar(value))
+  ) {
+    return { ...refused('INVALID_CONTEXT'), defaultVariantKey: checked.definition.defaultVariantKey }
+  }
+
+  // The same ordering `evaluateFlag` uses — ascending priority, first match wins.
+  const ordered = [...checked.definition.rules].sort((left, right) => left.priority - right.priority)
+  const rules: FlagRuleExplanation[] = []
+  let matched: FlagRuleExplanation | null = null
+
+  for (const rule of ordered) {
+    const base = {
+      priority: rule.priority,
+      variantKey: rule.variantKey,
+      clauses: rule.clauses,
+      ...(rule.rollout ? { rolloutBasisPoints: rule.rollout.basisPoints } : {}),
+    }
+    if (matched) {
+      rules.push({ ...base, outcome: 'not_reached' })
+      continue
+    }
+    const failedClause = firstFailingClause(rule, context as FlagEvaluationContext)
+    if (failedClause) {
+      rules.push({ ...base, outcome: 'clause_failed', failedClause })
+      continue
+    }
+    const rollout = rolloutOutcome(
+      rule,
+      input.flag.key,
+      input.flag.definitionVersion,
+      context as FlagEvaluationContext
+    )
+    if (rollout === 'excluded') {
+      rules.push({ ...base, outcome: 'rollout_excluded' })
+      continue
+    }
+    if (rollout === 'missing_targeting_key') {
+      rules.push({ ...base, outcome: 'rollout_missing_targeting_key' })
+      continue
+    }
+    const explanation: FlagRuleExplanation = { ...base, outcome: 'matched' }
+    rules.push(explanation)
+    matched = explanation
+  }
+
+  return {
+    variantKey: matched ? matched.variantKey : checked.definition.defaultVariantKey,
+    // A5: no rule matched is STATIC, never DEFAULT. 'DEFAULT' is reserved for the error fallbacks
+    // above, which is why the copy on the preview screen names the default VARIANT and never uses
+    // the word DEFAULT for this case.
+    reason: matched ? 'TARGETING_MATCH' : 'STATIC',
+    matched,
+    rules,
+    defaultVariantKey: checked.definition.defaultVariantKey,
   }
 }

@@ -10,6 +10,7 @@ import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagEnvironmentStateRow, FlagLifecycleAuditRow, FlagRegistryRow } from '@/lib/flag-registry'
 import { RuleBuilder } from './rule-builder'
 import { FlagInsight } from './flag-insight'
+import { FlagPreview } from './flag-preview'
 import {
   activateFlagAction,
   createFlagDefinitionVersionAction,
@@ -484,6 +485,10 @@ export function FlagManager({
                 nothing the table below does not already have — A4, no query added — so this is
                 additive to the version table, never a replacement for it. */}
             {ruleBuilderEnabled && <FlagInsight flag={flag} />}
+            {/* Sprint 3, Story 3.3 — the preview is reachable from the flag's own view, not a
+                separate page, and it is gated with the rest of the epic. It is READ-ONLY: the
+                action it posts to creates no version and changes no activation. */}
+            {ruleBuilderEnabled && <FlagPreview slug={slug} flagId={flag.id} />}
             <table>
               <thead>
                 <tr>
