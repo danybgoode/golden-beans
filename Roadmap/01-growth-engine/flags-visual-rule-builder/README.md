@@ -233,15 +233,23 @@ would be the most confident wrong number on the screen, and it would be wrong in
 matters: a `plan is pro` rule at 100% would render as "everyone".
 
 **Locked: the bar shows the ROLLOUT, of the contexts a rule already matches**, and the caption says
-exactly that. Three consequences, each unit-tested in `lib/flag-environment-view.test.ts`:
+exactly that. Five consequences, each unit-tested in `lib/flag-environment-view.test.ts`. The middle
+three were each found by a reviewer after the first version collapsed them:
 
 - **No rollout on any rule → a full bar labelled "everyone"**, never an empty bar. `0%` is a
   different, valid, opposite statement and the two are one keystroke apart in the definition.
-- **Rules with different rollouts → "up to 50% · 2 rules carry different rollouts".** One bar cannot
-  represent two rollouts, and picking the highest silently is how a PM reads 50% off a flag that is
-  also serving a second variant to everyone who matches a different rule.
-- **Nothing activated → no bar at all**, with the row saying so. An inactive environment drawn as a
-  zero-length bar reads as "0% of users", which is a targeting decision nobody made.
+- **Rules that disagree → "up to 50% · 3 rules reach different shares".** One bar cannot represent
+  three rollouts. The count is of RULES, not of distinct percentages — the number a reader can check
+  against the definition.
+- **A rollout-less rule counts as a disagreement.** `[10% rule, unrestricted rule]` is not a 10%
+  flag: the second rule serves every context it matches. Collapsing it understated the blast radius.
+- **…and it is not "100%" either.** Beside a rule that really is at 100% the two would agree and the
+  bar would read a flat `100%` — but a 100% rollout still excludes a context with no targeting key
+  (A5) and an absent rollout does not. `several` carries "includes an unbounded rule" separately and
+  the label reads **"up to everyone"**, which is a share no percentage names.
+- **Nothing activated, or a version with no rules → no bar at all**, with the row saying so
+  ("not active" / "default only"). A zero-length bar reads as "0% of users" and a full one reads as
+  "fully rolled out"; on a flag that targets nobody and serves its default, both are false.
 
 Story 2.2's "matches what the evaluator would return" is kept literally: the variant beside each bar
 is `evaluateFlag`'s own answer for a context with no attributes — the question behind "is this live

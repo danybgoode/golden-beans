@@ -355,7 +355,12 @@ export function FlagManager({
                 rows={18}
                 spellCheck={false}
                 required
-                style={{ display: 'block', width: '100%', fontFamily: 'monospace' }}
+                // app-component-kit-adoption wrote `.code-input` for exactly this control and said
+                // so in globals.css: "the flag authoring textarea gets it in Sprint 2 Story 2.3
+                // WITHOUT otherwise being touched", because replacing the control was this epic's
+                // to decide. The class sets the same three properties from tokens. Cross-review
+                // (Agy) raised the inline style; this is the swap that was already planned for here.
+                className="code-input"
               />
             </label>
             <label htmlFor="flag-reason">

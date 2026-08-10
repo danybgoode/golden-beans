@@ -117,16 +117,61 @@ function describeRule(rule: FlagRule): string {
 }
 
 /**
- * The rule body WITHOUT its priority — the identity used to recognise a pure reorder.
+ * The rule body WITHOUT its priority — the identity used to recognise a reorder.
  *
  * Rules are paired by `priority` because the parser guarantees it is unique within a definition and
- * because it is what the evaluator actually orders by. That pairing alone would report a renumbered
- * rule as one removal plus one addition, which is true but hides the thing D9 cares about most: the
- * evaluation ORDER changed and nothing else did. So an unmatched removal and an unmatched addition
- * with byte-identical bodies are re-joined here and reported as a move.
+ * because it is what the evaluator actually orders by. That pairing alone hides the thing D9 cares
+ * about most, and it hides it in two different ways:
+ *
+ *   • **a renumber into a vacant slot** would read as one removal plus one addition, and
+ *   • **a SWAP** would not even do that — both priorities exist on both sides, so the two rules pair
+ *     up and every field reads as changed. Two rules exchanging places produced four sentences
+ *     claiming both rules had been rewritten, for an edit that rewrote nothing (found by the fresh
+ *     reviewer on PR #88).
+ *
+ * So the second case is checked FIRST, before any pairing: if the two versions contain exactly the
+ * same multiset of bodies, nothing about targeting changed and every difference is a renumbering.
+ * The first case is then handled inside the removed/added reconciliation, which is where it lives.
  */
 function ruleBody(rule: FlagRule): string {
   return JSON.stringify([rule.clauses, rule.rollout ?? null, rule.variantKey])
+}
+
+/**
+ * Describe a pure renumbering — the case where both versions hold the same rules and only the
+ * priorities differ.
+ *
+ * Bodies can legitimately repeat (the parser requires unique priorities, not unique rules), so
+ * identical bodies are paired by sorted priority: the lowest before-priority to the lowest
+ * after-priority. Any other pairing would be a guess about which of two indistinguishable rules the
+ * author meant to move, and between two guesses that describe the same outcome this is the one that
+ * reports the fewest moves.
+ */
+function describeReorder(before: FlagRule[], after: FlagRule[], changes: string[]) {
+  const sides = new Map<string, { rule: FlagRule; before: number[]; after: number[] }>()
+  const side = (rule: FlagRule) => {
+    const body = ruleBody(rule)
+    const existing = sides.get(body)
+    if (existing) return existing
+    const fresh = { rule, before: [] as number[], after: [] as number[] }
+    sides.set(body, fresh)
+    return fresh
+  }
+  for (const rule of before) side(rule).before.push(rule.priority)
+  for (const rule of after) side(rule).after.push(rule.priority)
+
+  for (const entry of sides.values()) {
+    entry.before.sort((left, right) => left - right)
+    entry.after.sort((left, right) => left - right)
+    entry.before.forEach((priority, index) => {
+      const moved = entry.after[index]
+      if (moved !== priority) {
+        changes.push(
+          `the rule serving ${describeRule(entry.rule)} moved from priority ${priority} to ${moved}`
+        )
+      }
+    })
+  }
 }
 
 function describeVariantsChange(before: FlagVariant[], after: FlagVariant[], changes: string[]) {
@@ -229,6 +274,13 @@ export function diffFlagDefinitions(before: FlagDefinition, after: FlagDefinitio
   const beforeRules = rulesByPriority(before.rules)
   const afterRules = rulesByPriority(after.rules)
   if (!beforeRules || !afterRules) return { changes, unexplained: true }
+
+  // Checked BEFORE pairing by priority: same rules, different numbers, and nothing else. Pairing
+  // first would describe a swap as both rules being rewritten — see `ruleBody`'s header.
+  if (sameJson([...before.rules].map(ruleBody).sort(), [...after.rules].map(ruleBody).sort())) {
+    describeReorder(before.rules, after.rules, changes)
+    return { changes, unexplained }
+  }
 
   const removed: FlagRule[] = []
   const added: FlagRule[] = []

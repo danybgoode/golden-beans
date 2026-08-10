@@ -29,8 +29,30 @@ export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
   const versions = flag.versions
   const latest = versions[versions.length - 1]
   const previous = versions[versions.length - 2]
-  const [fromId, setFromId] = useState(previous?.id ?? latest?.id ?? '')
-  const [toId, setToId] = useState(latest?.id ?? '')
+  const defaultFromId = previous?.id ?? latest?.id ?? ''
+  const defaultToId = latest?.id ?? ''
+
+  const [fromId, setFromId] = useState(defaultFromId)
+  const [toId, setToId] = useState(defaultToId)
+
+  // ── Why the selection is reset during render, and not left alone ──────────────────────────────
+  // Cross-review (Codex, Blocking) caught this: initialising from props ONCE meant that saving a new
+  // version — which calls `router.refresh()` and re-renders this component with a longer `versions`
+  // list — left both selects pointing at the old latest. The reader would create v2, look down, and
+  // be told "Choose two different versions" instead of the diff they had just earned. It is the
+  // smoke walkthrough's step 4 path exactly, and the one moment the whole story exists for.
+  //
+  // The reset is keyed on THIS flag's version identities, not on any render: refreshing after an
+  // unrelated write (minting a key, activating another flag) leaves a deliberate comparison alone,
+  // because that flag's list did not change. React's documented "adjust state when props change"
+  // pattern — a set during render re-renders this component only, before anything is painted.
+  const versionIds = versions.map((version) => version.id).join(',')
+  const [comparedList, setComparedList] = useState(versionIds)
+  if (comparedList !== versionIds) {
+    setComparedList(versionIds)
+    setFromId(defaultFromId)
+    setToId(defaultToId)
+  }
 
   const from = versions.find((version) => version.id === fromId)
   const to = versions.find((version) => version.id === toId)
@@ -48,15 +70,20 @@ export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
 
       {versions.length < 2 ? (
         // CODE-QUALITY rule 8 — an honest empty state. One version is not a shortcoming; it means
-        // nothing has changed yet, and saying that beats an empty pair of selects.
+        // nothing has changed yet, and saying that beats an empty pair of selects. Worded so it is
+        // true of an EMPTY list too: every write path creates v1 in the same statement as the flag,
+        // so zero versions is unreachable today — but a sentence that would become false the moment
+        // it was reachable is not worth the two words it saves (fresh review, PR #88).
         <p className="flag-insight__empty">
-          There is one version of this flag, so there is nothing to compare yet. Create another and the change
-          will be described here.
+          There is nothing to compare yet. Create another version and the change will be described here.
         </p>
       ) : (
         <div className="flag-insight__diff">
+          {/* Wrapped controls, so each select's accessible name is the words beside it. Both say
+              "version" rather than leaving the second one named "with", which reads as nothing at
+              all to anyone hearing the controls one at a time. */}
           <label>
-            Compare
+            Compare version
             <select value={fromId} onChange={(event) => setFromId(event.target.value)}>
               {versions.map((version) => (
                 <option key={version.id} value={version.id}>
@@ -66,7 +93,7 @@ export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
             </select>
           </label>
           <label>
-            with
+            with version
             <select value={toId} onChange={(event) => setToId(event.target.value)}>
               {versions.map((version) => (
                 <option key={version.id} value={version.id}>
@@ -91,7 +118,14 @@ export function FlagInsight({ flag }: { flag: FlagRegistryRow }) {
                   version that changed both a rollout and its description shows both facts — the
                   story's "never guesses, never silently omits", as two separate obligations. */}
               {diff.unexplained && <p className="flag-insight__unexplained">{UNEXPLAINED_DIFF_TEXT}</p>}
-              {diff.changes.length === 0 && !diff.unexplained && <p>These two versions are identical.</p>}
+              {/* "behave identically", not "are identical". Two versions whose `rules` or `variants`
+                  arrays differ only in ORDER resolve the same way — the evaluator sorts rules by
+                  priority and finds variants by key — but their stored JSON is not the same bytes,
+                  and this page's whole subject is an immutable version model. Claiming byte equality
+                  about two distinct rows would be false (fresh review, PR #88). */}
+              {diff.changes.length === 0 && !diff.unexplained && (
+                <p>These two versions behave identically.</p>
+              )}
             </div>
           )}
 

@@ -64,6 +64,11 @@ function base(): FlagDefinition {
   }
 }
 
+/** The same flag with a different rule list — the shape most of the reorder cases need. */
+function withRules(rules: FlagDefinition['rules']): FlagDefinition {
+  return { ...base(), rules }
+}
+
 /** Diff two definitions the parser accepts. A fixture it rejects is not a version. */
 function diff(before: FlagDefinition, after: FlagDefinition) {
   for (const definition of [before, after]) {
@@ -196,6 +201,66 @@ test('a rule that only changes priority reads as a move, not as a removal plus a
   assert.deepEqual(result.changes, [
     'the rule serving "on" to plan is "pro" (10%) moved from priority 10 to 30',
   ])
+})
+
+test('two rules SWAPPING priorities read as two moves, not as four rewrites', () => {
+  // Fresh review, PR #88 — the highest-value misleading sentence found. Pairing by priority alone
+  // matched rule 10 to rule 10 and rule 20 to rule 20, so an edit that rewrote nothing produced
+  // four sentences claiming both rules had had their conditions and their variant changed. D9's
+  // "the evaluation order changed and nothing else did" was the one fact it hid completely.
+  const before = withRules([
+    { priority: 10, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    { priority: 20, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+  ])
+  const after = withRules([
+    { priority: 10, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+    { priority: 20, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+  ])
+
+  const result = diff(before, after)
+  assert.equal(result.unexplained, false)
+  assert.deepEqual(result.changes, [
+    'the rule serving "on" to plan is "pro" (everyone) moved from priority 10 to 20',
+    'the rule serving "off" to region is "mx" (everyone) moved from priority 20 to 10',
+  ])
+  assert.ok(
+    !sentences(result).includes('conditions changed'),
+    'a reorder must never be described as a rewrite'
+  )
+})
+
+test('reordering the rules ARRAY without changing any priority is no change at all', () => {
+  // The evaluator sorts by priority, so array order is not behaviour. The reorder path must not
+  // invent a move out of it.
+  const before = withRules([
+    { priority: 10, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    { priority: 20, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+  ])
+  const after = withRules([...before.rules].reverse())
+
+  const result = diff(before, after)
+  assert.deepEqual(result.changes, [])
+  assert.equal(result.unexplained, false)
+})
+
+test('two IDENTICAL rules that swap priorities produce no sentences — nothing distinguishes them', () => {
+  // Bodies can legitimately repeat: the parser requires unique priorities, not unique rules. Paired
+  // by sorted priority, so the diff reports the fewest moves rather than guessing which of two
+  // indistinguishable rules the author "meant" to move.
+  const body = {
+    clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: 'pro' }],
+    variantKey: 'on',
+  }
+  const before = withRules([
+    { priority: 10, ...body },
+    { priority: 20, ...body },
+  ])
+  const after = withRules([
+    { priority: 20, ...body },
+    { priority: 10, ...body },
+  ])
+
+  assert.deepEqual(diff(before, after).changes, [])
 })
 
 test('a rule added and a rule removed are each named with what they served', () => {

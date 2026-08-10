@@ -52,9 +52,19 @@ export type FlagView = {
  */
 export type FlagRolloutReach =
   | { kind: 'inactive' }
+  /** The version has no rules at all: the default variant, and no rollout to draw. */
+  | { kind: 'no-rules' }
+  /** Rules exist and none carries a rollout — every matching context is served. */
   | { kind: 'everyone' }
+  /** Every rule carries the SAME rollout. */
   | { kind: 'rollout'; basisPoints: number }
-  | { kind: 'several'; highestBasisPoints: number; count: number }
+  /**
+   * The rules disagree. `includesUnbounded` is carried separately from the numbers because a rule
+   * with no rollout is not "100%": a 100% rollout still excludes a context with no targeting key
+   * (A5) and an absent rollout does not. Folding the two into one maximum told a PM their flag
+   * misses anonymous traffic when one of its rules does not.
+   */
+  | { kind: 'several'; highestBasisPoints: number; includesUnbounded: boolean; ruleCount: number }
   | { kind: 'unreadable' }
 
 export type FlagEnvironmentSummary = {
@@ -105,35 +115,70 @@ function baselineVariantKey(flagKey: string, version: FlagVersionView): string |
   return resolved.variant ?? null
 }
 
+/**
+ * What the active version's rules add up to.
+ *
+ * ── Two collapses this deliberately does NOT make (both caught in review) ─────────────────────
+ * 1. **A rollout-less rule is not "no rollout on the flag".** The first version filtered those
+ *    rules out before looking for disagreement, so `[10% rule, unrestricted rule]` reported a
+ *    confident "10%" while the second rule served its variant to EVERY context it matched. That
+ *    understates the blast radius, which is the dangerous direction to be wrong in.
+ * 2. **A rollout-less rule is not "100%" either.** Mapping it to the full 10000 fixed (1) and broke
+ *    something subtler: beside a rule that really is at 100%, the two agreed and the bar read a
+ *    flat "100%". They are not the same — a 100% rollout still excludes a context with no targeting
+ *    key (A5), an absent rollout does not — so a flag one of whose rules reaches anonymous traffic
+ *    was labelled as one that does not.
+ *
+ * So bounded and unbounded rules are counted separately, and `several` carries both facts.
+ */
 function reachOf(definition: FlagDefinition): FlagRolloutReach {
-  const basisPoints = definition.rules
-    .map((rule) => rule.rollout?.basisPoints)
-    .filter((points): points is number => points !== undefined)
+  const rules = definition.rules
+  // No rules at all. There is no rollout to draw, and drawing a FULL bar here — as an earlier
+  // version did — reads as "fully rolled out" on a flag that targets nobody and serves its default.
+  if (rules.length === 0) return { kind: 'no-rules' }
 
-  // No rule carries a rollout: every context that matches is served. A full bar, and the label says
-  // so — an empty bar reading as 0% is the exact failure Story 2.1 names.
-  if (basisPoints.length === 0) return { kind: 'everyone' }
-  // A stored value the D3 seam refuses is a row that disagrees with the parser that wrote it.
-  if (basisPoints.some((points) => basisPointsToPercent(points) === null)) return { kind: 'unreadable' }
+  const bounded: number[] = []
+  let unbounded = 0
+  for (const rule of rules) {
+    if (!rule.rollout) {
+      unbounded += 1
+      continue
+    }
+    // A stored value the D3 seam refuses is a row that disagrees with the parser that wrote it.
+    if (basisPointsToPercent(rule.rollout.basisPoints) === null) return { kind: 'unreadable' }
+    bounded.push(rule.rollout.basisPoints)
+  }
 
-  const distinct = [...new Set(basisPoints)]
-  if (distinct.length === 1) return { kind: 'rollout', basisPoints: distinct[0] }
-  return { kind: 'several', highestBasisPoints: Math.max(...distinct), count: distinct.length }
+  if (bounded.length === 0) return { kind: 'everyone' }
+  if (unbounded === 0 && new Set(bounded).size === 1) return { kind: 'rollout', basisPoints: bounded[0] }
+  return {
+    kind: 'several',
+    highestBasisPoints: Math.max(...bounded),
+    includesUnbounded: unbounded > 0,
+    ruleCount: rules.length,
+  }
 }
 
 function labelOf(reach: FlagRolloutReach): string {
   if (reach.kind === 'inactive') return 'not active'
+  if (reach.kind === 'no-rules') return 'default only'
   if (reach.kind === 'unreadable') return 'unreadable'
   if (reach.kind === 'everyone') return formatRolloutPercent(null)
   if (reach.kind === 'rollout') return formatRolloutPercent(reach.basisPoints)
-  return `up to ${formatRolloutPercent(reach.highestBasisPoints)}`
+  // An unbounded rule in the mix means the widest reach is "everyone who matches it" — a share no
+  // percentage names, so the label does not invent one.
+  return reach.includesUnbounded
+    ? `up to ${formatRolloutPercent(null)}`
+    : `up to ${formatRolloutPercent(reach.highestBasisPoints)}`
 }
 
 function fillOf(reach: FlagRolloutReach): number | null {
-  if (reach.kind === 'inactive' || reach.kind === 'unreadable') return null
+  // `no-rules` draws NO bar, for the same reason `inactive` does: the caption says the bar is the
+  // share of the contexts a rule already matches, and with no rules that set is empty.
+  if (reach.kind === 'inactive' || reach.kind === 'no-rules' || reach.kind === 'unreadable') return null
   if (reach.kind === 'everyone') return rolloutBarPercent(null)
   if (reach.kind === 'rollout') return rolloutBarPercent(reach.basisPoints)
-  return rolloutBarPercent(reach.highestBasisPoints)
+  return reach.includesUnbounded ? rolloutBarPercent(null) : rolloutBarPercent(reach.highestBasisPoints)
 }
 
 function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmentSummary {
@@ -162,7 +207,10 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
     variantKey === null
       ? 'this version cannot be evaluated'
       : `a context with no attributes gets ${JSON.stringify(variantKey)}`
-  const spread = reach.kind === 'several' ? ` · ${reach.count} rules carry different rollouts` : ''
+  // "N rules reach different shares", not "N different rollouts": cross-review (Codex) pointed out
+  // that the count was of distinct percentages, so three rules at 10/10/50 read as "2 rules". The
+  // number a reader can check against the definition is how many rules there are.
+  const spread = reach.kind === 'several' ? ` · ${reach.ruleCount} rules reach different shares` : ''
 
   return {
     environment,

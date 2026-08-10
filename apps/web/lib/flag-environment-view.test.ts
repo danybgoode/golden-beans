@@ -162,10 +162,116 @@ test('rules with different rollouts are reported as several, not collapsed into 
   })
   const summary = summariseFlagEnvironments(flag([mixed], { production: 1 })).production
 
-  assert.deepEqual(summary.reach, { kind: 'several', highestBasisPoints: 5000, count: 2 })
+  assert.deepEqual(summary.reach, {
+    kind: 'several',
+    highestBasisPoints: 5000,
+    includesUnbounded: false,
+    ruleCount: 2,
+  })
   assert.equal(summary.label, 'up to 50%')
   assert.equal(summary.fillPercent, 50)
-  assert.ok(summary.detail.includes('2 rules carry different rollouts'))
+  assert.ok(summary.detail.includes('2 rules reach different shares'))
+})
+
+test('a rule with NO rollout beside one that has a rollout is a disagreement, not a 10% flag', () => {
+  // Cross-review (Codex, Blocking). The rollout-less rule serves its variant to EVERY context it
+  // matches, so a bar reading a confident "10%" understates the flag — and understating is the
+  // dangerous direction: it says the blast radius is smaller than it is.
+  const mixed = definition({
+    rules: [
+      {
+        priority: 10,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 1000 },
+        variantKey: 'on',
+      },
+      { priority: 20, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'on' },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([mixed], { production: 1 })).production
+
+  // `includesUnbounded` is carried separately from the numbers, and the label refuses to name a
+  // percentage for it: a rule with no rollout reaches every context it matches, which is not the
+  // same share as a 100% rollout (A5 — a 100% rollout still needs a targeting key).
+  assert.deepEqual(summary.reach, {
+    kind: 'several',
+    highestBasisPoints: 1000,
+    includesUnbounded: true,
+    ruleCount: 2,
+  })
+  assert.equal(summary.label, 'up to everyone')
+  assert.equal(summary.fillPercent, 100)
+  assert.ok(summary.detail.includes('2 rules reach different shares'))
+})
+
+test('the spread count is the number of RULES, not the number of distinct percentages', () => {
+  // 10 / 10 / 50 is three rules and two distinct rollouts. "2 rules" was the wrong number and the
+  // one a reader would try, and fail, to find in the definition (cross-review, Codex).
+  const three = definition({
+    rules: [10, 20, 30].map((priority, index) => ({
+      priority,
+      clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: `tier-${index}` }],
+      rollout: { basisPoints: index === 2 ? 5000 : 1000 },
+      variantKey: 'on',
+    })),
+  })
+  const summary = summariseFlagEnvironments(flag([three], { production: 1 })).production
+
+  assert.equal(summary.reach.kind, 'several')
+  assert.ok(summary.detail.includes('3 rules reach different shares'))
+})
+
+test('rules that ALL carry a 100% rollout say 100%, not "everyone" — they are different statements', () => {
+  // A 100% rollout still excludes a context with no targeting key (A5). An absent rollout does not.
+  // Collapsing the two would tell a PM their flag reaches anonymous traffic when it does not.
+  const full = definition({
+    rules: [
+      {
+        priority: 10,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 10_000 },
+        variantKey: 'on',
+      },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([full], { production: 1 })).production
+
+  assert.deepEqual(summary.reach, { kind: 'rollout', basisPoints: 10_000 })
+  assert.equal(summary.label, '100%')
+  assert.notEqual(summary.label, 'everyone')
+})
+
+test('a flag with NO rules draws no bar — a full bar would read as "fully rolled out"', () => {
+  // Fresh review, PR #88: returning `everyone` here filled the bar completely on a flag that
+  // targets nobody and serves its default. The caption calls the bar "the share of the contexts a
+  // rule already matches"; with no rules that set is empty, so there is nothing to draw.
+  const summary = summariseFlagEnvironments(flag([definition({ rules: [] })], { production: 1 })).production
+
+  assert.deepEqual(summary.reach, { kind: 'no-rules' })
+  assert.equal(summary.fillPercent, null)
+  assert.equal(summary.label, 'default only')
+})
+
+test('a rollout-less rule beside a 100% rollout is a disagreement, not a flat 100%', () => {
+  // The second collapse, and the subtler one (fresh review, PR #88). Mapping "no rollout" to 10000
+  // made it AGREE with a rule that really is at 100% — so a flag one of whose rules reaches
+  // anonymous traffic was labelled as one that does not.
+  const mixed = definition({
+    rules: [
+      { priority: 10, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+      {
+        priority: 20,
+        clauses: [{ field: 'region', operator: 'equals', value: 'mx' }],
+        rollout: { basisPoints: 10_000 },
+        variantKey: 'on',
+      },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([mixed], { production: 1 })).production
+
+  assert.equal(summary.reach.kind, 'several')
+  assert.equal(summary.label, 'up to everyone')
+  assert.notEqual(summary.label, '100%')
 })
 
 test('two rules sharing ONE rollout are not "several" — the number is unambiguous', () => {

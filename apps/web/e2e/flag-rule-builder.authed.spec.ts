@@ -221,6 +221,48 @@ test.describe('rollout bars and the version diff', () => {
     await expect(rows.filter({ hasText: 'development' })).toHaveAttribute('data-production', 'false')
   })
 
+  test('an ACTIVATED 10% rollout reads 10% on its bar, never 1000', async ({ page }) => {
+    // Fresh review, PR #88: the tests around this one create a version and never activate it, so
+    // every row renders "not active", NO fill element exists, and the row-count assertions would
+    // pass with the geometry and the percent label completely broken. This is the one that puts a
+    // real number on a real bar — smoke walkthrough step 2, and the epic's headline claim applied
+    // to the reading surface rather than the authoring one.
+    //
+    // Skipped rather than branched when serving is off: the Activate control only renders with
+    // FLAG_SERVING_ENABLED, and a conditional assertion is a test that reports green for having
+    // checked nothing. Same idiom as flag-serving.spec.ts.
+    test.skip(
+      process.env.FLAG_SERVING_ENABLED !== 'true',
+      'activating a version needs FLAG_SERVING_ENABLED=true'
+    )
+
+    const slug = tenantSlug()
+    const key = flagKey()
+    await page.goto(`/app/flags/${slug}`)
+    await createVersion(page, key, definition(), 'Rollout bar activation smoke.')
+
+    // Scoped to the development cell by the environment's own label rather than by position —
+    // the three buttons in that row are identically worded, which is exactly A9's defect.
+    const flag = flagOf(page, key)
+    await flag
+      .locator('td div')
+      .filter({ has: page.getByText('development', { exact: true }) })
+      .getByRole('button', { name: 'Activate v1' })
+      .click()
+    await expect(page.getByRole('status').filter({ hasText: 'Activated v1 in development' })).toBeVisible()
+
+    const development = flag.locator('.rollout-bar__row').filter({ hasText: 'development' })
+    await expect(development).toHaveAttribute('data-active', 'true')
+    await expect(development.locator('.rollout-bar__fill')).toHaveCount(1)
+    await expect(development.locator('.rollout-bar__label')).toHaveText('10%')
+    await expect(development).not.toContainText('1000')
+
+    // The environments that were NOT activated must not borrow the number.
+    await expect(flag.locator('.rollout-bar__row').filter({ hasText: 'production' })).toContainText(
+      'not active'
+    )
+  })
+
   test('the diff describes a rollout change in percent on both sides', async ({ page }) => {
     // Smoke walkthrough steps 3 and 4. 1000 → 5000 is what the database stores; "10% → 50%" is the
     // only true statement about what the PM did, and this asserts it survives the whole stack.
