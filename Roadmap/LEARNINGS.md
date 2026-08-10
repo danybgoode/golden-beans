@@ -913,3 +913,14 @@ one-liner + why + date shape.
   that the epic had just decided must NOT be applied (it would have broken a dark-launch guarantee).
   When a decision reverses, **retire the note in the same PR**; a leftover "do this next sprint" is a
   landmine with a friendly face.
+- **Playwright's `toContainText` NORMALISES WHITESPACE, so a trailing-`\n` guard against a numeric
+  prefix silently asserts nothing — and a negative one can be impossible to satisfy.** (2026-08-10,
+  `flags-visual-rule-builder`, found the first time the `authed` project was ever run.) The epic's
+  single most important check was `await expect(json).not.toContainText('"basisPoints": 10\n')`,
+  written to catch a factor-of-100 error. Normalisation strips the newline, leaving
+  `"basisPoints": 10` — a **prefix of the correct `"basisPoints": 1000`** — so the guard failed on a
+  CORRECT build and could never have passed on any build. **Assert on parsed values, not on rendered
+  substrings**: `JSON.parse(await locator.innerText()).rules[0].rollout.basisPoints === 1000` cannot
+  be blurred by rendering, and a `toEqual` between the builder's preview and the stored version
+  states the round-trip claim directly. Then mutation-check it — dropping the `× 100` must turn it
+  red, and here it does.

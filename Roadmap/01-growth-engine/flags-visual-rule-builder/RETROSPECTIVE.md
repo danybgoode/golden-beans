@@ -88,12 +88,22 @@ the worktree first, and confirm with `require.resolve('@golden-beans/sdk')`.
 
 - **The two merges.** #88 and #89 are owed to the product owner. #89 is stacked on #88 and targets its
   branch; merging #88 retargets it to `main`.
-- **The signed-in walkthroughs, all three sprints.** The `authed` Playwright project does not run in
-  CI, so the specs in `flag-rule-builder.authed.spec.ts` — including the ones written this epic for
-  the 10%-means-1000 check, the rollout bar, the diff and the preview — have never executed in a
-  pipeline. Running them locally with `FLAG_RULE_BUILDER_ENABLED=true` and `FLAG_SERVING_ENABLED=true`
-  is the cheapest way to close all three walkthroughs at once. **A9 was found by reading that file,
-  not by running it** — which is exactly the gap it names.
+- ~~The signed-in walkthroughs~~ — **done 2026-08-10. All 36 authed specs pass**, including every
+  Sprint 1–3 flag spec. Running them for the first time cost three more defects in that one file, all
+  in the SPEC and none in the product, and all of the same family A9 names:
+  1. `getByLabel('Serves variant')` matched two selects, because `getByLabel` is a **substring**
+     match and the definition-level control is "Serves variant when no rule matches". The test died
+     at the exact step the epic calls its most important.
+  2. `not.toContainText('"basisPoints": 10\n')` — the guard against the factor-of-100 error — **could
+     never pass**. Playwright normalises whitespace, so the newline was stripped and
+     `"basisPoints": 10` is a prefix of the correct `"basisPoints": 1000`. It failed on a correct
+     build, which is how it was finally noticed. Both assertions now parse the JSON and compare
+     values, and the round-trip is stated as `expect(stored).toEqual(built)`.
+  3. The fixture needed `SIGNUP_ENABLED=true` on the server — the provisioning redirect is gated on
+     it. The setup spec **names that in its own failure message**, which is why the first run
+     diagnosed itself in one pass. That is what a good fixture failure looks like.
+  **Mutation-checked:** dropping the `× 100` from `percentToBasisPoints` turns the repaired headline
+  test red. It has teeth now; for the whole epic before today, it did not.
 - **Flipping the gate.** `FLAG_RULE_BUILDER_ENABLED` is created disabled everywhere. Preview first,
   then production, after a real definition round-trip.
 - **`north-star-sync.spec.ts` fails locally**, identically on a stashed baseline tree — pre-existing,

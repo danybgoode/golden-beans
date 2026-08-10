@@ -274,6 +274,14 @@ stored-definition assertion, which Sprint 2's second `<pre>` in the same article
 re-pointed. **The general lesson for `LEARNINGS.md`: a positional locator over two identically
 worded controls is a spec that will silently start testing something else.**
 
+*Postscript, 2026-08-10 — the file was finally RUN, and held two more of the same family:
+`getByLabel('Serves variant')` matched two selects (it is a substring match, and the definition-level
+control is "Serves variant when no rule matches"), and the guard against the factor-of-100 error —
+`not.toContainText('"basisPoints": 10\n')` — **could never pass**, because Playwright normalises the
+whitespace away and `"basisPoints": 10` is a prefix of the correct `"basisPoints": 1000`. Three
+defects in one file, none of them in the product, none of them findable without running it. Both
+assertions now parse the JSON. All 36 authed specs pass, and the mutation turns the headline one red.*
+
 ### The seams this epic creates (named once, here)
 
 | Seam | Purpose | Sprint | Pure? |

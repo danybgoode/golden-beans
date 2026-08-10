@@ -112,17 +112,31 @@ test.describe('the visual rule builder', () => {
     await fieldSelect.selectOption('plan')
     await builder.getByLabel('Operator').selectOption('equals')
     await builder.getByLabel('Value').fill('pro')
-    await builder.getByLabel('Serves variant').selectOption('on')
+    // `{ exact: true }` because `getByLabel` matches on SUBSTRING, and the builder has two selects
+    // whose labels are prefixes of one another: the definition-level "Serves variant when no rule
+    // matches" and the rule card's "Serves variant". Without it the locator resolves to two elements
+    // and the test dies at the exact step the epic calls its most important — the 10%-means-1000
+    // check. Found by RUNNING the authed project for the first time (2026-08-10); it is the third
+    // ambiguous-locator defect in this one file, after A9's two, and the third is the proof of A9's
+    // second half: a spec no pipeline runs is a spec that decays silently.
+    await builder.getByLabel('Serves variant', { exact: true }).selectOption('on')
     await builder.getByLabel('Rollout (%)').fill('10')
     await builder.getByLabel('Reason').fill('Rule builder round-trip smoke.')
 
     // THE assertion of the epic. Not 10, not 100000. The JSON disclosure renders exactly what the
     // action will send, so reading it here reads the bytes that get stored.
+    //
+    // ── Asserted on the PARSED value, not on rendered substrings (found 2026-08-10) ─────────────
+    // This was three `toContainText` checks, and one of them **could never pass**: Playwright
+    // normalises whitespace before a substring match, so the trailing `\n` in
+    // `not.toContainText('"basisPoints": 10\n')` was stripped — leaving `"basisPoints": 10`, which
+    // is a prefix of `"basisPoints": 1000` and therefore always present. The guard written to catch
+    // the epic's single most dangerous defect was itself the thing that failed, on a correct build.
+    // Parsing removes the whole class: `1000`, `10` and `100000` are three different numbers and
+    // nothing about rendering can blur them.
     await builder.getByRole('group').filter({ hasText: 'Show JSON' }).getByText('Show JSON').click()
-    const json = builder.locator('pre')
-    await expect(json).toContainText('"basisPoints": 1000')
-    await expect(json).not.toContainText('"basisPoints": 10\n')
-    await expect(json).not.toContainText('100000')
+    const built = JSON.parse(await builder.locator('pre').innerText()) as FlagDefinition
+    expect(built.rules[0].rollout?.basisPoints).toBe(1000)
 
     await builder.getByRole('button', { name: 'Create immutable version' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
@@ -138,8 +152,13 @@ test.describe('the visual rule builder', () => {
       .locator('table')
     const storedDefinition = versions.locator('pre').first()
     await versions.getByText('Inspect immutable JSON').click()
-    await expect(storedDefinition).toContainText('"basisPoints": 1000')
-    await expect(storedDefinition).toContainText('"operator": "equals"')
+    // Parsed, for the same reason as above: this is the round-trip claim — what the CONTROLS built
+    // is byte-for-byte what the control plane stored — and it deserves the strong form.
+    await expect(storedDefinition).toBeVisible()
+    const stored = JSON.parse(await storedDefinition.innerText()) as FlagDefinition
+    expect(stored.rules[0].rollout?.basisPoints).toBe(1000)
+    expect(stored.rules[0].clauses[0]).toEqual({ field: 'plan', operator: 'equals', value: 'pro' })
+    expect(stored).toEqual(built)
   })
 
   test('a rule cannot exceed the clause cap, and the page says why', async ({ page }) => {
