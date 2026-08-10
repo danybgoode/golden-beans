@@ -103,11 +103,13 @@ After this deployment succeeds, the two service-owned catalogs are synchronized 
 resulting 41-key union, idempotent second run, unchanged production snapshot, and live owned-shop
 resolution are appended here before removing the obsolete Golden-side Miyagi importer.
 
-## 2026-08-01 — generic catalog sync and owned-shop activation
+## 2026-08-01 — generic catalog sync and owned-shop activation (historical)
 
-The live runtime tenant is Golden project `miyagi`. The similarly named `miyagisanchez` project is a
-dormant duplicate and was not used for the production cutover. The live service-owned publishers were
-corrected to preserve the exact immutable definitions already present in `miyagi` before syncing:
+This section preserves the evidence as it was recorded on 2026-08-01. Its project-identity claim is
+superseded by the 2026-08-09 correction below and must not be used to choose a current credential. At
+the time, the runtime tenant was recorded as Golden project `miyagi`, while `miyagisanchez` was recorded
+as a dormant duplicate not used for that cutover. The service-owned publishers were corrected to
+preserve the exact immutable definitions then observed in `miyagi` before syncing:
 
 - Frontend: `40 definitions (1 created, 39 unchanged)`; rerun `0 created, 40 unchanged`.
 - Backend: `13 definitions (0 created)`; rerun `0 created`.
@@ -124,3 +126,50 @@ The obsolete Golden-side importer was a one-time snapshot mechanism, not the ong
 rail. It is removed after this parity and activation proof. Future Golden-powered projects publish
 their typed catalogs through the generic project-scoped SDK route with a dedicated revocable
 `flag_sync` credential.
+
+## 2026-08-09 — owner-project identity correction
+
+The current owner UI exposes `/app/flags/miyagisanchez` and no owner-visible `miyagi` project. This
+entry supersedes the 2026-08-01 project-identity claim above: that historical claim must not be used to
+choose a new credential.
+
+A fresh, project-scoped `frontend` catalog-sync credential minted from
+`/app/flags/miyagisanchez` reached an existing immutable catalog. The whole 41-definition Miyagi
+publisher stopped atomically on HTTP `409` because at least one existing definition had semantic drift.
+The operator did not bypass that conflict. A narrowed publish of the already-reviewed
+`partners.recruiting_v3_enabled` entry returned `v1 created`, and an immediate identical rerun returned
+`v1 unchanged`. Catalog sync cannot activate a version or change a serving snapshot, so registration
+left the new definition dark and default-OFF. Its `source=miyagi` metadata names the publishing service;
+it is not a Golden project identifier.
+
+This proves `miyagisanchez` is the current owner-operated catalog. It did not by itself expose which
+project the storefront's server-only production read credential resolved. Revoke the temporary sync
+credential after owner inspection, and do not infer a project slug from either name by analogy again.
+
+## 2026-08-10 — scoped runtime binding and v2 activation
+
+The binding audit resolved the ambiguity without replacing a credential that already serves live flags.
+The storefront's primary production read credential resolves an owner-invisible snapshot `47` containing
+43 active decisions and no `partners.recruiting_v3_enabled` definition. At the same time, the owner-visible
+`miyagisanchez` production catalog initially had snapshot `3` and only two active decisions. A wholesale
+credential swap would therefore have made unrelated flags disappear from the runtime.
+
+Storefront PR [#350](https://github.com/danybgoode/miyagisanchezcommerce/pull/350) (`5d4df0c`)
+introduced a narrower binding: only the exact recruiting flag uses a dedicated `miyagisanchez` read
+credential; all other definitions continue through the primary provider. Project-relative snapshot
+versions from the scoped provider are excluded from the shared durable mirror. The credential is stored
+server-side in Secret Manager and bound to Cloud Run revision `miyagi-web-00069-kbd`, deployed at 100%
+traffic by successful Cloud Build `da67c055-6a93-4254-959c-eef644420bd2`.
+
+Activating version `1` in all three environments still evaluated OFF because its immutable definition had
+`defaultVariantKey=off` and no rules. Activation chooses the authoritative version; it does not override
+that version's decision semantics. Version `2` preserved the definition and variants and changed only the
+default to `on`. It is active in development snapshot `3`, preview snapshot `3` and production snapshot
+`4`; version `1` remains the immediate default-OFF rollback.
+
+The production authority log then resolved `partners.recruiting_v3_enabled` from Golden snapshot `4`,
+definition version `2`, with `source=golden`, `reason=STATIC` and `matchesLocal=false`. A real Chromium
+smoke of `https://miyagisanchez.com/us` returned HTTP `200`, rendered the complete founding-operator
+application and recorded zero console errors. This closes the server-only binding proof: for this exact
+flag, the production runtime and current owner UI both use project `miyagisanchez`, while the legacy
+43-decision catalog remains intact for every other flag.
