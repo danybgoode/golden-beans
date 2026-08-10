@@ -6,8 +6,17 @@
 > **D4 is the whole sprint**: evaluation happens through the SDK's own evaluator, server-side,
 > against the real snapshot. A second matching implementation in the browser is the one failure this
 > sprint exists to avoid — it will agree with production right up until someone relies on it.
-> Cite D1, D2, D4. Branch `feat/flags-visual-rule-builder-s3`, cut from `-s2`.
+> Cite D1, D2, D4 and **A3, A5**. Branch `feat/flags-visual-rule-builder-s3`, cut from `-s2`.
 > **Risk: low** — this sprint is read-only. It writes nothing to the control plane.
+>
+> **A3 — the SDK gains `explainFlagEvaluation()`, and that is how D4 is kept.** As shipped,
+> `evaluateFlag` cannot name which rule matched, and the private `matchesRule` collapses "a clause
+> failed" and "the rollout excluded you" into one `false` — so Stories 3.1/3.2 are unbuildable
+> without either a second matcher (D4's exact failure) or this export. Split `matchesRule` into
+> `clausesMatch` + `rolloutAdmits`, keep `matchesRule = clausesMatch && rolloutAdmits` so
+> `evaluateFlag` is unchanged by construction, and export the explanation built from the same two.
+> **A5:** no-rule-matched is `reason: 'STATIC'`, never `'DEFAULT'`; and a rollout with no
+> `targetingKey` in context excludes the rule outright — that is its own outcome, not "no match".
 
 ## Stories
 

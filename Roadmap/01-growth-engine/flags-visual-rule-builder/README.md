@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: flags-visual-rule-builder
 build_order: 15
 ---
@@ -104,6 +104,148 @@ definitions whose behaviour surprises their author. Show the number.
 **D10 — No new clause fields or operators, and no flag→experiment promotion.**
 Both are real and both are out. A new operator is an SDK contract change plus a migration; the
 flag→experiment transition (audit §3.2) is a second bet. Adding either is what turns this M into an L.
+
+---
+
+## Architecture lock — verified against live `main` @ `db95b5e`, 2026-08-09
+
+*The locking pass required by WAYS-OF-WORKING §5. Every decision above was re-read against the
+shipped code, not the plan. **Four things this doc asserted are wrong**; they are corrected here
+rather than discovered by a builder mid-build.*
+
+### What held (verified, cite freely)
+
+| Claim | Verified against | Result |
+|---|---|---|
+| `FLAG_CONTEXT_FIELDS` is a closed 6-value enum | `packages/sdk/src/flags.ts:10-17` | ✅ exactly 6 |
+| `FlagClause` has exactly 2 operators | `flags.ts:56-58`, parser at `:180-222` | ✅ `equals` \| `one_of`, parser rejects a third |
+| Limits are SDK constants | `flags.ts:19-26` | ✅ rules 20 · clauses 5 · variants 20 · 32 KiB · metadata 16 |
+| `rollout.basisPoints` is an integer 0–10000 | parser `flags.ts:324-333`; evaluator `:472` divides by `10_000` | ✅ D3's unit is real; **percent = bp ÷ 100** |
+| `FLAG_ENVIRONMENTS` is 3 values | `flags.ts:9` | ✅ development · preview · production |
+| 14 existing gates, exact `=== 'true'` | `apps/web/lib/flags.ts` | ✅ 14 counted; `FLAG_RULE_BUILDER_ENABLED` is the 15th |
+| `FormSection` / `Field` / `ConfirmDialog` on `main` | `apps/web/components/ui/` | ✅ #13 shipped 2026-08-09 (`db95b5e`) — **dependency met** |
+| No charting dependency | `apps/web/package.json` | ✅ `FunnelBars` remains the precedent |
+
+**No migration, confirmed.** Nothing in the three sprints writes a column that does not exist. The
+deploy order in this README stands unchanged.
+
+### A1 — Story 1.4 named the wrong write seam. Corrected.
+
+This README's "Admin write path" row listed six files, and sprint-1.md picked
+`lib/flag-admin-operations.ts` out of that list. **That is the wrong one.** It serves
+`POST /api/v1/flags/admin` — Miyagi's operational adapter, which flips a boolean `enabled` on an
+already-defined flag and carries `criticality`/`polarity` metadata. It cannot create a definition
+version and never sees a `FlagDefinition`.
+
+**The seam the builder reuses is the one the existing textarea already posts through:**
+
+```
+rule-builder (client)
+  → createFlagDefinitionVersionAction()   apps/web/app/app/flags/[projectSlug]/actions.ts:31
+  → parseFlagDefinition()                 (D2 — server-side, unchanged)
+  → createFlagDefinitionVersion()         apps/web/lib/flag-registry.ts:186
+```
+
+That action already resolves ownership (`requireProjectOwnership`), already validates server-side,
+and already surfaces `parsed.errors[0]` to the caller — so D2's "a rejection is displayed, never
+suppressed" is **wiring, not new code**. No new route, no new action, no second validation path.
+
+### A2 — D7's line count was stale. Decision unchanged.
+
+`flag-manager.tsx` is **548** lines, not 483 — #13's Sprints 2 and 3 added `DataTable` column memos
+and the revoke `ConfirmDialog`. This strengthens D7 rather than weakening it: extract, do not grow.
+
+### A3 — D4 cannot deliver Story 3.2 as the SDK stands. The SDK gains one additive export.
+
+**The finding.** `evaluateFlag` returns `{ value, variant, reason, flagMetadata, flagVersion }`. It
+never names *which* rule matched. Worse, `matchesRule` (`flags.ts:454`) is **private** and collapses
+two different outcomes into one `false`: *a clause did not match* and *the rollout excluded this
+context*. Story 3.2 requires both facts, by name, and calls the second one "the single most
+confusing outcome". As shipped, the SDK cannot answer either question.
+
+So Sprint 3 had exactly two roads, and one of them is the failure D4 exists to prevent:
+
+- ❌ Write a second matcher in `apps/web`. This is precisely D4's "a UI that re-implements matching
+  will disagree with production at exactly the moment someone trusts it."
+- ✅ **Add one export to the SDK, and refactor so there remains exactly ONE matcher.**
+
+**Locked: the second.** `packages/sdk/src/flags.ts` splits the existing private `matchesRule` into
+two private predicates — `clausesMatch(rule, context)` and `rolloutAdmits(rule, …)` — and exports
+`explainFlagEvaluation()` built from them. `matchesRule` becomes `clausesMatch && rolloutAdmits`, so
+`evaluateFlag`'s behaviour is unchanged **by construction**, not by assertion.
+
+**This is not a D10 violation.** D10 bans new clause *fields* and *operators* and the
+flag→experiment promotion. The grammar, the wire contract, `FLAG_CONTRACT_VERSION`, the parser and
+the stored shape are all untouched. What changes is that a private predicate becomes two private
+predicates and one new pure function is exported. It is additive, and it is the only way to keep D4.
+
+**The parity pin is the acceptance:** a spec asserts `explainFlagEvaluation(…).variantKey ===
+evaluateFlag(…).variant` across the same fixtures, following the existing `flags.test.ts` ↔
+`bucketing.ts` precedent. The mutation check sprint-3.md already names — evaluate through a locally
+written comparison → the parity spec goes red — now has something real to be red about.
+
+### A4 — Sprint 2 needs no new query. Do not add a fetch.
+
+`getFlagRegistryView()` (`lib/flag-registry.ts:80`) already returns, per flag, **every version with
+its full `definition`** plus `activations[]` (environment → versionId) and `environments[]`
+(snapshot version per environment). Stories 2.1, 2.2 and 2.3 are **pure derivations over props the
+page already passes**. A builder adding a Supabase call in Sprint 2 has taken a wrong turn.
+
+### A5 — Two evaluator facts the prose must get right
+
+- **No rule matched is `reason: 'STATIC'`, not `'DEFAULT'`** (`flags.ts:514`). `'DEFAULT'` is
+  reserved for the error fallbacks. Story 3.2's copy names the *default variant*, never "DEFAULT".
+- **A rollout with no `targetingKey` in context excludes silently** (`flags.ts:468-469`): if
+  `rollout` is set and `context.targetingKey` is not a valid string, the rule cannot match at all.
+  Story 3.2 must state this as its own outcome — a PM who leaves the targeting key blank and sees
+  "no rule matched" has been told something misleading.
+
+### A6 — D5 was unbuildable as written: three of its four constants were not exported. *(found during Sprint 1, 2026-08-09)*
+
+The "Limits" row of the table above says "Nothing" is missing and D5 says every limit is **read from
+the SDK constant**. `MAX_FLAG_RULES`, `MAX_FLAG_CLAUSES` and `MAX_FLAG_VARIANTS` are declared in
+`packages/sdk/src/flags.ts` — and **were never re-exported from `packages/sdk/src/index.ts`**. Only
+`MAX_FLAG_DEFINITION_BYTES` was, which is why `lib/flag-definition.ts` re-exports exactly that one
+and no other. Every consumer outside the SDK had no choice but to hardcode the numbers.
+
+So D5 could not be obeyed; a builder following it would have hit the wall mid-story and, under
+pressure, written the literal `20` that D5 exists to forbid. **Fixed by adding the three names to
+the existing export block** — purely additive, no behaviour change, and it is what makes "read the
+constant" possible at all. The cap test asserts the bound *against the constant*, so the mutation
+sprint-1.md names (hardcode 20, change the constant) now goes red as designed. Verified: it does.
+
+### A7 — A git worktree with no `node_modules` silently tests the ROOT checkout's SDK
+
+Not a scope finding, but it cost real time and will cost the next agent the same. This worktree
+resolved `@golden-beans/sdk` to **`/Users/cosmo/dobby/golden-beans/packages/sdk/dist`** — the root
+checkout, on `main`, without the branch's changes. `npm run build --workspace=@golden-beans/sdk`
+wrote to the worktree's `dist/`, which nothing imported, so an SDK edit appeared to have no effect
+and the unit tests were quietly asserting against `main`'s code. **`npm install` inside the worktree
+first**, and confirm with `node -e "console.log(require.resolve('@golden-beans/sdk'))"` before
+trusting a single SDK-touching test result. Promote to `LEARNINGS.md` at epic close.
+
+### The seams this epic creates (named once, here)
+
+| Seam | Purpose | Sprint | Pure? |
+|---|---|---|---|
+| `apps/web/lib/rollout-percent.ts` | **D3.** percent ↔ basis points, the only place the arithmetic exists | 1 | yes — zero-import, `node --test` |
+| `apps/web/lib/flag-rule-draft.ts` | builder draft → `FlagDefinition`, round-trip both ways | 1 | yes |
+| `isFlagRuleBuilderEnabled()` in `apps/web/lib/flags.ts` | **D6.** the 15th gate, exact `=== 'true'` | 1 | yes |
+| `apps/web/app/app/flags/[projectSlug]/rule-builder.tsx` | **D7.** the builder, a new client component | 1 | no |
+| `apps/web/components/ui/RolloutBar.tsx` | token-system bars, `FunnelBars` precedent | 2 | no |
+| `apps/web/lib/flag-definition-diff.ts` | **D8.** the six-part bounded diff + fallback | 2 | yes |
+| `explainFlagEvaluation()` in `packages/sdk/src/flags.ts` | **A3.** the one matcher, made explicable | 3 | yes |
+
+Every pure seam above is unit-tested with `node --test` and mutation-checked. The impure ones are
+covered by the api specs sprint QA names.
+
+### Routing (auditable, per WAYS-OF-WORKING)
+
+**Not delegated to a builder subagent.** This epic is a new **write path onto the production flag
+control plane**, and D3 is a silent-targeting-error risk on a live flag — the routing table's
+"never delegated" column. The architect builds it, and the review layer is where the independence
+comes from: two cross-family passes per PR plus the fresh reviewer subagent on the two HIGH-tier
+sprints, as the deploy-order section already requires.
 
 ## Scope — stories
 

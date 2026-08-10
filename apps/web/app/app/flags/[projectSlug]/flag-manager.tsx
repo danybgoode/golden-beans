@@ -8,6 +8,7 @@ import type { FlagReadKeyRow } from '@/lib/flag-read-keys'
 import type { FlagSyncKeyRow } from '@/lib/flag-sync-keys'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagEnvironmentStateRow, FlagLifecycleAuditRow, FlagRegistryRow } from '@/lib/flag-registry'
+import { RuleBuilder } from './rule-builder'
 import {
   activateFlagAction,
   createFlagDefinitionVersionAction,
@@ -45,6 +46,7 @@ export function FlagManager({
   syncKeys,
   canManage,
   servingEnabled,
+  ruleBuilderEnabled,
 }: {
   slug: string
   flags: FlagRegistryRow[]
@@ -54,6 +56,8 @@ export function FlagManager({
   syncKeys: FlagSyncKeyRow[]
   canManage: boolean
   servingEnabled: boolean
+  /** D6 — the epic's enablement gate, resolved server-side in page.tsx. */
+  ruleBuilderEnabled: boolean
 }) {
   const router = useRouter()
   const [key, setKey] = useState('new-product-details')
@@ -66,6 +70,12 @@ export function FlagManager({
   const [syncKeySource, setSyncKeySource] = useState('frontend')
   const [mintedSync, setMintedSync] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Which surface produced `error`. Cross-review (Agy) caught the same message rendering twice —
+  // once inside the builder's save section and once in this component's own alert below — because
+  // the builder was handed this shared state unconditionally. One failure, two alerts, and a reader
+  // checking whether they had made two mistakes. The error still always renders; this only decides
+  // which of the two places shows it, so nothing is suppressed (D2).
+  const [errorFromBuilder, setErrorFromBuilder] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [confirming, setConfirming] = useState<
@@ -103,12 +113,14 @@ export function FlagManager({
   )
   function onCreate(event: FormEvent) {
     event.preventDefault()
+    setErrorFromBuilder(false)
     run(
       async () => createFlagDefinitionVersionAction(slug, key, definition, reason),
       `Created ${key} as an immutable draft version.`
     )
   }
   function onActivate(flagId: string, versionId: string, version: number, environment: FlagEnvironment) {
+    setErrorFromBuilder(false)
     const revision = stateByEnvironment.get(environment)?.snapshotVersion ?? 0
     run(
       async () => activateFlagAction(slug, environment, flagId, versionId, revision, reason),
@@ -116,6 +128,7 @@ export function FlagManager({
     )
   }
   function onDeactivate(flagId: string, environment: FlagEnvironment) {
+    setErrorFromBuilder(false)
     const revision = stateByEnvironment.get(environment)?.snapshotVersion ?? 0
     run(
       async () => deactivateFlagAction(slug, environment, flagId, revision, reason),
@@ -123,6 +136,7 @@ export function FlagManager({
     )
   }
   function onMint(event: FormEvent) {
+    setErrorFromBuilder(false)
     event.preventDefault()
     setError(null)
     setNotice(null)
@@ -141,6 +155,7 @@ export function FlagManager({
   }
   const onRevoke = useCallback(
     (keyId: string) => {
+      setErrorFromBuilder(false)
       run(
         () => revokeFlagReadKeyAction(slug, keyId),
         'Flag read key revoked.',
@@ -150,6 +165,7 @@ export function FlagManager({
     [slug, run]
   )
   function onMintSync(event: FormEvent) {
+    setErrorFromBuilder(false)
     event.preventDefault()
     setError(null)
     setNotice(null)
@@ -168,6 +184,7 @@ export function FlagManager({
   }
   const onRevokeSync = useCallback(
     (keyId: string) => {
+      setErrorFromBuilder(false)
       run(
         () => revokeFlagSyncKeyAction(slug, keyId),
         'Catalog sync key revoked.',
@@ -304,6 +321,24 @@ export function FlagManager({
       )}
       {canManage ? (
         <>
+          {/* flags-visual-rule-builder · Story 1.4 (D6/D7). The builder is ADDITIVE: it renders
+              alongside the textarea, never instead of it. With the gate unset this whole block is
+              absent and the page below is byte-for-byte what it was before the epic — which is the
+              polarity argument in lib/flags.ts made concrete. It posts through the same action the
+              textarea does (A1), so there is one write path and one validator. */}
+          {ruleBuilderEnabled && (
+            <RuleBuilder
+              disabled={pending}
+              serverError={errorFromBuilder ? error : null}
+              onSubmit={(builtKey, builtDefinition, builtReason) => {
+                setErrorFromBuilder(true)
+                run(
+                  async () => createFlagDefinitionVersionAction(slug, builtKey, builtDefinition, builtReason),
+                  `Created ${builtKey} as an immutable draft version.`
+                )
+              }}
+            />
+          )}
           <form onSubmit={onCreate}>
             <h2>Create an immutable definition version</h2>
             <label htmlFor="flag-key">
@@ -422,7 +457,7 @@ export function FlagManager({
           catalog sync credentials, and changes environment activations.
         </p>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && !errorFromBuilder && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       <h2>Definitions</h2>
       {flags.length === 0 ? (

@@ -202,6 +202,37 @@ export function isAgentRailEnabled(): boolean {
   return process.env.AGENT_RAIL_ENABLED === 'true'
 }
 
+// flags-visual-rule-builder · Sprint 1, Story 1.4 (epic README, D6) — the FIFTEENTH flag. Born
+// unset/OFF, created DISABLED in every environment before Sprint 1 merged.
+//
+// Exactly `=== 'true'`, for the reason all fourteen above give: a gate that opens on a typo is not
+// a gate.
+//
+// ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
+// GATED:     the visual rule builder, the rollout bars, the version diff and "preview as a user" —
+//            i.e. every surface this epic adds to /app/flags/[projectSlug].
+// NOT gated: anything that exists today. **With this OFF the page renders exactly as it did before
+//            the epic, textarea included.** That is the whole polarity argument: this flag ships a
+//            new WRITE path onto the production flag control plane, so it merges dark — but a PM
+//            must never be left unable to author a flag because a new authoring surface is off.
+//            A gate whose OFF state removes the only way to do the job is an outage, not a switch.
+//
+// It is an ENABLEMENT gate, not a kill-switch, and the difference is not pedantry: nothing depends
+// on it yet, so flipping it on is a deliberate act after a real definition round-trip is verified,
+// and flipping it back off costs a PM nothing but the new controls.
+//
+// Note what it is NOT: it is not an authorization control. The builder posts through
+// `createFlagDefinitionVersionAction`, which resolves ownership server-side via
+// `requireProjectOwnership` whether this flag is on or off. Turning it ON grants nobody the right
+// to write a definition they could not already write through the textarea — it decides whether a
+// SURFACE exists, not who may use it.
+//
+// Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isFlagRuleBuilderEnabled(): boolean {
+  return process.env.FLAG_RULE_BUILDER_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

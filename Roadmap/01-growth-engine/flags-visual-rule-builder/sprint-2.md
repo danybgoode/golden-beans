@@ -8,6 +8,9 @@
 > rabbit hole; if this story starts growing one, stop and cut the diff to a follow-up (the seed's
 > stated circuit breaker).
 > **No charting dependency.** `RolloutBar` is token-system CSS, following `FunnelBars`' precedent.
+> **A4 — add no query.** `getFlagRegistryView()` already returns every version's full `definition`
+> plus per-environment activations and snapshot versions. All three stories are pure derivations
+> over props the page already passes. A Supabase call in this sprint is a wrong turn.
 > Branch `feat/flags-visual-rule-builder-s2`, cut from `-s1`.
 
 ## Stories
