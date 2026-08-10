@@ -4,8 +4,8 @@
 
 > **What was built, and the two decisions the build forced.**
 >
-> - **Seams:** `lib/flag-definition-diff.ts` (D8, pure, 13 unit tests), `lib/flag-environment-view.ts`
->   (the per-environment derivation, 11 unit tests, **added to the epic's seam table** — see A8 for
+> - **Seams:** `lib/flag-definition-diff.ts` (D8, pure, 23 unit tests), `lib/flag-environment-view.ts`
+>   (the per-environment derivation, 22 unit tests, **added to the epic's seam table** — see A8 for
 >   why it is a seam and not component-internal), `components/ui/RolloutBar.tsx`, and a new client
 >   component `flag-insight.tsx` mounted from `flag-manager.tsx` in six lines (D7 holds).
 > - **A8 — the bar shows the ROLLOUT, not user coverage.** Story 2.1's "proportion of users" is not

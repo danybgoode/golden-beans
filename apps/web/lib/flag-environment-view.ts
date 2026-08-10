@@ -155,31 +155,52 @@ function reachableRules(rules: FlagRule[]): { reachable: FlagRule[]; deadAfter: 
  *    was labelled as one that does not.
  *
  * So bounded and unbounded rules are counted separately, and `several` carries both facts.
+ *
+ * ── Readability is judged over EVERY rule; reach only over the reachable ones ──────────────────
+ * Round 3 moved the shadowing filter in front of this function and, with it, in front of the guard
+ * below — so a corrupt basis-points value BELOW a catch-all stopped being noticed, and the page drew
+ * a full gold bar labelled "everyone" beside the words "this version cannot be evaluated" (found in
+ * round 4). `parseFlagDefinition` rejects the whole definition either way, so nothing is being
+ * served; the bar has no business looking confident about it. The two questions are separate and
+ * are now asked in that order: *can this version be read at all*, then *what does it reach*.
  */
-function reachOf(rules: FlagRule[]): FlagRolloutReach {
+function reachOf(rules: FlagRule[]): { reach: FlagRolloutReach; deadAfter: number | null } {
   // No rules at all. There is no rollout to draw, and drawing a FULL bar here — as an earlier
   // version did — reads as "fully rolled out" on a flag that targets nobody and serves its default.
-  if (rules.length === 0) return { kind: 'no-rules' }
+  if (rules.length === 0) return { reach: { kind: 'no-rules' }, deadAfter: null }
 
-  const bounded: number[] = []
-  let unbounded = 0
   for (const rule of rules) {
-    if (!rule.rollout) {
-      unbounded += 1
-      continue
-    }
+    // `clauses` is typed as an array, and every row the parser wrote has one — but this reads JSONB
+    // straight out of the database, and reading `.length` off a row that lacks it throws before the
+    // graceful "cannot be evaluated" path can run (round 4). A row we cannot read is `unreadable`,
+    // which is a state the bar already knows how to draw.
+    if (!Array.isArray(rule.clauses)) return { reach: { kind: 'unreadable' }, deadAfter: null }
     // A stored value the D3 seam refuses is a row that disagrees with the parser that wrote it.
-    if (basisPointsToPercent(rule.rollout.basisPoints) === null) return { kind: 'unreadable' }
-    bounded.push(rule.rollout.basisPoints)
+    if (rule.rollout && basisPointsToPercent(rule.rollout.basisPoints) === null) {
+      return { reach: { kind: 'unreadable' }, deadAfter: null }
+    }
   }
 
-  if (bounded.length === 0) return { kind: 'everyone' }
-  if (unbounded === 0 && new Set(bounded).size === 1) return { kind: 'rollout', basisPoints: bounded[0] }
+  const { reachable, deadAfter } = reachableRules(rules)
+  const bounded: number[] = []
+  let unbounded = 0
+  for (const rule of reachable) {
+    if (!rule.rollout) unbounded += 1
+    else bounded.push(rule.rollout.basisPoints)
+  }
+
+  if (bounded.length === 0) return { reach: { kind: 'everyone' }, deadAfter }
+  if (unbounded === 0 && new Set(bounded).size === 1) {
+    return { reach: { kind: 'rollout', basisPoints: bounded[0] }, deadAfter }
+  }
   return {
-    kind: 'several',
-    highestBasisPoints: Math.max(...bounded),
-    includesUnbounded: unbounded > 0,
-    ruleCount: rules.length,
+    reach: {
+      kind: 'several',
+      highestBasisPoints: Math.max(...bounded),
+      includesUnbounded: unbounded > 0,
+      ruleCount: reachable.length,
+    },
+    deadAfter,
   }
 }
 
@@ -225,8 +246,7 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
   // resolved is precisely the state a PM needs told, not the one to render as "off".
   if (!version) return inactive('Activated version could not be read.')
 
-  const { reachable, deadAfter } = reachableRules(version.definition.rules)
-  const reach = reachOf(reachable)
+  const { reach, deadAfter } = reachOf(version.definition.rules)
   const variantKey = baselineVariantKey(flag.key, version)
   const serves =
     variantKey === null

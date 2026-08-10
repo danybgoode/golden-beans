@@ -323,6 +323,63 @@ test('shadowing is decided by PRIORITY, not by the order the rules array happens
   assert.ok(summary.detail.includes('rules after priority 10 never run'))
 })
 
+test('a corrupt rollout is unreadable even when it sits BELOW a catch-all', () => {
+  // Round 4 regression check. Moving the shadow filter in front of the readability guard meant a
+  // basis-points value the D3 seam refuses stopped being noticed once it was shadowed — and the page
+  // drew a full gold bar labelled "everyone" next to the words "this version cannot be evaluated".
+  // The parser rejects the whole definition either way, so nothing is served; a confident-looking
+  // bar is the one thing the row must not be. Fixtures here bypass the parser deliberately.
+  const corrupt = (rules: FlagDefinition['rules']): FlagDefinition => ({
+    valueType: 'boolean',
+    description: 'Corrupt row.',
+    defaultVariantKey: 'off',
+    variants: [
+      { key: 'off', value: false },
+      { key: 'on', value: true },
+    ],
+    rules,
+  })
+
+  const shadowed = corrupt([
+    { priority: 10, clauses: [], variantKey: 'on' },
+    { priority: 20, clauses: [], rollout: { basisPoints: 50_000 }, variantKey: 'off' },
+  ])
+  assert.equal(parseFlagDefinition(shadowed).ok, false, 'the fixture should be one the parser rejects')
+
+  const summary = summariseFlagEnvironments(flag([shadowed], { production: 1 })).production
+  assert.deepEqual(summary.reach, { kind: 'unreadable' })
+  assert.equal(summary.label, 'unreadable')
+  assert.equal(summary.fillPercent, null)
+
+  // …and above the catch-all, which never regressed, so the two agree.
+  const above = corrupt([
+    { priority: 10, clauses: [], rollout: { basisPoints: 50_000 }, variantKey: 'off' },
+    { priority: 20, clauses: [], variantKey: 'on' },
+  ])
+  assert.equal(summariseFlagEnvironments(flag([above], { production: 1 })).production.label, 'unreadable')
+})
+
+test('a stored rule with no clauses array is unreadable, not a crash', () => {
+  // The bar reads JSONB straight out of the database. Round 3 introduced the first read of
+  // `rule.clauses.length` in this seam, which threw on such a row BEFORE the graceful
+  // "cannot be evaluated" path could run — and for a single-version flag the bar is the only thing
+  // rendering, so the throw would have taken the page with it (round 4).
+  const malformed = {
+    valueType: 'boolean',
+    description: 'Row written by something that is not the parser.',
+    defaultVariantKey: 'off',
+    variants: [
+      { key: 'off', value: false },
+      { key: 'on', value: true },
+    ],
+    rules: [{ priority: 10, variantKey: 'on' }],
+  } as unknown as FlagDefinition
+
+  const summary = summariseFlagEnvironments(flag([malformed], { production: 1 })).production
+  assert.deepEqual(summary.reach, { kind: 'unreadable' })
+  assert.equal(summary.fillPercent, null)
+})
+
 test('a flag with NO rules draws no bar — a full bar would read as "fully rolled out"', () => {
   // Fresh review, PR #88: returning `everyone` here filled the bar completely on a flag that
   // targets nobody and serves its default. The caption calls the bar "the share of the contexts a
