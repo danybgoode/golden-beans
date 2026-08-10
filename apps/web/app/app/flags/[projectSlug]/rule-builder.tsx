@@ -76,9 +76,7 @@ function RuleBuilderRow({
             {...control}
             disabled={disabled}
             value={clause.field}
-            onChange={(event) =>
-              onChange({ ...clause, field: event.target.value as ClauseDraft['field'] })
-            }
+            onChange={(event) => onChange({ ...clause, field: event.target.value as ClauseDraft['field'] })}
           >
             {/* D1 — the closed six-value enum, straight from the SDK. */}
             {FLAG_CONTEXT_FIELDS.map((field) => (
@@ -215,9 +213,7 @@ function RuleCard({
               clauses: rule.clauses.map((existing, i) => (i === clauseIndex ? next : existing)),
             })
           }
-          onRemove={() =>
-            onChange({ ...rule, clauses: rule.clauses.filter((_, i) => i !== clauseIndex) })
-          }
+          onRemove={() => onChange({ ...rule, clauses: rule.clauses.filter((_, i) => i !== clauseIndex) })}
         />
       ))}
 
@@ -231,9 +227,7 @@ function RuleCard({
       {/* The cap and its explanation come from the constant, so the sentence cannot drift from the
           rule it describes (D5). Smoke step 6 reads this line. */}
       {!clauseRoom && (
-        <p role="status">
-          A rule can have at most {MAX_FLAG_CLAUSES} conditions. Remove one to add another.
-        </p>
+        <p role="status">A rule can have at most {MAX_FLAG_CLAUSES} conditions. Remove one to add another.</p>
       )}
 
       <Field
@@ -385,8 +379,8 @@ export function RuleBuilder({
           // CODE-QUALITY rule 8 — an honest empty state. A flag with no rules is valid and serves
           // its default to everyone; saying so beats an empty panel that reads as broken.
           <p>
-            No rules yet. This flag will serve <code>{draft.defaultVariantKey}</code> to everyone.
-            Add a rule to target a subset.
+            No rules yet. This flag will serve <code>{draft.defaultVariantKey}</code> to everyone. Add a rule
+            to target a subset.
           </p>
         )}
 

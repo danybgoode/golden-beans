@@ -87,9 +87,7 @@ export type DefinitionDraft = {
   rules: RuleDraft[]
 }
 
-export type DefinitionDraftResult =
-  | { ok: true; definition: FlagDefinition }
-  | { ok: false; errors: string[] }
+export type DefinitionDraftResult = { ok: true; definition: FlagDefinition } | { ok: false; errors: string[] }
 
 /** Whether another rule fits. The bound is the SDK constant — never a literal (D5). */
 export function canAddRule(rules: readonly unknown[]): boolean {

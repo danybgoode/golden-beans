@@ -8,12 +8,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import {
-  MAX_FLAG_CLAUSES,
-  MAX_FLAG_RULES,
-  FLAG_CONTEXT_FIELDS,
-  parseFlagDefinition,
-} from '@golden-beans/sdk'
+import { MAX_FLAG_CLAUSES, MAX_FLAG_RULES, FLAG_CONTEXT_FIELDS, parseFlagDefinition } from '@golden-beans/sdk'
 import type { DefinitionDraft, RuleDraft } from './flag-rule-draft.ts'
 
 // ── Why this hook, verbatim from breaker-policy.test.ts ───────────────────────────────────────
@@ -218,7 +213,13 @@ test('a definition the builder cannot faithfully represent refuses to load', () 
     description: 'x',
     defaultVariantKey: 'off',
     variants: [{ key: 'off', value: false }],
-    rules: [{ priority: 1, clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: 5 }], variantKey: 'off' }],
+    rules: [
+      {
+        priority: 1,
+        clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: 5 }],
+        variantKey: 'off',
+      },
+    ],
   }
   assert.equal(parseFlagDefinition(withNumericClause).ok, true, 'fixture must be a VALID definition')
   assert.equal(draftFromDefinition(withNumericClause), null)
