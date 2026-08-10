@@ -1,15 +1,14 @@
 # Flags — a visual rule builder, rollout viz, and a plain-language version diff — Retrospective
 
-_Built out: 2026-08-10. **Not yet closed** — Sprints 2 and 3 are built, gated and reviewed clean, and
-await the product owner's merge (HIGH tier: the owner merges every PR in this epic)._
+_Closed: 2026-08-10. **All three sprints merged and LIVE in production**, gate on._
 
 ## What shipped
 
 | Sprint | Capability | PR | State |
 |---|---|---|---|
 | 1 | The rule builder — two selects and a value control that cannot produce a clause the parser rejects | [#87](https://github.com/danybgoode/golden-beans/pull/87) `92e24b3` | **merged, dark in production** |
-| 2 | Rollout bars, per-environment state, the bounded version diff | [#88](https://github.com/danybgoode/golden-beans/pull/88) | built · 7 review rounds · **awaiting merge** |
-| 3 | Preview as a user, and the SDK's `explainFlagEvaluation` | [#89](https://github.com/danybgoode/golden-beans/pull/89) | built · 3 review rounds · **awaiting merge, stacked on #88** |
+| 2 | Rollout bars, per-environment state, the bounded version diff | [#88](https://github.com/danybgoode/golden-beans/pull/88) `a3a5606` | **merged** · 7 review rounds |
+| 3 | Preview as a user, and the SDK's `explainFlagEvaluation` | [#90](https://github.com/danybgoode/golden-beans/pull/90) `b473d13` | **merged** · 3 review rounds |
 
 `FLAG_RULE_BUILDER_ENABLED` is the 15th gate, created **disabled** in Development, Preview and
 Production on 2026-08-09. Every surface in all three sprints renders behind it, so with the gate down
@@ -86,8 +85,11 @@ the worktree first, and confirm with `require.resolve('@golden-beans/sdk')`.
 
 ## Gaps / follow-ups
 
-- **The two merges.** #88 and #89 are owed to the product owner. #89 is stacked on #88 and targets its
-  branch; merging #88 retargets it to `main`.
+- ~~The two merges~~ — **done.** One mechanical lesson: **deleting a stacked PR's base branch on merge
+  auto-closes the child, and GitHub will not reopen a PR whose base is gone.** #89 had to be
+  rebased onto the post-merge `main` and re-opened as #90; the review history stays on #89 and #90
+  links back to it. Next stacked pair: merge the parent WITHOUT `--delete-branch`, retarget the child
+  first, then delete.
 - ~~The signed-in walkthroughs~~ — **done 2026-08-10. All 36 authed specs pass**, including every
   Sprint 1–3 flag spec. Running them for the first time cost three more defects in that one file, all
   in the SPEC and none in the product, and all of the same family A9 names:
@@ -104,8 +106,11 @@ the worktree first, and confirm with `require.resolve('@golden-beans/sdk')`.
      diagnosed itself in one pass. That is what a good fixture failure looks like.
   **Mutation-checked:** dropping the `× 100` from `percentToBasisPoints` turns the repaired headline
   test red. It has teeth now; for the whole epic before today, it did not.
-- **Flipping the gate.** `FLAG_RULE_BUILDER_ENABLED` is created disabled everywhere. Preview first,
-  then production, after a real definition round-trip.
+- ~~Flipping the gate~~ — **done 2026-08-10: `FLAG_RULE_BUILDER_ENABLED=true` in Production and
+  Preview**, and verified on the live signed-in page against a real flag. The bars, the diff sentence
+  and a real preview evaluation all render; the `no-rules` case that round 4 corrected shows as
+  *"default only"* with no bar, which before that fix would have drawn a full bar labelled
+  *"everyone"* on flags that target nobody.
 - **`north-star-sync.spec.ts` fails locally**, identically on a stashed baseline tree — pre-existing,
   unrelated to this epic, and worth a look on its own.
 - **Subset shadowing is undetected, deliberately.** The rollout bar only recognises the unambiguous

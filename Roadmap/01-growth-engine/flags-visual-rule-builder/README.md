@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped       # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: flags-visual-rule-builder
 build_order: 15
 ---
@@ -330,12 +330,13 @@ fresh reviewer subagent (HIGH tier).
 
 ## Definition of Done (epic)
 
-*Status 2026-08-10: **all three sprints built and reviewed clean.** Sprint 1 is merged and dark in
-production; Sprints 2 and 3 await the product owner's merge, which the risk tier reserves to them.*
+*Closed 2026-08-10. **All three sprints are merged and the gate is ON in production** — the builder,
+the rollout bars, the version diff and the preview are live on
+`golden-beans-gamma.vercel.app/app/flags/<slug>`, verified against a real flag.*
 
-- [ ] **All sprints merged to `main`** — S1 merged (`92e24b3`); **S2 ([#88](https://github.com/danybgoode/golden-beans/pull/88)) and S3 ([#89](https://github.com/danybgoode/golden-beans/pull/89)) are owed the owner's merge.** #89 is stacked on #88 and targets its branch
+- [x] **All sprints merged to `main`** — S1 `92e24b3` (#87), S2 `a3a5606` (#88), S3 `b473d13` (#90, which replaced #89 after its stacked base branch was deleted on merge)
 - [x] Each `sprint-N.md` has its smoke walkthrough (real URLs) — and each now carries what was built and what the review layer found
-- [ ] This README marked ✅ — **deliberately not yet**: the frontmatter is the board's SSOT and two PRs are unmerged. Flip at merge
+- [x] This README marked ✅ — frontmatter is `shipped`
 - [x] `RETROSPECTIVE.md` written
 - [x] Product poster (`Roadmap/README.md`) updated
 - [x] Team memory + `MEMORY.md` index updated
@@ -347,4 +348,12 @@ production; Sprints 2 and 3 await the product owner's merge, which the risk tier
 - [x] **Basis-points conversion:** the `lib/` seam has boundary unit tests (0, 1, 10000, rounding)
       and every call site goes through it — verified by grep, and by a test in each consuming seam
       asserting no sentence or label can render the stored unit
-- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`) — **at merge, not before**
+- [x] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; `node scripts/build-order.mjs` re-run)
+- [x] **The gate is ON in Production and Preview** (`FLAG_RULE_BUILDER_ENABLED=true`, 2026-08-10), and
+      the surfaces were verified on the live signed-in page against a real flag: three environment
+      bars, the diff sentence *"when no rule matches, this flag now serves \"on\" (was \"off\")"*, and a
+      preview returning *"No rule matched. This flag serves \"on\", the variant it falls back to.
+      Evaluated against v2, the version activated in production."* — A5's copy rule, live
+- [x] **The signed-in walkthroughs are automated and green** — all 36 `authed` Playwright specs pass
+      with both gates on. Running them for the first time cost three spec defects and no product
+      ones; see the retrospective
