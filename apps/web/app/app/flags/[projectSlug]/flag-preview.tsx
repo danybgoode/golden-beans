@@ -94,6 +94,11 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
               <input
                 {...control}
                 disabled={pending}
+                // The same bound `parseEvaluationContext` enforces server-side, and the same one
+                // the evaluator's `validScalar` applies to a context value. Narrowing what can be
+                // TYPED to what the server will accept is D2's shape: the form pre-empts the error,
+                // the server still decides (cross-review, Agy).
+                maxLength={256}
                 value={draft[field] ?? ''}
                 onChange={(event) => setDraft({ ...draft, [field]: event.target.value })}
               />
@@ -123,13 +128,21 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
               Evaluated against v{result.version}, the version activated in {environment}.
             </p>
 
-            {result.explanation.matched && (
-              <ul className="flag-preview__conditions">
-                {describeRuleConditions(result.explanation.matched).map((condition) => (
-                  <li key={condition}>{condition}</li>
-                ))}
-              </ul>
-            )}
+            {/* The conditions that held, or — for a rule that has none — the fact that it has none.
+                A matched rule with no clauses matches EVERY context, which is the thing a reader
+                most needs told about it; an empty `<ul>` said nothing at all (cross-review, Agy). */}
+            {result.explanation.matched &&
+              (describeRuleConditions(result.explanation.matched).length > 0 ? (
+                <ul className="flag-preview__conditions">
+                  {describeRuleConditions(result.explanation.matched).map((condition) => (
+                    <li key={condition}>{condition}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="flag-preview__conditions">
+                  This rule has no conditions, so it matches every context.
+                </p>
+              ))}
 
             {result.explanation.rules.length > 0 && (
               <ol className="flag-preview__rules">
