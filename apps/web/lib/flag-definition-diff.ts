@@ -89,7 +89,15 @@ function formatScalar(value: ClauseScalar): string {
   return JSON.stringify(value)
 }
 
-function describeClause(clause: FlagClause): string {
+/**
+ * One clause in a PM's words.
+ *
+ * Exported in Sprint 3 so the preview screen describes a condition with the same vocabulary the
+ * version diff does. A reader who has just been told "rule 10: conditions changed from plan is
+ * \"pro\"" and then reads "plan is \"pro\" did not match" is reading about one thing; two
+ * independently-worded descriptions of the same clause would make them wonder if it is two.
+ */
+export function describeFlagClause(clause: FlagClause): string {
   return clause.operator === 'equals'
     ? `${clause.field} is ${formatScalar(clause.value)}`
     : `${clause.field} is one of ${clause.values.map(formatScalar).join(', ')}`
@@ -105,7 +113,7 @@ function describeClause(clause: FlagClause): string {
  */
 function describeConditions(rule: FlagRule): string {
   if (rule.clauses.length === 0) return 'every context'
-  return rule.clauses.map(describeClause).join(' and ')
+  return rule.clauses.map(describeFlagClause).join(' and ')
 }
 
 function describeRollout(rule: FlagRule): string {

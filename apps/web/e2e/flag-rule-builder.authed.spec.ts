@@ -22,7 +22,12 @@
 // check, which is the one step the epic README calls the most important in the whole build.
 
 import { test, expect } from '@playwright/test'
-import { FLAG_ENVIRONMENTS, MAX_FLAG_CLAUSES, type FlagDefinition } from '@golden-beans/sdk'
+import {
+  FLAG_ENVIRONMENTS,
+  MAX_FLAG_CLAUSES,
+  explainFlagEvaluation,
+  type FlagDefinition,
+} from '@golden-beans/sdk'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug(): string {
@@ -55,6 +60,30 @@ const textareaSubmit = (page: import('@playwright/test').Page) =>
     .filter({ has: page.locator('#flag-definition') })
     .getByRole('button', { name: 'Create immutable version' })
 
+/**
+ * Create an immutable version through the JSON TEXTAREA.
+ *
+ * Module scope because Sprints 2 and 3 both need it: the textarea is the surface that can express a
+ * metadata entry (Story 2.3's fallback case) and an arbitrary rule shape (Sprint 3's fixtures), and
+ * using it keeps those assertions independent of the builder's own controls.
+ */
+async function createVersion(
+  page: import('@playwright/test').Page,
+  key: string,
+  value: FlagDefinition,
+  reason: string
+) {
+  await page.locator('#flag-key').fill(key)
+  await page.locator('#flag-definition').fill(JSON.stringify(value, null, 2))
+  await page.locator('#flag-reason').fill(reason)
+  await textareaSubmit(page).click()
+  await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
+}
+
+/** One flag's article, located by its own heading rather than by position (A9). */
+const flagOf = (page: import('@playwright/test').Page, key: string) =>
+  page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
+
 test.describe('the visual rule builder', () => {
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
@@ -83,17 +112,31 @@ test.describe('the visual rule builder', () => {
     await fieldSelect.selectOption('plan')
     await builder.getByLabel('Operator').selectOption('equals')
     await builder.getByLabel('Value').fill('pro')
-    await builder.getByLabel('Serves variant').selectOption('on')
+    // `{ exact: true }` because `getByLabel` matches on SUBSTRING, and the builder has two selects
+    // whose labels are prefixes of one another: the definition-level "Serves variant when no rule
+    // matches" and the rule card's "Serves variant". Without it the locator resolves to two elements
+    // and the test dies at the exact step the epic calls its most important — the 10%-means-1000
+    // check. Found by RUNNING the authed project for the first time (2026-08-10); it is the third
+    // ambiguous-locator defect in this one file, after A9's two, and the third is the proof of A9's
+    // second half: a spec no pipeline runs is a spec that decays silently.
+    await builder.getByLabel('Serves variant', { exact: true }).selectOption('on')
     await builder.getByLabel('Rollout (%)').fill('10')
     await builder.getByLabel('Reason').fill('Rule builder round-trip smoke.')
 
     // THE assertion of the epic. Not 10, not 100000. The JSON disclosure renders exactly what the
     // action will send, so reading it here reads the bytes that get stored.
+    //
+    // ── Asserted on the PARSED value, not on rendered substrings (found 2026-08-10) ─────────────
+    // This was three `toContainText` checks, and one of them **could never pass**: Playwright
+    // normalises whitespace before a substring match, so the trailing `\n` in
+    // `not.toContainText('"basisPoints": 10\n')` was stripped — leaving `"basisPoints": 10`, which
+    // is a prefix of `"basisPoints": 1000` and therefore always present. The guard written to catch
+    // the epic's single most dangerous defect was itself the thing that failed, on a correct build.
+    // Parsing removes the whole class: `1000`, `10` and `100000` are three different numbers and
+    // nothing about rendering can blur them.
     await builder.getByRole('group').filter({ hasText: 'Show JSON' }).getByText('Show JSON').click()
-    const json = builder.locator('pre')
-    await expect(json).toContainText('"basisPoints": 1000')
-    await expect(json).not.toContainText('"basisPoints": 10\n')
-    await expect(json).not.toContainText('100000')
+    const built = JSON.parse(await builder.locator('pre').innerText()) as FlagDefinition
+    expect(built.rules[0].rollout?.basisPoints).toBe(1000)
 
     await builder.getByRole('button', { name: 'Create immutable version' }).click()
     await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
@@ -109,8 +152,13 @@ test.describe('the visual rule builder', () => {
       .locator('table')
     const storedDefinition = versions.locator('pre').first()
     await versions.getByText('Inspect immutable JSON').click()
-    await expect(storedDefinition).toContainText('"basisPoints": 1000')
-    await expect(storedDefinition).toContainText('"operator": "equals"')
+    // Parsed, for the same reason as above: this is the round-trip claim — what the CONTROLS built
+    // is byte-for-byte what the control plane stored — and it deserves the strong form.
+    await expect(storedDefinition).toBeVisible()
+    const stored = JSON.parse(await storedDefinition.innerText()) as FlagDefinition
+    expect(stored.rules[0].rollout?.basisPoints).toBe(1000)
+    expect(stored.rules[0].clauses[0]).toEqual({ field: 'plan', operator: 'equals', value: 'pro' })
+    expect(stored).toEqual(built)
   })
 
   test('a rule cannot exceed the clause cap, and the page says why', async ({ page }) => {
@@ -186,22 +234,6 @@ test.describe('rollout bars and the version diff', () => {
       ...overrides,
     }
   }
-
-  async function createVersion(
-    page: import('@playwright/test').Page,
-    key: string,
-    value: FlagDefinition,
-    reason: string
-  ) {
-    await page.locator('#flag-key').fill(key)
-    await page.locator('#flag-definition').fill(JSON.stringify(value, null, 2))
-    await page.locator('#flag-reason').fill(reason)
-    await textareaSubmit(page).click()
-    await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
-  }
-
-  const flagOf = (page: import('@playwright/test').Page, key: string) =>
-    page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
 
   test('every environment gets a bar and production is set apart', async ({ page }) => {
     const slug = tenantSlug()
@@ -297,5 +329,124 @@ test.describe('rollout bars and the version diff', () => {
     await expect(flag.locator('.flag-insight__unexplained')).toHaveText('definition changed — show JSON')
     await flag.locator('.flag-insight__json').getByText('Show JSON').click()
     await expect(flag.locator('.flag-insight__json pre')).toContainText('"owner": "growth"')
+  })
+})
+
+// ── Sprint 3 · Stories 3.1, 3.2 and 3.3 — preview as a user ───────────────────────────────────
+//
+// sprint-3.md's QA asks for three contexts — one that matches, one that matches nothing, and one
+// excluded by rollout — and says the parity assertion is the important one. Parity is pinned where
+// it belongs, on the SDK, in packages/sdk/src/flags.test.ts: `explainFlagEvaluation(...).variantKey
+// === evaluateFlag(...).variant` across thirteen contexts. What THAT cannot see is whether the
+// answer survives the server action, the wire and the render, so this block computes each expected
+// outcome with the SDK **in the spec** and asserts the page agrees.
+//
+// It also proves the read-only claim (Story 3.1's last criterion) the only way it can be proved:
+// count the versions before and after.
+test.describe('preview as a user', () => {
+  test.skip(
+    process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
+    'the preview is gated with the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
+  )
+  test.skip(
+    process.env.FLAG_SERVING_ENABLED !== 'true',
+    'a preview needs a version ACTIVATED in an environment; that needs FLAG_SERVING_ENABLED=true'
+  )
+
+  const previewDefinition: FlagDefinition = {
+    valueType: 'boolean',
+    description: 'Preview smoke: plan is pro at 10%, plus a region rule with no rollout.',
+    defaultVariantKey: 'off',
+    variants: [
+      { key: 'off', value: false },
+      { key: 'on', value: true },
+    ],
+    rules: [
+      {
+        priority: 10,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 1000 },
+        variantKey: 'on',
+      },
+    ],
+  }
+
+  /** A targeting key the 10% rollout excludes, chosen with the SDK rather than guessed. */
+  function subjectExcludedByRollout(flagKey: string): string {
+    for (let index = 0; index < 500; index++) {
+      const targetingKey = `probe-${index}`
+      const explained = explainFlagEvaluation({
+        flag: { key: flagKey, definitionVersion: 1, definition: previewDefinition },
+        context: { targetingKey, plan: 'pro' },
+      })
+      if (explained.rules.some((rule) => rule.outcome === 'rollout_excluded')) return targetingKey
+    }
+    throw new Error('no probe subject was excluded by the 10% rollout')
+  }
+
+  test('the three outcomes reach the screen, and evaluating writes nothing', async ({ page }) => {
+    const slug = tenantSlug()
+    const key = flagKey()
+    await page.goto(`/app/flags/${slug}`)
+    await createVersion(page, key, previewDefinition, 'Preview smoke.')
+
+    const flag = flagOf(page, key)
+    await flag
+      .locator('td div')
+      .filter({ has: page.getByText('development', { exact: true }) })
+      .getByRole('button', { name: 'Activate v1' })
+      .click()
+    await expect(page.getByRole('status').filter({ hasText: 'Activated v1 in development' })).toBeVisible()
+
+    const preview = flag.locator('.flag-preview')
+    await expect(preview).toBeVisible()
+    // Story 3.3's empty state: it tells a PM what to do rather than showing a blank result.
+    await expect(preview.locator('.flag-preview__empty')).toBeVisible()
+    await preview.getByLabel('Environment').selectOption('development')
+
+    // 1 — a context excluded by the rollout. The distinct wording is the sprint's whole point.
+    const excluded = subjectExcludedByRollout(key)
+    await preview.getByLabel('plan').fill('pro')
+    await preview.getByLabel('targetingKey').fill(excluded)
+    await preview.getByRole('button', { name: 'Evaluate' }).click()
+    await expect(preview.locator('.flag-preview__rules li[data-outcome="rollout_excluded"]')).toContainText(
+      'excluded this context'
+    )
+    await expect(preview.locator('.flag-preview__verdict')).toContainText('No rule matched')
+    await expect(preview.locator('.flag-preview__rules')).not.toContainText('1000')
+
+    // 2 — a context that matches nothing at all. Different words from the case above.
+    await preview.getByLabel('plan').fill('free')
+    await preview.getByRole('button', { name: 'Evaluate' }).click()
+    await expect(preview.locator('.flag-preview__verdict')).toContainText('No rule matched')
+    await expect(preview.locator('.flag-preview__rules li[data-outcome="clause_failed"]')).toContainText(
+      'did not match'
+    )
+    await expect(preview.locator('.flag-preview__rules li[data-outcome="rollout_excluded"]')).toHaveCount(0)
+    // A5 — the error-fallback word must never describe an ordinary no-match.
+    await expect(preview.locator('.flag-preview__verdict')).not.toContainText('DEFAULT')
+
+    // 3 — a context the rollout admits. Found with the SDK, so the page and the spec agree by
+    // construction about which subject should get through.
+    let admitted: string | null = null
+    for (let index = 0; index < 500 && admitted === null; index++) {
+      const targetingKey = `probe-${index}`
+      const explained = explainFlagEvaluation({
+        flag: { key, definitionVersion: 1, definition: previewDefinition },
+        context: { targetingKey, plan: 'pro' },
+      })
+      if (explained.matched?.priority === 10) admitted = targetingKey
+    }
+    expect(admitted).not.toBeNull()
+    await preview.getByLabel('plan').fill('pro')
+    await preview.getByLabel('targetingKey').fill(admitted!)
+    await preview.getByRole('button', { name: 'Evaluate' }).click()
+    await expect(preview.locator('.flag-preview__verdict')).toContainText('Rule 10 matched')
+    await expect(preview.locator('.flag-preview__verdict')).toContainText('"on"')
+
+    // Story 3.1's last criterion, and smoke step 5: nothing was written. Three evaluations, and the
+    // flag still has exactly the one immutable version it started with.
+    await page.reload()
+    await expect(flagOf(page, key).locator('tbody tr')).toHaveCount(1)
   })
 })

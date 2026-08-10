@@ -1602,6 +1602,54 @@ a.stat-card:hover {
   overflow: auto;
 }
 
+/* flags-visual-rule-builder · Sprint 3 — "preview as a user". */
+.flag-preview {
+  margin-bottom: 20px;
+}
+
+.flag-preview__empty {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.flag-preview__verdict {
+  color: var(--crema);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.flag-preview__conditions {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+  color: var(--dim);
+  font: 500 12px var(--mono);
+}
+
+.flag-preview__rules {
+  margin: 12px 0 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 6px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+/* The one outcome Story 3.2 calls the most confusing, given the only emphasis on the panel — a
+   rollout exclusion is the case a PM is most likely to report as a targeting bug, and reading it as
+   just another grey line is how it stays confusing. Never coloured green/red: it is not a fault. */
+.flag-preview__rules li[data-outcome='rollout_excluded'],
+.flag-preview__rules li[data-outcome='rollout_missing_targeting_key'] {
+  color: var(--crema);
+}
+
+.flag-preview__rules li[data-outcome='matched'] {
+  color: var(--gold-hot);
+}
+
+.flag-preview__rules li[data-outcome='not_reached'] {
+  color: var(--dim-2);
+}
+
 /* A textarea holding JSON, not prose. Replaces an inline `style` on the experiments plan editor.
 
    This comment used to say the flag authoring textarea would take the class in

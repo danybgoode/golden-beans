@@ -874,3 +874,53 @@ one-liner + why + date shape.
   the category by construction; hand the owner the mechanical step (or, as here, just leave auto
   mode). Corollary: don't spawn a planning agent to rationalize a wall before you've empirically
   mapped what actually passes vs. blocks — a confident wrong theory is worse than no theory.
+
+- **A worktree with no `node_modules` silently resolves workspace packages to the ROOT checkout,
+  so package edits look inert and unit tests assert against the wrong branch.**
+  (2026-08-09, `flags-visual-rule-builder` S1.) `@golden-beans/sdk` resolved to the root checkout's
+  `dist` — on `main`, without the branch's changes — so `npm run build --workspace=…` wrote to a
+  `dist/` nothing imported, an SDK edit appeared to have no effect, and the SDK unit tests were
+  quietly green against code the branch had already changed. **`npm install` inside the worktree
+  first**, then confirm with `node -e "console.log(require.resolve('@golden-beans/sdk'))"` before
+  trusting a single package-touching test result. (Related to the two worktree entries above, but a
+  different failure: those are about tooling that cannot RUN; this one runs fine and lies.)
+- **A positional locator over two identically-worded controls is a spec that will silently start
+  testing something else.** (2026-08-10, `flags-visual-rule-builder` S2, amendment A9.) A rejection
+  probe used `getByRole('button', { name: 'Create immutable version' }).first()`; a later sprint
+  added a second form with the same verb, rendered FIRST, whose button is disabled while its form has
+  problems — so the probe would have waited on an unclickable element instead of testing anything.
+  A second locator, `.locator('pre').first()`, would have re-pointed the same way the moment a flag
+  had two versions. **Scope by the control that distinguishes the two surfaces** (`.filter({ has:
+  page.locator('#flag-definition') })`), never by position. It went unnoticed because the `authed`
+  Playwright project does not run in CI — which is the second half of the lesson: **a spec no
+  pipeline runs is a spec that decays silently.**
+- **Stop cross-agent review at a CLEAN ROUND, not at a round count — and a clean round means every
+  reviewer, including the context-independent one.** (2026-08-10, `flags-visual-rule-builder` S2:
+  **seven rounds, sixteen real defects**.) Round 4 was clean from *both* external families and the
+  fresh reviewer found a **regression that round 3's own fix had introduced**; rounds 5 and 6 each
+  found one more path after the second family had gone clean three rounds running. Two corollaries
+  worth as much as the rule: **(a) a fix deserves the same suspicion as the code it replaces** — one
+  derivation here was corrected three times in three rounds, each time for a *different* wrong
+  statement about the same data, and the third fix moved a guard behind a filter and broke a fourth
+  thing; **(b) when several findings share one cause, the cause is the finding** — four separate
+  "guard this shape" reports on a JSONB-backed seam were one sentence (*a TypeScript type over a
+  JSONB column is a promise the database does not make*), and guarding each field by hand was
+  building a second validator, always one review finding behind. Ask the existing authority once.
+- **A comment that asserts a property is code, and goes stale like code — the dangerous kind reads
+  as an unfinished task.** (2026-08-10, `flags-visual-rule-builder`.) Three separate review rounds
+  found a comment claiming something the code did not do, including a `satisfies` said to enforce
+  exhaustiveness that did not, and a CSS note instructing the next adoption pass to apply a class
+  that the epic had just decided must NOT be applied (it would have broken a dark-launch guarantee).
+  When a decision reverses, **retire the note in the same PR**; a leftover "do this next sprint" is a
+  landmine with a friendly face.
+- **Playwright's `toContainText` NORMALISES WHITESPACE, so a trailing-`\n` guard against a numeric
+  prefix silently asserts nothing — and a negative one can be impossible to satisfy.** (2026-08-10,
+  `flags-visual-rule-builder`, found the first time the `authed` project was ever run.) The epic's
+  single most important check was `await expect(json).not.toContainText('"basisPoints": 10\n')`,
+  written to catch a factor-of-100 error. Normalisation strips the newline, leaving
+  `"basisPoints": 10` — a **prefix of the correct `"basisPoints": 1000`** — so the guard failed on a
+  CORRECT build and could never have passed on any build. **Assert on parsed values, not on rendered
+  substrings**: `JSON.parse(await locator.innerText()).rules[0].rollout.basisPoints === 1000` cannot
+  be blurred by rendering, and a `toEqual` between the builder's preview and the stored version
+  states the round-trip claim directly. Then mutation-check it — dropping the `× 100` must turn it
+  red, and here it does.

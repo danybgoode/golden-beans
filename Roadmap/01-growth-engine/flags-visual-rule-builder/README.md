@@ -274,6 +274,14 @@ stored-definition assertion, which Sprint 2's second `<pre>` in the same article
 re-pointed. **The general lesson for `LEARNINGS.md`: a positional locator over two identically
 worded controls is a spec that will silently start testing something else.**
 
+*Postscript, 2026-08-10 — the file was finally RUN, and held two more of the same family:
+`getByLabel('Serves variant')` matched two selects (it is a substring match, and the definition-level
+control is "Serves variant when no rule matches"), and the guard against the factor-of-100 error —
+`not.toContainText('"basisPoints": 10\n')` — **could never pass**, because Playwright normalises the
+whitespace away and `"basisPoints": 10` is a prefix of the correct `"basisPoints": 1000`. Three
+defects in one file, none of them in the product, none of them findable without running it. Both
+assertions now parse the JSON. All 36 authed specs pass, and the mutation turns the headline one red.*
+
 ### The seams this epic creates (named once, here)
 
 | Seam | Purpose | Sprint | Pure? |
@@ -321,16 +329,22 @@ per PR, routed by `node scripts/review-route.mjs --builder <who> --tier high <PR
 fresh reviewer subagent (HIGH tier).
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** `FLAG_RULE_BUILDER_ENABLED` exists in **every
+
+*Status 2026-08-10: **all three sprints built and reviewed clean.** Sprint 1 is merged and dark in
+production; Sprints 2 and 3 await the product owner's merge, which the risk tier reserves to them.*
+
+- [ ] **All sprints merged to `main`** — S1 merged (`92e24b3`); **S2 ([#88](https://github.com/danybgoode/golden-beans/pull/88)) and S3 ([#89](https://github.com/danybgoode/golden-beans/pull/89)) are owed the owner's merge.** #89 is stacked on #88 and targets its branch
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs) — and each now carries what was built and what the review layer found
+- [ ] This README marked ✅ — **deliberately not yet**: the frontmatter is the board's SSOT and two PRs are unmerged. Flip at merge
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append) — the worktree/`node_modules` trap, the positional-locator trap, the clean-round stopping rule, and stale asserting comments
+- [x] **Kill-switch (planned at grooming — Stage 6b):** `FLAG_RULE_BUILDER_ENABLED` exists in **every
       environment**, created **DISABLED**, default `false` — the enablement polarity D6 states.
-      *Verify-only.*
-- [ ] **Basis-points conversion:** the `lib/` seam has boundary unit tests (0, 1, 10000, rounding)
-      and every call site goes through it — verified by grep, not by assertion
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+      *Verified 2026-08-09.* Every surface in all three sprints renders behind it, and Sprint 2's
+      review round 2 caught the one place a tidy-up had quietly broken the gate-off guarantee
+- [x] **Basis-points conversion:** the `lib/` seam has boundary unit tests (0, 1, 10000, rounding)
+      and every call site goes through it — verified by grep, and by a test in each consuming seam
+      asserting no sentence or label can render the stored unit
+- [ ] Feature branches deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`) — **at merge, not before**

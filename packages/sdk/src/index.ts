@@ -50,6 +50,12 @@ export {
   MAX_FLAG_RULES,
   MAX_FLAG_VARIANTS,
   evaluateFlag,
+  // flags-visual-rule-builder (A3). Additive: one pure function, built from the SAME two predicates
+  // `matchesRule` is now defined as, so `evaluateFlag` is unchanged by construction. It exists
+  // because the evaluator cannot name WHICH rule matched, and collapses "a clause failed" and "the
+  // rollout excluded you" into one `false` — and D4 forbids the alternative, a second matcher in
+  // the app that would agree with production right up until someone relied on it.
+  explainFlagEvaluation,
   isFlagEnvironment,
   parseFlagDefinition,
   parseFlagSnapshot,
@@ -66,6 +72,9 @@ export type {
   FlagResolutionDetails,
   FlagResolutionReason,
   FlagRule,
+  FlagEvaluationExplanation,
+  FlagRuleExplanation,
+  FlagRuleOutcome,
   FlagSnapshot,
   FlagSnapshotFlag,
   FlagValueType,
