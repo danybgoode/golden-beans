@@ -241,6 +241,88 @@ test('rules that ALL carry a 100% rollout say 100%, not "everyone" — they are 
   assert.notEqual(summary.label, 'everyone')
 })
 
+test('a rule the evaluator can never reach does not change the number on the bar', () => {
+  // Cross-review (Codex, round 3, Blocking). `evaluateFlag` sorts ascending and serves the FIRST
+  // match, so a clause-less rollout-less rule at priority 10 matches everything and the 50% rule at
+  // 20 is dead code. Summing over the whole list read "up to everyone · 2 rules, not all reaching
+  // the same share" for a flag that in fact serves one variant to everyone, full stop.
+  const shadowed = definition({
+    rules: [
+      { priority: 10, clauses: [], variantKey: 'on' },
+      {
+        priority: 20,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 5000 },
+        variantKey: 'off',
+      },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([shadowed], { production: 1 })).production
+
+  assert.deepEqual(summary.reach, { kind: 'everyone' })
+  assert.equal(summary.label, 'everyone')
+  // …and the dead rule is named, not merely dropped. Its author believes it is doing something.
+  assert.ok(summary.detail.includes('rules after priority 10 never run'))
+})
+
+test('a clause-less rule WITH a rollout shadows nothing — it does not always match', () => {
+  // The bound on the shadow detection. A rollout can exclude a context (and always excludes one with
+  // no targeting key, A5), so a rule carrying one is not a catch-all and the rules below it are live.
+  const live = definition({
+    rules: [
+      { priority: 10, clauses: [], rollout: { basisPoints: 5000 }, variantKey: 'on' },
+      {
+        priority: 20,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 1000 },
+        variantKey: 'off',
+      },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([live], { production: 1 })).production
+
+  assert.equal(summary.reach.kind, 'several')
+  assert.ok(!summary.detail.includes('never run'))
+})
+
+test('a catch-all as the LAST rule shadows nothing — there is nothing below it', () => {
+  const trailing = definition({
+    rules: [
+      {
+        priority: 10,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 1000 },
+        variantKey: 'on',
+      },
+      { priority: 20, clauses: [], variantKey: 'off' },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([trailing], { production: 1 })).production
+
+  assert.equal(summary.reach.kind, 'several')
+  assert.ok(!summary.detail.includes('never run'))
+})
+
+test('shadowing is decided by PRIORITY, not by the order the rules array happens to hold', () => {
+  // The evaluator sorts; the array does not. A catch-all written second but numbered first still
+  // shadows, and reading the array in order would have missed it.
+  const shadowed = definition({
+    rules: [
+      {
+        priority: 20,
+        clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+        rollout: { basisPoints: 5000 },
+        variantKey: 'off',
+      },
+      { priority: 10, clauses: [], variantKey: 'on' },
+    ],
+  })
+  const summary = summariseFlagEnvironments(flag([shadowed], { production: 1 })).production
+
+  assert.deepEqual(summary.reach, { kind: 'everyone' })
+  assert.ok(summary.detail.includes('rules after priority 10 never run'))
+})
+
 test('a flag with NO rules draws no bar — a full bar would read as "fully rolled out"', () => {
   // Fresh review, PR #88: returning `everyone` here filled the bar completely on a flag that
   // targets nobody and serves its default. The caption calls the bar "the share of the contexts a

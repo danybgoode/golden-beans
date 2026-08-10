@@ -10,7 +10,7 @@
 >   component `flag-insight.tsx` mounted from `flag-manager.tsx` in six lines (D7 holds).
 > - **A8 — the bar shows the ROLLOUT, not user coverage.** Story 2.1's "proportion of users" is not
 >   computable from a definition; the caption says what the bar actually means. No rollout → a full
->   bar labelled "everyone"; several rollouts → "up to 50% · 2 rules carry different rollouts";
+>   bar labelled "everyone"; rules that disagree → "up to 50% · 3 rules, not all reaching the same share";
 >   nothing activated → no bar and a row that says so.
 > - **A9 — Sprint 1's authed spec pointed at the wrong button.** A positional `.first()` over two
 >   identically-worded submit buttons resolved to the builder's *disabled* one. Fixed here, with the

@@ -1537,8 +1537,8 @@ a.stat-card:hover {
   color: var(--crema);
 }
 
-/* The detail line spans the full row under the bar, so a long "2 rules carry different rollouts"
-   never squeezes the track it is explaining. */
+/* The detail line spans the full row under the bar, so a long "3 rules, not all reaching the same
+   share" never squeezes the track it is explaining. */
 .rollout-bar__detail {
   grid-column: 1 / -1;
   color: var(--dim-2);
@@ -1602,9 +1602,15 @@ a.stat-card:hover {
   overflow: auto;
 }
 
-/* A textarea holding JSON, not prose. Replaces an inline `style` that set the same three things on
-   the experiments plan editor; the flag authoring textarea gets it in Sprint 2 Story 2.3 WITHOUT
-   otherwise being touched, since replacing that control is flags-visual-rule-builder's whole epic. */
+/* A textarea holding JSON, not prose. Replaces an inline `style` on the experiments plan editor.
+
+   This comment used to say the flag authoring textarea would take the class in
+   flags-visual-rule-builder's Sprint 2. **It did not, and it should not** — that decision was made
+   and reversed in PR #88 (cross-review, Codex). The flags textarea renders when
+   FLAG_RULE_BUILDER_ENABLED is OFF, and that epic's D6 promises the page is byte-for-byte
+   pre-epic while the gate is down; this class also sets `white-space: pre`, so long JSON lines
+   would stop wrapping. Whoever eventually replaces that control owns the swap. The note is
+   retired here rather than left as an unfinished task the next kit-adoption pass would pick up. */
 .code-input {
   display: block;
   width: 100%;

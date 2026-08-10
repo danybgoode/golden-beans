@@ -125,8 +125,9 @@ function describeRule(rule: FlagRule): string {
  * arrays reported those as "conditions changed from … to …", which is a behaviour change that did
  * not happen (cross-review, Codex, round 2).
  *
- * The canonical form is used for COMPARISON only. Everything a reader sees is rendered from the
- * stored order, so the sentence still shows the definition as it was actually written.
+ * The canonical form is used for COMPARISON only. Every sentence is rendered from a rule's own
+ * stored order — the rule at the priority the sentence names, not a same-bodied stand-in — so what a
+ * reader sees always exists in the JSON at the priority they are told to look at.
  */
 function canonicalClause(clause: FlagClause): string {
   return clause.operator === 'equals'
@@ -183,12 +184,12 @@ type RuleReconciliation = {
  * genuinely cannot be told apart, and never at the cost of a spurious move.
  */
 function reconcileRules(before: FlagRule[], after: FlagRule[], changes: string[]): RuleReconciliation {
-  const sides = new Map<string, { rule: FlagRule; before: number[]; after: number[] }>()
+  const sides = new Map<string, { before: number[]; after: number[] }>()
   const side = (rule: FlagRule) => {
     const body = ruleBody(rule)
     const existing = sides.get(body)
     if (existing) return existing
-    const fresh = { rule, before: [] as number[], after: [] as number[] }
+    const fresh = { before: [] as number[], after: [] as number[] }
     sides.set(body, fresh)
     return fresh
   }
@@ -200,6 +201,7 @@ function reconcileRules(before: FlagRule[], after: FlagRule[], changes: string[]
   const afterByPriority = byPriority(after)
   const unmatchedBefore: number[] = []
   const unmatchedAfter: number[] = []
+  const moved: Array<{ from: number; to: number }> = []
 
   for (const entry of sides.values()) {
     // Step 1 — a rule that kept its body AND its priority did not change. Take those out first.
@@ -210,12 +212,26 @@ function reconcileRules(before: FlagRule[], after: FlagRule[], changes: string[]
     // Step 2 — the residue, in matching order, is this body's moves.
     const moves = Math.min(movedFrom.length, movedTo.length)
     for (let index = 0; index < moves; index++) {
-      changes.push(
-        `the rule serving ${describeRule(entry.rule)} moved from priority ${movedFrom[index]} to ${movedTo[index]}`
-      )
+      moved.push({ from: movedFrom[index], to: movedTo[index] })
     }
     unmatchedBefore.push(...movedFrom.slice(moves))
     unmatchedAfter.push(...movedTo.slice(moves))
+  }
+
+  // Sorted by the priority moved FROM, so the whole `changes` list reads in evaluation order and is
+  // a function of the definition rather than of how its `rules` array happened to be serialised.
+  // `sides` is keyed in before-array order, and two byte-different serialisations of the same
+  // definition would otherwise emit the same moves in different sequences (fresh review, round 3).
+  //
+  // Each sentence describes the rule AT ITS OWN before-priority, not the first rule that shared its
+  // body. `ruleBody` is order-insensitive, so several rules with different stored clause orders land
+  // in one entry — and rendering the entry's first member printed conditions in an order that
+  // existed at neither priority named. Behaviourally identical, but a reader cross-referencing
+  // "Show JSON" would have found no such rule (fresh review, round 3).
+  for (const move of moved.sort((left, right) => left.from - right.from)) {
+    changes.push(
+      `the rule serving ${describeRule(beforeByPriority.get(move.from)!)} moved from priority ${move.from} to ${move.to}`
+    )
   }
 
   // Step 3 — whatever no body could claim. A shared priority means the rule at that slot was edited.

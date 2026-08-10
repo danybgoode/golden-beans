@@ -391,6 +391,55 @@ test('a reorder alongside an out-of-scope change reports BOTH the move and the f
   ])
 })
 
+test('a move sentence shows the clause order stored AT the priority it names', () => {
+  // Fresh review, round 3. `ruleBody` is order-insensitive, so two rules whose clauses are stored in
+  // different orders share one map entry — and describing the entry's first member printed a
+  // condition order that existed at neither priority in the sentence. Behaviourally identical, but a
+  // reader following the sentence into "Show JSON" would have found no rule reading that way.
+  const pair = (first: 'plan' | 'region') =>
+    first === 'plan'
+      ? [
+          { field: 'plan' as const, operator: 'equals' as const, value: 'pro' },
+          { field: 'region' as const, operator: 'equals' as const, value: 'mx' },
+        ]
+      : [
+          { field: 'region' as const, operator: 'equals' as const, value: 'mx' },
+          { field: 'plan' as const, operator: 'equals' as const, value: 'pro' },
+        ]
+
+  const before = withRules([
+    { priority: 10, clauses: pair('plan'), variantKey: 'on' },
+    { priority: 20, clauses: pair('region'), variantKey: 'on' },
+  ])
+  const after = withRules([
+    { priority: 10, clauses: pair('plan'), variantKey: 'on' },
+    { priority: 30, clauses: pair('region'), variantKey: 'on' },
+  ])
+
+  assert.deepEqual(diff(before, after).changes, [
+    'the rule serving "on" to region is "mx" and plan is "pro" (everyone) moved from priority 20 to 30',
+  ])
+})
+
+test('moves are listed in evaluation order, not in rules-array order', () => {
+  // Two byte-different serialisations of the SAME definition must produce the same list in the same
+  // sequence — the diff describes a definition, not a JSON layout (fresh review, round 3).
+  const rule = (priority: number, value: string) => ({
+    priority,
+    clauses: [{ field: 'plan' as const, operator: 'equals' as const, value }],
+    variantKey: 'on',
+  })
+  const after = withRules([rule(30, 'a'), rule(10, 'b'), rule(20, 'c')])
+  const expected = [
+    'the rule serving "on" to plan is "a" (everyone) moved from priority 10 to 30',
+    'the rule serving "on" to plan is "b" (everyone) moved from priority 20 to 10',
+    'the rule serving "on" to plan is "c" (everyone) moved from priority 30 to 20',
+  ]
+
+  assert.deepEqual(diff(withRules([rule(10, 'a'), rule(20, 'b'), rule(30, 'c')]), after).changes, expected)
+  assert.deepEqual(diff(withRules([rule(30, 'c'), rule(20, 'b'), rule(10, 'a')]), after).changes, expected)
+})
+
 test('a rule added and a rule removed are each named with what they served', () => {
   const after = base()
   after.rules = [

@@ -25,6 +25,7 @@ import {
   evaluateFlag,
   type FlagDefinition,
   type FlagEnvironment,
+  type FlagRule,
   type FlagValueType,
 } from '@golden-beans/sdk'
 import { basisPointsToPercent, formatRolloutPercent, rolloutBarPercent } from './rollout-percent'
@@ -116,7 +117,31 @@ function baselineVariantKey(flagKey: string, version: FlagVersionView): string |
 }
 
 /**
- * What the active version's rules add up to.
+ * The rules the evaluator can actually reach, and the priority beyond which it never looks.
+ *
+ * ── Why this exists (cross-review, Codex, round 3) ────────────────────────────────────────────
+ * `evaluateFlag` sorts ascending and serves the FIRST match. A rule with no clauses and no rollout
+ * matches every context — the clause loop never runs and there is no rollout to exclude anyone — so
+ * every rule below it is dead code. Summing rollouts over the whole list therefore let an unreachable
+ * rule change the number on the bar: a catch-all at priority 10 plus a 50% rule at 20 read as
+ * "up to everyone · 2 rules, not all reaching the same share" when the flag in fact serves one
+ * variant to everyone and the second rule never runs.
+ *
+ * **Only the unambiguous shadow is detected**, and deliberately. A rule shadows a later one whenever
+ * its conditions are implied by theirs, and deciding implication in general is a solver — the exact
+ * appetite trap D8 refuses for the diff. A clause-less, rollout-less rule needs no solver: it
+ * matches everything, always. It is also the shape `flag-rule-draft.ts` already refuses to author,
+ * for the same reason, so the two halves of the epic agree about which rule is the dangerous one.
+ */
+function reachableRules(rules: FlagRule[]): { reachable: FlagRule[]; deadAfter: number | null } {
+  const ordered = [...rules].sort((left, right) => left.priority - right.priority)
+  const catchAll = ordered.findIndex((rule) => rule.clauses.length === 0 && !rule.rollout)
+  if (catchAll === -1 || catchAll === ordered.length - 1) return { reachable: ordered, deadAfter: null }
+  return { reachable: ordered.slice(0, catchAll + 1), deadAfter: ordered[catchAll].priority }
+}
+
+/**
+ * What the active version's reachable rules add up to.
  *
  * ── Two collapses this deliberately does NOT make (both caught in review) ─────────────────────
  * 1. **A rollout-less rule is not "no rollout on the flag".** The first version filtered those
@@ -131,8 +156,7 @@ function baselineVariantKey(flagKey: string, version: FlagVersionView): string |
  *
  * So bounded and unbounded rules are counted separately, and `several` carries both facts.
  */
-function reachOf(definition: FlagDefinition): FlagRolloutReach {
-  const rules = definition.rules
+function reachOf(rules: FlagRule[]): FlagRolloutReach {
   // No rules at all. There is no rollout to draw, and drawing a FULL bar here — as an earlier
   // version did — reads as "fully rolled out" on a flag that targets nobody and serves its default.
   if (rules.length === 0) return { kind: 'no-rules' }
@@ -201,7 +225,8 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
   // resolved is precisely the state a PM needs told, not the one to render as "off".
   if (!version) return inactive('Activated version could not be read.')
 
-  const reach = reachOf(version.definition)
+  const { reachable, deadAfter } = reachableRules(version.definition.rules)
+  const reach = reachOf(reachable)
   const variantKey = baselineVariantKey(flag.key, version)
   const serves =
     variantKey === null
@@ -214,6 +239,9 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
   // narrower statement, and it is the true one.
   const spread =
     reach.kind === 'several' ? ` · ${reach.ruleCount} rules, not all reaching the same share` : ''
+  // Said out loud rather than only silently excluded: a rule the evaluator never reaches is a rule
+  // its author believes is doing something, and this is the one place the page can tell them.
+  const dead = deadAfter === null ? '' : ` · rules after priority ${deadAfter} never run`
 
   return {
     environment,
@@ -223,7 +251,7 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
     reach,
     fillPercent: fillOf(reach),
     label: labelOf(reach),
-    detail: `v${version.version} · ${serves}${spread}`,
+    detail: `v${version.version} · ${serves}${spread}${dead}`,
   }
 }
 
