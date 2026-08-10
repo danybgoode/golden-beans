@@ -88,6 +88,19 @@ independently shippable slice of value.
   reuses the same `getProjectOutcome` the client-facing Pod Report reads, so an owner's numbers and a
   client's cannot drift. The rail is **dark in production** behind `AGENT_RAIL_ENABLED`, born OFF —
   and the var does not exist in Vercel yet, which is the one item owed.
+- 🟡 [Flags — a visual rule builder](01-growth-engine/flags-visual-rule-builder/README.md) (rule
+  builder · rollout bars · plain-language version diff · preview-as-a-user) — **all three sprints
+  built, Sprint 1 merged and dark in production; Sprints 2 and 3 await the owner's merge**
+  (PRs #87/#88/#89). A PM is the person who knows *"roll this out to pro-plan users in Mexico at
+  10%"* and the person least able to type it as JSON into a `<textarea>` — so the strongest
+  primitive the product has was invisible to the buyer it was built for. **No migration, no new
+  route, no new dependency, no change to the wire contract:** the builder posts through the server
+  action the textarea already used, the bars and the diff are pure derivations over props the page
+  already had, and the preview calls the SDK's own evaluator server-side. Everything renders behind
+  `FLAG_RULE_BUILDER_ENABLED`, so with the gate down the page is byte-for-byte pre-epic. The
+  architecture lock disproved **four** of this doc's own claims before a line was written — including
+  that D4 was unbuildable as the SDK stood, and that D5's "read the constant" was impossible because
+  three of its four constants were never exported.
 - ✅ [Component-kit adoption sweep](02-commercial/app-component-kit-adoption/README.md) (`DataTable`
   · `ConfirmDialog` · `FormSection`/`Field` · six converted routes · every irreversible action
   confirmed) — **shipped & live 2026-08-09** (PRs #82/#83/#84). `app-shell-and-agent-rail` shipped a
@@ -154,6 +167,22 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-10** — `flags-visual-rule-builder` **built out end to end** (PRs #87/#88/#89; Sprint 1
+  merged dark, Sprints 2 and 3 awaiting the owner's merge): the flag control plane finally has an
+  authoring surface, a picture of where each flag actually reaches, a version history that reads as
+  sentences, and a "what would this user see" that answers with the **SDK's own evaluator**. A3 is
+  the shape of the epic: `evaluateFlag` could not name which rule matched, and collapsed *"a clause
+  failed"* and *"the rollout excluded you"* into one `false` — the single outcome a PM is most likely
+  to report as a bug. Rather than write a second matcher in the app (D4's exact named failure), the
+  private predicate was split in two and `matchesRule` redefined as their conjunction, so the
+  evaluator is unchanged **by construction** and the exported explanation is built from the same two
+  halves. **Sprint 2 took seven review rounds and sixteen real defects**, and the reason it did not
+  stop at two is the finding worth keeping: **round 4 was clean from both external families, and the
+  fresh reviewer found a regression that round 3's own fix had introduced.** Rounds 5 and 6 each
+  found one more path after the second family had gone clean three rounds running. Four of those
+  sixteen were one cause wearing four hats — a TypeScript type over a JSONB column is a promise the
+  database does not make, and guarding each field by hand was building the second validator D2
+  forbids, always one review finding behind.
 - **2026-08-09** — `app-component-kit-adoption` **epic shipped & LIVE** (PRs #82/#83/#84): the kit
   finally reached the routes, and nothing irreversible is one click away any more. The
   architecture-lock pass earned its keep before a line was written — it read the code instead of the
