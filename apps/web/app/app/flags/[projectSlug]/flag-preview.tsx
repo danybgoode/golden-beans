@@ -31,9 +31,16 @@ type ContextDraft = Partial<Record<(typeof FLAG_CONTEXT_FIELDS)[number], string>
 export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) {
   const [environment, setEnvironment] = useState<FlagEnvironment>('production')
   const [draft, setDraft] = useState<ContextDraft>({})
-  const [result, setResult] = useState<{ version: number; explanation: FlagEvaluationExplanation } | null>(
-    null
-  )
+  // The evaluated environment is stored WITH the answer, not read from the select when rendering.
+  // Cross-review (Codex, Blocking): changing the select after an evaluation left the previous result
+  // on screen relabelled with the new environment — so a development answer could sit under the
+  // words "the version activated in production", which is the one sentence on this panel that must
+  // never be wrong.
+  const [result, setResult] = useState<{
+    version: number
+    environment: FlagEnvironment
+    explanation: FlagEvaluationExplanation
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -43,7 +50,7 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
       try {
         const answer = await previewFlagEvaluationAction(slug, flagId, environment, draft)
         if (answer.ok) {
-          setResult({ version: answer.version, explanation: answer.explanation })
+          setResult({ version: answer.version, environment, explanation: answer.explanation })
         } else {
           setResult(null)
           setError(answer.error)
@@ -125,22 +132,29 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
           <div role="status" className="flag-preview__result">
             <p className="flag-preview__verdict">{describeEvaluationOutcome(result.explanation)}</p>
             <p className="note">
-              Evaluated against v{result.version}, the version activated in {environment}.
+              Evaluated against v{result.version}, the version activated in {result.environment}.
             </p>
 
-            {/* The conditions that held, or — for a rule that has none — the fact that it has none.
-                A matched rule with no clauses matches EVERY context, which is the thing a reader
-                most needs told about it; an empty `<ul>` said nothing at all (cross-review, Agy). */}
+            {/* The conditions that held, or — for a rule that has none — the fact that it has none;
+                an empty `<ul>` said nothing at all (cross-review, Agy). The sentence is about the
+                CONDITIONS, not about the rule: a clause-less rule with a rollout is still excluded
+                for a context outside its bucket, or one with no targeting key at all. Round 1's
+                wording claimed it "matches every context", which is false for exactly that shape
+                and is the same conflation Sprint 2's `reachOf` was corrected for twice
+                (cross-review, Codex). The rollout, if there is one, is stated on its own line below. */}
             {result.explanation.matched &&
               (describeRuleConditions(result.explanation.matched).length > 0 ? (
                 <ul className="flag-preview__conditions">
-                  {describeRuleConditions(result.explanation.matched).map((condition) => (
-                    <li key={condition}>{condition}</li>
+                  {describeRuleConditions(result.explanation.matched).map((condition, index) => (
+                    // Index-suffixed: the parser does not forbid a rule from carrying the same
+                    // clause twice, and two identical conditions would collide on the string alone
+                    // (cross-review, Agy).
+                    <li key={`${index}-${condition}`}>{condition}</li>
                   ))}
                 </ul>
               ) : (
                 <p className="flag-preview__conditions">
-                  This rule has no conditions, so it matches every context.
+                  This rule has no conditions, so every context satisfies them.
                 </p>
               ))}
 
