@@ -142,7 +142,34 @@ The operator did not bypass that conflict. A narrowed publish of the already-rev
 left the new definition dark and default-OFF. Its `source=miyagi` metadata names the publishing service;
 it is not a Golden project identifier.
 
-This proves `miyagisanchez` is the current owner-operated catalog. It does not by itself expose which
-project the storefront's server-only production read credential resolves; the authenticated production
-smoke owns that final binding proof. Revoke the temporary sync credential after owner inspection, and do
-not infer a project slug from either name by analogy again.
+This proves `miyagisanchez` is the current owner-operated catalog. It did not by itself expose which
+project the storefront's server-only production read credential resolved. Revoke the temporary sync
+credential after owner inspection, and do not infer a project slug from either name by analogy again.
+
+## 2026-08-10 — scoped runtime binding and v2 activation
+
+The binding audit resolved the ambiguity without replacing a credential that already serves live flags.
+The storefront's primary production read credential resolves an owner-invisible snapshot `47` containing
+43 active decisions and no `partners.recruiting_v3_enabled` definition. At the same time, the owner-visible
+`miyagisanchez` production catalog initially had snapshot `3` and only two active decisions. A wholesale
+credential swap would therefore have made unrelated flags disappear from the runtime.
+
+Storefront PR [#350](https://github.com/danybgoode/miyagisanchezcommerce/pull/350) (`5d4df0c`)
+introduced a narrower binding: only the exact recruiting flag uses a dedicated `miyagisanchez` read
+credential; all other definitions continue through the primary provider. Project-relative snapshot
+versions from the scoped provider are excluded from the shared durable mirror. The credential is stored
+server-side in Secret Manager and bound to Cloud Run revision `miyagi-web-00069-kbd`, deployed at 100%
+traffic by successful Cloud Build `da67c055-6a93-4254-959c-eef644420bd2`.
+
+Activating version `1` in all three environments still evaluated OFF because its immutable definition had
+`defaultVariantKey=off` and no rules. Activation chooses the authoritative version; it does not override
+that version's decision semantics. Version `2` preserved the definition and variants and changed only the
+default to `on`. It is active in development snapshot `3`, preview snapshot `3` and production snapshot
+`4`; version `1` remains the immediate default-OFF rollback.
+
+The production authority log then resolved `partners.recruiting_v3_enabled` from Golden snapshot `4`,
+definition version `2`, with `source=golden`, `reason=STATIC` and `matchesLocal=false`. A real Chromium
+smoke of `https://miyagisanchez.com/us` returned HTTP `200`, rendered the complete founding-operator
+application and recorded zero console errors. This closes the server-only binding proof: for this exact
+flag, the production runtime and current owner UI both use project `miyagisanchez`, while the legacy
+43-decision catalog remains intact for every other flag.

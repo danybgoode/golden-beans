@@ -755,13 +755,15 @@ one-liner + why + date shape.
   with `*=golden`, a later `catalog.owned_shop_only_enabled` key had no Golden definition and resolved
   safely from its explicit local default with reason `DEFAULT`. The default-ON kill-switch contract
   was correct; treating permanent control-plane absence as an exception was not. A project declares
-  the typed default once, then a generic project-scoped sync rail must register it without a
-  Golden-side whitelist. Local defaults are resilience, not the operational writer. Never call the
-  original inventory evergreen. Never infer the operational project from a similar slug or an old proof
-  note: as of 2026-08-09 the current owner-operated catalog is `miyagisanchez`, while the storefront's
-  server-only read binding remains something the production smoke must prove. Choose the project through
-  the current owner UI and verify the exact key with an idempotent narrow publish. *(2026-08-01, corrected
-  2026-08-09; flag-serving / owned-shop.)*
+  the typed default once, then a generic project-scoped sync rail must register it without a Golden-side
+  whitelist. Local defaults are resilience, not the operational writer. Never call the original
+  inventory evergreen or infer the operational project from a similar slug or old proof note. Verify the
+  current owner project and the actual runtime credential's snapshot separately. If the established
+  credential serves a different live catalog, do not swap it wholesale: route only the new exact key to a
+  scoped provider and keep that provider's project-relative snapshot out of the shared mirror. Finally,
+  activation makes an immutable version authoritative; a no-rules version whose default is OFF remains
+  OFF until a new default-ON version is activated. *(2026-08-01, corrected 2026-08-09 and 2026-08-10;
+  flag-serving / owned-shop / Partners recruiting.)*
 - **A Next App Router `loading.tsx` or parent layout can change the HTTP semantics of a guarded
   child page by starting the response stream first.** During the design-system lift, both a shared
   `/app` layout and then the root loader made `notFound()` content look correct in a browser while
