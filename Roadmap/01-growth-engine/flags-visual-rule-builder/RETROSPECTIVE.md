@@ -1,14 +1,106 @@
 # Flags — a visual rule builder, rollout viz, and a plain-language version diff — Retrospective
 
-_Closed: <date>_
+_Built out: 2026-08-10. **Not yet closed** — Sprints 2 and 3 are built, gated and reviewed clean, and
+await the product owner's merge (HIGH tier: the owner merges every PR in this epic)._
 
 ## What shipped
-<!-- The capability now live, by sprint, with commit/PR refs. -->
+
+| Sprint | Capability | PR | State |
+|---|---|---|---|
+| 1 | The rule builder — two selects and a value control that cannot produce a clause the parser rejects | [#87](https://github.com/danybgoode/golden-beans/pull/87) `92e24b3` | **merged, dark in production** |
+| 2 | Rollout bars, per-environment state, the bounded version diff | [#88](https://github.com/danybgoode/golden-beans/pull/88) | built · 7 review rounds · **awaiting merge** |
+| 3 | Preview as a user, and the SDK's `explainFlagEvaluation` | [#89](https://github.com/danybgoode/golden-beans/pull/89) | built · 3 review rounds · **awaiting merge, stacked on #88** |
+
+`FLAG_RULE_BUILDER_ENABLED` is the 15th gate, created **disabled** in Development, Preview and
+Production on 2026-08-09. Every surface in all three sprints renders behind it, so with the gate down
+the flags page is byte-for-byte what it was before the epic — a property round 2 of Sprint 2's review
+caught us quietly breaking with a one-class CSS tidy-up.
+
+**No migration, no new route, no new dependency, no change to the wire contract.** The builder posts
+through the server action the textarea already used; the bars and the diff are pure derivations over
+props the page already had; the preview calls the SDK's own evaluator server-side.
 
 ## What went well
 
+**The architecture lock paid for itself four times over.** Before Sprint 1 started, re-reading every
+decision against shipped code disproved four things this doc had asserted: the named write seam was
+the wrong file (A1), D4 was unbuildable as the SDK stood (A3), D5 was unbuildable because three of its
+four constants were never exported (A6), and the line count D7 argued from was stale (A2). Each of
+those would have been discovered by a builder mid-story, under pressure, with the wrong incentive.
+A6 in particular: a builder told to "read the constant" and finding no constant to read writes the
+literal `20` that D5 exists to forbid.
+
+**Bounding the diff was the right appetite call, and the bound is what makes it useful.** D8's six
+parts plus an explicit "definition changed — show JSON" produced a diff a PM can trust precisely
+because it can say *I cannot describe this one*. Every reviewer who probed it probed the bound, and
+the bound held.
+
+**A3 kept D4 without breaking D10.** Splitting the private `matchesRule` into `clausesMatch` +
+`rolloutAdmits` and redefining `matchesRule` as their conjunction means `evaluateFlag` is unchanged
+**by construction, not by assertion** — and the exported explanation is built from the same two
+predicates, so there is still exactly one implementation of matching in the repository. The
+alternative — a second matcher in `apps/web` — is the failure D4 exists to name.
+
+**Putting the words on a seam.** Twice — Sprint 2's per-environment derivation and Sprint 3's
+explanation prose — the acceptance criterion was a *sentence*, and a sentence built inside a client
+component is reachable only through a signed-in browser. Extracting them made "excluded by rollout
+must not read like no rule matched" an assertion instead of an intention.
+
 ## What we learned
-<!-- Promote the durable, generalizable items to Roadmap/LEARNINGS.md (one-liner + why + date). Dedupe. -->
+
+**A clean cross-family round is not a clean round.** Sprint 2 ran seven rounds and found sixteen real
+defects. Round 4 was clean from *both* external families — and the fresh reviewer found a regression
+that round 3's own fix had introduced. Rounds 5 and 6 each found one more path after Antigravity had
+gone clean three rounds running. The two-round floor in `WAYS-OF-WORKING` is a floor; the stopping
+condition is a clean round, and this epic is the argument for it.
+
+**Fixing one collapse can create its opposite.** `reachOf` was corrected three times in three rounds,
+each time for a *different* wrong statement about the same data: a rollout-less rule filtered out
+(understating reach), then counted as 10000 (conflating it with a real 100% rollout), then shadowed
+rules included (counting rules the evaluator never consults). Then round 4 found that the round-3 fix
+had moved a readability guard behind a filter, so corrupt data started drawing a confident bar. A fix
+is a change, and a change deserves the same suspicion as the code it replaces.
+
+**Four findings with one cause means the cause is the finding.** Rounds 3–6 produced four separate
+"guard this shape" reports on the same two seams — a corrupt basis-points value, a missing `clauses`
+array, a `rollout: null`, a missing `rules` array. Guarding each was building the second validator D2
+forbids, one review finding at a time and always one behind. The fix was to ask the authority once:
+the read path now takes the evaluator's own verdict on a definition and describes nothing about a row
+it refuses. **A TypeScript type over a JSONB column is a promise the database does not make.**
+
+**A positional locator over two identically-worded controls is a spec that will silently start
+testing something else.** Sprint 1's rejection probe used `.first()` on a button whose text the
+builder also uses — and the builder renders first, and its button is disabled — so the probe would
+have hung rather than tested anything. It was never caught because the `authed` Playwright project
+does not run in CI. Sprint 2's second `<pre>` would have re-pointed a second locator the same way.
+
+**Comments that assert properties are code, and go stale like code.** Three separate rounds found a
+comment claiming something the code did not do: a `satisfies` said to enforce exhaustiveness that did
+not (Sprint 1), a renumbering said to always be recognised as a move when a swap defeated it, and a
+`.code-input` note instructing the next kit-adoption pass to do the exact thing this epic had just
+decided against. The last one is the dangerous kind: a stale comment that reads as an unfinished task.
+
+**A git worktree with no `node_modules` silently tests the ROOT checkout's packages.** Cost real time
+in Sprint 1 — SDK edits appeared inert and unit tests asserted against `main`. `npm install` inside
+the worktree first, and confirm with `require.resolve('@golden-beans/sdk')`.
 
 ## Gaps / follow-ups
-<!-- Smoke gaps owed to the product owner, deferred slices, known limitations. -->
+
+- **The two merges.** #88 and #89 are owed to the product owner. #89 is stacked on #88 and targets its
+  branch; merging #88 retargets it to `main`.
+- **The signed-in walkthroughs, all three sprints.** The `authed` Playwright project does not run in
+  CI, so the specs in `flag-rule-builder.authed.spec.ts` — including the ones written this epic for
+  the 10%-means-1000 check, the rollout bar, the diff and the preview — have never executed in a
+  pipeline. Running them locally with `FLAG_RULE_BUILDER_ENABLED=true` and `FLAG_SERVING_ENABLED=true`
+  is the cheapest way to close all three walkthroughs at once. **A9 was found by reading that file,
+  not by running it** — which is exactly the gap it names.
+- **Flipping the gate.** `FLAG_RULE_BUILDER_ENABLED` is created disabled everywhere. Preview first,
+  then production, after a real definition round-trip.
+- **`north-star-sync.spec.ts` fails locally**, identically on a stashed baseline tree — pre-existing,
+  unrelated to this epic, and worth a look on its own.
+- **Subset shadowing is undetected, deliberately.** The rollout bar only recognises the unambiguous
+  catch-all (no clauses, no rollout). A rule shadowing a later one because its conditions are implied
+  by theirs needs a solver, which is the appetite trap D8 refuses for the diff. Named in the code.
+- **`draftFromDefinition` still declines any definition with metadata or a non-string clause value**,
+  so those flags keep the JSON textarea. Bounded on purpose (Sprint 1); the diff and the bars read
+  them fine.

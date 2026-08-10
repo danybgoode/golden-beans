@@ -1,6 +1,8 @@
 # Flags — a visual rule builder — Sprint 3: Preview as a user
 
-**Status:** 🟡 built, in review — branch `feat/flags-visual-rule-builder-s3`, stacked on `-s2`.
+**Status:** 🟢 built, review CLEAN — PR [#89](https://github.com/danybgoode/golden-beans/pull/89),
+branch `feat/flags-visual-rule-builder-s3`, stacked on `-s2`. Three cross-family rounds (LOW tier:
+no fresh reviewer subagent); round 3 clean from both families. **Owed: the merge — #88 first.**
 
 > **What was built.**
 >
