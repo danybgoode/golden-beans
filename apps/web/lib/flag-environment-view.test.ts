@@ -359,6 +359,25 @@ test('a corrupt rollout is unreadable even when it sits BELOW a catch-all', () =
   assert.equal(summariseFlagEnvironments(flag([above], { production: 1 })).production.label, 'unreadable')
 })
 
+test('a null rollout and a missing rules array are unreadable, not "everyone" and not a crash', () => {
+  // Cross-review round 5, Codex. `rollout: null` was read as "no rollout" — an unrestricted rule —
+  // so a row the evaluator rejects outright drew a full bar labelled "everyone"; and a missing
+  // `rules` array threw at `.length`. Both are answered by the same parser gate as everything else.
+  const nullRollout = {
+    ...definition(),
+    rules: [{ ...definition().rules[0], rollout: null }],
+  } as unknown as FlagDefinition
+  const nulled = summariseFlagEnvironments(flag([nullRollout], { production: 1 })).production
+  assert.deepEqual(nulled.reach, { kind: 'unreadable' })
+  assert.equal(nulled.fillPercent, null)
+  assert.notEqual(nulled.label, 'everyone')
+
+  const noRules = { ...definition(), rules: undefined } as unknown as FlagDefinition
+  const missing = summariseFlagEnvironments(flag([noRules], { production: 1 })).production
+  assert.deepEqual(missing.reach, { kind: 'unreadable' })
+  assert.equal(missing.fillPercent, null)
+})
+
 test('a stored rule with no clauses array is unreadable, not a crash', () => {
   // The bar reads JSONB straight out of the database. Round 3 introduced the first read of
   // `rule.clauses.length` in this seam, which threw on such a row BEFORE the graceful

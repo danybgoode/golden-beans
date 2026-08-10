@@ -23,12 +23,13 @@
 import {
   FLAG_ENVIRONMENTS,
   evaluateFlag,
+  parseFlagDefinition,
   type FlagDefinition,
   type FlagEnvironment,
   type FlagRule,
   type FlagValueType,
 } from '@golden-beans/sdk'
-import { basisPointsToPercent, formatRolloutPercent, rolloutBarPercent } from './rollout-percent'
+import { formatRolloutPercent, rolloutBarPercent } from './rollout-percent'
 
 /** Only the fields this derivation reads. Structural, so `flag-registry`'s rows satisfy it as-is. */
 export type FlagVersionView = { id: string; version: number; definition: FlagDefinition }
@@ -156,30 +157,19 @@ function reachableRules(rules: FlagRule[]): { reachable: FlagRule[]; deadAfter: 
  *
  * So bounded and unbounded rules are counted separately, and `several` carries both facts.
  *
- * ── Readability is judged over EVERY rule; reach only over the reachable ones ──────────────────
- * Round 3 moved the shadowing filter in front of this function and, with it, in front of the guard
- * below — so a corrupt basis-points value BELOW a catch-all stopped being noticed, and the page drew
- * a full gold bar labelled "everyone" beside the words "this version cannot be evaluated" (found in
- * round 4). `parseFlagDefinition` rejects the whole definition either way, so nothing is being
- * served; the bar has no business looking confident about it. The two questions are separate and
- * are now asked in that order: *can this version be read at all*, then *what does it reach*.
+ * ── This runs on PARSER-CHECKED rules, which is why it holds no shape guards ───────────────────
+ * `summarise` puts every stored definition through `parseFlagDefinition` before anything reaches
+ * here, so `clauses` is an array, `rollout` is absent or an integer 0–10000, and priorities are
+ * unique. Three rounds of review each found one more hand-rolled guard this file was missing — a
+ * corrupt basis-points value below a catch-all, a rule with no `clauses` array, a `rollout: null`,
+ * a missing `rules` array — which is the shape of a problem that wants one answer, not four. D2
+ * already names the authority on what a valid definition is; the read path now asks it, instead of
+ * growing a second validator one review finding at a time.
  */
 function reachOf(rules: FlagRule[]): { reach: FlagRolloutReach; deadAfter: number | null } {
   // No rules at all. There is no rollout to draw, and drawing a FULL bar here — as an earlier
   // version did — reads as "fully rolled out" on a flag that targets nobody and serves its default.
   if (rules.length === 0) return { reach: { kind: 'no-rules' }, deadAfter: null }
-
-  for (const rule of rules) {
-    // `clauses` is typed as an array, and every row the parser wrote has one — but this reads JSONB
-    // straight out of the database, and reading `.length` off a row that lacks it throws before the
-    // graceful "cannot be evaluated" path can run (round 4). A row we cannot read is `unreadable`,
-    // which is a state the bar already knows how to draw.
-    if (!Array.isArray(rule.clauses)) return { reach: { kind: 'unreadable' }, deadAfter: null }
-    // A stored value the D3 seam refuses is a row that disagrees with the parser that wrote it.
-    if (rule.rollout && basisPointsToPercent(rule.rollout.basisPoints) === null) {
-      return { reach: { kind: 'unreadable' }, deadAfter: null }
-    }
-  }
 
   const { reachable, deadAfter } = reachableRules(rules)
   const bounded: number[] = []
@@ -246,7 +236,29 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
   // resolved is precisely the state a PM needs told, not the one to render as "off".
   if (!version) return inactive('Activated version could not be read.')
 
-  const { reach, deadAfter } = reachOf(version.definition.rules)
+  // ── The read path asks D2's authority, rather than growing a second validator ──────────────────
+  // `definition` is a JSONB column. Its TypeScript type is a promise the database does not make, and
+  // four review findings across three rounds were each one more shape this file failed to guard —
+  // a corrupt basis-points value, a rule with no `clauses` array, a `rollout: null`, a missing
+  // `rules` array. Guarding them one at a time builds exactly the second validator D2 forbids, and
+  // it would still be one finding behind. `parseFlagDefinition` is the authority on what a valid
+  // definition is; a row it rejects is a row nothing will serve, and the honest thing for the bar to
+  // say about it is "unreadable" — never a confident percentage.
+  const checked = parseFlagDefinition(version.definition)
+  if (!checked.ok) {
+    return {
+      environment,
+      active: true,
+      version: version.version,
+      baselineVariantKey: null,
+      reach: { kind: 'unreadable' },
+      fillPercent: null,
+      label: labelOf({ kind: 'unreadable' }),
+      detail: `v${version.version} · this version cannot be evaluated`,
+    }
+  }
+
+  const { reach, deadAfter } = reachOf(checked.definition.rules)
   const variantKey = baselineVariantKey(flag.key, version)
   const serves =
     variantKey === null

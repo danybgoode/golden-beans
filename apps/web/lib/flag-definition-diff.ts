@@ -22,7 +22,13 @@
 // Same reason as rollout-percent.ts: the native `node --test` runner executes this directly, so the
 // four cases Story 2.3 names are asserted without rendering anything.
 
-import type { FlagClause, FlagDefinition, FlagRule, FlagVariant } from '@golden-beans/sdk'
+import {
+  parseFlagDefinition,
+  type FlagClause,
+  type FlagDefinition,
+  type FlagRule,
+  type FlagVariant,
+} from '@golden-beans/sdk'
 import { formatRolloutPercent } from './rollout-percent'
 
 /**
@@ -313,23 +319,6 @@ function describePairedRule(priority: number, before: FlagRule, after: FlagRule,
 }
 
 /**
- * Index a definition's rules by priority, or `null` when they cannot be indexed.
- *
- * `null` is not defensiveness. Pairing by priority is only meaningful if priority is unique and
- * readable, which `parseFlagDefinition` guarantees for anything it wrote. A stored row that breaks
- * it disagrees with the parser that accepted it, and the honest response to a row we cannot read is
- * the fallback — not a diff computed against a pairing we know is wrong.
- */
-function rulesByPriority(rules: FlagRule[]): Map<number, FlagRule> | null {
-  const byPriority = new Map<number, FlagRule>()
-  for (const rule of rules) {
-    if (!Number.isFinite(rule.priority) || byPriority.has(rule.priority)) return null
-    byPriority.set(rule.priority, rule)
-  }
-  return byPriority
-}
-
-/**
  * What changed between two immutable versions, in the PM's words, bounded to the six parts D8 names.
  *
  * Reads only. This function does not merge, squash, normalise or reinterpret a stored version — the
@@ -338,6 +327,17 @@ function rulesByPriority(rules: FlagRule[]): Map<number, FlagRule> | null {
 export function diffFlagDefinitions(before: FlagDefinition, after: FlagDefinition): FlagDefinitionDiff {
   const changes: string[] = []
   let unexplained = false
+
+  // ── The one shape guard, and it is D2's authority rather than a second validator ───────────────
+  // These are JSONB columns; the TypeScript type is a promise the database does not make. Every
+  // sentence below indexes into `clauses`, pairs by `priority` and trusts `basisPoints` — all
+  // guaranteed by `parseFlagDefinition` and by nothing else. A row it rejects is a row nothing will
+  // ever serve, so the honest output is the fallback: show the JSON and describe none of it. This
+  // also subsumes the duplicate-priority refusal that used to live in a hand-written index, and it
+  // is what makes the non-null assertions in `reconcileRules` safe by construction.
+  if (!parseFlagDefinition(before).ok || !parseFlagDefinition(after).ok) {
+    return { changes: [], unexplained: true }
+  }
 
   // Anything outside the six parts: compared, never described.
   for (const key of UNDESCRIBED_KEYS) {
@@ -354,12 +354,6 @@ export function diffFlagDefinitions(before: FlagDefinition, after: FlagDefinitio
   }
 
   describeVariantsChange(before.variants, after.variants, changes)
-
-  // Only the pairing needs unique priorities; the guard runs first so a row the parser could not
-  // have written is refused before any sentence is built from it.
-  if (!rulesByPriority(before.rules) || !rulesByPriority(after.rules)) {
-    return { changes, unexplained: true }
-  }
 
   // Moves are emitted inside `reconcileRules` — they are the part of the rules diff that has to be
   // decided before anything else can be paired. What comes back is what no move could explain.

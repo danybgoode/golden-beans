@@ -466,6 +466,25 @@ test('the default variant change is named in the words the flags page uses', () 
   assert.deepEqual(result.changes, ['when no rule matches, this flag now serves "on" (was "off")'])
 })
 
+test('a row the parser rejects is not diffed at all — the JSON is the only honest answer', () => {
+  // Cross-review round 5, both families independently. `definition` is a JSONB column and its
+  // TypeScript type is a promise the database does not make; every sentence in this file indexes
+  // into `clauses`, pairs by `priority` and trusts `basisPoints`. Guarding each shape by hand builds
+  // the second validator D2 forbids and stays one finding behind, so the read path asks the
+  // authority instead. A row nothing will ever serve gets described by nothing.
+  const noClauses = { ...base(), rules: [{ priority: 10, variantKey: 'on' }] } as unknown as FlagDefinition
+  assert.deepEqual(diffFlagDefinitions(base(), noClauses), { changes: [], unexplained: true })
+
+  const nullRollout = {
+    ...base(),
+    rules: [{ ...base().rules[0], rollout: null }],
+  } as unknown as FlagDefinition
+  assert.deepEqual(diffFlagDefinitions(base(), nullRollout), { changes: [], unexplained: true })
+
+  const noRules = { ...base(), rules: undefined } as unknown as FlagDefinition
+  assert.deepEqual(diffFlagDefinitions(noRules, base()), { changes: [], unexplained: true })
+})
+
 test('duplicate priorities cannot be paired, so the diff refuses rather than guesses', () => {
   // The parser rejects this, which is why the fixtures here bypass `diff()`'s parser assertion. It
   // is still reachable: the diff reads rows written by an OLDER parser, and a pairing we know is
