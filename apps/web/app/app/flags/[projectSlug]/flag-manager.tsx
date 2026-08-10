@@ -355,12 +355,16 @@ export function FlagManager({
                 rows={18}
                 spellCheck={false}
                 required
-                // app-component-kit-adoption wrote `.code-input` for exactly this control and said
-                // so in globals.css: "the flag authoring textarea gets it in Sprint 2 Story 2.3
-                // WITHOUT otherwise being touched", because replacing the control was this epic's
-                // to decide. The class sets the same three properties from tokens. Cross-review
-                // (Agy) raised the inline style; this is the swap that was already planned for here.
-                className="code-input"
+                // ── This inline style STAYS, and the reason is D6 ─────────────────────────────
+                // Sprint 2 briefly swapped it for `.code-input`, the class app-component-kit-adoption
+                // wrote for this control and annotated as this sprint's to apply (raised by Agy).
+                // Cross-review (Codex, round 2) rejected it, correctly: this textarea renders when
+                // FLAG_RULE_BUILDER_ENABLED is OFF, and D6 promises that with the gate off the page
+                // is byte-for-byte what it was before the epic. The swap was not even neutral —
+                // `.code-input` also sets `white-space: pre`, so long JSON lines would have stopped
+                // wrapping. A dark-launch guarantee that holds "except for one class" is not a
+                // guarantee. Whoever replaces this control owns the swap.
+                style={{ display: 'block', width: '100%', fontFamily: 'monospace' }}
               />
             </label>
             <label htmlFor="flag-reason">

@@ -117,37 +117,72 @@ function describeRule(rule: FlagRule): string {
 }
 
 /**
- * The rule body WITHOUT its priority — the identity used to recognise a reorder.
+ * A clause in a form where ORDER carries no meaning.
  *
- * Rules are paired by `priority` because the parser guarantees it is unique within a definition and
- * because it is what the evaluator actually orders by. That pairing alone hides the thing D9 cares
- * about most, and it hides it in two different ways:
+ * The evaluator ANDs the clause list — `for (const clause of rule.clauses)` — and `one_of` tests
+ * with `.some()`. Neither cares about position, so two versions differing only in the order of a
+ * clause list, or of a `one_of` list, resolve identically for every context. Comparing the raw
+ * arrays reported those as "conditions changed from … to …", which is a behaviour change that did
+ * not happen (cross-review, Codex, round 2).
  *
- *   • **a renumber into a vacant slot** would read as one removal plus one addition, and
- *   • **a SWAP** would not even do that — both priorities exist on both sides, so the two rules pair
- *     up and every field reads as changed. Two rules exchanging places produced four sentences
- *     claiming both rules had been rewritten, for an edit that rewrote nothing (found by the fresh
- *     reviewer on PR #88).
- *
- * So the second case is checked FIRST, before any pairing: if the two versions contain exactly the
- * same multiset of bodies, nothing about targeting changed and every difference is a renumbering.
- * The first case is then handled inside the removed/added reconciliation, which is where it lives.
+ * The canonical form is used for COMPARISON only. Everything a reader sees is rendered from the
+ * stored order, so the sentence still shows the definition as it was actually written.
  */
-function ruleBody(rule: FlagRule): string {
-  return JSON.stringify([rule.clauses, rule.rollout ?? null, rule.variantKey])
+function canonicalClause(clause: FlagClause): string {
+  return clause.operator === 'equals'
+    ? JSON.stringify([clause.field, 'equals', clause.value])
+    : JSON.stringify([clause.field, 'one_of', clause.values.map((value) => JSON.stringify(value)).sort()])
+}
+
+function canonicalClauses(rule: FlagRule): string {
+  return JSON.stringify(rule.clauses.map(canonicalClause).sort())
 }
 
 /**
- * Describe a pure renumbering — the case where both versions hold the same rules and only the
- * priorities differ.
+ * The rule's identity WITHOUT its priority — what makes a renumbering recognisable as one.
  *
- * Bodies can legitimately repeat (the parser requires unique priorities, not unique rules), so
- * identical bodies are paired by sorted priority: the lowest before-priority to the lowest
- * after-priority. Any other pairing would be a guess about which of two indistinguishable rules the
- * author meant to move, and between two guesses that describe the same outcome this is the one that
- * reports the fewest moves.
+ * Everything that decides a rule's behaviour except WHEN it is consulted: its conditions (order
+ * canonicalised, see above), its rollout and the variant it serves. Two rules with the same body at
+ * different priorities are the same rule, moved.
  */
-function describeReorder(before: FlagRule[], after: FlagRule[], changes: string[]) {
+function ruleBody(rule: FlagRule): string {
+  return JSON.stringify([canonicalClauses(rule), rule.rollout ?? null, rule.variantKey])
+}
+
+type RuleReconciliation = {
+  /** before/after pairs that share a priority and whose bodies differ — a rule that was edited. */
+  edited: Array<{ priority: number; before: FlagRule; after: FlagRule }>
+  removed: FlagRule[]
+  added: FlagRule[]
+}
+
+/**
+ * Work out which rule in `after` is which rule in `before`, and emit the moves.
+ *
+ * ── Why identity is matched by BODY first, and by priority only afterwards ────────────────────
+ * Priority is unique and is what the evaluator orders by, so pairing by it is the obvious move —
+ * and it is wrong in the case D9 cares about most. Two rules exchanging priorities have both
+ * priorities present on both sides, so a priority-first pairing matches each rule to the OTHER one
+ * and reports four rewrites for an edit that rewrote nothing. Round 1 patched that with an
+ * all-or-nothing "same multiset of bodies" pre-check, which round 2 showed was defeated by any
+ * concurrent edit: swap two rules and widen one rollout, and the four false rewrites came back.
+ *
+ * So the reconciliation is body-first and incremental:
+ *
+ *   1. **Same body, same priority** — the rule is untouched. Consumed silently.
+ *   2. **Same body, different priority** — the rule MOVED. One sentence, and the surviving priorities
+ *      from step 1 are already out of the way, so a rule that did not move can never be described as
+ *      having moved to make room for one that did. (That cascade — "moved from 2 to 3" printed while
+ *      a rule still sits at 2 — is what sorted-index pairing produced before the intersection step.)
+ *   3. **What is left** pairs by priority for a field-level diff, and anything still unpaired is a
+ *      removal or an addition.
+ *
+ * Bodies can legitimately repeat: the parser requires unique priorities, not unique rules. After the
+ * step-1 intersection the residue is paired by sorted priority, which is a choice between
+ * indistinguishable rules and is therefore arbitrary by definition — but only between rules that
+ * genuinely cannot be told apart, and never at the cost of a spurious move.
+ */
+function reconcileRules(before: FlagRule[], after: FlagRule[], changes: string[]): RuleReconciliation {
   const sides = new Map<string, { rule: FlagRule; before: number[]; after: number[] }>()
   const side = (rule: FlagRule) => {
     const body = ruleBody(rule)
@@ -160,18 +195,49 @@ function describeReorder(before: FlagRule[], after: FlagRule[], changes: string[
   for (const rule of before) side(rule).before.push(rule.priority)
   for (const rule of after) side(rule).after.push(rule.priority)
 
+  const byPriority = (rules: FlagRule[]) => new Map(rules.map((rule) => [rule.priority, rule]))
+  const beforeByPriority = byPriority(before)
+  const afterByPriority = byPriority(after)
+  const unmatchedBefore: number[] = []
+  const unmatchedAfter: number[] = []
+
   for (const entry of sides.values()) {
-    entry.before.sort((left, right) => left - right)
-    entry.after.sort((left, right) => left - right)
-    entry.before.forEach((priority, index) => {
-      const moved = entry.after[index]
-      if (moved !== priority) {
-        changes.push(
-          `the rule serving ${describeRule(entry.rule)} moved from priority ${priority} to ${moved}`
-        )
-      }
-    })
+    // Step 1 — a rule that kept its body AND its priority did not change. Take those out first.
+    const stayed = new Set(entry.before.filter((priority) => entry.after.includes(priority)))
+    const movedFrom = entry.before.filter((priority) => !stayed.has(priority)).sort((a, b) => a - b)
+    const movedTo = entry.after.filter((priority) => !stayed.has(priority)).sort((a, b) => a - b)
+
+    // Step 2 — the residue, in matching order, is this body's moves.
+    const moves = Math.min(movedFrom.length, movedTo.length)
+    for (let index = 0; index < moves; index++) {
+      changes.push(
+        `the rule serving ${describeRule(entry.rule)} moved from priority ${movedFrom[index]} to ${movedTo[index]}`
+      )
+    }
+    unmatchedBefore.push(...movedFrom.slice(moves))
+    unmatchedAfter.push(...movedTo.slice(moves))
   }
+
+  // Step 3 — whatever no body could claim. A shared priority means the rule at that slot was edited.
+  const edited: RuleReconciliation['edited'] = []
+  const removed: FlagRule[] = []
+  const added: FlagRule[] = []
+  const stillAfter = new Set(unmatchedAfter)
+  for (const priority of unmatchedBefore.sort((a, b) => a - b)) {
+    if (stillAfter.delete(priority)) {
+      edited.push({
+        priority,
+        before: beforeByPriority.get(priority)!,
+        after: afterByPriority.get(priority)!,
+      })
+    } else {
+      removed.push(beforeByPriority.get(priority)!)
+    }
+  }
+  for (const priority of [...stillAfter].sort((a, b) => a - b)) {
+    added.push(afterByPriority.get(priority)!)
+  }
+  return { edited, removed, added }
 }
 
 function describeVariantsChange(before: FlagVariant[], after: FlagVariant[], changes: string[]) {
@@ -196,7 +262,9 @@ function describeVariantsChange(before: FlagVariant[], after: FlagVariant[], cha
 function describePairedRule(priority: number, before: FlagRule, after: FlagRule, changes: string[]) {
   const label = `rule ${priority}`
 
-  if (!sameJson(before.clauses, after.clauses)) {
+  // Compared canonically, described as stored: a reordered clause list is not a behaviour change,
+  // but the sentence still shows the conditions in the order the author wrote them.
+  if (canonicalClauses(before) !== canonicalClauses(after)) {
     changes.push(
       `${label}: conditions changed from ${describeConditions(before)} to ${describeConditions(after)}`
     )
@@ -271,44 +339,18 @@ export function diffFlagDefinitions(before: FlagDefinition, after: FlagDefinitio
 
   describeVariantsChange(before.variants, after.variants, changes)
 
-  const beforeRules = rulesByPriority(before.rules)
-  const afterRules = rulesByPriority(after.rules)
-  if (!beforeRules || !afterRules) return { changes, unexplained: true }
-
-  // Checked BEFORE pairing by priority: same rules, different numbers, and nothing else. Pairing
-  // first would describe a swap as both rules being rewritten — see `ruleBody`'s header.
-  if (sameJson([...before.rules].map(ruleBody).sort(), [...after.rules].map(ruleBody).sort())) {
-    describeReorder(before.rules, after.rules, changes)
-    return { changes, unexplained }
+  // Only the pairing needs unique priorities; the guard runs first so a row the parser could not
+  // have written is refused before any sentence is built from it.
+  if (!rulesByPriority(before.rules) || !rulesByPriority(after.rules)) {
+    return { changes, unexplained: true }
   }
 
-  const removed: FlagRule[] = []
-  const added: FlagRule[] = []
-  for (const [priority, rule] of beforeRules) {
-    const match = afterRules.get(priority)
-    if (match) describePairedRule(priority, rule, match, changes)
-    else removed.push(rule)
-  }
-  for (const [priority, rule] of afterRules) {
-    if (!beforeRules.has(priority)) added.push(rule)
-  }
-
-  // A renumbering, recognised as one thing rather than reported as two (D9).
-  const unmatchedAdded = [...added]
-  for (const gone of removed) {
-    const movedIndex = unmatchedAdded.findIndex((candidate) => ruleBody(candidate) === ruleBody(gone))
-    if (movedIndex === -1) {
-      changes.push(`rule ${gone.priority} removed — it served ${describeRule(gone)}`)
-      continue
-    }
-    const [moved] = unmatchedAdded.splice(movedIndex, 1)
-    changes.push(
-      `the rule serving ${describeRule(gone)} moved from priority ${gone.priority} to ${moved.priority}`
-    )
-  }
-  for (const fresh of unmatchedAdded) {
-    changes.push(`rule ${fresh.priority} added — it serves ${describeRule(fresh)}`)
-  }
+  // Moves are emitted inside `reconcileRules` — they are the part of the rules diff that has to be
+  // decided before anything else can be paired. What comes back is what no move could explain.
+  const { edited, removed, added } = reconcileRules(before.rules, after.rules, changes)
+  for (const pair of edited) describePairedRule(pair.priority, pair.before, pair.after, changes)
+  for (const gone of removed) changes.push(`rule ${gone.priority} removed — it served ${describeRule(gone)}`)
+  for (const fresh of added) changes.push(`rule ${fresh.priority} added — it serves ${describeRule(fresh)}`)
 
   return { changes, unexplained }
 }

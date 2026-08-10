@@ -170,7 +170,7 @@ test('rules with different rollouts are reported as several, not collapsed into 
   })
   assert.equal(summary.label, 'up to 50%')
   assert.equal(summary.fillPercent, 50)
-  assert.ok(summary.detail.includes('2 rules reach different shares'))
+  assert.ok(summary.detail.includes('2 rules, not all reaching the same share'))
 })
 
 test('a rule with NO rollout beside one that has a rollout is a disagreement, not a 10% flag', () => {
@@ -201,7 +201,7 @@ test('a rule with NO rollout beside one that has a rollout is a disagreement, no
   })
   assert.equal(summary.label, 'up to everyone')
   assert.equal(summary.fillPercent, 100)
-  assert.ok(summary.detail.includes('2 rules reach different shares'))
+  assert.ok(summary.detail.includes('2 rules, not all reaching the same share'))
 })
 
 test('the spread count is the number of RULES, not the number of distinct percentages', () => {
@@ -218,7 +218,7 @@ test('the spread count is the number of RULES, not the number of distinct percen
   const summary = summariseFlagEnvironments(flag([three], { production: 1 })).production
 
   assert.equal(summary.reach.kind, 'several')
-  assert.ok(summary.detail.includes('3 rules reach different shares'))
+  assert.ok(summary.detail.includes('3 rules, not all reaching the same share'))
 })
 
 test('rules that ALL carry a 100% rollout say 100%, not "everyone" — they are different statements', () => {

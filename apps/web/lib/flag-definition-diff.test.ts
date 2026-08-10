@@ -263,6 +263,134 @@ test('two IDENTICAL rules that swap priorities produce no sentences — nothing 
   assert.deepEqual(diff(before, after).changes, [])
 })
 
+test('reordering a CLAUSE list is not a change — the evaluator ANDs them', () => {
+  // Cross-review (Codex, round 2). `matchesRule` loops the clauses and fails on the first miss, so
+  // position carries no meaning. Reporting "conditions changed from … to …" for a reorder describes
+  // a behaviour change that did not happen, which is the diff's one unforgivable failure.
+  const before = withRules([
+    {
+      priority: 10,
+      clauses: [
+        { field: 'plan', operator: 'equals', value: 'pro' },
+        { field: 'region', operator: 'equals', value: 'mx' },
+      ],
+      variantKey: 'on',
+    },
+  ])
+  const after = withRules([{ ...before.rules[0], clauses: [...before.rules[0].clauses].reverse() }])
+
+  assert.deepEqual(diff(before, after).changes, [])
+})
+
+test('reordering a one_of list is not a change either — the evaluator uses .some()', () => {
+  const before = withRules([
+    {
+      priority: 10,
+      clauses: [{ field: 'region', operator: 'one_of', values: ['mx', 'us', 'ca'] }],
+      variantKey: 'on',
+    },
+  ])
+  const after = withRules([
+    {
+      priority: 10,
+      clauses: [{ field: 'region', operator: 'one_of', values: ['ca', 'mx', 'us'] }],
+      variantKey: 'on',
+    },
+  ])
+
+  assert.deepEqual(diff(before, after).changes, [])
+
+  // …but ADDING a value to that list still is one, described in the stored order.
+  const widened = withRules([
+    {
+      priority: 10,
+      clauses: [{ field: 'region', operator: 'one_of', values: ['mx', 'us', 'ca', 'br'] }],
+      variantKey: 'on',
+    },
+  ])
+  assert.deepEqual(diff(before, widened).changes, [
+    'rule 10: conditions changed from region is one of "mx", "us", "ca" to region is one of "mx", "us", "ca", "br"',
+  ])
+})
+
+test('a rule that did NOT move is never described as moving to make room for one that did', () => {
+  // Fresh review, round 2. Pairing identical bodies by sorted index reported [1,2] → [2,3] as TWO
+  // moves — including "moved from priority 2 to 3" while a rule is still sitting at priority 2. The
+  // shared priority is taken out of the pairing first, so the only move reported is the real one.
+  const body = {
+    clauses: [{ field: 'plan' as const, operator: 'equals' as const, value: 'pro' }],
+    variantKey: 'on',
+  }
+  const before = withRules([
+    { priority: 1, ...body },
+    { priority: 2, ...body },
+  ])
+  const after = withRules([
+    { priority: 2, ...body },
+    { priority: 3, ...body },
+  ])
+
+  assert.deepEqual(diff(before, after).changes, [
+    'the rule serving "on" to plan is "pro" (everyone) moved from priority 1 to 3',
+  ])
+})
+
+test('a swap COMBINED with an edit still names the move, instead of reporting two rewrites', () => {
+  // Fresh review, round 2: the all-or-nothing "same multiset of bodies" pre-check was defeated by
+  // any concurrent edit, and the four false rewrites came straight back. Body-first reconciliation
+  // is incremental, so the rule that only moved is still described as having only moved.
+  const before = withRules([
+    { priority: 10, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    { priority: 20, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+  ])
+  const after = withRules([
+    { priority: 10, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+    {
+      priority: 20,
+      clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }],
+      rollout: { basisPoints: 5000 },
+      variantKey: 'on',
+    },
+  ])
+
+  const result = diff(before, after)
+  assert.deepEqual(result.changes, [
+    'the rule serving "off" to region is "mx" (everyone) moved from priority 20 to 10',
+    'rule 10 removed — it served "on" to plan is "pro" (everyone)',
+    'rule 20 added — it serves "on" to plan is "pro" (50%)',
+  ])
+  assert.ok(
+    !sentences(result).includes('conditions changed'),
+    'the untouched rule must not be described as rewritten'
+  )
+})
+
+test('a reorder alongside an out-of-scope change reports BOTH the move and the fallback', () => {
+  // The early return that round 1's pre-check used has gone; this pins that nothing it guarded is
+  // lost — the default-variant sentence, the variants diff and `unexplained` all still apply.
+  const before = withRules([
+    { priority: 10, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    { priority: 20, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+  ])
+  const after: FlagDefinition = {
+    ...before,
+    defaultVariantKey: 'on',
+    metadata: { owner: 'growth' },
+    rules: [
+      { priority: 10, clauses: [{ field: 'region', operator: 'equals', value: 'mx' }], variantKey: 'off' },
+      { priority: 20, clauses: [{ field: 'plan', operator: 'equals', value: 'pro' }], variantKey: 'on' },
+    ],
+  }
+
+  const result = diff(before, after)
+  assert.equal(result.unexplained, true)
+  assert.deepEqual(result.changes, [
+    'when no rule matches, this flag now serves "on" (was "off")',
+    'the rule serving "on" to plan is "pro" (everyone) moved from priority 10 to 20',
+    'the rule serving "off" to region is "mx" (everyone) moved from priority 20 to 10',
+  ])
+})
+
 test('a rule added and a rule removed are each named with what they served', () => {
   const after = base()
   after.rules = [

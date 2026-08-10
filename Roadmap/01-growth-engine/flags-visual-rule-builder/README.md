@@ -238,9 +238,10 @@ three were each found by a reviewer after the first version collapsed them:
 
 - **No rollout on any rule → a full bar labelled "everyone"**, never an empty bar. `0%` is a
   different, valid, opposite statement and the two are one keystroke apart in the definition.
-- **Rules that disagree → "up to 50% · 3 rules reach different shares".** One bar cannot represent
-  three rollouts. The count is of RULES, not of distinct percentages — the number a reader can check
-  against the definition.
+- **Rules that disagree → "up to 50% · 3 rules, not all reaching the same share".** One bar cannot
+  represent three rollouts. The count is of RULES, not of distinct percentages — the number a reader
+  can check against the definition — and the phrasing claims only that they do not all agree, since
+  in 10/10/50 two of the three do.
 - **A rollout-less rule counts as a disagreement.** `[10% rule, unrestricted rule]` is not a 10%
   flag: the second rule serves every context it matches. Collapsing it understated the blast radius.
 - **…and it is not "100%" either.** Beside a rule that really is at 100% the two would agree and the

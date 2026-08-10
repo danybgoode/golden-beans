@@ -207,10 +207,13 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
     variantKey === null
       ? 'this version cannot be evaluated'
       : `a context with no attributes gets ${JSON.stringify(variantKey)}`
-  // "N rules reach different shares", not "N different rollouts": cross-review (Codex) pointed out
-  // that the count was of distinct percentages, so three rules at 10/10/50 read as "2 rules". The
-  // number a reader can check against the definition is how many rules there are.
-  const spread = reach.kind === 'several' ? ` · ${reach.ruleCount} rules reach different shares` : ''
+  // The count is of RULES — the number a reader can check against the definition. It said "N
+  // different rollouts" while counting distinct percentages, so 10/10/50 read as "2 rules" (Codex).
+  // And "N rules reach different shares" was then read as a claim that all N differ, when two of
+  // those three reach the same one (fresh review, round 2). "not all reaching the same" is the
+  // narrower statement, and it is the true one.
+  const spread =
+    reach.kind === 'several' ? ` · ${reach.ruleCount} rules, not all reaching the same share` : ''
 
   return {
     environment,
