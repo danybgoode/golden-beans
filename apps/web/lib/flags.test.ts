@@ -27,6 +27,7 @@ import {
   isSecuritySimulationsEnabled,
   isAutomaticCircuitBreakersEnabled,
   isAgentRailEnabled,
+  isFlagRuleBuilderEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -62,6 +63,11 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['SECURITY_SIMULATIONS_ENABLED', isSecuritySimulationsEnabled],
   ['AUTOMATIC_CIRCUIT_BREAKERS_ENABLED', isAutomaticCircuitBreakersEnabled],
   ['AGENT_RAIL_ENABLED', isAgentRailEnabled],
+  // flags-visual-rule-builder · Story 1.4 (D6). Added to the shared table, not tested
+  // separately, for the reason the SIGNALS_ENABLED note above gives: the born-dark contract is a
+  // property of every gate in this file, and a fifteenth one should inherit the whole near-miss
+  // matrix automatically rather than depend on whoever added it remembering to re-type it.
+  ['FLAG_RULE_BUILDER_ENABLED', isFlagRuleBuilderEnabled],
 ]
 
 for (const [envKey, gate] of singleFlagGates) {

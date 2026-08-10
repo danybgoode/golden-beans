@@ -1,5 +1,5 @@
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { isFlagServingEnabled } from '@/lib/flags'
+import { isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
@@ -39,6 +39,7 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
           syncKeys={syncKeys}
           canManage={canManage}
           servingEnabled={isFlagServingEnabled()}
+          ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
         />
       </main>
     </ProductShell>
