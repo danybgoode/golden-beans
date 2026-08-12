@@ -332,6 +332,18 @@ body {
    An explicit row with a gap is what the v2 hero (and §4's confirm/change pair, which reuses
    this class) actually needs. `flex-wrap` keeps the two CTAs stacking on a phone, where
    tokens.css still makes each button full-width. */
+/* `.button-row` is the generic; `.hero-cta` is the hero's instance of it. They were one class
+   until a spec that meant "the hero's two CTAs" matched four links, because §4's confirm/change
+   pair had borrowed `.hero-cta` for its layout. A shared name for two different things is a
+   selector waiting to over-match. */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  margin-top: 18px;
+}
+
 .hero-cta {
   display: flex;
   flex-wrap: wrap;

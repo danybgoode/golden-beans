@@ -65,7 +65,7 @@ export function PrincipleSection() {
                     <p>Expected North Star lift: +4–7% · current confidence: 82%.</p>
                   </Panel>
                 </div>
-                <div className="hero-cta">
+                <div className="button-row">
                   <Button href="#connect">Confirm 10% release</Button>
                   <Button href="#connect" variant="ghost">
                     Change audience
