@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '@/components/ui/Icon'
 
 // landing-redesign-v2 · Sprint 2, Story 2.2 — the "paste this into your agent" block.
@@ -40,17 +40,30 @@ export function CopyPromptCard({
 }) {
   const promptRef = useRef<HTMLPreElement>(null)
   const [state, setState] = useState<'idle' | 'copied' | 'select'>('idle')
+  // The "copied ✓" reset timer, held so it can be cancelled. Two reasons, the second the one that
+  // actually shows: an unmounted card must not schedule a state update, and a SECOND click inside
+  // the two-second window would otherwise inherit the first click's timer and snap the label back
+  // to "copy prompt" early — the reader sees their second copy report nothing.
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current)
+    },
+    []
+  )
 
   async function onCopy() {
     const element = promptRef.current
     if (!element) return
 
     const text = (element.textContent ?? '').trim()
+    if (resetTimer.current) clearTimeout(resetTimer.current)
 
     try {
       await navigator.clipboard.writeText(text)
       setState('copied')
-      setTimeout(() => setState('idle'), 2000)
+      resetTimer.current = setTimeout(() => setState('idle'), 2000)
     } catch {
       // Clipboard refused (permission, insecure context, older browser). Select the prompt so the
       // reader can copy it by hand — the one thing that must not happen is a button that reports
