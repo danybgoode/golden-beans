@@ -1,6 +1,6 @@
 # Landing redesign v2 — Sprint 3: Ship it
 
-**Status:** ✅ Built — in review
+**Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.
 
 > **Build contract.** No new product surface. This sprint reconciles everything the redesign broke,
 > runs the real gate, takes two cross-family review passes, and verifies production.

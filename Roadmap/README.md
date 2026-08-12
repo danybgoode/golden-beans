@@ -73,6 +73,25 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [Landing redesign v2](02-commercial/landing-redesign-v2/README.md) (the decision-first
+  narrative · mobile heuristics as site-wide rails · `/northstar-self-serve.md` · proof that carries
+  both the Pod Report and a live engine read) — **live in production 2026-08-12** (PR #92, `4553767`).
+  The landing sold an *engine* — "The growth engine your agent operates" — which accurately described
+  what was built and poorly described who buys it: it opened on the primitive set for a reader who
+  had not yet been told what primitives are *for*. It now opens on the problem a PM already has, and
+  the engine is the reason the receipts exist rather than the thing being sold. **Give-before-you-ask
+  is the second section:** a prompt a stranger can paste into their own ChatGPT or Claude, which
+  sends it to two public routes and runs a real North Star workshop with them — no account, no
+  connector, nothing to install. §6 is the only section with numbers, and it carries **both** proofs:
+  the Pod Report computed from this repo's own git history, and a live read of the demo tenant that
+  reconciles exactly with the `/api/v1/public/north-star` the page invites you to curl (verified in
+  production: `value: 35, wow: 0.409` both ways). Every other framed surface is labelled an
+  illustration, and **a spec checks that it is** — because the footer's ledger claimed the hero was
+  labelled before it actually was. Four collisions between the mockup's copy and what is checkable
+  were resolved in favour of checkable, including a `$49` tier that ships with its price *and* the
+  fact that nobody can be charged it yet. The mobile work is deliberately **rails, not an audit**:
+  zero-specificity floors any component can step over, plus a guard that sweeps a list of routes —
+  it found the site's most-tapped control sitting 4px under the accessibility floor on its first run.
 - ✅ [App shell and agent rail](02-commercial/app-shell-and-agent-rail/README.md) (section nav over
   the route inventory · the agent's activity rail · Command Center) — **merged to `main` 2026-08-07**
   (PRs #71/#75/#73). The backend had modelled the agent as an accountable actor since signals-loop —
@@ -166,6 +185,18 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-08-12** — `landing-redesign-v2` **shipped and live** (PR #92, `4553767`): the public page
+  now sells the decision rather than the engine, and gives a stranger something usable — a North Star
+  workshop their own agent runs — before asking for anything. Two things are worth carrying forward.
+  **Mobile shipped as rails, not as an audit:** zero-specificity floors in `globals.css` plus one
+  sweep spec over a *list* of routes, which found the site's most-tapped control 4px under the
+  accessibility floor on its first run; covering the next route is now one array entry. And **the
+  honesty rules did real work against a signed-off mockup** — four of its claims were not checkable
+  (hardcoded velocity stats, a price with no billing rail, a URL that 404'd, a CLI command that does
+  not exist) and all four were resolved in favour of what can be verified, without losing the design.
+  Five review rounds, nine findings; round 2's "clean" verdict came from a reviewer that had attached
+  **zero files**, which is the session's sharpest lesson: read the scope line before the findings.
 
 - **2026-08-10** — `flags-visual-rule-builder` **built out end to end** (PRs #87/#88/#89; Sprint 1
   merged dark, Sprints 2 and 3 awaiting the owner's merge): the flag control plane finally has an

@@ -1,6 +1,6 @@
 # Landing redesign v2 — Sprint 2: The redesigned landing
 
-**Status:** ✅ Built — in review
+**Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.
 
 > **Build contract.** Consumes Sprint 1's classes. Zero inline styles (D3). Every claim on the page
 > is either (a) generic product narrative, (b) explicitly labelled as an illustration (D4), or

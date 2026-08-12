@@ -291,6 +291,16 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **A reviewer that read NOTHING still reports "clean" — read the scope line before the findings.**
+  An agy round came back with no Blocking and no Should-fix, and its own output said
+  `Attached 0 whole file(s); 38 did not fit the budget`: it had seen the unified diff and not one
+  file. Accepting that verdict would have ended review three rounds and six real findings early,
+  including a `+133%`-on-a-flat-series arithmetic bug on a public page. Rerunning with `--code-only`
+  attached files and immediately produced Blocking findings. This generalises past agy: **the
+  reviewer's coverage is reported next to its verdict, not inside it**, and a clean verdict from a
+  reviewer with degraded input is not evidence. Same family as "a run that exits 0 with empty output
+  reads as a clean review" — the failure has just moved from empty output to *confident* output over
+  empty input. *(2026-08-12, landing-redesign-v2.)*
 - **On concurrency work, most late review findings are bugs in your OWN previous round's fix.**
   event-destination-router S2 took 24 cross-review rounds (Codex; Antigravity went clean at 11), and
   from about round 12 the pattern was consistent: each round's blocking finding was a race introduced
@@ -680,6 +690,37 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **`SUPABASE_DB_URL` must be exported for the local `api` gate, or ~30 specs fail on a
+  precondition that has nothing to do with your diff.** `npm run test:e2e` locally without it fails
+  with `SUPABASE_DB_URL must target local Supabase on loopback port 54322` from
+  `e2e/helpers/test-db-cleanup.ts`, in specs spread across every subsystem — which reads exactly
+  like a broad regression. Export
+  `SUPABASE_DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"` alongside
+  `supabase start` and the freshly-built server. **And when a suite fails in areas your change never
+  touched, get a baseline before explaining it away**: checking out `main`, rebuilding and running
+  the same specs took five minutes and turned "13 unrelated failures, probably environmental" into a
+  fact (identical 13 on `main`, all green in CI). *(2026-08-12, landing-redesign-v2.)*
+- **Verify against a freshly built artifact, or you will diagnose the wrong cause — confidently.**
+  A CSS rule appeared absent from the running page, and the plausible explanation (the minifier
+  mangles `:where(:has())`) went into a code comment as fact. It was false twice over: the grep that
+  "proved" it was matching inside the `:where(`, and the page was being served by a **stale build**.
+  The rule compiles fine. What almost shipped was not a broken selector but a confident, wrong
+  explanation in a comment, which the next reader would have trusted (CODE-QUALITY #3). Two rules
+  fall out: kill the server and rebuild before concluding anything about compiled output, and
+  **never write the verification and the conclusion in one step** — establish the fact on a clean
+  environment first, then write the sentence. *(2026-08-12, landing-redesign-v2.)*
+- **A descendant "default" at (0,1,1) silently outranks every single-class rule it should defer to.**
+  `.panel p { color: var(--dim) }` beat `.takeaway`, `.micro--gold` and `.tier__price` on elements
+  inside a panel: text rendered dim, a headline price rendered at body size, and every call site
+  looked correct. Nothing errors, and the fix at the call site (raise specificity there too) makes it
+  worse. Descendant rules that exist as **defaults for unclassed elements** belong in `:where()`, so
+  they are a floor any class can step over rather than a ceiling every class must fight. Same
+  reasoning as the mobile rails in the same epic. *(2026-08-12, landing-redesign-v2.)*
+- **Fix the CLASS with a spec, not the instance the reviewer named.** Review found one unlabelled
+  illustration on the landing page. Editing that one label would have closed the finding; writing a
+  spec that asserts *every* framed surface declares itself real-or-illustrated found **two more** the
+  reviewer never reached. When a finding is an instance of a property the surface should have, the
+  cheapest correct response is usually the assertion, not the edit. *(2026-08-12, landing-redesign-v2.)*
 - **Before believing a local test failure is your diff, run the identical command on clean `main`.**
   Two "regressions" in one epic were the environment: `npm run test:e2e:local` BUILDS into
   `apps/web/.next`, so a `next dev` server left running in the same worktree corrupts it and every
