@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golden Beans — the agent harness for product managers (visual pass)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   GOLDEN BEANS — tokens, verbatim from references/design/assets/tokens.css
+   (fonts wired to Google Fonts here since this is a standalone mock —
+   the app itself sets --font-sans/--font-mono via next/font/google)
+   ============================================================ */
+:root{
+  --font-sans:'Archivo',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --roast:#16120d; --roast-2:#221b13; --card:#241d14; --espresso:#0f0c08;
+  --line:#3a3023; --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+  --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e; --mark-gold:#ffd700;
+  --kraft:#c29c6a; --kraft-deep:#9d7b4c; --stamp:#3a2a16; --stamp-dim:#6b4f2a;
+  --foil:linear-gradient(105deg,#7a5c1a 0%,#ffd45e 35%,#e8b93c 55%,#8a6a1e 100%);
+  --kraft-fibers:repeating-linear-gradient(0deg,rgba(60,42,22,.05) 0 1px,transparent 1px 3px),
+                 repeating-linear-gradient(90deg,rgba(255,244,220,.05) 0 2px,transparent 2px 5px);
+  --brass:conic-gradient(from 210deg,#8a6a2e,#e8c56a 25%,#6b5220 50%,#d9b45a 75%,#8a6a2e);
+  --brass-hub:conic-gradient(#d9b45a,#8a6a2e,#e8c56a,#8a6a2e);
+  --needle:linear-gradient(180deg,#ffd45e,#e8b93c);
+  --green:#7fd069; --green-line:#3a5c33; --green-stamp:#2c5e22;
+  --red:#e86a5e; --blue:#6db3e8; --next-line:#6b5620;
+  --bar:linear-gradient(180deg,var(--gold-hot),#9c7a1e);
+}
+*{margin:0;box-sizing:border-box}
+body{background:var(--roast);color:var(--crema);font:16px/1.55 var(--font-sans)}
+a{color:var(--gold);text-decoration:none}a:hover{color:var(--gold-hot)}
+.wrap{max-width:1140px;margin:0 auto;padding:0 18px}
+h1,h2{font-weight:800;letter-spacing:-.01em}
+.display{font-weight:900;font-stretch:112%;letter-spacing:-.02em;line-height:1.02;font-family:var(--font-sans)}
+.foil{background:var(--foil);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.note{font:italic 400 12.5px var(--font-mono);color:var(--dim)}
+.data{font-family:var(--font-mono);color:var(--gold-hot)}
+body,h1,h2,h3,p,button,input{font-family:var(--font-sans)}
+.mono{font-family:var(--font-mono)}
+@keyframes gbBlink{0%,55%{opacity:1}56%,100%{opacity:0}}
+.cursor{display:inline-block;width:7px;height:15px;background:var(--gold);margin-left:4px;vertical-align:text-bottom;animation:gbBlink 1.1s steps(1) infinite}
+
+.btn{border:none;border-radius:10px;padding:14px 22px;font:700 15px var(--font-sans);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;transition:transform .08s ease,box-shadow .08s ease,background .15s ease,border-color .15s ease}
+.btn-gold{background:var(--gold);color:var(--roast);box-shadow:0 3px 0 var(--gold-deep)}
+.btn-gold:hover{background:var(--gold-hot)}
+.btn-gold:active{transform:translateY(2px);box-shadow:0 1px 0 var(--gold-deep)}
+.btn-ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:13px 22px}
+.btn-ghost:hover{color:var(--gold-hot);border-color:var(--gold-hot)}
+.btn:focus-visible{outline:2px solid var(--gold-hot);outline-offset:3px}
+.btn-mini{border:none;background:var(--line);color:var(--crema);font:700 11px var(--font-mono);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btn-mini:hover{background:#4a3f2d}
+
+.tag{display:inline-flex;align-items:center;gap:5px;font:600 10px var(--font-mono);letter-spacing:.08em;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim);vertical-align:middle;white-space:nowrap}
+.tag-gold{color:var(--gold);border-color:var(--next-line)}
+.tag-live{color:var(--green);border-color:var(--green-line)}
+.tag-stamp{color:var(--green-stamp);border-color:var(--green-stamp)}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+.panel-label{font:600 12px var(--font-mono);color:var(--dim);letter-spacing:.08em}
+
+.agent-win{background:var(--espresso);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.agent-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(180deg,#2a2218,#1c1610);border-bottom:1px solid var(--line);font:600 12px var(--font-mono);color:var(--dim)}
+.agent-dots{display:flex;gap:6px}
+.agent-dots span{width:10px;height:10px;border-radius:50%;background:#8a6a2e}
+.agent-dots span:nth-child(2){background:#6b5220}.agent-dots span:nth-child(3){background:#4a3a18}
+.agent-chip{margin-left:auto;font:500 10px var(--font-mono);color:var(--green);border:1px solid var(--green-line);border-radius:99px;padding:3px 8px}
+.agent-body{padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.agent-body hr{border:none;border-top:1px solid var(--line);width:100%}
+.you{font:500 13.5px var(--font-mono);color:var(--crema)}
+.you b{color:var(--gold);font-weight:600}
+.tool{border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:8px;padding:10px 14px;background:var(--roast);font:400 12px var(--font-mono);color:var(--dim)}
+.tool b{color:var(--gold);font-weight:600}
+.stage-card{border:1.5px dashed var(--next-line);border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:rgba(232,185,60,.05)}
+.commit-card{border:1px solid var(--green-line);border-radius:10px;padding:14px 16px;background:rgba(127,208,105,.06)}
+
+.funnel{display:flex;gap:14px;align-items:flex-end;height:150px}
+.funnel .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;font:500 12px var(--font-mono);color:var(--dim);gap:8px;height:100%}
+.funnel .bar>div{background:var(--bar);border-radius:8px 8px 0 0}
+
+.gauge{border-radius:50%;background:var(--brass);padding:8px;box-shadow:0 6px 18px rgba(0,0,0,.5),inset 0 2px 3px rgba(255,235,180,.5)}
+.gauge-face{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#2a2216,var(--roast) 65%);position:relative;box-shadow:inset 0 3px 8px rgba(0,0,0,.7)}
+.gauge-needle{position:absolute;left:50%;top:50%;width:3px;background:var(--needle);border-radius:2px;transform-origin:50% 100%}
+.gauge-hub{position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:var(--brass-hub);transform:translate(-50%,-50%)}
+
+.toggle-plate{background:linear-gradient(180deg,#2e2517,#1c1610);border:1px solid #4a3a18;border-radius:14px;padding:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.toggle-track{position:relative;height:34px;border-radius:99px;background:var(--espresso);box-shadow:inset 0 2px 5px rgba(0,0,0,.8);border:1px solid var(--line)}
+.toggle-knob{position:absolute;top:2px;width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f0d488,#c39b3f 55%,#8a6a2e);box-shadow:0 2px 5px rgba(0,0,0,.7),inset 0 1px 2px rgba(255,240,200,.8)}
+
+.divider{background:var(--kraft);background-image:var(--kraft-fibers);border-top:2px dashed var(--stamp-dim);border-bottom:2px dashed var(--stamp-dim);color:var(--stamp)}
+.divider .wrap{display:flex;align-items:center;gap:14px;padding-top:14px;padding-bottom:14px}
+.divider .num{font:700 12px var(--font-mono);letter-spacing:.14em}
+.divider .stamp-title{font-weight:900;font-stretch:112%;text-transform:uppercase;letter-spacing:.16em;font-size:13.5px}
+
+.baglabel{background:var(--kraft);background-image:var(--kraft-fibers);border-radius:6px;padding:30px 34px;color:var(--stamp);box-shadow:0 20px 50px rgba(0,0,0,.5);position:relative}
+.baglabel .brand{text-align:center;border-bottom:3px solid var(--stamp);padding-bottom:12px}
+.baglabel .brand b{display:block;font-weight:900;font-stretch:112%;font-size:22px}
+.baglabel .brand small{font:600 10px var(--font-mono);letter-spacing:.18em}
+.baglabel .netwt{display:flex;justify-content:space-between;font:700 12px var(--font-mono);padding:10px 0;border-bottom:2px solid var(--stamp)}
+.baglabel .row{display:flex;justify-content:space-between;gap:12px;font:500 12.5px var(--font-mono);padding:9px 0;border-bottom:1px solid rgba(58,42,22,.35)}
+.baglabel .row span.cat{flex:none;font-size:10px;letter-spacing:.08em;color:var(--stamp-dim);border:1px solid var(--stamp-dim);border-radius:99px;padding:2px 8px}
+.baglabel .foot{display:flex;justify-content:space-between;font:700 11px var(--font-mono);padding:11px 0 0;letter-spacing:.05em}
+.baglabel .motto{margin-top:14px;text-align:center;font:600 9.5px var(--font-mono);letter-spacing:.16em;color:var(--stamp-dim)}
+.roundstamp{position:absolute;top:-22px;right:-18px;width:78px;height:78px;background:var(--kraft);border:2px solid var(--stamp-dim);border-radius:50%;display:flex;align-items:center;justify-content:center;transform:rotate(10deg);font:700 9px var(--font-mono);letter-spacing:.1em;text-align:center;color:var(--stamp-dim);box-shadow:0 4px 10px rgba(0,0,0,.35)}
+
+.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.cmp th{text-align:left;font:700 11.5px var(--font-mono);letter-spacing:.08em;color:var(--dim);padding:12px 16px;border-bottom:1px solid var(--line)}
+.cmp th.us{color:var(--gold)}
+.cmp td{padding:16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--dim)}
+.cmp td.us{color:var(--crema);font-weight:600}
+.cmp tr:last-child td{border-bottom:none}
+.cmp td:first-child{font:600 12px var(--font-mono);color:var(--dim-2);width:22%}
+
+.cards3{display:grid;grid-template-columns:1fr;gap:16px}
+.row2{display:grid;grid-template-columns:1fr;gap:18px}
+.band{background:var(--roast-2)}
+section{padding:36px 0}
+nav.gb{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);max-width:1140px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-stretch:112%;font-size:19px;color:var(--gold)}
+.logo .bean{width:20px;height:26px;border-radius:50%/60% 60% 40% 40%;background:radial-gradient(circle at 35% 30%,#ffd45e,#c39b3f 60%,#8a6a2e);transform:rotate(-16deg);position:relative}
+.logo .bean::after{content:'';position:absolute;left:48%;top:12%;width:2px;height:76%;background:#5a4416;border-radius:2px;transform:rotate(4deg)}
+.urlfield{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--dim);font:500 13px var(--font-mono);padding:13px 14px}
+.urlfield .btn-mini{margin-left:auto}
+
+body{font-size:15px}
+.display{font-size:34px}
+h2{font-size:25px}
+.hero-grid{display:grid;grid-template-columns:1fr;gap:26px}
+.funnel{height:120px;gap:10px}
+.baglabel{padding:22px 20px}
+@media (min-width:640px){
+  body{font-size:16px}
+  .wrap{padding:0 32px}
+  section{padding:56px 0}
+  nav.gb{padding:18px 32px;gap:26px}
+  .display{font-size:44px}
+  h2{font-size:29px}
+  .row2{grid-template-columns:1fr 1fr}
+  .funnel{height:150px;gap:14px}
+  .baglabel{padding:30px 34px}
+}
+@media (min-width:900px){
+  section{padding:72px 0}
+  .cards3{grid-template-columns:repeat(3,1fr)}
+  .hero-grid{grid-template-columns:1.15fr .85fr;align-items:center;gap:40px}
+  .display{font-size:52px}
+}
+</style>
+
+<style>
+  .eyebrow{font:700 12px var(--font-mono);letter-spacing:.16em;color:var(--dim);margin-bottom:18px}
+  .hero-sub{margin:22px 0 24px;font-size:18px;color:var(--dim);max-width:560px}
+  .hero-sub strong{color:var(--crema)}
+  .micro{font:500 12px var(--font-mono);color:var(--dim);margin-top:14px}
+  .kicker{font:600 12px var(--font-mono);color:var(--gold);letter-spacing:.12em}
+  .stack{display:flex;flex-direction:column;gap:14px}
+  .card-title{font-size:18px;margin:8px 0 6px}
+  .card-copy{font-size:14px;color:var(--dim)}
+  .takeaway{font-weight:800;color:var(--crema);margin-top:16px}
+  .big-quote{font-size:30px;font-weight:900;line-height:1.15;max-width:760px}
+  .flow{display:flex;flex-direction:column;gap:10px;font:600 14px var(--font-mono)}
+  .flow .step{padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--espresso)}
+  .flow .arrow{text-align:center;color:var(--dim)}
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .stat{padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--espresso)}
+  .stat .n{font-size:30px;font-weight:800;color:var(--gold-hot)}
+  .stat .l{font:500 11.5px var(--font-mono);color:var(--dim)}
+  .plain-list{margin:10px 0 0 18px;color:var(--dim)}
+  .plain-list li{margin:6px 0}
+  .center-cta{text-align:center;max-width:760px;margin:0 auto}
+  .center-cta .display{font-size:42px}
+  .surface-note{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 9px;font:600 10.5px var(--font-mono);letter-spacing:.08em;color:var(--dim)}
+  .surface-note strong{color:var(--gold-hot);font-weight:700}
+  .prompt-card{background:var(--espresso);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 44px rgba(0,0,0,.35)}
+  .prompt-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#2a2218,#1c1610)}
+  .prompt-copy{white-space:pre-wrap;padding:18px 20px;font:500 12.5px/1.65 var(--font-mono);color:var(--crema)}
+  .prompt-route{display:inline-block;margin-top:9px;font:500 11px var(--font-mono);color:var(--dim)}
+  .release-list{display:flex;flex-direction:column;gap:0;margin-top:8px}
+  .release-item{padding:15px 0;border-bottom:1px solid var(--line)}
+  .release-item:last-child{border-bottom:0;padding-bottom:0}
+  .release-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+  .release-title{font-weight:800;font-size:14px;line-height:1.35;color:var(--crema)}
+  .release-desc{margin-top:5px;font-size:12.5px;line-height:1.55;color:var(--dim);max-width:560px}
+  .app-shell{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 20px 48px rgba(0,0,0,.32)}
+  .app-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--roast-2);font:600 11px var(--font-mono);color:var(--dim)}
+  .app-body{padding:22px}
+  .baglabel .row span:first-child{line-height:1.25}
+  @media (max-width:639px){.center-cta .display{font-size:34px}.big-quote{font-size:24px}.release-top{flex-direction:column}.prompt-copy{font-size:11.5px}}
+</style>
+</head>
+<body>
+<nav class="gb">
+  <span class="logo"><span class="bean"></span>golden beans</span>
+  <div style="display:flex;gap:22px;font-size:14px;margin-left:24px">
+    <a href="#product" style="color:var(--dim)">Product</a>
+    <a href="#how" style="color:var(--dim)">How it works</a>
+    <a href="#pods" style="color:var(--dim)">Pods</a>
+    <a href="#pricing" style="color:var(--dim)">Pricing</a>
+  </div>
+  <a class="btn btn-gold" href="#connect" style="margin-left:auto;padding:9px 18px;font-size:14px">Connect your agent →</a>
+</nav>
+
+<section>
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">PRODUCT MANAGEMENT, MINUS SOME OF THE POLITICS</p>
+      <h1 class="display">Your roadmap has<br><span class="foil">enough opinions.</span></h1>
+      <p class="hero-sub">Give your agent the goals your company agreed on and the context behind them.</p>
+      <p class="hero-sub" style="margin-top:0">Ask what to bet on. See the evidence. Make the call.</p>
+      <p class="takeaway" style="font-size:18px">Now your decisions have receipts.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:26px">
+        <a class="btn btn-gold" href="#connect">Connect your agent →</a>
+        <a class="btn btn-ghost" href="#try">Try it in your agent →</a>
+      </div>
+      <p class="micro">Works with Claude and ChatGPT. Bring whichever agent you already argue with.</p>
+    </div>
+
+    <div>
+      <div class="surface-note"><strong>IN CHATGPT, CLAUDE, OR YOUR AGENT</strong><span>Golden Beans supplies the product context</span></div>
+      <div class="agent-win">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>your agent · golden beans connected<span class="agent-chip">via MCP</span></div>
+      <div class="agent-body">
+        <div class="you"><b>you ▸</b> what should we bet on this cycle?</div>
+        <div class="tool"><b>golden beans</b> → comparing against your North Star…</div>
+        <div class="stack">
+          <div><b>Onboarding redesign</b><br><span style="color:var(--dim)">Expected lift: +8–12% activation · confidence: high · ~3 weeks to signal</span></div>
+          <div><b>Loyalty program</b><br><span style="color:var(--dim)">Expected lift: retention-dependent · confidence: low · ~6 weeks to signal</span></div>
+        </div>
+        <div style="font-size:14px">Your call. I brought the case.<span class="cursor"></span></div>
+      </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="try" style="padding-top:44px;padding-bottom:52px">
+  <div class="wrap row2" style="align-items:center">
+    <div>
+      <p class="panel-label" style="margin-bottom:10px">TRY IT BEFORE YOU CONNECT ANYTHING</p>
+      <h2>Give your agent one Golden Bean.</h2>
+      <p style="margin:12px 0;color:var(--dim);max-width:580px">Copy this into ChatGPT, Claude, or the agent you already use. It reads the public Golden Beans guide, explains what it can do, then offers to run the North Star workshop with you.</p>
+      <p class="takeaway">No account. No MCP. No tiny onboarding hostage situation.</p>
+      <p class="note" style="margin-top:16px">When you want the work to persist—or your agent to use live product context—that's when you connect Golden Beans.</p>
+    </div>
+    <div class="prompt-card">
+      <div class="prompt-head"><span class="mono" style="font-size:11px;color:var(--dim)">HANDOFF PROMPT · PUBLIC ROUTES</span><button class="btn-mini" data-copy-target="starter-prompt">copy prompt</button></div>
+      <div class="prompt-copy" id="starter-prompt">Read https://goldenbeans.app/llms.txt and act as my product-thinking partner for this conversation.
+
+First, explain Golden Beans in plain English: what it is, what it gives my agent, and what it deliberately does not do. Keep it brief and don't sell me.
+
+Then give me two choices:
+1) ask questions about Golden Beans, or
+2) run the North Star workshop now.
+
+If I choose the workshop, read https://goldenbeans.app/northstar-self-serve.md and facilitate it one question at a time. Use my answers, challenge vague language, and keep the goal measurable. At the end, summarize the proposed North Star, its inputs, guardrails, assumptions, and the first things we should test.
+
+Do not claim you are connected to my Golden Beans workspace unless I have actually connected the MCP. If we finish useful work, explain that connecting Golden Beans is how I can save it and give you ongoing product context.</div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="how" style="padding-top:44px;padding-bottom:52px">
+  <div class="wrap">
+    <p class="panel-label" style="margin-bottom:10px">HOW IT GROWS</p>
+    <h2 style="max-width:650px">Plant once. Keep asking better questions.</h2>
+    <p style="margin:12px 0 8px;color:var(--dim);max-width:650px">No migration project. No new place for everyone to stare at charts.</p>
+    <p class="takeaway">Golden Beans gives your agent the product context it needs to work alongside you.</p>
+    <div class="cards3" style="margin-top:30px">
+      <div class="panel"><span class="kicker">① PICK WHAT WINNING MEANS</span><h3 class="card-title">Give it a North Star.</h3><p class="card-copy">Start with the goal your company can actually agree on. Your agent now has something better than an opinion to work from.</p><p class="micro" style="color:var(--gold-hot)">ONE NUMBER. FEWER PHILOSOPHICAL DEBATES.</p></div>
+      <div class="panel"><span class="kicker">② CONNECT WHAT KNOWS THE TRUTH</span><h3 class="card-title">Give it context.</h3><p class="card-copy">Connect the places that know what customers did, what shipped, and what it cost. Your agent can finally see the same product you do.</p><p class="micro" style="color:var(--gold-hot)">NO NEW DASHBOARD REQUIRED.</p></div>
+      <div class="panel"><span class="kicker">③ ASK AWAY</span><h3 class="card-title">Put it to work.</h3><p class="card-copy">Ask what to bet on, what changed, whether it worked, or what you should look at next. The answer comes back against the goal.</p><p class="micro" style="color:var(--gold-hot)">WITH RECEIPTS.</p></div>
+    </div>
+    <p class="note" style="margin-top:24px">We considered adding a twelve-week implementation phase here. It tested poorly.</p>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">①</span><span class="stamp-title">Everyone has a good reason</span></div></div>
+<section>
+  <div class="wrap">
+    <h2>Product decisions get complicated when humans are involved.</h2>
+    <p style="margin:12px 0;color:var(--dim);max-width:700px">Sales heard it from a prospect. Engineering knows where the bodies are buried. The CEO has seen this movie before.</p>
+    <p class="takeaway">None of them are necessarily wrong.</p>
+    <div class="cards3" style="margin-top:28px">
+      <div class="panel"><h3 class="card-title">The loudest idea travels furthest</h3><p class="card-copy">A good idea shouldn't become a great idea because someone outranks the room.</p><p class="takeaway">Seniority is useful context. Not a confidence interval.</p></div>
+      <div class="panel"><h3 class="card-title">Every metric has a lawyer</h3><p class="card-copy">Retention says yes. Revenue says maybe. That dashboard nobody fully trusts says absolutely.</p></div>
+      <div class="panel"><h3 class="card-title">Eventually, someone has to call it</h3><p class="card-copy">Usually you. Preferably before the meeting about the meeting.</p></div>
+    </div>
+    <div style="margin-top:34px;max-width:760px">
+      <p class="big-quote">Opinions aren't the problem.</p>
+      <p style="margin-top:12px;color:var(--dim)">Good product teams should disagree. Golden Beans gives your agent the same quantifiable goal to test those ideas against—regardless of who suggested them.</p>
+      <p class="takeaway">The idea gets a fair hearing. The org chart doesn't get a vote.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">②</span><span class="stamp-title">Bring an agent to the argument</span></div></div>
+<section class="band" id="argument">
+  <div class="wrap">
+    <h2>Not to win it.</h2>
+    <p style="margin:14px 0;color:var(--dim);max-width:720px">Your agent can compare the bets against the goal, check what happened before, and work out what waiting could cost.</p>
+    <p class="takeaway">It doesn't care whose idea it was. Neither does the math.</p>
+
+    <div style="margin-top:28px">
+      <div class="surface-note"><strong>EXAMPLE CONVERSATION IN YOUR AGENT</strong><span>Not a Golden Beans chat screen</span></div>
+      <div class="agent-win">
+      <div class="agent-bar"><span class="agent-dots"><span></span><span></span><span></span></span>your agent · golden beans connected</div>
+      <div class="agent-body">
+        <div class="you"><b>you ▸</b> what should we bet on this cycle?</div>
+        <div class="tool"><b>compare_initiatives</b> · onboarding_redesign vs. loyalty_program</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px"><span>Onboarding redesign — direct North Star lift · ~3 weeks to signal</span><span class="tag tag-live">HIGH CONFIDENCE</span></div>
+          <div style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap"><span>Loyalty program — lift depends on retention · ~6 weeks to signal</span><span class="tag tag-gold">10% CONFIDENCE</span></div>
+        </div>
+        <div><b>Your call.</b> Your agent did the homework. You decide whether the evidence is good enough.</div>
+        <p class="note">Much nicer than “because Steve really believes in it.” Steve is probably lovely.</p>
+      </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">③</span><span class="stamp-title">From “I think” to “here's why”</span></div></div>
+<section id="product">
+  <div class="wrap">
+    <h2>Your agent finally has product context.</h2>
+    <p style="margin:12px 0;color:var(--dim);max-width:720px">Golden Beans connects what customers do, what your team ships, what you bet on, and whether it worked.</p>
+    <p class="takeaway">It already has the receipts.</p>
+    <div class="cards3" style="margin-top:28px">
+      <div class="panel"><span class="kicker">WHAT SHOULD WE BET ON?</span><h3 class="card-title">Compare before six weeks disappear.</h3><p class="card-copy">See expected impact, confidence, effort and the cost of waiting.</p><p class="micro" style="color:var(--gold-hot)">BET WITH A CASE</p></div>
+      <div class="panel"><span class="kicker">SHOULD WE SHIP IT?</span><h3 class="card-title">Turn the decision into a controlled rollout.</h3><p class="card-copy">You choose who gets it, how much, and when.</p><p class="micro" style="color:var(--gold-hot)">YOUR CALL</p></div>
+      <div class="panel"><span class="kicker">DID IT WORK?</span><h3 class="card-title">Measure the bet.</h3><p class="card-copy">See whether the thing you shipped moved the number it was supposed to. Not whether the launch announcement got twelve 🔥 reactions.</p></div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <span class="kicker">WHAT ACTUALLY HAPPENED?</span>
+      <h3 class="card-title">The whole story, in one trail.</h3>
+      <p class="card-copy">See the decision, rollout and result without branches, rebases, or Git archaeology.</p>
+    </div>
+
+    <div class="row2" style="margin-top:24px;align-items:start">
+      <div class="baglabel">
+        <div class="roundstamp">ONE<br>HANDFUL<br>★★★</div>
+        <div class="brand"><b>GOLDEN BEANS</b><small>WHAT YOUR AGENT GETS TO WORK WITH</small></div>
+        <div class="netwt"><span>YOUR AGENT CAN UNDERSTAND</span><span>THE PRODUCT</span></div>
+        <div class="row"><span>Where customers get stuck</span><span class="cat">BEHAVIOR</span></div>
+        <div class="row"><span>What actually moves your North Star</span><span class="cat">IMPACT</span></div>
+        <div class="row"><span>Who is doing what — and where they drop off</span><span class="cat">JOURNEYS</span></div>
+        <div class="row"><span>Safe, gradual releases</span><span class="cat">RELEASES</span></div>
+        <div class="row"><span>Which version actually wins</span><span class="cat">TESTS</span></div>
+        <div class="row"><span>Will launch day survive?</span><span class="cat">RISK</span></div>
+        <div class="row"><span>What changed, in plain English</span><span class="cat">HISTORY</span></div>
+        <div class="row"><span>What your agent is allowed to touch</span><span class="cat">CONTROL</span></div>
+        <div class="row"><span>Why a decision was made</span><span class="cat">RECEIPTS</span></div>
+        <div class="motto">TECHNICAL UNDER THE HOOD. PM-READABLE ON PURPOSE.</div>
+      </div>
+      <div>
+        <div class="surface-note"><strong>IN GOLDEN BEANS /APP · RELEASES</strong><span>The product UI, not your agent chat</span></div>
+        <div class="panel">
+          <p class="panel-label">RELEASE LEGIBILITY</p>
+          <p style="margin:12px 0;color:var(--dim)">See what changed in human language: who saw it, what happened, and whether anything still needs your decision.</p>
+          <div class="release-list">
+            <div class="release-item">
+              <div class="release-top"><div><div class="release-title">Checkout v2 — testing with 10% of customers in Mexico</div><div class="release-desc">1 in 10 eligible customers in Mexico sees the new checkout. The other 90% stays on the current version while you measure the difference.</div></div><span class="tag tag-live">TESTING</span></div>
+            </div>
+            <div class="release-item">
+              <div class="release-top"><div><div class="release-title">Quick Upload — experiment finished, chosen version is live</div><div class="release-desc">The test is closed. The version you selected has shipped to its intended audience, with the result kept beside the original bet.</div></div><span class="tag tag-live">SHIPPED</span></div>
+            </div>
+            <div class="release-item">
+              <div class="release-top"><div><div class="release-title">Black Friday readiness — stress test needs your decision</div><div class="release-desc">You simulated launch-day traffic before spending the campaign budget. Review the risk, then keep the plan, reduce exposure, or fix the weak point first.</div></div><span class="tag tag-gold">YOUR CALL</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">④</span><span class="stamp-title">A product principle</span></div></div>
+<section class="band">
+  <div class="wrap">
+    <h2 class="display" style="max-width:800px">Agnostic about ideas.<br><span class="foil">Conservative about actions.</span></h2>
+    <p style="margin:18px 0;color:var(--dim);max-width:720px">Your agent can investigate, compare, challenge and propose. Anything that changes the product gets staged first.</p>
+    <p class="takeaway">Then you make the call.</p>
+
+    <div style="margin-top:28px">
+      <div class="surface-note"><strong>IN GOLDEN BEANS /APP · RELEASES</strong><span>Your agent can propose. You can review and act here.</span></div>
+      <div class="app-shell">
+        <div class="app-bar"><span>PROPOSED RELEASE · checkout-v2</span><span class="tag tag-gold">WAITING ON YOU</span></div>
+        <div class="app-body">
+          <h3 style="font-size:20px">Show Checkout v2 to 10% of eligible customers in Mexico?</h3>
+          <p style="margin:9px 0 18px;color:var(--dim);max-width:720px">Your agent suggested a small first release. 1 in 10 eligible customers in Mexico would see the new checkout; everyone else stays on the current version while you watch the result.</p>
+          <div class="row2" style="gap:12px">
+            <div class="panel" style="padding:16px"><div class="panel-label">WHY THIS SIZE?</div><p style="margin-top:7px;font-size:13px;color:var(--dim)">Enough traffic to learn without putting the whole market behind an unproven change.</p></div>
+            <div class="panel" style="padding:16px"><div class="panel-label">WHAT ARE WE WATCHING?</div><p style="margin-top:7px;font-size:13px;color:var(--dim)">Expected North Star lift: +4–7% · current confidence: 82%.</p></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn btn-gold">Confirm 10% release</button><button class="btn btn-ghost">Change audience</button></div>
+          <p class="note" style="margin-top:14px">Because “the AI did it” isn't much of an audit trail.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;max-width:720px">
+      <h3 style="font-size:22px">Your agent gets leverage. Not a blank cheque.</h3>
+      <p style="margin-top:10px;color:var(--dim)">Every write stages first. Every credential is scoped. Every action leaves a trail.</p>
+      <p class="takeaway">Autonomy is great. Surprise production changes less so.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑤</span><span class="stamp-title">Less coordination. More product management.</span></div></div>
+<section>
+  <div class="wrap">
+    <h2>The question shouldn't take longer than the answer.</h2>
+    <p style="margin:12px 0;color:var(--dim);max-width:720px">You don't need Golden Beans to replace your engineers, analysts, executives—or your judgment.</p>
+    <p class="takeaway">You need less work between having a question and being able to make a good call. That's leverage.</p>
+    <div class="row2" style="margin-top:28px;align-items:start">
+      <div class="panel"><p class="panel-label" style="margin-bottom:14px">WITHOUT GOLDEN BEANS</p><div class="flow"><div class="step">Question</div><div class="arrow">↓</div><div class="step">Find the dashboard</div><div class="arrow">↓</div><div class="step">Ask analytics</div><div class="arrow">↓</div><div class="step">Ask engineering</div><div class="arrow">↓</div><div class="step">Meeting</div><div class="arrow">↓</div><div class="step">Meeting about previous meeting</div><div class="arrow">↓</div><div class="step">Decision</div></div><p class="note" style="margin-top:14px">We considered adding another meeting here for realism.</p></div>
+      <div class="panel"><p class="panel-label" style="margin-bottom:14px">WITH GOLDEN BEANS</p><div class="flow"><div class="step">Question</div><div class="arrow">↓</div><div class="step">Ask your agent</div><div class="arrow">↓</div><div class="step">Inspect the case</div><div class="arrow">↓</div><div class="step">Decision</div></div><p class="note" style="margin-top:14px">Your calendar may experience side effects.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑥</span><span class="stamp-title">Proof</span></div></div>
+<section class="band" id="pods">
+  <div class="wrap">
+    <h2>Leverage should show up in the numbers.</h2>
+    <p class="takeaway">Otherwise this is just a nice landing page.</p>
+    <div class="row2" style="margin-top:26px;align-items:start">
+      <div class="panel"><p class="panel-label" style="margin-bottom:16px">POD REPORT</p><div class="stat-grid"><div class="stat"><div class="n">+3.1×</div><div class="l">velocity</div></div><div class="stat"><div class="n">−68%</div><div class="l">cycle time</div></div><div class="stat"><div class="n">daily</div><div class="l">deploy frequency</div></div><div class="stat"><div class="n">−54%</div><div class="l">cost / shipped point</div></div></div><p class="note" style="margin-top:16px">We run the benchmark against our own delivery pod first. Seems only fair.</p></div>
+      <div class="panel"><p class="panel-label">AND DID ANY OF IT MATTER?</p><p style="margin-top:12px;color:var(--dim)">Shipping faster is nice. Golden Beans follows the result back to the product goal, so velocity doesn't get mistaken for progress.</p><p class="takeaway">More shipped isn't the same as more won.</p><a href="#" style="display:inline-block;margin-top:16px">See methodology →</a></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑦</span><span class="stamp-title">Yes, you can build this yourself</span></div></div>
+<section>
+  <div class="wrap">
+    <h2>PostHog is great. GrowthBook is great.</h2>
+    <p style="margin:12px 0;color:var(--dim);max-width:720px">Your warehouse probably works just fine too. Connect them. Normalize the concepts. Give your agent safe access. Build approvals. Correlate releases to outcomes. Maintain the glue.</p>
+    <p class="takeaway">Or don't.</p>
+    <div class="panel" style="padding:0;overflow:hidden;margin-top:26px">
+      <table class="cmp"><thead><tr><th></th><th>STITCH IT YOURSELF</th><th class="us">GOLDEN BEANS</th></tr></thead><tbody>
+        <tr><td>YOUR AGENT KNOWS</td><td>Whatever you've wired up</td><td class="us">The product context behind the decision</td></tr>
+        <tr><td>A BET BECOMES</td><td>Work across several systems</td><td class="us">One case against the goal</td></tr>
+        <tr><td>AN ACTION BECOMES</td><td>Whatever each tool permits</td><td class="us">Staged → confirmed → logged</td></tr>
+        <tr><td>WHAT SHIPPED</td><td>Somewhere in the repo</td><td class="us">One line a PM can actually read</td></tr>
+        <tr><td>DID IT WORK?</td><td>Back to the dashboards</td><td class="us">Back to the original bet</td></tr>
+      </tbody></table>
+    </div>
+    <p class="takeaway">Golden Beans isn't another place to analyze your product. It's the product layer your agent was missing.</p>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑧</span><span class="stamp-title">Bring your agent</span></div></div>
+<section class="band" id="connect">
+  <div class="wrap">
+    <h2>Your agent. Your call.</h2>
+    <p style="margin:12px 0;color:var(--dim)">Claude person? Great. ChatGPT person? Also great.</p>
+    <p class="takeaway">Golden Beans isn't here to start another AI preference war. We have roadmaps to ship.</p>
+    <div class="cards3" style="margin-top:26px">
+      <div class="panel"><span class="kicker">CLAUDE</span><h3 class="card-title">Connect Golden Beans</h3><p class="card-copy">Add your Golden Beans MCP connection and start asking product questions from Claude.</p><a class="btn btn-ghost" href="#" style="margin-top:16px">Connect to Claude →</a></div>
+      <div class="panel"><span class="kicker">CHATGPT</span><h3 class="card-title">Bring Golden Beans into ChatGPT</h3><p class="card-copy">Connect the remote MCP and let ChatGPT work from the same product context.</p><a class="btn btn-ghost" href="#" style="margin-top:16px">Connect to ChatGPT →</a><p class="note" style="margin-top:12px">Availability and capabilities vary by plan. Yes, we also wish these sentences aged more slowly.</p></div>
+      <div class="panel"><span class="kicker">YOUR OWN AGENT</span><h3 class="card-title">It's MCP. Go wild.</h3><p class="card-copy">Point a compatible agent at Golden Beans. Your product context shouldn't depend on which model won Twitter this week.</p><a class="btn btn-ghost" href="#" style="margin-top:16px">Read the MCP docs →</a></div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑨</span><span class="stamp-title">For the engineers who will inevitably ask</span></div></div>
+<section>
+  <div class="wrap">
+    <h2>Yes, there's an SDK.</h2>
+    <p style="margin:12px 0;color:var(--dim);max-width:720px">A few lines get the first event in. Your engineers keep control of what enters Golden Beans. You get a product layer you and your agent can actually operate.</p>
+    <p class="takeaway">Everybody gets to keep their IDE.</p>
+    <div class="panel mono" style="margin-top:22px;font-size:14px">npx golden-beans init</div>
+    <ul class="plain-list"><li>Signed event destinations</li><li>Scoped credentials</li><li>Revocable access</li><li>Audit trail</li><li>SDK data-in layer</li></ul>
+  </div>
+</section>
+
+<div class="divider"><div class="wrap"><span class="num">⑩</span><span class="stamp-title">Pricing</span></div></div>
+<section class="band" id="pricing">
+  <div class="wrap" style="text-align:center">
+    <h2>Pricing that doesn't require a meeting.</h2>
+    <p style="margin:12px auto 0;color:var(--dim);max-width:620px">Start with one project for $0. Bring the rest of the company when they inevitably ask where you got the numbers.</p>
+    <p class="takeaway">Humans remain unmetered.</p>
+    <div class="cards3" style="margin-top:32px;text-align:left">
+      <div class="panel"><div class="kicker">A HANDFUL</div><div style="margin:12px 0 4px;font-size:32px;font-weight:900">$0</div><p class="card-copy">One project. Enough Golden Beans to find out whether we're onto something.</p><ul class="plain-list"><li>100k events / month</li><li>Full product context</li><li>Experiments & rollouts</li><li>Agent connection</li></ul><a class="btn btn-ghost" href="#" style="margin-top:18px">Start free →</a><p class="note" style="margin-top:10px">No credit card. We checked.</p></div>
+      <div class="panel" style="border-color:var(--gold);position:relative"><div style="position:absolute;top:-11px;left:26px;background:var(--gold);color:var(--roast);font:700 10px var(--font-mono);letter-spacing:.1em;padding:4px 10px;border-radius:99px">MOST PLANTED</div><div class="kicker">THE BEANSTALK</div><div style="margin:12px 0 4px;font-size:32px;font-weight:900">$49<span style="font-size:14px;color:var(--dim)">/mo</span></div><p class="card-copy">For products that kept growing.</p><ul class="plain-list"><li>5M events / month</li><li>Unlimited projects</li><li>Unlimited seats</li><li>Higher-volume ingest</li></ul><a class="btn btn-gold" href="#" style="margin-top:18px">Start free →</a></div>
+      <div class="panel"><div class="kicker">THE VAULT</div><div style="margin:12px 0 4px;font-size:32px;font-weight:900">Pods</div><p class="card-copy">Your team, augmented with the same ways of working we use ourselves. Benchmarked before and after, because “it felt faster” isn't a Pod Report.</p><a class="btn btn-ghost" href="#" style="margin-top:18px">Talk to us →</a></div>
+    </div>
+    <p class="note" style="margin:20px auto 0">We meter events. Not coworkers.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap center-cta">
+    <p class="panel-label">STILL DECIDING?</p>
+    <h2 class="display" style="margin-top:8px">Fair.</h2>
+    <p style="margin:18px auto;color:var(--dim);max-width:620px">Ask your agent whether Golden Beans is likely to move your North Star.</p>
+    <p class="takeaway">At least one of us should practice what we preach.</p>
+    <div class="prompt-card" style="margin:24px auto 0;text-align:left;max-width:760px">
+      <div class="prompt-head"><span class="mono" style="font-size:11px;color:var(--dim)">PASTE THIS INTO YOUR AGENT</span><button class="btn-mini" data-copy-target="decision-prompt">copy prompt</button></div>
+      <div class="prompt-copy" id="decision-prompt">Read https://goldenbeans.app/llms.txt. Based on what Golden Beans actually does, help me decide whether it could improve how I manage product decisions and move our North Star. Ask me only the minimum questions you need about my product, current decision process, and where context gets lost. Then give me: (1) where Golden Beans would create leverage, (2) where it probably would not help, and (3) whether the next sensible step is the North Star workshop or connecting Golden Beans. Don't pretend you have access to my workspace unless I connect it.</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:20px"><a class="btn btn-gold" href="#try">Try the prompt first →</a><a class="btn btn-ghost" href="#connect">Connect your agent</a></div>
+    <p class="note" style="margin-top:14px">Free to try. No credit card. No sales call mysteriously disguised as a “quick chat.”</p>
+  </div>
+</section>
+
+<footer style="border-top:1px solid var(--line)">
+  <div class="wrap" style="padding-top:44px;padding-bottom:44px">
+    <div style="display:flex;gap:26px;flex-wrap:wrap;align-items:center;color:var(--dim);font-size:13.5px">
+      <span class="logo" style="font-size:16px"><span class="bean" style="width:15px;height:20px"></span>golden beans</span>
+      <a href="#" style="color:var(--dim)">Docs</a><a href="#" style="color:var(--dim)">GitHub</a><a href="#" style="color:var(--dim)">Status</a><a href="#" style="color:var(--dim)">Trust</a>
+      <span class="mono" style="margin-left:auto;font-size:12px">agent-readable: <a href="/llms.txt">/llms.txt</a> · <a href="/northstar-self-serve.md">/northstar-self-serve.md</a> · <a href="/mcp">/mcp</a></span>
+    </div>
+    <p style="margin:20px 0 0;font-size:13px;color:var(--dim-2)">Give your agent something worth arguing about.</p>
+  </div>
+</footer>
+<script>
+document.querySelectorAll('[data-copy-target]').forEach(function(button){
+  button.addEventListener('click', async function(){
+    var el=document.getElementById(button.getAttribute('data-copy-target'));
+    if(!el) return;
+    try{
+      await navigator.clipboard.writeText(el.innerText.trim());
+      var old=button.textContent; button.textContent='copied ✓';
+      setTimeout(function(){button.textContent=old},1600);
+    }catch(e){
+      var range=document.createRange(); range.selectNodeContents(el);
+      var sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      button.textContent='select + copy';
+    }
+  });
+});
+</script>
+</body></html>

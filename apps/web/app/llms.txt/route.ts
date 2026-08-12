@@ -20,17 +20,23 @@ export async function GET() {
 
   const body = `# Golden Beans
 
-> The growth engine your agent operates: telemetry ingest, TARS funnels, North Star metrics, and
-> A/B experiments, exposed to your agent as MCP tools over a per-project connector.
+> The product-context layer your own agent operates. Give it the goal your company agreed on and
+> the evidence behind it — telemetry ingest, TARS funnels, North Star metrics and A/B experiments,
+> exposed to your agent as MCP tools over a per-project connector. You bring the agent.
 
 ## Public routes
 
 - ${siteUrl}/
   The landing page — the product pitch, a live proof section reading the real synthetic demo
-  project, and the waitlist signup.
+  project, and the signup/waitlist entry point.
 - ${siteUrl}/install
   Get your own tokenized MCP connector URL ("Add to Claude" deep-link) for the demo project, plus
   the SDK install docs for wiring your own product into the engine.
+- ${siteUrl}/northstar-self-serve.md
+  A facilitation script for an agent to run the North Star workshop with a product person, one
+  question at a time. No account and no connector needed — it is deliberately usable before any
+  of the above. It states that the agent reading it is NOT connected to a workspace, which stays
+  true until the connector is actually installed.
 
 ## Connector docs (MCP)
 
