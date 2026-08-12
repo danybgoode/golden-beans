@@ -74,6 +74,10 @@ export function CopyPromptCard({
       selection?.removeAllRanges()
       selection?.addRange(range)
       setState('select')
+      // Reset like the success path does. Without this the button sat on "select + copy" forever,
+      // so a reader whose clipboard permission was refused once could never tell whether a later
+      // click had done anything.
+      resetTimer.current = setTimeout(() => setState('idle'), 4000)
     }
   }
 

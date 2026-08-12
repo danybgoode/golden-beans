@@ -2428,10 +2428,19 @@ a.stat-card:hover {
   border-bottom: none;
 }
 
-.cmp td:first-child {
+/* `tbody th`, not `td:first-child`. The mockup's comparison table used a plain <td> for the row
+   label; this build makes it `<th scope="row">` so a screen reader announces which concern each
+   cell belongs to — and that silently orphaned this rule, because the first child of every body
+   row stopped being a <td>. The column then fell back to `.cmp th` and rendered at the header's
+   11.5px/--dim instead of 12px/--dim-2, with its 22% width never applied.
+   Caught in cross-family review of PR #92; confirmed by reading the computed style off the
+   rendered page, not by re-reading the selector. */
+.cmp tbody th {
   width: 22%;
   color: var(--dim-2);
   font: 600 12px var(--mono);
+  text-align: left;
+  vertical-align: top;
 }
 
 /* ── The kraft bag label's category pill ────────────────────────────────── */
