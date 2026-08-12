@@ -5,14 +5,14 @@
 
 # Build order — generated status board
 
-> **Generated 2026-08-10 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-08-12 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (0)
+## 🏗️ Building now (1)
 
-_None._
+- [Landing redesign v2 — the agent harness for product managers](../../02-commercial/landing-redesign-v2/README.md) — 02 Commercial · 0/11 stories
 
 ## 📋 Ready to build (scaffolded, not started) (2)
 
@@ -53,4 +53,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 16 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 17 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._

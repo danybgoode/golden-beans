@@ -1,6 +1,6 @@
 # Landing redesign v2 — Sprint 1: Mobile rails + the v2 skin
 
-**Status:** 🚧 In progress
+**Status:** ✅ Built — in review
 
 > **Build contract.** This sprint ships **CSS and one spec harness**. No landing component changes
 > — Sprint 2 consumes what this lays down. `tokens.css` is a byte-mirrored handoff artifact and is

@@ -1,6 +1,6 @@
 # Landing redesign v2 — Sprint 3: Ship it
 
-**Status:** 🚧 In progress
+**Status:** ✅ Built — in review
 
 > **Build contract.** No new product surface. This sprint reconciles everything the redesign broke,
 > runs the real gate, takes two cross-family review passes, and verifies production.

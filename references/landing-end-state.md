@@ -5,6 +5,14 @@
 > that lights it up — the **backfill contract**: an epic that changes the public offer ships or
 > updates its landing section in the same epic (see WAYS-OF-WORKING → epic Definition of Done).
 > Companion visual mock: `landing-end-state-mock.html`. Written 2026-07-14 (E1 groom session).
+>
+> **⚠️ SUPERSEDED 2026-08-12 by `landing-redesign-v2`.** The section map below described the
+> engine-first pitch ("The growth engine your agent operates"). That page no longer exists: the v2
+> landing is built from `golden-beans-landing-v2.html` and its ten-section narrative, and the live
+> registry is `apps/web/lib/landing-sections.ts`. **The personas, the design language and the
+> guardrails in this document all still hold** — only the section map was replaced, and it is kept
+> below, struck through, because the backfill contract it defines is still how this project works.
+> A superseded map deleted outright would take that contract with it.
 
 ## The one-sentence pitch
 
@@ -30,7 +38,22 @@ ours ends in **yours**, over MCP. Verified PostHog product audit: SCOPE.md → "
 5. *(v2)* **The DevSecOps lead / resilient PM** — chaos + SecOps correlated to business metrics
    (PRD-G, E5b).
 
-## Section map — final vision, tagged by the epic that lights it up
+## Section map — ~~final vision~~ SUPERSEDED, see `landing-redesign-v2`
+
+**The current map lives in `apps/web/lib/landing-sections.ts`** — one entry per section, each
+naming the epic that lights it and its status. That file is the single source of truth, on purpose:
+this table went stale three separate times while the page moved underneath it.
+
+The v2 narrative, for orientation: hero (your roadmap has enough opinions) → try it in your own
+agent with no account → how it grows in three steps → ① everyone has a good reason → ② bring an
+agent to the argument → ③ from "I think" to "here's why" → ④ agnostic about ideas, conservative
+about actions → ⑤ less coordination → ⑥ proof (Pod Report **and** the live engine read) → ⑦ yes you
+can build this yourself → ⑧ bring your agent → ⑨ the SDK → ⑩ pricing → ask your own agent whether
+to bother.
+
+<details>
+<summary>The original E1 section map (historical — no longer describes the page)</summary>
+
 
 | # | Section | Content at end-state | Lights up |
 |---|---|---|---|
@@ -47,6 +70,13 @@ ours ends in **yours**, over MCP. Verified PostHog product audit: SCOPE.md → "
 "lights up next" teasers. Nothing fake: every number on the page is real engine output from the
 demo project; capability badges never claim ✅ for unshipped work (poster rule applies to the
 landing too).
+
+</details>
+
+**The "nothing fake" rule above survived the redesign unchanged, and got sharper.** v2 renders
+illustrated agent conversations as well as real ones, so every framed surface now carries a
+`SurfaceNote` saying which it is, and the only numbers on the page are the Pod Report's computed
+figures and the demo tenant's live engine read.
 
 ## Design language
 
