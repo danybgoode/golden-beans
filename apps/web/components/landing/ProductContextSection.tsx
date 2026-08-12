@@ -35,7 +35,7 @@ const contextRows = [
 // rollout the product actually models (a percentage rollout scoped to a country, a closed
 // experiment, a stress test awaiting a decision). It is not a read of anyone's releases: a real
 // customer's rollouts live behind auth at /app and behind revocable share links, and this page
-// shows no client data, ever (the rule PodsProofSection.tsx states at length).
+// shows no client data, ever (the rule PodReportProof.tsx states at length).
 const releases = [
   {
     title: 'Checkout v2 — testing with 10% of customers in Mexico',

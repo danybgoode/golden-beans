@@ -1,6 +1,6 @@
 import { SectionDivider } from '@/components/ui/SectionDivider'
-import { LiveEngineProof } from './LiveProofSection'
-import { PodReportProof } from './PodsProofSection'
+import { LiveEngineProof } from './LiveEngineProof'
+import { PodReportProof } from './PodReportProof'
 
 // landing-redesign-v2 · Sprint 2, Story 2.3 — ⑥ Proof.
 //
@@ -21,7 +21,7 @@ import { PodReportProof } from './PodsProofSection'
 //
 // Neither is a claim about a customer. The Pod Report is our own delivery history, published on
 // purpose; the live read is the synthetic demo project. No client data appears on this page, ever
-// — the rule PodsProofSection.tsx states at length and this composition does not weaken.
+// — the rule PodReportProof.tsx states at length and this composition does not weaken.
 export function ProofSection() {
   return (
     <>

@@ -2081,7 +2081,7 @@ a.stat-card:hover {
   letter-spacing: 0.16em;
 }
 
-/* `.kicker` was already used by InvertedLoopSection and PodsProofSection and
+/* `.kicker` was already used by the inverted-loop and pod-report sections and
    had NO rule anywhere in this stylesheet or in tokens.css — those four call
    sites have been rendering unstyled paragraphs. Defining it here fixes them as
    a side effect of needing it for the v2 sections. */
@@ -2277,7 +2277,7 @@ a.stat-card:hover {
 
 /* ── The proof stat grid ────────────────────────────────────────────────────
    Reuses the existing `.stat` element (b + span) rather than introducing the
-   mockup's second `.n`/`.l` shape, so PodsProofSection's markup is unchanged
+   mockup's second `.n`/`.l` shape, so PodReportProof's markup is unchanged
    and there is one stat tile in the codebase, not two (CODE-QUALITY #1). This
    only changes the arrangement and the headline size. */
 

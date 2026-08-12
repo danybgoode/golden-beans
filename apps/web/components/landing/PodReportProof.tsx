@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge'
 // Section 5 — Pods & proof (ROI). pod-report · Sprint 3, Story 3.2.
 //
 // Replaces the <Teaser/> this section shipped with. Reads in-process with the slug as a hardcoded
-// constant rather than request input — the same arrangement LiveProofSection uses, and the same
+// constant rather than request input — the same arrangement LiveEngineProof uses, and the same
 // reason rule #2's `assertPublicAllowedSlug` isn't repeated here: that check guards the HTTP
 // boundary where a slug IS attacker-controlled, and no slug crosses one here.
 //
