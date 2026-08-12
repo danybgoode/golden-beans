@@ -1,6 +1,6 @@
 # Landing redesign v2 — Sprint 1: Mobile rails + the v2 skin
 
-**Status:** ✅ Built — in review
+**Status:** ✅ Shipped — PR [#92](https://github.com/danybgoode/golden-beans/pull/92), merged as `4553767`. Live in production.
 
 > **Build contract.** This sprint ships **CSS and one spec harness**. No landing component changes
 > — Sprint 2 consumes what this lays down. `tokens.css` is a byte-mirrored handoff artifact and is
