@@ -36,8 +36,8 @@ import { Badge } from '@/components/ui/Badge'
 // not a report and a wall of criteria would bury the one line that matters. The lens cannot narrow
 // the honesty — the not-instrumented count and the caveats survive it by construction, which is
 // exactly why this section can be short without becoming a boast.
-export async function PodsProofSection() {
-  const section = getSection('pods-proof')
+export async function PodReportProof() {
+  const section = getSection('proof')
   const report = await getPodReport(DEMO_PROJECT_SLUG, 'investor')
 
   // Not-yet-pushed and could-not-be-read both land here. A landing section must never be the thing
@@ -52,12 +52,12 @@ export async function PodsProofSection() {
   const repo = view.source.repo
 
   return (
-    <section className="band section-compact" id="pods-proof">
-      <div className="wrap">
-        <p className="kicker">Pods &amp; proof</p>
-        <h2>
+    <div className="proof-block">
+      <div>
+        <p className="kicker">Pod report</p>
+        <h3 className="card-title">
           Your dev team, as a <em className="gold-em">revenue engine</em>.
-        </h2>
+        </h3>
         <p className="section-copy">
           Computed, not claimed — every figure below comes from <code>{repo ?? 'this repository'}</code>
           &apos;s own git and pull-request history, measured over{' '}
@@ -66,7 +66,11 @@ export async function PodsProofSection() {
           things we <em>cannot</em> measure are listed beside the things we can.
         </p>
 
-        <div className="statrow">
+        {/* The mockup's layout, the repo's numbers (epic D1): `.stat-grid` is the 2x2 tile
+            arrangement from references/golden-beans-landing-v2.html, and what fills it is
+            getPodReport's computed output rather than the mockup's hardcoded "+3.1x / -68%".
+            CODE-QUALITY.md #8 — never invent numbers to fill space. */}
+        <div className="stat-grid">
           {lead?.value && (
             <div className="stat">
               <b className="data">{lead.value}</b>
@@ -111,10 +115,10 @@ export async function PodsProofSection() {
         </p>
 
         <p className="section-status">
-          <Badge status="live">LIVE · {section.epic}</Badge>
+          <Badge status="live">COMPUTED · {section.epic}</Badge>
         </p>
       </div>
-    </section>
+    </div>
   )
 }
 
@@ -128,23 +132,21 @@ export async function PodsProofSection() {
  */
 function PodsProofFallback({ epic }: { epic: string }) {
   return (
-    <section className="band section-compact" id="pods-proof">
-      <div className="wrap">
-        <div className="teaser">
-          <div className="teaser__copy">
-            <h2>
-              Your dev team, as a <em className="gold-em">revenue engine</em>.
-            </h2>
-            <p>
-              The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and an
-              auditable position on the published AI-adoption ladder, computed from a real repository&apos;s
-              own history and read against published benchmarks. Computed, not claimed: which is exactly why
-              there are no numbers here until one is pushed.
-            </p>
-          </div>
-          <Badge status="next">LIGHTS UP · {epic}</Badge>
+    <div className="proof-block">
+      <div className="teaser">
+        <div className="teaser__copy">
+          <h3 className="card-title">
+            Your dev team, as a <em className="gold-em">revenue engine</em>.
+          </h3>
+          <p>
+            The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and an
+            auditable position on the published AI-adoption ladder, computed from a real repository&apos;s own
+            history and read against published benchmarks. Computed, not claimed: which is exactly why there
+            are no numbers here until one is pushed.
+          </p>
         </div>
+        <Badge status="next">LIGHTS UP · {epic}</Badge>
       </div>
-    </section>
+    </div>
   )
 }

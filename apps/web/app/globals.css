@@ -72,7 +72,17 @@ body {
    `min-width: auto` lets that push the whole track wider than the viewport. One
    long connector token in a two-column grid is enough. Resetting it to 0 lets
    the track shrink and the content wrap. */
-:where(.row2, .cards3, .hero-grid, .proof-grid, .comparison-grid, .statrow, .stat-grid, .funnel-layout)
+:where(
+    .row2,
+    .cards3,
+    .hero-grid,
+    .proof-grid,
+    .proof-stack,
+    .comparison-grid,
+    .statrow,
+    .stat-grid,
+    .funnel-layout
+  )
   > * {
   min-width: 0;
 }
@@ -82,7 +92,22 @@ body {
    `anywhere` also breaks mid-word when a *short* word would merely have made
    the line ragged, which reads as broken typography on the desktop the same
    rule serves. */
-:where(p, li, dd, dt, td, th, figcaption, blockquote, .note, .card-copy, .release-desc) {
+:where(
+  p,
+  li,
+  dd,
+  dt,
+  td,
+  th,
+  figcaption,
+  blockquote,
+  .note,
+  .card-copy,
+  .release-desc,
+  .you,
+  .tool,
+  .agent-result
+) {
   overflow-wrap: break-word;
 }
 
@@ -302,19 +327,17 @@ body {
   gap: 26px;
 }
 
-.hero-copy {
-  margin: 16px 0 22px;
-  max-width: 52ch;
-  color: var(--dim);
-  font-size: 16px;
-}
-
+/* landing-redesign-v2 S2.1 — was `width: 100%` alone, which relied on the buttons' own
+   inline-flex to sit them side by side and left them jammed against the takeaway line above.
+   An explicit row with a gap is what the v2 hero (and §4's confirm/change pair, which reuses
+   this class) actually needs. `flex-wrap` keeps the two CTAs stacking on a phone, where
+   tokens.css still makes each button full-width. */
 .hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   width: 100%;
-}
-
-.hero-note {
-  margin-top: 14px;
+  margin-top: 26px;
 }
 
 .urlfield {
@@ -392,11 +415,20 @@ body {
   letter-spacing: 0.1em;
 }
 
-.panel h3 {
+/* landing-redesign-v2 S2 — `:where(.panel)` rather than `.panel`.
+   These are DEFAULTS for unclassed elements inside a panel, but at (0,1,1) they outranked every
+   single-class rule applied to those same elements, so a panel silently overrode any class put on
+   its own children. Three v2 classes were losing: `.takeaway` and `.micro--gold` both rendered
+   dim instead of crema/gold, and `.tier__price` rendered at 14px instead of 32px — visible on the
+   page, and impossible to fix at the call site without escalating specificity there too.
+   `:where()` drops these to (0,0,1): still the default for a bare <p>, now beaten by any class
+   that says otherwise. Same reasoning as the mobile rails at the top of this file — a floor, not
+   a ceiling. */
+:where(.panel) h3 {
   font-size: 18px;
 }
 
-.panel p {
+:where(.panel) p {
   color: var(--dim);
   font-size: 14px;
 }
@@ -679,8 +711,9 @@ body {
   color: var(--dim);
 }
 
+/* The 760px cap was correct for the two-tier layout this section used to have. The v2 pricing
+   has three tiers in `.cards3`, and keeping the cap squeezed them into a third of the page. */
 .pricing__grid {
-  max-width: 760px;
   margin: 34px auto 0;
   text-align: left;
 }
@@ -2095,8 +2128,12 @@ a.stat-card:hover {
   max-width: 620px;
 }
 
+/* `padding-inline-start: 0` is not cosmetic: the UA stylesheet applies 40px of its own, which
+   stacks on top of this margin and pushed the pricing tiers' bullets ~58px in from a 24px panel
+   gutter. One indent, declared here, rather than two that happen to add up. */
 .plain-list {
   margin: 10px 0 0 18px;
+  padding-inline-start: 0;
   color: var(--dim);
 }
 
@@ -2400,13 +2437,18 @@ a.stat-card:hover {
   letter-spacing: 0.1em;
 }
 
-.tier__price {
+/* `.panel .tier__price`, not `.tier__price`: the tier price is a <p> inside a `.panel`, and
+   `.panel p { font-size: 14px }` (0,1,1) outranks a bare class (0,1,0) — the headline price was
+   rendering at body size. Matching the parent's specificity is the fix; raising the font-size on
+   an already-losing selector would not have been. */
+.panel .tier__price {
   margin: 12px 0 4px;
+  color: var(--crema);
   font-size: 32px;
   font-weight: 900;
 }
 
-.tier__price small {
+.panel .tier__price small {
   color: var(--dim);
   font-size: 14px;
   font-weight: 400;
@@ -2491,5 +2533,84 @@ a.stat-card:hover {
   .cmp th,
   .cmp td {
     padding: 16px;
+  }
+}
+
+/* ── v2 pieces discovered while building the sections ───────────────────── */
+
+/* The mockup writes these labels in literal uppercase; the components pass
+   sentence case so the copy stays readable in the source and screen readers
+   don't spell out shouted text. The transform belongs here either way. */
+.eyebrow,
+.surface-note strong,
+.panel-label,
+.kicker {
+  text-transform: uppercase;
+}
+
+.hero-window__meta {
+  color: var(--dim);
+}
+
+/* The hero's two illustrated bets, and §2's compare_initiatives rows: a label
+   that wraps, with its badge held to the right until there is no room for it. */
+.bet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bet-row--last {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* §6 stacks two independent proofs (epic D2) with a rule between them, so a
+   reader can see where "our delivery history" ends and "a live engine read"
+   begins. */
+.proof-stack {
+  display: grid;
+  gap: 30px;
+  margin-top: 26px;
+}
+
+.proof-block + .proof-block {
+  padding-top: 30px;
+  border-top: 1px solid var(--line);
+}
+
+.proof-block .section-copy {
+  max-width: 720px;
+}
+
+.row2--center {
+  align-items: center;
+}
+
+.row2--start {
+  align-items: start;
+}
+
+.app-body__reasons {
+  gap: 12px;
+}
+
+/* The closing CTA centres its copy; `.measure`'s asymmetric margin would pull
+   it off-axis. */
+.center-cta .measure {
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .proof-stack {
+    gap: 40px;
+  }
+
+  .proof-block + .proof-block {
+    padding-top: 40px;
   }
 }

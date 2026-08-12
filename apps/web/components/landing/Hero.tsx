@@ -1,55 +1,92 @@
-import { isSignupEnabled } from '@/lib/flags'
-import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { AgentWindow } from '@/components/ui/AgentWindow'
-import { Badge } from '@/components/ui/Badge'
+import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
-import { WaitlistForm } from './WaitlistForm'
+import { SurfaceNote } from './SurfaceNote'
 
-// The connector slot remains visibly NEXT until its independent gate is live. The hero's primary
-// action follows the real signup flag, so the visual lift cannot accidentally advertise a dark path.
+// landing-redesign-v2 · Sprint 2, Story 2.1 — the repositioned hero.
+//
+// The headline this replaces was "The growth engine your agent operates." It was an accurate
+// description of what was built and a poor description of who buys it: it opened on the primitive
+// set, for a reader who has not yet been told what primitives are FOR. The v2 hero opens on the
+// problem the reader already has — a roadmap with more opinions than evidence — and lets the
+// engine be the reason receipts are possible rather than the thing being sold.
+//
+// ── The hero window is an ILLUSTRATION and says so ────────────────────────────────────────────
+// It shows a conversation shape, not a live read. Further down the page §6 renders a REAL agent
+// window over live demo-tenant data, and a reader who cannot tell those two apart learns nothing
+// from either — the honest one gets no credit and the illustration gets undeserved weight. Hence
+// the surface note above the frame (epic D4); it is the same reason `references/design-direction
+// .md` insists the frame device never fakes a product screenshot.
 export function Hero() {
-  const signupEnabled = isSignupEnabled()
-
   return (
     <section className="hero">
       <div className="wrap hero-grid">
+        {/* No class: `.hero-copy` used to live here and is NOT a container style — it was the old
+            hero's paragraph rule (`max-width: 52ch`), and putting it on the column capped the
+            headline at 476px inside a 596px track, breaking "Your roadmap has" across two lines.
+            The v2 sub-paragraphs carry `.hero-sub` instead. */}
         <div>
+          <p className="eyebrow">Product management, minus some of the politics</p>
           <h1 className="display">
-            The growth engine <em className="foil">your agent</em> operates.
+            Your roadmap has
+            <br />
+            <em className="foil">enough opinions.</em>
           </h1>
-          <p className="hero-copy">
-            Telemetry, TARS funnels, North Star metrics and A/B experiments — as primitives. Others close the
-            signal loop with <i>their</i> AI. Golden Beans closes it with <b>yours</b>, over MCP.
+          <p className="hero-sub">
+            Give your agent the goals your company agreed on and the context behind them.
           </p>
+          <p className="hero-sub hero-sub--tight">Ask what to bet on. See the evidence. Make the call.</p>
+          <p className="takeaway takeaway--lead">Now your decisions have receipts.</p>
 
           <div className="hero-cta">
-            {signupEnabled ? (
-              <Button href="/signup">
-                Start free
-                <Icon name="arrow-right" />
-              </Button>
-            ) : (
-              <WaitlistForm compact />
-            )}
+            <Button href="#connect">
+              Connect your agent
+              <Icon name="arrow-right" />
+            </Button>
+            <Button href="#try" variant="ghost">
+              Try it in your agent
+              <Icon name="arrow-right" />
+            </Button>
           </div>
 
-          <div className="urlfield" aria-disabled="true">
-            Connector URL — lights up next
-            <Badge status="next">Sprint 2</Badge>
-          </div>
-          <p className="note hero-note">
-            works on the Claude free tier · your data, your Supabase, your agent
+          <p className="micro">
+            Works with Claude and ChatGPT. Bring whichever agent you already argue with.
           </p>
         </div>
 
-        <AgentWindow>
-          <ActivityFeedItem actor="human">add golden-beans</ActivityFeedItem>
-          <ActivityFeedItem actor="agent">handshake → 6 tools</ActivityFeedItem>
-          <div className="agent-result">
-            Connected to <b>golden-beans-demo</b>. Ask me for the funnel — or bring your PM, no SQL required.
-          </div>
-        </AgentWindow>
+        <div>
+          <SurfaceNote
+            label="In ChatGPT, Claude, or your agent"
+            detail="Golden Beans supplies the product context"
+          />
+          <AgentWindow title="your agent · golden beans connected" status="via MCP">
+            <ActivityFeedItem actor="human">what should we bet on this cycle?</ActivityFeedItem>
+            <ActivityFeedItem actor="agent" name="golden beans">
+              comparing against your North Star…
+            </ActivityFeedItem>
+            <div className="stack">
+              <div>
+                <b>Onboarding redesign</b>
+                <br />
+                <span className="hero-window__meta">
+                  Expected lift: +8–12% activation · confidence: high · ~3 weeks to signal
+                </span>
+              </div>
+              <div>
+                <b>Loyalty program</b>
+                <br />
+                <span className="hero-window__meta">
+                  Expected lift: retention-dependent · confidence: low · ~6 weeks to signal
+                </span>
+              </div>
+            </div>
+            <div className="agent-result">
+              Your call. I brought the case.
+              <span className="cursor" />
+            </div>
+          </AgentWindow>
+        </div>
       </div>
     </section>
   )

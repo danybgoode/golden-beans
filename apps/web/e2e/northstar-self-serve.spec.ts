@@ -45,10 +45,7 @@ test('the workshop claims only capabilities that exist', async ({ request }) => 
   expect(body).toContain('read-only MCP connector')
 })
 
-test("the workshop's URLs are built from this deployment's own base URL", async ({
-  request,
-  baseURL,
-}) => {
+test("the workshop's URLs are built from this deployment's own base URL", async ({ request, baseURL }) => {
   const body = await (await request.get('/northstar-self-serve.md')).text()
 
   expect(body).toContain(`${baseURL}/install`)

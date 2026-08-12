@@ -54,9 +54,7 @@ export async function assertMobileClean(page: Page, label: string) {
       document.documentElement.scrollWidth,
       document.documentElement.clientWidth,
     ])
-    expect(scrollWidth, `${label} overflows horizontally at ${width}px`).toBeLessThanOrEqual(
-      clientWidth
-    )
+    expect(scrollWidth, `${label} overflows horizontally at ${width}px`).toBeLessThanOrEqual(clientWidth)
 
     // Every CONTROL meets the tap-target floor.
     //

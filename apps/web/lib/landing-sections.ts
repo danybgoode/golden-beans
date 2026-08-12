@@ -3,9 +3,18 @@
 // here instead of hardcoding badge text, so "flipping one entry flips the badge" (change
 // `status: 'next' -> 'live'` here, then swap the section's <Teaser/> for its real component —
 // no other JSX changes). This is the mechanical surface the WAYS-OF-WORKING backfill DoD line
-// checks against (Roadmap/02-commercial/commercial-shell/README.md documents this pointer).
+// checks against.
 //
-// Section ids/order mirror references/landing-end-state.md's 8-section map.
+// ── Rewritten, not extended, by landing-redesign-v2 (2026-08-12) ──────────────────────────────
+// The previous map described the eight sections of `references/landing-end-state.md`, written
+// against the engine-first pitch ("The growth engine your agent operates"). The v2 page is a
+// different narrative with a different section order, so leaving the old ids alongside the new
+// ones would leave a registry that no longer describes the page — which is precisely the drift
+// this file exists to prevent (epic D6). `landing-end-state.md`'s map was superseded in the same
+// commit.
+//
+// Section ids/order mirror the ten numbered stamps in
+// `references/golden-beans-landing-v2.html`, plus the unnumbered hero/try/how opening.
 
 export type SectionStatus = 'live' | 'next'
 
@@ -19,33 +28,75 @@ export interface LandingSection {
 }
 
 export const LANDING_SECTIONS: LandingSection[] = [
-  { id: 'hero', title: 'Hero', epic: 'commercial-shell', status: 'live' },
-  { id: 'live-proof', title: 'Live proof', epic: 'commercial-shell', status: 'live' },
   {
-    id: 'operate-routes',
-    title: 'Three operate routes',
+    id: 'hero',
+    title: 'Hero — your roadmap has enough opinions',
+    epic: 'landing-redesign-v2',
+    status: 'live',
+  },
+  {
+    id: 'try',
+    title: 'Try it before you connect anything',
+    epic: 'landing-redesign-v2',
+    status: 'live',
+    note: 'The handoff prompt + /northstar-self-serve.md — usable with no account and no connector.',
+  },
+  { id: 'how', title: 'How it grows — plant once', epic: 'landing-redesign-v2', status: 'live' },
+  { id: 'opinions', title: '① Everyone has a good reason', epic: 'landing-redesign-v2', status: 'live' },
+  { id: 'argument', title: '② Bring an agent to the argument', epic: 'landing-redesign-v2', status: 'live' },
+  {
+    id: 'product',
+    title: '③ From "I think" to "here\'s why"',
+    epic: 'landing-redesign-v2',
+    status: 'live',
+    note: 'Illustrative release list — the real one is behind auth at /app.',
+  },
+  {
+    id: 'principle',
+    title: '④ Agnostic about ideas, conservative about actions',
+    epic: 'signals-loop',
+    status: 'live',
+    note: 'The staged propose → confirm → apply shape shipped with signals-loop.',
+  },
+  {
+    id: 'leverage',
+    title: '⑤ Less coordination, more product management',
+    epic: 'landing-redesign-v2',
+    status: 'live',
+  },
+  {
+    id: 'proof',
+    title: '⑥ Proof — the Pod Report and the live engine',
+    epic: 'pod-report',
+    status: 'live',
+    note: 'Carries BOTH the computed Pod Report and the live demo-tenant engine read (epic D2).',
+  },
+  {
+    id: 'build-it-yourself',
+    title: '⑦ Yes, you can build this yourself',
+    epic: 'landing-redesign-v2',
+    status: 'live',
+  },
+  {
+    id: 'connect',
+    title: '⑧ Bring your agent',
     epic: 'commercial-shell',
     status: 'live',
-    note: '① connector URL and ③ npx wizard only — ② the pod plugin lands with multi-tenant-activation',
+    note: 'The tokenized MCP connector URL — CONNECTOR_ENABLED is ON in production.',
   },
-  // signals-loop · Sprint 3, Story 3.3 — flipped 'next' -> 'live': InvertedLoopSection.tsx now
-  // explains the deterministic signal → task → customer-agent loop and its explicit enablement
-  // state, rather than advertising a task count before the two born-OFF gates are deliberately
-  // flipped.
-  { id: 'inverted-loop', title: 'The inverted loop', epic: 'signals-loop', status: 'live' },
-  // pod-report · Sprint 3, Story 3.2 — flipped 'next' -> 'live': PodsProofSection.tsx now renders a
-  // real, computed Pod Report (the demo tenant's artifact, computed from golden-beans' OWN repo —
-  // never a client's, which stays behind auth and share links). This entry is the static "the
-  // capability shipped" declaration the backfill DoD checks; the component still falls back to the
-  // honest teaser when no artifact has been pushed, which is a data state, not a capability state.
-  { id: 'pods-proof', title: 'Pods & proof (ROI)', epic: 'pod-report', status: 'live' },
-  { id: 'primitives', title: 'Primitives grid', epic: 'commercial-shell', status: 'live' },
-  // multi-tenant-activation · Sprint 3, Story 3.1 — flipped 'next' -> 'live': the section's real
-  // component (WaitlistSection.tsx) now renders honest self-serve tiers whenever SIGNUP_ENABLED
-  // is on, not just the waitlist teaser. This registry entry is the static "the capability
-  // shipped" declaration the backfill DoD checks — the per-request choice of which of the two
-  // (tiers vs waitlist) actually renders still lives in the component, keyed off the live flag.
-  { id: 'pricing', title: 'Pricing & tenancy', epic: 'multi-tenant-activation', status: 'live' },
+  {
+    id: 'sdk',
+    title: '⑨ For the engineers who will inevitably ask',
+    epic: 'growth-engine-v1',
+    status: 'live',
+  },
+  {
+    id: 'pricing',
+    title: '⑩ Pricing',
+    epic: 'multi-tenant-activation',
+    status: 'live',
+    note: 'Self-serve free tier follows SIGNUP_ENABLED. No payment rail yet — the paid tier says so.',
+  },
   { id: 'footer', title: 'Footer', epic: 'commercial-shell', status: 'live' },
 ]
 
