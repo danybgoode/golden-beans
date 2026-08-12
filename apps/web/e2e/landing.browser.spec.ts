@@ -24,6 +24,34 @@ test('the landing renders the v2 narrative', async ({ page }) => {
   await expect(page.locator('.prompt-card')).toHaveCount(2)
 })
 
+// The copy button's actual contract: what lands on the clipboard is what the reader saw.
+//
+// `CopyPromptCard` copies from its own rendered `<pre>` rather than from the `prompt` prop
+// specifically so the two cannot drift — but that guarantee lived only in a comment until
+// cross-family review of PR #92 pointed out that the handler also calls `.trim()`, so "identical
+// by construction" was an overstatement. This asserts the real property instead of restating the
+// claim: surrounding whitespace is normalised, and nothing else is touched — every interior line,
+// blank line and character survives the round trip.
+test('the copy button puts the visible prompt on the clipboard, unaltered', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await page.goto('/')
+
+  const card = page.locator('.prompt-card').first()
+  const visible = await card.locator('.prompt-copy').innerText()
+
+  await card.getByRole('button').click()
+  await expect(card.getByRole('button')).toContainText('copied')
+
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText())
+  expect(clipboard).toBe(visible.trim())
+
+  // The interior is byte-identical — the trim touches the ends only. Asserted separately because
+  // a handler that collapsed newlines would still pass a naive equality check against a
+  // similarly-collapsed `innerText`.
+  expect(clipboard.split('\n').length).toBeGreaterThan(5)
+  expect(clipboard).toContain('\n\n')
+})
+
 // Epic D4, and the finding that proved it needs a spec rather than a convention.
 //
 // This page renders illustrated agent conversations AND one real read of the demo tenant, in

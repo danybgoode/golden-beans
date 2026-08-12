@@ -2,6 +2,10 @@ import { DEMO_PROJECT_SLUG } from '@/lib/public-demo'
 import { getFeatureFunnel } from '@/lib/tars-query'
 import { getFeatureImpact } from '@/lib/north-star-query'
 import { getExperimentComparison } from '@/lib/ab-query'
+// Extracted from this file during PR #92's review: it prints a percentage beside a claim that the
+// numbers are checkable, and as a private helper here nothing could test it. See the module for
+// the negative-slice bug that made a flat series read as +133%.
+import { weekOverWeek } from '@/lib/week-over-week'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Icon } from '@/components/ui/Icon'
@@ -11,19 +15,6 @@ const FEATURE_KEY = 'setup_guide'
 const INPUT_KEY = 'setup_guide_completions'
 const EXPERIMENT_KEY = 'quick-upload-ui'
 const CONVERSION_EVENT = 'upload_completed'
-// Presentation-layer helper over an already-fetched series — sum of the last 7 days vs. the 7
-// before that. Not a new query function; the series itself comes from getFeatureImpact.
-function weekOverWeek(series: { date: string; value: number }[]) {
-  if (series.length === 0) return null
-  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date))
-  const lastWeek = sorted.slice(-7)
-  const priorWeek = sorted.slice(-14, -7)
-  const lastSum = lastWeek.reduce((sum, p) => sum + p.value, 0)
-  const priorSum = priorWeek.reduce((sum, p) => sum + p.value, 0)
-  const current = sorted[sorted.length - 1].value
-  const wow = priorSum > 0 ? (lastSum - priorSum) / priorSum : null
-  return { current, wow, lastSum }
-}
 
 // Section 2 — Live proof. Reads the synthetic golden-beans-demo project ONLY, in-process (no
 // self-fetch) — the same slug-based getters the unauthed /app/{funnel,impact,experiments} pages

@@ -12,11 +12,18 @@ import { Icon } from '@/components/ui/Icon'
 // ── Why it copies from its own rendered node instead of from the prop ─────────────────────────
 // The acceptance for this story is that the copied string and the displayed string cannot
 // diverge. Reading `prompt` directly in the click handler would satisfy that only as long as the
-// two stay in step by accident: the moment the render side gains any transformation — a trim, a
-// template wrapper, a line the JSX adds for layout — the button starts handing over a string the
-// reader never saw. Copying `textContent` off the element that is actually on screen makes the
-// displayed text the definition, so the two are the same string by construction rather than by
-// review. (CODE-QUALITY.md #2: make the failure unrepresentable, not merely fixed.)
+// two stay in step by accident: the moment the render side gains any transformation — a template
+// wrapper, a line the JSX adds for layout — the button starts handing over a string the reader
+// never saw. Copying `textContent` off the element that is actually on screen makes the displayed
+// text the definition. (CODE-QUALITY.md #2: make the failure unrepresentable, not merely fixed.)
+//
+// The one deliberate normalisation is `.trim()`, and it is worth being precise rather than
+// claiming an identity the code does not have (cross-family review of PR #92 caught the
+// overstatement). `<pre>` preserves whitespace, so if JSX ever indents the prompt's opening or
+// closing line the reader sees leading blank space and the clipboard would otherwise carry it into
+// their agent. Trimming SURROUNDING whitespace only — never interior — keeps the copied prompt
+// byte-identical to the visible text everywhere it matters, and `e2e/landing.browser.spec.ts`
+// asserts the clipboard contents against the prompt rather than leaving it to this comment.
 //
 // The fallback matters more here than on the URL field. A prompt is several hundred characters of
 // prose; if the clipboard write is refused there is no realistic manual alternative, so the
