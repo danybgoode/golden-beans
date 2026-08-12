@@ -1,3 +1,4 @@
+import { isResilienceScenariosEnabled } from '@/lib/flags'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
@@ -19,6 +20,26 @@ import { SurfaceNote } from './SurfaceNote'
 // what erodes a badge's meaning for the day one of them genuinely is not. The badge vocabulary is
 // still carried by the sections that need it (§4's flags, §6's Pod Report fallback, §10's pricing).
 
+// ── Why one row carries a gate and the other eight do not ────────────────────────────────────
+// Cross-family review of PR #92 flagged this list as advertising capability without qualification.
+// Checking each row against PRODUCTION rather than against memory: eight are genuinely live —
+// `JOURNEY_PROJECTIONS_ENABLED`, `EXPERIMENT_GOVERNANCE_ENABLED`, `SIGNALS_ENABLED`,
+// `CONNECTOR_WRITES_ENABLED`, `FLAG_DEFINITION_SYNC_ENABLED` and `SIGNUP_ENABLED` are all `true`
+// there. (The review's stated reason — that journey projections are gated off — was wrong; they
+// have been on since 2026-07-23. The conclusion still held for a row it did not name.)
+//
+// The exception is RISK. Resilience scenarios are built and shipped, but their gate is a
+// proof-only one that `flag-serving-and-prd-g` deliberately switched back OFF at epic close.
+// Confirmed by exercising the behaviour, not by reading `vercel env ls`: in production
+// `GET /api/v1/scenarios/snapshot` returns 404 while `POST` to the same path returns 405 — the
+// route is deployed, and only the gate makes the GET 404 rather than the 401 an unauthenticated
+// call would otherwise get.
+//
+// So the row keeps a badge and the badge READS THE FLAG rather than stating its position
+// (CODE-QUALITY #2: a value that must not go stale is computed, not written down). Flip the gate
+// on and the badge disappears by itself. This is also why the other eight are bare: a badge that
+// appears on every row is decoration, and decoration is what empties a badge of meaning for the
+// one row that genuinely needs it.
 const contextRows = [
   ['Where customers get stuck', 'Behavior'],
   ['What actually moves your North Star', 'Impact'],
@@ -30,6 +51,9 @@ const contextRows = [
   ['What your agent is allowed to touch', 'Control'],
   ['Why a decision was made', 'Receipts'],
 ] as const
+
+/** The one row whose capability is gated in production. Keyed by category, not by index. */
+const GATED_CATEGORY = 'Risk'
 
 // The release list is ILLUSTRATIVE — it shows the SHAPE of release legibility, using the kind of
 // rollout the product actually models (a percentage rollout scoped to a country, a closed
@@ -79,6 +103,8 @@ const capabilities = [
 ]
 
 export function ProductContextSection() {
+  const riskLive = isResilienceScenariosEnabled()
+
   return (
     <>
       {/* Real typographic quotes, not JSX entities: `title` is a string prop, so `&ldquo;` would
@@ -136,7 +162,13 @@ export function ProductContextSection() {
               {contextRows.map(([label, category]) => (
                 <div className="row" key={label}>
                   <span>{label}</span>
-                  <span className="cat">{category}</span>
+                  {category === GATED_CATEGORY && !riskLive ? (
+                    <Badge status="next" onKraft>
+                      {category} · not switched on yet
+                    </Badge>
+                  ) : (
+                    <span className="cat">{category}</span>
+                  )}
                 </div>
               ))}
               <div className="motto">TECHNICAL UNDER THE HOOD. PM-READABLE ON PURPOSE.</div>
