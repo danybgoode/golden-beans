@@ -28,14 +28,15 @@ export function Footer() {
           </span>
         </div>
         <p className="footer__meta">
-          Footnote ledger, in order of appearance: the agent conversations in the hero and in §2 are
-          illustrations, labelled as such, not screenshots of a live session · §3&apos;s release list shows
-          the shape of release legibility, not anyone&apos;s actual releases · §6 is the only section with
-          real numbers — the Pod Report is computed from this repository&apos;s own git history, and the
-          engine read comes from the synthetic demo project, which you can curl at /api/v1/public/north-star ·
-          no customer data appears on this page, ever · the $49 tier has no billing rail behind it yet and
-          says so where it is priced. If a claim on this page ever stops being checkable, that&apos;s a bug —
-          file it.
+          Footnote ledger, in order of appearance: every framed surface on this page is labelled above itself
+          as either an illustration or a real read, and a test checks that it is — the hero and §2 are
+          illustrated conversations, §3&apos;s release list and §4&apos;s staged proposal are illustrations of
+          the product UI rather than screenshots of anyone&apos;s account · §6 is the only section carrying
+          real numbers: the Pod Report is computed from this repository&apos;s own git history, and the engine
+          read comes from the synthetic demo project, which you can curl at /api/v1/public/north-star · no
+          customer data appears on this page, ever · the MCP connector is read-only, so your agent can read
+          this context but cannot write it · the $49 tier has no billing rail behind it yet and says so where
+          it is priced. If a claim on this page ever stops being checkable, that&apos;s a bug — file it.
         </p>
       </div>
     </footer>

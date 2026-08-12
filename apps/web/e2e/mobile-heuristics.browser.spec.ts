@@ -70,7 +70,24 @@ export async function assertMobileClean(page: Page, label: string) {
     // while the hero's `a.btn` CTA — the target that actually matters on a phone — is in it.
     const undersized = await page.evaluate((min) => {
       const selector = 'button, summary, select, textarea, [role="button"], input, a.btn'
+
+      // A checkbox or radio is never itself the target — its LABEL is, because clicking a label
+      // activates its control. So the rect that matters is the label's, and globals.css sizes
+      // exactly that. Measuring the 13x13 control instead would report every checkbox on the site
+      // as a failure while the rail was working correctly, which is how the first version of this
+      // pair disagreed with itself (see the checkbox comment in globals.css).
+      const targetOf = (element: Element): Element => {
+        if (
+          element instanceof HTMLInputElement &&
+          (element.type === 'checkbox' || element.type === 'radio')
+        ) {
+          return element.closest('label') ?? element
+        }
+        return element
+      }
+
       return Array.from(document.querySelectorAll(selector))
+        .map(targetOf)
         .filter((element) => {
           const style = getComputedStyle(element)
           if (style.display === 'none' || style.visibility === 'hidden') return false

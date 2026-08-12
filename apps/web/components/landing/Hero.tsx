@@ -56,11 +56,19 @@ export function Hero() {
         </div>
 
         <div>
+          {/* "Example" is not optional here. This note carried the mockup's wording ("In ChatGPT,
+              Claude, or your agent · Golden Beans supplies the product context"), which describes
+              where the conversation happens but never says it is invented — while the window shows
+              specific lift and confidence figures and its chip reads "via MCP". The footer's
+              ledger already claimed the hero was labelled as an illustration, so the page was
+              asserting a label it did not have. Caught in cross-family review of PR #92. */}
           <SurfaceNote
-            label="In ChatGPT, Claude, or your agent"
-            detail="Golden Beans supplies the product context"
+            label="Example conversation in your agent"
+            detail="Illustration — not a live session, and not anyone's real numbers"
           />
-          <AgentWindow title="your agent · golden beans connected" status="via MCP">
+          {/* `status="illustration"`, matching §2. The chip read "via MCP", which is the one place
+              on this frame a reader would look to decide whether it is live — and it said yes. */}
+          <AgentWindow title="your agent · golden beans connected" status="illustration">
             <ActivityFeedItem actor="human">what should we bet on this cycle?</ActivityFeedItem>
             <ActivityFeedItem actor="agent" name="golden beans">
               comparing against your North Star…

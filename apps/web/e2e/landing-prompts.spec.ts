@@ -50,3 +50,14 @@ test('both prompts forbid the agent from claiming a workspace connection', async
   expect(handoffPrompt(baseURL!)).toContain('Do not claim you are connected to my Golden Beans workspace')
   expect(decisionPrompt(baseURL!)).toContain("Don't pretend you have access to my workspace")
 })
+
+// The second half of the same problem, caught in cross-family review of PR #92. The handoff prompt
+// used to end "connecting Golden Beans is how I can save it" — true of the product, false of the
+// MCP connector, which is read-only (AGENTS.md rule #3). A model reading the loose version would
+// reasonably tell its human "connect the MCP and I'll save your North Star", which nothing in the
+// system can do. The prompt now states the read-only boundary explicitly, and this pins it.
+test('the handoff prompt states the connector is read-only and cannot save the work', async ({ baseURL }) => {
+  const prompt = handoffPrompt(baseURL!)
+  expect(prompt).toContain('read-only')
+  expect(prompt).toContain('cannot write my North Star or save this conversation')
+})

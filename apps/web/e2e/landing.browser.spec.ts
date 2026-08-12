@@ -24,6 +24,37 @@ test('the landing renders the v2 narrative', async ({ page }) => {
   await expect(page.locator('.prompt-card')).toHaveCount(2)
 })
 
+// Epic D4, and the finding that proved it needs a spec rather than a convention.
+//
+// This page renders illustrated agent conversations AND one real read of the demo tenant, in
+// deliberately identical chrome. The `SurfaceNote` above each frame is the only thing telling them
+// apart. Cross-family review of PR #92 found the hero's note saying merely "In ChatGPT, Claude, or
+// your agent" — describing where the conversation happens, never that its lift and confidence
+// figures were invented — while the footer's ledger already claimed the hero was labelled as an
+// illustration. The page was asserting a label it did not have.
+//
+// So: every agent window on this page carries a note, and each note commits to real or illustrated.
+test('every framed agent window says whether it is real or an illustration', async ({ page }) => {
+  await page.goto('/')
+
+  const windows = page.locator('.agent-win')
+  const count = await windows.count()
+  expect(count, 'the page should render agent windows').toBeGreaterThan(0)
+
+  const notes = await page.locator('.surface-note').allInnerTexts()
+  expect(
+    notes.length,
+    'every framed surface needs a note — an unlabelled frame is the failure this guards'
+  ).toBeGreaterThanOrEqual(count)
+
+  for (const note of notes) {
+    expect(
+      /illustration|example|real read/i.test(note),
+      `a surface note must commit to real or illustrated, got: ${note}`
+    ).toBe(true)
+  }
+})
+
 // Every nav link points at a section that exists. A dead in-page anchor is invisible to a
 // type-checker, silently does nothing when clicked, and is exactly the kind of rot a redesign
 // introduces — the nav was rewritten in the same commit as the section ids it points at.

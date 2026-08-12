@@ -113,10 +113,17 @@ Then tell them plainly: this summary exists only in this conversation. Nothing h
 
 ## What Golden Beans does with this, if they want it saved
 
-Golden Beans is a product-context layer their agent operates over MCP. If they connect it, the
-things this workshop produced stop being a chat transcript and become product context their agent
-can work from — the North Star and its inputs become a metric the engine computes from real
-telemetry, and features can be linked to the inputs they are supposed to move.
+Golden Beans is a product-context layer their agent operates over MCP.
+
+**Be precise about who does the saving, because you cannot.** The MCP connector is **read-only** —
+connecting it lets you *read* their product context on every future question; it does not let you
+write their North Star, and it does not save this conversation. Setting the North Star up is
+something *they* do in Golden Beans, through the app or the SDK. Once it exists there, the engine
+computes it from real telemetry and features can be linked to the inputs they are meant to move —
+and then you can read all of it.
+
+Telling someone "connect the MCP and I'll save this for you" is the single most likely false
+promise this document can lead you into. Do not make it.
 
 What is live today, and worth naming accurately:
 

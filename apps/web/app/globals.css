@@ -158,22 +158,45 @@ body {
 }
 
 /* Checkbox and radio are excluded above because a 44px-tall checkbox is a
-   rendering bug, not an accessible one. They get the hit area instead of the
-   size: the box stays its native dimensions and an invisible 44px pad is
-   centred on it. `inline-grid` on the wrapper-less input is not possible, so
-   this hangs off the control itself. */
-:where(input[type='checkbox'], input[type='radio']) {
-  position: relative;
-}
-
-:where(input[type='checkbox'], input[type='radio'])::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: max(100%, 44px);
-  height: max(100%, 44px);
-  transform: translate(-50%, -50%);
+   rendering bug, not an accessible one. The target is their LABEL.
+   ── What this used to be, and why it was wrong ─────────────────────────────
+   The first version pinned an invisible 44px `::after` onto the control itself.
+   It measurably works in Chromium — `elementFromPoint` 18px below a checkbox
+   does return the checkbox — but it fails on two counts that matter. Generated
+   content on a replaced element is not portable (Firefox renders no pseudo box
+   for checkbox/radio at all), so the rail silently did nothing for a share of
+   real users. And it does not change the control's own bounding box, so
+   `mobile-heuristics.browser.spec.ts` — which measures rects — would have
+   flagged every swept route with a checkbox as failing while the rail was
+   "working". A rail whose guard cannot see it is a rail nobody can trust.
+   Making the wrapping label the target is the standards-compliant answer
+   (clicking a label activates its control, everywhere), it enlarges a box the
+   guard can actually measure, and it matches how these controls are already
+   written here — `shares/[projectSlug]/share-manager.tsx` wraps each radio in
+   its own label. Caught in cross-family review of PR #92. */
+/* The target for a checkbox or radio is its LABEL, not the control.
+   ── What this replaced, and why ────────────────────────────────────────────
+   The first version pinned an invisible 44px `::after` onto the control
+   itself. It measurably works in Chromium — `elementFromPoint` 18px below a
+   checkbox does return the checkbox — but it fails on two counts. Generated
+   content on a replaced element is not portable (Firefox renders no pseudo box
+   for checkbox/radio at all), so the rail silently did nothing for a share of
+   real users. And it never changes the control's own bounding box, so
+   `mobile-heuristics.browser.spec.ts` — which measures rects — would flag every
+   swept route with a checkbox while the rail was "working". A rail its own
+   guard cannot see is a rail nobody can trust.
+   Sizing the wrapping label is the standards-compliant answer (clicking a label
+   activates its control, in every engine), it enlarges a box the guard can
+   actually measure, and it matches how these are already written here —
+   `shares/[projectSlug]/share-manager.tsx` wraps each radio in its own label.
+   The spec's `targetOf()` resolves checkbox/radio to that label for the same
+   reason, so rail and guard measure the same box.
+   Caught in cross-family review of PR #92. */
+:where(label:has(> input[type='checkbox']), label:has(> input[type='radio'])) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
 }
 
 /* The page gutter respects a notched device. `max()` means nothing changes on a

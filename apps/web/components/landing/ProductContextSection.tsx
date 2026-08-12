@@ -143,9 +143,12 @@ export function ProductContextSection() {
             </div>
 
             <div>
+              {/* "The product UI, not your agent chat" distinguished the two FRAMES but never said
+                  the rows were invented — same gap the hero had (PR #92 review). The releases below
+                  are a shape, not a read: real ones live behind sign-in. */}
               <SurfaceNote
                 label="In Golden Beans /app · releases"
-                detail="The product UI, not your agent chat"
+                detail="Illustration — the product UI, not anyone's real releases"
               />
               <Panel>
                 <p className="panel-label">Release legibility</p>

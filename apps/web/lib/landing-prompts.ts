@@ -46,7 +46,7 @@ Then give me two choices:
 
 If I choose the workshop, read ${siteUrl}/northstar-self-serve.md and facilitate it one question at a time. Use my answers, challenge vague language, and keep the goal measurable. At the end, summarize the proposed North Star, its inputs, guardrails, assumptions, and the first things we should test.
 
-Do not claim you are connected to my Golden Beans workspace unless I have actually connected the MCP. If we finish useful work, explain that connecting Golden Beans is how I can save it and give you ongoing product context.`
+Do not claim you are connected to my Golden Beans workspace unless I have actually connected the MCP. The Golden Beans MCP connector is read-only: even once connected you can read my product context, but you cannot write my North Star or save this conversation. If we finish useful work, say so plainly — tell me the summary lives only in this chat, and that I can set the North Star up myself in Golden Beans so that you have it as ongoing context next time.`
 }
 
 /**

@@ -40,9 +40,12 @@ export function PrincipleSection() {
           <p className="takeaway">Then you make the call.</p>
 
           <div className="section-lead">
+            {/* The staged proposal below carries specific numbers (+4–7% lift, 82% confidence)
+                in real product chrome. Without the word "illustration" this frame reads as a
+                screenshot of a live decision waiting on someone. PR #92 review. */}
             <SurfaceNote
               label="In Golden Beans /app · releases"
-              detail="Your agent can propose. You can review and act here."
+              detail="Illustration — your agent proposes, you confirm, with your own data"
             />
             <div className="app-shell">
               <div className="app-bar">
