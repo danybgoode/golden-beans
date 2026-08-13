@@ -48,6 +48,13 @@ independently shippable slice of value.
      `### <NN> · <name>` heading per macro-section row above. -->
 
 ### 01 · Growth Engine
+- 🚧 [Scenarios made PM-operable](01-growth-engine/scenarios-pm-operable/README.md) (owner define ·
+  bounded launch/retry/stop · explicit target state · honest impact comparison and immutable evidence
+  links) — **code and migration are live, authoring remains dark** (2026-08-13, PR #98, `5bca24c`).
+  Signed-in owners now have one project-scoped operating surface over the existing scenario engine;
+  members keep the read-only evidence view. The enablement gate stays OFF until a verified synthetic
+  production launch/stop and the product owner's rendered-claim judgment are complete. #14's chart
+  decision remains open, so impact uses the documented comparison-table fallback.
 - ✅ [Flag control plane + Miyagi migration + resilience/SecOps](01-growth-engine/flag-serving-and-prd-g/README.md)
   (typed/versioned flag registry · local snapshot provider · complete 40-key Miyagi cutover · closed
   resilience/security scenarios · policy-bound circuit breakers · generic project catalog sync ·
@@ -205,6 +212,12 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-13** — `scenarios-pm-operable` **shipped dark** (PR #98, `5bca24c`): the scenario engine
+  now has a PM-facing owner surface for closed-choice definition, bounded launch/retry/stop, target
+  state, and an honest control-vs-treatment evidence thread. The additive owner-session facade keeps
+  every write project-scoped and actor-attributed while sharing the credential rail's transaction
+  cores. `SCENARIO_AUTHORING_ENABLED` remains OFF pending the named synthetic production walkthrough
+  and rendered-claim judgment; read-only evidence remains available throughout.
 - **2026-08-13** — `frijoles-rebrand-closeout` **shipped and live** (PR #96, `0a0beb0`): the name now
   holds below the public surface too. `@golden-frijoles/sdk@0.4.0` is public and clean-installable,
   the old `0.1.0` package points forward, and the OpenFeature provider identity break is explicit.

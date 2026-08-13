@@ -291,6 +291,13 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **A fail-closed evidence context must not be reused by the safety control that stops already-running
+  work.** Scenario launch and retry correctly refuse an absent or malformed immutable fault summary,
+  but reusing that disclosure-heavy context for `stop` briefly made a legacy running row impossible
+  to stop. Separate *eligibility to begin* from *authority to end*: the shutdown path should require
+  only project-scoped identity, current lifecycle state, and the policy needed to make the transition.
+  Pin the malformed/legacy row as a regression, because happy-path fixtures will always carry the new
+  metadata. *(2026-08-13, scenarios-pm-operable.)*
 - **A finding's CONCLUSION can be wrong while its OBSERVATION is right — check before accepting AND
   before dismissing.** Three times in one epic: "reduced motion is broken" (false — the token file
   already handled it) exposed that the new motion rule was *dead for `.btn` all along*, losing to a
