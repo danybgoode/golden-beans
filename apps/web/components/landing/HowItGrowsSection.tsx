@@ -9,20 +9,20 @@ import { Panel } from '@/components/ui/Panel'
 // ask.
 const steps = [
   {
-    kicker: '① Pick what winning means',
-    title: 'Give it a North Star.',
+    kicker: 'Step 1 · Pick what winning means',
+    title: 'Give it a North Star',
     copy: 'Start with the goal your company can actually agree on. Your agent now has something better than an opinion to work from.',
     tail: 'One number. Fewer philosophical debates.',
   },
   {
-    kicker: '② Connect what knows the truth',
-    title: 'Give it context.',
+    kicker: 'Step 2 · Connect what knows the truth',
+    title: 'Give it context',
     copy: 'Connect the places that know what customers did, what shipped, and what it cost. Your agent can finally see the same product you do.',
     tail: 'No new dashboard required.',
   },
   {
-    kicker: '③ Ask away',
-    title: 'Put it to work.',
+    kicker: 'Step 3 · Ask away',
+    title: 'Put it to work',
     copy: 'Ask what to bet on, what changed, whether it worked, or what you should look at next. The answer comes back against the goal.',
     tail: 'With receipts.',
   },
@@ -33,10 +33,10 @@ export function HowItGrowsSection() {
     <section className="band section-tight" id="how">
       <div className="wrap">
         <p className="panel-label">How it grows</p>
-        <h2 className="section-title">Plant once. Keep asking better questions.</h2>
+        <h2 className="section-title">Plant once. Keep asking better questions</h2>
         <p className="measure">No migration project. No new place for everyone to stare at charts.</p>
         <p className="takeaway">
-          Golden Beans gives your agent the product context it needs to work alongside you.
+          Golden Frijoles gives your agent the product context it needs to work alongside you.
         </p>
         <div className="cards3 section-lead">
           {steps.map((step) => (

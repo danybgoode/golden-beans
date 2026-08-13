@@ -19,7 +19,7 @@ import { getSiteUrl } from '@/lib/site-url'
 // The landing makes claims to a human who can see the badges around them. This document makes
 // claims to a MODEL, which will repeat them to a human as fact, with none of the surrounding
 // context and none of the hedging. So it names only capabilities that exist today, and it says
-// explicitly and more than once that the agent reading it is NOT connected to a Golden Beans
+// explicitly and more than once that the agent reading it is NOT connected to a Golden Frijoles
 // workspace — because the single most likely failure mode of this whole surface is an agent that
 // reads a workshop script and then cheerfully claims to have saved the result somewhere.
 // e2e/northstar-self-serve.spec.ts pins that.
@@ -31,7 +31,7 @@ export async function GET() {
   const body = `# The North Star workshop — self-serve
 
 > A facilitation script for an AI agent to run with a product person, one question at a time.
-> Published by Golden Beans at ${siteUrl}/northstar-self-serve.md — free to use, no account needed.
+> Published by Golden Frijoles at ${siteUrl}/northstar-self-serve.md — free to use, no account needed.
 
 ## Read this part first (instructions for the agent)
 
@@ -47,7 +47,7 @@ decision; you own the rigour of the process. Concretely:
    things the product can actually observe, it is not a North Star yet.
 4. **Do not flatter the answer.** If the metric they propose would go up when the product gets
    worse, say so and show the case.
-5. **You are NOT connected to a Golden Beans workspace.** Unless the person has actually connected
+5. **You are NOT connected to a Golden Frijoles workspace.** Unless the person has actually connected
    the MCP connector in this conversation, you cannot read their product data, you cannot save
    anything, and you must not imply otherwise. Say "I don't have access to your data — you'll have
    to tell me" whenever that is the true answer.
@@ -111,14 +111,14 @@ Write it back to them in this shape, and nothing longer:
 
 Then tell them plainly: this summary exists only in this conversation. Nothing has been saved.
 
-## What Golden Beans does with this, if they want it saved
+## What Golden Frijoles does with this, if they want it saved
 
-Golden Beans is a product-context layer their agent operates over MCP.
+Golden Frijoles is a product-context layer their agent operates over MCP.
 
 **Be precise about who does the saving, because you cannot.** The MCP connector is **read-only** —
 connecting it lets you *read* their product context on every future question; it does not let you
 write their North Star, and it does not save this conversation. Setting the North Star up is
-something *they* do in Golden Beans, through the app or the SDK. Once it exists there, the engine
+something *they* do in Golden Frijoles, through the app or the SDK. Once it exists there, the engine
 computes it from real telemetry and features can be linked to the inputs they are meant to move —
 and then you can read all of it.
 

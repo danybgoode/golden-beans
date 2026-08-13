@@ -47,12 +47,12 @@ test('the prompts name no URL outside the checked set', async ({ baseURL }) => {
 // about data the agent never had. If this instruction is ever edited out, the prompt starts
 // inviting exactly that.
 test('both prompts forbid the agent from claiming a workspace connection', async ({ baseURL }) => {
-  expect(handoffPrompt(baseURL!)).toContain('Do not claim you are connected to my Golden Beans workspace')
+  expect(handoffPrompt(baseURL!)).toContain('Do not claim you are connected to my Golden Frijoles workspace')
   expect(decisionPrompt(baseURL!)).toContain("Don't pretend you have access to my workspace")
 })
 
 // The second half of the same problem, caught in cross-family review of PR #92. The handoff prompt
-// used to end "connecting Golden Beans is how I can save it" — true of the product, false of the
+// used to end "connecting Golden Frijoles is how I can save it" — true of the product, false of the
 // MCP connector, which is read-only (AGENTS.md rule #3). A model reading the loose version would
 // reasonably tell its human "connect the MCP and I'll save your North Star", which nothing in the
 // system can do. The prompt now states the read-only boundary explicitly, and this pins it.

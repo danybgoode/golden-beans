@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { GoldenBeansLoader } from './Loader'
+import { GoldenFrijolesLoader } from './Loader'
 
 const MAX_VISIBLE_MS = 10_000
 
@@ -101,7 +101,7 @@ export function NavigationLoader() {
 
   return (
     <div className="navigation-loader">
-      <GoldenBeansLoader compact />
+      <GoldenFrijolesLoader compact />
     </div>
   )
 }

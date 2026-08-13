@@ -16,7 +16,7 @@ import { ClosingCta } from '@/components/landing/ClosingCta'
 import { Footer } from '@/components/landing/Footer'
 import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 
-// The Golden Beans public landing — the v2 narrative, per
+// The Golden Frijoles public landing — the v2 narrative, per
 // references/golden-beans-landing-v2.html and Roadmap/02-commercial/landing-redesign-v2/.
 //
 // Which sections are lit is NOT recorded here. It was — "sections 1, 2, 3①③, 6, 8 fully live;

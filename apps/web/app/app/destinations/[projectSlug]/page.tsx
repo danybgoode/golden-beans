@@ -29,8 +29,8 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
         </p>
         <p>
           A destination reliably delivers this project&apos;s events to an external webhook. Each delivery is
-          signed (HMAC-SHA256) so your receiver can verify it came from Golden Beans. New destinations start{' '}
-          <strong>disabled</strong> — configure it, send a test, then enable it.
+          signed (HMAC-SHA256) so your receiver can verify it came from Golden Frijoles. New destinations
+          start <strong>disabled</strong> — configure it, send a test, then enable it.
         </p>
         {/* event-destination-router · Sprint 3, Story 3.3 — the delivery operating view. Read-only, so
           it renders server-side here rather than travelling through the client manager component.

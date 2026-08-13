@@ -56,7 +56,7 @@ export async function PodReportProof() {
       <div>
         <p className="kicker">Pod report</p>
         <h3 className="card-title">
-          Your dev team, as a <em className="gold-em">revenue engine</em>.
+          Your dev team, as a <em className="gold-em">revenue engine</em>
         </h3>
         <p className="section-copy">
           Computed, not claimed — every figure below comes from <code>{repo ?? 'this repository'}</code>
@@ -136,7 +136,7 @@ function PodsProofFallback({ epic }: { epic: string }) {
       <div className="teaser">
         <div className="teaser__copy">
           <h3 className="card-title">
-            Your dev team, as a <em className="gold-em">revenue engine</em>.
+            Your dev team, as a <em className="gold-em">revenue engine</em>
           </h3>
           <p>
             The Pod Report — cycle and lead time, the DORA measures that are actually derivable, and an

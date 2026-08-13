@@ -27,10 +27,10 @@ const frictions = [
 export function OpinionsSection() {
   return (
     <>
-      <SectionDivider number="①" title="Everyone has a good reason" />
+      <SectionDivider number={1} title="Everyone has a good reason" />
       <section id="opinions">
         <div className="wrap">
-          <h2 className="section-title">Product decisions get complicated when humans are involved.</h2>
+          <h2 className="section-title">Product decisions get complicated when humans are involved</h2>
           <p className="measure">
             Sales heard it from a prospect. Engineering knows where the bodies are buried. The CEO has seen
             this movie before.
@@ -50,8 +50,8 @@ export function OpinionsSection() {
           <div className="section-lead measure">
             <p className="big-quote">Opinions aren&apos;t the problem.</p>
             <p className="measure">
-              Good product teams should disagree. Golden Beans gives your agent the same quantifiable goal to
-              test those ideas against — regardless of who suggested them.
+              Good product teams should disagree. Golden Frijoles gives your agent the same quantifiable goal
+              to test those ideas against — regardless of who suggested them.
             </p>
             <p className="takeaway">The idea gets a fair hearing. The org chart doesn&apos;t get a vote.</p>
           </div>

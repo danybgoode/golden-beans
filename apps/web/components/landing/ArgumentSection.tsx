@@ -17,10 +17,10 @@ import { SurfaceNote } from './SurfaceNote'
 export function ArgumentSection() {
   return (
     <>
-      <SectionDivider number="②" title="Bring an agent to the argument" />
+      <SectionDivider number={2} title="Bring an agent to the argument" />
       <section className="band" id="argument">
         <div className="wrap">
-          <h2 className="section-title">Not to win it.</h2>
+          <h2 className="section-title">Not to win it</h2>
           <p className="measure">
             Your agent can compare the bets against the goal, check what happened before, and work out what
             waiting could cost.
@@ -28,8 +28,11 @@ export function ArgumentSection() {
           <p className="takeaway">It doesn&apos;t care whose idea it was. Neither does the math.</p>
 
           <div className="section-lead">
-            <SurfaceNote label="Example conversation in your agent" detail="Not a Golden Beans chat screen" />
-            <AgentWindow title="your agent · golden beans connected" status="illustration">
+            <SurfaceNote
+              label="Example conversation in your agent"
+              detail="Not a Golden Frijoles chat screen"
+            />
+            <AgentWindow title="your agent · golden frijoles connected" status="illustration">
               <ActivityFeedItem actor="human">what should we bet on this cycle?</ActivityFeedItem>
               <ActivityFeedItem actor="agent" name="compare_initiatives">
                 onboarding_redesign vs. loyalty_program

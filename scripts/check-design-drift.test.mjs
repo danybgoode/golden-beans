@@ -107,3 +107,72 @@ test('the inline-style ban stays landing-only, so /app can compute a bar width',
     ['apps/web/components/landing/Bar.tsx']
   );
 });
+
+// ── landing-frijoles-rebrand · Sprint 1, Stories 1.5 and 1.7 ────────────────────────────────────
+
+test('enclosed numerals are rejected wherever the sweep reaches', () => {
+  // Not Extended_Pictographic, so the original PICTOGRAPH rule never saw them — which is how ten
+  // of them lived in the section dividers through a whole epic.
+  const source = `<SectionDivider number="①" title="Everyone has a good reason" />`;
+  assert.deepEqual(
+    inspectDesignSource(source).map((finding) => finding.rule),
+    ['enclosed-numeral']
+  );
+});
+
+test('a landing heading may not end in a full stop, and a sentence still may', () => {
+  const heading = `<h2 className="section-title">Not to win it.</h2>`;
+  assert.deepEqual(
+    inspectDesignSource(heading, { enforceHeadingVoice: true }).map((finding) => finding.rule),
+    ['heading-period']
+  );
+
+  // `.takeaway` / `.note` / `.micro` are closing lines of prose (epic D7). Stripping their stop
+  // would leave a fragment, so the rule must not reach them.
+  const prose = `<p className="takeaway">Now your decisions have receipts.</p>`;
+  assert.deepEqual(inspectDesignSource(prose, { enforceHeadingVoice: true }), []);
+});
+
+test('the heading rule survives the two shapes that straddle newlines', () => {
+  // 1. A heading prettier has wrapped. A line-scoped rule sees "enough opinions.</em>" on its own
+  //    line with no heading tag in sight, and passes.
+  const wrapped = `<h1 className="display">\n  Your roadmap has\n  <br />\n  <em className="foil">enough opinions.</em>\n</h1>`;
+  assert.deepEqual(
+    inspectDesignSource(wrapped, { enforceHeadingVoice: true }).map((finding) => finding.rule),
+    ['heading-period']
+  );
+
+  // 2. A title declared in a data array dozens of lines above the <h3> that renders it.
+  const dataTitle = `const steps = [\n  { title: 'Give it a North Star.', copy: 'x' },\n]`;
+  assert.deepEqual(
+    inspectDesignSource(dataTitle, { enforceHeadingVoice: true }).map((finding) => finding.rule),
+    ['heading-period']
+  );
+});
+
+test('a heading may end in ? ! or an ellipsis — only the full stop reads as a sentence', () => {
+  const allowed = [
+    `<h2 className="section-title">Fix your org in three easy steps!</h2>`,
+    `<h3 className="card-title">What if Black Friday actually works?</h3>`,
+    `<h3 className="card-title">Percolating…</h3>`,
+    `<h3 className="card-title">Still deciding...</h3>`,
+  ];
+  for (const source of allowed) {
+    assert.deepEqual(inspectDesignSource(source, { enforceHeadingVoice: true }), [], source);
+  }
+});
+
+test('the heading voice is enforced on the landing and nowhere else', (t) => {
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  const heading = `<h2 className="section-title">Your agent finally has product context.</h2>\n`;
+  writeFileSync(join(root, 'apps/web/components/landing/Titled.tsx'), heading);
+  // /app's headings are UI labels written under a different brief (epic D7).
+  writeFileSync(join(root, 'apps/web/components/ui/Titled.tsx'), heading);
+
+  assert.deepEqual(
+    inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
+    ['apps/web/components/landing/Titled.tsx heading-period']
+  );
+});

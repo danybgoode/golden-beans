@@ -13,6 +13,89 @@ const RAW_HEX = /#[\da-f]{3,8}\b/i;
 const INLINE_STYLE = /\bstyle\s*=\s*\{/;
 const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 
+// landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
+// section dividers used to be built from. They are NOT Extended_Pictographic, so the rule above
+// never saw them; they rendered at 12px inside a kraft band and were illegible at the only size a
+// text run tolerates. The divider now takes an integer and draws a stamped disc, so any surviving
+// glyph is a leftover rather than a choice. Ⓐ-style letters are included because the same
+// temptation ("just paste a nicer character") reaches for them next.
+const ENCLOSED_ALPHANUMERIC = /[①-⓿㉑-㊿]/u;
+
+// landing-frijoles-rebrand · Sprint 1, Story 1.7 (epic D7) — headings are titles, not sentences.
+//
+// Scoped to HEADINGS ONLY, and deliberately not to `.takeaway`/`.note`/`.micro`: those are closing
+// lines of prose and stripping their stop would leave a fragment. The match is on a heading element
+// or a heading class carrying a text child that ends in `.` — so `<h2 className="section-title">Not
+// to win it.</h2>` fails and `<p className="takeaway">Now your decisions have receipts.</p>` does
+// not.
+//
+// `!` and `?` are allowed: the infomercial band's "Fix your org in three easy steps!" and §4's
+// question headings are titles that legitimately carry terminal punctuation which is not a full
+// stop. Only the period reads as "this heading is a sentence".
+//
+// An ellipsis is allowed too (`…` and `...`): it is a trailing-off, not a sentence end.
+//
+// Matching is done over the WHOLE source rather than line by line, because both shapes that matter
+// here straddle newlines: a heading whose text prettier has wrapped, and a heading whose text comes
+// from a `title:` entry in a data array several dozen lines above the JSX that renders it. A
+// line-scoped rule would silently pass both — the failure CODE-QUALITY rule 5 calls worse than no
+// test.
+const HEADING_BLOCK = /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/g;
+const TITLE_LITERAL = /\btitle\s*[:=]\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+
+/** True when a heading's visible text ends in a full stop (and not an ellipsis). */
+function endsInPeriod(text) {
+  const trimmed = text
+    // JSX expression containers hold interpolated titles; their literal text is checked where it
+    // is declared, not where it is rendered.
+    .replace(/\{[\s\S]*?\}/g, '')
+    // Entities prettier and this codebase actually use in headings.
+    .replace(/&apos;|&rsquo;/g, "'")
+    .replace(/&ldquo;|&rdquo;|&quot;/g, '"')
+    .replace(/<[^>]*>/g, ' ')
+    .trim();
+  if (!trimmed) return false;
+  if (trimmed.endsWith('...') || trimmed.endsWith('…')) return false;
+  return trimmed.endsWith('.');
+}
+
+/** Line number of a character offset, 1-indexed, for a readable violation. */
+function lineOf(source, index) {
+  return source.slice(0, index).split('\n').length;
+}
+
+/**
+ * Heading rules (epic D7 + D4). Applied only where `enforceHeadingVoice` is on — i.e. the landing,
+ * which is the surface the product owner set this voice for. `/app`'s headings are UI labels
+ * written under a different brief and are not swept.
+ */
+export function inspectHeadings(source) {
+  const liveSource = withoutComments(source);
+  const violations = [];
+
+  for (const match of liveSource.matchAll(HEADING_BLOCK)) {
+    if (endsInPeriod(match[2])) {
+      violations.push({
+        line: lineOf(liveSource, match.index),
+        rule: 'heading-period',
+        content: match[0].replace(/\s+/g, ' ').trim().slice(0, 120),
+      });
+    }
+  }
+
+  for (const match of liveSource.matchAll(TITLE_LITERAL)) {
+    if (endsInPeriod(match[2])) {
+      violations.push({
+        line: lineOf(liveSource, match.index),
+        rule: 'heading-period',
+        content: match[0].replace(/\s+/g, ' ').trim().slice(0, 120),
+      });
+    }
+  }
+
+  return violations;
+}
+
 function sourceFiles(root) {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const path = join(root, entry.name);
@@ -25,7 +108,10 @@ export function withoutComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-export function inspectDesignSource(source, { disallowInlineStyle = false } = {}) {
+export function inspectDesignSource(
+  source,
+  { disallowInlineStyle = false, enforceHeadingVoice = false } = {}
+) {
   const liveSource = withoutComments(source);
   const violations = [];
 
@@ -34,6 +120,9 @@ export function inspectDesignSource(source, { disallowInlineStyle = false } = {}
     if (PICTOGRAPH.test(line)) {
       violations.push({ line: index + 1, rule: 'ui-pictograph', content: line.trim() });
     }
+    if (ENCLOSED_ALPHANUMERIC.test(line)) {
+      violations.push({ line: index + 1, rule: 'enclosed-numeral', content: line.trim() });
+    }
     if (RAW_HEX.test(lineWithoutUrlFragments)) {
       violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
     }
@@ -41,6 +130,8 @@ export function inspectDesignSource(source, { disallowInlineStyle = false } = {}
       violations.push({ line: index + 1, rule: 'landing-inline-style', content: line.trim() });
     }
   });
+
+  if (enforceHeadingVoice) violations.push(...inspectHeadings(source));
 
   return violations;
 }
@@ -71,6 +162,7 @@ export function inspectRepository(root = repoRoot) {
   const violations = files.flatMap((path) =>
     inspectDesignSource(readFileSync(path, 'utf8'), {
       disallowInlineStyle: path.startsWith(`${landing}/`),
+      enforceHeadingVoice: path.startsWith(`${landing}/`),
     }).map((violation) => ({
       ...violation,
       path: relative(root, path),

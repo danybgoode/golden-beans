@@ -16,22 +16,22 @@ import { SectionDivider } from '@/components/ui/SectionDivider'
 const routes = [
   {
     kicker: 'Claude',
-    title: 'Connect Golden Beans',
-    copy: 'Add your Golden Beans MCP connection and start asking product questions from Claude.',
+    title: 'Connect Golden Frijoles',
+    copy: 'Add your Golden Frijoles MCP connection and start asking product questions from Claude.',
     cta: 'Connect to Claude',
     note: null,
   },
   {
     kicker: 'ChatGPT',
-    title: 'Bring Golden Beans into ChatGPT',
+    title: 'Bring Golden Frijoles into ChatGPT',
     copy: 'Connect the remote MCP and let ChatGPT work from the same product context.',
     cta: 'Connect to ChatGPT',
     note: 'Availability and capabilities vary by plan. Yes, we also wish these sentences aged more slowly.',
   },
   {
     kicker: 'Your own agent',
-    title: "It's MCP. Go wild.",
-    copy: "Point a compatible agent at Golden Beans. Your product context shouldn't depend on which model won Twitter this week.",
+    title: "It's MCP. Go wild",
+    copy: "Point a compatible agent at Golden Frijoles. Your product context shouldn't depend on which model won Twitter this week.",
     cta: 'Read the MCP docs',
     note: null,
   },
@@ -40,13 +40,13 @@ const routes = [
 export function ConnectSection() {
   return (
     <>
-      <SectionDivider number="⑧" title="Bring your agent" />
+      <SectionDivider number={8} title="Bring your agent" />
       <section className="band" id="connect">
         <div className="wrap">
-          <h2 className="section-title">Your agent. Your call.</h2>
+          <h2 className="section-title">Bring your agent into product</h2>
           <p className="measure">Claude person? Great. ChatGPT person? Also great.</p>
           <p className="takeaway">
-            Golden Beans isn&apos;t here to start another AI preference war. We have roadmaps to ship.
+            Golden Frijoles isn&apos;t here to start another AI preference war. We have roadmaps to ship.
           </p>
 
           <div className="cards3 section-lead">

@@ -26,13 +26,13 @@ const guarantees = [
 export function SdkSection() {
   return (
     <>
-      <SectionDivider number="⑨" title="For the engineers who will inevitably ask" />
+      <SectionDivider number={9} title="For the engineers who will inevitably ask" />
       <section id="sdk">
         <div className="wrap">
-          <h2 className="section-title">Yes, there&apos;s an SDK.</h2>
+          <h2 className="section-title">Yes, there&apos;s an SDK</h2>
           <p className="measure">
-            A few lines get the first event in. Your engineers keep control of what enters Golden Beans. You
-            get a product layer you and your agent can actually operate.
+            A few lines get the first event in. Your engineers keep control of what enters Golden Frijoles.
+            You get a product layer you and your agent can actually operate.
           </p>
           <p className="takeaway">Everybody gets to keep their IDE.</p>
 

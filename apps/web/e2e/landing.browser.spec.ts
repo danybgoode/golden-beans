@@ -114,3 +114,132 @@ test('the hero CTAs resolve to sections on the page', async ({ page }) => {
     await expect(page.locator(href), `${href} has no target on the page`).toHaveCount(1)
   }
 })
+
+// ── landing-frijoles-rebrand · Sprint 1 ─────────────────────────────────────────────────────────
+
+// Story 1.3 (epic D2). The defect this pins was LIVE in production: `a:hover` (0,1,1) in
+// tokens.css out-specified `.btn-gold` (0,1,0), so hovering an anchor-based gold CTA painted
+// `--gold-hot` ink on a `--gold-hot` face and the label — plus the arrow, which strokes
+// `currentColor` — disappeared outright.
+//
+// It asserts the RENDERED result rather than the stylesheet on purpose. A test that reads the rule
+// passes happily while some later selector out-specifies it, which is the exact shape of the bug
+// it is guarding: nothing here was wrong in isolation.
+//
+// The threshold is deliberately crude — a real contrast-ratio implementation would be a second
+// definition of "legible" to keep in step with whatever the design system decides later. What is
+// being caught is total collapse (ink == face), not a subtle regression, so channel distance is
+// both sufficient and impossible to argue with.
+test('a gold CTA keeps its label while hovered', async ({ page }) => {
+  await page.goto('/')
+
+  const cta = page.locator('.hero .hero-cta a.btn-gold').first()
+  await expect(cta).toBeVisible()
+  await cta.hover()
+
+  const { color, background } = await cta.evaluate((node) => {
+    const style = getComputedStyle(node)
+    return { color: style.color, background: style.backgroundColor }
+  })
+
+  const channels = (value: string) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number)
+  const [r1, g1, b1] = channels(color)
+  const [r2, g2, b2] = channels(background)
+  const distance = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2)
+
+  expect(
+    distance,
+    `hovered CTA ink ${color} is indistinguishable from its face ${background}`
+  ).toBeGreaterThan(240)
+})
+
+// Story 1.1 (epic D1). The rename is public-surfaces-only, and the ONE deliberate survivor is the
+// npm package name in §9 — `@golden-beans/sdk` is the package that actually exists, and
+// CODE-QUALITY.md #9 says a public claim must be checkable.
+//
+// Naming that exception here rather than loosening the matcher is the point: if the package is ever
+// republished, this test fails and tells the next person exactly which line to change.
+test('the page is called Golden Frijoles, with one named exception', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page).toHaveTitle(/Golden Frijoles/)
+  await expect(page.locator('.brand-lockup__type strong').first()).toHaveText('golden frijoles')
+
+  const body = await page.locator('body').innerText()
+  const survivors = body.split('\n').filter((line) => /golden bean/i.test(line))
+
+  for (const line of survivors) {
+    expect(
+      line.includes('@golden-beans/sdk'),
+      `"${line.trim()}" still says Golden Beans and is not the npm package exception`
+    ).toBe(true)
+  }
+})
+
+// Story 1.5 (epic D4). The section number is a drawn disc, not a `①` glyph — and the prop that
+// feeds it is typed `number`, so the glyph cannot come back through the front door either.
+test('section dividers carry a legible numbered stamp', async ({ page }) => {
+  await page.goto('/')
+
+  const stamps = page.locator('.divider__stamp')
+  await expect(stamps.first()).toBeVisible()
+  expect(await stamps.count()).toBeGreaterThanOrEqual(10)
+
+  await expect(stamps.first()).toHaveText('1')
+
+  const box = await stamps.first().boundingBox()
+  expect(box!.width, 'the stamp must be a real target, not a text glyph').toBeGreaterThanOrEqual(24)
+
+  const body = await page.locator('body').innerText()
+  expect(body, 'no enclosed-numeral glyph survives on the page').not.toMatch(/[①-⓿]/)
+})
+
+// Story 1.4. Selecting a paragraph on a phone used to paint a solid gold brick across the whole
+// screen. The geometry is the UA's and cannot be changed from CSS — a selection that includes the
+// trailing block break leaves no line terminal, so every line's highlight extends to the containing
+// block's content edge, and on a phone that block is the viewport. What was ours is that the fill
+// was OPAQUE and inverted the ink, which is what turned a normal extension into a slab.
+//
+// So the assertion is on the material, and it is exact rather than impressionistic: the ground must
+// be translucent, and the ink must NOT be the page ground colour (which is what an inverted
+// selection sets it to). Both halves matter — a translucent wash under inverted ink would still
+// read as a stamped block.
+test('selecting a paragraph is a wash, not a slab', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+
+  const paragraph = page.locator('.hero-sub').first()
+  await paragraph.scrollIntoViewIfNeeded()
+
+  const material = await paragraph.evaluate((node) => {
+    const style = getComputedStyle(node, '::selection')
+    return { background: style.backgroundColor, color: style.color }
+  })
+
+  // `color-mix()` resolves to whichever serialisation the engine prefers, and it is NOT `rgba()`
+  // here — Chromium returns `color(srgb 1 0.831373 0.368627 / 0.34)`. So the alpha is read as
+  // "whatever follows the slash", in either notation, with the percentage form normalised. An
+  // `rgba()`-only regex would have found nothing, defaulted to 1, and failed this test against a
+  // fix that works — which is how a guard teaches people to delete it.
+  const alphaToken = material.background.match(/\/\s*([\d.]+)(%?)\s*\)/)
+  const alpha = alphaToken ? Number(alphaToken[1]) / (alphaToken[2] === '%' ? 100 : 1) : 1
+  expect(
+    alpha,
+    `selection ground ${material.background} must be translucent so the words stay visible under it`
+  ).toBeLessThan(1)
+
+  // `--roast` is the page ground. Selection ink landing on it means the old inverted treatment is
+  // back, and the extension will read as a filled block again whatever its alpha.
+  expect(material.color.replace(/\s/g, '')).not.toBe('rgb(22,18,13)')
+
+  // And the selection a real gesture produces still hugs the words rather than running the full
+  // width of the viewport. Triple-click is the gesture that reproduced the report.
+  await paragraph.click({ clickCount: 3 })
+  const widest = await page.evaluate(() => {
+    const selection = getSelection()
+    if (!selection?.rangeCount) return null
+    return Math.max(...[...selection.getRangeAt(0).getClientRects()].map((rect) => rect.width))
+  })
+  expect(widest, 'a paragraph must actually be selectable by triple-click').not.toBeNull()
+  expect(widest!).toBeLessThanOrEqual(390)
+})

@@ -25,13 +25,13 @@ export function PrincipleSection() {
 
   return (
     <>
-      <SectionDivider number="④" title="A product principle" />
+      <SectionDivider number={4} title="A product principle" />
       <section className="band" id="principle">
         <div className="wrap">
           <h2 className="display measure measure--wide">
             Agnostic about ideas.
             <br />
-            <em className="foil">Conservative about actions.</em>
+            <em className="foil">Conservative about actions</em>
           </h2>
           <p className="measure">
             Your agent can investigate, compare, challenge and propose. Anything that changes the product gets
@@ -44,7 +44,7 @@ export function PrincipleSection() {
                 in real product chrome. Without the word "illustration" this frame reads as a
                 screenshot of a live decision waiting on someone. PR #92 review. */}
             <SurfaceNote
-              label="In Golden Beans /app · releases"
+              label="In Golden Frijoles /app · releases"
               detail="Illustration — your agent proposes, you confirm, with your own data"
             />
             <div className="app-shell">
@@ -82,7 +82,7 @@ export function PrincipleSection() {
           </div>
 
           <div className="section-lead measure">
-            <h3 className="card-title">Your agent gets leverage. Not a blank cheque.</h3>
+            <h3 className="card-title">Your agent gets leverage. Not a blank cheque</h3>
             <p>Every write stages first. Every credential is scoped. Every action leaves a trail.</p>
             <p className="takeaway">Autonomy is great. Surprise production changes less so.</p>
             <p className="note">

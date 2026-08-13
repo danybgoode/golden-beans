@@ -31,7 +31,7 @@ export function Hero() {
           <h1 className="display">
             Your roadmap has
             <br />
-            <em className="foil">enough opinions.</em>
+            <em className="foil">enough opinions</em>
           </h1>
           <p className="hero-sub">
             Give your agent the goals your company agreed on and the context behind them.
@@ -57,7 +57,7 @@ export function Hero() {
 
         <div>
           {/* "Example" is not optional here. This note carried the mockup's wording ("In ChatGPT,
-              Claude, or your agent · Golden Beans supplies the product context"), which describes
+              Claude, or your agent · Golden Frijoles supplies the product context"), which describes
               where the conversation happens but never says it is invented — while the window shows
               specific lift and confidence figures and its chip reads "via MCP". The footer's
               ledger already claimed the hero was labelled as an illustration, so the page was
@@ -68,9 +68,9 @@ export function Hero() {
           />
           {/* `status="illustration"`, matching §2. The chip read "via MCP", which is the one place
               on this frame a reader would look to decide whether it is live — and it said yes. */}
-          <AgentWindow title="your agent · golden beans connected" status="illustration">
+          <AgentWindow title="your agent · golden frijoles connected" status="illustration">
             <ActivityFeedItem actor="human">what should we bet on this cycle?</ActivityFeedItem>
-            <ActivityFeedItem actor="agent" name="golden beans">
+            <ActivityFeedItem actor="agent" name="golden frijoles">
               comparing against your North Star…
             </ActivityFeedItem>
             <div className="stack">

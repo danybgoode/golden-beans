@@ -10,14 +10,110 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── The selection material ───────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.4.
+
+   This used to be an OPAQUE `--gold-hot` fill with the ink inverted to
+   `--roast`, and on a phone it turned selecting a paragraph into a solid gold
+   brick spanning the whole screen. The geometry is not our bug and cannot be
+   fixed in CSS: a selection that includes the trailing block break — which is
+   what the ordinary "select this paragraph" gesture produces, reproduced with
+   a triple-click at 390px in BOTH Chromium and WebKit — leaves no line
+   terminal, so the UA extends every line's highlight to the containing block's
+   content edge. On a phone the containing block IS the viewport.
+
+   What *was* ours is how loud that geometry lands. An opaque fill plus an
+   inverted ink means the extension paints as a slab of colour; a translucent
+   wash over unchanged ink paints as a highlighter stroke, which is what a
+   reader expects to see. So the ink stays put and only the ground is tinted.
+
+   Two rules, not one, because this site has two grounds. A wash tuned for the
+   dark roast is invisible on `--kraft`, and the kraft bands carry real copy
+   (the dividers, the bag label, the infomercial). `color-mix` is deliberate
+   over a hand-mixed rgba: the tint stays tied to the token, so a change to
+   `--gold-hot` cannot leave the selection behind. */
 ::selection {
-  color: var(--roast);
-  background: var(--gold-hot);
+  color: var(--crema);
+  background: color-mix(in srgb, var(--gold-hot) 34%, transparent);
+}
+
+.divider ::selection,
+.divider::selection,
+.baglabel ::selection,
+.baglabel::selection,
+.infomercial ::selection,
+.infomercial::selection {
+  color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 26%, transparent);
 }
 
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--gold-hot);
   outline-offset: 3px;
+}
+
+/* ── A control is not a link ──────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.3 (epic D2).
+
+   THE BUG THIS FIXES, precisely. `tokens.css` styles prose links with
+   `a{color:var(--gold)}` / `a:hover{color:var(--gold-hot)}` and the primary
+   control with `.btn-gold{color:var(--roast)}`. `a:hover` is (0,1,1) and
+   `.btn-gold` is (0,1,0), so on hover an ANCHOR-based gold button took
+   `--gold-hot` ink on a `--gold-hot` face and its label vanished outright —
+   along with the arrow, which strokes `currentColor`. It was invisible on
+   `<button>`-based gold controls, which is exactly why it read in review as
+   "some of the CTAs" rather than as one rule.
+
+   WHY IT IS FIXED HERE AND NOT IN tokens.css. That file is the byte-mirrored
+   design handoff and is not edited (landing-redesign-v2 D3). Correcting it
+   downstream is also the honest place: the defect is an INTERACTION between two
+   correct-in-isolation rules, and this sheet is where this app resolves those.
+
+   WHY IT PINS EVERY STATE RATHER THAN JUST `:hover`. Patching the one state
+   that was reported leaves `:visited` — which UA sheets also colour on anchors —
+   and the next prose-link rule anyone adds. Naming the full state set makes the
+   whole class of "a link rule reached a control" unrepresentable rather than
+   fixed once (CODE-QUALITY.md #2). `:is()` takes the specificity of its most
+   specific argument, so (0,2,0) here outranks `a:hover` by construction and not
+   by source order.
+
+   e2e/landing.browser.spec.ts hovers a real gold CTA and asserts the RENDERED
+   contrast, so this cannot regress silently — a stylesheet assertion would pass
+   on a rule that some later selector out-specifies. */
+:is(
+  .btn-gold,
+  .btn-gold:link,
+  .btn-gold:visited,
+  .btn-gold:hover,
+  .btn-gold:focus,
+  .btn-gold:focus-visible,
+  .btn-gold:active
+) {
+  color: var(--roast);
+}
+
+:is(.btn-ghost, .btn-ghost:link, .btn-ghost:visited) {
+  color: var(--gold);
+}
+
+/* The ghost variant's hover was already correct — ink and border move together.
+   It is restated so the two variants are read side by side, and so a future
+   edit to one is visibly a decision about both. */
+:is(.btn-ghost:hover, .btn-ghost:focus, .btn-ghost:focus-visible, .btn-ghost:active) {
+  color: var(--gold-hot);
+  border-color: var(--gold-hot);
+}
+
+:is(
+  .btn-mini,
+  .btn-mini:link,
+  .btn-mini:visited,
+  .btn-mini:hover,
+  .btn-mini:focus,
+  .btn-mini:focus-visible,
+  .btn-mini:active
+) {
+  color: var(--crema);
 }
 
 .sr-only {
@@ -209,7 +305,7 @@ body {
 }
 
 /* Brand mark — Lucide's bean silhouette, treated as a small stamped gold ingot. */
-.golden-bean-mark {
+.golden-frijol-mark {
   --bean-size: 28px;
   position: relative;
   display: inline-grid;
@@ -220,7 +316,7 @@ body {
   isolation: isolate;
 }
 
-.golden-bean-mark svg {
+.golden-frijol-mark svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -229,24 +325,24 @@ body {
   stroke-linejoin: round;
 }
 
-.golden-bean-mark__depth {
+.golden-frijol-mark__depth {
   color: var(--gold-deep);
   fill: var(--gold-deep);
   transform: translateY(2px);
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.42));
 }
 
-.golden-bean-mark__face {
+.golden-frijol-mark__face {
   color: var(--gold-hot);
   fill: var(--mark-gold);
   filter: drop-shadow(0 1px 0 rgba(255, 244, 220, 0.38)) drop-shadow(0 3px 2px rgba(20, 14, 6, 0.35));
 }
 
-.golden-bean-mark__face path:last-child {
+.golden-frijol-mark__face path:last-child {
   stroke: var(--gold-deep);
 }
 
-.golden-bean-mark__glint {
+.golden-frijol-mark__glint {
   position: absolute;
   z-index: 2;
   width: 24%;
@@ -703,6 +799,38 @@ body {
 
 .divider .wrap {
   flex-wrap: wrap;
+}
+
+/* ── The section stamp ─────────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4).
+
+   Replaces the `①`-`⑩` glyphs `.divider .num` used to set at 12px. The glyph
+   was illegible for a structural reason, not a sizing one: the enclosing ring
+   is part of the character, so the digit inside it renders at roughly a third
+   of the nominal font size and scaling the type scales the ring with it. Drawn
+   as a real disc, the ring is a border and the numeral gets the whole em box.
+
+   Materially this is the packaging family (kraft ground, `--stamp` ink, the
+   fibre texture already on `.divider`), so it reads as an ink stamp on a paper
+   band rather than as a UI chip that wandered in from the product surface. The
+   inset highlight is the paper showing through where a rubber stamp presses
+   least — the same trick `.roundstamp` uses on the bag label, kept consistent
+   on purpose so the two read as one system. */
+.divider__stamp {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--stamp-dim);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--stamp);
+  box-shadow: inset 0 1px 2px rgb(255 244 220 / 35%);
 }
 
 .divider .tag {

@@ -21,9 +21,9 @@ export function ClosingCta() {
     <section id="decide">
       <div className="wrap center-cta">
         <p className="panel-label">Still deciding?</p>
-        <h2 className="display">Fair.</h2>
+        <h2 className="display">Fair</h2>
         <p className="measure measure--narrow section-copy--center">
-          Ask your agent whether Golden Beans is likely to move your North Star.
+          Ask your agent whether Golden Frijoles is likely to move your North Star.
         </p>
         <p className="takeaway">At least one of us should practice what we preach.</p>
 

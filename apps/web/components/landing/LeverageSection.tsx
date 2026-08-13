@@ -40,12 +40,12 @@ function Flow({ steps }: { steps: string[] }) {
 export function LeverageSection() {
   return (
     <>
-      <SectionDivider number="⑤" title="Less coordination. More product management." />
+      <SectionDivider number={5} title="Less coordination. More product management" />
       <section id="leverage">
         <div className="wrap">
-          <h2 className="section-title">The question shouldn&apos;t take longer than the answer.</h2>
+          <h2 className="section-title">The question shouldn&apos;t take longer than the answer</h2>
           <p className="measure">
-            You don&apos;t need Golden Beans to replace your engineers, analysts, executives — or your
+            You don&apos;t need Golden Frijoles to replace your engineers, analysts, executives — or your
             judgment.
           </p>
           <p className="takeaway">
@@ -55,12 +55,12 @@ export function LeverageSection() {
 
           <div className="row2 section-lead row2--start">
             <Panel>
-              <p className="panel-label">Without Golden Beans</p>
+              <p className="panel-label">Without Golden Frijoles</p>
               <Flow steps={without} />
               <p className="note section-lead">We considered adding another meeting here for realism.</p>
             </Panel>
             <Panel>
-              <p className="panel-label">With Golden Beans</p>
+              <p className="panel-label">With Golden Frijoles</p>
               <Flow steps={withGoldenBeans} />
               <p className="note section-lead">Your calendar may experience side effects.</p>
             </Panel>

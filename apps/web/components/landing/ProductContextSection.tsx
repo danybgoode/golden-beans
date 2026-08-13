@@ -84,19 +84,19 @@ const releases = [
 const capabilities = [
   {
     kicker: 'What should we bet on?',
-    title: 'Compare before six weeks disappear.',
+    title: 'Compare before six weeks disappear',
     copy: 'See expected impact, confidence, effort and the cost of waiting.',
     tail: 'Bet with a case',
   },
   {
     kicker: 'Should we ship it?',
-    title: 'Turn the decision into a controlled rollout.',
+    title: 'Turn the decision into a controlled rollout',
     copy: 'You choose who gets it, how much, and when.',
     tail: 'Your call',
   },
   {
     kicker: 'Did it work?',
-    title: 'Measure the bet.',
+    title: 'Measure the bet',
     copy: 'See whether the thing you shipped moved the number it was supposed to. Not whether the launch announcement collected twelve celebratory reactions.',
     tail: null,
   },
@@ -109,12 +109,12 @@ export function ProductContextSection() {
     <>
       {/* Real typographic quotes, not JSX entities: `title` is a string prop, so `&ldquo;` would
           reach the DOM as those six literal characters rather than as a quote mark. */}
-      <SectionDivider number="③" title={'From “I think” to “here’s why”'} />
+      <SectionDivider number={3} title={'From “I think” to “here’s why”'} />
       <section id="product">
         <div className="wrap">
-          <h2 className="section-title">Your agent finally has product context.</h2>
+          <h2 className="section-title">Your agent finally has product context</h2>
           <p className="measure">
-            Golden Beans connects what customers do, what your team ships, what you bet on, and whether it
+            Golden Frijoles connects what customers do, what your team ships, what you bet on, and whether it
             worked.
           </p>
           <p className="takeaway">It already has the receipts.</p>
@@ -132,7 +132,7 @@ export function ProductContextSection() {
 
           <Panel className="section-lead">
             <span className="kicker">What actually happened?</span>
-            <h3 className="card-title">The whole story, in one trail.</h3>
+            <h3 className="card-title">The whole story, in one trail</h3>
             <p className="card-copy">
               See the decision, rollout and result without branches, rebases, or Git archaeology.
             </p>
@@ -152,7 +152,7 @@ export function ProductContextSection() {
                 </span>
               </div>
               <div className="brand">
-                <b>GOLDEN BEANS</b>
+                <b>GOLDEN FRIJOLES</b>
                 <small>WHAT YOUR AGENT GETS TO WORK WITH</small>
               </div>
               <div className="netwt">
@@ -179,7 +179,7 @@ export function ProductContextSection() {
                   the rows were invented — same gap the hero had (PR #92 review). The releases below
                   are a shape, not a read: real ones live behind sign-in. */}
               <SurfaceNote
-                label="In Golden Beans /app · releases"
+                label="In Golden Frijoles /app · releases"
                 detail="Illustration — the product UI, not anyone's real releases"
               />
               <Panel>

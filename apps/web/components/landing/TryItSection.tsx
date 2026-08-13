@@ -22,15 +22,15 @@ export function TryItSection() {
       <div className="wrap row2 row2--center">
         <div>
           <p className="panel-label">Try it before you connect anything</p>
-          <h2 className="section-title">Give your agent one Golden Bean.</h2>
+          <h2 className="section-title">Give your agent one Golden Frijol</h2>
           <p className="measure measure--narrow">
-            Copy this into ChatGPT, Claude, or the agent you already use. It reads the public Golden Beans
+            Copy this into ChatGPT, Claude, or the agent you already use. It reads the public Golden Frijoles
             guide, explains what it can do, then offers to run the North Star workshop with you.
           </p>
           <p className="takeaway">No account. No MCP. No tiny onboarding hostage situation.</p>
           <p className="note section-lead">
             When you want the work to persist — or your agent to use live product context — that&apos;s when
-            you connect Golden Beans.
+            you connect Golden Frijoles.
           </p>
         </div>
         <CopyPromptCard label="Handoff prompt · public routes" prompt={prompt} />

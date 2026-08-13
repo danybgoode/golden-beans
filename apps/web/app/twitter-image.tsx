@@ -5,7 +5,7 @@ import { ogImageContent } from '@/lib/og-image-content'
 // than relying on X/Twitter's own og:image fallback) so `metadata.twitter.card` in app/layout.tsx
 // (summary_large_image) has an explicit twitter:image tag to point at, matching the same visual
 // as opengraph-image.tsx via the shared lib/og-image-content.tsx JSX.
-export const alt = 'Golden Beans — plant signals, grow outcomes'
+export const alt = 'Golden Frijoles — plant signals, grow outcomes'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
