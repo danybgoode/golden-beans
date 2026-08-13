@@ -1,4 +1,4 @@
-# Golden Beans — landing page end-state (reference spec)
+# Golden Frijoles — landing page end-state (reference spec)
 
 > **Reference end-state: inspiration, never signed-off scope** (WAYS-OF-WORKING). This is the
 > "final version" of the public landing we work *backwards* from. Each section carries the epic
@@ -6,19 +6,30 @@
 > updates its landing section in the same epic (see WAYS-OF-WORKING → epic Definition of Done).
 > Companion visual mock: `landing-end-state-mock.html`. Written 2026-07-14 (E1 groom session).
 >
-> **⚠️ SUPERSEDED 2026-08-12 by `landing-redesign-v2`.** The section map below described the
-> engine-first pitch ("The growth engine your agent operates"). That page no longer exists: the v2
-> landing is built from `golden-beans-landing-v2.html` and its ten-section narrative, and the live
-> registry is `apps/web/lib/landing-sections.ts`. **The personas, the design language and the
-> guardrails in this document all still hold** — only the section map was replaced, and it is kept
-> below, struck through, because the backfill contract it defines is still how this project works.
-> A superseded map deleted outright would take that contract with it.
+> **⚠️ SUPERSEDED 2026-08-12 by `landing-redesign-v2`, and again the same day by
+> `landing-frijoles-rebrand`.** The section map below described the engine-first pitch ("The growth
+> engine your agent operates"). That page no longer exists: the current landing is built from
+> `golden-frijoles-landing-v2.html`, and the live registry is `apps/web/lib/landing-sections.ts`.
+> **The personas, the design language and the guardrails in this document all still hold** — only
+> the section map was replaced, and it is kept below, struck through, because the backfill contract
+> it defines is still how this project works. A superseded map deleted outright would take that
+> contract with it.
+>
+> **The product is now called Golden Frijoles, on `goldenfrijoles.com`.** The rename is
+> public-surfaces-only (`landing-frijoles-rebrand` D1): the npm package is still
+> `@golden-beans/sdk`, as are the GitHub repository, the Vercel project and every environment
+> variable. Where this document says "Golden Beans" below in a historical table, it is describing a
+> page that no longer exists and is left as written.
 
 ## The one-sentence pitch
 
-**Golden Beans is the growth engine your own agent operates** — telemetry, TARS funnels, North
-Star metrics, and A/B experiments as primitives; you bring the agent (Claude, or any MCP client)
-instead of renting ours.
+**Golden Frijoles is the product context your own agent works from** — telemetry, TARS funnels,
+North Star metrics, and A/B experiments as primitives; you bring the agent (Claude, ChatGPT, or any
+MCP client) instead of renting ours.
+
+*(The engine-first phrasing this replaces — "the growth engine your own agent operates" — is the
+sentence `landing-redesign-v2` was written to retire: it opens on the primitive set for a reader
+who has not yet been told what primitives are for.)*
 
 The positioning inversion (vs PostHog, the quality bar): their signal loop ends in *their* AI;
 ours ends in **yours**, over MCP. Verified PostHog product audit: SCOPE.md → "Product frame
@@ -44,12 +55,21 @@ ours ends in **yours**, over MCP. Verified PostHog product audit: SCOPE.md → "
 naming the epic that lights it and its status. That file is the single source of truth, on purpose:
 this table went stale three separate times while the page moved underneath it.
 
-The v2 narrative, for orientation: hero (your roadmap has enough opinions) → try it in your own
-agent with no account → how it grows in three steps → ① everyone has a good reason → ② bring an
-agent to the argument → ③ from "I think" to "here's why" → ④ agnostic about ideas, conservative
-about actions → ⑤ less coordination → ⑥ proof (Pod Report **and** the live engine read) → ⑦ yes you
-can build this yourself → ⑧ bring your agent → ⑨ the SDK → ⑩ pricing → ask your own agent whether
-to bother.
+The current narrative, for orientation. Ten numbered stamps carry the spine of the argument; two
+unnumbered bands sit between them and are unnumbered deliberately — an aside and a capability
+showcase are not steps in an argument:
+
+hero (your roadmap has enough opinions) → try it in your own agent with no account → how to start,
+in three steps → *the shameless infomercial* → **1** everyone has a good reason → **2** bring an
+agent to the argument → **3** from "I think" to "here's why" → *break glass, on purpose (the chaos
+and security drills, each reading its own gate)* → **4** agnostic about ideas, conservative about
+actions → **5** less coordination → **6** proof (Pod Report **and** the live engine read) →
+**7** yes you can build this yourself → **8** bring your agent → **9** the SDK → **10** pricing →
+ask your own agent whether to bother.
+
+The `①`-`⑩` glyphs this used to be written with are retired (`landing-frijoles-rebrand` D4): they
+are illegible at the size a text run tolerates, because the enclosing ring is part of the character.
+`scripts/check-design-drift.mjs` now refuses them.
 
 <details>
 <summary>The original E1 section map (historical — no longer describes the page)</summary>

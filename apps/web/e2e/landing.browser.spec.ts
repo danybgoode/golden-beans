@@ -243,3 +243,87 @@ test('selecting a paragraph is a wash, not a slab', async ({ page }) => {
   expect(widest, 'a paragraph must actually be selectable by triple-click').not.toBeNull()
   expect(widest!).toBeLessThanOrEqual(390)
 })
+
+// ── landing-frijoles-rebrand · Sprint 3 ─────────────────────────────────────────────────────────
+
+// Story 3.1. The product owner's ask was that the site feel smooth rather than jumpy, and the one
+// rule that does most of that work is this: hover feedback must not change GEOMETRY. A control that
+// grows or shifts under the pointer reflows its neighbours, and on a dense page that reads as the
+// layout flinching.
+//
+// Measured on the RENDERED box rather than by reading the transition list, for the same reason the
+// hover-contrast spec is: a `transform` reintroduced by any later rule would still move the box
+// while the declared transition looked innocent.
+test('hovering a control does not move it or its neighbour', async ({ page }) => {
+  await page.goto('/')
+
+  const cta = page.locator('.hero .hero-cta a.btn-gold').first()
+  const neighbour = page.locator('.hero .hero-cta a.btn-ghost').first()
+  await expect(cta).toBeVisible()
+
+  const before = { cta: await cta.boundingBox(), neighbour: await neighbour.boundingBox() }
+  await cta.hover()
+  await page.waitForTimeout(300) // longer than --motion-base, so a transition has finished moving
+  const after = { cta: await cta.boundingBox(), neighbour: await neighbour.boundingBox() }
+
+  for (const key of ['cta', 'neighbour'] as const) {
+    for (const dimension of ['x', 'y', 'width', 'height'] as const) {
+      expect(
+        Math.abs(after[key]![dimension] - before[key]![dimension]),
+        `hovering the CTA moved the ${key}'s ${dimension}`
+      ).toBeLessThan(0.5)
+    }
+  }
+})
+
+// Story 2.3 / epic D5. The drills describe a capability whose gates are OFF in production, and the
+// section must say so — by READING the flag, not by carrying a sentence someone has to remember to
+// update. Both branches are pinned so the honest state cannot quietly disappear, and neither can
+// the badge outlive the gate being switched on.
+//
+// The spec derives the expectation from the same predicate the page uses rather than hardcoding
+// "there is a badge": this suite runs against local, preview and production, where the flag differs.
+// A test that assumed one state would be a test that has to be edited at launch — and one that
+// passes for the wrong reason in between.
+test('the resilience drills declare whether they are switched on', async ({ page, request }) => {
+  await page.goto('/')
+
+  const section = page.locator('#resilience')
+  await expect(section).toBeVisible()
+  await expect(section.locator('.drill-card')).toHaveCount(2)
+
+  // The route family answers 404 while its gate is shut and something other than 404 once it is
+  // open — which is the same fact the badge is reporting, obtained independently of the page.
+  const probe = await request.post('/api/v1/scenarios/execution', { data: {}, failOnStatusCode: false })
+  const chaosGated = probe.status() === 404
+
+  const badges = section.locator('.drill-card__gate')
+  if (chaosGated) {
+    expect(await badges.count(), 'a gated drill must carry its honest badge').toBeGreaterThan(0)
+    await expect(badges.first()).toContainText(/not switched on/i)
+  } else {
+    await expect(
+      section.locator('.drill-card').first().locator('.drill-card__gate'),
+      'a live drill must not still claim it is switched off'
+    ).toHaveCount(0)
+  }
+})
+
+// Story 2.2 / epic D6. The infomercial is the one place on this page where invented content is
+// allowed, and it is allowed ONLY because it is labelled at the point of the claim. If a future
+// edit drops the disclaimer, the page is left with three fabricated testimonials presented as real
+// — on a page whose entire argument is that claims should be checkable.
+test('every invented thing in the infomercial is labelled as invented', async ({ page }) => {
+  await page.goto('/')
+
+  const band = page.locator('#infomercial')
+  await expect(band).toBeVisible()
+
+  const text = await band.innerText()
+  expect(text, 'the testimonials must disclaim themselves').toMatch(/we wrote these/i)
+  expect(text, 'the headline asterisk must resolve').toMatch(/cannot fix your org/i)
+
+  // The struck-through price is a real <s>, not the mockup's literal `~~$999~~` markdown.
+  await expect(band.locator('s')).toHaveCount(1)
+  expect(text).not.toContain('~~')
+})

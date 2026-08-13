@@ -9,6 +9,45 @@
 :root {
   --kraft-card: color-mix(in srgb, var(--kraft) 55%, white);
   --kraft-panel: color-mix(in srgb, var(--kraft) 78%, white);
+
+  /* ── The elevation ladder ──────────────────────────────────────────────
+     landing-frijoles-rebrand · Sprint 3, Story 3.2.
+
+     Before this, every raised surface picked its own shadow — `0 24px 60px`,
+     `0 20px 50px`, `0 20px 48px`, `0 18px 46px`, `0 18px 44px`, `0 14px 40px`
+     — six values for what are really three heights. Nobody chose six; each was
+     chosen once, in isolation, by whoever shipped that surface, which is
+     exactly how a design system stops being one. Naming the heights means a
+     new surface picks a ROLE rather than a number, and two things at the same
+     conceptual height cannot drift apart.
+
+     The rungs, by what the surface IS rather than by how big the blur is:
+       raised  — sits on the page ground: a prompt card, an app shell.
+       lifted  — a frame the page is showing you: the agent window.
+       overlay — floats above everything: the shell's nav, its panels.
+     `--elevation-press` is the pressed-control underside, which is a different
+     idea (a physical edge, not a cast shadow) and stays separate on purpose. */
+  --elevation-raised: 0 18px 44px rgb(0 0 0 / 34%);
+  --elevation-lifted: 0 20px 50px rgb(0 0 0 / 45%);
+  --elevation-overlay: 0 20px 50px rgb(0 0 0 / 55%);
+
+  /* ── One motion vocabulary ─────────────────────────────────────────────
+     Same story as the shadows: `.08s`, `.15s`, `.25s` and three easings were
+     scattered across this sheet, so two controls that should feel identical
+     did not. `--ease-out` is for a surface arriving or a colour settling;
+     `--ease-press` is the springier curve, reserved for something that moves
+     under the pointer.
+
+     The product owner's ask was that the site feel smooth rather than jumpy.
+     The single highest-leverage rule for that is not a duration — it is that
+     hover feedback must never change GEOMETRY, because a control that grows on
+     hover reflows its neighbours and the page appears to twitch. So the state
+     layer is colour and shadow only, and `transform` is reserved for the press,
+     where the movement is the point and nothing around it reflows. */
+  --motion-quick: 90ms;
+  --motion-base: 160ms;
+  --ease-out: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-press: cubic-bezier(0.3, 1.4, 0.6, 1);
 }
 
 html {
@@ -1144,7 +1183,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--elevation-overlay);
 }
 
 .product-shell__header nav a,
@@ -1201,7 +1240,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--elevation-overlay);
 }
 
 .product-shell__sections-panel ul {
@@ -1261,7 +1300,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elevation-overlay);
 }
 
 .agent-rail__panel summary {
@@ -2355,7 +2394,7 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--elevation-raised);
 }
 
 .prompt-card--center {
@@ -2482,7 +2521,7 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.32);
+  box-shadow: var(--elevation-raised);
 }
 
 .app-bar {
@@ -3403,5 +3442,90 @@ a.stat-card:hover {
 @media (min-width: 700px) {
   .mobile-hint {
     display: none;
+  }
+}
+
+/* ============================================================================
+   MATERIAL AND MOTION — landing-frijoles-rebrand · Sprint 3
+   ============================================================================
+   The elevation and motion tokens are declared at the top of this file, next to
+   the palette they belong with. What follows is where they are APPLIED, plus
+   the two rules that actually make a page feel settled rather than twitchy.
+
+   `tokens.css` is the byte-mirrored design handoff and is not edited
+   (landing-redesign-v2 D3), so the two surfaces whose shadow is declared there
+   — `.agent-win` and `.baglabel` — are pulled onto the ladder here instead.
+   Both are the same idea: a frame the page is holding up for you to look at. */
+.agent-win,
+.baglabel {
+  box-shadow: var(--elevation-lifted);
+}
+
+/* ── Hover changes colour, never geometry ────────────────────────────────────
+   The single highest-leverage rule for "smooth, not jumpy". A control that
+   grows or shifts on hover reflows whatever sits beside it, and on a dense page
+   that reads as the layout flinching under the pointer. So the hover state is a
+   state layer — background, border, shadow — and `transform` is reserved for
+   the press, where the movement IS the feedback and the element returns to
+   exactly where it started.
+
+   Durations come off the two tokens rather than each control naming its own,
+   which is what stops the nav CTA and the pricing CTA feeling like different
+   buttons. */
+:where(.btn, .btn-mini, .platform-pill, .icon-link, .tier, .panel) {
+  transition:
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    color var(--motion-base) var(--ease-out);
+}
+
+.btn:active {
+  transition:
+    transform var(--motion-quick) var(--ease-press),
+    box-shadow var(--motion-quick) var(--ease-press);
+}
+
+/* ── Space is reserved before the content arrives ────────────────────────────
+   The other half of "not jumpy", and the half that is invisible until you
+   watch a cold load on a slow connection. Each of these is a box whose contents
+   settle AFTER first paint — an icon font swap, a lazily-decoded SVG, a client
+   island hydrating — and without a floor the surrounding text jumps upward as
+   each one resolves.
+
+   `min-height` rather than `height`: these are floors, not cages. Content that
+   legitimately needs more room still gets it; what is prevented is the box
+   starting at zero. */
+.golden-frijol-mark,
+.chat-avatar,
+.journey-node__icon,
+.divider__stamp {
+  contain: layout paint;
+}
+
+.surface-note {
+  min-height: 1.4em;
+}
+
+/* An `<svg>` inside a control must not be able to change the control's height
+   as it decodes. `.btn` already has `min-height: 44px` from the tap-target
+   rail; this pins the glyph itself so the label's baseline cannot move. */
+:where(.btn, .btn-mini, .drill-action, .journey-node, .icon-link) svg {
+  flex: 0 0 auto;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────────
+   Extends the existing block rather than adding a second one — two
+   reduced-motion blocks is how one of them gets forgotten. Everything the two
+   motion tokens drive is switched off at the source by zeroing the tokens
+   themselves, which also covers any rule added later that uses them. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-base: 0ms;
+  }
+
+  .btn:active {
+    transform: none;
   }
 }
