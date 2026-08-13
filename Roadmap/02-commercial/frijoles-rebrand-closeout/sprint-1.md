@@ -1,6 +1,6 @@
 # Golden Frijoles rebrand close-out — Sprint 1: Identity, cleanup, and owed rails
 
-**Status:** 🟨 in progress
+**Status:** ✅ shipped 2026-08-13 — PR #96, merge `0a0beb0`
 
 ## Build contract (locked before implementation)
 
@@ -23,6 +23,8 @@ remain explicit exceptions; pack contents are inspected.
 
 **Risk:** low
 
+**Shipped:** PR #96, merge `0a0beb0`.
+
 ### Story 1.2 — Breaking provider identity made explicit and tested
 
 **As an** OpenFeature consumer, **I want** provider metadata to report the renamed product under a
@@ -34,6 +36,8 @@ the SDK README calls out the `0.4.0` provider-identity change and deliberately r
 env examples.
 
 **Risk:** low
+
+**Shipped:** PR #96, merge `0a0beb0`.
 
 ### Story 1.3 — Footer ledger and public residue removed without losing honesty
 
@@ -48,6 +52,8 @@ live-proof title use Golden Frijoles; final public-source/rendered sweeps name o
 
 **Risk:** low
 
+**Shipped:** PR #96, merge `0a0beb0`.
+
 ### Story 1.4 — Real signed-in mobile sweep on the existing auth rail
 
 **As a** signed-in owner on a phone, **I want** operating routes to fit and remain tappable,
@@ -59,6 +65,8 @@ record lazily after `auth-setup`; visits the current signed-in route set at 360p
 observed red through targeted auth/layout mutations that are reverted and verified clean.
 
 **Risk:** low
+
+**Shipped:** PR #96, merge `0a0beb0`.
 
 ### Story 1.5 — Publish, review, deploy, verify, and clear the owed ledger
 
@@ -73,6 +81,8 @@ production write smoke and Daniel’s first real share links remain surfaced as 
 not attempted.
 
 **Risk:** low
+
+**Shipped:** PR #96, merge `0a0beb0`; npm release and deprecation completed before merge.
 
 ## Sprint QA
 
@@ -150,3 +160,13 @@ If any step fails, note the step number and what you saw — that is the bug rep
   provider identities were `golden-frijoles` / `golden-frijoles-scenarios`. Only after that proof,
   npm accepted and served the verified `@golden-beans/sdk@0.1.0` deprecation pointer: “This package
   moved to `@golden-frijoles/sdk`. Install `@golden-frijoles/sdk` instead.”
+- PR #96 merged to `main` as `0a0beb0` at 2026-08-13 14:21 UTC. GitHub deployment `5889853438`
+  attached the exact SHA to Production and completed successfully; no manual Vercel deploy ran.
+  Against `https://goldenfrijoles.com`, the committed landing browser suite passed 15/15: §9 served
+  the new package, the footer ledger was absent, the canonical assets and public brand were renamed,
+  every honesty label remained, and both resilience/security cards derived their honest OFF state.
+  A direct rendered Chromium inspection showed the Golden Frijoles hero and no console errors.
+- The shared `live-smoke` skill could not run because this repository does not contain its required
+  `scripts/live-smoke.mjs` wrapper. The gap is explicit rather than hidden behind an invented
+  equivalent; the committed production browser spec plus direct rendered inspection supplied the
+  behavioral proof for this close-out.

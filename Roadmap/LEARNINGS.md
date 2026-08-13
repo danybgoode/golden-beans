@@ -726,6 +726,18 @@ one-liner + why + date shape.
   1.0.10 incident this repo already paid for. *(2026-07-25.)*
 
 ## Working efficiently
+- **A new npm scope is an owned namespace, not a label the first publish creates.** A scoped publish
+  can authenticate successfully and still fail `Scope not found` until the organization exists;
+  creating that organization is its own outward decision about owner and package plan. On the first
+  package, a registry PUT 200, public access, a dist-tag and even a rendered package page can precede
+  the metadata document used by `npm install`. The release proof is a clean install and import from a
+  new directory; only then deprecate the old package. *(2026-08-13, frijoles-rebrand-closeout.)*
+- **An authenticated page sweep must assert it reached authenticated content before measuring it.**
+  The anonymous browser project followed signed-in routes to `/login`, so the mobile rail measured a
+  clean redirect and looked complete while covering none of the product. Reuse the real auth rail,
+  assert status/session/no-login first, then apply the shared geometry helper. The first honest run
+  found undersized sortable headers and two overflowing table surfaces. *(2026-08-13,
+  frijoles-rebrand-closeout.)*
 - **`SUPABASE_DB_URL` must be exported for the local `api` gate, or ~30 specs fail on a
   precondition that has nothing to do with your diff.** `npm run test:e2e` locally without it fails
   with `SUPABASE_DB_URL must target local Supabase on loopback port 54322` from

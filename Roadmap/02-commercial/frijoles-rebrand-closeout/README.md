@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived.
 slug: frijoles-rebrand-closeout
 build_order: 19
 ---
@@ -144,16 +144,16 @@ footer ledger, local honesty labels, and OFF badges on `https://goldenfrijoles.c
 
 ## Definition of Done (epic)
 
-- [ ] All stories merged to `main` and smoke-tested; actual gate output recorded
-- [ ] `sprint-1.md` carries a fool-proof smoke walkthrough with real URLs
-- [ ] `@golden-frijoles/sdk@0.4.0` installs/imports from a clean directory; §9 matches it
-- [ ] `@golden-beans/sdk@0.1.0` is deprecated only after the new package proof
-- [ ] Package/provider decisions A1–A9 are reflected in code/docs; every survivor is named
-- [ ] No public surface says “Golden Beans”; technical survivors from A3/A4/A6 are enumerated
-- [ ] Footer ledger and unused CSS are gone; local honesty assertions still pass
-- [ ] Authed mobile sweep reaches real signed-in routes and has an observed-red record
-- [ ] Two routed full-scope cross-family passes have read the stabilized result (quota downgrade, if
+- [x] All stories merged to `main` and smoke-tested; actual gate output recorded
+- [x] `sprint-1.md` carries a fool-proof smoke walkthrough with real URLs
+- [x] `@golden-frijoles/sdk@0.4.0` installs/imports from a clean directory; §9 matches it
+- [x] `@golden-beans/sdk@0.1.0` is deprecated only after the new package proof
+- [x] Package/provider decisions A1–A9 are reflected in code/docs; every survivor is named
+- [x] No public surface says “Golden Beans”; technical survivors from A3/A4/A6 are enumerated
+- [x] Footer ledger and unused CSS are gone; local honesty assertions still pass
+- [x] Authed mobile sweep reaches real signed-in routes and has an observed-red record
+- [x] Two routed full-scope cross-family passes have read the stabilized result (quota downgrade, if
       any, recorded under the router’s refund rule)
-- [ ] Production verified by exercising `https://goldenfrijoles.com`, never by env listings
-- [ ] Retrospective, product poster, and durable learnings updated; older credential-gated debts named
-- [ ] Feature branch deleted; this README frontmatter `status: shipped`; build order regenerated
+- [x] Production verified by exercising `https://goldenfrijoles.com`, never by env listings
+- [x] Retrospective, product poster, and durable learnings updated; older credential-gated debts named
+- [x] Feature branch deleted; this README frontmatter `status: shipped`; build order regenerated
