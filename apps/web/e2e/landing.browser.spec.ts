@@ -278,34 +278,50 @@ test('hovering a control does not move it or its neighbour', async ({ page }) =>
 
 // Story 2.3 / epic D5. The drills describe a capability whose gates are OFF in production, and the
 // section must say so — by READING the flag, not by carrying a sentence someone has to remember to
-// update. Both branches are pinned so the honest state cannot quietly disappear, and neither can
-// the badge outlive the gate being switched on.
+// update. Both branches are pinned so the honest state cannot quietly disappear, and neither can a
+// badge outlive its gate being switched on.
 //
-// The spec derives the expectation from the same predicate the page uses rather than hardcoding
-// "there is a badge": this suite runs against local, preview and production, where the flag differs.
-// A test that assumed one state would be a test that has to be edited at launch — and one that
-// passes for the wrong reason in between.
-test('the resilience drills declare whether they are switched on', async ({ page, request }) => {
+// The spec derives each expectation from the same fact the page derives it from rather than
+// hardcoding "there is a badge": this suite runs against local, preview and production, where the
+// flags differ. A test that assumed one state would have to be edited at launch — and would pass
+// for the wrong reason in between.
+//
+// ── The two cards ride SEPARATE gates, and are therefore checked separately ───────────────────
+// `RESILIENCE_SCENARIOS_ENABLED` and `SECURITY_SIMULATIONS_ENABLED` are independent by design: a
+// production owner may allow an internal fault drill without authorizing an active security probe
+// (`lib/flags.ts`). The first version of this spec probed only the chaos route and then asserted a
+// section-wide `count() > 0`, which meant a wrong or missing badge on the SECURITY card passed
+// silently — a test that cannot fail for half its subject (CODE-QUALITY.md #5). Caught in
+// cross-family review of PR #95.
+const DRILL_GATES = [
+  { card: 0, name: 'chaos', route: '/api/v1/scenarios/execution' },
+  { card: 1, name: 'security', route: '/api/v1/scenarios/security' },
+] as const
+
+test('each resilience drill declares whether its own gate is switched on', async ({ page, request }) => {
   await page.goto('/')
 
   const section = page.locator('#resilience')
   await expect(section).toBeVisible()
-  await expect(section.locator('.drill-card')).toHaveCount(2)
+  await expect(section.locator('.drill-card')).toHaveCount(DRILL_GATES.length)
 
-  // The route family answers 404 while its gate is shut and something other than 404 once it is
-  // open — which is the same fact the badge is reporting, obtained independently of the page.
-  const probe = await request.post('/api/v1/scenarios/execution', { data: {}, failOnStatusCode: false })
-  const chaosGated = probe.status() === 404
+  for (const gate of DRILL_GATES) {
+    // Each route answers 404 while its own gate is shut and something else once it is open — the
+    // same fact its badge reports, obtained independently of the page. The bodies are deliberately
+    // empty: a 400 is as good as a 200 here, because both prove the gate let the request through.
+    const probe = await request.post(gate.route, { data: {}, failOnStatusCode: false })
+    const shut = probe.status() === 404
 
-  const badges = section.locator('.drill-card__gate')
-  if (chaosGated) {
-    expect(await badges.count(), 'a gated drill must carry its honest badge').toBeGreaterThan(0)
-    await expect(badges.first()).toContainText(/not switched on/i)
-  } else {
-    await expect(
-      section.locator('.drill-card').first().locator('.drill-card__gate'),
-      'a live drill must not still claim it is switched off'
-    ).toHaveCount(0)
+    const badge = section.locator('.drill-card').nth(gate.card).locator('.drill-card__gate')
+    if (shut) {
+      await expect(badge, `the ${gate.name} drill is gated and must say so`).toHaveCount(1)
+      await expect(badge).toContainText(/not switched on/i)
+    } else {
+      await expect(
+        badge,
+        `the ${gate.name} drill is live and must not still claim it is switched off`
+      ).toHaveCount(0)
+    }
   }
 })
 

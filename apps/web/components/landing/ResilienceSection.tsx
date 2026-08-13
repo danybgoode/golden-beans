@@ -20,9 +20,18 @@ import { Panel } from '@/components/ui/Panel'
 //
 // So each card's badge READS ITS OWN GATE rather than stating a position (CODE-QUALITY.md #2: a
 // value that must not go stale is computed, not written down; #9: do not state a capability as live
-// while its flag is off). Flip either gate and its badge disappears with no code change and no
-// deploy of this file. This is the same device §3's RISK row already uses, deliberately — one
+// while its flag is off). This is the same device §3's RISK row already uses, deliberately — one
 // honesty vocabulary on this page, not two.
+//
+// ── What "no code change" does and does NOT mean ──────────────────────────────────────────────
+// Turning a drill on needs **no edit to this file**: the badge is derived, and the page is
+// `force-dynamic`, so the flag is read fresh on every request. It still needs a **new Git-tracked
+// deployment** — Vercel snapshots environment variables into a deployment at build time, so the
+// running functions keep serving whatever they captured at their own build (AGENTS.md rule #4;
+// disproved empirically during the multi-tenant-activation launch, where `SIGNUP_ENABLED=true` sat
+// unobserved for seven minutes). "Set" and "live" are two separate facts. An earlier version of
+// this comment said "no deploy", which read as though setting the var were sufficient — corrected
+// after cross-family review (Codex, PR #95).
 //
 // The copy is written so it is true in BOTH states: it says what the drills are and what they are
 // for, never "you can run this today". The badge supplies the tense.
