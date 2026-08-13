@@ -1,9 +1,16 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import type { ScenarioImpactEvidence } from './scenario-impact'
+import {
+  parseScenarioDefinition,
+  parseScenarioFault,
+  type ScenarioDefinition,
+  type ScenarioFaultKind,
+} from './scenario-definition'
 
 export type ScenarioDashboardRun = {
   id: string
+  scenarioVersionId: string
   scenarioKey: string
   definitionVersion: number
   kind: 'resilience' | 'security'
@@ -75,6 +82,18 @@ export type ScenarioDashboardView = {
     status: string
     verifiedAt: string | null
   }>
+  definitions: Array<{
+    id: string
+    scenarioKey: string
+    version: number
+    definition: ScenarioDefinition
+    createdAt: string
+  }>
+  faultFlags: Array<{
+    key: string
+    version: number
+    faultKinds: ScenarioFaultKind[]
+  }>
   runs: ScenarioDashboardRun[]
   securityResults: ScenarioDashboardSecurityResult[]
   impacts: ScenarioDashboardImpact[]
@@ -107,6 +126,8 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
     policiesResult,
     statesResult,
     tripsResult,
+    flagRegistriesResult,
+    flagVersionsResult,
   ] = await Promise.all([
     supabase
       .from('scenario_targets')
@@ -117,7 +138,7 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
     supabase.from('scenario_registries').select('id, key').eq('project_id', projectId).limit(100),
     supabase
       .from('scenario_definition_versions')
-      .select('id, scenario_id, target_id, version, definition')
+      .select('id, scenario_id, target_id, version, definition, created_at')
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -162,6 +183,13 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(100),
+    supabase.from('flag_registries').select('id, key').eq('project_id', projectId).limit(100),
+    supabase
+      .from('flag_definition_versions')
+      .select('flag_id, version, definition')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(500),
   ])
 
   const results = [
@@ -174,6 +202,8 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
     policiesResult,
     statesResult,
     tripsResult,
+    flagRegistriesResult,
+    flagVersionsResult,
   ]
   const failed = results.find((result) => result.error)
   if (failed?.error) {
@@ -187,6 +217,9 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
   )
   const versions = new Map(boundedRows(versionsResult.data).map((row) => [String(row.id), row]))
   const targetKeys = new Map(targets.map((row) => [String(row.id), String(row.key)]))
+  const flagKeys = new Map(
+    boundedRows(flagRegistriesResult.data).map((row) => [String(row.id), String(row.key)])
+  )
   const states = new Map(boundedRows(statesResult.data).map((row) => [String(row.policy_id), row]))
 
   return {
@@ -198,6 +231,37 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
       status: String(row.status),
       verifiedAt: (row.verified_at as string | null) ?? null,
     })),
+    definitions: boundedRows(versionsResult.data).flatMap((row) => {
+      const parsed = parseScenarioDefinition(row.definition)
+      if (!parsed.ok) return []
+      return [
+        {
+          id: String(row.id),
+          scenarioKey: registries.get(String(row.scenario_id)) ?? 'unknown',
+          version: Number(row.version),
+          definition: parsed.definition,
+          createdAt: String(row.created_at),
+        },
+      ]
+    }),
+    faultFlags: boundedRows(flagVersionsResult.data).flatMap((row) => {
+      if (
+        !record(row.definition) ||
+        row.definition.valueType !== 'json' ||
+        !Array.isArray(row.definition.variants)
+      )
+        return []
+      const faults = row.definition.variants.flatMap((variant) => {
+        if (!record(variant)) return []
+        const fault = parseScenarioFault(variant.value)
+        return fault ? [fault.kind] : []
+      })
+      if (faults.length !== row.definition.variants.length || !faults.some((kind) => kind !== 'none'))
+        return []
+      const key = flagKeys.get(String(row.flag_id))
+      if (!key) return []
+      return [{ key, version: Number(row.version), faultKinds: [...new Set(faults)] }]
+    }),
     runs: boundedRows(runsResult.data).flatMap((row) => {
       const version = versions.get(String(row.scenario_version_id))
       const definition = version && record(version.definition) ? version.definition : null
@@ -212,6 +276,7 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
       return [
         {
           id: String(row.id),
+          scenarioVersionId: String(row.scenario_version_id),
           scenarioKey: registries.get(String(row.scenario_id)) ?? 'unknown',
           definitionVersion: Number(version.version),
           kind,

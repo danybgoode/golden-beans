@@ -43,3 +43,46 @@ export async function scenarioOwnerOperationAction(
   if (result.ok) revalidatePath(`/app/scenarios/${slug}`)
   return result
 }
+
+export async function launchScenarioRunAction(
+  slug: unknown,
+  selectedEnvironment: unknown,
+  scenarioVersionId: unknown,
+  reason: unknown
+) {
+  if (!isScenarioAuthoringEnabled())
+    return { ok: false as const, error: 'Scenario authoring is unavailable in this deployment.' }
+  if (typeof slug !== 'string') return { ok: false as const, error: 'Invalid project.' }
+  const { projectId, userId } = await requireProjectOwnership(slug)
+  const safeEnvironment = environment(selectedEnvironment)
+  const create = parseScenarioAdminOperation({
+    operation: 'create_run',
+    scenarioVersionId,
+    reason,
+  })
+  if (!safeEnvironment || !create || create.operation !== 'create_run')
+    return { ok: false as const, error: 'Invalid launch command.' }
+  const draft = await executeScenarioOwnerOperation({
+    projectId,
+    environment: safeEnvironment,
+    actorUserId: userId,
+    operation: create,
+  })
+  if (!draft.ok || typeof draft.run_id !== 'string' || typeof draft.revision !== 'number') return draft
+  const start = parseScenarioAdminOperation({
+    operation: 'start_run',
+    runId: draft.run_id,
+    expectedRevision: draft.revision,
+    reason,
+  })
+  if (!start || start.operation !== 'start_run')
+    return { ok: false as const, error: 'Could not prepare the run start.' }
+  const result = await executeScenarioOwnerOperation({
+    projectId,
+    environment: safeEnvironment,
+    actorUserId: userId,
+    operation: start,
+  })
+  if (result.ok) revalidatePath(`/app/scenarios/${slug}`)
+  return result
+}
