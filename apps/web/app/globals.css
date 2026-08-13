@@ -2225,7 +2225,24 @@ a.stat-card:hover {
   }
 }
 
+/* ── Reduced motion — ONE block, and this is it ──────────────────────────────
+   landing-frijoles-rebrand · Sprint 3, Story 3.1 merged its rules in here
+   rather than appending a second `prefers-reduced-motion` block at the end of
+   the file. It briefly DID append one, with a comment claiming it had not —
+   which is the comment-asserting-a-false-property failure CODE-QUALITY.md #3
+   names, and it is how the two drift apart: the next person extends whichever
+   one they happen to find. Cross-family review of PR #95 caught the split.
+
+   Everything the motion tokens drive is switched off at the SOURCE by zeroing
+   the tokens, so a rule added later that uses them is covered without editing
+   this block. The three below are the ones that do not go through a token:
+   the page's own smooth scroll, and two keyframe animations. */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-base: 0ms;
+  }
+
   html {
     scroll-behavior: auto;
   }
@@ -2233,6 +2250,10 @@ a.stat-card:hover {
   .gb-loader__dot,
   .cursor {
     animation: none;
+  }
+
+  .btn:active {
+    transform: none;
   }
 }
 
@@ -3525,20 +3546,4 @@ a.stat-card:hover {
    rail; this pins the glyph itself so the label's baseline cannot move. */
 :where(.btn, .btn-mini, .drill-action, .journey-node, .icon-link) svg {
   flex: 0 0 auto;
-}
-
-/* ── Reduced motion ──────────────────────────────────────────────────────────
-   Extends the existing block rather than adding a second one — two
-   reduced-motion blocks is how one of them gets forgotten. Everything the two
-   motion tokens drive is switched off at the source by zeroing the tokens
-   themselves, which also covers any rule added later that uses them. */
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-quick: 0ms;
-    --motion-base: 0ms;
-  }
-
-  .btn:active {
-    transform: none;
-  }
 }

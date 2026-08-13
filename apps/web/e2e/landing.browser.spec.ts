@@ -348,3 +348,56 @@ test('every invented thing in the infomercial is labelled as invented', async ({
   await expect(band.locator('s')).toHaveCount(1)
   expect(text).not.toContain('~~')
 })
+
+// Story 3.1, and the finding that proved it needed a spec rather than a comment.
+//
+// The reduced-motion rules were briefly split across TWO `prefers-reduced-motion` blocks, with a
+// comment in the second one claiming it had merged into the first. The behaviour happened to be
+// correct — but only by luck of which block held which rule, and the next person to extend
+// "the" block would have found whichever one they searched to first.
+//
+// So this asserts the OUTCOME a reader with the preference set actually gets, which is the thing
+// that must hold however the stylesheet is organised. Run under Playwright's `reducedMotion`
+// emulation rather than by reading the sheet: a rule out-specified by a later one still reads fine.
+test('with reduced motion requested, nothing animates, transitions, or smooth-scrolls', async ({ page }) => {
+  // `page.emulateMedia` rather than `test.use({ reducedMotion })`: the fixture form sets the option
+  // on the browser CONTEXT, and this project's context is already built from `devices['Desktop
+  // Chrome']` in playwright.config.ts — the override did not reach the page here (observed: the
+  // media query stayed false and `scroll-behavior` stayed `smooth`, while the same emulation applied
+  // directly returns `auto`). Emulating on the page is unambiguous and asserted below by checking
+  // the media query itself, so this can never silently test the wrong mode.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+
+  const motion = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement)
+    // Every element carrying a non-zero transition or a running animation, by class — the question
+    // is "does anything still move", not "does this one control still move".
+    const moving: string[] = []
+    for (const node of document.querySelectorAll('*')) {
+      const style = getComputedStyle(node)
+      const durations = [style.transitionDuration, style.animationDuration]
+        .join(',')
+        .split(',')
+        .map((value) => parseFloat(value) || 0)
+      if (durations.some((d) => d > 0) && style.animationName !== 'none') {
+        moving.push(`${node.tagName.toLowerCase()}.${(node.className || '').toString().split(' ')[0]}`)
+      }
+    }
+    return {
+      queryMatches: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      scrollBehavior: root.scrollBehavior,
+      motionBase: root.getPropertyValue('--motion-base').trim(),
+      motionQuick: root.getPropertyValue('--motion-quick').trim(),
+      moving: [...new Set(moving)].slice(0, 10),
+    }
+  })
+
+  // Asserted FIRST: if the emulation ever stops reaching the page, everything below passes
+  // vacuously and this spec becomes the thing it exists to prevent.
+  expect(motion.queryMatches, 'the reduced-motion emulation must actually reach the page').toBe(true)
+  expect(motion.scrollBehavior, 'smooth scrolling must be off').toBe('auto')
+  expect(motion.motionBase, 'the motion tokens are zeroed at the source').toBe('0ms')
+  expect(motion.motionQuick).toBe('0ms')
+  expect(motion.moving, `these still animate: ${motion.moving.join(', ')}`).toEqual([])
+})
