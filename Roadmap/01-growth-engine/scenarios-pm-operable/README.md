@@ -210,15 +210,15 @@ the kill path.
 
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
 - [ ] This README marked ✅; every sprint status ticked with commit refs
 - [ ] `RETROSPECTIVE.md` written
 - [ ] Product poster (`Roadmap/README.md`) updated
 - [ ] Team memory + `MEMORY.md` index updated
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** `SCENARIO_AUTHORING_ENABLED` exists in **every
+- [x] **Kill-switch (planned at grooming — Stage 6b):** `SCENARIO_AUTHORING_ENABLED` exists in **every
       environment**, created **DISABLED**, default `false`. *Verify-only.*
-- [ ] **D9 answered in writing** — whether `approve_definition` gates a synthetic run, and what
+- [x] **D9 answered in writing** — whether `approve_definition` gates a synthetic run, and what
       changed if it does
 - [ ] **The rendered impact claim reviewed by the product owner specifically** (D11), not just the
       page

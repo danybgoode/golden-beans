@@ -1,6 +1,6 @@
 # Scenarios made PM-operable — Sprint 2: Launch and kill
 
-**Status:** ⬜ not started
+**Status:** ✅ built in `cf1b971` + hardening through `0c88c33`; PR #98 awaits product-owner merge
 
 > **Build contract (locked by the architect before the builder started).**
 > **This is the sprint that gives a human a button that injects faults.** Every gate applies and
