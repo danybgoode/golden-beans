@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 1: The name, the domain, and the broken controls
 
-**Status:** 🟨 In progress
+**Status:** 🟦 In review
 
 > **Build contract (locked by the architect before any builder started).**
 > This sprint is **shared surface**: the brand strings, `globals.css`, the `Icon` map, the
@@ -79,9 +79,14 @@ highlighter pass over the words, **so that** I can still see what I selected.
   the extension reads as a wash rather than a brick.)*
 - The kraft surfaces get their own `::selection` so the wash stays legible on `--kraft` too — a
   single dark-ground rule would be invisible there.
-- The `.prompt-copy` block's `pre-wrap` trailing whitespace no longer paints stub slabs on blank
-  lines: prompt lines are emitted without trailing spaces.
-- A spec captures the geometry at 390px so a future `::selection` change has something to fail.
+- A spec captures the material at 390px so a future `::selection` change has something to fail.
+
+*Shipped note (2026-08-13):* the acceptance list also carried a `.prompt-copy` trailing-whitespace
+item, on the theory that `pre-wrap` blank lines were painting stub slabs. **Checked, and the prompt
+templates in `lib/landing-prompts.ts` have no trailing whitespace** — there was nothing to fix. The
+stub slabs visible in the original repro were the same block-break extension as everywhere else, and
+the translucent wash resolves them. Recorded rather than deleted, so the next reader knows the
+question was asked.
 **Risk:** low
 
 ### Story 1.5 — The section number is legible

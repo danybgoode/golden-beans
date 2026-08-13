@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 3: Material, motion, and ship
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review
 
 > **Build contract (locked by the architect before any builder started).**
 > No new sections and no new copy in this sprint — it makes what Sprints 1 and 2 shipped *feel*

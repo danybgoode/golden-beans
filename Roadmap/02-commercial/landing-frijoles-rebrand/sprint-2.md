@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 2: The product-feel surfaces
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review
 
 > **Build contract (locked by the architect before any builder started).**
 > Sprint 1 has already landed the brand strings, the corrected control ink, the stamped divider and
@@ -36,7 +36,7 @@ like the chat I already use, **so that** I can picture the product in the tool I
 joke, **so that** the page has a voice and I trust its serious claims more, not less.
 
 **Acceptance:**
-- A kraft band between §how and ①, carrying the mockup's parody: the "fix your org in three easy
+- A kraft band between §how and stamp 1, carrying the mockup's parody: the "fix your org in three easy
   steps!*" headline with its disclaiming footnote, three rotated kraft cards, the testimonial box,
   and the struck-through consultant price beside the real "starts at $0".
 - **Everything invented is labelled as invented** (epic D6): the testimonials carry
@@ -62,7 +62,14 @@ joke, **so that** the page has a voice and I trust its serious claims more, not 
   With the flag OFF — which is its state in production today — the section renders an honest badge
   in the same vocabulary §3's RISK row already uses, and the copy does not describe the capability
   in the unqualified present tense. Flipping the gate clears the badge with no code change.
-- A unit test pins both branches of that badge, so the honest state cannot silently disappear.
+- A spec pins both branches of that badge, so the honest state cannot silently disappear.
+
+*Shipped note (2026-08-13):* this was written as "a unit test", and a unit test is the wrong tool —
+it would assert that a pure function returns what the env var says, which is a tautology over
+`process.env`. What shipped is a **browser spec that probes the gate independently** (`POST
+/api/v1/scenarios/execution` → 404 while shut) and derives its expectation from that, so it is
+honest against local, preview AND production, where the flag differs. A spec hardcoding one state
+would have to be edited at launch and would pass for the wrong reason until then.
 **Risk:** low — *the flag is read, never written; no route or gate changes.*
 
 ### Story 2.4 — The journey, side by side
@@ -102,8 +109,9 @@ that** the claim "less coordination" is something I can count rather than someth
    context card; the note above it still says it is an illustration.)*
 2. Scroll past §how. *(Expected: a kraft infomercial band; its testimonials are marked as written by
    us; the $999 is struck through.)*
-3. Scroll past §3. *(Expected: the two drill cards. Because `RESILIENCE_SCENARIOS_ENABLED` is off in
-   production, an honest badge says so — the same wording §3's RISK row uses.)*
+3. Scroll past §3. *(Expected: the two drill cards, each carrying a "Built · not switched on yet"
+   badge, because both gates are off in production. The env-var name is deliberately not in the
+   badge — nobody outside this repo can check one.)*
 4. At 390px, swipe the §5 comparison sideways. *(Expected: it scrolls inside its own box; the page
    itself does not move sideways.)*
 5. Scroll to §4. *(Expected: the shared plan, three collaboration cells, three buttons; hovering the
