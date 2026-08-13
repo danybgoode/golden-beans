@@ -291,6 +291,42 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **A finding's CONCLUSION can be wrong while its OBSERVATION is right — check before accepting AND
+  before dismissing.** Three times in one epic: "reduced motion is broken" (false — the token file
+  already handled it) exposed that the new motion rule was *dead for `.btn` all along*, losing to a
+  token-file selector on specificity; "the canonical-domain change is missing" (false — it was live,
+  set out-of-band deliberately, since rollout order requires the env var before the deploy that
+  snapshots it) correctly noted the diff alone cannot show it; and a Unicode range given as
+  U+2780–2793 was wrong while the gap it named was real (❶ lives at U+2776). The reflex to dismiss on
+  the first factual error would have lost all three. **Verify the claim by rendering or probing, then
+  answer the observation rather than the conclusion.** *(2026-08-13, landing-frijoles-rebrand.)*
+- **A reviewer repeating a finding you reasoned your way out of is a signal to find a third option.**
+  Trailing `//` comments were raised twice by the same family. The first triage — that stripping them
+  naively eats every `https://`, turning a loud false positive into a quiet false negative — was a
+  right concern and a wrong conclusion: the risk was avoidable with a lookbehind, not inherent. A
+  well-argued triage still resolves to "no change", and the second raise is the prompt to re-examine
+  the premise instead of restating the trade-off. *(2026-08-13, landing-frijoles-rebrand.)*
+- **Your GUARDS deserve the same suspicion as your code — three shipped in one epic that could not
+  fail.** A reduced-motion spec whose predicate was `hasDuration && animationName !== 'none'`, so the
+  transition half could never fire (every element with a transition and no animation reports
+  `'none'`). A selection spec bounding a rect at `<= 390` on a 390px viewport, which the broken
+  rendering satisfies too. And `check-design-drift.mjs`, which stripped block comments to the empty
+  string and so had been reporting **the wrong line number for every violation of its entire
+  existence**. A guard that looks like coverage and is not is worse than no guard, because the next
+  reader stops there. Mutation-check a guard the way you would a test — break the thing it defends
+  and watch it go red. *(2026-08-13, landing-frijoles-rebrand.)*
+- **Half a fix reads exactly like a whole one, and can be worse than none.** Making illustrated
+  buttons `aria-hidden` spans removed their SEMANTICS and left their AFFORDANCE — `cursor: pointer`
+  and the hover state layer — so mouse users were invited to click what screen-reader users could no
+  longer find. Strictly worse than before. Same shape as correcting a flag-honesty claim in a
+  section's lead paragraph and leaving the identical claim in its card copy one level down. LEARNINGS'
+  "grep for its siblings" rule applies to COPY and to ACCESSIBILITY, not only to code.
+  *(2026-08-13, landing-frijoles-rebrand.)*
+- **Two families beat one family run twice — with a worked example.** Codex ran nine rounds on one PR
+  and never noticed the drift guard was naming the wrong line; agy found it in a single pass. Codex
+  found the flag-honesty and accessibility defects agy did not. The router's insistence on different
+  families is doing real work, not ceremony — and "a clean round from one family is not a stopping
+  condition" is the rule that keeps it doing it. *(2026-08-13, landing-frijoles-rebrand.)*
 - **A reviewer that read NOTHING still reports "clean" — read the scope line before the findings.**
   An agy round came back with no Blocking and no Should-fix, and its own output said
   `Attached 0 whole file(s); 38 did not fit the budget`: it had seen the unified diff and not one

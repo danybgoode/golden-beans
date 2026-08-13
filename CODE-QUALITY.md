@@ -61,6 +61,17 @@ Two traps we have hit:
 - Testing a helper directly while the **caller** was never wired to it. Test through the caller with
   an input whose result differs between the old and new implementation.
 
+## 5b. Your guards get the same suspicion as your code.
+
+A lint rule, a drift check, a spec helper — these are code that reports on code, and when one is
+wrong it reports success. Three shipped in one epic that could not fail: a predicate joined by AND
+where one half was always false, a bound the broken rendering already satisfied, and a comment
+stripper that ate newlines so every violation it ever reported named the wrong line.
+
+Mutation-check a guard the way you would a test: break the thing it defends, watch it go red,
+revert, verify. And when you add a second guard for the same job, reach for the existing helper —
+the copy will carry whatever bug you are about to fix in the original.
+
 ## 6. Assert that a scripted edit matched.
 
 An unasserted `str.replace()` that finds nothing succeeds silently, and it is invisible in a green

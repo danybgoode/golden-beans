@@ -73,6 +73,18 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [Golden Frijoles — the rebrand, the material pass, and the broken controls](02-commercial/landing-frijoles-rebrand/README.md)
+  (the product's name and its own domain · two live-page defects repaired · the chat-shaped agent
+  surfaces · the infomercial and the flag-honest resilience drills · one elevation ladder and one
+  motion vocabulary) — **live in production 2026-08-13** (PR #95, `5544c06`), serving on
+  **https://goldenfrijoles.com**. The rename is *public surfaces only*: `@golden-beans/sdk`, the
+  GitHub repo, the Vercel and Supabase projects and every env var keep their names, so §9's install
+  line still reads the package that actually exists. Two controls were genuinely broken and both
+  were specificity accidents — the primary CTA lost its label on hover (`a:hover` at (0,1,1) beating
+  `.btn-gold` at (0,1,0), so only *anchor*-based golds were affected, which is why it read as "some
+  of them"), and selecting a paragraph on a phone painted an opaque gold slab. The section stamps
+  are drawn discs now rather than `①` glyphs, which are illegible at any size a text run tolerates
+  because the ring is part of the character.
 - ✅ [Landing redesign v2](02-commercial/landing-redesign-v2/README.md) (the decision-first
   narrative · mobile heuristics as site-wide rails · `/northstar-self-serve.md` · proof that carries
   both the Pod Report and a live engine read) — **live in production 2026-08-12** (PR #92, `4553767`).
@@ -186,6 +198,17 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-13** — `landing-frijoles-rebrand` **shipped and live** (PR #95, `5544c06`): the product
+  is **Golden Frijoles**, on **goldenfrijoles.com**. Beyond the rename, this epic repaired two
+  defects the previous one shipped and made the page's materials one system. Three things are worth
+  carrying forward. **Both bugs were specificity accidents** — nothing was wrong in isolation, which
+  is exactly why they survived review and reached a human's eye instead. **Reproducing the selection
+  bug in two engines before touching it prevented a wrong fix:** the full-width extension is UA
+  selection painting and cannot be changed from CSS; what was ours was the opaque fill, so the fix
+  was a material change, not a geometry one. And **fifteen cross-family review rounds found real
+  defects for nine of them** — three of which were in the *guards* rather than the product,
+  including a drift check that had been reporting the wrong line number for its entire existence,
+  found by the second family in one pass after the first missed it in nine.
 - **2026-08-12** — `landing-redesign-v2` **shipped and live** (PR #92, `4553767`): the public page
   now sells the decision rather than the engine, and gives a stranger something usable — a North Star
   workshop their own agent runs — before asking for anything. Two things are worth carrying forward.

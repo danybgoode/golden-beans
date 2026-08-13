@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 2: The product-feel surfaces
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.
 
 > **Build contract (locked by the architect before any builder started).**
 > Sprint 1 has already landed the brand strings, the corrected control ink, the stamped divider and

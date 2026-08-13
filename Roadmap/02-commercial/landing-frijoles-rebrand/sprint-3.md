@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 3: Material, motion, and ship
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.
 
 > **Build contract (locked by the architect before any builder started).**
 > No new sections and no new copy in this sprint — it makes what Sprints 1 and 2 shipped *feel*

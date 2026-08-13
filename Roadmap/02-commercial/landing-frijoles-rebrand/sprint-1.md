@@ -1,6 +1,6 @@
 # Golden Frijoles — Sprint 1: The name, the domain, and the broken controls
 
-**Status:** 🟦 In review
+**Status:** ✅ Shipped — PR [#95](https://github.com/danybgoode/golden-beans/pull/95), merged as `5544c06`. Live on https://goldenfrijoles.com.
 
 > **Build contract (locked by the architect before any builder started).**
 > This sprint is **shared surface**: the brand strings, `globals.css`, the `Icon` map, the

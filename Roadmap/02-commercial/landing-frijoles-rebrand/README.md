@@ -1,10 +1,16 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: landing-frijoles-rebrand
 build_order: 17
 ---
 
 # Epic: Golden Frijoles — the rebrand, the material pass, and the controls that were broken
+
+> ✅ **SHIPPED & LIVE 2026-08-13** — PR [#95](https://github.com/danybgoode/golden-beans/pull/95),
+> merged as `5544c06`, serving on **https://goldenfrijoles.com**. Verified in production by
+> exercising behaviour: the apex serves 200 and `www` 308s to it, the tab reads Golden Frijoles,
+> both copy-prompt blocks name the apex domain, `/llms.txt` and `/northstar-self-serve.md` both
+> return 200, and the full 18-spec browser suite passes against the live site.
 
 > **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Rebrand + repair
 > **Appetite:** M (one wave) · **Mockup (signed-off):**
