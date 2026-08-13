@@ -11,6 +11,7 @@ import {
   SCENARIO_KINDS,
   SCENARIO_SECURITY_TEMPLATES,
   type ScenarioFaultKind,
+  type ScenarioKind,
 } from '@/lib/scenario-definition'
 import {
   buildScenarioDefinition,
@@ -24,8 +25,13 @@ import type {
   ScenarioDashboardRun,
   ScenarioDashboardView,
 } from '@/lib/scenario-dashboard'
-import { scenarioImpactExperimentKey } from '@/lib/scenario-impact-link'
-import { launchScenarioRunAction, scenarioOwnerOperationAction } from './actions'
+import {
+  isScenarioKindEnabled,
+  scenarioLaunchBlocker,
+  type ScenarioCapabilityGates,
+} from '@/lib/scenario-authoring-policy'
+import { scenarioImpactExperimentReference } from '@/lib/scenario-impact-link'
+import { launchScenarioRunAction, scenarioOwnerOperationAction, startScenarioRunAction } from './actions'
 
 function timestamp(value: string | null): string {
   return value ? `${new Date(value).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '—'
@@ -55,7 +61,15 @@ function ElapsedTime({ since }: { since: string }) {
 
 type Confirmation =
   | { kind: 'revoke'; id: string; label: string }
-  | { kind: 'launch'; id: string; label: string; target: string; blastRadius: string }
+  | {
+      kind: 'launch'
+      id: string
+      label: string
+      target: string
+      blastRadius: string
+      faultSummary: string
+      targetingSummary: string
+    }
   | {
       kind: 'start'
       id: string
@@ -64,6 +78,8 @@ type Confirmation =
       environment: string
       target: string
       blastRadius: string
+      faultSummary: string
+      targetingSummary: string
     }
   | { kind: 'stop'; id: string; label: string; revision: number; environment: string }
 
@@ -71,15 +87,19 @@ export function ScenarioWorkspace({
   projectSlug,
   view,
   canAuthor,
+  capabilities,
 }: {
   projectSlug: string
   view: ScenarioDashboardView
   canAuthor: boolean
+  capabilities: ScenarioCapabilityGates
 }) {
+  const enabledKinds = SCENARIO_KINDS.filter((kind) => isScenarioKindEnabled(kind, capabilities))
+  const defaultKind: ScenarioKind = enabledKinds[0] ?? 'resilience'
   const defaultTarget = view.targets.find((target) => target.status === 'verified')?.key ?? ''
   const defaultFlag = firstCompatibleFaultFlag('delay', view.faultFlags)
   const [draft, setDraft] = useState<ScenarioAuthoringDraft>({
-    kind: 'resilience',
+    kind: defaultKind,
     cohort: 'synthetic',
     targetKey: defaultTarget,
     environment: 'production',
@@ -102,6 +122,10 @@ export function ScenarioWorkspace({
   const [pending, startTransition] = useTransition()
   const parsed = useMemo(() => buildScenarioDefinition(draft), [draft])
   const selectedDefinition = view.definitions.find((item) => item.id === confirmation?.id)
+  const selectedFaultFlag = view.faultFlags.find(
+    (flag) => flag.key === draft.flagKey && flag.version === draft.flagVersion
+  )
+  const policyKeys = new Map(view.policies.map((policy) => [policy.id, policy.key]))
 
   const compatibleFlags = view.faultFlags.filter((flag) => flag.faultKinds.includes(faultKind))
   const update = <K extends keyof ScenarioAuthoringDraft>(key: K, value: ScenarioAuthoringDraft[K]) =>
@@ -174,7 +198,7 @@ export function ScenarioWorkspace({
       header: 'Scenario',
       value: (row) => row.scenarioKey,
       cell: (row) => (
-        <>
+        <span id={`run-${row.id}`}>
           <a href={`#definition-${row.scenarioKey}-${row.definitionVersion}`}>
             {row.scenarioKey} v{row.definitionVersion}
           </a>
@@ -186,7 +210,7 @@ export function ScenarioWorkspace({
               </a>
             </>
           ) : null}
-        </>
+        </span>
       ),
     },
     {
@@ -266,22 +290,31 @@ export function ScenarioWorkspace({
           {
             key: 'actions',
             header: 'Actions',
-            cell: (row) =>
-              row.status === 'running' || row.status === 'created' ? (
+            cell: (row) => {
+              const definitionItem = view.definitions.find((item) => item.id === row.scenarioVersionId)
+              const definition = definitionItem?.definition
+              const flag = definition
+                ? view.faultFlags.find(
+                    (item) =>
+                      item.key === definition.flag.key && item.version === definition.flag.definitionVersion
+                  )
+                : undefined
+              const retryBlocker = definitionItem
+                ? scenarioLaunchBlocker(
+                    {
+                      ...definitionItem.definition,
+                      targetVerified:
+                        view.targets.find((target) => target.key === row.targetKey)?.status === 'verified',
+                      productionSecurityApproved: definitionItem.productionSecurityApproved,
+                    },
+                    capabilities
+                  )
+                : 'The immutable definition is unavailable.'
+              return row.status === 'running' || row.status === 'draft' ? (
                 <button
                   className="btn btn-gold"
-                  disabled={
-                    row.status === 'created' &&
-                    (row.cohort === 'external' ||
-                      view.targets.find((target) => target.key === row.targetKey)?.status !== 'verified')
-                  }
-                  title={
-                    row.status === 'created' &&
-                    (row.cohort === 'external' ||
-                      view.targets.find((target) => target.key === row.targetKey)?.status !== 'verified')
-                      ? 'Only verified, non-external draft runs can start here.'
-                      : undefined
-                  }
+                  disabled={row.status === 'draft' && retryBlocker !== null}
+                  title={row.status === 'draft' ? (retryBlocker ?? undefined) : undefined}
                   type="button"
                   onClick={() => {
                     setOperationReason('')
@@ -294,9 +327,6 @@ export function ScenarioWorkspace({
                         environment: row.environment,
                       })
                     else {
-                      const definition = view.definitions.find(
-                        (item) => item.id === row.scenarioVersionId
-                      )?.definition
                       setConfirmation({
                         kind: 'start',
                         id: row.id,
@@ -307,13 +337,16 @@ export function ScenarioWorkspace({
                         blastRadius: definition
                           ? `${definition.limits.requestCap} requests, ${definition.limits.concurrencyCap} concurrent, ${durationSeconds(definition.startAt, definition.expiresAt)} seconds`
                           : 'the stored immutable definition limits',
+                        faultSummary: flag?.payloadSummary ?? 'Stored immutable fault payloads.',
+                        targetingSummary: flag?.targetingSummary ?? 'Stored immutable targeting.',
                       })
                     }
                   }}
                 >
                   {row.status === 'running' ? 'Stop run' : 'Retry start'}
                 </button>
-              ) : null,
+              ) : null
+            },
           } satisfies DataTableColumn<ScenarioDashboardRun>,
         ]
       : []),
@@ -402,7 +435,7 @@ export function ScenarioWorkspace({
                     value={draft.kind}
                     onChange={(event) => update('kind', event.target.value as ScenarioAuthoringDraft['kind'])}
                   >
-                    {SCENARIO_KINDS.map((value) => (
+                    {enabledKinds.map((value) => (
                       <option key={value}>{value}</option>
                     ))}
                   </select>
@@ -524,6 +557,13 @@ export function ScenarioWorkspace({
                   </select>
                 )}
               </Field>
+              {selectedFaultFlag ? (
+                <p>
+                  <strong>Payloads:</strong> {selectedFaultFlag.payloadSummary}
+                  <br />
+                  <strong>Targeting:</strong> {selectedFaultFlag.targetingSummary}
+                </p>
+              ) : null}
               {draft.kind === 'security' ? (
                 <Field
                   label="Defensive template"
@@ -696,7 +736,19 @@ export function ScenarioWorkspace({
           view.definitions.map((item) => {
             const target = view.targets.find((candidate) => candidate.key === item.definition.targetKey)
             const duration = durationSeconds(item.definition.startAt, item.definition.expiresAt)
-            const launchable = target?.status === 'verified' && item.definition.cohort !== 'external'
+            const launchBlocker = scenarioLaunchBlocker(
+              {
+                ...item.definition,
+                targetVerified: target?.status === 'verified',
+                productionSecurityApproved: item.productionSecurityApproved,
+              },
+              capabilities
+            )
+            const flag = view.faultFlags.find(
+              (candidate) =>
+                candidate.key === item.definition.flag.key &&
+                candidate.version === item.definition.flag.definitionVersion
+            )
             return (
               <article id={`definition-${item.scenarioKey}-${item.version}`} key={item.id} className="panel">
                 <h3>
@@ -709,11 +761,18 @@ export function ScenarioWorkspace({
                   Blast radius: {item.definition.limits.requestCap} requests,{' '}
                   {item.definition.limits.concurrencyCap} concurrent, {duration} seconds.
                 </p>
+                {flag ? (
+                  <p>
+                    <strong>Payloads:</strong> {flag.payloadSummary}
+                    <br />
+                    <strong>Targeting:</strong> {flag.targetingSummary}
+                  </p>
+                ) : null}
                 {canAuthor ? (
                   <button
                     className="btn btn-gold"
-                    disabled={!launchable || pending}
-                    title={launchable ? undefined : 'Only verified, non-external targets can launch here.'}
+                    disabled={launchBlocker !== null || pending}
+                    title={launchBlocker ?? undefined}
                     type="button"
                     onClick={() => {
                       setOperationReason('')
@@ -723,6 +782,8 @@ export function ScenarioWorkspace({
                         label: `${item.scenarioKey} v${item.version}`,
                         target: item.definition.targetKey,
                         blastRadius: `${item.definition.limits.requestCap} requests, ${item.definition.limits.concurrencyCap} concurrent, ${duration} seconds`,
+                        faultSummary: flag?.payloadSummary ?? 'Stored immutable fault payloads.',
+                        targetingSummary: flag?.targetingSummary ?? 'Stored immutable targeting.',
                       })
                     }}
                   >
@@ -794,7 +855,7 @@ export function ScenarioWorkspace({
           view.impacts.map((impact: ScenarioDashboardImpact) => {
             const comparable =
               impact.evidence.technical.control.attempts > 0 && impact.evidence.technical.fault.attempts > 0
-            const experimentKey = scenarioImpactExperimentKey(impact.evidence)
+            const experiment = scenarioImpactExperimentReference(impact.evidence)
             return (
               <article id={`impact-${impact.id}`} key={impact.id} className="panel">
                 <h3>
@@ -805,6 +866,13 @@ export function ScenarioWorkspace({
                 </p>
                 <p>
                   <strong>Blockers: {impact.evidence.claim.blockers.join(', ') || 'none'}</strong>
+                </p>
+                <p>
+                  Captured {timestamp(impact.createdAt)} · run {shortId(impact.runId)} · {impact.reason}
+                  <br />
+                  Technical delta: {impact.evidence.technical.nonZeroDifference ? 'non-zero' : 'none'} ·
+                  failure Δ {impact.evidence.technical.failureRateDelta ?? '—'} · latency Δ{' '}
+                  {impact.evidence.technical.latencyP95DeltaMs ?? '—'}ms
                 </p>
                 {comparable ? (
                   <table>
@@ -839,10 +907,12 @@ export function ScenarioWorkspace({
                   <a href={`#definition-${impact.scenarioKey}-${impact.scenarioVersion}`}>
                     Open the producing definition
                   </a>{' '}
-                  ·{' '}
-                  {experimentKey ? (
-                    <a href={`/app/experiments/${projectSlug}/${encodeURIComponent(experimentKey)}`}>
-                      Open downstream experiment analysis
+                  · <a href={`#run-${impact.runId}`}>Open the producing run</a> ·{' '}
+                  {experiment ? (
+                    <a
+                      href={`/app/experiments/${projectSlug}/${encodeURIComponent(experiment.key)}?version=${experiment.definitionVersion}`}
+                    >
+                      Open downstream experiment analysis v{experiment.definitionVersion}
                     </a>
                   ) : (
                     <span>No downstream experiment reference was captured.</span>
@@ -864,6 +934,22 @@ export function ScenarioWorkspace({
           caption="Automatic circuit-breaker policies"
           columns={[
             { key: 'policy', header: 'Policy', value: (row) => row.key },
+            {
+              key: 'bound-flag',
+              header: 'Bound flag',
+              value: (row) => {
+                const flag = row.definition.flag
+                return typeof flag === 'object' && flag !== null && 'key' in flag
+                  ? String(flag.key)
+                  : 'unknown'
+              },
+            },
+            {
+              key: 'id',
+              header: 'Policy ID',
+              value: (row) => row.id,
+              cell: (row) => shortId(row.id),
+            },
             {
               key: 'state',
               header: 'State',
@@ -899,6 +985,12 @@ export function ScenarioWorkspace({
               header: 'When',
               value: (row) => row.createdAt,
               cell: (row) => timestamp(row.createdAt),
+            },
+            {
+              key: 'policy',
+              header: 'Policy',
+              value: (row) => policyKeys.get(row.policyId) ?? row.policyId,
+              cell: (row) => policyKeys.get(row.policyId) ?? shortId(row.policyId),
             },
             { key: 'mode', header: 'Mode', value: (row) => row.mode },
             {
@@ -948,7 +1040,7 @@ export function ScenarioWorkspace({
             : confirmation?.kind === 'stop'
               ? 'This run stops admitting bounded fault executions.'
               : confirmation?.kind === 'launch' || confirmation?.kind === 'start'
-                ? `${confirmation.target}. Blast radius: ${confirmation.blastRadius}.`
+                ? `${confirmation.target}. Blast radius: ${confirmation.blastRadius}. Payloads: ${confirmation.faultSummary} Targeting: ${confirmation.targetingSummary}`
                 : ''
         }
         pending={pending}
@@ -985,25 +1077,14 @@ export function ScenarioWorkspace({
             )
           if (confirmation.kind === 'launch' && selectedDefinition)
             act(
-              () =>
-                launchScenarioRunAction(
-                  projectSlug,
-                  selectedDefinition.definition.environment,
-                  confirmation.id,
-                  operationReason
-                ),
+              () => launchScenarioRunAction(projectSlug, confirmation.id, operationReason),
               'Scenario run launched.',
               true
             )
           if (confirmation.kind === 'start')
             act(
               () =>
-                scenarioOwnerOperationAction(projectSlug, confirmation.environment, {
-                  operation: 'start_run',
-                  runId: confirmation.id,
-                  expectedRevision: confirmation.revision,
-                  reason: operationReason,
-                }),
+                startScenarioRunAction(projectSlug, confirmation.id, confirmation.revision, operationReason),
               'Scenario run started.',
               true
             )

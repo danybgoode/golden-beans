@@ -667,6 +667,9 @@ SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
   PERFORM private.assert_scenario_owner(p_project_id, p_actor_user_id);
+  IF p_definition->>'cohort' = 'external' THEN
+    RAISE EXCEPTION 'external cohort is unavailable to owner authoring' USING ERRCODE = '42501';
+  END IF;
   RETURN QUERY SELECT * FROM private.create_scenario_definition_version_core(
     p_project_id, p_environment, p_actor_user_id, NULL, p_scenario_key, p_definition, p_reason
   );
@@ -687,6 +690,15 @@ SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
   PERFORM private.assert_scenario_owner(p_project_id, p_actor_user_id);
+  IF EXISTS (
+    SELECT 1
+    FROM public.scenario_definition_versions version
+    WHERE version.project_id = p_project_id
+      AND version.id = p_scenario_version_id
+      AND version.definition->>'cohort' = 'external'
+  ) THEN
+    RAISE EXCEPTION 'external cohort is unavailable to owner authoring' USING ERRCODE = '42501';
+  END IF;
   RETURN QUERY SELECT * FROM private.create_scenario_run_core(
     p_project_id, p_environment, p_actor_user_id, NULL, p_scenario_version_id, p_reason
   );
@@ -708,6 +720,17 @@ SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
   PERFORM private.assert_scenario_owner(p_project_id, p_actor_user_id);
+  IF EXISTS (
+    SELECT 1
+    FROM public.scenario_runs run
+    JOIN public.scenario_definition_versions version
+      ON version.project_id = run.project_id AND version.id = run.scenario_version_id
+    WHERE run.project_id = p_project_id
+      AND run.id = p_run_id
+      AND version.definition->>'cohort' = 'external'
+  ) THEN
+    RAISE EXCEPTION 'external cohort is unavailable to owner authoring' USING ERRCODE = '42501';
+  END IF;
   RETURN QUERY SELECT * FROM private.start_scenario_run_core(
     p_project_id, p_environment, p_actor_user_id, NULL, p_run_id, p_expected_revision, p_reason
   );
@@ -729,6 +752,9 @@ SET search_path = pg_catalog, public, pg_temp
 AS $$
 BEGIN
   PERFORM private.assert_scenario_owner(p_project_id, p_actor_user_id);
+  IF p_transition <> 'stop' THEN
+    RAISE EXCEPTION 'owner scenario transition must be stop' USING ERRCODE = '42501';
+  END IF;
   RETURN QUERY SELECT * FROM private.transition_scenario_run_core(
     p_project_id, p_actor_user_id, NULL, p_run_id, p_expected_revision, p_transition, p_reason
   );

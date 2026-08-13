@@ -1,6 +1,7 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import type { ScenarioAdminOperation } from './scenario-admin-operation'
+import { parseScenarioDefinition, type ScenarioDefinition } from './scenario-definition'
 
 type OwnerOperation = Extract<
   ScenarioAdminOperation,
@@ -9,6 +10,91 @@ type OwnerOperation = Extract<
 
 export type ScenarioOwnerOperationResult =
   ({ ok: true } & Record<string, unknown>) | { ok: false; error: string; conflict?: boolean }
+
+export type ScenarioOwnerDefinitionContext = {
+  definition: ScenarioDefinition
+  productionSecurityApproved: boolean
+  targetVerified: boolean
+}
+
+export type ScenarioOwnerRunContext = ScenarioOwnerDefinitionContext & {
+  environment: 'development' | 'preview' | 'production'
+  revision: number
+  status: string
+}
+
+export async function getScenarioOwnerDefinitionContext(
+  projectId: string,
+  scenarioVersionId: string
+): Promise<ScenarioOwnerDefinitionContext | null> {
+  const supabase = getSupabaseServiceClient()
+  const { data: version, error } = await supabase
+    .from('scenario_definition_versions')
+    .select('definition')
+    .eq('project_id', projectId)
+    .eq('id', scenarioVersionId)
+    .maybeSingle()
+  if (error) {
+    console.error('[scenario-owner] definition policy read failed', { code: error.code })
+    return null
+  }
+  const parsed = parseScenarioDefinition(version?.definition)
+  if (!parsed.ok) return null
+  const [{ data: approval, error: approvalError }, { data: target, error: targetError }] = await Promise.all([
+    supabase
+      .from('scenario_owner_approvals')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('scenario_version_id', scenarioVersionId)
+      .eq('approval_kind', 'production_security')
+      .maybeSingle(),
+    supabase
+      .from('scenario_targets')
+      .select('status')
+      .eq('project_id', projectId)
+      .eq('key', parsed.definition.targetKey)
+      .maybeSingle(),
+  ])
+  if (approvalError || targetError) {
+    console.error('[scenario-owner] definition eligibility read failed', {
+      approvalCode: approvalError?.code,
+      targetCode: targetError?.code,
+    })
+    return null
+  }
+  return {
+    definition: parsed.definition,
+    productionSecurityApproved: approval !== null,
+    targetVerified: target?.status === 'verified',
+  }
+}
+
+export async function getScenarioOwnerRunContext(
+  projectId: string,
+  runId: string
+): Promise<ScenarioOwnerRunContext | null> {
+  const { data: run, error } = await getSupabaseServiceClient()
+    .from('scenario_runs')
+    .select('scenario_version_id, environment, revision, status')
+    .eq('project_id', projectId)
+    .eq('id', runId)
+    .maybeSingle()
+  if (error || !run) {
+    if (error) console.error('[scenario-owner] run policy read failed', { code: error.code })
+    return null
+  }
+  if (run.environment !== 'development' && run.environment !== 'preview' && run.environment !== 'production')
+    return null
+  const context = await getScenarioOwnerDefinitionContext(projectId, String(run.scenario_version_id))
+  return context
+    ? {
+        ...context,
+        environment: run.environment,
+        revision: Number(run.revision),
+        status: String(run.status),
+      }
+    : null
+}
 
 function failure(code: string | undefined): ScenarioOwnerOperationResult {
   if (code === 'P0001')

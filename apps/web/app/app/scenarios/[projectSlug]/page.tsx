@@ -1,6 +1,10 @@
 import { ProductShell } from '@/components/product/ProductShell'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { isScenarioAuthoringEnabled } from '@/lib/flags'
+import {
+  isResilienceScenariosEnabled,
+  isScenarioAuthoringEnabled,
+  isSecuritySimulationsEnabled,
+} from '@/lib/flags'
 import { getScenarioDashboardView } from '@/lib/scenario-dashboard'
 import { ScenarioWorkspace } from './scenario-workspace'
 
@@ -10,11 +14,23 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
   const view = await getScenarioDashboardView(membership.projectId)
-  const canAuthor = membership.role === 'owner' && isScenarioAuthoringEnabled()
+  const capabilities = {
+    resilience: isResilienceScenariosEnabled(),
+    security: isSecuritySimulationsEnabled(),
+  }
+  const canAuthor =
+    membership.role === 'owner' &&
+    isScenarioAuthoringEnabled() &&
+    (capabilities.resilience || capabilities.security)
 
   return (
     <ProductShell projectSlug={projectSlug}>
-      <ScenarioWorkspace projectSlug={projectSlug} view={view} canAuthor={canAuthor} />
+      <ScenarioWorkspace
+        projectSlug={projectSlug}
+        view={view}
+        canAuthor={canAuthor}
+        capabilities={capabilities}
+      />
     </ProductShell>
   )
 }

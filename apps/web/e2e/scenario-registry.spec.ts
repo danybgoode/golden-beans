@@ -1361,6 +1361,16 @@ test('owner-session facade is owner-attributed, tenant-bound, and lifecycle-comp
     flagKey: 'scenario.owner_facade',
   })
 
+  const externalDefinition = await client.rpc('owner_create_scenario_definition_version', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_key: 'owner_external_denied',
+    p_definition: { ...definition, cohort: 'external' },
+    p_reason: 'owner UI must not author external cohorts',
+  })
+  expect(externalDefinition.error?.code).toBe('42501')
+
   const denied = await client.rpc('owner_create_scenario_definition_version', {
     p_project_id: projectA,
     p_environment: 'production',
@@ -1413,6 +1423,16 @@ test('owner-session facade is owner-attributed, tenant-bound, and lifecycle-comp
   expect(started.error).toBeNull()
   expect(started.data?.[0]?.revision).toBe(2)
 
+  const aborted = await client.rpc('owner_transition_scenario_run', {
+    p_project_id: projectA,
+    p_actor_user_id: ownerA,
+    p_run_id: runId,
+    p_expected_revision: 2,
+    p_transition: 'abort',
+    p_reason: 'owner facade exposes stop only',
+  })
+  expect(aborted.error?.code).toBe('42501')
+
   const stopped = await client.rpc('owner_transition_scenario_run', {
     p_project_id: projectA,
     p_actor_user_id: ownerA,
@@ -1423,6 +1443,25 @@ test('owner-session facade is owner-attributed, tenant-bound, and lifecycle-comp
   })
   expect(stopped.error).toBeNull()
   expect(stopped.data?.[0]?.revision).toBe(3)
+
+  const externalVersion = await createScenario(
+    client,
+    credentialsA.adminKey,
+    'credential_external',
+    scenarioDefinition({
+      targetKey: targetA.targetKey,
+      flagKey: 'scenario.owner_facade',
+      cohort: 'external',
+    })
+  )
+  const externalRun = await client.rpc('owner_create_scenario_run', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_version_id: externalVersion.scenario_version_id,
+    p_reason: 'owner UI must not launch credential-approved external definitions',
+  })
+  expect(externalRun.error?.code).toBe('42501')
 
   const revoked = await client.rpc('owner_revoke_scenario_target', {
     p_project_id: projectA,
@@ -1437,6 +1476,7 @@ test('owner-session facade is owner-attributed, tenant-bound, and lifecycle-comp
     .from('scenario_lifecycle_audit')
     .select('action, actor_user_id, external_actor_id')
     .eq('project_id', projectA)
+    .is('external_actor_id', null)
     .in('action', ['version_created', 'run_created', 'run_started', 'run_stopped', 'target_revoked'])
   expect(audit.error).toBeNull()
   expect(audit.data).toHaveLength(5)
