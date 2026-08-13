@@ -24,6 +24,7 @@ import type {
   ScenarioDashboardRun,
   ScenarioDashboardView,
 } from '@/lib/scenario-dashboard'
+import { scenarioImpactExperimentKey } from '@/lib/scenario-impact-link'
 import { launchScenarioRunAction, scenarioOwnerOperationAction } from './actions'
 
 function timestamp(value: string | null): string {
@@ -145,7 +146,10 @@ export function ScenarioWorkspace({
                 <button
                   className="btn btn-ghost"
                   type="button"
-                  onClick={() => setConfirmation({ kind: 'revoke', id: row.id, label: row.key })}
+                  onClick={() => {
+                    setOperationReason('')
+                    setConfirmation({ kind: 'revoke', id: row.id, label: row.key })
+                  }}
                 >
                   Revoke
                 </button>
@@ -258,7 +262,8 @@ export function ScenarioWorkspace({
                 <button
                   className="btn btn-gold"
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setOperationReason('')
                     setConfirmation({
                       kind: 'stop',
                       id: row.id,
@@ -266,7 +271,7 @@ export function ScenarioWorkspace({
                       revision: row.revision,
                       environment: row.environment,
                     })
-                  }
+                  }}
                 >
                   Stop run
                 </button>
@@ -464,6 +469,12 @@ export function ScenarioWorkspace({
                           flagKey: selected.key,
                           flagVersion: selected.version,
                         }))
+                      else
+                        setDraft((current) => ({
+                          ...current,
+                          flagKey: '',
+                          flagVersion: 1,
+                        }))
                     }}
                   >
                     <option value="">Select a version</option>
@@ -628,29 +639,6 @@ export function ScenarioWorkspace({
         </Panel>
       ) : null}
 
-      {canAuthor ? (
-        <Panel>
-          <FormSection
-            title="Operation reason"
-            description="Required when launching or stopping a run, or revoking a target. Each reason is written to the immutable lifecycle audit."
-          >
-            <Field
-              label="Reason for launch, stop or revoke"
-              error={confirmation && !operationReason.trim() ? 'A human-written reason is required.' : null}
-            >
-              {(control) => (
-                <textarea
-                  {...control}
-                  maxLength={500}
-                  value={operationReason}
-                  onChange={(event) => setOperationReason(event.target.value)}
-                />
-              )}
-            </Field>
-          </FormSection>
-        </Panel>
-      ) : null}
-
       <Panel>
         <h2>Registered targets</h2>
         <DataTable
@@ -689,7 +677,8 @@ export function ScenarioWorkspace({
                     disabled={!launchable || pending}
                     title={launchable ? undefined : 'Only verified, non-external targets can launch here.'}
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      setOperationReason('')
                       setConfirmation({
                         kind: 'launch',
                         id: item.id,
@@ -697,7 +686,7 @@ export function ScenarioWorkspace({
                         target: item.definition.targetKey,
                         blastRadius: `${item.definition.limits.requestCap} requests, ${item.definition.limits.concurrencyCap} concurrent, ${duration} seconds`,
                       })
-                    }
+                    }}
                   >
                     Launch run
                   </button>
@@ -767,6 +756,7 @@ export function ScenarioWorkspace({
           view.impacts.map((impact: ScenarioDashboardImpact) => {
             const comparable =
               impact.evidence.technical.control.attempts > 0 && impact.evidence.technical.fault.attempts > 0
+            const experimentKey = scenarioImpactExperimentKey(impact.evidence)
             return (
               <article id={`impact-${impact.id}`} key={impact.id} className="panel">
                 <h3>
@@ -812,11 +802,13 @@ export function ScenarioWorkspace({
                     Open the producing definition
                   </a>{' '}
                   ·{' '}
-                  <a
-                    href={`/app/experiments/${projectSlug}/${encodeURIComponent(impact.evidence.experiment.key)}`}
-                  >
-                    Open downstream experiment analysis
-                  </a>
+                  {experimentKey ? (
+                    <a href={`/app/experiments/${projectSlug}/${encodeURIComponent(experimentKey)}`}>
+                      Open downstream experiment analysis
+                    </a>
+                  ) : (
+                    <span>No downstream experiment reference was captured.</span>
+                  )}
                 </p>
               </article>
             )
@@ -906,14 +898,26 @@ export function ScenarioWorkspace({
                 : ''
         }
         pending={pending}
-        onCancel={() => setConfirmation(null)}
+        confirmDisabled={!operationReason.trim()}
+        details={
+          <Field label="Operation reason" hint="Written to the immutable lifecycle audit." error={null}>
+            {(control) => (
+              <textarea
+                {...control}
+                maxLength={500}
+                value={operationReason}
+                onChange={(event) => setOperationReason(event.target.value)}
+              />
+            )}
+          </Field>
+        }
+        onCancel={() => {
+          setConfirmation(null)
+          setOperationReason('')
+        }}
         onConfirm={() => {
           if (!confirmation) return
-          if (!operationReason.trim()) {
-            setConfirmation(null)
-            setFeedback('Enter a human-written reason before confirming an operation.')
-            return
-          }
+          if (!operationReason.trim()) return
           if (confirmation.kind === 'revoke')
             act(
               () =>

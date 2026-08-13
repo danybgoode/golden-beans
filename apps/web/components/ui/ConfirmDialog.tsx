@@ -37,9 +37,11 @@ export function ConfirmDialog({
   noun,
   subject,
   consequence,
+  details,
   onConfirm,
   onCancel,
   pending = false,
+  confirmDisabled = false,
 }: {
   open: boolean
   /**
@@ -69,9 +71,12 @@ export function ConfirmDialog({
    * quietly skipping it.
    */
   consequence: ReactNode
+  /** Optional operation-specific input or context that belongs inside the confirmation step. */
+  details?: ReactNode
   onConfirm: () => void
   onCancel: () => void
   pending?: boolean
+  confirmDisabled?: boolean
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   // Not a fixed string: a converted route can mount more than one manager, and two dialogs sharing
@@ -115,6 +120,7 @@ export function ConfirmDialog({
         <Icon name="warning" size={14} />
         {consequence}
       </p>
+      {details ? <div className="confirm-dialog__details">{details}</div> : null}
       <div className="confirm-dialog__actions">
         {/*
           Cancel is FIRST in the DOM and carries `autoFocus`, so the destructive control is never
@@ -128,7 +134,7 @@ export function ConfirmDialog({
         <button
           type="button"
           className="btn btn-gold confirm-dialog__confirm"
-          disabled={pending}
+          disabled={pending || confirmDisabled}
           onClick={onConfirm}
         >
           {pending ? 'Working…' : verb}

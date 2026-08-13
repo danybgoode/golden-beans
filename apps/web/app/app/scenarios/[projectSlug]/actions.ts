@@ -68,7 +68,9 @@ export async function launchScenarioRunAction(
     actorUserId: userId,
     operation: create,
   })
-  if (!draft.ok || typeof draft.run_id !== 'string' || typeof draft.revision !== 'number') return draft
+  if (!draft.ok) return draft
+  if (typeof draft.run_id !== 'string' || typeof draft.revision !== 'number')
+    return { ok: false as const, error: 'The run draft response was incomplete.' }
   // Starting can still fail after the draft transaction commits. Revalidate now so the honest
   // partial state is visible and the owner can retry instead of seeing a stale page.
   revalidatePath(`/app/scenarios/${slug}`)

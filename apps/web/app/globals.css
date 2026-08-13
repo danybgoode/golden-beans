@@ -1758,6 +1758,10 @@ a.stat-card:hover {
   color: var(--red);
 }
 
+.confirm-dialog__details {
+  margin-top: 16px;
+}
+
 .confirm-dialog__actions {
   display: flex;
   gap: 10px;
