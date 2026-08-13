@@ -3597,3 +3597,32 @@ a.stat-card:hover {
     transform: none;
   }
 }
+
+/* A picture of a control, not a control. Keeps `.btn`'s geometry and colour so
+   the illustration reads as the real product UI, and drops every signal that
+   says "you may press this": the pointer cursor, the hover state layer, and the
+   press. Paired with `aria-hidden` on its container — the two halves have to
+   ship together, and the first version shipped only the semantic half, which
+   left a mouse user invited to click something a screen-reader user could no
+   longer even find (PR #95 review). */
+.btn--illustration {
+  cursor: default;
+}
+
+.btn--illustration:hover,
+.btn--illustration:focus,
+.btn--illustration:active {
+  background: inherit;
+  border-color: inherit;
+  color: inherit;
+  transform: none;
+}
+
+.btn-gold.btn--illustration:hover {
+  background: var(--gold);
+}
+
+.btn-ghost.btn--illustration:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}

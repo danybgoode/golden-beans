@@ -107,14 +107,20 @@ export function PrincipleSection() {
                     "this control exists and you may not use it right now", which is a different and
                     still-untrue claim — there is no rollout here to run. A picture of a decision row
                     is what this is, so it is marked `aria-hidden` and the sentence beneath carries
-                    the meaning for anyone not looking at it. */}
+                    the meaning for anyone not looking at it.
+
+                    `.btn--illustration` is the second half, and the first version omitted it: a
+                    `span.btn` still inherited `cursor: pointer` and the hover state layer, so a
+                    mouse user was invited to click three things that had stopped being clickable.
+                    Removing the semantics without removing the affordance is a worse state than
+                    leaving them as buttons. Raised in cross-family review of PR #95. */}
                 <p className="sr-only">
                   Illustration of the decision row: run the 10% test, tune the plan, or save for later.
                 </p>
                 <div className="button-row decision-row" aria-hidden="true">
-                  <span className="btn btn-gold">Run the 10% test</span>
-                  <span className="btn btn-ghost">Tune the plan</span>
-                  <span className="btn btn-ghost">Save for later</span>
+                  <span className="btn btn-gold btn--illustration">Run the 10% test</span>
+                  <span className="btn btn-ghost btn--illustration">Tune the plan</span>
+                  <span className="btn btn-ghost btn--illustration">Save for later</span>
                 </div>
                 <p className="note section-lead">
                   Not &ldquo;approve your agent.&rdquo; More &ldquo;we&apos;ve looked at this together;
