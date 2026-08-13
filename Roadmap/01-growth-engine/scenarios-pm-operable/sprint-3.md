@@ -1,6 +1,6 @@
 # Scenarios made PM-operable — Sprint 3: Impact as a comparison
 
-**Status:** ✅ built in `cf1b971` + hardening through `00b1a86`; PR #98 awaits product-owner merge
+**Status:** ✅ merged in PR #98 (`5bca24c`); built in `cf1b971` + hardening through `00b1a86`
 
 > **Build contract (locked by the architect before the builder started).**
 > **D7 answered:** #14's charting decision has not landed. This sprint ships impact as a clearer

@@ -209,17 +209,18 @@ the kill path.
 `review-route.mjs --tier high`, **plus** a fresh reviewer subagent.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
+- [x] All sprints merged to `main` + smoke-tested (production-authenticated gaps stated in the retro)
 - [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] Every sprint status ticked with commit refs; final README status waits on the named owner check
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory: not applicable — this repository has no `MEMORY.md` store or index
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (deduped)
 - [x] **Kill-switch (planned at grooming — Stage 6b):** `SCENARIO_AUTHORING_ENABLED` exists in **every
       environment**, created **DISABLED**, default `false`. *Verify-only.*
 - [x] **D9 answered in writing** — whether `approve_definition` gates a synthetic run, and what
       changed if it does
 - [ ] **The rendered impact claim reviewed by the product owner specifically** (D11), not just the
       page
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [ ] Feature branch deleted remotely; set this README's frontmatter `status: shipped` after the
+      product-owner claim check, then run `node scripts/build-order.mjs`

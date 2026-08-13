@@ -1,6 +1,6 @@
 # Scenarios made PM-operable — Sprint 1: Define a scenario
 
-**Status:** ✅ built in `013b404` + hardening through `00b1a86`; PR #98 awaits product-owner merge
+**Status:** ✅ merged in PR #98 (`5bca24c`); built in `013b404` + hardening through `00b1a86`
 
 > **Build contract (locked by the architect before the builder started).**
 > **Run D9 before writing a line:** does a `synthetic`-cohort scenario run without
