@@ -131,15 +131,15 @@ reviews the rendered claim, not just the render.
 **D12 — This epic rewrites the scenarios page; #13 deliberately did not convert it.**
 Do not convert-then-rewrite. Rewrite once, here, using #13's primitives.
 
-**D13 — The signed-in UI needs one owner-session command facade; the existing API-key facade cannot be reused as-is.**
+**D13 — The signed-in UI uses one owner-session command facade; the existing API-key facade is not reused as-is.**
 `executeScenarioAdminOperation` requires a key hash and derives `project_id` plus `actor_user_id` from
 that credential. `requireProjectOwnership()` resolves the signed-in owner directly. Selecting an
 arbitrary stored key hash would attribute the write to that key's creator and would still fail the
 external-actor contract; passing a project id from the browser is forbidden. The safe shape is the
 same one used by journeys, experiments and flags: a server action gates first, re-authenticates owner
 server-side, parses through the existing contract, then calls a service-role-only, project-and-actor
-scoped RPC. The RPC must share the existing transaction logic rather than reimplement it. This is an
-auth/DB scope addition and requires the product owner's Amendment 1 decision before code.
+scoped RPC. The RPC shares the existing transaction logic rather than reimplementing it. This is an
+auth/DB scope addition approved by the product owner in Amendment 1.
 
 **D14 — A scenario selects an existing immutable fault-injector flag version; it does not reuse `RuleBuilderRow`.**
 `ScenarioDefinition` stores a `{key, definitionVersion}` flag reference. `RuleBuilderRow` is a private
@@ -162,21 +162,22 @@ The scenario page, actions and tests are shared hot files across all three sprin
 builders would buy conflicts rather than speed. Review independence comes from the required routed
 cross-family passes. The high-risk fresh-reviewer layer remains owed by policy.
 
-## Amendment 1 — 2026-08-13 · owner-session command boundary (decision required)
+## Amendment 1 — 2026-08-13 · owner-session command boundary (approved)
 
-The lock disproved the sentence “a screen, nothing else.” There are two honest choices:
+The lock disproved the sentence “a screen, nothing else.” The product owner approved option 1:
 
-1. **Recommended — add the owner-session facade.** Add service-role-only, owner-scoped RPC wrappers
+1. **APPROVED — add the owner-session facade.** Add service-role-only, owner-scoped RPC wrappers
    for create/start/stop/revoke that share the credential operations' transaction cores. Server
    actions call them only after `requireProjectOwnership()`. This preserves the epic outcome and adds
    a migration, grant-denial specs, tenant-isolation specs and the mandatory migration-before-merge
    rollout step.
-2. **Narrow the bet to read-only UX.** Ship the sectioned evidence view and comparison table, but
+2. **Rejected — narrow the bet to read-only UX.** Ship the sectioned evidence view and comparison table, but
    leave define/launch/stop available only to credential clients. This avoids auth/DB work and fails
    the epic's named PM-operable outcome, so it is not recommended.
 
-No builder may infer this answer from the instruction to “build the epic”; WAYS-OF-WORKING requires
-an explicit decision when a locked acceptance contract grows into auth/DB scope.
+Decision given explicitly in the build session on 2026-08-13. The owner-session RPCs are additive,
+service-role-only, tenant-scoped, actor-attributed and migration-first; no existing credential route
+loses its current contract.
 
 ## Scope — stories
 

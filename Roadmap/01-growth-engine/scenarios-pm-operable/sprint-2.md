@@ -9,7 +9,7 @@
 > **D4 was corrected by the lock:** stopping a run is `transition_run` through the scenario command;
 > `executeBreakerAdminOperation` trips a flag breaker policy and never stops a scenario. A PM who
 > believes they killed something that is still running is the worst outcome this epic can produce.
-> **BLOCKED before command-path code:** Amendment 1 must be decided.
+> **Amendment 1 approved 2026-08-13:** use the owner-session facade; keep API-key commands intact.
 > Branch `feat/scenarios-pm-operable-s2`, cut from `-s1`.
 
 ## Stories

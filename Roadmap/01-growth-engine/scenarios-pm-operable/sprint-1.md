@@ -11,9 +11,9 @@
 > `SCENARIO_AUTHORING_ENABLED` must exist **DISABLED in every environment before this merges.**
 > #13's form/dialog primitives and #15's percent seam are on `main`. `RuleBuilderRow` is not a
 > scenario primitive (D14).
-> **BLOCKED before code:** the product owner must decide Amendment 1's owner-session facade. The
-> existing credential command cannot be called from a signed-in session by pretending the identities
-> are interchangeable (D13).
+> **Amendment 1 approved 2026-08-13:** build the owner-session facade. The existing credential
+> command still cannot be called from a signed-in session by pretending the identities are
+> interchangeable (D13).
 
 ## Stories
 
