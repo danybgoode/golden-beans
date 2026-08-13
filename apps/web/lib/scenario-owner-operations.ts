@@ -25,6 +25,57 @@ export type ScenarioOwnerRunContext = ScenarioOwnerDefinitionContext & {
   status: string
 }
 
+export type ScenarioOwnerStopContext = {
+  kind: 'resilience' | 'security'
+  environment: 'development' | 'preview' | 'production'
+  revision: number
+  status: string
+}
+
+export async function getScenarioOwnerStopContext(
+  projectId: string,
+  runId: string
+): Promise<ScenarioOwnerStopContext | null> {
+  const supabase = getSupabaseServiceClient()
+  const { data: run, error } = await supabase
+    .from('scenario_runs')
+    .select('scenario_version_id, environment, revision, status')
+    .eq('project_id', projectId)
+    .eq('id', runId)
+    .maybeSingle()
+  if (error || !run) {
+    if (error) console.error('[scenario-owner] stop context read failed', { code: error.code })
+    return null
+  }
+  const { data: version, error: versionError } = await supabase
+    .from('scenario_definition_versions')
+    .select('definition')
+    .eq('project_id', projectId)
+    .eq('id', String(run.scenario_version_id))
+    .maybeSingle()
+  const definition = version?.definition
+  const kind =
+    definition && typeof definition === 'object' && !Array.isArray(definition) && 'kind' in definition
+      ? definition.kind
+      : null
+  if (
+    versionError ||
+    (kind !== 'resilience' && kind !== 'security') ||
+    (run.environment !== 'development' &&
+      run.environment !== 'preview' &&
+      run.environment !== 'production')
+  ) {
+    if (versionError) console.error('[scenario-owner] stop definition read failed', { code: versionError.code })
+    return null
+  }
+  return {
+    kind,
+    environment: run.environment,
+    revision: Number(run.revision),
+    status: String(run.status),
+  }
+}
+
 export async function getScenarioOwnerDefinitionContext(
   projectId: string,
   scenarioVersionId: string

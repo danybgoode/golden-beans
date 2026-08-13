@@ -85,3 +85,5 @@ export const IMPACT_SERIES: ReadonlyArray<{ occurredOn: string; value: number }>
 export const SCENARIO_FIXTURE_KEY = 'gb_e2e_owner_scenario'
 export const SCENARIO_TARGET_KEY = 'gb.e2e.owner.probe'
 export const SCENARIO_FLAG_KEY = 'gb.e2e.owner.fault'
+export const SCENARIO_UNDISCLOSED_KEY = 'gb_e2e_undisclosed_scenario'
+export const SCENARIO_UNDISCLOSED_FLAG_KEY = 'gb.e2e.owner.noop'

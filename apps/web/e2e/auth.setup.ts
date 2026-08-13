@@ -12,6 +12,8 @@ import {
   SCENARIO_FIXTURE_KEY,
   SCENARIO_FLAG_KEY,
   SCENARIO_TARGET_KEY,
+  SCENARIO_UNDISCLOSED_FLAG_KEY,
+  SCENARIO_UNDISCLOSED_KEY,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -222,6 +224,68 @@ async function seedScenarioFixture(db: SupabaseClient, projectId: string, ownerI
     p_reason: 'seed owner scenario browser fixture',
   })
   if (definitionError) throw new Error(`could not seed scenario definition: ${definitionError.message}`)
+
+  // A historic but database-valid closed-fault flag can contain only the no-op variant. The modern
+  // disclosure helper intentionally refuses to launch it because there is no injected payload to
+  // describe. Seed one already-running run to pin the inverse safety rule: disclosure may block a
+  // new launch, but it must never prevent stopping work that is already running.
+  const { data: undisclosedFlag, error: undisclosedFlagError } = await db.rpc(
+    'create_flag_definition_version',
+    {
+      p_project_id: projectId,
+      p_flag_key: SCENARIO_UNDISCLOSED_FLAG_KEY,
+      p_definition: {
+        valueType: 'json',
+        description: 'Historic no-op-only scenario flag.',
+        defaultVariantKey: 'control',
+        variants: [{ key: 'control', value: { kind: 'none' } }],
+        rules: [],
+      },
+      p_reason: 'seed undisclosed stop regression',
+      p_actor_user_id: ownerId,
+    }
+  )
+  if (undisclosedFlagError || !undisclosedFlag?.[0])
+    throw new Error(`could not seed undisclosed scenario flag: ${undisclosedFlagError?.message}`)
+  const undisclosedDefinition = {
+    ...definition,
+    flag: {
+      key: SCENARIO_UNDISCLOSED_FLAG_KEY,
+      definitionVersion: Number(undisclosedFlag[0].version),
+    },
+  }
+  const { data: undisclosedVersion, error: undisclosedDefinitionError } = await db.rpc(
+    'owner_create_scenario_definition_version',
+    {
+      p_project_id: projectId,
+      p_environment: 'production',
+      p_actor_user_id: ownerId,
+      p_scenario_key: SCENARIO_UNDISCLOSED_KEY,
+      p_definition: undisclosedDefinition,
+      p_reason: 'seed undisclosed stop regression',
+    }
+  )
+  if (undisclosedDefinitionError || !undisclosedVersion?.[0])
+    throw new Error(`could not seed undisclosed scenario definition: ${undisclosedDefinitionError?.message}`)
+  const { data: undisclosedRun, error: undisclosedRunError } = await db.rpc('owner_create_scenario_run', {
+    p_project_id: projectId,
+    p_environment: 'production',
+    p_actor_user_id: ownerId,
+    p_scenario_version_id: undisclosedVersion[0].scenario_version_id,
+    p_reason: 'seed running undisclosed stop regression',
+  })
+  if (undisclosedRunError || !undisclosedRun?.[0])
+    throw new Error(`could not seed undisclosed scenario run: ${undisclosedRunError?.message}`)
+  const { error: undisclosedStartError } = await db.rpc('owner_start_scenario_run', {
+    p_project_id: projectId,
+    p_environment: 'production',
+    p_actor_user_id: ownerId,
+    p_run_id: undisclosedRun[0].run_id,
+    p_expected_revision: undisclosedRun[0].revision,
+    p_reason: 'start undisclosed stop regression',
+  })
+  if (undisclosedStartError)
+    throw new Error(`could not start undisclosed scenario run: ${undisclosedStartError.message}`)
 }
 
 /**

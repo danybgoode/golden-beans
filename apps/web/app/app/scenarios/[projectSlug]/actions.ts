@@ -17,6 +17,7 @@ import {
   executeScenarioOwnerOperation,
   getScenarioOwnerDefinitionContext,
   getScenarioOwnerRunContext,
+  getScenarioOwnerStopContext,
 } from '@/lib/scenario-owner-operations'
 
 type Environment = 'development' | 'preview' | 'production'
@@ -76,10 +77,10 @@ export async function scenarioOwnerOperationAction(
   if (operation.operation === 'revoke_target' && !gates.resilience && !gates.security)
     return { ok: false as const, error: 'Scenario capabilities are unavailable in this deployment.' }
   if (operation.operation === 'transition_run') {
-    const context = await getScenarioOwnerRunContext(projectId, operation.runId)
+    const context = await getScenarioOwnerStopContext(projectId, operation.runId)
     if (!context || context.environment !== safeEnvironment)
       return { ok: false as const, error: 'The scenario run is unavailable.' }
-    if (!isScenarioKindEnabled(context.definition.kind, gates)) return unavailable(context.definition.kind)
+    if (!isScenarioKindEnabled(context.kind, gates)) return unavailable(context.kind)
   }
   const result = await executeScenarioOwnerOperation({
     projectId,
