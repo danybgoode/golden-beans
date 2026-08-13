@@ -171,6 +171,29 @@ export function inspectRepository(root = repoRoot) {
 
   const globalsPath = join(root, 'apps/web/app/globals.css');
   const globals = readFileSync(globalsPath, 'utf8');
+
+  // landing-frijoles-rebrand · Sprint 3 — the raw-hex rule reaches the STYLESHEET too.
+  //
+  // It swept .tsx only, so `globals.css` — the one file whose entire job is colour — was the single
+  // place in this repo where a hand-picked hex could land unchallenged. One did (`#000` in a
+  // pressed-state mix), and it took a human-tier reviewer to catch what a one-line regex catches
+  // for free (PR #95). The tokens themselves live in `tokens.css`, which is the byte-mirrored
+  // handoff and legitimately full of hex; this file is supposed to consume them.
+  //
+  // Comments are stripped first for the same reason they are in the .tsx sweep: a comment
+  // explaining a retired colour must not itself become a violation.
+  const globalsWithoutComments = globals.replace(/\/\*[\s\S]*?\*\//g, '');
+  globalsWithoutComments.split('\n').forEach((line, index) => {
+    if (RAW_HEX.test(line)) {
+      violations.push({
+        path: relative(root, globalsPath),
+        line: index + 1,
+        rule: 'raw-hex',
+        content: line.trim(),
+      });
+    }
+  });
+
   if (!globals.startsWith("@import '../../../references/design/assets/tokens.css';")) {
     violations.push({
       path: relative(root, globalsPath),

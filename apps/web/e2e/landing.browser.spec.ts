@@ -310,10 +310,23 @@ test('each resilience drill declares whether its own gate is switched on', async
   await expect(section).toBeVisible()
   await expect(section.locator('.drill-card')).toHaveCount(DRILL_GATES.length)
 
+  // A 404 on its own is AMBIGUOUS between "the gate is shut" and "this route was never deployed",
+  // and only one of those makes the section's "Built" claim true. The sibling `/admin` route rides
+  // no gate, so its answer to the same malformed body proves the route family is deployed at all.
+  // The section's own comment says this is what distinguishes the two cases; the spec did not
+  // actually check it until cross-family review of PR #95 pointed that out — so the production-off
+  // case could have validated a "Built" claim against a deployment that shipped none of it.
+  const deployed = await request.post('/api/v1/scenarios/admin', { data: {}, failOnStatusCode: false })
+  expect(
+    deployed.status(),
+    'the ungated sibling must prove the scenario routes are deployed, or a 404 below means nothing'
+  ).not.toBe(404)
+
   for (const gate of DRILL_GATES) {
-    // Each route answers 404 while its own gate is shut and something else once it is open — the
-    // same fact its badge reports, obtained independently of the page. The bodies are deliberately
-    // empty: a 400 is as good as a 200 here, because both prove the gate let the request through.
+    // Given the routes ARE deployed, each answers 404 while its own gate is shut and something else
+    // once it is open — the same fact its badge reports, obtained independently of the page. The
+    // body is deliberately empty: a 400 is as good as a 200, because both prove the gate let the
+    // request through.
     const probe = await request.post(gate.route, { data: {}, failOnStatusCode: false })
     const shut = probe.status() === 404
 
@@ -371,17 +384,26 @@ test('with reduced motion requested, nothing animates, transitions, or smooth-sc
 
   const motion = await page.evaluate(() => {
     const root = getComputedStyle(document.documentElement)
-    // Every element carrying a non-zero transition or a running animation, by class — the question
-    // is "does anything still move", not "does this one control still move".
+    // Every element still carrying motion, by class — the question is "does anything move", not
+    // "does this one control move".
+    //
+    // ── Transitions and animations are counted SEPARATELY, and that is the point ────────────────
+    // The first version tested `hasDuration && animationName !== 'none'`, one predicate joined by
+    // AND. Every element with a live TRANSITION and no animation — which is every control on this
+    // page — has `animationName: 'none'`, so the transition half of the assertion could never fire
+    // and the "nothing transitions" guarantee was untested. The spec would have passed with every
+    // hover transition intact. Caught in cross-family review of PR #95, and it is the same failure
+    // this spec was written to catch one round earlier: a guard that looks like coverage and is not.
+    const seconds = (value: string) => value.split(',').map((part) => parseFloat(part) || 0)
     const moving: string[] = []
     for (const node of document.querySelectorAll('*')) {
       const style = getComputedStyle(node)
-      const durations = [style.transitionDuration, style.animationDuration]
-        .join(',')
-        .split(',')
-        .map((value) => parseFloat(value) || 0)
-      if (durations.some((d) => d > 0) && style.animationName !== 'none') {
-        moving.push(`${node.tagName.toLowerCase()}.${(node.className || '').toString().split(' ')[0]}`)
+      const label = `${node.tagName.toLowerCase()}.${(node.className || '').toString().split(' ')[0]}`
+      if (seconds(style.transitionDuration).some((d) => d > 0)) moving.push(`${label} (transition)`)
+      // An animation only counts when one is actually named — `animation-duration` reports a
+      // non-zero default on elements that declare no animation at all.
+      if (style.animationName !== 'none' && seconds(style.animationDuration).some((d) => d > 0)) {
+        moving.push(`${label} (animation)`)
       }
     }
     return {

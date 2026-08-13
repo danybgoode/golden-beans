@@ -3166,8 +3166,13 @@ a.stat-card:hover {
   box-shadow: 0 3px 0 var(--stamp-dim);
 }
 
+/* `black`, not `#000`: this sheet's material system is token- and keyword-only, and a raw hex is
+   how a one-off colour becomes a second palette nobody knows is a palette. The guard sweeps .tsx
+   for raw hex but not this file, so the discipline here is by convention — which is exactly why it
+   needed a reviewer to catch (PR #95). Mixing toward black rather than naming a darker stamp keeps
+   the pressed state tied to `--stamp`: change the ink and the press follows. */
 :is(.btn-stamp:hover, .btn-stamp:focus-visible) {
-  background: color-mix(in srgb, var(--stamp) 88%, #000);
+  background: color-mix(in srgb, var(--stamp) 88%, black);
 }
 
 .btn-stamp:active {

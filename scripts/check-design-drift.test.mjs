@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -175,4 +175,26 @@ test('the heading voice is enforced on the landing and nowhere else', (t) => {
     inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
     ['apps/web/components/landing/Titled.tsx heading-period']
   );
+});
+
+test('a raw hex in globals.css is a violation, and a comment about one is not', (t) => {
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+
+  const globalsPath = join(root, 'apps/web/app/globals.css');
+  const clean = readFileSync(globalsPath, 'utf8');
+  assert.deepEqual(inspectRepository(root).violations, [], 'the fixture must start clean');
+
+  // The real defect this closes: globals.css was the ONE file whose job is colour and the one
+  // place the raw-hex rule did not reach.
+  writeFileSync(globalsPath, `${clean}\n.pressed {\n  background: #000;\n}\n`);
+  assert.deepEqual(
+    inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
+    ['apps/web/app/globals.css raw-hex']
+  );
+
+  // ...but a comment explaining a colour that was REMOVED must not itself fail, or the rule
+  // punishes writing down why.
+  writeFileSync(globalsPath, `${clean}\n/* was #000, now a token */\n.pressed {\n  background: black;\n}\n`);
+  assert.deepEqual(inspectRepository(root).violations, []);
 });
