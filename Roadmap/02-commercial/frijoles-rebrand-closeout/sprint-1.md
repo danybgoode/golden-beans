@@ -132,3 +132,12 @@ If any step fails, note the step number and what you saw — that is the bug rep
   was reverted, the first real authed run exposed undersized sortable headers plus page overflow on
   scenario/destination tables. The shared component and table rails were fixed; all eight routes,
   setup, and teardown now pass (10/10) at 360px and 390px.
+- Blocking gate: format check passed; ESLint passed with zero warnings; all four TypeScript projects
+  passed; unit tests passed 1,068/1,068; production build passed (30 static pages); design drift
+  passed across 95 component files. The hermetic API rail passed its 9 dark-gate tests, 5
+  sync-with-serving-off tests, and 446 enabled tests with 33 skips; its sole failure was the
+  documented accumulated-local-DB false alarm at `north-star-sync.spec.ts:69`. That spec and its
+  north-star implementation path are byte-unchanged from `origin/main`.
+- The complete authenticated project passed 44/44 after its required loopback-only
+  `SUPABASE_DB_URL` was supplied. The complete landing browser spec passed 15/15, including every
+  local honesty assertion after the footer ledger was removed.
