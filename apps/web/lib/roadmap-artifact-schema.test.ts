@@ -73,6 +73,13 @@ test('unknown row fields are PRESERVED, so a newer generator is not an outage', 
   if (r.ok) assert.equal((r.value.items[0] as Record<string, unknown>).brand_new_field, 'kept')
 })
 
+test('build_order accepts the current numeric extract and the legacy string shape', () => {
+  for (const build_order of [16, '16']) {
+    const r = parseRoadmapPush(push({ items: [row({ build_order })] }))
+    assert.equal(r.ok, true, `build_order should accept ${typeof build_order}`)
+  }
+})
+
 test('a hostile slug is refused at ingest, never stored to be dealt with at render time', () => {
   // Slugs become URL path segments on the drill-down view. Validate once at the boundary rather
   // than trusting every future renderer to re-sanitise.

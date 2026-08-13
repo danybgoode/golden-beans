@@ -59,7 +59,9 @@ const roadmapRowSchema = z
     type: z.string().max(100).nullish(),
     risk: z.string().max(40).nullish(),
     sprint_progress: z.string().max(100).nullish(),
-    build_order: z.string().max(40).nullish(),
+    // Current roadmap-to-notion extracts emit the numeric frontmatter value. Older client extracts
+    // sent the display form as a string, and schema v1 artifacts remain valid, so accept both.
+    build_order: z.union([z.string().max(40), z.number().int()]).nullish(),
     build_order_num: z.number().int().nullish(),
     doc_link: z.string().max(500).nullish(),
     epic_slug: z.string().max(200).nullish(),
