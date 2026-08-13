@@ -73,13 +73,20 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [Golden Frijoles rebrand close-out](02-commercial/frijoles-rebrand-closeout/README.md)
+  (published `@golden-frijoles/sdk@0.4.0` · explicit OpenFeature identity break · deprecated old SDK
+  pointer · footer-ledger deletion · authenticated mobile sweep) — **live in production 2026-08-13**
+  (PR #96, `0a0beb0`). The package clean-installs from npm, §9 names the package that exists, and the
+  signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
+  Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
+  deliberately stable because other systems resolve them.
 - ✅ [Golden Frijoles — the rebrand, the material pass, and the broken controls](02-commercial/landing-frijoles-rebrand/README.md)
   (the product's name and its own domain · two live-page defects repaired · the chat-shaped agent
   surfaces · the infomercial and the flag-honest resilience drills · one elevation ladder and one
   motion vocabulary) — **live in production 2026-08-13** (PR #95, `5544c06`), serving on
-  **https://goldenfrijoles.com**. The rename is *public surfaces only*: `@golden-beans/sdk`, the
-  GitHub repo, the Vercel and Supabase projects and every env var keep their names, so §9's install
-  line still reads the package that actually exists. Two controls were genuinely broken and both
+  **https://goldenfrijoles.com**. This epic deliberately stopped at public surfaces; the follow-up
+  rebrand close-out above published the renamed SDK while leaving the GitHub, Vercel, Supabase, wire,
+  tenant-data, and caller-owned integration addresses stable. Two controls were genuinely broken and both
   were specificity accidents — the primary CTA lost its label on hover (`a:hover` at (0,1,1) beating
   `.btn-gold` at (0,1,0), so only *anchor*-based golds were affected, which is why it read as "some
   of them"), and selecting a paragraph on a phone painted an opaque gold slab. The section stamps
@@ -198,6 +205,12 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-13** — `frijoles-rebrand-closeout` **shipped and live** (PR #96, `0a0beb0`): the name now
+  holds below the public surface too. `@golden-frijoles/sdk@0.4.0` is public and clean-installable,
+  the old `0.1.0` package points forward, and the OpenFeature provider identity break is explicit.
+  The footer's mockup ledger is gone without weakening the local honesty labels. The long-owed
+  signed-in mobile sweep reached eight real app routes and immediately found shared tap-target and
+  table-overflow defects that the anonymous rail could only measure on a login redirect.
 - **2026-08-13** — `landing-frijoles-rebrand` **shipped and live** (PR #95, `5544c06`): the product
   is **Golden Frijoles**, on **goldenfrijoles.com**. Beyond the rename, this epic repaired two
   defects the previous one shipped and made the page's materials one system. Three things are worth
