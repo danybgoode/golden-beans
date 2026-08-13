@@ -37,7 +37,13 @@ export function AgentWindow({
         {platforms ? (
           <span className="agent-platforms">
             {platforms.map((platform, index) => (
-              <span key={platform} className={`platform-pill${index === 0 ? ' platform-pill--active' : ''}`}>
+              // Index is part of the key because nothing stops a caller passing the same platform
+              // twice, and the list is static — there is no reorder for a positional key to go
+              // wrong against. Same reasoning as the journey paths in LeverageSection.
+              <span
+                key={`${platform}-${index}`}
+                className={`platform-pill${index === 0 ? ' platform-pill--active' : ''}`}
+              >
                 {platform}
               </span>
             ))}

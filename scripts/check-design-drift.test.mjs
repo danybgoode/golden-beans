@@ -198,3 +198,28 @@ test('a raw hex in globals.css is a violation, and a comment about one is not', 
   writeFileSync(globalsPath, `${clean}\n/* was #000, now a token */\n.pressed {\n  background: black;\n}\n`);
   assert.deepEqual(inspectRepository(root).violations, []);
 });
+
+test('a violation is reported at the line it actually occupies', () => {
+  // A guard that names the wrong line sends the next person to the wrong code, which is worse than
+  // naming no line — and this repo's convention is a long block comment above almost everything, so
+  // the drift was dozens of lines on a real file.
+  //
+  // TWO bugs, one symptom. `withoutComments` collapsed a block comment to the empty string
+  // (dropping every one of its newlines), and its line-comment pattern led with `\s*`, which
+  // matches a newline and so swallowed the blank line ABOVE each comment. Both are fixed; this
+  // pins the outcome rather than either mechanism.
+  const source = [
+    '/**', // 1
+    ' * A block comment', // 2
+    ' * spanning several lines,', // 3
+    ' * as almost everything here does.', // 4
+    ' */', // 5
+    '', // 6  ← the blank line the `\s*` pattern used to eat
+    '// a line comment', // 7
+    '<h2 className="section-title">Ends in a period.</h2>', // 8
+  ].join('\n');
+
+  const [violation] = inspectDesignSource(source, { enforceHeadingVoice: true });
+  assert.equal(violation.rule, 'heading-period');
+  assert.equal(violation.line, 8, 'the heading is on line 8 of the source as written');
+});

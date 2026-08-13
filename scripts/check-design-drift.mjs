@@ -113,8 +113,34 @@ function sourceFiles(root) {
   });
 }
 
+/**
+ * Strips comments so a comment ABOUT a retired colour or glyph is not itself a violation — the
+ * reason this function exists at all.
+ *
+ * ── Newlines are preserved, and that is not cosmetic ──────────────────────────────────────────
+ * It used to collapse a block comment to the empty string, which shifted every line below it.
+ * Since this repo's convention is a long block comment above almost everything, the line number on
+ * a violation could be dozens of lines out — and a guard that names the wrong line sends the next
+ * person to the wrong code, which is worse than naming no line. Every rule here reports a position
+ * derived from this output, so the fix is one place.
+ *
+ * The line-comment pattern uses `[^\S\n]` where it used to use `\s`. The difference is the
+ * newline: `\s` matches it, so a leading-whitespace-then-slash-slash pattern under the `m` flag
+ * begins matching at the BLANK LINE above a comment, swallows its newline, and collapses two lines
+ * into one — every position below then reports one line early. That was the residue left after the
+ * block-comment fix above, and it is the older half of the same bug.
+ *
+ * (Written without the literal pattern inline, because a JSDoc block cannot contain the two
+ * characters that close it — which is how the first attempt at this comment broke the module.)
+ *
+ * Caught by the second-family reviewer on PR #95, after nine rounds from the first family missed
+ * it — which is the argument for routing two families rather than running one twice. Verified by
+ * reintroducing a violation and checking the reported line against the file.
+ */
 export function withoutComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => '\n'.repeat((comment.match(/\n/g) ?? []).length))
+    .replace(/^[^\S\n]*\/\/.*$/gm, '');
 }
 
 export function inspectDesignSource(
