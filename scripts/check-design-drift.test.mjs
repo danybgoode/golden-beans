@@ -223,3 +223,28 @@ test('a violation is reported at the line it actually occupies', () => {
   assert.equal(violation.rule, 'heading-period');
   assert.equal(violation.line, 8, 'the heading is on line 8 of the source as written');
 });
+
+test('a globals.css violation is reported at the line it actually occupies', () => {
+  // Same property as the .tsx case above, asserted separately because `globals.css` is checked by
+  // its own code path in `inspectRepository` — and that path had its own copy of the
+  // comment-stripping regex, carrying the same newline bug. It calls the shared helper now; this is
+  // what proves the two agree rather than merely currently matching.
+  const root = scaffoldFixtureRepo();
+  try {
+    const globalsPath = join(root, 'apps/web/app/globals.css');
+    const clean = readFileSync(globalsPath, 'utf8');
+    const cleanLines = clean.split('\n').length;
+
+    writeFileSync(
+      globalsPath,
+      `${clean}\n/* a block comment\n   spanning\n   four\n   lines */\n.pressed {\n  background: #000;\n}\n`
+    );
+
+    const [violation] = inspectRepository(root).violations.filter((v) => v.rule === 'raw-hex');
+    // clean ends with a newline, so its last line is empty: the appended block starts there.
+    const expected = cleanLines + 6;
+    assert.equal(violation.line, expected, `raw hex sits on line ${expected} of the file as written`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

@@ -215,9 +215,14 @@ export function inspectRepository(root = repoRoot) {
   // for free (PR #95). The tokens themselves live in `tokens.css`, which is the byte-mirrored
   // handoff and legitimately full of hex; this file is supposed to consume them.
   //
-  // Comments are stripped first for the same reason they are in the .tsx sweep: a comment
-  // explaining a retired colour must not itself become a violation.
-  const globalsWithoutComments = globals.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Stripped through the SHARED helper, not a local copy of its regex. The first version inlined
+  // `globals.replace(/\/\*[\s\S]*?\*\//g, '')` here — a second implementation of a job
+  // `withoutComments` already does (CODE-QUALITY.md #1), and it carried the exact newline-eating
+  // bug that was being fixed in the shared one at the same time, so `globals.css` violations
+  // reported a line number offset by every block comment above them. Two things that must agree get
+  // one implementation, not two that currently match (#2). Caught by the second-family reviewer on
+  // PR #95, in the same pass that found the original.
+  const globalsWithoutComments = withoutComments(globals);
   globalsWithoutComments.split('\n').forEach((line, index) => {
     if (RAW_HEX.test(line)) {
       violations.push({
