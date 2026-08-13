@@ -1,0 +1,179 @@
+import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
+import { Badge } from '@/components/ui/Badge'
+import { Icon, type IconName } from '@/components/ui/Icon'
+import { Panel } from '@/components/ui/Panel'
+
+// landing-frijoles-rebrand · Sprint 2, Story 2.3 (epic D5) — Break glass, on purpose.
+//
+// ── This section describes a capability whose gates are OFF, and it says so ───────────────────
+// Chaos scenarios and security simulations are BUILT. They are not switched on in production, and
+// that was confirmed by exercising the behaviour rather than by reading `vercel env ls` (which never
+// shows values anyway):
+//
+//   POST /api/v1/scenarios/execution → 404   (RESILIENCE_SCENARIOS_ENABLED off)
+//   POST /api/v1/scenarios/security  → 404   (SECURITY_SIMULATIONS_ENABLED off)
+//   POST /api/v1/scenarios/admin     → 400   ← the route family IS deployed; only the gates are shut
+//
+// That last line is the load-bearing one. A 404 on its own is ambiguous between "gated" and "never
+// shipped"; the sibling route answering 400 to the same malformed body proves the code is live and
+// the gate is what is closing the door.
+//
+// So each card's badge READS ITS OWN GATE rather than stating a position (CODE-QUALITY.md #2: a
+// value that must not go stale is computed, not written down; #9: do not state a capability as live
+// while its flag is off). Flip either gate and its badge disappears with no code change and no
+// deploy of this file. This is the same device §3's RISK row already uses, deliberately — one
+// honesty vocabulary on this page, not two.
+//
+// The copy is written so it is true in BOTH states: it says what the drills are and what they are
+// for, never "you can run this today". The badge supplies the tense.
+type Drill = {
+  kicker: string
+  title: string
+  copy: string
+  note: string
+  /** Read per request from this card's own gate. The gate NAME is deliberately not carried on the
+   *  object: nothing renders it, and this repo has already paid for one dead constant that every
+   *  reader assumed was wiring something (see `PROSE_MODEL`, Roadmap/LEARNINGS.md). The names live
+   *  in this file's header and in `lib/landing-sections.ts`, where they are prose a person acts on
+   *  rather than data pretending to be plumbing. */
+  live: boolean
+}
+
+const METERS = [
+  { label: 'Traffic', fill: 'meter--92', value: '10×', tone: '' },
+  { label: 'Checkout latency', fill: 'meter--72', value: '1.8s', tone: '' },
+  { label: 'Orders completed', fill: 'meter--84', value: 'holds', tone: 'status-ok' },
+] as const
+
+const FINDINGS: ReadonlyArray<{ icon: IconName; label: string; tail: string }> = [
+  {
+    icon: 'warning-triangle',
+    label: 'Weak point found:',
+    tail: ' payment retries pile up after 8× traffic.',
+  },
+  { icon: 'refresh', label: 'Next move:', tail: ' cap retries and rerun the scenario.' },
+]
+
+const PROBES: ReadonlyArray<{ icon: IconName; label: string; result: string; tone: string }> = [
+  { icon: 'lock', label: 'Try unauthorized account access', result: 'blocked', tone: 'status-ok' },
+  { icon: 'server', label: 'Probe rate-limit behavior', result: '1 weakness', tone: 'status-warn' },
+  { icon: 'refresh', label: 'Check recovery path', result: 'held', tone: 'status-ok' },
+]
+
+/** The honest badge, or nothing. Rendered only while a gate is shut — a badge on every card is
+ *  decoration, and decoration is what empties a badge of meaning for the card that needs one.
+ *
+ *  The env-var name is deliberately NOT in the badge. It was, briefly, on a "maximum checkability"
+ *  argument, and it does not survive contact with the reader: nobody outside this repo can check an
+ *  environment variable, so the name buys a PM nothing and reads as a leak rather than candour. */
+function GateBadge({ live }: { live: boolean }) {
+  if (live) return null
+  return (
+    <Badge status="next" className="drill-card__gate">
+      Built · not switched on yet
+    </Badge>
+  )
+}
+
+export function ResilienceSection() {
+  const drills: [Drill, Drill] = [
+    {
+      kicker: 'Chaos engineering · controlled mayhem',
+      title: 'What if Black Friday actually works?',
+      copy: 'Simulate the traffic spike, a slow dependency, and a checkout service wobble. See where the customer experience bends before the campaign budget arrives.',
+      note: 'The campaign can still traumatize you emotionally. Just ideally not infrastructurally.',
+      live: isResilienceScenariosEnabled(),
+    },
+    {
+      kicker: 'Security · friendly mutiny',
+      title: 'Ask your agents to turn on you',
+      copy: 'Run controlled attack scenarios against the protections you expect to hold. Your agent plays the troublemaker, records what got through, and turns the aftermath into work you can actually prioritize.',
+      note: 'A betrayal, but the kind with an action list.',
+      live: isSecuritySimulationsEnabled(),
+    },
+  ]
+
+  return (
+    <section className="band" id="resilience">
+      <div className="wrap">
+        <p className="panel-label">Break glass · on purpose</p>
+        <h2 className="display measure measure--wide">
+          Let your agents <em className="foil">mutiny</em>
+          <br />
+          Then see what survives
+        </h2>
+        <p className="measure section-lead">
+          Chaos engineering and security testing used to be things PMs heard about after someone else
+          scheduled them. Golden Frijoles turns them into scenarios you can run with your agent before the
+          campaign, the launch, or the very expensive lesson.
+        </p>
+        <p className="takeaway">Break the rehearsal. Not launch day.</p>
+
+        <div className="drill-grid">
+          <Panel className="drill-card">
+            <span className="kicker">{drills[0].kicker}</span>
+            <h3 className="card-title">{drills[0].title}</h3>
+            <p className="card-copy">{drills[0].copy}</p>
+            <GateBadge live={drills[0].live} />
+            <div className="drill-visual">
+              <p className="panel-label">Black Friday dress rehearsal</p>
+              {METERS.map((meter) => (
+                <div className="meter-row" key={meter.label}>
+                  <span>{meter.label}</span>
+                  {/* The fill is a class from a bounded set, not an inline width: this is a fixed
+                      illustration, and /app's RolloutBar is where a COMPUTED width belongs. */}
+                  <span className="meter">
+                    <i className={meter.fill} />
+                  </span>
+                  <b className={meter.tone}>{meter.value}</b>
+                </div>
+              ))}
+              <div className="drill-actions">
+                {FINDINGS.map((finding) => (
+                  <p className="drill-action" key={finding.label}>
+                    <Icon name={finding.icon} />
+                    <span>
+                      <b>{finding.label}</b>
+                      {finding.tail}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            </div>
+            <p className="note section-lead">{drills[0].note}</p>
+          </Panel>
+
+          <Panel className="drill-card">
+            <span className="kicker">{drills[1].kicker}</span>
+            <h3 className="card-title">{drills[1].title}</h3>
+            <p className="card-copy">{drills[1].copy}</p>
+            <GateBadge live={drills[1].live} />
+            <div className="drill-visual">
+              <p className="panel-label">Auth mutiny · simulation</p>
+              <div className="drill-actions">
+                {PROBES.map((probe) => (
+                  <p className="drill-action" key={probe.label}>
+                    <Icon name={probe.icon} />
+                    <span>
+                      {probe.label} <b className={probe.tone}>{probe.result}</b>
+                    </span>
+                  </p>
+                ))}
+              </div>
+              <div className="shared-plan">
+                <div className="shared-plan__head">
+                  <strong>After-action list</strong>
+                  <span className="tag tag-next">3 ITEMS</span>
+                </div>
+                <p>
+                  One protection to tighten. One scenario to rerun. One thing that worked exactly as intended.
+                </p>
+              </div>
+            </div>
+            <p className="note section-lead">{drills[1].note}</p>
+          </Panel>
+        </div>
+      </div>
+    </section>
+  )
+}

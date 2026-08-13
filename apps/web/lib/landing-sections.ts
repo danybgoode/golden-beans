@@ -41,7 +41,14 @@ export const LANDING_SECTIONS: LandingSection[] = [
     status: 'live',
     note: 'The handoff prompt + /northstar-self-serve.md — usable with no account and no connector.',
   },
-  { id: 'how', title: 'How it grows — plant once', epic: 'landing-redesign-v2', status: 'live' },
+  { id: 'how', title: 'How to start — three steps', epic: 'landing-redesign-v2', status: 'live' },
+  {
+    id: 'infomercial',
+    title: 'Shameless infomercial — the parody band',
+    epic: 'landing-frijoles-rebrand',
+    status: 'live',
+    note: 'The one place on this page where invented content is allowed, and every piece of it is labelled as invented (epic D6).',
+  },
   { id: 'opinions', title: '1 · Everyone has a good reason', epic: 'landing-redesign-v2', status: 'live' },
   {
     id: 'argument',
@@ -55,6 +62,13 @@ export const LANDING_SECTIONS: LandingSection[] = [
     epic: 'landing-redesign-v2',
     status: 'live',
     note: 'Illustrative release list — the real one is behind auth at /app.',
+  },
+  {
+    id: 'resilience',
+    title: 'Break glass, on purpose — chaos drills and security simulations',
+    epic: 'flag-serving-and-prd-g',
+    status: 'next',
+    note: 'Built, but RESILIENCE_SCENARIOS_ENABLED and SECURITY_SIMULATIONS_ENABLED are both OFF in production — each card renders its own gate (epic D5). Confirmed by exercising the routes: POST /api/v1/scenarios/execution and /security both 404 while the sibling /admin answers 400.',
   },
   {
     id: 'principle',

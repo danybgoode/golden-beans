@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 
 // Story 3.1 (commercial-shell/sprint-3.md) — the dogfood funnel: the landing instruments ITSELF
-// (Golden Beans as its own tenant) via the real SDK. Two halves:
+// (Golden Frijoles as its own tenant) via the real SDK. Two halves:
 //   - entry:      POST /v1/public/self-visit fires `landing_visited` and mints the visitor cookie
 //   - conversion: POST /v1/public/waitlist (successful, non-honeypot) fires `waitlist_joined`
 // under the SAME visitor id.
@@ -57,7 +57,7 @@ async function pollForEvents(
   db: ReturnType<typeof dbClient>,
   userId: string,
   expectedCount: number,
-  timeoutMs = 5000,
+  timeoutMs = 5000
 ): Promise<{ event: string; projects: { slug: string } | null }[]> {
   const deadline = Date.now() + timeoutMs
   for (;;) {
@@ -67,7 +67,7 @@ async function pollForEvents(
     if ((data ?? []).length >= expectedCount) return data ?? []
     if (Date.now() > deadline) {
       throw new Error(
-        `pollForEvents: only ${data?.length ?? 0}/${expectedCount} event(s) for ${userId} after ${timeoutMs}ms`,
+        `pollForEvents: only ${data?.length ?? 0}/${expectedCount} event(s) for ${userId} after ${timeoutMs}ms`
       )
     }
     await new Promise((r) => setTimeout(r, 200))
@@ -125,11 +125,7 @@ test('funnel events land in the self tenant and NEVER the demo project', async (
 
   const db = dbClient()
   // Guard against an env that has a key but no seeded project — skip rather than false-fail.
-  const { data: selfProject } = await db
-    .from('projects')
-    .select('id')
-    .eq('slug', SELF_SLUG)
-    .maybeSingle()
+  const { data: selfProject } = await db.from('projects').select('id').eq('slug', SELF_SLUG).maybeSingle()
   test.skip(!selfProject, `self project '${SELF_SLUG}' not seeded — run npm run seed:self first`)
 
   // One synthetic visitor progressing through the whole funnel under a SHARED identity.

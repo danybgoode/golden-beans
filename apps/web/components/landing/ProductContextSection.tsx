@@ -74,10 +74,10 @@ const releases = [
     label: 'SHIPPED',
   },
   {
-    title: 'Black Friday readiness — stress test needs your decision',
+    title: 'Black Friday readiness — stress test needs a read together',
     desc: 'You simulated launch-day traffic before spending the campaign budget. Review the risk, then keep the plan, reduce exposure, or fix the weak point first.',
     status: 'next' as const,
-    label: 'YOUR CALL',
+    label: 'TOGETHER',
   },
 ]
 
@@ -92,7 +92,7 @@ const capabilities = [
     kicker: 'Should we ship it?',
     title: 'Turn the decision into a controlled rollout',
     copy: 'You choose who gets it, how much, and when.',
-    tail: 'Your call',
+    tail: 'Together',
   },
   {
     kicker: 'Did it work?',
@@ -186,7 +186,7 @@ export function ProductContextSection() {
                 <p className="panel-label">Release legibility</p>
                 <p className="measure">
                   See what changed in human language: who saw it, what happened, and whether anything still
-                  needs your decision.
+                  needs a read together.
                 </p>
                 <div className="release-list">
                   {releases.map((release) => (

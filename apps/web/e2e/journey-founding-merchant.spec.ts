@@ -5,10 +5,7 @@ import {
 } from '@/lib/founding-merchant-journey'
 import { parseJourneyDefinition } from '@/lib/journey-definition'
 import { computeJourneyCohort, type JourneyCohortOptions } from '@/lib/journey-cohort'
-import {
-  projectJourneySubject,
-  type JourneyProjectionEvent,
-} from '@/lib/journey-projection'
+import { projectJourneySubject, type JourneyProjectionEvent } from '@/lib/journey-projection'
 import { fixturesDigest, lifecycleFixtures } from './_fixtures/merchant-lifecycle'
 
 const FIXTURES_SHA256 = 'b53f300bdd967bfe21dadbc7543655ccf36f95d27e643625fbb68df5739f3671'
@@ -16,7 +13,7 @@ const SUBJECT_ID = '11111111-1111-4111-8111-111111111111'
 
 function journeyFacts(): JourneyProjectionEvent[] {
   const stageFixtures = lifecycleFixtures.filter((fixture) =>
-    MIYAGI_FOUNDING_MERCHANT_EVENT_NAMES.has(fixture.envelope.type ?? ''),
+    MIYAGI_FOUNDING_MERCHANT_EVENT_NAMES.has(fixture.envelope.type ?? '')
   )
   return stageFixtures.map((fixture, index) => ({
     id: fixture.envelope.id!,
@@ -51,16 +48,11 @@ test.describe('Miyagi founding-merchant journey contract', () => {
 
   test('out-of-order and replayed contract facts converge on all 13 stages and 30-day retention', () => {
     const facts = journeyFacts()
-    const replayedAndShuffled = [
-      ...facts.slice().reverse(),
-      facts[6],
-      facts[6],
-      facts[11],
-    ]
+    const replayedAndShuffled = [...facts.slice().reverse(), facts[6], facts[6], facts[11]]
     const projection = projectJourneySubject(
       MIYAGI_FOUNDING_MERCHANT_JOURNEY,
       SUBJECT_ID,
-      replayedAndShuffled,
+      replayedAndShuffled
     )
 
     expect(projection.currentStage).toEqual({
@@ -68,7 +60,7 @@ test.describe('Miyagi founding-merchant journey contract', () => {
       enteredAt: '2026-08-23T18:45:00.000Z',
     })
     expect(projection.history.map((stage) => stage.key)).toEqual(
-      MIYAGI_FOUNDING_MERCHANT_JOURNEY.stages.map((stage) => stage.key),
+      MIYAGI_FOUNDING_MERCHANT_JOURNEY.stages.map((stage) => stage.key)
     )
     expect(projection.history).toHaveLength(13)
 
@@ -81,11 +73,7 @@ test.describe('Miyagi founding-merchant journey contract', () => {
       staleAfterHours: 72,
       pageSize: 25,
     }
-    const cohort = computeJourneyCohort(
-      MIYAGI_FOUNDING_MERCHANT_JOURNEY,
-      replayedAndShuffled,
-      options,
-    )
+    const cohort = computeJourneyCohort(MIYAGI_FOUNDING_MERCHANT_JOURNEY, replayedAndShuffled, options)
     expect(cohort.cohort.subjectCount).toBe(1)
     expect(cohort.stages.every((stage) => stage.satisfiedCount === 1)).toBe(true)
     expect(cohort.retention).toMatchObject({
@@ -122,7 +110,7 @@ test.describe('Miyagi founding-merchant journey contract', () => {
       'payment_id',
       'product_id',
     ]) {
-      expect(serialized, `${forbidden} must stay outside Golden Beans`).not.toContain(forbidden)
+      expect(serialized, `${forbidden} must stay outside Golden Frijoles`).not.toContain(forbidden)
     }
     expect(serialized).toContain(SUBJECT_ID)
   })

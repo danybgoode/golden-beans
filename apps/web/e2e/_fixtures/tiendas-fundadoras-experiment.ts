@@ -1,12 +1,9 @@
-import type {
-  ExperimentAnalysisFact,
-  ExperimentAnalysisInput,
-} from '@/lib/experiment-analysis'
+import type { ExperimentAnalysisFact, ExperimentAnalysisInput } from '@/lib/experiment-analysis'
 import type { ExperimentDefinition } from '@/lib/experiment-definition'
 
-// Experiment governance v2 · Story 3.3 — Golden Beans' copyable half of the future
+// Experiment governance v2 · Story 3.3 — Golden Frijoles' copyable half of the future
 // cross-repo Tiendas Fundadoras contract. Miyagi still owns the enablement flag and
-// calls the SDK only after its local eligibility check; Golden Beans receives facts
+// calls the SDK only after its local eligibility check; Golden Frijoles receives facts
 // and never serves, reads or mutates that flag.
 export const TIENDAS_FUNDADORAS_CONTRACT = {
   experimentKey: 'tiendas-fundadoras-promise-v1',
@@ -53,19 +50,50 @@ type ScenarioPlan = {
 }
 
 const CLEAN_CONTROL = [
-  'tf-app-0002', 'tf-app-0003', 'tf-app-0005', 'tf-app-0007', 'tf-app-0008',
-  'tf-app-0009', 'tf-app-0011', 'tf-app-0012', 'tf-app-0013', 'tf-app-0014',
+  'tf-app-0002',
+  'tf-app-0003',
+  'tf-app-0005',
+  'tf-app-0007',
+  'tf-app-0008',
+  'tf-app-0009',
+  'tf-app-0011',
+  'tf-app-0012',
+  'tf-app-0013',
+  'tf-app-0014',
 ] as const
 const CLEAN_PROMISE_FIRST = [
-  'tf-app-0001', 'tf-app-0004', 'tf-app-0006', 'tf-app-0010', 'tf-app-0015',
-  'tf-app-0016', 'tf-app-0018', 'tf-app-0020', 'tf-app-0022', 'tf-app-0023',
+  'tf-app-0001',
+  'tf-app-0004',
+  'tf-app-0006',
+  'tf-app-0010',
+  'tf-app-0015',
+  'tf-app-0016',
+  'tf-app-0018',
+  'tf-app-0020',
+  'tf-app-0022',
+  'tf-app-0023',
 ] as const
 const SKEWED_CONTROL = ['tf-app-0017'] as const
 const SKEWED_PROMISE_FIRST = [
-  'tf-app-0028', 'tf-app-0030', 'tf-app-0031', 'tf-app-0032', 'tf-app-0033',
-  'tf-app-0037', 'tf-app-0039', 'tf-app-0040', 'tf-app-0041', 'tf-app-0042',
-  'tf-app-0043', 'tf-app-0048', 'tf-app-0049', 'tf-app-0053', 'tf-app-0054',
-  'tf-app-0056', 'tf-app-0058', 'tf-app-0060', 'tf-app-0062',
+  'tf-app-0028',
+  'tf-app-0030',
+  'tf-app-0031',
+  'tf-app-0032',
+  'tf-app-0033',
+  'tf-app-0037',
+  'tf-app-0039',
+  'tf-app-0040',
+  'tf-app-0041',
+  'tf-app-0042',
+  'tf-app-0043',
+  'tf-app-0048',
+  'tf-app-0049',
+  'tf-app-0053',
+  'tf-app-0054',
+  'tf-app-0056',
+  'tf-app-0058',
+  'tf-app-0060',
+  'tf-app-0062',
 ] as const
 
 const PLANS: Record<TiendasFundadorasFixtureScenario, ScenarioPlan> = {
@@ -91,7 +119,7 @@ function exposure(
   scenario: TiendasFundadorasFixtureScenario,
   subjectId: string,
   variant: 'control' | 'promise_first',
-  minute: number,
+  minute: number
 ): ExperimentAnalysisFact {
   return {
     id: `tf-${scenario}-exposure-${subjectId}`,
@@ -114,7 +142,7 @@ function applicationEvent(
   scenario: TiendasFundadorasFixtureScenario,
   subjectId: string,
   event: 'founding_application_completed' | 'founding_application_abandoned',
-  minute: number,
+  minute: number
 ): ExperimentAnalysisFact {
   return {
     id: `tf-${scenario}-${event}-${subjectId}`,
@@ -131,19 +159,23 @@ function applicationEvent(
 }
 
 export function buildTiendasFundadorasFixture(
-  scenario: TiendasFundadorasFixtureScenario,
+  scenario: TiendasFundadorasFixtureScenario
 ): ExperimentAnalysisInput {
   const plan = PLANS[scenario]
   const exposures = [
     ...plan.control.map((subjectId, index) => exposure(scenario, subjectId, 'control', 5 + index)),
-    ...plan.promiseFirst.map((subjectId, index) => exposure(scenario, subjectId, 'promise_first', 30 + index)),
+    ...plan.promiseFirst.map((subjectId, index) =>
+      exposure(scenario, subjectId, 'promise_first', 30 + index)
+    ),
   ]
   const facts = [
     ...exposures,
     ...plan.completed.map((subjectId, index) =>
-      applicationEvent(scenario, subjectId, 'founding_application_completed', 180 + index)),
+      applicationEvent(scenario, subjectId, 'founding_application_completed', 180 + index)
+    ),
     ...plan.abandoned.map((subjectId, index) =>
-      applicationEvent(scenario, subjectId, 'founding_application_abandoned', 240 + index)),
+      applicationEvent(scenario, subjectId, 'founding_application_abandoned', 240 + index)
+    ),
   ]
 
   return {

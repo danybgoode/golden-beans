@@ -2,23 +2,41 @@ import { getSection } from '@/lib/landing-sections'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Panel } from '@/components/ui/Panel'
 import { SectionDivider } from '@/components/ui/SectionDivider'
 import { SurfaceNote } from './SurfaceNote'
 
 // landing-redesign-v2 · Sprint 2, Story 2.1 — ④ Agnostic about ideas. Conservative about actions.
+// landing-frijoles-rebrand · Sprint 2, Story 2.5 — the release room.
 //
-// The section that describes a property the product genuinely has: every write from an agent is
-// staged and confirmed before it applies. That shipped with signals-loop, which is why this
-// section's registry entry names that epic rather than this one.
+// The section describes a property the product genuinely has: every write from an agent is staged
+// and confirmed before it applies. That shipped with signals-loop, which is why this section's
+// registry entry names that epic rather than this one.
+//
+// ── Why the framing moved from approval to a shared plan ──────────────────────────────────────
+// The previous version's app bar read "WAITING ON YOU" over a question — "Show Checkout v2 to 10%
+// of eligible customers in Mexico?" — with a "Confirm 10% release" button. That is the UI of
+// supervising software, and it fights the section's own claim: the argument is not that you police
+// your agent, it is that you and it look at the same evidence and decide together. So the plan is
+// stated rather than asked, the three cells say what the two of you agreed to watch, and the
+// buttons offer running it, tuning it, or not yet.
+//
+// This is a presentation change, not a promise change. Nothing here weakens the staging guarantee
+// — the collaboration strip is where the guarantee becomes legible, because "what would worry us"
+// and "if it goes sideways" ARE the guardrails, written in the reader's language.
 //
 // ── The enablement sentence is COMPUTED, not written down ─────────────────────────────────────
-// Carried over from InvertedLoopSection.tsx, which learned it the hard way: a previous version of
-// that section stated a flag's position as a literal, and the sentence was false a few hours later
-// when the flag flipped. A landing page asserting its own product is switched off while it serves
-// is the failure nobody notices, because the page keeps rendering — it just lies. So the one
-// sentence whose truth depends on a gate reads the gate. Both states are honest and neither needs
-// editing at launch. (The page is already `force-dynamic`, so this is read fresh per request.)
+// Carried over from InvertedLoopSection.tsx, which learned it the hard way: a previous version
+// stated a flag's position as a literal, and the sentence was false a few hours later when the flag
+// flipped. A landing page asserting its own product is switched off while it serves is the failure
+// nobody notices, because the page keeps rendering — it just lies. So the one sentence whose truth
+// depends on a gate reads the gate. Both states are honest and neither needs editing at launch.
+// (The page is already `force-dynamic`, so this is read fresh per request.)
+const GUARDRAILS = [
+  { label: 'Why 10%?', value: 'Enough signal without betting the whole market.' },
+  { label: 'What would worry us?', value: 'Payment failures +0.5% or checkout completion down.' },
+  { label: 'If it goes sideways', value: 'Return everyone to the current checkout.' },
+]
+
 export function PrincipleSection() {
   const section = getSection('principle')
   const writesLive = isConnectorWritesEnabled()
@@ -34,57 +52,79 @@ export function PrincipleSection() {
             <em className="foil">Conservative about actions</em>
           </h2>
           <p className="measure">
-            Your agent can investigate, compare, challenge and propose. Anything that changes the product gets
-            staged first.
+            You and your agent can investigate, disagree, compare, challenge and propose freely. When an idea
+            turns into a real product change, the plan gets explicit: audience, expected result, guardrails,
+            rollback, and what you&apos;ll watch together.
           </p>
-          <p className="takeaway">Then you make the call.</p>
+          <p className="takeaway">Be adventurous in thought. Deliberate in action.</p>
 
           <div className="section-lead">
-            {/* The staged proposal below carries specific numbers (+4–7% lift, 82% confidence)
-                in real product chrome. Without the word "illustration" this frame reads as a
-                screenshot of a live decision waiting on someone. PR #92 review. */}
+            {/* The plan below carries a specific audience and specific thresholds in real product
+                chrome. Without the word "illustration" this frame reads as a screenshot of a live
+                decision sitting in someone's account. PR #92 review. */}
             <SurfaceNote
-              label="In Golden Frijoles /app · releases"
-              detail="Illustration — your agent proposes, you confirm, with your own data"
+              label="In Golden Frijoles /app · release room"
+              detail="Illustration — a shared plan before a real change, not anyone's account"
             />
             <div className="app-shell">
               <div className="app-bar">
-                <span>PROPOSED RELEASE · checkout-v2</span>
-                <Badge status="next">WAITING ON YOU</Badge>
+                <span>Checkout v2 · first release</span>
+                <Badge status="live">READY TO TRY TOGETHER</Badge>
               </div>
               <div className="app-body">
-                <h3>Show Checkout v2 to 10% of eligible customers in Mexico?</h3>
-                <p className="app-body__lede">
-                  Your agent suggested a small first release. 1 in 10 eligible customers in Mexico would see
-                  the new checkout; everyone else stays on the current version while you watch the result.
-                </p>
-                <div className="row2 app-body__reasons">
-                  <Panel>
-                    <p className="panel-label">Why this size?</p>
-                    <p>Enough traffic to learn without putting the whole market behind an unproven change.</p>
-                  </Panel>
-                  <Panel>
-                    <p className="panel-label">What are we watching?</p>
-                    <p>Expected North Star lift: +4–7% · current confidence: 82%.</p>
-                  </Panel>
+                <div className="shared-plan">
+                  <div className="shared-plan__head">
+                    <div>
+                      <p className="panel-label">The plan we shaped</p>
+                      <h3 className="shared-plan__title">
+                        Try Checkout v2 with 10% of eligible customers in Mexico
+                      </h3>
+                    </div>
+                    <Badge status="next">SMALL FIRST STEP</Badge>
+                  </div>
+                  <p>
+                    Start with 1 in 10 eligible customers in Mexico. The rest stay on today&apos;s checkout
+                    while we compare completion, payment failures and revenue per visitor.
+                  </p>
                 </div>
-                <div className="button-row">
-                  <Button href="#connect">Confirm 10% release</Button>
-                  <Button href="#connect" variant="ghost">
-                    Change audience
+
+                <div className="collab-strip">
+                  {GUARDRAILS.map((guardrail) => (
+                    <div className="collab-cell" key={guardrail.label}>
+                      <span>{guardrail.label}</span>
+                      <strong>{guardrail.value}</strong>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Inert by construction, exactly as this illustration has always been: these are
+                    `<button type="button">` with no handler, not links dressed as controls. A
+                    marketing page must not offer a control that appears to do something to a real
+                    rollout. `Button` renders a <button> whenever no `href` is passed. */}
+                <div className="button-row decision-row">
+                  <Button type="button">Run the 10% test</Button>
+                  <Button type="button" variant="ghost">
+                    Tune the plan
+                  </Button>
+                  <Button type="button" variant="ghost">
+                    Save for later
                   </Button>
                 </div>
                 <p className="note section-lead">
-                  Because &ldquo;the AI did it&rdquo; isn&apos;t much of an audit trail.
+                  Not &ldquo;approve your agent.&rdquo; More &ldquo;we&apos;ve looked at this together;
+                  let&apos;s try it carefully.&rdquo;
                 </p>
               </div>
             </div>
           </div>
 
           <div className="section-lead measure">
-            <h3 className="card-title">Your agent gets leverage. Not a blank cheque</h3>
-            <p>Every write stages first. Every credential is scoped. Every action leaves a trail.</p>
-            <p className="takeaway">Autonomy is great. Surprise production changes less so.</p>
+            <h3 className="card-title">Shared courage. Sensible guardrails</h3>
+            <p>
+              Golden Frijoles keeps meaningful actions visible and reversible, so working with an agent feels
+              less like supervising software and more like having company in the uncertainty.
+            </p>
+            <p className="takeaway">Try together. Watch together. Learn together.</p>
             <p className="note">
               {writesLive
                 ? 'Live today: the staged write tools are switched on, and every one of them still requires your explicit confirmation before it applies.'
