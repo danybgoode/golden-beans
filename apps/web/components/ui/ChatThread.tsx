@@ -29,14 +29,26 @@ export function ChatBubble({
   return (
     <div className={`chat-row chat-row--${actor}`}>
       {actor === 'agent' && (
-        // Decorative: the bubble's side already carries who is speaking, and a screen reader
-        // announcing "A" before every agent line is noise. The visible label for the whole frame
-        // is its SurfaceNote.
+        // The avatar glyph itself stays decorative — a screen reader announcing "A" before every
+        // agent line is noise, not information.
         <span className="chat-avatar" aria-hidden="true">
           {avatar}
         </span>
       )}
-      <div className="chat-bubble">{children}</div>
+      <div className="chat-bubble">
+        {/* ── Who is speaking must not be visual-only ──────────────────────────────────────────
+            Sighted readers get it from which side the bubble hangs from and from the avatar; a
+            screen reader got neither, so the thread flattened into an unattributed wall of text
+            and the entire point — that this is a conversation between two parties with a third
+            supplying context — was invisible. Caught in cross-family review of PR #95.
+
+            A visually-hidden label per turn rather than an ARIA role: this is a picture of a
+            conversation, not a live log, so `role="log"`/`aria-live` would announce it as something
+            that is updating. A name before each turn is what a transcript does, and a transcript is
+            exactly what this is. */}
+        <span className="sr-only">{actor === 'agent' ? 'Agent said: ' : 'You said: '}</span>
+        {children}
+      </div>
     </div>
   )
 }

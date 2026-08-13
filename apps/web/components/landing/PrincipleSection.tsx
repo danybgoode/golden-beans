@@ -1,7 +1,6 @@
 import { getSection } from '@/lib/landing-sections'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { SectionDivider } from '@/components/ui/SectionDivider'
 import { SurfaceNote } from './SurfaceNote'
 
@@ -97,18 +96,25 @@ export function PrincipleSection() {
                   ))}
                 </div>
 
-                {/* Inert by construction, exactly as this illustration has always been: these are
-                    `<button type="button">` with no handler, not links dressed as controls. A
-                    marketing page must not offer a control that appears to do something to a real
-                    rollout. `Button` renders a <button> whenever no `href` is passed. */}
-                <div className="button-row decision-row">
-                  <Button type="button">Run the 10% test</Button>
-                  <Button type="button" variant="ghost">
-                    Tune the plan
-                  </Button>
-                  <Button type="button" variant="ghost">
-                    Save for later
-                  </Button>
+                {/* ── These are PICTURES of controls, and the markup now says so ──────────────
+                    They were `<button type="button">` with no handler: focusable, announced to a
+                    screen reader as actionable, activating to do precisely nothing. "Inert by
+                    construction" was true of the JavaScript and false of the experience — a
+                    keyboard user tabs into three buttons on a marketing page and presses them.
+                    Caught in cross-family review of PR #95.
+
+                    Rendered as spans instead of `disabled` buttons deliberately. Disabled means
+                    "this control exists and you may not use it right now", which is a different and
+                    still-untrue claim — there is no rollout here to run. A picture of a decision row
+                    is what this is, so it is marked `aria-hidden` and the sentence beneath carries
+                    the meaning for anyone not looking at it. */}
+                <p className="sr-only">
+                  Illustration of the decision row: run the 10% test, tune the plan, or save for later.
+                </p>
+                <div className="button-row decision-row" aria-hidden="true">
+                  <span className="btn btn-gold">Run the 10% test</span>
+                  <span className="btn btn-ghost">Tune the plan</span>
+                  <span className="btn btn-ghost">Save for later</span>
                 </div>
                 <p className="note section-lead">
                   Not &ldquo;approve your agent.&rdquo; More &ldquo;we&apos;ve looked at this together;

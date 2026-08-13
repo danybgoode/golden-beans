@@ -39,7 +39,22 @@ test('the landing renders the approved roast, foil, icon, and tactile system', a
   )
 
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  expect(await primary.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s')
+  // Asserted as "every duration is zero" rather than as the string `'0s'`. `transition-duration`
+  // serialises one value per transitioned PROPERTY, so a control listing four properties computes
+  // to `'0s, 0s, 0s, 0s'` — correct behaviour that a string-exact check calls a regression. It did:
+  // landing-frijoles-rebrand put `.btn` on the shared motion tokens (four properties instead of the
+  // token file's transform/box-shadow pair) and this line failed on the serialisation while the
+  // durations were all zero.
+  const durations = await primary.evaluate((element) =>
+    getComputedStyle(element)
+      .transitionDuration.split(',')
+      .map((value) => parseFloat(value) || 0)
+  )
+  expect(durations.length).toBeGreaterThan(0)
+  expect(
+    durations.every((duration) => duration === 0),
+    `still transitions: ${durations}`
+  ).toBe(true)
 
   await page.screenshot({ path: testInfo.outputPath('landing-desktop.png'), fullPage: true })
   expect(consoleErrors).toEqual([])

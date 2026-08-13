@@ -3511,7 +3511,29 @@ a.stat-card:hover {
    Durations come off the two tokens rather than each control naming its own,
    which is what stops the nav CTA and the pricing CTA feeling like different
    buttons. */
-:where(.btn, .btn-mini, .platform-pill, .icon-link, .tier, .panel) {
+/* `.btn` is NOT in the `:where()` group below, and that pair is the whole point.
+   `:where()` has specificity 0 by design — a rail any component may step over — but `tokens.css`
+   already declares `.btn { transition: … .08s … .15s … }` at (0,1,0), so a zero-specificity rule
+   loses to it and the primary control kept its own hand-written durations while this block claimed
+   to have unified them. The comment above said "durations come off the two tokens rather than each
+   control naming its own", and for the one control that matters most it was false.
+
+   Caught in cross-family review of PR #95. The reviewer's conclusion — that reduced motion was
+   broken — was wrong: `tokens.css` zeroes `.btn` itself under the preference, verified by rendering
+   (`transition-property: none` with the media query on). The specificity observation underneath it
+   was right, and it is the one that mattered.
+
+   So `.btn` gets its own (0,1,0) rule, and everything with no competing token rule stays on the
+   zero-specificity rail. */
+.btn {
+  transition:
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    color var(--motion-base) var(--ease-out);
+}
+
+:where(.btn-mini, .platform-pill, .icon-link, .tier, .panel) {
   transition:
     background-color var(--motion-base) var(--ease-out),
     border-color var(--motion-base) var(--ease-out),
