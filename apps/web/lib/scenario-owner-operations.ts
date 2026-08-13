@@ -61,11 +61,10 @@ export async function getScenarioOwnerStopContext(
   if (
     versionError ||
     (kind !== 'resilience' && kind !== 'security') ||
-    (run.environment !== 'development' &&
-      run.environment !== 'preview' &&
-      run.environment !== 'production')
+    (run.environment !== 'development' && run.environment !== 'preview' && run.environment !== 'production')
   ) {
-    if (versionError) console.error('[scenario-owner] stop definition read failed', { code: versionError.code })
+    if (versionError)
+      console.error('[scenario-owner] stop definition read failed', { code: versionError.code })
     return null
   }
   return {
@@ -101,7 +100,9 @@ export async function getScenarioOwnerDefinitionContext(
     .maybeSingle()
   if (flagRegistryError || !flagRegistry) {
     if (flagRegistryError)
-      console.error('[scenario-owner] fault registry eligibility read failed', { code: flagRegistryError.code })
+      console.error('[scenario-owner] fault registry eligibility read failed', {
+        code: flagRegistryError.code,
+      })
     return null
   }
   const [

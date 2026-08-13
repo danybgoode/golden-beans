@@ -1,9 +1,5 @@
 import { test, expect } from '@playwright/test'
-import {
-  readTenantRecord,
-  SCENARIO_FIXTURE_KEY,
-  SCENARIO_UNDISCLOSED_KEY,
-} from './helpers/authed-fixture'
+import { readTenantRecord, SCENARIO_FIXTURE_KEY, SCENARIO_UNDISCLOSED_KEY } from './helpers/authed-fixture'
 
 test('an owner gets closed authoring choices and live blast-radius validation', async ({ page }) => {
   test.skip(
@@ -50,7 +46,9 @@ test('an owner can stop a running legacy scenario even when its fault cannot be 
   await expect(runRow).toContainText('stopped')
 })
 
-test('an owner launches and stops a disclosed synthetic run through the signed-in actions', async ({ page }) => {
+test('an owner launches and stops a disclosed synthetic run through the signed-in actions', async ({
+  page,
+}) => {
   test.skip(
     process.env.SCENARIO_AUTHORING_ENABLED !== 'true',
     'set SCENARIO_AUTHORING_ENABLED=true to smoke the owner authoring workspace'
