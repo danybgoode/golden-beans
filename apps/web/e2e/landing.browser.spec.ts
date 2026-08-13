@@ -232,16 +232,21 @@ test('selecting a paragraph is a wash, not a slab', async ({ page }) => {
   // back, and the extension will read as a filled block again whatever its alpha.
   expect(material.color.replace(/\s/g, '')).not.toBe('rgb(22,18,13)')
 
-  // And the selection a real gesture produces still hugs the words rather than running the full
-  // width of the viewport. Triple-click is the gesture that reproduced the report.
+  // The gesture that reproduced the report still selects the paragraph. Only that is asserted:
+  //
+  // ── Why there is NO geometry assertion here ─────────────────────────────────────────────────
+  // The obvious one — "the selection rect is not the full viewport width" — cannot fail, and a
+  // test that cannot fail is worse than no test because the next reader stops there
+  // (CODE-QUALITY.md #5). The extension to the containing block's edge is UA selection painting,
+  // it is what the browser is SUPPOSED to do for a non-terminal line, and no CSS turns it off. A
+  // `<= 390` bound is satisfied by the broken rendering and the fixed one alike; tightening it to
+  // "narrower than the viewport" would fail on any paragraph whose text legitimately fills the
+  // line. The material assertions above are the ones with teeth, because the material is the part
+  // that was actually ours to get wrong. Written this way after cross-family review of PR #95
+  // pointed out that the bound was decorative.
   await paragraph.click({ clickCount: 3 })
-  const widest = await page.evaluate(() => {
-    const selection = getSelection()
-    if (!selection?.rangeCount) return null
-    return Math.max(...[...selection.getRangeAt(0).getClientRects()].map((rect) => rect.width))
-  })
-  expect(widest, 'a paragraph must actually be selectable by triple-click').not.toBeNull()
-  expect(widest!).toBeLessThanOrEqual(390)
+  const selected = await page.evaluate(() => getSelection()?.toString().trim() ?? '')
+  expect(selected, 'a paragraph must be selectable by triple-click').toContain('Give your agent')
 })
 
 // ── landing-frijoles-rebrand · Sprint 3 ─────────────────────────────────────────────────────────
