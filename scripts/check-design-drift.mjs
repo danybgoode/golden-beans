@@ -17,17 +17,33 @@ const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 // section dividers used to be built from. They are NOT Extended_Pictographic, so the rule above
 // never saw them; they rendered at 12px inside a kraft band and were illegible at the only size a
 // text run tolerates. The divider now takes an integer and draws a stamped disc, so any surviving
-// glyph is a leftover rather than a choice. Ⓐ-style letters are included because the same
-// temptation ("just paste a nicer character") reaches for them next.
-const ENCLOSED_ALPHANUMERIC = /[①-⓿㉑-㊿]/u;
+// glyph is a leftover rather than a choice.
+//
+// The ranges are written as escapes rather than as literal characters, so this line is legible in a
+// terminal and greppable. They cover Enclosed Alphanumerics (U+2460–24FF — the circled digits and
+// Ⓐ-style letters, because "just paste a nicer character" reaches for those next), the Dingbat
+// circled digits (U+2776–2793) and Enclosed CJK (U+3251–32BF). The Dingbat block was missing and is
+// the most likely substitute for a banned glyph — ❶ and ➀ render almost identically to ①.
+//
+// The reviewer who found the gap gave the range as U+278A–2793 / U+2780–2789. That is the sans-serif
+// pair and it omits the ORIGINAL negative circled digits at U+2776–277F — which is where ❶ actually
+// lives. The gap was real and the codepoints were not, so the range here is the union, and the unit
+// test asserts each GLYPH rather than the range it is supposed to be in. A test written against a
+// claimed range would have passed while ❶ still got through. (PR #95.)
+const ENCLOSED_ALPHANUMERIC = /[\u2460-\u24FF\u2776-\u2793\u3251-\u32BF]/u;
 
 // landing-frijoles-rebrand · Sprint 1, Story 1.7 (epic D7) — headings are titles, not sentences.
 //
 // Scoped to HEADINGS ONLY, and deliberately not to `.takeaway`/`.note`/`.micro`: those are closing
-// lines of prose and stripping their stop would leave a fragment. The match is on a heading element
-// or a heading class carrying a text child that ends in `.` — so `<h2 className="section-title">Not
-// to win it.</h2>` fails and `<p className="takeaway">Now your decisions have receipts.</p>` does
-// not.
+// lines of prose and stripping their stop would leave a fragment.
+//
+// Two things are matched, and NEITHER is a class: an `<h1>`–`<h6>` ELEMENT, and a `title` literal
+// (see below). An earlier version of this comment said "a heading element or a heading class",
+// which `HEADING_BLOCK` has never done — a comment describing behaviour the regex does not have
+// (CODE-QUALITY.md #3), caught by the second-family reviewer on PR #95. In practice every
+// `.section-title`/`.card-title` in this codebase sits ON an `h2`/`h3`, so the element match
+// reaches them; a `<div className="section-title">` would not be checked, and if one is ever
+// written the right fix is to make it a heading, not to widen this regex.
 //
 // `!` and `?` are allowed: the infomercial band's "Fix your org in three easy steps!" and §4's
 // question headings are titles that legitimately carry terminal punctuation which is not a full
@@ -50,7 +66,16 @@ const HEADING_BLOCK = /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/g;
 // now `headline:`. So in `components/landing`, a `title:` literal is heading text and is held to
 // D7; any other key is not looked at. Body content that needs a terminal period uses a different
 // key name, and the comment on that array says so.
-const TITLE_LITERAL = /\btitle\s*[:=]\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+// `title:` (an object key) always counts. `title=` counts only on a COMPONENT — a tag whose name
+// starts uppercase, like `<SectionDivider title="Pricing" />`, where the prop genuinely renders as
+// a heading. On a lowercase HTML tag, `title=` is the tooltip attribute — `<abbr title="For
+// example.">` is microcopy, not a heading, and holding it to the no-terminal-period rule would be a
+// false positive on correct markup. The two cases are told apart by what precedes the attribute in
+// the same tag, which is why this is applied per opening tag rather than over the whole file.
+// Raised by the second-family reviewer on PR #95.
+const TITLE_KEY = /\btitle\s*:\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+const COMPONENT_TAG = /<([A-Z][\w.]*)\b((?:[^>'"]|'[^']*'|"[^"]*")*?)\/?>/g;
+const TITLE_PROP = /\btitle\s*=\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
 
 /** True when a heading's visible text ends in a full stop (and not an ellipsis). */
 function endsInPeriod(text) {
@@ -64,8 +89,15 @@ function endsInPeriod(text) {
     .replace(/<[^>]*>/g, ' ')
     .trim();
   if (!trimmed) return false;
-  if (trimmed.endsWith('...') || trimmed.endsWith('…')) return false;
-  return trimmed.endsWith('.');
+  // A heading may be wrapped in quotes — this codebase writes them as `&ldquo;`/`&rdquo;` entities,
+  // normalised to `"` above. Without peeling them the final character is the quote, not the stop,
+  // so `“Not to win it.”` sailed through the rule that exists to catch exactly that sentence.
+  // Peeled from the END only: a stray opening quote is not what decides whether a heading is a
+  // sentence. Caught by the second-family reviewer on PR #95.
+  const unquoted = trimmed.replace(/["'”’»›]+$/u, '').trim();
+  if (!unquoted) return false;
+  if (unquoted.endsWith('...') || unquoted.endsWith('…')) return false;
+  return unquoted.endsWith('.');
 }
 
 /** Line number of a character offset, 1-indexed, for a readable violation. */
@@ -92,13 +124,27 @@ export function inspectHeadings(source) {
     }
   }
 
-  for (const match of liveSource.matchAll(TITLE_LITERAL)) {
+  for (const match of liveSource.matchAll(TITLE_KEY)) {
     if (endsInPeriod(match[2])) {
       violations.push({
         line: lineOf(liveSource, match.index),
         rule: 'heading-period',
         content: match[0].replace(/\s+/g, ' ').trim().slice(0, 120),
       });
+    }
+  }
+
+  // `title=` only where the tag is a component. `match.index` is the offset of the opening tag, so
+  // the reported line is the tag's — which is where a reader has to go to fix it.
+  for (const tag of liveSource.matchAll(COMPONENT_TAG)) {
+    for (const prop of tag[2].matchAll(TITLE_PROP)) {
+      if (endsInPeriod(prop[2])) {
+        violations.push({
+          line: lineOf(liveSource, tag.index),
+          rule: 'heading-period',
+          content: `<${tag[1]} … ${prop[0]}`.replace(/\s+/g, ' ').trim().slice(0, 120),
+        });
+      }
     }
   }
 

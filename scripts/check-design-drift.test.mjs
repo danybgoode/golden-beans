@@ -248,3 +248,56 @@ test('a globals.css violation is reported at the line it actually occupies', () 
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('a quoted heading cannot hide its full stop behind the closing quote', () => {
+  // `endsWith('.')` looked at the LAST character, which for a quoted heading is the quote. So the
+  // rule silently passed the exact sentence it exists to catch. Second-family reviewer, PR #95.
+  for (const source of [
+    `<h2 className="section-title">&ldquo;Not to win it.&rdquo;</h2>`,
+    `<h2 className="section-title">"Not to win it."</h2>`,
+    `const s = [{ title: '“Give it a North Star.”' }]`,
+  ]) {
+    assert.deepEqual(
+      inspectDesignSource(source, { enforceHeadingVoice: true }).map((f) => f.rule),
+      ['heading-period'],
+      source
+    );
+  }
+
+  // ...and a quoted heading WITHOUT a stop is still fine.
+  assert.deepEqual(
+    inspectDesignSource(`<h2 className="section-title">&ldquo;Not to win it&rdquo;</h2>`, {
+      enforceHeadingVoice: true,
+    }),
+    []
+  );
+});
+
+test('title= is a heading on a component and a tooltip on an HTML tag', () => {
+  // `<SectionDivider title="…" />` renders a heading; `<abbr title="…">` is microcopy. Holding the
+  // second to the no-terminal-period rule is a false positive on correct markup.
+  assert.deepEqual(
+    inspectDesignSource(`<SectionDivider number={5} title="Less coordination. More of it." />`, {
+      enforceHeadingVoice: true,
+    }).map((f) => f.rule),
+    ['heading-period']
+  );
+
+  for (const source of [
+    `<abbr title="For example.">e.g.</abbr>`,
+    `<button title="Click for details.">Go</button>`,
+  ]) {
+    assert.deepEqual(inspectDesignSource(source, { enforceHeadingVoice: true }), [], source);
+  }
+});
+
+test('dingbat circled digits are refused like their Enclosed Alphanumeric twins', () => {
+  // ❶ and ➀ render almost identically to ① and are the obvious substitute for a banned glyph.
+  for (const glyph of ['①', '❶', '➀', 'Ⓐ']) {
+    assert.deepEqual(
+      inspectDesignSource(`<span className="num">${glyph}</span>`).map((f) => f.rule),
+      ['enclosed-numeral'],
+      glyph
+    );
+  }
+});
