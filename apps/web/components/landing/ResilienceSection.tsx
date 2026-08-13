@@ -33,8 +33,17 @@ import { Panel } from '@/components/ui/Panel'
 // this comment said "no deploy", which read as though setting the var were sufficient — corrected
 // after cross-family review (Codex, PR #95).
 //
-// The copy is written so it is true in BOTH states: it says what the drills are and what they are
-// for, never "you can run this today". The badge supplies the tense.
+// ── The LEAD claim has to survive the gates being shut too, not just the cards ────────────────
+// This comment used to say the copy "never says you can run this today" — and the lead paragraph
+// said Golden Frijoles "turns them into scenarios you can run with your agent", in the unqualified
+// present tense, one paragraph above two badges saying the opposite. A comment asserting a property
+// the code does not have is precisely the failure CODE-QUALITY.md #3 names, and it is worse here
+// than an ordinary wrong comment because it is the thing a reviewer reads INSTEAD of re-checking
+// the copy. Caught in cross-family review of PR #95.
+//
+// The lead now reads "is building them into" — true while the gates are shut and still true once
+// they open, since a shipped capability is one you are still building on. The badges supply the
+// precise tense per card; the lead must not contradict them before the reader gets there.
 type Drill = {
   kicker: string
   title: string
@@ -112,9 +121,9 @@ export function ResilienceSection() {
           Then see what survives
         </h2>
         <p className="measure section-lead">
-          Chaos engineering and security testing used to be things PMs heard about after someone else
-          scheduled them. Golden Frijoles turns them into scenarios you can run with your agent before the
-          campaign, the launch, or the very expensive lesson.
+          Chaos engineering and security testing are things PMs usually hear about after someone else has
+          scheduled them. Golden Frijoles is building them into scenarios you and your agent shape and run
+          together — before the campaign, the launch, or the very expensive lesson.
         </p>
         <p className="takeaway">Break the rehearsal. Not launch day.</p>
 

@@ -72,9 +72,16 @@ serves the product it names.
   `format:changed` → `lint` → `typecheck` → `test:unit` → `build` → the Playwright `api` project.
   "Should pass" is not a result (`CODE-QUALITY.md`).
 - **Two cross-family review passes**, routed by `scripts/review-route.mjs --builder claude --tier low`
-  — never hand-picked. Blocking findings resolved or explicitly triaged before merge. Rounds
-  continue until one comes back **clean**, not until a count is reached, and a clean round from one
-  family alone is not a stopping condition.
+  — never hand-picked. Blocking findings resolved or explicitly triaged before merge.
+
+  *On how many rounds, since a reviewer read this line as contradicting the SOP (PR #95, Codex
+  round 3):* WAYS-OF-WORKING's "**single pass**" governs **one reviewer against one target** — it
+  forbids a debate loop where a reviewer argues with itself toward convergence. It does not cap the
+  number of targets. The very next paragraph of that same section mandates the opposite: "a
+  substantive fix reruns the reviewer that found it." So a fix produces a new target, and the new
+  target gets a fresh single-pass read. Two passes are the **floor**, and the stopping condition is
+  a round that comes back clean — not a count, and not a clean round from one family while the
+  other has unanswered findings.
 - The apex redirect is flipped and `SITE_URL` set **before** the merge, so the deploy that ships the
   code is the deploy that snapshots the value (`CODE-QUALITY.md` #11: rollout order is part of the
   design).

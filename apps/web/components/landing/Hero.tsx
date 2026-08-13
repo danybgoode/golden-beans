@@ -89,7 +89,12 @@ export function Hero() {
           >
             <ChatThread>
               <ChatBubble actor="user">What should we bet on this cycle?</ChatBubble>
-              <ContextCard source="Golden Frijoles · live product context" meta="North Star: activation">
+              {/* NOT "live product context". The frame above this says "not a live session", and a
+                  card inside it calling itself live is the same mixed signal the hero's old "via
+                  MCP" chip sent — the one landing-redesign-v2's review had to remove. What the card
+                  is illustrating is that the product context is THERE; "live" is a claim about this
+                  particular conversation, which is invented. PR #95 review. */}
+              <ContextCard source="Golden Frijoles · your product context" meta="North Star: activation">
                 <ContextOption
                   title="Onboarding redesign"
                   detail="+8–12% expected lift · high confidence · ~3 weeks"
