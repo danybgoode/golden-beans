@@ -202,6 +202,43 @@ h2{font-size:25px}
 </style>
 </head>
 <body>
+<!-- =============================================================================================
+     REFERENCE MOCK — inspiration, never signed-off scope (Roadmap/WAYS-OF-WORKING.md).
+
+     WHAT DID NOT SHIP FROM THIS FILE, AND WHY. Read this before copying anything out of it.
+     Added 2026-08-13 at epic close (landing-frijoles-rebrand), after cross-family review of PR #95
+     pointed out that a handoff artifact containing false claims is a trap for whoever reuses it —
+     the claims get re-derived by someone who reasonably assumes a signed-off mock was checked.
+
+     The mock is deliberately NOT rewritten to match the implementation: its job is to record what
+     we were aiming at, and a mock edited into agreement with the code stops being evidence of
+     anything. So the divergences are listed instead.
+
+     1. `npx golden-frijoles init` (§9) — THERE IS NO SUCH COMMAND. `packages/sdk/package.json`
+        declares no `bin` and no CLI is published. The rename is public-surfaces-only (epic D1), so
+        the real package is still `@golden-beans/sdk` and the shipped line is
+        `npm install @golden-beans/sdk`. A copy-pasteable command that fails on first contact, in
+        front of the one persona who will definitely run it, is the worst possible place for a
+        fiction.
+
+     2. "GOLDEN FRIJOLES · LIVE PRODUCT CONTEXT" (hero context card) — the frame around it says the
+        conversation is an illustration, so a card inside it calling itself LIVE is the same mixed
+        signal as the old "via MCP" chip. Ships as "your product context".
+
+     3. The resilience drills (§break-glass) are shown as things you can run today.
+        `RESILIENCE_SCENARIOS_ENABLED` and `SECURITY_SIMULATIONS_ENABLED` are both OFF in
+        production. The shipped section reads each gate and renders an honest badge, and its copy
+        is written to be true in both states (epic D5).
+
+     4. The Pod Report stat tiles (§6) are hardcoded here and COMPUTED in the shipped page, and the
+        `$49` tier ships with an explicit line that billing is not live yet (landing-redesign-v2 D1).
+
+     5. The two "Implementation note:" paragraphs are build instructions to the builder, not page
+        copy, and do not render. Iconoir was deliberately not adopted — the repo runs one icon seam
+        (epic D3).
+
+     6. The `~~$999~~` strike is markdown that nothing here renders; it ships as a real `<s>`.
+     ============================================================================================= -->
 <nav class="gb">
   <span class="logo"><span class="bean"></span>golden frijoles</span>
   <div style="display:flex;gap:22px;font-size:14px;margin-left:24px">

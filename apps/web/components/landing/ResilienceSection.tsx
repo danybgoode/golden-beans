@@ -44,6 +44,15 @@ import { Panel } from '@/components/ui/Panel'
 // The lead now reads "is building them into" — true while the gates are shut and still true once
 // they open, since a shipped capability is one you are still building on. The badges supply the
 // precise tense per card; the lead must not contradict them before the reader gets there.
+//
+// ── The CARD copy had the same problem, and round 3 only fixed the lead ───────────────────────
+// The cards opened "Simulate the traffic spike…" and "Run controlled attack scenarios…" — bare
+// imperatives, which read as instructions for something you can do right now. A badge underneath
+// saying "not switched on yet" does not retract an instruction; it just makes the card argue with
+// itself. Both are noun phrases now ("A dress rehearsal for…", "Controlled attack scenarios
+// against…"), which describe what the drill IS without telling the reader to go and run it. Caught
+// in cross-family review of PR #95, one round after the identical fix to the lead — the lesson
+// being that "grep for its siblings" applies to copy too, not only to code.
 type Drill = {
   kicker: string
   title: string
@@ -98,14 +107,14 @@ export function ResilienceSection() {
     {
       kicker: 'Chaos engineering · controlled mayhem',
       title: 'What if Black Friday actually works?',
-      copy: 'Simulate the traffic spike, a slow dependency, and a checkout service wobble. See where the customer experience bends before the campaign budget arrives.',
+      copy: 'A dress rehearsal for the traffic spike, the slow dependency and the checkout service wobble — so you find where the customer experience bends before the campaign budget arrives, not during it.',
       note: 'The campaign can still traumatize you emotionally. Just ideally not infrastructurally.',
       live: isResilienceScenariosEnabled(),
     },
     {
       kicker: 'Security · friendly mutiny',
       title: 'Ask your agents to turn on you',
-      copy: 'Run controlled attack scenarios against the protections you expect to hold. Your agent plays the troublemaker, records what got through, and turns the aftermath into work you can actually prioritize.',
+      copy: 'Controlled attack scenarios against the protections you expect to hold. Your agent plays the troublemaker, the run records what got through, and the aftermath comes back as work you can actually prioritize.',
       note: 'A betrayal, but the kind with an action list.',
       live: isSecuritySimulationsEnabled(),
     },
