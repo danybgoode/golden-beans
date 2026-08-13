@@ -26,6 +26,7 @@ import {
   isResilienceScenariosEnabled,
   isSecuritySimulationsEnabled,
   isAutomaticCircuitBreakersEnabled,
+  isScenarioAuthoringEnabled,
   isAgentRailEnabled,
   isFlagRuleBuilderEnabled,
   isTaskMcpToolEnabled,
@@ -62,6 +63,7 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['RESILIENCE_SCENARIOS_ENABLED', isResilienceScenariosEnabled],
   ['SECURITY_SIMULATIONS_ENABLED', isSecuritySimulationsEnabled],
   ['AUTOMATIC_CIRCUIT_BREAKERS_ENABLED', isAutomaticCircuitBreakersEnabled],
+  ['SCENARIO_AUTHORING_ENABLED', isScenarioAuthoringEnabled],
   ['AGENT_RAIL_ENABLED', isAgentRailEnabled],
   // flags-visual-rule-builder · Story 1.4 (D6). Added to the shared table, not tested
   // separately, for the reason the SIGNALS_ENABLED note above gives: the born-dark contract is a

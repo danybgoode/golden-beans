@@ -24,6 +24,9 @@ registerHooks({
 
 const {
   MAX_SCENARIO_DELAY_MS,
+  MAX_SCENARIO_ERROR_RATE_BASIS_POINTS,
+  SCENARIO_FAULT_KINDS,
+  SCENARIO_KINDS,
   evaluateScenario,
   parseScenarioDefinition,
   parseScenarioFault,
@@ -78,6 +81,12 @@ const DEFINITION = {
   guardrails: ENTRY.guardrails,
   flag: { key: ENTRY.flag.key, definitionVersion: ENTRY.flag.definitionVersion },
 }
+
+test('authoring choices and numeric bounds are exported runtime contracts', () => {
+  assert.deepEqual(SCENARIO_KINDS, ['resilience', 'security'])
+  assert.deepEqual(SCENARIO_FAULT_KINDS, ['none', 'delay', 'synthetic_error'])
+  assert.equal(MAX_SCENARIO_ERROR_RATE_BASIS_POINTS, 10_000)
+})
 
 test('fault payloads are a closed, bounded union', () => {
   assert.deepEqual(parseScenarioFault({ kind: 'none' }), { kind: 'none' })
