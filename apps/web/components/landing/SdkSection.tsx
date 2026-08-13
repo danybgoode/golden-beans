@@ -37,7 +37,7 @@ export function SdkSection() {
           <p className="takeaway">Everybody gets to keep their IDE.</p>
 
           <Panel className="section-lead">
-            <pre className="code-block">npm install @golden-beans/sdk</pre>
+            <pre className="code-block">npm install @golden-frijoles/sdk</pre>
           </Panel>
 
           <ul className="plain-list">

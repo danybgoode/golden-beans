@@ -99,7 +99,7 @@ export interface ScenarioProviderConfig {
 }
 
 export interface ScenarioProvider {
-  readonly metadata: { name: 'golden-beans-scenarios' }
+  readonly metadata: { name: 'golden-frijoles-scenarios' }
   initialize(): Promise<ScenarioProviderRefreshResult>
   refresh(): Promise<ScenarioProviderRefreshResult>
   shutdown(): void
@@ -443,7 +443,7 @@ export function createScenarioProvider(config: ScenarioProviderConfig): Scenario
   }
 
   return {
-    metadata: { name: 'golden-beans-scenarios' },
+    metadata: { name: 'golden-frijoles-scenarios' },
     async initialize() {
       if (shutDown) return failure('PROVIDER_FATAL', 'Scenario provider has been shut down.')
       if (!initialized) {

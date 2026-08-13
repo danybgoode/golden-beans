@@ -1,5 +1,5 @@
 {
-  "name": "golden-beans",
+  "name": "golden-frijoles",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -9,12 +9,12 @@
     "prepare": "git config core.hooksPath .githooks",
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
-    "typecheck": "npm run build --workspace=@golden-beans/sdk && tsc --noEmit -p apps/web && tsc --noEmit -p apps/web/tsconfig.test.json && tsc --noEmit -p packages/sdk && tsc --noEmit -p packages/sdk/tsconfig.test.json",
+    "typecheck": "npm run build --workspace=@golden-frijoles/sdk && tsc --noEmit -p apps/web && tsc --noEmit -p apps/web/tsconfig.test.json && tsc --noEmit -p packages/sdk && tsc --noEmit -p packages/sdk/tsconfig.test.json",
     "lint": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write",
     "format:changed": "node scripts/format-changed.mjs",
-    "test:unit": "npm run build --workspace=@golden-beans/sdk && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
+    "test:unit": "npm run build --workspace=@golden-frijoles/sdk && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
     "test:unit:coverage": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test --experimental-test-coverage 'scripts/**/*.test.mjs' 'apps/web/lib/**/*.test.ts' 'apps/web/e2e/helpers/*.test.ts' 'packages/*/src/**/*.test.ts'",
     "test:e2e": "npm run test:e2e --workspace=apps/web",
     "test:e2e:local": "node scripts/run-local-e2e.mjs",

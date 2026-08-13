@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   createGrowthEngineClient,
   type ExperimentGovernanceContext,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 
 const variants = [
   { key: 'treatment', weight: 3 },

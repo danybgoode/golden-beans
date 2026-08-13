@@ -18,7 +18,7 @@
 
 import { useMemo, useState } from 'react'
 import { FormSection, Field } from '@/components/ui/FormSection'
-import { FLAG_CONTEXT_FIELDS, MAX_FLAG_CLAUSES, MAX_FLAG_RULES } from '@golden-beans/sdk'
+import { FLAG_CONTEXT_FIELDS, MAX_FLAG_CLAUSES, MAX_FLAG_RULES } from '@golden-frijoles/sdk'
 import {
   canAddClause,
   canAddRule,

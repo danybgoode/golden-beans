@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 import { computeExperimentAnalysis } from '@/lib/experiment-analysis'
 import {
   buildTiendasFundadorasFixture,

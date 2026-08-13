@@ -1,7 +1,7 @@
 import type { JourneyDefinition } from './journey-definition'
 
 // Entity journeys · Sprint 3, Story 3.1 — Miyagi's founding-merchant lifecycle as
-// an analytics contract. These are event names only: Golden Beans receives opaque
+// an analytics contract. These are event names only: Golden Frijoles receives opaque
 // lifecycle facts and never imports contacts, tasks, consent bodies or commerce state.
 export const MIYAGI_FOUNDING_MERCHANT_JOURNEY = {
   entityType: 'merchant',

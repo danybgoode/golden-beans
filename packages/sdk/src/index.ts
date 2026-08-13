@@ -1,4 +1,4 @@
-// Golden Beans Growth Engine — TS SDK.
+// Golden Frijoles Growth Engine — TS SDK.
 // Story 1.2 (Roadmap/01-growth-engine/growth-engine-v1/sprint-1.md): `track` + `trackAdoption`,
 // auto-appending the configured userId, returning an extensible envelope — never a bare boolean —
 // so v2 fault injection (delay_ms, force_error_code) can extend TrackResult without a breaking
@@ -159,7 +159,7 @@ export type {
  * event-destination-router · Story 1.1 — who caused an event vs. what it's about.
  *
  * `type` is a controlled vocabulary (lower_snake_case: "merchant", "shop", "campaign"); `id` is
- * opaque to Golden Beans — we index and echo it, never parse meaning from it. Keep it a stable
+ * opaque to Golden Frijoles — we index and echo it, never parse meaning from it. Keep it a stable
  * identifier from your own system, and DO NOT put personal data in it: it lands in an analytical
  * event store, and the epics downstream (lifecycle projections, experiment attribution) join on it
  * across every read surface including the MCP connector.

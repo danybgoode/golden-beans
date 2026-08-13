@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 // event-destination-router · Sprint 2, Story 2.1 — the HMAC signature a receiver verifies to trust
-// that a delivery came from Golden Beans and was not tampered with in flight.
+// that a delivery came from Golden Frijoles and was not tampered with in flight.
 //
 // Zero-import beyond node:crypto so the scheme is unit-testable directly — and so a RECEIVER can copy
 // verifyWebhookSignature() verbatim as reference code (the whole point of a documented scheme is that

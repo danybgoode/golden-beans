@@ -4,7 +4,7 @@
 // live-proof section reads. Everything below the project-row upsert goes through the REAL
 // Bearer-authed API, the same surface any customer uses — never a raw DB insert for content.
 //
-// Uses raw fetch() rather than importing @golden-beans/sdk: the SDK ships as un-transpiled TS
+// Uses raw fetch() rather than importing @golden-frijoles/sdk: the SDK ships as un-transpiled TS
 // source with extensionless internal imports (`./bucketing`), which Next.js's bundler resolves
 // fine but plain `node` cannot (ERR_MODULE_NOT_FOUND — no TS/extensionless-ESM loader outside a
 // bundler). The payloads below are byte-identical to what the SDK's track()/trackAdoption()/

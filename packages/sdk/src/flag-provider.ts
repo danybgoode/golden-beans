@@ -53,7 +53,7 @@ export type FlagProviderStatus = {
 }
 
 export interface FlagProviderConfig {
-  /** Golden Beans base URL. The snapshot route is always `/api/v1/flags/snapshot`. */
+  /** Golden Frijoles base URL. The snapshot route is always `/api/v1/flags/snapshot`. */
   baseUrl: string
   /** Revocable, project- and environment-scoped `flag_read` credential. Keep this server-side. */
   flagReadKey: string
@@ -72,7 +72,7 @@ export interface FlagProviderConfig {
 }
 
 export interface FlagProvider {
-  readonly metadata: { name: 'golden-beans' }
+  readonly metadata: { name: 'golden-frijoles' }
   /** Starts bounded periodic refresh and makes one immediate, deduplicated refresh attempt. */
   initialize(): Promise<FlagProviderRefreshResult>
   /** Makes one bounded, deduplicated refresh attempt without making reads asynchronous. */
@@ -342,7 +342,7 @@ export function createFlagProvider(config: FlagProviderConfig): FlagProvider {
   }
 
   return {
-    metadata: { name: 'golden-beans' },
+    metadata: { name: 'golden-frijoles' },
     async initialize(): Promise<FlagProviderRefreshResult> {
       if (shutDown) return providerFailure('PROVIDER_FATAL', 'Flag provider has been shut down.')
       if (!initialized) {

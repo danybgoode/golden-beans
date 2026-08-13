@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 
 test('governance management is nonexistent while OFF and legacy experiments remain unchanged', async ({ request }) => {

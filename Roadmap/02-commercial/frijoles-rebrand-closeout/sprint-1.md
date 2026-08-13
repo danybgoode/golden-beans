@@ -1,6 +1,6 @@
 # Golden Frijoles rebrand close-out — Sprint 1: Identity, cleanup, and owed rails
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress
 
 ## Build contract (locked before implementation)
 
@@ -118,3 +118,17 @@ Still owed, not part of this smoke: the signals-loop production write proof and 
 first real pod-report share links; both need credentials only Daniel can mint.
 
 If any step fails, note the step number and what you saw — that is the bug report.
+
+## Build evidence (2026-08-13)
+
+- The asserted package/import sweep stopped before writing when its first expected count was wrong
+  (41 files, not 40), then rewrote 54 exact occurrences and proved the old scope absent.
+- Both provider metadata assertions were observed red against the old runtime names, then passed
+  12/12 targeted SDK tests after the provider change.
+- The landing assertions were observed red against production before implementation: the footer
+  still had one `.footer__meta` block and the new canonical mark URL returned 404. The complete
+  15-test landing browser spec passes locally after the cleanup, including all local honesty labels.
+- The mobile helper was mutation-checked with an impossible 440px target floor. After that mutation
+  was reverted, the first real authed run exposed undersized sortable headers plus page overflow on
+  scenario/destination tables. The shared component and table rails were fixed; all eight routes,
+  setup, and teardown now pass (10/10) at 360px and 390px.

@@ -17,7 +17,7 @@
 
 import { useState, useTransition } from 'react'
 import { FormSection, Field } from '@/components/ui/FormSection'
-import { FLAG_CONTEXT_FIELDS, FLAG_ENVIRONMENTS, type FlagEnvironment } from '@golden-beans/sdk'
+import { FLAG_CONTEXT_FIELDS, FLAG_ENVIRONMENTS, type FlagEnvironment } from '@golden-frijoles/sdk'
 import type { FlagEvaluationExplanation } from '@/lib/flag-definition'
 import {
   describeEvaluationOutcome,

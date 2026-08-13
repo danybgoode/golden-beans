@@ -320,7 +320,7 @@ export function DestinationManager({
                 type="url"
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="https://example.com/webhooks/golden-beans"
+                placeholder="https://example.com/webhooks/golden-frijoles"
                 required
               />
             )}

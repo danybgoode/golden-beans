@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 function response(deduplicated = false) {
   return new Response(

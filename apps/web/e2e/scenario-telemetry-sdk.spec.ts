@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createGrowthEngineClient, type ScenarioExecutionTelemetryInput } from '@golden-beans/sdk'
+import { createGrowthEngineClient, type ScenarioExecutionTelemetryInput } from '@golden-frijoles/sdk'
 
 const input: ScenarioExecutionTelemetryInput = {
   scenarioKey: 'checkout_probe',

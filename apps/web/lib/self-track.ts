@@ -1,5 +1,5 @@
 import 'server-only'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 import { getSiteUrl } from './site-url'
 
 // Story 3.1 (commercial-shell/sprint-3.md) — the landing dogfoods the engine: Golden Frijoles is its

@@ -327,7 +327,7 @@ export const STARTER_ADOPTED_EVENT = 'first_event_sent'
  */
 export async function registerStarterFeature(apiKey: string): Promise<void> {
   try {
-    const { createGrowthEngineClient } = await import('@golden-beans/sdk')
+    const { createGrowthEngineClient } = await import('@golden-frijoles/sdk')
     const { getSiteUrl } = await import('./site-url')
     const engine = createGrowthEngineClient({
       baseUrl: getSiteUrl(),

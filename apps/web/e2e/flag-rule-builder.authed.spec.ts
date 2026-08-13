@@ -27,7 +27,7 @@ import {
   MAX_FLAG_CLAUSES,
   explainFlagEvaluation,
   type FlagDefinition,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 function tenantSlug(): string {

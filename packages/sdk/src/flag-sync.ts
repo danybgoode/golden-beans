@@ -48,7 +48,7 @@ export type FlagDefinitionSyncFailure =
 export type FlagDefinitionSyncResult = FlagDefinitionSyncSuccess | FlagDefinitionSyncFailure
 
 export interface FlagDefinitionSyncClientConfig {
-  /** Golden Beans base URL, for example https://growth.example.com. */
+  /** Golden Frijoles base URL, for example https://growth.example.com. */
   baseUrl: string
   /** Dedicated revocable `flag_sync` credential. Keep it in server-only/operator configuration. */
   flagSyncKey: string

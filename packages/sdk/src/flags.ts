@@ -2,7 +2,7 @@
 //
 // This module must remain usable in any JavaScript runtime. It contains no fetch, timers, Node
 // imports, or database assumptions: snapshot transport belongs in flag-provider.ts and definition
-// persistence belongs in Golden Beans. Keeping evaluation pure makes a flag check synchronous even
+// persistence belongs in Golden Frijoles. Keeping evaluation pure makes a flag check synchronous even
 // when the control plane is unavailable.
 
 export const FLAG_CONTRACT_VERSION = 1 as const

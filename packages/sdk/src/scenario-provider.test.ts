@@ -19,6 +19,18 @@ registerHooks({
 
 const { createScenarioProvider } = await import('./scenario-provider.ts')
 
+test('reports the Golden Frijoles scenario-provider identity', () => {
+  const provider = createScenarioProvider({
+    baseUrl: 'https://golden.example',
+    flagReadKey: 'read-key',
+    refreshIntervalMs: 0,
+    fetchImpl: async () => new Response(null, { status: 500 }),
+  })
+
+  assert.deepEqual(provider.metadata, { name: 'golden-frijoles-scenarios' })
+  provider.shutdown()
+})
+
 const NOW = Date.parse('2026-07-29T02:00:00.000Z')
 
 function snapshot(revision = 1, environment = 'production') {

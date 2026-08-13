@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: frijoles-rebrand-closeout
 build_order: 19
 ---
@@ -74,6 +74,24 @@ that was true when written and stale `.claude/worktrees/` copies do not join the
 Build/test/pack → publish new package → clean-install/import the registry artifact → deprecate old
 package → merge the PR (which deploys the new install line) → verify production behavior. Never
 serve a copy-paste command before the package exists; never run a manual Vercel deploy.
+
+### Deliberate survivor inventory
+
+- **Signed delivery contract (A3):** `apps/web/lib/delivery-payload.ts` and the Miyagi-pinned
+  `apps/web/e2e/_fixtures/merchant-lifecycle.fixtures.json` retain the exact
+  `golden_beans.webhook.test` envelope and verification message.
+- **Tenant data (A4):** `golden-beans` / `golden-beans-demo` defaults remain in self-tracking,
+  public-demo, seeds, reserved-slug logic, and tenant-aware specs. They are database identities and
+  may appear when a surface truthfully displays its project slug.
+- **Caller/protocol addresses (A6):** the documented `GOLDEN_BEANS_FLAG_*` consumer env examples;
+  `golden-beans-connector`; existing `x-golden-beans-*` headers and signed scenario-domain strings;
+  and `golden-beans-engine` task attribution remain stable.
+- **Infrastructure/repository addresses (A6):** the `golden-beans` GitHub/Vercel/Supabase project,
+  checkout paths, daemon labels/log paths, notification provenance, and their tests remain named as
+  deployed. Those are locators, not product copy.
+- **Historical artifacts (A7):** dated Roadmap prose and non-deployed design explorations/reference
+  mocks continue to describe the then-current Golden Beans work. Active source/docs around them use
+  Golden Frijoles; stale `.claude/worktrees/` copies remain untouched.
 
 ## Build contract — locked before implementation
 

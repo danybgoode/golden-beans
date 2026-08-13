@@ -28,7 +28,7 @@ golden-beans/
 │   ├── app/api/v1/      ← the engine's public API (track, features/sync, public/*, connector)
 │   ├── lib/             ← the reusable seams (auth, supabase, rate-limit, query libs, flags…)
 │   └── supabase/migrations/  ← expand/contract SQL migrations (applied separately from deploy)
-├── packages/sdk/        ← @golden-beans/sdk — createGrowthEngineClient (the ONLY app→engine path)
+├── packages/sdk/        ← @golden-frijoles/sdk — createGrowthEngineClient (the ONLY app→engine path)
 ├── scripts/             ← CLI tooling (cross-review, seed-*, build-order, sync-* from Miyagi)
 └── Roadmap/             ← product source of truth (poster, ways-of-working, learnings, epics)
 ```
@@ -90,7 +90,7 @@ Before planning or building, read these — they are the source of truth and cha
 ### 1. The growth engine (Supabase-backed ingest/registry/TARS/North Star/experiments) owns telemetry. Never build a parallel pipeline.
 If a feature needs to track an event, define a feature, read a funnel, or compare an experiment, it goes
 through the existing primitives — `/api/v1/track`, `/api/v1/features/sync`, the TARS/North Star/A-B query
-libs (`apps/web/lib/{tars,north-star,ab}*.ts`) — via the real `@golden-beans/sdk` client. Do not insert
+libs (`apps/web/lib/{tars,north-star,ab}*.ts`) — via the real `@golden-frijoles/sdk` client. Do not insert
 directly into `events`/`features` from application code, and do not stand up a second event table or a
 bespoke analytics route for something this system already models.
 
