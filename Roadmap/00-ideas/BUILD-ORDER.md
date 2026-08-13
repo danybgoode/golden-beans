@@ -14,10 +14,11 @@
 
 _None._
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (3)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 0/10 stories · risk: High · wave-2026-08-08
+- [Golden Frijoles rebrand close-out](../../02-commercial/frijoles-rebrand-closeout/README.md) — 02 Commercial · 0/5 stories · risk: Low
 
 ## ✅ Shipped (16)
 
@@ -55,4 +56,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 18 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 19 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
