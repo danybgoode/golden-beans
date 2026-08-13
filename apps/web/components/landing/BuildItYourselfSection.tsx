@@ -11,7 +11,7 @@ import { SectionDivider } from '@/components/ui/SectionDivider'
 // against PostHog Desktop, which is announced for Summer 2026 and not a product a reader can buy.
 //
 // The comparison table's left column is therefore "stitch it yourself", not a competitor's name.
-// That is the honest axis: the alternative to Golden Beans is not another product, it is the
+// That is the honest axis: the alternative to Golden Frijoles is not another product, it is the
 // integration work between the good products you already have.
 const rows = [
   ['Your agent knows', "Whatever you've wired up", 'The product context behind the decision'],
@@ -24,10 +24,10 @@ const rows = [
 export function BuildItYourselfSection() {
   return (
     <>
-      <SectionDivider number="⑦" title="Yes, you can build this yourself" />
+      <SectionDivider number={7} title="Yes, you can build this yourself" />
       <section id="build-it-yourself">
         <div className="wrap">
-          <h2 className="section-title">PostHog is great. GrowthBook is great.</h2>
+          <h2 className="section-title">PostHog is great. GrowthBook is great</h2>
           <p className="measure">
             Your warehouse probably works just fine too. Connect them. Normalize the concepts. Give your agent
             safe access. Build approvals. Correlate releases to outcomes. Maintain the glue.
@@ -37,7 +37,7 @@ export function BuildItYourselfSection() {
           <Panel className="cmp-panel">
             <table className="cmp">
               <caption className="sr-only">
-                Stitching the tools you already have, compared with Golden Beans
+                Stitching the tools you already have, compared with Golden Frijoles
               </caption>
               <thead>
                 <tr>
@@ -46,7 +46,7 @@ export function BuildItYourselfSection() {
                   </th>
                   <th scope="col">Stitch it yourself</th>
                   <th scope="col" className="us">
-                    Golden Beans
+                    Golden Frijoles
                   </th>
                 </tr>
               </thead>
@@ -63,7 +63,7 @@ export function BuildItYourselfSection() {
           </Panel>
 
           <p className="takeaway">
-            Golden Beans isn&apos;t another place to analyze your product. It&apos;s the product layer your
+            Golden Frijoles isn&apos;t another place to analyze your product. It&apos;s the product layer your
             agent was missing.
           </p>
         </div>

@@ -1,5 +1,55 @@
 @import '../../../references/design/assets/tokens.css';
 
+/* Two derived kraft surfaces the infomercial band needs and `tokens.css` does
+   not carry. Declared here rather than added to the token file, which is the
+   byte-mirrored design handoff (landing-redesign-v2 D3), and DERIVED from
+   `--kraft` rather than picked by eye so the paper family stays one family if
+   the base ever moves. They are lighter stocks of the same paper: a printed
+   card and the panel it sits on. */
+:root {
+  --kraft-card: color-mix(in srgb, var(--kraft) 55%, white);
+  --kraft-panel: color-mix(in srgb, var(--kraft) 78%, white);
+
+  /* ── The elevation ladder ──────────────────────────────────────────────
+     landing-frijoles-rebrand · Sprint 3, Story 3.2.
+
+     Before this, every raised surface picked its own shadow — `0 24px 60px`,
+     `0 20px 50px`, `0 20px 48px`, `0 18px 46px`, `0 18px 44px`, `0 14px 40px`
+     — six values for what are really three heights. Nobody chose six; each was
+     chosen once, in isolation, by whoever shipped that surface, which is
+     exactly how a design system stops being one. Naming the heights means a
+     new surface picks a ROLE rather than a number, and two things at the same
+     conceptual height cannot drift apart.
+
+     The rungs, by what the surface IS rather than by how big the blur is:
+       raised  — sits on the page ground: a prompt card, an app shell.
+       lifted  — a frame the page is showing you: the agent window.
+       overlay — floats above everything: the shell's nav, its panels.
+     `--elevation-press` is the pressed-control underside, which is a different
+     idea (a physical edge, not a cast shadow) and stays separate on purpose. */
+  --elevation-raised: 0 18px 44px rgb(0 0 0 / 34%);
+  --elevation-lifted: 0 20px 50px rgb(0 0 0 / 45%);
+  --elevation-overlay: 0 20px 50px rgb(0 0 0 / 55%);
+
+  /* ── One motion vocabulary ─────────────────────────────────────────────
+     Same story as the shadows: `.08s`, `.15s`, `.25s` and three easings were
+     scattered across this sheet, so two controls that should feel identical
+     did not. `--ease-out` is for a surface arriving or a colour settling;
+     `--ease-press` is the springier curve, reserved for something that moves
+     under the pointer.
+
+     The product owner's ask was that the site feel smooth rather than jumpy.
+     The single highest-leverage rule for that is not a duration — it is that
+     hover feedback must never change GEOMETRY, because a control that grows on
+     hover reflows its neighbours and the page appears to twitch. So the state
+     layer is colour and shadow only, and `transform` is reserved for the press,
+     where the movement is the point and nothing around it reflows. */
+  --motion-quick: 90ms;
+  --motion-base: 160ms;
+  --ease-out: cubic-bezier(0.2, 0, 0.2, 1);
+  --ease-press: cubic-bezier(0.3, 1.4, 0.6, 1);
+}
+
 html {
   color-scheme: dark;
   scroll-behavior: smooth;
@@ -10,14 +60,110 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── The selection material ───────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.4.
+
+   This used to be an OPAQUE `--gold-hot` fill with the ink inverted to
+   `--roast`, and on a phone it turned selecting a paragraph into a solid gold
+   brick spanning the whole screen. The geometry is not our bug and cannot be
+   fixed in CSS: a selection that includes the trailing block break — which is
+   what the ordinary "select this paragraph" gesture produces, reproduced with
+   a triple-click at 390px in BOTH Chromium and WebKit — leaves no line
+   terminal, so the UA extends every line's highlight to the containing block's
+   content edge. On a phone the containing block IS the viewport.
+
+   What *was* ours is how loud that geometry lands. An opaque fill plus an
+   inverted ink means the extension paints as a slab of colour; a translucent
+   wash over unchanged ink paints as a highlighter stroke, which is what a
+   reader expects to see. So the ink stays put and only the ground is tinted.
+
+   Two rules, not one, because this site has two grounds. A wash tuned for the
+   dark roast is invisible on `--kraft`, and the kraft bands carry real copy
+   (the dividers, the bag label, the infomercial). `color-mix` is deliberate
+   over a hand-mixed rgba: the tint stays tied to the token, so a change to
+   `--gold-hot` cannot leave the selection behind. */
 ::selection {
-  color: var(--roast);
-  background: var(--gold-hot);
+  color: var(--crema);
+  background: color-mix(in srgb, var(--gold-hot) 34%, transparent);
+}
+
+.divider ::selection,
+.divider::selection,
+.baglabel ::selection,
+.baglabel::selection,
+.infomercial ::selection,
+.infomercial::selection {
+  color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 26%, transparent);
 }
 
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--gold-hot);
   outline-offset: 3px;
+}
+
+/* ── A control is not a link ──────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.3 (epic D2).
+
+   THE BUG THIS FIXES, precisely. `tokens.css` styles prose links with
+   `a{color:var(--gold)}` / `a:hover{color:var(--gold-hot)}` and the primary
+   control with `.btn-gold{color:var(--roast)}`. `a:hover` is (0,1,1) and
+   `.btn-gold` is (0,1,0), so on hover an ANCHOR-based gold button took
+   `--gold-hot` ink on a `--gold-hot` face and its label vanished outright —
+   along with the arrow, which strokes `currentColor`. It was invisible on
+   `<button>`-based gold controls, which is exactly why it read in review as
+   "some of the CTAs" rather than as one rule.
+
+   WHY IT IS FIXED HERE AND NOT IN tokens.css. That file is the byte-mirrored
+   design handoff and is not edited (landing-redesign-v2 D3). Correcting it
+   downstream is also the honest place: the defect is an INTERACTION between two
+   correct-in-isolation rules, and this sheet is where this app resolves those.
+
+   WHY IT PINS EVERY STATE RATHER THAN JUST `:hover`. Patching the one state
+   that was reported leaves `:visited` — which UA sheets also colour on anchors —
+   and the next prose-link rule anyone adds. Naming the full state set makes the
+   whole class of "a link rule reached a control" unrepresentable rather than
+   fixed once (CODE-QUALITY.md #2). `:is()` takes the specificity of its most
+   specific argument, so (0,2,0) here outranks `a:hover` by construction and not
+   by source order.
+
+   e2e/landing.browser.spec.ts hovers a real gold CTA and asserts the RENDERED
+   contrast, so this cannot regress silently — a stylesheet assertion would pass
+   on a rule that some later selector out-specifies. */
+:is(
+  .btn-gold,
+  .btn-gold:link,
+  .btn-gold:visited,
+  .btn-gold:hover,
+  .btn-gold:focus,
+  .btn-gold:focus-visible,
+  .btn-gold:active
+) {
+  color: var(--roast);
+}
+
+:is(.btn-ghost, .btn-ghost:link, .btn-ghost:visited) {
+  color: var(--gold);
+}
+
+/* The ghost variant's hover was already correct — ink and border move together.
+   It is restated so the two variants are read side by side, and so a future
+   edit to one is visibly a decision about both. */
+:is(.btn-ghost:hover, .btn-ghost:focus, .btn-ghost:focus-visible, .btn-ghost:active) {
+  color: var(--gold-hot);
+  border-color: var(--gold-hot);
+}
+
+:is(
+  .btn-mini,
+  .btn-mini:link,
+  .btn-mini:visited,
+  .btn-mini:hover,
+  .btn-mini:focus,
+  .btn-mini:focus-visible,
+  .btn-mini:active
+) {
+  color: var(--crema);
 }
 
 .sr-only {
@@ -209,7 +355,7 @@ body {
 }
 
 /* Brand mark — Lucide's bean silhouette, treated as a small stamped gold ingot. */
-.golden-bean-mark {
+.golden-frijol-mark {
   --bean-size: 28px;
   position: relative;
   display: inline-grid;
@@ -220,7 +366,7 @@ body {
   isolation: isolate;
 }
 
-.golden-bean-mark svg {
+.golden-frijol-mark svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -229,24 +375,24 @@ body {
   stroke-linejoin: round;
 }
 
-.golden-bean-mark__depth {
+.golden-frijol-mark__depth {
   color: var(--gold-deep);
   fill: var(--gold-deep);
   transform: translateY(2px);
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.42));
 }
 
-.golden-bean-mark__face {
+.golden-frijol-mark__face {
   color: var(--gold-hot);
   fill: var(--mark-gold);
   filter: drop-shadow(0 1px 0 rgba(255, 244, 220, 0.38)) drop-shadow(0 3px 2px rgba(20, 14, 6, 0.35));
 }
 
-.golden-bean-mark__face path:last-child {
+.golden-frijol-mark__face path:last-child {
   stroke: var(--gold-deep);
 }
 
-.golden-bean-mark__glint {
+.golden-frijol-mark__glint {
   position: absolute;
   z-index: 2;
   width: 24%;
@@ -705,6 +851,38 @@ body {
   flex-wrap: wrap;
 }
 
+/* ── The section stamp ─────────────────────────────────────────────────────
+   landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4).
+
+   Replaces the `①`-`⑩` glyphs `.divider .num` used to set at 12px. The glyph
+   was illegible for a structural reason, not a sizing one: the enclosing ring
+   is part of the character, so the digit inside it renders at roughly a third
+   of the nominal font size and scaling the type scales the ring with it. Drawn
+   as a real disc, the ring is a border and the numeral gets the whole em box.
+
+   Materially this is the packaging family (kraft ground, `--stamp` ink, the
+   fibre texture already on `.divider`), so it reads as an ink stamp on a paper
+   band rather than as a UI chip that wandered in from the product surface. The
+   inset highlight is the paper showing through where a rubber stamp presses
+   least — the same trick `.roundstamp` uses on the bag label, kept consistent
+   on purpose so the two read as one system. */
+.divider__stamp {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--stamp-dim);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--stamp);
+  box-shadow: inset 0 1px 2px rgb(255 244 220 / 35%);
+}
+
 .divider .tag {
   margin-left: 0;
   max-width: 100%;
@@ -1005,7 +1183,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--elevation-overlay);
 }
 
 .product-shell__header nav a,
@@ -1062,7 +1240,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--elevation-overlay);
 }
 
 .product-shell__sections-panel ul {
@@ -1122,7 +1300,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--elevation-overlay);
 }
 
 .agent-rail__panel summary {
@@ -2047,17 +2225,6 @@ a.stat-card:hover {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  .gb-loader__dot,
-  .cursor {
-    animation: none;
-  }
-}
-
 /* ============================================================================
    LANDING V2 — landing-redesign-v2 · Sprint 1, Story 1.3
    ============================================================================
@@ -2216,7 +2383,7 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--espresso);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--elevation-raised);
 }
 
 .prompt-card--center {
@@ -2343,7 +2510,7 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.32);
+  box-shadow: var(--elevation-raised);
 }
 
 .app-bar {
@@ -2657,4 +2824,805 @@ a.stat-card:hover {
   .proof-block + .proof-block {
     padding-top: 40px;
   }
+}
+
+/* ============================================================================
+   GOLDEN FRIJOLES — the product-feel surfaces
+   landing-frijoles-rebrand · Sprint 2
+   ============================================================================
+   Every device the Frijoles mockup adds, as classes. The mockup is built
+   entirely from inline styles and `check-design-drift.mjs` refuses those in
+   `components/landing` (landing-redesign-v2 D3), which is the reason this
+   block exists at all rather than the markup carrying its own geometry.
+
+   Mobile-first throughout: the base case is the phone, and the `min-width`
+   queries at the end of this block only add columns and space. */
+
+/* ── The chat thread (hero, §2) ─────────────────────────────────────────────
+   The conversation shape, as distinct from `.agent-body`'s tool-call log. Both
+   live inside `.agent-win`; only the body vocabulary differs. */
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 14px;
+}
+
+.chat-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* The asymmetry is the whole legibility device — who is speaking is carried by
+   which side the bubble hangs from, so neither bubble needs a name label. The
+   padding on the opposite side is what stops a long message filling the width
+   and destroying that signal. */
+.chat-row--agent {
+  padding-right: 6%;
+}
+
+.chat-row--user {
+  justify-content: flex-end;
+  padding-left: 14%;
+}
+
+.chat-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--gold-hot);
+  font: 800 10px var(--mono);
+}
+
+.chat-bubble {
+  max-width: 88%;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--espresso);
+  font-size: 13.5px;
+}
+
+.chat-row--user .chat-bubble {
+  background: var(--roast-2);
+  border-color: var(--next-line);
+}
+
+.chat-bubble strong {
+  color: var(--crema);
+}
+
+.chat-thread__foot {
+  padding: 0 14px 14px;
+}
+
+/* ── The context card ───────────────────────────────────────────────────────
+   What Golden Frijoles contributed. Deliberately NOT a bubble: a third party's
+   artefact in a two-party conversation, so it reads as something handed over
+   rather than as a second assistant speaking. The gold left edge is the same
+   marker `.tool` uses for an agent's own tool call — one vocabulary for "this
+   came from the engine". */
+.context-card {
+  margin: 0 6% 0 38px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 10px;
+  background: var(--roast);
+  overflow: hidden;
+}
+
+.context-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.context-body {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.context-body small {
+  display: block;
+  margin-top: 3px;
+  color: var(--dim);
+}
+
+.context-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── The platform pills ─────────────────────────────────────────────────────
+   Replace the status chip when a frame is showing "this works wherever you
+   already talk to an agent" rather than "this is/isn't live". */
+.agent-platforms {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.platform-pill {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  font: 600 9px var(--mono);
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.platform-pill--active {
+  border-color: var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  color: var(--gold-hot);
+}
+
+/* ── The infomercial band ───────────────────────────────────────────────────
+   Family 1 (kraft + foil), used at full volume exactly once. It is the same
+   material as the dividers and the bag label, so the joke lands as part of the
+   packaging rather than as a different website. */
+.infomercial {
+  padding: 46px 0;
+  border-top: 2px dashed var(--stamp-dim);
+  border-bottom: 2px dashed var(--stamp-dim);
+  background-color: var(--kraft);
+  background-image: var(--kraft-fibers);
+  color: var(--stamp);
+}
+
+.infomercial__lede {
+  max-width: 820px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.infomercial__eyebrow {
+  font: 800 12px var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* `clamp` rather than a breakpoint ladder: this is the one headline on the
+   page whose job is to be absurdly large, and it should reach that size as
+   soon as the viewport allows rather than in three steps. */
+.infomercial__headline {
+  margin: 12px 0 18px;
+  font-weight: 900;
+  font-stretch: 112%;
+  font-size: clamp(30px, 6vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.infomercial__pitch {
+  max-width: 680px;
+  margin: 0 auto;
+  font-size: 17px;
+}
+
+.infomercial__footnote {
+  margin-top: 10px;
+  font: 500 10px var(--mono);
+  color: var(--stamp-dim);
+}
+
+.infomercial__card {
+  padding: 24px;
+  border: 2px solid var(--stamp);
+  border-radius: 8px;
+  background: var(--kraft-card);
+}
+
+/* Three fixed angles, one per position. A static rotation is a printed-card
+   affectation, not motion, so `prefers-reduced-motion` has no opinion on it —
+   and it is a class rather than an inline transform because the landing rail
+   forbids inline styles. */
+.infomercial__card--1 {
+  transform: rotate(-1deg);
+}
+
+.infomercial__card--2 {
+  transform: rotate(1deg);
+}
+
+.infomercial__card--3 {
+  transform: rotate(-0.5deg);
+}
+
+.infomercial__card-kicker {
+  font: 800 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.infomercial__card-headline {
+  margin: 10px 0;
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1.05;
+}
+
+.infomercial__testimonials {
+  margin-top: 34px;
+  padding: 24px;
+  border: 3px double var(--stamp);
+  border-radius: 8px;
+  background: var(--kraft-panel);
+}
+
+.infomercial__testimonials-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.infomercial__testimonials-title {
+  margin-top: 6px;
+  font-size: 24px;
+}
+
+.infomercial__quote {
+  margin: 0;
+  font-size: 15px;
+}
+
+.infomercial__quote cite {
+  display: block;
+  margin-top: 6px;
+  font: 500 11px var(--mono);
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stamp-dim);
+}
+
+.infomercial__close {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.infomercial__price {
+  font: 900 13px var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.infomercial__price s {
+  color: var(--stamp-dim);
+}
+
+.infomercial__spots {
+  margin: 8px 0 16px;
+  font-weight: 900;
+  font-size: 22px;
+}
+
+/* The band's own CTA. It keeps `.btn`'s geometry and the pressed-underside
+   shadow, in kraft ink — the control ink rail at the top of this file pins
+   `.btn-gold`/`.btn-ghost`, and this variant declares its own for the same
+   reason: a prose-link rule must never be able to reach it. */
+:is(
+  .btn-stamp,
+  .btn-stamp:link,
+  .btn-stamp:visited,
+  .btn-stamp:hover,
+  .btn-stamp:focus,
+  .btn-stamp:focus-visible,
+  .btn-stamp:active
+) {
+  background: var(--stamp);
+  color: var(--kraft);
+  box-shadow: 0 3px 0 var(--stamp-dim);
+}
+
+/* `black`, not `#000`: this sheet's material system is token- and keyword-only, and a raw hex is
+   how a one-off colour becomes a second palette nobody knows is a palette. The guard sweeps .tsx
+   for raw hex but not this file, so the discipline here is by convention — which is exactly why it
+   needed a reviewer to catch (PR #95). Mixing toward black rather than naming a darker stamp keeps
+   the pressed state tied to `--stamp`: change the ink and the press follows. */
+:is(.btn-stamp:hover, .btn-stamp:focus-visible) {
+  background: color-mix(in srgb, var(--stamp) 88%, black);
+}
+
+.btn-stamp:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--stamp-dim);
+}
+
+/* ── The resilience drills ──────────────────────────────────────────────────*/
+.drill-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 26px;
+}
+
+.drill-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The honest gate badge sits between the copy and the illustration, not at the
+   bottom of the card: a reader who stops at the picture must have met it. */
+.drill-card__gate {
+  margin-top: 14px;
+}
+
+.drill-visual {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--espresso);
+}
+
+.meter-row {
+  display: grid;
+  grid-template-columns: 105px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font: 500 11px var(--mono);
+}
+
+.meter-row:last-of-type {
+  border-bottom: 0;
+}
+
+.meter {
+  height: 7px;
+  border-radius: 99px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gold);
+}
+
+/* A bounded set, because these are fixed illustration values. A computed width
+   belongs in /app's RolloutBar, where the number comes from the database. */
+.meter--72 {
+  width: 72%;
+}
+
+.meter--84 {
+  width: 84%;
+}
+
+.meter--92 {
+  width: 92%;
+}
+
+.status-ok {
+  color: var(--green);
+}
+
+.status-warn {
+  color: var(--gold-hot);
+}
+
+.drill-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.drill-action {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.drill-action svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+/* ── The shared plan + collaboration strip (§4, §5) ─────────────────────────*/
+.shared-plan {
+  padding: 15px;
+  border: 1px solid var(--gold-deep);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--gold) 5%, transparent);
+}
+
+.shared-plan__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shared-plan__title {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.shared-plan p {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.shared-plan__result {
+  color: var(--crema);
+}
+
+.collab-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.collab-cell {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--espresso);
+}
+
+.collab-cell span {
+  font: 600 9px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.collab-cell strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.decision-row {
+  margin-top: 15px;
+}
+
+/* ── The journey comparison (§5) ────────────────────────────────────────────
+   Wider than a phone on purpose. It scrolls inside its own box via the
+   `.scroll-x` rail at the top of this file — the page body never scrolls
+   sideways, which is what e2e/mobile-heuristics.browser.spec.ts measures. */
+.journey-scroll {
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.journey-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-width: 620px;
+}
+
+.journey-col {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.journey-col--after {
+  border-color: var(--next-line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 6%, transparent), var(--card));
+}
+
+.journey-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.journey-path {
+  display: grid;
+  gap: 7px;
+}
+
+.journey-node {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--espresso);
+  font-size: 12px;
+}
+
+.journey-col--after .journey-node {
+  border-color: var(--next-line);
+}
+
+.journey-node__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--gold);
+}
+
+.journey-node small {
+  display: block;
+  margin-top: 2px;
+  color: var(--dim);
+}
+
+.journey-arrow {
+  display: block;
+  height: 12px;
+  margin-left: 21px;
+  border-left: 1px dashed var(--dim-2);
+}
+
+.mobile-hint {
+  margin-bottom: 8px;
+  font: 600 9px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+@media (min-width: 640px) {
+  .infomercial {
+    padding: 62px 0;
+  }
+
+  .infomercial__card,
+  .infomercial__testimonials {
+    padding: 24px;
+  }
+
+  .chat-thread {
+    padding: 18px;
+  }
+
+  .chat-thread__foot {
+    padding: 0 18px 18px;
+  }
+
+  .meter-row {
+    grid-template-columns: 130px 1fr auto;
+  }
+}
+
+@media (min-width: 760px) {
+  .drill-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .collab-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Above this width the comparison fits without scrolling and the swipe hint is
+   a lie, so it goes. Kept in step with `.journey-compare`'s `min-width` plus
+   the page gutters. */
+@media (min-width: 700px) {
+  .mobile-hint {
+    display: none;
+  }
+}
+
+/* Below it, the window bar cannot hold both a title and three pills without one
+   of them wrapping into the other. The TITLE wins: it names what the frame is,
+   and the pills are saying "this works in whichever agent you use" — a claim
+   the hero's own copy makes one column over ("Works with Claude and ChatGPT").
+   Dropping them on a phone loses nothing the reader was not just told.
+   Sprint 2's acceptance called for exactly this and the rule was missing until
+   cross-family review of PR #95 caught it. */
+@media (max-width: 699px) {
+  .agent-platforms {
+    display: none;
+  }
+}
+
+/* ============================================================================
+   MATERIAL AND MOTION — landing-frijoles-rebrand · Sprint 3
+   ============================================================================
+   The elevation and motion tokens are declared at the top of this file, next to
+   the palette they belong with. What follows is where they are APPLIED, plus
+   the two rules that actually make a page feel settled rather than twitchy.
+
+   `tokens.css` is the byte-mirrored design handoff and is not edited
+   (landing-redesign-v2 D3), so the two surfaces whose shadow is declared there
+   — `.agent-win` and `.baglabel` — are pulled onto the ladder here instead.
+   Both are the same idea: a frame the page is holding up for you to look at. */
+.agent-win,
+.baglabel {
+  box-shadow: var(--elevation-lifted);
+}
+
+/* ── Hover changes colour, never geometry ────────────────────────────────────
+   The single highest-leverage rule for "smooth, not jumpy". A control that
+   grows or shifts on hover reflows whatever sits beside it, and on a dense page
+   that reads as the layout flinching under the pointer. So the hover state is a
+   state layer — background, border, shadow — and `transform` is reserved for
+   the press, where the movement IS the feedback and the element returns to
+   exactly where it started.
+
+   Durations come off the two tokens rather than each control naming its own,
+   which is what stops the nav CTA and the pricing CTA feeling like different
+   buttons. */
+/* `.btn` is NOT in the `:where()` group below, and that pair is the whole point.
+   `:where()` has specificity 0 by design — a rail any component may step over — but `tokens.css`
+   already declares `.btn { transition: … .08s … .15s … }` at (0,1,0), so a zero-specificity rule
+   loses to it and the primary control kept its own hand-written durations while this block claimed
+   to have unified them. The comment above said "durations come off the two tokens rather than each
+   control naming its own", and for the one control that matters most it was false.
+
+   Caught in cross-family review of PR #95. The reviewer's conclusion — that reduced motion was
+   broken — was wrong: `tokens.css` zeroes `.btn` itself under the preference, verified by rendering
+   (`transition-property: none` with the media query on). The specificity observation underneath it
+   was right, and it is the one that mattered.
+
+   So `.btn` gets its own (0,1,0) rule, and everything with no competing token rule stays on the
+   zero-specificity rail. */
+.btn {
+  transition:
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    color var(--motion-base) var(--ease-out);
+}
+
+:where(.btn-mini, .platform-pill, .icon-link, .tier, .panel) {
+  transition:
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    color var(--motion-base) var(--ease-out);
+}
+
+.btn:active {
+  transition:
+    transform var(--motion-quick) var(--ease-press),
+    box-shadow var(--motion-quick) var(--ease-press);
+}
+
+/* ── Space is reserved before the content arrives ────────────────────────────
+   The other half of "not jumpy", and the half that is invisible until you
+   watch a cold load on a slow connection. Each of these is a box whose contents
+   settle AFTER first paint — an icon font swap, a lazily-decoded SVG, a client
+   island hydrating — and without a floor the surrounding text jumps upward as
+   each one resolves.
+
+   `min-height` rather than `height`: these are floors, not cages. Content that
+   legitimately needs more room still gets it; what is prevented is the box
+   starting at zero. */
+.golden-frijol-mark,
+.chat-avatar,
+.journey-node__icon,
+.divider__stamp {
+  contain: layout paint;
+}
+
+.surface-note {
+  min-height: 1.4em;
+}
+
+/* An `<svg>` inside a control must not be able to change the control's height
+   as it decodes. `.btn` already has `min-height: 44px` from the tap-target
+   rail; this pins the glyph itself so the label's baseline cannot move. */
+:where(.btn, .btn-mini, .drill-action, .journey-node, .icon-link) svg {
+  flex: 0 0 auto;
+}
+
+/* ============================================================================
+   REDUCED MOTION — one block, and it is LAST on purpose
+   ============================================================================
+   landing-frijoles-rebrand · Sprint 3.
+
+   ── Why it lives at the end of the file ────────────────────────────────────
+   It is a RESET, and a reset that can be outranked is not one. It used to sit
+   mid-file where the original block happened to be, and `.btn-stamp:active`
+   — declared ~900 lines later at the same specificity — quietly won, so the
+   infomercial CTA still pressed down for a reader who had asked for no motion.
+   Nothing about the rule was wrong; it was in the wrong place, which is the
+   kind of defect no amount of care inside the rule can prevent. Caught in
+   cross-family review of PR #95. Last position means any future `:active`
+   transform anywhere above is covered by construction rather than by whoever
+   adds it remembering this block exists.
+
+   ── Why it is ONE block ────────────────────────────────────────────────────
+   Sprint 3 briefly had two, with a comment in the second claiming it had merged
+   into the first — a comment false about its own diff (CODE-QUALITY.md #3), and
+   how the two drift: the next person extends whichever they find. Also caught
+   in review, one round earlier.
+
+   Everything the motion tokens drive is switched off at the SOURCE by zeroing
+   the tokens, so a rule added later that uses them needs no edit here. The rest
+   are the ones that do not go through a token: the page's smooth scroll, two
+   keyframe animations, and the pressed-control transforms.
+
+   `e2e/landing.browser.spec.ts` asserts the OUTCOME — that nothing on the page
+   transitions or animates with the preference set — because that is what has to
+   hold however this file is organised. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-base: 0ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  .gb-loader__dot,
+  .cursor {
+    animation: none;
+  }
+
+  /* Every pressed-control transform in this sheet, named together so the set is
+     visible in one place rather than inferred. */
+  .btn:active,
+  .btn-gold:active,
+  .btn-ghost:active,
+  .btn-stamp:active {
+    transform: none;
+  }
+}
+
+/* A picture of a control, not a control. Keeps `.btn`'s geometry and colour so
+   the illustration reads as the real product UI, and drops every signal that
+   says "you may press this": the pointer cursor, the hover state layer, and the
+   press. Paired with `aria-hidden` on its container — the two halves have to
+   ship together, and the first version shipped only the semantic half, which
+   left a mouse user invited to click something a screen-reader user could no
+   longer even find (PR #95 review). */
+.btn--illustration {
+  cursor: default;
+}
+
+.btn--illustration:hover,
+.btn--illustration:focus,
+.btn--illustration:active {
+  background: inherit;
+  border-color: inherit;
+  color: inherit;
+  transform: none;
+}
+
+.btn-gold.btn--illustration:hover {
+  background: var(--gold);
+}
+
+.btn-ghost.btn--illustration:hover {
+  border-color: var(--gold);
+  color: var(--gold);
 }

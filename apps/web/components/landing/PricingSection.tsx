@@ -31,10 +31,10 @@ export function PricingSection() {
 
   return (
     <>
-      <SectionDivider number="⑩" title="Pricing" />
+      <SectionDivider number={10} title="Pricing" />
       <section className="band" id="pricing">
         <div className="wrap pricing">
-          <h2 className="section-title">Pricing that doesn&apos;t require a meeting.</h2>
+          <h2 className="section-title">Pricing that doesn&apos;t require a meeting</h2>
           <p className="measure measure--narrow pricing__intro">
             Start with one project for $0. Bring the rest of the company when they inevitably ask where you
             got the numbers.
@@ -46,7 +46,7 @@ export function PricingSection() {
               <p className="kicker">A handful</p>
               <p className="tier__price">$0</p>
               <p className="card-copy">
-                One project. Enough Golden Beans to find out whether we&apos;re onto something.
+                One project. Enough Golden Frijoles to find out whether we&apos;re onto something.
               </p>
               <ul className="plain-list">
                 <li>Full product context</li>

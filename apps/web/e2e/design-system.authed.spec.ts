@@ -7,7 +7,7 @@ function tenantSlug() {
   return slug
 }
 
-test('signed-in pages inherit the responsive Golden Beans product shell', async ({ page }, testInfo) => {
+test('signed-in pages inherit the responsive Golden Frijoles product shell', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   const response = await page.goto('/app')
   expect(response?.status()).toBe(200)

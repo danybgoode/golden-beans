@@ -25,9 +25,9 @@ test('the workshop tells the agent it is NOT connected to a workspace', async ({
   const body = await (await request.get('/northstar-self-serve.md')).text()
 
   // The named failure mode: an agent reads a workshop script and then tells its human the results
-  // have been saved to their Golden Beans workspace. Both halves are asserted — that the document
+  // have been saved to their Golden Frijoles workspace. Both halves are asserted — that the document
   // states the disconnection, and that it says the summary was not persisted.
-  expect(body).toContain('NOT connected to a Golden Beans workspace')
+  expect(body).toContain('NOT connected to a Golden Frijoles workspace')
   expect(body).toContain('Nothing has been saved.')
 })
 

@@ -11,7 +11,7 @@ test('the /llms.txt manifest is served as plain text and lists the public routes
   expect(res.headers()['content-type']).toContain('text/plain')
 
   const body = await res.text()
-  expect(body).toContain('Golden Beans')
+  expect(body).toContain('Golden Frijoles')
   expect(body).toContain('/install')
   expect(body).toContain('/api/v1/public/mcp/c/{token}')
 })

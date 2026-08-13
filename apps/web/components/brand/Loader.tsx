@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { LOADER_PHRASES } from '@/lib/loader-phrases'
 
-export function GoldenBeansLoader({ compact = false }: { compact?: boolean }) {
+export function GoldenFrijolesLoader({ compact = false }: { compact?: boolean }) {
   const [phraseIndex, setPhraseIndex] = useState(0)
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function GoldenBeansLoader({ compact = false }: { compact?: boolean }) {
     <div className={`gb-loader${compact ? ' gb-loader--compact' : ''}`} role="status" aria-live="polite">
       <span className="gb-loader__dot" aria-hidden="true" />
       <p>{LOADER_PHRASES[phraseIndex]}</p>
-      <span className="sr-only">Loading Golden Beans</span>
+      <span className="sr-only">Loading Golden Frijoles</span>
     </div>
   )
 }

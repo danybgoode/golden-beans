@@ -249,7 +249,7 @@ function GovernedAnalysis({ result, canManage }: { result: GovernedSuccess; canM
         </section>
         <p>
           <em>
-            Descriptive counts and basic lift only. Golden Beans does not declare a winner, stop this
+            Descriptive counts and basic lift only. Golden Frijoles does not declare a winner, stop this
             experiment, or change a product flag.
           </em>
         </p>

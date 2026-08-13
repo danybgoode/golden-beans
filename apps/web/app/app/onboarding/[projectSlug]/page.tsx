@@ -84,7 +84,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
         <div className="panel" style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-              ① YOUR API KEY
+              STEP 1 · YOUR API KEY
             </span>
             {plaintextKey && (
               <span className="tag" style={{ color: 'var(--red)', borderColor: 'var(--red)' }}>
@@ -117,7 +117,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
         <div className="panel" style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-              ② PASTE THIS
+              STEP 2 · PASTE THIS
             </span>
           </div>
           <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Your first event</h2>
@@ -150,7 +150,7 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
           <div className="panel" style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-                ③ OPTIONAL — BRING YOUR AGENT
+                STEP 3 · OPTIONAL — BRING YOUR AGENT
               </span>
               <Badge status="live">LIVE</Badge>
             </div>

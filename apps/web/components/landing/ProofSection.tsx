@@ -25,10 +25,10 @@ import { PodReportProof } from './PodReportProof'
 export function ProofSection() {
   return (
     <>
-      <SectionDivider number="⑥" title="Proof" />
+      <SectionDivider number={6} title="Proof" />
       <section className="band" id="proof">
         <div className="wrap">
-          <h2 className="section-title">Leverage should show up in the numbers.</h2>
+          <h2 className="section-title">Leverage should show up in the numbers</h2>
           <p className="takeaway">Otherwise this is just a nice landing page.</p>
 
           <div className="proof-stack">

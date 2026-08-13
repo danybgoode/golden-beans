@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const siteUrl = getSiteUrl()
 
-  const body = `# Golden Beans
+  const body = `# Golden Frijoles
 
 > The product-context layer your own agent operates. Give it the goal your company agreed on and
 > the evidence behind it — telemetry ingest, TARS funnels, North Star metrics and A/B experiments,

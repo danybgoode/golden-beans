@@ -59,7 +59,7 @@ export function ogImageContent() {
             color: '#f5ead6' /* --crema */,
           }}
         >
-          Golden Beans
+          Golden Frijoles
         </div>
         <div
           style={{

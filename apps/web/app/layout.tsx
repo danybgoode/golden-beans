@@ -7,7 +7,7 @@ import './globals.css'
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })
 
-const TITLE = 'Golden Beans — the growth engine your agent operates'
+const TITLE = 'Golden Frijoles — the growth engine your agent operates'
 const DESCRIPTION =
   'Telemetry, TARS funnels, North Star metrics, and A/B experiments — as primitives your agent can operate over MCP.'
 
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title: TITLE,
       description: DESCRIPTION,
       url: siteUrl,
-      siteName: 'Golden Beans',
+      siteName: 'Golden Frijoles',
       type: 'website',
     },
     twitter: {

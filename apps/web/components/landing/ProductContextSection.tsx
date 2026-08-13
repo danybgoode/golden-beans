@@ -60,43 +60,49 @@ const GATED_CATEGORY = 'Risk'
 // experiment, a stress test awaiting a decision). It is not a read of anyone's releases: a real
 // customer's rollouts live behind auth at /app and behind revocable share links, and this page
 // shows no client data, ever (the rule PodReportProof.tsx states at length).
+// `headline:`, not `title:` — these render into a `<div class="release-title">`, which is body
+// content, not a heading. `scripts/check-design-drift.mjs` reads a `title:` literal in a landing
+// component as a heading and holds it to the no-terminal-period rule (epic D7); a release line is a
+// sentence and may legitimately end in one. Renaming the key makes the guard's assumption TRUE
+// rather than a heuristic that happens to hold today — the difference between a rule and a
+// coincidence. Raised in cross-family review of PR #95.
 const releases = [
   {
-    title: 'Checkout v2 — testing with 10% of customers in Mexico',
+    headline: 'Checkout v2 — testing with 10% of customers in Mexico',
     desc: '1 in 10 eligible customers in Mexico sees the new checkout. The other 90% stays on the current version while you measure the difference.',
     status: 'live' as const,
     label: 'TESTING',
   },
   {
-    title: 'Quick Upload — experiment finished, chosen version is live',
+    headline: 'Quick Upload — experiment finished, chosen version is live',
     desc: 'The test is closed. The version you selected has shipped to its intended audience, with the result kept beside the original bet.',
     status: 'live' as const,
     label: 'SHIPPED',
   },
   {
-    title: 'Black Friday readiness — stress test needs your decision',
+    headline: 'Black Friday readiness — stress test needs a read together',
     desc: 'You simulated launch-day traffic before spending the campaign budget. Review the risk, then keep the plan, reduce exposure, or fix the weak point first.',
     status: 'next' as const,
-    label: 'YOUR CALL',
+    label: 'TOGETHER',
   },
 ]
 
 const capabilities = [
   {
     kicker: 'What should we bet on?',
-    title: 'Compare before six weeks disappear.',
+    title: 'Compare before six weeks disappear',
     copy: 'See expected impact, confidence, effort and the cost of waiting.',
     tail: 'Bet with a case',
   },
   {
     kicker: 'Should we ship it?',
-    title: 'Turn the decision into a controlled rollout.',
+    title: 'Turn the decision into a controlled rollout',
     copy: 'You choose who gets it, how much, and when.',
-    tail: 'Your call',
+    tail: 'Together',
   },
   {
     kicker: 'Did it work?',
-    title: 'Measure the bet.',
+    title: 'Measure the bet',
     copy: 'See whether the thing you shipped moved the number it was supposed to. Not whether the launch announcement collected twelve celebratory reactions.',
     tail: null,
   },
@@ -109,12 +115,12 @@ export function ProductContextSection() {
     <>
       {/* Real typographic quotes, not JSX entities: `title` is a string prop, so `&ldquo;` would
           reach the DOM as those six literal characters rather than as a quote mark. */}
-      <SectionDivider number="③" title={'From “I think” to “here’s why”'} />
+      <SectionDivider number={3} title={'From “I think” to “here’s why”'} />
       <section id="product">
         <div className="wrap">
-          <h2 className="section-title">Your agent finally has product context.</h2>
+          <h2 className="section-title">Your agent finally has product context</h2>
           <p className="measure">
-            Golden Beans connects what customers do, what your team ships, what you bet on, and whether it
+            Golden Frijoles connects what customers do, what your team ships, what you bet on, and whether it
             worked.
           </p>
           <p className="takeaway">It already has the receipts.</p>
@@ -132,7 +138,7 @@ export function ProductContextSection() {
 
           <Panel className="section-lead">
             <span className="kicker">What actually happened?</span>
-            <h3 className="card-title">The whole story, in one trail.</h3>
+            <h3 className="card-title">The whole story, in one trail</h3>
             <p className="card-copy">
               See the decision, rollout and result without branches, rebases, or Git archaeology.
             </p>
@@ -152,7 +158,7 @@ export function ProductContextSection() {
                 </span>
               </div>
               <div className="brand">
-                <b>GOLDEN BEANS</b>
+                <b>GOLDEN FRIJOLES</b>
                 <small>WHAT YOUR AGENT GETS TO WORK WITH</small>
               </div>
               <div className="netwt">
@@ -179,21 +185,21 @@ export function ProductContextSection() {
                   the rows were invented — same gap the hero had (PR #92 review). The releases below
                   are a shape, not a read: real ones live behind sign-in. */}
               <SurfaceNote
-                label="In Golden Beans /app · releases"
+                label="In Golden Frijoles /app · releases"
                 detail="Illustration — the product UI, not anyone's real releases"
               />
               <Panel>
                 <p className="panel-label">Release legibility</p>
                 <p className="measure">
                   See what changed in human language: who saw it, what happened, and whether anything still
-                  needs your decision.
+                  needs a read together.
                 </p>
                 <div className="release-list">
                   {releases.map((release) => (
-                    <div className="release-item" key={release.title}>
+                    <div className="release-item" key={release.headline}>
                       <div className="release-top">
                         <div>
-                          <div className="release-title">{release.title}</div>
+                          <div className="release-title">{release.headline}</div>
                           <div className="release-desc">{release.desc}</div>
                         </div>
                         <Badge status={release.status}>{release.label}</Badge>

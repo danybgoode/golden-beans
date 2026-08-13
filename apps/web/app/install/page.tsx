@@ -44,7 +44,7 @@ export default async function InstallPage() {
           <div className="install-stack">
             <Panel className="install-panel">
               <div className="install-panel__heading">
-                <span className="install-panel__label">① CONNECTOR URL</span>
+                <span className="install-panel__label">STEP 1 · CONNECTOR URL</span>
                 <Badge status="live">LIVE</Badge>
               </div>
               <h2>Paste it into Claude</h2>
@@ -102,7 +102,7 @@ export default async function InstallPage() {
 
             <Panel className="install-panel">
               <div className="install-panel__heading">
-                <span className="install-panel__label">③ SDK IMPORT</span>
+                <span className="install-panel__label">STEP 3 · SDK IMPORT</span>
                 <Badge status="live">LIVE</Badge>
               </div>
               <h2>For your engineers</h2>

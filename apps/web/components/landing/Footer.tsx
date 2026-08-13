@@ -30,13 +30,18 @@ export function Footer() {
         <p className="footer__meta">
           Footnote ledger, in order of appearance: every framed surface on this page is labelled above itself
           as either an illustration or a real read, and a test checks that it is — the hero and §2 are
-          illustrated conversations, §3&apos;s release list and §4&apos;s staged proposal are illustrations of
-          the product UI rather than screenshots of anyone&apos;s account · §6 is the only section carrying
-          real numbers: the Pod Report is computed from this repository&apos;s own git history, and the engine
-          read comes from the synthetic demo project, which you can curl at /api/v1/public/north-star · no
-          customer data appears on this page, ever · the MCP connector is read-only, so your agent can read
-          this context but cannot write it · the $49 tier has no billing rail behind it yet and says so where
-          it is priced. If a claim on this page ever stops being checkable, that&apos;s a bug — file it.
+          illustrated conversations, §3&apos;s release list and §4&apos;s release room are illustrations of
+          the product UI rather than screenshots of anyone&apos;s account · the infomercial band is a joke and
+          labels itself as one: the testimonials are invented and say so beside themselves, and the
+          struck-through consultant day rate is there to be struck through · the chaos and security drills are
+          built but not switched on, and each card says so by reading its own switch rather than by us
+          remembering to update a sentence — when either one is turned on, its badge goes away by itself · §6
+          is the only section carrying real numbers: the Pod Report is computed from this repository&apos;s
+          own git history, and the engine read comes from the synthetic demo project, which you can curl at
+          /api/v1/public/north-star · no customer data appears on this page, ever · the MCP connector is
+          read-only, so your agent can read this context but cannot write it · the $49 tier has no billing
+          rail behind it yet and says so where it is priced. If a claim on this page ever stops being
+          checkable, that&apos;s a bug — file it.
         </p>
       </div>
     </footer>

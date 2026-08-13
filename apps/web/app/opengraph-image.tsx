@@ -7,7 +7,7 @@ import { ogImageContent } from '@/lib/og-image-content'
 // because there's no existing design asset in this repo (no apps/web/public/ dir yet, confirmed
 // at plan time) and this convention is the idiomatic Next 15 App Router way to get a real image
 // without one, plus Next wires up og:image:width/height/type automatically from the exports below.
-export const alt = 'Golden Beans — plant signals, grow outcomes'
+export const alt = 'Golden Frijoles — plant signals, grow outcomes'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
