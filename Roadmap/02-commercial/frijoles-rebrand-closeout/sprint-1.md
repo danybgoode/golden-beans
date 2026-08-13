@@ -4,7 +4,7 @@
 
 ## Build contract (locked before implementation)
 
-Follow epic amendments A1–A8 verbatim. In particular: change the SDK/provider identities; do not
+Follow epic amendments A1–A9 verbatim. In particular: change the SDK/provider identities; do not
 change the webhook envelope, tenant slugs, integration env names, or MCP server identity; reuse the
 auth/mobile helpers; publish before deploying the new install line; assert every scripted match.
 
@@ -141,3 +141,12 @@ If any step fails, note the step number and what you saw — that is the bug rep
 - The complete authenticated project passed 44/44 after its required loopback-only
   `SUPABASE_DB_URL` was supplied. The complete landing browser spec passed 15/15, including every
   local honesty assertion after the footer ledger was removed.
+- npm accepted `@golden-frijoles/sdk@0.4.0` with a registry PUT 200 after Daniel completed the
+  security-key challenge. The first scoped publish required creating the free public-package
+  `golden-frijoles` organization (epic A9); npm then reported public visibility, `latest: 0.4.0`,
+  one published version, and the expected 24-file/41.6 kB tarball. After the first-package metadata
+  cache propagated, a new temporary directory installed the named package with zero audit findings;
+  Node loaded the growth-client, flag-provider, and scenario-provider exports, and the installed
+  provider identities were `golden-frijoles` / `golden-frijoles-scenarios`. Only after that proof,
+  npm accepted and served the verified `@golden-beans/sdk@0.1.0` deprecation pointer: “This package
+  moved to `@golden-frijoles/sdk`. Install `@golden-frijoles/sdk` instead.”

@@ -75,6 +75,13 @@ Build/test/pack → publish new package → clean-install/import the registry ar
 package → merge the PR (which deploys the new install line) → verify production behavior. Never
 serve a copy-paste command before the package exists; never run a manual Vercel deploy.
 
+**A9 — The new npm scope is a free public-package organization owned by Daniel.**
+The first publish proved that npm does not mint an arbitrary scope from a package name: it rejected
+`@golden-frijoles/sdk` until the `golden-frijoles` organization existed. Daniel authorized the
+required outward action, and the organization was created on **2026-08-13** under `danybgoode` on
+npm's free unlimited-public-packages plan. No private-package subscription or additional member
+access was added.
+
 ### Deliberate survivor inventory
 
 - **Signed delivery contract (A3):** `apps/web/lib/delivery-payload.ts` and the Miyagi-pinned
@@ -141,7 +148,7 @@ footer ledger, local honesty labels, and OFF badges on `https://goldenfrijoles.c
 - [ ] `sprint-1.md` carries a fool-proof smoke walkthrough with real URLs
 - [ ] `@golden-frijoles/sdk@0.4.0` installs/imports from a clean directory; §9 matches it
 - [ ] `@golden-beans/sdk@0.1.0` is deprecated only after the new package proof
-- [ ] Package/provider decisions A1–A8 are reflected in code/docs; every survivor is named
+- [ ] Package/provider decisions A1–A9 are reflected in code/docs; every survivor is named
 - [ ] No public surface says “Golden Beans”; technical survivors from A3/A4/A6 are enumerated
 - [ ] Footer ledger and unused CSS are gone; local honesty assertions still pass
 - [ ] Authed mobile sweep reaches real signed-in routes and has an observed-red record
