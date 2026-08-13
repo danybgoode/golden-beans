@@ -41,6 +41,15 @@ const ENCLOSED_ALPHANUMERIC = /[①-⓿㉑-㊿]/u;
 // line-scoped rule would silently pass both — the failure CODE-QUALITY rule 5 calls worse than no
 // test.
 const HEADING_BLOCK = /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/g;
+
+// ── `title:` in a landing component MEANS "renders as a heading" ──────────────────────────────
+// This rule cannot see where a data literal ends up, so it asserts a convention rather than a fact,
+// and the convention has to be one the code actually follows or the rule will one day reject a
+// legitimate punctuated string. Raised in cross-family review of PR #95, and the answer was to make
+// it true: `ProductContextSection`'s release lines — the one place `title:` held body copy — are
+// now `headline:`. So in `components/landing`, a `title:` literal is heading text and is held to
+// D7; any other key is not looked at. Body content that needs a terminal period uses a different
+// key name, and the comment on that array says so.
 const TITLE_LITERAL = /\btitle\s*[:=]\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
 
 /** True when a heading's visible text ends in a full stop (and not an ellipsis). */

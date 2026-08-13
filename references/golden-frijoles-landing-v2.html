@@ -269,7 +269,15 @@ Then give me two choices:
 
 If I choose the workshop, read https://goldenfrijoles.com/northstar-self-serve.md and facilitate it one question at a time. Use my answers, challenge vague language, and keep the goal measurable. At the end, summarize the proposed North Star, its inputs, guardrails, assumptions, and the first things we should test.
 
-Do not claim you are connected to my Golden Frijoles workspace unless I have actually connected the MCP. If we finish useful work, explain that connecting Golden Frijoles is how I can save it and give you ongoing product context.</div>
+Do not claim you are connected to my Golden Frijoles workspace unless I have actually connected the MCP. The Golden Frijoles MCP connector is read-only: even once connected you can read my product context, but you cannot write my North Star or save this conversation. If we finish useful work, say so plainly — tell me the summary lives only in this chat, and that I can set the North Star up myself in Golden Frijoles so that you have it as ongoing context next time.</div>
+<!-- ^ CORRECTED 2026-08-13 (landing-frijoles-rebrand, cross-family review of PR #95).
+     The mockup shipped with "connecting Golden Frijoles is how I can save it", which tells a
+     reader's agent that connecting will persist their workshop output. The connector is READ-ONLY,
+     so it will not. `lib/landing-prompts.ts` has carried the corrected wording since
+     landing-redesign-v2; this file had not, and a signed-off mock is exactly the artifact someone
+     copies from next time. Reference mocks are inspiration, never scope — but an inspiration
+     containing a false capability claim is a trap, so it is fixed here too rather than left to be
+     re-derived. -->
     </div>
   </div>
 </section>

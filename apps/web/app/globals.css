@@ -2225,38 +2225,6 @@ a.stat-card:hover {
   }
 }
 
-/* ── Reduced motion — ONE block, and this is it ──────────────────────────────
-   landing-frijoles-rebrand · Sprint 3, Story 3.1 merged its rules in here
-   rather than appending a second `prefers-reduced-motion` block at the end of
-   the file. It briefly DID append one, with a comment claiming it had not —
-   which is the comment-asserting-a-false-property failure CODE-QUALITY.md #3
-   names, and it is how the two drift apart: the next person extends whichever
-   one they happen to find. Cross-family review of PR #95 caught the split.
-
-   Everything the motion tokens drive is switched off at the SOURCE by zeroing
-   the tokens, so a rule added later that uses them is covered without editing
-   this block. The three below are the ones that do not go through a token:
-   the page's own smooth scroll, and two keyframe animations. */
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-quick: 0ms;
-    --motion-base: 0ms;
-  }
-
-  html {
-    scroll-behavior: auto;
-  }
-
-  .gb-loader__dot,
-  .cursor {
-    animation: none;
-  }
-
-  .btn:active {
-    transform: none;
-  }
-}
-
 /* ============================================================================
    LANDING V2 — landing-redesign-v2 · Sprint 1, Story 1.3
    ============================================================================
@@ -3573,4 +3541,59 @@ a.stat-card:hover {
    rail; this pins the glyph itself so the label's baseline cannot move. */
 :where(.btn, .btn-mini, .drill-action, .journey-node, .icon-link) svg {
   flex: 0 0 auto;
+}
+
+/* ============================================================================
+   REDUCED MOTION — one block, and it is LAST on purpose
+   ============================================================================
+   landing-frijoles-rebrand · Sprint 3.
+
+   ── Why it lives at the end of the file ────────────────────────────────────
+   It is a RESET, and a reset that can be outranked is not one. It used to sit
+   mid-file where the original block happened to be, and `.btn-stamp:active`
+   — declared ~900 lines later at the same specificity — quietly won, so the
+   infomercial CTA still pressed down for a reader who had asked for no motion.
+   Nothing about the rule was wrong; it was in the wrong place, which is the
+   kind of defect no amount of care inside the rule can prevent. Caught in
+   cross-family review of PR #95. Last position means any future `:active`
+   transform anywhere above is covered by construction rather than by whoever
+   adds it remembering this block exists.
+
+   ── Why it is ONE block ────────────────────────────────────────────────────
+   Sprint 3 briefly had two, with a comment in the second claiming it had merged
+   into the first — a comment false about its own diff (CODE-QUALITY.md #3), and
+   how the two drift: the next person extends whichever they find. Also caught
+   in review, one round earlier.
+
+   Everything the motion tokens drive is switched off at the SOURCE by zeroing
+   the tokens, so a rule added later that uses them needs no edit here. The rest
+   are the ones that do not go through a token: the page's smooth scroll, two
+   keyframe animations, and the pressed-control transforms.
+
+   `e2e/landing.browser.spec.ts` asserts the OUTCOME — that nothing on the page
+   transitions or animates with the preference set — because that is what has to
+   hold however this file is organised. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-base: 0ms;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  .gb-loader__dot,
+  .cursor {
+    animation: none;
+  }
+
+  /* Every pressed-control transform in this sheet, named together so the set is
+     visible in one place rather than inferred. */
+  .btn:active,
+  .btn-gold:active,
+  .btn-ghost:active,
+  .btn-stamp:active {
+    transform: none;
+  }
 }

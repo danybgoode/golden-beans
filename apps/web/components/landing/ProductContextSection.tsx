@@ -60,21 +60,27 @@ const GATED_CATEGORY = 'Risk'
 // experiment, a stress test awaiting a decision). It is not a read of anyone's releases: a real
 // customer's rollouts live behind auth at /app and behind revocable share links, and this page
 // shows no client data, ever (the rule PodReportProof.tsx states at length).
+// `headline:`, not `title:` — these render into a `<div class="release-title">`, which is body
+// content, not a heading. `scripts/check-design-drift.mjs` reads a `title:` literal in a landing
+// component as a heading and holds it to the no-terminal-period rule (epic D7); a release line is a
+// sentence and may legitimately end in one. Renaming the key makes the guard's assumption TRUE
+// rather than a heuristic that happens to hold today — the difference between a rule and a
+// coincidence. Raised in cross-family review of PR #95.
 const releases = [
   {
-    title: 'Checkout v2 — testing with 10% of customers in Mexico',
+    headline: 'Checkout v2 — testing with 10% of customers in Mexico',
     desc: '1 in 10 eligible customers in Mexico sees the new checkout. The other 90% stays on the current version while you measure the difference.',
     status: 'live' as const,
     label: 'TESTING',
   },
   {
-    title: 'Quick Upload — experiment finished, chosen version is live',
+    headline: 'Quick Upload — experiment finished, chosen version is live',
     desc: 'The test is closed. The version you selected has shipped to its intended audience, with the result kept beside the original bet.',
     status: 'live' as const,
     label: 'SHIPPED',
   },
   {
-    title: 'Black Friday readiness — stress test needs a read together',
+    headline: 'Black Friday readiness — stress test needs a read together',
     desc: 'You simulated launch-day traffic before spending the campaign budget. Review the risk, then keep the plan, reduce exposure, or fix the weak point first.',
     status: 'next' as const,
     label: 'TOGETHER',
@@ -190,10 +196,10 @@ export function ProductContextSection() {
                 </p>
                 <div className="release-list">
                   {releases.map((release) => (
-                    <div className="release-item" key={release.title}>
+                    <div className="release-item" key={release.headline}>
                       <div className="release-top">
                         <div>
-                          <div className="release-title">{release.title}</div>
+                          <div className="release-title">{release.headline}</div>
                           <div className="release-desc">{release.desc}</div>
                         </div>
                         <Badge status={release.status}>{release.label}</Badge>
