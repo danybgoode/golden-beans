@@ -14,7 +14,7 @@ export type ScenarioOwnerOperationResult =
 
 export type ScenarioOwnerDefinitionContext = {
   definition: ScenarioDefinition
-  faultSummary: ScenarioFaultFlagSummary
+  faultSummary: ScenarioFaultFlagSummary | null
   productionSecurityApproved: boolean
   targetVerified: boolean
 }
@@ -131,12 +131,11 @@ export async function getScenarioOwnerDefinitionContext(
       .maybeSingle(),
   ])
   const faultSummary = summarizeScenarioFaultFlag(flagVersion?.definition)
-  if (approvalError || targetError || flagVersionError || !faultSummary) {
+  if (approvalError || targetError || flagVersionError) {
     console.error('[scenario-owner] definition eligibility read failed', {
       approvalCode: approvalError?.code,
       targetCode: targetError?.code,
       flagVersionCode: flagVersionError?.code,
-      faultSummaryAvailable: faultSummary !== null,
     })
     return null
   }

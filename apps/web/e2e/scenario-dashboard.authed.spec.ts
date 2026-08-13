@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import {
+  readTenantRecord,
+  SCENARIO_FIXTURE_KEY,
+  SCENARIO_TARGET_KEY,
+  SCENARIO_UNDISCLOSED_KEY,
+} from './helpers/authed-fixture'
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
@@ -7,9 +12,7 @@ function tenantSlug(): string {
   return slug
 }
 
-test('a project member can inspect the read-only scenario operating lens while execution is dark', async ({
-  page,
-}) => {
+test('a project member can inspect the tenant-scoped scenario operating lens', async ({ page }) => {
   const slug = tenantSlug()
   await page.goto('/app')
   await expect(page.getByRole('link', { name: 'Scenarios & breakers' })).toBeVisible()
@@ -17,7 +20,9 @@ test('a project member can inspect the read-only scenario operating lens while e
   const response = await page.goto(`/app/scenarios/${slug}`)
   expect(response?.status()).toBe(200)
   await expect(page.getByRole('heading', { name: `Scenarios & breakers — ${slug}` })).toBeVisible()
-  await expect(page.getByText('No scenario targets registered.')).toBeVisible()
+  await expect(page.getByRole('cell', { name: SCENARIO_TARGET_KEY, exact: true })).toBeVisible()
+  await expect(page.getByText(`${SCENARIO_FIXTURE_KEY} v1`, { exact: true }).first()).toBeVisible()
+  await expect(page.getByText(`${SCENARIO_UNDISCLOSED_KEY} v1`, { exact: true }).first()).toBeVisible()
   await expect(page.getByText('No impact snapshots captured.')).toBeVisible()
   await expect(page.getByText('No breaker trips recorded.')).toBeVisible()
 })
