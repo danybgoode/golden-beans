@@ -301,3 +301,44 @@ test('dingbat circled digits are refused like their Enclosed Alphanumeric twins'
     );
   }
 });
+
+test('a title= after a prop containing > is still checked', () => {
+  // The regex form used `[^>'"]` for the attribute run, so it stopped at the first `>` inside a
+  // prop expression and silently dropped every prop after it. A guard that stops looking halfway
+  // through a tag reports success, which is the worst failure mode it has. Second-family reviewer,
+  // PR #95.
+  const sources = [
+    `<SectionDivider render={(x) => x} title="Ends in a period." />`,
+    `<SectionDivider icon={<Icon name="star" />} title="Ends in a period." />`,
+    `<Panel show={count > 0} title="Ends in a period." />`,
+  ];
+  for (const source of sources) {
+    assert.deepEqual(
+      inspectDesignSource(source, { enforceHeadingVoice: true }).map((f) => f.rule),
+      ['heading-period'],
+      source
+    );
+  }
+});
+
+test('a quoted object key is the same declaration as a bare one', () => {
+  assert.deepEqual(
+    inspectDesignSource(`const s = [{ 'title': 'Give it a North Star.' }]`, {
+      enforceHeadingVoice: true,
+    }).map((f) => f.rule),
+    ['heading-period']
+  );
+});
+
+test('a trailing comment is stripped, and a URL is not', () => {
+  // Stripping to end-of-line from `//` fixes the false positive on an explanatory comment, and
+  // introduces a false NEGATIVE on every line containing a protocol if done without the lookbehind
+  // — which is much worse, because it fails quietly.
+  assert.deepEqual(inspectDesignSource(`const c = token; // replacing #000`), []);
+
+  // The URL survives, so a real violation later on the same line is still seen.
+  assert.deepEqual(
+    inspectDesignSource(`<a href="https://github.com/x">#ff0000</a>`).map((f) => f.rule),
+    ['raw-hex']
+  );
+});

@@ -66,6 +66,7 @@ const HEADING_BLOCK = /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/g;
 // now `headline:`. So in `components/landing`, a `title:` literal is heading text and is held to
 // D7; any other key is not looked at. Body content that needs a terminal period uses a different
 // key name, and the comment on that array says so.
+//
 // `title:` (an object key) always counts. `title=` counts only on a COMPONENT — a tag whose name
 // starts uppercase, like `<SectionDivider title="Pricing" />`, where the prop genuinely renders as
 // a heading. On a lowercase HTML tag, `title=` is the tooltip attribute — `<abbr title="For
@@ -73,9 +74,52 @@ const HEADING_BLOCK = /<(h[1-6])\b[^>]*>([\s\S]*?)<\/\1>/g;
 // false positive on correct markup. The two cases are told apart by what precedes the attribute in
 // the same tag, which is why this is applied per opening tag rather than over the whole file.
 // Raised by the second-family reviewer on PR #95.
-const TITLE_KEY = /\btitle\s*:\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
-const COMPONENT_TAG = /<([A-Z][\w.]*)\b((?:[^>'"]|'[^']*'|"[^"]*")*?)\/?>/g;
+//
+// The key may be quoted — `'title':` and `"title":` are the same declaration as `title:`, and a
+// regex that only accepts the bare form lets a data array opt out of the rule by adding quotes.
+const TITLE_KEY = /(?:\btitle|['"]title['"])\s*:\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
 const TITLE_PROP = /\btitle\s*=\s*(?:\{\s*)?(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+const COMPONENT_TAG_OPEN = /<([A-Z][\w.]*)\b/g;
+
+/**
+ * The attribute text of each component opening tag, with its offset.
+ *
+ * Scanned rather than regex-matched. The regex form used `[^>'"]` for the attribute run, which
+ * stops dead at the first `>` inside a prop expression — an arrow function, a `size > 0`, a nested
+ * `icon={<Icon />}` — and silently truncates every prop after it, including a `title=` that should
+ * have been checked. A guard that stops looking halfway through a tag is worse than one that does
+ * not look at all, because it reports success. Caught by the second-family reviewer on PR #95.
+ *
+ * So it tracks the two things that make a `>` something other than a tag terminator: string quotes
+ * and JSX expression braces. It is not a JSX parser and does not need to be — it needs to know where one
+ * opening tag ends.
+ */
+function componentTags(source) {
+  const tags = [];
+  for (const open of source.matchAll(COMPONENT_TAG_OPEN)) {
+    let depth = 0;
+    let quote = null;
+    let index = open.index + open[0].length;
+    for (; index < source.length; index += 1) {
+      const char = source[index];
+      if (quote) {
+        if (char === '\\') index += 1;
+        else if (char === quote) quote = null;
+        continue;
+      }
+      if (char === "'" || char === '"' || char === '`') quote = char;
+      else if (char === '{') depth += 1;
+      else if (char === '}') depth -= 1;
+      else if (char === '>' && depth === 0) break;
+    }
+    tags.push({
+      name: open[1],
+      index: open.index,
+      attributes: source.slice(open.index + open[0].length, index),
+    });
+  }
+  return tags;
+}
 
 /** True when a heading's visible text ends in a full stop (and not an ellipsis). */
 function endsInPeriod(text) {
@@ -134,15 +178,15 @@ export function inspectHeadings(source) {
     }
   }
 
-  // `title=` only where the tag is a component. `match.index` is the offset of the opening tag, so
-  // the reported line is the tag's — which is where a reader has to go to fix it.
-  for (const tag of liveSource.matchAll(COMPONENT_TAG)) {
-    for (const prop of tag[2].matchAll(TITLE_PROP)) {
+  // `title=` only where the tag is a component. The reported line is the TAG's, which is where a
+  // reader has to go to fix it.
+  for (const tag of componentTags(liveSource)) {
+    for (const prop of tag.attributes.matchAll(TITLE_PROP)) {
       if (endsInPeriod(prop[2])) {
         violations.push({
           line: lineOf(liveSource, tag.index),
           rule: 'heading-period',
-          content: `<${tag[1]} … ${prop[0]}`.replace(/\s+/g, ' ').trim().slice(0, 120),
+          content: `<${tag.name} … ${prop[0]}`.replace(/\s+/g, ' ').trim().slice(0, 120),
         });
       }
     }
@@ -184,9 +228,24 @@ function sourceFiles(root) {
  * reintroducing a violation and checking the reported line against the file.
  */
 export function withoutComments(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, (comment) => '\n'.repeat((comment.match(/\n/g) ?? []).length))
-    .replace(/^[^\S\n]*\/\/.*$/gm, '');
+  return (
+    source
+      .replace(/\/\*[\s\S]*?\*\//g, (comment) => '\n'.repeat((comment.match(/\n/g) ?? []).length))
+      .replace(/^[^\S\n]*\/\/.*$/gm, '')
+      // ── Trailing comments too, but never a URL ─────────────────────────────────────────────
+      // `const c = token; // replacing #000` used to keep its hex and false-positive. Stripping
+      // from the slashes to end-of-line fixes that, and does a worse thing if done naively: every
+      // `https://` in this codebase — the GitHub link, the prompt routes, the connector docs —
+      // would lose everything after the protocol, hiding any real violation later on that line. A
+      // false NEGATIVE in a drift guard is far worse than a false positive, because it fails
+      // quietly.
+      //
+      // The lookbehind is what separates the two: a protocol is preceded by `:`, a comment is
+      // preceded by whitespace or the end of a statement. Raised twice by the second-family
+      // reviewer on PR #95 — the first time it was triaged on the URL risk, which was the right
+      // concern and the wrong conclusion, since the risk is avoidable rather than inherent.
+      .replace(/(?<![:\w])\/\/.*$/gm, '')
+  );
 }
 
 export function inspectDesignSource(
@@ -212,7 +271,11 @@ export function inspectDesignSource(
     }
   });
 
-  if (enforceHeadingVoice) violations.push(...inspectHeadings(source));
+  // `liveSource`, not `source`: `inspectHeadings` strips comments itself, so passing the raw text
+  // did the same regex work twice. Harmless, but two call sites deriving the same value is how they
+  // stop agreeing — and `withoutComments` is idempotent, so `inspectHeadings` stays safe for a
+  // direct caller (the unit tests are one). Raised by the second-family reviewer on PR #95.
+  if (enforceHeadingVoice) violations.push(...inspectHeadings(liveSource));
 
   return violations;
 }
