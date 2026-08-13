@@ -37,23 +37,26 @@ definition, **so that** I can run a resilience exercise without an engineer.
 **Acceptance:**
 - Kind, cohort, fault and (for `security`) template selects are populated from `ScenarioKind`,
   `SCENARIO_COHORTS`, `ScenarioFault` and `SCENARIO_SECURITY_TEMPLATES` — **imported, not listed** (D1).
-- Numeric inputs for `requestCap`, `concurrencyCap`, `leaseTtlSeconds`, `delayMs`,
+- Numeric inputs for `requestCap`, `concurrencyCap`, `leaseTtlSeconds`,
   `abortAfterFailures` and duration are bounded by the SDK constants, **read from them** (D5). A test
   asserts each bound tracks its constant rather than a literal.
 - The cross-field constraint **`concurrencyCap ≤ requestCap` is enforced live in the form**, shown
   before submit — not discovered as a server error after (named rabbit hole).
 - `maxErrorRateBasisPoints` is entered as a **percent** and converted through #15's seam (D3).
-- Targeting reuses `RuleBuilderRow` from #15, so a PM learns the pattern once.
+- The form selects an existing immutable compatible fault-injector flag version. It does not expose
+  `RuleBuilderRow`, invent a flag definition, or silently retain an incompatible version when the
+  selected fault kind changes (D14).
 - `external` cohort is **not offered** (D10).
 **Risk:** high
 
-### Story 1.3 — Save through the existing operation
+### Story 1.3 — Save through the shared operation core
 **As a** PM, **I want** the scenario I defined to be a real registered definition,
 **so that** I can launch it in the next sprint.
 
 **Acceptance:**
-- Saving posts `create_definition` through `executeScenarioAdminOperation` — the **existing**
-  operation, no new route (platform-first note).
+- Saving parses the existing `create_definition` operation in a gated server action, re-authenticates
+  project ownership, then calls the service-role-only owner RPC. Credential and owner RPCs share the
+  same private transaction core (D13); no public route or second invariant is introduced.
 - The definition round-trips through `parseScenarioDefinition` unchanged.
 - A parser rejection is **displayed on screen** with the field it concerns, never swallowed (D2).
 - The operation's required `reason` field is captured from the PM in plain language, not
@@ -75,11 +78,10 @@ definition, **so that** I can run a resilience exercise without an engineer.
 **Risk:** high
 
 ## Sprint QA
-- **api spec(s):** new `e2e/scenario-authoring.spec.ts` — definition round-trip (form output →
-  `parseScenarioDefinition` → stored → re-read → same); rejection surfacing; `concurrencyCap >
-  requestCap` refused. New `scenario-authoring-dark.spec.ts` for the gate-off path, following
-  `scenario-dark.spec.ts`. Pure-logic parts (bound-from-constant, cross-field constraint, basis-points
-  conversion) as unit tests on `lib/` seams.
+- **specs:** `lib/scenario-authoring-draft.test.ts` pins definition round-trip, SDK-derived bounds,
+  compatible immutable flag selection, cross-field refusal and percent conversion. The owner RPC
+  path is exercised in `e2e/scenario-registry.spec.ts`; `scenario-authoring.authed.spec.ts` and
+  `scenario-authoring-dark.authed.spec.ts` cover the rendered ON/OFF boundary.
 - **Existing specs must pass unchanged:** `scenario-dark.spec.ts`,
   `scenario-dashboard.authed.spec.ts`, `scenario-registry.spec.ts`, `scenario-telemetry-sdk.spec.ts`,
   `breaker-contract.spec.ts`. A spec that needed editing means this epic changed scenario behaviour —
@@ -112,10 +114,11 @@ Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel
    → The fault select offers exactly three options.
 5. Set `requestCap` to 10 and `concurrencyCap` to 20.
    → The form tells you concurrency can't exceed the request cap, **before** you submit.
-6. Fix it (concurrency 2), set the delay to 500 ms, enter a reason, and save.
+6. Fix it (concurrency 2), choose a compatible immutable delay flag version, enter a reason, and save.
    → It saves. The definition appears in the registry.
-7. Try to set the delay to 5000 ms.
-   → The form stops you at 2000 and says why.
+7. Change the fault kind.
+   → The flag-version select moves to a compatible version or clears and asks for one; a hidden
+     incompatible version is never submitted.
 8. Look at the registered targets section.
    → Each target shows its state. An unverified one explains what the verification step is and who
      can do it — it doesn't just say "unverified".

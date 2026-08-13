@@ -78,4 +78,7 @@ export async function executeScenarioOwnerOperation(input: {
         p_transition: input.operation.transition,
       })
   }
+  const unreachable: never = input.operation
+  console.error('[scenario-owner] unsupported operation', unreachable)
+  return { ok: false, error: 'Unsupported scenario operation.' }
 }

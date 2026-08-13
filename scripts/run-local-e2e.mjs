@@ -133,6 +133,7 @@ async function main() {
     RESILIENCE_SCENARIOS_ENABLED: 'true',
     SECURITY_SIMULATIONS_ENABLED: 'true',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
+    SCENARIO_AUTHORING_ENABLED: 'true',
     SELF_PROJECT_API_KEY: randomBytes(24).toString('hex'),
   };
 
@@ -150,6 +151,7 @@ async function main() {
     RESILIENCE_SCENARIOS_ENABLED: 'false',
     SECURITY_SIMULATIONS_ENABLED: 'false',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
+    SCENARIO_AUTHORING_ENABLED: 'false',
   };
   await withServer({ port: darkPort, env: dark, label: 'dark-gate' }, async () => {
     runPlaywright(dark, darkPort, [

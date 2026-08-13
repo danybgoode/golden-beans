@@ -11,6 +11,7 @@ import {
   parseScenarioDefinition,
   type ScenarioCohort,
   type ScenarioDefinition,
+  type ScenarioFaultKind,
   type ScenarioKind,
   type ScenarioSecurityTemplate,
 } from './scenario-definition'
@@ -49,6 +50,19 @@ export type ScenarioAuthoringDraft = {
 export type ScenarioAuthoringResult =
   | { ok: true; definition: ScenarioDefinition }
   | { ok: false; field: keyof ScenarioAuthoringDraft | 'definition'; error: string }
+
+export type FaultFlagChoice = {
+  key: string
+  version: number
+  faultKinds: readonly ScenarioFaultKind[]
+}
+
+export function firstCompatibleFaultFlag(
+  faultKind: ScenarioFaultKind,
+  flags: readonly FaultFlagChoice[]
+): FaultFlagChoice | null {
+  return flags.find((flag) => flag.faultKinds.includes(faultKind)) ?? null
+}
 
 function bounded(value: number, maximum: number): boolean {
   return Number.isSafeInteger(value) && value >= 1 && value <= maximum

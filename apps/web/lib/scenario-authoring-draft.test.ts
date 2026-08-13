@@ -31,8 +31,12 @@ registerHooks({
   },
 })
 
-const { buildScenarioDefinition, SCENARIO_AUTHORING_COHORTS, SCENARIO_AUTHORING_LIMITS } =
-  await import('./scenario-authoring-draft.ts')
+const {
+  buildScenarioDefinition,
+  firstCompatibleFaultFlag,
+  SCENARIO_AUTHORING_COHORTS,
+  SCENARIO_AUTHORING_LIMITS,
+} = await import('./scenario-authoring-draft.ts')
 
 const valid: ScenarioAuthoringDraft = {
   kind: 'resilience',
@@ -78,4 +82,13 @@ test('percent input round-trips through the canonical basis-point seam', () => {
     assert.equal(result.definition.guardrails.maxErrorRateBasisPoints, 1_234)
     assert.equal(result.definition.expiresAt, '2026-08-13T12:05:00.000Z')
   }
+})
+
+test('changing fault kind cannot retain an incompatible hidden flag version', () => {
+  const flags = [
+    { key: 'delay-only', version: 1, faultKinds: ['none', 'delay'] as const },
+    { key: 'error-only', version: 2, faultKinds: ['none', 'synthetic_error'] as const },
+  ]
+  assert.deepEqual(firstCompatibleFaultFlag('synthetic_error', flags), flags[1])
+  assert.equal(firstCompatibleFaultFlag('delay', [flags[1]]), null)
 })

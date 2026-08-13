@@ -14,6 +14,7 @@ import {
 } from '@/lib/scenario-definition'
 import {
   buildScenarioDefinition,
+  firstCompatibleFaultFlag,
   SCENARIO_AUTHORING_COHORTS,
   SCENARIO_AUTHORING_LIMITS,
   type ScenarioAuthoringDraft,
@@ -66,7 +67,7 @@ export function ScenarioWorkspace({
   canAuthor: boolean
 }) {
   const defaultTarget = view.targets.find((target) => target.status === 'verified')?.key ?? ''
-  const defaultFlag = view.faultFlags[0]
+  const defaultFlag = firstCompatibleFaultFlag('delay', view.faultFlags)
   const [draft, setDraft] = useState<ScenarioAuthoringDraft>({
     kind: 'resilience',
     cohort: 'synthetic',
@@ -84,6 +85,7 @@ export function ScenarioWorkspace({
   })
   const [scenarioKey, setScenarioKey] = useState('')
   const [reason, setReason] = useState('')
+  const [operationReason, setOperationReason] = useState('')
   const [faultKind, setFaultKind] = useState<ScenarioFaultKind>('delay')
   const [feedback, setFeedback] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
@@ -94,10 +96,15 @@ export function ScenarioWorkspace({
   const compatibleFlags = view.faultFlags.filter((flag) => flag.faultKinds.includes(faultKind))
   const update = <K extends keyof ScenarioAuthoringDraft>(key: K, value: ScenarioAuthoringDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }))
-  const act = (task: () => Promise<{ ok: boolean; error?: string }>, success: string) => {
+  const act = (
+    task: () => Promise<{ ok: boolean; error?: string }>,
+    success: string,
+    clearOperationReason = false
+  ) => {
     startTransition(async () => {
       const result = await task()
       setConfirmation(null)
+      if (result.ok && clearOperationReason) setOperationReason('')
       setFeedback(result.ok ? success : (result.error ?? 'Could not complete that scenario command.'))
     })
   }
@@ -422,7 +429,16 @@ export function ScenarioWorkspace({
                   <select
                     {...control}
                     value={faultKind}
-                    onChange={(event) => setFaultKind(event.target.value as ScenarioFaultKind)}
+                    onChange={(event) => {
+                      const nextKind = event.target.value as ScenarioFaultKind
+                      const nextFlag = firstCompatibleFaultFlag(nextKind, view.faultFlags)
+                      setFaultKind(nextKind)
+                      setDraft((current) => ({
+                        ...current,
+                        flagKey: nextFlag?.key ?? '',
+                        flagVersion: nextFlag?.version ?? 1,
+                      }))
+                    }}
                   >
                     {SCENARIO_FAULT_KINDS.map((value) => (
                       <option key={value}>{value}</option>
@@ -609,6 +625,29 @@ export function ScenarioWorkspace({
               </button>
             </FormSection>
           </form>
+        </Panel>
+      ) : null}
+
+      {canAuthor ? (
+        <Panel>
+          <FormSection
+            title="Operation reason"
+            description="Required when launching or stopping a run, or revoking a target. Each reason is written to the immutable lifecycle audit."
+          >
+            <Field
+              label="Reason for launch, stop or revoke"
+              error={confirmation && !operationReason.trim() ? 'A human-written reason is required.' : null}
+            >
+              {(control) => (
+                <textarea
+                  {...control}
+                  maxLength={500}
+                  value={operationReason}
+                  onChange={(event) => setOperationReason(event.target.value)}
+                />
+              )}
+            </Field>
+          </FormSection>
         </Panel>
       ) : null}
 
@@ -870,7 +909,7 @@ export function ScenarioWorkspace({
         onCancel={() => setConfirmation(null)}
         onConfirm={() => {
           if (!confirmation) return
-          if (!reason.trim()) {
+          if (!operationReason.trim()) {
             setConfirmation(null)
             setFeedback('Enter a human-written reason before confirming an operation.')
             return
@@ -881,9 +920,10 @@ export function ScenarioWorkspace({
                 scenarioOwnerOperationAction(projectSlug, 'production', {
                   operation: 'revoke_target',
                   targetId: confirmation.id,
-                  reason,
+                  reason: operationReason,
                 }),
-              'Target revoked.'
+              'Target revoked.',
+              true
             )
           if (confirmation.kind === 'launch' && selectedDefinition)
             act(
@@ -892,9 +932,10 @@ export function ScenarioWorkspace({
                   projectSlug,
                   selectedDefinition.definition.environment,
                   confirmation.id,
-                  reason
+                  operationReason
                 ),
-              'Scenario run launched.'
+              'Scenario run launched.',
+              true
             )
           if (confirmation.kind === 'stop')
             act(
@@ -904,9 +945,10 @@ export function ScenarioWorkspace({
                   runId: confirmation.id,
                   expectedRevision: confirmation.revision,
                   transition: 'stop',
-                  reason,
+                  reason: operationReason,
                 }),
-              'Scenario run stopped.'
+              'Scenario run stopped.',
+              true
             )
         }}
       />

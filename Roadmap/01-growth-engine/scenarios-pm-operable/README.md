@@ -162,6 +162,14 @@ The scenario page, actions and tests are shared hot files across all three sprin
 builders would buy conflicts rather than speed. Review independence comes from the required routed
 cross-family passes. The high-risk fresh-reviewer layer remains owed by policy.
 
+**D17 — Impact links follow the immutable experiment reference; they do not guess a TARS feature.**
+`ScenarioImpactEvidence` stores the producing scenario/run and the exact canonical experiment key and
+definition version. It does not store a feature key, and an experiment metric event is not a unique
+feature identity. The PM thread therefore links run → impact → exact experiment analysis and back to
+the producing definition. Inventing a funnel key from the scenario, flag or metric name could produce
+a broken or semantically false tenant-local link. A future TARS link requires an explicit immutable
+feature reference in the evidence contract, not a UI heuristic.
+
 ## Amendment 1 — 2026-08-13 · owner-session command boundary (approved)
 
 The lock disproved the sentence “a screen, nothing else.” The product owner approved option 1:
@@ -189,10 +197,9 @@ loses its current contract.
 
 ## Deploy order
 
-Deployment order depends on Amendment 1. Under the recommended option it is env var → additive
-owner-session RPC migration → merge/deploy. Under the narrow option it is frontend + gate only.
-**Stacked branches:**
-`feat/scenarios-pm-operable` → `-s2` → `-s3`, one PR per sprint, merged in order.
+Deployment order under approved Amendment 1 is env var → additive owner-session RPC migration →
+merge/deploy. The three slices are delivered in one orchestrated epic branch and one PR, with a
+separate commit per completed slice.
 
 `SCENARIO_AUTHORING_ENABLED` is created **DISABLED in every environment before Sprint 1 merges**.
 Flip on per environment only after a synthetic-cohort run has been verified end to end — including

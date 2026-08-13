@@ -69,6 +69,9 @@ export async function launchScenarioRunAction(
     operation: create,
   })
   if (!draft.ok || typeof draft.run_id !== 'string' || typeof draft.revision !== 'number') return draft
+  // Starting can still fail after the draft transaction commits. Revalidate now so the honest
+  // partial state is visible and the owner can retry instead of seeing a stale page.
+  revalidatePath(`/app/scenarios/${slug}`)
   const start = parseScenarioAdminOperation({
     operation: 'start_run',
     runId: draft.run_id,

@@ -10,7 +10,8 @@
 > table. The "no causal customer claim" and cohort caveats stay verbatim, and the product owner
 > reviews the **rendered claim**, not just the render. On this sprint, "it looks good" is a warning
 > sign.
-> Branch `feat/scenarios-pm-operable-s3`, cut from `-s2`.
+> D17 applies: the immutable downstream reference is an experiment, not a TARS feature. Delivered
+> sequentially on the single epic branch after Sprint 2.
 
 ## Stories
 
@@ -41,24 +42,25 @@
 - Copy is reviewed against audit §2.6 and changed only in the direction of more precision.
 **Risk:** high
 
-### Story 3.3 — The scenario → impact → TARS thread (PRD-G E1)
-**As a** PM, **I want** to get from a scenario I ran to the funnel it affected,
+### Story 3.3 — The scenario → impact → experiment thread (PRD-G E1)
+**As a** PM, **I want** to get from a scenario I ran to the canonical experiment analysis it used,
 **so that** "define a scenario and watch the downstream impact" is one path instead of two screens.
 
 **Acceptance:**
-- A completed run links to the impact evidence it produced, and that links onward to the relevant
-  funnel/North Star view.
+- A completed run links to the impact evidence it produced, and that links onward to the exact
+  immutable experiment analysis referenced by the evidence.
 - The thread works in both directions — from a run to its impact, and from the impact back to the
   run and definition that produced it.
 - Links resolve through the existing tenancy path (`lib/dashboard-auth.ts`); no `project_id` is
   taken from the URL.
-- No new read seam is introduced — this story connects existing views.
+- No funnel key is guessed from an event or flag name; the evidence contract contains no immutable
+  feature reference (D17). No new read seam is introduced — this story connects existing views.
 **Risk:** high
 
 ## Sprint QA
 - **api spec(s):** extend `e2e/scenario-authoring.spec.ts` — impact renders with its caveats present
   (assert the caveat text is in the response, so a redesign cannot silently drop it); insufficient
-  evidence renders the no-comparison state; the run↔impact↔funnel links resolve and are
+  evidence renders the no-comparison state; the run↔impact↔experiment links resolve and are
   tenancy-scoped. `scenario-dashboard.authed.spec.ts` must pass **unchanged**.
 - **browser smoke owed:** yes, to the product owner, and named explicitly — **read the rendered
   claim and judge whether it overstates the evidence** (D11). This is the one check in the epic that
@@ -88,10 +90,11 @@ Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel
 5. Open a scenario whose evidence is insufficient.
    → It says the evidence is insufficient and shows **no comparison** — not a comparison with a
      disclaimer attached.
-6. From the completed run, follow the link to its impact, then onward to the funnel view.
-   → Both links work, and the funnel view is the right project's.
-7. From the funnel view, navigate back to the run and its definition.
-   → The thread works in both directions.
+6. From the completed run, follow the link to its impact, then onward to experiment analysis.
+   → Both links work, and the analysis is the exact project-scoped experiment referenced in the
+     immutable evidence.
+7. From the impact, follow the producing-definition link.
+   → It returns to the exact scenario definition that produced the evidence.
 8. Try step 6 while signed in as a member of a **different** project.
    → You cannot reach the first project's run or impact.
 
