@@ -1,6 +1,6 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
-import type { ScenarioImpactEvidence } from './scenario-impact'
+import { parseScenarioImpactEvidence, type ScenarioImpactEvidence } from './scenario-impact'
 import {
   parseScenarioDefinition,
   type ScenarioDefinition,
@@ -100,6 +100,7 @@ export type ScenarioDashboardView = {
   runs: ScenarioDashboardRun[]
   securityResults: ScenarioDashboardSecurityResult[]
   impacts: ScenarioDashboardImpact[]
+  malformedImpactCount: number
   policies: ScenarioDashboardPolicy[]
   trips: ScenarioDashboardTrip[]
 }
@@ -235,6 +236,32 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
     boundedRows(flagRegistriesResult.data).map((row) => [String(row.id), String(row.key)])
   )
   const states = new Map(boundedRows(statesResult.data).map((row) => [String(row.policy_id), row]))
+  let malformedImpactCount = 0
+  const impacts = boundedRows(impactResult.data).flatMap((row) => {
+    const evidence = parseScenarioImpactEvidence(row.evidence)
+    if (
+      !evidence ||
+      typeof row.id !== 'string' ||
+      typeof row.run_id !== 'string' ||
+      !Number.isSafeInteger(Number(row.scenario_version)) ||
+      typeof row.reason !== 'string' ||
+      typeof row.created_at !== 'string'
+    ) {
+      malformedImpactCount += 1
+      return []
+    }
+    return [
+      {
+        id: row.id,
+        runId: row.run_id,
+        scenarioKey: evidence.scenario.key,
+        scenarioVersion: Number(row.scenario_version),
+        evidence,
+        reason: row.reason,
+        createdAt: row.created_at,
+      },
+    ]
+  })
 
   return {
     targets: targets.map((row) => ({
@@ -310,22 +337,8 @@ export async function getScenarioDashboardView(projectId: string): Promise<Scena
       latencyMs: Number(row.latency_ms),
       createdAt: String(row.created_at),
     })),
-    impacts: boundedRows(impactResult.data).flatMap((row) => {
-      if (!record(row.evidence)) return []
-      const scenario = record(row.evidence.scenario) ? row.evidence.scenario : null
-      if (!scenario || typeof scenario.key !== 'string') return []
-      return [
-        {
-          id: String(row.id),
-          runId: String(row.run_id),
-          scenarioKey: scenario.key,
-          scenarioVersion: Number(row.scenario_version),
-          evidence: row.evidence as ScenarioImpactEvidence,
-          reason: String(row.reason),
-          createdAt: String(row.created_at),
-        },
-      ]
-    }),
+    impacts,
+    malformedImpactCount,
     policies: boundedRows(policiesResult.data).flatMap((row) => {
       const state = states.get(String(row.id))
       if (!state || !record(row.definition)) return []

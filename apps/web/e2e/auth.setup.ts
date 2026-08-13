@@ -3,11 +3,15 @@ import { test as setup, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { hashCredential } from '@/lib/credential-hash'
 import {
   AUTHED_STATE_PATH,
   IMPACT_FEATURE_KEY,
   IMPACT_INPUT_KEY,
   IMPACT_SERIES,
+  SCENARIO_FIXTURE_KEY,
+  SCENARIO_FLAG_KEY,
+  SCENARIO_TARGET_KEY,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -136,9 +140,89 @@ setup('provision a disposable tenant and sign in through the real form', async (
   writeRecord({ userId, projectId: membership.project_id as string, slug, email: TEST_USER.email })
 
   await seedImpactFixture(db, membership.project_id as string)
+  await seedScenarioFixture(db, membership.project_id as string, userId)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+async function seedScenarioFixture(db: SupabaseClient, projectId: string, ownerId: string) {
+  const flagDefinition = {
+    valueType: 'json',
+    description: 'Disposable owner-authoring fault payload.',
+    defaultVariantKey: 'control',
+    variants: [
+      { key: 'control', value: { kind: 'none' } },
+      { key: 'delay', value: { kind: 'delay', delayMs: 25 } },
+    ],
+    rules: [
+      {
+        priority: 1,
+        clauses: [{ field: 'source', operator: 'equals', value: 'internal' }],
+        variantKey: 'delay',
+      },
+    ],
+  }
+  const { data: flag, error: flagError } = await db.rpc('create_flag_definition_version', {
+    p_project_id: projectId,
+    p_flag_key: SCENARIO_FLAG_KEY,
+    p_definition: flagDefinition,
+    p_reason: 'seed owner scenario browser fixture',
+    p_actor_user_id: ownerId,
+  })
+  if (flagError || !flag?.[0]) throw new Error(`could not seed scenario fault flag: ${flagError?.message}`)
+
+  const adminKey = `gb_key_${crypto.randomUUID().replaceAll('-', '')}`
+  const { error: keyError } = await db.rpc('create_flag_admin_key', {
+    p_project_id: projectId,
+    p_environment: 'production',
+    p_key_hash: hashCredential(adminKey),
+    p_label: 'Owner scenario browser fixture',
+    p_expires_at: null,
+    p_actor_user_id: ownerId,
+  })
+  if (keyError) throw new Error(`could not seed scenario admin key: ${keyError.message}`)
+  const challengeHash = hashCredential(`challenge-${crypto.randomUUID()}`)
+  const { data: target, error: targetError } = await db.rpc('register_scenario_target', {
+    p_key_hash: hashCredential(adminKey),
+    p_target_key: SCENARIO_TARGET_KEY,
+    p_target_kind: 'miyagi_resilience_probe_v1',
+    p_origin: 'https://owner-scenario.example.test',
+    p_ownership_challenge_hash: challengeHash,
+    p_reason: 'seed owner scenario browser fixture',
+    p_external_actor_id: 'user_OwnerBrowserFixture',
+  })
+  if (targetError || !target?.[0]) throw new Error(`could not seed scenario target: ${targetError?.message}`)
+  const { error: verifyError } = await db.rpc('verify_scenario_target', {
+    p_key_hash: hashCredential(adminKey),
+    p_target_id: target[0].target_id,
+    p_expected_challenge_hash: challengeHash,
+    p_reason: 'verify owner scenario browser fixture',
+    p_external_actor_id: 'user_OwnerBrowserFixture',
+  })
+  if (verifyError) throw new Error(`could not verify scenario target: ${verifyError.message}`)
+
+  const definition = {
+    contractVersion: 1,
+    kind: 'resilience',
+    targetKey: SCENARIO_TARGET_KEY,
+    environment: 'production',
+    cohort: 'synthetic',
+    startAt: new Date(Date.now() - 60_000).toISOString(),
+    expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    limits: { requestCap: 3, concurrencyCap: 2, leaseTtlSeconds: 10 },
+    guardrails: { abortAfterFailures: 1, maxErrorRateBasisPoints: 10_000 },
+    flag: { key: SCENARIO_FLAG_KEY, definitionVersion: Number(flag[0].version) },
+  }
+  const { error: definitionError } = await db.rpc('owner_create_scenario_definition_version', {
+    p_project_id: projectId,
+    p_environment: 'production',
+    p_actor_user_id: ownerId,
+    p_scenario_key: SCENARIO_FIXTURE_KEY,
+    p_definition: definition,
+    p_reason: 'seed owner scenario browser fixture',
+  })
+  if (definitionError) throw new Error(`could not seed scenario definition: ${definitionError.message}`)
+}
 
 /**
  * Seed exactly enough for `/app/impact/<slug>/<featureKey>` to render.

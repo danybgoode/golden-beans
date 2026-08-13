@@ -2,6 +2,7 @@ import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
 import type { ScenarioAdminOperation } from './scenario-admin-operation'
 import { parseScenarioDefinition, type ScenarioDefinition } from './scenario-definition'
+import { summarizeScenarioFaultFlag, type ScenarioFaultFlagSummary } from './scenario-fault-flag-summary'
 
 type OwnerOperation = Extract<
   ScenarioAdminOperation,
@@ -13,6 +14,7 @@ export type ScenarioOwnerOperationResult =
 
 export type ScenarioOwnerDefinitionContext = {
   definition: ScenarioDefinition
+  faultSummary: ScenarioFaultFlagSummary
   productionSecurityApproved: boolean
   targetVerified: boolean
 }
@@ -40,7 +42,22 @@ export async function getScenarioOwnerDefinitionContext(
   }
   const parsed = parseScenarioDefinition(version?.definition)
   if (!parsed.ok) return null
-  const [{ data: approval, error: approvalError }, { data: target, error: targetError }] = await Promise.all([
+  const { data: flagRegistry, error: flagRegistryError } = await supabase
+    .from('flag_registries')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('key', parsed.definition.flag.key)
+    .maybeSingle()
+  if (flagRegistryError || !flagRegistry) {
+    if (flagRegistryError)
+      console.error('[scenario-owner] fault registry eligibility read failed', { code: flagRegistryError.code })
+    return null
+  }
+  const [
+    { data: approval, error: approvalError },
+    { data: target, error: targetError },
+    { data: flagVersion, error: flagVersionError },
+  ] = await Promise.all([
     supabase
       .from('scenario_owner_approvals')
       .select('id')
@@ -54,16 +71,27 @@ export async function getScenarioOwnerDefinitionContext(
       .eq('project_id', projectId)
       .eq('key', parsed.definition.targetKey)
       .maybeSingle(),
+    supabase
+      .from('flag_definition_versions')
+      .select('definition')
+      .eq('project_id', projectId)
+      .eq('flag_id', flagRegistry.id)
+      .eq('version', parsed.definition.flag.definitionVersion)
+      .maybeSingle(),
   ])
-  if (approvalError || targetError) {
+  const faultSummary = summarizeScenarioFaultFlag(flagVersion?.definition)
+  if (approvalError || targetError || flagVersionError || !faultSummary) {
     console.error('[scenario-owner] definition eligibility read failed', {
       approvalCode: approvalError?.code,
       targetCode: targetError?.code,
+      flagVersionCode: flagVersionError?.code,
+      faultSummaryAvailable: faultSummary !== null,
     })
     return null
   }
   return {
     definition: parsed.definition,
+    faultSummary,
     productionSecurityApproved: approval !== null,
     targetVerified: target?.status === 'verified',
   }

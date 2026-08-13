@@ -22,9 +22,14 @@ test('owner launch refuses external, unverified, gated, and unapproved productio
     environment: 'production' as const,
     targetVerified: true,
     productionSecurityApproved: false,
+    faultSummaryAvailable: true,
   }
   assert.match(scenarioLaunchBlocker(base, { resilience: false, security: true }) ?? '', /disabled/)
   assert.match(scenarioLaunchBlocker({ ...base, cohort: 'external' }, enabled) ?? '', /External/)
+  assert.match(
+    scenarioLaunchBlocker({ ...base, faultSummaryAvailable: false }, enabled) ?? '',
+    /cannot be disclosed/
+  )
   assert.match(scenarioLaunchBlocker({ ...base, targetVerified: false }, enabled) ?? '', /not verified/)
   assert.match(
     scenarioLaunchBlocker({ ...base, kind: 'security' }, enabled) ?? '',

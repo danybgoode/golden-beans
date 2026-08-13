@@ -8,6 +8,7 @@ export type ScenarioCapabilityGates = {
 export type ScenarioLaunchFacts = Pick<ScenarioDefinition, 'kind' | 'cohort' | 'environment'> & {
   targetVerified: boolean
   productionSecurityApproved: boolean
+  faultSummaryAvailable: boolean
 }
 
 export function isScenarioKindEnabled(kind: ScenarioKind, capabilities: ScenarioCapabilityGates): boolean {
@@ -21,6 +22,8 @@ export function scenarioLaunchBlocker(
   if (!isScenarioKindEnabled(facts.kind, capabilities))
     return `${facts.kind === 'resilience' ? 'Resilience scenarios' : 'Security simulations'} are disabled.`
   if (facts.cohort === 'external') return 'External-cohort runs are not available in owner authoring.'
+  if (!facts.faultSummaryAvailable)
+    return 'The immutable fault payload or targeting rules cannot be disclosed, so this definition cannot run.'
   if (!facts.targetVerified) return 'The scenario target is not verified.'
   if (facts.kind === 'security' && facts.environment === 'production' && !facts.productionSecurityApproved)
     return 'Production security approval is required before this definition can run.'

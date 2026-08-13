@@ -202,6 +202,8 @@ export function ScenarioWorkspace({
           <a href={`#definition-${row.scenarioKey}-${row.definitionVersion}`}>
             {row.scenarioKey} v{row.definitionVersion}
           </a>
+          <br />
+          <small>run {shortId(row.id)}</small>
           {view.impacts.find((impact) => impact.runId === row.id) ? (
             <>
               <br />
@@ -306,15 +308,22 @@ export function ScenarioWorkspace({
                       targetVerified:
                         view.targets.find((target) => target.key === row.targetKey)?.status === 'verified',
                       productionSecurityApproved: definitionItem.productionSecurityApproved,
+                      faultSummaryAvailable: flag !== undefined,
                     },
                     capabilities
                   )
                 : 'The immutable definition is unavailable.'
+              const stopBlocker = definitionItem
+                ? isScenarioKindEnabled(definitionItem.definition.kind, capabilities)
+                  ? null
+                  : `${definitionItem.definition.kind === 'resilience' ? 'Resilience scenarios' : 'Security simulations'} are disabled.`
+                : 'The immutable definition is unavailable.'
+              const actionBlocker = row.status === 'running' ? stopBlocker : retryBlocker
               return row.status === 'running' || row.status === 'draft' ? (
                 <button
                   className="btn btn-gold"
-                  disabled={row.status === 'draft' && retryBlocker !== null}
-                  title={row.status === 'draft' ? (retryBlocker ?? undefined) : undefined}
+                  disabled={actionBlocker !== null}
+                  title={actionBlocker ?? undefined}
                   type="button"
                   onClick={() => {
                     setOperationReason('')
@@ -337,8 +346,8 @@ export function ScenarioWorkspace({
                         blastRadius: definition
                           ? `${definition.limits.requestCap} requests, ${definition.limits.concurrencyCap} concurrent, ${durationSeconds(definition.startAt, definition.expiresAt)} seconds`
                           : 'the stored immutable definition limits',
-                        faultSummary: flag?.payloadSummary ?? 'Stored immutable fault payloads.',
-                        targetingSummary: flag?.targetingSummary ?? 'Stored immutable targeting.',
+                        faultSummary: flag?.payloadSummary ?? '',
+                        targetingSummary: flag?.targetingSummary ?? '',
                       })
                     }
                   }}
@@ -736,18 +745,19 @@ export function ScenarioWorkspace({
           view.definitions.map((item) => {
             const target = view.targets.find((candidate) => candidate.key === item.definition.targetKey)
             const duration = durationSeconds(item.definition.startAt, item.definition.expiresAt)
+            const flag = view.faultFlags.find(
+              (candidate) =>
+                candidate.key === item.definition.flag.key &&
+                candidate.version === item.definition.flag.definitionVersion
+            )
             const launchBlocker = scenarioLaunchBlocker(
               {
                 ...item.definition,
                 targetVerified: target?.status === 'verified',
                 productionSecurityApproved: item.productionSecurityApproved,
+                faultSummaryAvailable: flag !== undefined,
               },
               capabilities
-            )
-            const flag = view.faultFlags.find(
-              (candidate) =>
-                candidate.key === item.definition.flag.key &&
-                candidate.version === item.definition.flag.definitionVersion
             )
             return (
               <article id={`definition-${item.scenarioKey}-${item.version}`} key={item.id} className="panel">
@@ -782,8 +792,8 @@ export function ScenarioWorkspace({
                         label: `${item.scenarioKey} v${item.version}`,
                         target: item.definition.targetKey,
                         blastRadius: `${item.definition.limits.requestCap} requests, ${item.definition.limits.concurrencyCap} concurrent, ${duration} seconds`,
-                        faultSummary: flag?.payloadSummary ?? 'Stored immutable fault payloads.',
-                        targetingSummary: flag?.targetingSummary ?? 'Stored immutable targeting.',
+                        faultSummary: flag?.payloadSummary ?? '',
+                        targetingSummary: flag?.targetingSummary ?? '',
                       })
                     }}
                   >
@@ -821,6 +831,12 @@ export function ScenarioWorkspace({
               header: 'When',
               value: (row) => row.createdAt,
               cell: (row) => timestamp(row.createdAt),
+            },
+            {
+              key: 'run',
+              header: 'Run',
+              value: (row) => row.runId,
+              cell: (row) => <a href={`#run-${row.runId}`}>{shortId(row.runId)}</a>,
             },
             { key: 'template', header: 'Template', value: (row) => row.template },
             { key: 'expected', header: 'Expected', value: (row) => row.expectedOutcome },
@@ -922,6 +938,13 @@ export function ScenarioWorkspace({
             )
           })
         )}
+        {view.malformedImpactCount > 0 ? (
+          <p role="status">
+            {view.malformedImpactCount} malformed impact evidence{' '}
+            {view.malformedImpactCount === 1 ? 'record was' : 'records were'} omitted because the stored
+            contract could not be verified.
+          </p>
+        ) : null}
       </Panel>
 
       <Panel>

@@ -110,6 +110,7 @@ export async function launchScenarioRunAction(slug: unknown, scenarioVersionId: 
       ...context.definition,
       targetVerified: context.targetVerified,
       productionSecurityApproved: context.productionSecurityApproved,
+      faultSummaryAvailable: true,
     },
     capabilities()
   )
@@ -167,6 +168,7 @@ export async function startScenarioRunAction(
       environment: context.environment,
       targetVerified: context.targetVerified,
       productionSecurityApproved: context.productionSecurityApproved,
+      faultSummaryAvailable: true,
     },
     capabilities()
   )
