@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // check-template-drift.mjs — the grep-to-zero guard for load-bearing spawn placeholders.
 //
-// Golden Beans was spawned from the dobby-foundation template, which seeds `TEMPLATE FILL-IN`
+// Golden Frijoles was spawned from the dobby-foundation template, which seeds `TEMPLATE FILL-IN`
 // placeholders into its load-bearing docs (AGENTS.md, the poster, WAYS-OF-WORKING, the root README).
 // Those must all be filled with this project's real shape and STAY filled — an unfilled rules file is
 // exactly what lets a high-risk schema/auth epic make decisions against a placeholder

@@ -27,7 +27,7 @@ import {
   type FlagRule,
   type FlagValueType,
   type FlagVariant,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 import { basisPointsToPercent, percentToBasisPoints } from './rollout-percent'
 
 /**

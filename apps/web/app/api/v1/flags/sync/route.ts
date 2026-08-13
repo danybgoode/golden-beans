@@ -3,7 +3,7 @@ import {
   FLAG_DEFINITION_SYNC_CONTRACT_VERSION,
   MAX_FLAG_DEFINITION_SYNC_BODY_BYTES,
   parseFlagDefinitionSyncRequest,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 import { hashCredential } from '@/lib/credential-hash'
 import { isFlagDefinitionSyncEnabled } from '@/lib/flags'
 import { syncFlagDefinitionCatalog } from '@/lib/flag-sync-operations'

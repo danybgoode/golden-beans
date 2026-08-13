@@ -1,6 +1,6 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
-import type { FlagDefinitionSyncEntry } from '@golden-beans/sdk'
+import type { FlagDefinitionSyncEntry } from '@golden-frijoles/sdk'
 
 type SyncRow = {
   flag_key?: unknown

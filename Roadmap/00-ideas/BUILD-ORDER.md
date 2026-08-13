@@ -10,9 +10,9 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (0)
+## 🏗️ Building now (1)
 
-_None._
+- [Golden Frijoles rebrand close-out](../../02-commercial/frijoles-rebrand-closeout/README.md) — 02 Commercial · 0/5 stories · risk: Low
 
 ## 📋 Ready to build (scaffolded, not started) (2)
 
@@ -55,4 +55,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 18 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 19 · seeds in funnel: 3 · status drift: 1. Regenerate with `node scripts/build-order.mjs`._

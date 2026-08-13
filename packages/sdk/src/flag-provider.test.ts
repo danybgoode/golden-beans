@@ -22,6 +22,18 @@ registerHooks({
 
 const { createFlagProvider } = await import('./flag-provider.ts')
 
+test('reports the Golden Frijoles OpenFeature provider identity', () => {
+  const provider = createFlagProvider({
+    baseUrl: 'https://golden.example',
+    flagReadKey: 'read-key',
+    refreshIntervalMs: 0,
+    fetchImpl: async () => new Response(null, { status: 500 }),
+  })
+
+  assert.deepEqual(provider.metadata, { name: 'golden-frijoles' })
+  provider.shutdown()
+})
+
 function snapshot(version = 1, environment = 'production') {
   return {
     contractVersion: 1,

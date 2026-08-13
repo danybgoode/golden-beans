@@ -41,6 +41,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
         {health.length === 0 ? (
           <p>No destinations configured yet.</p>
         ) : (
+          <div className="scroll-x">
           <table>
             <thead>
               <tr>
@@ -77,6 +78,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
               ))}
             </tbody>
           </table>
+          </div>
         )}
 
         <DestinationManager slug={projectSlug} destinations={destinations} deliveries={deliveries} />
@@ -92,6 +94,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
             record; the table above is current state.
           </small>
         </p>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -128,6 +131,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
             )}
           </tbody>
         </table>
+        </div>
       </main>
     </ProductShell>
   )

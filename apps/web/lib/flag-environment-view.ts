@@ -27,7 +27,7 @@ import {
   type FlagEnvironment,
   type FlagRule,
   type FlagValueType,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 import { formatRolloutPercent, rolloutBarPercent } from './rollout-percent'
 
 /** Only the fields this derivation reads. Structural, so `flag-registry`'s rows satisfy it as-is. */

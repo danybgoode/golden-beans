@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 import {
   requireLocalSupabaseApiUrl,
   requireTestDatabaseUrl,

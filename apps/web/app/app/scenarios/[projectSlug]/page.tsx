@@ -32,6 +32,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
         </p>
 
         <h2>Registered targets</h2>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -60,8 +61,10 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
 
         <h2>Recent runs</h2>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -118,8 +121,10 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
 
         <h2>Defensive simulation results</h2>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -154,11 +159,13 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
 
         <h2>Canonical product-impact evidence</h2>
         <p>
           <small>Internal and synthetic cohorts never produce a causal customer claim.</small>
         </p>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -204,8 +211,10 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
 
         <h2>Circuit-breaker policies</h2>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -247,8 +256,10 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
 
         <h2>Immutable breaker trips</h2>
+        <div className="scroll-x">
         <table>
           <thead>
             <tr>
@@ -281,6 +292,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             )}
           </tbody>
         </table>
+        </div>
       </main>
     </ProductShell>
   )

@@ -8,7 +8,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import { MAX_FLAG_CLAUSES, MAX_FLAG_RULES, FLAG_CONTEXT_FIELDS, parseFlagDefinition } from '@golden-beans/sdk'
+import { MAX_FLAG_CLAUSES, MAX_FLAG_RULES, FLAG_CONTEXT_FIELDS, parseFlagDefinition } from '@golden-frijoles/sdk'
 import type { DefinitionDraft, RuleDraft } from './flag-rule-draft.ts'
 
 // ── Why this hook, verbatim from breaker-policy.test.ts ───────────────────────────────────────

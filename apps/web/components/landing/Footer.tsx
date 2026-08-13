@@ -1,18 +1,6 @@
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 
-// landing-redesign-v2 · Sprint 2, Story 2.1 — the footer, and the page's footnote ledger.
-//
-// ── The ledger is the most important paragraph on this page ───────────────────────────────────
-// It survived the redesign with its contents rewritten, because the previous one had gone stale in
-// exactly the way it warns about: it still described "the connector, pod report, and inverted-loop
-// sections above" as not-yet-shipped, months after all three shipped. A ledger that lists retired
-// caveats teaches a reader to skip it, which costs more than having no ledger at all.
-//
-// So this one lists what is true of the page as it now stands, in the order the reader met it:
-// which windows were illustrations, which numbers were real, and what the priced tier cannot do
-// yet. If any line here stops being true, the section that changed is the one that should have
-// changed it.
 export function Footer() {
   return (
     <footer className="footer">
@@ -27,22 +15,6 @@ export function Footer() {
             <a href="/northstar-self-serve.md">/northstar-self-serve.md</a> · <a href="/install">/install</a>
           </span>
         </div>
-        <p className="footer__meta">
-          Footnote ledger, in order of appearance: every framed surface on this page is labelled above itself
-          as either an illustration or a real read, and a test checks that it is — the hero and §2 are
-          illustrated conversations, §3&apos;s release list and §4&apos;s release room are illustrations of
-          the product UI rather than screenshots of anyone&apos;s account · the infomercial band is a joke and
-          labels itself as one: the testimonials are invented and say so beside themselves, and the
-          struck-through consultant day rate is there to be struck through · the chaos and security drills are
-          built but not switched on, and each card says so by reading its own switch rather than by us
-          remembering to update a sentence — when either one is turned on, its badge goes away by itself · §6
-          is the only section carrying real numbers: the Pod Report is computed from this repository&apos;s
-          own git history, and the engine read comes from the synthetic demo project, which you can curl at
-          /api/v1/public/north-star · no customer data appears on this page, ever · the MCP connector is
-          read-only, so your agent can read this context but cannot write it · the $49 tier has no billing
-          rail behind it yet and says so where it is priced. If a claim on this page ever stops being
-          checkable, that&apos;s a bug — file it.
-        </p>
       </div>
     </footer>
   )

@@ -215,9 +215,9 @@ h2{font-size:25px}
      anything. So the divergences are listed instead.
 
      1. `npx golden-frijoles init` (§9) — THERE IS NO SUCH COMMAND. `packages/sdk/package.json`
-        declares no `bin` and no CLI is published. The rename is public-surfaces-only (epic D1), so
-        the real package is still `@golden-beans/sdk` and the shipped line is
-        `npm install @golden-beans/sdk`. A copy-pasteable command that fails on first contact, in
+        declares no `bin` and no CLI is published. `frijoles-rebrand-closeout` subsequently
+        published the package as `@golden-frijoles/sdk`, so the shipped line is
+        `npm install @golden-frijoles/sdk`. A copy-pasteable command that fails on first contact, in
         front of the one persona who will definitely run it, is the worst possible place for a
         fiction.
 

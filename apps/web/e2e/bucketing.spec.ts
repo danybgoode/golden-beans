@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 // Story 4.1 (Roadmap/01-growth-engine/growth-engine-v1/sprint-4.md) — deterministic client-side
 // hash bucketing. No network involved (bucket() is synchronous), so this spec never touches

@@ -17,7 +17,7 @@ export {
   parseScenarioDefinition,
   parseScenarioFault,
   parseScenarioSnapshot,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 export type {
   ScenarioCohort,
   ScenarioDefinition,
@@ -33,4 +33,4 @@ export type {
   ScenarioSnapshot,
   ScenarioSnapshotEntry,
   ScenarioSnapshotResult,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'

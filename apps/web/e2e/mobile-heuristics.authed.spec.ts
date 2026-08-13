@@ -1,0 +1,49 @@
+import { expect, test } from '@playwright/test'
+import { IMPACT_FEATURE_KEY, readTenantRecord } from './helpers/authed-fixture'
+import { assertMobileClean } from './helpers/mobile-heuristics'
+
+// frijoles-rebrand-closeout · Story 1.4 — the signed-in half of the shared mobile rail.
+//
+// The anonymous browser project cannot cover these paths: every one redirects to /login and the
+// helper would measure that page instead. This file runs only in Playwright's `authed` project,
+// after auth-setup has created a disposable owner + tenant and saved a real session.
+
+type AuthedRoute = { label: string; path: (slug: string) => string }
+
+// Always-on owner surfaces only. Flag-gated pages have their own focused authed specs and would
+// make this baseline depend on unrelated local gate values. The seeded impact route is included
+// because it exercises the densest data layout, not just empty management tables.
+const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
+  { label: 'command center', path: () => '/app' },
+  { label: 'impact', path: (slug) => `/app/impact/${slug}/${IMPACT_FEATURE_KEY}` },
+  { label: 'scenarios', path: (slug) => `/app/scenarios/${slug}` },
+  { label: 'API keys', path: (slug) => `/app/keys/${slug}` },
+  { label: 'destinations', path: (slug) => `/app/destinations/${slug}` },
+  { label: 'share links', path: (slug) => `/app/shares/${slug}` },
+  { label: 'agent write keys', path: (slug) => `/app/agent-keys/${slug}` },
+  { label: 'onboarding', path: (slug) => `/app/onboarding/${slug}` },
+] as const
+
+function tenantSlug(): string {
+  const slug = readTenantRecord()?.slug
+  if (!slug) throw new Error('the authed mobile sweep requires the auth-setup project')
+  return slug
+}
+
+for (const target of AUTHED_MOBILE_ROUTES) {
+  test(`${target.label} is mobile-clean for a signed-in owner`, async ({ page }) => {
+    const path = target.path(tenantSlug())
+    const response = await page.goto(path)
+
+    // These assertions come BEFORE the layout helper. A 200 login page is not proof of an authed
+    // route, and measuring it would recreate the exact false-green this counterpart exists to stop.
+    expect(response?.status(), `${path} did not render`).toBe(200)
+    await expect(page, `${path} redirected to login instead of rendering itself`).not.toHaveURL(/\/login/)
+    await expect(
+      page.locator('.product-shell'),
+      `${path} did not render the signed-in product shell`
+    ).toBeVisible()
+
+    await assertMobileClean(page, path)
+  })
+}

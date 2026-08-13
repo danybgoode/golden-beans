@@ -44,7 +44,7 @@ CI gate already carries the repetitive checking; you read once.
 **The rules that cannot be violated** (from this project's `AGENTS.md`)
 1. **The growth engine (Supabase-backed ingest/registry/TARS/North Star/experiments) owns telemetry.**
    Never a parallel event pipeline, a direct `events`/`features` table insert from app code, or a bespoke
-   analytics route — go through `/api/v1/track`, `/api/v1/features/sync`, or the real `@golden-beans/sdk`.
+   analytics route — go through `/api/v1/track`, `/api/v1/features/sync`, or the real `@golden-frijoles/sdk`.
 2. **`/api/v1/public/*` may only ever serve the demo project** (`DEMO_PROJECT_SLUG`, checked via
    `assertPublicAllowedSlug()`). A real customer project slug must 403, not 404 — never a public route
    that trusts a caller-supplied project slug without this check.

@@ -136,7 +136,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
               overflowX: 'auto',
             }}
           >
-            {`import { createGrowthEngineClient } from '@golden-beans/sdk'
+            {`import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 const engine = createGrowthEngineClient({ baseUrl: '${siteUrl}', apiKey: ${apiKeyExpr}, userId: 'me' })
 

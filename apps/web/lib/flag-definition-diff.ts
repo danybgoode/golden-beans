@@ -28,7 +28,7 @@ import {
   type FlagDefinition,
   type FlagRule,
   type FlagVariant,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 import { formatRolloutPercent } from './rollout-percent'
 
 /**

@@ -1087,12 +1087,6 @@ body {
   font-size: 13.5px;
 }
 
-.footer__meta {
-  color: var(--dim-2);
-  font: 400 12px/1.8 var(--mono);
-  margin-top: 22px;
-}
-
 .external-link {
   display: inline-flex;
   align-items: center;
@@ -1691,7 +1685,9 @@ a.stat-card:hover {
 .data-table__sort {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  min-width: 44px;
   padding: 0;
   border: 0;
   background: none;

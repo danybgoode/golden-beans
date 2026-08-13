@@ -1,18 +1,29 @@
-# @golden-beans/sdk
+# @golden-frijoles/sdk
 
-The framework-agnostic client for Golden Beans telemetry, governed experiment assignment, and
+The framework-agnostic client for Golden Frijoles telemetry, governed experiment assignment, and
 typed local feature-flag evaluation.
 
 ## Install
 
 ```bash
-npm install @golden-beans/sdk
+npm install @golden-frijoles/sdk
 ```
+
+## 0.4.0 identity change
+
+The package rename and the OpenFeature provider rename ship together as a breaking pre-1.0 minor
+release. `createFlagProvider().metadata.name` is now `golden-frijoles`, and
+`createScenarioProvider().metadata.name` is now `golden-frijoles-scenarios`. Consumers that assert
+provider identity must update those expectations when moving to `@golden-frijoles/sdk@0.4.0`.
+
+The `GOLDEN_BEANS_FLAG_READ_KEY` and `GOLDEN_BEANS_FLAG_SYNC_KEY` names below are deliberately
+retained integration addresses used by existing consumers. They are caller-owned environment
+variable names, not SDK lookups or provider identities; renaming them is not required to adopt 0.4.0.
 
 ## Telemetry
 
 ```ts
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 const growth = createGrowthEngineClient({
   baseUrl: process.env.GROWTH_ENGINE_URL!,
@@ -30,7 +41,7 @@ fetches a versioned snapshot in the background; request-path resolution stays sy
 uses a safe caller-supplied default if no fresh snapshot is available.
 
 ```ts
-import { createFlagProvider } from '@golden-beans/sdk'
+import { createFlagProvider } from '@golden-frijoles/sdk'
 
 const flags = createFlagProvider({
   baseUrl: process.env.GROWTH_ENGINE_URL!,
@@ -44,7 +55,7 @@ const checkoutEnabled = flags.resolveBooleanEvaluation('checkout.enabled', false
 }).value
 ```
 
-Do not expose `flagReadKey` or telemetry API keys to browser bundles. Golden Beans derives tenant
+Do not expose `flagReadKey` or telemetry API keys to browser bundles. Golden Frijoles derives tenant
 and environment from the credential; callers never send either in a snapshot request.
 
 ## Server-side flag-definition catalog sync
@@ -55,7 +66,7 @@ runtime flag evaluation. Use a dedicated, revocable `flag_sync` credential — n
 `flag_read` key — and keep it server-side.
 
 ```ts
-import { createFlagDefinitionSyncClient, type FlagDefinitionSyncEntry } from '@golden-beans/sdk'
+import { createFlagDefinitionSyncClient, type FlagDefinitionSyncEntry } from '@golden-frijoles/sdk'
 
 const catalog: FlagDefinitionSyncEntry[] = [
   {
@@ -91,7 +102,7 @@ Scenario evaluation is also synchronous and local. It returns only the closed `n
 application must apply it at an explicitly instrumented server seam.
 
 ```ts
-import { createScenarioProvider } from '@golden-beans/sdk'
+import { createScenarioProvider } from '@golden-frijoles/sdk'
 
 const scenarios = createScenarioProvider({
   baseUrl: process.env.GROWTH_ENGINE_URL!,

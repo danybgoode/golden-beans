@@ -15,11 +15,12 @@
 > it defines is still how this project works. A superseded map deleted outright would take that
 > contract with it.
 >
-> **The product is now called Golden Frijoles, on `goldenfrijoles.com`.** The rename is
-> public-surfaces-only (`landing-frijoles-rebrand` D1): the npm package is still
-> `@golden-beans/sdk`, as are the GitHub repository, the Vercel project and every environment
-> variable. Where this document says "Golden Beans" below in a historical table, it is describing a
-> page that no longer exists and is left as written.
+> **The product is now called Golden Frijoles, on `goldenfrijoles.com`.** The first rename was
+> public-surfaces-only (`landing-frijoles-rebrand` D1); `frijoles-rebrand-closeout` subsequently
+> published the SDK as `@golden-frijoles/sdk`. The GitHub repository, Vercel/Supabase projects,
+> live tenant slugs and existing consumer environment variables remain named technical addresses.
+> Where this document says "Golden Beans" below in a historical table, it describes a page that no
+> longer exists and is left as written.
 
 ## The one-sentence pitch
 

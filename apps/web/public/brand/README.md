@@ -1,14 +1,14 @@
-# Golden Beans asset pack
+# Golden Frijoles asset pack
 
 Canonical geometry: Lucide `Bean` (ISC), on the 24×24 Lucide grid. Canonical brand color:
 `#FFD700`.
 
 | Asset | Use |
 |---|---|
-| `golden-bean-mark.svg` | Primary material/ingot mark on transparent backgrounds |
-| `golden-bean-mark-flat.svg` | Small sizes, engraving, one-color-friendly reproduction |
-| `golden-beans-lockup-dark.svg` | Ready-made lockup for dark placements |
-| `golden-beans-lockup-light.svg` | Ready-made lockup for light placements |
+| `golden-frijoles-mark.svg` | Primary material/ingot mark on transparent backgrounds |
+| `golden-frijoles-mark-flat.svg` | Small sizes, engraving, one-color-friendly reproduction |
+| `golden-frijoles-lockup-dark.svg` | Ready-made lockup for dark placements |
+| `golden-frijoles-lockup-light.svg` | Ready-made lockup for light placements |
 
 In the React app, use `GoldenBeanMark` / `BrandLockup` from `components/brand`; do not import these
 SVGs into product UI. That component uses `lucide-react` directly and keeps accessible labeling,

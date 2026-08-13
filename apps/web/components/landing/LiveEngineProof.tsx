@@ -22,7 +22,7 @@ const CONVERSION_EVENT = 'upload_completed'
 // allow-list check in lib/public-demo.ts isn't needed here — it guards the HTTP boundary where a
 // slug IS attacker-controlled; see app/api/v1/public/*). Data is seeded by
 // scripts/seed-demo-project.mjs through the real, Bearer-authed API — see that script for the
-// exact events (same wire contract @golden-beans/sdk's track()/trackExposure() send).
+// exact events (same wire contract @golden-frijoles/sdk's track()/trackExposure() send).
 export async function LiveEngineProof() {
   const [funnel, impact, experiment] = await Promise.all([
     getFeatureFunnel(DEMO_PROJECT_SLUG, FEATURE_KEY),
@@ -59,7 +59,7 @@ export async function LiveEngineProof() {
         </p>
         <AgentWindow
           className="live-proof__window"
-          title={`claude — connected: golden-beans · ${DEMO_PROJECT_SLUG}`}
+          title={`claude — connected: golden-frijoles · ${DEMO_PROJECT_SLUG}`}
           status="revocable"
         >
           <ActivityFeedItem actor="human">how&apos;s the setup-guide funnel?</ActivityFeedItem>

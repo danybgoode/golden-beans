@@ -11,7 +11,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import { parseFlagDefinition, type FlagDefinition } from '@golden-beans/sdk'
+import { parseFlagDefinition, type FlagDefinition } from '@golden-frijoles/sdk'
 
 // The extensionless-import hook, verbatim from flag-rule-draft.test.ts — flag-definition-diff
 // imports ./rollout-percent, which is D3's single-conversion rule expressed as a dependency.

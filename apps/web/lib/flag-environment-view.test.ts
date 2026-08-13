@@ -14,7 +14,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import { FLAG_ENVIRONMENTS, evaluateFlag, parseFlagDefinition, type FlagDefinition } from '@golden-beans/sdk'
+import { FLAG_ENVIRONMENTS, evaluateFlag, parseFlagDefinition, type FlagDefinition } from '@golden-frijoles/sdk'
 
 type ResolveHook = (
   specifier: string,

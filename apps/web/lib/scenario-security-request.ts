@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { SCENARIO_SECURITY_TEMPLATES, type ScenarioSecurityTemplate } from '@golden-beans/sdk'
+import { SCENARIO_SECURITY_TEMPLATES, type ScenarioSecurityTemplate } from '@golden-frijoles/sdk'
 
 export const SCENARIO_SECURITY_REQUEST_HEADER = 'x-golden-beans-scenario-request'
 export const SCENARIO_SECURITY_TARGET_PATH = '/api/internal/resilience/security-probe'

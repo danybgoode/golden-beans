@@ -17,7 +17,7 @@ import {
   parseFlagDefinition,
   type FlagDefinition,
   type FlagEvaluationContext,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 
 type ResolveHook = (
   specifier: string,

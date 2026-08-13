@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { hashCredential } from '@/lib/credential-hash'
 import type { FlagDefinition } from '@/lib/flag-definition'
-import { FLAG_DEFINITION_SYNC_CONTRACT_VERSION, type FlagDefinitionSyncRequest } from '@golden-beans/sdk'
+import { FLAG_DEFINITION_SYNC_CONTRACT_VERSION, type FlagDefinitionSyncRequest } from '@golden-frijoles/sdk'
 import {
   cleanupFlagProjects,
   requireLocalSupabaseApiUrl,

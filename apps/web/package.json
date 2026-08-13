@@ -1,17 +1,17 @@
 {
-  "name": "@golden-beans/web",
+  "name": "@golden-frijoles/web",
   "private": true,
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build --workspace=@golden-beans/sdk && next build",
+    "build": "npm run build --workspace=@golden-frijoles/sdk && next build",
     "start": "next start",
     "test:e2e": "playwright test --project=api",
     "test:e2e:browser": "playwright test --project=browser",
     "test:e2e:authed": "playwright test --project=authed"
   },
   "dependencies": {
-    "@golden-beans/sdk": "*",
+    "@golden-frijoles/sdk": "*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.45.4",

@@ -16,7 +16,7 @@
 // bar's length is computed geometry, not a colour drifting away from the tokens. Every colour below
 // is a token, and the drift guard sweeps this directory for raw hex.
 
-import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@golden-beans/sdk'
+import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@golden-frijoles/sdk'
 import type { FlagEnvironmentSummary } from '@/lib/flag-environment-view'
 
 /**

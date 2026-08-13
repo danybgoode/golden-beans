@@ -7,7 +7,7 @@
 // the same shape: the PROJECT ROW is a direct Supabase upsert (there's no self-serve signup API),
 // but the Grower SIGNAL is registered through the REAL Bearer-authed API, never a raw DB write.
 //
-// Uses raw fetch() rather than importing @golden-beans/sdk for the same reason the demo script
+// Uses raw fetch() rather than importing @golden-frijoles/sdk for the same reason the demo script
 // does: the SDK ships as un-transpiled TS with extensionless internal imports that plain `node`
 // can't resolve (ERR_MODULE_NOT_FOUND). The /features/sync payload below is byte-identical to what
 // the SDK's syncFeatures() sends (packages/sdk/src/index.ts).
@@ -157,7 +157,7 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           targetEvent: TARGET_EVENT,
           adoptedEvent: ADOPTED_EVENT,
           retentionDays: RETENTION_DAYS,
-          description: 'Golden Beans landing dogfood funnel: visitor → waitlist (Grower signal, Story 3.1).',
+          description: 'Golden Frijoles landing dogfood funnel: visitor → waitlist (Grower signal, Story 3.1).',
         },
         {
           key: ACTIVATION_KEY,
@@ -167,7 +167,7 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           retainedEvent: ACTIVATION_RETAINED_EVENT,
           retentionDays: RETENTION_DAYS,
           description:
-            'Golden Beans activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
+            'Golden Frijoles activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
         },
         {
           key: HUB_KEY,
@@ -176,7 +176,7 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           adoptedEvent: HUB_ADOPTED_EVENT,
           retentionDays: RETENTION_DAYS,
           description:
-            'Golden Beans hub dogfood: Pod Report opened → share link opened (pod-report Story 3.2).',
+            'Golden Frijoles hub dogfood: Pod Report opened → share link opened (pod-report Story 3.2).',
         },
       ],
     }),

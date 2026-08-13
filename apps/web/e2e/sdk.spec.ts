@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 // Story 1.2 (Roadmap/01-growth-engine/growth-engine-v1/sprint-1.md) — proves the SDK's
 // "≤5-line integration" acceptance: this IS the consumer, not a mock of one.

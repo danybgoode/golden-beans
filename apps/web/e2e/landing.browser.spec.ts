@@ -153,26 +153,56 @@ test('a gold CTA keeps its label while hovered', async ({ page }) => {
   ).toBeGreaterThan(240)
 })
 
-// Story 1.1 (epic D1). The rename is public-surfaces-only, and the ONE deliberate survivor is the
-// npm package name in §9 — `@golden-beans/sdk` is the package that actually exists, and
-// CODE-QUALITY.md #9 says a public claim must be checkable.
-//
-// Naming that exception here rather than loosening the matcher is the point: if the package is ever
-// republished, this test fails and tells the next person exactly which line to change.
-test('the page is called Golden Frijoles, with one named exception', async ({ page }) => {
+// frijoles-rebrand-closeout A4. The two old-name tenant slugs are live DATA identities, not brand
+// copy: one owns historical landing telemetry and one owns the synthetic public proof. Strip only
+// those exact, enumerated values before checking the rest of the rendered page. A broad matcher or
+// a generic hyphen exception would let the old brand creep back in under cover of the slug decision.
+test('the page is called Golden Frijoles, with only the named data-slug survivors', async ({ page }) => {
   await page.goto('/')
 
   await expect(page).toHaveTitle(/Golden Frijoles/)
   await expect(page.locator('.brand-lockup__type strong').first()).toHaveText('golden frijoles')
 
   const body = await page.locator('body').innerText()
-  const survivors = body.split('\n').filter((line) => /golden bean/i.test(line))
+  const withoutDataSlugs = body.replaceAll('golden-beans-demo', '').replaceAll('golden-beans', '')
+  expect(withoutDataSlugs).not.toMatch(/golden[ -]beans/i)
+  expect(body).toContain('npm install @golden-frijoles/sdk')
+})
 
-  for (const line of survivors) {
-    expect(
-      line.includes('@golden-beans/sdk'),
-      `"${line.trim()}" still says Golden Beans and is not the npm package exception`
-    ).toBe(true)
+// frijoles-rebrand-closeout Story 1.3. The paragraph was a mockup ledger, not product copy. Its
+// honesty claims already have local guards in this file (surface notes, flag-derived drill badges,
+// and the infomercial disclaimer), so deleting it must leave the useful footer rails and no hidden
+// second copy. This test was observed red against the shipped pre-closeout page.
+test('the footer keeps its useful rails without the mockup footnote ledger', async ({ page }) => {
+  await page.goto('/')
+
+  const footer = page.locator('footer.footer')
+  await expect(footer.locator('.brand-lockup')).toBeVisible()
+  await expect(footer.locator('.footer__agent-manifest')).toBeVisible()
+  await expect(footer.locator('.footer__meta')).toHaveCount(0)
+  await expect(footer).not.toContainText(/footnote ledger/i)
+})
+
+// The prior rebrand missed directly served SVGs because no React component imports them. A source
+// sweep found the residue; this request-level check makes the canonical public assets part of the
+// rendered contract instead of relying on another one-off grep. It was observed red while these
+// Golden Frijoles paths still returned 404.
+test('canonical public brand assets use Golden Frijoles names and accessible text', async ({ request }) => {
+  const assets = [
+    '/brand/golden-frijoles-mark.svg',
+    '/brand/golden-frijoles-mark-flat.svg',
+    '/brand/golden-frijoles-lockup-dark.svg',
+    '/brand/golden-frijoles-lockup-light.svg',
+  ]
+
+  for (const path of assets) {
+    const response = await request.get(path)
+    expect(response.status(), `${path} must be directly servable`).toBe(200)
+    const svg = await response.text()
+    expect(svg, `${path} still contains old-brand text`).not.toMatch(/Golden Beans/i)
+    if (!path.includes('-flat.')) {
+      expect(svg, `${path} needs accessible Golden Frijoles text`).toMatch(/Golden Frijoles/i)
+    }
   }
 })
 

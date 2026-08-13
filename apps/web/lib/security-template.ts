@@ -1,4 +1,4 @@
-import { SCENARIO_SECURITY_TEMPLATES, type ScenarioSecurityTemplate } from '@golden-beans/sdk'
+import { SCENARIO_SECURITY_TEMPLATES, type ScenarioSecurityTemplate } from '@golden-frijoles/sdk'
 
 // Closed defensive-security templates. Callers choose only a registered template identifier;
 // request construction, caps and success classification remain server-owned.

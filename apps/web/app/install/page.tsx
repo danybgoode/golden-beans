@@ -108,9 +108,9 @@ export default async function InstallPage() {
               <h2>For your engineers</h2>
               <p>An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input.</p>
               <pre className="code-block">
-                {`npm install @golden-beans/sdk
+                {`npm install @golden-frijoles/sdk
 
-import { createGrowthEngineClient } from '@golden-beans/sdk'
+import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 const engine = createGrowthEngineClient({
   baseUrl: '${getSiteUrl()}',

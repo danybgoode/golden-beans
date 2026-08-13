@@ -11,7 +11,7 @@ export {
   explainFlagEvaluation,
   parseFlagDefinition,
   validateFlagKey,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
 export type {
   FlagDefinition,
   FlagDefinitionResult,
@@ -20,4 +20,4 @@ export type {
   FlagEvaluationExplanation,
   FlagRuleExplanation,
   FlagValueType,
-} from '@golden-beans/sdk'
+} from '@golden-frijoles/sdk'
