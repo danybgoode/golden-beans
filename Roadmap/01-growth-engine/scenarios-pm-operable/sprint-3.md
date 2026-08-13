@@ -3,9 +3,9 @@
 **Status:** ⬜ not started
 
 > **Build contract (locked by the architect before the builder started).**
-> **Check D7 first:** has #14's charting decision landed? If not, this sprint ships impact as
-> **today's table with the gap stated in the PR** — it does not hand-roll an SVG chart and thereby
-> make the dependency decision by accident.
+> **D7 answered:** #14's charting decision has not landed. This sprint ships impact as a clearer
+> control-vs-treatment comparison table with the gap stated in the PR — it does not hand-roll an SVG
+> chart and thereby make the dependency decision by accident.
 > **D11 governs every story here.** A chart makes a claim look stronger than the same numbers in a
 > table. The "no causal customer claim" and cohort caveats stay verbatim, and the product owner
 > reviews the **rendered claim**, not just the render. On this sprint, "it looks good" is a warning

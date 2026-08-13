@@ -5,10 +5,11 @@
 > **Build contract (locked by the architect before the builder started).**
 > **This is the sprint that gives a human a button that injects faults.** Every gate applies and
 > none is optional. Cite D4 (two distinct affordances), D6 (verified targets only), D8 (the gate),
-> D10 (no external cohort).
-> **D4 is the one to get right:** stopping a *run* and the automatic breaker *policy* are different
-> things. A PM who believes they killed something that is still running is the worst outcome this
-> epic can produce.
+> D10 (no external cohort) and D13 (owner-session command facade).
+> **D4 was corrected by the lock:** stopping a run is `transition_run` through the scenario command;
+> `executeBreakerAdminOperation` trips a flag breaker policy and never stops a scenario. A PM who
+> believes they killed something that is still running is the worst outcome this epic can produce.
+> **BLOCKED before command-path code:** Amendment 1 must be decided.
 > Branch `feat/scenarios-pm-operable-s2`, cut from `-s1`.
 
 ## Stories
@@ -33,7 +34,8 @@
 without needing an engineer to end it.
 
 **Acceptance:**
-- A stop control on an in-progress run calls `executeBreakerAdminOperation` and stops **that run**.
+- A stop control on an in-progress run calls `transition_run` with `transition: 'stop'` through the
+  scenario command facade and stops **that run** (D4).
 - It opens `ConfirmDialog` naming the specific run and saying, in a sentence, what stops when it
   fires.
 - Stopping records an immutable breaker trip, visible in the trips view with the reason the PM gave.
@@ -46,11 +48,12 @@ without needing an engineer to end it.
 own", **so that** I never think I've stopped something I haven't.
 
 **Acceptance:**
-- Automatic breaker policy (`executeAutomaticBreaker`, `lib/breaker-policy.ts`) is presented in its
-  own section with its own wording — never as a variant of the stop button (D4).
+- Automatic breaker policy (`executeBreakerAdminOperation`, `executeAutomaticBreaker`,
+  `lib/breaker-policy.ts`) is presented in its own section with its own wording — never as a variant
+  of the stop button (D4).
 - The two are visually distinct and their confirmation copy shares no sentence.
-- A spec asserts the stop-run path calls `executeBreakerAdminOperation` and **not**
-  `executeAutomaticBreaker` — the mutation check for this story swaps them and watches it go red.
+- A spec asserts the stop-run path calls the scenario `transition_run` operation and **neither**
+  breaker function — the mutation check swaps in a breaker call and watches it go red.
 - The trips view distinguishes human-initiated stops from automatic trips, attributing each.
 **Risk:** high
 
@@ -62,7 +65,7 @@ own", **so that** I never think I've stopped something I haven't.
 - **browser smoke owed:** yes, to the product owner — **the full launch → observe → kill loop on a
   synthetic cohort.** This is fault injection against a real target; an automated smoke covers the
   API shape, a human confirms the thing actually stopped.
-- **Mutation checks (each observed red once):** wire stop-run to `executeAutomaticBreaker` → the
+- **Mutation checks (each observed red once):** wire stop-run to either breaker function → the
   distinctness spec goes red. Remove the verified-target precondition → its spec goes red.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` +
   `check:design-drift` green before merge.

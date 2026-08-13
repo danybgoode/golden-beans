@@ -6,9 +6,14 @@
 > **Run D9 before writing a line:** does a `synthetic`-cohort scenario run without
 > `approve_definition`? If it does not, the approval flow is load-bearing for v1 and this epic's
 > shape changes — amend the README out loud, do not reinterpret silently.
-> Cite D1, D2, D3, D5, D6, D8, D10, D12.
+> **Answered:** D9 is safe for synthetic resilience; production security still needs its named
+> approval. Cite D1, D2, D3, D5, D6, D8, D10, D12, D13 and D14.
 > `SCENARIO_AUTHORING_ENABLED` must exist **DISABLED in every environment before this merges.**
-> **Blocked by:** #13 Sprint 1 (`FormSection`/`Field`) and #15 Sprint 1 (`RuleBuilderRow`) on `main`.
+> #13's form/dialog primitives and #15's percent seam are on `main`. `RuleBuilderRow` is not a
+> scenario primitive (D14).
+> **BLOCKED before code:** the product owner must decide Amendment 1's owner-session facade. The
+> existing credential command cannot be called from a signed-in session by pretending the identities
+> are interchangeable (D13).
 
 ## Stories
 
