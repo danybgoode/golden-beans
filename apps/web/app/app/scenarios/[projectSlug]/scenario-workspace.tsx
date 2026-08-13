@@ -56,6 +56,15 @@ function ElapsedTime({ since }: { since: string }) {
 type Confirmation =
   | { kind: 'revoke'; id: string; label: string }
   | { kind: 'launch'; id: string; label: string; target: string; blastRadius: string }
+  | {
+      kind: 'start'
+      id: string
+      label: string
+      revision: number
+      environment: string
+      target: string
+      blastRadius: string
+    }
   | { kind: 'stop'; id: string; label: string; revision: number; environment: string }
 
 export function ScenarioWorkspace({
@@ -258,22 +267,51 @@ export function ScenarioWorkspace({
             key: 'actions',
             header: 'Actions',
             cell: (row) =>
-              row.status === 'running' ? (
+              row.status === 'running' || row.status === 'created' ? (
                 <button
                   className="btn btn-gold"
+                  disabled={
+                    row.status === 'created' &&
+                    (row.cohort === 'external' ||
+                      view.targets.find((target) => target.key === row.targetKey)?.status !== 'verified')
+                  }
+                  title={
+                    row.status === 'created' &&
+                    (row.cohort === 'external' ||
+                      view.targets.find((target) => target.key === row.targetKey)?.status !== 'verified')
+                      ? 'Only verified, non-external draft runs can start here.'
+                      : undefined
+                  }
                   type="button"
                   onClick={() => {
                     setOperationReason('')
-                    setConfirmation({
-                      kind: 'stop',
-                      id: row.id,
-                      label: `${row.scenarioKey} run ${shortId(row.id)}`,
-                      revision: row.revision,
-                      environment: row.environment,
-                    })
+                    if (row.status === 'running')
+                      setConfirmation({
+                        kind: 'stop',
+                        id: row.id,
+                        label: `${row.scenarioKey} run ${shortId(row.id)}`,
+                        revision: row.revision,
+                        environment: row.environment,
+                      })
+                    else {
+                      const definition = view.definitions.find(
+                        (item) => item.id === row.scenarioVersionId
+                      )?.definition
+                      setConfirmation({
+                        kind: 'start',
+                        id: row.id,
+                        label: `${row.scenarioKey} draft run ${shortId(row.id)}`,
+                        revision: row.revision,
+                        environment: row.environment,
+                        target: row.targetKey,
+                        blastRadius: definition
+                          ? `${definition.limits.requestCap} requests, ${definition.limits.concurrencyCap} concurrent, ${durationSeconds(definition.startAt, definition.expiresAt)} seconds`
+                          : 'the stored immutable definition limits',
+                      })
+                    }
                   }}
                 >
-                  Stop run
+                  {row.status === 'running' ? 'Stop run' : 'Retry start'}
                 </button>
               ) : null,
           } satisfies DataTableColumn<ScenarioDashboardRun>,
@@ -458,7 +496,7 @@ export function ScenarioWorkspace({
                 {(control) => (
                   <select
                     {...control}
-                    value={`${draft.flagKey}:${draft.flagVersion}`}
+                    value={draft.flagKey ? `${draft.flagKey}:${draft.flagVersion}` : ''}
                     onChange={(event) => {
                       const selected = view.faultFlags.find(
                         (flag) => `${flag.key}:${flag.version}` === event.target.value
@@ -885,15 +923,31 @@ export function ScenarioWorkspace({
 
       <ConfirmDialog
         open={confirmation !== null}
-        verb={confirmation?.kind === 'revoke' ? 'Revoke' : confirmation?.kind === 'stop' ? 'Stop' : 'Launch'}
-        noun={confirmation?.kind === 'revoke' ? 'target' : confirmation?.kind === 'stop' ? 'run' : 'scenario'}
+        verb={
+          confirmation?.kind === 'revoke'
+            ? 'Revoke'
+            : confirmation?.kind === 'stop'
+              ? 'Stop'
+              : confirmation?.kind === 'start'
+                ? 'Start'
+                : 'Launch'
+        }
+        noun={
+          confirmation?.kind === 'revoke'
+            ? 'target'
+            : confirmation?.kind === 'stop'
+              ? 'run'
+              : confirmation?.kind === 'start'
+                ? 'draft run'
+                : 'scenario'
+        }
         subject={confirmation?.label ?? 'scenario'}
         consequence={
           confirmation?.kind === 'revoke'
             ? 'New runs cannot use this target after revocation.'
             : confirmation?.kind === 'stop'
               ? 'This run stops admitting bounded fault executions.'
-              : confirmation?.kind === 'launch'
+              : confirmation?.kind === 'launch' || confirmation?.kind === 'start'
                 ? `${confirmation.target}. Blast radius: ${confirmation.blastRadius}.`
                 : ''
         }
@@ -939,6 +993,18 @@ export function ScenarioWorkspace({
                   operationReason
                 ),
               'Scenario run launched.',
+              true
+            )
+          if (confirmation.kind === 'start')
+            act(
+              () =>
+                scenarioOwnerOperationAction(projectSlug, confirmation.environment, {
+                  operation: 'start_run',
+                  runId: confirmation.id,
+                  expectedRevision: confirmation.revision,
+                  reason: operationReason,
+                }),
+              'Scenario run started.',
               true
             )
           if (confirmation.kind === 'stop')
