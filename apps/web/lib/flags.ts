@@ -167,6 +167,13 @@ export function isAutomaticCircuitBreakersEnabled(): boolean {
   return process.env.AUTOMATIC_CIRCUIT_BREAKERS_ENABLED === 'true'
 }
 
+// scenarios-pm-operable · PM-authored scenario writes are an independently removable control
+// plane. Evidence remains readable while this is OFF; create/start/stop/revoke fail before auth or
+// payload work. Born dark like every operational gate in this module.
+export function isScenarioAuthoringEnabled(): boolean {
+  return process.env.SCENARIO_AUTHORING_ENABLED === 'true'
+}
+
 // app-shell-and-agent-rail · Sprint 2, Story 2.2 — the agent rail's enablement gate. Fourteenth
 // flag, same polarity and same dark-by-default contract as every one above (epic README, D6): born
 // unset/OFF, created disabled, flipped deliberately once the rail has been exercised.

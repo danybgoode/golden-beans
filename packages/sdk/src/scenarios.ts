@@ -24,6 +24,7 @@ export const MAX_SCENARIO_CONCURRENCY_CAP = 5
 export const MAX_SCENARIO_LEASE_TTL_SECONDS = 30
 export const MAX_SCENARIO_ABORT_FAILURES = 10
 export const MAX_SCENARIO_DELAY_MS = 2_000
+export const MAX_SCENARIO_ERROR_RATE_BASIS_POINTS = 10_000
 
 const SCENARIO_KEY = /^[a-z][a-z0-9_-]{0,63}$/
 const TARGET_KEY = /^[a-z][a-z0-9_.-]{0,127}$/
@@ -31,6 +32,8 @@ const RUN_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const UTC_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
 
 export const SCENARIO_COHORTS = ['synthetic', 'internal', 'external'] as const
+export const SCENARIO_KINDS = ['resilience', 'security'] as const
+export const SCENARIO_FAULT_KINDS = ['none', 'delay', 'synthetic_error'] as const
 export const SCENARIO_SECURITY_TEMPLATES = [
   'malformed_payload_v1',
   'rate_limit_v1',
@@ -39,7 +42,8 @@ export const SCENARIO_SECURITY_TEMPLATES = [
 ] as const
 export type ScenarioCohort = (typeof SCENARIO_COHORTS)[number]
 export type ScenarioSecurityTemplate = (typeof SCENARIO_SECURITY_TEMPLATES)[number]
-export type ScenarioKind = 'resilience' | 'security'
+export type ScenarioKind = (typeof SCENARIO_KINDS)[number]
+export type ScenarioFaultKind = (typeof SCENARIO_FAULT_KINDS)[number]
 
 export type ScenarioFault =
   | { kind: 'none' }
@@ -227,11 +231,13 @@ function parseGuardrails(value: unknown, path: string, errors: string[]): Scenar
   if (!boundedInteger(value.abortAfterFailures, 1, MAX_SCENARIO_ABORT_FAILURES)) {
     errors.push(`${path}.abortAfterFailures must be an integer from 1 to ${MAX_SCENARIO_ABORT_FAILURES}`)
   }
-  if (!boundedInteger(value.maxErrorRateBasisPoints, 1, 10_000)) {
-    errors.push(`${path}.maxErrorRateBasisPoints must be an integer from 1 to 10000`)
+  if (!boundedInteger(value.maxErrorRateBasisPoints, 1, MAX_SCENARIO_ERROR_RATE_BASIS_POINTS)) {
+    errors.push(
+      `${path}.maxErrorRateBasisPoints must be an integer from 1 to ${MAX_SCENARIO_ERROR_RATE_BASIS_POINTS}`
+    )
   }
   return boundedInteger(value.abortAfterFailures, 1, MAX_SCENARIO_ABORT_FAILURES) &&
-    boundedInteger(value.maxErrorRateBasisPoints, 1, 10_000)
+    boundedInteger(value.maxErrorRateBasisPoints, 1, MAX_SCENARIO_ERROR_RATE_BASIS_POINTS)
     ? {
         abortAfterFailures: value.abortAfterFailures,
         maxErrorRateBasisPoints: value.maxErrorRateBasisPoints,

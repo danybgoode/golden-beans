@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type { ExperimentAnalysisResult } from './experiment-analysis.ts'
-import { buildScenarioImpactEvidence, type ScenarioImpactInput } from './scenario-impact.ts'
+import {
+  buildScenarioImpactEvidence,
+  parseScenarioImpactEvidence,
+  type ScenarioImpactInput,
+} from './scenario-impact.ts'
 
 function analysis(overrides: Partial<ExperimentAnalysisResult> = {}): ExperimentAnalysisResult {
   return {
@@ -130,4 +134,13 @@ test('invalid technical counters are rejected rather than laundered into zero di
   const invalid = input()
   invalid.technical.fault.failures = 11
   assert.throws(() => buildScenarioImpactEvidence(invalid))
+})
+
+test('stored impact parsing rejects incomplete nested evidence before the dashboard dereferences it', () => {
+  const evidence = buildScenarioImpactEvidence(input())
+  assert.deepEqual(parseScenarioImpactEvidence(evidence), evidence)
+  assert.equal(parseScenarioImpactEvidence({ ...evidence, technical: {} }), null)
+  assert.equal(parseScenarioImpactEvidence({ ...evidence, claim: { status: 'causal_eligible' } }), null)
+  assert.equal(parseScenarioImpactEvidence({ ...evidence, experiment: { key: 'missing-version' } }), null)
+  assert.equal(parseScenarioImpactEvidence({ ...evidence, relatedEvidence: null }), null)
 })

@@ -1345,6 +1345,145 @@ test('impact capture persists one immutable tenant-bound canonical evidence snap
   }
 })
 
+test('owner-session facade is owner-attributed, tenant-bound, and lifecycle-complete', async () => {
+  const client = db()
+  const ownerA = await fixtureUser(client, 'owner-facade-a')
+  const ownerB = await fixtureUser(client, 'owner-facade-b')
+  const projectA = await fixtureProject(client, ownerA, 'owner-facade-a')
+  const projectB = await fixtureProject(client, ownerB, 'owner-facade-b')
+  const credentialsA = await fixtureCredentials(client, projectA, ownerA, 'owner-facade-a')
+  const credentialsB = await fixtureCredentials(client, projectB, ownerB, 'owner-facade-b')
+  await fixtureFlag(client, projectA, ownerA, 'scenario.owner_facade')
+  const targetA = await fixtureTarget(client, credentialsA.adminKey, 'owner-facade-a')
+  const targetB = await fixtureTarget(client, credentialsB.adminKey, 'owner-facade-b')
+  const definition = scenarioDefinition({
+    targetKey: targetA.targetKey,
+    flagKey: 'scenario.owner_facade',
+  })
+
+  const externalDefinition = await client.rpc('owner_create_scenario_definition_version', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_key: 'owner_external_denied',
+    p_definition: { ...definition, cohort: 'external' },
+    p_reason: 'owner UI must not author external cohorts',
+  })
+  expect(externalDefinition.error?.code).toBe('42501')
+
+  const denied = await client.rpc('owner_create_scenario_definition_version', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerB,
+    p_scenario_key: 'owner_facade_denied',
+    p_definition: definition,
+    p_reason: 'foreign owner must not cross the tenant boundary',
+  })
+  expect(denied.error?.code).toBe('42501')
+
+  const foreignTarget = await client.rpc('owner_revoke_scenario_target', {
+    p_project_id: projectA,
+    p_actor_user_id: ownerA,
+    p_target_id: targetB.targetId,
+    p_reason: 'foreign target must remain invisible',
+  })
+  expect(foreignTarget.error).toBeNull()
+  expect(foreignTarget.data).toEqual([])
+
+  const created = await client.rpc('owner_create_scenario_definition_version', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_key: 'owner_facade',
+    p_definition: definition,
+    p_reason: 'owner authored bounded scenario',
+  })
+  expect(created.error).toBeNull()
+  expect(created.data?.[0]?.created).toBe(true)
+  const versionId = created.data?.[0]?.scenario_version_id as string
+
+  const draft = await client.rpc('owner_create_scenario_run', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_version_id: versionId,
+    p_reason: 'owner created bounded run',
+  })
+  expect(draft.error).toBeNull()
+  const runId = draft.data?.[0]?.run_id as string
+
+  const started = await client.rpc('owner_start_scenario_run', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_run_id: runId,
+    p_expected_revision: 1,
+    p_reason: 'owner launched bounded run',
+  })
+  expect(started.error).toBeNull()
+  expect(started.data?.[0]?.revision).toBe(2)
+
+  const aborted = await client.rpc('owner_transition_scenario_run', {
+    p_project_id: projectA,
+    p_actor_user_id: ownerA,
+    p_run_id: runId,
+    p_expected_revision: 2,
+    p_transition: 'abort',
+    p_reason: 'owner facade exposes stop only',
+  })
+  expect(aborted.error?.code).toBe('42501')
+
+  const stopped = await client.rpc('owner_transition_scenario_run', {
+    p_project_id: projectA,
+    p_actor_user_id: ownerA,
+    p_run_id: runId,
+    p_expected_revision: 2,
+    p_transition: 'stop',
+    p_reason: 'owner stopped bounded run',
+  })
+  expect(stopped.error).toBeNull()
+  expect(stopped.data?.[0]?.revision).toBe(3)
+
+  const externalVersion = await createScenario(
+    client,
+    credentialsA.adminKey,
+    'credential_external',
+    scenarioDefinition({
+      targetKey: targetA.targetKey,
+      flagKey: 'scenario.owner_facade',
+      cohort: 'external',
+    })
+  )
+  const externalRun = await client.rpc('owner_create_scenario_run', {
+    p_project_id: projectA,
+    p_environment: 'production',
+    p_actor_user_id: ownerA,
+    p_scenario_version_id: externalVersion.scenario_version_id,
+    p_reason: 'owner UI must not launch credential-approved external definitions',
+  })
+  expect(externalRun.error?.code).toBe('42501')
+
+  const revoked = await client.rpc('owner_revoke_scenario_target', {
+    p_project_id: projectA,
+    p_actor_user_id: ownerA,
+    p_target_id: targetA.targetId,
+    p_reason: 'owner retired fixture target',
+  })
+  expect(revoked.error).toBeNull()
+  expect(revoked.data?.[0]?.status).toBe('revoked')
+
+  const audit = await client
+    .from('scenario_lifecycle_audit')
+    .select('action, actor_user_id, external_actor_id')
+    .eq('project_id', projectA)
+    .is('external_actor_id', null)
+    .in('action', ['version_created', 'run_created', 'run_started', 'run_stopped', 'target_revoked'])
+  expect(audit.error).toBeNull()
+  expect(audit.data).toHaveLength(5)
+  expect(audit.data?.every((row) => row.actor_user_id === ownerA)).toBe(true)
+  expect(audit.data?.every((row) => row.external_actor_id === null)).toBe(true)
+})
+
 test('every scenario RPC denies anon/authenticated at the function boundary', async () => {
   const pg = new PgClient({ connectionString: requireTestDatabaseUrl() })
   await pg.connect()
@@ -1358,6 +1497,11 @@ test('every scenario RPC denies anon/authenticated at the function boundary', as
       'public.create_scenario_run(text,uuid,text,text)',
       'public.start_scenario_run(text,uuid,bigint,text,text)',
       'public.transition_scenario_run(text,uuid,bigint,text,text,text)',
+      'public.owner_revoke_scenario_target(uuid,uuid,uuid,text)',
+      'public.owner_create_scenario_definition_version(uuid,text,uuid,text,jsonb,text)',
+      'public.owner_create_scenario_run(uuid,text,uuid,uuid,text)',
+      'public.owner_start_scenario_run(uuid,text,uuid,uuid,bigint,text)',
+      'public.owner_transition_scenario_run(uuid,uuid,uuid,bigint,text,text)',
       'public.get_scenario_admin_snapshot(text)',
       'public.get_scenario_read_snapshot(text)',
       'public.reserve_scenario_execution(text,uuid,bigint)',

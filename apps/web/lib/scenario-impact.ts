@@ -38,6 +38,83 @@ export type ScenarioImpactEvidence = ScenarioImpactInput & {
   }
 }
 
+function record(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function stringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function nullableFiniteNumber(value: unknown): value is number | null {
+  return value === null || (typeof value === 'number' && Number.isFinite(value))
+}
+
+function storedArm(value: unknown): boolean {
+  if (!record(value)) return false
+  return (
+    typeof value.attempts === 'number' &&
+    typeof value.failures === 'number' &&
+    validCounter(value.attempts) &&
+    validCounter(value.failures) &&
+    value.failures <= value.attempts &&
+    nullableFiniteNumber(value.latencyP95Ms)
+  )
+}
+
+/**
+ * Stored evidence is JSON and can outlive its writer. Parse every field the dashboard relies on,
+ * plus the immutable references and provenance that make the evidence contract meaningful, before
+ * allowing a render to dereference it. Unknown additive fields remain forward-compatible.
+ */
+export function parseScenarioImpactEvidence(value: unknown): ScenarioImpactEvidence | null {
+  if (!record(value) || value.contractVersion !== 1 || typeof value.generatedAt !== 'string') return null
+  const scenario = record(value.scenario) ? value.scenario : null
+  const flag = record(value.flag) ? value.flag : null
+  const experiment = record(value.experiment) ? value.experiment : null
+  const technical = record(value.technical) ? value.technical : null
+  const claim = record(value.claim) ? value.claim : null
+  const related = record(value.relatedEvidence) ? value.relatedEvidence : null
+  const claimStatuses: ScenarioImpactEvidence['claim']['status'][] = [
+    'blocked_missing_outcome',
+    'blocked_integrity',
+    'blocked_sample',
+    'internal_noncausal',
+    'causal_eligible',
+  ]
+  if (
+    !scenario ||
+    typeof scenario.key !== 'string' ||
+    !Number.isSafeInteger(scenario.definitionVersion) ||
+    typeof scenario.runId !== 'string' ||
+    !Number.isSafeInteger(scenario.runRevision) ||
+    !flag ||
+    typeof flag.key !== 'string' ||
+    !Number.isSafeInteger(flag.definitionVersion) ||
+    !experiment ||
+    typeof experiment.key !== 'string' ||
+    !Number.isSafeInteger(experiment.definitionVersion) ||
+    (value.cohort !== 'synthetic' && value.cohort !== 'internal' && value.cohort !== 'external') ||
+    !technical ||
+    !storedArm(technical.control) ||
+    !storedArm(technical.fault) ||
+    typeof technical.nonZeroDifference !== 'boolean' ||
+    !nullableFiniteNumber(technical.failureRateDelta) ||
+    !nullableFiniteNumber(technical.latencyP95DeltaMs) ||
+    !record(value.canonicalAnalysis) ||
+    !related ||
+    !stringArray(related.errorSignalIds) ||
+    !stringArray(related.frictionSignalIds) ||
+    !stringArray(related.taskIds) ||
+    !claim ||
+    !claimStatuses.includes(claim.status as ScenarioImpactEvidence['claim']['status']) ||
+    typeof claim.causal !== 'boolean' ||
+    !stringArray(claim.blockers)
+  )
+    return null
+  return value as ScenarioImpactEvidence
+}
+
 function rate(failures: number, attempts: number): number | null {
   return attempts === 0 ? null : failures / attempts
 }

@@ -230,12 +230,15 @@ supabase link --project-ref <ref> && supabase migration list && supabase db push
   **born OFF**; legacy local bucketing, exposure ingest and v1 comparison do not read it), and
   `FLAG_DEFINITION_SYNC_ENABLED` (`lib/flags.ts`, project catalog-registration write gate,
   **born OFF**; definition inspection, activation and snapshot serving do not read it), and
+  `SCENARIO_AUTHORING_ENABLED` (`lib/flags.ts`, owner-session define/launch/stop/revoke UI gate,
+  **born OFF**; scenario evidence remains readable and the underlying resilience/security/breaker
+  gates still apply independently), and
   `SIGNUP_ENABLED` (`lib/flags.ts`, self-serve signup enablement gate, **born OFF**; gates the
   `/signup` page, `POST /api/v1/public/signup`, tenant provisioning in `/auth/callback`, and the
   landing's §1/§7 CTA flip — all four read it fresh per request, but every env change still needs a
   new Git-tracked deployment because Vercel snapshots env values at build time). The same redeploy
   requirement applies to every gate above.
-  *A future epic adds `DESTINATION_DELIVERY_ENABLED`, also born OFF.*
+  `DESTINATION_DELIVERY_ENABLED` (`lib/flags.ts`, scheduled destination-delivery gate, **born OFF**).
 - **Tenancy limits are DATA, not env** — `projects.monthly_event_quota` / `projects.ingest_rate_per_min`
   (`lib/quota.ts`); raising a customer's ceiling is an `UPDATE`, never a deploy.
 

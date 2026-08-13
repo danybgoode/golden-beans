@@ -6,11 +6,11 @@ area: "01"
 type: feature
 priority: "wave-2026-08-08"
 appetite: M
-underwritten_by: null
+underwritten_by: "Roadmap/bets/wave-2026-08-13-scenarios.md"
 risk: high
 epic: "01-growth-engine/scenarios-pm-operable"
 build_order: 16
-updated: 2026-08-08
+updated: 2026-08-13
 ---
 
 # Pitch — Scenarios, from a read-only log to the tool PRD-G describes
@@ -18,8 +18,8 @@ updated: 2026-08-08
 > **Class:** Feature · **Lane:** shaped bet · **Risk:** high
 > **Source:** `Roadmap/00-ideas/audits/app-ux-audit-2026-08-01.md` §2.4, §6.4, §7 (P1); PRD-G E1/E3.
 > **Verified against live `main`, 2026-08-08** — see *What already exists*.
-> **Shaped and scaffolded, NOT yet underwritten.** `underwritten_by: null` is the honest state: the
-> docs are ready so the next betting table is a three-line decision rather than a fresh groom.
+> **Underwritten 2026-08-13** by [`wave-2026-08-13-scenarios.md`](../../bets/wave-2026-08-13-scenarios.md)
+> after the product owner explicitly started the epic build.
 
 ## Problem
 

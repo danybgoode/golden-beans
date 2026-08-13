@@ -22,7 +22,8 @@ const darkPort = 3111;
 const syncWithoutServingPort = 3112;
 // Optional file arguments keep focused local investigation hermetic too. The dark-gate tripwire
 // still always runs because a focused enabled spec must not accidentally skip the OFF boundary.
-const requestedFiles = process.argv.slice(2);
+const requestedProject = process.argv.includes('--authed') ? 'authed' : 'api';
+const requestedFiles = process.argv.slice(2).filter((argument) => argument !== '--authed');
 
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`);
@@ -111,8 +112,8 @@ async function withServer({ port, env, label }, action) {
   }
 }
 
-function runPlaywright(env, port, files = []) {
-  run(playwright, ['test', '--config=apps/web/playwright.config.ts', ...files, '--project=api'], {
+function runPlaywright(env, port, files = [], project = 'api') {
+  run(playwright, ['test', '--config=apps/web/playwright.config.ts', ...files, `--project=${project}`], {
     env: { ...env, PLAYWRIGHT_BASE_URL: `http://127.0.0.1:${port}` },
   });
 }
@@ -133,6 +134,8 @@ async function main() {
     RESILIENCE_SCENARIOS_ENABLED: 'true',
     SECURITY_SIMULATIONS_ENABLED: 'true',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
+    SCENARIO_AUTHORING_ENABLED: 'true',
+    SIGNUP_ENABLED: requestedProject === 'authed' ? 'true' : 'false',
     SELF_PROJECT_API_KEY: randomBytes(24).toString('hex'),
   };
 
@@ -150,6 +153,7 @@ async function main() {
     RESILIENCE_SCENARIOS_ENABLED: 'false',
     SECURITY_SIMULATIONS_ENABLED: 'false',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
+    SCENARIO_AUTHORING_ENABLED: 'false',
   };
   await withServer({ port: darkPort, env: dark, label: 'dark-gate' }, async () => {
     runPlaywright(dark, darkPort, [
@@ -185,7 +189,7 @@ async function main() {
       quiet: true,
     });
     process.stdout.write('local-e2e: seeded disposable demo and self fixtures.\n');
-    runPlaywright(shared, normalPort, requestedFiles);
+    runPlaywright(shared, normalPort, requestedFiles, requestedProject);
   });
 }
 

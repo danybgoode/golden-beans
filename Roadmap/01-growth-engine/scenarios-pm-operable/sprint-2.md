@@ -1,15 +1,16 @@
 # Scenarios made PM-operable — Sprint 2: Launch and kill
 
-**Status:** ⬜ not started
+**Status:** ✅ built in `cf1b971` + hardening through `00b1a86`; PR #98 awaits product-owner merge
 
 > **Build contract (locked by the architect before the builder started).**
 > **This is the sprint that gives a human a button that injects faults.** Every gate applies and
 > none is optional. Cite D4 (two distinct affordances), D6 (verified targets only), D8 (the gate),
-> D10 (no external cohort).
-> **D4 is the one to get right:** stopping a *run* and the automatic breaker *policy* are different
-> things. A PM who believes they killed something that is still running is the worst outcome this
-> epic can produce.
-> Branch `feat/scenarios-pm-operable-s2`, cut from `-s1`.
+> D10 (no external cohort) and D13 (owner-session command facade).
+> **D4 was corrected by the lock:** stopping a run is `transition_run` through the scenario command;
+> `executeBreakerAdminOperation` trips a flag breaker policy and never stops a scenario. A PM who
+> believes they killed something that is still running is the worst outcome this epic can produce.
+> **Amendment 1 approved 2026-08-13:** use the owner-session facade; keep API-key commands intact.
+> Delivered sequentially on the single epic branch after Sprint 1.
 
 ## Stories
 
@@ -18,7 +19,9 @@
 **so that** I can run a resilience exercise myself.
 
 **Acceptance:**
-- Launch posts `create_run` through `executeScenarioAdminOperation` — the existing operation.
+- Launch parses `create_run` then `start_run` through the gated owner-session facade. Both owner and
+  credential RPCs share the existing transaction cores; if start fails after draft creation, the
+  page refreshes so the honest retryable draft remains visible.
 - **A target that is not verified cannot be selected.** The precondition is a visible state, not a
   rejected request (D6).
 - `external`-cohort definitions offer no launch control at all (D10).
@@ -33,10 +36,12 @@
 without needing an engineer to end it.
 
 **Acceptance:**
-- A stop control on an in-progress run calls `executeBreakerAdminOperation` and stops **that run**.
+- A stop control on an in-progress run calls `transition_run` with `transition: 'stop'` through the
+  scenario command facade and stops **that run** (D4).
 - It opens `ConfirmDialog` naming the specific run and saying, in a sentence, what stops when it
   fires.
-- Stopping records an immutable breaker trip, visible in the trips view with the reason the PM gave.
+- Stopping records the immutable scenario lifecycle transition and reason, visible in the run
+  history. It does not create a breaker trip (D4).
 - The control is disabled — with a stated reason — for a run the PM cannot stop, rather than
   failing after the click.
 **Risk:** high
@@ -46,23 +51,24 @@ without needing an engineer to end it.
 own", **so that** I never think I've stopped something I haven't.
 
 **Acceptance:**
-- Automatic breaker policy (`executeAutomaticBreaker`, `lib/breaker-policy.ts`) is presented in its
-  own section with its own wording — never as a variant of the stop button (D4).
+- Automatic breaker policy (`executeBreakerAdminOperation`, `executeAutomaticBreaker`,
+  `lib/breaker-policy.ts`) is presented in its own section with its own wording — never as a variant
+  of the stop button (D4).
 - The two are visually distinct and their confirmation copy shares no sentence.
-- A spec asserts the stop-run path calls `executeBreakerAdminOperation` and **not**
-  `executeAutomaticBreaker` — the mutation check for this story swaps them and watches it go red.
-- The trips view distinguishes human-initiated stops from automatic trips, attributing each.
+- A spec asserts the stop-run path calls the scenario `transition_run` operation and **neither**
+  breaker function — the mutation check swaps in a breaker call and watches it go red.
+- Run history attributes human stop reasons. The separate trips view contains only flag-policy
+  trips and distinguishes its own manual-confirmed and automatic modes.
 **Risk:** high
 
 ## Sprint QA
-- **api spec(s):** extend `e2e/scenario-authoring.spec.ts` — launch against a verified target
-  succeeds; launch against an unverified target is not offered *and* is refused if forced; stop-run
-  calls the run path and records a trip; the two breaker paths are not interchangeable. Extend
-  `scenario-authoring-dark.spec.ts` for gate-off. `breaker-contract.spec.ts` must pass **unchanged**.
+- **specs:** the owner-operation cases in `e2e/scenario-registry.spec.ts` prove owner attribution,
+  tenant isolation, verified-target launch and lifecycle stop. `scenario-authoring.authed.spec.ts`
+  covers the launch/stop affordances; `breaker-contract.spec.ts` passes unchanged.
 - **browser smoke owed:** yes, to the product owner — **the full launch → observe → kill loop on a
   synthetic cohort.** This is fault injection against a real target; an automated smoke covers the
   API shape, a human confirms the thing actually stopped.
-- **Mutation checks (each observed red once):** wire stop-run to `executeAutomaticBreaker` → the
+- **Mutation checks (each observed red once):** wire stop-run to either breaker function → the
   distinctness spec goes red. Remove the verified-target precondition → its spec goes red.
 - **deterministic gate:** `npm run typecheck` + `npm run build` + Playwright `api` +
   `check:design-drift` green before merge.
@@ -92,12 +98,11 @@ Env: preview (pre-merge) · then production · https://golden-beans-gamma.vercel
 6. Confirm the stop.
    → The run ends. **Verify it actually ended** — the run's state is terminal and no further
      activity appears against the target.
-7. Open the immutable trips view.
-   → The trip is recorded, attributed to you, with the reason you gave, and marked as
-     **human-initiated** rather than automatic.
+7. Inspect the terminal run in run history.
+   → Its stop reason is recorded on the scenario lifecycle; no breaker trip was manufactured.
 8. Look at the automatic breaker policy section.
    → It is clearly a **different thing** — different section, different wording. Nothing about it
-     reads like the stop button you just used.
+     reads like the stop button you just used. Its trips are only flag-policy trips.
 9. Unset `SCENARIO_AUTHORING_ENABLED` and reload.
    → Launch and stop controls are gone. The run history and trips are **still visible** — the gate
      hides authoring, not evidence.
