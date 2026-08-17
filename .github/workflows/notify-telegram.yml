@@ -82,8 +82,8 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Send Telegram push notification
@@ -136,8 +136,8 @@ jobs:
       contains(fromJSON('["success", "failure", "error"]'), github.event.deployment_status.state)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # Resolve once, before either delivery. Putting this inside the Telegram step made the Slack
