@@ -32,7 +32,7 @@ test('the gated-off fallback is root-relative, so it is never a bare in-page anc
   const href = primaryCtaHref(false)
   assert.ok(
     href.startsWith('/'),
-    `"${href}" is a bare fragment — it would resolve against whatever page renders the CTA`
+    `"${href}" must be root-relative; a bare fragment resolves against whatever page renders the CTA`
   )
 })
 

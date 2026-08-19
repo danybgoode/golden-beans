@@ -45,6 +45,16 @@ export interface OpsSurface {
   id: 'product' | 'dev' | 'sec' | 'fin'
   /** Tab label. */
   tab: string
+  /**
+   * The three-or-four-word contents line, as it appears on the hero's kraft bag label.
+   *
+   * It lives HERE rather than in the hero because the bag and the Ops panel are two views of one
+   * list, and they were briefly two hand-written lists instead. That cost three review findings in
+   * a row — the same "a gated capability is listed unqualified" defect, found once per surface,
+   * because fixing it in one list never reached the other. One source, and a row cannot be
+   * qualified in one place and bare in the other.
+   */
+  bagContents: string
   eyebrow: string
   /**
    * Renders as an `<h3>`. No terminal full stop — headings are titles, not sentences (the D7 rule
@@ -63,6 +73,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   {
     id: 'product',
     tab: 'Product Ops',
+    bagContents: 'North Star · signals · experiments',
     eyebrow: 'PRODUCT OPS',
     title: 'Make the right product better',
     description:
@@ -83,6 +94,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   {
     id: 'dev',
     tab: 'DevOps',
+    bagContents: 'flags · rollouts · operations',
     eyebrow: 'DEVOPS',
     title: 'Keep shipping without losing control',
     description:
@@ -115,6 +127,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   {
     id: 'sec',
     tab: 'SecOps',
+    bagContents: 'scenarios · guardrails · evidence',
     eyebrow: 'SECOPS',
     title: 'Find the weak point before reality does',
     description:
@@ -142,6 +155,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   {
     id: 'fin',
     tab: 'FinOps',
+    bagContents: 'tokens · cost · value',
     eyebrow: 'FINOPS',
     title: 'Spend intelligence where it creates value',
     description:

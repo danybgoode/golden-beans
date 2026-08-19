@@ -90,8 +90,11 @@ body {
 .divider ::selection,
 .divider::selection,
 .baglabel ::selection,
-.baglabel::selection,
-.infomercial ::selection,
+.baglabel::selection {
+  color: var(--stamp);
+  background: color-mix(in srgb, var(--stamp) 26%, transparent);
+}
+
 :where(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--gold-hot);
   outline-offset: 3px;

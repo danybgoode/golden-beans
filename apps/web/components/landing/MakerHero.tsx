@@ -1,5 +1,9 @@
-import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
-import { gatedDrillNote } from '@/lib/maker-ops'
+import {
+  isDestinationDeliveryEnabled,
+  isResilienceScenariosEnabled,
+  isSecuritySimulationsEnabled,
+} from '@/lib/flags'
+import { MAKER_OPS_SURFACES, resolveSurfaceStatus } from '@/lib/maker-ops'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -34,24 +38,25 @@ import { SurfaceNote } from './SurfaceNote'
 // Further down the page §proof renders a REAL agent window over live demo-tenant data in
 // deliberately identical chrome. The `SurfaceNote` is the only thing that tells them apart, and
 // `e2e/landing.browser.spec.ts` asserts every framed window on this page carries one.
-const bagRows = [
-  { category: 'Product ops', contents: 'North Star · signals · experiments' },
-  { category: 'DevOps', contents: 'flags · rollouts · operations' },
-  // SecOps carries a gate, so its badge is RESOLVED per request rather than declared here. The
-  // first version listed it bare beside two unconditionally-live rows: a bag label is the most
-  // literal "here is what is in the packet" surface on the page, and an unqualified row there
-  // states a capability as live without reading its flag. Exactly the defect the Ops panel was
-  // already built to avoid — caught one section away from it, by Codex in round 4 of PR #100.
-  { category: 'SecOps', contents: 'scenarios · guardrails · evidence', gated: true },
-  { category: 'FinOps', contents: 'tokens · cost · value', next: true },
-]
-
+// ── The bag's rows ARE the Ops surfaces, resolved ────────────────────────────────────────────
+// This was a hand-written list parallel to `MAKER_OPS_SURFACES`, and the duplication cost three
+// separate review findings that were all the same defect: a gated capability listed here without
+// its qualification, found once per surface because fixing one list never reached the other
+// (SecOps in round 4, DevOps in round 5, after the Ops panel itself in round 3).
+//
+// A badge on the third one would have been the third patch for one root cause. Deriving the rows
+// instead makes the class of bug unrepresentable (CODE-QUALITY #2): a surface cannot be qualified
+// in the panel and bare on the bag, because there is only one list and one status resolution.
 export function MakerHero() {
-  const drillsGated =
-    gatedDrillNote({
-      resilienceScenariosEnabled: isResilienceScenariosEnabled(),
-      securitySimulationsEnabled: isSecuritySimulationsEnabled(),
-    }) !== ''
+  const gates = {
+    resilienceScenariosEnabled: isResilienceScenariosEnabled(),
+    securitySimulationsEnabled: isSecuritySimulationsEnabled(),
+    destinationDeliveryEnabled: isDestinationDeliveryEnabled(),
+  }
+  const bagRows = MAKER_OPS_SURFACES.map((surface) => ({
+    surface,
+    resolved: resolveSurfaceStatus(surface, gates),
+  }))
 
   return (
     <section className="hero" id="hero">
@@ -111,19 +116,14 @@ export function MakerHero() {
             <div className="netwt">
               <span>Grow ideas into products</span>
             </div>
-            {bagRows.map((row) => (
-              <div className="row" key={row.category}>
-                <b>{row.category}</b>
+            {bagRows.map(({ surface, resolved }) => (
+              <div className="row" key={surface.id}>
+                <b>{surface.tab}</b>
                 <span>
-                  {row.contents}
-                  {row.next ? (
+                  {surface.bagContents}
+                  {resolved.status !== 'live' ? (
                     <Badge status="next" onKraft className="baglabel__badge">
-                      Next
-                    </Badge>
-                  ) : null}
-                  {row.gated && drillsGated ? (
-                    <Badge status="next" onKraft className="baglabel__badge">
-                      Partly gated
+                      {resolved.status === 'next' ? 'Next' : 'Partly gated'}
                     </Badge>
                   ) : null}
                 </span>
