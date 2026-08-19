@@ -32,8 +32,6 @@ export type SurfaceAvailability =
       kind: 'gated'
       /** The env-var names, for the doc comment and for a reviewer to grep. Not read at runtime. */
       gates: readonly string[]
-      /** What a reader is told is not currently reachable. Plain language, not a flag name. */
-      gatedPart: string
     }
   | { kind: 'unbuilt' }
 
@@ -131,7 +129,6 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
     availability: {
       kind: 'gated',
       gates: ['RESILIENCE_SCENARIOS_ENABLED', 'SECURITY_SIMULATIONS_ENABLED'],
-      gatedPart: 'Running a drill is switched off in this deployment',
     },
   },
   {
@@ -182,6 +179,29 @@ export type SurfaceStatus =
   { status: 'live' } | { status: 'gated'; note: string } | { status: 'next'; note: string }
 
 /**
+ * Which drills a reader cannot start right now, in plain language. Empty string = all of them can.
+ *
+ * ── Why this is computed per gate, and not one fixed sentence ────────────────────────────────
+ * The first version carried a constant — "Running a drill is switched off in this deployment" —
+ * rendered whenever `resilience && security` was false. That sentence is TRUE today (both gates are
+ * off in production) and becomes FALSE the moment either one opens on its own: the page would tell
+ * a reader that nothing can run while a resilience drill happily runs.
+ *
+ * A claim that is only accurate in the state it was written in is exactly what CODE-QUALITY #2 and
+ * #9 forbid, and this module exists so that no status is written down. Computing the badge
+ * correctly while hardcoding the sentence beside it is the same defect wearing a smaller hat.
+ * Caught by Codex in cross-family review of PR #100.
+ */
+export function gatedDrillNote(gates: OpsGateReadings): string {
+  const off: string[] = []
+  if (!gates.resilienceScenariosEnabled) off.push('resilience drills')
+  if (!gates.securitySimulationsEnabled) off.push('security scenarios')
+
+  if (off.length === 0) return ''
+  return `Starting ${off.join(' or ')} is switched off in this deployment`
+}
+
+/**
  * What this surface's badge says right now.
  *
  * Pure, and takes the readings as an argument rather than importing `lib/flags` — so a spec can
@@ -198,8 +218,8 @@ export function resolveSurfaceStatus(surface: OpsSurface, gates: OpsGateReadings
     case 'unbuilt':
       return { status: 'next', note: 'Next build — not a shipped capability' }
     case 'gated': {
-      const allOn = gates.resilienceScenariosEnabled && gates.securitySimulationsEnabled
-      return allOn ? { status: 'live' } : { status: 'gated', note: surface.availability.gatedPart }
+      const note = gatedDrillNote(gates)
+      return note === '' ? { status: 'live' } : { status: 'gated', note }
     }
   }
 }

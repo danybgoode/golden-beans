@@ -3801,6 +3801,15 @@ a.stat-card:hover {
   gap: 14px;
 }
 
+/* `hidden` sets `display: none` in the UA sheet, and `display: grid` above out-specifies it —
+   so every inactive panel would render on top of the active one. The attribute selector restores
+   the UA behaviour at a specificity that wins. This is the standard cost of styling `display` on
+   an element that also uses `hidden`, and it is the reason the tablist spec asserts visibility
+   rather than trusting the attribute. */
+.ops-panel[hidden] {
+  display: none;
+}
+
 .ops-panel:focus-visible {
   outline: 2px solid var(--gold-hot);
   outline-offset: 4px;

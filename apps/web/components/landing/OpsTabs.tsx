@@ -99,44 +99,60 @@ export function OpsTabs({ surfaces }: { surfaces: ResolvedSurface[] }) {
         })}
       </div>
 
-      <div
-        className="ops-panel"
-        role="tabpanel"
-        id={`ops-panel-${active.id}`}
-        aria-labelledby={`ops-tab-${active.id}`}
-        tabIndex={0}
-      >
-        <div className="ops-copy panel">
-          <p className="kicker">{active.eyebrow}</p>
-          <h3>{active.title}</h3>
-          <p>{active.description}</p>
+      {/* ── Every panel is MOUNTED; the inactive ones are `hidden` ────────────────────────────
+          The first version rendered only the active panel, so the other three tabs' `aria-controls`
+          pointed at element ids that were not in the document. A dangling ARIA reference is not a
+          cosmetic problem: it is the one attribute telling an assistive technology what a tab
+          controls, and a tab that references nothing is a tab whose panel cannot be reached by the
+          relationship it advertises.
 
-          {active.resolved.status !== 'live' ? (
-            <p className="ops-status">
-              <Badge status="next">{active.resolved.status === 'next' ? 'Next build' : 'Partly gated'}</Badge>
-              <span>{active.resolved.note}</span>
-            </p>
-          ) : null}
+          `hidden` (the HTML attribute, not a CSS class) is the right tool — the panel is removed
+          from the accessibility tree and from find-in-page while it is off, so keeping all four in
+          the DOM costs nothing semantically. Caught by Codex in cross-family review of PR #100. */}
+      {surfaces.map((surface) => (
+        <div
+          key={surface.id}
+          className="ops-panel"
+          role="tabpanel"
+          id={`ops-panel-${surface.id}`}
+          aria-labelledby={`ops-tab-${surface.id}`}
+          hidden={surface.id !== active.id}
+          tabIndex={0}
+        >
+          <div className="ops-copy panel">
+            <p className="kicker">{surface.eyebrow}</p>
+            <h3>{surface.title}</h3>
+            <p>{surface.description}</p>
 
-          <ul className="ops-questions">
-            {active.questions.map((question) => (
-              <li key={question}>{question}</li>
+            {surface.resolved.status !== 'live' ? (
+              <p className="ops-status">
+                <Badge status="next">
+                  {surface.resolved.status === 'next' ? 'Next build' : 'Partly gated'}
+                </Badge>
+                <span>{surface.resolved.note}</span>
+              </p>
+            ) : null}
+
+            <ul className="ops-questions">
+              {surface.questions.map((question) => (
+                <li key={question}>{question}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="ops-caps panel">
+            {surface.capabilities.map((capability) => (
+              <div className="ops-cap" key={capability.name}>
+                <b>
+                  <Icon name={capability.icon} size={15} />
+                  {capability.name}
+                </b>
+                <span>{capability.detail}</span>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
-
-        <div className="ops-caps panel">
-          {active.capabilities.map((capability) => (
-            <div className="ops-cap" key={capability.name}>
-              <b>
-                <Icon name={capability.icon} size={15} />
-                {capability.name}
-              </b>
-              <span>{capability.detail}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
     </>
   )
 }

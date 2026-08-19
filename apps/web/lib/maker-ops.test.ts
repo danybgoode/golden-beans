@@ -15,7 +15,13 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { MAKER_OPS_SURFACES, getSurface, resolveSurfaceStatus, type OpsGateReadings } from './maker-ops.ts'
+import {
+  MAKER_OPS_SURFACES,
+  gatedDrillNote,
+  getSurface,
+  resolveSurfaceStatus,
+  type OpsGateReadings,
+} from './maker-ops.ts'
 
 const BOTH_GATES_ON: OpsGateReadings = {
   resilienceScenariosEnabled: true,
@@ -85,4 +91,41 @@ test('the unbuilt surface is next under every gate reading', () => {
 test('an unknown surface id fails loudly', () => {
   // @ts-expect-error — the point of the test is the runtime guard behind the type.
   assert.throws(() => getSurface('marketing'), /Unknown ops surface id/)
+})
+
+// ── The partial-gate defect Codex found in PR #100 ────────────────────────────────────────────
+// The note used to be a constant, shown whenever either gate was off: "Running a drill is switched
+// off in this deployment". True with both gates off, FALSE the moment one opens on its own — the
+// page would tell a reader nothing can run while a resilience drill ran. These pin the property
+// that replaced it: the sentence names the drills that are actually unavailable, and nothing else.
+test('the gated note names only the drills that are actually switched off', () => {
+  const bothOff = gatedDrillNote(BOTH_GATES_OFF)
+  assert.match(bothOff, /resilience drills/)
+  assert.match(bothOff, /security scenarios/)
+
+  const securityOnly = gatedDrillNote({
+    resilienceScenariosEnabled: true,
+    securitySimulationsEnabled: false,
+  })
+  assert.match(securityOnly, /security scenarios/)
+  assert.doesNotMatch(
+    securityOnly,
+    /resilience/,
+    'resilience drills CAN be started in this state — saying otherwise is the defect'
+  )
+
+  const resilienceOnly = gatedDrillNote({
+    resilienceScenariosEnabled: false,
+    securitySimulationsEnabled: true,
+  })
+  assert.match(resilienceOnly, /resilience drills/)
+  assert.doesNotMatch(resilienceOnly, /security/)
+})
+
+// Empty string is the "nothing is gated" signal `resolveSurfaceStatus` branches on, so it must stay
+// empty rather than becoming a cheerful sentence — a non-empty note here would paint a "partly
+// gated" badge over a fully-open deployment.
+test('with both gates open the note is empty, and the surface reads live', () => {
+  assert.equal(gatedDrillNote(BOTH_GATES_ON), '')
+  assert.deepEqual(resolveSurfaceStatus(getSurface('sec'), BOTH_GATES_ON), { status: 'live' })
 })

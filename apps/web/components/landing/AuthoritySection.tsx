@@ -1,4 +1,5 @@
 import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
+import { gatedDrillNote } from '@/lib/maker-ops'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { Badge } from '@/components/ui/Badge'
 import { Panel } from '@/components/ui/Panel'
@@ -64,7 +65,15 @@ const rehearsed = [
 ]
 
 export function AuthoritySection() {
-  const drillsRunnable = isResilienceScenariosEnabled() && isSecuritySimulationsEnabled()
+  // Shares `gatedDrillNote` with the Ops panel rather than re-deriving the sentence. Two components
+  // making the same claim about the same two flags is two claims to keep in step; the first version
+  // hardcoded this one and would have said "no drill can run" while one of them ran. Codex, PR #100.
+  const gates = {
+    resilienceScenariosEnabled: isResilienceScenariosEnabled(),
+    securitySimulationsEnabled: isSecuritySimulationsEnabled(),
+  }
+  const gatedNote = gatedDrillNote(gates)
+  const drillsRunnable = gatedNote === ''
 
   return (
     <section className="band" id="authority">
@@ -130,8 +139,8 @@ export function AuthoritySection() {
             </div>
             {drillsRunnable ? null : (
               <p className="note">
-                The drills are built and deployed. Running one is switched off in this deployment, so this
-                shows the shape rather than a run you could start today.
+                The drills are built and deployed. {gatedNote}, so this shows the shape rather than a run you
+                could start here today.
               </p>
             )}
           </Panel>
