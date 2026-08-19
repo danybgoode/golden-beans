@@ -1,6 +1,6 @@
 # Maker ops — Sprint 1: Shared surface
 
-**Status:** in progress
+**Status:** ✅ done
 
 > **Build contract (locked by the architect before any builder started).**
 > This sprint is **shared surface**: the section registry, the Ops data module and `globals.css` are

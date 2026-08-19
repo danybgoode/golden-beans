@@ -13,7 +13,7 @@
 ## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [Maker ops — the landing repositions from a growth engine to an operating context](../../02-commercial/landing-maker-ops/README.md) — 02 Commercial · 4/21 stories · risk: Low · wave-2026-08-19
+- [Maker ops — the landing repositions from a growth engine to an operating context](../../02-commercial/landing-maker-ops/README.md) — 02 Commercial · 16/21 stories · risk: Low · wave-2026-08-19
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 

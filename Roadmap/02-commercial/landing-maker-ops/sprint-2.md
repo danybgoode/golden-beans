@@ -1,6 +1,6 @@
 # Maker ops — Sprint 2: The new spine
 
-**Status:** not started
+**Status:** ✅ done
 
 > **Build contract.** Every story below consumes Sprint 1's shared surface and adds nothing to it.
 > The mockup supplies the argument and the copy; the skin comes from the component kit

@@ -1,3 +1,5 @@
+import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
+import { gatedDrillNote } from '@/lib/maker-ops'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -35,11 +37,22 @@ import { SurfaceNote } from './SurfaceNote'
 const bagRows = [
   { category: 'Product ops', contents: 'North Star · signals · experiments' },
   { category: 'DevOps', contents: 'flags · rollouts · operations' },
-  { category: 'SecOps', contents: 'scenarios · guardrails · evidence' },
+  // SecOps carries a gate, so its badge is RESOLVED per request rather than declared here. The
+  // first version listed it bare beside two unconditionally-live rows: a bag label is the most
+  // literal "here is what is in the packet" surface on the page, and an unqualified row there
+  // states a capability as live without reading its flag. Exactly the defect the Ops panel was
+  // already built to avoid — caught one section away from it, by Codex in round 4 of PR #100.
+  { category: 'SecOps', contents: 'scenarios · guardrails · evidence', gated: true },
   { category: 'FinOps', contents: 'tokens · cost · value', next: true },
 ]
 
 export function MakerHero() {
+  const drillsGated =
+    gatedDrillNote({
+      resilienceScenariosEnabled: isResilienceScenariosEnabled(),
+      securitySimulationsEnabled: isSecuritySimulationsEnabled(),
+    }) !== ''
+
   return (
     <section className="hero" id="hero">
       <div className="wrap hero-grid">
@@ -106,6 +119,11 @@ export function MakerHero() {
                   {row.next ? (
                     <Badge status="next" onKraft className="baglabel__badge">
                       Next
+                    </Badge>
+                  ) : null}
+                  {row.gated && drillsGated ? (
+                    <Badge status="next" onKraft className="baglabel__badge">
+                      Partly gated
                     </Badge>
                   ) : null}
                 </span>

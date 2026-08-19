@@ -1,6 +1,8 @@
 # Retrospective — Maker ops
 
-_Closed: 2026-08-19_
+_Closed: 2026-08-19 — written at the end of the review layer, before merge. The README's
+`status:` frontmatter stays `in-progress` until the merge that deploys it; that field is the SSOT and
+this file is not._
 
 ## What shipped
 
@@ -74,6 +76,13 @@ reduced scope, which is what keeps that honest.
 
 **The agy version pin was stale and blocked the rail entirely.** `agy-doctor --fix` re-probed and
 bumped it. Folded into this PR rather than its own, given the Actions quota.
+
+**agy then failed outright on two later rounds**, with two different errors (a permission-boundary
+refusal reading its own config dir, then a bare `pwd`). Both were LOUD failures, which is the
+system working — the danger this repo has recorded before is agy silently falling back and
+hallucinating findings. Round 3 therefore had one external family, not two, and round 4 rotated
+**vibe** in from the preference order rather than running a short layer. Worth knowing: the roster
+has four families precisely so one going dark is a rotation and not a stall.
 
 ## Gaps / follow-ups
 

@@ -87,6 +87,18 @@ independently shippable slice of value.
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
+- ✅ [Maker ops — the landing repositions from a growth engine to an operating context](02-commercial/landing-maker-ops/README.md)
+  (the maker-ops spine · four operating surfaces whose status is computed, never written down ·
+  FinOps shipped as an explicit concept · the Pods booking flow at `/talk`) — **live in production
+  2026-08-19** (PR #100). The page stopped selling a primitive set: the buyer changed underneath it,
+  because agents made it possible for one person to hold a product that used to need a department.
+  Twelve sections retired; Proof, Connect, SDK and Pricing were kept against the mockup, since they
+  are the page's only live numbers and both of its conversion paths. Three cross-family review
+  rounds found the two failure modes a repositioning is uniquely good at producing: a **claim that
+  outlived its qualifier** (retiring §4 took `isConnectorWritesEnabled()` with it while the new
+  authority section inherited the argument), and a **shared component that moved from one route to
+  many**, silently invalidating the spec that only ever loaded `/`. The consulting tier lost its
+  price and gained a real conversation.
 - ✅ [Golden Frijoles — the rebrand, the material pass, and the broken controls](02-commercial/landing-frijoles-rebrand/README.md)
   (the product's name and its own domain · two live-page defects repaired · the chat-shaped agent
   surfaces · the infomercial and the flag-honest resilience drills · one elevation ladder and one

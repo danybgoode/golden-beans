@@ -1,6 +1,6 @@
 # Maker ops — Sprint 4: Verify and ship
 
-**Status:** not started
+**Status:** in progress — specs and the gate are done; review rounds ran (see below); merge + prod smoke outstanding
 
 > **Build contract.** "Done" means serving on `https://goldenfrijoles.com`. Merging to `main` **is**
 > the deploy (AGENTS.md rule #4) — no `vercel deploy`, ever. Nothing here is reported as passing
