@@ -295,6 +295,30 @@ export function resolveSurfaceStatus(surface: OpsSurface, gates: OpsGateReadings
   }
 }
 
+/**
+ * The badge text for a resolved status — ONE label per state, for every view that shows it.
+ *
+ * Three surfaces render this: the hero's bag label, the Ops tab, and the Ops panel. They drifted
+ * immediately — the bag said "Next" while the panel said "Next build", and the tab showed nothing
+ * at all for a gated surface, so a reader scanning the tabs saw no qualification until they opened
+ * the panel. Same root cause as the bag rows: several views deciding independently how to say one
+ * thing. This is the third time in this epic, so it gets the same treatment as the second — one
+ * function, no room for a fourth opinion.
+ *
+ * Returns null for a live surface: nothing to qualify, and a badge on every row is decoration that
+ * empties the badge of meaning for the rows that need it.
+ */
+export function surfaceBadgeLabel(status: SurfaceStatus['status']): string | null {
+  switch (status) {
+    case 'live':
+      return null
+    case 'next':
+      return 'Next build'
+    case 'gated':
+      return 'Partly gated'
+  }
+}
+
 export function getSurface(id: OpsSurface['id']): OpsSurface {
   const surface = MAKER_OPS_SURFACES.find((s) => s.id === id)
   if (!surface) throw new Error(`Unknown ops surface id: ${id}`)

@@ -3,7 +3,7 @@ import {
   isResilienceScenariosEnabled,
   isSecuritySimulationsEnabled,
 } from '@/lib/flags'
-import { MAKER_OPS_SURFACES, resolveSurfaceStatus } from '@/lib/maker-ops'
+import { MAKER_OPS_SURFACES, resolveSurfaceStatus, surfaceBadgeLabel } from '@/lib/maker-ops'
 import { AgentWindow } from '@/components/ui/AgentWindow'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -89,7 +89,7 @@ export function MakerHero() {
 
           <div className="hero-cta">
             <RunYourFirstBet />
-            <Button href="#methodology" variant="ghost">
+            <Button href="/#methodology" variant="ghost">
               See how the method works
               <Icon name="arrow-right" />
             </Button>
@@ -121,9 +121,9 @@ export function MakerHero() {
                 <b>{surface.tab}</b>
                 <span>
                   {surface.bagContents}
-                  {resolved.status !== 'live' ? (
+                  {surfaceBadgeLabel(resolved.status) ? (
                     <Badge status="next" onKraft className="baglabel__badge">
-                      {resolved.status === 'next' ? 'Next' : 'Partly gated'}
+                      {surfaceBadgeLabel(resolved.status)}
                     </Badge>
                   ) : null}
                 </span>

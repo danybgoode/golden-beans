@@ -20,6 +20,7 @@ import {
   gatedDrillNote,
   getSurface,
   resolveSurfaceStatus,
+  surfaceBadgeLabel,
   type OpsGateReadings,
 } from './maker-ops.ts'
 
@@ -177,4 +178,19 @@ test('each gated surface answers only for the flags it names', () => {
     destinationDeliveryEnabled: false,
   })
   assert.deepEqual(sec, { status: 'live' }, 'delivery being off says nothing about SecOps')
+})
+
+// ── Round 6: three views, three different words for one state ─────────────────────────────────
+// The bag said "Next", the panel said "Next build", and the tab said nothing at all for a gated
+// surface. One label function now serves all three, and this pins the contract it has to keep:
+// every non-live state has exactly one non-empty label, and live has none.
+test('every status has one badge label, and live has none', () => {
+  assert.equal(surfaceBadgeLabel('live'), null, 'a live surface needs no badge')
+  assert.equal(surfaceBadgeLabel('next'), 'Next build')
+  assert.equal(surfaceBadgeLabel('gated'), 'Partly gated')
+
+  // The two qualified states must stay DISTINGUISHABLE. Collapsing them to one word would make
+  // "not built" and "built but switched off" look identical, which is the whole distinction the
+  // page's honesty vocabulary rests on.
+  assert.notEqual(surfaceBadgeLabel('next'), surfaceBadgeLabel('gated'))
 })

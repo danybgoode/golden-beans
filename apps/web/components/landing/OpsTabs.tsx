@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
-import type { OpsSurface, SurfaceStatus } from '@/lib/maker-ops'
+import { surfaceBadgeLabel, type OpsSurface, type SurfaceStatus } from '@/lib/maker-ops'
 
 // landing-maker-ops · Sprint 2, Story 2.4 — the four surfaces, one panel.
 //
@@ -90,10 +90,13 @@ export function OpsTabs({ surfaces }: { surfaces: ResolvedSurface[] }) {
               onKeyDown={(event) => handleKeyDown(event, index)}
             >
               {surface.tab}
-              {/* The unbuilt surface is labelled on the TAB, not only inside the panel a reader
-                  has to open first. Epic D4: the one section describing something that does not
-                  exist says so everywhere it appears. */}
-              {surface.resolved.status === 'next' ? <Badge status="next">Next</Badge> : null}
+              {/* Any qualified surface is labelled on the TAB, not only inside the panel a reader
+                  has to open first. This checked `=== 'next'` and so said nothing for a GATED
+                  surface — a reader scanning the tabs saw no qualification for SecOps or DevOps
+                  until they opened one. Found by Mistral Vibe in round 6 of PR #100. */}
+              {surfaceBadgeLabel(surface.resolved.status) ? (
+                <Badge status="next">{surfaceBadgeLabel(surface.resolved.status)}</Badge>
+              ) : null}
             </button>
           )
         })}
@@ -126,9 +129,7 @@ export function OpsTabs({ surfaces }: { surfaces: ResolvedSurface[] }) {
 
             {surface.resolved.status !== 'live' ? (
               <p className="ops-status">
-                <Badge status="next">
-                  {surface.resolved.status === 'next' ? 'Next build' : 'Partly gated'}
-                </Badge>
+                <Badge status="next">{surfaceBadgeLabel(surface.resolved.status)}</Badge>
                 <span>{surface.resolved.note}</span>
               </p>
             ) : null}
