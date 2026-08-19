@@ -241,9 +241,21 @@ function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
   if (named.includes('RESILIENCE_SCENARIOS_ENABLED') || named.includes('SECURITY_SIMULATIONS_ENABLED')) {
     return gatedDrillNote(gates)
   }
-  if (named.includes('DESTINATION_DELIVERY_ENABLED')) return ''
 
-  throw new Error(`No note is defined for gates: ${named.join(', ')}`)
+  // Every gate this function knows about has been checked and none of them are off, so there is
+  // nothing to qualify. Reaching here with an UNKNOWN gate is a different thing entirely and must
+  // not be confused with it: a surface that names a flag nobody wrote a sentence for would
+  // otherwise render as fully live, and a status resolver that fails toward over-claiming is the
+  // one direction that costs something.
+  const known = [
+    'DESTINATION_DELIVERY_ENABLED',
+    'RESILIENCE_SCENARIOS_ENABLED',
+    'SECURITY_SIMULATIONS_ENABLED',
+  ]
+  const unknown = named.filter((gate) => !known.includes(gate))
+  if (unknown.length > 0) throw new Error(`No note is defined for gates: ${unknown.join(', ')}`)
+
+  return ''
 }
 
 /**
