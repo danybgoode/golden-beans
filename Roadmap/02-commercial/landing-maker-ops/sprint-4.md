@@ -60,7 +60,13 @@ short layer. Both reviewers hit their 256 KB argv cap on a diff this size; `--co
 | 7 | **0 blocking**, 1 should-fix (rejected with evidence — the tarball was never tracked) | vibe: malformed output, no review produced | a comment asserting "one badge, on the one row that needs it" after the rows were derived and three of them qualified |
 | 8 | 1 blocking, 1 should-fix | vibe: 1 blocking, 2 should-fix, 1 nit | an unknown-gate guard that could not fire in the case it exists for; a THIRD dead anchor (`#try`, pointing at a deleted section) → added the guard for the whole class; a share description naming gate-dependent capabilities |
 | 9 | **0 blocking**, 1 should-fix, 1 nit | vibe: 1 blocking, 1 should-fix (rejected), 1 nit | a lead sentence claiming runnability above the badge that qualified it; an allow-list that did not guarantee a handler — add a gate, forget the branch, and the surface renders LIVE with its gate closed |
-| 10 | *(pending)* | *(pending)* | |
+| 10 | **0 blocking**, 1 should-fix | vibe: **0 blocking, 0 should-fix**, 1 nit | the share description's THIRD draft — the second listed capabilities and justified it by claiming they were ungated, which `lib/flags.ts` disproves; the last hand-spelled badge string |
+| 11 | *(the confirming round)* | | |
+
+**Stopping condition.** Round 10 was the first round where both families reported no blocking
+findings. Because fixes landed after it, round 11 runs on the head that contains them — a clean
+round on a head nobody has reviewed is not a clean round (LEARNINGS: a fix deserves the same
+suspicion as the code it replaced).
 
 Two findings were **rejected with evidence** rather than fixed: the section stamps were already
 unique (1–4, verified), and `.agent-result` had zero consumers (verified twice). Five copy findings
