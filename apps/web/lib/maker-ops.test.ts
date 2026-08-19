@@ -22,6 +22,7 @@ import {
   resolveSurfaceStatus,
   surfaceBadgeLabel,
   type OpsGateReadings,
+  type OpsSurface,
 } from './maker-ops.ts'
 
 const BOTH_GATES_ON: OpsGateReadings = {
@@ -201,10 +202,14 @@ test('every status has one badge label, and live has none', () => {
 // then have rendered under a sentence that says nothing about it. Validation now runs first, and
 // this pins it — including the mixed case, which is the one that was actually broken.
 test('a surface naming an undescribed gate fails loudly, even beside a known one', () => {
+  // The casts are the point, not a workaround. Since round 11 `gates` is typed to a union derived
+  // from GATE_NOTES, so an undescribed gate is a COMPILE error — which is the primary defence and
+  // is asserted by the fact that these objects need a cast at all. What is tested here is the
+  // SECOND layer: the runtime check that still has to hold for data the type system cannot reach.
   const withUnknownOnly = {
     ...getSurface('sec'),
     availability: { kind: 'gated' as const, gates: ['SOME_FUTURE_GATE'] },
-  }
+  } as unknown as OpsSurface
   assert.throws(() => resolveSurfaceStatus(withUnknownOnly, BOTH_GATES_OFF), /No note is defined/)
 
   // The case the old ordering let through: an unknown gate hiding behind a known one.
@@ -214,7 +219,7 @@ test('a surface naming an undescribed gate fails loudly, even beside a known one
       kind: 'gated' as const,
       gates: ['RESILIENCE_SCENARIOS_ENABLED', 'SOME_FUTURE_GATE'],
     },
-  }
+  } as unknown as OpsSurface
   assert.throws(
     () => resolveSurfaceStatus(mixed, BOTH_GATES_OFF),
     /SOME_FUTURE_GATE/,

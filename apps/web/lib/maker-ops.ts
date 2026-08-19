@@ -30,8 +30,8 @@ export type SurfaceAvailability =
   | { kind: 'shipped' }
   | {
       kind: 'gated'
-      /** The env-var names, for the doc comment and for a reviewer to grep. Not read at runtime. */
-      gates: readonly string[]
+      /** The gates this surface rides. Must be describable — see `GATE_NOTES`. */
+      gates: readonly DescribableGate[]
     }
   | { kind: 'unbuilt' }
 
@@ -258,7 +258,7 @@ export function gatedDrillNote(gates: DrillGateReadings): string {
  * without a handler is now a type error rather than a silent over-claim (CODE-QUALITY #2 — make the
  * failure unrepresentable, not merely caught).
  */
-const GATE_NOTES: Record<string, (gates: OpsGateReadings) => string> = {
+const GATE_NOTES = {
   DESTINATION_DELIVERY_ENABLED: (gates) =>
     gates.destinationDeliveryEnabled
       ? ''
@@ -267,7 +267,23 @@ const GATE_NOTES: Record<string, (gates: OpsGateReadings) => string> = {
   // sentence names whichever halves are actually closed.
   RESILIENCE_SCENARIOS_ENABLED: (gates) => gatedDrillNote(gates),
   SECURITY_SIMULATIONS_ENABLED: (gates) => gatedDrillNote(gates),
-}
+} as const satisfies Record<string, (gates: OpsGateReadings) => string>
+
+/**
+ * The gate names a surface is allowed to declare — derived from the handler map, not written twice.
+ *
+ * This is what makes the comment above TRUE rather than aspirational. `GATE_NOTES` was typed
+ * `Record<string, …>`, under a comment claiming that adding a gate without a handler was a type
+ * error. It was not: any string key satisfied that type, and only the runtime check caught it.
+ * Codex spotted the mismatch in round 11 of PR #100 — the fifth time in this epic that prose
+ * asserted a property the code did not have, and the reason the fix here is to make the property
+ * real rather than to soften the sentence.
+ *
+ * With `gates` typed as this union, a surface naming an undescribed gate fails `npm run typecheck`.
+ * The runtime validation in `gatedNoteFor` stays as the second layer, because this type cannot
+ * constrain data that arrives from outside the module.
+ */
+export type DescribableGate = keyof typeof GATE_NOTES
 
 function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
   if (surface.availability.kind !== 'gated') return ''
