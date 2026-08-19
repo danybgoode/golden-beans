@@ -59,7 +59,8 @@ short layer. Both reviewers hit their 256 KB argv cap on a diff this size; `--co
 | 6 | **0 blocking**, 1 should-fix, 1 nit | vibe: 1 blocking, 1 should-fix, 1 nit | a 404 that could mean "deleted" reading as "gated"; three views spelling one status three ways → one label function |
 | 7 | **0 blocking**, 1 should-fix (rejected with evidence — the tarball was never tracked) | vibe: malformed output, no review produced | a comment asserting "one badge, on the one row that needs it" after the rows were derived and three of them qualified |
 | 8 | 1 blocking, 1 should-fix | vibe: 1 blocking, 2 should-fix, 1 nit | an unknown-gate guard that could not fire in the case it exists for; a THIRD dead anchor (`#try`, pointing at a deleted section) → added the guard for the whole class; a share description naming gate-dependent capabilities |
-| 9 | *(pending)* | *(pending)* | |
+| 9 | **0 blocking**, 1 should-fix, 1 nit | vibe: 1 blocking, 1 should-fix (rejected), 1 nit | a lead sentence claiming runnability above the badge that qualified it; an allow-list that did not guarantee a handler — add a gate, forget the branch, and the surface renders LIVE with its gate closed |
+| 10 | *(pending)* | *(pending)* | |
 
 Two findings were **rejected with evidence** rather than fixed: the section stamps were already
 unique (1–4, verified), and `.agent-result` had zero consumers (verified twice). Five copy findings
