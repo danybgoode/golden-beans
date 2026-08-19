@@ -44,6 +44,25 @@
 - Every finding is answered in the PR: fixed, or rejected with a reason.
 **Risk:** medium
 
+**Round log.** Seven rounds. agy went dark after round 2 (two loud failures — a permission-boundary
+refusal, then a bare `pwd`), so **vibe** rotated in from the preference order rather than running a
+short layer. Both reviewers hit their 256 KB argv cap on a diff this size; `--code-only` then
+`--paths` kept them reading, with the reduced scope stated in each posted comment.
+
+| Round | Codex | vibe / agy | What it cost |
+|---|---|---|---|
+| 1 | 2 blocking, 2 should-fix | agy: version pin stale, no review | dead nav anchors on `/talk`; a drill note true only in that day's flag state; dangling `aria-controls`; a CTA test covering one branch |
+| 2 | 1 blocking | agy: 1 blocking, 1 should-fix, 1 nit | **both families independently found the same bug** — the CTA's fallback anchor, sibling of round 1's own fix |
+| 3 | 2 blocking, 1 should-fix | agy failed | a claim that outlived its qualifier (`isConnectorWritesEnabled` retired with §4); DevOps advertising a gated capability; ~400 lines of dead CSS |
+| 4 | 2 blocking, 1 should-fix | vibe: 1 blocking, 1 should-fix, 1 nit | the hero bag's SecOps row; an unbuilt capability in the link preview; **a guard I broke while fixing what it guards** — which then surfaced five stale specs |
+| 5 | 1 blocking, 1 nit | vibe: 3 should-fix, 2 nits | a premature "live in production" claim; a CSS splice that ate one rule's body; the DevOps bag row (third instance of one root cause → derived the list) |
+| 6 | **0 blocking**, 1 should-fix, 1 nit | vibe: 1 blocking, 1 should-fix, 1 nit | a 404 that could mean "deleted" reading as "gated"; three views spelling one status three ways → one label function |
+| 7 | — | — | *(the round this story is waiting on)* |
+
+Two findings were **rejected with evidence** rather than fixed: the section stamps were already
+unique (1–4, verified), and `.agent-result` had zero consumers (verified twice). Five copy findings
+from Sprint 3 were rejected on the record in `sprint-3.md`.
+
 ### Story 4.4 — Ship it, then prove it shipped
 **Acceptance:**
 - PR opened, gate green, `origin/main` merged into the branch before merging.
