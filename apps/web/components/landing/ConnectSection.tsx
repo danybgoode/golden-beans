@@ -40,7 +40,7 @@ const routes = [
 export function ConnectSection() {
   return (
     <>
-      <SectionDivider number={8} title="Bring your agent" />
+      <SectionDivider number={2} title="Bring your agent" />
       <section className="band" id="connect">
         <div className="wrap">
           <h2 className="section-title">Bring your agent into product</h2>

@@ -15,12 +15,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  MAKER_OPS_SURFACES,
-  getSurface,
-  resolveSurfaceStatus,
-  type OpsGateReadings,
-} from './maker-ops.ts'
+import { MAKER_OPS_SURFACES, getSurface, resolveSurfaceStatus, type OpsGateReadings } from './maker-ops.ts'
 
 const BOTH_GATES_ON: OpsGateReadings = {
   resilienceScenariosEnabled: true,
@@ -68,13 +63,11 @@ test('the gated surface reports gated while a gate it names is off, and clears w
 
   // One on, one off is still gated — the surface names two flags and claims neither individually.
   assert.equal(
-    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: true, securitySimulationsEnabled: false })
-      .status,
+    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: true, securitySimulationsEnabled: false }).status,
     'gated'
   )
   assert.equal(
-    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: false, securitySimulationsEnabled: true })
-      .status,
+    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: false, securitySimulationsEnabled: true }).status,
     'gated'
   )
 

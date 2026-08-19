@@ -179,9 +179,7 @@ export interface OpsGateReadings {
 }
 
 export type SurfaceStatus =
-  | { status: 'live' }
-  | { status: 'gated'; note: string }
-  | { status: 'next'; note: string }
+  { status: 'live' } | { status: 'gated'; note: string } | { status: 'next'; note: string }
 
 /**
  * What this surface's badge says right now.

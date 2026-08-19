@@ -7,9 +7,16 @@ import './globals.css'
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })
 
-const TITLE = 'Golden Frijoles — the growth engine your agent operates'
+// landing-maker-ops · Sprint 2, Story 2.8 — the metadata follows the repositioning.
+//
+// The pair this replaces described the primitive set ("Telemetry, TARS funnels, North Star metrics
+// and A/B experiments…"). That is what the product IS, and it is the wrong first sentence for a
+// reader deciding whether to click: the tab title and the link preview are read by someone who has
+// not yet been told what primitives are for. A page that opens on "maker ops" and unfurls as an
+// analytics primitive list is two products in one link.
+const TITLE = 'Golden Frijoles — make more, grow what works'
 const DESCRIPTION =
-  'Telemetry, TARS funnels, North Star metrics, and A/B experiments — as primitives your agent can operate over MCP.'
+  'Product, delivery, security and AI-spend operations in one context your agents can work in — so a single maker can build a product and actually run it.'
 
 // Story 3.2 (commercial-shell/sprint-3.md) — real OG/Twitter metadata, so a pasted landing link
 // unfurls with a correct card in a chat app instead of the platform's generic fallback. `async
