@@ -14,8 +14,20 @@
 // button's promise ("start here") is true in both worlds, and only the mechanism differs.
 // `PricingSection` makes the same call for the same reason, reading the same gate.
 
-/** The section id the CTA falls back to. Also the anchor the pricing section renders. */
-export const PRICING_ANCHOR = '#pricing'
+/**
+ * Where the CTA lands when signup is gated off.
+ *
+ * ROOT-RELATIVE, and that is load-bearing rather than tidy. `Nav` renders this CTA on every route
+ * that uses it, not just the landing page — `/talk` does — and a bare `#pricing` resolves against
+ * whatever page it is currently on. On `/talk` there is no pricing section, so the primary call to
+ * action on the page would be completely inert.
+ *
+ * This is the SIBLING of the bug Codex found in `Nav`'s own links in round 1 of PR #100. Those were
+ * fixed and this was not, because it lives in a different file and looks like a section id rather
+ * than a link — which is precisely the shape LEARNINGS' "grep for its siblings" rule exists for.
+ * Found by agy in round 2.
+ */
+export const PRICING_ANCHOR = '/#pricing'
 
 export function primaryCtaHref(signupEnabled: boolean): string {
   return signupEnabled ? '/signup' : PRICING_ANCHOR

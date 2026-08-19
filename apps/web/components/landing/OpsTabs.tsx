@@ -39,7 +39,7 @@ export function OpsTabs({ surfaces }: { surfaces: ResolvedSurface[] }) {
     tabRefs.current[bounded]?.focus()
   }
 
-  function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
     // Only the keys the pattern owns are intercepted. Tab, Shift+Tab and every shortcut the
     // browser or an assistive technology uses must keep working — a tablist that swallows keys it
     // does not handle is worse than one that handles none.
@@ -87,7 +87,7 @@ export function OpsTabs({ surfaces }: { surfaces: ResolvedSurface[] }) {
               // Roving tabindex: one stop for the whole group, arrows move within it.
               tabIndex={selected ? 0 : -1}
               onClick={() => setActiveIndex(index)}
-              onKeyDown={(event) => onKeyDown(event, index)}
+              onKeyDown={(event) => handleKeyDown(event, index)}
             >
               {surface.tab}
               {/* The unbuilt surface is labelled on the TAB, not only inside the panel a reader

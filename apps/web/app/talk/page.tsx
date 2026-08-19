@@ -39,6 +39,15 @@ export const metadata: Metadata = {
 // copy rather than as an error state — it costs one line for everyone and it is the whole feature
 // for anyone the frame fails. It is not conditional on the frame failing, because nothing in this
 // page can detect that: a cross-origin iframe's load event fires for a blocked frame too.
+// This page renders `Nav`, which renders `RunYourFirstBet`, which reads `isSignupEnabled()`. Without
+// this, Next statically optimizes `/talk` at build time and freezes that flag reading into the HTML
+// — so flipping SIGNUP_ENABLED in production would leave this page's primary CTA pointing at the
+// old destination until something else happened to trigger a rebuild. Vercel snapshots env vars into
+// a deployment at build time (AGENTS.md rule #4), and `app/page.tsx` is `force-dynamic` for exactly
+// this reason. A second page rendering the same flag-reading component needs the same treatment.
+// Found by agy in cross-family review round 2 of PR #100.
+export const dynamic = 'force-dynamic'
+
 export default function TalkPage() {
   return (
     <>

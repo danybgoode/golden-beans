@@ -22,6 +22,18 @@ test('with signup gated off, the CTA falls back to pricing rather than a dead ro
   assert.notEqual(primaryCtaHref(false), '/signup')
 })
 
+// The round-2 defect, pinned. `Nav` renders this CTA on `/talk` as well as on `/`, so a BARE
+// `#pricing` would be inert there — the primary action on the page, doing nothing. Asserting the
+// leading slash rather than the whole string keeps this about the property (resolves from any
+// route) rather than about the exact section id.
+test('the gated-off fallback resolves from any route, not just the landing page', () => {
+  const href = primaryCtaHref(false)
+  assert.ok(
+    href.startsWith('/'),
+    `"${href}" resolves against the current page — inert anywhere but the landing route`
+  )
+})
+
 // The mockup pointed every CTA at `#start`, an anchor with nothing behind it. Neither branch may
 // ever reproduce that.
 test('neither branch is an empty or dead anchor', () => {
