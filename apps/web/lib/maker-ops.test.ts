@@ -20,6 +20,7 @@ import {
   gatedDrillNote,
   getSurface,
   resolveSurfaceStatus,
+  drillAvailabilitySentence,
   surfaceBadgeLabel,
   type OpsGateReadings,
   type OpsSurface,
@@ -276,4 +277,36 @@ test('a surface naming two gates that share a sentence says it once', () => {
   assert.equal(sec.status, 'gated')
   const note = sec.status === 'gated' ? sec.note : ''
   assert.equal(note.split('Starting').length - 1, 1, `the note repeats itself: ${note}`)
+})
+
+// ── Round 12: the trailing clause contradicted the computed half ──────────────────────────────
+// The panel rendered `{gatedDrillNote(...)}, so this shows the shape rather than a run you could
+// start here today.` — first half computed, tail hardcoded. With exactly ONE gate open the tail
+// said no drill was startable while one was.
+//
+// Codex also named why the existing test missed it: it asserted only that "switched off" appears,
+// which is true in the partial case AND the total case. So these assert the DISTINCTION, which is
+// the only thing that can fail on the bug.
+test('the drills sentence does not deny a run that is actually startable', () => {
+  const bothOff = drillAvailabilitySentence(BOTH_GATES_OFF)
+  assert.match(bothOff, /switched off/)
+  assert.match(bothOff, /rather than a run you could start here today/)
+
+  for (const partial of [
+    { resilienceScenariosEnabled: true, securitySimulationsEnabled: false },
+    { resilienceScenariosEnabled: false, securitySimulationsEnabled: true },
+  ]) {
+    const sentence = drillAvailabilitySentence(partial)
+    assert.match(sentence, /switched off/, 'the closed half must still be disclosed')
+    assert.doesNotMatch(
+      sentence,
+      /rather than a run you could start here today/,
+      `one drill IS startable in this state — saying otherwise is the defect: "${sentence}"`
+    )
+    assert.match(sentence, /the other one can be started/)
+  }
+})
+
+test('with both drill gates open the panel says nothing at all', () => {
+  assert.equal(drillAvailabilitySentence(BOTH_GATES_ON), '')
 })

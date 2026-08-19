@@ -3,7 +3,7 @@ import {
   isResilienceScenariosEnabled,
   isSecuritySimulationsEnabled,
 } from '@/lib/flags'
-import { gatedDrillNote } from '@/lib/maker-ops'
+import { drillAvailabilitySentence } from '@/lib/maker-ops'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { Badge } from '@/components/ui/Badge'
 import { Panel } from '@/components/ui/Panel'
@@ -76,8 +76,10 @@ export function AuthoritySection() {
     resilienceScenariosEnabled: isResilienceScenariosEnabled(),
     securitySimulationsEnabled: isSecuritySimulationsEnabled(),
   }
-  const gatedNote = gatedDrillNote(gates)
-  const drillsRunnable = gatedNote === ''
+  // The WHOLE sentence, not just its first half — see `drillAvailabilitySentence`. The tail used to
+  // be a constant here and contradicted the computed half whenever exactly one gate was open.
+  const drillSentence = drillAvailabilitySentence(gates)
+  const drillsRunnable = drillSentence === ''
 
   // ── The gate read that retired with PrincipleSection, restored ──────────────────────────────
   // §4 of the page this replaced closed on a sentence that READ this flag: staged writes are live,
@@ -164,12 +166,7 @@ export function AuthoritySection() {
                 </ActivityFeedItem>
               ))}
             </div>
-            {drillsRunnable ? null : (
-              <p className="note">
-                The drills are built and deployed. {gatedNote}, so this shows the shape rather than a run you
-                could start here today.
-              </p>
-            )}
+            {drillsRunnable ? null : <p className="note">{drillSentence}</p>}
           </Panel>
         </div>
       </div>

@@ -1,8 +1,15 @@
 # Retrospective — Maker ops
 
-_Closed: 2026-08-19 — written at the end of the review layer, before merge. The README's
-`status:` frontmatter stays `in-progress` until the merge that deploys it; that field is the SSOT and
-this file is not._
+> ⚠️ **NOT YET CLOSED.** This is written at the end of the review layer, before the merge that
+> deploys it. The epic README's `status:` frontmatter is the SSOT and stays `in-progress` until the
+> merge lands and the production smoke passes; the close-out commit sets both this line and that
+> field together.
+>
+> It is written now rather than after, deliberately: the incidents below are freshest while the
+> review rounds are still in view, and a retro drafted from memory a day later is the one that
+> loses the detail worth keeping. Codex flagged the earlier "_Closed:_" header in round 12 —
+> correctly, since a doc asserting a lifecycle state the SSOT contradicts is the same
+> claim-without-a-check this epic spent twelve rounds removing from the page itself.
 
 ## What shipped
 
