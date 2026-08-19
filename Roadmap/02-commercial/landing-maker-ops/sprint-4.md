@@ -61,7 +61,8 @@ short layer. Both reviewers hit their 256 KB argv cap on a diff this size; `--co
 | 8 | 1 blocking, 1 should-fix | vibe: 1 blocking, 2 should-fix, 1 nit | an unknown-gate guard that could not fire in the case it exists for; a THIRD dead anchor (`#try`, pointing at a deleted section) → added the guard for the whole class; a share description naming gate-dependent capabilities |
 | 9 | **0 blocking**, 1 should-fix, 1 nit | vibe: 1 blocking, 1 should-fix (rejected), 1 nit | a lead sentence claiming runnability above the badge that qualified it; an allow-list that did not guarantee a handler — add a gate, forget the branch, and the surface renders LIVE with its gate closed |
 | 10 | **0 blocking**, 1 should-fix | vibe: **0 blocking, 0 should-fix**, 1 nit | the share description's THIRD draft — the second listed capabilities and justified it by claiming they were ungated, which `lib/flags.ts` disproves; the last hand-spelled badge string |
-| 11 | *(the confirming round)* | | |
+| 11 | **0 blocking, 0 should-fix**, 1 nit | vibe: 1 "blocking" (rejected — scope artifact), 1 should-fix, 1 nit | `GATE_NOTES` typed `Record<string, …>` under a comment claiming an undescribed gate was a TYPE error — it was not; made real and proven by mutation. An unexercised `variant` prop |
+| 12 | *(the confirming round)* | | |
 
 **Stopping condition.** Round 10 was the first round where both families reported no blocking
 findings. Because fixes landed after it, round 11 runs on the head that contains them — a clean
