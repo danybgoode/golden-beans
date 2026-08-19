@@ -107,6 +107,20 @@ link.
 Leaving the retired ids beside the new ones produces a registry that no longer describes the page —
 precisely the drift it exists to prevent. Same call `landing-redesign-v2` made for the same reason.
 
+### D8. The Pods tier is unpriced, and books through our own page
+*Decided by the product owner, 2026-08-19, mid-build.*
+
+The consulting tier stays. It loses its price — a Pod is scoped per team, so any number would be
+invented, and this page has spent ten sections arguing it does not do that — and its CTA becomes a
+real booking conversation on `cal.com/miyagisan/quick-chat`.
+
+The booking is a **route** (`/talk`), not Cal.com's embed script on the pricing card. Three reasons,
+weakest first: their script would load on the page every visitor opens, to serve a control almost
+none of them press; that script executes in our origin while a cross-origin iframe cannot read this
+page at all; and a modal leaves no room to answer the one question an unpriced tier provokes —
+*what am I agreeing to?* The frame's failure mode (a blank rectangle, undetectable from our side)
+is why the direct link renders unconditionally rather than as a fallback.
+
 ### D7. Copy gets an adversarial pass from two foreign model families before it ships
 *Instructed by the product owner, 2026-08-19.*
 
@@ -126,6 +140,7 @@ than as an omission.
 | 2 | [The new spine](sprint-2.md) | Hero → maker loop → operating context → Ops → authority → FinOps → methodology → closing, and the page recomposed |
 | 3 | [Copy, adversarially](sprint-3.md) | Two foreign-family polish passes + the de-slop sweep, applied |
 | 4 | [Verify and ship](sprint-4.md) | Specs, the full gate, cross-family review to clean, PR, merge (= deploy), production smoke |
+| 5 | [The Pods booking flow](sprint-5.md) | The consulting tier loses its price and gains a real booking conversation |
 
 ## Definition of Done (epic)
 
