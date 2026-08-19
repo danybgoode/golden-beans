@@ -141,9 +141,15 @@ export function AuthoritySection() {
               <Badge status="next">Built, currently gated</Badge>
             )}
             <h3>Break glass on purpose</h3>
+            {/* Describes what the capability IS, not what you can do right now. The previous
+                wording ("…let you exercise the product") is a claim about runnability, and the
+                badge and note below it were carrying a qualification the opening sentence had
+                already contradicted. The first sentence is the one a scanning reader takes away.
+                Codex, round 9 of PR #100. */}
             <p>
-              Flags, circuit breakers, resilience drills and security scenarios let you exercise the product
-              before the unpleasant version of the lesson arrives on its own.
+              Flags, circuit breakers, resilience drills and security scenarios exist so a product can be put
+              under the unpleasant version of the lesson deliberately, rather than waiting for it to arrive on
+              its own.
             </p>
             <div className="authority-feed">
               {rehearsed.map((row) => (

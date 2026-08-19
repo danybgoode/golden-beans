@@ -107,6 +107,17 @@ link.
 Leaving the retired ids beside the new ones produces a registry that no longer describes the page —
 precisely the drift it exists to prevent. Same call `landing-redesign-v2` made for the same reason.
 
+### D7. Copy gets an adversarial pass from two foreign model families before it ships
+*Instructed by the product owner, 2026-08-19.*
+
+The mockup's copy was written by a single model family, and single-family prose has a house style
+that the family that wrote it cannot see. Sprint 3 runs the full page's copy through **agy** and
+**vibe** — brand compliance, cliché detection, sentence rhythm, emotional resonance, filler
+transitions — and then a de-slop sweep for buzzwords. Advisory, print-only: the orchestrator is the
+editor, exactly as `cross-panel` and `prose-draft` already work. The findings and what was
+accepted/rejected are recorded in `sprint-3.md`, so a rejected note is visible as a decision rather
+than as an omission.
+
 ### D8. The Pods tier is unpriced, and books through our own page
 *Decided by the product owner, 2026-08-19, mid-build.*
 
@@ -120,17 +131,6 @@ none of them press; that script executes in our origin while a cross-origin ifra
 page at all; and a modal leaves no room to answer the one question an unpriced tier provokes —
 *what am I agreeing to?* The frame's failure mode (a blank rectangle, undetectable from our side)
 is why the direct link renders unconditionally rather than as a fallback.
-
-### D7. Copy gets an adversarial pass from two foreign model families before it ships
-*Instructed by the product owner, 2026-08-19.*
-
-The mockup's copy was written by a single model family, and single-family prose has a house style
-that the family that wrote it cannot see. Sprint 3 runs the full page's copy through **agy** and
-**vibe** — brand compliance, cliché detection, sentence rhythm, emotional resonance, filler
-transitions — and then a de-slop sweep for buzzwords. Advisory, print-only: the orchestrator is the
-editor, exactly as `cross-panel` and `prose-draft` already work. The findings and what was
-accepted/rejected are recorded in `sprint-3.md`, so a rejected note is visible as a decision rather
-than as an omission.
 
 ## Sprints
 
