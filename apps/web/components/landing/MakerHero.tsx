@@ -27,12 +27,22 @@ import { SurfaceNote } from './SurfaceNote'
 // canonical mark. So the bag below is the existing packaging device with the mockup's contents in
 // it, not a second bag — the substitution table in the epic README has the full list.
 //
-// ── The FinOps row carries a badge and the other three do not ────────────────────────────────
-// The mockup's bag lists four ingredients as though all four were in the packet. Three are; FinOps
-// is not built. A bag label is the most literal "here is what you are buying" surface on the page,
-// so an unqualified fourth row is the exact failure CODE-QUALITY #9 names — a capability stated as
-// live while it does not exist. One badge, on the one row that needs it. Putting a badge on all
-// four would empty the badge of meaning, which is the same mistake in the other direction.
+// ── Every row that is not fully live carries its own badge, and the badge is RESOLVED ────────
+// The mockup's bag lists four ingredients as though all four were in the packet. Only one is
+// unqualified: FinOps is not built, and SecOps and DevOps each ride a gate that is closed in
+// production today. A bag label is the most literal "here is what you are buying" surface on the
+// page, so an unqualified row is the exact failure CODE-QUALITY #9 names.
+//
+// This comment previously read "one badge, on the one row that needs it" — true of the first draft
+// (which badged FinOps only) and FALSE by the time the rows were derived and three of them
+// qualified. A comment asserting a property the code does not have is CODE-QUALITY #3, and it is
+// the kind a reviewer reads as evidence and spends their scrutiny elsewhere. Caught by Mistral
+// Vibe in round 7 of PR #100.
+//
+// The concern behind the old wording still stands and is still handled: a badge on EVERY row would
+// empty the badge of meaning. Product Ops has none, because it needs none — the badge appears only
+// where there is something to qualify, and `surfaceBadgeLabel` returns null for a live surface so
+// that cannot drift.
 //
 // ── The window is an ILLUSTRATION and says so ─────────────────────────────────────────────────
 // Further down the page §proof renders a REAL agent window over live demo-tenant data in

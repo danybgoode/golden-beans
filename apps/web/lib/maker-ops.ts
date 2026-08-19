@@ -308,6 +308,12 @@ export function resolveSurfaceStatus(surface: OpsSurface, gates: OpsGateReadings
  * Returns null for a live surface: nothing to qualify, and a badge on every row is decoration that
  * empties the badge of meaning for the rows that need it.
  */
+// Both qualified states render through `Badge status="next"` — the amber treatment — and that is
+// deliberate rather than a shortcut. `Badge` speaks live/next/blocked; `blocked` is red and means
+// "this is broken", which is wrong for a capability that is merely unbuilt or switched off. So the
+// COLOUR says "not fully available" for both and the TEXT carries the distinction, which is the
+// same division of labour the honesty badges have used since the design system landed. Raised by
+// Mistral Vibe in round 7 of PR #100 and answered here rather than by adding a fourth badge status.
 export function surfaceBadgeLabel(status: SurfaceStatus['status']): string | null {
   switch (status) {
     case 'live':
