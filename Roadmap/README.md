@@ -87,11 +87,10 @@ independently shippable slice of value.
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
-- 🏗️ [Maker ops — the landing repositions from a growth engine to an operating context](02-commercial/landing-maker-ops/README.md)
+- ✅ [Maker ops — the landing repositions from a growth engine to an operating context](02-commercial/landing-maker-ops/README.md)
   (the maker-ops spine · four operating surfaces whose status is computed, never written down ·
-  FinOps shipped as an explicit concept · the Pods booking flow at `/talk`) — **in review, PR
-  #100**; this line becomes ✅ with a date and a SHA in the close-out commit, after the merge that
-  deploys it and the production smoke that proves it. The page stopped selling a primitive set: the buyer changed underneath it,
+  FinOps shipped as an explicit concept · the Pods booking flow at `/talk`) — **live in production
+  2026-08-19** (PR #100, `46c7e80`), serving on **https://goldenfrijoles.com**. The page stopped selling a primitive set: the buyer changed underneath it,
   because agents made it possible for one person to hold a product that used to need a department.
   Twelve sections retired; Proof, Connect, SDK and Pricing were kept against the mockup, since they
   are the page's only live numbers and both of its conversion paths. Three cross-family review

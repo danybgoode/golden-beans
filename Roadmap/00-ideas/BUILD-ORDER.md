@@ -10,16 +10,15 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (2)
+## 🏗️ Building now (1)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [Maker ops — the landing repositions from a growth engine to an operating context](../../02-commercial/landing-maker-ops/README.md) — 02 Commercial · 16/21 stories · risk: Low · wave-2026-08-19
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (17)
+## ✅ Shipped (18)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -35,6 +34,7 @@
 - [Golden Frijoles — the rebrand, the material pass, and the controls that were broken](../../02-commercial/landing-frijoles-rebrand/README.md) — 02 Commercial · 16/16 stories
 - [Golden Frijoles rebrand close-out](../../02-commercial/frijoles-rebrand-closeout/README.md) — 02 Commercial · 5/5 stories · risk: Low
 - [Landing redesign v2 — the agent harness for product managers](../../02-commercial/landing-redesign-v2/README.md) — 02 Commercial · 11/11 stories
+- [Maker ops — the landing repositions from a growth engine to an operating context](../../02-commercial/landing-maker-ops/README.md) — 02 Commercial · 21/21 stories · risk: Low · wave-2026-08-19
 - [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
