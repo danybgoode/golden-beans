@@ -1,4 +1,5 @@
 import { getSection } from '@/lib/landing-sections'
+import { surfaceBadgeLabel } from '@/lib/maker-ops'
 import { Badge } from '@/components/ui/Badge'
 
 // landing-maker-ops · Sprint 2, Story 2.6 — AI unit economics, labelled as the concept it is.
@@ -34,6 +35,10 @@ const facets = [
 ]
 
 export function FinOpsSection() {
+  // Status AND its wording both come from shared sources: the registry says this section is
+  // `next`, and `surfaceBadgeLabel` says what `next` is called. This was the last place on the page
+  // spelling that word by hand, which is how the bag and the panel drifted apart in round 6.
+  // Mistral Vibe flagged it as a nit in round 10; it costs one import to remove the last copy.
   const section = getSection('finops')
 
   return (
@@ -59,7 +64,7 @@ export function FinOpsSection() {
 
         <div className="finops-concept section-lead">
           <p className="ops-status">
-            <Badge status={section.status}>Next build</Badge>
+            <Badge status={section.status}>{surfaceBadgeLabel(section.status)}</Badge>
             <span>
               Nothing on this panel is built or measured. It is the shape of the capability, drawn so you can
               tell us it is wrong before we build it.

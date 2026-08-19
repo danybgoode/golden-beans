@@ -27,12 +27,21 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], 
 // qualification attached, and gate state is per-deployment while this string is not. Any
 // capability list here is a claim the preview cannot qualify and a flag flip can falsify.
 //
-// So it describes the SHAPE of the product (one operating context, for you and your agents) and
-// names no capability at all. Nothing here can go stale when a gate moves, which is the only
-// version of this sentence that stays true by construction.
+// So it names NO capability, and the third draft is the one that finally holds. Worth recording why
+// the second failed, because the failure is instructive: it listed "goals, releases, experiments and
+// evidence" under a comment claiming those were ungated. Checking rather than asserting —
+// `lib/flags.ts` — releases ride FLAG_SERVING_ENABLED and experiments ride
+// EXPERIMENT_GOVERNANCE_ENABLED. The justification was false on its own terms, and I wrote it while
+// fixing this exact class of defect elsewhere in the same PR.
+//
+// The rule, stated so it cannot be argued into a capability list again: a link preview travels
+// WITHOUT the qualification the page carries, and gate state is per-deployment while this string is
+// baked per-build. Any capability named here is therefore a claim that a flag flip can falsify and
+// the preview cannot qualify. Describe the shape; let the page describe the capabilities, where it
+// can read the gates. (Codex, rounds 4, 8 and 10 — it took three.)
 const TITLE = 'Golden Frijoles — make more, grow what works'
 const DESCRIPTION =
-  'One operating context for your product — goals, releases, experiments and evidence — that you and your agents can both work in.'
+  'The operating context your product and your agents share — so the next decision starts from what actually happened, not from an empty chat box.'
 
 // Story 3.2 (commercial-shell/sprint-3.md) — real OG/Twitter metadata, so a pasted landing link
 // unfurls with a correct card in a chat app instead of the platform's generic fallback. `async
