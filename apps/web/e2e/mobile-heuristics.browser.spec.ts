@@ -25,7 +25,11 @@ export { assertMobileClean } from './helpers/mobile-heuristics'
  * surfaces belong in an `*.authed.spec.ts` sweep that reuses `assertMobileClean` below; the helper
  * is exported for exactly that.
  */
-export const PUBLIC_MOBILE_ROUTES = ['/', '/install', '/login'] as const
+// `/talk` joins the sweep with landing-maker-ops: it is a new public route, and it is the one most
+// likely to blow the mobile budget because it embeds a third-party iframe whose contents this
+// repo does not control. Adding a row here is the whole cost of covering it — which is the point
+// of the list existing rather than each spec re-deriving "mobile-clean".
+export const PUBLIC_MOBILE_ROUTES = ['/', '/install', '/login', '/talk'] as const
 
 for (const route of PUBLIC_MOBILE_ROUTES) {
   test(`${route} is mobile-clean`, async ({ page }) => {

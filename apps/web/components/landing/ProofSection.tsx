@@ -37,6 +37,21 @@ export function ProofSection() {
         <div className="wrap">
           <h2 className="section-title">Leverage should show up in the numbers</h2>
           <p className="takeaway">Otherwise this is just a nice landing page.</p>
+          {/* ── The audience switches here, and it now says so ────────────────────────────────
+              Flagged in Sprint 3's cross-family copy pass as a contradiction: the page opens on
+              "one maker, a whole operation" and this section's Pod Report headline is addressed to
+              someone who has a dev team.
+
+              It is not a contradiction — it is an unannounced audience switch. This page sells two
+              things: the product, to a maker, and Pods, to a team that would hire one. The Pod
+              Report is the evidence for the second, computed from our own delivery history. So the
+              fix is one sentence naming the switch, not a rewrite of what the Pod Report is; the
+              alternative (making the headline maker-shaped) would have described the report as
+              something it is not. */}
+          <p className="measure">
+            Two of these are about us rather than about you. If you are a maker working alone, the first one
+            is the case for Pods — skip it. The second is the engine you would actually be using, read live.
+          </p>
 
           <div className="proof-stack">
             <PodReportProof />

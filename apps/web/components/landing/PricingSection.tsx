@@ -101,17 +101,35 @@ export function PricingSection() {
               </p>
             </Panel>
 
+            {/* ── The one tier with no price, on purpose (landing-maker-ops, product-owner call) ──
+                The other two tiers carry a number because a number is what they are. A Pod is
+                scoped per team, so any figure here would be invented — and this page has spent ten
+                sections arguing that invented numbers are the thing it does not do. The slot the
+                price would occupy says what it is instead of standing empty, which keeps the three
+                tiers aligned without pretending to a figure.
+
+                The CTA used to point at a GitHub profile, which answers none of the questions
+                someone reading an unpriced tier actually has. It goes to `/talk` — our page, our
+                framing of what the conversation is, with the real scheduler embedded in it. */}
             <Panel className="tier">
               <p className="kicker">The vault</p>
-              <p className="tier__price">Pods</p>
+              <p className="tier__price tier__price--quoted">Pods</p>
               <p className="card-copy">
                 Your team, augmented with the same ways of working we use ourselves. Benchmarked before and
                 after, because &ldquo;it felt faster&rdquo; isn&apos;t a Pod Report.
               </p>
-              <Button href="https://github.com/danybgoode" variant="ghost" className="panel-tail">
-                Talk to us
-                <Icon name="external" />
+              <ul className="plain-list">
+                <li>Scoped to your team</li>
+                <li>Measured before and after</li>
+                <li>Priced after we talk</li>
+              </ul>
+              <Button href="/talk" variant="ghost" className="panel-tail">
+                Book a conversation
+                <Icon name="arrow-right" />
               </Button>
+              <p className="note">
+                Twenty minutes with a human. No price until we both know the shape of it.
+              </p>
             </Panel>
           </div>
 
