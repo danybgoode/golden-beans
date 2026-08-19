@@ -77,6 +77,14 @@ reduced scope, which is what keeps that honest.
 **The agy version pin was stale and blocked the rail entirely.** `agy-doctor --fix` re-probed and
 bumped it. Folded into this PR rather than its own, given the Actions quota.
 
+**I broke a guard while fixing the thing it guards, and the pipeline could not tell me.** Making
+the nav root-relative (round 1) broke `every nav link resolves to a section on the page`, which
+asserted `toMatch(/^#/)`. It went unnoticed through two more rounds because the `browser` project
+is not in the blocking gate. vibe found it by *reading* the spec. Running the suite then surfaced
+**five** failures, all specs still asserting retired sections. The lesson is not "update your
+specs" — it is that a deletion-heavy epic invalidates tests that no gate runs, so the suite has to
+be run deliberately, not assumed.
+
 **agy then failed outright on two later rounds**, with two different errors (a permission-boundary
 refusal reading its own config dir, then a bare `pwd`). Both were LOUD failures, which is the
 system working — the danger this repo has recorded before is agy silently falling back and
@@ -93,8 +101,11 @@ has four families precisely so one going dark is a rotation and not a stall.
   was resolved (kept, unpriced, booking through `/talk`). The Pod Report's *"your dev team, as a
   revenue engine"* headline got a one-sentence audience-switch note rather than a rewrite; whether
   that headline should change at all is `pod-report`'s call, not this epic's.
-- The `browser` and `authed` Playwright projects are **not** in the blocking gate, so the three new
-  browser contracts (tablist, registry↔DOM, FinOps labelling) run on demand rather than on every PR.
+- The `browser` and `authed` Playwright projects are **not** in the blocking gate, so the new
+  browser contracts (tablist, registry↔DOM, FinOps labelling) run on demand rather than on every
+  PR. **This is now a known, demonstrated cost rather than a theoretical one** — see the incident
+  below. Worth a follow-up bet: either put `browser` in the gate, or accept it and make "run the
+  browser suite" an explicit line in the epic Definition of Done.
 
 ## Durable learnings
 
@@ -112,3 +123,11 @@ has four families precisely so one going dark is a rotation and not a stall.
    sentence by promising a feature.
 5. **Convergence between two foreign families is the signal worth paying for.** Every issue both
    models found independently was real. Findings from one alone were roughly half taste.
+6. **A test suite outside the blocking gate is a suite you must run on purpose.** An epic that
+   deletes twelve components will invalidate specs, and if those specs live in a non-gating project
+   nothing will tell you — not CI, not the pre-push hook, not a reviewer who only reads the diff.
+   Run it before claiming the epic is verified.
+7. **When a review makes you change a shape, re-read every guard that asserts that shape.** The
+   root-relative nav fix and the spec asserting bare fragments were two lines apart conceptually
+   and in different files literally. Fixing the code and orphaning its guard leaves a green run and
+   no coverage.
