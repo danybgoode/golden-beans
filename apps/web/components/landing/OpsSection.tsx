@@ -1,4 +1,8 @@
-import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
+import {
+  isDestinationDeliveryEnabled,
+  isResilienceScenariosEnabled,
+  isSecuritySimulationsEnabled,
+} from '@/lib/flags'
 import { MAKER_OPS_SURFACES, resolveSurfaceStatus } from '@/lib/maker-ops'
 import { OpsTabs, type ResolvedSurface } from './OpsTabs'
 
@@ -16,6 +20,7 @@ export function OpsSection() {
   const gates = {
     resilienceScenariosEnabled: isResilienceScenariosEnabled(),
     securitySimulationsEnabled: isSecuritySimulationsEnabled(),
+    destinationDeliveryEnabled: isDestinationDeliveryEnabled(),
   }
 
   const surfaces: ResolvedSurface[] = MAKER_OPS_SURFACES.map((surface) => ({

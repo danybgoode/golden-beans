@@ -1,4 +1,8 @@
-import { isResilienceScenariosEnabled, isSecuritySimulationsEnabled } from '@/lib/flags'
+import {
+  isConnectorWritesEnabled,
+  isResilienceScenariosEnabled,
+  isSecuritySimulationsEnabled,
+} from '@/lib/flags'
 import { gatedDrillNote } from '@/lib/maker-ops'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { Badge } from '@/components/ui/Badge'
@@ -75,6 +79,14 @@ export function AuthoritySection() {
   const gatedNote = gatedDrillNote(gates)
   const drillsRunnable = gatedNote === ''
 
+  // ── The gate read that retired with PrincipleSection, restored ──────────────────────────────
+  // §4 of the page this replaced closed on a sentence that READ this flag: staged writes are live,
+  // or they are built and deliberately switched off. Retiring that section took the flag read with
+  // it — and this panel inherited the argument ("let agents move") without inheriting the gate that
+  // made the claim checkable. A repositioning is exactly when this happens: the claim survives the
+  // section that qualified it. Caught by Codex in cross-family review round 3 of PR #100.
+  const writesLive = isConnectorWritesEnabled()
+
   return (
     <section className="band" id="authority">
       <div className="wrap">
@@ -92,7 +104,11 @@ export function AuthoritySection() {
 
         <div className="authority-grid section-lead">
           <Panel className="authority-card">
-            <Badge status="live">Accountable actors</Badge>
+            {writesLive ? (
+              <Badge status="live">Accountable actors</Badge>
+            ) : (
+              <Badge status="next">Built, writes gated</Badge>
+            )}
             <h3>Let agents move, keep the last word</h3>
             <p>
               Scoped credentials, staged actions, explicit approvals and an append-only record. The
@@ -111,6 +127,11 @@ export function AuthoritySection() {
                 </ActivityFeedItem>
               ))}
             </div>
+            <p className="note">
+              {writesLive
+                ? 'Live today: the staged write tools are switched on, and every one of them still needs your explicit confirmation before it applies.'
+                : 'The staged write path is built and deliberately switched off until it is verified end to end — so this page does not claim a live write surface before there is one.'}
+            </p>
           </Panel>
 
           <Panel className="authority-card">

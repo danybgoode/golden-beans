@@ -26,10 +26,12 @@ import {
 const BOTH_GATES_ON: OpsGateReadings = {
   resilienceScenariosEnabled: true,
   securitySimulationsEnabled: true,
+  destinationDeliveryEnabled: true,
 }
 const BOTH_GATES_OFF: OpsGateReadings = {
   resilienceScenariosEnabled: false,
   securitySimulationsEnabled: false,
+  destinationDeliveryEnabled: false,
 }
 
 test('every surface heading is a title, not a sentence', () => {
@@ -69,11 +71,19 @@ test('the gated surface reports gated while a gate it names is off, and clears w
 
   // One on, one off is still gated — the surface names two flags and claims neither individually.
   assert.equal(
-    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: true, securitySimulationsEnabled: false }).status,
+    resolveSurfaceStatus(sec, {
+      resilienceScenariosEnabled: true,
+      securitySimulationsEnabled: false,
+      destinationDeliveryEnabled: true,
+    }).status,
     'gated'
   )
   assert.equal(
-    resolveSurfaceStatus(sec, { resilienceScenariosEnabled: false, securitySimulationsEnabled: true }).status,
+    resolveSurfaceStatus(sec, {
+      resilienceScenariosEnabled: false,
+      securitySimulationsEnabled: true,
+      destinationDeliveryEnabled: true,
+    }).status,
     'gated'
   )
 
@@ -128,4 +138,43 @@ test('the gated note names only the drills that are actually switched off', () =
 test('with both gates open the note is empty, and the surface reads live', () => {
   assert.equal(gatedDrillNote(BOTH_GATES_ON), '')
   assert.deepEqual(resolveSurfaceStatus(getSurface('sec'), BOTH_GATES_ON), { status: 'live' })
+})
+
+// ── Round 3: DevOps advertised a gated capability as shipped ──────────────────────────────────
+// "Destinations + replay" sat beside three unconditionally-live capabilities with no
+// qualification, while DESTINATION_DELIVERY_ENABLED is born OFF. Stating a capability as live
+// without reading its flag is CODE-QUALITY #9, and it is the exact defect the SecOps surface was
+// already built to avoid — so the fix was to give DevOps the same treatment, not a caveat in prose.
+test('the DevOps surface reads its own delivery gate', () => {
+  const dev = getSurface('dev')
+
+  const off = resolveSurfaceStatus(dev, BOTH_GATES_OFF)
+  assert.equal(off.status, 'gated')
+  assert.match(
+    off.status === 'gated' ? off.note : '',
+    /delivery/i,
+    'the note must name what is actually switched off, not drills'
+  )
+
+  // The scenario gates must not move it: they are a different surface's flags entirely.
+  assert.deepEqual(
+    resolveSurfaceStatus(dev, {
+      resilienceScenariosEnabled: false,
+      securitySimulationsEnabled: false,
+      destinationDeliveryEnabled: true,
+    }),
+    { status: 'live' }
+  )
+})
+
+// The SecOps surface must not have picked up the delivery gate in the same change — each gated
+// surface answers for its OWN flags. A resolver that ORs every gate together would pass the test
+// above and quietly make both surfaces report each other's outages.
+test('each gated surface answers only for the flags it names', () => {
+  const sec = resolveSurfaceStatus(getSurface('sec'), {
+    resilienceScenariosEnabled: true,
+    securitySimulationsEnabled: true,
+    destinationDeliveryEnabled: false,
+  })
+  assert.deepEqual(sec, { status: 'live' }, 'delivery being off says nothing about SecOps')
 })

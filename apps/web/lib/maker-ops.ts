@@ -102,7 +102,15 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
       },
       { name: 'Circuit breakers', detail: 'Stop damage without stopping work.', icon: 'warning-triangle' },
     ],
-    availability: { kind: 'shipped' },
+    // Flags and rollouts are unconditionally live; SCHEDULED DELIVERY to a destination rides
+    // `DESTINATION_DELIVERY_ENABLED`, which is born OFF. Listing "destinations + replay" beside three
+    // shipped capabilities with no qualification states a capability as live without reading its
+    // flag — CODE-QUALITY #9, and the same defect the SecOps surface was already built to avoid.
+    // Caught by Codex in cross-family review round 3 of PR #100.
+    availability: {
+      kind: 'gated',
+      gates: ['DESTINATION_DELIVERY_ENABLED'],
+    },
   },
   {
     id: 'sec',
@@ -169,10 +177,24 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
   },
 ]
 
+/**
+ * Just the two scenario gates.
+ *
+ * Narrower than `OpsGateReadings` on purpose: `gatedDrillNote` is about drills and nothing else, and
+ * `AuthoritySection` calls it while having no business knowing whether destination delivery is on.
+ * A helper that demands the whole readings object forces every caller to source flags it does not
+ * use — which is how an unrelated gate ends up read (and then rendered) in the wrong component.
+ */
+export type DrillGateReadings = Pick<
+  OpsGateReadings,
+  'resilienceScenariosEnabled' | 'securitySimulationsEnabled'
+>
+
 /** The live positions of every gate any surface names. Supplied by the caller, from `lib/flags`. */
 export interface OpsGateReadings {
   resilienceScenariosEnabled: boolean
   securitySimulationsEnabled: boolean
+  destinationDeliveryEnabled: boolean
 }
 
 export type SurfaceStatus =
@@ -192,13 +214,36 @@ export type SurfaceStatus =
  * correctly while hardcoding the sentence beside it is the same defect wearing a smaller hat.
  * Caught by Codex in cross-family review of PR #100.
  */
-export function gatedDrillNote(gates: OpsGateReadings): string {
+export function gatedDrillNote(gates: DrillGateReadings): string {
   const off: string[] = []
   if (!gates.resilienceScenariosEnabled) off.push('resilience drills')
   if (!gates.securitySimulationsEnabled) off.push('security scenarios')
 
   if (off.length === 0) return ''
   return `Starting ${off.join(' or ')} is switched off in this deployment`
+}
+
+/**
+ * The qualification a GATED surface currently needs, or '' when nothing about it is switched off.
+ *
+ * Keyed by the gate names the surface itself declares, so adding a gated capability means naming
+ * its flag in the data — not remembering to come here. A surface naming a gate this function does
+ * not know about throws rather than silently rendering as fully live: a missing case in a status
+ * resolver fails in the direction of over-claiming, which is the direction that matters.
+ */
+function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
+  if (surface.availability.kind !== 'gated') return ''
+
+  const named = surface.availability.gates
+  if (named.includes('DESTINATION_DELIVERY_ENABLED') && !gates.destinationDeliveryEnabled) {
+    return 'Scheduled delivery to a destination is switched off in this deployment'
+  }
+  if (named.includes('RESILIENCE_SCENARIOS_ENABLED') || named.includes('SECURITY_SIMULATIONS_ENABLED')) {
+    return gatedDrillNote(gates)
+  }
+  if (named.includes('DESTINATION_DELIVERY_ENABLED')) return ''
+
+  throw new Error(`No note is defined for gates: ${named.join(', ')}`)
 }
 
 /**
@@ -218,7 +263,7 @@ export function resolveSurfaceStatus(surface: OpsSurface, gates: OpsGateReadings
     case 'unbuilt':
       return { status: 'next', note: 'Next build — not a shipped capability' }
     case 'gated': {
-      const note = gatedDrillNote(gates)
+      const note = gatedNoteFor(surface, gates)
       return note === '' ? { status: 'live' } : { status: 'gated', note }
     }
   }
