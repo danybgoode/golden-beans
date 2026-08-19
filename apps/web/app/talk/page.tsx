@@ -20,8 +20,11 @@ export const metadata: Metadata = {
 //
 //   1. It puts a third-party <script> on the landing page — the page every visitor loads — to serve
 //      a control that a small fraction of them will ever press.
-//   2. That script executes in OUR origin. An <iframe> does not: it is a sandboxed document that
-//      cannot read this page, its cookies or its DOM. Same booking, strictly less trust extended.
+//   2. That script executes in OUR origin. An <iframe> does not: it is a cross-origin document, and
+//      the same-origin policy alone stops it reading this page, its cookies or its DOM. (That is
+//      ISOLATION, not sandboxing — there is no `sandbox` attribute here, deliberately; see the note
+//      on the element itself. The distinction was blurred in an earlier draft of this comment and
+//      Codex caught it in round 6 of PR #100.) Same booking, strictly less trust extended.
 //   3. A modal gives the reader no room to be told what the conversation actually is. The Pods tier
 //      is the one thing on the pricing table with no price on it, so the reader arriving here has
 //      exactly one question — "what am I agreeing to?" — and a calendar grid does not answer it.

@@ -392,8 +392,20 @@ test("the authority panel's gate claim matches the real route state", async ({ p
   const panel = page.locator('#authority')
   await expect(panel).toBeVisible()
 
-  // 404 means the gate is closed — the route is deployed either way, so a 404 here is the gate and
-  // not a missing endpoint (the sibling POST answers 405 when the route exists).
+  // ── A 404 alone does NOT prove "gated" ──────────────────────────────────────────────────────
+  // A DELETED route 404s exactly like a gated one, and this test would then read the deletion as
+  // "merely switched off" and happily validate the page's "built and deployed" claim. So each
+  // probe is paired with a deployment proof: `/api/v1/scenarios/admin` is the ungated sibling in
+  // the same route family, and it answers 400/401/405 — anything but 404 — whenever the scenario
+  // routes are deployed at all. If that sibling 404s, the assumption under this whole test is
+  // gone and the test says so rather than passing. Restored after Codex flagged its loss in round
+  // 6 of PR #100; the spec this replaced had the same probe and I dropped it in the rewrite.
+  const deploymentProof = await request.post('/api/v1/scenarios/admin', { data: {} })
+  expect(
+    deploymentProof.status(),
+    'the scenario route family must be deployed for a 404 to mean "gated" rather than "gone"'
+  ).not.toBe(404)
+
   const gateStates = await Promise.all(
     DRILL_ROUTES.map(async (drill) => ({
       name: drill.name,
