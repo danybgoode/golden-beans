@@ -30,7 +30,7 @@ export function OpsSection() {
         <h2 className="section-title">Run the whole operation</h2>
         <p className="measure">
           You do not have to become every department. Golden Frijoles gives a maker and their agents one set
-          of rails across the surfaces a real product needs in order to grow.
+          of rails across the surfaces a real product needs to grow.
         </p>
 
         <div className="section-lead">

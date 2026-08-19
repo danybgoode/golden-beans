@@ -26,7 +26,7 @@ const guarantees = [
 export function SdkSection() {
   return (
     <>
-      <SectionDivider number={3} title="For the engineers who will inevitably ask" />
+      <SectionDivider number={3} title="For the engineers who will ask" />
       <section id="sdk">
         <div className="wrap">
           <h2 className="section-title">Yes, there&apos;s an SDK</h2>

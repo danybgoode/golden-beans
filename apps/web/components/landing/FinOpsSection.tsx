@@ -41,11 +41,21 @@ export function FinOpsSection() {
       <div className="wrap">
         <p className="eyebrow">FinOps for agentic making</p>
         <h2 className="section-title">Know what your intelligence costs, and what it buys</h2>
+        {/* Sprint 3, agy's strongest finding: the opening stated an administrative benefit
+            ("attribute token spend") for a reader whose actual relationship to this subject is a
+            bill they did not expect. The problem goes first now.
+
+            What is NOT taken from the suggestion is its replacement line, which promised that
+            Golden Frijoles "caps spend per Bet" — a capability that does not exist, in the one
+            section of this page whose entire justification is that it says so (epic D4). A copy
+            note that fixes the register by inventing a feature is a worse defect than the flat
+            sentence it replaces, and the reviewer had no way to know. */}
         <p className="measure">
-          Token spend is only useful once you can attribute it to the agent, the workflow and the Bet that
-          consumed it, then connect it back to product value. This would bring AI unit economics into the same
-          operating context as your North Star.
+          An agent looping on a broken test overnight is a bill, and you find out about it from the bill.
+          Token spend only becomes useful once you can attribute it to the agent, the workflow and the Bet
+          that consumed it — and then weigh it against what it actually produced.
         </p>
+        <p className="measure">None of that exists yet. This is what it would look like.</p>
 
         <div className="finops-concept section-lead">
           <p className="ops-status">

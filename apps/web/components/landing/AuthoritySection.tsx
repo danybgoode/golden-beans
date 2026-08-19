@@ -52,7 +52,7 @@ const rehearsed = [
   {
     icon: 'shield' as const,
     name: 'Security scenario',
-    detail: 'An unauthorised transition is attempted',
+    detail: 'An unauthorized transition is attempted',
     when: 'blocked',
   },
   {
@@ -71,10 +71,14 @@ export function AuthoritySection() {
       <div className="wrap">
         <p className="eyebrow">Agents with somewhere to work</p>
         <h2 className="section-title">More than an endpoint</h2>
+        {/* The second sentence was 33 words and four stacked noun phrases, and it landed on "a box
+            you cannot see into" — flagged by both external families, one for the rhythm and one for
+            the dead metaphor. Split, and the metaphor replaced with the actual mechanism rather than
+            with "black box", which is the same cliché wearing a shorter coat. */}
         <p className="measure">
-          Your agents can investigate, propose and act. Golden Frijoles keeps the context, the permissions,
-          the staged changes and the evidence visible, so autonomy can grow without the product turning into a
-          box you cannot see into.
+          Your agents can investigate, propose and act. What they cannot do is act unseen: the context they
+          used, the permission they had and the change they staged are all on the record before anything
+          happens.
         </p>
 
         <div className="authority-grid section-lead">

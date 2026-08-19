@@ -41,8 +41,8 @@ export function OperatingContextSection() {
         <p className="eyebrow">One operating context</p>
         <h2 className="section-title">Your product, legible to you and your agents</h2>
         <p className="measure">
-          North Star, customer behaviour, experiments, releases, operational state and agent activity belong
-          in one place — so the next decision starts from what happened, rather than from an empty chat box.
+          North Star, customer behavior, experiments, releases, operational state and agent activity belong in
+          one place — so the next decision starts from what happened, rather than from an empty chat box.
         </p>
 
         <div className="section-lead">

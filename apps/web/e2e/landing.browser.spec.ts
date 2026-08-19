@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { LANDING_SECTIONS } from '@/lib/landing-sections'
 
 // The landing's rendered-content contract.
 //
@@ -12,16 +13,16 @@ import { test, expect } from '@playwright/test'
 // What is left is the thing only this page can assert: that the v2 narrative actually rendered,
 // and that the nav's promises resolve to real anchors.
 
-test('the landing renders the v2 narrative', async ({ page }) => {
+test('the landing renders the maker-ops narrative', async ({ page }) => {
   await page.goto('/')
 
   await expect(page.locator('nav.gb')).toBeVisible()
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Your roadmap has')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Make more')
 
-  // Both copy-a-prompt blocks are present — the `#try` handoff prompt and the closing decision
-  // prompt. These are the page's two "use this without an account" affordances and the only
-  // interactive client components on it.
-  await expect(page.locator('.prompt-card')).toHaveCount(2)
+  // ONE copy-a-prompt block, not two. `TryItSection`'s handoff prompt retired with the
+  // repositioning (landing-maker-ops D1); the closing decision prompt survived, deliberately —
+  // it is the page's only moment of acting on its own "evidence over assertion" argument.
+  await expect(page.locator('.prompt-card')).toHaveCount(1)
 })
 
 // The copy button's actual contract: what lands on the clipboard is what the reader saw.
@@ -100,18 +101,51 @@ test('every nav link resolves to a section on the page', async ({ page }) => {
   }
 })
 
-// The hero's two CTAs are the page's primary actions, and both are in-page anchors rather than
-// routes — so nothing type-checks them either.
-test('the hero CTAs resolve to sections on the page', async ({ page }) => {
+// landing-maker-ops · Story 4.1 — the hero's two CTAs both resolve to something real.
+//
+// The mockup pointed every CTA at `href="#start"` with nothing behind it, and the version this
+// replaces asserted a hardcoded `['#connect', '#try']`. Neither shape survives a gate flip, so the
+// assertion is on the PROPERTY rather than on the strings: an in-page anchor must have a target,
+// and a route must answer. `primaryCtaHref` returns `/signup` or `#pricing` depending on
+// SIGNUP_ENABLED, and both branches pass this without the spec knowing which one it got.
+test('the hero CTAs resolve to something real, under either gate position', async ({ page, request }) => {
   await page.goto('/')
 
   const hrefs = await page
     .locator('.hero .hero-cta a')
     .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
-  expect(hrefs).toEqual(['#connect', '#try'])
+  expect(hrefs.length, 'the hero has two CTAs').toBe(2)
 
   for (const href of hrefs) {
-    await expect(page.locator(href), `${href} has no target on the page`).toHaveCount(1)
+    expect(href, 'a CTA must go somewhere').not.toBe('')
+    expect(href, "the mockup's dead #start anchor must never ship").not.toBe('#start')
+
+    if (href.startsWith('#')) {
+      await expect(page.locator(href), `${href} has no target on the page`).toHaveCount(1)
+    } else {
+      const response = await request.get(href)
+      expect(response.status(), `${href} must be a route that answers`).toBeLessThan(400)
+    }
+  }
+})
+
+// landing-maker-ops · Story 4.1 — the registry and the page describe each other.
+//
+// `lib/landing-sections.ts` is the single source of truth for what is on this page, and it has now
+// been rewritten twice by a redesign. Both times, the risk was the same: an entry that outlives the
+// section it described, or a section that ships without one. Neither is visible to a type-checker,
+// and the first is exactly the drift the file exists to prevent.
+//
+// Every id is also the `id` attribute of exactly one element, so a stale entry fails here rather
+// than rotting quietly — and so does a nav or CTA anchor pointing at a section that has gone.
+test('every section in the registry is on the page, exactly once', async ({ page }) => {
+  await page.goto('/')
+
+  for (const section of LANDING_SECTIONS) {
+    await expect(
+      page.locator(`#${section.id}`),
+      `#${section.id} is in LANDING_SECTIONS but not rendered exactly once`
+    ).toHaveCount(1)
   }
 })
 
@@ -211,9 +245,13 @@ test('canonical public brand assets use Golden Frijoles names and accessible tex
 test('section dividers carry a legible numbered stamp', async ({ page }) => {
   await page.goto('/')
 
+  // Four, not ten: landing-maker-ops replaced §1–§5 and §7 with sections that carry no stamp, and
+  // renumbered the four survivors 1–4. The assertion is a floor rather than an equality so adding
+  // a stamped section does not fail it — but it moved down with the page, because a floor of 10
+  // above a page with four is a check that can only ever be a bug report about the check.
   const stamps = page.locator('.divider__stamp')
   await expect(stamps.first()).toBeVisible()
-  expect(await stamps.count()).toBeGreaterThanOrEqual(10)
+  expect(await stamps.count()).toBeGreaterThanOrEqual(4)
 
   await expect(stamps.first()).toHaveText('1')
 
@@ -452,4 +490,75 @@ test('with reduced motion requested, nothing animates, transitions, or smooth-sc
   expect(motion.motionBase, 'the motion tokens are zeroed at the source').toBe('0ms')
   expect(motion.motionQuick).toBe('0ms')
   expect(motion.moving, `these still animate: ${motion.moving.join(', ')}`).toEqual([])
+})
+
+// ── landing-maker-ops · Sprint 4, Story 4.1 ─────────────────────────────────────────────────────
+
+// Story 2.4's acceptance, as a spec rather than as a promise in a comment.
+//
+// The mockup's version of this control is four `<button class="opstab">` with a click handler that
+// swaps `textContent`: focusable, pressable, and completely silent about what it did. This asserts
+// the three things that make it a real tablist rather than four styled divs — the roles, the
+// selected state, and keyboard navigation — because all three are invisible to a type-checker and
+// all three are what a screen-reader or keyboard user actually depends on.
+test('the Ops tabs are a real, keyboard-operable tablist', async ({ page }) => {
+  await page.goto('/')
+
+  const tablist = page.locator('[role="tablist"]')
+  await expect(tablist).toHaveCount(1)
+
+  const tabs = tablist.getByRole('tab')
+  await expect(tabs).toHaveCount(4)
+
+  // Exactly one selected, and it is the only one in the tab order (the roving-tabindex pattern).
+  await expect(tablist.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+  await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
+
+  const first = tabs.nth(0)
+  const second = tabs.nth(1)
+  await expect(first).toHaveAttribute('aria-selected', 'true')
+
+  // The panel is associated with its tab in BOTH directions. A panel a tab does not point at is a
+  // panel an assistive technology cannot follow the tab into.
+  const controls = await first.getAttribute('aria-controls')
+  await expect(page.locator(`#${controls}`)).toHaveAttribute('role', 'tabpanel')
+  await expect(page.locator(`#${controls}`)).toHaveAttribute('aria-labelledby', 'ops-tab-product')
+
+  // Arrow keys move selection — the part the mockup has no equivalent for at all.
+  await first.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(second).toBeFocused()
+  await expect(second).toHaveAttribute('aria-selected', 'true')
+  await expect(first).toHaveAttribute('aria-selected', 'false')
+
+  // End jumps to the last tab, and the panel follows rather than going stale.
+  await page.keyboard.press('End')
+  await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#ops-panel-fin')).toBeVisible()
+})
+
+// Epic D4. FinOps is the one section on this page describing something that does not exist, and the
+// whole decision to ship it rested on it being unmistakably labelled. "Unmistakably" means the
+// label is on the tab a reader has not opened yet AND inside the panel — not only in the panel,
+// which a reader who never clicks the fourth tab will not see.
+//
+// It also asserts the negative that actually matters: the unbuilt surface must never be sold in the
+// same vocabulary as the shipped ones. If someone later gives it a `live` badge, this goes red.
+test('the unbuilt FinOps surface is labelled as next wherever it appears', async ({ page }) => {
+  await page.goto('/')
+
+  const finTab = page.locator('#ops-tab-fin')
+  await expect(finTab.locator('.tag-next')).toHaveCount(1)
+  await expect(finTab.locator('.tag-live')).toHaveCount(0)
+
+  await finTab.click()
+  const panel = page.locator('#ops-panel-fin')
+  await expect(panel.locator('.tag-next')).not.toHaveCount(0)
+  await expect(panel.locator('.tag-live')).toHaveCount(0)
+
+  // And the section further down the page, which carries the concept panel.
+  const finops = page.locator('#finops')
+  await expect(finops.locator('.tag-next')).not.toHaveCount(0)
+  await expect(finops.locator('.tag-live')).toHaveCount(0)
+  await expect(finops).toContainText(/not built|nothing on this panel is built/i)
 })

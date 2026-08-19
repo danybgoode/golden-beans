@@ -68,7 +68,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
     eyebrow: 'PRODUCT OPS',
     title: 'Make the right product better',
     description:
-      'Connect strategy to what people actually do, then turn that evidence into the next thing worth making.',
+      'Stop guessing what to build next. Connect the goal to what people actually do, and let the evidence pick the next thing worth making.',
     questions: [
       'What is moving our North Star?',
       'Where are people getting stuck?',
@@ -77,7 +77,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
     capabilities: [
       { name: 'North Star + inputs', detail: 'Keep the product pointed at value.', icon: 'star' },
       { name: 'Journeys + TARS', detail: 'See how people move through the product.', icon: 'map-pin' },
-      { name: 'Signals', detail: 'Turn behaviour into evidence you can act on.', icon: 'gauge' },
+      { name: 'Signals', detail: 'Turn behavior into evidence you can act on.', icon: 'gauge' },
       { name: 'Experiments', detail: 'Compare what changed against what mattered.', icon: 'flask' },
     ],
     availability: { kind: 'shipped' },
@@ -148,7 +148,7 @@ export const MAKER_OPS_SURFACES: readonly OpsSurface[] = [
     ],
     capabilities: [
       {
-        name: 'Provider-normalised usage',
+        name: 'Provider-normalized usage',
         detail: 'Input, output, cache, retry and model mix.',
         icon: 'binary',
       },

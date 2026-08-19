@@ -53,10 +53,19 @@ export function MakerHero() {
             <br />
             <em className="foil">Grow what works</em>
           </h1>
+          {/* Rewritten in Sprint 3 after agy and vibe independently flagged the same line. It read
+              "Agents turn your ideas into working software faster than you can decide what to build
+              next" — a speed claim nobody can check, in a voice the brand does not use, on the one
+              sentence a reader definitely reads. Neither model's replacement is used verbatim; what
+              they were right about is that the line asserted a benefit instead of naming the
+              problem, and the problem is the thing this reader already has. */}
           <p className="hero-sub">
-            Agents turn your ideas into working software faster than you can decide what to build next. Golden
-            Frijoles gives that work somewhere to land: shared product context, operating rails, and evidence
-            that outlives the conversation.
+            Your agents can build almost anything you describe. What they cannot do is remember what it was
+            for a month later, or tell you whether it worked.
+          </p>
+          <p className="hero-sub hero-sub--tight">
+            Golden Frijoles gives that work somewhere to land: shared product context, operating rails, and
+            evidence that outlives the conversation it came from.
           </p>
           <p className="takeaway takeaway--lead">One maker. A whole operation.</p>
 

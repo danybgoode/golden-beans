@@ -40,9 +40,8 @@ export function MakerLoopSection() {
           <p className="eyebrow">The new maker loop</p>
           <h2 className="section-title">From an idea to something real</h2>
           <p className="measure">
-            Golden Frijoles does not ask you to make less. It gives everything you are already making
-            somewhere to go: shared context, bounded action, real product operations, and evidence that
-            survives the conversation it came from.
+            Golden Frijoles does not ask you to make less. It gives what you are already making somewhere to
+            go — shared context, bounded action, real product operations. Then it keeps the evidence.
           </p>
 
           <ol className="maker-flow section-lead">
