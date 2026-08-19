@@ -63,7 +63,27 @@ short layer. Both reviewers hit their 256 KB argv cap on a diff this size; `--co
 | 10 | **0 blocking**, 1 should-fix | vibe: **0 blocking, 0 should-fix**, 1 nit | the share description's THIRD draft — the second listed capabilities and justified it by claiming they were ungated, which `lib/flags.ts` disproves; the last hand-spelled badge string |
 | 11 | **0 blocking, 0 should-fix**, 1 nit | vibe: 1 "blocking" (rejected — scope artifact), 1 should-fix, 1 nit | `GATE_NOTES` typed `Record<string, …>` under a comment claiming an undescribed gate was a TYPE error — it was not; made real and proven by mutation. An unexercised `variant` prop |
 | 12 | 1 blocking, 1 should-fix | vibe: **CLEAN — 0 blocking, 0 should-fix** | the drills panel's trailing clause: head computed, tail hardcoded, so with one gate open it denied a run that was startable |
-| 13 | *(the confirming round)* | | |
+| 13 | **CLEAN — 0 blocking, 0 should-fix, 0 nits** | vibe: 0 blocking; 1 should-fix + 2 nits, all checked and rejected with evidence | — |
+
+**Stopped at 13.** Codex came back fully clean and vibe's three remaining items were verified
+rather than applied: Cal.com does honour `embed=` (the plain and embed URLs return different
+documents), the bag's `*` footnote IS referenced (the round stamp reads "beans\*"), and the `Nav`
+comment stays because it records a shipped bug and why its guard could not see it.
+
+### What the layer bought, by class
+
+Six findings were ONE recurring defect — *a computed value sitting beside a hardcoded claim about
+the same thing*: the Ops panel, SecOps on the bag, DevOps on the bag, the badge text, the drills
+note, and the trailing half of a sentence whose first half was already computed. Every fix made
+them one value rather than patching the copy.
+
+Five more were a SECOND class — *prose asserting a property the code did not have*, including my
+own comment claiming `Record<string, …>` made an undescribed gate a type error. It did not; it does
+now, proven by mutation.
+
+Five findings were **rejected with evidence**: the section stamps (already unique), `.agent-result`
+(zero consumers), the SDK tarball (never tracked), `booking.ts` as dead code (scope artifact), and
+the two from round 13.
 
 **Stopping condition.** Round 10 was the first round where both families reported no blocking
 findings. Because fixes landed after it, round 11 runs on the head that contains them — a clean
