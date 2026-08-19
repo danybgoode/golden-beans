@@ -1,10 +1,16 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: landing-maker-ops
 build_order: 20
 ---
 
 # Epic: Maker ops — the landing repositions from a growth engine to an operating context
+
+> ✅ **SHIPPED & LIVE 2026-08-19** — PR [#100](https://github.com/danybgoode/golden-beans/pull/100),
+> merged as `46c7e80`, serving on **https://goldenfrijoles.com**. Verified in production by
+> exercising behaviour, not by reading a listing: the maker-ops spine renders, every CTA
+> resolves, the gated surfaces' badges match the real route state, and `/talk` serves the
+> booking flow.
 
 > **Area:** 02-commercial · **Risk:** low · **Class:** Feature · **Archetype:** Repositioning
 > **Appetite:** M (one wave) · **Mockup (signed-off):**

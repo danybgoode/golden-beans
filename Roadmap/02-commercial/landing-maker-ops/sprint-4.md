@@ -1,6 +1,6 @@
 # Maker ops — Sprint 4: Verify and ship
 
-**Status:** in progress — specs and the gate are done; review rounds ran (see below); merge + prod smoke outstanding
+**Status:** ✅ done — merged as `46c7e80`, production smoke green.
 
 > **Build contract.** "Done" means serving on `https://goldenfrijoles.com`. Merging to `main` **is**
 > the deploy (AGENTS.md rule #4) — no `vercel deploy`, ever. Nothing here is reported as passing
@@ -95,6 +95,29 @@ unique (1–4, verified), and `.agent-result` had zero consumers (verified twice
 from Sprint 3 were rejected on the record in `sprint-3.md`.
 
 ### Story 4.4 — Ship it, then prove it shipped
+
+**Result — 2026-08-19.** Merged as `46c7e80`. Production deployment confirmed via
+`gh api repos/danybgoode/golden-beans/deployments` (sha `46c7e80`, state `success`), not assumed
+from a green CI run. Production smoke: **34 checks, 34 pass, 0 fail.**
+
+The smoke script was **baselined against the OLD production first**, where it failed 19 checks —
+which is what makes the pass afterwards evidence rather than a script that would have passed
+either way. One check failed on the first live run and it was the CHECK that was wrong, not the
+page: it counted string occurrences of the Cal.com embed URL and got 2, because the URL also
+appears in Next's RSC payload. Corrected to count `<iframe>` elements (there is exactly one).
+
+What the smoke actually exercised, by behaviour: six routes answer 200; all thirteen section ids
+render; the tablist and all four Ops panels are present; **the gate-derived claims match reality** —
+`GET /api/v1/scenarios/snapshot` is 404 while `POST /api/v1/scenarios/admin` is 400, so the route
+family is deployed and only the gate closes it, and the page says so; every CTA resolves; `/talk`
+serves exactly one Cal.com frame plus its unconditional escape-hatch link, with root-relative nav;
+the metadata is repositioned and names no gate-dependent capability; the dogfood beacon endpoint
+still answers.
+
+Verified visually on the live site as well: the hero bag reads SecOps "Partly gated" and FinOps
+"Next build" — both computed from the real production flags, which is the epic's central claim
+proving itself in production.
+
 **Acceptance:**
 - PR opened, gate green, `origin/main` merged into the branch before merging.
 - Merged to `main`. The deployed SHA confirmed via
