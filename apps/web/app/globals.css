@@ -3626,3 +3626,448 @@ a.stat-card:hover {
   border-color: var(--gold);
   color: var(--gold);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   landing-maker-ops · Sprint 1, Story 1.4 — the maker-ops spine.
+
+   Every rule below is MOBILE-FIRST, per `references/ux-guidelines.md`: the base
+   declaration is the single-column phone layout and a `min-width` query ADDS
+   the wider one. Not a `max-width` block fighting desktop rules — the shape
+   this repo has repeatedly had to unpick.
+
+   Zero raw hex. `check-design-drift` sweeps this file as well as the
+   components (a colour file was, for a while, the one place a hand-picked hex
+   could land unchallenged), so every value here comes off a token or is
+   derived from one with `color-mix`.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── The statement band ─────────────────────────────────────────────────────
+   A kraft strip carrying one sentence, between two dark sections. It is the
+   `.divider` material with the numbered stamp swapped for the mark, so the
+   paper family stays one family rather than gaining a second, near-identical
+   member. */
+.divider--statement .wrap {
+  justify-content: center;
+  gap: 12px;
+  padding-block: 18px;
+  text-align: center;
+}
+
+.divider--statement p {
+  max-width: 62ch;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ── The maker loop ─────────────────────────────────────────────────────────
+   Five steps. Stacked on a phone with a rule between them; five tracks across
+   from 900px, where the rule becomes vertical. One border declaration per
+   orientation rather than a per-item override. */
+.maker-flow {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.maker-flow__item {
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.maker-flow__item:last-child {
+  border-bottom: none;
+}
+
+.maker-flow__n {
+  color: var(--gold);
+  font: 700 11px var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.maker-flow__item h3 {
+  margin: 14px 0 6px;
+  font-size: 17px;
+}
+
+.maker-flow__item p {
+  color: var(--dim);
+  font-size: 13.5px;
+}
+
+/* ── The operating context shell ────────────────────────────────────────────
+   Reuses `.app-shell`/`.app-bar`/`.app-body`, which already model "a picture of
+   the product". Only the navigation column is new. */
+.context-nav {
+  display: none;
+}
+
+.context-nav__item {
+  padding: 8px 10px;
+  border-radius: 7px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+.context-nav__item--on {
+  background: var(--roast-2);
+  color: var(--crema);
+}
+
+.context-main__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* The agent's line under the shell. Left rule in gold, same as `.tool` — the
+   agent's contribution is marked the same way everywhere on this page. */
+.context-rail {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 9px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.context-rail strong {
+  color: var(--gold);
+}
+
+/* ── The Ops panel ──────────────────────────────────────────────────────────
+   A real tablist (`role="tablist"`), so the tabs are keyboard-operable. The
+   focus ring is not optional here: this is the one place on the page where a
+   keyboard user changes what is displayed, and losing the ring would make the
+   arrow-key navigation invisible. */
+.ops-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.ops-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font: 700 13px var(--sans);
+  cursor: pointer;
+}
+
+.ops-tab:hover {
+  border-color: var(--gold-deep);
+  color: var(--crema);
+}
+
+.ops-tab[aria-selected='true'] {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--roast);
+}
+
+.ops-tab:focus-visible {
+  outline: 2px solid var(--gold-hot);
+  outline-offset: 3px;
+}
+
+.ops-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.ops-panel:focus-visible {
+  outline: 2px solid var(--gold-hot);
+  outline-offset: 4px;
+}
+
+.ops-copy h3 {
+  margin: 8px 0 10px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.ops-copy p {
+  color: var(--dim);
+}
+
+.ops-questions {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.ops-questions li {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.ops-caps {
+  display: grid;
+  gap: 10px;
+}
+
+.ops-cap {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--espresso);
+}
+
+.ops-cap b {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+}
+
+.ops-cap b svg {
+  flex: none;
+  color: var(--gold);
+}
+
+.ops-cap span {
+  display: block;
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+/* ── Authority ──────────────────────────────────────────────────────────────
+   Two panels: what the agent may stage, and what it may only rehearse. */
+.authority-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.authority-card h3 {
+  margin: 12px 0 8px;
+  font-size: 21px;
+}
+
+.authority-card > p {
+  color: var(--dim);
+  font-size: 14px;
+}
+
+.authority-feed {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+/* ── FinOps, as a concept ───────────────────────────────────────────────────
+   Deliberately NOT `.stat-card`. That component's whole contract is "this is a
+   reading" (it will not even render a placeholder number in place of a missing
+   one), and borrowing it for four hypothetical figures would be the exact
+   confusion epic D4 exists to prevent. So the concept panel gets its own,
+   visibly quieter treatment: a dashed edge, dim ink, and figures set at a size
+   that does not compete with a real one further down the page. */
+.finops-concept {
+  border: 1px dashed var(--next-line);
+  border-radius: 14px;
+  background: var(--card);
+  padding: 18px 16px;
+}
+
+.finops-figures {
+  display: grid;
+  gap: 10px;
+}
+
+.finops-figure {
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+}
+
+.finops-figure small {
+  display: block;
+  color: var(--dim);
+  font: 600 10px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.finops-figure b {
+  display: block;
+  margin-top: 5px;
+  color: var(--gold);
+  font-size: 22px;
+}
+
+.finops-figure span {
+  display: block;
+  margin-top: 3px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.finops-facets {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.finops-facet {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.finops-facet small {
+  color: var(--dim);
+  font: 600 9.5px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.finops-facet strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+}
+
+/* ── The field guide ────────────────────────────────────────────────────────
+   Kraft, like the bag label — the methodology is packaging-family material: a
+   printed thing you take away, not a product surface. */
+.method-grid {
+  display: grid;
+  gap: 26px;
+  align-items: center;
+}
+
+.field-guide {
+  padding: 26px 24px;
+  border-radius: 8px;
+  background: var(--kraft);
+  background-image: var(--kraft-fibers);
+  color: var(--stamp);
+  box-shadow: var(--elevation-lifted);
+}
+
+.field-guide .eyebrow {
+  color: var(--stamp-dim);
+}
+
+.field-guide h3 {
+  margin: 12px 0;
+  font-size: 27px;
+  line-height: 1.06;
+}
+
+.field-guide p {
+  color: var(--stamp-dim);
+}
+
+.field-guide__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.field-guide__steps li {
+  padding: 5px 9px;
+  border: 1px solid var(--stamp-dim);
+  border-radius: 999px;
+  font: 800 9.5px var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.field-guide__doctrine {
+  padding-top: 14px;
+  border-top: 2px solid var(--stamp-dim);
+  font: 800 11px var(--mono);
+  letter-spacing: 0.04em;
+}
+
+/* ── Wider viewports ────────────────────────────────────────────────────────
+   Everything above is the phone layout. This is the only place the maker-ops
+   spine becomes multi-column. */
+@media (min-width: 760px) {
+  .ops-panel {
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 18px;
+  }
+
+  .ops-caps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .authority-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .finops-figures {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .finops-facets {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .finops-concept {
+    padding: 22px;
+  }
+
+  .method-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+
+  .field-guide {
+    padding: 30px;
+  }
+}
+
+@media (min-width: 900px) {
+  .maker-flow {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .maker-flow__item {
+    border-right: 1px solid var(--line);
+    border-bottom: none;
+  }
+
+  .maker-flow__item:last-child {
+    border-right: none;
+  }
+
+  /* The navigation column appears only where there is room for it beside the
+     content. On a phone it is hidden rather than stacked: it is a picture of
+     where these things live, and a stacked list of eight labels above the
+     figures reads as a menu the reader is supposed to use. */
+  .context-nav {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+    padding: 16px;
+    border-right: 1px solid var(--line);
+  }
+
+  .context-body {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+  }
+
+  .finops-facets {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

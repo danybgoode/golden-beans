@@ -37,9 +37,16 @@ registry stays the source of truth the badges read from instead of a second, sta
 - Every entry names the epic that lights it and its honest status.
 - `getSection()` still throws on an unknown id — the mechanism that makes a typo in a section
   component a build-time failure rather than a missing badge.
-- Every id in the registry is rendered by exactly one section component, and every section
-  component reads its own entry. A unit test asserts the round trip, so an id that nothing renders
-  fails rather than rots.
+- Every id in the registry is rendered as the `id` attribute of exactly one section element on `/`,
+  asserted in `e2e/landing.browser.spec.ts` (Story 4.1).
+
+  *Changed during the build, and why:* this acceptance first asked for a **unit** test on the round
+  trip. Written that way it would have had to grep the component sources for a `getSection('<id>')`
+  call — which would force a no-op `getSection` into sections that have no badge to render, purely
+  to satisfy the grep. That is a test asserting a convention rather than the property, and the
+  ceremony would be the only thing keeping it true. Asserting the rendered DOM instead tests the
+  thing that actually matters (a registry entry with no section, and a nav anchor with no target,
+  are the same failure) and needs no ceremony in the components.
 **Risk:** low
 
 ### Story 1.3 — The four Ops surfaces are data, and their status is computed

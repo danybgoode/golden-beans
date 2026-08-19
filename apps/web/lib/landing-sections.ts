@@ -1,20 +1,27 @@
 // Story 1.4 (commercial-shell/sprint-1.md) — the section↔epic registry. Each landing section
 // declares the epic that lights it up + its current status; the landing components read from
 // here instead of hardcoding badge text, so "flipping one entry flips the badge" (change
-// `status: 'next' -> 'live'` here, then swap the section's <Teaser/> for its real component —
-// no other JSX changes). This is the mechanical surface the WAYS-OF-WORKING backfill DoD line
-// checks against.
+// `status: 'next' -> 'live'` here, then swap the section's teaser for its real component — no
+// other JSX changes).
 //
-// ── Rewritten, not extended, by landing-redesign-v2 (2026-08-12) ──────────────────────────────
-// The previous map described the eight sections of `references/landing-end-state.md`, written
-// against the engine-first pitch ("The growth engine your agent operates"). The v2 page is a
-// different narrative with a different section order, so leaving the old ids alongside the new
-// ones would leave a registry that no longer describes the page — which is precisely the drift
-// this file exists to prevent (epic D6). `landing-end-state.md`'s map was superseded in the same
-// commit.
+// ── Rewritten, not extended, by landing-maker-ops (2026-08-19) ────────────────────────────────
+// This is the second rewrite of this file and for the same reason as the first: the page's
+// narrative changed, so a registry that kept the old ids alongside the new ones would no longer
+// describe the page — precisely the drift it exists to prevent (epic D6). `landing-redesign-v2`
+// made the same call in 2026-08-12 and wrote down why; this is that note being honoured rather
+// than rediscovered.
 //
-// Section ids/order mirror the ten numbered stamps in
-// `references/golden-beans-landing-v2.html`, plus the unnumbered hero/try/how opening.
+// Nine section ids retired with the maker-ops repositioning (try, how, infomercial, opinions,
+// argument, resilience, principle, leverage, build-it-yourself). Their arguments are absorbed by
+// the new spine — see the epic README's D1 — and their components were deleted in the same commit,
+// which is what keeps this file a description rather than a wish.
+//
+// ── The ids are also DOM ids, and that is load-bearing ────────────────────────────────────────
+// Every id below is rendered as the `id` attribute of exactly one section element on `/`. That is
+// what `e2e/landing.browser.spec.ts` asserts, and it makes two different rots fail loudly instead
+// of silently: a registry entry whose section was deleted, and a nav/CTA anchor pointing at a
+// section that no longer exists. Add an entry here and the page must grow the section; delete a
+// section and this file must lose the entry.
 
 export type SectionStatus = 'live' | 'next'
 
@@ -30,91 +37,82 @@ export interface LandingSection {
 export const LANDING_SECTIONS: LandingSection[] = [
   {
     id: 'hero',
-    title: 'Hero — your roadmap has enough opinions',
-    epic: 'landing-redesign-v2',
+    title: 'Hero — make more, grow what works',
+    epic: 'landing-maker-ops',
     status: 'live',
   },
   {
-    id: 'try',
-    title: 'Try it before you connect anything',
-    epic: 'landing-redesign-v2',
-    status: 'live',
-    note: 'The handoff prompt + /northstar-self-serve.md — usable with no account and no connector.',
-  },
-  { id: 'how', title: 'How to start — three steps', epic: 'landing-redesign-v2', status: 'live' },
-  {
-    id: 'infomercial',
-    title: 'Shameless infomercial — the parody band',
-    epic: 'landing-frijoles-rebrand',
-    status: 'live',
-    note: 'The one place on this page where invented content is allowed, and every piece of it is labelled as invented (epic D6).',
-  },
-  { id: 'opinions', title: '1 · Everyone has a good reason', epic: 'landing-redesign-v2', status: 'live' },
-  {
-    id: 'argument',
-    title: '2 · Bring an agent to the argument',
-    epic: 'landing-redesign-v2',
+    id: 'loop',
+    title: 'The maker loop — shape, build, release, observe, grow',
+    epic: 'landing-maker-ops',
     status: 'live',
   },
   {
     id: 'product',
-    title: '3 · From "I think" to "here\'s why"',
-    epic: 'landing-redesign-v2',
+    title: 'One operating context',
+    epic: 'landing-maker-ops',
     status: 'live',
-    note: 'Illustrative release list — the real one is behind auth at /app.',
+    note: 'Illustrative figures over the real /app navigation vocabulary — the live read is §proof.',
   },
   {
-    id: 'resilience',
-    title: 'Break glass, on purpose — chaos drills and security simulations',
-    epic: 'flag-serving-and-prd-g',
-    status: 'next',
-    note: 'Built, but RESILIENCE_SCENARIOS_ENABLED and SECURITY_SIMULATIONS_ENABLED are both OFF in production — each card renders its own gate (epic D5). Confirmed by exercising the routes: POST /api/v1/scenarios/execution and /security both 404 while the sibling /admin answers 400.',
+    id: 'ops',
+    title: 'Four operating surfaces — product, delivery, security, spend',
+    epic: 'landing-maker-ops',
+    status: 'live',
+    note: 'Content lives in lib/maker-ops.ts; each surface resolves its own gate per request, so no status is written down here.',
   },
   {
-    id: 'principle',
-    title: '4 · Agnostic about ideas, conservative about actions',
+    id: 'authority',
+    title: 'Agents move, authority stays put',
     epic: 'signals-loop',
     status: 'live',
     note: 'The staged propose → confirm → apply shape shipped with signals-loop.',
   },
   {
-    id: 'leverage',
-    title: '5 · Less coordination, more product management',
-    epic: 'landing-redesign-v2',
+    id: 'finops',
+    title: 'AI unit economics',
+    epic: 'landing-maker-ops',
+    status: 'next',
+    note: 'Not built. The only section on this page describing something that does not exist, and it says so on the page (epic D4).',
+  },
+  {
+    id: 'methodology',
+    title: 'The way of working behind the product',
+    epic: 'landing-maker-ops',
     status: 'live',
   },
   {
     id: 'proof',
-    title: '6 · Proof — the Pod Report and the live engine',
+    title: 'Proof — the Pod Report and the live engine',
     epic: 'pod-report',
     status: 'live',
-    note: 'Carries BOTH the computed Pod Report and the live demo-tenant engine read (epic D2).',
-  },
-  {
-    id: 'build-it-yourself',
-    title: '7 · Yes, you can build this yourself',
-    epic: 'landing-redesign-v2',
-    status: 'live',
+    note: 'Carries BOTH the computed Pod Report and the live demo-tenant engine read.',
   },
   {
     id: 'connect',
-    title: '8 · Bring your agent',
+    title: 'Bring your agent',
     epic: 'commercial-shell',
     status: 'live',
     note: 'The tokenized MCP connector URL — CONNECTOR_ENABLED is ON in production.',
   },
   {
     id: 'sdk',
-    title: '9 · For the engineers who will inevitably ask',
+    title: 'For the engineers who will inevitably ask',
     epic: 'growth-engine-v1',
     status: 'live',
   },
   {
     id: 'pricing',
-    title: '10 · Pricing',
+    title: 'Pricing',
     epic: 'multi-tenant-activation',
     status: 'live',
     note: 'Self-serve free tier follows SIGNUP_ENABLED. No payment rail yet — the paid tier says so.',
+  },
+  {
+    id: 'start',
+    title: 'Run your first Bet',
+    epic: 'landing-maker-ops',
+    status: 'live',
   },
   { id: 'footer', title: 'Footer', epic: 'commercial-shell', status: 'live' },
 ]
