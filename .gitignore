@@ -51,3 +51,9 @@ apps/web/e2e/.auth/
 
 # codex-task delegation transcripts — run artifacts, not source
 .codex-runs/
+
+# `npm pack` tarballs. They are a COMPILED SNAPSHOT of packages/*/dist (itself ignored above), so a
+# committed one is a second copy of the build that goes stale the moment src moves and looks
+# authoritative while it does — CODE-QUALITY.md #2 ("a value that must not go stale is computed,
+# not written down"). Regenerate on demand: `npm pack -w @golden-frijoles/sdk`.
+*.tgz

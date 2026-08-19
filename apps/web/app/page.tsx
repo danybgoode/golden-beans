@@ -1,78 +1,71 @@
 import { Nav } from '@/components/landing/Nav'
-import { Hero } from '@/components/landing/Hero'
-import { TryItSection } from '@/components/landing/TryItSection'
-import { HowItGrowsSection } from '@/components/landing/HowItGrowsSection'
-import { InfomercialSection } from '@/components/landing/InfomercialSection'
-import { OpinionsSection } from '@/components/landing/OpinionsSection'
-import { ArgumentSection } from '@/components/landing/ArgumentSection'
-import { ProductContextSection } from '@/components/landing/ProductContextSection'
-import { ResilienceSection } from '@/components/landing/ResilienceSection'
-import { PrincipleSection } from '@/components/landing/PrincipleSection'
-import { LeverageSection } from '@/components/landing/LeverageSection'
+import { MakerHero } from '@/components/landing/MakerHero'
+import { MakerLoopSection } from '@/components/landing/MakerLoopSection'
+import { OperatingContextSection } from '@/components/landing/OperatingContextSection'
+import { OpsSection } from '@/components/landing/OpsSection'
+import { AuthoritySection } from '@/components/landing/AuthoritySection'
+import { FinOpsSection } from '@/components/landing/FinOpsSection'
+import { MethodologySection } from '@/components/landing/MethodologySection'
 import { ProofSection } from '@/components/landing/ProofSection'
-import { BuildItYourselfSection } from '@/components/landing/BuildItYourselfSection'
 import { ConnectSection } from '@/components/landing/ConnectSection'
 import { SdkSection } from '@/components/landing/SdkSection'
 import { PricingSection } from '@/components/landing/PricingSection'
-import { ClosingCta } from '@/components/landing/ClosingCta'
+import { MakerClosingCta } from '@/components/landing/MakerClosingCta'
 import { Footer } from '@/components/landing/Footer'
 import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 
-// The Golden Frijoles public landing, per references/golden-frijoles-landing-v2.html and
-// Roadmap/02-commercial/landing-frijoles-rebrand/ (which supersedes landing-redesign-v2's mockup).
+// The Golden Frijoles public landing, per references/golden-frijoles-maker-ops-landing-v0.2.html
+// and Roadmap/02-commercial/landing-maker-ops/ (which supersedes landing-frijoles-rebrand's mockup).
 //
-// Which sections are lit is NOT recorded here. It was — "sections 1, 2, 3, 6, 8 fully live;
-// 4, 5, 7 honestly teased" — and it went stale three times as §7 (multi-tenant-activation), §5
-// (pod-report) and §4 (signals-loop) each flipped, because the epic that lights a section has
-// no reason to come and edit a list in a different file. lib/landing-sections.ts is the registry
-// and the single source of truth for that; a second copy in prose is a copy that drifts.
+// Which sections are lit is NOT recorded here. It was, once, and it went stale three times, because
+// the epic that lights a section has no reason to come and edit a list in a different file.
+// lib/landing-sections.ts is the registry and the single source of truth for that.
 //
 // ── The order below is the argument, and it is not arbitrary ──────────────────────────────────
-// Problem (hero) → try it for free right now (§try) → how it works in three steps (§how) → the
-// joke that proves there is a person here (§infomercial) → why this is hard (1) → what an agent
-// adds (2) → what it can therefore know (3) → what you can rehearse before it costs you
-// (§resilience) → what it is NOT allowed to do (4) → what that buys you (5) → proof (6) → the
-// honest objection (7) → how to connect (8) → the engineer's questions (9) → price (10) → ask your
-// own agent whether to bother.
+// who this is for (hero) → the loop that makes it work (loop) → where all of it lives (product) →
+// how wide it goes (ops) → what stops the agent (authority) → what we would build next and have not
+// (finops) → how you would learn it (methodology) → and only then: is any of this real (proof) →
+// how to plug your agent in (connect) → the engineer's questions (sdk) → what it costs (pricing) →
+// ask your own agent whether to bother (start).
 //
-// The give-before-you-ask section sits second on purpose: it is the only part of this page a
-// reader can use without an account, and burying it below the fold would waste it. The two
-// unnumbered bands are unnumbered deliberately — the stamps carry the spine of the argument, and
-// an aside and a capability showcase are not steps in it.
+// The evidence half sits below the repositioning on purpose, and that is a change from the page
+// this replaces. The previous page put its "try it for free right now" second, because it was the
+// only part a reader could use without an account. This page's first job is different: it has to
+// convince a reader that the category exists at all — that "one maker operating a whole product" is
+// a thing you can buy — before proof of a product is worth anything. Proof of something the reader
+// has not yet decided they want is just numbers.
 //
-// Without this, Next statically optimizes `/` at build time (no dynamic route params on this
-// page) — which does two things wrong: the proof section's demo-project numbers would freeze into
-// the build's HTML forever (never reflecting a reseed), AND the build itself would try to reach
+// Without `force-dynamic`, Next statically optimizes `/` at build time (no dynamic route params on
+// this page) — which does two things wrong: the proof section's demo-project numbers would freeze
+// into the build's HTML forever (never reflecting a reseed), AND the build itself would try to reach
 // Supabase at build time — this repo's `typecheck-build` CI job runs `npm run build` with NO
-// Supabase env vars at all (only the separate `e2e` job provisions them), so a build-time
-// prerender attempt throws `Missing required env var: SUPABASE_URL` and fails the gate. Every
-// other page in this app is already `force-dynamic` in practice (dynamic route params leave no
-// other option) — this makes `/` consistent with that, and keeps every flag-derived sentence
-// (§4's write gate, §10's signup gate) true per request rather than true at build time.
+// Supabase env vars at all (only the separate `e2e` job provisions them), so a build-time prerender
+// attempt throws `Missing required env var: SUPABASE_URL` and fails the gate. It is also what keeps
+// every flag-derived sentence on this page true PER REQUEST rather than true at build time — the
+// Ops panel's SecOps gate, the authority section's drill gate, and every "Run your first Bet" CTA
+// destination all read a flag, and Vercel snapshots env vars into a deployment at build time.
 export const dynamic = 'force-dynamic'
 
 export default function Home() {
   return (
     <>
-      {/* Story 3.1 — dogfood funnel entry beacon (fires `landing_visited`, mints the visitor id). */}
+      {/* Story 3.1 — dogfood funnel entry beacon (fires `landing_visited`, mints the visitor id).
+          It stays first through every redesign: it is the only instrumentation on this page, and
+          the landing → signup conversion this epic is judged on is read through it. */}
       <SelfTrackBeacon />
       <Nav />
-      <Hero />
-      <TryItSection />
-      <HowItGrowsSection />
-      <InfomercialSection />
-      <OpinionsSection />
-      <ArgumentSection />
-      <ProductContextSection />
-      <ResilienceSection />
-      <PrincipleSection />
-      <LeverageSection />
+      <MakerHero />
+      <MakerLoopSection />
+      <OperatingContextSection />
+      <OpsSection />
+      <AuthoritySection />
+      <FinOpsSection />
+      <MethodologySection />
       <ProofSection />
-      <BuildItYourselfSection />
       <ConnectSection />
       <SdkSection />
       <PricingSection />
-      <ClosingCta />
+      <MakerClosingCta />
       <Footer />
     </>
   )

@@ -3,7 +3,7 @@ import { Icon } from '@/components/ui/Icon'
 
 export function Footer() {
   return (
-    <footer className="footer">
+    <footer className="footer" id="footer">
       <div className="wrap footer__inner">
         <div className="footer__links">
           <BrandLockup compact />

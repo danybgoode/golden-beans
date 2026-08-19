@@ -10,11 +10,11 @@ test('the landing renders the approved roast, foil, icon, and tactile system', a
   expect(response?.status()).toBe(200)
   await expect(page.locator('.brand-lockup').first()).toBeVisible()
   await expect(page.locator('.golden-frijol-mark__face').first()).toBeVisible()
-  // landing-redesign-v2 — the v2 headline. `toContainText` normalises the <br/> away, so this
+  // landing-maker-ops — the current headline. `toContainText` normalises the <br/> away, so this
   // reads as one string; the `.foil` assertion below is what pins which half gets the gold-foil
   // treatment, and that split is the whole typographic idea of the hero.
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Your roadmap has')
-  await expect(page.locator('h1 .foil')).toHaveText('enough opinions')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Make more')
+  await expect(page.locator('h1 .foil')).toHaveText('Grow what works')
   await expect(page.locator('.tag svg').first()).toBeVisible()
 
   const beanFill = await page

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { LANDING_SECTIONS } from '@/lib/landing-sections'
 
 // The landing's rendered-content contract.
 //
@@ -12,16 +13,16 @@ import { test, expect } from '@playwright/test'
 // What is left is the thing only this page can assert: that the v2 narrative actually rendered,
 // and that the nav's promises resolve to real anchors.
 
-test('the landing renders the v2 narrative', async ({ page }) => {
+test('the landing renders the maker-ops narrative', async ({ page }) => {
   await page.goto('/')
 
   await expect(page.locator('nav.gb')).toBeVisible()
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Your roadmap has')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Make more')
 
-  // Both copy-a-prompt blocks are present — the `#try` handoff prompt and the closing decision
-  // prompt. These are the page's two "use this without an account" affordances and the only
-  // interactive client components on it.
-  await expect(page.locator('.prompt-card')).toHaveCount(2)
+  // ONE copy-a-prompt block, not two. `TryItSection`'s handoff prompt retired with the
+  // repositioning (landing-maker-ops D1); the closing decision prompt survived, deliberately —
+  // it is the page's only moment of acting on its own "evidence over assertion" argument.
+  await expect(page.locator('.prompt-card')).toHaveCount(1)
 })
 
 // The copy button's actual contract: what lands on the clipboard is what the reader saw.
@@ -45,11 +46,16 @@ test('the copy button puts the visible prompt on the clipboard, unaltered', asyn
   const clipboard = await page.evaluate(() => navigator.clipboard.readText())
   expect(clipboard).toBe(visible.trim())
 
-  // The interior is byte-identical — the trim touches the ends only. Asserted separately because
-  // a handler that collapsed newlines would still pass a naive equality check against a
+  // The interior is byte-identical — the trim touches the ends only. Asserted separately because a
+  // handler that collapsed newlines would still pass a naive equality check against a
   // similarly-collapsed `innerText`.
-  expect(clipboard.split('\n').length).toBeGreaterThan(5)
-  expect(clipboard).toContain('\n\n')
+  //
+  // Bounds derived from the SURVIVING prompt rather than hardcoded. The old numbers (>5 lines, a
+  // blank line) described the retired `#try` handoff prompt; the decision prompt is one paragraph,
+  // so they failed against a page that was working correctly. Comparing against what is rendered
+  // keeps this a real check on the copy handler without pinning it to one prompt's shape.
+  expect(clipboard.split('\n').length).toBe(visible.trim().split('\n').length)
+  expect(clipboard.length).toBeGreaterThan(80)
 })
 
 // Epic D4, and the finding that proved it needs a spec rather than a convention.
@@ -95,23 +101,71 @@ test('every nav link resolves to a section on the page', async ({ page }) => {
   expect(hrefs.length).toBeGreaterThan(0)
 
   for (const href of hrefs) {
-    expect(href, 'nav links are in-page anchors').toMatch(/^#/)
-    await expect(page.locator(href), `${href} has no target on the page`).toHaveCount(1)
+    // ROOT-RELATIVE fragments (`/#product`), not bare ones. The nav is rendered on `/talk` too, and
+    // a bare fragment resolves against whatever page it is on — so `href` is no longer a valid CSS
+    // selector and `page.locator(href)` would throw. The id is parsed out and asserted directly.
+    //
+    // The previous version of this loop asserted `toMatch(/^#/)`, which the root-relative fix broke
+    // outright. Nothing caught it: the `browser` project is not in the blocking gate, so this file
+    // does not run on every PR. Found by Mistral Vibe in round 4 of PR #100 — a reviewer reading
+    // the spec noticed what the pipeline could not.
+    const fragment = /#(.+)$/.exec(href)?.[1]
+    expect(fragment, `${href} is not an anchor into the landing page`).toBeTruthy()
+    await expect(page.locator(`#${fragment}`), `#${fragment} has no target on the page`).toHaveCount(1)
   }
 })
 
-// The hero's two CTAs are the page's primary actions, and both are in-page anchors rather than
-// routes — so nothing type-checks them either.
-test('the hero CTAs resolve to sections on the page', async ({ page }) => {
+// landing-maker-ops · Story 4.1 — the hero's two CTAs both resolve to something real.
+//
+// The mockup pointed every CTA at `href="#start"` with nothing behind it, and the version this
+// replaces asserted a hardcoded `['#connect', '#try']`. Neither shape survives a gate flip, so the
+// assertion is on the PROPERTY rather than on the strings: an in-page anchor must have a target,
+// and a route must answer. `primaryCtaHref` returns `/signup` or `#pricing` depending on
+// SIGNUP_ENABLED, and both branches pass this without the spec knowing which one it got.
+test('the hero CTAs resolve to something real, under either gate position', async ({ page, request }) => {
   await page.goto('/')
 
   const hrefs = await page
     .locator('.hero .hero-cta a')
     .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
-  expect(hrefs).toEqual(['#connect', '#try'])
+  expect(hrefs.length, 'the hero has two CTAs').toBe(2)
 
   for (const href of hrefs) {
-    await expect(page.locator(href), `${href} has no target on the page`).toHaveCount(1)
+    expect(href, 'a CTA must go somewhere').not.toBe('')
+    expect(href, "the mockup's dead #start anchor must never ship").not.toBe('#start')
+
+    // Three shapes are legitimate and each is checked for what makes it real: a bare fragment must
+    // have a target here; a root-relative fragment must have one on `/`; a route must answer. The
+    // `startsWith('#')` form this replaces silently passed anything that was not a bare fragment,
+    // which after the root-relative fix was ALL of them — a guard that had quietly stopped guarding
+    // (CODE-QUALITY #5). Found by Mistral Vibe in round 4 of PR #100.
+    const fragment = /#(.+)$/.exec(href)?.[1]
+    if (fragment) {
+      await expect(page.locator(`#${fragment}`), `#${fragment} has no target on the page`).toHaveCount(1)
+    } else {
+      const response = await request.get(href)
+      expect(response.status(), `${href} must be a route that answers`).toBeLessThan(400)
+    }
+  }
+})
+
+// landing-maker-ops · Story 4.1 — the registry and the page describe each other.
+//
+// `lib/landing-sections.ts` is the single source of truth for what is on this page, and it has now
+// been rewritten twice by a redesign. Both times, the risk was the same: an entry that outlives the
+// section it described, or a section that ships without one. Neither is visible to a type-checker,
+// and the first is exactly the drift the file exists to prevent.
+//
+// Every id is also the `id` attribute of exactly one element, so a stale entry fails here rather
+// than rotting quietly — and so does a nav or CTA anchor pointing at a section that has gone.
+test('every section in the registry is on the page, exactly once', async ({ page }) => {
+  await page.goto('/')
+
+  for (const section of LANDING_SECTIONS) {
+    await expect(
+      page.locator(`#${section.id}`),
+      `#${section.id} is in LANDING_SECTIONS but not rendered exactly once`
+    ).toHaveCount(1)
   }
 })
 
@@ -211,9 +265,13 @@ test('canonical public brand assets use Golden Frijoles names and accessible tex
 test('section dividers carry a legible numbered stamp', async ({ page }) => {
   await page.goto('/')
 
+  // Four, not ten: landing-maker-ops replaced §1–§5 and §7 with sections that carry no stamp, and
+  // renumbered the four survivors 1–4. The assertion is a floor rather than an equality so adding
+  // a stamped section does not fail it — but it moved down with the page, because a floor of 10
+  // above a page with four is a check that can only ever be a bug report about the check.
   const stamps = page.locator('.divider__stamp')
   await expect(stamps.first()).toBeVisible()
-  expect(await stamps.count()).toBeGreaterThanOrEqual(10)
+  expect(await stamps.count()).toBeGreaterThanOrEqual(4)
 
   await expect(stamps.first()).toHaveText('1')
 
@@ -276,7 +334,7 @@ test('selecting a paragraph is a wash, not a slab', async ({ page }) => {
   // pointed out that the bound was decorative.
   await paragraph.click({ clickCount: 3 })
   const selected = await page.evaluate(() => getSelection()?.toString().trim() ?? '')
-  expect(selected, 'a paragraph must be selectable by triple-click').toContain('Give your agent')
+  expect(selected, 'a paragraph must be selectable by triple-click').toContain('Your agents can build')
 })
 
 // ── landing-frijoles-rebrand · Sprint 3 ─────────────────────────────────────────────────────────
@@ -311,85 +369,65 @@ test('hovering a control does not move it or its neighbour', async ({ page }) =>
   }
 })
 
-// Story 2.3 / epic D5. The drills describe a capability whose gates are OFF in production, and the
-// section must say so — by READING the flag, not by carrying a sentence someone has to remember to
-// update. Both branches are pinned so the honest state cannot quietly disappear, and neither can a
-// badge outlive its gate being switched on.
+// ── landing-maker-ops · Sprint 4 ───────────────────────────────────────────────────────────────
+// The drill-gate contract, re-pointed at the section that now carries it.
 //
-// The spec derives each expectation from the same fact the page derives it from rather than
-// hardcoding "there is a badge": this suite runs against local, preview and production, where the
-// flags differ. A test that assumed one state would have to be edited at launch — and would pass
-// for the wrong reason in between.
+// This replaces a spec that checked `#resilience`'s two drill cards. That section retired with the
+// repositioning, but the PROPERTY it guarded is the one this page most needs: a claim about a
+// gated capability must match the gate's actual state, verified by exercising the route rather
+// than by reading a flag the test also reads. Deleting the section is not a reason to delete the
+// guard — the claim moved, so the guard moves with it.
 //
-// ── The two cards ride SEPARATE gates, and are therefore checked separately ───────────────────
-// `RESILIENCE_SCENARIOS_ENABLED` and `SECURITY_SIMULATIONS_ENABLED` are independent by design: a
-// production owner may allow an internal fault drill without authorizing an active security probe
-// (`lib/flags.ts`). The first version of this spec probed only the chaos route and then asserted a
-// section-wide `count() > 0`, which meant a wrong or missing badge on the SECURITY card passed
-// silently — a test that cannot fail for half its subject (CODE-QUALITY.md #5). Caught in
-// cross-family review of PR #95.
-const DRILL_GATES = [
-  { card: 0, name: 'chaos', route: '/api/v1/scenarios/execution' },
-  { card: 1, name: 'security', route: '/api/v1/scenarios/security' },
+// The two flags are independent by design (`lib/flags.ts`): an owner may allow an internal fault
+// drill without authorizing an active security probe. So the page's claim is checked against BOTH
+// routes, and it must not say "switched off" while either one answers.
+const DRILL_ROUTES = [
+  { name: 'chaos', route: '/api/v1/scenarios/execution' },
+  { name: 'security', route: '/api/v1/scenarios/security' },
 ] as const
 
-test('each resilience drill declares whether its own gate is switched on', async ({ page, request }) => {
+test("the authority panel's gate claim matches the real route state", async ({ page, request }) => {
   await page.goto('/')
 
-  const section = page.locator('#resilience')
-  await expect(section).toBeVisible()
-  await expect(section.locator('.drill-card')).toHaveCount(DRILL_GATES.length)
+  const panel = page.locator('#authority')
+  await expect(panel).toBeVisible()
 
-  // A 404 on its own is AMBIGUOUS between "the gate is shut" and "this route was never deployed",
-  // and only one of those makes the section's "Built" claim true. The sibling `/admin` route rides
-  // no gate, so its answer to the same malformed body proves the route family is deployed at all.
-  // The section's own comment says this is what distinguishes the two cases; the spec did not
-  // actually check it until cross-family review of PR #95 pointed that out — so the production-off
-  // case could have validated a "Built" claim against a deployment that shipped none of it.
-  const deployed = await request.post('/api/v1/scenarios/admin', { data: {}, failOnStatusCode: false })
+  // ── A 404 alone does NOT prove "gated" ──────────────────────────────────────────────────────
+  // A DELETED route 404s exactly like a gated one, and this test would then read the deletion as
+  // "merely switched off" and happily validate the page's "built and deployed" claim. So each
+  // probe is paired with a deployment proof: `/api/v1/scenarios/admin` is the ungated sibling in
+  // the same route family, and it answers 400/401/405 — anything but 404 — whenever the scenario
+  // routes are deployed at all. If that sibling 404s, the assumption under this whole test is
+  // gone and the test says so rather than passing. Restored after Codex flagged its loss in round
+  // 6 of PR #100; the spec this replaced had the same probe and I dropped it in the rewrite.
+  const deploymentProof = await request.post('/api/v1/scenarios/admin', { data: {} })
   expect(
-    deployed.status(),
-    'the ungated sibling must prove the scenario routes are deployed, or a 404 below means nothing'
+    deploymentProof.status(),
+    'the scenario route family must be deployed for a 404 to mean "gated" rather than "gone"'
   ).not.toBe(404)
 
-  for (const gate of DRILL_GATES) {
-    // Given the routes ARE deployed, each answers 404 while its own gate is shut and something else
-    // once it is open — the same fact its badge reports, obtained independently of the page. The
-    // body is deliberately empty: a 400 is as good as a 200, because both prove the gate let the
-    // request through.
-    const probe = await request.post(gate.route, { data: {}, failOnStatusCode: false })
-    const shut = probe.status() === 404
+  const gateStates = await Promise.all(
+    DRILL_ROUTES.map(async (drill) => ({
+      name: drill.name,
+      open: (await request.post(drill.route, { data: {} })).status() !== 404,
+    }))
+  )
+  const anyClosed = gateStates.some((g) => !g.open)
+  const text = await panel.innerText()
 
-    const badge = section.locator('.drill-card').nth(gate.card).locator('.drill-card__gate')
-    if (shut) {
-      await expect(badge, `the ${gate.name} drill is gated and must say so`).toHaveCount(1)
-      await expect(badge).toContainText(/not switched on/i)
-    } else {
-      await expect(
-        badge,
-        `the ${gate.name} drill is live and must not still claim it is switched off`
-      ).toHaveCount(0)
-    }
+  if (anyClosed) {
+    expect(
+      text,
+      `a drill gate is closed (${gateStates
+        .filter((g) => !g.open)
+        .map((g) => g.name)
+        .join(', ')}) ` + 'so the panel must say a drill cannot be started here'
+    ).toMatch(/switched off/i)
+  } else {
+    expect(text, 'every drill gate is open, so the panel must not claim otherwise').not.toMatch(
+      /switched off/i
+    )
   }
-})
-
-// Story 2.2 / epic D6. The infomercial is the one place on this page where invented content is
-// allowed, and it is allowed ONLY because it is labelled at the point of the claim. If a future
-// edit drops the disclaimer, the page is left with three fabricated testimonials presented as real
-// — on a page whose entire argument is that claims should be checkable.
-test('every invented thing in the infomercial is labelled as invented', async ({ page }) => {
-  await page.goto('/')
-
-  const band = page.locator('#infomercial')
-  await expect(band).toBeVisible()
-
-  const text = await band.innerText()
-  expect(text, 'the testimonials must disclaim themselves').toMatch(/we wrote these/i)
-  expect(text, 'the headline asterisk must resolve').toMatch(/cannot fix your org/i)
-
-  // The struck-through price is a real <s>, not the mockup's literal `~~$999~~` markdown.
-  await expect(band.locator('s')).toHaveCount(1)
-  expect(text).not.toContain('~~')
 })
 
 // Story 3.1, and the finding that proved it needed a spec rather than a comment.
@@ -452,4 +490,126 @@ test('with reduced motion requested, nothing animates, transitions, or smooth-sc
   expect(motion.motionBase, 'the motion tokens are zeroed at the source').toBe('0ms')
   expect(motion.motionQuick).toBe('0ms')
   expect(motion.moving, `these still animate: ${motion.moving.join(', ')}`).toEqual([])
+})
+
+// ── landing-maker-ops · Sprint 4, Story 4.1 ─────────────────────────────────────────────────────
+
+// Story 2.4's acceptance, as a spec rather than as a promise in a comment.
+//
+// The mockup's version of this control is four `<button class="opstab">` with a click handler that
+// swaps `textContent`: focusable, pressable, and completely silent about what it did. This asserts
+// the three things that make it a real tablist rather than four styled divs — the roles, the
+// selected state, and keyboard navigation — because all three are invisible to a type-checker and
+// all three are what a screen-reader or keyboard user actually depends on.
+test('the Ops tabs are a real, keyboard-operable tablist', async ({ page }) => {
+  await page.goto('/')
+
+  const tablist = page.locator('[role="tablist"]')
+  await expect(tablist).toHaveCount(1)
+
+  const tabs = tablist.getByRole('tab')
+  await expect(tabs).toHaveCount(4)
+
+  // Exactly one selected, and it is the only one in the tab order (the roving-tabindex pattern).
+  await expect(tablist.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+  await expect(tablist.locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
+
+  const first = tabs.nth(0)
+  const second = tabs.nth(1)
+  await expect(first).toHaveAttribute('aria-selected', 'true')
+
+  // The panel is associated with its tab in BOTH directions. A panel a tab does not point at is a
+  // panel an assistive technology cannot follow the tab into.
+  const controls = await first.getAttribute('aria-controls')
+  await expect(page.locator(`#${controls}`)).toHaveAttribute('role', 'tabpanel')
+  await expect(page.locator(`#${controls}`)).toHaveAttribute('aria-labelledby', 'ops-tab-product')
+
+  // Arrow keys move selection — the part the mockup has no equivalent for at all.
+  await first.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(second).toBeFocused()
+  await expect(second).toHaveAttribute('aria-selected', 'true')
+  await expect(first).toHaveAttribute('aria-selected', 'false')
+
+  // End jumps to the last tab, and the panel follows rather than going stale.
+  await page.keyboard.press('End')
+  await expect(tabs.nth(3)).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('#ops-panel-fin')).toBeVisible()
+})
+
+// Epic D4. FinOps is the one section on this page describing something that does not exist, and the
+// whole decision to ship it rested on it being unmistakably labelled. "Unmistakably" means the
+// label is on the tab a reader has not opened yet AND inside the panel — not only in the panel,
+// which a reader who never clicks the fourth tab will not see.
+//
+// It also asserts the negative that actually matters: the unbuilt surface must never be sold in the
+// same vocabulary as the shipped ones. If someone later gives it a `live` badge, this goes red.
+test('the unbuilt FinOps surface is labelled as next wherever it appears', async ({ page }) => {
+  await page.goto('/')
+
+  const finTab = page.locator('#ops-tab-fin')
+  await expect(finTab.locator('.tag-next')).toHaveCount(1)
+  await expect(finTab.locator('.tag-live')).toHaveCount(0)
+
+  await finTab.click()
+  const panel = page.locator('#ops-panel-fin')
+  await expect(panel.locator('.tag-next')).not.toHaveCount(0)
+  await expect(panel.locator('.tag-live')).toHaveCount(0)
+
+  // And the section further down the page, which carries the concept panel.
+  const finops = page.locator('#finops')
+  await expect(finops.locator('.tag-next')).not.toHaveCount(0)
+  await expect(finops.locator('.tag-live')).toHaveCount(0)
+  await expect(finops).toContainText(/not built|nothing on this panel is built/i)
+})
+
+// ── The anchor contract, for EVERY link on the page ───────────────────────────────────────────
+// Three separate review rounds found a dead in-page anchor: the nav's bare fragments on `/talk`
+// (round 1), the CTA's gated-off fallback (round 2), and `#try` pointing at a section this epic
+// deleted (round 8). Each was fixed individually and the next one was found by a human-tier
+// reviewer reading the diff, because the specs only ever checked the nav and the hero.
+//
+// A dead anchor type-checks, renders, and silently does nothing when clicked — there is no signal
+// anywhere except someone noticing. So this checks every one of them, which is the only version of
+// this guard that can catch the fourth instance.
+test('every in-page anchor on the landing page resolves to a section that exists', async ({ page }) => {
+  await page.goto('/')
+
+  const anchors = await page
+    .locator('a[href*="#"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+
+  expect(anchors.length, 'the page should have in-page links').toBeGreaterThan(3)
+
+  const seen = new Set<string>()
+  for (const href of anchors) {
+    // Only same-page targets. An external URL that happens to contain a fragment is not ours.
+    if (/^https?:/.test(href)) continue
+    const fragment = /#(.+)$/.exec(href)?.[1]
+    if (!fragment) continue
+    seen.add(fragment)
+    await expect(
+      page.locator(`#${fragment}`),
+      `${href} points at #${fragment}, which is not on the page`
+    ).toHaveCount(1)
+  }
+
+  expect(seen.size, 'no in-page anchors were actually checked — this guard would be vacuous').toBeGreaterThan(
+    2
+  )
+})
+
+// The same contract on `/talk`, which is where a BARE fragment actually breaks. A root-relative
+// `/#pricing` is correct there (it navigates home and scrolls); a bare `#pricing` is inert. The
+// distinction is invisible on `/`, which is exactly why round 1's bug survived.
+test('no link on /talk is a bare in-page fragment', async ({ page }) => {
+  await page.goto('/talk')
+
+  const bare = await page
+    .locator('a[href^="#"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+
+  expect(bare, 'a bare fragment on /talk resolves against /talk, where these sections do not exist').toEqual(
+    []
+  )
 })
