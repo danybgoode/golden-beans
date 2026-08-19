@@ -88,8 +88,12 @@ export function PricingSection() {
                   <Icon name="arrow-right" />
                 </Button>
               ) : (
-                <Button href="#try" variant="ghost" className="panel-tail">
-                  Try the prompt first
+                /* `/#start` — the closing section, which carries the decision prompt. This pointed
+                   at `#try` until round 8 of PR #100: `TryItSection` was retired by this epic and
+                   the anchor went with it, so the gated-off branch of this tier was a button that
+                   did nothing. Root-relative, like every other in-page link on this page. */
+                <Button href="/#start" variant="ghost" className="panel-tail">
+                  Ask your agent first
                   <Icon name="arrow-right" />
                 </Button>
               )}

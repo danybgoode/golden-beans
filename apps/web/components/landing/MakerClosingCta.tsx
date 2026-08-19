@@ -47,7 +47,7 @@ export function MakerClosingCta() {
 
         <div className="center-cta__actions">
           <RunYourFirstBet />
-          <Button href="#connect" variant="ghost">
+          <Button href="/#connect" variant="ghost">
             Connect your agent
             <Icon name="arrow-right" />
           </Button>

@@ -562,3 +562,54 @@ test('the unbuilt FinOps surface is labelled as next wherever it appears', async
   await expect(finops.locator('.tag-live')).toHaveCount(0)
   await expect(finops).toContainText(/not built|nothing on this panel is built/i)
 })
+
+// ── The anchor contract, for EVERY link on the page ───────────────────────────────────────────
+// Three separate review rounds found a dead in-page anchor: the nav's bare fragments on `/talk`
+// (round 1), the CTA's gated-off fallback (round 2), and `#try` pointing at a section this epic
+// deleted (round 8). Each was fixed individually and the next one was found by a human-tier
+// reviewer reading the diff, because the specs only ever checked the nav and the hero.
+//
+// A dead anchor type-checks, renders, and silently does nothing when clicked — there is no signal
+// anywhere except someone noticing. So this checks every one of them, which is the only version of
+// this guard that can catch the fourth instance.
+test('every in-page anchor on the landing page resolves to a section that exists', async ({ page }) => {
+  await page.goto('/')
+
+  const anchors = await page
+    .locator('a[href*="#"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+
+  expect(anchors.length, 'the page should have in-page links').toBeGreaterThan(3)
+
+  const seen = new Set<string>()
+  for (const href of anchors) {
+    // Only same-page targets. An external URL that happens to contain a fragment is not ours.
+    if (/^https?:/.test(href)) continue
+    const fragment = /#(.+)$/.exec(href)?.[1]
+    if (!fragment) continue
+    seen.add(fragment)
+    await expect(
+      page.locator(`#${fragment}`),
+      `${href} points at #${fragment}, which is not on the page`
+    ).toHaveCount(1)
+  }
+
+  expect(seen.size, 'no in-page anchors were actually checked — this guard would be vacuous').toBeGreaterThan(
+    2
+  )
+})
+
+// The same contract on `/talk`, which is where a BARE fragment actually breaks. A root-relative
+// `/#pricing` is correct there (it navigates home and scrolls); a bare `#pricing` is inert. The
+// distinction is invisible on `/`, which is exactly why round 1's bug survived.
+test('no link on /talk is a bare in-page fragment', async ({ page }) => {
+  await page.goto('/talk')
+
+  const bare = await page
+    .locator('a[href^="#"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+
+  expect(bare, 'a bare fragment on /talk resolves against /talk, where these sections do not exist').toEqual(
+    []
+  )
+})

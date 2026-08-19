@@ -194,3 +194,42 @@ test('every status has one badge label, and live has none', () => {
   // page's honesty vocabulary rests on.
   assert.notEqual(surfaceBadgeLabel('next'), surfaceBadgeLabel('gated'))
 })
+
+// ── Round 8: the unknown-gate guard was unreachable in the case it exists for ──────────────────
+// The check sat AFTER the per-gate branches, so a surface naming a known gate alongside an unknown
+// one matched the known branch and returned before ever validating. A newly-gated capability would
+// then have rendered under a sentence that says nothing about it. Validation now runs first, and
+// this pins it — including the mixed case, which is the one that was actually broken.
+test('a surface naming an undescribed gate fails loudly, even beside a known one', () => {
+  const withUnknownOnly = {
+    ...getSurface('sec'),
+    availability: { kind: 'gated' as const, gates: ['SOME_FUTURE_GATE'] },
+  }
+  assert.throws(() => resolveSurfaceStatus(withUnknownOnly, BOTH_GATES_OFF), /No note is defined/)
+
+  // The case the old ordering let through: an unknown gate hiding behind a known one.
+  const mixed = {
+    ...getSurface('sec'),
+    availability: {
+      kind: 'gated' as const,
+      gates: ['RESILIENCE_SCENARIOS_ENABLED', 'SOME_FUTURE_GATE'],
+    },
+  }
+  assert.throws(
+    () => resolveSurfaceStatus(mixed, BOTH_GATES_OFF),
+    /SOME_FUTURE_GATE/,
+    'an unknown gate beside a known one must still fail — this is the case that was broken'
+  )
+  // And it must fail whether or not the known gate happens to be open.
+  assert.throws(() => resolveSurfaceStatus(mixed, BOTH_GATES_ON), /SOME_FUTURE_GATE/)
+})
+
+// The real surfaces must all pass that validation — otherwise the guard above is theatre.
+test('every shipped surface names only describable gates', () => {
+  for (const surface of MAKER_OPS_SURFACES) {
+    assert.doesNotThrow(
+      () => resolveSurfaceStatus(surface, BOTH_GATES_OFF),
+      `${surface.id} names a gate with no sentence defined for it`
+    )
+  }
+})

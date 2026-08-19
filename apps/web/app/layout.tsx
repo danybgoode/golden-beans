@@ -15,13 +15,24 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], 
 // not yet been told what primitives are for. A page that opens on "maker ops" and unfurls as an
 // analytics primitive list is two products in one link.
 //
-// AI-spend is deliberately NOT in this list. It was, for one commit. FinOps is unbuilt and every
-// other surface on the site says so — but a link preview is the one piece of copy that travels
-// without its qualification attached, so an unbuilt capability named here is a claim nobody can see
-// the caveat for. Caught by Codex in round 4 of PR #100.
+// ── The description names NO capability, and that is the resolution ─────────────────────────
+// It has been narrowed twice under review. First it said "AI-spend operations", which was simply
+// false — FinOps is unbuilt (round 4). Then it said "product, delivery and security operations",
+// and round 8 argued that delivery and security each ride a gate that is closed in production, so
+// naming them still implies more than a reader gets.
+//
+// Only half of that second objection is fair: those capabilities ARE built and deployed, and what
+// is gated is one runtime action in each. But the underlying point holds and is the reason this
+// line changed anyway — a link preview is the one piece of copy that travels WITHOUT its
+// qualification attached, and gate state is per-deployment while this string is not. Any
+// capability list here is a claim the preview cannot qualify and a flag flip can falsify.
+//
+// So it describes the SHAPE of the product (one operating context, for you and your agents) and
+// names no capability at all. Nothing here can go stale when a gate moves, which is the only
+// version of this sentence that stays true by construction.
 const TITLE = 'Golden Frijoles — make more, grow what works'
 const DESCRIPTION =
-  'Product, delivery and security operations in one context your agents can work in — so a single maker can build a product and actually run it.'
+  'One operating context for your product — goals, releases, experiments and evidence — that you and your agents can both work in.'
 
 // Story 3.2 (commercial-shell/sprint-3.md) — real OG/Twitter metadata, so a pasted landing link
 // unfurls with a correct card in a chat app instead of the platform's generic fallback. `async

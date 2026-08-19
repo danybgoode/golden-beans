@@ -245,10 +245,34 @@ export function gatedDrillNote(gates: DrillGateReadings): string {
  * not know about throws rather than silently rendering as fully live: a missing case in a status
  * resolver fails in the direction of over-claiming, which is the direction that matters.
  */
+/** Every gate `gatedNoteFor` knows how to describe. A surface may name only these. */
+const DESCRIBABLE_GATES: readonly string[] = [
+  'DESTINATION_DELIVERY_ENABLED',
+  'RESILIENCE_SCENARIOS_ENABLED',
+  'SECURITY_SIMULATIONS_ENABLED',
+]
+
 function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
   if (surface.availability.kind !== 'gated') return ''
 
   const named = surface.availability.gates
+
+  // ── Validate FIRST, resolve second ──────────────────────────────────────────────────────────
+  // This check used to sit at the BOTTOM, after the per-gate branches, which made it unreachable
+  // in exactly the case it exists for: a surface naming ['RESILIENCE_SCENARIOS_ENABLED',
+  // 'SOME_NEW_GATE'] matched the drill branch, returned the drill note and never validated. A
+  // newly-gated capability would then render under a sentence that says nothing about it — or as
+  // fully live. The comment promised fail-closed and the control flow did not deliver it, which is
+  // the same "prose asserts a property the code lacks" defect this epic has now hit three times.
+  // Caught by Codex in round 8 of PR #100.
+  const unknown = named.filter((gate) => !DESCRIBABLE_GATES.includes(gate))
+  if (unknown.length > 0) {
+    throw new Error(
+      `No note is defined for gate(s): ${unknown.join(', ')}. Add one to gatedNoteFor before ` +
+        'shipping a surface that names it — a gated capability with no sentence renders as live.'
+    )
+  }
+
   if (named.includes('DESTINATION_DELIVERY_ENABLED') && !gates.destinationDeliveryEnabled) {
     return 'Scheduled delivery to a destination is switched off in this deployment'
   }
@@ -256,19 +280,7 @@ function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
     return gatedDrillNote(gates)
   }
 
-  // Every gate this function knows about has been checked and none of them are off, so there is
-  // nothing to qualify. Reaching here with an UNKNOWN gate is a different thing entirely and must
-  // not be confused with it: a surface that names a flag nobody wrote a sentence for would
-  // otherwise render as fully live, and a status resolver that fails toward over-claiming is the
-  // one direction that costs something.
-  const known = [
-    'DESTINATION_DELIVERY_ENABLED',
-    'RESILIENCE_SCENARIOS_ENABLED',
-    'SECURITY_SIMULATIONS_ENABLED',
-  ]
-  const unknown = named.filter((gate) => !known.includes(gate))
-  if (unknown.length > 0) throw new Error(`No note is defined for gates: ${unknown.join(', ')}`)
-
+  // Every gate named is one we can describe, and none of them is off. Nothing to qualify.
   return ''
 }
 
