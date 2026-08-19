@@ -291,6 +291,42 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **When a review finds a bug, fix the CLASS or you will be told about it once per instance.** The
+  maker-ops epic was told three separate times that a gated capability was listed without its
+  qualification — the Ops panel, then SecOps on the hero's bag, then DevOps on the same bag. Each
+  was one root cause: a hand-written list running parallel to the data. A third badge would have
+  been a third patch; deriving the list made the class unrepresentable. The same shape appeared
+  again with dead in-page anchors — a fix in `Nav` that left its twin in `lib/primary-cta.ts`, found
+  by BOTH families in the next round. **Before claiming a fix, grep for the sibling.**
+  *(2026-08-19, landing-maker-ops.)*
+- **A test suite outside the blocking gate is a suite you must run ON PURPOSE, and a
+  deletion-heavy epic will silently invalidate it.** `browser` and `authed` are not in this repo's
+  gate. A guard broken in review round 1 (`toMatch(/^#/)` against nav links that had just become
+  root-relative) survived two more rounds because nothing ran it; running the suite then surfaced
+  FIVE stale specs, all asserting sections the epic had retired. Neither CI, the pre-push hook, nor
+  a reviewer reading the diff can catch this. *(2026-08-19, landing-maker-ops.)*
+- **Compute the sentence, not just the badge.** A status chip correctly derived from a flag, sitting
+  beside prose that hardcodes the same claim, is the rule half-applied — and the prose is the half
+  a reader actually reads. A drill note read "running a drill is switched off" whenever either of
+  two independent gates was closed; true that day, false the moment one opened alone.
+  *(2026-08-19, landing-maker-ops.)*
+- **A repositioning drops qualifiers along with the sections that carried them.** Retiring the
+  landing's §4 removed the only `isConnectorWritesEnabled()` read on the page, while the new
+  section inherited the argument that flag qualified. Nothing failed — the claim simply became
+  unchecked. When deleting a section, grep it for flag reads before deleting it, and re-home each
+  one. *(2026-08-19, landing-maker-ops.)*
+- **An advisory COPY reviewer's findings and its fixes are worth very different amounts.** Two
+  foreign families reviewed the landing's prose; every issue both found independently was real, and
+  findings from one alone were roughly half taste. But not one suggested replacement line was
+  usable: they invented a capability ("caps spend per Bet" — in the section whose whole point is
+  that nothing is built), reached for vocabulary the brand bans, or swapped a cliché for a shorter
+  cliché. **Take the diagnosis; write the line yourself.** *(2026-08-19, landing-maker-ops.)*
+- **A scripted CSS/text prune can leave VALID output that is semantically wrong.** Deleting a rule
+  by brace-matching ate one rule's body and spliced its selectors onto the next rule — still valid
+  CSS, silently dropping a style and applying another to a pseudo-element that cannot use it. A
+  static "unreferenced class" sweep is also not evidence: `.chat-row--agent` and `.lift--up` are
+  built as template literals and would have been purged as dead. **After a scripted prune, diff
+  every rule body before/after and render the page.** *(2026-08-19, landing-maker-ops.)*
 - **A fail-closed evidence context must not be reused by the safety control that stops already-running
   work.** Scenario launch and retry correctly refuse an absent or malformed immutable fault summary,
   but reusing that disclosure-heavy context for `stop` briefly made a legacy running row impossible
