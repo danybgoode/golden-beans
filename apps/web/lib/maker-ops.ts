@@ -290,8 +290,15 @@ function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
     )
   }
 
-  // First closed gate wins. Deduplicated because the two scenario gates share a sentence and a
-  // surface naming both must not say it twice.
+  // EVERY closed gate is reported, not just the first — a surface can name two independent
+  // capabilities and a reader who is told about one of them has been told half the truth.
+  // Deduplicated because the two scenario gates deliberately share a sentence, and a surface naming
+  // both must not say it twice.
+  //
+  // (This comment read "first closed gate wins" for one commit, describing a behaviour the code
+  // never had. Fourth instance of prose asserting a property the code lacks in this epic, and the
+  // first one I caught before a reviewer did — which is not a boast, it is the reason the rule
+  // exists: read the comment against the code, not the code against the comment.)
   const notes = [...new Set(named.map((gate) => GATE_NOTES[gate](gates)).filter((note) => note !== ''))]
   return notes.join(' · ')
 }
