@@ -233,3 +233,42 @@ test('every shipped surface names only describable gates', () => {
     )
   }
 })
+
+// ── Round 9: the allow-list did not guarantee a handler ───────────────────────────────────────
+// `DESCRIBABLE_GATES` was a bare list of names, checked separately from the branches that describe
+// them. A contributor could add a gate to the list, use it on a surface, forget the branch, and
+// ship — validation passes (the name is listed) and the surface renders as fully LIVE with its
+// gate closed. The list and the handlers are now one structure, so that is a type error.
+//
+// This asserts the property that structure buys: every gate any real surface names produces a
+// non-empty sentence when it is off. A handler that returned '' unconditionally would pass the
+// unknown-gate test and fail this one.
+test('every gate a surface names produces a real sentence when it is closed', () => {
+  const allOff: OpsGateReadings = {
+    resilienceScenariosEnabled: false,
+    securitySimulationsEnabled: false,
+    destinationDeliveryEnabled: false,
+  }
+
+  for (const surface of MAKER_OPS_SURFACES) {
+    if (surface.availability.kind !== 'gated') continue
+    const resolved = resolveSurfaceStatus(surface, allOff)
+    assert.equal(
+      resolved.status,
+      'gated',
+      `${surface.id} names gates that are all off but does not report gated`
+    )
+    assert.ok(
+      resolved.status === 'gated' && resolved.note.trim().length > 0,
+      `${surface.id} reports gated with an empty sentence — the reader is told nothing`
+    )
+  }
+})
+
+// A surface naming BOTH scenario gates must not say the same sentence twice.
+test('a surface naming two gates that share a sentence says it once', () => {
+  const sec = resolveSurfaceStatus(getSurface('sec'), BOTH_GATES_OFF)
+  assert.equal(sec.status, 'gated')
+  const note = sec.status === 'gated' ? sec.note : ''
+  assert.equal(note.split('Starting').length - 1, 1, `the note repeats itself: ${note}`)
+})

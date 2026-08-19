@@ -245,12 +245,29 @@ export function gatedDrillNote(gates: DrillGateReadings): string {
  * not know about throws rather than silently rendering as fully live: a missing case in a status
  * resolver fails in the direction of over-claiming, which is the direction that matters.
  */
-/** Every gate `gatedNoteFor` knows how to describe. A surface may name only these. */
-const DESCRIBABLE_GATES: readonly string[] = [
-  'DESTINATION_DELIVERY_ENABLED',
-  'RESILIENCE_SCENARIOS_ENABLED',
-  'SECURITY_SIMULATIONS_ENABLED',
-]
+/**
+ * Every gate a surface may name, PAIRED WITH the sentence that describes it being off.
+ *
+ * The allow-list and the handlers are one structure, not two that currently agree. As a bare list
+ * of names it was possible to add a gate, use it on a surface, forget the branch that describes it,
+ * and ship — the validation would pass (the name is listed) and the surface would render as fully
+ * LIVE with its gate closed. That is the same failure the whole module exists to prevent, one level
+ * up. Found by Mistral Vibe in round 9 of PR #100.
+ *
+ * A handler returns its sentence when the gate is closed, or '' when it is open. Adding a gate here
+ * without a handler is now a type error rather than a silent over-claim (CODE-QUALITY #2 — make the
+ * failure unrepresentable, not merely caught).
+ */
+const GATE_NOTES: Record<string, (gates: OpsGateReadings) => string> = {
+  DESTINATION_DELIVERY_ENABLED: (gates) =>
+    gates.destinationDeliveryEnabled
+      ? ''
+      : 'Scheduled delivery to a destination is switched off in this deployment',
+  // Both scenario gates share one sentence, because they describe one activity to a reader and the
+  // sentence names whichever halves are actually closed.
+  RESILIENCE_SCENARIOS_ENABLED: (gates) => gatedDrillNote(gates),
+  SECURITY_SIMULATIONS_ENABLED: (gates) => gatedDrillNote(gates),
+}
 
 function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
   if (surface.availability.kind !== 'gated') return ''
@@ -265,23 +282,18 @@ function gatedNoteFor(surface: OpsSurface, gates: OpsGateReadings): string {
   // fully live. The comment promised fail-closed and the control flow did not deliver it, which is
   // the same "prose asserts a property the code lacks" defect this epic has now hit three times.
   // Caught by Codex in round 8 of PR #100.
-  const unknown = named.filter((gate) => !DESCRIBABLE_GATES.includes(gate))
+  const unknown = named.filter((gate) => !(gate in GATE_NOTES))
   if (unknown.length > 0) {
     throw new Error(
-      `No note is defined for gate(s): ${unknown.join(', ')}. Add one to gatedNoteFor before ` +
+      `No note is defined for gate(s): ${unknown.join(', ')}. Add one to GATE_NOTES before ` +
         'shipping a surface that names it — a gated capability with no sentence renders as live.'
     )
   }
 
-  if (named.includes('DESTINATION_DELIVERY_ENABLED') && !gates.destinationDeliveryEnabled) {
-    return 'Scheduled delivery to a destination is switched off in this deployment'
-  }
-  if (named.includes('RESILIENCE_SCENARIOS_ENABLED') || named.includes('SECURITY_SIMULATIONS_ENABLED')) {
-    return gatedDrillNote(gates)
-  }
-
-  // Every gate named is one we can describe, and none of them is off. Nothing to qualify.
-  return ''
+  // First closed gate wins. Deduplicated because the two scenario gates share a sentence and a
+  // surface naming both must not say it twice.
+  const notes = [...new Set(named.map((gate) => GATE_NOTES[gate](gates)).filter((note) => note !== ''))]
+  return notes.join(' · ')
 }
 
 /**

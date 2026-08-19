@@ -19,7 +19,7 @@ export const BOOKING_URL = 'https://cal.com/miyagisan/quick-chat'
  * The same booking page, asked to render for embedding in a dark surface.
  *
  * `embed=` is Cal.com's own flag for its embedded layout (it drops their page chrome); `theme=dark`
- * stops a white panel being punched through this site's roast ground. Neither is load-bearing — if
+ * stops a white panel being punched through this site's dark roast ground. Neither is load-bearing — if
  * Cal.com ignores or renames them the frame still books correctly, it just looks less like ours.
  * That is the right dependency to have on a third party: cosmetic, never functional.
  */
