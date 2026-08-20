@@ -4089,3 +4089,156 @@ a.stat-card:hover {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* ── methodology-experience · Sprint 2, Story 2.3 ───────────────────────────
+   `/methodology/[chapter]`. Same plain, layout-and-density-only contract as Story 2.2's block
+   above — Sprint 3 owns the reading experience (no sticky TOC, no translucency, no spring
+   motion). Every value below still resolves from `tokens.css` (epic D1). */
+
+/* ── The chapter article ──────────────────────────────────────────────────
+   A single readable column. No sticky TOC, no right-hand progress rail (epic D6 cuts the rail
+   outright until Story 3.4 builds real per-visitor progress) — this is the skateboard, not the
+   reading shell. */
+
+.methodology-article {
+  max-width: 720px;
+  padding-block: 44px 72px;
+}
+
+.methodology-lede {
+  margin: 10px 0 34px;
+  color: var(--dim);
+  font-size: 18px;
+}
+
+.methodology-article h2 {
+  margin: 38px 0 10px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+.methodology-article > blockquote {
+  margin: 26px 0;
+  padding-left: 18px;
+  border-left: 3px solid var(--gold);
+  font: 700 21px/1.35 var(--sans);
+}
+
+/* ── The work-block family ────────────────────────────────────────────────
+   Kept from the mockup as-is because it is the pedagogy, not the skin (epic README's substitution
+   table): gold "do this on your project", dark "use your agent", green "look for", plain "this
+   part is yours" / "what you just learned". Sprint 3's Story 3.2 is where this family gets its
+   Apple-materials pass; this is the plain version. */
+
+.work {
+  margin: 22px 0;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.work__label {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font: 900 10px var(--mono);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.work p,
+.work li {
+  color: var(--dim);
+}
+
+.work blockquote {
+  margin: 12px 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--line);
+  color: var(--crema);
+  font-weight: 700;
+}
+
+/* "Do this on your project" — gold. Derived from `--gold` with `color-mix` rather than a
+   hand-picked tint, the same device `.journey-col--after` above already uses for a coloured card
+   on the dark ground. */
+.work--do {
+  background: color-mix(in srgb, var(--gold) 10%, var(--card));
+  border-color: color-mix(in srgb, var(--gold) 35%, var(--line));
+}
+
+.work--do .work__label {
+  color: var(--gold-hot);
+}
+
+/* "Look for" — green. */
+.work--look {
+  background: color-mix(in srgb, var(--green) 10%, var(--card));
+  border-color: var(--green-line);
+}
+
+.work--look .work__label {
+  color: var(--green);
+}
+
+/* "Use your agent" wraps `CopyPromptCard` and owns no chrome of its own — the espresso surface
+   IS the mockup's dark work card, already built, already tested (epic D8). A background here
+   would just be a card inside a card. */
+.work--agent {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+/* The lead line inside a work body (`WorkBodyBlock`'s `lead?: true` — e.g. every "What you just
+   learned" card's opening sentence). Same role `.takeaway` plays on the landing, scoped to one
+   work card instead of a whole section. */
+.methodology-lead-line {
+  color: var(--crema);
+  font-weight: 800;
+}
+
+/* ── Prev / next ───────────────────────────────────────────────────────── */
+
+.methodology-prev-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.methodology-prev-link__icon {
+  /* The shared arrow-right glyph, pointed back at the previous chapter. A CSS transform, not a
+     second icon: the drift guard's SVG-icon rule (Icon.tsx's own header note) is about avoiding a
+     second glyph library, not about which way one arrow happens to point. */
+  transform: rotate(180deg);
+}
+
+.methodology-next {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.methodology-next__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.methodology-next__label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--dim);
+  font: 700 10px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.methodology-next__inner strong {
+  font-size: 17px;
+}
