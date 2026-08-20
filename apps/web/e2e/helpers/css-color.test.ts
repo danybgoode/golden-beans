@@ -31,7 +31,18 @@ test('color(srgb …) — what color-mix() computes to', () => {
 
 // A parser that returns a default for an unknown input is how a guard stops guarding.
 test('an unrecognised value throws rather than guessing', () => {
-  for (const bad of ['', 'not a colour', 'hsl(20 30% 40%)', 'rgb(1, 2)']) {
+  for (const bad of [
+    '',
+    'not a colour',
+    'hsl(20 30% 40%)',
+    'rgb(1, 2)',
+    // Fail-closed means REJECTING malformed input, not parsing the first three numbers out of it.
+    'rgb(1, 2, 3, 4, 5)',
+    'color(srgb 0.1 0.2 0.3 0.4)',
+    'rgba(1, 2, 3, 7)',
+    'rgb(1 2 3 / 2)',
+    'rgb(1 2 3 / -1)',
+  ]) {
     assert.throws(() => parseCssColor(bad), /unparsed/, `${bad} must throw`)
   }
   assert.deepEqual(parseCssColor('transparent'), { r: 0, g: 0, b: 0, a: 0 })

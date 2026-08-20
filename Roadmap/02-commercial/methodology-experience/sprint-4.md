@@ -93,6 +93,23 @@ methodology to work, **so that** the guide is readable by more than a sighted mo
     `methodology_visited` is arriving with a non-null `feature_id`.
 **Risk:** MEDIUM — it is the deploy
 
+### Story 4.5 — Close the epic
+
+**Acceptance:**
+- `Roadmap/README.md` poster updated — the 02-commercial feature map gains the methodology
+  experience, plus a Recent highlights entry.
+- Each `sprint-N.md` carries its fool-proof smoke walkthrough with real production URLs, and its
+  `Status:` ticked with commit refs.
+- `RETROSPECTIVE.md` written — what shipped, what worked, what did not, the owed ledger. In
+  particular: did the Apple-materials pass survive its circuit breaker, and did *Design* read better
+  than *Shape*?
+- Durable learnings promoted to `Roadmap/LEARNINGS.md`, deduped — sharpen the existing line, do not
+  append a near-duplicate.
+- Epic README frontmatter `status: shipped`; seed frontmatter `status: shipped`.
+- `node scripts/build-order.mjs` regenerated (never hand-edited).
+- Branches deleted.
+**Risk:** LOW
+
 ### Story 4.6 — Any agent can read the methodology *(amendment A6)*
 
 **As** a maker's agent — Claude, ChatGPT, Gemini, or whatever they run — **I want** to read the whole
@@ -117,23 +134,6 @@ This story owns the outcome; 4.2 and 4.3 build the parts.
   JS off, not inferred from the routes being server-rendered.
 - Verified by the architect against live production, and **owed to the product owner to test himself**
   afterwards.
-**Risk:** LOW
-
-### Story 4.5 — Close the epic
-
-**Acceptance:**
-- `Roadmap/README.md` poster updated — the 02-commercial feature map gains the methodology
-  experience, plus a Recent highlights entry.
-- Each `sprint-N.md` carries its fool-proof smoke walkthrough with real production URLs, and its
-  `Status:` ticked with commit refs.
-- `RETROSPECTIVE.md` written — what shipped, what worked, what did not, the owed ledger. In
-  particular: did the Apple-materials pass survive its circuit breaker, and did *Design* read better
-  than *Shape*?
-- Durable learnings promoted to `Roadmap/LEARNINGS.md`, deduped — sharpen the existing line, do not
-  append a near-duplicate.
-- Epic README frontmatter `status: shipped`; seed frontmatter `status: shipped`.
-- `node scripts/build-order.mjs` regenerated (never hand-edited).
-- Branches deleted.
 **Risk:** LOW
 
 ## Sprint QA

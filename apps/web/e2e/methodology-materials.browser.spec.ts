@@ -146,38 +146,62 @@ test('with reduced motion requested, the chapter does not animate in', async ({ 
 })
 
 // The circuit breaker's remaining live criterion: `backdrop-filter` over a scrolling article is the
-// one thing here with a real cost. Measured on the LONGEST chapter, because that is where a
-// compositing cost would actually show.
-test('scrolling the longest chapter with the material on does not drop frames', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await page.goto('/methodology/build-it')
-
-  const frames = await page.evaluate(async () => {
+// one thing here with a real cost.
+//
+// ── Measured RELATIVE to the same page without the material ───────────────────────────────────
+// An earlier version asserted an absolute frame-time threshold, which measures shared CI
+// scheduling as much as the effect — it could fail under host contention with the UI unchanged,
+// and pass on a fast runner with the material genuinely expensive (Codex, round 3 of PR #107).
+//
+// The question is not "is this machine fast" but "does the MATERIAL cost frames", so the same
+// scroll runs twice on the same machine, seconds apart: once as shipped, once with the blur
+// disabled through `prefers-reduced-transparency` — the fallback that already exists, so the
+// comparison is between two real shipped states rather than against a synthetic one. A ratio is
+// immune to how fast the host is.
+async function scrollCost(page: Page, url: string) {
+  await page.goto(url)
+  return page.evaluate(async () => {
     const times: number[] = []
     let last = performance.now()
-    let raf = 0
-    const tick = () => {
+    let raf = requestAnimationFrame(function tick() {
       const now = performance.now()
       times.push(now - last)
       last = now
       raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
+    })
     for (let y = 0; y < 3000; y += 60) {
       window.scrollTo(0, y)
       await new Promise((r) => setTimeout(r, 16))
     }
     cancelAnimationFrame(raf)
-    return times.slice(2)
+    const measured = times.slice(2).sort((a, b) => a - b)
+    return {
+      frames: measured.length,
+      // The median, not the mean: one GC pause or one late frame should not decide this.
+      median: measured[Math.floor(measured.length / 2)] ?? 0,
+    }
   })
+}
 
-  expect(frames.length, 'the scroll must actually have produced frames to measure').toBeGreaterThan(20)
-  const long = frames.filter((f) => f > 50).length
-  // A generous bound on purpose: this runs on shared CI hardware and is a smoke test for a
-  // pathological compositing cost, not a benchmark. It fails if the material makes scrolling
-  // genuinely janky, not if one frame is late.
+test('the material does not measurably slow scrolling the longest chapter', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+
+  const withMaterial = await scrollCost(page, '/methodology/build-it')
+
+  // The opaque fallback, reached through the preference a real reader would set.
+  await emulate(page, 'prefers-reduced-transparency', 'reduce')
+  const withoutMaterial = await scrollCost(page, '/methodology/build-it')
+
+  expect(withMaterial.frames, 'the scroll must produce frames to measure').toBeGreaterThan(20)
+  expect(withoutMaterial.frames, 'the baseline must produce frames too').toBeGreaterThan(20)
+
+  // A generous ratio: this is a smoke test for a PATHOLOGICAL compositing cost — the kind that
+  // would make the circuit breaker fire — not a benchmark. `+ 4` keeps sub-millisecond medians on
+  // a fast host from turning normal jitter into a large ratio.
+  const ratio = (withMaterial.median + 4) / (withoutMaterial.median + 4)
   expect(
-    long / frames.length,
-    `${long} of ${frames.length} frames took over 50ms while scrolling the longest chapter`
-  ).toBeLessThan(0.25)
+    ratio,
+    `median frame time ${withMaterial.median.toFixed(1)}ms with the material vs ` +
+      `${withoutMaterial.median.toFixed(1)}ms without it`
+  ).toBeLessThan(2.5)
 })

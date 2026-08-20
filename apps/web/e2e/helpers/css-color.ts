@@ -26,6 +26,12 @@ export interface Rgba {
   a: number
 }
 
+/** Alpha outside 0–1 is not a colour this parser will guess at. */
+function assertAlpha(a: number, value: string): number {
+  if (Number.isNaN(a) || a < 0 || a > 1) throw new Error(`unparsed alpha: ${value}`)
+  return a
+}
+
 export function parseCssColor(value: string): Rgba {
   const trimmed = value.trim()
 
@@ -38,13 +44,15 @@ export function parseCssColor(value: string): Rgba {
       .map((p) => p.trim())
       .filter(Boolean)
       .map(Number)
-    if (parts.length < 3 || parts.some(Number.isNaN)) {
+    // EXACTLY three channels, or four in the legacy `rgba(r, g, b, a)` form. "At least three" was
+    // the first version, and it accepted `rgb(1, 2, 3, 4, 5)` — a fail-closed contract that quietly
+    // parsed malformed input (Codex, round 3 of PR #107).
+    const expected = alpha === undefined ? [3, 4] : [3]
+    if (!expected.includes(parts.length) || parts.some(Number.isNaN)) {
       throw new Error(`unparsed colour channels: ${value}`)
     }
-    // The legacy comma form carries alpha as a fourth channel; the modern form after a slash.
     const a = alpha !== undefined ? Number(alpha.trim()) : parts.length > 3 ? parts[3] : 1
-    if (Number.isNaN(a)) throw new Error(`unparsed alpha: ${value}`)
-    return { r: parts[0], g: parts[1], b: parts[2], a }
+    return { r: parts[0], g: parts[1], b: parts[2], a: assertAlpha(a, value) }
   }
 
   // `color(srgb r g b / a)` — 0-1 floats. What `color-mix()` computes to.
@@ -52,12 +60,11 @@ export function parseCssColor(value: string): Rgba {
   if (srgb) {
     const [channels, alpha] = srgb[1].split('/')
     const parts = channels.trim().split(/\s+/).map(Number)
-    if (parts.length < 3 || parts.some(Number.isNaN)) {
+    if (parts.length !== 3 || parts.some(Number.isNaN)) {
       throw new Error(`unparsed colour channels: ${value}`)
     }
     const a = alpha !== undefined ? Number(alpha.trim()) : 1
-    if (Number.isNaN(a)) throw new Error(`unparsed alpha: ${value}`)
-    return { r: parts[0] * 255, g: parts[1] * 255, b: parts[2] * 255, a }
+    return { r: parts[0] * 255, g: parts[1] * 255, b: parts[2] * 255, a: assertAlpha(a, value) }
   }
 
   if (trimmed === 'transparent') return { r: 0, g: 0, b: 0, a: 0 }

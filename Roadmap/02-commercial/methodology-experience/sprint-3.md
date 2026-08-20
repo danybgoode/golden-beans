@@ -57,7 +57,7 @@ visually distinct, **so that** I can tell the instruction from the explanation w
   close enough to the AA boundary at small sizes to need measuring.
 **Risk:** LOW
 
-### Story 3.3 — circuit-breaker evidence, gathered BEFORE the build (2026-08-20)
+### Circuit-breaker evidence for Story 3.3, gathered BEFORE the build (2026-08-20)
 
 The breaker's condition is *"if translucency does not read well over warm kraft inside this story's
 budget"*. That is a question with an answer, so it was answered first — with a prototype over the
