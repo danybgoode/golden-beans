@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { isOpaque } from './helpers/css-color'
 
 // methodology-experience · Sprint 3, Story 3.3 — the materials pass and its mandatory fallbacks.
 //
@@ -40,20 +41,6 @@ async function chromeStyles(page: Page) {
       toc: read('.methodology-chrome .methodology-toc'),
     }
   })
-}
-
-/** True when a computed colour is fully opaque — handles `rgb()`, `rgba()` and `color(srgb …)`. */
-function isOpaque(color: string): boolean {
-  const rgba = color.match(/^rgba?\(([^)]+)\)$/)
-  if (rgba) {
-    const parts = rgba[1].split(',').map((p) => Number.parseFloat(p.trim()))
-    return parts.length < 4 || parts[3] === 1
-  }
-  // `color-mix()` computes to this form, and its alpha rides after a slash. A checker that only
-  // understood `rgba()` would report every translucent mix as opaque — passing, and wrong.
-  const srgb = color.match(/^color\(srgb\s+[^)/]+(?:\/\s*([\d.]+))?\)$/)
-  if (srgb) return srgb[1] === undefined || Number.parseFloat(srgb[1]) === 1
-  throw new Error(`unparsed colour: ${color}`)
 }
 
 test('by default the chrome is a translucent material over the article', async ({ page }) => {

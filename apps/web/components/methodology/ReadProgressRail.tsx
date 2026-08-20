@@ -42,7 +42,15 @@ import {
 // a placeholder and swapping it would flash a wrong number; rendering nothing until the effect has
 // run means the rail appears once, correct. It also keeps the server HTML identical for every
 // visitor, which matters for a route that is statically generated (Story 2.3).
-export function ReadProgressRail({ chapterId, chapterIds }: { chapterId: string; chapterIds: string[] }) {
+export function ReadProgressRail({
+  chapterId,
+  chapterIds,
+}: {
+  chapterId: string
+  /** `METHODOLOGY_CHAPTER_IDS` — a module-level constant, so this reference is stable across
+      renders and the effect below runs when the CHAPTER changes rather than on every render. */
+  chapterIds: readonly string[]
+}) {
   const [progress, setProgress] = useState<ReadProgress | null>(null)
 
   useEffect(() => {

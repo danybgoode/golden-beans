@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { contrastRatio } from './helpers/css-color'
 import { METHODOLOGY_CHAPTERS, WORK_LABELS, type WorkVariant } from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 3, Story 3.2 — the work-block family as primitives.
@@ -62,36 +63,6 @@ async function gotoVariant(page: Page, variant: WorkVariant) {
 // ── WCAG contrast, computed from REAL rendered colours ──────────────────────────────────────────
 // Standard relative-luminance / contrast-ratio formula (WCAG 2.x). `getComputedStyle` does NOT
 // reliably return `rgb()` — a `color-mix()` result (every tinted work-card background: `do`,
-// `look`) comes back from Chromium as `color(srgb 0.21 0.17 0.09)`, 0–1 floats, not 0–255 integers
-// in `rgb(r, g, b)`. Both are parsed into a single 0–1 scale so the formula below is written once.
-// A parser that only understood `rgb()` would have silently thrown on exactly the two variants
-// this story adds a tint to — caught by running this, not by reading the CSS.
-function parseColorToUnitRgb(value: string): [number, number, number] {
-  const rgbMatch = value.match(/^rgba?\(([^)]+)\)$/)
-  if (rgbMatch) {
-    const [r, g, b] = rgbMatch[1].split(',').map((part) => Number.parseFloat(part.trim()) / 255)
-    return [r, g, b]
-  }
-  const colorMatch = value.match(/^color\(srgb\s+([^)]+)\)$/)
-  if (colorMatch) {
-    const [r, g, b] = colorMatch[1].trim().split(/\s+/).map(Number.parseFloat)
-    return [r, g, b]
-  }
-  throw new Error(`unrecognised computed colour format: ${value}`)
-}
-
-function relativeLuminance([r, g, b]: [number, number, number]): number {
-  const channel = (cs: number) => (cs <= 0.03928 ? cs / 12.92 : ((cs + 0.055) / 1.055) ** 2.4)
-  const [R, G, B] = [channel(r), channel(g), channel(b)]
-  return 0.2126 * R + 0.7152 * G + 0.0722 * B
-}
-
-function contrastRatio(a: string, b: string): number {
-  const La = relativeLuminance(parseColorToUnitRgb(a))
-  const Lb = relativeLuminance(parseColorToUnitRgb(b))
-  const [lighter, darker] = La >= Lb ? [La, Lb] : [Lb, La]
-  return (lighter + 0.05) / (darker + 0.05)
-}
 
 /** Walks up from an element to the nearest ancestor (inclusive) with a non-transparent painted
  * background — i.e. the card the text is actually sitting on, not necessarily its own parent. */

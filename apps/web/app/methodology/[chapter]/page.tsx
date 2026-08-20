@@ -6,7 +6,12 @@ import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
 import { ChapterNav } from '@/components/methodology/ChapterNav'
 import { ChapterToc } from '@/components/methodology/ChapterToc'
 import { ReadProgressRail } from '@/components/methodology/ReadProgressRail'
-import { METHODOLOGY_CHAPTERS, getChapter, chapterNeighbours } from '@/lib/methodology-chapters'
+import {
+  METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHAPTER_IDS,
+  getChapter,
+  chapterNeighbours,
+} from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 2, Story 2.3 — one chapter, at its own URL (epic D7).
 //
@@ -70,7 +75,7 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
             is often empty, which is the intended state rather than a missing feature (epic D6).
             No `aria-hidden` any more: what is in here is now real content when it appears. */}
         <div className="methodology-shell__aside">
-          <ReadProgressRail chapterId={chapter.id} chapterIds={METHODOLOGY_CHAPTERS.map((c) => c.id)} />
+          <ReadProgressRail chapterId={chapter.id} chapterIds={METHODOLOGY_CHAPTER_IDS} />
         </div>
       </main>
       <Footer />
