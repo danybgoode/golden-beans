@@ -60,7 +60,12 @@ test('each chapter renders exactly one <h1> with its own title, and its phase la
     expect(h1Content![1].trim(), `${chapter.id}'s <h1> should be its OWN title`).toBe(chapter.title)
 
     const phaseLabel = [...html.matchAll(elementsByClass('p', 'methodology-phase-label'))][0]
-    expect(phaseLabel, `${chapter.id} should render a phase label`).not.toBeNull()
+    // `toBeDefined`, not `not.toBeNull`. `matchAll()[0]` yields UNDEFINED when nothing matches,
+    // and `undefined !== null`, so `.not.toBeNull()` passed vacuously — the assertion became a
+    // guard that cannot fail the moment this extractor moved from `match()` to `matchAll()`.
+    // The test still failed, but on a `TypeError` one line down instead of its own message
+    // (Antigravity, round 6 of PR #105).
+    expect(phaseLabel, `${chapter.id} should render a phase label`).toBeDefined()
     const phaseTitle = PHASE_TITLE_BY_ID.get(chapter.phase)
     expect(phaseTitle, `${chapter.phase} should be a declared phase`).toBeDefined()
     expect(phaseLabel![1]).toContain(phaseTitle)
@@ -79,7 +84,9 @@ test('no rendered lede contains a stray object-literal brace', async ({ request 
     const res = await request.get(`/methodology/${chapter.id}`)
     const html = await res.text()
     const lede = [...html.matchAll(elementsByClass('p', 'methodology-lede'))][0]
-    expect(lede, `${chapter.id} should render a .methodology-lede paragraph`).not.toBeNull()
+    // `toBeDefined` for the same reason as the phase label above — `matchAll()[0]` is undefined,
+    // not null, when the extractor finds nothing.
+    expect(lede, `${chapter.id} should render a .methodology-lede paragraph`).toBeDefined()
     ledeCount += 1
     expect(lede![1], `${chapter.id}'s lede must not contain a stray brace`).not.toContain('{')
   }

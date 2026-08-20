@@ -48,12 +48,15 @@ function loopMoves(html: string): { title: string; copy: string }[] {
   })
 }
 
+/** The chapter-number span, hoisted: it is the same pattern every iteration, so it is built once. */
+const CHAPTER_NUMBER = elementsByClass('span', 'field-guide__n')
+
 /** The text of every chapter in §methodology's field-guide contents, in document order. */
 function fieldGuideChapters(html: string): string[] {
   return [...html.matchAll(elementsByClass('ol', 'field-guide__chapters'))].flatMap((group) =>
     [...group[1].matchAll(/<li>([\s\S]*?)<\/li>/g)].map((item) =>
       // The chapter number lives in its own span and is presentation, not the title.
-      visibleText(item[1].replace(elementsByClass('span', 'field-guide__n'), ' '))
+      visibleText(item[1].replace(CHAPTER_NUMBER, ' '))
     )
   )
 }
