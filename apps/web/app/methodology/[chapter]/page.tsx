@@ -1,5 +1,8 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { getSiteUrl } from '@/lib/site-url'
 import { Nav } from '@/components/landing/Nav'
+import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 import { Footer } from '@/components/landing/Footer'
 import { PhaseLabel } from '@/components/methodology/PhaseLabel'
 import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
@@ -9,6 +12,7 @@ import { ReadProgressRail } from '@/components/methodology/ReadProgressRail'
 import {
   METHODOLOGY_CHAPTERS,
   METHODOLOGY_CHAPTER_IDS,
+  METHODOLOGY_PHASES,
   getChapter,
   chapterNeighbours,
 } from '@/lib/methodology-chapters'
@@ -18,6 +22,74 @@ import {
 // `generateStaticParams` enumerates the module's ids, so every legitimate request that reaches
 // this component carries an id `getChapter` will find. No flag, no DB read, no `force-dynamic`
 // (same reasoning as the index route's header comment) — this is content, and it is prerendered.
+// methodology-experience · Sprint 4, Story 4.3 — each chapter's OWN metadata.
+//
+// Derived from the module, so a seventh chapter gets a correct title with no edit here. Before
+// this, all six chapters served the landing's title: nothing — a search result, a link preview, an
+// agent listing pages — could tell them apart (amendment A6, measured on live production).
+//
+// `async generateMetadata` per `app/layout.tsx`'s recorded reasoning (epic D9): a static object
+// bakes in whatever `SITE_URL` was set at build time, and CI builds with none.
+//
+// An unknown segment returns EMPTY metadata rather than throwing. `generateMetadata` runs before
+// the page component, so a throw here would surface as a 500 for a URL whose correct answer is a
+// 404 — the same trap the page body avoids by checking membership before the throwing lookup, and
+// `methodology-routes.spec.ts` asserts that 404.
+// ── `force-dynamic`, and why `async generateMetadata` was NOT enough ─────────────────────────
+// `async generateMetadata` does not make a page dynamic. These routes are statically generated —
+// the chapters through `generateStaticParams`, the index by default — so `getSiteUrl()` ran at
+// BUILD time and this repo's `typecheck-build` job builds with NO env vars at all.
+//
+// Verified by building without `SITE_URL` and reading the prerendered HTML:
+//
+//   rel="canonical" href="http://localhost:3000/methodology"
+//   <meta property="og:url" content="http://localhost:3000/methodology">
+//
+// A canonical tag pointing at localhost is worse than none: it tells a crawler the real URL is
+// somewhere it cannot reach. This is precisely the failure epic D9 describes, committed while
+// citing D9 — the decision was right and the mechanism it named was not sufficient on its own
+// (Codex, round 1 of PR #108).
+//
+// `force-dynamic` is the same answer `app/page.tsx`, `app/llms.txt` and `app/sitemap.ts` already
+// carry, for the same reason: Vercel snapshots env vars into a deployment at build time, so
+// anything that reads one has to be resolved per request. The CONTENT here is static and cheap;
+// only the URLs in the metadata are deployment-dependent.
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ chapter: string }>
+}): Promise<Metadata> {
+  const { chapter: chapterId } = await params
+  const chapter = METHODOLOGY_CHAPTERS.find((entry) => entry.id === chapterId)
+  if (!chapter) return {}
+
+  const siteUrl = getSiteUrl()
+  const phase = METHODOLOGY_PHASES.find((entry) => entry.id === chapter.phase)
+  const title = `${chapter.title} — the Golden Frijoles methodology`
+  // The chapter's own summary, which is written for exactly this job: one line telling a reader
+  // choosing between six what this one covers.
+  const description = chapter.summary
+  const url = `${siteUrl}/methodology/${chapter.id}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: 'Golden Frijoles',
+      type: 'article',
+      // The phase is the one piece of structure a preview can carry that a title cannot.
+      ...(phase ? { section: phase.title } : {}),
+    },
+    twitter: { card: 'summary_large_image', title, description },
+  }
+}
+
 export function generateStaticParams() {
   return METHODOLOGY_CHAPTERS.map((chapter) => ({ chapter: chapter.id }))
 }
@@ -43,6 +115,11 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
 
   return (
     <>
+      {/* Story 4.1 — which chapter rides as a TAG, not as part of the event name: the funnel's
+          question is "did readers get past the index?", and a per-chapter event name would make
+          "adopted" mean "opened chapter 3 specifically". The id is validated server-side against
+          the module, so it can only ever be a real route segment. */}
+      <SelfTrackBeacon surface="methodology-chapter" chapter={chapter.id} />
       <Nav />
       {/* ── Sprint 3, Story 3.1 — the reading shell ───────────────────────────────────────────
           Three tracks at wide widths: the contents rail, the article at a real reading measure,

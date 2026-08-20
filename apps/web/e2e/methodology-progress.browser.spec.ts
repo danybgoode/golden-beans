@@ -88,13 +88,21 @@ test('on a phone the rail is visible, not merely present', async ({ page }) => {
 // out of its track. All three instances were found by review, none by the suite — so this asserts
 // the computed values on both sides of the breakpoint rather than trusting the rule's existence.
 test('the rail switches its margins between the phone and three-track layouts', async ({ page }) => {
-  const read = async () =>
-    page.evaluate(() => {
+  // WAIT for the rail before measuring it. `page.goto` resolves on load, but this rail is written
+  // by a client effect — so reading computed styles immediately is a race that a fast local server
+  // hides and a real network exposes. It did: every other spec here passed against production and
+  // this one reported "the rail must render in the third track / Received: null", while the rail
+  // was in fact rendering correctly. A spec that passes only because the machine is quick is a spec
+  // that will fail for the next person and blame the product.
+  const read = async () => {
+    await expect(page.locator(RAIL)).toBeVisible()
+    return page.evaluate(() => {
       const el = document.querySelector('.methodology-progress')
       if (!el) return null
       const s = getComputedStyle(el)
       return { left: s.marginLeft, right: s.marginRight, bottom: s.marginBottom }
     })
+  }
 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/methodology/bring-an-idea')

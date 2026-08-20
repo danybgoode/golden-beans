@@ -32,6 +32,12 @@ export async function GET() {
 - ${siteUrl}/install
   Get your own tokenized MCP connector URL ("Add to Claude" deep-link) for the demo project, plus
   the SDK install docs for wiring your own product into the engine.
+- ${siteUrl}/methodology
+  The methodology itself — six chapters at their own URLs, server-rendered, no JavaScript needed.
+  Start here if you want the method rather than the product.
+- ${siteUrl}/methodology/edition.md
+  The whole methodology as ONE markdown document, generated from the same source the site renders.
+  Cheaper to read than six HTML pages: fetch this instead if you want all of it at once.
 - ${siteUrl}/northstar-self-serve.md
   A facilitation script for an agent to run the North Star workshop with a product person, one
   question at a time. No account and no connector needed — it is deliberately usable before any

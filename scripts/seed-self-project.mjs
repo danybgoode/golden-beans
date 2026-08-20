@@ -55,6 +55,16 @@ const ACTIVATION_RETAINED_EVENT = 'first_event_ingested';
 const HUB_KEY = 'hub_engagement';
 const HUB_TARGET_EVENT = 'report_viewed';
 const HUB_ADOPTED_EVENT = 'share_viewed';
+// methodology-experience Story 4.1 — the methodology-reading signal. Two real stages: the index
+// was opened (targetEvent), and a chapter was actually opened (adoptedEvent). "Adopted" here means
+// the reader got past the contents page, which is the only question this funnel can honestly
+// answer — WHICH chapter rides as a tag on the event, not as a separate event name.
+// Mirrors lib/self-track.ts's METHODOLOGY_SIGNAL_KEY / *_EVENT constants. An event whose feature_id
+// does not match a REGISTERED feature is invisible to lib/tars-query.ts forever, so registering it
+// here is what makes the funnel renderable at all.
+const METHODOLOGY_KEY = 'methodology_reading';
+const METHODOLOGY_TARGET_EVENT = 'methodology_visited';
+const METHODOLOGY_ADOPTED_EVENT = 'methodology_chapter_opened';
 const TARGET_EVENT = 'landing_visited';
 const ADOPTED_EVENT = 'waitlist_joined';
 const RETENTION_DAYS = 7; // schema default; retention isn't meaningful for a one-shot join, but the
@@ -157,7 +167,8 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           targetEvent: TARGET_EVENT,
           adoptedEvent: ADOPTED_EVENT,
           retentionDays: RETENTION_DAYS,
-          description: 'Golden Frijoles landing dogfood funnel: visitor → waitlist (Grower signal, Story 3.1).',
+          description:
+            'Golden Frijoles landing dogfood funnel: visitor → waitlist (Grower signal, Story 3.1).',
         },
         {
           key: ACTIVATION_KEY,
@@ -168,6 +179,15 @@ async function registerGrowerSignal(baseUrl, apiKey) {
           retentionDays: RETENTION_DAYS,
           description:
             'Golden Frijoles activation funnel: signup → confirmed → first event (multi-tenant-activation Story 3.3).',
+        },
+        {
+          key: METHODOLOGY_KEY,
+          enabled: true,
+          targetEvent: METHODOLOGY_TARGET_EVENT,
+          adoptedEvent: METHODOLOGY_ADOPTED_EVENT,
+          retentionDays: RETENTION_DAYS,
+          description:
+            'Golden Frijoles methodology reading: index opened → chapter opened (methodology-experience Story 4.1).',
         },
         {
           key: HUB_KEY,

@@ -1,5 +1,8 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getSiteUrl } from '@/lib/site-url'
 import { Nav } from '@/components/landing/Nav'
+import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 import { Footer } from '@/components/landing/Footer'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -37,9 +40,69 @@ import {
 // `Nav` renders `BrandLockup` with no `href` override, so it defaults to `/` — there is currently
 // no other way back to the site from the methodology (epic README's substitution table), and this
 // route gets that for free by reusing `Nav` rather than rebuilding the mockup's non-linking brand.
+// methodology-experience · Sprint 4, Story 4.3 — this route's own metadata.
+//
+// `async generateMetadata` and not a static object, following `app/layout.tsx`'s recorded reasoning
+// (epic D9): a static object is evaluated once and bakes in whatever `SITE_URL` was set at build
+// time, and this repo's `typecheck-build` job runs `npm run build` with NO env vars at all.
+//
+// ── Why this matters more than a tidy tag ─────────────────────────────────────────────────────
+// Before this, all seven methodology URLs served the LANDING's title and description — measured on
+// live production (amendment A6). A search result, a link preview and an agent's page list could
+// not tell the index from a chapter from the sales page. That is not a polish item; it is the
+// difference between six pages existing and six pages being findable.
+//
+// D9's rule applies unchanged: a link preview travels WITHOUT the qualification the page carries,
+// so it describes the shape and names no capability a flag flip could falsify. Nothing here claims
+// the method is easy, proven, or that anyone has used it.
+// ── `force-dynamic`, and why `async generateMetadata` was NOT enough ─────────────────────────
+// `async generateMetadata` does not make a page dynamic. These routes are statically generated —
+// the chapters through `generateStaticParams`, the index by default — so `getSiteUrl()` ran at
+// BUILD time and this repo's `typecheck-build` job builds with NO env vars at all.
+//
+// Verified by building without `SITE_URL` and reading the prerendered HTML:
+//
+//   rel="canonical" href="http://localhost:3000/methodology"
+//   <meta property="og:url" content="http://localhost:3000/methodology">
+//
+// A canonical tag pointing at localhost is worse than none: it tells a crawler the real URL is
+// somewhere it cannot reach. This is precisely the failure epic D9 describes, committed while
+// citing D9 — the decision was right and the mechanism it named was not sufficient on its own
+// (Codex, round 1 of PR #108).
+//
+// `force-dynamic` is the same answer `app/page.tsx`, `app/llms.txt` and `app/sitemap.ts` already
+// carry, for the same reason: Vercel snapshots env vars into a deployment at build time, so
+// anything that reads one has to be resolved per request. The CONTENT here is static and cheap;
+// only the URLs in the metadata are deployment-dependent.
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const siteUrl = getSiteUrl()
+  const title = 'The Golden Frijoles methodology'
+  const description =
+    'Six chapters that take one real idea through one bounded, shipped, verified Bet. Bring your own project and your own agents.'
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `${siteUrl}/methodology` },
+    openGraph: {
+      title,
+      description,
+      url: `${siteUrl}/methodology`,
+      siteName: 'Golden Frijoles',
+      type: 'article',
+    },
+    twitter: { card: 'summary_large_image', title, description },
+  }
+}
+
 export default function MethodologyIndexPage() {
   return (
     <>
+      {/* Story 4.1 — the reader becomes evidence. Same beacon as the landing, naming its surface;
+          the event is chosen server-side from a closed set. */}
+      <SelfTrackBeacon surface="methodology" />
       <Nav />
       <main>
         <section className="band">
@@ -56,6 +119,18 @@ export default function MethodologyIndexPage() {
                 <Button href={`/methodology/${METHODOLOGY_CHAPTERS[0]!.id}`}>
                   Start with a real idea
                   <Icon name="arrow-right" size={14} />
+                </Button>
+                {/* Story 4.2 — the edition is GENERATED from the same module this page renders
+                    (epic D5), so this button cannot hand anyone a stale fork of the methodology.
+                    The story's alternative was to CUT it rather than point at a file that would
+                    silently diverge; generation is built, so it ships.
+
+                    A plain link and not a download attribute: an agent fetching this URL should get
+                    the method as readable text, which is the larger half of what it is for
+                    (amendment A6). A browser still saves it with one keystroke. */}
+                <Button href="/methodology/edition.md" variant="ghost">
+                  Read it as one document
+                  <Icon name="book" size={14} />
                 </Button>
               </div>
             </div>

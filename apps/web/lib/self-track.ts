@@ -13,83 +13,32 @@ import { getSiteUrl } from './site-url'
 // job may not have this new project seeded — so an unset key or a failed call must degrade to a
 // clean no-op, not a 500 on the landing or the waitlist route.
 
+import { EVENT_FEATURE, type SelfTrackEvent } from './self-track-events'
+
+// Re-exported so every existing caller keeps importing the vocabulary from here — the split is an
+// implementation detail of making the constants testable, not a new seam for callers to learn.
+export {
+  LANDING_VISITED_EVENT,
+  WAITLIST_JOINED_EVENT,
+  SIGNUP_STARTED_EVENT,
+  ACCOUNT_CONFIRMED_EVENT,
+  FIRST_EVENT_INGESTED_EVENT,
+  REPORT_VIEWED_EVENT,
+  SHARE_VIEWED_EVENT,
+  METHODOLOGY_VISITED_EVENT,
+  METHODOLOGY_CHAPTER_OPENED_EVENT,
+  WAITLIST_SIGNAL_KEY,
+  ACTIVATION_SIGNAL_KEY,
+  HUB_ENGAGEMENT_SIGNAL_KEY,
+  METHODOLOGY_SIGNAL_KEY,
+  type SelfTrackEvent,
+} from './self-track-events'
+
 // The self tenant's slug — a SEPARATE project from DEMO_PROJECT_SLUG (public-demo.ts). Named after
 // SITE_URL's / DEMO_PROJECT_SLUG's env-override pattern. Nothing here reads or writes the demo
 // project; the tenant is chosen entirely by SELF_PROJECT_API_KEY, resolved server-side from the
 // Authorization header (lib/auth.ts) — so events physically cannot land against another project.
 export const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golden-beans'
-
-// The funnel's two events: entry (targetEvent) and conversion (adoptedEvent). Exported so the
-// beacon route, the waitlist route, and the seed script's registry entry all name them from one
-// place — no stringly-typed drift between what we fire and what the Grower signal is defined on.
-export const LANDING_VISITED_EVENT = 'landing_visited'
-export const WAITLIST_JOINED_EVENT = 'waitlist_joined'
-
-// multi-tenant-activation · Sprint 2/3 — the ACTIVATION funnel, the second funnel this tenant
-// measures (epic README: "Success includes a dogfooded signup→activated funnel rendered by the
-// engine itself"). Three stages, fired from three different places in the flow:
-//   signup_started       — a signup submission passed the gate + guards (public signup route)
-//   account_confirmed    — the email round-trip completed and a tenant was provisioned (callback)
-//   first_event_ingested — that new tenant's very first event landed (the ingest route)
-export const SIGNUP_STARTED_EVENT = 'signup_started'
-export const ACCOUNT_CONFIRMED_EVENT = 'account_confirmed'
-export const FIRST_EVENT_INGESTED_EVENT = 'first_event_ingested'
-
-// pod-report · Sprint 3, Story 3.2 — the hub/report surfaces measured BY THE ENGINE ITSELF ("we
-// sell what we use"). Two events, deliberately with two different notions of "user":
-//   report_viewed — a person opened the internal Pod Report. Fired only when the visitor cookie is
-//                   already present, never with a freshly invented id: TARS counts DISTINCT users
-//                   (lib/tars.ts), so minting a random id per view would turn a page-view counter
-//                   into a fake audience-size number.
-//   share_viewed  — a SHARE LINK was opened. The "user" here is the share row id, so `targeted`
-//                   reads as "distinct links opened", which is the honest unit for a bearer URL
-//                   that may be forwarded to a room full of people from one email. Stated here
-//                   because a reader of the funnel would otherwise assume "people".
-export const REPORT_VIEWED_EVENT = 'report_viewed'
-export const SHARE_VIEWED_EVENT = 'share_viewed'
-
-export type SelfTrackEvent =
-  | typeof LANDING_VISITED_EVENT
-  | typeof WAITLIST_JOINED_EVENT
-  | typeof SIGNUP_STARTED_EVENT
-  | typeof ACCOUNT_CONFIRMED_EVENT
-  | typeof FIRST_EVENT_INGESTED_EVENT
-  | typeof REPORT_VIEWED_EVENT
-  | typeof SHARE_VIEWED_EVENT
-
-// The TARS feature each funnel event belongs to. Registered on the self tenant by
-// scripts/seed-self-project.mjs.
-export const WAITLIST_SIGNAL_KEY = 'waitlist_conversion'
-export const ACTIVATION_SIGNAL_KEY = 'activation'
-/** pod-report S3.2 — registered on the self tenant by scripts/seed-self-project.mjs. */
-export const HUB_ENGAGEMENT_SIGNAL_KEY = 'hub_engagement'
-
-// ⚠️ THIS MAPPING IS LOAD-BEARING, AND ITS ABSENCE WAS A LIVE PRODUCTION BUG.
-//
-// lib/tars-query.ts reads a funnel with `.eq('feature_id', featureKey)` — so an event with a NULL
-// feature_id belongs to NO funnel and is invisible to every dashboard, forever. Until this map
-// existed, trackSelfEvent() fired every event untagged: checked against production 2026-07-20, all
-// four `landing_visited` rows on the `golden-beans` tenant had `feature_id = NULL`, which means the
-// landing dogfood funnel commercial-shell Sprint 3 shipped has been rendering a permanent zero
-// since it launched. Nothing errored; the events were ingested perfectly and simply counted toward
-// nothing (cross-review, Codex 2026-07-20 — raised against the NEW activation funnel, which would
-// have shipped with the identical defect).
-//
-// This is the growth-engine-v1 S4 "realistic input" lesson recurring in a third place: a query
-// that silently requires a tag the caller had no reason to set produces an honest-looking zero
-// rather than an error, and zeros do not page anyone.
-const EVENT_FEATURE: Record<SelfTrackEvent, string> = {
-  [LANDING_VISITED_EVENT]: WAITLIST_SIGNAL_KEY,
-  [WAITLIST_JOINED_EVENT]: WAITLIST_SIGNAL_KEY,
-  [SIGNUP_STARTED_EVENT]: ACTIVATION_SIGNAL_KEY,
-  [ACCOUNT_CONFIRMED_EVENT]: ACTIVATION_SIGNAL_KEY,
-  [FIRST_EVENT_INGESTED_EVENT]: ACTIVATION_SIGNAL_KEY,
-  // Both hub events MUST appear here. An event missing from this map ingests perfectly and counts
-  // toward nothing, forever — the live production bug documented above, which is why every new
-  // event added to SelfTrackEvent gets a row here in the same edit.
-  [REPORT_VIEWED_EVENT]: HUB_ENGAGEMENT_SIGNAL_KEY,
-  [SHARE_VIEWED_EVENT]: HUB_ENGAGEMENT_SIGNAL_KEY,
-}
 
 // The per-visitor identity cookie. A visit (Server Components can't set cookies, so the visited
 // beacon is a Route Handler — see app/api/v1/public/self-visit/route.ts) mints/returns this id;
@@ -133,7 +82,20 @@ function timeoutFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Res
 // transition (the ingest route stamping projects.first_event_at) must branch on this: committing
 // the "already sent" marker on a send that silently failed loses that funnel stage permanently,
 // because no later event ever retries it (cross-review, Codex 2026-07-20).
-export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Promise<boolean> {
+export async function trackSelfEvent(
+  event: SelfTrackEvent,
+  userId: string,
+  /**
+   * Optional non-identifying detail, e.g. which chapter was opened (Story 4.1).
+   *
+   * Deliberately `tags` and not `metadata`: tags are the dimension the query layer can group by,
+   * which is the whole reason to carry the chapter at all. Callers must pass only values that are
+   * already public route segments — the story's rule is "an id and a route segment", never PII and
+   * never the chapter's CONTENT, and nothing here would stop a caller ignoring that, so the check
+   * lives at the call site where the value is chosen.
+   */
+  tags?: Record<string, string>
+): Promise<boolean> {
   const apiKey = selfApiKey()
   if (!apiKey) return false // unset in CI/local-without-config — dogfooding is a prod-config concern
 
@@ -145,7 +107,10 @@ export async function trackSelfEvent(event: SelfTrackEvent, userId: string): Pro
       fetchImpl: timeoutFetch,
     })
     // featureId is REQUIRED for this event to appear in any funnel — see EVENT_FEATURE above.
-    const result = await engine.track(event, { featureId: EVENT_FEATURE[event] })
+    const result = await engine.track(event, {
+      featureId: EVENT_FEATURE[event],
+      ...(tags ? { tags } : {}),
+    })
     if (!result.ok) {
       console.warn(`[self-track] ${event} for ${userId} did not land: ${result.error}`)
       return false
