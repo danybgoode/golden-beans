@@ -52,6 +52,15 @@ async function withDb<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
+// One query text, used by both the single read and the poll below — two copies of a tenancy
+// predicate is exactly the kind of pair where one gets updated and the other does not.
+const EVENT_QUERY = `select e.event, e.feature_id, e.user_id, e.tags
+     from events e
+     join projects p on p.id = e.project_id
+    where e.event = $1 and e.user_id = $2 and p.slug = $3
+    order by e.created_at desc
+    limit 1`
+
 /**
  * The most recent event of `name` for one visitor, ON THE SELF TENANT, or null.
  *
@@ -71,12 +80,7 @@ async function latestEvent(name: string, visitorId: string) {
     const { rows } = await client.query(
       // The column is `event`, not `event_name` — checked against the live schema rather than
       // guessed. A wrong column name at least fails loudly; a wrong VALUE would not have.
-      `select e.event, e.feature_id, e.user_id, e.tags
-         from events e
-         join projects p on p.id = e.project_id
-        where e.event = $1 and e.user_id = $2 and p.slug = $3
-        order by e.created_at desc
-        limit 1`,
+      EVENT_QUERY,
       [name, visitorId, SELF_PROJECT_SLUG]
     )
     return rows[0] ?? null
@@ -92,13 +96,20 @@ async function latestEvent(name: string, visitorId: string) {
  * send's own timeout cannot (Codex, round 2 of PR #108).
  */
 async function waitForEvent(name: string, visitorId: string, timeoutMs = 8000) {
-  const deadline = Date.now() + timeoutMs
-  for (;;) {
-    const row = await latestEvent(name, visitorId)
-    if (row) return row
-    if (Date.now() > deadline) return null
-    await new Promise((r) => setTimeout(r, 250))
-  }
+  // ONE connection for the whole poll, not one per attempt. `latestEvent` opens and closes its own
+  // client, which is right for a single read and wrong for a loop that can run 32 times: under a
+  // full suite that is a burst of connect/teardown against a database several other specs are also
+  // using, and connection exhaustion would surface as a failure that looks like a telemetry bug
+  // (Antigravity, round 3 of PR #108).
+  return withDb(async (client) => {
+    const deadline = Date.now() + timeoutMs
+    for (;;) {
+      const { rows } = await client.query(EVENT_QUERY, [name, visitorId, SELF_PROJECT_SLUG])
+      if (rows[0]) return rows[0]
+      if (Date.now() > deadline) return null
+      await new Promise((r) => setTimeout(r, 250))
+    }
+  })
 }
 
 /** Fire the beacon exactly as the browser does, with a visitor id we control so we can find it. */

@@ -164,7 +164,7 @@ test('the generated edition round-trips the same six chapters as the module', as
   ).toBeGreaterThan(htmlRatio * 3)
 })
 
-test('llms.txt names the methodology, and every URL it names resolves', async ({ request }) => {
+test('llms.txt names the methodology, and every URL it names resolves', async ({ request, baseURL }) => {
   const res = await request.get('/llms.txt')
   expect(res.status()).toBe(200)
   const body = await res.text()
@@ -178,6 +178,9 @@ test('llms.txt names the methodology, and every URL it names resolves', async ({
   const urls = [...new Set(body.match(/https?:\/\/\S+/g) ?? [])]
   expect(urls.length, 'a manifest naming no URLs would satisfy this vacuously').toBeGreaterThan(3)
 
+  const origin = new URL(baseURL!).origin
+  let checked = 0
+
   for (const url of urls) {
     const cleaned = url.replace(/[.,)\]]+$/, '')
     // The connector endpoint is a POST carrying a PLACEHOLDER token in its path — not fetchable
@@ -187,10 +190,26 @@ test('llms.txt names the methodology, and every URL it names resolves', async ({
     // to `%7Btoken%7D`, so a check against `pathname` silently never matches and the placeholder
     // gets fetched anyway (it answers 405 — a POST-only route). Caught on this spec's first run.
     if (cleaned.includes('{token}')) continue
-    const path = new URL(cleaned).pathname
-    const answer = await request.get(path)
-    expect(answer.status(), `${path} is named in /llms.txt but does not resolve`).toBeLessThan(400)
+
+    const parsed = new URL(cleaned)
+    // ONLY this app's own URLs. `request.get()` resolves a bare path against `baseURL`, so an
+    // external link in the manifest — a GitHub repo, a spec, anyone's docs — would be requested
+    // from the LOCAL server as `/org/repo` and fail as a 404 that says nothing about the manifest.
+    // `/llms.txt` names only same-origin URLs today; this keeps that from becoming a trap the day
+    // it names one that is not (Antigravity, round 3 of PR #108).
+    if (parsed.origin !== origin) continue
+
+    // `pathname + search`, not `pathname`: a query string is part of what has to resolve, and
+    // dropping it would test a different URL from the one the manifest actually names.
+    const target = `${parsed.pathname}${parsed.search}`
+    const answer = await request.get(target)
+    expect(answer.status(), `${target} is named in /llms.txt but does not resolve`).toBeLessThan(400)
+    checked += 1
   }
+
+  // Without this, filtering everything out would leave the loop asserting nothing at all — the
+  // "an empty list satisfies every check" trap, one level further in than the count above.
+  expect(checked, 'no same-origin URL from /llms.txt was actually fetched').toBeGreaterThan(2)
 })
 
 test('the sitemap lists exactly the routes that exist, and robots points at it', async ({ request }) => {
