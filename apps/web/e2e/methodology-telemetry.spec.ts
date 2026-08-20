@@ -70,11 +70,27 @@ async function beacon(
   body: Record<string, string>,
   visitorId: string
 ) {
-  const res = await request.post('/api/v1/public/self-visit', {
+  // The route is rate-limited by IP (20/min) — correctly: it is an unauthenticated public write.
+  // Every spec in this suite shares one IP, so under a full run this legitimately returns 429 and
+  // the assertion below would fail for a reason that has nothing to do with telemetry. Observed
+  // passing in isolation and failing in the full suite, which is the signature of a shared limiter
+  // rather than of a defect.
+  //
+  // Retried rather than exempted: a spec that turned the limiter off would stop testing the real
+  // route, and the limiter is a property worth keeping (it is what stops anyone inflating the
+  // numbers the product owner reads as status).
+  let res = await request.post('/api/v1/public/self-visit', {
     data: body,
     headers: { Cookie: `gb_vid=${visitorId}` },
   })
-  expect(res.status(), 'the beacon must always answer 200').toBe(200)
+  for (let attempt = 0; attempt < 4 && res.status() === 429; attempt += 1) {
+    await new Promise((r) => setTimeout(r, 2000))
+    res = await request.post('/api/v1/public/self-visit', {
+      data: body,
+      headers: { Cookie: `gb_vid=${visitorId}` },
+    })
+  }
+  expect(res.status(), 'the beacon must answer 200 once the rate-limit window clears').toBe(200)
   // `after()` runs the send once the response is out, so the row is not there synchronously.
   await new Promise((r) => setTimeout(r, 1500))
 }
