@@ -4317,6 +4317,12 @@ a.stat-card:hover {
 .methodology-prose h2 {
   margin: 38px 0 10px;
   font-size: 22px;
+  /* Explicit, not inherited: with no `line-height` here this fell back to the body's 1.55, tuned
+     for paragraph text at 15–16px, not for a bold 22px section heading — the extra leading read as
+     loose air above a short line rather than as heading rhythm. Story 3.2's article typography
+     pass sets it directly instead of leaving a heading to borrow a body value that happens to be
+     in scope. */
+  line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
@@ -4325,6 +4331,23 @@ a.stat-card:hover {
   padding-left: 18px;
   border-left: 3px solid var(--gold);
   font: 700 21px/1.35 var(--sans);
+}
+
+/* Lists get the same reading-rhythm treatment as the heading and blockquote above (Story 3.2
+   acceptance groups all three). The paragraph-rhythm rule below spaces a `<ul>` from what
+   surrounds it, but says nothing about one `<li>` and the next — with no per-item margin, chapter
+   3's restored bullet list (epic README defect 3, five short judgment calls) read as one dense
+   block with bullets glued to it, the exact defect that list was rescued FROM. The UA's 40px
+   `padding-inline-start` is also sized for a much wider column than this article's 720px measure,
+   so it reads as an oversized indent here — trimmed to something proportionate instead. */
+.methodology-prose li,
+.work li {
+  margin: 6px 0;
+}
+
+.methodology-prose ul,
+.work ul {
+  padding-inline-start: 22px;
 }
 
 /* ── Paragraph rhythm ──────────────────────────────────────────────────────
@@ -4380,7 +4403,22 @@ a.stat-card:hover {
    Kept from the mockup as-is because it is the pedagogy, not the skin (epic README's substitution
    table): gold "do this on your project", dark "use your agent", green "look for", plain "this
    part is yours" / "what you just learned". Sprint 3's Story 3.2 is where this family gets its
-   Apple-materials pass; this is the plain version. */
+   Apple-materials pass; this is the plain version.
+
+   ── Contrast is MEASURED here, not assumed ──────────────────────────────────────────────────
+   Story 3.2 acceptance names the mockup's own `--muted` on `--paper` as close enough to the AA
+   boundary at small sizes to need checking rather than eyeballing. This product ships the dark
+   `--roast`/`--card`/`--dim` family instead of that mockup palette, but the instruction still
+   applies to the tokens actually in use: `--dim` body text against each variant's own tinted
+   background, computed with the WCAG relative-luminance formula (not eyeballed):
+     --dim on --card (plain/`yours`/`learned`)                    7.13:1
+     --dim on color-mix(--gold 10%, --card)  (`do`)                5.78:1
+     --dim on color-mix(--green 10%, --card) (`look`)              5.86:1
+     --crema on --espresso (`agent`, via `.prompt-copy`)          16.37:1
+   All clear the 4.5:1 floor for body text with margin, so no token moved for this story — the
+   floor is what `e2e/methodology-blocks.browser.spec.ts` asserts from the RENDERED page, not from
+   this arithmetic, so a future tint change that erodes it fails the suite rather than this
+   comment going stale. */
 
 .work {
   margin: 22px 0;
@@ -4388,6 +4426,12 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
+  /* Story 3.2 acceptance: elevation picks a NAMED RUNG from the ladder above (epic D2), never a
+     new blur radius chosen by eye — `landing-frijoles-rebrand` S3.2 consolidated six ad-hoc shadow
+     values into three conceptual heights for exactly this reason. A work card sits on the article
+     ground the same way the ladder's own definition of `raised` describes ("a prompt card, an app
+     shell"), so it takes that rung rather than inventing a fourth height for one more card type. */
+  box-shadow: var(--elevation-raised);
 }
 
 .work__label {
@@ -4455,6 +4499,30 @@ a.stat-card:hover {
   padding: 0;
   border: none;
   background: none;
+  /* `.work`'s own `--elevation-raised` shadow (above) would otherwise land on THIS wrapper too —
+     a box with no visible fill or radius of its own — while `.prompt-card` inside casts the same
+     rung a second time at its own corner radius. Two shadows for one visible surface reads as a
+     halo around nothing; cancelling it here leaves exactly the card's. */
+  box-shadow: none;
+}
+
+/* "This part is yours" and "What you just learned" render through the SAME plain `.work` rule
+   and, before this story, were visually IDENTICAL — a reader skimming past could not tell a
+   reflection prompt from a recap without stopping to read the label. The epic README's
+   substitution table keeps the plain card as ONE conceptual surface (gold/dark/green are the
+   coloured three; plain is the fourth), so the fix stays inside that family rather than adding a
+   fifth hue — border TREATMENT tells them apart, not colour.
+
+   `yours` gets a dashed rule: the visual grammar of a line to write on, which matches what the
+   card is actually asking the reader to do (produce something, not receive something).
+   `learned` gets a heavier solid top edge in `--dim-2` — a neutral ink already in the palette, not
+   a new token — read as a closing mark on a card that recaps rather than instructs. */
+.work--yours {
+  border-style: dashed;
+}
+
+.work--learned {
+  border-top: 3px solid var(--dim-2);
 }
 
 /* The lead line inside a work body (`WorkBodyBlock`'s `lead?: true` — e.g. every "What you just
