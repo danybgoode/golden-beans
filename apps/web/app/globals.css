@@ -4159,9 +4159,17 @@ a.stat-card:hover {
    spacing the components had already decided. */
 .methodology-prose p:not([class]),
 .methodology-prose ul,
-.methodology-prose .methodology-lead-line,
 .work p:not([class]),
-.work ul {
+.work ul,
+/* Unqualified, not `.methodology-prose .methodology-lead-line`. Scoping it to
+   the prose context left a lead line inside a `.work` card rendered anywhere
+   else with no bottom margin at all, touching the text below it — a latent
+   inconsistency rather than a live bug, because every `.work` today sits inside
+   `.methodology-prose`. It is fixed now, while the mental model is loaded,
+   rather than found later by whoever first renders a work card somewhere new
+   (Antigravity, round 2 of PR #105). A lead line's spacing does not depend on
+   who is holding it. */
+.methodology-lead-line {
   margin: 0 0 12px;
 }
 
