@@ -5,7 +5,15 @@
 **Risk:** LOW — reviewer may auto-merge on green CI
 
 > **Build contract (locked by the architect before any builder starts).**
-> This sprint touches **only** existing landing components and `lib/landing-sections.ts`. It adds no
+> **Amended in flight — see [A1](README.md#a1--sprint-1-touches-globalscss-2026-08-19).** The clause
+> below said this sprint touches no CSS. It does: Story 1.3's six-title contents list could not reuse
+> the three-pill band that held the three-word list, so `.field-guide__steps` is deleted and replaced
+> from the same tokens. No new device, no new token, nothing dropped. The rest of the contract stands
+> unchanged, and this note stays here rather than in the amendment alone — a contract that asserts a
+> property the code does not have is read as evidence by the next reviewer (CODE-QUALITY #3).
+>
+> This sprint touches **only** existing landing components, `lib/landing-sections.ts` and the one
+> `globals.css` rule named above. It adds no
 > route, no module, no CSS device and no dependency, and it is carved so that **if the epic stops
 > here, the live page is still better and nothing is half-built.**
 > `references/design/assets/tokens.css` is **not edited** — it is the byte-mirrored design handoff.

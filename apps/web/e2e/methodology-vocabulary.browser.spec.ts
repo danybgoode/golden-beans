@@ -43,13 +43,35 @@ for (const [label, viewport] of [
     const chapters = page.locator('#methodology .field-guide__chapters li')
     await expect(chapters, 'the field guide previews six chapters').toHaveCount(6)
 
-    // Read each row's own text rather than the list's, so a title that has collapsed to nothing —
-    // clipped, wrapped away, or rendered as a stray number with no words — fails here instead of
-    // passing because its neighbours' text made the container look full.
+    // Read each row's own text rather than the list's, so a title that has collapsed to nothing
+    // fails here instead of passing because its neighbours' text made the container look full.
+    //
+    // `toBeVisible()` alone does NOT establish that a row is un-clipped — an element inside an
+    // `overflow: hidden` box that has been squeezed to a sliver is still "visible" to Playwright.
+    // Codex made that point in round 1 of PR #104, and the honest answer to a disputed property is
+    // to make the property real rather than to soften the sentence describing it (LEARNINGS). So
+    // the geometry is measured: every row has a real line of height, and every row sits inside the
+    // kraft card that contains it. That is what "the six titles still render on a phone" means.
+    const card = page.locator('#methodology .field-guide')
+    const cardBox = await card.boundingBox()
+    expect(cardBox, 'the field-guide card must be laid out before its rows can be measured').not.toBeNull()
+
     for (const [index, title] of CHAPTERS.entries()) {
       const row = chapters.nth(index)
       await expect(row).toBeVisible()
       await expect(row).toContainText(title)
+
+      const box = await row.boundingBox()
+      expect(box, `chapter ${index + 1} has no box at all`).not.toBeNull()
+      // One line of the 15px type this list is set in. A row squeezed below that is clipped,
+      // whatever `toBeVisible()` reports.
+      expect(box!.height, `"${title}" is squeezed below one line of text`).toBeGreaterThanOrEqual(15)
+      expect(box!.width, `"${title}" has no width`).toBeGreaterThan(0)
+      expect(box!.x, `"${title}" starts outside the card`).toBeGreaterThanOrEqual(cardBox!.x - 1)
+      expect(
+        box!.x + box!.width,
+        `"${title}" runs past the right edge of the card`
+      ).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1)
     }
 
     // The phase labels are the grouping, and there are three of them. If a group ever renders with
