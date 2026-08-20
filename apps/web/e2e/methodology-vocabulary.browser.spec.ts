@@ -40,6 +40,34 @@ for (const [label, viewport] of [
     await expect(moves, 'the maker loop is three moves').toHaveCount(3)
     await expect(moves).toHaveText(LOOP_MOVES)
 
+    // ── The loop's items fill their card ────────────────────────────────────────────────────
+    // `.maker-flow` is a grid, and its desktop rule used to name a track count — `repeat(5, 1fr)`,
+    // written when the loop had five steps. Story 1.1 made it three, and the three items kept 60%
+    // of the row while the remaining 40% of the card stayed empty with a border ending in the
+    // middle of nothing. Every assertion above passed: the markup was right, there were three
+    // items, and the text matched. A count is not a layout (LEARNINGS: a full green gate does not
+    // see layout — someone has to open the page).
+    //
+    // The CSS fix derives the track count from the item count, so the mismatch is now
+    // unrepresentable. This is the assertion that says so out loud: whatever the loop's length, its
+    // last item reaches the end of the card it sits in.
+    const flow = page.locator('#loop .maker-flow')
+    const flowBox = await flow.boundingBox()
+    const lastItem = page.locator('#loop .maker-flow__item').last()
+    const lastBox = await lastItem.boundingBox()
+    expect(flowBox, 'the loop list must be laid out before it can be measured').not.toBeNull()
+    expect(lastBox, 'the loop list has items but the last one has no box').not.toBeNull()
+
+    if (viewport.width >= 900) {
+      // Above the 900px breakpoint the moves are columns, so "fills the card" is a horizontal
+      // claim. Below it they stack, and the vertical equivalent is what the mobile rail already
+      // covers — re-asserting it here would be a second copy of that rule.
+      expect(
+        flowBox!.x + flowBox!.width - (lastBox!.x + lastBox!.width),
+        'the loop leaves dead space to the right of its last move — the grid has more tracks than items'
+      ).toBeLessThanOrEqual(2)
+    }
+
     const chapters = page.locator('#methodology .field-guide__chapters li')
     await expect(chapters, 'the field guide previews six chapters').toHaveCount(6)
 

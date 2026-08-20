@@ -3173,12 +3173,17 @@ a.stat-card:hover {
 }
 
 /* ── The maker loop ─────────────────────────────────────────────────────────
-   Five steps. Stacked on a phone with a rule between them; five tracks across
-   from 900px, where the rule becomes vertical. One border declaration per
-   orientation rather than a per-item override. */
+   Stacked on a phone with a rule between them; one track per move across from
+   900px, where the rule becomes vertical. One border declaration per orientation
+   rather than a per-item override.
+
+   The track count is DERIVED, never written down — see the note on the 900px
+   rule below. This comment used to say "Five steps … five tracks", and the day
+   the loop became three moves it was both wrong and the reason the layout broke
+   (Antigravity, round 1 of PR #104). */
 .maker-flow {
   display: grid;
-  /* An ordered list, so the steps are numbered for a screen reader too — the `01`…`05` marks are
+  /* An ordered list, so the moves are numbered for a screen reader too — the `01`… marks are
      decoration on top of real list semantics, not a substitute for them. The UA's own marker and
      40px indent are removed here rather than per-item. */
   margin: 0;
@@ -3656,8 +3661,21 @@ a.stat-card:hover {
     grid-template-columns: 1.05fr 0.95fr;
   }
 
+  /* One track per item, derived from how many items there are — NOT a number
+     written down here that has to agree with a list in a `.tsx` file.
+
+     It was `repeat(5, 1fr)`. When Story 1.1 collapsed the loop from five steps
+     to three moves, the three items kept 60% of the row and left 40% of the
+     card as dead space with a border ending in the middle of nothing. Nothing
+     failed: the markup was correct, the spec counted three items and found
+     three, and the gate was green — a stylesheet still describing the shape of
+     deleted markup (LEARNINGS: "after deleting markup, sweep every class it
+     used"). `grid-auto-flow: column` makes that disagreement unrepresentable
+     rather than merely corrected, so the next change to the loop's length needs
+     no edit here at all. */
   .maker-flow {
-    grid-template-columns: repeat(5, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
   }
 
   .maker-flow__item {
