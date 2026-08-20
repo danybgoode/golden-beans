@@ -2965,19 +2965,6 @@ a.stat-card:hover {
   }
 }
 
-/* Below it, the window bar cannot hold both a title and three pills without one
-   of them wrapping into the other. The TITLE wins: it names what the frame is,
-   and the pills are saying "this works in whichever agent you use" — a claim
-   the hero's own copy makes one column over ("Works with Claude and ChatGPT").
-   Dropping them on a phone loses nothing the reader was not just told.
-   Sprint 2's acceptance called for exactly this and the rule was missing until
-   cross-family review of PR #95 caught it. */
-@media (max-width: 699px) {
-  .agent-platforms {
-    display: none;
-  }
-}
-
 /* ============================================================================
    MATERIAL AND MOTION — landing-frijoles-rebrand · Sprint 3
    ============================================================================
