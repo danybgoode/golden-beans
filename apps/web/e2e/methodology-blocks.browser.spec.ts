@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { contrastRatio } from './helpers/css-color'
+import { contrastRatio, parseCssColor } from './helpers/css-color'
 import { METHODOLOGY_CHAPTERS, WORK_LABELS, type WorkVariant } from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 3, Story 3.2 — the work-block family as primitives.
@@ -61,22 +61,40 @@ async function gotoVariant(page: Page, variant: WorkVariant) {
 }
 
 // ── WCAG contrast, computed from REAL rendered colours ──────────────────────────────────────────
-// Standard relative-luminance / contrast-ratio formula (WCAG 2.x). `getComputedStyle` does NOT
-// reliably return `rgb()` — a `color-mix()` result (every tinted work-card background: `do`,
+// The ratio itself comes from `helpers/css-color.ts`, which is unit-tested and understands all
+// three serialisations `getComputedStyle` can return — including `color(srgb …)`, which is what
+// every tinted work-card background (`do`, `look`) computes to because it is a `color-mix()`.
+// This file used to carry its own parser; two specs having two of them is how one of them ends up
+// wrong, and the copy in the materials spec was wrong in a way that passed (PR #107, round 2).
 
-/** Walks up from an element to the nearest ancestor (inclusive) with a non-transparent painted
- * background — i.e. the card the text is actually sitting on, not necessarily its own parent. */
+/**
+ * Walks up from an element to the nearest ancestor (inclusive) that actually PAINTS a background —
+ * the card the text sits on, which is not necessarily its own parent.
+ *
+ * "Painted" is decided by ALPHA, not by matching strings. An earlier version compared against
+ * `'transparent'` and `'rgba(0, 0, 0, 0)'` literally, which misses every other zero-alpha
+ * spelling — `rgba(255, 255, 255, 0)`, `color(srgb 1 1 1 / 0)`, the space-separated forms — and
+ * would then measure contrast against a surface that paints NOTHING, reporting a ratio for a
+ * colour the reader never sees (Antigravity, round 4 of PR #107).
+ *
+ * The walk happens in Node rather than in the page so it can use the shared, tested parser instead
+ * of a second copy shipped into `evaluate`.
+ */
 async function ownBackgroundColor(locator: ReturnType<Page['locator']>) {
-  return locator.evaluate((el) => {
+  const chain: string[] = await locator.evaluate((el) => {
+    const backgrounds: string[] = []
     let node: Element | null = el
     while (node) {
-      const bg = getComputedStyle(node).backgroundColor
-      const isTransparent = bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)'
-      if (!isTransparent) return bg
+      backgrounds.push(getComputedStyle(node).backgroundColor)
       node = node.parentElement
     }
-    throw new Error('no ancestor painted a background — walked off the document')
+    return backgrounds
   })
+
+  for (const background of chain) {
+    if (parseCssColor(background).a > 0) return background
+  }
+  throw new Error('no ancestor painted a background — walked off the document')
 }
 
 test.describe('the work-block family renders as distinct primitives', () => {
