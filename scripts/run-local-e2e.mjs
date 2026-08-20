@@ -27,8 +27,17 @@ const syncWithoutServingPort = 3112;
 // silently, and this repo has watched a `browser` guard stop guarding for three review rounds
 // because nothing ever executed it (LEARNINGS, landing-maker-ops).
 const PROJECT_FLAGS = { '--authed': 'authed', '--browser': 'browser' };
-const requestedProject =
-  Object.entries(PROJECT_FLAGS).find(([flag]) => process.argv.includes(flag))?.[1] ?? 'api';
+const selectedProjects = Object.entries(PROJECT_FLAGS).filter(([flag]) => process.argv.includes(flag));
+// Fail loud rather than substitute (CODE-QUALITY #7). `find` took the first match, so
+// `--authed --browser` silently ran `authed` and the requested browser suite was skipped with a
+// green exit — the failure mode this runner exists to prevent, in the flag that added it. Codex,
+// round 2 of PR #104.
+if (selectedProjects.length > 1) {
+  const flags = selectedProjects.map(([flag]) => flag).join(' and ');
+  process.stderr.write(`local-e2e: ${flags} select different Playwright projects — pass exactly one.\n`);
+  process.exit(1);
+}
+const requestedProject = selectedProjects[0]?.[1] ?? 'api';
 // `Object.hasOwn`, not `in`: `in` walks the prototype chain, so an argument literally named
 // `toString` or `constructor` would be silently dropped from the file list. Vanishingly unlikely
 // and free to exclude (Antigravity, round 1 of PR #104).

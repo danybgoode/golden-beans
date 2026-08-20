@@ -29,11 +29,18 @@ function visibleText(html: string): string {
     .trim()
 }
 
-/** The text of every `<h3>` inside §loop's ordered list, in document order. */
-function loopMoves(html: string): string[] {
-  return [...html.matchAll(/<li class="maker-flow__item"[\s\S]*?<h3>([\s\S]*?)<\/h3>/g)].map((match) =>
-    visibleText(match[1])
-  )
+/**
+ * Every move in §loop, read out of its OWN list item — title and copy together, in document order.
+ *
+ * Both halves come from the same `<li>` on purpose. An earlier version asserted the titles here and
+ * the copy against the whole page's text, which would have stayed green if a move's sentence moved
+ * to another section while §loop regressed (Codex, round 2 of PR #104). The copy is only evidence
+ * about the loop if it is read from inside the loop.
+ */
+function loopMoves(html: string): { title: string; copy: string }[] {
+  return [
+    ...html.matchAll(/<li class="maker-flow__item"[\s\S]*?<h3>([\s\S]*?)<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/g),
+  ].map((match) => ({ title: visibleText(match[1]), copy: visibleText(match[2]) }))
 }
 
 /** The text of every chapter in §methodology's field-guide contents, in document order. */
@@ -66,15 +73,14 @@ test('§loop renders exactly three portfolio moves, in order, with the product o
   request,
 }) => {
   const html = await landingHtml(request)
-  const text = visibleText(html)
 
-  expect(loopMoves(html), 'the maker loop is three moves, not five steps').toEqual(
-    MOVES.map((move) => move.title)
-  )
-
-  for (const move of MOVES) {
-    expect(text, `§loop must carry "${move.title}"’s copy verbatim`).toContain(move.copy)
-  }
+  // One assertion over the whole list: three items, in order, each carrying its own title AND its
+  // own copy. Order, count, wording and pairing all fail here rather than in four separate checks
+  // that could each pass against a different broken page.
+  expect(
+    loopMoves(html),
+    'the maker loop is three moves, each with the product owner’s copy, not five steps'
+  ).toEqual(MOVES)
 })
 
 // ── Story 1.2 ────────────────────────────────────────────────────────────────────────────────
@@ -138,7 +144,10 @@ test('§methodology previews the six chapters instead of repeating §loop’s th
   // The property epic D4 actually asks for: the page must not print the same list twice. Asserting
   // inequality rather than "the field guide is not ['Consider','Operate','Exit']" keeps the check
   // true if either list is ever rewritten — it is the RELATIONSHIP that must hold.
-  const moves = loopMoves(html)
-  expect(moves.length, 'both lists must be non-empty for their inequality to mean anything').toBe(3)
-  expect(chapters).not.toEqual(moves)
+  const moveTitles = loopMoves(html).map((move) => move.title)
+  expect(
+    moveTitles.length,
+    'both lists must be non-empty for their inequality to mean anything'
+  ).toBe(3)
+  expect(chapters).not.toEqual(moveTitles)
 })
