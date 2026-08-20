@@ -17,14 +17,19 @@ export const dynamic = 'force-dynamic'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const siteUrl = getSiteUrl()
-  // One `lastModified` for the whole set, taken at request time. Per-route dates would be a claim
-  // this app cannot substantiate — nothing here tracks when a given chapter's prose last changed,
-  // and inventing per-route timestamps would be a plausible-looking fiction a crawler acts on.
-  const lastModified = new Date()
-
+  // NO `lastModified`, and that is the honest answer rather than a missing field.
+  //
+  // The first version stamped `new Date()` on every route on every request, which tells a crawler
+  // that every page on this site changed since it last looked — every time it looks. It is a
+  // plausible-looking claim the app cannot substantiate: nothing here tracks when a given chapter's
+  // prose last changed. A crawler acts on that by recrawling everything forever, which is worse
+  // than being told nothing (Codex, round 1 of PR #108).
+  //
+  // Omitting it is legal in the sitemap protocol and is what "we do not know" looks like in this
+  // format. If per-content timestamps ever exist — the content module could carry them — this is
+  // where they go, and they will mean something.
   return publicRoutes(METHODOLOGY_CHAPTER_IDS).map((route) => ({
     url: `${siteUrl}${route.path}`,
-    lastModified,
     changeFrequency: route.changeFrequency,
     priority: route.priority,
   }))

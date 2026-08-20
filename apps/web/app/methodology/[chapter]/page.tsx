@@ -35,6 +35,27 @@ import {
 // the page component, so a throw here would surface as a 500 for a URL whose correct answer is a
 // 404 — the same trap the page body avoids by checking membership before the throwing lookup, and
 // `methodology-routes.spec.ts` asserts that 404.
+// ── `force-dynamic`, and why `async generateMetadata` was NOT enough ─────────────────────────
+// `async generateMetadata` does not make a page dynamic. These routes are statically generated —
+// the chapters through `generateStaticParams`, the index by default — so `getSiteUrl()` ran at
+// BUILD time and this repo's `typecheck-build` job builds with NO env vars at all.
+//
+// Verified by building without `SITE_URL` and reading the prerendered HTML:
+//
+//   rel="canonical" href="http://localhost:3000/methodology"
+//   <meta property="og:url" content="http://localhost:3000/methodology">
+//
+// A canonical tag pointing at localhost is worse than none: it tells a crawler the real URL is
+// somewhere it cannot reach. This is precisely the failure epic D9 describes, committed while
+// citing D9 — the decision was right and the mechanism it named was not sufficient on its own
+// (Codex, round 1 of PR #108).
+//
+// `force-dynamic` is the same answer `app/page.tsx`, `app/llms.txt` and `app/sitemap.ts` already
+// carry, for the same reason: Vercel snapshots env vars into a deployment at build time, so
+// anything that reads one has to be resolved per request. The CONTENT here is static and cheap;
+// only the URLs in the metadata are deployment-dependent.
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata({
   params,
 }: {

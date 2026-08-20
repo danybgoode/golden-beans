@@ -69,6 +69,55 @@ test('every methodology route serves its OWN title and description', async ({ re
   }
 })
 
+// The canonical and OG URLs must be THIS deployment's, never a build-time fallback.
+//
+// `async generateMetadata` does NOT make a page dynamic. These routes were statically generated, so
+// `getSiteUrl()` ran at build time — and this repo's CI builds with no env vars at all, which baked
+// `rel="canonical" href="http://localhost:3000/methodology"` into the prerendered HTML. A canonical
+// tag pointing at localhost is worse than none: it tells a crawler the real page is somewhere it
+// cannot reach. Found by Codex in round 1 of PR #108, against code that cited epic D9 while
+// committing the exact failure D9 describes.
+//
+// ── This spec asserts TWO things, because one of them cannot fail here ────────────────────────
+// The canonical-URL assertion below is correct and worth having — it is what catches a genuinely
+// wrong `SITE_URL` when this suite runs against production. But it CANNOT catch the defect it was
+// written for in the local harness: `run-local-e2e` builds with `SITE_URL` set to its own server, so
+// even a statically prerendered page bakes the right host. Mutation-checked, and it stayed green.
+// A spec that cannot fail for the cause it names is the trap this epic has hit twice.
+//
+// So the structural property is asserted directly as well: these routes must be RENDERED PER
+// REQUEST. Next serves a prerendered route with `x-nextjs-prerender` and a long `s-maxage`; a
+// dynamic one carries neither. That distinction holds regardless of which `SITE_URL` the build had,
+// which is exactly what the canonical check cannot do. Verified by measuring both states.
+test('the methodology routes render per request, and their URLs are this deployment’s', async ({
+  request,
+  baseURL,
+}) => {
+  const origin = new URL(baseURL!).origin
+
+  for (const path of ['/methodology', ...METHODOLOGY_CHAPTERS.map((c) => `/methodology/${c.id}`)]) {
+    const res = await request.get(path)
+    expect(res.status(), `${path} must render`).toBe(200)
+
+    // The structural half — this is the one that would have caught the original defect.
+    expect(
+      res.headers()['x-nextjs-prerender'],
+      `${path} is statically prerendered, so its metadata froze whatever SITE_URL the BUILD had`
+    ).toBeUndefined()
+
+    const html = await res.text()
+
+    // The value half — what a crawler actually receives.
+    const canonical = tagContent(html, /<link rel="canonical" href="([^"]*)"/)
+    expect(canonical, `${path} must declare a canonical URL`).toBeTruthy()
+    expect(canonical, `${path}'s canonical URL must be this origin`).toBe(`${origin}${path}`)
+
+    const ogUrl = tagContent(html, /<meta property="og:url" content="([^"]*)"/)
+    expect(ogUrl, `${path} must declare an og:url`).toBeTruthy()
+    expect(ogUrl, `${path}'s og:url must be this origin`).toBe(`${origin}${path}`)
+  }
+})
+
 test('the whole method is readable with no JavaScript executed', async ({ request }) => {
   // The `api` project runs no browser at all, so this is the honest test of "no JS required": every
   // assertion below is against raw bytes the server sent.
