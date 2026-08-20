@@ -3534,32 +3534,57 @@ a.stat-card:hover {
   color: var(--stamp-dim);
 }
 
-.field-guide__steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* methodology-experience · Sprint 1, Story 1.3 — the card became a contents page.
+   `.field-guide__steps` (three pills) is retired with the three-word list it held.
+   Its rules are DELETED rather than left behind: an orphaned rule under a good
+   explanation reads as evidence to the next reader, which is the trail a deleted
+   component leaves and the thing landing-readability-pass was bitten by.
+
+   Six titles cannot be that band. At pill scale they need ~3 wrapped rows of
+   uppercase mono, which is the nine-item spec sheet the old comment warned about
+   arriving by a different route. A contents page is a list, so this is a list. */
+.field-guide__contents {
+  display: grid;
+  gap: 14px;
   margin: 20px 0;
-  padding: 0;
-  list-style: none;
 }
 
-/* Three pills, not nine. At nine they were a spec sheet and had to be tiny to fit
-   on one kraft card; at three they can be read from across the room, which is what
-   a field guide's contents page is for. `flex: 1` divides the card's width between
-   them so they read as one band rather than three loose chips. */
-.field-guide__steps li {
-  flex: 1 1 auto;
-  padding: 9px 12px;
-  border: 1px solid var(--stamp-dim);
-  border-radius: 999px;
-  font: 800 12px var(--mono);
-  letter-spacing: 0.1em;
-  text-align: center;
-  /* The DOM keeps title case ("Consider") and the uppercase is presentational, so a
-     screen reader announces a word rather than an initialism, and the case can be
-     changed here without editing `MethodologySection`'s array. Do not "fix" this by
-     shouting in the markup. Mistral Vibe, round 4 of PR #102. */
+/* No `color` here on purpose. `.field-guide p` already paints every paragraph in
+   this card `--stamp-dim`, at (0,1,1), so a `color` on this single class would lose
+   to it and sit in the stylesheet doing nothing — the inert-rule defect this repo
+   has now shipped twice. The value it would have set is the value it already gets. */
+.field-guide__phase {
+  margin: 0 0 6px;
+  font: 900 9px var(--mono);
+  letter-spacing: 0.15em;
+  /* Title case in the DOM ("Consider"), uppercase here, so a screen reader announces
+     a word rather than an initialism and the case can change without editing
+     `MethodologySection`. Do not "fix" this by shouting in the markup. Mistral Vibe,
+     round 4 of PR #102 — the rule survives the device it was written for. */
   text-transform: uppercase;
+}
+
+.field-guide__chapters {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 5px;
+}
+
+.field-guide__chapters li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.field-guide__n {
+  flex: none;
+  font: 800 11px var(--mono);
+  color: var(--stamp-dim);
 }
 
 .field-guide__doctrine {
