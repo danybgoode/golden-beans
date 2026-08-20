@@ -1,48 +1,35 @@
-import { RunYourFirstBet } from './RunYourFirstBet'
+import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
+import { METHODOLOGY_PHASES, chaptersInPhase } from '@/lib/methodology-chapters'
 
 // landing-maker-ops · Sprint 2, Story 2.7 — the way of working behind the product.
 // methodology-experience · Sprint 1, Stories 1.2 + 1.3 — one word for the second move, and the card
 // previews the chapters instead of repeating the phases.
+// methodology-experience · Sprint 2, Story 2.4 — the promise finally has a destination.
 //
-// ── What was cut, and why (landing-maker-ops D5) ──────────────────────────────────────────────
-// The mockup's version of this section carries a CTA pointing at `href="#"` and, underneath it, the
-// line *"Read online / download experience placeholder — to be designed in a focused session."*
-// That sentence is a note from one designer to another that ended up rendered as product copy, and
-// the link beside it goes nowhere. Both are gone.
+// ── The CTA goes where it says now (landing-maker-ops D5, closed) ──────────────────────────────
+// The mockup's version of this section carried a CTA pointing at `href="#"`, under the line "Read
+// online / download experience placeholder — to be designed in a focused session". Both were cut,
+// and the button carried the mockup's LABEL over the page's real DESTINATION — starting a Bet —
+// because a button that says "explore" and goes nowhere is the version that cannot ship. That note
+// ended: "the epic that writes the document re-points it."
 //
-// The section keeps everything that is actually true: the methodology exists, it came out of
-// building this product, and the way to learn it is to run one real Bet on your own project. So the
-// CTA carries the mockup's LABEL ("Explore the methodology") over the page's real DESTINATION —
-// starting a Bet — rather than the mockup's `href="#"`. That note used to end "the epic that writes
-// the document re-points it"; this is that epic, and Story 2.4 is where the re-point happens. It
-// has NOT happened yet: `/methodology` does not exist on this branch, and shipping a link to a
-// route that 404s would be a worse version of the placeholder this section already refused once.
+// This is that epic, and this is that re-point. The destination is `/methodology`.
 //
-// ── The card previews the six chapters, not the three phases (epic D4) ────────────────────────
-// This list was `['Consider', 'Operate', 'Exit']`, under a comment titled "Three steps, not nine"
-// arguing that the field guide's nine named moves were a spec sheet and three was the method's real
-// shape. Story 1.1 has since made §loop itself Consider / Operate / Exit — so the page rendered the
-// same three words twice, once as the loop and once as the field guide's contents, and a reader
-// scrolling from one to the other learned nothing new.
+// It is a plain `Button` rather than `RunYourFirstBet` because the two asks are genuinely
+// different: this one offers to teach you the method, and `Run your first Bet` offers to start one.
+// While they shared a destination, sharing a component was what kept the label honest. Now that
+// they do not, `RunYourFirstBet`'s `label` prop has no call site and is removed with this change —
+// the same reasoning that removed its `variant` prop, and the reason this section does not simply
+// pass a different label to it.
 //
-// Three is still the method's shape; it is just no longer THIS section's job to say so. What a
-// contents page owes a reader is what is actually inside, so the card lists the six real chapters.
-// The phase names return as group labels rather than as the argument — an index says which part of
-// the loop a chapter belongs to, which is a different act from teaching the loop.
-//
-// ── This list is TEMPORARY and Story 2.1 replaces it ──────────────────────────────────────────
-// Two lists that must agree is the defect `MakerHero`'s bag rows were bitten by three times in one
-// epic, and it is the reason `lib/landing-sections.ts` exists. Here it lives for exactly one sprint
-// by design: `lib/methodology-chapters.ts` is Sprint 2's shared surface and does not exist yet, and
-// Sprint 1 is carved to ship standalone if the appetite runs out. Story 2.4 replaces this constant
-// with a derive from that module and deletes this note with it. If you are reading this and
-// `lib/methodology-chapters.ts` exists, that replacement did not happen — do it now.
-const FIELD_GUIDE_PHASES = [
-  { phase: 'Consider', chapters: ['Bring an idea', 'Design it', 'Place the Bet'] },
-  { phase: 'Operate', chapters: ['Build it', 'Prove it'] },
-  { phase: 'Exit', chapters: ['Decide what happens next'] },
-]
-
+// ── The chapter list is DERIVED, which was always the plan ─────────────────────────────────────
+// Story 1.3 shipped this list as an inline constant, under a comment saying it was temporary and
+// that Story 2.4 would replace it with a derive from `lib/methodology-chapters.ts`. That comment is
+// gone because the thing it promised has happened: there is ONE list of chapters in this product,
+// and both this card and `/methodology` read it. Two lists that must agree is the defect
+// `MakerHero`'s bag rows were bitten by three times in one epic; it lived here for exactly one
+// sprint, by design, because Sprint 1 was carved to ship standalone.
 export function MethodologySection() {
   return (
     <section className="band" id="methodology">
@@ -58,7 +45,10 @@ export function MethodologySection() {
           <p className="takeaway">Your project. Not our demo.</p>
 
           <div className="button-row">
-            <RunYourFirstBet label="Explore the methodology" />
+            <Button href="/methodology">
+              Explore the methodology
+              <Icon name="arrow-right" />
+            </Button>
           </div>
         </div>
 
@@ -67,30 +57,23 @@ export function MethodologySection() {
           <h3>From an idea to one shipped, proven Bet</h3>
           <p>Enough theory to make the next decision, then straight back to your product.</p>
           <div className="field-guide__contents">
-            {FIELD_GUIDE_PHASES.map((group, groupIndex) => {
-              // The chapter number is COMPUTED from the group's position, never written down beside
-              // the title. A hand-numbered list is two things that must agree, in the one component
-              // whose comment above is about exactly that — and the numbers are what a reader uses
-              // to find their place, so a wrong one is worse than none.
-              const offset = FIELD_GUIDE_PHASES.slice(0, groupIndex).reduce(
-                (total, previous) => total + previous.chapters.length,
-                0
-              )
-
-              return (
-                <div key={group.phase}>
-                  <p className="field-guide__phase">{group.phase}</p>
-                  <ol className="field-guide__chapters">
-                    {group.chapters.map((title, index) => (
-                      <li key={title}>
-                        <span className="field-guide__n">{String(offset + index + 1).padStart(2, '0')}</span>
-                        {title}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )
-            })}
+            {METHODOLOGY_PHASES.map((phase) => (
+              <div key={phase.id}>
+                <p className="field-guide__phase">{phase.title}</p>
+                <ol className="field-guide__chapters">
+                  {/* The number comes off the chapter itself. Story 1.3 computed it from the
+                      group's position because there was nothing else to read it from; now
+                      `chapter.number` is the single place a chapter's position is stated, so this
+                      card cannot disagree with the route about which chapter is 04. */}
+                  {chaptersInPhase(phase.id).map((chapter) => (
+                    <li key={chapter.id}>
+                      <span className="field-guide__n">{String(chapter.number).padStart(2, '0')}</span>
+                      {chapter.title}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
           </div>
           <p className="field-guide__doctrine">Practice earns doctrine. Reality gets the last word.</p>
         </div>

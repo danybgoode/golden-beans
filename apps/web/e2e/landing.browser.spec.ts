@@ -92,7 +92,7 @@ test('every framed agent window says whether it is real or an illustration', asy
 // Every nav link points at a section that exists. A dead in-page anchor is invisible to a
 // type-checker, silently does nothing when clicked, and is exactly the kind of rot a redesign
 // introduces — the nav was rewritten in the same commit as the section ids it points at.
-test('every nav link resolves to a section on the page', async ({ page }) => {
+test('every nav link resolves to something real', async ({ page, request }) => {
   await page.goto('/')
 
   const hrefs = await page
@@ -105,13 +105,29 @@ test('every nav link resolves to a section on the page', async ({ page }) => {
     // a bare fragment resolves against whatever page it is on — so `href` is no longer a valid CSS
     // selector and `page.locator(href)` would throw. The id is parsed out and asserted directly.
     //
-    // The previous version of this loop asserted `toMatch(/^#/)`, which the root-relative fix broke
-    // outright. Nothing caught it: the `browser` project is not in the blocking gate, so this file
-    // does not run on every PR. Found by Mistral Vibe in round 4 of PR #100 — a reviewer reading
-    // the spec noticed what the pipeline could not.
+    // A previous version asserted `toMatch(/^#/)`, which the root-relative fix broke outright.
+    // Nothing caught it: the `browser` project is not in the blocking gate, so this file does not
+    // run on every PR. Found by Mistral Vibe in round 4 of PR #100 — a reviewer reading the spec
+    // noticed what the pipeline could not.
+    //
+    // ── Renamed from "resolves to a SECTION on the page" (methodology-experience, Story 2.4) ───
+    // That name, and the `toBeTruthy()` on the parsed fragment under it, encoded an assumption
+    // that stopped being true the moment the nav grew its first ROUTE link (`/methodology`): every
+    // entry is an anchor into `/`. The assertion is now on the property both shapes share — a nav
+    // link goes somewhere that exists — checked the way each shape can actually be checked. This
+    // is the same shape as the hero-CTA spec below, deliberately: two specs asserting "goes
+    // somewhere real" should not disagree about what that means.
     const fragment = /#(.+)$/.exec(href)?.[1]
-    expect(fragment, `${href} is not an anchor into the landing page`).toBeTruthy()
-    await expect(page.locator(`#${fragment}`), `#${fragment} has no target on the page`).toHaveCount(1)
+
+    if (fragment) {
+      await expect(page.locator(`#${fragment}`), `#${fragment} has no target on the page`).toHaveCount(1)
+      continue
+    }
+
+    expect(href, 'a nav link must go somewhere').not.toBe('')
+    expect(href, `${href} is neither an anchor nor a root-relative route`).toMatch(/^\//)
+    const res = await request.get(href)
+    expect(res.status(), `${href} is in the nav but does not resolve`).toBe(200)
   }
 })
 

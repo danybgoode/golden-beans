@@ -21,6 +21,13 @@
 // question that belongs after the decision rather than between the proof and the price. /install
 // still carries the connector flow and the footer still links it.
 //
+// ── One section now links OUT of this page (methodology-experience, Story 2.4) ────────────────
+// Every id below is still a section of `/`, and the round-trip assertion below still holds. What
+// changed is that §methodology's CTA is no longer an in-page action: it goes to `/methodology`, a
+// real route with its own six chapter URLs. This registry does not model routes and should not
+// start — `lib/methodology-chapters.ts` is the registry for those, and it keeps the same throwing
+// lookup this file does, for the same reason.
+//
 // ── The ids are also DOM ids, and that is load-bearing ────────────────────────────────────────
 // Every id below is rendered as the `id` attribute of exactly one section element on `/`. That is
 // what `e2e/landing.browser.spec.ts` asserts, and it makes two different rots fail loudly instead
@@ -83,8 +90,9 @@ export const LANDING_SECTIONS: LandingSection[] = [
   {
     id: 'methodology',
     title: 'The way of working behind the product',
-    epic: 'landing-maker-ops',
+    epic: 'methodology-experience',
     status: 'live',
+    note: 'The only section that links OUT of this page: its CTA goes to /methodology, and its chapter list is derived from lib/methodology-chapters.ts rather than written here.',
   },
   {
     id: 'proof',

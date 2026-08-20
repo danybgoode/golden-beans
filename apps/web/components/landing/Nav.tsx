@@ -37,6 +37,12 @@ export function Nav() {
         <Link href="/#ops">Ops</Link>
         <Link href="/#proof">Proof</Link>
         <Link href="/#pricing">Pricing</Link>
+        {/* methodology-experience · Story 2.4 — the first entry here that is a ROUTE rather than a
+            section of `/`. It is last because the other four are the page's own argument in the
+            order it makes it, and this one leaves the page. Root-relative like its siblings, for
+            the same reason recorded above: this nav renders on `/talk` and on `/methodology`
+            itself, and a bare fragment resolves against whatever page it is on. */}
+        <Link href="/methodology">Methodology</Link>
       </div>
       <RunYourFirstBet />
     </nav>
