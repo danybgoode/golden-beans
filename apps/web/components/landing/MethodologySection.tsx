@@ -10,9 +10,17 @@ import { RunYourFirstBet } from './RunYourFirstBet'
 //
 // The section keeps everything that is actually true: the methodology exists, it came out of
 // building this product, and the way to learn it is to run one real Bet on your own project. So the
-// CTA is the page's real one — start — rather than a promise of a document nobody has written. The
-// epic that writes that document adds the link, and that is the moment the claim becomes checkable.
-const steps = ['Orient', 'Shape', 'Bet', 'Route', 'Slice', 'Bound', 'Prove', 'Reconsider', 'Learn']
+// CTA carries the mockup's LABEL ("Explore the methodology") over the page's real DESTINATION —
+// starting a Bet — rather than the mockup's `href="#"`. A button that says "explore" and goes
+// nowhere is the version of this that cannot ship; the epic that writes the document re-points it.
+//
+// ── Three steps, not nine ─────────────────────────────────────────────────────────────────────
+// The field guide listed all nine named moves of the method (Orient · Shape · Bet · Route · Slice ·
+// Bound · Prove · Reconsider · Learn). Nine mono pills at 9.5px is a spec sheet, and a reader
+// scanning a kraft card takes nothing from it. Three is the method's actual shape — decide, run,
+// close — and it is the same three beats the hero's "Bring an idea. Consider it. Operate it." sets
+// up, so the page teaches one vocabulary instead of two.
+const steps = ['Consider', 'Operate', 'Exit']
 
 export function MethodologySection() {
   return (
@@ -29,7 +37,7 @@ export function MethodologySection() {
           <p className="takeaway">Your project. Not our demo.</p>
 
           <div className="button-row">
-            <RunYourFirstBet />
+            <RunYourFirstBet label="Explore the methodology" />
           </div>
         </div>
 

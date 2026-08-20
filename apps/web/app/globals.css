@@ -677,9 +677,16 @@ body {
   font-size: 16px;
 }
 
+/* Gold, not green. These two are the only readings on the landing that were ever
+   painted `--green`, and the page's green ink was removed wholesale in the
+   2026-08-19 readability pass. The NUMBER stays — it is a real measurement off
+   the demo tenant, not chrome — and it keeps a direction: up reads in the data
+   colour every other figure on the page uses, down stays red, and the arrow
+   glyph beside it (`Icon name="trend-up|trend-down"`) carries the direction
+   independently of colour, which `references/ux-guidelines.md` requires anyway. */
 .trend--up,
 .lift--up {
-  color: var(--green);
+  color: var(--gold-hot);
 }
 
 .trend--down,
@@ -723,8 +730,7 @@ body {
   font-weight: 600;
 }
 
-.live-proof__footnote,
-.section-status {
+.live-proof__footnote {
   margin-top: 18px;
 }
 
@@ -830,12 +836,6 @@ body {
 
 .pricing {
   text-align: center;
-}
-
-.pricing__intro {
-  max-width: 560px;
-  margin: 14px auto 0;
-  color: var(--dim);
 }
 
 /* The 760px cap was correct for the two-tier layout this section used to have. The v2 pricing
@@ -2591,9 +2591,17 @@ a.stat-card:hover {
   gap: 12px;
 }
 
-/* The closing CTA centres its copy; `.measure`'s asymmetric margin would pull
-   it off-axis. */
-.center-cta .measure {
+/* Both centred sections need this: `.measure` sets `margin: 12px 0`, which pulls
+   a paragraph off-axis inside a `text-align: center` block.
+
+   §pricing used to carry its own `.pricing__intro` rule for the same job — and it
+   had silently stopped working. `.pricing__intro` is declared ~1400 lines ABOVE
+   `.measure`, both at (0,1,0), so `.measure`'s `margin: 12px 0` won on source
+   order and the intro sat flush left under a centred heading. Its `max-width`
+   lost to `.measure--narrow` the same way. Every declaration in that rule was
+   dead, so the rule is gone and the centring joins the one that already worked. */
+.center-cta .measure,
+.pricing .measure {
   margin-inline: auto;
 }
 
@@ -2694,19 +2702,6 @@ a.stat-card:hover {
   overflow: hidden;
 }
 
-.context-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--line);
-  font: 600 9.5px var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
 .context-body {
   display: grid;
   gap: 8px;
@@ -2724,30 +2719,6 @@ a.stat-card:hover {
   grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
-}
-
-/* ── The platform pills ─────────────────────────────────────────────────────
-   Replace the status chip when a frame is showing "this works wherever you
-   already talk to an agent" rather than "this is/isn't live". */
-.agent-platforms {
-  display: flex;
-  gap: 6px;
-  margin-left: auto;
-}
-
-.platform-pill {
-  padding: 3px 7px;
-  border: 1px solid var(--line);
-  border-radius: 99px;
-  font: 600 9px var(--mono);
-  color: var(--dim);
-  white-space: nowrap;
-}
-
-.platform-pill--active {
-  border-color: var(--gold-deep);
-  background: color-mix(in srgb, var(--gold) 7%, transparent);
-  color: var(--gold-hot);
 }
 
 /* The band's own CTA. It keeps `.btn`'s geometry and the pressed-underside
@@ -2994,19 +2965,6 @@ a.stat-card:hover {
   }
 }
 
-/* Below it, the window bar cannot hold both a title and three pills without one
-   of them wrapping into the other. The TITLE wins: it names what the frame is,
-   and the pills are saying "this works in whichever agent you use" — a claim
-   the hero's own copy makes one column over ("Works with Claude and ChatGPT").
-   Dropping them on a phone loses nothing the reader was not just told.
-   Sprint 2's acceptance called for exactly this and the rule was missing until
-   cross-family review of PR #95 caught it. */
-@media (max-width: 699px) {
-  .agent-platforms {
-    display: none;
-  }
-}
-
 /* ============================================================================
    MATERIAL AND MOTION — landing-frijoles-rebrand · Sprint 3
    ============================================================================
@@ -3056,7 +3014,7 @@ a.stat-card:hover {
     color var(--motion-base) var(--ease-out);
 }
 
-:where(.btn-mini, .platform-pill, .icon-link, .tier, .panel) {
+:where(.btn-mini, .icon-link, .tier, .panel) {
   transition:
     background-color var(--motion-base) var(--ease-out),
     border-color var(--motion-base) var(--ease-out),
@@ -3579,18 +3537,29 @@ a.stat-card:hover {
 .field-guide__steps {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  margin: 18px 0;
+  gap: 8px;
+  margin: 20px 0;
   padding: 0;
   list-style: none;
 }
 
+/* Three pills, not nine. At nine they were a spec sheet and had to be tiny to fit
+   on one kraft card; at three they can be read from across the room, which is what
+   a field guide's contents page is for. `flex: 1` divides the card's width between
+   them so they read as one band rather than three loose chips. */
 .field-guide__steps li {
-  padding: 5px 9px;
+  flex: 1 1 auto;
+  padding: 9px 12px;
   border: 1px solid var(--stamp-dim);
   border-radius: 999px;
-  font: 800 9.5px var(--mono);
-  letter-spacing: 0.08em;
+  font: 800 12px var(--mono);
+  letter-spacing: 0.1em;
+  text-align: center;
+  /* The DOM keeps title case ("Consider") and the uppercase is presentational, so a
+     screen reader announces a word rather than an initialism, and the case can be
+     changed here without editing `MethodologySection`'s array. Do not "fix" this by
+     shouting in the markup. Mistral Vibe, round 4 of PR #102. */
+  text-transform: uppercase;
 }
 
 .field-guide__doctrine {
@@ -3646,12 +3615,20 @@ a.stat-card:hover {
 }
 
 @media (min-width: 900px) {
-  /* tokens.css centres the hero's two columns against each other. That was right when the right
-     column was one object; this hero stacks two (the bag label and the agent window), so centring
-     the shorter left column against it opens ~280px of dead air above the headline — on the one
-     screen that has to land in two seconds. Both columns start together instead. */
+  /* Two corrections to `tokens.css`'s hero grid, which was written for a right
+     column holding ONE object.
+
+     `align-items`: it centres the columns against each other. This hero's right
+     column holds two, so centring the shorter left column against it opens ~280px
+     of dead air above the headline — on the one screen that has to land in two
+     seconds. Both columns start together instead.
+
+     `grid-template-columns`: near-even, as the mockup has them (`1.05fr .95fr`)
+     rather than `1.15fr .85fr`. Two overlapping objects need the width; without it
+     the window covers the bag almost entirely instead of crossing its corner. */
   .hero-grid {
     align-items: start;
+    grid-template-columns: 1.05fr 0.95fr;
   }
 
   .maker-flow {
@@ -3689,13 +3666,41 @@ a.stat-card:hover {
   }
 }
 
+
+/* The mockup's hero type, which is a step up from the rest of the page rather
+   than the page-wide `.display` size. `tokens.css` sets 36/46/54px across three
+   breakpoints; the hero clamps instead, so the headline keeps growing on a wide
+   screen the way it does in the mockup (`clamp(46px, 7vw, 88px)`), while every
+   other `.display` on the page — §start's closing headline — is untouched. */
+.hero .display {
+  font-size: clamp(38px, 6.6vw, 78px);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  margin-bottom: 4px;
+}
+
+.hero .hero-sub {
+  max-width: 620px;
+  font-size: clamp(17px, 1.9vw, 22px);
+  line-height: 1.45;
+}
+
 /* ── The hero's right-hand column ───────────────────────────────────────────
-   The bag label and the agent window, stacked. The mockup overlaps them —
-   absolute positioning, a rotated bag, the window tucked under its corner —
-   which is a composition that only exists at one viewport width and collapses
-   into a pile at every other. Stacked, both objects keep their whole selves at
-   every width, and the `.roundstamp` still overhangs the bag's corner, which is
-   the part of the mockup's arrangement that was actually carrying the charm. */
+   The bag label and the agent window, and the relationship between them is the
+   whole composition: the bag is tilted on the right, the window sits across its
+   bottom-left corner, and the two objects overlap the way they do in
+   `references/golden-frijoles-maker-ops-landing-v0.2.html`.
+
+   The mockup does that with absolute positioning at EVERY width, which on a
+   phone stacks two near-full-width objects on top of each other and buries one.
+   So the overlap is a wide-viewport composition only — see the block below,
+   which is where the breakpoint that governs it is stated. This paragraph named
+   900px, which is `.hero-grid`'s breakpoint and not this composition's; a second
+   copy of a number is a second thing to keep in step, so it names none.
+
+   This file previously argued for stacking at every width. That was a defensible
+   call and it is not the one the page wants: read on a laptop, two stacked
+   rectangles are a list of two things rather than one picture. */
 .hero-magic {
   display: grid;
   gap: 26px;
@@ -3709,11 +3714,116 @@ a.stat-card:hover {
   gap: 8px;
 }
 
+/* ── The overlap ────────────────────────────────────────────────────────────
+   Both objects are placed in the SAME grid cell — the bag pinned to the top-right
+   and tilted, the window across the bottom-left and in front.
+
+   ── This block sits BELOW the base rules on purpose ─────────────────────────
+   It overrides `.hero-magic`'s `gap` and `padding-top` at the same specificity
+   (0,1,0), so source order is the only thing deciding the winner. It was written
+   ABOVE them, which made both of those declarations inert: the base values kept
+   applying at every width and the media query only ever contributed
+   `grid-template-columns`. Caught by Antigravity in cross-family review of PR
+   #102 — and it is the SAME defect this PR fixes in `.pricing__intro`, a rule
+   sitting above its target at equal specificity and silently doing nothing. Two
+   instances of one class in one file is why this names the rule rather than the
+   symptom: anything added here stays below the base block.
+
+   ── Why one grid cell and not two absolutely-positioned children ────────────
+   The first version did use `position: absolute` on both, with a `min-height` on
+   the parent to reserve the row (absolutely-positioned children contribute no
+   height). That number is a guess about how tall the two objects are, and it was
+   wrong at the first width I checked that was not the one I tuned it at: at
+   1024px the window's top landed over the bag's masthead and cut the title in
+   half, because the window grows taller as the column narrows and the
+   `min-height` did not.
+
+   Overlapping in one grid cell removes the guess. The row's height is
+   `max(bag, window + its offset)`, measured rather than declared, so the window's
+   top is always exactly `margin-top` below the bag's — whatever either one's
+   content does. That offset is the composition's one real number: it is set to
+   clear the bag's masthead and first row, which is the part of the packet that
+   has to stay readable.
+
+   Below 1000px both objects return to normal flow and keep their whole selves —
+   the stacked layout this page shipped with. (That sentence read "below 900px"
+   for one commit, naming `.hero-grid`'s breakpoint rather than this one's. Same
+   review round.) */
+@media (min-width: 1000px) {
+  .hero-magic {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding-top: 0;
+  }
+
+  .hero-magic > .baglabel {
+    grid-area: 1 / 1;
+    align-self: start;
+    justify-self: end;
+    width: min(340px, 72%);
+    transform: rotate(2deg);
+    /* Room for what hangs off the bag's top-right corner: the `.roundstamp`
+       (-18px) plus the horizontal spread the 2deg tilt adds to the bounding box.
+       Without it the stamp cleared the wrap's gutter by 0.6px at 1024 and put a
+       horizontal scrollbar on the page — which `e2e/mobile-heuristics.browser.
+       spec.ts` sweeps for, at phone widths where this layout does not apply. */
+    margin-right: 26px;
+  }
+
+  .hero-magic > .hero-window {
+    grid-area: 1 / 1;
+    /* `start`, not `end`. With `end` the window's BOTTOM pins to the row's, so the
+       offset below the bag only equals `margin-top` while the window plus that
+       offset is the taller of the two — and silently grows when the bag is taller.
+       Measured: forcing the bag to 542px slid the offset from 194px to 542px, i.e.
+       the window dropped clear of the bag entirely. With `start` the window's top
+       IS `margin-top` below the row's, unconditionally, which is what the comment
+       above claims. Antigravity, round 3 of PR #102 — and the same defect shape as
+       the two it found in round 2: prose asserting a property the code only had in
+       the case I happened to look at. */
+    align-self: start;
+    justify-self: start;
+    width: min(420px, 82%);
+    /* Clears the bag's title and its first row. */
+    margin-top: 160px;
+    /* In front of the bag: the conversation is the subject, the packet is the
+       thing it is about. */
+    z-index: 1;
+  }
+}
+
+/* ── The bag, with its brand plate removed ──────────────────────────────────
+   `tokens.css` gives `.baglabel .brand` the bag's masthead — a 24px name over a
+   3px rule. That block came out (it read "GOLDEN FRIJOLES · MAKER GRADE" over a
+   logo the nav already carries), which left `.netwt` as the topmost element: a
+   12px mono line where the mockup has a 29px title. So `.netwt` becomes the
+   title it is now standing in for, and keeps the heavy rule under it that used
+   to belong to the plate above. */
+.baglabel .netwt {
+  display: block;
+  padding: 2px 0 12px;
+  border-bottom: 3px solid var(--stamp);
+  font: 900 27px/1.05 var(--sans);
+  font-stretch: 112%;
+  letter-spacing: -0.02em;
+}
+
 /* A row on the bag label that is not yet in the packet. Inline with the
    contents rather than on its own line: the row is one statement, and a badge
    that wraps to its own line reads as a separate claim about the whole bag. */
 .baglabel__badge {
   margin-left: 8px;
+}
+
+/* The mockup's `.note-next`: the panel's last word, in the colour the page uses
+   for "not yet". It is the third statement of the same fact (eyebrow, badge,
+   this) and that repetition is the point — it is the only section on the page
+   describing something that does not exist. */
+.finops-concept__next {
+  margin-top: 10px;
+  color: var(--gold);
+  font: 600 11.5px var(--mono);
+  font-style: normal;
 }
 
 /* ── The Pods booking page (/talk) ──────────────────────────────────────────

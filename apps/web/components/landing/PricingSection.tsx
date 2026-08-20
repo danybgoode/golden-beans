@@ -31,11 +31,16 @@ export function PricingSection() {
 
   return (
     <>
-      <SectionDivider number={4} title="Pricing" />
+      <SectionDivider number={2} title="Pricing" />
       <section className="band" id="pricing">
         <div className="wrap pricing">
           <h2 className="section-title">Pricing that doesn&apos;t require a meeting</h2>
-          <p className="measure measure--narrow pricing__intro">
+          {/* `.pricing__intro` is gone from this list, not just from the stylesheet. Its rule was
+              fully inert (see globals.css) and deleting it left a class name in the markup with
+              nothing behind it — a hook that reads as load-bearing to the next person who greps
+              for it. Everything it meant to do is covered: `.measure--narrow` caps the width and
+              `.pricing .measure` centres it. Mistral Vibe, round 4 of PR #102. */}
+          <p className="measure measure--narrow">
             Start with one project for $0. Bring the rest of the company when they inevitably ask where you
             got the numbers.
           </p>

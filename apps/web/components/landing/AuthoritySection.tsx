@@ -3,7 +3,7 @@ import {
   isResilienceScenariosEnabled,
   isSecuritySimulationsEnabled,
 } from '@/lib/flags'
-import { drillAvailabilitySentence } from '@/lib/maker-ops'
+import { gatedDrillNote } from '@/lib/maker-ops'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
 import { Badge } from '@/components/ui/Badge'
 import { Panel } from '@/components/ui/Panel'
@@ -19,13 +19,16 @@ import { Panel } from '@/components/ui/Panel'
 // in this codebase, shared with the signed-in rail, so the landing and the product cannot drift
 // into two different pictures of the same thing.
 //
-// ── The right-hand panel reads the gates ──────────────────────────────────────────────────────
-// Its whole subject is the drills, and the drills' two gates are OFF in production today (verified
-// by exercising the routes — see `lib/maker-ops.ts`). Describing a rehearsal a reader cannot
-// currently run, without saying so, is the failure CODE-QUALITY #9 names on the surface where it
-// costs most. So the panel keeps its argument — the capability is built, and it is the reason the
-// evidence exists — and states the current position by READING it, so the sentence disappears on
-// its own the day the gates open.
+// ── Both panels still READ their gate; only the prose under them is gone ─────────────────────
+// The drills' two gates are OFF in production today, and so is the connector's write path. Each
+// panel used to carry a computed sentence saying so underneath its activity feed. Those sentences
+// were cut in the readability pass, and the qualification did NOT go with them: each panel's badge
+// is still resolved from the live flag, so a gated capability is still labelled as gated and the
+// label still disappears on its own the day the gate opens (epic D3). What is gone is the second,
+// longer statement of the same fact — not the fact.
+//
+// `e2e/landing.browser.spec.ts` checks this against the real routes rather than against the flag,
+// and it was re-pointed at the badge in the same commit.
 const staged = [
   {
     icon: 'sparkles' as const,
@@ -69,17 +72,15 @@ const rehearsed = [
 ]
 
 export function AuthoritySection() {
-  // Shares `gatedDrillNote` with the Ops panel rather than re-deriving the sentence. Two components
+  // Shares `gatedDrillNote` with the Ops panel rather than re-deriving the answer. Two components
   // making the same claim about the same two flags is two claims to keep in step; the first version
   // hardcoded this one and would have said "no drill can run" while one of them ran. Codex, PR #100.
   const gates = {
     resilienceScenariosEnabled: isResilienceScenariosEnabled(),
     securitySimulationsEnabled: isSecuritySimulationsEnabled(),
   }
-  // The WHOLE sentence, not just its first half — see `drillAvailabilitySentence`. The tail used to
-  // be a constant here and contradicted the computed half whenever exactly one gate was open.
-  const drillSentence = drillAvailabilitySentence(gates)
-  const drillsRunnable = drillSentence === ''
+  // Empty note = every drill can be started, so nothing needs qualifying.
+  const drillsRunnable = gatedDrillNote(gates) === ''
 
   // ── The gate read that retired with PrincipleSection, restored ──────────────────────────────
   // §4 of the page this replaced closed on a sentence that READ this flag: staged writes are live,
@@ -94,23 +95,15 @@ export function AuthoritySection() {
       <div className="wrap">
         <p className="eyebrow">Agents with somewhere to work</p>
         <h2 className="section-title">More than an endpoint</h2>
-        {/* The second sentence was 33 words and four stacked noun phrases, and it landed on "a box
-            you cannot see into" — flagged by both external families, one for the rhythm and one for
-            the dead metaphor. Split, and the metaphor replaced with the actual mechanism rather than
-            with "black box", which is the same cliché wearing a shorter coat. */}
         <p className="measure">
-          Your agents can investigate, propose and act. What they cannot do is act unseen: the context they
-          used, the permission they had and the change they staged are all on the record before anything
-          happens.
+          Your agents can investigate, propose and act. Golden Frijoles keeps the context, permissions,
+          staged changes and evidence visible so autonomy can expand without turning the product into a
+          black box.
         </p>
 
         <div className="authority-grid section-lead">
           <Panel className="authority-card">
-            {writesLive ? (
-              <Badge status="live">Accountable actors</Badge>
-            ) : (
-              <Badge status="next">Built, writes gated</Badge>
-            )}
+            {writesLive ? null : <Badge status="next">Built, writes gated</Badge>}
             <h3>Let agents move, keep the last word</h3>
             <p>
               Scoped credentials, staged actions, explicit approvals and an append-only record. The
@@ -129,25 +122,14 @@ export function AuthoritySection() {
                 </ActivityFeedItem>
               ))}
             </div>
-            <p className="note">
-              {writesLive
-                ? 'Live today: the staged write tools are switched on, and every one of them still needs your explicit confirmation before it applies.'
-                : 'The staged write path is built and deliberately switched off until it is verified end to end — so this page does not claim a live write surface before there is one.'}
-            </p>
           </Panel>
 
           <Panel className="authority-card">
-            {drillsRunnable ? (
-              <Badge status="live">Built for reality</Badge>
-            ) : (
-              <Badge status="next">Built, currently gated</Badge>
-            )}
+            {drillsRunnable ? null : <Badge status="next">Built, currently gated</Badge>}
             <h3>Break glass on purpose</h3>
-            {/* Describes what the capability IS, not what you can do right now. The previous
-                wording ("…let you exercise the product") is a claim about runnability, and the
-                badge and note below it were carrying a qualification the opening sentence had
-                already contradicted. The first sentence is the one a scanning reader takes away.
-                Codex, round 9 of PR #100. */}
+            {/* Describes what the capability IS, not what you can do right now — the badge above
+                carries the runnability qualification, and with the note below it gone this
+                sentence is the only other claim in the panel. Codex, round 9 of PR #100. */}
             <p>
               Flags, circuit breakers, resilience drills and security scenarios exist so a product can be put
               under the unpleasant version of the lesson deliberately, rather than waiting for it to arrive on
@@ -166,7 +148,6 @@ export function AuthoritySection() {
                 </ActivityFeedItem>
               ))}
             </div>
-            {drillsRunnable ? null : <p className="note">{drillSentence}</p>}
           </Panel>
         </div>
       </div>

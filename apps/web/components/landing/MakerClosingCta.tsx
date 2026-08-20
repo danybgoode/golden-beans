@@ -47,7 +47,10 @@ export function MakerClosingCta() {
 
         <div className="center-cta__actions">
           <RunYourFirstBet />
-          <Button href="/#connect" variant="ghost">
+          {/* `/install`, not `/#connect`: the section that anchor pointed at was cut, and /install is
+              where the tokenized connector URL is actually minted — it was the destination all three
+              of that section's buttons had anyway. */}
+          <Button href="/install" variant="ghost">
             Connect your agent
             <Icon name="arrow-right" />
           </Button>

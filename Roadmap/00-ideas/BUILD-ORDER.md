@@ -5,14 +5,15 @@
 
 # Build order — generated status board
 
-> **Generated 2026-08-19 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-08-20 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (1)
+## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [The landing reads at a glance — the maker-ops page, cut down to what it claims](../../02-commercial/landing-readability-pass/README.md) — 02 Commercial · 4/4 stories
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
@@ -45,7 +46,7 @@
 - [Board renders priority where it should render build_order](seeds/build-order-render-fix.md) — Queued · Chore · appetite S · wave-2026-08-08
 - [Git & Releases — a PM-legible picture of what the agent shipped (discovery spike)](seeds/git-and-releases-legibility.md) — Ready · Spike · appetite S
 
-## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (2)
+## ⚠️ Status drift — README frontmatter vs sprint/retro-derived (3)
 
 These epics’ authoritative README-frontmatter `status:` disagrees with what the sprint/retro
 derivation infers. The board trusts the **frontmatter**; a mismatch usually means a close-out
@@ -55,6 +56,7 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 |---|---|---|
 | Scenarios made PM-operable — define, launch, and kill a scenario from the UI | In progress | Shipped |
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
+| The landing reads at a glance — the maker-ops page, cut down to what it claims | In progress | Shipped |
 
 ---
-_Epics: 20 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 21 · seeds in funnel: 3 · status drift: 3. Regenerate with `node scripts/build-order.mjs`._

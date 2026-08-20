@@ -1,6 +1,5 @@
 import { PROJECT_ROUTE_INVENTORY } from '@/lib/project-route-inventory'
 import { ActivityFeedItem } from '@/components/ui/ActivityFeedItem'
-import { Badge } from '@/components/ui/Badge'
 import { FunnelBars } from '@/components/ui/FunnelBars'
 import { StatCard } from '@/components/ui/StatCard'
 import { SurfaceNote } from './SurfaceNote'
@@ -53,7 +52,6 @@ export function OperatingContextSection() {
           <div className="app-shell">
             <div className="app-bar">
               <span>golden frijoles / proyecto-mágico</span>
-              <Badge status="live">One context</Badge>
             </div>
             <div className="operating-body">
               {/* Decorative: this is a picture of navigation, not navigation. Announcing seven

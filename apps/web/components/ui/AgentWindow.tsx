@@ -1,25 +1,20 @@
 import type { ReactNode } from 'react'
 
+// The signature frame device: an agent conversation, framed.
+//
+// ── The bar carries no text, and that is the whole of it now ──────────────────────────────────
+// It used to carry a title, plus EITHER a liveness chip ("connected", "revocable") or a row of
+// platform pills (Claude / ChatGPT / your agent). All three are gone: they were chrome describing
+// the frame rather than content inside it, and the page's honesty label was never in the bar in the
+// first place — it is the `SurfaceNote` above every frame, which is what `e2e/landing.browser.
+// spec.ts` asserts. Removing the bar's text removes a second, weaker answer to "is this real",
+// which is the reason the props are deleted rather than defaulted to empty: an empty chip still
+// renders a bordered pill, and a nullable title is a branch nothing exercises.
 export function AgentWindow({
-  title = 'claude',
-  status = 'connected',
-  // landing-frijoles-rebrand · Sprint 2, Story 2.1 — the platform pills.
-  //
-  // When supplied they REPLACE the status chip rather than sitting beside it, and that is a
-  // deliberate constraint rather than a layout convenience: the chip is where a reader looks to
-  // decide whether a frame is live (which is why landing-redesign-v2 had to stop it reading "via
-  // MCP" over an invented conversation), and a bar carrying both a liveness chip and a set of
-  // platform tabs gives them two answers to one question. The window's honesty label is the
-  // `SurfaceNote` above it, in both shapes.
-  platforms,
   layout = 'feed',
   children,
   className = '',
 }: {
-  title?: string
-  status?: string
-  /** First entry renders as the active tab. Omit for the status-chip form. */
-  platforms?: readonly string[]
   /** `feed` is the tool-call log; `thread` is the chat shape, which owns its own padding. */
   layout?: 'feed' | 'thread'
   children: ReactNode
@@ -33,25 +28,6 @@ export function AgentWindow({
           <span />
           <span />
         </span>
-        {title}
-        {platforms ? (
-          <span className="agent-platforms">
-            {platforms.map((platform, index) => (
-              // Index is part of the key because nothing stops a caller passing the same platform
-              // twice, and the list is static — there is no reorder for a positional key to go
-              // wrong against. Same reasoning as the journey paths
-              // the v2 leverage section used before landing-maker-ops retired it.
-              <span
-                key={`${platform}-${index}`}
-                className={`platform-pill${index === 0 ? ' platform-pill--active' : ''}`}
-              >
-                {platform}
-              </span>
-            ))}
-          </span>
-        ) : (
-          <span className="agent-chip">{status}</span>
-        )}
       </div>
       {layout === 'thread' ? children : <div className="agent-body">{children}</div>}
     </div>

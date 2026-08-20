@@ -16,6 +16,11 @@
 // the new spine — see the epic README's D1 — and their components were deleted in the same commit,
 // which is what keeps this file a description rather than a wish.
 //
+// Two more retired in the 2026-08-19 readability pass — `connect` and `sdk` — under the same rule:
+// components deleted in the same commit as the entries. Both answered "how do I wire this up", a
+// question that belongs after the decision rather than between the proof and the price. /install
+// still carries the connector flow and the footer still links it.
+//
 // ── The ids are also DOM ids, and that is load-bearing ────────────────────────────────────────
 // Every id below is rendered as the `id` attribute of exactly one section element on `/`. That is
 // what `e2e/landing.browser.spec.ts` asserts, and it makes two different rots fail loudly instead
@@ -87,19 +92,6 @@ export const LANDING_SECTIONS: LandingSection[] = [
     epic: 'pod-report',
     status: 'live',
     note: 'Carries BOTH the computed Pod Report and the live demo-tenant engine read.',
-  },
-  {
-    id: 'connect',
-    title: 'Bring your agent',
-    epic: 'commercial-shell',
-    status: 'live',
-    note: 'The tokenized MCP connector URL — CONNECTOR_ENABLED is ON in production.',
-  },
-  {
-    id: 'sdk',
-    title: 'For the engineers who will inevitably ask',
-    epic: 'growth-engine-v1',
-    status: 'live',
   },
   {
     id: 'pricing',

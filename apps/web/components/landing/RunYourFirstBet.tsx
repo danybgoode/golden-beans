@@ -15,10 +15,21 @@ import { Icon } from '@/components/ui/Icon'
 // This IS the page's primary action; a ghost version of it would be a different, softer ask, and the
 // decision to offer one belongs to whoever needs it, along with the reasoning for where. Flagged by
 // Mistral Vibe in round 11 of PR #100.
-export function RunYourFirstBet({ className }: { className?: string }) {
+//
+// `label` IS exercised, by §methodology, and it changes only the words. That section asks the reader
+// to explore the method rather than to start a Bet, and the mockup labels its CTA accordingly — but
+// there is one place a reader can actually do either, so the destination stays this component's and
+// cannot drift out of step with the signup gate.
+export function RunYourFirstBet({
+  className,
+  label = 'Run your first Bet',
+}: {
+  className?: string
+  label?: string
+}) {
   return (
     <Button href={primaryCtaHref(isSignupEnabled())} className={className}>
-      Run your first Bet
+      {label}
       <Icon name="arrow-right" />
     </Button>
   )
