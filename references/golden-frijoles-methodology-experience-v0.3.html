@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Golden Frijoles — Methodology v0.3</title>
+<style>
+:root{--ink:#201a15;--muted:#746a5f;--paper:#f5eddf;--white:#fffdf8;--gold:#e6b64a;--green:#2d6245;--dark:#211813;--line:#d9cdbb;--soft:#eee4d5;--shadow:0 22px 60px rgba(57,40,23,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.58 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}button{font:inherit}
+.topbar{height:62px;border-bottom:1px solid var(--line);background:rgba(245,237,223,.94);backdrop-filter:blur(12px);position:sticky;top:0;z-index:20;display:flex;align-items:center;padding:0 28px}
+.brand{font-weight:900;letter-spacing:-.02em;display:flex;align-items:center}.bean{width:18px;height:12px;border-radius:60% 42%;background:var(--gold);transform:rotate(-25deg);display:inline-block;margin-right:9px}
+.util{margin-left:auto;display:flex;gap:8px;align-items:center}.util button{border:0;background:transparent;padding:8px 10px;border-radius:9px;color:var(--muted);cursor:pointer;font-size:12px;font-weight:750}.util .download{border:1px solid #c9bda9;background:var(--white)}
+.page{display:none}.page.active{display:block}.wrap{max-width:1140px;margin:auto;padding:0 28px}
+.hero{padding:82px 0 48px;display:grid;grid-template-columns:1.15fr .85fr;gap:55px;align-items:end}.kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:900;color:#8c713d}
+h1{font-size:66px;line-height:.98;letter-spacing:-.06em;margin:10px 0 20px;max-width:780px}.hero p{font-size:19px;max-width:670px;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.btn{border:1px solid #bcae99;background:var(--white);padding:12px 17px;border-radius:11px;font-weight:850;cursor:pointer}.btn.gold{background:var(--gold);border-color:var(--gold)}
+.loop{border:1px solid var(--line);background:var(--white);border-radius:21px;padding:21px;box-shadow:var(--shadow)}.direction{background:#fff4d5;border-radius:10px;padding:9px 11px;margin-bottom:8px;font-size:11px;font-weight:850}.phase{padding:13px 0;border-bottom:1px solid var(--soft)}.phase:last-child{border:0}.phase b{display:block;font-size:17px}.phase span{font-size:12px;color:var(--muted)}
+.indexhead{display:flex;justify-content:space-between;align-items:end;padding:14px 0 16px;border-top:1px solid var(--line)}.indexhead h2{font-size:26px;margin:0;letter-spacing:-.03em}.indexhead p{margin:0;color:var(--muted);font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:0 0 78px}.card{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:22px;min-height:220px;box-shadow:var(--shadow);cursor:pointer;transition:.15s transform}.card:hover{transform:translateY(-2px)}.card .num{font:900 10px ui-monospace,monospace;letter-spacing:.12em;color:#a18e7a;margin-top:15px}.card h3{font-size:24px;line-height:1.08;letter-spacing:-.035em;margin:20px 0 9px}.card p{font-size:12px;color:var(--muted)}.card .arrow{margin-top:18px;font-weight:900}.sectiontag{display:inline-flex;padding:4px 7px;border-radius:999px;background:#f1e6d4;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.1em}.sectiontag.operate{background:#e7efe9;color:#376247}.sectiontag.exit{background:#eee6ef;color:#6a4f6b}
+.footerline{border-top:1px solid var(--line);padding:24px 0 42px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between}
+.chapter-shell{display:grid;grid-template-columns:230px minmax(0,1fr) 220px;max-width:1360px;margin:auto}.left{padding:28px 17px;border-right:1px solid var(--line);position:sticky;top:62px;height:calc(100vh - 62px);overflow:auto}.left .back{border:0;background:transparent;font-weight:850;color:var(--muted);cursor:pointer;margin-bottom:23px}.toc-group{margin:18px 0 6px;font-size:9px;text-transform:uppercase;letter-spacing:.15em;font-weight:900;color:#9a8a77}.toc{display:block;width:100%;border:0;background:transparent;text-align:left;padding:7px 9px;border-radius:8px;font-size:12px;color:var(--muted);cursor:pointer}.toc.active{background:#e9ddcb;color:var(--ink);font-weight:850}
+.article{display:none;max-width:760px;width:100%;margin:auto;padding:60px 48px 105px}.article.active{display:block}.chapter-label{font-size:10px;text-transform:uppercase;letter-spacing:.14em;font-weight:900;color:#8c713d}.article h1{font-size:50px;margin:8px 0 15px}.lede{font-size:19px;color:var(--muted);margin-bottom:42px}.article h2{font-size:25px;letter-spacing:-.03em;margin:46px 0 9px}.article p{color:#51483f}.article ul{color:#51483f;padding-left:22px}.article blockquote{font:700 25px/1.35 Georgia,serif;margin:32px 0;padding-left:22px;border-left:3px solid var(--gold)}
+.work{border:1px solid var(--line);border-radius:16px;padding:19px 20px;margin:24px 0;background:var(--white)}.work.gold{background:#fff5d9;border-color:#e3c77f}.work.green{background:#eaf2ec;border-color:#c9ddce}.work.dark{background:var(--dark);border-color:var(--dark);color:#fff}.work.dark p,.work.dark ul{color:#d8ccbf}.work .label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:950;color:#8b7658;margin-bottom:8px}.work.dark .label{color:#d7b85f}
+.prompt{position:relative;background:#171310;color:#f7ead8;border-radius:12px;padding:17px;margin-top:13px;font:11px/1.6 ui-monospace,monospace;white-space:pre-wrap}.copy{position:absolute;right:8px;top:8px;border:1px solid #55483e;background:#2c241e;color:#fff;border-radius:7px;padding:5px 8px;font:700 10px Inter;cursor:pointer}
+.nextchapter{margin-top:56px;border-top:1px solid var(--line);padding-top:24px;display:flex;justify-content:space-between;align-items:center}.nextchapter span{font-size:11px;color:var(--muted)}
+.right{padding:28px 18px;border-left:1px solid var(--line);position:sticky;top:62px;height:calc(100vh - 62px)}.progress-label{font-size:9px;text-transform:uppercase;letter-spacing:.13em;font-weight:900;color:#95836f}.progress{height:4px;background:#dfd3c1;border-radius:4px;margin:10px 0 20px;overflow:hidden}.progress i{display:block;height:100%;background:var(--gold);transition:.2s width}.state{padding:9px 0;border-top:1px solid var(--soft);font-size:11px;display:flex;justify-content:space-between}.done{color:var(--green);font-weight:900}.right p{font-size:11px;color:var(--muted)}
+@media(max-width:980px){.hero{grid-template-columns:1fr}.cards{grid-template-columns:1fr 1fr}.chapter-shell{grid-template-columns:190px 1fr}.right{display:none}}
+@media(max-width:700px){.wrap{padding:0 18px}.hero{padding-top:52px;gap:24px}h1{font-size:46px}.cards{grid-template-columns:1fr}.indexhead{display:block}.indexhead p{margin-top:6px}.chapter-shell{display:block}.left{position:relative;top:0;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:15px 18px}.left .toc-group,.left .toc{display:none}.left .back{margin:0}.article{padding:36px 20px 78px}.article h1{font-size:40px}.util .download{display:none}}
+</style></head>
+<body>
+<header class="topbar"><div class="brand"><span class="bean"></span>Golden Frijoles <span style="color:#9b8b78;font-weight:600;margin-left:8px">/ Methodology</span></div><div class="util"><button onclick="showHome()">Methodology</button><button class="download">Download current edition ↓</button></div></header>
+
+<section id="home" class="page active"><div class="wrap">
+<div class="hero"><div><div class="kicker">Learn by doing</div><h1>Make something real.</h1><p>The Golden Frijoles methodology is a practical way to build products with humans and agents as one operating system. Bring your own project. Use your own agents. Learn the method while you make.</p><div class="actions"><button class="btn gold" onclick="openChapter(1)">Start with a real idea →</button></div></div>
+<div class="loop"><div class="direction">DIRECTION · Your North Star surrounds the loop</div><div class="phase"><b>Consider</b><span>Bring an idea → Shape it → Place the Bet</span></div><div class="phase"><b>Operate</b><span>Build ↔ Prove</span></div><div class="phase"><b>Exit</b><span>Reconsider → Learn</span></div></div></div>
+<div class="indexhead"><div><div class="kicker">Methodology index</div><h2>Six chapters. One real project.</h2></div><p>Read in order the first time. Jump straight to a chapter when you come back.</p></div>
+<div class="cards"><div class="card" onclick="openChapter(1)"><span class="sectiontag ">Consider</span><div class="num">01</div><h3>Bring an idea.</h3><p>Start with something you genuinely want to make, fix, change, or learn. An idea is not yet a commitment.</p><div class="arrow">Read chapter →</div></div><div class="card" onclick="openChapter(2)"><span class="sectiontag ">Consider</span><div class="num">02</div><h3>Shape it.</h3><p>Orient to reality, establish the Outcome and Baseline, fix the Appetite, and find a plausible bounded approach.</p><div class="arrow">Read chapter →</div></div><div class="card" onclick="openChapter(3)"><span class="sectiontag ">Consider</span><div class="num">03</div><h3>Place the Bet.</h3><p>Make the investment decision explicit: Evidence, Displacement, Boundaries, Authority, and whether this is actually worth doing.</p><div class="arrow">Read chapter →</div></div><div class="card" onclick="openChapter(4)"><span class="sectiontag operate">Operate</span><div class="num">04</div><h3>Build it.</h3><p>Route the work, Slice for coherent behavior, and Bound autonomy so humans and agents can operate without losing control.</p><div class="arrow">Read chapter →</div></div><div class="card" onclick="openChapter(5)"><span class="sectiontag operate">Operate</span><div class="num">05</div><h3>Prove it.</h3><p>Separate deterministic verification, independent judgment, and Evidence from reality. Shipping is not proof of Outcome.</p><div class="arrow">Read chapter →</div></div><div class="card" onclick="openChapter(6)"><span class="sectiontag exit">Exit</span><div class="num">06</div><h3>Decide what happens next.</h3><p>Reconsider the Bet from Evidence, then turn Learning into an actual change in how the system behaves.</p><div class="arrow">Read chapter →</div></div></div>
+<div class="footerline"><span>Golden Frijoles Methodology · living edition</span><span>Consider · Operate · Exit</span></div>
+</div></section>
+
+<section id="reader" class="page"><div class="chapter-shell">
+<aside class="left"><button class="back" onclick="showHome()">← Methodology index</button>
+<div class="toc-group">Consider</div>
+<button class="toc" data-ch="1" onclick="openChapter(1)">1 · Bring an idea</button>
+<button class="toc" data-ch="2" onclick="openChapter(2)">2 · Shape it</button>
+<button class="toc" data-ch="3" onclick="openChapter(3)">3 · Place the Bet</button>
+<div class="toc-group">Operate</div>
+<button class="toc" data-ch="4" onclick="openChapter(4)">4 · Build it</button>
+<button class="toc" data-ch="5" onclick="openChapter(5)">5 · Prove it</button>
+<div class="toc-group">Exit</div>
+<button class="toc" data-ch="6" onclick="openChapter(6)">6 · Decide what happens next</button>
+</aside>
+<main id="articles">
+    <article class="article" id="chapter-1">
+      <div class="chapter-label">Consider · Chapter 1</div>
+      <h1>Bring an idea.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[1]</p>
+      <h2>Understand</h2><p>Start with the thing you want to make.</p><p>Do not turn it into tickets. Do not write acceptance criteria. Do not solve it before understanding it.</p><p>An idea is not commitment.</p><p>A possibility worth understanding is an <strong>Opportunity</strong>. That does not mean it deserves investment.</p><div class="work gold"><div class="label">Do this on your project</div><p>Write one real thing you want to make, fix, change, or learn.</p><p>Example:</p><blockquote>I want shops to see which customers look likely to return, without building another giant analytics dashboard.</blockquote><p>Your ask can be messier.</p></div><div class="work dark"><div class="label">Use your agent</div><div class="prompt"><button class="copy" onclick="copyPrompt(this)">Copy</button>Help me groom this ask:
+
+[DESCRIBE WHAT YOU WANT TO MAKE, CHANGE, FIX, OR EXPLORE]
+
+Before shaping it, read the project agents and ways of working, review relevant learnings, and skim team memory so you understand the context first.</div></div><div class="work green"><div class="label">Look for</div><p>The agent should understand the project before producing a solution. Useful orientation may surface what already exists, architecture, current behavior, prior decisions, constraints, relevant learnings, contradictions, and missing information.</p><p>If the first response is merely a confident implementation plan, orientation failed.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>Before creating, orient.</strong></p><p>Agents make plausible implementation cheap. Golden Frijoles makes context and coherence part of the work so makers can build more without multiplying avoidable mistakes.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>NEXT · CONSIDER</span><br><strong>2. Shape it</strong></div><button class="btn gold" onclick="openChapter(2)">Continue →</button></div>
+    </article>
+    
+
+    <article class="article" id="chapter-2">
+      <div class="chapter-label">Consider · Chapter 2</div>
+      <h1>Shape it.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[2]</p>
+      <h2>Understand</h2><p>Shaping asks:</p><blockquote><strong>How much is this Opportunity worth to us?</strong></blockquote><p>The answer is the <strong>Appetite</strong>.</p><p>Appetite constrains the solution. The imagined solution does not dictate the investment.</p><p>A useful Appetite is exhaustible. When it is consumed, the operation must reconsider rather than silently expand.</p><div class="work gold"><div class="label">Do this on your project</div><p>Continue Groom. Work through the questions that require judgment.</p><p>By the end, the Bet candidate should make these things legible:</p><p><strong>Opportunity</strong> --- what possibility are we considering?</p><p><strong>Outcome</strong> --- what meaningful change in reality do we intend to cause?</p><p><strong>Baseline</strong> --- what is true before the change?</p><p><strong>Appetite</strong> --- how much attention, elapsed time, execution, compute, money, review burden, operational risk, or disruption is this worth?</p><p><strong>Approach</strong> --- what plausible path fits inside the investment?</p><p><strong>Boundaries</strong> --- what are we deliberately not solving?</p><p><strong>Evidence</strong> --- what would justify the claims we expect to make?</p><p><strong>Displacement</strong> --- what receives less investment because we choose this?</p><p><strong>Risk and Authority</strong> --- what consequences matter, and who may authorize them?</p><p>Do not fill fields merely because they exist. The point is the investment decision.</p></div><div class="work"><div class="label">This part is yours</div><p>Your agent can orient, research, synthesize, challenge, propose, and model tradeoffs.</p><p>It cannot own consequential judgment merely because it can produce an answer.</p><p><strong>Capability does not imply Authority.</strong></p><p>You decide what the Opportunity is worth.</p></div><div class="work green"><div class="label">Look for</div><p>A shaped Bet should be bounded enough to operate but open enough to discover implementation.</p><p>Avoid both &quot;Improve retention&quot; and a giant implementation specification produced before discovery.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>Fix the investment before designing the solution.</strong></p><p>Shape creates a plausible bounded investment decision; it does not predict the future.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>NEXT · CONSIDER</span><br><strong>3. Place the Bet</strong></div><button class="btn gold" onclick="openChapter(3)">Continue →</button></div>
+    </article>
+    
+
+    <article class="article" id="chapter-3">
+      <div class="chapter-label">Consider · Chapter 3</div>
+      <h1>Place the Bet.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[3]</p>
+      <h2>Understand</h2><p>A scaffold is not commitment. A well-shaped idea can still deserve a <strong>no</strong>.</p><p>The Bet is the unit of strategic commitment.</p><div class="work gold"><div class="label">Do this on your project</div><p>Review the Bet.</p><p>Ask: - Does the Opportunity matter? - Is the Outcome a change in reality rather than merely an Output? - Is the Appetite explicit and exhaustible? - Could the Evidence actually justify the claim? - What is displaced? - What Authority are we granting? - Where must autonomous action stop?</p><p><strong>Nothing is prioritized until something else is displaced.</strong></p></div><div class="work"><div class="label">This part is yours</div><p>Place the Bet only if the investment is justified.</p><p>&quot;Do not build this&quot; can be the correct result of shaping. Preventing unjustified investment is progress.</p></div><div class="work green"><div class="label">Look for</div><p>The placed Bet should carry enough coherence for decentralized execution without constant central coordination.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>Bounded bets over endless backlogs.</strong></p><p>A Bet is not a promise that the thesis is right. It is a bounded commitment to find out.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>NEXT · OPERATE</span><br><strong>4. Build it</strong></div><button class="btn gold" onclick="openChapter(4)">Continue →</button></div>
+    </article>
+    
+
+    <article class="article" id="chapter-4">
+      <div class="chapter-label">Operate · Chapter 4</div>
+      <h1>Build it.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[4]</p>
+      <h2>Understand</h2><p>Once the Bet is placed, the question changes.</p><p>You are deploying the investment against reality.</p><p>The learner-facing rule is:</p><blockquote><strong>Build one coherent piece at a time.</strong></blockquote><p>Three deeper practices sit inside Build: <strong>Route · Slice · Bound</strong>.</p><p>They are practices, not ceremonies.</p><h2>Route</h2><p><strong>Route uncertainty upward. Route certainty outward.</strong></p><p>High-uncertainty or consequential work may require human judgment, a reasoning/coordinating agent, adversarial review, or explicit Authority.</p><p>Well-understood reversible execution can move outward to bounded execution agents or deterministic systems.</p><p>Assign work according to cognition and Authority, not job title.</p><h2>Slice</h2><p>Do not default to frontend/backend/database decomposition when none can independently demonstrate useful behavior.</p><p><strong>Slice for coherent behavior.</strong></p><p>A Slice is a coherent piece of the Bet that can be independently owned, integrated, and verified.</p><div class="work gold"><div class="label">Do this on your project</div><p>Ask the project agent to identify the smallest coherent Slice that materially reduces uncertainty or creates usable behavior.</p><p>Build it. Integrate it. Prove what can already be proved. Then choose the next Slice.</p></div><h2>Bound</h2><p>A Boundary answers:</p><blockquote><strong>Where must autonomous action stop or escalate?</strong></blockquote><p>It may cover Appetite, solution limits, WIP, merge/release behavior, flags, production access, spend, security consequences, irreversible actions, and human authorization.</p><p><strong>Autonomy expands with reversibility and contracts with consequence.</strong></p><div class="work"><div class="label">This part is yours</div><p>Do not micromanage reversible execution merely to feel in control.</p><p>Do not grant consequential Authority merely because an agent is capable of exercising it.</p></div><div class="work green"><div class="label">Look for</div><p>Healthy operation makes visible what is being attempted, what remains uncertain, what has been integrated, what Evidence exists, what boundary was reached, and what decision needs a human.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>Centralize coherence. Decentralize execution.</strong></p><p>The Bet carries coherence. Bounded agents carry execution. Humans concentrate on decisions that actually require them.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>NEXT · OPERATE</span><br><strong>5. Prove it</strong></div><button class="btn gold" onclick="openChapter(5)">Continue →</button></div>
+    </article>
+    
+
+    <article class="article" id="chapter-5">
+      <div class="chapter-label">Operate · Chapter 5</div>
+      <h1>Prove it.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[5]</p>
+      <h2>Understand</h2><p>Prove is not &quot;after Build.&quot; It happens throughout Build.</p><p><strong>Claims require Evidence proportional to their consequences.</strong></p><p>Use three questions.</p><h2>Did we build it correctly?</h2><p>Use deterministic verification where the fact is knowable: tests, type checks, linting, schema validation, build checks, reproducible assertions.</p><p><strong>Never ask judgment to do the work of determinism.</strong></p><h2>Is it good enough?</h2><p>Some claims require judgment: UX quality, coherence, architectural fitness, copy quality, whether the result solves the shaped problem.</p><p>Use genuinely independent review where independence matters.</p><p>Another agent repeating the author&#x27;s reasoning is not automatically independent Evidence.</p><p><strong>Confidence comes from independent Evidence, not repeated agreement.</strong></p><h2>Did it work in reality?</h2><p>Shipping proves something became real. It does not prove the Outcome occurred.</p><p>Look for Evidence where the claim lives: customer behavior, runtime behavior, production telemetry, business results, observed workflow changes, or direct experiential verification.</p><div class="work gold"><div class="label">Do this on your project</div><p>Write down the claims you expect to make about the current Slice or Bet.</p><p>For each ask:</p><blockquote><strong>What Evidence would actually justify saying this is true?</strong></blockquote><p>Then obtain it.</p></div><div class="work"><div class="label">This part is yours</div><p>Where consequence requires human authorization, an agent cannot turn Evidence into permission by itself. Risk acceptance and accountability remain Authority decisions.</p></div><div class="work green"><div class="label">Look for</div><p>Keep these distinct:</p><p><strong>Output</strong> --- what changed.</p><p><strong>Evidence</strong> --- what we observed.</p><p><strong>Outcome</strong> --- the change in reality we hoped to cause.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>Done means shipped and verified, not merged.</strong></p><p>Progress is reduction of meaningful uncertainty through Evidence. Conclusive Evidence that tells you to stop is progress.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>NEXT · EXIT</span><br><strong>6. Decide what happens next</strong></div><button class="btn gold" onclick="openChapter(6)">Continue →</button></div>
+    </article>
+    
+
+    <article class="article" id="chapter-6">
+      <div class="chapter-label">Exit · Chapter 6</div>
+      <h1>Decide what happens next.</h1>
+      <p class="lede">{
+        1:"Start with one real thing you want to make. The methodology begins in your project, not in a workbook.",
+        2:"Turn a rough idea into a plausible investment without pretending you already know the solution.",
+        3:"Make the investment decision explicit. A scaffold is not commitment until the right Authority places the Bet.",
+        4:"Turn the Bet into real behavior through bounded human-agent operation.",
+        5:"Establish Evidence continuously. Shipping proves something changed; it does not prove the Outcome.",
+        6:"Use Evidence to decide what the Bet deserves now, then change the system based on what reality taught you."
+      }[6]</p>
+      <h2>Understand</h2><p>A Bet does not earn continued investment because you already placed it.</p><p>Exit means ending the current investment decision, not deleting the capability produced by it.</p><p>Begin with Evidence:</p><blockquote><strong>Knowing what we know now, would we still make this Bet with the Appetite remaining?</strong></blockquote><div class="work gold"><div class="label">Do this on your project</div><p>Make one explicit judgment.</p><p><strong>Continue</strong> --- thesis holds and remaining Appetite justifies continuing.</p><p><strong>Change</strong> --- Opportunity matters, but approach or Boundaries should change.</p><p><strong>Reduce</strong> --- remaining value justifies a smaller investment.</p><p><strong>Increase</strong> --- new Evidence justifies deliberately increasing Appetite. This is a new investment judgment, not silent expansion.</p><p><strong>Exit</strong> --- stop the current investment.</p><p>Success, failure, and conclusive negative Evidence can all justify Exit.</p></div><h2>Learn</h2><p>Ask:</p><blockquote>What did reality teach us?</blockquote><p>Then:</p><blockquote><strong>What changes because of it?</strong></blockquote><p>A Learning can change project instructions, guardrails, an agent skill, architecture, verification requirements, operating heuristics, Direction, a future Bet, or something the organization stops doing.</p><p>If nothing changes, you recorded an observation.</p><div class="work green"><div class="label">Look for</div><p>The system should behave differently next time.</p><p>That is Evidence that the lesson survived the conversation in which it was discovered.</p></div><div class="work"><div class="label">What you just learned</div><p><strong>A lesson is not learned until the system behaves differently.</strong></p><p>Golden Frijoles compounds when each completed Bet improves the system that will operate the next one.</p><p>------------------------------------------------------------------------</p></div>
+      <div class="nextchapter"><div><span>YOU COMPLETED THE LOOP</span><br><strong>Better operation is the test.</strong></div><button class="btn gold" onclick="showHome()">Back to methodology →</button></div>
+    </article>
+    </main>
+<aside class="right"><div class="progress-label">Your progress</div><div class="progress"><i id="progressBar"></i></div><div class="state"><span>Read</span><span class="done">✓</span></div><div class="state"><span>Tried</span><span>○</span></div><div class="state"><span>Produced</span><span>○</span></div><p style="margin-top:22px"><strong>Produced means something real changed.</strong><br><br>The methodology is learned through your project. Scrolling does not count.</p></aside>
+</div></section>
+
+<script>
+function showHome(){document.getElementById('home').classList.add('active');document.getElementById('reader').classList.remove('active');scrollTo(0,0)}
+function openChapter(n){document.getElementById('home').classList.remove('active');document.getElementById('reader').classList.add('active');document.querySelectorAll('.article').forEach(a=>a.classList.toggle('active',a.id==='chapter-'+n));document.querySelectorAll('.toc').forEach(t=>t.classList.toggle('active',t.dataset.ch==n));document.getElementById('progressBar').style.width=(n/6*100)+'%';scrollTo(0,0)}
+function copyPrompt(b){let text=b.parentElement.innerText.replace('Copy','').trim();navigator.clipboard?.writeText(text);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1000)}
+openChapter(1);showHome();
+</script>
+</body></html>
