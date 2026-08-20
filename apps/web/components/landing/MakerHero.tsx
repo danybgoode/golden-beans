@@ -101,7 +101,7 @@ export function MakerHero() {
             </Button>
           </div>
 
-          <p className="micro">Bring an idea. Consider it. Operate it. Learn from it.</p>
+          <p className="micro">Bring an idea. Consider it. Operate it. Exit on the Evidence.</p>
         </div>
 
         <div className="hero-magic">
@@ -143,7 +143,7 @@ export function MakerHero() {
           <div className="hero-window">
             <AgentWindow layout="thread">
               <ChatThread>
-                <ChatBubble actor="user">I want onboarding to feel instant. Help me shape it.</ChatBubble>
+                <ChatBubble actor="user">I want onboarding to feel instant. Help me design it.</ChatBubble>
                 <ChatBubble actor="agent">
                   I read your North Star, your activation journey and the last two weeks of signals. The drop
                   is before first value, not at account creation.
