@@ -486,57 +486,77 @@ test("the authority panel's gate claim matches the real route state", async ({ p
 // So this asserts the OUTCOME a reader with the preference set actually gets, which is the thing
 // that must hold however the stylesheet is organised. Run under Playwright's `reducedMotion`
 // emulation rather than by reading the sheet: a rule out-specified by a later one still reads fine.
-test('with reduced motion requested, nothing animates, transitions, or smooth-scrolls', async ({ page }) => {
-  // `page.emulateMedia` rather than `test.use({ reducedMotion })`: the fixture form sets the option
-  // on the browser CONTEXT, and this project's context is already built from `devices['Desktop
-  // Chrome']` in playwright.config.ts — the override did not reach the page here (observed: the
-  // media query stayed false and `scroll-behavior` stayed `smooth`, while the same emulation applied
-  // directly returns `auto`). Emulating on the page is unambiguous and asserted below by checking
-  // the media query itself, so this can never silently test the wrong mode.
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
+// ── Every route with motion on it, not just `/` (methodology-experience, Sprint 2) ─────────────
+// This covered `/` alone, which was the whole product's motion surface when it was written. The
+// methodology routes added transitions of their own (the index cards, the prev-link), and a rule
+// that never gets the preference applied to it is a rule nobody has checked.
+//
+// A row in an array, deliberately the same shape as `PUBLIC_MOBILE_ROUTES` in
+// `mobile-heuristics.browser.spec.ts`: covering the next route costs one line, which is what stops
+// coverage from stalling at whatever existed the day the spec was written.
+//
+// Antigravity raised this in round 3 of PR #105 as "the reduced-motion block is no longer the final
+// block in the stylesheet". That conclusion is wrong — `globals.css` says in its own comment that
+// everything the motion tokens drive is switched off AT THE SOURCE by zeroing the tokens, so a rule
+// added later needs no edit there and order does not matter. But the observation underneath it was
+// right: this PR added motion, and nothing was asserting the outcome on the routes carrying it.
+const MOTION_ROUTES = ['/', '/methodology', '/methodology/design-it'] as const
 
-  const motion = await page.evaluate(() => {
-    const root = getComputedStyle(document.documentElement)
-    // Every element still carrying motion, by class — the question is "does anything move", not
-    // "does this one control move".
-    //
-    // ── Transitions and animations are counted SEPARATELY, and that is the point ────────────────
-    // The first version tested `hasDuration && animationName !== 'none'`, one predicate joined by
-    // AND. Every element with a live TRANSITION and no animation — which is every control on this
-    // page — has `animationName: 'none'`, so the transition half of the assertion could never fire
-    // and the "nothing transitions" guarantee was untested. The spec would have passed with every
-    // hover transition intact. Caught in cross-family review of PR #95, and it is the same failure
-    // this spec was written to catch one round earlier: a guard that looks like coverage and is not.
-    const seconds = (value: string) => value.split(',').map((part) => parseFloat(part) || 0)
-    const moving: string[] = []
-    for (const node of document.querySelectorAll('*')) {
-      const style = getComputedStyle(node)
-      const label = `${node.tagName.toLowerCase()}.${(node.className || '').toString().split(' ')[0]}`
-      if (seconds(style.transitionDuration).some((d) => d > 0)) moving.push(`${label} (transition)`)
-      // An animation only counts when one is actually named — `animation-duration` reports a
-      // non-zero default on elements that declare no animation at all.
-      if (style.animationName !== 'none' && seconds(style.animationDuration).some((d) => d > 0)) {
-        moving.push(`${label} (animation)`)
+for (const route of MOTION_ROUTES)
+  test(`with reduced motion requested, nothing on ${route} animates, transitions, or smooth-scrolls`, async ({
+    page,
+  }) => {
+    // `page.emulateMedia` rather than `test.use({ reducedMotion })`: the fixture form sets the option
+    // on the browser CONTEXT, and this project's context is already built from `devices['Desktop
+    // Chrome']` in playwright.config.ts — the override did not reach the page here (observed: the
+    // media query stayed false and `scroll-behavior` stayed `smooth`, while the same emulation applied
+    // directly returns `auto`). Emulating on the page is unambiguous and asserted below by checking
+    // the media query itself, so this can never silently test the wrong mode.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const response = await page.goto(route)
+    expect(response?.status(), `${route} did not render`).toBe(200)
+
+    const motion = await page.evaluate(() => {
+      const root = getComputedStyle(document.documentElement)
+      // Every element still carrying motion, by class — the question is "does anything move", not
+      // "does this one control move".
+      //
+      // ── Transitions and animations are counted SEPARATELY, and that is the point ────────────────
+      // The first version tested `hasDuration && animationName !== 'none'`, one predicate joined by
+      // AND. Every element with a live TRANSITION and no animation — which is every control on this
+      // page — has `animationName: 'none'`, so the transition half of the assertion could never fire
+      // and the "nothing transitions" guarantee was untested. The spec would have passed with every
+      // hover transition intact. Caught in cross-family review of PR #95, and it is the same failure
+      // this spec was written to catch one round earlier: a guard that looks like coverage and is not.
+      const seconds = (value: string) => value.split(',').map((part) => parseFloat(part) || 0)
+      const moving: string[] = []
+      for (const node of document.querySelectorAll('*')) {
+        const style = getComputedStyle(node)
+        const label = `${node.tagName.toLowerCase()}.${(node.className || '').toString().split(' ')[0]}`
+        if (seconds(style.transitionDuration).some((d) => d > 0)) moving.push(`${label} (transition)`)
+        // An animation only counts when one is actually named — `animation-duration` reports a
+        // non-zero default on elements that declare no animation at all.
+        if (style.animationName !== 'none' && seconds(style.animationDuration).some((d) => d > 0)) {
+          moving.push(`${label} (animation)`)
+        }
       }
-    }
-    return {
-      queryMatches: matchMedia('(prefers-reduced-motion: reduce)').matches,
-      scrollBehavior: root.scrollBehavior,
-      motionBase: root.getPropertyValue('--motion-base').trim(),
-      motionQuick: root.getPropertyValue('--motion-quick').trim(),
-      moving: [...new Set(moving)].slice(0, 10),
-    }
-  })
+      return {
+        queryMatches: matchMedia('(prefers-reduced-motion: reduce)').matches,
+        scrollBehavior: root.scrollBehavior,
+        motionBase: root.getPropertyValue('--motion-base').trim(),
+        motionQuick: root.getPropertyValue('--motion-quick').trim(),
+        moving: [...new Set(moving)].slice(0, 10),
+      }
+    })
 
-  // Asserted FIRST: if the emulation ever stops reaching the page, everything below passes
-  // vacuously and this spec becomes the thing it exists to prevent.
-  expect(motion.queryMatches, 'the reduced-motion emulation must actually reach the page').toBe(true)
-  expect(motion.scrollBehavior, 'smooth scrolling must be off').toBe('auto')
-  expect(motion.motionBase, 'the motion tokens are zeroed at the source').toBe('0ms')
-  expect(motion.motionQuick).toBe('0ms')
-  expect(motion.moving, `these still animate: ${motion.moving.join(', ')}`).toEqual([])
-})
+    // Asserted FIRST: if the emulation ever stops reaching the page, everything below passes
+    // vacuously and this spec becomes the thing it exists to prevent.
+    expect(motion.queryMatches, 'the reduced-motion emulation must actually reach the page').toBe(true)
+    expect(motion.scrollBehavior, 'smooth scrolling must be off').toBe('auto')
+    expect(motion.motionBase, 'the motion tokens are zeroed at the source').toBe('0ms')
+    expect(motion.motionQuick).toBe('0ms')
+    expect(motion.moving, `${route}: these still animate: ${motion.moving.join(', ')}`).toEqual([])
+  })
 
 // ── landing-maker-ops · Sprint 4, Story 4.1 ─────────────────────────────────────────────────────
 

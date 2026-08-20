@@ -4304,7 +4304,20 @@ a.stat-card:hover {
 .methodology-prev-link__icon {
   /* The shared arrow-right glyph, pointed back at the previous chapter. A CSS transform, not a
      second icon: the drift guard's SVG-icon rule (Icon.tsx's own header note) is about avoiding a
-     second glyph library, not about which way one arrow happens to point. */
+     second glyph library, not about which way one arrow happens to point. There is no `arrow-left`
+     in the curated set (down/right/up only), and growing a shared registry for one call site is
+     the wrong trade.
+
+     `display` is set explicitly, and that is the point of this line. `transform` does not apply to
+     non-replaced INLINE elements, so this rule's correctness otherwise depends on facts about its
+     container — that `Icon` renders an `<svg>`, and that `.methodology-prev-link` is `inline-flex`
+     so the icon is a flex item. Both are true today and neither is stated anywhere near here.
+     Antigravity raised this twice (rounds 2 and 3 of PR #105); it was right both times that the
+     rule rested on an assumption, and wrong both times that the arrow renders forwards — it does
+     not, verified by screenshot. A finding raised twice after a well-argued rejection is the prompt
+     to find a third option rather than to restate the argument (LEARNINGS), and the third option is
+     one declaration that removes the assumption instead of documenting it. */
+  display: inline-block;
   transform: rotate(180deg);
 }
 
