@@ -4028,12 +4028,23 @@ a.stat-card:hover {
   background: var(--card);
   box-shadow: var(--elevation-raised);
   color: inherit;
-  transition: transform var(--motion-quick) var(--ease-out);
+  /* Colour and border only. The motion architecture at the top of this file is
+     explicit that hover feedback must never change GEOMETRY — a control that
+     moves on hover reflows its neighbours and the page twitches — and reserves
+     `transform` for the press, where the movement is the point. This card had
+     `transform: translateY(-2px)` on hover, which is that rule broken in the
+     file that states it (Antigravity, round 1 of PR #105). */
+  transition: border-color var(--motion-base) var(--ease-out);
 }
 
+/* The same hover `a.stat-card` already uses — border only, `--gold`. A linked
+   card in this design system has one hover treatment, and this is it; the first
+   draft of this fix invented `--gold-line` and `--card-hover`, neither of which
+   is a token (CODE-QUALITY #1: reuse the seam, and never hand-pick a value the
+   system already names). */
 .methodology-card:hover {
   color: inherit;
-  transform: translateY(-2px);
+  border-color: var(--gold);
 }
 
 .methodology-card__num {
@@ -4194,8 +4205,23 @@ a.stat-card:hover {
   text-transform: uppercase;
 }
 
-.work p,
-.work li {
+/* A FLOOR, not a ceiling — `:where()` on both halves, so this rule carries zero
+   specificity and any class inside a work card steps over it.
+
+   It was `.work p, .work li` at (0, 1, 1), which silently outranked
+   `.methodology-lead-line` at (0, 1, 0): every "What you just learned" card
+   rendered its takeaway sentence in `--dim`, identical to the body text around
+   it, in the one card whose entire job is to state the point. Nothing errored
+   and every call site looked correct — which is exactly the entry already in
+   LEARNINGS about `.panel p` beating `.takeaway`. Same defect, same file, one
+   epic later; found by Antigravity reading globals.css alone, and confirmed by
+   reading the COMPUTED colour off the rendered page (rgb(184,168,136) — `--dim`)
+   rather than by re-reading the selector.
+
+   Raising the lead line's specificity to match would have been the fix that
+   makes it worse: the next class added inside a work card inherits the same
+   trap. */
+:where(.work) :where(p, li) {
   color: var(--dim);
 }
 
@@ -4255,6 +4281,16 @@ a.stat-card:hover {
   margin-bottom: 18px;
   color: var(--dim);
   font-size: 13px;
+  transition: color var(--motion-base) var(--ease-out);
+}
+
+/* It had no hover or focus colour at all, so the one control above the article
+   gave less pointer feedback than every link below it. Colour only — same
+   motion rule as the cards. The focus RING still comes from the site-wide
+   `:focus-visible` rail; this is the colour that goes with it. */
+.methodology-prev-link:hover,
+.methodology-prev-link:focus-visible {
+  color: var(--crema);
 }
 
 .methodology-prev-link__icon {
