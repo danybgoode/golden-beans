@@ -13,7 +13,7 @@
 ## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 7/17 stories · risk: Low · wave-2026-08-20
+- [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 11/18 stories · risk: Low · wave-2026-08-20
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 

@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 3: The reading experience
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review — all four stories built and gated locally
 **Branch:** `feat/methodology-experience-s3` (cut from `feat/methodology-experience-s2`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -19,7 +19,7 @@
 
 ## Stories
 
-### Story 3.1 — The chapter shell
+### Story 3.1 — The chapter shell  ✅ `d9c5d11`
 
 **As a** reader working through the method, **I want** to see where I am and jump between chapters
 without going back to the index, **so that** six chapters read as one guide rather than six pages.
@@ -38,7 +38,7 @@ without going back to the index, **so that** six chapters read as one guide rath
 - Every rule lands in `globals.css` and resolves from tokens (epic D1).
 **Risk:** LOW
 
-### Story 3.2 — The work-block family as primitives
+### Story 3.2 — The work-block family as primitives  ✅ `1990c00` + `c23815e`
 
 **As a** reader, **I want** "do this", "use your agent", "look for" and "what you just learned" to be
 visually distinct, **so that** I can tell the instruction from the explanation while skimming.
@@ -128,7 +128,7 @@ finding named a hazard class, and a class outlives the instance that prompted it
 describes a **hazard** rather than a defect, the useful question is not "is this broken today" but
 "what would have to be added for this to break", and this epic added it within the hour.
 
-### Story 3.3 — The Apple-materials pass, with its fallbacks
+### Story 3.3 — The Apple-materials pass, with its fallbacks  ✅ `e512bf4`
 
 **As a** reader, **I want** the methodology to feel materially different from the sales page, **so
 that** I know I have moved from being sold to, to being taught — **and as a** reader with reduced
@@ -151,7 +151,7 @@ transparency or increased contrast turned on, **I want** it to stay legible.
   budget is spent, stop, ship 3.1 + 3.2 without it, and say so in the PR.
 **Risk:** LOW
 
-### Story 3.4 — Real progress, or no progress
+### Story 3.4 — Real progress, or no progress  ✅ `ce80701`
 
 **As a** returning reader, **I want** the page to show what I have actually read, **so that** the
 progress rail is information rather than decoration.
