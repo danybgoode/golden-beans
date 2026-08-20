@@ -15,7 +15,8 @@ them. They exist so a reviewer can check a claim against what it came from.
 
 **Attribution.** The North Star Framework is Amplitude's; *The North Star Playbook* is by John
 Cutler and Jason McBride. The canonical path is `amplitude.com/resources/north-star-playbook`
-(verified 200 on 2026-08-20 — the obvious guess, `amplitude.com/north-star-playbook`, is a 404).
+— fetched 2026-08-20 and returns **200**. The obvious guess, `amplitude.com/north-star-playbook`,
+returns **404**; it is recorded here so nobody "corrects" the path back to it.
 The shipped document credits them once, near the top, per epic D6.
 
 ## Where each element came from

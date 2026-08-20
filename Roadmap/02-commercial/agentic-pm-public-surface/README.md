@@ -301,9 +301,32 @@ find it, and the invariant becomes *stronger* rather than weaker: every absolute
 document is ours, with no exception to remember. A new spec asserts the citation is still present
 and still scheme-less, so "scheme-less" cannot quietly decay into "dropped".
 
-**The path was fetched before it shipped.** `amplitude.com/resources/north-star-playbook` returns
-200; `amplitude.com/north-star-playbook`, the obvious guess, is a **404**. A public surface citing
-a dead link is worse than one citing none.
+**Both candidate paths were fetched before this shipped.** `amplitude.com/resources/north-star-playbook`
+returns **200** and is what ships. `amplitude.com/north-star-playbook` — the obvious guess, and
+what an unchecked citation would have used — returns **404**. A public surface citing a dead link
+is worse than one citing none.
+
+**Challenged in review, and triaged rather than reversed (Codex, PR #111 round 2 — Blocking).**
+The finding is correct on its face: a bare `amplitude.com/...` string is Markdown text, not a
+Markdown hyperlink, so Story 1.2's *"with a link"* is not literally satisfied. It is answered rather
+than fixed, for three reasons stated here so the next reader sees a decision instead of a shortcut:
+
+1. **The alternative is worse.** Making it a real hyperlink means a second `https://` host, which
+   fails a safety pin — and the build contract's rule is that a failing pin means a dropped
+   property. A reviewer who later finds that pin relaxed has no way to tell a citation from a
+   wrong-environment URL, which is the exact thing it exists to catch.
+2. **This document's reader is a model, not a browser.** It is served as `text/markdown` to an
+   agent that was told to fetch it. For that reader the anchor syntax carries nothing the URL text
+   does not; the locator is complete either way.
+3. **Nothing is hidden.** The path is exact, verified 200, and pinned by a spec so it cannot decay
+   into "dropped".
+
+**This is nevertheless a deviation from a locked acceptance criterion, and amending one is the
+product owner's call, not a documentation task** (LEARNINGS, 2026-08-10). Flagged for Daniel by
+name at epic close. If he wants a true hyperlink, the honest way to get it is to widen the pin
+deliberately — to *"every `https://` URL is either `getSiteUrl()`'s host or one of a named
+allow-list"* — which keeps the property real while making room for citations. That is a change to
+a safety assertion and therefore his decision, not one to make inside a copy sprint.
 
 ## Scope
 

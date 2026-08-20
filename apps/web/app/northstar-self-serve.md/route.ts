@@ -29,8 +29,11 @@ import { CATEGORY_DEFINITION } from '@/lib/positioning'
 // Rather than loosen a safety assertion to fit a citation, the citation is written without a
 // scheme. The credit is complete (title, both authors, publisher, path), a reader or an agent can
 // still find it, and the invariant gets STRONGER rather than weaker: every absolute URL in this
-// document is ours, with no exceptions to remember. The path was fetched and returns 200 —
-// `amplitude.com/north-star-playbook`, the obvious guess, is a 404.
+// document is ours, with no exceptions to remember.
+//
+// Both candidate paths were fetched before this shipped. `amplitude.com/resources/north-star-playbook`
+// returns 200 and is what ships. `amplitude.com/north-star-playbook` — the obvious guess, and what
+// this would have cited unchecked — returns 404.
 //
 // ── Why a route and not a static file in /public ──────────────────────────────────────────────
 // The same two reasons app/llms.txt/route.ts is a route (read that file first — this mirrors it
