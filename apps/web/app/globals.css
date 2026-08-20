@@ -4216,6 +4216,19 @@ a.stat-card:hover {
 .methodology-article {
   max-width: 720px;
   padding-block: 44px 72px;
+  /* Horizontal padding is the ARTICLE's own here, not `.wrap`'s.
+     Sprint 2 rendered this as `<article class="wrap methodology-article">`, and
+     Story 3.1 dropped `.wrap` when the article became a grid track — `.wrap`
+     also carries a `max-width` and `margin-inline: auto` that fight a track
+     that is already sized by the grid. What went with it was the 18px gutter,
+     so below 900px (where the `padding-inline` in the wide block does not
+     apply) chapter text sat FLUSH against the viewport edge on a phone.
+     Nothing failed: it is not overflow, so `assertMobileClean` is silent, and
+     every spec asserting text is present still passed. Found by looking at a
+     390px screenshot.
+     `max()` with the safe-area inset, matching `.wrap` — on a notched phone in
+     landscape the inset is what keeps text out from under the rounded corner. */
+  padding-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
 }
 
 /* The wide-width shell. Its own block, placed AFTER the base rules above and not
@@ -4297,7 +4310,7 @@ a.stat-card:hover {
   }
 
   .methodology-article {
-    padding-inline: 40px;
+    padding-inline: max(40px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-right));
   }
 }
 
@@ -4504,6 +4517,22 @@ a.stat-card:hover {
      rung a second time at its own corner radius. Two shadows for one visible surface reads as a
      halo around nothing; cancelling it here leaves exactly the card's. */
   box-shadow: none;
+}
+
+/* The agent card's label joins the work-block label family.
+   `CopyPromptCard` styles its own header label (`.prompt-head__label`) in sentence case, which is
+   right on the landing where it stands alone. Inside a work block it sits beside four siblings
+   that are uppercase mono, so one member of a five-part taxonomy announced itself in a different
+   voice — visible the moment all five are on one page, invisible to every assertion (the label
+   TEXT is identical either way; only its rendering differs).
+
+   Scoped to `.work--agent` rather than changed in `.prompt-head__label`, because that component is
+   shared with the landing and this is a statement about this family, not about that card. */
+.work--agent .prompt-head__label {
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
 /* "This part is yours" and "What you just learned" render through the SAME plain `.work` rule

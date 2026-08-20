@@ -104,6 +104,36 @@ test('the rail is keyboard-operable and navigates', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('Prove it')
 })
 
+// The article keeps a gutter at EVERY width — the defect this pins had chapter text sitting flush
+// against the viewport edge on a phone. Story 3.1 dropped `.wrap` when the article became a grid
+// track (correctly: `.wrap` carries a `max-width` and `margin-inline: auto` that fight a track the
+// grid already sizes), and the 18px gutter went with it. Nothing failed: flush text is not
+// overflow, so `assertMobileClean` is silent, and every spec asserting the text is PRESENT still
+// passed. Only a screenshot showed it.
+for (const [label, viewport] of [
+  ['phone', PHONE],
+  ['wide', WIDE],
+] as const) {
+  test(`the article keeps a readable gutter at ${label} width`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/methodology/bring-an-idea')
+
+    const heading = page.locator('.methodology-article h1')
+    const box = await heading.boundingBox()
+    expect(box, 'the chapter heading must be laid out').not.toBeNull()
+
+    // Measured from the ARTICLE's own left edge, not from the viewport's: at wide widths the
+    // article is a grid track that already starts well inside the page, so a viewport-relative
+    // check would pass there for the wrong reason and only ever test the phone case.
+    const articleBox = await page.locator('.methodology-article').boundingBox()
+    expect(articleBox).not.toBeNull()
+    expect(
+      box!.x - articleBox!.x,
+      'chapter text must not sit flush against the article edge'
+    ).toBeGreaterThanOrEqual(16)
+  })
+}
+
 // The mockup sets `display: none` on the whole TOC under 700px, stranding a phone reader inside a
 // chapter with no way sideways except the back button. This is the assertion that keeps that from
 // being re-introduced as a "tidy" mobile fix.
