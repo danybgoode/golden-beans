@@ -3944,3 +3944,148 @@ a.stat-card:hover {
   font-size: 28px;
   color: var(--gold);
 }
+
+/* ── methodology-experience · Sprint 2, Story 2.2 ───────────────────────────
+   `/methodology`, the index. Deliberately plain, per the sprint's build contract: layout and
+   density only, no three-column reading shell, no sticky TOC, no translucency, no spring motion
+   (Sprint 3 owns the reading experience). Every value below still resolves from `tokens.css`
+   (epic D1) — nothing here is a hand-picked colour. */
+
+/* ── The index hero's Direction card (mockup's `.loop`) ─────────────────── */
+
+.methodology-direction {
+  margin-top: 24px;
+}
+
+.methodology-direction__label {
+  margin: 0 0 10px;
+  color: var(--dim);
+  font: 700 10px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.methodology-direction__phases {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.methodology-direction__phases li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.methodology-direction__phases li:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.methodology-direction__phases strong {
+  font-size: 16px;
+}
+
+.methodology-direction__phases span {
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+/* ── The chapter index ────────────────────────────────────────────────────
+   `.method-grid`'s two-column shape (defined above for the landing's field-guide card) is reused
+   for the hero rather than a second grid device — same "text left, loop card right" composition
+   the mockup argues for. */
+
+.methodology-index__head {
+  display: grid;
+  gap: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.methodology-index__head p {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.methodology-cards {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding-bottom: 12px;
+}
+
+/* A real `<a>` (via `next/link`), styled as a card — mockup defect 5 was `<div onclick>`:
+   unfocusable, unreachable by keyboard, announced as nothing. Being a real link means
+   `:where(a, button, ...):focus-visible` above already gives it the site's one focus ring; this
+   class owns only the resting and hover chrome. */
+.methodology-card {
+  display: block;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--elevation-raised);
+  color: inherit;
+  transition: transform var(--motion-quick) var(--ease-out);
+}
+
+.methodology-card:hover {
+  color: inherit;
+  transform: translateY(-2px);
+}
+
+.methodology-card__num {
+  display: block;
+  margin-top: 14px;
+  color: var(--dim-2);
+  font: 900 11px var(--mono);
+  letter-spacing: 0.1em;
+}
+
+.methodology-card h3 {
+  margin: 16px 0 8px;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.methodology-card p {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.methodology-card__arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  color: var(--gold);
+  font: 700 12px var(--mono);
+}
+
+/* ── The phase label ───────────────────────────────────────────────────────
+   `components/methodology/PhaseLabel.tsx` (Story 2.1) renders this class — an index card's tag
+   here, and a chapter's "Consider · Chapter 1" kicker in Story 2.3 — and had no rule here until
+   now. Same shape as `.kicker` above, deliberately: both are "which part of the loop is this"
+   microcopy. */
+.methodology-phase-label {
+  margin: 0 0 10px;
+  color: var(--gold);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 760px) {
+  .methodology-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 980px) {
+  .methodology-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
