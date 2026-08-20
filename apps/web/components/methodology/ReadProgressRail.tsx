@@ -53,8 +53,19 @@ export function ReadProgressRail({ chapterId, chapterIds }: { chapterId: string;
     try {
       const current = parseProgress(window.localStorage.getItem(PROGRESS_STORAGE_KEY), chapterIds)
       const next = withChapterOpened(current, chapterId, chapterIds)
+
+      // REPAIR the store either way — the next visit deserves an accurate record.
       window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(next.opened))
-      setProgress(next)
+
+      // ...but say NOTHING on the visit where the read came back corrupt. `parseProgress` returning
+      // `null` means "we do not know what this reader has opened", and the repaired value knows
+      // only about this one visit — so rendering it would announce "1 of 6" to someone who may have
+      // worked through four chapters. That is the silent-zero defect wearing a one instead of a
+      // zero: a number-shaped claim about data we just admitted we lost.
+      //
+      // Caught by Codex in round 1 of PR #107, against this module's own documented rule. The rule
+      // was right and the component did not honour it.
+      setProgress(current === null ? null : next)
     } catch {
       // Storage unavailable: no rail.
       //

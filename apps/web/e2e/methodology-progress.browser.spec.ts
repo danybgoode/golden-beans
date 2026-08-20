@@ -93,9 +93,17 @@ test('a corrupt stored value is treated as unknown, not as zero', async ({ page 
   await page.evaluate((key) => window.localStorage.setItem(key, 'not json at all'), PROGRESS_STORAGE_KEY)
   await page.goto('/methodology/build-it')
 
-  // After a corrupt read the module returns null, so this visit starts a fresh count of 1 — and a
-  // count of 1 renders nothing under the "nothing worth saying yet" rule. What must NOT happen is
-  // the rail announcing a number that contradicts what the reader knows they have read.
-  const railText = (await page.locator(RAIL).count()) ? await page.locator(RAIL).innerText() : ''
-  expect(railText, 'a corrupt read must never render a stale or invented count').not.toContain('3 of')
+  // The visit that DETECTS the corruption says nothing at all. "1 of 6" here would announce a
+  // number about data we just admitted we lost, to a reader who may have worked through four
+  // chapters — the silent-zero defect wearing a one instead of a zero.
+  await expect(page.locator(RAIL), 'the visit that finds a corrupt store must render no rail').toHaveCount(0)
+
+  // ...and the store is REPAIRED, so the next visit is honest about what it can actually observe.
+  const repaired = await page.evaluate((key) => window.localStorage.getItem(key), PROGRESS_STORAGE_KEY)
+  expect(repaired, 'a corrupt value must not be left in place to suppress the rail forever').toBe(
+    JSON.stringify(['build-it'])
+  )
+
+  await page.goto('/methodology/prove-it')
+  await expect(page.locator(RAIL)).toContainText(`2 of ${METHODOLOGY_CHAPTERS.length} chapters opened`)
 })
