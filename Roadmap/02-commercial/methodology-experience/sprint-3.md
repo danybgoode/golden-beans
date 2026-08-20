@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 3: The reading experience
 
-**Status:** 🟦 In review — all four stories built and gated locally
+**Status:** ✅ **Shipped and verified in production** — PR [#107](https://github.com/danybgoode/golden-beans/pull/107), squashed to `main` as `3196171`, Production deployment `6008591605` reported `success` for that exact SHA.
 **Branch:** `feat/methodology-experience-s3` (cut from `feat/methodology-experience-s2`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -181,8 +181,39 @@ progress rail is information rather than decoration.
 
 ## Sprint 3 — Smoke walkthrough
 
-*Written at sprint close, with real production URLs. Placeholder — do not tick the sprint without it.*
-Env: production · `https://goldenfrijoles.com` (preview URL while pre-merge)
+Env: **production** · <https://goldenfrijoles.com> · deployed SHA `3196171` (confirmed via
+`gh api repos/danybgoode/golden-beans/deployments`, not inferred from a green CI run).
 
-**Owed to the product owner by name:** does `/methodology` read as a genuinely different room from
-`/`? That is the whole point of the sprint and no automated check covers it.
+All public surface. Steps 5–7 need a browser setting changed, and are the ones an automated check
+cannot fully stand in for.
+
+| # | Do this | Expect |
+|---|---|---|
+| 1 | Open <https://goldenfrijoles.com/methodology/design-it> on a wide screen | Three columns: a contents rail on the left, the article at a comfortable measure, space on the right |
+| 2 | Look at the rail | Chapters grouped under **CONSIDER · OPERATE · EXIT**, with `02 Design it` highlighted |
+| 3 | Open <https://goldenfrijoles.com/methodology/prove-it> **directly**, in a new tab | `05 Prove it` is highlighted — the active state comes from the URL, not from having clicked |
+| 4 | Scroll down a long chapter, e.g. <https://goldenfrijoles.com/methodology/build-it> | The topbar stays, and content passing beneath it tints and blurs through the bar. The rail stays put and never slides under the topbar |
+| 5 | **macOS:** System Settings → Accessibility → Display → **Reduce transparency**. Reload | The topbar and rail go fully opaque. Still clearly separated from the article — the hairline and shadow survive |
+| 6 | Turn on **Increase contrast** instead. Reload | Opaque again, with a brighter edge on the chrome |
+| 7 | Turn on **Reduce motion**. Reload a chapter | The chapter appears immediately, with no slide-and-fade. **It must not be invisible** — that was a real defect this sprint |
+| 8 | Open three or four chapters, then look at the right-hand column | *"N of 6 chapters opened"* and *"Counted in this browser only."* Never a ✓, never *Tried*, never *Produced* |
+| 9 | Open the same page in a private window | No rail — a fresh browser has nothing to report, and it says nothing rather than "0 of 6" |
+| 10 | Narrow to a phone width | The rail becomes a scrollable strip above the article; the progress card follows the article. Nothing is hidden |
+| 11 | Run the sprint's specs against production | `PLAYWRIGHT_BASE_URL=https://goldenfrijoles.com npx playwright test apps/web/e2e/methodology-shell.browser.spec.ts apps/web/e2e/methodology-materials.browser.spec.ts apps/web/e2e/methodology-progress.browser.spec.ts --project=browser` → **19 passed** |
+
+**Step 11 found a real defect on its first run**, which is why it is in the walkthrough rather than
+assumed: 18 of 19 passed and the margin-switching spec reported the rail as missing. The rail was
+rendering correctly — the spec read computed styles before the client effect had run, a race a fast
+local server hides and a real network exposes. Fixed in `b0b6e7a`.
+
+**Owed to the product owner by name — answered, and the answer is yes.** Put `/` and a chapter side
+by side: the landing is full-bleed bands, display headlines, figures and gold bars, everything
+competing for attention. The chapter is one column at reading measure, a persistent rail saying
+where you are in six, quiet section markers instead of headlines, and content passing under a
+translucent bar. It reads as a document rather than a page.
+
+Two honest qualifications. The room is different but the **building** is the same — same palette,
+same nav, same footer — which is D1 working exactly as intended rather than a shortfall. And the
+difference comes overwhelmingly from **layout and density**; the materials pass is a real but subtle
+finish on top of that, not the thing doing the work. If the glass were removed tomorrow, it would
+still read as a different room.
