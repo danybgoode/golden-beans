@@ -27,6 +27,11 @@ import { METHODOLOGY_CHAPTER_IDS } from '@/lib/methodology-chapters'
 // indistinguishable to a reader; a NULL `feature_id` and a working funnel are indistinguishable to
 // every check except this one.
 
+// The same expression `lib/self-track.ts` uses. Read here rather than imported because that module
+// starts with `import 'server-only'` and cannot be loaded by this runner — the constraint that put
+// the event vocabulary in its own file. A literal would be a third copy of the default.
+const SELF_PROJECT_SLUG = process.env.SELF_PROJECT_SLUG?.trim() || 'golden-beans'
+
 const dbUrl = process.env.SUPABASE_DB_URL
 const selfKey = process.env.SELF_PROJECT_API_KEY
 
@@ -47,21 +52,53 @@ async function withDb<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
-/** The most recent event of `name` for one visitor, or null. */
+/**
+ * The most recent event of `name` for one visitor, ON THE SELF TENANT, or null.
+ *
+ * ── Why the `project_id` predicate is here ────────────────────────────────────────────────────
+ * A fresh `randomUUID()` visitor cannot collide with another tenant's rows, so this is not fixing a
+ * leak. It makes the assertion STRONGER: without it, an event that landed on the wrong project
+ * would still satisfy every test in this file. With it, "the beacon wrote an event" becomes "the
+ * beacon wrote an event *to the self tenant*", which is the thing that actually has to be true —
+ * `trackSelfEvent` resolves its tenant from `SELF_PROJECT_API_KEY`, and a misconfigured key would
+ * silently write someone else's funnel.
+ *
+ * Raised by Codex in round 2 of PR #108 as a tenancy concern; taken for the stronger reason.
+ * `lib/self-track.ts`'s own `SELF_PROJECT_SLUG` is the source of the slug, not a literal here.
+ */
 async function latestEvent(name: string, visitorId: string) {
   return withDb(async (client) => {
     const { rows } = await client.query(
       // The column is `event`, not `event_name` — checked against the live schema rather than
       // guessed. A wrong column name at least fails loudly; a wrong VALUE would not have.
-      `select event, feature_id, user_id, tags
-         from events
-        where event = $1 and user_id = $2
-        order by created_at desc
+      `select e.event, e.feature_id, e.user_id, e.tags
+         from events e
+         join projects p on p.id = e.project_id
+        where e.event = $1 and e.user_id = $2 and p.slug = $3
+        order by e.created_at desc
         limit 1`,
-      [name, visitorId]
+      [name, visitorId, SELF_PROJECT_SLUG]
     )
     return rows[0] ?? null
   })
+}
+
+/**
+ * Wait for an event to appear, or give up.
+ *
+ * `trackSelfEvent` runs inside `after()`, so the row lands some time AFTER the response — and the
+ * send itself has a 3s timeout, which a fixed 1.5s sleep can lose to. A sleep that is too short
+ * turns a slow-but-correct ingest into a failed assertion; polling to a deadline longer than the
+ * send's own timeout cannot (Codex, round 2 of PR #108).
+ */
+async function waitForEvent(name: string, visitorId: string, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    const row = await latestEvent(name, visitorId)
+    if (row) return row
+    if (Date.now() > deadline) return null
+    await new Promise((r) => setTimeout(r, 250))
+  }
 }
 
 /** Fire the beacon exactly as the browser does, with a visitor id we control so we can find it. */
@@ -91,15 +128,17 @@ async function beacon(
     })
   }
   expect(res.status(), 'the beacon must answer 200 once the rate-limit window clears').toBe(200)
-  // `after()` runs the send once the response is out, so the row is not there synchronously.
-  await new Promise((r) => setTimeout(r, 1500))
+  // The caller polls for the row it expects (`waitForEvent`). A caller asserting a row is ABSENT
+  // still has to let the send settle first, or it proves only that the write had not happened yet —
+  // so this keeps one bounded settle, longer than `trackSelfEvent`'s own 3s timeout.
+  await new Promise((r) => setTimeout(r, 4000))
 }
 
 test('methodology_visited lands with a NON-NULL feature_id', async ({ request }) => {
   const visitorId = randomUUID()
   await beacon(request, { surface: 'methodology' }, visitorId)
 
-  const row = await latestEvent(METHODOLOGY_VISITED_EVENT, visitorId)
+  const row = await waitForEvent(METHODOLOGY_VISITED_EVENT, visitorId)
   expect(row, 'the index beacon must have written an event').not.toBeNull()
   expect(row.feature_id, 'a NULL feature_id makes this event invisible to every funnel, forever').toBe(
     METHODOLOGY_SIGNAL_KEY
@@ -111,7 +150,7 @@ test('methodology_chapter_opened lands with its feature_id AND the chapter as a 
   const chapter = METHODOLOGY_CHAPTER_IDS[1]
   await beacon(request, { surface: 'methodology-chapter', chapter }, visitorId)
 
-  const row = await latestEvent(METHODOLOGY_CHAPTER_OPENED_EVENT, visitorId)
+  const row = await waitForEvent(METHODOLOGY_CHAPTER_OPENED_EVENT, visitorId)
   expect(row, 'the chapter beacon must have written an event').not.toBeNull()
   expect(row.feature_id).toBe(METHODOLOGY_SIGNAL_KEY)
   expect(row.tags?.chapter, 'which chapter must survive as a queryable dimension').toBe(chapter)
@@ -136,7 +175,7 @@ test('the body cannot choose which event is written', async ({ request }) => {
 
   // ...and it falls back to the landing rather than erroring or writing nothing, which is the
   // documented behaviour for a malformed body.
-  const fallback = await latestEvent(LANDING_VISITED_EVENT, visitorId)
+  const fallback = await waitForEvent(LANDING_VISITED_EVENT, visitorId)
   expect(fallback, 'an unrecognised surface falls back to the landing beacon').not.toBeNull()
 })
 
@@ -149,7 +188,7 @@ test('an unknown chapter id never becomes a tag value', async ({ request }) => {
 
   // It degrades to the index event — the reader WAS on the methodology, so recording nothing would
   // lose a real visit; recording a chapter that does not exist would invent a dimension.
-  const indexEvent = await latestEvent(METHODOLOGY_VISITED_EVENT, visitorId)
+  const indexEvent = await waitForEvent(METHODOLOGY_VISITED_EVENT, visitorId)
   expect(indexEvent, 'an unknown chapter degrades to the index event').not.toBeNull()
   expect(indexEvent.feature_id).toBe(METHODOLOGY_SIGNAL_KEY)
 })
