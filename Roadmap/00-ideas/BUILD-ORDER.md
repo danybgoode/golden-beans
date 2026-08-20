@@ -10,16 +10,15 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (2)
+## 🏗️ Building now (1)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 11/17 stories · risk: Low · wave-2026-08-20
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (19)
+## ✅ Shipped (20)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -39,6 +38,7 @@
 - [Multi-tenant activation — auth hardening, self-serve tenants, pod trials](../../02-commercial/multi-tenant-activation/README.md) — 02 Commercial · 9/9 stories · risk: High
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High
 - [The landing reads at a glance — the maker-ops page, cut down to what it claims](../../02-commercial/landing-readability-pass/README.md) — 02 Commercial · 4/4 stories
+- [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 17/17 stories · risk: Low · wave-2026-08-20
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
 ## ⬜ Funnel — seeds not yet scaffolded (3)

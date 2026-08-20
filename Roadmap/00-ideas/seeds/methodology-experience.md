@@ -1,7 +1,7 @@
 ---
 title: "The methodology becomes a place you can go — /methodology as a reading experience, the loop reads as three portfolio moves, and Shape becomes Design"
 slug: methodology-experience
-status: scaffolded
+status: shipped
 area: "02"
 type: feature
 priority: "wave-2026-08-20"
