@@ -57,3 +57,106 @@ test("the workshop's URLs are built from this deployment's own base URL", async 
   const hosts = new Set(body.match(/https?:\/\/[^/\s]+/g) ?? [])
   expect(hosts.size).toBe(1)
 })
+
+// ── agentic-pm-public-surface · Sprint 1, Story 1.2 ──────────────────────────────────────────────
+//
+// Everything above this line was written against the document these tests now run against a full
+// rewrite of, and NONE of it was edited. That is the mutation check on the rewrite: a document can
+// be replaced word for word and still be obliged to keep every safety property the old one had.
+//
+// What follows is new, and it guards a different class of failure. The old document's problem was
+// not that it was unsafe — it was that it taught nothing, and "teaches nothing" is invisible to a
+// test suite that only checks for danger. These assert that the framework is actually in here, so a
+// future edit that quietly reverts it to eight generic questions fails loudly instead of reading as
+// a tidy-up.
+
+test('the workshop makes the reader pick one of the three games', async ({ request }) => {
+  const body = await (await request.get('/northstar-self-serve.md')).text()
+
+  // The forced choice is the element the source calls the first real disagreement of a workshop and
+  // the most useful one. A version of this document without it is a metric exercise, not the North
+  // Star Framework.
+  for (const game of ['attention game', 'transaction game', 'productivity game']) {
+    expect(body.toLowerCase(), `the ${game} is not named`).toContain(game)
+  }
+})
+
+test('the workshop carries the seven-question checklist and the ladder', async ({ request }) => {
+  const body = await (await request.get('/northstar-self-serve.md')).text()
+
+  // The checklist is the critique instrument — without it the agent has opinions about a candidate
+  // rather than a test for one. Counted by its rungs rather than by a heading, because a heading
+  // can survive an edit that guts what is under it.
+  expect(body).toContain('leading** indicator of success')
+  expect(body).toContain('vanity metric')
+
+  // The ladder is the document's spine and the thing the version this replaced had no equivalent
+  // of. All four rungs, in order, each of which means something different.
+  const ladder = ['**North Star**', '**Inputs**', '**Opportunities**', '**Interventions**']
+  let cursor = -1
+  for (const rung of ladder) {
+    const at = body.indexOf(rung)
+    expect(at, `${rung} is missing from the ladder`).toBeGreaterThan(-1)
+    expect(at, `${rung} is out of order — the ladder only means anything top-down`).toBeGreaterThan(cursor)
+    cursor = at
+  }
+})
+
+test('the workshop gives the input heuristic and a worked example of it', async ({ request }) => {
+  const body = await (await request.get('/northstar-self-serve.md')).text()
+
+  for (const dimension of ['Breadth', 'Depth', 'Frequency', 'Efficiency']) {
+    expect(body, `${dimension} is missing from the input heuristic`).toContain(dimension)
+  }
+
+  // A heuristic with no worked example is a list of four nouns. Instacart is the source's own, and
+  // its efficiency input is the half that stops the other three being gamed.
+  expect(body).toContain('Instacart')
+  expect(body).toContain('delivered on time')
+})
+
+test('the framework is credited by name, once, and the credit is not repeated', async ({ request }) => {
+  const body = await (await request.get('/northstar-self-serve.md')).text()
+
+  // Whitespace-insensitive: the title spans a line break in the rendered document today, and a
+  // reflow of that paragraph is not a dropped credit. Assert the claim, not the wrapping.
+  expect(body).toMatch(/The North Star\s+Playbook/)
+  expect(body).toContain('John Cutler')
+  expect(body).toContain('Jason McBride')
+
+  // Epic D6: credited ONCE, near the top. A credit repeated is a document that reads like someone
+  // else's — so this asserts the count, not just the presence.
+  const mentions = body.match(/Amplitude/g) ?? []
+  expect(mentions.length, 'Amplitude should be credited once, not throughout').toBe(1)
+
+  // ── The attribution is deliberately scheme-less (epic A10) ─────────────────────────────────
+  // A markdown link would introduce a second `https://` host and fail the one-host test above —
+  // for a reason that test does not exist to catch. Writing the path without a scheme keeps the
+  // credit complete AND makes the one-host invariant literally true: every absolute URL in this
+  // document is ours. This asserts the citation is still findable, so "scheme-less" cannot decay
+  // into "dropped".
+  expect(body).toContain('amplitude.com/resources/north-star-playbook')
+  expect(body).not.toContain('https://amplitude.com')
+})
+
+test('the close runs the greenfield test first and names every part of the hand-off', async ({
+  request,
+}) => {
+  const body = await (await request.get('/northstar-self-serve.md')).text()
+
+  // Story 1.3: the greenfield test runs BEFORE the summary. A summary the agent has already been
+  // told is wrong is worse than none, because it is the artefact the person keeps. Asserted as an
+  // ordering, which is the only form the claim actually has.
+  const greenfield = body.indexOf('greenfield test')
+  const close = body.indexOf('## Close the workshop')
+  expect(greenfield, 'the greenfield test is missing').toBeGreaterThan(-1)
+  expect(close, 'the close is missing').toBeGreaterThan(-1)
+  expect(greenfield, 'the greenfield test must run before the summary, not after').toBeLessThan(close)
+
+  // The close writes back exactly one shape, and every part of it is load-bearing: guardrails stop
+  // the metric being gamed, assumptions are what the first tests attack, and the game is what the
+  // whole thing was chosen against.
+  for (const part of ['**The game:**', '**North Star:**', '**Inputs:**', '**Guardrails:**', '**Assumptions:**', '**First tests:**']) {
+    expect(body, `the close is missing ${part}`).toContain(part)
+  }
+})
