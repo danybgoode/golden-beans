@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 2: `/methodology` skateboard
 
-**Status:** ⬜ Not started
+**Status:** 🟨 In progress — Story 2.1 (shared surface, architect) built; 2.2–2.4 next
 **Branch:** `feat/methodology-experience-s2` (cut from `feat/methodology-experience`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -46,11 +46,17 @@ derive from it instead of drifting apart.
   (epic D3) — including *"A shaped Bet should be bounded enough to operate"*, *"Shape creates a
   plausible bounded investment decision"*, *"the correct result of shaping"* and Chapter 1's agent
   prompt *"Before shaping it, read the project agents…"*. Each rewritten line is readable on its own.
-- **Field guide version skew is reconciled or recorded.** The v0.2 source's Practitioner checkpoint
-  still gestures at nine named practices while the reader gets six chapters. Fix it, or write the gap
-  down in this file with the reason.
-- `references/golden-frijoles-minimum-viable-field-guide-v0.2.md` is added and tracked (mode 644) as
-  the dated provenance record the content was derived from — **not** as a live second source (D5).
+- **Field guide version skew is reconciled or recorded.** ✅ **Recorded: there is no skew in what
+  shipped.** The v0.2 source's Practitioner checkpoint gestured at nine named practices; the v0.3
+  mockup this content was derived from contains **no Practitioner checkpoint at all** (verified:
+  zero occurrences in `references/golden-frijoles-methodology-experience-v0.3.html`). The nine named
+  practices reach neither `lib/methodology-chapters.ts` nor any rendered page, so there is nothing to
+  reconcile. Written down here rather than silently skipped.
+- ~~`references/golden-frijoles-minimum-viable-field-guide-v0.2.md` is added and tracked (mode 644) as
+  the dated provenance record the content was derived from — **not** as a live second source (D5).~~
+  **BLOCKED — see [A3](README.md). The file does not exist in this repository**, and it will not be
+  reconstructed from the v0.3 mockup: that would manufacture a provenance record for a document
+  nobody here has seen. Needs the product owner's either/or. Nothing else depends on it.
 - Unit tests: exactly six chapters in phase order; every `id` unique and URL-safe; every chapter has
   a non-empty `lede` that **does not contain `{`**; `getChapter` throws on an unknown id;
   `chapterNeighbours` returns `null` at both ends; every `agent` block's prompt is non-empty.

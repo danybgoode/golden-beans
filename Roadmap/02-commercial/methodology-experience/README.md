@@ -250,6 +250,46 @@ which contains exactly the previous sprint's work. The stacking *property* the p
 sprint builds on the one before it, one PR per sprint, merged in order — holds unchanged; only the
 git mechanic differs. Sprint 1 merged as `0751e45`; `-s2` is cut from there.
 
+### A3 — the v0.2 field guide is not in the repo and cannot be reconstructed. **Open — needs the product owner.** 2026-08-19.
+
+**Class:** dropped scope. Everything else in Story 2.1 is done and merged; this one bullet is
+blocked and is the only part of the epic waiting on an answer.
+
+Story 2.1 requires `references/golden-frijoles-minimum-viable-field-guide-v0.2.md` to be "added and
+tracked (mode 644) as the dated provenance record the content was derived from". **That file does
+not exist anywhere in this repository**, and the epic README's own header says so
+(*"not yet in the repo; landing it is Story 2.1"*).
+
+What is in the repo is `references/golden-frijoles-methodology-experience-v0.3.html` — the mockup,
+already tracked, and itself a pandoc conversion of the field guide. It is where all six chapters'
+prose in `lib/methodology-chapters.ts` came from, and the module says so at the top.
+
+**I will not write the v0.2 file.** Producing a "v0.2 field guide" by converting the v0.3 mockup
+backwards would manufacture a provenance record for a document I have never seen, dated to a version
+I cannot verify. A provenance record that was reconstructed from its own descendant is worse than no
+provenance record: it is a *second source* of the same prose — precisely what D5 exists to forbid —
+and a fabricated one.
+
+**The either/or, for the product owner:**
+
+- **(a) Land the real file.** If the v0.2 markdown exists outside the repo, hand it over and it goes
+  into `references/` verbatim, unedited, as the dated record. This is the better outcome if the file
+  exists.
+- **(b) Name the mockup as the provenance record and close the bullet.** `v0.3.html` is already
+  tracked, already dated, and already cited by the module as its source. D5's *purpose* — one live
+  source, with a dated record of where its prose came from — is satisfied by it.
+
+**Recommendation: (a) if the file exists, (b) otherwise.** Nothing else in the epic depends on this
+answer: the content module, the routes and the reading experience all derive from the module, which
+is the live source either way.
+
+**Related, and resolved rather than left open:** the same story asks whether the v0.2 source's
+"Practitioner checkpoint" — which gestured at nine named practices while the reader gets six
+chapters — needed reconciling. **There is no version skew to reconcile in the content that shipped.**
+The v0.3 mockup contains no Practitioner checkpoint at all (verified: zero occurrences), so the nine
+named practices reach neither the module nor any rendered page. Recorded here so the question is not
+re-opened by a later reader who only has the epic README.
+
 ## Sprints
 
 Sprint 1 is carved to **ship standalone**. If the appetite is exhausted after it, the live page is
