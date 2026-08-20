@@ -290,6 +290,40 @@ The v0.3 mockup contains no Practitioner checkpoint at all (verified: zero occur
 named practices reach neither the module nor any rendered page. Recorded here so the question is not
 re-opened by a later reader who only has the epic README.
 
+### A4 — the methodology renders from `components/methodology`, and the drift guard's strict rules follow it there. 2026-08-19.
+
+**Class:** an architecture call the locked decisions implied but did not state. No scope change.
+
+D1 says every value resolves from tokens and D9 puts real routes under `app/methodology`. Checking
+what actually enforces that turned up a hole: `scripts/check-design-drift.mjs` sweeps `apps/web/app`
+for raw hex and pictographs, but its **`heading-period` and inline-style rules were landing-only**.
+So the largest new public reading surface in the product would have been exempt from both — while
+this epic's own docs cite `heading-period` as the reason chapter titles carry no full stop. A guard
+named by a decision it does not actually cover is the "guard that cannot fail" class
+(CODE-QUALITY #5b), and the epic would have shipped citing it.
+
+**Two consequences, both landed with Story 2.1:**
+
+1. **The rendering primitives live in `apps/web/components/methodology/`, not inline in route
+   files.** The route files stay thin (params → module lookup → component). This puts the real
+   surface inside a swept component root, and gives Sprint 3's work-block family (Story 3.2) an
+   obvious home instead of a new decision.
+2. **A `VOICE_AND_STYLE_ROOTS` list** now carries the strict pair — headings are titles, no inline
+   `style=` — over `components/landing`, `components/methodology` and `app/methodology`. The product
+   routes keep their exemption, for the reason it was granted: the funnel's bar widths are computed
+   geometry, not a colour drifting from the tokens.
+
+Verified by probe rather than by reading: a component under `components/methodology` carrying
+`style={{ color: '#ff0000' }}` and `<h2>Make something real.</h2>` now reports `raw-hex`,
+`landing-inline-style` and `heading-period`. A missing swept root now fails loud instead of
+returning an empty file list, which is the same defect one level up.
+
+**Consequence for Story 2.2's copy:** the mockup's index hero is *"Make something real."* and its
+section heading *"Six chapters. One real project."* Both are `<h1>`/`<h2>` and both now violate
+`heading-period`. They ship without the terminal stop, the same way `MakerHero`'s display headline
+already does. The internal full stop in "Six chapters. One real project" is untouched — the rule
+reads only the final character, and the two-beat heading is the house voice.
+
 ## Sprints
 
 Sprint 1 is carved to **ship standalone**. If the appetite is exhausted after it, the live page is

@@ -196,6 +196,16 @@ export function inspectHeadings(source) {
 }
 
 function sourceFiles(root) {
+  // A swept root that does not exist must be LOUD, not empty. Returning `[]` would make a typo in
+  // `SWEPT_ROOTS` — or a directory someone renamed — read as "nothing to report", which is this
+  // guard reporting success about a surface it never opened (CODE-QUALITY #5b). The raw ENOENT
+  // stack trace technically failed too; it just did not say which root or why it mattered.
+  if (!existsSync(root)) {
+    throw new Error(
+      `check-design-drift: swept root ${root} does not exist. ` +
+        'Add the directory or remove it from SWEPT_ROOTS — a missing root silently sweeps nothing.'
+    );
+  }
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const path = join(root, entry.name);
     if (entry.isDirectory()) return sourceFiles(path);
@@ -292,21 +302,46 @@ export function inspectDesignSource(
 // The INLINE-STYLE rule stays landing-only (see the `disallowInlineStyle` argument below). /app
 // needs dynamic bar widths for the funnel, which is a computed geometry, not a colour drifting away
 // from the tokens.
-const SWEPT_ROOTS = [
+export const SWEPT_ROOTS = [
   'apps/web/components/landing',
   'apps/web/components/ui',
   'apps/web/components/product',
   'apps/web/components/brand',
+  // methodology-experience · Sprint 2 — the methodology's rendering primitives live in
+  // `components/methodology`, not inline in the route files, and this is one of the two reasons
+  // why (the other is that Sprint 3's work-block family needs a home). `apps/web/app` below is
+  // already swept for raw hex and pictographs, but the HEADING-VOICE and INLINE-STYLE rules were
+  // landing-only — so the largest new public reading surface in the product would have been
+  // exempt from both while the epic's own docs cited `heading-period` as the reason its chapter
+  // titles carry no full stop. A guard cited by a decision it does not actually cover is the
+  // "guard that cannot fail" class (CODE-QUALITY #5b).
+  'apps/web/components/methodology',
   'apps/web/app',
 ];
 
+/**
+ * Roots held to the LANDING's stricter two rules — headings are titles rather than sentences, and
+ * no inline `style=` where a token belongs.
+ *
+ * Not all of `apps/web/app`: the product routes need computed geometry (the funnel's bar widths),
+ * which is why the inline-style rule was landing-only to begin with. `/methodology` needs none —
+ * epic D1 puts every value in `globals.css` resolving from tokens — and it is public brand surface
+ * in the same voice as `/`.
+ */
+export const VOICE_AND_STYLE_ROOTS = [
+  'apps/web/components/landing',
+  'apps/web/components/methodology',
+  'apps/web/app/methodology',
+];
+
 export function inspectRepository(root = repoRoot) {
-  const landing = join(root, 'apps/web/components/landing');
+  const strictRoots = VOICE_AND_STYLE_ROOTS.map((relativeRoot) => `${join(root, relativeRoot)}/`);
+  const isStrict = (path) => strictRoots.some((prefix) => path.startsWith(prefix));
   const files = SWEPT_ROOTS.flatMap((relativeRoot) => sourceFiles(join(root, relativeRoot)));
   const violations = files.flatMap((path) =>
     inspectDesignSource(readFileSync(path, 'utf8'), {
-      disallowInlineStyle: path.startsWith(`${landing}/`),
-      enforceHeadingVoice: path.startsWith(`${landing}/`),
+      disallowInlineStyle: isStrict(path),
+      enforceHeadingVoice: isStrict(path),
     }).map((violation) => ({
       ...violation,
       path: relative(root, path),
