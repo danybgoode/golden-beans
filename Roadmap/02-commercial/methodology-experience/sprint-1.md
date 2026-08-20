@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 1: The vocabulary and the loop
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review — stories 1.1–1.3 built and gated locally (`d65ddec`, `db2ea21`, `a0f797f`, `1672315`, `7f15e1a`)
 **Branch:** `feat/methodology-experience` (off latest `main`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -14,7 +14,7 @@
 
 ## Stories
 
-### Story 1.1 — The maker loop reads as three portfolio moves
+### Story 1.1 — The maker loop reads as three portfolio moves  ✅ `d65ddec`
 
 **As a** visitor, **I want** the maker loop to read as three investment moves, **so that** I
 understand the method as decisions about what deserves funding rather than as a five-step process.
@@ -31,7 +31,7 @@ understand the method as decisions about what deserves funding rather than as a 
 - Numbering stays `01/02/03`; the kraft `.divider` above the section is untouched.
 **Risk:** LOW
 
-### Story 1.2 — The product uses one word for the second move
+### Story 1.2 — The product uses one word for the second move  ✅ `db2ea21` + `a0f797f`
 
 **As a** reader, **I want** the page to say *Design* and never *Shape*, **so that** the product does
 not use two words for the same move while I am deciding whether to trust it.
@@ -51,7 +51,7 @@ not use two words for the same move while I am deciding whether to trust it.
   internal use of "shape" that means *the shape of a data structure* (there are ~30 in `lib/`).
 **Risk:** LOW
 
-### Story 1.3 — The Methodology section previews the chapters instead of repeating the phases
+### Story 1.3 — The Methodology section previews the chapters instead of repeating the phases  ✅ `a0f797f`
 
 **As a** visitor, **I want** §methodology to tell me what is actually in the field guide, **so that**
 the page stops printing Consider/Operate/Exit twice and I learn something new by scrolling.

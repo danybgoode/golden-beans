@@ -206,6 +206,36 @@ No kill-switch and no enablement flag. Everything here is public presentation: n
 DB write, no migration. The route simply is not linked from the nav until Story 2.4 — same "hold it
 dark" property, none of the flag debt.
 
+## Amendments
+
+Recorded, dated, and never a silent reinterpretation. A locked decision that research invalidates
+comes back here with the reasoning; a decision that *drops scope* also needs the product owner's
+answer before it lands (LEARNINGS, 2026-08-09).
+
+### A1 — Sprint 1 touches `globals.css`. 2026-08-19.
+
+**Class:** a prediction falsified by the work, not dropped scope. Nothing is cut; a few lines of CSS
+are added that the contract predicted would not be needed. Recorded rather than asked.
+
+Sprint 1's build contract says the sprint "touches **only** existing landing components and
+`lib/landing-sections.ts`" and "adds no … CSS device". Story 1.3 replaces §methodology's three-word
+list with six chapter titles grouped by phase, and the rule that held the three words —
+`.field-guide__steps` — is a pill band: `flex: 1 1 auto`, `border-radius: 999px`, 12px uppercase
+mono, sized so three short words read from across the room.
+
+Six titles cannot be that band. At pill scale "Decide what happens next" and its five siblings wrap
+into roughly three rows of uppercase mono chips — which is the nine-item spec sheet that rule's own
+comment was written to prevent, arriving by a different route. Its comment ("Three pills, not nine")
+also had to change regardless: leaving it would assert a property the code no longer has
+(CODE-QUALITY #3).
+
+**What shipped:** `.field-guide__steps` is **deleted**, not left orphaned — a dead rule under a good
+explanation reads as evidence to the next reader, which is the trail `landing-readability-pass` was
+bitten by. In its place, a contents list built from the same tokens (`--stamp-dim`, `--mono`) with no
+new token, no new device, no new dependency, and no edit to `references/design/assets/tokens.css`.
+D1 holds unchanged: the room changes by layout and density, and every value still resolves from the
+canonical token file.
+
 ## Sprints
 
 Sprint 1 is carved to **ship standalone**. If the appetite is exhausted after it, the live page is
