@@ -4308,6 +4308,14 @@ a.stat-card:hover {
 
   .methodology-article {
     padding-inline: max(40px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-right));
+    /* Centred in its own track, not left-aligned in it. The middle track is wider
+       than the article's 720px measure, so without this the column sits hard
+       against the rail and all the slack collects on the right — which reads as
+       lopsided exactly when the third track is empty, and the third track is
+       empty for most readers most of the time (Story 3.4 renders nothing until
+       there is something true to say). Found by looking at the two pages side by
+       side for the "different room" judgment. */
+    margin-inline: auto;
   }
 }
 
