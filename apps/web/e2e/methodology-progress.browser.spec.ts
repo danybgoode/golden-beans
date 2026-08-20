@@ -80,6 +80,38 @@ test('on a phone the rail is visible, not merely present', async ({ page }) => {
   expect(box!.x + box!.width, 'the rail must not widen the page').toBeLessThanOrEqual(390)
 })
 
+// The rail's margins must actually SWITCH between the one-column and three-track layouts.
+//
+// The third instance of one cascade defect in this file in a single epic: a `@media (min-width:
+// 900px)` override that sits ABOVE its base rule loses on source order and does nothing, because
+// media queries add no specificity. Here the phone margins persisted on desktop, pushing the rail
+// out of its track. All three instances were found by review, none by the suite — so this asserts
+// the computed values on both sides of the breakpoint rather than trusting the rule's existence.
+test('the rail switches its margins between the phone and three-track layouts', async ({ page }) => {
+  const read = async () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.methodology-progress')
+      if (!el) return null
+      const s = getComputedStyle(el)
+      return { left: s.marginLeft, right: s.marginRight, bottom: s.marginBottom }
+    })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/methodology/bring-an-idea')
+  await page.goto('/methodology/design-it')
+  const phone = await read()
+  expect(phone, 'the rail must render on a phone').not.toBeNull()
+  expect(phone!.left, 'on one column the rail carries the article gutter').toBe('18px')
+  expect(phone!.bottom, 'and clears the content below it').toBe('34px')
+
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/methodology/prove-it')
+  const wide = await read()
+  expect(wide, 'the rail must render in the third track').not.toBeNull()
+  expect(wide!.left, 'in the third track the aside owns the gutter').toBe('0px')
+  expect(wide!.bottom).toBe('0px')
+})
+
 // The property the whole module exists for. A reader whose browser refuses storage must get NO
 // rail — never "0 of 6", which is a number-shaped lie to someone who may have read all six.
 test('a browser that refuses storage gets no rail, not a zero', async ({ page }) => {

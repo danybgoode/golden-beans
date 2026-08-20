@@ -4317,13 +4317,6 @@ a.stat-card:hover {
     white-space: normal;
   }
 
-  /* In the third track the aside owns the gutter, so the rail drops the
-     one-column margins from its base rule. */
-  .methodology-progress {
-    margin-inline: 0 18px;
-    margin-bottom: 0;
-  }
-
   .methodology-article {
     padding-inline: max(40px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-right));
     /* Centred in its own track, not left-aligned in it. The middle track is wider
@@ -4439,8 +4432,22 @@ a.stat-card:hover {
    Quiet on purpose. It sits beside the article for the whole scroll and is the
    least important thing on the page: a reader who ignores it loses nothing.
    Sized and coloured to be findable when looked for and invisible when not. */
+/* ── Every base declaration in ONE block, above the wide override ───────────
+   Mobile-first: the one-column margins live here and the `min-width: 900px`
+   block later in the file resets them, because in the third track the aside
+   supplies the gutter.
+
+   The ORDER is the load-bearing part. An earlier version put these two margins
+   in a second `.methodology-progress` block placed AFTER that media query —
+   media queries add no specificity, so the base rule won and the phone margins
+   persisted on desktop. That is the third instance of the same cascade defect
+   in this file in one epic (the shell grid, the chapter animation, this), and
+   all three were Antigravity findings. The rule that prevents a fourth: a
+   selector gets ONE base block, and it goes above every override of it. */
 .methodology-progress {
   margin-top: 34px;
+  margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+  margin-bottom: 34px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -4461,15 +4468,21 @@ a.stat-card:hover {
   line-height: 1.35;
 }
 
-/* One column: the rail follows the article, matching its gutter. Written as the
-   BASE rule with the wide layout overriding it, rather than as a `max-width:
-   899px` block against a `min-width: 900px` sibling — two queries meeting at a
-   boundary invite the "is it 899 or 899.98" question on fractional viewports,
-   and mobile-first removes the boundary instead of answering it. Antigravity
-   raised the asymmetry in round 1 of PR #107; this is the third option. */
-.methodology-progress {
-  margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
-  margin-bottom: 34px;
+/* The desktop override, in its OWN block directly below the base rules rather
+   than folded into the shared wide-width block ~6000 characters earlier in this
+   file. Media queries add no specificity, so an override that sits ABOVE its
+   base rule loses on order and does nothing — which is what happened when these
+   two margins first moved to a base rule, and is the third instance of that
+   cascade defect in this file in one epic. Keeping a selector's base and its
+   override adjacent makes the order visible to the next reader instead of
+   depending on where two distant blocks happen to fall. */
+@media (min-width: 900px) {
+  /* In the third track the aside owns the gutter, so the rail drops its
+     one-column margins. */
+  .methodology-progress {
+    margin-inline: 0 18px;
+    margin-bottom: 0;
+  }
 }
 
 /* ── methodology-experience · Sprint 3, Story 3.3 — the materials pass ──────
