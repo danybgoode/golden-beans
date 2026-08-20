@@ -236,6 +236,20 @@ new token, no new device, no new dependency, and no edit to `references/design/a
 D1 holds unchanged: the room changes by layout and density, and every value still resolves from the
 canonical token file.
 
+### A2 — the stack is cut from `main` after each squash, not from the previous branch. 2026-08-19.
+
+**Class:** a mechanical correction to the branch plan, no scope effect.
+
+The plan draws the stack as `feat/…` → `-s2` → `-s3` → `-s4`, "each cut from the previous". This
+repo **squash-merges**: a merged sprint's individual commits never reach `main`, only the one squash
+commit does, so continuing the old branch re-introduces a duplicate diff that cannot fast-forward
+(LEARNINGS: "a squash-merged sprint branch is a dead end").
+
+Each sprint branch is therefore cut from `origin/main` **after the previous sprint has merged**,
+which contains exactly the previous sprint's work. The stacking *property* the plan wanted — every
+sprint builds on the one before it, one PR per sprint, merged in order — holds unchanged; only the
+git mechanic differs. Sprint 1 merged as `0751e45`; `-s2` is cut from there.
+
 ## Sprints
 
 Sprint 1 is carved to **ship standalone**. If the appetite is exhausted after it, the live page is
