@@ -83,17 +83,32 @@ independently shippable slice of value.
 - ✅ [Golden Frijoles rebrand close-out](02-commercial/frijoles-rebrand-closeout/README.md)
   (published `@golden-frijoles/sdk@0.4.0` · explicit OpenFeature identity break · deprecated old SDK
   pointer · footer-ledger deletion · authenticated mobile sweep) — **live in production 2026-08-13**
-  (PR #96, `0a0beb0`). The package clean-installs from npm, §9 names the package that exists, and the
+  (PR #96, `0a0beb0`). The package clean-installs from npm, the SDK section named the package that
+  exists (that section was retired by `landing-readability-pass` on 2026-08-20; `/install` carries
+  the install line now), and the
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
+- ✅ [The landing reads at a glance — the maker-ops page, cut down to what it claims](02-commercial/landing-readability-pass/README.md)
+  (one statement per claim · no green ink · §connect and §sdk retired into `/install` · the hero at
+  the mockup's scale, its two objects overlapping) — **live in production 2026-08-20** (PR #102,
+  `0ec12b3`), serving on **https://goldenfrijoles.com**. `landing-maker-ops` earned its honesty the
+  hard way and then said everything twice: a resolved badge AND a paragraph restating the same gate.
+  This pass keeps every qualification and deletes the second copy of it — including
+  `drillAvailabilitySentence`, whose whole job was composing one. The guard moved rather than going
+  with it: the spec now asserts the resolved badge against the same two real drill routes. Six
+  cross-family rounds with Codex quota-capped for weeks (agy + vibe rotated in per the router's own
+  order); every real finding came from a round explicitly scoped at `globals.css`, which did not fit
+  agy's argv budget in the unscoped rounds that returned clean.
 - ✅ [Maker ops — the landing repositions from a growth engine to an operating context](02-commercial/landing-maker-ops/README.md)
   (the maker-ops spine · four operating surfaces whose status is computed, never written down ·
   FinOps shipped as an explicit concept · the Pods booking flow at `/talk`) — **live in production
   2026-08-19** (PR #100, `46c7e80`), serving on **https://goldenfrijoles.com**. The page stopped selling a primitive set: the buyer changed underneath it,
   because agents made it possible for one person to hold a product that used to need a department.
   Twelve sections retired; Proof, Connect, SDK and Pricing were kept against the mockup, since they
-  are the page's only live numbers and both of its conversion paths. Three cross-family review
+  are the page's only live numbers and both of its conversion paths. (Connect and SDK were
+  subsequently retired by `landing-readability-pass` on 2026-08-20 — both answered "how do I wire
+  this up", which is a question a reader has after deciding; `/install` carries that flow.) Three cross-family review
   rounds found the two failure modes a repositioning is uniquely good at producing: a **claim that
   outlived its qualifier** (retiring §4 took `isConnectorWritesEnabled()` with it while the new
   authority section inherited the argument), and a **shared component that moved from one route to
@@ -224,6 +239,14 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-20** — `landing-readability-pass` **shipped and live** (PR #102, `0ec12b3`): the landing
+  says each thing once. Every `tag-live` badge is gone and the page carries zero green ink, verified
+  by sweeping computed styles over every element rather than by grepping a class name — which is what
+  caught the two trend readings that no class search would have found (recoloured, not deleted: they
+  are real measurements). Two sections came out with nothing orphaned. The hero's bag and agent
+  window now overlap in ONE grid cell, so the row height is measured rather than declared and the
+  bag's title keeps a constant 52px of clearance at every width above 1000px. Twenty-one production
+  smoke checks pass on the live site.
 - **2026-08-13** — `scenarios-pm-operable` **shipped dark** (PR #98, `5bca24c`): the scenario engine
   now has a PM-facing owner surface for closed-choice definition, bounded launch/retry/stop, target
   state, and an honest control-vs-treatment evidence thread. The additive owner-session facade keeps
