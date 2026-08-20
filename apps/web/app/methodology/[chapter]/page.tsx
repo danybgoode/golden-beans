@@ -38,7 +38,7 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
     <>
       <Nav />
       <main>
-        <article className="wrap methodology-article">
+        <article className="wrap methodology-article methodology-prose">
           <PhaseLabel phase={chapter.phase} chapterNumber={chapter.number} />
           {/* Exactly one <h1> per route (sprint-2.md Story 2.3). Chapter titles already carry no
               terminal full stop (lib/methodology-chapters.ts's own header note) — decided once,

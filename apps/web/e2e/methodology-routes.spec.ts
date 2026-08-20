@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { METHODOLOGY_CHAPTERS, METHODOLOGY_PHASES } from '@/lib/methodology-chapters'
+import {
+  METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHECKPOINT,
+  METHODOLOGY_PHASES,
+  METHODOLOGY_PREFLIGHT,
+} from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 2 QA (sprint-2.md) — the blocking gate for the `/methodology`
 // skateboard (epic D7: real routes, deep-linkable, and a registry that fails loudly).
@@ -141,5 +146,85 @@ test('every chapter id renders as exactly one reachable index card, and every ca
   for (const href of renderedTargets) {
     const res = await request.get(href)
     expect(res.status(), `index card target ${href} should resolve`).toBe(200)
+  }
+})
+
+// ── §0, the closing and the Practitioner checkpoint (amendment A5) ───────────────────────────
+// These three sections are in the v0.2 field guide and were dropped entirely by the v0.3 mockup,
+// so nothing in the mockup-derived content would have noticed them going missing again. They are
+// index content, not chapters, and they are derived from the module the same way everything else
+// on this route is.
+
+test('the index renders §0 with its prerequisites as a real list', async ({ request }) => {
+  const html = await (await request.get('/methodology')).text()
+
+  const preflight = METHODOLOGY_PREFLIGHT.blocks.find((block) => block.kind === 'list')
+  expect(preflight?.kind, 'the module has no §0 list for this spec to check').toBe('list')
+  const items = preflight!.kind === 'list' ? preflight!.items : []
+  expect(items.length, 'an empty list would satisfy every assertion below').toBeGreaterThan(0)
+
+  for (const item of items) {
+    expect(html, `§0 must render its prerequisite "${item}"`).toContain(item)
+  }
+
+  // The line that matters most in §0, and the one a reader needs before choosing a chapter.
+  expect(html).toContain('Do not create a tutorial project')
+})
+
+test('the index renders the Practitioner checkpoint in full', async ({ request }) => {
+  const html = await (await request.get('/methodology')).text()
+
+  const capabilities = METHODOLOGY_CHECKPOINT.blocks.find((block) => block.kind === 'list')
+  expect(capabilities?.kind, 'the module has no checkpoint list').toBe('list')
+  const items = capabilities!.kind === 'list' ? capabilities!.items : []
+  expect(items.length, 'an empty checkpoint would satisfy every assertion below').toBeGreaterThan(0)
+
+  for (const item of items) {
+    expect(html, `the checkpoint must render "${item}"`).toContain(item)
+  }
+
+  expect(html).toContain('Terminology recall is not the test')
+  expect(html).toContain('Better operation is')
+})
+
+// The version skew Story 2.1 asked about, asserted on the RENDERED page rather than only on the
+// data. The unit test guards the module; this guards what a reader actually receives — the two
+// fail for different reasons (a module edit vs. a route that stops rendering the closing).
+test('the rendered index names no practice count the reader was never shown', async ({ request }) => {
+  const html = await (await request.get('/methodology')).text()
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+
+  expect(text.length, 'an empty page would satisfy the assertions below').toBeGreaterThan(1000)
+  expect(text, 'the closing must actually be on the page for its absence-check to mean anything').toContain(
+    'You do not need to memorize'
+  )
+  expect(text, 'the closing still names a practice count').not.toMatch(
+    /\b(nine|three|four|five|six|seven|eight|ten|eleven)\s+practices\b/i
+  )
+})
+
+// D4, one surface over: the Direction card at the top already renders the three phase summaries.
+// The closing must not print them a second time on the same page.
+test('the index renders each phase summary exactly once', async ({ request }) => {
+  // Counted over VISIBLE text, not raw HTML. A server-rendered Next route embeds its RSC flight
+  // payload in `<script>` tags, so every string on the page appears at least twice in the bytes
+  // and a naive count reports a duplicate that no reader can see. Stripping scripts first is the
+  // difference between asserting what was rendered and asserting what was transmitted.
+  const html = await (await request.get('/methodology')).text()
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+
+  expect(text.length, 'an empty page would satisfy the assertions below').toBeGreaterThan(1000)
+
+  for (const phase of METHODOLOGY_PHASES) {
+    const occurrences = text.split(phase.summary).length - 1
+    expect(occurrences, `"${phase.summary}" is rendered ${occurrences} times, not once`).toBe(1)
   }
 })

@@ -4111,17 +4111,65 @@ a.stat-card:hover {
   font-size: 18px;
 }
 
-.methodology-article h2 {
+/* ── The prose treatment is shared, not copied ────────────────────────────
+   `methodology-experience` Sprint 2, amendment A5. These rules were written for
+   `.methodology-article` alone. The index then grew two sections built from the
+   SAME block union — §0 "Before you begin" and the closing/checkpoint — and
+   giving them their own near-identical heading and blockquote rules would have
+   been two things that must agree (CODE-QUALITY #2), diverging the first time
+   either was touched. One class, worn by both contexts. */
+.methodology-prose h2 {
   margin: 38px 0 10px;
   font-size: 22px;
   letter-spacing: -0.02em;
 }
 
-.methodology-article > blockquote {
+.methodology-prose > blockquote {
   margin: 26px 0;
   padding-left: 18px;
   border-left: 3px solid var(--gold);
   font: 700 21px/1.35 var(--sans);
+}
+
+/* ── Paragraph rhythm ──────────────────────────────────────────────────────
+   The reset zeroes paragraph margins, so consecutive `<p>`s from the block
+   renderer stacked with no gap and read as one dense block — six sentences of a
+   chapter's "Understand" section running together, and the closing's seven-line
+   recap worst of all. Found by opening the page; no assertion in the suite can
+   see it (LEARNINGS: a full green gate does not see layout).
+
+   This is legibility, not the materials pass — Sprint 3's contract owns the
+   reading EXPERIENCE, but a plain document still has to have paragraphs.
+
+   `p:not([class])` on purpose: these are exactly the unclassed paragraphs the
+   renderer emits for `prose`. Every classed one already owns its spacing
+   (`.work__label`, `.methodology-lede`), and a blanket `p` rule here would
+   sit at equal specificity to those and win on order — silently retuning
+   spacing the components had already decided. */
+.methodology-prose p:not([class]),
+.methodology-prose ul,
+.methodology-prose .methodology-lead-line,
+.work p:not([class]),
+.work ul {
+  margin: 0 0 12px;
+}
+
+/* No trailing gap inside a work card — the card's own padding is the bottom edge. */
+.work > :last-child {
+  margin-bottom: 0;
+}
+
+/* A non-chapter section on the index: the same reading measure as a chapter, without a chapter's
+   page-level top padding, because these sit between bands that already have their own. */
+.methodology-aside {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.methodology-aside__title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
 }
 
 /* ── The work-block family ────────────────────────────────────────────────

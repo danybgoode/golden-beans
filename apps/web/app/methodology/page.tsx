@@ -4,7 +4,13 @@ import { Footer } from '@/components/landing/Footer'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { PhaseLabel } from '@/components/methodology/PhaseLabel'
-import { METHODOLOGY_CHAPTERS, METHODOLOGY_PHASES } from '@/lib/methodology-chapters'
+import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
+import {
+  METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHECKPOINT,
+  METHODOLOGY_PHASES,
+  METHODOLOGY_PREFLIGHT,
+} from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 2, Story 2.2 — the methodology index, at its own URL (epic D7).
 //
@@ -68,6 +74,27 @@ export default function MethodologyIndexPage() {
           </div>
         </section>
 
+        {/* ── §0, the closing and the checkpoint (amendment A5) ─────────────────────────────
+            The v0.3 mockup dropped all three of these; the v0.2 field guide has them, and the
+            product owner ruled on 2026-08-19 that they ship. None is a seventh chapter — D7's
+            six-chapter structure is untouched — so they are index content with no route of their
+            own, rendered through the SAME `MethodologyBlocks` the chapters use.
+
+            §0 sits above the chapter grid because it is a precondition for chapter 1, and the line
+            that matters most in it ("Do not create a tutorial project") is the one a reader needs
+            BEFORE they pick a chapter, not after. */}
+        <section>
+          <div className="wrap methodology-aside methodology-prose">
+            {/* No `kicker` above this one. The section's title IS "Before you begin", and a mono
+                kicker carrying the same three words directly above the heading printed them twice
+                — visible the moment the page was opened, invisible to every assertion in the
+                suite. The other sections' kickers name a CATEGORY the heading then states
+                ("Methodology index" / "Six chapters. One real project"); here they collapsed. */}
+            <h2 className="methodology-aside__title">{METHODOLOGY_PREFLIGHT.title}</h2>
+            <MethodologyBlocks blocks={METHODOLOGY_PREFLIGHT.blocks} />
+          </div>
+        </section>
+
         <section>
           <div className="wrap">
             <div className="methodology-index__head">
@@ -93,6 +120,18 @@ export default function MethodologyIndexPage() {
                 </Link>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* The closing. It reads as an ending, so it is last.
+            It deliberately carries NO phase recap, though the v0.2 source's closing has one: the
+            Direction card at the top of this same page already renders those three lines from
+            `METHODOLOGY_PHASES`, and printing them again here is the "say each thing once" defect
+            D4 exists to prevent. See the note on `METHODOLOGY_CHECKPOINT`. */}
+        <section className="band">
+          <div className="wrap methodology-aside methodology-prose">
+            <p className="kicker">{METHODOLOGY_CHECKPOINT.title}</p>
+            <MethodologyBlocks blocks={METHODOLOGY_CHECKPOINT.blocks} />
           </div>
         </section>
       </main>

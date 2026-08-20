@@ -701,8 +701,17 @@ export const METHODOLOGY_PREFLIGHT: MethodologySection = {
  * that phrase reappears verbatim two sentences later ("The deeper vocabulary is there when you need
  * precision"), and the repetition was audible when read aloud. Same decision, better sentence.
  *
- * The phase recap DERIVES from `METHODOLOGY_PHASES` rather than restating it, which is also what
- * keeps "Bring an idea → Design it → Place the Bet" renamed here without a second edit (D3).
+ * ── The source's phase recap is DROPPED here, deliberately ───────────────────────────────────
+ * v0.2 closes by restating CONSIDER / OPERATE / EXIT with their one-line summaries. That is right
+ * for a linear document whose reader has scrolled a long way from the loop. It is wrong for this
+ * edition: the index renders the same three lines in its Direction card at the top of the SAME
+ * page, from `METHODOLOGY_PHASES`, so repeating them here would print the same list twice — the
+ * defect epic D4 exists to prevent, one surface over.
+ *
+ * A unit test asserts no phase summary is hardcoded in these blocks, so a future edit that
+ * reintroduces the recap has to reintroduce it as a DERIVE rather than as a second copy. Dropping
+ * it is also what keeps D3's rename ("Bring an idea → Design it → Place the Bet") true here
+ * without a second edit: the only copy of that line lives in `METHODOLOGY_PHASES`.
  */
 export const METHODOLOGY_CHECKPOINT: MethodologySection = {
   id: 'practitioner-checkpoint',
