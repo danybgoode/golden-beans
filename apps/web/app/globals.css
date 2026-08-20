@@ -3709,7 +3709,6 @@ a.stat-card:hover {
   }
 }
 
-
 /* The mockup's hero type, which is a step up from the rest of the page rather
    than the page-wide `.display` size. `tokens.css` sets 36/46/54px across three
    breakpoints; the hero clamps instead, so the headline keeps growing on a wide

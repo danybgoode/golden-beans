@@ -100,16 +100,15 @@ test('the landing never names the second move "Shape" — the two surviving "sha
 }) => {
   const text = await landingHtml(request).then(visibleText)
 
-  expect(
-    text.length,
-    'an empty page would satisfy every "does not contain" assertion below'
-  ).toBeGreaterThan(2000)
+  expect(text.length, 'an empty page would satisfy every "does not contain" assertion below').toBeGreaterThan(
+    2000
+  )
 
   // The move, in every casing and inflection the source actually had ("Shape", "shape a Bet",
   // "shaped", "shaping"). Checked separately from the count below so a regression reports which
   // rule it broke rather than an off-by-one in an array.
-  expect(text, 'the method\'s second move is called Design').not.toMatch(/\bshaping\b|\bshaped\b/i)
-  expect(text, 'the method\'s second move is called Design').not.toMatch(/\bShape\b/)
+  expect(text, "the method's second move is called Design").not.toMatch(/\bshaping\b|\bshaped\b/i)
+  expect(text, "the method's second move is called Design").not.toMatch(/\bShape\b/)
 
   // Each hit is reported with the words around it. A bare list of matched words tells the next
   // reader that something regressed but not WHERE, on a page assembled from a dozen components.
@@ -145,9 +144,6 @@ test('§methodology previews the six chapters instead of repeating §loop’s th
   // inequality rather than "the field guide is not ['Consider','Operate','Exit']" keeps the check
   // true if either list is ever rewritten — it is the RELATIONSHIP that must hold.
   const moveTitles = loopMoves(html).map((move) => move.title)
-  expect(
-    moveTitles.length,
-    'both lists must be non-empty for their inequality to mean anything'
-  ).toBe(3)
+  expect(moveTitles.length, 'both lists must be non-empty for their inequality to mean anything').toBe(3)
   expect(chapters).not.toEqual(moveTitles)
 })

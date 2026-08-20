@@ -84,8 +84,8 @@ export function MakerHero() {
           {/* Set at the mockup's scale (`.hero .hero-sub` in globals.css), which is a size up from the
               rest of the page's body copy. This is the one paragraph a reader definitely reads. */}
           <p className="hero-sub">
-            Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your
-            agent the methodology, operating rails and evidence to keep building.
+            Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your agent
+            the methodology, operating rails and evidence to keep building.
           </p>
           <p className="hero-sub hero-sub--tight">
             Plant your own Golden Frijoles across product, delivery, security and AI operations and see the

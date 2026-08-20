@@ -41,9 +41,7 @@ const requestedProject = selectedProjects[0]?.[1] ?? 'api';
 // `Object.hasOwn`, not `in`: `in` walks the prototype chain, so an argument literally named
 // `toString` or `constructor` would be silently dropped from the file list. Vanishingly unlikely
 // and free to exclude (Antigravity, round 1 of PR #104).
-const requestedFiles = process.argv
-  .slice(2)
-  .filter((argument) => !Object.hasOwn(PROJECT_FLAGS, argument));
+const requestedFiles = process.argv.slice(2).filter((argument) => !Object.hasOwn(PROJECT_FLAGS, argument));
 
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`);

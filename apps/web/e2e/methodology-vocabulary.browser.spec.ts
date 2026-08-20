@@ -96,18 +96,13 @@ for (const [label, viewport] of [
       expect(box!.height, `"${title}" is squeezed below one line of text`).toBeGreaterThanOrEqual(15)
       expect(box!.width, `"${title}" has no width`).toBeGreaterThan(0)
       expect(box!.x, `"${title}" starts outside the card`).toBeGreaterThanOrEqual(cardBox!.x - 1)
-      expect(
-        box!.x + box!.width,
-        `"${title}" runs past the right edge of the card`
-      ).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1)
+      expect(box!.x + box!.width, `"${title}" runs past the right edge of the card`).toBeLessThanOrEqual(
+        cardBox!.x + cardBox!.width + 1
+      )
     }
 
     // The phase labels are the grouping, and there are three of them. If a group ever renders with
     // no chapters under it the count above would still pass, so the groups are counted too.
-    await expect(page.locator('#methodology .field-guide__phase')).toHaveText([
-      'Consider',
-      'Operate',
-      'Exit',
-    ])
+    await expect(page.locator('#methodology .field-guide__phase')).toHaveText(['Consider', 'Operate', 'Exit'])
   })
 }

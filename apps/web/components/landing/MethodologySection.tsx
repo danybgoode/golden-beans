@@ -83,9 +83,7 @@ export function MethodologySection() {
                   <ol className="field-guide__chapters">
                     {group.chapters.map((title, index) => (
                       <li key={title}>
-                        <span className="field-guide__n">
-                          {String(offset + index + 1).padStart(2, '0')}
-                        </span>
+                        <span className="field-guide__n">{String(offset + index + 1).padStart(2, '0')}</span>
                         {title}
                       </li>
                     ))}
