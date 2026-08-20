@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { withClass } from './helpers/html-class'
+import { elementsByClass } from './helpers/html-class'
 import {
   METHODOLOGY_CHAPTERS,
   METHODOLOGY_CHECKPOINT,
@@ -59,7 +59,7 @@ test('each chapter renders exactly one <h1> with its own title, and its phase la
     expect(h1Content, `${chapter.id} should render its <h1> content`).not.toBeNull()
     expect(h1Content![1].trim(), `${chapter.id}'s <h1> should be its OWN title`).toBe(chapter.title)
 
-    const phaseLabel = html.match(new RegExp(`<p ${withClass('methodology-phase-label')}>([\\s\\S]*?)</p>`))
+    const phaseLabel = [...html.matchAll(elementsByClass('p', 'methodology-phase-label'))][0]
     expect(phaseLabel, `${chapter.id} should render a phase label`).not.toBeNull()
     const phaseTitle = PHASE_TITLE_BY_ID.get(chapter.phase)
     expect(phaseTitle, `${chapter.phase} should be a declared phase`).toBeDefined()
@@ -78,7 +78,7 @@ test('no rendered lede contains a stray object-literal brace', async ({ request 
   for (const chapter of METHODOLOGY_CHAPTERS) {
     const res = await request.get(`/methodology/${chapter.id}`)
     const html = await res.text()
-    const lede = html.match(new RegExp(`<p ${withClass('methodology-lede')}>([\\s\\S]*?)</p>`))
+    const lede = [...html.matchAll(elementsByClass('p', 'methodology-lede'))][0]
     expect(lede, `${chapter.id} should render a .methodology-lede paragraph`).not.toBeNull()
     ledeCount += 1
     expect(lede![1], `${chapter.id}'s lede must not contain a stray brace`).not.toContain('{')

@@ -167,13 +167,27 @@ test('chapter 2 is "Design it" and no chapter still names the move "Shape"', () 
 // line was "Fix the investment before designing the solution", which after the rename would use the
 // move's name for the thing the move is not.
 test('the rename did not leave "Design" describing the solution', () => {
+  // LIST ITEMS ARE INCLUDED. An earlier version read only `prose` and `blockquote`, while the "no
+  // Shape" test three tests up already covered lists — the same guard half-applied inside one file,
+  // which is the shape that guarantees the gap gets found by someone else (Antigravity, round 5 of
+  // PR #105).
   for (const chapter of METHODOLOGY_CHAPTERS) {
     for (const block of allBlocks(chapter.blocks)) {
-      const text = block.kind === 'prose' || block.kind === 'blockquote' ? block.text : ''
-      assert.ok(
-        !/design(ing)? the solution/i.test(text),
-        `${chapter.id}: "Design" is being used for the solution, not for the move`
-      )
+      const texts =
+        block.kind === 'list'
+          ? block.items
+          : block.kind === 'work'
+            ? block.variant === 'agent'
+              ? [block.prompt]
+              : []
+            : [block.text]
+
+      for (const text of texts) {
+        assert.ok(
+          !/design(ing)? the solution/i.test(text),
+          `${chapter.id}: "Design" is being used for the solution, not for the move`
+        )
+      }
     }
   }
 })
