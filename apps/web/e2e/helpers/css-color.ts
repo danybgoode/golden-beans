@@ -32,23 +32,42 @@ function assertAlpha(a: number, value: string): number {
   return a
 }
 
+/**
+ * Split a `…(…)` body into its channel list and optional alpha.
+ *
+ * Rejects more than one `/`. `split('/')` destructured into two names silently DROPS the rest, so
+ * `rgb(1 2 3 / 0.5 / 0.2)` parsed cleanly under a contract that says it throws (Antigravity, round
+ * 5 of PR #107). The same shape as the "at least three channels" hole one round earlier: lenient
+ * parsing inside a function documented as strict.
+ */
+function splitAlpha(body: string, value: string): [string, string | undefined] {
+  const parts = body.split('/')
+  if (parts.length > 2) throw new Error(`unparsed colour: ${value}`)
+  return [parts[0], parts[1]]
+}
+
 export function parseCssColor(value: string): Rgba {
   const trimmed = value.trim()
 
   // `rgb()` / `rgba()`, comma- OR space-separated, with an optional `/ alpha`.
   const legacy = trimmed.match(/^rgba?\(([^)]+)\)$/i)
   if (legacy) {
-    const [channels, alpha] = legacy[1].split('/')
+    const [channels, alpha] = splitAlpha(legacy[1], value)
+
+    // The two syntaxes have DIFFERENT arity rules and are not interchangeable:
+    //   · the legacy comma form carries alpha as a fourth channel — `rgba(r, g, b, a)`;
+    //   · the Level 4 space form must use a slash — `rgb(r g b / a)`, never `rgb(r g b a)`.
+    // Treating them as one list of "three or four numbers" accepted `rgb(22 18 13 0.72)`, which is
+    // not valid CSS and which no browser emits (Antigravity, round 5).
+    const commaSeparated = channels.includes(',')
     const parts = channels
-      .split(/[,\s]+/)
+      .split(commaSeparated ? ',' : /\s+/)
       .map((p) => p.trim())
       .filter(Boolean)
       .map(Number)
-    // EXACTLY three channels, or four in the legacy `rgba(r, g, b, a)` form. "At least three" was
-    // the first version, and it accepted `rgb(1, 2, 3, 4, 5)` — a fail-closed contract that quietly
-    // parsed malformed input (Codex, round 3 of PR #107).
-    const expected = alpha === undefined ? [3, 4] : [3]
-    if (!expected.includes(parts.length) || parts.some(Number.isNaN)) {
+
+    const allowed = commaSeparated && alpha === undefined ? [3, 4] : [3]
+    if (!allowed.includes(parts.length) || parts.some(Number.isNaN)) {
       throw new Error(`unparsed colour channels: ${value}`)
     }
     const a = alpha !== undefined ? Number(alpha.trim()) : parts.length > 3 ? parts[3] : 1
@@ -58,7 +77,7 @@ export function parseCssColor(value: string): Rgba {
   // `color(srgb r g b / a)` — 0-1 floats. What `color-mix()` computes to.
   const srgb = trimmed.match(/^color\(srgb\s+([^)]+)\)$/i)
   if (srgb) {
-    const [channels, alpha] = srgb[1].split('/')
+    const [channels, alpha] = splitAlpha(srgb[1], value)
     const parts = channels.trim().split(/\s+/).map(Number)
     if (parts.length !== 3 || parts.some(Number.isNaN)) {
       throw new Error(`unparsed colour channels: ${value}`)

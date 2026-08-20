@@ -42,6 +42,12 @@ test('an unrecognised value throws rather than guessing', () => {
     'rgba(1, 2, 3, 7)',
     'rgb(1 2 3 / 2)',
     'rgb(1 2 3 / -1)',
+    // More than one slash: `split('/')` destructured into two names drops the rest silently.
+    'rgb(1 2 3 / 0.5 / 0.2)',
+    'color(srgb 0.1 0.2 0.3 / 0.5 / 0.2)',
+    // The space form must use a slash for alpha — `rgb(r g b a)` is not valid CSS and no browser
+    // emits it, so accepting it means accepting something that can only be a mistake.
+    'rgb(22 18 13 0.72)',
   ]) {
     assert.throws(() => parseCssColor(bad), /unparsed/, `${bad} must throw`)
   }
