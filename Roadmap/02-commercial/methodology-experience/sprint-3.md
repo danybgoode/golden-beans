@@ -98,6 +98,36 @@ to every page, from a sprint whose contract is the methodology's reading experie
 the methodology routes via their own layout instead, or it is not done. Recorded here so the
 narrower reading is a decision rather than an omission.
 
+### A rejected review finding that turned out to be right — recorded, not buried (2026-08-20)
+
+On PR #105 round 3, Antigravity raised: *"the reduced-motion reset block is no longer the final
+block in the stylesheet … appending new section blocks below it reintroduces a regression hazard for
+any future `:active` transforms or transitions added lower in the file."*
+
+**I rejected it**, on the grounds that `globals.css` switches motion off **at the source** by zeroing
+`--motion-quick`/`--motion-base`, so a rule added later that uses those tokens needs no edit there
+and declaration order cannot matter. That was true of every transition in the file, and it is why
+the rejection was reasonable.
+
+**It was false for the very next thing this epic built.** Story 3.3's chapter-arrival effect is a
+`@keyframes` animation, and an animation does not consult `--motion-base` for its own *existence* —
+only for its duration. The unguarded rule sat ~1300 lines below the reduced-motion block, won on
+order, and the `animation: … both` shorthand applied its `from` state regardless: a reader who asks
+for reduced motion would have landed on a chapter at **`opacity: 0`**. An invisible chapter, for
+precisely the readers who asked for less movement. The spec caught it on its first run.
+
+**The fix is the guard, not a re-ordering:** the animation is declared inside
+`@media (prefers-reduced-motion: no-preference)`, so there is nothing to switch off and no order to
+get wrong. `no-preference` is deliberately not "not reduce" — an engine that has never heard of the
+query matches neither and gets the static page, which is the correct degradation.
+
+**The transferable rule** (for `RETROSPECTIVE.md` and `LEARNINGS.md`): *a review finding rejected on
+sound reasoning about the code as it stands can be a correct prediction about the code you are about
+to write.* The rejection is not retroactively wrong — it was right about transitions — but the
+finding named a hazard class, and a class outlives the instance that prompted it. When a reviewer
+describes a **hazard** rather than a defect, the useful question is not "is this broken today" but
+"what would have to be added for this to break", and this epic added it within the hour.
+
 ### Story 3.3 — The Apple-materials pass, with its fallbacks
 
 **As a** reader, **I want** the methodology to feel materially different from the sales page, **so
