@@ -279,6 +279,32 @@ turned out to carry the four spec traps above, which a locked contract can name 
 builder would resolve permissively. Review is the LOW-tier policy from `WAYS-OF-WORKING.md`: **two
 cross-family external passes per PR via `scripts/review-route.mjs`, and no reviewer subagents.**
 
+### A10. The attribution and the one-host pin conflict. The citation gives way, not the assertion.
+
+Found while building Story 1.2, not at lock time — recorded here because a decision discovered
+mid-build is still a decision, and code in two files cites it.
+
+Story 1.2 requires the framework *"credited by name with a link"*. The pinned property directly
+above it requires *"exactly one host in the body"*, enforced by
+`e2e/northstar-self-serve.spec.ts` counting `https?://` matches. A markdown link to Amplitude is a
+second host. **Both cannot hold as literally written.**
+
+The pin exists to prove every absolute URL came from `getSiteUrl()` rather than being a hardcoded
+wrong-environment literal — a third-party citation is not that class, so the assertion would fire
+for a reason outside its own purpose. That is an argument for changing the citation, **not** for
+loosening the assertion: the build contract's rule is that a failing pin means a dropped property,
+and a reviewer who later finds a relaxed one has no way to tell which case they are looking at.
+
+**The ruling:** the citation is written **scheme-less** — `amplitude.com/resources/north-star-playbook`.
+The credit stays complete (title, both authors, publisher, path), a reader or an agent can still
+find it, and the invariant becomes *stronger* rather than weaker: every absolute URL in that
+document is ours, with no exception to remember. A new spec asserts the citation is still present
+and still scheme-less, so "scheme-less" cannot quietly decay into "dropped".
+
+**The path was fetched before it shipped.** `amplitude.com/resources/north-star-playbook` returns
+200; `amplitude.com/north-star-playbook`, the obvious guess, is a **404**. A public surface citing
+a dead link is worse than one citing none.
+
 ## Scope
 
 | Sprint | Story | Risk |

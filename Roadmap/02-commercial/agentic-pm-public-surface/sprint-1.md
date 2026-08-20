@@ -13,8 +13,10 @@
 
 ## Build contract (locked by the architect before the builder started)
 
-**Sources are in the repo before a word is written.** `references/North-Star_how-to-Guide_2024.pdf`
-and `references/northstar-workshop.md` land in Story 1.2's first commit. Every page citation in the
+**Sources are in the repo before a word is written**, under repo-legible names rather than their
+download names: `references/amplitude-north-star-how-to-guide-2024.pdf`,
+`references/northstar-workshop-skill.md`, and `references/northstar-sources.md` — the provenance
+record that maps every element of the shipped document back to a page of a source. Every page citation in the
 element map below was checked against the PDF and is correct — **except the OpenTable worksheet,
 which is a duplicated Spotify page in the source (epic A1).** Carry p.19's OpenTable *brief* as the
 warm-up and exactly one completed worksheet, Spotify's.
