@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Nav } from '@/components/landing/Nav'
+import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 import { Footer } from '@/components/landing/Footer'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -40,6 +41,9 @@ import {
 export default function MethodologyIndexPage() {
   return (
     <>
+      {/* Story 4.1 — the reader becomes evidence. Same beacon as the landing, naming its surface;
+          the event is chosen server-side from a closed set. */}
+      <SelfTrackBeacon surface="methodology" />
       <Nav />
       <main>
         <section className="band">

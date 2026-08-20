@@ -29,12 +29,32 @@ function ensureVisitorId(): string {
 // later waitlist join reads the same cookie so both events share one visitor identity.
 //
 // Fire-and-forget: a failed or unconfigured beacon must never affect the page. Renders nothing.
-export function SelfTrackBeacon() {
+// methodology-experience · Sprint 4, Story 4.1 — the same beacon, now able to name its surface.
+//
+// A `surface` prop rather than a second component (the story's "no second beacon"): the visitor-id
+// minting above is the subtle part, it was fixed once in cross-review, and a copy of this file for
+// the methodology would be a copy of that fix waiting to drift out of step with it.
+//
+// The surface is a SUGGESTION, not a command — the route validates it against its own closed set
+// and picks the event server-side. Nothing here can cause an arbitrary event to be written.
+export function SelfTrackBeacon({
+  surface = 'landing',
+  chapter,
+}: {
+  surface?: 'landing' | 'methodology' | 'methodology-chapter'
+  /** Only meaningful for `methodology-chapter`; validated server-side against the module's ids. */
+  chapter?: string
+} = {}) {
   useEffect(() => {
     ensureVisitorId()
     // keepalive so an immediate navigation away doesn't cancel the entry beacon.
-    fetch('/api/v1/public/self-visit', { method: 'POST', keepalive: true }).catch(() => {})
-  }, [])
+    fetch('/api/v1/public/self-visit', {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface, ...(chapter ? { chapter } : {}) }),
+    }).catch(() => {})
+  }, [surface, chapter])
 
   return null
 }

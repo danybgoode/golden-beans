@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { Nav } from '@/components/landing/Nav'
+import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 import { Footer } from '@/components/landing/Footer'
 import { PhaseLabel } from '@/components/methodology/PhaseLabel'
 import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
@@ -43,6 +44,11 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
 
   return (
     <>
+      {/* Story 4.1 — which chapter rides as a TAG, not as part of the event name: the funnel's
+          question is "did readers get past the index?", and a per-chapter event name would make
+          "adopted" mean "opened chapter 3 specifically". The id is validated server-side against
+          the module, so it can only ever be a real route segment. */}
+      <SelfTrackBeacon surface="methodology-chapter" chapter={chapter.id} />
       <Nav />
       {/* ── Sprint 3, Story 3.1 — the reading shell ───────────────────────────────────────────
           Three tracks at wide widths: the contents rail, the article at a real reading measure,
