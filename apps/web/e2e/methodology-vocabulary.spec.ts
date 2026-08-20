@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { elementsByClass, withClass } from './helpers/html-class'
 
 // methodology-experience · Sprint 1 QA — the blocking-gate spec for Stories 1.1, 1.2 and 1.3.
 //
@@ -39,16 +40,21 @@ function visibleText(html: string): string {
  */
 function loopMoves(html: string): { title: string; copy: string }[] {
   return [
-    ...html.matchAll(/<li class="maker-flow__item"[\s\S]*?<h3>([\s\S]*?)<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/g),
+    ...html.matchAll(
+      new RegExp(
+        `<li ${withClass('maker-flow__item')}[\\s\\S]*?<h3>([\\s\\S]*?)</h3>[\\s\\S]*?<p>([\\s\\S]*?)</p>`,
+        'g'
+      )
+    ),
   ].map((match) => ({ title: visibleText(match[1]), copy: visibleText(match[2]) }))
 }
 
 /** The text of every chapter in §methodology's field-guide contents, in document order. */
 function fieldGuideChapters(html: string): string[] {
-  return [...html.matchAll(/<ol class="field-guide__chapters">([\s\S]*?)<\/ol>/g)].flatMap((group) =>
+  return [...html.matchAll(elementsByClass('ol', 'field-guide__chapters'))].flatMap((group) =>
     [...group[1].matchAll(/<li>([\s\S]*?)<\/li>/g)].map((item) =>
       // The chapter number lives in its own span and is presentation, not the title.
-      visibleText(item[1].replace(/<span class="field-guide__n">[\s\S]*?<\/span>/g, ' '))
+      visibleText(item[1].replace(elementsByClass('span', 'field-guide__n'), ' '))
     )
   )
 }
