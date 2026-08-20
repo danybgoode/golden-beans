@@ -23,12 +23,12 @@ import { PodReportProof } from './PodReportProof'
 // purpose; the live read is the synthetic demo project. No client data appears on this page, ever
 // — the rule PodReportProof.tsx states at length and this composition does not weaken.
 // ── The stamps were renumbered by landing-maker-ops, and that is not cosmetic ─────────────────
-// These four sections used to be §6, §8, §9 and §10 of a ten-stamp argument. The maker-ops spine
+// These sections used to be §6, §8, §9 and §10 of a ten-stamp argument. The maker-ops spine
 // replaced §1–§5 and §7 with sections that carry no stamps, which left four kraft discs reading
 // 6, 8, 9, 10 above a page whose 1 through 5 no longer exist — a numbering that describes a
-// document nobody can read any more. They are now 1–4: the closing act the page actually has, in
-// the order it argues it. Is any of this real (1) → how do I plug in (2) → what will my engineers
-// ask (3) → what does it cost (4).
+// document nobody can read any more. The 2026-08-19 readability pass then cut `connect` and `sdk`,
+// so the closing act is two: is any of this real (1) → what does it cost (2). The stamps count the
+// sections that exist, which is the only rule that survives a section being added or removed.
 export function ProofSection() {
   return (
     <>

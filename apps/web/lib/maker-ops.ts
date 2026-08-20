@@ -361,30 +361,6 @@ export function resolveSurfaceStatus(surface: OpsSurface, gates: OpsGateReadings
 // COLOUR says "not fully available" for both and the TEXT carries the distinction, which is the
 // same division of labour the honesty badges have used since the design system landed. Raised by
 // Mistral Vibe in round 7 of PR #100 and answered here rather than by adding a fourth badge status.
-/**
- * The whole sentence the drills panel shows, or '' when every drill can be started.
- *
- * ── Why the TRAILING clause is derived too ───────────────────────────────────────────────────
- * The panel used to render `{gatedDrillNote(...)}, so this shows the shape rather than a run you
- * could start here today.` The first half was computed; the tail was a constant — and with exactly
- * ONE gate open it said "not a run you could start today" while a run was startable. Same defect as
- * round 1 (a note true only in the state it was written in), in the half of the sentence that had
- * not been fixed. Sixth instance in this epic of a computed value sitting next to a hardcoded claim
- * about the same thing; the answer, again, is that they must be one value.
- *
- * Caught by Codex in round 12 of PR #100, which also noted the test could not see it — it asserted
- * only that "switched off" appeared, which is true in both the partial and the total case.
- */
-export function drillAvailabilitySentence(gates: DrillGateReadings): string {
-  const note = gatedDrillNote(gates)
-  if (note === '') return ''
-
-  const bothOff = !gates.resilienceScenariosEnabled && !gates.securitySimulationsEnabled
-  return bothOff
-    ? `The drills are built and deployed. ${note}, so this shows the shape rather than a run you could start here today.`
-    : `The drills are built and deployed. ${note} — the other one can be started.`
-}
-
 export function surfaceBadgeLabel(status: SurfaceStatus['status']): string | null {
   switch (status) {
     case 'live':

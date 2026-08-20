@@ -113,10 +113,6 @@ export async function PodReportProof() {
             <>Every gap this report can declare is declared inside the artifact itself.</>
           )}
         </p>
-
-        <p className="section-status">
-          <Badge status="live">COMPUTED · {section.epic}</Badge>
-        </p>
       </div>
     </div>
   )

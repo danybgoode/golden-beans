@@ -9,10 +9,11 @@ import { RunYourFirstBet } from './RunYourFirstBet'
 // costs (Pricing). `e2e/landing.browser.spec.ts` asserts every one of these resolves to a section
 // that exists, because a dead in-page anchor type-checks, renders, and silently does nothing.
 //
-// The CTA is the page's primary action rather than an anchor. The version this replaces pointed at
-// `#connect` on the reasoning that a reader who clicks in the first two seconds has not been told
-// what this is yet — true, and it is why the nav CTA is the same "Run your first Bet" as everywhere
-// else rather than a different, softer ask. One promise, four places, one implementation.
+// The CTA is the page's primary action rather than an anchor. An earlier version pointed at the
+// connector section on the reasoning that a reader who clicks in the first two seconds has not been
+// told what this is yet — true, and it is why the nav CTA is the same "Run your first Bet" as
+// everywhere else rather than a different, softer ask. One promise, four places, one implementation.
+// (That section has since been cut entirely; /install is where the connector flow lives.)
 export function Nav() {
   return (
     <nav className="gb landing-nav">

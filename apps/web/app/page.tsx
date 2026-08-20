@@ -7,8 +7,6 @@ import { AuthoritySection } from '@/components/landing/AuthoritySection'
 import { FinOpsSection } from '@/components/landing/FinOpsSection'
 import { MethodologySection } from '@/components/landing/MethodologySection'
 import { ProofSection } from '@/components/landing/ProofSection'
-import { ConnectSection } from '@/components/landing/ConnectSection'
-import { SdkSection } from '@/components/landing/SdkSection'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { MakerClosingCta } from '@/components/landing/MakerClosingCta'
 import { Footer } from '@/components/landing/Footer'
@@ -25,8 +23,15 @@ import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 // who this is for (hero) → the loop that makes it work (loop) → where all of it lives (product) →
 // how wide it goes (ops) → what stops the agent (authority) → what we would build next and have not
 // (finops) → how you would learn it (methodology) → and only then: is any of this real (proof) →
-// how to plug your agent in (connect) → the engineer's questions (sdk) → what it costs (pricing) →
-// ask your own agent whether to bother (start).
+// what it costs (pricing) → ask your own agent whether to bother (start).
+//
+// ── Two sections were CUT from that spine, and the argument closed over the gap ────────────────
+// `connect` ("Bring your agent" — three routes, all landing on /install) and `sdk` ("For the
+// engineers who will ask") both answered "how do I wire this up", which is a question a reader has
+// AFTER deciding they want it. On a page whose first job is to establish that the category exists,
+// two integration sections sat between the proof and the price and pushed the ask further down. The
+// connector is not hidden: /install still mints the tokenized URL, the footer's agent manifest links
+// it, and the closing CTA points straight at it.
 //
 // The evidence half sits below the repositioning on purpose, and that is a change from the page
 // this replaces. The previous page put its "try it for free right now" second, because it was the
@@ -62,8 +67,6 @@ export default function Home() {
       <FinOpsSection />
       <MethodologySection />
       <ProofSection />
-      <ConnectSection />
-      <SdkSection />
       <PricingSection />
       <MakerClosingCta />
       <Footer />

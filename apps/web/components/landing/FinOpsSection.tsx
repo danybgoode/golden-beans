@@ -22,15 +22,15 @@ import { Badge } from '@/components/ui/Badge'
 // asking, and a product that says "not yet, and here is exactly what we would build" is more
 // credible than one that stays quiet about it.
 const figures = [
-  { label: 'Projected token spend', value: '$184', note: 'Across three providers' },
-  { label: 'Cost per completed workflow', value: '$0.42', note: 'Retries and cache included' },
-  { label: 'Expected value signal', value: '+6 pts', note: 'Projected North Star input' },
+  { label: 'Projected token spend', value: '$184', note: 'across 3 providers' },
+  { label: 'Cost / completed workflow', value: '$0.42', note: 'includes retries + cache' },
+  { label: 'Expected value signal', value: '+6 pts', note: 'North Star input projection' },
 ]
 
 const facets = [
   { label: 'Attribution', detail: 'agent → workflow → Bet' },
-  { label: 'Provider mix', detail: 'cost and quality, by model' },
-  { label: 'Appetite', detail: 'budget, alerts, stop' },
+  { label: 'Provider mix', detail: 'cost + quality by model' },
+  { label: 'Appetite', detail: 'budget + alerts + stop' },
   { label: 'Unit economics', detail: 'cost per useful outcome' },
 ]
 
@@ -44,23 +44,18 @@ export function FinOpsSection() {
   return (
     <section id="finops">
       <div className="wrap">
-        <p className="eyebrow">FinOps for agentic making</p>
-        <h2 className="section-title">Know what your intelligence costs, and what it buys</h2>
-        {/* Sprint 3, agy's strongest finding: the opening stated an administrative benefit
-            ("attribute token spend") for a reader whose actual relationship to this subject is a
-            bill they did not expect. The problem goes first now.
-
-            What is NOT taken from the suggestion is its replacement line, which promised that
-            Golden Frijoles "caps spend per Bet" — a capability that does not exist, in the one
-            section of this page whose entire justification is that it says so (epic D4). A copy
-            note that fixes the register by inventing a feature is a worse defect than the flat
-            sentence it replaces, and the reviewer had no way to know. */}
+        <p className="eyebrow">FinOps for agentic making · next build</p>
+        <h2 className="section-title">Know what your intelligence costs — and what it buys</h2>
+        {/* The mockup's lead, verbatim. It states the mechanism ("attribute, then connect back to
+            product value") and its verb is FUTURE — "will bring" — which is the one thing this
+            section's copy has to keep getting right: it is the only section on this page about
+            something that does not exist. The badge and the closing note below say so outright;
+            this sentence just does not contradict them. */}
         <p className="measure">
-          An agent looping on a broken test overnight is a bill, and you find out about it from the bill.
-          Token spend only becomes useful once you can attribute it to the agent, the workflow and the Bet
-          that consumed it — and then weigh it against what it actually produced.
+          Token spend is only useful when it can be attributed to the agent, workflow and Bet that consumed
+          it, then connected back to product value. Golden Frijoles will bring AI unit economics into the
+          same operating context as your North Star.
         </p>
-        <p className="measure">None of that exists yet. This is what it would look like.</p>
 
         <div className="finops-concept section-lead">
           <p className="ops-status">
@@ -92,8 +87,11 @@ export function FinOpsSection() {
 
           <p className="note">
             The kind of thing it would tell you: route routine classification to a smaller model, projected
-            cost down 31%, quality threshold for this Bet preserved. A recommendation, not an instruction —
-            the cheapest token is not automatically the right one.
+            cost down 31% while preserving the quality threshold this Bet requires. A recommendation, not an
+            instruction — value beats cheapest-token theatre.
+          </p>
+          <p className="note finops-concept__next">
+            Illustrative product direction — FinOps is the next build, not a shipped capability.
           </p>
         </div>
       </div>

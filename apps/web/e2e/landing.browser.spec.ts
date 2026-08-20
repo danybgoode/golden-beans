@@ -220,7 +220,17 @@ test('the page is called Golden Frijoles, with only the named data-slug survivor
   const body = await page.locator('body').innerText()
   const withoutDataSlugs = body.replaceAll('golden-beans-demo', '').replaceAll('golden-beans', '')
   expect(withoutDataSlugs).not.toMatch(/golden[ -]beans/i)
-  expect(body).toContain('npm install @golden-frijoles/sdk')
+})
+
+// The rebranded package name used to be asserted on `/`, because §sdk printed the install line
+// there. That section was cut in the 2026-08-19 readability pass, and the claim it carried is
+// still checkable — /install is where the install line has always actually lived, and it is where
+// the footer's agent manifest and the closing CTA now send a reader who wants it. Moving the
+// assertion rather than deleting it is the point: the section went, the guarantee did not.
+test('the install page still carries the rebranded package name', async ({ page }) => {
+  await page.goto('/install')
+
+  await expect(page.locator('body')).toContainText('npm install @golden-frijoles/sdk')
 })
 
 // frijoles-rebrand-closeout Story 1.3. The paragraph was a mockup ledger, not product copy. Its
@@ -265,13 +275,14 @@ test('canonical public brand assets use Golden Frijoles names and accessible tex
 test('section dividers carry a legible numbered stamp', async ({ page }) => {
   await page.goto('/')
 
-  // Four, not ten: landing-maker-ops replaced §1–§5 and §7 with sections that carry no stamp, and
-  // renumbered the four survivors 1–4. The assertion is a floor rather than an equality so adding
-  // a stamped section does not fail it — but it moved down with the page, because a floor of 10
-  // above a page with four is a check that can only ever be a bug report about the check.
+  // Two, not four and not ten: landing-maker-ops replaced §1–§5 and §7 with sections that carry no
+  // stamp, and the 2026-08-19 readability pass cut §connect and §sdk, leaving Proof (1) and
+  // Pricing (2). The assertion is a floor rather than an equality so adding a stamped section does
+  // not fail it — but it moves down with the page, because a floor above what the page has is a
+  // check that can only ever be a bug report about the check.
   const stamps = page.locator('.divider__stamp')
   await expect(stamps.first()).toBeVisible()
-  expect(await stamps.count()).toBeGreaterThanOrEqual(4)
+  expect(await stamps.count()).toBeGreaterThanOrEqual(2)
 
   await expect(stamps.first()).toHaveText('1')
 
@@ -334,7 +345,9 @@ test('selecting a paragraph is a wash, not a slab', async ({ page }) => {
   // pointed out that the bound was decorative.
   await paragraph.click({ clickCount: 3 })
   const selected = await page.evaluate(() => getSelection()?.toString().trim() ?? '')
-  expect(selected, 'a paragraph must be selectable by triple-click').toContain('Your agents can build')
+  expect(selected, 'a paragraph must be selectable by triple-click').toContain(
+    'Agents can turn your ideas into reality'
+  )
 })
 
 // ── landing-frijoles-rebrand · Sprint 3 ─────────────────────────────────────────────────────────
@@ -353,6 +366,16 @@ test('hovering a control does not move it or its neighbour', async ({ page }) =>
   const cta = page.locator('.hero .hero-cta a.btn-gold').first()
   const neighbour = page.locator('.hero .hero-cta a.btn-ghost').first()
   await expect(cta).toBeVisible()
+
+  // ── Scrolled into view BEFORE the baseline is taken ─────────────────────────────────────────
+  // `hover()` scrolls its target into view first, and `boundingBox()` is frame-relative — so if
+  // the control starts below the fold, the "after" reading differs from the "before" one by the
+  // scroll distance and this test reports a 388px jump on a page where nothing moved. It passed
+  // for as long as the hero happened to be short enough to fit the CTAs into a 720px-tall default
+  // viewport, which is not a property of the thing under test; the hero grew a type size and the
+  // spec went red without a hover state changing. Scrolling first removes the coupling, and the
+  // assertion below is unchanged.
+  await cta.scrollIntoViewIfNeeded()
 
   const before = { cta: await cta.boundingBox(), neighbour: await neighbour.boundingBox() }
   await cta.hover()
@@ -413,20 +436,27 @@ test("the authority panel's gate claim matches the real route state", async ({ p
     }))
   )
   const anyClosed = gateStates.some((g) => !g.open)
-  const text = await panel.innerText()
+
+  // ── The claim moved from a sentence to the badge, and so did this assertion ─────────────────
+  // The panel used to carry a computed sentence ("…is switched off in this deployment, so this
+  // shows the shape rather than a run you could start here today") and this test matched on
+  // "switched off". The readability pass cut the sentence; the QUALIFICATION stayed, as the
+  // amber `Built, currently gated` badge, which is resolved from the same gate read.
+  //
+  // So the property is unchanged and still checked against the REAL routes rather than against a
+  // flag the test also reads: a closed gate must be labelled on the page, an open one must not be.
+  const badge = panel.getByText('Built, currently gated')
 
   if (anyClosed) {
-    expect(
-      text,
+    await expect(
+      badge,
       `a drill gate is closed (${gateStates
         .filter((g) => !g.open)
         .map((g) => g.name)
-        .join(', ')}) ` + 'so the panel must say a drill cannot be started here'
-    ).toMatch(/switched off/i)
+        .join(', ')}) ` + 'so the panel must be labelled as gated'
+    ).toHaveCount(1)
   } else {
-    expect(text, 'every drill gate is open, so the panel must not claim otherwise').not.toMatch(
-      /switched off/i
-    )
+    await expect(badge, 'every drill gate is open, so the panel must not claim otherwise').toHaveCount(0)
   }
 })
 

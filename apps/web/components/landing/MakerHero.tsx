@@ -81,19 +81,15 @@ export function MakerHero() {
             <br />
             <em className="foil">Grow what works</em>
           </h1>
-          {/* Rewritten in Sprint 3 after agy and vibe independently flagged the same line. It read
-              "Agents turn your ideas into working software faster than you can decide what to build
-              next" — a speed claim nobody can check, in a voice the brand does not use, on the one
-              sentence a reader definitely reads. Neither model's replacement is used verbatim; what
-              they were right about is that the line asserted a benefit instead of naming the
-              problem, and the problem is the thing this reader already has. */}
+          {/* Set at the mockup's scale (`.hero .hero-sub` in globals.css), which is a size up from the
+              rest of the page's body copy. This is the one paragraph a reader definitely reads. */}
           <p className="hero-sub">
-            Your agents can build almost anything you describe. What they cannot do is remember what it was
-            for a month later, or tell you whether it worked.
+            Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your
+            agent the methodology, operating rails and evidence to keep building.
           </p>
           <p className="hero-sub hero-sub--tight">
-            Golden Frijoles gives that work somewhere to land: shared product context, operating rails, and
-            evidence that outlives the conversation it came from.
+            Plant your own Golden Frijoles across product, delivery, security and AI operations and see the
+            magic happen.
           </p>
           <p className="takeaway takeaway--lead">One maker. A whole operation.</p>
 
@@ -105,9 +101,7 @@ export function MakerHero() {
             </Button>
           </div>
 
-          <p className="micro">
-            Bring an idea. Shape it. Build it. Operate it. Learn from what actually happened.
-          </p>
+          <p className="micro">Bring an idea. Consider it. Operate it. Learn from it.</p>
         </div>
 
         <div className="hero-magic">
@@ -119,10 +113,6 @@ export function MakerHero() {
               <br />
               beans*
             </span>
-            <div className="brand">
-              <b>Golden Frijoles</b>
-              <small>Maker grade</small>
-            </div>
             <div className="netwt">
               <span>Grow ideas into products</span>
             </div>
@@ -144,16 +134,14 @@ export function MakerHero() {
             </p>
           </div>
 
+          {/* ── The note sits UNDER this frame, and only this one ─────────────────────────────
+              Everywhere else on the page it labels the frame from above. Here the window is
+              positioned across the bag's lower-left corner at wide widths, so anything stacked on
+              top of it lands on kraft and becomes unreadable — the caveat is the one element that
+              cannot afford to be hard to read. Below the frame it is a caption, which is a normal
+              way to caption a picture and keeps DOM order equal to reading order. */}
           <div className="hero-window">
-            <SurfaceNote
-              label="This happens in your agent"
-              detail="Illustration — not a live session, and not anyone's real numbers"
-            />
-            <AgentWindow
-              title="shaping a Bet"
-              layout="thread"
-              platforms={['Claude', 'ChatGPT', 'your agent']}
-            >
+            <AgentWindow layout="thread">
               <ChatThread>
                 <ChatBubble actor="user">I want onboarding to feel instant. Help me shape it.</ChatBubble>
                 <ChatBubble actor="agent">
@@ -163,7 +151,7 @@ export function MakerHero() {
                 {/* The Bet renders as a ContextCard, not a bespoke panel: the card is already this
                     page's device for "here is what Golden Frijoles contributed to a conversation
                     between you and your agent", and a Bet is exactly that. */}
-                <ContextCard source="Golden Frijoles · your product context" meta="Ready to place">
+                <ContextCard>
                   <ContextOption
                     title="Outcome"
                     detail="More new users reach first value in the same session."
@@ -176,6 +164,10 @@ export function MakerHero() {
                 </ContextCard>
               </ChatThread>
             </AgentWindow>
+            <SurfaceNote
+              label="This happens in your agent"
+              detail="Illustration — not a live session, and not anyone's real numbers"
+            />
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ export function PricingSection() {
 
   return (
     <>
-      <SectionDivider number={4} title="Pricing" />
+      <SectionDivider number={2} title="Pricing" />
       <section className="band" id="pricing">
         <div className="wrap pricing">
           <h2 className="section-title">Pricing that doesn&apos;t require a meeting</h2>

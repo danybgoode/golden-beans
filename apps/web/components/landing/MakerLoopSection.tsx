@@ -28,10 +28,7 @@ export function MakerLoopSection() {
       <div className="divider divider--statement">
         <div className="wrap">
           <GoldenFrijolMark size={22} />
-          <p>
-            The surprise was never that agents can build. It is that one maker can now operate the whole
-            thing.
-          </p>
+          <p>Plant Golden Frijoles and operate across the board, grow with no limit.</p>
         </div>
       </div>
 
@@ -40,8 +37,8 @@ export function MakerLoopSection() {
           <p className="eyebrow">The new maker loop</p>
           <h2 className="section-title">From an idea to something real</h2>
           <p className="measure">
-            Golden Frijoles does not ask you to make less. It gives what you are already making somewhere to
-            go — shared context, bounded action, real product operations. Then it keeps the evidence.
+            Golden Frijoles enables makers. It gives what you are already making somewhere to go — shared
+            context, bounded action, real product operations. Then it keeps the evidence.
           </p>
 
           <ol className="maker-flow section-lead">

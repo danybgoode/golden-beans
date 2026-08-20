@@ -57,11 +57,10 @@ export async function LiveEngineProof() {
           Everything below is rendered from the synthetic <b>{DEMO_PROJECT_SLUG}</b> project by the same
           queries your agent would run.* No client data appears on this page, ever.
         </p>
-        <AgentWindow
-          className="live-proof__window"
-          title={`claude — connected: golden-frijoles · ${DEMO_PROJECT_SLUG}`}
-          status="revocable"
-        >
+        {/* No bar text. It read "claude — connected: golden-frijoles · golden-beans-demo" with a
+            green "revocable" chip, which is a second answer to "is this real" beside the
+            `SurfaceNote` above — and the note is the one the page's honesty spec actually checks. */}
+        <AgentWindow className="live-proof__window">
           <ActivityFeedItem actor="human">how&apos;s the setup-guide funnel?</ActivityFeedItem>
           <ActivityFeedItem actor="agent" name="get_tars_funnel">
             {'{'} project: &quot;{DEMO_PROJECT_SLUG}&quot;, feature: &quot;
