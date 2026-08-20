@@ -25,6 +25,24 @@ test('a hyphenated neighbour is NOT the class you asked for', () => {
   assert.ok(matches('class="target-header target"', 'target'))
 })
 
+// Antigravity round 7 of PR #105 argued that a preceding sibling class lets the pattern match a
+// hyphenated PREFIX of a longer class — `methodology-lede` inside `class="btn
+// methodology-lede-wide"` — because the optional trailing group can match zero characters. The
+// argument is sound about the trailing group and wrong about the whole match: the pattern is
+// anchored by the closing quote, so after the prefix the next character is `-`, which is neither
+// whitespace nor `"`, and the only backtrack available (`[^"]*\s` must end in whitespace) does not
+// help. These cases are pinned rather than argued, in every combination.
+test('a hyphenated prefix is not a match, with or without sibling classes', () => {
+  assert.ok(!matches('class="methodology-lede-wide"', 'methodology-lede'))
+  assert.ok(!matches('class="btn methodology-lede-wide"', 'methodology-lede'))
+  assert.ok(!matches('class="methodology-lede-wide btn"', 'methodology-lede'))
+  assert.ok(!matches('class="a methodology-lede-wide b"', 'methodology-lede'))
+  assert.ok(!matches('class="btn wide-methodology-lede"', 'methodology-lede'))
+  // ...and the real class is still found when a prefixed sibling sits beside it.
+  assert.ok(matches('class="btn methodology-lede-wide methodology-lede"', 'methodology-lede'))
+  assert.ok(matches('class="methodology-lede methodology-lede-wide"', 'methodology-lede'))
+})
+
 test('a partial word is not a match either', () => {
   assert.ok(!matches('class="targeted"', 'target'))
   assert.ok(!matches('class="untarget"', 'target'))
