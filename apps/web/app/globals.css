@@ -3198,6 +3198,12 @@ a.stat-card:hover {
 .maker-flow__item {
   padding: 20px;
   border-bottom: 1px solid var(--line);
+  /* Depth by LAYERING rather than by a heavier border: a named rung, so the
+     chrome reads as a surface above the article — the HIG "material over
+     content" idea, and the thing a thicker hairline fakes badly. Declared in
+     this block rather than a second one for the same selector, which is
+     duplication that invites an ordering hazard later (Antigravity, round 1). */
+  box-shadow: var(--elevation-raised);
 }
 
 .maker-flow__item:last-child {
@@ -4126,12 +4132,21 @@ a.stat-card:hover {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* The reserved right track. It holds nothing until Story 3.4 decides whether
-   real read progress is worth a rail — and D6 means an empty one renders
-   NOTHING rather than a plausible-looking placeholder. `aria-hidden` in the
-   markup keeps an empty box out of the accessibility tree entirely. */
+/* The third track. Written when it was a permanent empty placeholder, it was
+   `display: none` here and `block` only from 900px — which was harmless while it
+   held nothing and became a real defect the moment Story 3.4 put the progress
+   rail inside it: the ancestor's `display: none` suppressed the rail on every
+   phone, and the `max-width` rules written for it were dead code. The comment
+   next to them said "the rail follows the article rather than being hidden",
+   which is the property the code did not have (CODE-QUALITY #3).
+
+   It is `block` at every width now. When the rail has nothing honest to say it
+   renders null, so this element is simply an empty box with no styles of its own
+   and no height — the emptiness comes from the CONTENT being absent, which is
+   what D6 asks for, rather than from an ancestor hiding real content.
+   Antigravity, round 1 of PR #107. */
 .methodology-shell__aside {
-  display: none;
+  display: block;
 }
 
 /* ── The contents rail ──────────────────────────────────────────────────────
@@ -4250,10 +4265,6 @@ a.stat-card:hover {
     margin-inline: auto;
   }
 
-  .methodology-shell__aside {
-    display: block;
-  }
-
   /* `top` is overridden to the chrome's height by Story 3.3's materials block
      below, which is what made this page's topbar sticky. The base value stays
      0 so the rail is still correct if that block is ever removed.
@@ -4304,6 +4315,13 @@ a.stat-card:hover {
     /* Titles wrap here — there is a column to wrap inside, and truncating a
        chapter title is worse than two lines. */
     white-space: normal;
+  }
+
+  /* In the third track the aside owns the gutter, so the rail drops the
+     one-column margins from its base rule. */
+  .methodology-progress {
+    margin-inline: 0 18px;
+    margin-bottom: 0;
   }
 
   .methodology-article {
@@ -4443,14 +4461,15 @@ a.stat-card:hover {
   line-height: 1.35;
 }
 
-/* Below the shell's breakpoint the third track collapses. The rail follows the
-   article rather than being hidden — it is small, it is at the end, and a phone
-   reader is exactly the reader most likely to return across sessions. */
-@media (max-width: 899px) {
-  .methodology-progress {
-    margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
-    margin-bottom: 34px;
-  }
+/* One column: the rail follows the article, matching its gutter. Written as the
+   BASE rule with the wide layout overriding it, rather than as a `max-width:
+   899px` block against a `min-width: 900px` sibling — two queries meeting at a
+   boundary invite the "is it 899 or 899.98" question on fractional viewports,
+   and mobile-first removes the boundary instead of answering it. Antigravity
+   raised the asymmetry in round 1 of PR #107; this is the third option. */
+.methodology-progress {
+  margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+  margin-bottom: 34px;
 }
 
 /* ── methodology-experience · Sprint 3, Story 3.3 — the materials pass ──────
@@ -4539,13 +4558,6 @@ a.stat-card:hover {
     backdrop-filter: blur(10px) saturate(1.3);
     -webkit-backdrop-filter: blur(10px) saturate(1.3);
   }
-}
-
-/* Depth by LAYERING rather than by a heavier border: the chrome carries a
-   named rung so it reads as a surface above the article, which is the HIG
-   "material over content" idea and the thing a thicker hairline fakes badly. */
-.methodology-chrome .landing-nav {
-  box-shadow: var(--elevation-raised);
 }
 
 /* Spring-weighted motion on the chapter transition. `--ease-press` is the

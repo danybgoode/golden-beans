@@ -56,6 +56,30 @@ test('the rail claims only what the page can observe, and promises nothing it do
   expect(text).not.toContain('✓')
 })
 
+// The rail must be VISIBLE on a phone, not merely present.
+//
+// It was in the DOM with `display: block` on itself — and zero height, because its ancestor track
+// was `display: none` below 900px, written when that track was a permanent empty placeholder. The
+// `max-width` rules styling the rail for mobile were dead code, and the comment beside them claimed
+// "the rail follows the article rather than being hidden": the property the code did not have.
+// A count assertion would have passed the whole time; only measuring it catches this
+// (Antigravity, round 1 of PR #107).
+test('on a phone the rail is visible, not merely present', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/methodology/bring-an-idea')
+  await page.goto('/methodology/design-it')
+
+  const rail = page.locator(RAIL)
+  await expect(rail).toHaveCount(1)
+  await expect(rail).toBeVisible()
+
+  const box = await rail.boundingBox()
+  expect(box, 'the rail must have a box on a phone').not.toBeNull()
+  expect(box!.height, 'a rail suppressed by an ancestor reports zero height').toBeGreaterThan(20)
+  expect(box!.x, 'the rail must keep the article gutter').toBeGreaterThanOrEqual(12)
+  expect(box!.x + box!.width, 'the rail must not widen the page').toBeLessThanOrEqual(390)
+})
+
 // The property the whole module exists for. A reader whose browser refuses storage must get NO
 // rail — never "0 of 6", which is a number-shaped lie to someone who may have read all six.
 test('a browser that refuses storage gets no rail, not a zero', async ({ page }) => {
