@@ -3624,19 +3624,19 @@ a.stat-card:hover {
 }
 
 @media (min-width: 900px) {
-  /* tokens.css centres the hero's two columns against each other. That was right when the right
-     column was one object; this hero holds two (the bag label and the agent window), so centring
-     the shorter left column against it opens ~280px of dead air above the headline — on the one
-     screen that has to land in two seconds. Both columns start together instead. */
+  /* Two corrections to `tokens.css`'s hero grid, which was written for a right
+     column holding ONE object.
+
+     `align-items`: it centres the columns against each other. This hero's right
+     column holds two, so centring the shorter left column against it opens ~280px
+     of dead air above the headline — on the one screen that has to land in two
+     seconds. Both columns start together instead.
+
+     `grid-template-columns`: near-even, as the mockup has them (`1.05fr .95fr`)
+     rather than `1.15fr .85fr`. Two overlapping objects need the width; without it
+     the window covers the bag almost entirely instead of crossing its corner. */
   .hero-grid {
     align-items: start;
-  }
-
-  /* Near-even columns, as the mockup has them (`1.05fr .95fr`). `tokens.css`
-     gives the hero `1.15fr .85fr`, which was right for a single stacked object
-     on the right; two overlapping ones need the width, and without it the window
-     covers the bag almost entirely instead of crossing its corner. */
-  .hero-grid {
     grid-template-columns: 1.05fr 0.95fr;
   }
 
@@ -3781,7 +3781,16 @@ a.stat-card:hover {
 
   .hero-magic > .hero-window {
     grid-area: 1 / 1;
-    align-self: end;
+    /* `start`, not `end`. With `end` the window's BOTTOM pins to the row's, so the
+       offset below the bag only equals `margin-top` while the window plus that
+       offset is the taller of the two — and silently grows when the bag is taller.
+       Measured: forcing the bag to 542px slid the offset from 194px to 542px, i.e.
+       the window dropped clear of the bag entirely. With `start` the window's top
+       IS `margin-top` below the row's, unconditionally, which is what the comment
+       above claims. Antigravity, round 3 of PR #102 — and the same defect shape as
+       the two it found in round 2: prose asserting a property the code only had in
+       the case I happened to look at. */
+    align-self: start;
     justify-self: start;
     width: min(420px, 82%);
     /* Clears the bag's title and its first row. */
