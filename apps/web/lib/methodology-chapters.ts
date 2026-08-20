@@ -754,6 +754,21 @@ export const METHODOLOGY_CHECKPOINT: MethodologySection = {
 }
 
 /**
+ * Every chapter id, in reading order, as ONE stable array.
+ *
+ * Computed once at module load rather than by callers doing `METHODOLOGY_CHAPTERS.map(c => c.id)`
+ * at each render. That inline form produces a NEW array every time, which is a fresh reference —
+ * and a client component with that array in a `useEffect` dependency list re-runs its effect on
+ * every render of its parent, doing redundant storage reads and writes for no change in the data
+ * (Antigravity, round 1 of PR #107).
+ *
+ * It is also the list `generateStaticParams`, the TOC and any future sitemap all want, so having
+ * one of it is the same "two things that must agree get one implementation" rule as everything else
+ * in this module.
+ */
+export const METHODOLOGY_CHAPTER_IDS: readonly string[] = METHODOLOGY_CHAPTERS.map((chapter) => chapter.id)
+
+/**
  * Look up a chapter by id, THROWING on an unknown one.
  *
  * Same mechanism and the same reason as `lib/landing-sections.ts`'s `getSection` (epic D7): the ids

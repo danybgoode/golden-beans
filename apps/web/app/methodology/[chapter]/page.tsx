@@ -4,7 +4,14 @@ import { Footer } from '@/components/landing/Footer'
 import { PhaseLabel } from '@/components/methodology/PhaseLabel'
 import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
 import { ChapterNav } from '@/components/methodology/ChapterNav'
-import { METHODOLOGY_CHAPTERS, getChapter, chapterNeighbours } from '@/lib/methodology-chapters'
+import { ChapterToc } from '@/components/methodology/ChapterToc'
+import { ReadProgressRail } from '@/components/methodology/ReadProgressRail'
+import {
+  METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHAPTER_IDS,
+  getChapter,
+  chapterNeighbours,
+} from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 2, Story 2.3 — one chapter, at its own URL (epic D7).
 //
@@ -37,8 +44,19 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
   return (
     <>
       <Nav />
-      <main>
-        <article className="wrap methodology-article methodology-prose">
+      {/* ── Sprint 3, Story 3.1 — the reading shell ───────────────────────────────────────────
+          Three tracks at wide widths: the contents rail, the article at a real reading measure,
+          and a reserved right column. The third track is EMPTY today and that is deliberate — its
+          content is Story 3.4's read progress, or nothing at all if 3.4 decides the honest answer
+          is nothing (epic D6: no fake state). Reserving it now is not a placeholder for its own
+          sake: it is what keeps the article optically centred on the page instead of shoved right
+          by the rail, which is a real benefit whether or not anything ever fills it.
+
+          Below the shell's breakpoint the grid collapses to one column and the rail becomes a
+          scrollable strip above the article — never `display: none` (see `ChapterToc`). */}
+      <main className="methodology-shell">
+        <ChapterToc currentId={chapter.id} />
+        <article className="methodology-article methodology-prose">
           <PhaseLabel phase={chapter.phase} chapterNumber={chapter.number} />
           {/* Exactly one <h1> per route (sprint-2.md Story 2.3). Chapter titles already carry no
               terminal full stop (lib/methodology-chapters.ts's own header note) — decided once,
@@ -52,6 +70,13 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
 
           <ChapterNav previous={previous} next={next} />
         </article>
+        {/* The reserved third track, now Story 3.4's read progress. It renders NOTHING when there
+            is nothing honest to say — storage unavailable, or nothing opened yet — so this column
+            is often empty, which is the intended state rather than a missing feature (epic D6).
+            No `aria-hidden` any more: what is in here is now real content when it appears. */}
+        <div className="methodology-shell__aside">
+          <ReadProgressRail chapterId={chapter.id} chapterIds={METHODOLOGY_CHAPTER_IDS} />
+        </div>
       </main>
       <Footer />
     </>

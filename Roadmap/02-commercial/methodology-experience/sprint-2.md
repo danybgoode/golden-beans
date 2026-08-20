@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 2: `/methodology` skateboard
 
-**Status:** 🟦 In review — all four stories built and gated locally (`4fb97be`, `b62321c`, `1a6fdfc`, `188ddcf`, `64869c0`, `1a89835`, `f5462cf`, `8435074`)
+**Status:** ✅ **Shipped and verified in production** — PR [#105](https://github.com/danybgoode/golden-beans/pull/105), squashed to `main` as `066d5c2`, Production deployment `6004005562` reported `success` for that exact SHA.
 **Branch:** `feat/methodology-experience-s2` (cut from `feat/methodology-experience`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -136,5 +136,31 @@ to the one that matters instead of "scroll to chapter 4".
 
 ## Sprint 2 — Smoke walkthrough
 
-*Written at sprint close, with real production URLs. Placeholder — do not tick the sprint without it.*
-Env: production · `https://goldenfrijoles.com` (preview URL while pre-merge)
+Env: **production** · <https://goldenfrijoles.com> · deployed SHA `066d5c2` (confirmed via
+`gh api repos/danybgoode/golden-beans/deployments`, not inferred from a green CI run).
+
+All public surface — no account, no session, no credentials.
+
+| # | Do this | Expect |
+|---|---|---|
+| 1 | Open <https://goldenfrijoles.com> and scroll to **The way of working behind the product** | The kraft card lists six chapters grouped by phase, and the button reads **Explore the methodology** |
+| 2 | Click it | You land on <https://goldenfrijoles.com/methodology> — a real URL, not an in-page jump |
+| 3 | Read the top of that page | "Make something real", then a Direction card: Consider *(Bring an idea → Design it → Place the Bet)* · Operate *(Build ↔ Prove)* · Exit *(Reconsider → Learn)* |
+| 4 | Scroll past the Direction card | **Before you begin** — four prerequisites as a real list, then "Open the real project you want to change. Do not create a tutorial project." |
+| 5 | Scroll to the chapter grid | Six cards, `01`–`06`, each tagged with its phase |
+| 6 | Scroll to the bottom | **You completed the loop**, then **Practitioner checkpoint** with eleven capabilities, closing on "Terminology recall is not the test. / Better operation is." |
+| 7 | Click chapter 02 | <https://goldenfrijoles.com/methodology/design-it> — the chapter is titled **Design it**, and its opening line is real prose, not `{1:"…"}[2]` |
+| 8 | Find the dark **USE YOUR AGENT** block on chapter 1 | <https://goldenfrijoles.com/methodology/bring-an-idea> — press *copy prompt*, paste anywhere: you get exactly the visible text |
+| 9 | Scroll to the bottom of any chapter | Prev/next with phase labels. On <https://goldenfrijoles.com/methodology/decide-what-happens-next> the next link is the index and says the loop is complete |
+| 10 | Visit <https://goldenfrijoles.com/methodology/not-a-chapter> | A real **404**, not a 500 |
+| 11 | Check the nav and footer on any page | Both carry a **Methodology** link |
+| 12 | Run the sprint's specs against production | `PLAYWRIGHT_BASE_URL=https://goldenfrijoles.com npx playwright test apps/web/e2e/methodology-routes.spec.ts apps/web/e2e/methodology-vocabulary.spec.ts --project=api` → **14 passed** |
+
+**Baselined, so a pass is evidence rather than a script that would have passed either way.** The same
+route spec run against the *previous* production deployment (`8191459`) fails **11 of 11**; against
+`066d5c2` it passes 11 of 11. The checks can tell the two builds apart.
+
+Also verified by looking: the index and a chapter screenshotted at 1280px and 390px, before merge and
+again on live production. `/methodology` and `/methodology/design-it` are rows in
+`PUBLIC_MOBILE_ROUTES`, so both are swept for overflow and tap targets at 360 and 390 on every
+browser run.

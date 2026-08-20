@@ -13,6 +13,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHAPTER_IDS,
   METHODOLOGY_CHECKPOINT,
   METHODOLOGY_PHASES,
   METHODOLOGY_PREFLIGHT,
@@ -387,4 +388,16 @@ test('the closing does not restate the phases as its own copy', () => {
       `the closing hardcodes "${phase.summary}" instead of deriving it from METHODOLOGY_PHASES`
     )
   }
+})
+
+test('METHODOLOGY_CHAPTER_IDS matches the chapters, in order, and is one stable array', () => {
+  assert.deepEqual(
+    [...METHODOLOGY_CHAPTER_IDS],
+    METHODOLOGY_CHAPTERS.map((chapter) => chapter.id)
+  )
+  // The property it exists for: the SAME reference every time it is read. A getter or an inline
+  // `.map()` would satisfy the deepEqual above and still re-run a consumer's effect on every render.
+  assert.equal(METHODOLOGY_CHAPTER_IDS, METHODOLOGY_CHAPTER_IDS)
+  const before = METHODOLOGY_CHAPTER_IDS
+  assert.ok(Object.is(before, METHODOLOGY_CHAPTER_IDS), 'the ids array must be one allocation')
 })

@@ -3198,6 +3198,12 @@ a.stat-card:hover {
 .maker-flow__item {
   padding: 20px;
   border-bottom: 1px solid var(--line);
+  /* Depth by LAYERING rather than by a heavier border: a named rung, so the
+     chrome reads as a surface above the article — the HIG "material over
+     content" idea, and the thing a thicker hairline fakes badly. Declared in
+     this block rather than a second one for the same selector, which is
+     duplication that invites an ordering hazard later (Antigravity, round 1). */
+  box-shadow: var(--elevation-raised);
 }
 
 .maker-flow__item:last-child {
@@ -4111,9 +4117,217 @@ a.stat-card:hover {
    outright until Story 3.4 builds real per-visitor progress) — this is the skateboard, not the
    reading shell. */
 
+/* ── methodology-experience · Sprint 3, Story 3.1 — the reading shell ───────
+   The shared surface for this sprint: the grid, the contents rail and the
+   article's place in it. Stories 3.2–3.4 extend this; they do not re-derive it.
+
+   Epic D1 in one rule: the room changes by LAYOUT AND DENSITY, not by a second
+   palette. Every value below resolves from `tokens.css` — there is no colour
+   here that `/` does not already use. What makes `/methodology` feel unlike the
+   sales page is that it is a three-track reading surface with a persistent
+   contents rail, not that it is painted differently. */
+.methodology-shell {
+  display: grid;
+  /* Phone first: one column. The rail is a strip above the article (below). */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* The third track. Written when it was a permanent empty placeholder, it was
+   `display: none` here and `block` only from 900px — which was harmless while it
+   held nothing and became a real defect the moment Story 3.4 put the progress
+   rail inside it: the ancestor's `display: none` suppressed the rail on every
+   phone, and the `max-width` rules written for it were dead code. The comment
+   next to them said "the rail follows the article rather than being hidden",
+   which is the property the code did not have (CODE-QUALITY #3).
+
+   It is `block` at every width now. When the rail has nothing honest to say it
+   renders null, so this element is simply an empty box with no styles of its own
+   and no height — the emptiness comes from the CONTENT being absent, which is
+   what D6 asks for, rather than from an ancestor hiding real content.
+   Antigravity, round 1 of PR #107. */
+.methodology-shell__aside {
+  display: block;
+}
+
+/* ── The contents rail ──────────────────────────────────────────────────────
+   Below the shell's breakpoint this is a horizontal strip, not a hidden
+   element. The mockup sets `display: none` on the whole TOC under 700px, which
+   strands a phone reader in a chapter with no way sideways.
+
+   A strip rather than a disclosure, deliberately: a `<details>` collapsed on a
+   narrow window and then widened is a control that has hidden itself with no
+   way back, and CSS cannot force it open again. This has no state to get
+   stuck in. The horizontal scroll is contained by this element, which is what
+   `assertMobileClean` requires of any deliberate horizontal rail. */
+.methodology-toc {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  /* The strip is a row of chapters; the phase headings are a wide-width
+     affordance and would double its height here for no navigational gain — the
+     chapter page states its own phase in the kicker above the title. */
+  scrollbar-width: thin;
+}
+
+.methodology-toc__group {
+  display: contents;
+}
+
+.methodology-toc__phase {
+  display: none;
+}
+
+.methodology-toc__list {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.methodology-toc__link {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.2;
+  text-decoration: none;
+  /* On the strip a wrapped chapter title would double the rail's height for one
+     item. They are short; the number carries the order if one ever truncates. */
+  white-space: nowrap;
+  transition: background var(--motion-base) var(--ease-out);
+}
+
+.methodology-toc__link:hover {
+  background: var(--card);
+  color: var(--crema);
+}
+
+/* The active state, derived from the route (see ChapterToc.tsx). Paired with
+   `aria-current="page"` in the markup — this rule is the half a sighted reader
+   gets, and it is not the only half. */
+.methodology-toc__link.is-current {
+  background: var(--card);
+  color: var(--crema);
+  font-weight: 800;
+}
+
+.methodology-toc__n {
+  flex: none;
+  color: var(--dim-2);
+  font: 800 10px var(--mono);
+  letter-spacing: 0.08em;
+}
+
+.methodology-toc__link.is-current .methodology-toc__n {
+  color: var(--gold);
+}
+
 .methodology-article {
   max-width: 720px;
   padding-block: 44px 72px;
+  /* Horizontal padding is the ARTICLE's own here, not `.wrap`'s.
+     Sprint 2 rendered this as `<article class="wrap methodology-article">`, and
+     Story 3.1 dropped `.wrap` when the article became a grid track — `.wrap`
+     also carries a `max-width` and `margin-inline: auto` that fight a track
+     that is already sized by the grid. What went with it was the 18px gutter,
+     so below 900px (where the `padding-inline` in the wide block does not
+     apply) chapter text sat FLUSH against the viewport edge on a phone.
+     Nothing failed: it is not overflow, so `assertMobileClean` is silent, and
+     every spec asserting text is present still passed. Found by looking at a
+     390px screenshot.
+     `max()` with the safe-area inset, matching `.wrap` — on a notched phone in
+     landscape the inset is what keeps text out from under the rounded corner. */
+  padding-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+}
+
+/* The wide-width shell. Its own block, placed AFTER the base rules above and not
+   folded into one of the earlier `min-width: 900px` blocks in this file — those sit
+   ~2000 lines higher, so at equal specificity the base one-column rule would win on
+   ORDER and the grid would silently never apply. It did, for one build; the page was
+   still one column with a green gate. Media queries add no specificity — only position
+   in the sheet decides. */
+@media (min-width: 900px) {
+  /* ── The shell becomes three tracks ──────────────────────────────────────
+     methodology-experience · Sprint 3, Story 3.1. `minmax(0, 1fr)` on the
+     middle track and not `1fr`: a grid item's default `min-width: auto` lets a
+     long unbroken token (a URL in a prompt, a code span) push the track wider
+     than its share and blow the whole grid out horizontally. The article's own
+     `max-width` then never gets a chance to apply. */
+  .methodology-shell {
+    grid-template-columns: 230px minmax(0, 1fr) 220px;
+    max-width: 1360px;
+    margin-inline: auto;
+  }
+
+  /* `top` is overridden to the chrome's height by Story 3.3's materials block
+     below, which is what made this page's topbar sticky. The base value stays
+     0 so the rail is still correct if that block is ever removed.
+
+     `align-self: start` is what makes `position: sticky` work at all inside a
+     grid: a stretched item is already as tall as its row, so it has nothing to
+     stick within and the property silently does nothing. */
+  .methodology-toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    display: block;
+    max-height: 100vh;
+    padding: 34px 18px;
+    overflow-x: visible;
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    border-bottom: none;
+  }
+
+  .methodology-toc__group {
+    display: block;
+    margin-bottom: 16px;
+  }
+
+  /* The phase grouping, which is the point of the rail at this width: six
+     chapters read as three moves rather than as a list of six. */
+  .methodology-toc__phase {
+    /* `display` is reset here, not just restyled. The base rule hides these —
+       the strip is one row and three headings would double its height — and
+       leaving that out meant the rail rendered its six chapters with NO phase
+       grouping at all, which is the one thing Story 3.1's acceptance names it
+       for. Green gate, correct markup, missing feature; caught by opening the
+       page. */
+    display: block;
+    margin: 0 0 6px;
+    color: var(--dim-2);
+    font: 900 9px var(--mono);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .methodology-toc__list {
+    display: block;
+  }
+
+  .methodology-toc__link {
+    /* Titles wrap here — there is a column to wrap inside, and truncating a
+       chapter title is worse than two lines. */
+    white-space: normal;
+  }
+
+  .methodology-article {
+    padding-inline: max(40px, env(safe-area-inset-left)) max(40px, env(safe-area-inset-right));
+    /* Centred in its own track, not left-aligned in it. The middle track is wider
+       than the article's 720px measure, so without this the column sits hard
+       against the rail and all the slack collects on the right — which reads as
+       lopsided exactly when the third track is empty, and the third track is
+       empty for most readers most of the time (Story 3.4 renders nothing until
+       there is something true to say). Found by looking at the two pages side by
+       side for the "different room" judgment. */
+    margin-inline: auto;
+  }
 }
 
 .methodology-lede {
@@ -4132,6 +4346,12 @@ a.stat-card:hover {
 .methodology-prose h2 {
   margin: 38px 0 10px;
   font-size: 22px;
+  /* Explicit, not inherited: with no `line-height` here this fell back to the body's 1.55, tuned
+     for paragraph text at 15–16px, not for a bold 22px section heading — the extra leading read as
+     loose air above a short line rather than as heading rhythm. Story 3.2's article typography
+     pass sets it directly instead of leaving a heading to borrow a body value that happens to be
+     in scope. */
+  line-height: 1.25;
   letter-spacing: -0.02em;
 }
 
@@ -4140,6 +4360,23 @@ a.stat-card:hover {
   padding-left: 18px;
   border-left: 3px solid var(--gold);
   font: 700 21px/1.35 var(--sans);
+}
+
+/* Lists get the same reading-rhythm treatment as the heading and blockquote above (Story 3.2
+   acceptance groups all three). The paragraph-rhythm rule below spaces a `<ul>` from what
+   surrounds it, but says nothing about one `<li>` and the next — with no per-item margin, chapter
+   3's restored bullet list (epic README defect 3, five short judgment calls) read as one dense
+   block with bullets glued to it, the exact defect that list was rescued FROM. The UA's 40px
+   `padding-inline-start` is also sized for a much wider column than this article's 720px measure,
+   so it reads as an oversized indent here — trimmed to something proportionate instead. */
+.methodology-prose li,
+.work li {
+  margin: 6px 0;
+}
+
+.methodology-prose ul,
+.work ul {
+  padding-inline-start: 22px;
 }
 
 /* ── Paragraph rhythm ──────────────────────────────────────────────────────
@@ -4191,11 +4428,247 @@ a.stat-card:hover {
   letter-spacing: -0.02em;
 }
 
+/* ── Story 3.4 — read progress ──────────────────────────────────────────────
+   Quiet on purpose. It sits beside the article for the whole scroll and is the
+   least important thing on the page: a reader who ignores it loses nothing.
+   Sized and coloured to be findable when looked for and invisible when not. */
+/* ── Every base declaration in ONE block, above the wide override ───────────
+   Mobile-first: the one-column margins live here and the `min-width: 900px`
+   block later in the file resets them, because in the third track the aside
+   supplies the gutter.
+
+   The ORDER is the load-bearing part. An earlier version put these two margins
+   in a second `.methodology-progress` block placed AFTER that media query —
+   media queries add no specificity, so the base rule won and the phone margins
+   persisted on desktop. That is the third instance of the same cascade defect
+   in this file in one epic (the shell grid, the chapter animation, this), and
+   all three were Antigravity findings. The rule that prevents a fourth: a
+   selector gets ONE base block, and it goes above every override of it. */
+.methodology-progress {
+  margin-top: 34px;
+  margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+  margin-bottom: 34px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.methodology-progress__count {
+  margin: 0;
+  color: var(--crema);
+  font: 800 12px var(--mono);
+  letter-spacing: 0.06em;
+}
+
+.methodology-progress__note {
+  margin: 6px 0 0;
+  color: var(--dim-2);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+/* The desktop override, in its OWN block directly below the base rules rather
+   than folded into the shared wide-width block ~6000 characters earlier in this
+   file. Media queries add no specificity, so an override that sits ABOVE its
+   base rule loses on order and does nothing — which is what happened when these
+   two margins first moved to a base rule, and is the third instance of that
+   cascade defect in this file in one epic. Keeping a selector's base and its
+   override adjacent makes the order visible to the next reader instead of
+   depending on where two distant blocks happen to fall. */
+@media (min-width: 900px) {
+  /* In the third track the aside owns the gutter, so the rail drops its
+     one-column margins. */
+  .methodology-progress {
+    margin-inline: 0 18px;
+    margin-bottom: 0;
+  }
+}
+
+/* ── methodology-experience · Sprint 3, Story 3.3 — the materials pass ──────
+   Epic D2: Apple's HIG *materials*, not Google's Material Design 3 — layered
+   depth, translucency and vibrancy, elevation expressed as a material sitting
+   over content rather than as a drop shadow.
+
+   ── The circuit breaker did NOT fire, and the evidence is written down ───────
+   The breaker's condition is "if translucency does not read well over warm
+   kraft inside this story's budget". Prototyped over the real tokens BEFORE
+   building (see sprint-3.md, "circuit-breaker evidence"). Two findings:
+
+   1. D2's sentence describes the MOCKUP's page. It says "over the paper
+      ground"; the mockup is light (`--paper: #f5eddf`), this site is dark
+      (`--roast`), and kraft is a CARD material here, never the page ground.
+   2. It reads on dark, and the first visual read of that was WRONG. On a
+      full-page screenshot the effect looked nearly invisible. Measured, the
+      dark ground changes MORE than paper (mean channel delta 15.13/255 vs
+      10.44), because a bright element passing under the bar has far more
+      contrast against near-black than kraft has against paper.
+
+   So the effect ships. What makes it read is a bright element (a gold rule, a
+   kraft card) passing underneath — which is exactly what a scrolling chapter
+   provides.
+
+   ── Scope: the methodology's own chrome, not the site's ─────────────────────
+   `.methodology-chrome` is `app/methodology/layout.tsx` and nothing else. `Nav`
+   is shared by `/`, `/talk`, `/install` and `/login` and is sticky on none of
+   them; granting stickiness in the component would change every page in the
+   product from a sprint scoped to one reading experience. Product owner
+   approved the narrower reading on 2026-08-20.
+
+   ── Every value is a token ──────────────────────────────────────────────────
+   The tint is `color-mix()` over `--roast`; the hairline is `--line`; the
+   depth is a NAMED RUNG (`--elevation-raised`), not a new shadow chosen by eye.
+   D1 holds: the room changes by layout, density and material — not by a second
+   palette. */
+/* ── ONE number, consumed by both surfaces ──────────────────────────────────
+   The sticky topbar's height and the rail's sticky offset must agree, and
+   "two things that must agree" is the defect class this repo keeps paying for
+   (CODE-QUALITY #2). So it is declared once here and read by both: the nav
+   pins it as a floor, the rail offsets by it, and the rail's scroll box
+   subtracts it.
+
+   It is still a written-down number — CSS cannot read a sibling's height — so
+   it does not rest on this comment: `methodology-materials.browser.spec.ts`
+   measures the rail's top edge against the nav's BOTTOM edge on the rendered
+   page. If the nav ever outgrows this value, that assertion fails rather than
+   the rail quietly sliding under the bar again. */
+.methodology-chrome {
+  --methodology-chrome-h: 81px;
+}
+
+.methodology-chrome .landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: var(--methodology-chrome-h);
+  /* The material, in three parts: a partly-transparent ground so what scrolls
+     under it tints the bar, a blur so that tint is a wash rather than a legible
+     ghost of the content, and `saturate` for the vibrancy half of the HIG
+     recipe — without it the wash goes grey and reads as fog, not as glass. */
+  background: color-mix(in srgb, var(--roast) 72%, transparent);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  border-bottom: 1px solid var(--line);
+}
+
+/* The rail is the second surface D2 names, and it is already sticky (Story
+   3.1). Same material, one step quieter: it sits beside the article for the
+   whole scroll, and a rail as present as the topbar competes with the text it
+   exists to navigate. */
+@media (min-width: 900px) {
+  .methodology-chrome .methodology-toc {
+    /* Offset by the chrome, not by zero. Story 3.1 set `top: 0` and said so in
+       a comment — correct then, because nothing on this page was sticky. THIS
+       story made the topbar sticky, and the rail immediately began rendering
+       underneath it with its first entry clipped. That Story 3.1 comment ended
+       "if Story 3.3's materials pass makes the topbar sticky, this `top` grows
+       to its height and this note is what says so" — it did, and this is that.
+       The scroll box subtracts the same value, or a rail taller than the
+       remaining viewport hides its own last entries. */
+    top: var(--methodology-chrome-h);
+    max-height: calc(100vh - var(--methodology-chrome-h));
+    background: color-mix(in srgb, var(--roast) 80%, transparent);
+    backdrop-filter: blur(10px) saturate(1.3);
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  }
+}
+
+/* Spring-weighted motion on the chapter transition. `--ease-press` is the
+   springier curve the motion architecture already reserves for movement that
+   IS the point; a chapter arriving is exactly that. Opacity and a small
+   translate only — nothing here reflows its neighbours, and it runs on arrival
+   rather than on hover, so the "hover never changes geometry" rule is untouched. */
+@keyframes methodology-chapter-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Guarded by `no-preference`, not switched off later ─────────────────────
+   This rule used to sit unguarded, with a matching `animation: none` added to
+   the reduced-motion block ~1300 lines ABOVE it. Media queries add no
+   specificity, so the later rule won on order and the animation ran anyway —
+   with `both`, a reader who asks for reduced motion could have landed on a
+   chapter still at its `from` state, `opacity: 0`. An invisible chapter, for
+   exactly the readers who asked for less movement.
+
+   Antigravity raised this ordering hazard on PR #105 ("appending new section
+   blocks below the reduced-motion block reintroduces a regression hazard for
+   any future transitions added lower in the file") and I rejected it, on the
+   grounds that everything the motion tokens drive is switched off AT THE SOURCE
+   by zeroing the tokens. That was true of transitions and false of this: an
+   `@keyframes` animation does not consult `--motion-base` for its own
+   existence, only for its duration. The finding was right about the case that
+   had not arisen yet, and this is that case.
+
+   The fix is the guard, not a re-ordering: declaring the animation only when
+   motion is welcome means there is nothing to switch off and no order to get
+   wrong (CODE-QUALITY #2). `no-preference` is deliberately not the same as "not
+   reduce" — a browser that has never heard of the query matches neither, and
+   gets the static page, which is the correct degradation. */
+@media (prefers-reduced-motion: no-preference) {
+  .methodology-article {
+    animation: methodology-chapter-in var(--motion-base) var(--ease-press) both;
+  }
+}
+
+/* ── The fallbacks, shipping in THIS story — D2's mandatory rider ───────────
+   Apple shipped Liquid Glass and then reduced its translucency during the iOS
+   26 beta cycle over legibility complaints. `Reduce Transparency` and
+   `Increase Contrast` are first-class user settings, not edge cases.
+
+   Each of these degrades to an OPAQUE, legible, still-hierarchical surface —
+   the hierarchy is kept by the elevation rung and the hairline, which survive
+   when the material does not. `e2e/methodology-materials.browser.spec.ts`
+   asserts the rendered result under each preference; web support for
+   `prefers-reduced-transparency` is uneven across engines, so it is emulated
+   through CDP and MEASURED rather than inferred from the query existing. */
+@media (prefers-reduced-transparency: reduce) {
+  .methodology-chrome .landing-nav,
+  .methodology-chrome .methodology-toc {
+    background: var(--roast);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .methodology-chrome .landing-nav,
+  .methodology-chrome .methodology-toc {
+    background: var(--roast);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* Increase Contrast asks for MORE separation, not merely for opacity — a
+       reader who turns it on wants the edge between surfaces to be obvious. */
+    border-color: var(--crema);
+  }
+}
+
 /* ── The work-block family ────────────────────────────────────────────────
    Kept from the mockup as-is because it is the pedagogy, not the skin (epic README's substitution
    table): gold "do this on your project", dark "use your agent", green "look for", plain "this
    part is yours" / "what you just learned". Sprint 3's Story 3.2 is where this family gets its
-   Apple-materials pass; this is the plain version. */
+   Apple-materials pass; this is the plain version.
+
+   ── Contrast is MEASURED here, not assumed ──────────────────────────────────────────────────
+   Story 3.2 acceptance names the mockup's own `--muted` on `--paper` as close enough to the AA
+   boundary at small sizes to need checking rather than eyeballing. This product ships the dark
+   `--roast`/`--card`/`--dim` family instead of that mockup palette, but the instruction still
+   applies to the tokens actually in use: `--dim` body text against each variant's own tinted
+   background, computed with the WCAG relative-luminance formula (not eyeballed):
+     --dim on --card (plain/`yours`/`learned`)                    7.13:1
+     --dim on color-mix(--gold 10%, --card)  (`do`)                5.78:1
+     --dim on color-mix(--green 10%, --card) (`look`)              5.86:1
+     --crema on --espresso (`agent`, via `.prompt-copy`)          16.37:1
+   All clear the 4.5:1 floor for body text with margin, so no token moved for this story — the
+   floor is what `e2e/methodology-blocks.browser.spec.ts` asserts from the RENDERED page, not from
+   this arithmetic, so a future tint change that erodes it fails the suite rather than this
+   comment going stale. */
 
 .work {
   margin: 22px 0;
@@ -4203,6 +4676,12 @@ a.stat-card:hover {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
+  /* Story 3.2 acceptance: elevation picks a NAMED RUNG from the ladder above (epic D2), never a
+     new blur radius chosen by eye — `landing-frijoles-rebrand` S3.2 consolidated six ad-hoc shadow
+     values into three conceptual heights for exactly this reason. A work card sits on the article
+     ground the same way the ladder's own definition of `raised` describes ("a prompt card, an app
+     shell"), so it takes that rung rather than inventing a fourth height for one more card type. */
+  box-shadow: var(--elevation-raised);
 }
 
 .work__label {
@@ -4270,6 +4749,46 @@ a.stat-card:hover {
   padding: 0;
   border: none;
   background: none;
+  /* `.work`'s own `--elevation-raised` shadow (above) would otherwise land on THIS wrapper too —
+     a box with no visible fill or radius of its own — while `.prompt-card` inside casts the same
+     rung a second time at its own corner radius. Two shadows for one visible surface reads as a
+     halo around nothing; cancelling it here leaves exactly the card's. */
+  box-shadow: none;
+}
+
+/* The agent card's label joins the work-block label family.
+   `CopyPromptCard` styles its own header label (`.prompt-head__label`) in sentence case, which is
+   right on the landing where it stands alone. Inside a work block it sits beside four siblings
+   that are uppercase mono, so one member of a five-part taxonomy announced itself in a different
+   voice — visible the moment all five are on one page, invisible to every assertion (the label
+   TEXT is identical either way; only its rendering differs).
+
+   Scoped to `.work--agent` rather than changed in `.prompt-head__label`, because that component is
+   shared with the landing and this is a statement about this family, not about that card. */
+.work--agent .prompt-head__label {
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* "This part is yours" and "What you just learned" render through the SAME plain `.work` rule
+   and, before this story, were visually IDENTICAL — a reader skimming past could not tell a
+   reflection prompt from a recap without stopping to read the label. The epic README's
+   substitution table keeps the plain card as ONE conceptual surface (gold/dark/green are the
+   coloured three; plain is the fourth), so the fix stays inside that family rather than adding a
+   fifth hue — border TREATMENT tells them apart, not colour.
+
+   `yours` gets a dashed rule: the visual grammar of a line to write on, which matches what the
+   card is actually asking the reader to do (produce something, not receive something).
+   `learned` gets a heavier solid top edge in `--dim-2` — a neutral ink already in the palette, not
+   a new token — read as a closing mark on a card that recaps rather than instructs. */
+.work--yours {
+  border-style: dashed;
+}
+
+.work--learned {
+  border-top: 3px solid var(--dim-2);
 }
 
 /* The lead line inside a work body (`WorkBodyBlock`'s `lead?: true` — e.g. every "What you just

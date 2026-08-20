@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 3: The reading experience
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review — all four stories built and gated locally
 **Branch:** `feat/methodology-experience-s3` (cut from `feat/methodology-experience-s2`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -19,7 +19,7 @@
 
 ## Stories
 
-### Story 3.1 — The chapter shell
+### Story 3.1 — The chapter shell  ✅ `d9c5d11`
 
 **As a** reader working through the method, **I want** to see where I am and jump between chapters
 without going back to the index, **so that** six chapters read as one guide rather than six pages.
@@ -38,7 +38,7 @@ without going back to the index, **so that** six chapters read as one guide rath
 - Every rule lands in `globals.css` and resolves from tokens (epic D1).
 **Risk:** LOW
 
-### Story 3.2 — The work-block family as primitives
+### Story 3.2 — The work-block family as primitives  ✅ `1990c00` + `c23815e`
 
 **As a** reader, **I want** "do this", "use your agent", "look for" and "what you just learned" to be
 visually distinct, **so that** I can tell the instruction from the explanation while skimming.
@@ -57,7 +57,78 @@ visually distinct, **so that** I can tell the instruction from the explanation w
   close enough to the AA boundary at small sizes to need measuring.
 **Risk:** LOW
 
-### Story 3.3 — The Apple-materials pass, with its fallbacks
+### Circuit-breaker evidence for Story 3.3, gathered BEFORE the build (2026-08-20)
+
+The breaker's condition is *"if translucency does not read well over warm kraft inside this story's
+budget"*. That is a question with an answer, so it was answered first — with a prototype over the
+real tokens rather than by building the feature and then judging it.
+
+**Finding 1 — D2's premise describes the mockup's page, not ours.** D2 says "translucent sticky
+chrome over the **paper** ground" and "mechanics over kraft". The mockup is a light page
+(`--paper: #f5eddf`). **This site is dark**: the page ground is `--roast: #16120d`, and kraft is a
+material for *cards* (the bag label, the field-guide) — never the page ground. So the breaker's
+literal condition, "over warm kraft", describes a surface that does not exist on `/methodology`.
+The question that matters is whether it reads over `--roast`.
+
+**Finding 2 — it does, and my first visual read was WRONG.** Both grounds were prototyped with the
+same bar, the same blur, and real content scrolled underneath. Judged by eye on a full-page
+screenshot, the dark version looked nearly invisible. Measured, the opposite is true:
+
+| Ground | mean channel delta, glass vs opaque | max |
+|---|---|---|
+| `--roast` (ours) | **15.13 / 255** | 46 |
+| `--paper` (the mockup's) | 10.44 / 255 | 34 |
+
+The dark ground changes **more**, because a bright element passing under the bar (the gold swatch,
+`--gold`) has far more contrast against near-black than kraft has against paper. Isolated, the
+translucent bar shows a warm luminous wash where the opaque one is flat.
+
+**This is the "verify a visual claim by RENDERING, not by grepping" rule one level in: a full-page
+screenshot at small scale is not a measurement either.** Had the breaker been pulled on the first
+impression, a working effect would have been cut on false evidence.
+
+**Consequence: the breaker does NOT fire on this criterion.** It stays armed for the other two the
+story names — the fallbacks not landing in the same story, and frame cost on a long chapter.
+
+**Finding 3 — a scope question the story does not settle, and the architect's call.** D2 asks for
+translucent sticky chrome on "topbar and TOC rail". The TOC rail is already sticky (Story 3.1) and
+is methodology's own chrome, so it costs nothing. **The topbar is not sticky anywhere on this site**,
+and `Nav` is shared by `/`, `/talk`, `/install` and `/login` — making it sticky site-wide is a change
+to every page, from a sprint whose contract is the methodology's reading experience. It is scoped to
+the methodology routes via their own layout instead, or it is not done. Recorded here so the
+narrower reading is a decision rather than an omission.
+
+### A rejected review finding that turned out to be right — recorded, not buried (2026-08-20)
+
+On PR #105 round 3, Antigravity raised: *"the reduced-motion reset block is no longer the final
+block in the stylesheet … appending new section blocks below it reintroduces a regression hazard for
+any future `:active` transforms or transitions added lower in the file."*
+
+**I rejected it**, on the grounds that `globals.css` switches motion off **at the source** by zeroing
+`--motion-quick`/`--motion-base`, so a rule added later that uses those tokens needs no edit there
+and declaration order cannot matter. That was true of every transition in the file, and it is why
+the rejection was reasonable.
+
+**It was false for the very next thing this epic built.** Story 3.3's chapter-arrival effect is a
+`@keyframes` animation, and an animation does not consult `--motion-base` for its own *existence* —
+only for its duration. The unguarded rule sat ~1300 lines below the reduced-motion block, won on
+order, and the `animation: … both` shorthand applied its `from` state regardless: a reader who asks
+for reduced motion would have landed on a chapter at **`opacity: 0`**. An invisible chapter, for
+precisely the readers who asked for less movement. The spec caught it on its first run.
+
+**The fix is the guard, not a re-ordering:** the animation is declared inside
+`@media (prefers-reduced-motion: no-preference)`, so there is nothing to switch off and no order to
+get wrong. `no-preference` is deliberately not "not reduce" — an engine that has never heard of the
+query matches neither and gets the static page, which is the correct degradation.
+
+**The transferable rule** (for `RETROSPECTIVE.md` and `LEARNINGS.md`): *a review finding rejected on
+sound reasoning about the code as it stands can be a correct prediction about the code you are about
+to write.* The rejection is not retroactively wrong — it was right about transitions — but the
+finding named a hazard class, and a class outlives the instance that prompted it. When a reviewer
+describes a **hazard** rather than a defect, the useful question is not "is this broken today" but
+"what would have to be added for this to break", and this epic added it within the hour.
+
+### Story 3.3 — The Apple-materials pass, with its fallbacks  ✅ `e512bf4`
 
 **As a** reader, **I want** the methodology to feel materially different from the sales page, **so
 that** I know I have moved from being sold to, to being taught — **and as a** reader with reduced
@@ -80,7 +151,7 @@ transparency or increased contrast turned on, **I want** it to stay legible.
   budget is spent, stop, ship 3.1 + 3.2 without it, and say so in the PR.
 **Risk:** LOW
 
-### Story 3.4 — Real progress, or no progress
+### Story 3.4 — Real progress, or no progress  ✅ `ce80701`
 
 **As a** returning reader, **I want** the page to show what I have actually read, **so that** the
 progress rail is information rather than decoration.
