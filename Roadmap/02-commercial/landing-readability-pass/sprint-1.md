@@ -1,6 +1,7 @@
 # Landing readability pass — Sprint 1: The page says each thing once
 
-**Status:** ✅ done
+**Status:** ✅ done — merged in PR #102 (`0ec12b3`), live in production 2026-08-20; all 15 smoke
+steps verified against https://goldenfrijoles.com (21 automated assertions, 0 failures).
 
 > **Build contract.** One slice, because the changes share a single subject: what the page says
 > twice, in green, or after the reader has already decided. Every gate read stays where it was;

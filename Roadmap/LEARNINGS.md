@@ -298,7 +298,38 @@ one-liner + why + date shape.
   been a third patch; deriving the list made the class unrepresentable. The same shape appeared
   again with dead in-page anchors — a fix in `Nav` that left its twin in `lib/primary-cta.ts`, found
   by BOTH families in the next round. **Before claiming a fix, grep for the sibling.**
-  *(2026-08-19, landing-maker-ops.)*
+  *(2026-08-19, landing-maker-ops.)* **And writing the explanation of a class does not immunise you
+  against committing an instance of it an hour later:** `landing-readability-pass`'s headline CSS fix
+  was a rule sitting above its target at equal specificity and therefore inert (`.pricing__intro`) —
+  and a reviewer then found the same defect, in the same file, in the code that PR had just added
+  (the hero's overlap block above the base rule it overrides). *(2026-08-20,
+  landing-readability-pass.)*
+- **A reviewer that could not see the risky file has not reviewed it — and the tooling says so in
+  its own output.** `cross-review.mjs` prints "N did not fit the budget" when a diff exceeds agy's
+  256 KB argv cap. In `landing-readability-pass` the withheld file was `globals.css`, where every bit
+  of the diff's non-obvious reasoning lived, and BOTH families returned clean on the unscoped rounds.
+  Every real finding in that epic — one Blocking, three Should-fix — came from a later round run with
+  `--paths globals.css`. **Read the attachment line before believing a clean round, and re-run scoped
+  at whatever it withheld.** *(2026-08-20, landing-readability-pass.)*
+- **A comment documenting an invariant is a claim, and it earns the same proof as the code.** A hero
+  rule paired `align-self: end` with a fixed `margin-top`, under a comment promising the offset held
+  "whatever either one's content does". True only while one object was the taller — the reviewer
+  found the other case. The fix made the property real (`align-self: start`) rather than softening
+  the sentence, and it was confirmed by forcing the other object +200/+400/+800px and watching the
+  offset not move. **When a reviewer disputes a documented property, prove it by making the disputed
+  case happen — do not rewrite the comment to cover it.** *(2026-08-20, landing-readability-pass.)*
+- **Deleting a component leaves a trail in the stylesheet, and the trail comes with confident prose
+  attached.** Removing an element left an orphaned `@media` rule ~200 lines away, hiding something
+  that no longer rendered, under a comment explaining in detail why it was needed. Dead CSS under a
+  good explanation is worse than dead CSS: it reads as evidence. **After deleting markup, sweep every
+  class it used across the stylesheet — not just the rule the reviewer happened to name.**
+  *(2026-08-20, landing-readability-pass.)*
+- **Verify a visual claim by RENDERING, not by grepping for the class that usually causes it.**
+  "Remove all the green text" was verified by sweeping computed styles — colour and border, every
+  element on the page — instead of searching for `tag-live`. That is what surfaced two trend readings
+  painted `--green` by a rule with no green in its name, which a class-name search would have missed
+  entirely (and which were correctly recoloured rather than deleted: they are real measurements).
+  *(2026-08-20, landing-readability-pass.)*
 - **A test suite outside the blocking gate is a suite you must run ON PURPOSE, and a
   deletion-heavy epic will silently invalidate it.** `browser` and `authed` are not in this repo's
   gate. A guard broken in review round 1 (`toMatch(/^#/)` against nav links that had just become
@@ -820,7 +851,13 @@ one-liner + why + date shape.
   accumulated local fixture data while green on CI's fresh DB. A checkout of the merge base and one
   re-run settles it in minutes and is far cheaper than reasoning about the diff. Kill the dev server
   before the local gate; `rm -rf apps/web/.next` if you already crossed them.
-  *(2026-08-09, app-component-kit-adoption.)*
+  *(2026-08-09, app-component-kit-adoption.)* **A second trigger, same corruption:** `npm run
+  typecheck` rebuilds the `@golden-frijoles/sdk` workspace, which invalidates a live `next dev`'s
+  chunks — `/_next/static/chunks/*.js` then 404, the page never hydrates, and exactly the specs that
+  need client JS fail (clipboard, the Ops tablist) with no defect in the components. Symptom to
+  recognise: a spec you did not touch fails reproducibly right after you ran the static gate. Restart
+  dev, re-run, and do not go looking in the components. *(2026-08-20,
+  landing-readability-pass.)*
 - **Amending a locked acceptance criterion is a product-owner decision, not a documentation task.**
   Writing the reasoning down is necessary and not sufficient — cross-review correctly flagged an
   amendment as Blocking scope change even though it was recorded with measurements and a rationale.
