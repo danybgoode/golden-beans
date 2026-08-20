@@ -3632,14 +3632,6 @@ a.stat-card:hover {
     align-items: start;
   }
 
-  /* ── The overlap ────────────────────────────────────────────────────────────
-     `.hero-magic` becomes the positioning context and the two objects are placed
-     inside it: the bag pinned top-right and tilted, the window across the
-     bottom-left and in front. `min-height` is what reserves the row, since two
-     absolutely-positioned children contribute nothing to their parent's height —
-     it is measured against the taller of the two objects plus the offset between
-     them, and it is the one number here that has to be re-checked if either
-     object grows a row. */
   /* Near-even columns, as the mockup has them (`1.05fr .95fr`). `tokens.css`
      gives the hero `1.15fr .85fr`, which was right for a single stacked object
      on the right; two overlapping ones need the width, and without it the window
@@ -3683,17 +3675,76 @@ a.stat-card:hover {
   }
 }
 
+
+/* The mockup's hero type, which is a step up from the rest of the page rather
+   than the page-wide `.display` size. `tokens.css` sets 36/46/54px across three
+   breakpoints; the hero clamps instead, so the headline keeps growing on a wide
+   screen the way it does in the mockup (`clamp(46px, 7vw, 88px)`), while every
+   other `.display` on the page — §start's closing headline — is untouched. */
+.hero .display {
+  font-size: clamp(38px, 6.6vw, 78px);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+  margin-bottom: 4px;
+}
+
+.hero .hero-sub {
+  max-width: 620px;
+  font-size: clamp(17px, 1.9vw, 22px);
+  line-height: 1.45;
+}
+
+/* ── The hero's right-hand column ───────────────────────────────────────────
+   The bag label and the agent window, and the relationship between them is the
+   whole composition: the bag is tilted on the right, the window sits across its
+   bottom-left corner, and the two objects overlap the way they do in
+   `references/golden-frijoles-maker-ops-landing-v0.2.html`.
+
+   The mockup does that with absolute positioning at EVERY width, which on a
+   phone stacks two near-full-width objects on top of each other and buries one.
+   So the overlap is a wide-viewport composition only — see the block below,
+   which is where the breakpoint that governs it is stated. This paragraph named
+   900px, which is `.hero-grid`'s breakpoint and not this composition's; a second
+   copy of a number is a second thing to keep in step, so it names none.
+
+   This file previously argued for stacking at every width. That was a defensible
+   call and it is not the one the page wants: read on a laptop, two stacked
+   rectangles are a list of two things rather than one picture. */
+.hero-magic {
+  display: grid;
+  gap: 26px;
+  /* The stamp is positioned outside the bag's top-right corner. Without this the
+     grid clips it on a narrow viewport, where the bag is already at the gutter. */
+  padding-top: 14px;
+}
+
+.hero-window {
+  display: grid;
+  gap: 8px;
+}
+
 /* ── The overlap ────────────────────────────────────────────────────────────
    Both objects are placed in the SAME grid cell — the bag pinned to the top-right
    and tilted, the window across the bottom-left and in front.
 
+   ── This block sits BELOW the base rules on purpose ─────────────────────────
+   It overrides `.hero-magic`'s `gap` and `padding-top` at the same specificity
+   (0,1,0), so source order is the only thing deciding the winner. It was written
+   ABOVE them, which made both of those declarations inert: the base values kept
+   applying at every width and the media query only ever contributed
+   `grid-template-columns`. Caught by Antigravity in cross-family review of PR
+   #102 — and it is the SAME defect this PR fixes in `.pricing__intro`, a rule
+   sitting above its target at equal specificity and silently doing nothing. Two
+   instances of one class in one file is why this names the rule rather than the
+   symptom: anything added here stays below the base block.
+
    ── Why one grid cell and not two absolutely-positioned children ────────────
-   The first version of this did use `position: absolute` on both, with a
-   `min-height` on the parent to reserve the row (absolutely-positioned children
-   contribute no height). That number is a guess about how tall the two objects
-   are, and it was wrong at the first width I checked that was not the one I tuned
-   it at: at 1024px the window's top landed over the bag's masthead and cut the
-   title in half, because the window grows taller as the column narrows and the
+   The first version did use `position: absolute` on both, with a `min-height` on
+   the parent to reserve the row (absolutely-positioned children contribute no
+   height). That number is a guess about how tall the two objects are, and it was
+   wrong at the first width I checked that was not the one I tuned it at: at
+   1024px the window's top landed over the bag's masthead and cut the title in
+   half, because the window grows taller as the column narrows and the
    `min-height` did not.
 
    Overlapping in one grid cell removes the guess. The row's height is
@@ -3701,7 +3752,12 @@ a.stat-card:hover {
    top is always exactly `margin-top` below the bag's — whatever either one's
    content does. That offset is the composition's one real number: it is set to
    clear the bag's masthead and first row, which is the part of the packet that
-   has to stay readable. */
+   has to stay readable.
+
+   Below 1000px both objects return to normal flow and keep their whole selves —
+   the stacked layout this page shipped with. (That sentence read "below 900px"
+   for one commit, naming `.hero-grid`'s breakpoint rather than this one's. Same
+   review round.) */
 @media (min-width: 1000px) {
   .hero-magic {
     grid-template-columns: minmax(0, 1fr);
@@ -3734,52 +3790,6 @@ a.stat-card:hover {
        thing it is about. */
     z-index: 1;
   }
-}
-
-/* The mockup's hero type, which is a step up from the rest of the page rather
-   than the page-wide `.display` size. `tokens.css` sets 36/46/54px across three
-   breakpoints; the hero clamps instead, so the headline keeps growing on a wide
-   screen the way it does in the mockup (`clamp(46px, 7vw, 88px)`), while every
-   other `.display` on the page — §start's closing headline — is untouched. */
-.hero .display {
-  font-size: clamp(38px, 6.6vw, 78px);
-  line-height: 0.96;
-  letter-spacing: -0.045em;
-  margin-bottom: 4px;
-}
-
-.hero .hero-sub {
-  max-width: 620px;
-  font-size: clamp(17px, 1.9vw, 22px);
-  line-height: 1.45;
-}
-
-/* ── The hero's right-hand column ───────────────────────────────────────────
-   The bag label and the agent window, and the relationship between them is the
-   whole composition: the bag is tilted on the right, the window sits across its
-   bottom-left corner, and the two objects overlap the way they do in
-   `references/golden-frijoles-maker-ops-landing-v0.2.html`.
-
-   The mockup does that with absolute positioning at EVERY width, which on a
-   phone stacks two near-full-width objects on top of each other and buries one.
-   So the overlap is a wide-viewport composition only: below 900px — the same
-   breakpoint at which `.hero-grid` stops being two columns — both objects
-   return to normal flow and keep their whole selves.
-
-   This file previously argued for stacking at every width. That was a defensible
-   call and it is not the one the page wants: read on a laptop, two stacked
-   rectangles are a list of two things rather than one picture. */
-.hero-magic {
-  display: grid;
-  gap: 26px;
-  /* The stamp is positioned outside the bag's top-right corner. Without this the
-     grid clips it on a narrow viewport, where the bag is already at the gutter. */
-  padding-top: 14px;
-}
-
-.hero-window {
-  display: grid;
-  gap: 8px;
 }
 
 /* ── The bag, with its brand plate removed ──────────────────────────────────
