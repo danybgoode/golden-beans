@@ -22,8 +22,14 @@ const darkPort = 3111;
 const syncWithoutServingPort = 3112;
 // Optional file arguments keep focused local investigation hermetic too. The dark-gate tripwire
 // still always runs because a focused enabled spec must not accidentally skip the OFF boundary.
-const requestedProject = process.argv.includes('--authed') ? 'authed' : 'api';
-const requestedFiles = process.argv.slice(2).filter((argument) => argument !== '--authed');
+// `--authed` and `--browser` select the two opt-in Playwright projects. Neither is in the blocking
+// gate, which is exactly why they need a first-class way to run: a suite no pipeline runs decays
+// silently, and this repo has watched a `browser` guard stop guarding for three review rounds
+// because nothing ever executed it (LEARNINGS, landing-maker-ops).
+const PROJECT_FLAGS = { '--authed': 'authed', '--browser': 'browser' };
+const requestedProject =
+  Object.entries(PROJECT_FLAGS).find(([flag]) => process.argv.includes(flag))?.[1] ?? 'api';
+const requestedFiles = process.argv.slice(2).filter((argument) => !(argument in PROJECT_FLAGS));
 
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`);
