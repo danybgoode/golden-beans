@@ -5,6 +5,7 @@ import { PhaseLabel } from '@/components/methodology/PhaseLabel'
 import { MethodologyBlocks } from '@/components/methodology/MethodologyBlocks'
 import { ChapterNav } from '@/components/methodology/ChapterNav'
 import { ChapterToc } from '@/components/methodology/ChapterToc'
+import { ReadProgressRail } from '@/components/methodology/ReadProgressRail'
 import { METHODOLOGY_CHAPTERS, getChapter, chapterNeighbours } from '@/lib/methodology-chapters'
 
 // methodology-experience · Sprint 2, Story 2.3 — one chapter, at its own URL (epic D7).
@@ -64,8 +65,13 @@ export default async function MethodologyChapterPage({ params }: { params: Promi
 
           <ChapterNav previous={previous} next={next} />
         </article>
-        {/* The reserved third track. Empty by design until Story 3.4 — see the note above. */}
-        <div className="methodology-shell__aside" aria-hidden="true" />
+        {/* The reserved third track, now Story 3.4's read progress. It renders NOTHING when there
+            is nothing honest to say — storage unavailable, or nothing opened yet — so this column
+            is often empty, which is the intended state rather than a missing feature (epic D6).
+            No `aria-hidden` any more: what is in here is now real content when it appears. */}
+        <div className="methodology-shell__aside">
+          <ReadProgressRail chapterId={chapter.id} chapterIds={METHODOLOGY_CHAPTERS.map((c) => c.id)} />
+        </div>
       </main>
       <Footer />
     </>

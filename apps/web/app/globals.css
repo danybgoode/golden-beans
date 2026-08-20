@@ -4409,6 +4409,42 @@ a.stat-card:hover {
   letter-spacing: -0.02em;
 }
 
+/* ── Story 3.4 — read progress ──────────────────────────────────────────────
+   Quiet on purpose. It sits beside the article for the whole scroll and is the
+   least important thing on the page: a reader who ignores it loses nothing.
+   Sized and coloured to be findable when looked for and invisible when not. */
+.methodology-progress {
+  margin-top: 34px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.methodology-progress__count {
+  margin: 0;
+  color: var(--crema);
+  font: 800 12px var(--mono);
+  letter-spacing: 0.06em;
+}
+
+.methodology-progress__note {
+  margin: 6px 0 0;
+  color: var(--dim-2);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+/* Below the shell's breakpoint the third track collapses. The rail follows the
+   article rather than being hidden — it is small, it is at the end, and a phone
+   reader is exactly the reader most likely to return across sessions. */
+@media (max-width: 899px) {
+  .methodology-progress {
+    margin-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+    margin-bottom: 34px;
+  }
+}
+
 /* ── methodology-experience · Sprint 3, Story 3.3 — the materials pass ──────
    Epic D2: Apple's HIG *materials*, not Google's Material Design 3 — layered
    depth, translucency and vibrancy, elevation expressed as a material sitting
