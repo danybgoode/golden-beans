@@ -64,3 +64,11 @@ test('contrast ratio matches the WCAG anchors', () => {
     contrastRatio('rgb(36, 29, 20)', 'rgb(184, 168, 136)')
   )
 })
+
+// The contract was documented and not enforced — the same shape as the parsing holes above.
+test('contrastRatio refuses a translucent input rather than inventing a ratio', () => {
+  assert.throws(() => contrastRatio('rgba(255, 255, 255, 0.5)', 'rgb(0, 0, 0)'), /opaque foreground/)
+  assert.throws(() => contrastRatio('rgb(255, 255, 255)', 'color(srgb 0 0 0 / 0.72)'), /opaque background/)
+  // ...and still computes for the opaque case every caller actually passes.
+  assert.equal(Math.round(contrastRatio('rgb(0, 0, 0)', 'rgb(255, 255, 255)')), 21)
+})

@@ -103,9 +103,33 @@ export function relativeLuminance({ r, g, b }: Rgba): number {
   return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
 }
 
-/** WCAG 2.x contrast ratio between two OPAQUE colours. */
+/**
+ * WCAG 2.x contrast ratio between two OPAQUE colours.
+ *
+ * THROWS on a translucent input rather than computing a ratio from its nominal channels. WCAG is
+ * defined over what is actually painted, so the honest answer for a translucent colour is the
+ * composite against everything behind it — which this function cannot see and must not guess.
+ *
+ * Every surface it is called on today is opaque, so this changes no result. It is here because the
+ * contract was DOCUMENTED as opaque-only and not ENFORCED, which is the same shape as the three
+ * parsing holes above it: a docblock right about the intent and silent about the code. A caller who
+ * later measures a translucent card would otherwise get a confident, wrong, PASSING number
+ * (Codex, round 4 of PR #107).
+ */
 export function contrastRatio(foreground: string, background: string): number {
-  const a = relativeLuminance(parseCssColor(foreground)) + 0.05
-  const b = relativeLuminance(parseCssColor(background)) + 0.05
+  const fg = parseCssColor(foreground)
+  const bg = parseCssColor(background)
+  for (const [label, colour, raw] of [
+    ['foreground', fg, foreground],
+    ['background', bg, background],
+  ] as const) {
+    if (colour.a !== 1) {
+      throw new Error(
+        `contrastRatio needs an opaque ${label}; got ${raw}. Composite it against what is behind it first.`
+      )
+    }
+  }
+  const a = relativeLuminance(fg) + 0.05
+  const b = relativeLuminance(bg) + 0.05
   return Math.max(a, b) / Math.min(a, b)
 }
