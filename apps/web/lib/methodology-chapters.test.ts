@@ -13,7 +13,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   METHODOLOGY_CHAPTERS,
+  METHODOLOGY_CHECKPOINT,
   METHODOLOGY_PHASES,
+  METHODOLOGY_PREFLIGHT,
   WORK_LABELS,
   chapterNeighbours,
   chaptersInPhase,
@@ -288,6 +290,87 @@ test('no chapter is a stub — every one carries real blocks and a summary', () 
     assert.ok(
       chapter.blocks.some((block) => block.kind === 'work' && block.variant === 'learned'),
       `${chapter.id} never tells the reader what they just learned`
+    )
+  }
+})
+
+// ── The non-chapter sections (amendment A5) ──────────────────────────────────────────────────
+// §0 and the closing/checkpoint were dropped entirely by the v0.3 mockup and are in the v0.2
+// source. They ship on the index, and they are held to the same content rules the chapters are —
+// the defects the mockup introduced are not the only way this prose can rot.
+
+test('the preflight and checkpoint sections carry real content and no pandoc artifact', () => {
+  for (const section of [METHODOLOGY_PREFLIGHT, METHODOLOGY_CHECKPOINT]) {
+    assert.match(section.id, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${section.id} is not a kebab id`)
+    assert.ok(section.title.length > 0)
+    assert.ok(!section.title.endsWith('.'), `${section.id}'s title is a sentence, not a title`)
+    assert.ok(section.blocks.length >= 3, `${section.id} is a stub`)
+
+    for (const block of allBlocks(section.blocks)) {
+      const texts =
+        block.kind === 'list'
+          ? block.items
+          : block.kind === 'work'
+            ? block.variant === 'agent'
+              ? [block.prompt]
+              : []
+            : [block.text]
+      for (const text of texts) {
+        assert.ok(text.length > 0, `${section.id} has an empty block`)
+        assert.ok(!text.includes('---'), `${section.id}: "${text.slice(0, 40)}…" carries a pandoc dash`)
+        assert.ok(!text.includes('{'), `${section.id} carries a template literal`)
+      }
+    }
+  }
+})
+
+// §0's prerequisites were one hyphenated paragraph in the source — the epic README names §0 as one
+// of the three places that happened.
+test('§0 restores its prerequisites as a real list', () => {
+  const list = METHODOLOGY_PREFLIGHT.blocks.find((block) => block.kind === 'list')
+  assert.ok(list, '§0 has no list — the collapsed "You should already have: - …" paragraph is back')
+  assert.equal(list.kind === 'list' && list.items.length, 4)
+})
+
+// The version skew Story 2.1 asked about, and the whole reason A5 exists. The source's closing
+// says "nine practices"; this edition never shows the reader nine named practices, so the count
+// pointed at nothing. Asserting on the DIGIT and the word covers the rewrite regressing in either
+// direction — someone restoring the source line verbatim, or someone "fixing" it back to a count.
+test('the closing names no practice count the reader was never shown', () => {
+  const prose = allBlocks(METHODOLOGY_CHECKPOINT.blocks)
+    .map((block) => (block.kind === 'list' ? block.items.join(' ') : block.kind === 'work' ? '' : block.text))
+    .join(' ')
+
+  assert.ok(prose.length > 0, 'an empty closing would satisfy every assertion below')
+  assert.ok(!/\bnine\b/i.test(prose), 'the closing still says "nine practices"')
+  assert.ok(
+    !/\b(three|four|five|six|seven|eight|ten|eleven)\s+practices\b/i.test(prose),
+    'the closing names a practice count'
+  )
+  assert.ok(
+    prose.includes('You do not need to memorize'),
+    'the reassurance itself was lost along with the count'
+  )
+})
+
+test('the checkpoint lists every capability the guide claims to teach', () => {
+  const list = METHODOLOGY_CHECKPOINT.blocks.find((block) => block.kind === 'list')
+  assert.ok(list, 'the Practitioner checkpoint has no capabilities')
+  assert.equal(list.kind === 'list' && list.items.length, 11)
+})
+
+// The phase recap in the closing is DERIVED, never restated — which is also what carried D3's
+// rename into it without a second edit. A hardcoded "Bring an idea → Shape it → Place the Bet"
+// would be both a second list and a missed rename.
+test('the closing does not restate the phases as its own copy', () => {
+  const prose = allBlocks(METHODOLOGY_CHECKPOINT.blocks)
+    .map((block) => (block.kind === 'list' ? block.items.join(' ') : block.kind === 'work' ? '' : block.text))
+    .join(' ')
+
+  for (const phase of METHODOLOGY_PHASES) {
+    assert.ok(
+      !prose.includes(phase.summary),
+      `the closing hardcodes "${phase.summary}" instead of deriving it from METHODOLOGY_PHASES`
     )
   }
 })

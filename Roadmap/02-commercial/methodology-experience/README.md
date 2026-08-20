@@ -250,7 +250,7 @@ which contains exactly the previous sprint's work. The stacking *property* the p
 sprint builds on the one before it, one PR per sprint, merged in order — holds unchanged; only the
 git mechanic differs. Sprint 1 merged as `0751e45`; `-s2` is cut from there.
 
-### A3 — the v0.2 field guide is not in the repo and cannot be reconstructed. **Open — needs the product owner.** 2026-08-19.
+### A3 — the v0.2 field guide. **RESOLVED (a): the product owner supplied the real file.** 2026-08-19.
 
 **Class:** dropped scope. Everything else in Story 2.1 is done and merged; this one bullet is
 blocked and is the only part of the epic waiting on an answer.
@@ -283,12 +283,17 @@ and a fabricated one.
 answer: the content module, the routes and the reading experience all derive from the module, which
 is the live source either way.
 
-**Related, and resolved rather than left open:** the same story asks whether the v0.2 source's
-"Practitioner checkpoint" — which gestured at nine named practices while the reader gets six
-chapters — needed reconciling. **There is no version skew to reconcile in the content that shipped.**
-The v0.3 mockup contains no Practitioner checkpoint at all (verified: zero occurrences), so the nine
-named practices reach neither the module nor any rendered page. Recorded here so the question is not
-re-opened by a later reader who only has the epic README.
+**Outcome: (a).** The product owner supplied
+`references/golden-frijoles-minimum-viable-field-guide-v0.2.md`, tracked verbatim and unedited at
+mode 644 in `1a6fdfc`. The module was then checked against it rather than assumed — all six chapters
+are faithful, and the v0.3 mockup turns out to have been an accurate pandoc conversion of the chapter
+bodies, so the content derived from it needed no correction.
+
+**A claim made here while the file was missing was WRONG, and is withdrawn.** This amendment
+previously closed by asserting there was no version skew to reconcile, on the evidence that the v0.3
+mockup contains no Practitioner checkpoint. That was a true fact about the mockup answering a
+question about the **source** — the classic shape of a conclusion that outruns its evidence. With
+the real v0.2 in hand the skew is real, and it is larger than the checkpoint. See **A5**.
 
 ### A4 — the methodology renders from `components/methodology`, and the drift guard's strict rules follow it there. 2026-08-19.
 
@@ -323,6 +328,44 @@ section heading *"Six chapters. One real project."* Both are `<h1>`/`<h2>` and b
 `heading-period`. They ship without the terminal stop, the same way `MakerHero`'s display headline
 already does. The internal full stop in "Six chapters. One real project" is untouched — the rule
 reads only the final character, and the two-beat heading is the house voice.
+
+### A5 — §0, the closing and the Practitioner checkpoint ship; the "nine practices" count does not. 2026-08-19.
+
+*Product owner, 2026-08-19, on an explicit either/or.*
+
+**Class:** restored scope. The v0.2 field guide arrived after Sprint 2 began (see A3) and turned out
+to contain three sections the v0.3 mockup dropped entirely, so the content this epic derived from
+the mockup was missing them. None is a seventh chapter — **D7's six-chapter structure is untouched**
+— they are index content.
+
+**What ships, on `/methodology`:**
+
+| Source section | Where it lands |
+|---|---|
+| §0 *Before you begin* | A "Before you begin" block above the chapter cards. Prerequisites: a project, the full Direction from the North Star workshop, a connected agent, project rails — and the line that matters most, *"Open the real project you want to change. Do not create a tutorial project."* |
+| *You completed the loop* | The index's closing block. Its phase recap **derives** from `METHODOLOGY_PHASES` rather than restating it, which is also what carried D3's rename into it without a second edit. |
+| *Practitioner checkpoint* | The eleven capabilities, closing on *"Terminology recall is not the test. Better operation is."* |
+
+**The version skew Story 2.1 asked about is real, and this is the answer.** The source's closing
+reads *"You do not need to memorize nine practices to do it again."* A reader of this six-chapter
+edition is never shown nine named practices — the nine moves (Orient · Shape · Bet · Route · Slice ·
+Bound · Prove · Reconsider · Learn) were cut as a spec sheet by `landing-maker-ops`, and this edition
+does not reintroduce them. The count pointed at a set that does not exist for this reader.
+
+**Decision: drop the count, keep the reassurance.** The line ships as *"You do not need to memorize a
+list of practices to do it again."* The first proposal was "the deeper vocabulary", which was
+rejected on reading it aloud: that exact phrase reappears two sentences later (*"The deeper
+vocabulary is there when you need precision"*). Same decision, better sentence.
+
+A unit test asserts the closing names no practice count in either direction — someone restoring the
+source line verbatim, and someone "fixing" it back to a different number. Mutation-checked by
+restoring *"nine practices"*: red.
+
+**Also corrected here:** two fidelity slips found by reading the real source against the module,
+neither of which the mockup could have revealed. Chapter 2's *"Continue Groom."* had become
+*"Continue grooming."* — the source names the Groom stage the chapter-1 prompt already put the reader
+in. And chapter 6's Learn section asks **two** questions, each its own blockquote (*"What did reality
+teach us?"* then *"What changes because of it?"*); they had been compressed into one.
 
 ## Sprints
 

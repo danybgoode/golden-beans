@@ -208,7 +208,7 @@ Before designing it, read the project agents and ways of working, review relevan
         kind: 'work',
         variant: 'do',
         body: [
-          { kind: 'prose', text: 'Continue grooming. Work through the questions that require judgment.' },
+          { kind: 'prose', text: 'Continue Groom. Work through the questions that require judgment.' },
           {
             kind: 'prose',
             text: 'By the end, the Bet candidate should make these things legible.',
@@ -584,7 +584,9 @@ Before designing it, read the project agents and ways of working, review relevan
         ],
       },
       { kind: 'heading', text: 'Learn' },
-      { kind: 'prose', text: 'Ask what reality taught you. Then ask:' },
+      { kind: 'prose', text: 'Ask:' },
+      { kind: 'blockquote', text: 'What did reality teach us?' },
+      { kind: 'prose', text: 'Then:' },
       { kind: 'blockquote', text: 'What changes because of it?' },
       {
         kind: 'prose',
@@ -620,6 +622,127 @@ Before designing it, read the project agents and ways of working, review relevan
     ],
   },
 ]
+
+/**
+ * A section of the guide that is not a chapter.
+ *
+ * The v0.3 mockup dropped all three of these; the v0.2 field guide has them, and the product owner
+ * ruled on 2026-08-19 that they ship (amendment A5). None is a seventh chapter — D7's six-chapter
+ * structure is untouched — so they are index content and carry no route of their own.
+ */
+export interface MethodologySection {
+  id: string
+  title: string
+  blocks: MethodologyBlock[]
+}
+
+/**
+ * §0 "Before you begin" — the guide's prerequisites.
+ *
+ * It ships because the guide's own job statement is "take one real idea through one bounded,
+ * shipped, verified Bet", and a reader without Direction or a connected agent cannot. The last line
+ * is the one that matters most and is the one a tutorial would get wrong: this method is run
+ * against a real project, not a sandbox.
+ */
+export const METHODOLOGY_PREFLIGHT: MethodologySection = {
+  id: 'before-you-begin',
+  title: 'Before you begin',
+  blocks: [
+    { kind: 'prose', text: 'You should already have:' },
+    {
+      // Mockup defect 4 again, in the section the mockup never carried at all. The source has this
+      // as "You should already have: - a Golden Frijoles project; - the full Direction…" — one
+      // hyphenated paragraph. The epic README names §0 as one of the three places it happened.
+      kind: 'list',
+      items: [
+        'a Golden Frijoles project',
+        'the full Direction produced by your North Star workshop',
+        'a connected agent',
+        'Golden Frijoles project rails available where you intend to work',
+      ],
+    },
+    { kind: 'prose', text: 'If you completed first-run setup, you have this.' },
+    {
+      kind: 'work',
+      variant: 'do',
+      body: [
+        {
+          kind: 'prose',
+          text: 'Open the real project you want to change. Do not create a tutorial project.',
+        },
+      ],
+    },
+    {
+      kind: 'work',
+      variant: 'look',
+      body: [
+        {
+          kind: 'prose',
+          text: 'Your project agent should be able to orient to project agents and instructions, ways of working, relevant learnings, team memory where available, and the Golden Frijoles context it has permission to read.',
+        },
+        { kind: 'prose', text: 'If not, finish setup before continuing.' },
+      ],
+    },
+  ],
+}
+
+/**
+ * The closing: "You completed the loop" and the Practitioner checkpoint.
+ *
+ * ── The one line that is NOT the source's ─────────────────────────────────────────────────────
+ * The v0.2 source reads "You do not need to memorize nine practices to do it again." A reader of
+ * this six-chapter edition is never shown nine named practices — the nine moves (Orient · Shape ·
+ * Bet · Route · Slice · Bound · Prove · Reconsider · Learn) were deliberately cut as a spec sheet
+ * by the predecessor epic, and this edition does not reintroduce them. So the count pointed at a
+ * set that does not exist for this reader. That is the version skew Story 2.1 asked about, and the
+ * product owner ruled to drop the count (A5).
+ *
+ * The wording is "a list of practices" rather than the "the deeper vocabulary" first proposed:
+ * that phrase reappears verbatim two sentences later ("The deeper vocabulary is there when you need
+ * precision"), and the repetition was audible when read aloud. Same decision, better sentence.
+ *
+ * The phase recap DERIVES from `METHODOLOGY_PHASES` rather than restating it, which is also what
+ * keeps "Bring an idea → Design it → Place the Bet" renamed here without a second edit (D3).
+ */
+export const METHODOLOGY_CHECKPOINT: MethodologySection = {
+  id: 'practitioner-checkpoint',
+  title: 'You completed the loop',
+  blocks: [
+    { kind: 'prose', text: 'You started with a rough idea.' },
+    { kind: 'prose', text: 'You Considered whether it deserved investment.' },
+    {
+      kind: 'prose',
+      text: 'You Operated a bounded human-agent system to make it real and establish Evidence.',
+    },
+    { kind: 'prose', text: 'You Exited the investment according to what reality justified.' },
+    { kind: 'prose', text: 'You do not need to memorize a list of practices to do it again.' },
+    { kind: 'prose', text: 'Your North Star provides Direction around the loop.' },
+    {
+      kind: 'prose',
+      text: 'The deeper vocabulary is there when you need precision. The loop is there when you need to make something.',
+    },
+    { kind: 'heading', text: 'Practitioner checkpoint' },
+    { kind: 'prose', text: 'The guide succeeds if you can now:' },
+    {
+      kind: 'list',
+      items: [
+        'turn a raw ask into a bounded investment decision',
+        'set Appetite before allowing a solution to expand',
+        'distinguish Outcome from Output',
+        'displace something when prioritizing something else',
+        'route work according to uncertainty and Authority',
+        'grant autonomy inside explicit Boundaries',
+        'build coherent Slices rather than technical task piles',
+        'demand Evidence appropriate to the claim',
+        'distinguish shipping from proving',
+        'reconsider without sunk-cost loyalty',
+        'turn Learning into a change in the operating system',
+      ],
+    },
+    { kind: 'prose', text: 'Terminology recall is not the test.' },
+    { kind: 'prose', text: 'Better operation is.', lead: true },
+  ],
+}
 
 /**
  * Look up a chapter by id, THROWING on an unknown one.

@@ -46,17 +46,18 @@ derive from it instead of drifting apart.
   (epic D3) — including *"A shaped Bet should be bounded enough to operate"*, *"Shape creates a
   plausible bounded investment decision"*, *"the correct result of shaping"* and Chapter 1's agent
   prompt *"Before shaping it, read the project agents…"*. Each rewritten line is readable on its own.
-- **Field guide version skew is reconciled or recorded.** ✅ **Recorded: there is no skew in what
-  shipped.** The v0.2 source's Practitioner checkpoint gestured at nine named practices; the v0.3
-  mockup this content was derived from contains **no Practitioner checkpoint at all** (verified:
-  zero occurrences in `references/golden-frijoles-methodology-experience-v0.3.html`). The nine named
-  practices reach neither `lib/methodology-chapters.ts` nor any rendered page, so there is nothing to
-  reconcile. Written down here rather than silently skipped.
-- ~~`references/golden-frijoles-minimum-viable-field-guide-v0.2.md` is added and tracked (mode 644) as
-  the dated provenance record the content was derived from — **not** as a live second source (D5).~~
-  **BLOCKED — see [A3](README.md). The file does not exist in this repository**, and it will not be
-  reconstructed from the v0.3 mockup: that would manufacture a provenance record for a document
-  nobody here has seen. Needs the product owner's either/or. Nothing else depends on it.
+- **Field guide version skew is reconciled or recorded.** ⚠️ **CORRECTED 2026-08-19 — see
+  [A5](README.md).** An earlier version of this line claimed there was no skew, on the evidence that
+  the v0.3 mockup contains no Practitioner checkpoint. That was true about the *mockup* and it
+  answered the wrong question: the story asks about the **v0.2 source**, which was not in the
+  repository at the time and is now. It **does** carry the Practitioner checkpoint, and it carries
+  the line *"You do not need to memorize nine practices to do it again."* The skew is real. A5 holds
+  the decision.
+- `references/golden-frijoles-minimum-viable-field-guide-v0.2.md` is added and tracked (mode 644) as
+  the dated provenance record the content was derived from — **not** as a live second source (D5).
+  ✅ **Done** (`1a6fdfc`). The product owner supplied the real file; A3 resolved with option (a), and
+  it is tracked verbatim and unedited. The module was then checked against it rather than assumed:
+  all six chapters are faithful, and the only deviations are the deliberate D3 rewrites.
 - Unit tests: exactly six chapters in phase order; every `id` unique and URL-safe; every chapter has
   a non-empty `lede` that **does not contain `{`**; `getChapter` throws on an unknown id;
   `chapterNeighbours` returns `null` at both ends; every `agent` block's prompt is non-empty.
