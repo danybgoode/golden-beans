@@ -22,8 +22,26 @@ const darkPort = 3111;
 const syncWithoutServingPort = 3112;
 // Optional file arguments keep focused local investigation hermetic too. The dark-gate tripwire
 // still always runs because a focused enabled spec must not accidentally skip the OFF boundary.
-const requestedProject = process.argv.includes('--authed') ? 'authed' : 'api';
-const requestedFiles = process.argv.slice(2).filter((argument) => argument !== '--authed');
+// `--authed` and `--browser` select the two opt-in Playwright projects. Neither is in the blocking
+// gate, which is exactly why they need a first-class way to run: a suite no pipeline runs decays
+// silently, and this repo has watched a `browser` guard stop guarding for three review rounds
+// because nothing ever executed it (LEARNINGS, landing-maker-ops).
+const PROJECT_FLAGS = { '--authed': 'authed', '--browser': 'browser' };
+const selectedProjects = Object.entries(PROJECT_FLAGS).filter(([flag]) => process.argv.includes(flag));
+// Fail loud rather than substitute (CODE-QUALITY #7). `find` took the first match, so
+// `--authed --browser` silently ran `authed` and the requested browser suite was skipped with a
+// green exit — the failure mode this runner exists to prevent, in the flag that added it. Codex,
+// round 2 of PR #104.
+if (selectedProjects.length > 1) {
+  const flags = selectedProjects.map(([flag]) => flag).join(' and ');
+  process.stderr.write(`local-e2e: ${flags} select different Playwright projects — pass exactly one.\n`);
+  process.exit(1);
+}
+const requestedProject = selectedProjects[0]?.[1] ?? 'api';
+// `Object.hasOwn`, not `in`: `in` walks the prototype chain, so an argument literally named
+// `toString` or `constructor` would be silently dropped from the file list. Vanishingly unlikely
+// and free to exclude (Antigravity, round 1 of PR #104).
+const requestedFiles = process.argv.slice(2).filter((argument) => !Object.hasOwn(PROJECT_FLAGS, argument));
 
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`);

@@ -84,8 +84,8 @@ export function MakerHero() {
           {/* Set at the mockup's scale (`.hero .hero-sub` in globals.css), which is a size up from the
               rest of the page's body copy. This is the one paragraph a reader definitely reads. */}
           <p className="hero-sub">
-            Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your
-            agent the methodology, operating rails and evidence to keep building.
+            Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your agent
+            the methodology, operating rails and evidence to keep building.
           </p>
           <p className="hero-sub hero-sub--tight">
             Plant your own Golden Frijoles across product, delivery, security and AI operations and see the
@@ -101,7 +101,7 @@ export function MakerHero() {
             </Button>
           </div>
 
-          <p className="micro">Bring an idea. Consider it. Operate it. Learn from it.</p>
+          <p className="micro">Bring an idea. Consider it. Operate it. Exit on the Evidence.</p>
         </div>
 
         <div className="hero-magic">
@@ -143,7 +143,7 @@ export function MakerHero() {
           <div className="hero-window">
             <AgentWindow layout="thread">
               <ChatThread>
-                <ChatBubble actor="user">I want onboarding to feel instant. Help me shape it.</ChatBubble>
+                <ChatBubble actor="user">I want onboarding to feel instant. Help me design it.</ChatBubble>
                 <ChatBubble actor="agent">
                   I read your North Star, your activation journey and the last two weeks of signals. The drop
                   is before first value, not at account creation.

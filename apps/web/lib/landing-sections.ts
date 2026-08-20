@@ -48,7 +48,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
   },
   {
     id: 'loop',
-    title: 'The maker loop — shape, build, release, observe, grow',
+    title: 'The maker loop — consider, operate, exit',
     epic: 'landing-maker-ops',
     status: 'live',
   },
