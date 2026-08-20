@@ -3568,6 +3568,10 @@ a.stat-card:hover {
   font: 800 12px var(--mono);
   letter-spacing: 0.1em;
   text-align: center;
+  /* The DOM keeps title case ("Consider") and the uppercase is presentational, so a
+     screen reader announces a word rather than an initialism, and the case can be
+     changed here without editing `MethodologySection`'s array. Do not "fix" this by
+     shouting in the markup. Mistral Vibe, round 4 of PR #102. */
   text-transform: uppercase;
 }
 
