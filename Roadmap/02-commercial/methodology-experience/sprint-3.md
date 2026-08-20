@@ -57,6 +57,47 @@ visually distinct, **so that** I can tell the instruction from the explanation w
   close enough to the AA boundary at small sizes to need measuring.
 **Risk:** LOW
 
+### Story 3.3 — circuit-breaker evidence, gathered BEFORE the build (2026-08-20)
+
+The breaker's condition is *"if translucency does not read well over warm kraft inside this story's
+budget"*. That is a question with an answer, so it was answered first — with a prototype over the
+real tokens rather than by building the feature and then judging it.
+
+**Finding 1 — D2's premise describes the mockup's page, not ours.** D2 says "translucent sticky
+chrome over the **paper** ground" and "mechanics over kraft". The mockup is a light page
+(`--paper: #f5eddf`). **This site is dark**: the page ground is `--roast: #16120d`, and kraft is a
+material for *cards* (the bag label, the field-guide) — never the page ground. So the breaker's
+literal condition, "over warm kraft", describes a surface that does not exist on `/methodology`.
+The question that matters is whether it reads over `--roast`.
+
+**Finding 2 — it does, and my first visual read was WRONG.** Both grounds were prototyped with the
+same bar, the same blur, and real content scrolled underneath. Judged by eye on a full-page
+screenshot, the dark version looked nearly invisible. Measured, the opposite is true:
+
+| Ground | mean channel delta, glass vs opaque | max |
+|---|---|---|
+| `--roast` (ours) | **15.13 / 255** | 46 |
+| `--paper` (the mockup's) | 10.44 / 255 | 34 |
+
+The dark ground changes **more**, because a bright element passing under the bar (the gold swatch,
+`--gold`) has far more contrast against near-black than kraft has against paper. Isolated, the
+translucent bar shows a warm luminous wash where the opaque one is flat.
+
+**This is the "verify a visual claim by RENDERING, not by grepping" rule one level in: a full-page
+screenshot at small scale is not a measurement either.** Had the breaker been pulled on the first
+impression, a working effect would have been cut on false evidence.
+
+**Consequence: the breaker does NOT fire on this criterion.** It stays armed for the other two the
+story names — the fallbacks not landing in the same story, and frame cost on a long chapter.
+
+**Finding 3 — a scope question the story does not settle, and the architect's call.** D2 asks for
+translucent sticky chrome on "topbar and TOC rail". The TOC rail is already sticky (Story 3.1) and
+is methodology's own chrome, so it costs nothing. **The topbar is not sticky anywhere on this site**,
+and `Nav` is shared by `/`, `/talk`, `/install` and `/login` — making it sticky site-wide is a change
+to every page, from a sprint whose contract is the methodology's reading experience. It is scoped to
+the methodology routes via their own layout instead, or it is not done. Recorded here so the
+narrower reading is a decision rather than an omission.
+
 ### Story 3.3 — The Apple-materials pass, with its fallbacks
 
 **As a** reader, **I want** the methodology to feel materially different from the sales page, **so
