@@ -11,6 +11,29 @@
 > Read the epic README's **D2** (the category string) and **D6** (attribution and what the document
 > must contain) before starting.
 
+## Build contract (locked by the architect before the builder started)
+
+**Sources are in the repo before a word is written.** `references/North-Star_how-to-Guide_2024.pdf`
+and `references/northstar-workshop.md` land in Story 1.2's first commit. Every page citation in the
+element map below was checked against the PDF and is correct — **except the OpenTable worksheet,
+which is a duplicated Spotify page in the source (epic A1).** Carry p.19's OpenTable *brief* as the
+warm-up and exactly one completed worksheet, Spotify's.
+
+**The five pinned properties are a mutation check, not a formality.** `e2e/northstar-self-serve.spec.ts`
+was written against the document this story replaces. It must go green **with no edit to the file**.
+If a pin fails, the rewrite dropped a safety property — restore the property, never the assertion.
+
+**`lib/positioning.ts` is the shared seam and lands FIRST**, by the architect, before anything
+imports it (WAYS-OF-WORKING: highest blast radius goes first). Story 1.2 imports it; it does not
+copy the string.
+
+**The document is a route, not a file.** Every absolute URL comes from `getSiteUrl()` (AGENTS rule
+#5). The one-host assertion is what proves it, and it is why the workshop is testable on a preview.
+
+**Attribution is once, near the top, by name, with a link** (epic D6). A credit repeated is a
+document that reads like someone else's.
+
+
 ## Stories
 
 ### Story 1.1 — The category is stated once, from one module

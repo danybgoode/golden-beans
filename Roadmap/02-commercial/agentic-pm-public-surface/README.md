@@ -176,6 +176,109 @@ diagnostic questions to put to someone who has just arrived, and an explicit pla
 Its existing honesty guardrail is inherited unchanged: **this manifest lists only what is live in
 this deployment right now.**
 
+## Amendments — the architecture-lock pass, 2026-08-20
+
+Written by the architect before any story started, by reading the shipped code and the two source
+PDFs rather than the plan. Each item below is a place the scaffolded plan was **wrong or
+incomplete about the live system**. Builders cite these; they do not re-derive them.
+
+### A1. The guide's OpenTable worksheet is a duplicated page. Do not carry it.
+
+Story 1.2 lists *"Spotify and OpenTable worksheets"* among the case studies carried. Checked against
+the source: **guide p.22, labelled "Open Table", is a byte-identical copy of the Spotify worksheet on
+p.21** — same North Star ("Time spent listening to music by subscribers"), same premium-trial and
+songs-per-session inputs, same "monthly subscriptions from premium users" impact. It is a production
+error in Amplitude's PDF, not an OpenTable example.
+
+The OpenTable material that is real is **p.19**: the warm-up brief (prompt, product background,
+business model — free for diners, restaurants pay a base subscription plus a per-reservation fee).
+That is what ships, as the warm-up. **One** completed worksheet is carried — Spotify (p.21) — and it
+is named as Spotify.
+
+*Every other page citation in Story 1.2's element map was checked and is correct.*
+
+### A2. Story 2.3's `/llms.txt` check is too narrow to catch the lie it is aimed at
+
+It says the manifest is confirmed to *"name only routes that still exist"*. `/` still exists, so that
+check passes — while the manifest's description of it reads *"a live proof section reading the real
+synthetic demo project"*, describing a section Story 2.3 has just deleted. The check is therefore on
+**every claim the manifest makes about `/`**, not on its route list. Story 3.3 owns the full rewrite;
+Story 2.3 owns not shipping a manifest that lies in the interim.
+
+### A3. `/llms.txt` already carries one stale gate claim, and Story 3.3 inherits it
+
+> `Returns 404 while the connector is disabled (CONNECTOR_ENABLED unset — the default until this
+> epic's launch story flips it on).`
+
+That launch story shipped; the connector is enabled in production. The parenthetical describes an
+unshipped future that is now the past. The 404-while-disabled sentence is true and stays; the
+parenthetical goes. Named here so it is a decision rather than a builder's discovery.
+
+### A4. Deleting §proof leaves three prose references behind, in files that survive
+
+`grep`ped rather than assumed (LEARNINGS, *"grep for its siblings"*; CODE-QUALITY #3):
+
+| File | What it says | Disposition |
+|---|---|---|
+| `components/landing/FinOpsSection.tsx:17` | *"cannot mistake this panel for the live one in §proof"* | Rewrite — the distinction it draws no longer has a second term |
+| `components/landing/MakerHero.tsx:48` | *"Further down the page §proof renders a REAL agent window…"* | Goes with the window, in Story 2.1 |
+| `app/page.tsx` header comment | The section-order narrative names both `product` and `proof` | Rewrite to the spine that now exists |
+
+`OperatingContextSection.tsx:50`'s user-visible *"the live read of a real tenant is further down, in
+Proof"* needs no separate handling — that component is deleted in Story 2.2.
+
+**Verified and NOT a problem:** none of the four deleted components reads a flag. The
+`landing-maker-ops` failure mode — a repositioning that drops the only reader of a qualifier — does
+not apply here, and that was checked rather than hoped.
+
+### A5. Retiring the stamps breaks a browser spec that Sprint 2 does not name
+
+`e2e/landing.browser.spec.ts` → *"section dividers carry a legible numbered stamp"* asserts
+`stamps.first()` is visible, that there are **at least two**, and that the first reads `1`. With both
+call sites gone it fails outright. The `browser` project **is not in the blocking gate**, so nothing
+would have caught this before a manual run (LEARNINGS: *a deletion-heavy epic silently invalidates a
+suite no pipeline runs*).
+
+**The ruling:** the spec retires with the device. Loosening its floor to zero would leave a test that
+cannot fail (CODE-QUALITY #5), which is worse than deleting it. Its **last** assertion is not about
+dividers and must survive — `expect(body).not.toMatch(/[①-⓿]/)`, the enclosed-numeral guard from
+`landing-frijoles-rebrand` — so it moves into a test that still has a subject.
+
+### A6. Story 3.2's "metadata spec" does not exist and must be written
+
+There is no spec anywhere in `e2e/` asserting `app/layout.tsx`'s `TITLE`/`DESCRIPTION`. Story 3.2's
+QA line reads as though one is being extended. It is **new**, and it must be observed failing.
+
+### A7. The hero's second prompt card contradicts a live assertion *and* its comment
+
+`e2e/landing.browser.spec.ts:16` asserts `.prompt-card` has **exactly one** match, under a comment
+that argues the epic's D5 in reverse: *"ONE copy-a-prompt block, not two."* Story 2.1 adds the
+second. Changing the count and leaving the comment would ship a rationale for the opposite of what
+the code does — the exact defect three review rounds found in `flags-visual-rule-builder`. **Both
+change, in Story 2.1, and the comment cites D5** for why two blocks asking different questions is
+not the pattern `landing-readability-pass` D1 refused.
+
+### A8. `.app-shell` is the SIGNED-IN product's class. Do not sweep it.
+
+Deleting markup obliges a stylesheet sweep of the classes it used (LEARNINGS, 2026-08-20). Applied
+naively here it breaks `/app`: `.app-shell` is used by `components/product/ProductShell.tsx`,
+`CommandCenter`, `AgentRail` and six authed specs — `OperatingContextSection` was only borrowing it.
+
+**Safe to sweep** (single call site, landing-only, verified by grep over `.tsx`): `baglabel`,
+`roundstamp`, `netwt`, `hero-magic`, `hero-window`, `proof-stack`, `operating-nav`, `operating-body`,
+`trend--*`, `lift--*`, `divider__stamp`.
+**Not safe:** `.app-shell`, `.app-bar`, and anything `components/ui/` renders. Check each class for a
+non-landing user **before** deleting its rule, and render the page after.
+
+### A9. Routing and review, stated so the choice is auditable
+
+Every sprint is built by the coordinating agent (Claude Opus 5) in the root checkout on a stacked
+branch. **No builder subagents were dispatched** — the epic's judgment-heavy half is Sprint 1's
+workshop, which depends on two source PDFs that a cold subagent cannot read, and Sprint 2's edits
+turned out to carry the four spec traps above, which a locked contract can name but a mechanical
+builder would resolve permissively. Review is the LOW-tier policy from `WAYS-OF-WORKING.md`: **two
+cross-family external passes per PR via `scripts/review-route.mjs`, and no reviewer subagents.**
+
 ## Scope
 
 | Sprint | Story | Risk |
