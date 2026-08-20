@@ -89,6 +89,18 @@ independently shippable slice of value.
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
+- ✅ [The methodology gets a room of its own](02-commercial/methodology-experience/README.md) —
+  `/methodology` plus six chapter URLs, server-rendered and deep-linkable, with the whole method in
+  ONE typed module (`lib/methodology-chapters.ts`) that the pages, the index, the sticky
+  phase-grouped rail, the route metadata, the sitemap and the downloadable edition all derive from.
+  The maker loop reads as three portfolio moves (Consider · Operate · Exit) and the method's second
+  move is **Design**, everywhere a reader can see it. A reading shell with the work-block family as
+  primitives (contrast measured, not assumed), an Apple-materials pass whose
+  `prefers-reduced-transparency` / `prefers-contrast` / `prefers-reduced-motion` fallbacks ship in
+  the same story and are verified through CDP, and read progress that renders NOTHING rather than a
+  zero it cannot stand behind. **Agent-readable by design**: per-route metadata, a generated
+  markdown edition at `/methodology/edition.md`, and the sitemap + `robots.txt` this site did not
+  have.
 - ✅ [The landing reads at a glance — the maker-ops page, cut down to what it claims](02-commercial/landing-readability-pass/README.md)
   (one statement per claim · no green ink · §connect and §sdk retired into `/install` · the hero at
   the mockup's scale, its two objects overlapping) — **live in production 2026-08-20** (PR #102,
@@ -238,6 +250,20 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-08-20** — `methodology-experience` **shipped and live** (PRs #104/#105/#107/#108, deployed
+  `727fc04`): the landing has said *"the way to learn it is to use it"* for months over a CTA that
+  went nowhere. It now goes to `/methodology` — six chapters at their own URLs, readable without
+  JavaScript, in a room that reads as a document rather than a sales page. The whole method lives in
+  one typed module, so there is no second copy of the prose anywhere; the downloadable edition is
+  **generated** from it rather than maintained beside it. Four of the mockup's five defects were
+  fixed in the content, including six chapters that rendered a raw `{1:"…"}[n]` JavaScript literal
+  as their opening paragraph. The materials pass survived its circuit breaker on evidence gathered
+  BEFORE the build — the first visual read was wrong and the measurement caught it. Reader telemetry
+  is proved by a non-zero funnel read out of the production database, not by a 200. And a
+  product-owner question mid-flight ("can any agent read this?") turned up seven measured gaps,
+  including a sitemap that **no story owned** under an acceptance criterion that read as though it
+  were already handled.
 
 - **2026-08-20** — `landing-readability-pass` **shipped and live** (PR #102, `0ec12b3`): the landing
   says each thing once. Every `tag-live` badge is gone and the page carries zero green ink, verified

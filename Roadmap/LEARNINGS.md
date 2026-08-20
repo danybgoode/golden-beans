@@ -291,6 +291,40 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+- **A review finding you rejected on sound reasoning can be a correct PREDICTION about code you have
+  not written yet.** Antigravity warned that appending rules below `globals.css`'s reduced-motion
+  block reintroduces an ordering hazard. The rejection was right about every transition in the file
+  — motion is switched off at the SOURCE by zeroing the tokens, so order cannot matter. It was wrong
+  within the hour: a `@keyframes` animation does not consult those tokens for its EXISTENCE, only
+  its duration, so an unguarded rule won on order and `animation: … both` applied its `from` state
+  anyway — a reader who asked for reduced motion would have landed on a chapter at `opacity: 0`.
+  **When a reviewer describes a HAZARD rather than a defect, the useful question is not "is this
+  broken today" but "what would have to be added for this to break".** Reject the instance; keep the
+  hazard. *(2026-08-20, methodology-experience.)*
+- **In a large stylesheet, "later wins at equal specificity" is the DEFAULT failure mode, not an edge
+  case — and a media query reads as though it ought to win when it does not.** The same cascade
+  defect landed three times in one epic in one file: a three-column grid that never applied (the
+  page rendered with no rail at all), the animation above, and a desktop override that lost to its
+  own base rule. All three were found by review; none by the suite, because each produced correct
+  markup and a green gate. The structural fix is adjacency — **a selector gets ONE base block, and
+  it goes above every override of it** — and the assertion is on the COMPUTED value at both sides of
+  the breakpoint, never on the rule's existence. *(2026-08-20, methodology-experience.)*
+- **`0 did not fit the budget` is not proof the reviewer read anything.** agy's documented 256 KB
+  argv cap is not the binding limit — the MODEL gives out well before it, and fails as *garbage
+  output* rather than as an error (171 KB returned `agy -p failed: "`; 19 KB reviewed cleanly; the
+  same file alone at 119 KB produced three findings including a Blocking). This extends the existing
+  "read the attachment line" rule: a clean verdict needs both an attachment line AND a payload the
+  model actually digested. Reviewing one large file on its own is a legitimate round.
+  *(2026-08-20, methodology-experience.)*
+- **A mutation check that does NOT go red is itself a finding.** Swapping a component's `null` for an
+  empty count changed no pixel — a downstream guard already suppressed both — which proved a comment
+  claiming that `null` prevented the rendered zero was FALSE. The check earns its keep by failing;
+  when it does not, the question is not "try a bigger mutation" but "what did I believe that is not
+  true". Two other guards in the same epic passed against their own defect for the same class of
+  reason: a colour parser that understood `rgb()` but not `color(srgb …)` (silently measuring an
+  ancestor's background and reporting plausible PASSING numbers), and a canonical-URL assertion that
+  could not fail locally because the harness builds with `SITE_URL` set.
+  *(2026-08-20, methodology-experience.)*
 - **When a review finds a bug, fix the CLASS or you will be told about it once per instance.** The
   maker-ops epic was told three separate times that a gated capability was listed without its
   qualification — the Ops panel, then SecOps on the hero's bag, then DevOps on the same bag. Each
@@ -822,6 +856,21 @@ one-liner + why + date shape.
   touched, get a baseline before explaining it away**: checking out `main`, rebuilding and running
   the same specs took five minutes and turned "13 unrelated failures, probably environmental" into a
   fact (identical 13 on `main`, all green in CI). *(2026-08-12, landing-redesign-v2.)*
+- **A full-page screenshot at small scale is not a measurement either.** "Verify a visual claim by
+  RENDERING, not by grepping" has a second half: a rendered image can also be read wrong. A
+  translucency effect judged "nearly invisible on our dark ground" from a full-page screenshot was
+  measurably the OPPOSITE — the dark ground changed more than the light one (mean channel delta
+  15.13/255 vs 10.44), because a bright element passing under the bar has far more contrast against
+  near-black. Pulling a circuit breaker on that impression would have cut a working feature on false
+  evidence. **Isolate the element and compute a number before concluding.**
+  *(2026-08-20, methodology-experience.)*
+- **`async generateMetadata` does not make a Next.js page dynamic.** A statically generated route
+  evaluates it at BUILD time, so `getSiteUrl()` froze whatever `SITE_URL` the build had — and this
+  repo's CI builds with none, baking `rel="canonical" href="http://localhost:3000/…"` into the HTML.
+  A canonical tag pointing at localhost is worse than none: it tells a crawler the real page is
+  somewhere it cannot reach. `force-dynamic` is required alongside it. Assert the STRUCTURAL property
+  (`x-nextjs-prerender` absent) and not just the rendered URL, because a harness that builds WITH
+  `SITE_URL` set produces a correct-looking value either way. *(2026-08-20, methodology-experience.)*
 - **Verify against a freshly built artifact, or you will diagnose the wrong cause — confidently.**
   A CSS rule appeared absent from the running page, and the plausible explanation (the minifier
   mangles `:where(:has())`) went into a code comment as fact. It was false twice over: the grep that
