@@ -16,20 +16,16 @@ import { Icon } from '@/components/ui/Icon'
 // decision to offer one belongs to whoever needs it, along with the reasoning for where. Flagged by
 // Mistral Vibe in round 11 of PR #100.
 //
-// `label` IS exercised, by §methodology, and it changes only the words. That section asks the reader
-// to explore the method rather than to start a Bet, and the mockup labels its CTA accordingly — but
-// there is one place a reader can actually do either, so the destination stays this component's and
-// cannot drift out of step with the signup gate.
-export function RunYourFirstBet({
-  className,
-  label = 'Run your first Bet',
-}: {
-  className?: string
-  label?: string
-}) {
+// `label` is gone too, for the same reason and one epic later. It existed for §methodology, which
+// asked the reader to explore the method while there was still only one place to send them — so the
+// label changed and the destination stayed this component's. `methodology-experience` Story 2.4
+// gave that section a real destination (`/methodology`), which left `label` with no call site. A
+// prop kept alive by nothing is an unexercised branch shipped on the assumption someone will want
+// it; when the section that needed it stopped needing it, it went with it.
+export function RunYourFirstBet({ className }: { className?: string }) {
   return (
     <Button href={primaryCtaHref(isSignupEnabled())} className={className}>
-      {label}
+      Run your first Bet
       <Icon name="arrow-right" />
     </Button>
   )

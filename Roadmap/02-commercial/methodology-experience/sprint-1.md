@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 1: The vocabulary and the loop
 
-**Status:** 🟦 In review — stories 1.1–1.3 built and gated locally (`d65ddec`, `db2ea21`, `a0f797f`, `1672315`, `7f15e1a`)
+**Status:** ✅ **Shipped and verified in production** — PR [#104](https://github.com/danybgoode/golden-beans/pull/104), squashed to `main` as `0751e45`, Production deployment `5995556979` reported `success` for that exact SHA.
 **Branch:** `feat/methodology-experience` (off latest `main`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -90,8 +90,31 @@ the page stops printing Consider/Operate/Exit twice and I learn something new by
 
 ## Sprint 1 — Smoke walkthrough
 
-*Written at sprint close, with real production URLs. Placeholder — do not tick the sprint without it.*
-Env: production · `https://goldenfrijoles.com` (preview URL while pre-merge)
+Env: **production** · <https://goldenfrijoles.com> · deployed SHA `0751e45` (confirmed via
+`gh api repos/danybgoode/golden-beans/deployments`, not inferred from a green CI run).
+
+Every step is one action and one expected result. No account, no session, no credentials — this is
+all public surface. Steps 1–5 are a browser walkthrough; step 6 is the same thing as a command.
+
+| # | Do this | Expect |
+|---|---|---|
+| 1 | Open <https://goldenfrijoles.com> and scroll to **The new maker loop** | **Three** numbered cards, not five: `01 Consider` · `02 Operate` · `03 Exit` |
+| 2 | Read the three sentences under those titles | *"Consider whether it deserves investment."* · *"Operate by deploying that investment through humans and agents."* · *"Exit by deciding what the Evidence justifies."* — word for word |
+| 3 | On a screen wider than 900px, look at the **right-hand edge** of that card | The third card reaches the edge. No empty strip, no border stopping in the middle of nothing. (This was broken before merge and is the reason the check exists.) |
+| 4 | Scroll to **The way of working behind the product** and read the kraft card | A contents page: `CONSIDER` 01 Bring an idea · 02 Design it · 03 Place the Bet · `OPERATE` 04 Build it · 05 Prove it · `EXIT` 06 Decide what happens next |
+| 5 | Use the browser's own find (⌘F / Ctrl+F) for **Shape** with match-case on | **Zero** hits. Lower-case "shape" hits twice — §finops' *"the shape of the capability"* and §pricing's *"the shape of it"* — both the ordinary English noun, both deliberate |
+| 6 | Run the sprint's own spec against production | `PLAYWRIGHT_BASE_URL=https://goldenfrijoles.com npx playwright test apps/web/e2e/methodology-vocabulary.spec.ts --project=api` → **3 passed** |
+
+**The walkthrough is baselined, so a pass is evidence rather than a script that would have passed
+either way.** The same three specs were run against the *previous* production deployment
+(`d0824bc`, `https://golden-beans-q5nfh7ubg-danybgoodes-projects.vercel.app`) and **3 failed / 0
+passed**. Against `0751e45` they are **3 passed / 0 failed**. The checks can tell the two builds
+apart.
+
+Also verified by looking rather than by asserting: §loop and §methodology screenshotted at 1280px
+and 390px, before merge and again on live production. Six chapter titles each sit on one line on a
+phone; the loop's three columns fill their card on desktop.
 
 **Owed to the product owner by name:** the judgment in Story 1.2 — does each renamed sentence read
-better as *Design*? No automated check covers that.
+better as *Design*? And is the hero's new micro line (*"Bring an idea. Consider it. Operate it. Exit
+on the Evidence."*) the right closing beat? No automated check covers either.

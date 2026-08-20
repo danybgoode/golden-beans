@@ -4,7 +4,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { inspectDesignSource, inspectRepository, withoutComments } from './check-design-drift.mjs';
+import {
+  SWEPT_ROOTS,
+  VOICE_AND_STYLE_ROOTS,
+  inspectDesignSource,
+  inspectRepository,
+  withoutComments,
+} from './check-design-drift.mjs';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -17,12 +23,12 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 function scaffoldFixtureRepo() {
   const root = mkdtempSync(join(tmpdir(), 'design-drift-'));
+  // DERIVED from the guard's own roots, not a second list beside them. It was a hand-copied
+  // duplicate, and the moment a root was added the fixture stopped having the same shape as the
+  // repo — which is the one property this whole fixture exists to provide (CODE-QUALITY #2).
   for (const dir of [
-    'apps/web/components/landing',
-    'apps/web/components/ui',
-    'apps/web/components/product',
-    'apps/web/components/brand',
-    'apps/web/app',
+    ...SWEPT_ROOTS,
+    ...VOICE_AND_STYLE_ROOTS,
     'references/design',
     'references/golden-beans-design-system-proposal',
   ]) {
@@ -94,17 +100,31 @@ test('the sweep covers the shared component directories, not only landing and ap
   ]);
 });
 
-test('the inline-style ban stays landing-only, so /app can compute a bar width', (t) => {
+// methodology-experience · Sprint 2 — this used to read "stays landing-only". The strict pair
+// (inline style, heading voice) now also covers the methodology's public reading surface, and the
+// product routes still keep their computed geometry. The policy moved deliberately; the test moved
+// with it rather than being deleted.
+test('the inline-style ban covers the brand surfaces, so /app can still compute a bar width', (t) => {
   const root = scaffoldFixtureRepo();
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
   const dynamicWidth = `<div style={{ width: \`\${pct}%\` }} />\n`;
   writeFileSync(join(root, 'apps/web/components/ui/Bar.tsx'), dynamicWidth);
   writeFileSync(join(root, 'apps/web/components/landing/Bar.tsx'), dynamicWidth);
+  writeFileSync(join(root, 'apps/web/components/methodology/Bar.tsx'), dynamicWidth);
+  writeFileSync(join(root, 'apps/web/app/methodology/Bar.tsx'), dynamicWidth);
+  // The reason the ban is not simply repo-wide: the funnel's bars are computed geometry.
+  writeFileSync(join(root, 'apps/web/app/Bar.tsx'), dynamicWidth);
 
   assert.deepEqual(
-    inspectRepository(root).violations.map((violation) => violation.path),
-    ['apps/web/components/landing/Bar.tsx']
+    inspectRepository(root)
+      .violations.map((violation) => violation.path)
+      .sort(),
+    [
+      'apps/web/app/methodology/Bar.tsx',
+      'apps/web/components/landing/Bar.tsx',
+      'apps/web/components/methodology/Bar.tsx',
+    ]
   );
 });
 
@@ -162,18 +182,31 @@ test('a heading may end in ? ! or an ellipsis — only the full stop reads as a 
   }
 });
 
-test('the heading voice is enforced on the landing and nowhere else', (t) => {
+// methodology-experience · Sprint 2 — renamed from "…on the landing and nowhere else", which
+// stopped being true when the methodology's public reading surface joined the strict pair. A test
+// whose NAME states the old policy is the CODE-QUALITY #3 defect wearing a green tick: it passed
+// against the new behaviour purely because it never wrote a file where the policy had changed.
+test('the heading voice is enforced on the brand surfaces, not on product UI labels', (t) => {
   const root = scaffoldFixtureRepo();
   t.after(() => rmSync(root, { recursive: true, force: true }));
 
   const heading = `<h2 className="section-title">Your agent finally has product context.</h2>\n`;
   writeFileSync(join(root, 'apps/web/components/landing/Titled.tsx'), heading);
-  // /app's headings are UI labels written under a different brief (epic D7).
+  writeFileSync(join(root, 'apps/web/components/methodology/Titled.tsx'), heading);
+  writeFileSync(join(root, 'apps/web/app/methodology/Titled.tsx'), heading);
+  // /app's headings are UI labels written under a different brief, and stay exempt.
   writeFileSync(join(root, 'apps/web/components/ui/Titled.tsx'), heading);
+  writeFileSync(join(root, 'apps/web/app/Titled.tsx'), heading);
 
   assert.deepEqual(
-    inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
-    ['apps/web/components/landing/Titled.tsx heading-period']
+    inspectRepository(root)
+      .violations.map((violation) => `${violation.path} ${violation.rule}`)
+      .sort(),
+    [
+      'apps/web/app/methodology/Titled.tsx heading-period',
+      'apps/web/components/landing/Titled.tsx heading-period',
+      'apps/web/components/methodology/Titled.tsx heading-period',
+    ]
   );
 });
 

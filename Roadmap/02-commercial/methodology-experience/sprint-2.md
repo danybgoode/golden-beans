@@ -1,6 +1,6 @@
 # Methodology experience — Sprint 2: `/methodology` skateboard
 
-**Status:** ⬜ Not started
+**Status:** 🟦 In review — all four stories built and gated locally (`4fb97be`, `b62321c`, `1a6fdfc`, `188ddcf`, `64869c0`, `1a89835`, `f5462cf`, `8435074`)
 **Branch:** `feat/methodology-experience-s2` (cut from `feat/methodology-experience`)
 **Risk:** LOW — reviewer may auto-merge on green CI
 
@@ -19,7 +19,7 @@
 
 ## Stories
 
-### Story 2.1 — The methodology is one typed module *(architect, first, shared surface)*
+### Story 2.1 — The methodology is one typed module *(architect, first, shared surface)*  ✅ `4fb97be` + `b62321c` + `1a6fdfc` + `188ddcf`
 
 **As a** future agent or builder, **I want** the six chapters to live in one typed module, **so that**
 the prose has exactly one source and the page, the TOC, the metadata and any downloadable edition all
@@ -46,17 +46,24 @@ derive from it instead of drifting apart.
   (epic D3) — including *"A shaped Bet should be bounded enough to operate"*, *"Shape creates a
   plausible bounded investment decision"*, *"the correct result of shaping"* and Chapter 1's agent
   prompt *"Before shaping it, read the project agents…"*. Each rewritten line is readable on its own.
-- **Field guide version skew is reconciled or recorded.** The v0.2 source's Practitioner checkpoint
-  still gestures at nine named practices while the reader gets six chapters. Fix it, or write the gap
-  down in this file with the reason.
+- **Field guide version skew is reconciled or recorded.** ⚠️ **CORRECTED 2026-08-19 — see
+  [A5](README.md).** An earlier version of this line claimed there was no skew, on the evidence that
+  the v0.3 mockup contains no Practitioner checkpoint. That was true about the *mockup* and it
+  answered the wrong question: the story asks about the **v0.2 source**, which was not in the
+  repository at the time and is now. It **does** carry the Practitioner checkpoint, and it carries
+  the line *"You do not need to memorize nine practices to do it again."* The skew is real. A5 holds
+  the decision.
 - `references/golden-frijoles-minimum-viable-field-guide-v0.2.md` is added and tracked (mode 644) as
   the dated provenance record the content was derived from — **not** as a live second source (D5).
+  ✅ **Done** (`1a6fdfc`). The product owner supplied the real file; A3 resolved with option (a), and
+  it is tracked verbatim and unedited. The module was then checked against it rather than assumed:
+  all six chapters are faithful, and the only deviations are the deliberate D3 rewrites.
 - Unit tests: exactly six chapters in phase order; every `id` unique and URL-safe; every chapter has
   a non-empty `lede` that **does not contain `{`**; `getChapter` throws on an unknown id;
   `chapterNeighbours` returns `null` at both ends; every `agent` block's prompt is non-empty.
 **Risk:** LOW
 
-### Story 2.2 — A methodology index I can link to
+### Story 2.2 — A methodology index I can link to  ✅ `64869c0` + `f5462cf`
 
 **As a** maker, **I want** a methodology index at its own URL, **so that** I can find the method
 without hunting the landing page, and send someone the whole thing in one link.
@@ -73,7 +80,7 @@ without hunting the landing page, and send someone the whole thing in one link.
   the reading shell is Sprint 3.
 **Risk:** LOW
 
-### Story 2.3 — Every chapter at its own URL
+### Story 2.3 — Every chapter at its own URL  ✅ `1a89835`
 
 **As a** maker, **I want** each chapter to have its own URL, **so that** I can send someone straight
 to the one that matters instead of "scroll to chapter 4".
@@ -89,9 +96,15 @@ to the one that matters instead of "scroll to chapter 4".
   are written as titles — `check-design-drift`'s `heading-period` rule will reject *"Bring an idea."*
   as an `<h1>`. **Decide once, here, and record it:** either the titles lose the stop, or the
   displayed title is not a heading element. Do not special-case the guard.
+  ✅ **Decided: the titles lose the stop.** They are titles, not sentences — the same rule
+  `MakerHero`'s display headline already follows. Stored without the stop in
+  `lib/methodology-chapters.ts` (so every surface inherits it, not just the `<h1>`), asserted by a
+  unit test there, and the guard is untouched. **A4 also extended `heading-period` to reach these
+  routes at all** — it was landing-only, so this decision would otherwise have cited a guard that
+  never looked at the surface it governs.
 **Risk:** LOW
 
-### Story 2.4 — The promise gets its destination
+### Story 2.4 — The promise gets its destination  ✅ `8435074`
 
 **As a** visitor who just read "explore the methodology", **I want** the button to take me there,
 **so that** the page stops making an offer it cannot keep.

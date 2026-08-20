@@ -95,7 +95,12 @@ export function MakerHero() {
 
           <div className="hero-cta">
             <RunYourFirstBet />
-            <Button href="/#methodology" variant="ghost">
+            {/* methodology-experience · Story 2.4 — re-pointed from `/#methodology` to the real
+                route. The in-page section is a PREVIEW of the method (its contents page and a
+                one-paragraph pitch); this button's words promise to show how the method works, and
+                only `/methodology` does that. Jumping a reader down the sales page to a card that
+                then asks them to click again is the offer being made twice. */}
+            <Button href="/methodology" variant="ghost">
               See how the method works
               <Icon name="arrow-right" />
             </Button>

@@ -29,7 +29,19 @@ export { assertMobileClean } from './helpers/mobile-heuristics'
 // likely to blow the mobile budget because it embeds a third-party iframe whose contents this
 // repo does not control. Adding a row here is the whole cost of covering it — which is the point
 // of the list existing rather than each spec re-deriving "mobile-clean".
-export const PUBLIC_MOBILE_ROUTES = ['/', '/install', '/login', '/talk'] as const
+// `/methodology` and one chapter join with methodology-experience Sprint 2. Two rows, because the
+// index and a chapter are different layouts with different failure modes — a card grid that can
+// overflow, and a long article whose lists and work cards can. `design-it` is the chapter chosen
+// deliberately: it carries the longest list in the guide (nine definition lines, several of which
+// wrap) plus a `CopyPromptCard`, so it is the one most likely to blow the budget.
+export const PUBLIC_MOBILE_ROUTES = [
+  '/',
+  '/install',
+  '/login',
+  '/talk',
+  '/methodology',
+  '/methodology/design-it',
+] as const
 
 for (const route of PUBLIC_MOBILE_ROUTES) {
   test(`${route} is mobile-clean`, async ({ page }) => {

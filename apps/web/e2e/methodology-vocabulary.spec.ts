@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { elementsByClass } from './helpers/html-class'
 
 // methodology-experience · Sprint 1 QA — the blocking-gate spec for Stories 1.1, 1.2 and 1.3.
 //
@@ -38,17 +39,24 @@ function visibleText(html: string): string {
  * about the loop if it is read from inside the loop.
  */
 function loopMoves(html: string): { title: string; copy: string }[] {
-  return [
-    ...html.matchAll(/<li class="maker-flow__item"[\s\S]*?<h3>([\s\S]*?)<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/g),
-  ].map((match) => ({ title: visibleText(match[1]), copy: visibleText(match[2]) }))
+  // The `<li>` is found through the shared helper — so other attributes and extra classes are
+  // tolerated — and its OWN inner HTML is then read for the title and copy. Reading them out of the
+  // item rather than out of the page is the point of this extractor (see the note above).
+  return [...html.matchAll(elementsByClass('li', 'maker-flow__item'))].flatMap((item) => {
+    const parts = /<h3>([\s\S]*?)<\/h3>[\s\S]*?<p>([\s\S]*?)<\/p>/.exec(item[1])
+    return parts ? [{ title: visibleText(parts[1]), copy: visibleText(parts[2]) }] : []
+  })
 }
+
+/** The chapter-number span, hoisted: it is the same pattern every iteration, so it is built once. */
+const CHAPTER_NUMBER = elementsByClass('span', 'field-guide__n')
 
 /** The text of every chapter in §methodology's field-guide contents, in document order. */
 function fieldGuideChapters(html: string): string[] {
-  return [...html.matchAll(/<ol class="field-guide__chapters">([\s\S]*?)<\/ol>/g)].flatMap((group) =>
+  return [...html.matchAll(elementsByClass('ol', 'field-guide__chapters'))].flatMap((group) =>
     [...group[1].matchAll(/<li>([\s\S]*?)<\/li>/g)].map((item) =>
       // The chapter number lives in its own span and is presentation, not the title.
-      visibleText(item[1].replace(/<span class="field-guide__n">[\s\S]*?<\/span>/g, ' '))
+      visibleText(item[1].replace(CHAPTER_NUMBER, ' '))
     )
   )
 }
