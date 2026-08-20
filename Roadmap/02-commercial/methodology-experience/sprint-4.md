@@ -61,7 +61,15 @@ methodology to work, **so that** the guide is readable by more than a sighted mo
 - `generateMetadata` per route following `app/layout.tsx`'s precedent (epic D9) — dynamic, not a
   static object, and **naming no capability a flag flip can falsify**. OG/Twitter images for the
   index and for chapters.
-- The routes appear wherever the site tells crawlers what exists.
+- The routes appear wherever the site tells crawlers what exists. ⚠️ **Amended (A6): there is
+  nowhere.** Measured on live production — `/sitemap.xml` is a **404**, and `/robots.txt` is the
+  deploy platform's default boilerplate with no `User-agent`, no `Allow` and no `Sitemap:` line.
+  This bullet read as though a crawler manifest already existed. So this story BUILDS one: a
+  sitemap generated from the real route set (never a hand-written list), and a `robots.txt` this
+  repo owns which points at it.
+- `generateMetadata` is asserted **per route**, not assumed from D9. All seven methodology URLs
+  currently serve the LANDING's `<title>` and description, so nothing — a search result, a link
+  preview, an agent's page list — can tell the six chapters apart (A6).
 **Risk:** LOW
 
 ### Story 4.4 — Ship it, then prove it shipped
@@ -85,6 +93,32 @@ methodology to work, **so that** the guide is readable by more than a sighted mo
     `methodology_visited` is arriving with a non-null `feature_id`.
 **Risk:** MEDIUM — it is the deploy
 
+### Story 4.6 — Any agent can read the methodology *(amendment A6)*
+
+**As** a maker's agent — Claude, ChatGPT, Gemini, or whatever they run — **I want** to read the whole
+method from this site without executing JavaScript or guessing at URLs, **so that** my human can hand
+me a link instead of pasting a document.
+
+The product owner asked for this by name on 2026-08-20. Most of it was already implied by D5, D7 and
+Stories 4.2/4.3, but it was scattered across three stories as a side effect and **nothing tested it**.
+This story owns the outcome; 4.2 and 4.3 build the parts.
+
+**Acceptance — asserted as what an agent RECEIVES, not as which tags exist:**
+- Every chapter URL returns **its own** `<title>` and description. Today all seven serve the
+  landing's (A6, measured).
+- The generated edition (4.2) round-trips **the same six chapters as the module**, derived, and is
+  reachable at a stable URL. Signal ratio today is 5.8%–8.1%: an agent spends ~30–41 KB of context to
+  read ~2–3 KB of method, and the edition is what fixes that.
+- `/llms.txt` names the methodology and the edition, and **every URL it names resolves** — the
+  existing `landing-prompts.spec.ts` pattern, which already fetches every URL a prompt mentions.
+- The sitemap (4.3) lists **exactly** the routes that exist: every chapter id appears, and no id that
+  is not in the module does. Derived from the same source as `generateStaticParams`.
+- The whole method is reachable with **JavaScript disabled** — asserted in the `browser` project with
+  JS off, not inferred from the routes being server-rendered.
+- Verified by the architect against live production, and **owed to the product owner to test himself**
+  afterwards.
+**Risk:** LOW
+
 ### Story 4.5 — Close the epic
 
 **Acceptance:**
@@ -104,8 +138,9 @@ methodology to work, **so that** the guide is readable by more than a sighted mo
 
 ## Sprint QA
 
-- **`api` project** — the telemetry spec (event fires, `feature_id` non-null), the metadata spec, and
-  the full Sprint 1 + 2 specs still green.
+- **`api` project** — the telemetry spec (event fires, `feature_id` non-null), the metadata spec, the
+  agent-readability spec (Story 4.6 — per-route titles, the edition's round trip, every `llms.txt`
+  URL resolving, the sitemap matching the module), and the full Sprint 1 + 2 specs still green.
 - **`browser` project** — axe on index + one chapter; the Sprint 3 preference-emulation specs still
   green post-materials.
 - **Production smoke** — Story 4.4, baselined against old production first.

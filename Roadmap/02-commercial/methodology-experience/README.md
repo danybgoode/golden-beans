@@ -367,6 +367,50 @@ neither of which the mockup could have revealed. Chapter 2's *"Continue Groom."*
 in. And chapter 6's Learn section asks **two** questions, each its own blockquote (*"What did reality
 teach us?"* then *"What changes because of it?"*); they had been compressed into one.
 
+### A6 — "any agent can read `/methodology`" becomes an explicit, tested outcome. 2026-08-20.
+
+*Product owner, 2026-08-20: "we must make sure that `/methodology` is fully agent friendly, meaning
+any agent, like claude, chatgpt, gemini etc could read it easily."*
+
+**Class:** restored scope. Most of this was already implied by D5, D7 and Stories 4.2/4.3, but it was
+scattered across three stories as a side effect and **nothing tested it**. It is now one named
+outcome with its own spec. One part of it — the sitemap — was covered by NO story at all.
+
+**Measured against live production at `066d5c2` before writing this**, so the gap is a fact rather
+than an assumption:
+
+| Property | State today | Owner |
+|---|---|---|
+| Content in server-rendered HTML, no JS required | ✅ all six chapters, including the agent prompt | D7, shipped |
+| `<title>` per route | ❌ **all seven routes serve the landing's title** — "Golden Frijoles — make more, grow what works" | 4.3 |
+| `<meta description>` per route | ❌ all seven serve the landing's description | 4.3 |
+| Signal ratio (text ÷ bytes) | ❌ **5.8%–8.1%** — an agent spends ~30–41 KB to read ~2–3 KB of method | 4.2 |
+| Plain-text / markdown edition | ❌ not built | 4.2 |
+| `/llms.txt` names the methodology | ❌ no mention at all | 4.2 |
+| `/sitemap.xml` | ❌ **404 — no sitemap exists anywhere on this site** | **nobody — the gap** |
+| `/robots.txt` | ❌ Vercel's default boilerplate: no `User-agent`, no `Allow`, no `Sitemap:` line | **nobody — the gap** |
+
+**The `<title>` row is the one worth reading twice.** Six chapter routes are live right now, and a
+link preview, a search result or an agent's page list cannot tell any of them apart — every one
+claims to be the landing page. D9 already requires `async generateMetadata` per route; what this
+amendment adds is that it is *checked*, per route, rather than assumed from the decision.
+
+**Story 4.3's wording assumed something that does not exist.** It says "the routes appear wherever
+the site tells crawlers what exists" — and the answer is *nowhere*. There is no sitemap, and
+`robots.txt` is served by the platform, not by this repo. Building one is added to 4.3 rather than
+left as a sentence that reads as if it were already handled.
+
+**Where it lands:** Sprint 4, as written — 4.2 (the generated edition + `llms.txt`) and 4.3 (metadata
++ crawlability), plus a new **Story 4.6** that owns the outcome and its spec. It is deliberately NOT
+pulled into Sprint 3: Sprint 3 is the reading experience and carries its own circuit breaker, and
+nothing here depends on it.
+
+**The property the spec asserts** (not "the tags exist" — what an agent actually receives):
+every chapter URL returns its own title and description; the generated edition round-trips the same
+six chapters as the module; `llms.txt` names the methodology and every URL it names resolves; the
+sitemap lists exactly the routes that exist and no route that does not; and the whole method is
+reachable by an agent that runs no JavaScript.
+
 ## Sprints
 
 Sprint 1 is carved to **ship standalone**. If the appetite is exhausted after it, the live page is
