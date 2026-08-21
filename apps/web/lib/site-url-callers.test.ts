@@ -227,7 +227,11 @@ test('the registry does not name a file that no longer imports getSiteUrl', () =
   // has moved on, and it makes the durable list read as bigger coverage than it has.
   const callers = new Set(callersOfGetSiteUrl())
   const stale = Object.keys(CALLERS).filter((file) => !callers.has(file))
-  assert.deepEqual(stale, [], `CALLERS lists file(s) that no longer import getSiteUrl:\n  ${stale.join('\n  ')}`)
+  assert.deepEqual(
+    stale,
+    [],
+    `CALLERS lists file(s) that no longer import getSiteUrl:\n  ${stale.join('\n  ')}`
+  )
 })
 
 test('nothing re-exports getSiteUrl, which would route callers around this registry', () => {

@@ -16,10 +16,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  isSiteUrlMisconfiguredInProductionEnv,
-  resolveSiteUrl,
-} from './site-url-resolve.ts'
+import { isSiteUrlMisconfiguredInProductionEnv, resolveSiteUrl } from './site-url-resolve.ts'
 
 test('SITE_URL wins over everything, including a present preview hostname', () => {
   assert.equal(
@@ -92,7 +89,10 @@ test('development and CI are untouched — no VERCEL_ENV means localhost', () =>
 test('both sources are normalised the same way', () => {
   // A normalisation covering one branch and not the other is the shape of bug this module exists to
   // prevent, so both are asserted rather than just the one that had it first.
-  assert.equal(resolveSiteUrl({ SITE_URL: '  https://goldenfrijoles.com///  ' }), 'https://goldenfrijoles.com')
+  assert.equal(
+    resolveSiteUrl({ SITE_URL: '  https://goldenfrijoles.com///  ' }),
+    'https://goldenfrijoles.com'
+  )
   assert.equal(
     resolveSiteUrl({ VERCEL_ENV: 'preview', VERCEL_BRANCH_URL: ' gb-git-feat-x.vercel.app/ ' }),
     'https://gb-git-feat-x.vercel.app'

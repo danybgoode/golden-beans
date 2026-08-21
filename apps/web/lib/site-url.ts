@@ -1,9 +1,5 @@
 import 'server-only'
-import {
-  isSiteUrlMisconfiguredInProductionEnv,
-  resolveSiteUrl,
-  type SiteUrlEnv,
-} from './site-url-resolve'
+import { isSiteUrlMisconfiguredInProductionEnv, resolveSiteUrl, type SiteUrlEnv } from './site-url-resolve'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the ONLY absolute-URL builder in this app
 // (AGENTS.md rule #5, "Key imports"). Extended by site-url-preview-aware · Sprint 1, Story 1.1.
