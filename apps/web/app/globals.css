@@ -2499,15 +2499,6 @@ a.stat-card:hover {
   text-transform: uppercase;
 }
 
-.proof-block + .proof-block {
-  padding-top: 30px;
-  border-top: 1px solid var(--line);
-}
-
-.proof-block .section-copy {
-  max-width: 720px;
-}
-
 .row2--center {
   align-items: center;
 }

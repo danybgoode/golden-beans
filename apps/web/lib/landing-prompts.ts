@@ -6,10 +6,19 @@
 // stranger's ChatGPT has to be able to fetch. It is also the version that cannot be tested and
 // that AGENTS.md rule #5 exists to prevent: every absolute URL in this app is built by
 // `getSiteUrl()` so it can never be a wrong-environment literal. Taking `siteUrl` as an argument
-// buys three things — a preview deployment's prompt points at the preview and can actually be
-// exercised before merge, `e2e/landing-prompts.spec.ts` can fetch every URL the prompt names
-// against the run's own base URL, and there is no production hostname in the source to go stale
-// the next time the domain moves.
+// buys three things — `e2e/landing-prompts.spec.ts` can fetch every URL the prompt names against
+// the RUN's own base URL (which is how these prompts are exercised at all), any deployment emits
+// whatever `SITE_URL` it was given rather than a baked-in host, and there is no production hostname
+// in the source to go stale the next time the domain moves.
+//
+// ── One thing this does NOT buy, corrected 2026-08-20 ─────────────────────────────────────────
+// This comment used to claim "a preview deployment's prompt points at the preview". It does not.
+// `getSiteUrl()` reads `SITE_URL` and falls back to localhost — it never derives the deployment's
+// own URL (deliberately: AGENTS rule #5 forbids a Host-header fallback). A Vercel preview emits
+// whatever `SITE_URL` its environment carries, which is not the preview's hostname. The prompts are
+// testable pre-merge because the SPEC runs them against its own base URL, not because a preview
+// rewrites them. Caught by Codex in review of PR #113 — the claim had been here since
+// landing-redesign-v2 and had been copied into two more files.
 //
 // No `import 'server-only'`: `CopyPromptCard` is a client component and receives the built strings
 // as props, so this module is legitimately reachable from both sides of the boundary. It stays

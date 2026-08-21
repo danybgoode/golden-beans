@@ -42,8 +42,10 @@ import { CATEGORY_DEFINITION } from '@/lib/positioning'
 // ── Why a route and not a static file in /public ──────────────────────────────────────────────
 // The same two reasons app/llms.txt/route.ts is a route (read that file first — this mirrors it
 // deliberately). (1) Every absolute URL comes from `getSiteUrl()`, so this cannot drift to a
-// wrong-environment host the way a checked-in string with a hardcoded prod URL would; a preview
-// deployment's copy points at the preview, which is what makes the workshop testable before merge.
+// wrong-environment host the way a checked-in string with a hardcoded prod URL would, and the
+// workshop is exercisable before merge because `e2e/northstar-self-serve.spec.ts` fetches it
+// against the RUN's own base URL. (It is not because a preview rewrites the URLs: `getSiteUrl()`
+// reads `SITE_URL` and never derives the deployment's own hostname.)
 // (2) A static file would be frozen at build time and would keep asserting whatever was true the
 // day it was written.
 //
