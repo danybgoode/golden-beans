@@ -8,9 +8,14 @@ import type { ReactNode } from 'react'
 // giving it a bubble would make it look like a second assistant talking. It reads as an inline
 // artefact the agent was handed — gold left edge, its contents legible at a glance.
 //
-// It carries no illustration caveat of its own. The frame above it did (`SurfaceNote`, deleted in
-// agentic-pm-public-surface Sprint 2 — epic A12; epic D4 of
-// landing-redesign-v2), and per-element caveats are how a page ends up with caveats nobody reads.
+// It carries no illustration caveat of its own, and that was always deliberate: the FRAME around
+// it carried one (`SurfaceNote`, landing-redesign-v2 epic D4), because per-element caveats are how
+// a page ends up with caveats nobody reads.
+//
+// That arrangement no longer exists. `SurfaceNote` was deleted when agentic-pm-public-surface
+// Sprint 2 removed the last landing illustration (epic A12), and this card has no call site today.
+// The rule it depended on still holds and is now the caller's to honour: if this card returns to a
+// public page, whatever frames it must say whether the figures inside are real.
 //
 // The `source`/`meta` header ("GOLDEN FRIJOLES · YOUR PRODUCT CONTEXT" / "READY TO PLACE") was
 // removed with the rest of the hero's frame chrome: two lines of uppercase mono above three lines
