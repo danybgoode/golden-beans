@@ -51,11 +51,33 @@ test("the workshop's URLs are built from this deployment's own base URL", async 
   expect(body).toContain(`${baseURL}/install`)
   expect(body).toContain(`${baseURL}/northstar-self-serve.md`)
 
-  // Same mutation-check substitute as llms-txt.spec.ts: generated content has no "old wrong
-  // string" to assert against, so instead assert no SECOND host leaked in — which is exactly what
-  // a hardcoded production URL in the source would produce when this runs against localhost.
-  const hosts = new Set(body.match(/https?:\/\/[^/\s]+/g) ?? [])
-  expect(hosts.size).toBe(1)
+  // ── Widened from "exactly one host" by product-owner amendment, 2026-08-20 (epic A10) ──────
+  // This is the ONLY edit to the four tests that predate agentic-pm-public-surface, and it is a
+  // deliberate strengthening rather than a relaxation, so the reason is recorded here rather than
+  // in a commit message nobody will read again.
+  //
+  // The old form counted hosts and required the count to be 1. That was a PROXY for the property
+  // this test actually defends — every absolute URL in this document is built by `getSiteUrl()`,
+  // never a hardcoded wrong-environment literal — and a count cannot tell you WHICH host it found.
+  // It also left no room for citing a source, which Story 1.2 requires; cross-family review called
+  // that Blocking twice, and the product owner amended the criterion rather than dropping the
+  // credit.
+  //
+  // The property is now asserted directly: every host is either THIS deployment's or a named
+  // citation. Adding a host to CITATION_HOSTS is a deliberate act with a review behind it, not a
+  // number quietly going up.
+  const CITATION_HOSTS = new Set(['amplitude.com'])
+  const ourHost = new URL(baseURL!).host
+
+  const hosts = new Set((body.match(/https?:\/\/[^/\s)]+/g) ?? []).map((url) => new URL(url).host))
+  expect(hosts.has(ourHost), "this deployment's own host is missing").toBe(true)
+
+  for (const host of hosts) {
+    expect(
+      host === ourHost || CITATION_HOSTS.has(host),
+      `${host} is neither this deployment nor a named citation — a hardcoded wrong-environment URL looks exactly like this`
+    ).toBe(true)
+  }
 })
 
 // ── agentic-pm-public-surface · Sprint 1, Story 1.2 ──────────────────────────────────────────────
@@ -129,14 +151,11 @@ test('the framework is credited by name, once, and the credit is not repeated', 
   const mentions = body.match(/Amplitude/g) ?? []
   expect(mentions.length, 'Amplitude should be credited once, not throughout').toBe(1)
 
-  // ── The attribution is deliberately scheme-less (epic A10) ─────────────────────────────────
-  // A markdown link would introduce a second `https://` host and fail the one-host test above —
-  // for a reason that test does not exist to catch. Writing the path without a scheme keeps the
-  // credit complete AND makes the one-host invariant literally true: every absolute URL in this
-  // document is ours. This asserts the citation is still findable, so "scheme-less" cannot decay
-  // into "dropped".
-  expect(body).toContain('amplitude.com/resources/north-star-playbook')
-  expect(body).not.toContain('https://amplitude.com')
+  // The credit is a real Markdown hyperlink (Story 1.2, "credited by name with a link"), pointing
+  // at the path that was actually fetched. `amplitude.com/north-star-playbook` — the obvious guess
+  // — is a 404, so the exact path is asserted rather than the domain: a citation that 404s is
+  // worse than none, and nothing else in the pipeline would ever notice.
+  expect(body).toContain('](https://amplitude.com/resources/north-star-playbook)')
 })
 
 test('the close runs the greenfield test first and names every part of the hand-off', async ({

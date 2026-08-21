@@ -20,16 +20,17 @@ import { CATEGORY_DEFINITION } from '@/lib/positioning'
 // and references/northstar-workshop-skill.md, with references/northstar-sources.md recording the
 // provenance and the page-level map.
 //
-// ── The attribution is scheme-less on purpose (epic A10) ─────────────────────────────────────
-// `e2e/northstar-self-serve.spec.ts` asserts this document contains exactly ONE host, which is what
-// proves every absolute URL in it came from `getSiteUrl()` rather than being a hardcoded
-// wrong-environment literal. A markdown link to Amplitude would be a second `https://` host and
-// would fail that pin — for a reason entirely outside what the pin exists to catch.
+// ── The attribution is a real link, and the URL assertion was widened to allow it (epic A10) ──
+// `e2e/northstar-self-serve.spec.ts` used to assert this document contained exactly ONE host. That
+// was a PROXY for the property that matters — every absolute URL here is built by `getSiteUrl()`
+// rather than being a hardcoded wrong-environment literal — and the proxy had no room for a
+// citation. Cross-family review raised that twice as Blocking against Story 1.2's "credited by
+// name with a link", and the product owner amended the criterion on 2026-08-20.
 //
-// Rather than loosen a safety assertion to fit a citation, the citation is written without a
-// scheme. The credit is complete (title, both authors, publisher, path), a reader or an agent can
-// still find it, and the invariant gets STRONGER rather than weaker: every absolute URL in this
-// document is ours, with no exceptions to remember.
+// So the assertion now names the property directly: every `https://` host is either this
+// deployment's or a member of a short, explicit citation allow-list. That is STRICTER than the
+// count it replaces — a count of one cannot tell you WHICH host — and it is why adding a link here
+// did not weaken anything. Do not add a host to that list without the same conversation.
 //
 // Both candidate paths were fetched before this shipped. `amplitude.com/resources/north-star-playbook`
 // returns 200 and is what ships. `amplitude.com/north-star-playbook` — the obvious guess, and what
@@ -67,7 +68,9 @@ anyone builds anything.
 
 **Where this comes from.** The North Star Framework is Amplitude's, set out in *The North Star
 Playbook* by John Cutler and Jason McBride and in their 2024 guide *Running Your North Star
-Workshop* (amplitude.com/resources/north-star-playbook). The structure below is theirs. The words,
+Workshop*
+([amplitude.com/resources/north-star-playbook](https://amplitude.com/resources/north-star-playbook)).
+The structure below is theirs. The words,
 the mechanics and the opinions are ours, and where we disagree with the source we say so. This is
 the only place they are credited, because a credit repeated is a document that reads like someone
 else's.

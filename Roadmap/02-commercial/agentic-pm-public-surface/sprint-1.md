@@ -22,8 +22,15 @@ which is a duplicated Spotify page in the source (epic A1).** Carry p.19's OpenT
 warm-up and exactly one completed worksheet, Spotify's.
 
 **The five pinned properties are a mutation check, not a formality.** `e2e/northstar-self-serve.spec.ts`
-was written against the document this story replaces. It must go green **with no edit to the file**.
+was written against the document this story replaces. It goes green **with no edit to the file**.
 If a pin fails, the rewrite dropped a safety property — restore the property, never the assertion.
+
+**Amended 2026-08-20 (epic A10), by the product owner, for exactly one of the five.** The
+"exactly one host" pin was a proxy that left no room for the citation Story 1.2 also requires.
+It was **widened to a named allow-list** — every host is either this deployment's or an explicit
+citation — which states the property directly and is stricter than the count it replaces. The other
+four are untouched and green. No other pin may be edited under this amendment; it was a decision
+with a review behind it, not a precedent.
 
 **`lib/positioning.ts` is the shared seam and lands FIRST**, by the architect, before anything
 imports it (WAYS-OF-WORKING: highest blast radius goes first). Story 1.2 imports it; it does not
@@ -102,7 +109,8 @@ must stay green **without being edited**:
 - "You are **NOT connected to a Golden Frijoles workspace**" and "**Nothing has been saved.**"
 - "**basic lift only**", and never "statistically significant"
 - "**read-only MCP connector**"
-- Every absolute URL from `getSiteUrl()`; exactly one host in the body
+- Every absolute URL from `getSiteUrl()`; every host is this deployment's or a named citation
+  (widened from "exactly one host" by product-owner amendment — epic A10)
 
 **Risk:** low
 **QA:** the four existing tests stay green unedited (that is the mutation check — they were written

@@ -279,54 +279,45 @@ turned out to carry the four spec traps above, which a locked contract can name 
 builder would resolve permissively. Review is the LOW-tier policy from `WAYS-OF-WORKING.md`: **two
 cross-family external passes per PR via `scripts/review-route.mjs`, and no reviewer subagents.**
 
-### A10. The attribution and the one-host pin conflict. The citation gives way, not the assertion.
+### A10. The attribution and the one-host pin conflicted. The pin was widened, by decision.
 
-Found while building Story 1.2, not at lock time — recorded here because a decision discovered
-mid-build is still a decision, and code in two files cites it.
+Found while building Story 1.2, raised **Blocking twice** by Codex in PR #111, and **amended by the
+product owner on 2026-08-20.** Recorded in full because it is the one place this epic changed a
+safety assertion.
 
-Story 1.2 requires the framework *"credited by name with a link"*. The pinned property directly
-above it requires *"exactly one host in the body"*, enforced by
-`e2e/northstar-self-serve.spec.ts` counting `https?://` matches. A markdown link to Amplitude is a
-second host. **Both cannot hold as literally written.**
+**The conflict.** Story 1.2 requires the framework *"credited by name with a link"*. The pinned
+property beside it required *"exactly one host in the body"*, enforced by
+`e2e/northstar-self-serve.spec.ts` counting `https?://` matches. A Markdown hyperlink to Amplitude
+is a second host. Both could not hold as literally written.
 
-The pin exists to prove every absolute URL came from `getSiteUrl()` rather than being a hardcoded
-wrong-environment literal — a third-party citation is not that class, so the assertion would fire
-for a reason outside its own purpose. That is an argument for changing the citation, **not** for
-loosening the assertion: the build contract's rule is that a failing pin means a dropped property,
-and a reviewer who later finds a relaxed one has no way to tell which case they are looking at.
+**The first answer was wrong, and review was right to keep pushing.** The citation initially shipped
+scheme-less — complete, findable, and not a hyperlink. That preserved the assertion by degrading the
+criterion, and it is the kind of trade a builder makes because it is the one that needs no
+permission. LEARNINGS' rule applies exactly: *a reviewer repeating a finding you reasoned your way
+out of is a signal to find a third option.*
 
-**The ruling:** the citation is written **scheme-less** — `amplitude.com/resources/north-star-playbook`.
-The credit stays complete (title, both authors, publisher, path), a reader or an agent can still
-find it, and the invariant becomes *stronger* rather than weaker: every absolute URL in that
-document is ours, with no exception to remember. A new spec asserts the citation is still present
-and still scheme-less, so "scheme-less" cannot quietly decay into "dropped".
+**The third option, and why it is not a relaxation.** The old assertion counted hosts and required
+the count to be 1. That was a **proxy** for the property it defends — every absolute URL in this
+document is built by `getSiteUrl()` and never a hardcoded wrong-environment literal — and a count
+cannot tell you *which* host it found. The assertion now states the property directly:
+
+> every `https://` host in the body is either **this deployment's** or a member of a short, explicit
+> `CITATION_HOSTS` allow-list.
+
+That is **stricter** than the count it replaces, and it is why adding a link weakened nothing.
+Confirmed by mutation, not by argument: replacing `${siteUrl}/install` with a hardcoded foreign host
+turns it red, and dropping the hyperlink back to bare text turns the attribution test red.
+
+**The cost, stated rather than glossed.** This is the only edit to the four tests that predate this
+epic, so "all four green, unedited" is no longer the whole mutation-check on the rewrite. Three of
+the four remain untouched and green; the fourth was edited deliberately, with the reason in the spec
+itself, and its replacement was mutation-checked in both directions.
 
 **Both candidate paths were fetched before this shipped.** `amplitude.com/resources/north-star-playbook`
-returns **200** and is what ships. `amplitude.com/north-star-playbook` — the obvious guess, and
-what an unchecked citation would have used — returns **404**. A public surface citing a dead link
-is worse than one citing none.
+returns **200** and is what ships. `amplitude.com/north-star-playbook` — the obvious guess, and what
+an unchecked citation would have used — returns **404**. A public surface citing a dead link is
+worse than one citing none.
 
-**Challenged in review, and triaged rather than reversed (Codex, PR #111 round 2 — Blocking).**
-The finding is correct on its face: a bare `amplitude.com/...` string is Markdown text, not a
-Markdown hyperlink, so Story 1.2's *"with a link"* is not literally satisfied. It is answered rather
-than fixed, for three reasons stated here so the next reader sees a decision instead of a shortcut:
-
-1. **The alternative is worse.** Making it a real hyperlink means a second `https://` host, which
-   fails a safety pin — and the build contract's rule is that a failing pin means a dropped
-   property. A reviewer who later finds that pin relaxed has no way to tell a citation from a
-   wrong-environment URL, which is the exact thing it exists to catch.
-2. **This document's reader is a model, not a browser.** It is served as `text/markdown` to an
-   agent that was told to fetch it. For that reader the anchor syntax carries nothing the URL text
-   does not; the locator is complete either way.
-3. **Nothing is hidden.** The path is exact, verified 200, and pinned by a spec so it cannot decay
-   into "dropped".
-
-**This is nevertheless a deviation from a locked acceptance criterion, and amending one is the
-product owner's call, not a documentation task** (LEARNINGS, 2026-08-10). Flagged for Daniel by
-name at epic close. If he wants a true hyperlink, the honest way to get it is to widen the pin
-deliberately — to *"every `https://` URL is either `getSiteUrl()`'s host or one of a named
-allow-list"* — which keeps the property real while making room for citations. That is a change to
-a safety assertion and therefore his decision, not one to make inside a copy sprint.
 
 ## Scope
 
