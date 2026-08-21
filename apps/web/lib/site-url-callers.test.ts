@@ -41,7 +41,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const WEB_ROOT = join(fileURLToPath(new URL('.', import.meta.url)), '..')
-const SEARCH_DIRS = ['app', 'lib', 'components']
+// Everything under apps/web is scanned, minus build output, dependencies, and test/config trees.
+// A hardcoded ['app', 'lib', 'components'] would silently exempt a caller added under a NEW
+// top-level directory — `services/`, `hooks/`, `config/` — which is the same allow-list mistake as
+// matching import shapes, one level up. Deny-list the things that cannot contain shipped callers
+// instead. (agy, PR #116 round 2.)
+const SKIP_DIRS = new Set(['node_modules', '.next', 'e2e', 'supabase', 'public', 'scripts'])
 
 /**
  * `informational` — renders a URL for someone to read now. A preview hostname is correct here, and
@@ -79,11 +84,16 @@ const CALLERS: Record<string, { kind: 'informational' } | { kind: 'durable'; gat
   'app/app/onboarding/[projectSlug]/page.tsx': { kind: 'durable', gatedBy: 'isConnectorEnabled' },
 }
 
-function walk(dir: string, out: string[] = []): string[] {
+// SKIP_DIRS applies at the TOP LEVEL only. Matching bare directory names at any depth looked
+// equivalent and was not: `public` is both `apps/web/public` (static assets) and
+// `app/api/v1/public/` (the demo-only read routes), so a depth-blind skip silently dropped the
+// signup route — a DURABLE caller — out of discovery. Caught by this file's own stale-registry
+// test, which is the half of the guard that watches the other half.
+function walk(dir: string, out: string[] = [], depth = 0): string[] {
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === '.next') continue
+    if (depth === 0 && SKIP_DIRS.has(entry)) continue
     const full = join(dir, entry)
-    if (statSync(full).isDirectory()) walk(full, out)
+    if (statSync(full).isDirectory()) walk(full, out, depth + 1)
     else if (/\.tsx?$/.test(entry)) out.push(full)
   }
   return out
@@ -115,18 +125,19 @@ const SEAM_FILES = ['lib/site-url.ts', 'lib/site-url-resolve.ts']
  */
 function callersOfGetSiteUrl(): string[] {
   const found: string[] = []
-  for (const dir of SEARCH_DIRS) {
-    for (const file of walk(join(WEB_ROOT, dir))) {
-      if (/\.test\.tsx?$/.test(file)) continue
-      const relative = file.slice(WEB_ROOT.length + 1)
-      if (SEAM_FILES.includes(relative)) continue
-      const source = readFileSync(file, 'utf8')
-      // `from '…site-url'` covers static and re-export forms; `import('…site-url')` covers dynamic.
-      const importsModule =
-        /from\s*['"][^'"]*\bsite-url(-resolve)?['"]/.test(source) ||
-        /import\(\s*['"][^'"]*\bsite-url(-resolve)?['"]\s*\)/.test(source)
-      if (importsModule) found.push(relative)
-    }
+  for (const file of walk(WEB_ROOT)) {
+    if (/\.test\.tsx?$/.test(file)) continue
+    const relative = file.slice(WEB_ROOT.length + 1)
+    if (SEAM_FILES.includes(relative)) continue
+    const source = readFileSync(file, 'utf8')
+    // `from '…site-url'` covers static and re-export forms; `import('…site-url')` covers dynamic.
+    // The optional extension matters and is not hypothetical: this repo's own unit tests import
+    // with an explicit `.ts` (`./site-url-resolve.ts`), so a specifier pattern that demanded the
+    // closing quote right after the module name would miss that shape. (agy, PR #116 round 2.)
+    const importsModule =
+      /from\s*['"][^'"]*\bsite-url(-resolve)?(\.[cm]?[jt]sx?)?['"]/.test(source) ||
+      /import\(\s*['"][^'"]*\bsite-url(-resolve)?(\.[cm]?[jt]sx?)?['"]\s*\)/.test(source)
+    if (importsModule) found.push(relative)
   }
   return found.sort()
 }
@@ -212,17 +223,15 @@ test('nothing re-exports getSiteUrl, which would route callers around this regis
   // (Codex raised the barrel case in review of PR #116. It is closed by prohibition rather than by
   // detection, which is the cheaper and more durable half of "make the failure unrepresentable".)
   const offenders: string[] = []
-  for (const dir of SEARCH_DIRS) {
-    for (const file of walk(join(WEB_ROOT, dir))) {
-      const relative = file.slice(WEB_ROOT.length + 1)
-      if (SEAM_FILES.includes(relative) || /\.test\.tsx?$/.test(file)) continue
-      const source = readFileSync(file, 'utf8')
-      if (
-        /export\s*\{[^}]*\bgetSiteUrl\b[^}]*\}/.test(source) ||
-        /export\s*\*\s*from\s*['"][^'"]*\bsite-url(-resolve)?['"]/.test(source)
-      ) {
-        offenders.push(relative)
-      }
+  for (const file of walk(WEB_ROOT)) {
+    const relative = file.slice(WEB_ROOT.length + 1)
+    if (SEAM_FILES.includes(relative) || /\.test\.tsx?$/.test(file)) continue
+    const source = readFileSync(file, 'utf8')
+    if (
+      /export\s*\{[^}]*\bgetSiteUrl\b[^}]*\}/.test(source) ||
+      /export\s*\*\s*from\s*['"][^'"]*\bsite-url(-resolve)?(\.[cm]?[jt]sx?)?['"]/.test(source)
+    ) {
+      offenders.push(relative)
     }
   }
   assert.deepEqual(

@@ -108,3 +108,17 @@ test('an empty-string SITE_URL is treated as unset, not as a base URL', () => {
   )
   assert.equal(isSiteUrlMisconfiguredInProductionEnv({ VERCEL_ENV: 'production', SITE_URL: '   ' }), true)
 })
+
+test('a hostname that already carries a scheme does not become https://https://', () => {
+  // Vercel sets these bare, but a custom preview runner or a local reproduction can populate them
+  // by hand. `https://${host}` on an already-schemed value produces a string that parses as a URL
+  // and points nowhere — plausible enough to survive review. (agy, PR #116.)
+  assert.equal(
+    resolveSiteUrl({ VERCEL_ENV: 'preview', VERCEL_BRANCH_URL: 'https://gb-git-feat-x.vercel.app' }),
+    'https://gb-git-feat-x.vercel.app'
+  )
+  assert.equal(
+    resolveSiteUrl({ VERCEL_ENV: 'preview', VERCEL_URL: 'http://gb-abc123.vercel.app/' }),
+    'https://gb-abc123.vercel.app'
+  )
+})

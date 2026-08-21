@@ -66,9 +66,14 @@ export function resolveSiteUrl(env: SiteUrlEnv): string {
   if (configured) return normalise(configured)
 
   if (env.VERCEL_ENV === 'preview') {
-    // Bare hostnames, no scheme — Vercel serves preview deployments over TLS. The `if (host)` is
-    // what stops a missing variable becoming the plausible-looking `https://undefined`.
-    const host = env.VERCEL_BRANCH_URL?.trim() || env.VERCEL_URL?.trim()
+    // Vercel sets these as BARE hostnames and serves previews over TLS, so the scheme is ours to
+    // add. An existing scheme is stripped first: if one of these is ever populated by hand — a
+    // custom preview runner, a local reproduction — `https://${host}` would otherwise produce
+    // `https://https://…`, a string that parses as a URL and points nowhere. (agy, PR #116.)
+    //
+    // The `if (host)` is what stops a missing variable becoming the plausible-looking
+    // `https://undefined`.
+    const host = (env.VERCEL_BRANCH_URL?.trim() || env.VERCEL_URL?.trim())?.replace(/^https?:\/\//, '')
     if (host) return normalise(`https://${host}`)
   }
 
