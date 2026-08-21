@@ -13,6 +13,34 @@
 > `LANDING_SECTIONS` entry. `lib/landing-sections.ts` states that rule about itself, and
 > `e2e/landing.browser.spec.ts` enforces it by asserting every registry id is a real DOM id on `/`.
 
+## Build contract (locked by the architect before the builder started)
+
+**Four specs break or lie when this sprint lands, and the plan named none of them.** The `browser`
+project is not in the blocking gate, so the deterministic gate will stay green while they rot
+(LEARNINGS, 2026-08-19). Each has a decided disposition — do not improvise a fifth:
+
+| Spec | What happens | Locked disposition |
+|---|---|---|
+| `landing.browser.spec.ts` "the landing renders the maker-ops narrative" | asserts `.prompt-card` count **1**, under a comment arguing "not two" | Count → 2, **and the comment is rewritten citing epic D5** (A7) |
+| `landing.browser.spec.ts` "section dividers carry a legible numbered stamp" | fails outright — no stamps remain | **Deleted with the device.** Its enclosed-numeral guard (`/[①-⓿]/`) moves to a test that still has a subject (A5) |
+| `landing.browser.spec.ts` "every nav link resolves to something real" | still passes, over three links | Unchanged. It is the guard for the nav edit; a **new** spec asserts the retired anchors are gone |
+| `landing.browser.spec.ts` "every section in the registry is on the page, exactly once" | passes only if both registry entries go in the same commit | Unchanged. This is the rule enforcing itself |
+
+**The stylesheet sweep has a trap: `.app-shell` belongs to the signed-in product** (A8). Sweep only
+the classes verified to have one landing call site. Check each class for a non-landing user before
+deleting its rule, then **render the page** — a static class sweep is not evidence (LEARNINGS,
+2026-08-19).
+
+**Three prose references to §proof survive in files this sprint does not delete** (A4). They are
+listed by file and line in the epic README. A comment asserting a property the code no longer has is
+CODE-QUALITY #3.
+
+**`force-dynamic` stays.** Its comment loses the proof-numbers reason and keeps the flag-derived-copy
+reason, which was always the load-bearing half.
+
+**The manifest check is on every claim `/llms.txt` makes about `/`, not on its route list** (A2).
+
+
 ## Stories
 
 ### Story 2.1 — The hero hands the reader a prompt

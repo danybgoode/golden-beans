@@ -11,6 +11,41 @@
 > Read the epic README's **D2** (the category string) and **D6** (attribution and what the document
 > must contain) before starting.
 
+## Build contract (locked by the architect before the builder started)
+
+**The provenance is in the repo before a word is written** — `references/northstar-sources.md`, a
+page-level map from every element of the shipped document back to the source it came from, beside
+`references/northstar-workshop-skill.md` (the product owner's own skill, ours to commit).
+
+**Amplitude's PDF is deliberately NOT committed** (epic A11). It is a third-party gated asset and
+checking it into a repo is redistribution we have no permission for. The page map gives a reviewer
+everything the binary would have, without the licence question. Every page citation in the
+element map below was checked against the PDF and is correct — **except the OpenTable worksheet,
+which is a duplicated Spotify page in the source (epic A1).** Carry p.19's OpenTable *brief* as the
+warm-up and exactly one completed worksheet, Spotify's.
+
+**The five pinned properties are a mutation check, not a formality.** `e2e/northstar-self-serve.spec.ts`
+was written against the document this story replaces. It goes green **with no edit to the file**.
+If a pin fails, the rewrite dropped a safety property — restore the property, never the assertion.
+
+**Amended 2026-08-20 (epic A10), by the product owner, for exactly one of the five.** The
+"exactly one host" pin was a proxy that left no room for the citation Story 1.2 also requires.
+It was **widened to a named allow-list** — every host is either this deployment's or an explicit
+citation — which states the property directly and is stricter than the count it replaces. The other
+four are untouched and green. No other pin may be edited under this amendment; it was a decision
+with a review behind it, not a precedent.
+
+**`lib/positioning.ts` is the shared seam and lands FIRST**, by the architect, before anything
+imports it (WAYS-OF-WORKING: highest blast radius goes first). Story 1.2 imports it; it does not
+copy the string.
+
+**The document is a route, not a file.** Every absolute URL comes from `getSiteUrl()` (AGENTS rule
+#5). The one-host assertion is what proves it, and it is why the workshop is testable on a preview.
+
+**Attribution is once, near the top, by name, with a link** (epic D6). A credit repeated is a
+document that reads like someone else's.
+
+
 ## Stories
 
 ### Story 1.1 — The category is stated once, from one module
@@ -77,7 +112,8 @@ must stay green **without being edited**:
 - "You are **NOT connected to a Golden Frijoles workspace**" and "**Nothing has been saved.**"
 - "**basic lift only**", and never "statistically significant"
 - "**read-only MCP connector**"
-- Every absolute URL from `getSiteUrl()`; exactly one host in the body
+- Every absolute URL from `getSiteUrl()`; every host is this deployment's or a named citation
+  (widened from "exactly one host" by product-owner amendment — epic A10)
 
 **Risk:** low
 **QA:** the four existing tests stay green unedited (that is the mutation check — they were written

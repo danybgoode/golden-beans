@@ -15,6 +15,28 @@
 > honesty assertion, the assertion is catching an over-claim — change the copy, not the test.
 > Thirteen review rounds of this repo's history are behind that rule.
 
+## Build contract (locked by the architect before the builder started)
+
+**The whole-sprint gate is procedural and it is the safety property:** every pre-existing gate,
+badge and vocabulary assertion goes green **without being edited**. An edit to one of those tests in
+this sprint's diff is a review stop. If a copy change needs an honesty assertion loosened, the
+assertion is catching an over-claim — change the copy.
+
+**Story 3.2's metadata spec does not exist yet — write it** (A6). The QA line reads as though one is
+being extended. It is new, and it must be observed failing before it is believed.
+
+**`/llms.txt` carries one stale gate claim to retire** (A3): the `CONNECTOR_ENABLED` parenthetical
+describes a launch that already happened. The 404-while-disabled sentence itself is true and stays.
+
+**The category string is imported from `lib/positioning.ts` on every surface.** Retyping it on the
+fifth surface is the defect D2 exists to prevent, and a spec asserts the surfaces agree.
+
+**Take the diagnosis, write the line yourself.** A copy reviewer's *findings* and its *suggested
+replacements* are worth very different amounts (LEARNINGS, 2026-08-19) — every suggested line in that
+epic was unusable, and one invented a capability in the section whose whole point is that nothing is
+built.
+
+
 ## Stories
 
 ### Story 3.1 — The register pass, everywhere it shows
