@@ -20,9 +20,11 @@
 // That safety property has two halves and this test can only hold one of them:
 //
 //   IN REPO, and asserted below — every file that imports `getSiteUrl` is classified, and every
-//   file classified `durable` still carries the gate that keeps it off a preview. This catches the
-//   likely regressions: a NEW durable-URL surface added without anyone thinking about previews, and
-//   an existing one quietly losing its gate.
+//   file classified `durable` still USES its declared gate in code. This catches the likely
+//   regressions: a NEW durable-URL surface added without anyone thinking about previews, and an
+//   existing one losing its gate or reducing it to a dead import. It does NOT prove the gate
+//   dominates every path to the URL construction — see the note above that test for why a string
+//   check must not pretend to answer a control-flow question.
 //
 //   OUT OF REPO, and NOT assertable here — the Vercel environment scoping itself. If someone adds
 //   `SUPABASE_URL` to Preview scope, every durable path becomes reachable on previews and this test
@@ -138,18 +140,39 @@ test('every getSiteUrl caller is classified as informational or durable', () => 
   )
 })
 
-test('every durable-URL caller still carries the gate that keeps it off a preview', () => {
+// ── Be exact about what the next check proves, because it is less than it sounds ─────────────
+// It asserts each durable file still USES its declared gate, in code rather than only in an import.
+// It does NOT prove the gate guards execution — no string check can. A file could call
+// `isSignupEnabled()` and ignore the result, and this would stay green.
+//
+// That is a deliberate limit, not an oversight. Proving "this identifier dominates every path to
+// the URL construction" is a control-flow question, and a regex pretending to answer it would be a
+// guard that reports success while understanding nothing — the failure mode this repo has shipped
+// three times. What this DOES catch is the realistic regression: a gate deleted, renamed, or
+// reduced to a dead import while the durable URL path stays. Naming the limit is what keeps the
+// next reader from treating the green as more than it is.
+//
+// Renamed from "still carries the gate that keeps it off a preview" after Codex pointed out that
+// the old name claimed the strong property while the body checked the weak one. A test name is a
+// comment: it claims something and owes the same proof.
+test('every durable-URL caller still USES its declared gate, not just imports it', () => {
   for (const [file, entry] of Object.entries(CALLERS)) {
     if (entry.kind !== 'durable') continue
     const source = readFileSync(join(WEB_ROOT, file), 'utf8')
+
+    // Strip import statements, so a gate reduced to an unused import fails rather than passes.
+    const body = source.replace(/^\s*import\s[\s\S]*?from\s*['"][^'"]+['"];?\s*$/gm, '')
+
     assert.ok(
-      source.includes(entry.gatedBy),
-      `${file} mints a durable URL and no longer references ${entry.gatedBy}.\n\n` +
+      body.includes(entry.gatedBy),
+      `${file} mints a durable URL and no longer USES ${entry.gatedBy} outside its imports.\n\n` +
         `That reference is what keeps this path off preview deployments: ${entry.gatedBy} depends on\n` +
         `something scoped to Production only, so a preview cannot reach this code. Without it, a\n` +
-        `preview could mint a URL pointing at a hostname that disappears when the preview does.\n\n` +
-        `If the gate genuinely moved, update the registry entry. If it was removed, this path now\n` +
-        `needs a different answer to "why can a preview not run this?".`
+        `preview could mint a URL pointing at a hostname that disappears when the preview does, and\n` +
+        `the person holding that URL has no way to find out why it broke.\n\n` +
+        `If the gate genuinely moved, update the registry entry above. If it was removed, this path\n` +
+        `now needs a different answer to "why can a preview not run this?" — and that answer is a\n` +
+        `conversation, not a test edit.`
     )
   }
 })

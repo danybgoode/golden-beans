@@ -107,10 +107,10 @@ export function MakerHero() {
 
         {/* The card is the hero's second object, and the only one. `handoffPrompt` takes the site
             URL rather than hardcoding one, so no production hostname is baked into the source
-            (AGENTS.md rule #5) and each deployment hands out its OWN URLs — including a preview,
-            since site-url-preview-aware taught `getSiteUrl()` to derive a preview's hostname from
-            Vercel's platform variables. Before that a preview told the reader's agent to fetch
-            `http://localhost:3000/llms.txt`.
+            (AGENTS.md rule #5). `SITE_URL` decides it wherever that is set — which is production —
+            and since site-url-preview-aware a PREVIEW, which has no `SITE_URL`, resolves its own
+            hostname from Vercel's platform variables instead of falling through to
+            `http://localhost:3000` and telling the reader's agent to fetch their own machine.
             See lib/site-url-resolve.ts for the order and lib/landing-prompts.ts for the rest. */}
         <div className="hero-magic">
           <CopyPromptCard
