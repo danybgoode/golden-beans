@@ -1990,10 +1990,6 @@ a.stat-card:hover {
     white-space: nowrap;
   }
 
-  .roundstamp {
-    right: -18px;
-  }
-
   .hero-cta {
     width: auto;
   }
@@ -2539,9 +2535,6 @@ a.stat-card:hover {
 }
 
 @media (min-width: 640px) {
-  .proof-stack {
-    gap: 40px;
-  }
 
   .proof-block + .proof-block {
     padding-top: 40px;
@@ -2906,9 +2899,11 @@ a.stat-card:hover {
    the two rules that actually make a page feel settled rather than twitchy.
 
    `tokens.css` is the byte-mirrored design handoff and is not edited
-   (landing-redesign-v2 D3), so the two surfaces whose shadow is declared there
-   — `.agent-win` and `.baglabel` — are pulled onto the ladder here instead.
-   Both are the same idea: a frame the page is holding up for you to look at. */
+   (landing-redesign-v2 D3), so a surface whose shadow is declared there is
+   pulled onto the ladder here instead. It used to be two — `.agent-win` and
+   `.baglabel` — until agentic-pm-public-surface Sprint 2 deleted the hero's
+   kraft bag and every rule that styled it. `.agent-win` is a frame the page
+   holds up for you to look at, and it keeps the lifted rung. */
 .agent-win {
   box-shadow: var(--elevation-lifted);
 }
@@ -3572,23 +3567,6 @@ a.stat-card:hover {
     border-right: none;
   }
 
-  /* The navigation column appears only where there is room for it beside the
-     content. On a phone it is hidden rather than stacked: it is a picture of
-     where these things live, and a stacked list of eight labels above the
-     figures reads as a menu the reader is supposed to use. */
-  .operating-nav {
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    padding: 16px;
-    border-right: 1px solid var(--line);
-  }
-
-  .operating-body {
-    display: grid;
-    grid-template-columns: 190px 1fr;
-  }
-
   .finops-facets {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -3676,41 +3654,6 @@ a.stat-card:hover {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     padding-top: 0;
-  }
-
-  .hero-magic > .baglabel {
-    grid-area: 1 / 1;
-    align-self: start;
-    justify-self: end;
-    width: min(340px, 72%);
-    transform: rotate(2deg);
-    /* Room for what hangs off the bag's top-right corner: the `.roundstamp`
-       (-18px) plus the horizontal spread the 2deg tilt adds to the bounding box.
-       Without it the stamp cleared the wrap's gutter by 0.6px at 1024 and put a
-       horizontal scrollbar on the page — which `e2e/mobile-heuristics.browser.
-       spec.ts` sweeps for, at phone widths where this layout does not apply. */
-    margin-right: 26px;
-  }
-
-  .hero-magic > .hero-window {
-    grid-area: 1 / 1;
-    /* `start`, not `end`. With `end` the window's BOTTOM pins to the row's, so the
-       offset below the bag only equals `margin-top` while the window plus that
-       offset is the taller of the two — and silently grows when the bag is taller.
-       Measured: forcing the bag to 542px slid the offset from 194px to 542px, i.e.
-       the window dropped clear of the bag entirely. With `start` the window's top
-       IS `margin-top` below the row's, unconditionally, which is what the comment
-       above claims. Antigravity, round 3 of PR #102 — and the same defect shape as
-       the two it found in round 2: prose asserting a property the code only had in
-       the case I happened to look at. */
-    align-self: start;
-    justify-self: start;
-    width: min(420px, 82%);
-    /* Clears the bag's title and its first row. */
-    margin-top: 160px;
-    /* In front of the bag: the conversation is the subject, the packet is the
-       thing it is about. */
-    z-index: 1;
   }
 }
 
