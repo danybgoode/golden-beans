@@ -95,10 +95,13 @@ export function AuthoritySection() {
       <div className="wrap">
         <p className="eyebrow">Agents with somewhere to work</p>
         <h2 className="section-title">More than an endpoint</h2>
+        {/* Epic D1 — governance and control over policy, without a department. The enterprise
+            version of this argument ends in an admin console someone administers full-time. Ours
+            ends in the same property arriving as a default, because there is nobody to staff it. */}
         <p className="measure">
           Your agents can investigate, propose and act. Golden Frijoles keeps the context, permissions,
-          staged changes and evidence visible so autonomy can expand without turning the product into a
-          black box.
+          staged changes and evidence visible, so autonomy can expand without the product becoming a black
+          box. Governance and control over what your agents may do, without a department to enforce it.
         </p>
 
         <div className="authority-grid section-lead">

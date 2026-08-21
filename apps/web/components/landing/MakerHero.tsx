@@ -1,4 +1,5 @@
 import { handoffPrompt } from '@/lib/landing-prompts'
+import { CATEGORY_DEFINITION } from '@/lib/positioning'
 import { getSiteUrl } from '@/lib/site-url'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -57,15 +58,34 @@ export function MakerHero() {
             <br />
             <em className="foil">Grow what works</em>
           </h1>
+          {/* ── The category, defined once, from lib/positioning.ts (epic D2) ────────────────
+              "Agentic product management" is an emerging term with no owner, and today's dominant
+              usage means product management OF agentic AI products — building agents. That is not
+              what we mean, and it is close enough to be mistaken for it, so the page defines it
+              rather than using it bare. Every other surface imports the same string.
+
+              ── Why it sits HERE and not on the `.micro` line ──────────────────────────────────
+              Story 3.1 offered either, and asked for it "where it cannot be missed". It was built
+              on `.micro` first and a screenshot settled it: down there it is the dimmest, smallest
+              text on the page, under the CTAs, reading as a footnote to the offer rather than as
+              the claim the whole page rests on. Directly under the headline it is the first thing
+              after the promise, which is where a reader is still looking.
+
+              This is the ONLY place on `/` the definition appears. Twice would make it a slogan. */}
+          <p className="hero-definition">{CATEGORY_DEFINITION}</p>
           {/* Set at the mockup's scale (`.hero .hero-sub` in globals.css), which is a size up from the
               rest of the page's body copy. This is the one paragraph a reader definitely reads. */}
           <p className="hero-sub">
             Agents can turn your ideas into reality faster than ever. Golden Frijoles gives you and your agent
-            the methodology, operating rails and evidence to keep building.
+            the methodology, operating rails and evidence to keep moving fast without losing the thread.
           </p>
+          {/* "Future-proof as models evolve" is the borrowed idea, re-pointed at one person (epic D1):
+              the enterprise version is a company avoiding vendor lock-in, and ours is you not being
+              stuck with whichever agent you happened to start with. It is a claim we can actually
+              back — nothing here ships a model, and the connector is the same for all of them. */}
           <p className="hero-sub hero-sub--tight">
-            Plant your own Golden Frijoles across product, delivery, security and AI operations and see the
-            magic happen.
+            Plant your own Golden Frijoles across product, delivery, security and AI operations. You bring the
+            agent, and you keep bringing whichever one is best — the rails do not change when the models do.
           </p>
           <p className="takeaway takeaway--lead">One maker. A whole operation.</p>
 

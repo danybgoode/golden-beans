@@ -190,6 +190,22 @@ body {
   gap: 6px;
 }
 
+/* ── The category definition, directly under the hero headline ────────────────────────────────
+   agentic-pm-public-surface · Sprint 3, Story 3.1.
+
+   Not `.micro` and not `.hero-sub`. `.micro` buries it (it is the page's dimmest text, and a
+   screenshot is what settled that); `.hero-sub` would give it the same weight as the two paragraphs
+   below it, and then the hero opens with three equal paragraphs and no shape.
+
+   So: mono, to mark it as a definition rather than a sentence of prose, at body size, in full-
+   strength ink. It reads as the thing being defined, which is what it is. */
+.hero-definition {
+  max-width: 46ch;
+  margin: 14px 0 18px;
+  color: var(--crema);
+  font: 500 14.5px/1.6 var(--mono);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

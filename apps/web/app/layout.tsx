@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Archivo, IBM_Plex_Mono } from 'next/font/google'
 import { getSiteUrl } from '@/lib/site-url'
+import { CATEGORY } from '@/lib/positioning'
 import { NavigationLoader } from '@/components/brand/NavigationLoader'
 import './globals.css'
 
@@ -39,7 +40,15 @@ const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], 
 // baked per-build. Any capability named here is therefore a claim that a flag flip can falsify and
 // the preview cannot qualify. Describe the shape; let the page describe the capabilities, where it
 // can read the gates. (Codex, rounds 4, 8 and 10 — it took three.)
-const TITLE = 'Golden Frijoles — make more, grow what works'
+// ── The category is named here too, from the one module (epic D2, Story 3.2) ─────────────────
+// Imported rather than retyped. This is the fifth outward surface carrying it, and a category name
+// that five surfaces each spell for themselves is the defect `lib/positioning.ts` exists to make
+// unrepresentable — the same shape as the two lists that cost three review rounds in one epic.
+//
+// It also satisfies the rule above rather than straining against it: "agentic product management"
+// names a DISCIPLINE, not a capability. No flag can falsify it and no gate qualifies it, which is
+// exactly the test the third draft of DESCRIPTION was written to pass.
+const TITLE = `Golden Frijoles — ${CATEGORY}`
 const DESCRIPTION =
   'The operating context your product and your agents share — so the next decision starts from what actually happened, not from an empty chat box.'
 

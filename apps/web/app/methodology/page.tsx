@@ -14,6 +14,7 @@ import {
   METHODOLOGY_PHASES,
   METHODOLOGY_PREFLIGHT,
 } from '@/lib/methodology-chapters'
+import { CATEGORY_DEFINITION } from '@/lib/positioning'
 
 // methodology-experience · Sprint 2, Story 2.2 — the methodology index, at its own URL (epic D7).
 //
@@ -110,10 +111,14 @@ export default function MethodologyIndexPage() {
             <div>
               <p className="kicker">Learn by doing</p>
               <h1 className="display">Make something real</h1>
+              {/* agentic-pm-public-surface · Sprint 3, Story 3.4 — this route opens on the same
+                  category the landing names, from the same module. Nothing else here moves: the six
+                  chapters, their content, Consider · Operate · Exit and the phase vocabulary are
+                  untouched, and `e2e/methodology-vocabulary.spec.ts` is the guard that this story
+                  stayed in its lane. */}
               <p className="measure">
-                The Golden Frijoles methodology is a practical way to build products with humans and agents as
-                one operating system. Bring your own project. Use your own agents. Learn the method while you
-                make.
+                {CATEGORY_DEFINITION} The Golden Frijoles methodology is how that is actually done: bring your
+                own project, use your own agents, and learn the method while you make.
               </p>
               <div className="button-row">
                 <Button href={`/methodology/${METHODOLOGY_CHAPTERS[0]!.id}`}>

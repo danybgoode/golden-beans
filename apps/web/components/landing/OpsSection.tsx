@@ -52,9 +52,14 @@ export function OpsSection() {
             Sprint 2 — the eyebrow is where its one good line went. */}
         <p className="eyebrow">One operating context</p>
         <h2 className="section-title">Run the whole operation</h2>
+        {/* Epic D1 — the borrowed register, re-pointed. The enterprise version of this paragraph
+            sells identity, governance, security and spend control to a buyer with departments for
+            each. The SURFACE is the same one; the scale is not. So these are named as things one
+            person holds, never as an admin console for other people's employees. */}
         <p className="measure">
-          You do not have to become every department. Golden Frijoles gives a maker and their agents one set
-          of rails across the surfaces a real product needs to grow.
+          Identity and access, governance, security, spend — a real product needs all of it, and the usual
+          answer is a department for each. Golden Frijoles gives a maker and their agents one set of rails
+          across the whole surface instead, so owning the product does not mean becoming five teams.
         </p>
 
         <div className="section-lead">

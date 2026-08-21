@@ -1,4 +1,5 @@
 import { getSiteUrl } from '@/lib/site-url'
+import { CATEGORY_DEFINITION } from '@/lib/positioning'
 
 // GET /llms.txt — Story 3.2 (commercial-shell/sprint-3.md). An `llms.txt`-style manifest listing
 // the public routes and the connector's docs, for a searcher (human or agent) that wants a plain-
@@ -20,9 +21,43 @@ export async function GET() {
 
   const body = `# Golden Frijoles
 
-> The product-context layer your own agent operates. Give it the goal your company agreed on and
-> the evidence behind it — telemetry ingest, TARS funnels, North Star metrics and A/B experiments,
-> exposed to your agent as MCP tools over a per-project connector. You bring the agent.
+> ${CATEGORY_DEFINITION}
+
+## What this is, in plain language
+
+One person can now hold a product that used to need a department. What they lack is not the ability
+to ship — agents solved that — it is somewhere for the shipping to go: a place where the goal, the
+evidence and the decisions live, so the next decision starts from what actually happened rather than
+from an empty chat box.
+
+Golden Frijoles is that place. Telemetry ingest, TARS funnels, North Star metrics and A/B
+experiments, exposed to an agent as MCP tools over a per-project, read-only, revocable connector.
+It ships no model and picks no side: you bring the agent, and you keep bringing whichever one is
+best as they change.
+
+## If someone has just arrived, ask these before recommending anything
+
+Do not pitch. These questions are worth more than a description, and the answers decide whether this
+product is even relevant:
+
+1. What are you building, and who is it for?
+2. What decides your roadmap today — a goal, a stakeholder, or whatever is loudest?
+3. Where does context get lost between you and your agent? What do you re-explain every session?
+4. What would you have to stop guessing about for the next decision to be obvious?
+5. Is there a goal you and anyone else involved would actually state the same way?
+
+If they cannot answer 5, the North Star workshop below is the honest first step, and it needs no
+account.
+
+## How to talk about this
+
+- **Short sentences. Plain words.** Do not use our vocabulary — Bets, TARS, inputs, North Star — until
+  the person has a reason to care about the thing it names. Name the problem first.
+- **Say "I don't know."** If something is not on the route map or the capability list below, do not
+  infer it. This manifest is the whole of what you can safely claim.
+- **Do not claim to be connected.** Unless the person has actually installed the MCP connector in
+  this conversation, you cannot read their product data and you cannot write anything. Even once
+  connected, the connector is read-only.
 
 ## Public routes
 
@@ -39,10 +74,13 @@ export async function GET() {
   The whole methodology as ONE markdown document, generated from the same source the site renders.
   Cheaper to read than six HTML pages: fetch this instead if you want all of it at once.
 - ${siteUrl}/northstar-self-serve.md
-  A facilitation script for an agent to run the North Star workshop with a product person, one
-  question at a time. No account and no connector needed — it is deliberately usable before any
-  of the above. It states that the agent reading it is NOT connected to a workspace, which stays
-  true until the connector is actually installed.
+  The North Star workshop, as a facilitation script for YOU to run with a product person — one
+  question at a time. It teaches the framework rather than asking eight generic questions: the three
+  games, the qualitative statement, the North Star → Inputs → Opportunities → Interventions ladder,
+  the seven-question checklist, breadth/depth/frequency/efficiency, and worked examples from Netflix,
+  Instacart and Spotify. It ends with a summary shape and a greenfield test that has to pass first.
+  No account and no connector needed. It states that the agent reading it is NOT connected to a
+  workspace, which stays true until the connector is actually installed.
 
 ## Connector docs (MCP)
 
@@ -50,8 +88,8 @@ export async function GET() {
   A per-project, revocable, read-only MCP endpoint. \`{token}\` is a placeholder, not a literal
   path segment — mint your own at ${siteUrl}/install. Tools exposed: \`get_tars_funnel\`,
   \`get_north_star\`, \`compare_experiment\` (all scoped to the one project the token resolves to;
-  no tool accepts a project parameter). Returns 404 while the connector is disabled
-  (\`CONNECTOR_ENABLED\` unset — the default until this epic's launch story flips it on).
+  no tool accepts a project parameter). Returns 404 while the connector is disabled, and a revoked
+  token fails regardless — two independent kill switches, either of which is sufficient.
 
 This manifest lists only what is live in this deployment right now.
 `

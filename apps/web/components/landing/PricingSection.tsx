@@ -38,9 +38,12 @@ export function PricingSection() {
               nothing behind it — a hook that reads as load-bearing to the next person who greps
               for it. Everything it meant to do is covered: `.measure--narrow` caps the width and
               `.pricing .measure` centres it. Mistral Vibe, round 4 of PR #102. */}
+          {/* Epic D1 — no lock-in, said as a price rather than as a promise. The enterprise version
+              of this line is a concession won at a negotiating table; ours is that there is
+              nothing to escape in the first place. */}
           <p className="measure measure--narrow">
             Start with one project for $0. Bring the rest of the company when they inevitably ask where you
-            got the numbers.
+            got the numbers. Nothing here locks you in — not the agent you use, and not a contract.
           </p>
           <p className="takeaway">Humans remain unmetered.</p>
 

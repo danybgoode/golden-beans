@@ -34,9 +34,11 @@ export function MakerClosingCta() {
           <br />
           <em className="foil">to make?</em>
         </h2>
+        {/* Epic D1 — "you bring the agent", which is the closing ask and also the honest limit of
+            what this product is. It ships no model and picks no side. */}
         <p className="measure measure--narrow section-copy--center">
-          Bring the idea. Bring your agents. Golden Frijoles gives you the rails to turn it into a product you
-          can build, operate, test and grow.
+          Bring the idea. Bring your agents — whichever ones you like, now and when better ones arrive.
+          Golden Frijoles gives you the rails to turn it into a product you can build, operate, test and grow.
         </p>
 
         <CopyPromptCard
