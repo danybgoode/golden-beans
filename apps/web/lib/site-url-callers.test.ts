@@ -197,16 +197,16 @@ test('every durable-URL caller still USES its declared gate, not just imports it
     // `(?!\bimport\b)` stops the span at the next import keyword. Reproduced before fixing: the
     // naive version ate a whole `const` declaration sitting between two imports.
     // (agy, PR #116 round 3 — a guard gets the same suspicion as the code it guards.)
-    // `(?:\s*\/\/.*)?` on both: an import carrying a trailing comment
+    // A trailing-comment tolerance on both, covering `//` AND `/* … */`: an import with a trailing comment
     // (`import { isSignupEnabled } from '@/lib/flags' // auth gate`) does not match a bare `$`
     // anchor, so it would survive the strip and leave the gate identifier in `body` — a FALSE PASS
     // on the dangerous side. (agy, PR #116 round 4.)
     const body = source
       .replace(
-        /^\s*import\s(?:(?!\bimport\b)[\s\S])*?from\s*['"][^'"]+['"];?(?:\s*\/\/.*)?\s*$/gm,
+        /^\s*import\s(?:(?!\bimport\b)[\s\S])*?from\s*['"][^'"]+['"];?(?:\s*(?:\/\/.*|\/\*[\s\S]*?\*\/))*\s*$/gm,
         ''
       )
-      .replace(/^\s*import\s*['"][^'"]+['"];?(?:\s*\/\/.*)?\s*$/gm, '')
+      .replace(/^\s*import\s*['"][^'"]+['"];?(?:\s*(?:\/\/.*|\/\*[\s\S]*?\*\/))*\s*$/gm, '')
 
     assert.ok(
       body.includes(entry.gatedBy),
