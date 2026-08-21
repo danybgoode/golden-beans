@@ -106,11 +106,12 @@ export function MakerHero() {
         </div>
 
         {/* The card is the hero's second object, and the only one. `handoffPrompt` takes the site
-            URL rather than hardcoding one, so the prompt names whatever `SITE_URL` this deployment
-            was given and no production hostname is baked into the source (AGENTS.md rule #5). It is
-            testable pre-merge because `e2e/landing-prompts.spec.ts` builds it against the run's own
-            base URL — not because a preview rewrites it; `getSiteUrl()` never derives a deployment's
-            own hostname. See lib/landing-prompts.ts for the full reasoning. */}
+            URL rather than hardcoding one, so no production hostname is baked into the source
+            (AGENTS.md rule #5) and each deployment hands out its OWN URLs — including a preview,
+            since site-url-preview-aware taught `getSiteUrl()` to derive a preview's hostname from
+            Vercel's platform variables. Before that a preview told the reader's agent to fetch
+            `http://localhost:3000/llms.txt`.
+            See lib/site-url-resolve.ts for the order and lib/landing-prompts.ts for the rest. */}
         <div className="hero-magic">
           <CopyPromptCard
             label="HANDOFF PROMPT · PASTE INTO YOUR AGENT"

@@ -11,14 +11,24 @@
 // whatever `SITE_URL` it was given rather than a baked-in host, and there is no production hostname
 // in the source to go stale the next time the domain moves.
 //
-// ── One thing this does NOT buy, corrected 2026-08-20 ─────────────────────────────────────────
-// This comment used to claim "a preview deployment's prompt points at the preview". It does not.
-// `getSiteUrl()` reads `SITE_URL` and falls back to localhost — it never derives the deployment's
-// own URL (deliberately: AGENTS rule #5 forbids a Host-header fallback). A Vercel preview emits
-// whatever `SITE_URL` its environment carries, which is not the preview's hostname. The prompts are
-// testable pre-merge because the SPEC runs them against its own base URL, not because a preview
-// rewrites them. Caught by Codex in review of PR #113 — the claim had been here since
-// landing-redesign-v2 and had been copied into two more files.
+// ── A preview DOES point at the preview, since site-url-preview-aware ────────────────────────
+// It did not, for two epics. `SITE_URL` is scoped to Production only, so a preview deployment fell
+// through to `http://localhost:3000` and handed the reader a prompt aimed at their own machine.
+// Nothing failed — it was consistently the wrong host, so the one-host specs passed.
+//
+// `getSiteUrl()` now derives a preview's own hostname from `VERCEL_BRANCH_URL` (see
+// `lib/site-url-resolve.ts` for the order and for why a platform variable is NOT the Host-header
+// fallback AGENTS rule #5 prohibits). `SITE_URL` still wins wherever it is set, so production is
+// unchanged.
+//
+// Worth keeping from the note this replaces, because it is still the load-bearing half: these
+// prompts are exercisable pre-merge because `e2e/landing-prompts.spec.ts` builds them against the
+// RUN's own base URL. That was true when previews said localhost and it is true now.
+//
+// (History, because the correction cost two review rounds: this comment once claimed the preview
+// behaviour before it existed, and the claim had been copied into two other files. Codex caught it
+// in PR #113 and pushed until the underlying fact was checked — which is what produced the epic
+// that made the claim true.)
 //
 // No `import 'server-only'`: `CopyPromptCard` is a client component and receives the built strings
 // as props, so this module is legitimately reachable from both sides of the boundary. It stays

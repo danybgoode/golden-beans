@@ -135,6 +135,37 @@ is CODE-QUALITY #3 — the exact class that epic paid for twice.
 - `components/landing/MakerHero.tsx`
 - `app/northstar-self-serve.md/route.ts`
 
+## Amendments
+
+### A1. The resolver had to be split out, because `server-only` does not resolve under `node --test`
+
+*Found while writing Story 1.1's unit tests, not at lock time.*
+
+`lib/site-url.ts` begins `import 'server-only'`. That package is provided by Next's bundler and is
+in neither `node_modules` tree, so `node --test` fails at import with `ERR_MODULE_NOT_FOUND` — the
+resolution order could not be tested where it lived. The plan assumed it could.
+
+**This repo already has the rule and the precedent.** LEARNINGS: *a unit-tested pure helper cannot
+live in the same file as code that imports a framework/runtime-only module.* CODE-QUALITY #5: *if a
+guard sits behind state your test cannot reach, extract it into a pure, zero-import module and
+assert it directly.* `lib/agent-rail-visibility.ts` is the shape.
+
+So the order lives in **`lib/site-url-resolve.ts`** — pure, zero-import, taking a `SiteUrlEnv`
+object — and `lib/site-url.ts` stays the `server-only` seam every caller imports, doing nothing but
+reading the four permitted variables out of `process.env`.
+
+**Two things this bought beyond testability, both worth keeping:**
+
+1. **The Host-header rule became structural rather than a promise.** `resolveSiteUrl(env)` has no
+   request in scope to read. AGENTS rule #5 cannot be violated by accident here; it would take
+   changing the signature.
+2. **No `process.env` mutation in the test suite.** `node --test` shares one process across files,
+   and an env-stubbing suite that throws mid-test leaks into every other suite. Every case is now
+   an argument.
+
+The public API is unchanged: `getSiteUrl()` and `isSiteUrlMisconfiguredInProduction()` keep their
+names, their signatures and their call sites.
+
 ## Scope
 
 | Sprint | Story | Risk |
