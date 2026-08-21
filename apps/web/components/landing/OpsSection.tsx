@@ -16,6 +16,22 @@ import { OpsTabs, type ResolvedSurface } from './OpsTabs'
 // `SECURITY_SIMULATIONS_ENABLED` on in production and the SecOps "partly gated" line disappears by
 // itself, with no edit here, none in `maker-ops.ts`, and none in the client component. Nobody has
 // to remember, which is the only reliable kind of correctness for a claim on a public page.
+//
+// ── This is now the ONLY place the surfaces are derived, and it must stay that way ────────────
+// Moved here from `MakerHero.tsx` by agentic-pm-public-surface Sprint 2, which deleted the hero's
+// kraft bag. The reasoning travels with the derivation rather than being deleted with the markup,
+// because it is what stops someone re-introducing the defect it was the fix for:
+//
+// The bag once carried a HAND-WRITTEN list of the four surfaces, parallel to `MAKER_OPS_SURFACES`.
+// That duplication cost three separate review findings which were all the same defect — a gated
+// capability listed without its qualification, found once per surface, because fixing one list
+// never reached the other (SecOps in round 4, DevOps in round 5, after this panel itself in round
+// 3). A badge on the third one would have been the third patch for one root cause.
+//
+// Deriving instead makes the class unrepresentable (CODE-QUALITY #2): a surface cannot be qualified
+// in one place and bare in another, because there is one list and one status resolution. If a
+// second surface on this site ever needs to name these capabilities, it imports `maker-ops.ts` and
+// resolves the gates per request. It does not write them down.
 export function OpsSection() {
   const gates = {
     resilienceScenariosEnabled: isResilienceScenariosEnabled(),
@@ -31,7 +47,10 @@ export function OpsSection() {
   return (
     <section id="ops">
       <div className="wrap">
-        <p className="eyebrow">One project, many operations</p>
+        {/* The phrase survives the section that carried it. §product ("One operating context") made
+            this same argument under a second heading and was deleted in agentic-pm-public-surface
+            Sprint 2 — the eyebrow is where its one good line went. */}
+        <p className="eyebrow">One operating context</p>
         <h2 className="section-title">Run the whole operation</h2>
         <p className="measure">
           You do not have to become every department. Golden Frijoles gives a maker and their agents one set

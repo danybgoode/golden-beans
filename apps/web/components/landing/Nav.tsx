@@ -4,10 +4,16 @@ import { RunYourFirstBet } from './RunYourFirstBet'
 
 // landing-maker-ops · Sprint 2, Story 2.8 — the nav follows the maker-ops section map.
 //
-// The links are the four sections a reader actually navigates to, in the order the page argues
-// them: what it is (Product), how wide it goes (Ops), whether any of it is real (Proof), what it
-// costs (Pricing). `e2e/landing.browser.spec.ts` asserts every one of these resolves to a section
-// that exists, because a dead in-page anchor type-checks, renders, and silently does nothing.
+// The links are the sections a reader actually navigates to, in the order the page argues them:
+// how wide it goes (Ops), what it costs (Pricing), how you would learn it (Methodology).
+// `e2e/landing.browser.spec.ts` asserts every one of these resolves to something that exists,
+// because a dead in-page anchor type-checks, renders, and silently does nothing.
+//
+// ── Two links were RETIRED, not re-pointed (agentic-pm-public-surface, epic D4) ───────────────
+// `/#product` and `/#proof` named sections Sprint 2 deleted. "Product" was deliberately not
+// re-aimed at `#ops`: a link labelled Product that lands on a section called Ops is a small lie,
+// and it costs more than the link is worth. A nav is a promise about the page's shape, so when the
+// shape changes the nav shrinks rather than redirecting.
 //
 // The CTA is the page's primary action rather than an anchor. An earlier version pointed at the
 // connector section on the reasoning that a reader who clicks in the first two seconds has not been
@@ -33,9 +39,7 @@ export function Nav() {
           `<a>` to a page — a full document load where a client-side transition belongs. The lint
           rule catching my own fix is the gate doing its job. */}
       <div className="landing-nav__links">
-        <Link href="/#product">Product</Link>
         <Link href="/#ops">Ops</Link>
-        <Link href="/#proof">Proof</Link>
         <Link href="/#pricing">Pricing</Link>
         {/* methodology-experience · Story 2.4 — the first entry here that is a ROUTE rather than a
             section of `/`. It is last because the other four are the page's own argument in the

@@ -13,8 +13,14 @@ import { Badge } from '@/components/ui/Badge'
 //   2. The figures deliberately do NOT use `StatCard`. That component's entire contract is "this is
 //      a reading" — it will not even render a placeholder in place of a number it could not read —
 //      and borrowing it for four invented figures would put a shipped-evidence device around a
-//      sketch. They get their own dashed, quieter treatment instead, so a reader scanning the page
-//      cannot mistake this panel for the live one in §proof.
+//      sketch. They get their own dashed, quieter treatment instead.
+//
+//      That distinction used to be drawn against §proof, which rendered a genuinely live read in
+//      shipped-evidence chrome one section below. §proof was deleted in agentic-pm-public-surface
+//      Sprint 2, so the contrast now has only one term — but the rule is unchanged and matters
+//      MORE, not less: with no live reading anywhere on the page, `StatCard` around invented
+//      figures would be the only stat-shaped thing here, and a reader has nothing to calibrate it
+//      against.
 //   3. The honesty line is inside the panel, not in a footnote below it.
 //
 // The alternative was to cut the section. It earns its place because the question it answers —

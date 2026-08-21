@@ -8,7 +8,8 @@ import type { ReactNode } from 'react'
 // giving it a bubble would make it look like a second assistant talking. It reads as an inline
 // artefact the agent was handed — gold left edge, its contents legible at a glance.
 //
-// It carries no illustration caveat of its own. The frame above it does (`SurfaceNote`, epic D4 of
+// It carries no illustration caveat of its own. The frame above it did (`SurfaceNote`, deleted in
+// agentic-pm-public-surface Sprint 2 — epic A12; epic D4 of
 // landing-redesign-v2), and per-element caveats are how a page ends up with caveats nobody reads.
 //
 // The `source`/`meta` header ("GOLDEN FRIJOLES · YOUR PRODUCT CONTEXT" / "READY TO PLACE") was

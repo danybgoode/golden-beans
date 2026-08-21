@@ -87,10 +87,12 @@ body {
   background: color-mix(in srgb, var(--gold-hot) 34%, transparent);
 }
 
+/* `.baglabel` was dropped from this group when the hero's kraft bag was deleted
+   (agentic-pm-public-surface Sprint 2). `.divider` still renders — MakerLoopSection uses it — so
+   this rule was EDITED rather than deleted with its dead neighbours. A prune that took the whole
+   group would have silently un-styled selection on a live element: valid CSS, wrong page. */
 .divider ::selection,
-.divider::selection,
-.baglabel ::selection,
-.baglabel::selection {
+.divider::selection {
   color: var(--stamp);
   background: color-mix(in srgb, var(--stamp) 26%, transparent);
 }
@@ -164,6 +166,30 @@ body {
   color: var(--crema);
 }
 
+/* ── `.btn-mini` lays out its icon, because tokens.css does not ────────────────────────────────
+   agentic-pm-public-surface · Sprint 2, Story 2.4.
+
+   `tokens.css` gives `.btn-mini` padding, colour and a radius, and no layout: no `display`, no
+   `align-items`, no `gap`. Its one call site — `CopyPromptCard`'s copy button — renders an inline
+   SVG followed by a text node, so the glyph sat ON the first letter of the label at every width.
+
+   This was already true before this sprint and nobody had seen it, because the card lived at the
+   BOTTOM of the page. Story 2.1 put a second one in the hero, which made a pre-existing defect the
+   first interactive thing a reader meets, and Story 2.4's acceptance names the copy button's
+   affordance specifically. Found by taking a screenshot and looking at it — no assertion on this
+   page could have failed for it (LEARNINGS, 2026-08-07: a full green gate does not see layout).
+
+   The fix is HERE and not in `tokens.css`: that file is the byte-mirrored design handoff and this
+   epic does not edit it (epic D1). `globals.css` imports it on line 1, so a plain override at equal
+   specificity wins by order — the mechanism the stylesheet already relies on.
+
+   Blast radius checked rather than assumed: `.btn-mini` has exactly one call site in the app. */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -216,18 +242,14 @@ body {
    `min-width: auto` lets that push the whole track wider than the viewport. One
    long connector token in a two-column grid is enough. Resetting it to 0 lets
    the track shrink and the content wrap. */
-:where(
-    .row2,
-    .cards3,
-    .hero-grid,
-    .proof-grid,
-    .proof-stack,
-    .comparison-grid,
-    .statrow,
-    .stat-grid,
-    .funnel-layout
-  )
-  > * {
+:where( .row2,
+.cards3,
+.hero-grid,
+.proof-grid,
+.comparison-grid,
+.statrow,
+.stat-grid,
+.funnel-layout ) > * {
   min-width: 0;
 }
 
@@ -677,23 +699,6 @@ body {
   font-size: 16px;
 }
 
-/* Gold, not green. These two are the only readings on the landing that were ever
-   painted `--green`, and the page's green ink was removed wholesale in the
-   2026-08-19 readability pass. The NUMBER stays — it is a real measurement off
-   the demo tenant, not chrome — and it keeps a direction: up reads in the data
-   colour every other figure on the page uses, down stays red, and the arrow
-   glyph beside it (`Icon name="trend-up|trend-down"`) carries the direction
-   independently of colour, which `references/ux-guidelines.md` requires anyway. */
-.trend--up,
-.lift--up {
-  color: var(--gold-hot);
-}
-
-.trend--down,
-.lift--down {
-  color: var(--red);
-}
-
 .experiment-grid {
   display: flex;
   flex-wrap: wrap;
@@ -780,58 +785,11 @@ body {
   flex-wrap: wrap;
 }
 
-/* ── The section stamp ─────────────────────────────────────────────────────
-   landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4).
-
-   Replaces the `①`-`⑩` glyphs `.divider .num` used to set at 12px. The glyph
-   was illegible for a structural reason, not a sizing one: the enclosing ring
-   is part of the character, so the digit inside it renders at roughly a third
-   of the nominal font size and scaling the type scales the ring with it. Drawn
-   as a real disc, the ring is a border and the numeral gets the whole em box.
-
-   Materially this is the packaging family (kraft ground, `--stamp` ink, the
-   fibre texture already on `.divider`), so it reads as an ink stamp on a paper
-   band rather than as a UI chip that wandered in from the product surface. The
-   inset highlight is the paper showing through where a rubber stamp presses
-   least — the same trick `.roundstamp` uses on the bag label, kept consistent
-   on purpose so the two read as one system. */
-.divider__stamp {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--stamp-dim);
-  border-radius: 50%;
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  color: var(--stamp);
-  box-shadow: inset 0 1px 2px rgb(255 244 220 / 35%);
-}
-
 .divider .tag {
   margin-left: 0;
   max-width: 100%;
   white-space: normal;
   text-align: center;
-}
-
-.roundstamp__stars {
-  display: inline-flex;
-  justify-content: center;
-}
-
-.roundstamp {
-  right: 2px;
-}
-
-.baglabel .row b {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .pricing {
@@ -2423,22 +2381,6 @@ a.stat-card:hover {
   font-size: 13px;
 }
 
-/* ── The kraft bag label's category pill ────────────────────────────────── */
-
-.baglabel .row .cat {
-  flex: none;
-  padding: 2px 8px;
-  border: 1px solid var(--stamp-dim);
-  border-radius: 99px;
-  color: var(--stamp-dim);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-}
-
-.baglabel .row span:first-child {
-  line-height: 1.25;
-}
-
 /* ── Pricing ───────────────────────────────────────────────────────────── */
 
 .tier {
@@ -2559,15 +2501,6 @@ a.stat-card:hover {
 .panel-label,
 .kicker {
   text-transform: uppercase;
-}
-
-/* §6 stacks two independent proofs (epic D2) with a rule between them, so a
-   reader can see where "our delivery history" ends and "a live engine read"
-   begins. */
-.proof-stack {
-  display: grid;
-  gap: 30px;
-  margin-top: 26px;
 }
 
 .proof-block + .proof-block {
@@ -2976,8 +2909,7 @@ a.stat-card:hover {
    (landing-redesign-v2 D3), so the two surfaces whose shadow is declared there
    — `.agent-win` and `.baglabel` — are pulled onto the ladder here instead.
    Both are the same idea: a frame the page is holding up for you to look at. */
-.agent-win,
-.baglabel {
+.agent-win {
   box-shadow: var(--elevation-lifted);
 }
 
@@ -3040,8 +2972,7 @@ a.stat-card:hover {
    starting at zero. */
 .golden-frijol-mark,
 .chat-avatar,
-.journey-node__icon,
-.divider__stamp {
+.journey-node__icon {
   contain: layout paint;
 }
 
@@ -3224,58 +3155,6 @@ a.stat-card:hover {
 .maker-flow__item p {
   color: var(--dim);
   font-size: 13.5px;
-}
-
-/* ── The operating context shell ────────────────────────────────────────────
-   Reuses `.app-shell`/`.app-bar`/`.app-body`, which already model "a picture of
-   the product". Only the navigation column is new.
-
-   The `operating-` prefix is not decoration. The first version of this block
-   named its wrapper `.context-body` — a class `ContextCard` has owned since
-   landing-frijoles-rebrand — so the 900px rule below silently turned every Bet
-   card on the page into a 190px + 1fr grid, and the hero's three-row Bet
-   rendered as "Outcome | Appetite / Evidence". Nothing failed; it just looked
-   like a layout decision somebody had made. Same failure this stylesheet
-   already recorded once for `.hero-cta`/`.button-row`: a shared name for two
-   different things is a selector waiting to over-match. */
-.operating-nav {
-  display: none;
-}
-
-.operating-nav__item {
-  padding: 8px 10px;
-  border-radius: 7px;
-  color: var(--dim);
-  font-size: 12.5px;
-}
-
-.operating-nav__item--on {
-  background: var(--roast-2);
-  color: var(--crema);
-}
-
-.operating-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* The agent's line under the shell. Left rule in gold, same as `.tool` — the
-   agent's contribution is marked the same way everywhere on this page. */
-.operating-rail {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--gold);
-  border-radius: 9px;
-  color: var(--dim);
-  font-size: 13px;
-}
-
-.operating-rail strong {
-  color: var(--gold);
 }
 
 /* ── The Ops panel ──────────────────────────────────────────────────────────
@@ -3757,11 +3636,6 @@ a.stat-card:hover {
   padding-top: 14px;
 }
 
-.hero-window {
-  display: grid;
-  gap: 8px;
-}
-
 /* ── The overlap ────────────────────────────────────────────────────────────
    Both objects are placed in the SAME grid cell — the bag pinned to the top-right
    and tilted, the window across the bottom-left and in front.
@@ -3838,29 +3712,6 @@ a.stat-card:hover {
        thing it is about. */
     z-index: 1;
   }
-}
-
-/* ── The bag, with its brand plate removed ──────────────────────────────────
-   `tokens.css` gives `.baglabel .brand` the bag's masthead — a 24px name over a
-   3px rule. That block came out (it read "GOLDEN FRIJOLES · MAKER GRADE" over a
-   logo the nav already carries), which left `.netwt` as the topmost element: a
-   12px mono line where the mockup has a 29px title. So `.netwt` becomes the
-   title it is now standing in for, and keeps the heavy rule under it that used
-   to belong to the plate above. */
-.baglabel .netwt {
-  display: block;
-  padding: 2px 0 12px;
-  border-bottom: 3px solid var(--stamp);
-  font: 900 27px/1.05 var(--sans);
-  font-stretch: 112%;
-  letter-spacing: -0.02em;
-}
-
-/* A row on the bag label that is not yet in the packet. Inline with the
-   contents rather than on its own line: the row is one statement, and a badge
-   that wraps to its own line reads as a separate claim about the whole bag. */
-.baglabel__badge {
-  margin-left: 8px;
 }
 
 /* The mockup's `.note-next`: the panel's last word, in the colour the page uses

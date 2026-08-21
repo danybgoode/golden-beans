@@ -60,15 +60,8 @@ export const LANDING_SECTIONS: LandingSection[] = [
     status: 'live',
   },
   {
-    id: 'product',
-    title: 'One operating context',
-    epic: 'landing-maker-ops',
-    status: 'live',
-    note: 'Illustrative figures over the real /app navigation vocabulary — the live read is §proof.',
-  },
-  {
     id: 'ops',
-    title: 'Four operating surfaces — product, delivery, security, spend',
+    title: 'One operating context — product, delivery, security and spend operations',
     epic: 'landing-maker-ops',
     status: 'live',
     note: 'Content lives in lib/maker-ops.ts; each surface resolves its own gate per request, so no status is written down here.',
@@ -93,13 +86,6 @@ export const LANDING_SECTIONS: LandingSection[] = [
     epic: 'methodology-experience',
     status: 'live',
     note: 'The only section that links OUT of this page: its CTA goes to /methodology, and its chapter list is derived from lib/methodology-chapters.ts rather than written here.',
-  },
-  {
-    id: 'proof',
-    title: 'Proof — the Pod Report and the live engine',
-    epic: 'pod-report',
-    status: 'live',
-    note: 'Carries BOTH the computed Pod Report and the live demo-tenant engine read.',
   },
   {
     id: 'pricing',

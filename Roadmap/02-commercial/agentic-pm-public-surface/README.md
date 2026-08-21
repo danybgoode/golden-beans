@@ -340,6 +340,38 @@ facilitation skill, which is ours to keep.
 page, and record the map. Do not vendor the artefact. The provenance requirement was always about
 the claims being checkable, not about the bytes being present.
 
+### A12. There is no "elsewhere" — Sprint 2 removes the LAST framed window, and the guard retires with it
+
+Story 2.1 says the framed-window assertion *"stays — it is now vacuously true of the hero and still
+meaningful elsewhere"*. **There is no elsewhere.** After this sprint nothing under
+`components/landing/` renders `AgentWindow`: the hero's illustration, §product's app-shell picture
+and §proof's live read were the only three, and all three go.
+
+The guard's floor is `count > 0`, so it **failed** rather than passing vacuously — which is the
+honest outcome, and is how this was found rather than shipped.
+
+**Ruling, identical to A5:** the guard is deleted, not floored at zero. A test that cannot fail is
+worse than no test. It is recorded in the file as *unemployed rather than obsolete* — if an
+illustrated frame ever returns to this page, the guard returns with it, because the failure it
+prevents (a page labelling an invented conversation as though it were live) is one this page has
+actually shipped.
+
+**Consequences handled in the same commit:**
+
+- `components/landing/SurfaceNote.tsx` is deleted. Its entire contract was labelling a landing
+  illustration, and there are none left.
+- `AgentWindow` / `ChatThread` / `ContextCard` are **kept**, and this is a deliberate difference.
+  They live in `components/ui/`, which is a component *kit* — `app-component-kit-adoption` is a
+  whole epic about growing its use — and an unused kit primitive is inventory, not dead code.
+  Deleting kit components because one page stopped using them is a different decision from the one
+  this epic was bet on.
+- Two comments in those primitives referenced `SurfaceNote` in the present tense and now say what
+  actually happened (CODE-QUALITY #3).
+
+**Stated gap, so it gets scheduled rather than assumed** (LEARNINGS, 2026-08-07): three kit
+primitives now have zero call sites anywhere in the app. That is visible and named here; it is not
+this epic's to resolve.
+
 ## Scope
 
 | Sprint | Story | Risk |

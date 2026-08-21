@@ -1,12 +1,10 @@
 import { Nav } from '@/components/landing/Nav'
 import { MakerHero } from '@/components/landing/MakerHero'
 import { MakerLoopSection } from '@/components/landing/MakerLoopSection'
-import { OperatingContextSection } from '@/components/landing/OperatingContextSection'
 import { OpsSection } from '@/components/landing/OpsSection'
 import { AuthoritySection } from '@/components/landing/AuthoritySection'
 import { FinOpsSection } from '@/components/landing/FinOpsSection'
 import { MethodologySection } from '@/components/landing/MethodologySection'
-import { ProofSection } from '@/components/landing/ProofSection'
 import { PricingSection } from '@/components/landing/PricingSection'
 import { MakerClosingCta } from '@/components/landing/MakerClosingCta'
 import { Footer } from '@/components/landing/Footer'
@@ -20,10 +18,9 @@ import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 // lib/landing-sections.ts is the registry and the single source of truth for that.
 //
 // ── The order below is the argument, and it is not arbitrary ──────────────────────────────────
-// who this is for (hero) → the loop that makes it work (loop) → where all of it lives (product) →
-// how wide it goes (ops) → what stops the agent (authority) → what we would build next and have not
-// (finops) → how you would learn it (methodology) → and only then: is any of this real (proof) →
-// what it costs (pricing) → ask your own agent whether to bother (start).
+// who this is for (hero) → the loop that makes it work (loop) → how wide it goes (ops) → what stops
+// the agent (authority) → what we would build next and have not (finops) → how you would learn it
+// (methodology) → what it costs (pricing) → ask your own agent whether to bother (start).
 //
 // ── Two sections were CUT from that spine, and the argument closed over the gap ────────────────
 // `connect` ("Bring your agent" — three routes, all landing on /install) and `sdk` ("For the
@@ -33,22 +30,31 @@ import { SelfTrackBeacon } from '@/components/landing/SelfTrackBeacon'
 // connector is not hidden: /install still mints the tokenized URL, the footer's agent manifest links
 // it, and the closing CTA points straight at it.
 //
-// The evidence half sits below the repositioning on purpose, and that is a change from the page
-// this replaces. The previous page put its "try it for free right now" second, because it was the
-// only part a reader could use without an account. This page's first job is different: it has to
-// convince a reader that the category exists at all — that "one maker operating a whole product" is
-// a thing you can buy — before proof of a product is worth anything. Proof of something the reader
-// has not yet decided they want is just numbers.
+// ── Two more went in agentic-pm-public-surface Sprint 2, and one of them is a real trade ──────
+// `product` ("One operating context") argued the same thing as §ops under a second heading, so its
+// phrase moved onto §ops's eyebrow and the section went.
 //
-// Without `force-dynamic`, Next statically optimizes `/` at build time (no dynamic route params on
-// this page) — which does two things wrong: the proof section's demo-project numbers would freeze
-// into the build's HTML forever (never reflecting a reseed), AND the build itself would try to reach
-// Supabase at build time — this repo's `typecheck-build` CI job runs `npm run build` with NO
-// Supabase env vars at all (only the separate `e2e` job provisions them), so a build-time prerender
-// attempt throws `Missing required env var: SUPABASE_URL` and fails the gate. It is also what keeps
-// every flag-derived sentence on this page true PER REQUEST rather than true at build time — the
-// Ops panel's SecOps gate, the authority section's drill gate, and every "Run your first Bet" CTA
-// destination all read a flag, and Vercel snapshots env vars into a deployment at build time.
+// `proof` is the consequential one. It carried the Pod Report and a live read of the demo tenant,
+// and it was the only non-illustrative thing on a page whose central argument is evidence over
+// assertion. Removing it was a deliberate product-owner call (epic D4), on the reasoning that proof
+// of something a reader has not yet decided they want is just numbers — and that the hero's handoff
+// prompt is stronger evidence anyway, because a reader who pastes it sends their OWN agent to go
+// and check us rather than being asked to believe a stat tile.
+//
+// Recorded because it is the risk: every frame on this page is now a labelled illustration. If the
+// page later reads thin on evidence, the live engine read returns as a strip under the hero. Do NOT
+// rebuild §proof.
+//
+// `force-dynamic` STAYS, and its reason narrowed rather than disappeared with §proof. It used to
+// carry two: the proof section's demo-project numbers must not freeze into the build's HTML, and
+// every flag-derived sentence on this page must be true PER REQUEST. The first is gone with the
+// section. The second was always the load-bearing half and is untouched — the Ops panel's SecOps
+// gate, the authority section's drill gate and every "Run your first Bet" CTA destination all read
+// a flag, and Vercel snapshots env vars into a deployment at build time, so a statically optimized
+// `/` would serve whatever the gates happened to be at build.
+//
+// A comment asserting a reason that no longer exists is CODE-QUALITY #3, which is why this was
+// edited rather than left alone when the section it half-described went away.
 export const dynamic = 'force-dynamic'
 
 export default function Home() {
@@ -61,12 +67,10 @@ export default function Home() {
       <Nav />
       <MakerHero />
       <MakerLoopSection />
-      <OperatingContextSection />
       <OpsSection />
       <AuthoritySection />
       <FinOpsSection />
       <MethodologySection />
-      <ProofSection />
       <PricingSection />
       <MakerClosingCta />
       <Footer />

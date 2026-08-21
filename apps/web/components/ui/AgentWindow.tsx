@@ -6,7 +6,8 @@ import type { ReactNode } from 'react'
 // It used to carry a title, plus EITHER a liveness chip ("connected", "revocable") or a row of
 // platform pills (Claude / ChatGPT / your agent). All three are gone: they were chrome describing
 // the frame rather than content inside it, and the page's honesty label was never in the bar in the
-// first place — it is the `SurfaceNote` above every frame, which is what `e2e/landing.browser.
+// first place — it was the `SurfaceNote` above every frame, deleted in agentic-pm-public-surface
+// Sprint 2 along with the last landing illustration (epic A12). What
 // spec.ts` asserts. Removing the bar's text removes a second, weaker answer to "is this real",
 // which is the reason the props are deleted rather than defaulted to empty: an empty chip still
 // renders a bordered pill, and a nullable title is a branch nothing exercises.
