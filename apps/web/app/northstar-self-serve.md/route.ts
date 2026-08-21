@@ -16,9 +16,12 @@ import { CATEGORY_DEFINITION } from '@/lib/positioning'
 //
 // This version teaches the North Star Framework as the sources actually set it out. The structure
 // is theirs; every word here is ours, and each element is connected to what our engine computes.
-// Sources are IN THE REPO, not in a chat log — references/amplitude-north-star-how-to-guide-2024.pdf
-// and references/northstar-workshop-skill.md, with references/northstar-sources.md recording the
-// provenance and the page-level map.
+// The provenance is IN THE REPO, not in a chat log — references/northstar-sources.md maps every
+// element below to the page of the source it came from, beside references/northstar-workshop-skill.md
+// (the product owner's own facilitation skill, which is ours to keep here). Amplitude's PDF itself
+// is NOT committed: it is a third-party gated asset and checking it in would be redistribution we
+// have no permission for. A page map is what a reviewer actually needs, and it does not need the
+// binary. Raised by Codex in review of PR #111.
 //
 // ── The attribution is a real link, and the URL assertion was widened to allow it (epic A10) ──
 // `e2e/northstar-self-serve.spec.ts` used to assert this document contained exactly ONE host. That

@@ -319,6 +319,27 @@ an unchecked citation would have used — returns **404**. A public surface citi
 worse than one citing none.
 
 
+### A11. Third-party source material is cited and mapped, never committed
+
+*Raised by Codex in review of PR #111, and correct.*
+
+Story 1.2's first move said to "land the guide in `references/`". It was, and it should not have
+been: *Running Your North Star Workshop* and *The North Star Playbook* are Amplitude's gated
+marketing assets. Committing a copy into this repository is **redistribution we have no permission
+for**, and a licence question is not something a copy sprint gets to answer by not asking it.
+
+**What ships instead:** `references/northstar-sources.md`, a page-level map from every element of
+the shipped document back to the page of the source it came from. That is what a reviewer actually
+needs — it makes each claim checkable by anyone holding a legitimate copy — and it carries no
+licence question and no 1 MB binary that nothing in the build reads.
+
+`references/northstar-workshop-skill.md` **is** committed: it is the product owner's own
+facilitation skill, which is ours to keep.
+
+**The general rule, since this will come up again:** cite third-party material by title, author and
+page, and record the map. Do not vendor the artefact. The provenance requirement was always about
+the claims being checkable, not about the bytes being present.
+
 ## Scope
 
 | Sprint | Story | Risk |

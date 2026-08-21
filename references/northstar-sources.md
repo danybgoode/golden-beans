@@ -8,10 +8,11 @@ These are **provenance records, not live sources.** The workshop route
 Golden Frijoles' words. Nothing generates from these files; nothing should be kept in step with
 them. They exist so a reviewer can check a claim against what it came from.
 
-| File | What it is |
+| Source | Where it is |
 |---|---|
-| `amplitude-north-star-how-to-guide-2024.pdf` | *Amplitude — How-to Guide: Running Your North Star Workshop*, 2024. 28pp. |
-| `northstar-workshop-skill.md` | The product owner's own `northstar-workshop` facilitation skill, verbatim as of 2026-08-20. |
+| *Amplitude — How-to Guide: Running Your North Star Workshop*, 2024, 28pp. | **Not committed.** Third-party gated asset — checking it in would be redistribution we have no permission for. The page map below is what a reviewer needs; obtain a copy from Amplitude to check it against. |
+| *The North Star Playbook*, Cutler & McBride | **Not committed**, same reason. See the attribution below. |
+| `northstar-workshop-skill.md` | Committed — the product owner's own `northstar-workshop` facilitation skill, verbatim as of 2026-08-20. Ours to keep. |
 
 **Attribution.** The North Star Framework is Amplitude's; *The North Star Playbook* is by John
 Cutler and Jason McBride. The canonical path is `amplitude.com/resources/north-star-playbook`

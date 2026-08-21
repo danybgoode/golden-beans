@@ -13,10 +13,13 @@
 
 ## Build contract (locked by the architect before the builder started)
 
-**Sources are in the repo before a word is written**, under repo-legible names rather than their
-download names: `references/amplitude-north-star-how-to-guide-2024.pdf`,
-`references/northstar-workshop-skill.md`, and `references/northstar-sources.md` — the provenance
-record that maps every element of the shipped document back to a page of a source. Every page citation in the
+**The provenance is in the repo before a word is written** — `references/northstar-sources.md`, a
+page-level map from every element of the shipped document back to the source it came from, beside
+`references/northstar-workshop-skill.md` (the product owner's own skill, ours to commit).
+
+**Amplitude's PDF is deliberately NOT committed** (epic A11). It is a third-party gated asset and
+checking it into a repo is redistribution we have no permission for. The page map gives a reviewer
+everything the binary would have, without the licence question. Every page citation in the
 element map below was checked against the PDF and is correct — **except the OpenTable worksheet,
 which is a duplicated Spotify page in the source (epic A1).** Carry p.19's OpenTable *brief* as the
 warm-up and exactly one completed worksheet, Spotify's.
