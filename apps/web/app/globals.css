@@ -2534,13 +2534,6 @@ a.stat-card:hover {
   margin-inline: auto;
 }
 
-@media (min-width: 640px) {
-
-  .proof-block + .proof-block {
-    padding-top: 40px;
-  }
-}
-
 /* ============================================================================
    GOLDEN FRIJOLES — the product-feel surfaces
    landing-frijoles-rebrand · Sprint 2
@@ -3591,70 +3584,30 @@ a.stat-card:hover {
 }
 
 /* ── The hero's right-hand column ───────────────────────────────────────────
-   The bag label and the agent window, and the relationship between them is the
-   whole composition: the bag is tilted on the right, the window sits across its
-   bottom-left corner, and the two objects overlap the way they do in
-   `references/golden-frijoles-maker-ops-landing-v0.2.html`.
+   One object: the handoff prompt card (agentic-pm-public-surface Sprint 2).
 
-   The mockup does that with absolute positioning at EVERY width, which on a
-   phone stacks two near-full-width objects on top of each other and buries one.
-   So the overlap is a wide-viewport composition only — see the block below,
-   which is where the breakpoint that governs it is stated. This paragraph named
-   900px, which is `.hero-grid`'s breakpoint and not this composition's; a second
-   copy of a number is a second thing to keep in step, so it names none.
+   This was a composition of TWO — a tilted kraft bag and an illustrated agent
+   window overlapping it in a single grid cell at wide widths, returning to
+   normal flow below 1000px. Roughly sixty lines of this file argued the
+   mechanics of that overlap: why one grid cell rather than two absolutely
+   positioned children (the `min-height` it needed was a guess about how tall
+   the objects were, and it was wrong at the first untuned width), and why the
+   override block had to sit BELOW the base rules to win on source order at
+   equal specificity.
 
-   This file previously argued for stacking at every width. That was a defensible
-   call and it is not the one the page wants: read on a laptop, two stacked
-   rectangles are a list of two things rather than one picture. */
+   All of it went with the second object. Sprint 2 replaced both with a single
+   `CopyPromptCard` — something the reader can use instead of two pictures they
+   have to take on trust — so there is nothing left to overlap, no breakpoint
+   that changes the composition, and no reason for this to be a grid.
+
+   Story 2.4 asked for this to be SIMPLIFIED rather than left as dead rules
+   under a confident explanation. Dead CSS under a good comment is worse than
+   dead CSS: it reads as evidence (LEARNINGS, 2026-08-20). */
 .hero-magic {
-  display: grid;
-  gap: 26px;
-  /* The stamp is positioned outside the bag's top-right corner. Without this the
-     grid clips it on a narrow viewport, where the bag is already at the gutter. */
-  padding-top: 14px;
-}
-
-/* ── The overlap ────────────────────────────────────────────────────────────
-   Both objects are placed in the SAME grid cell — the bag pinned to the top-right
-   and tilted, the window across the bottom-left and in front.
-
-   ── This block sits BELOW the base rules on purpose ─────────────────────────
-   It overrides `.hero-magic`'s `gap` and `padding-top` at the same specificity
-   (0,1,0), so source order is the only thing deciding the winner. It was written
-   ABOVE them, which made both of those declarations inert: the base values kept
-   applying at every width and the media query only ever contributed
-   `grid-template-columns`. Caught by Antigravity in cross-family review of PR
-   #102 — and it is the SAME defect this PR fixes in `.pricing__intro`, a rule
-   sitting above its target at equal specificity and silently doing nothing. Two
-   instances of one class in one file is why this names the rule rather than the
-   symptom: anything added here stays below the base block.
-
-   ── Why one grid cell and not two absolutely-positioned children ────────────
-   The first version did use `position: absolute` on both, with a `min-height` on
-   the parent to reserve the row (absolutely-positioned children contribute no
-   height). That number is a guess about how tall the two objects are, and it was
-   wrong at the first width I checked that was not the one I tuned it at: at
-   1024px the window's top landed over the bag's masthead and cut the title in
-   half, because the window grows taller as the column narrows and the
-   `min-height` did not.
-
-   Overlapping in one grid cell removes the guess. The row's height is
-   `max(bag, window + its offset)`, measured rather than declared, so the window's
-   top is always exactly `margin-top` below the bag's — whatever either one's
-   content does. That offset is the composition's one real number: it is set to
-   clear the bag's masthead and first row, which is the part of the packet that
-   has to stay readable.
-
-   Below 1000px both objects return to normal flow and keep their whole selves —
-   the stacked layout this page shipped with. (That sentence read "below 900px"
-   for one commit, naming `.hero-grid`'s breakpoint rather than this one's. Same
-   review round.) */
-@media (min-width: 1000px) {
-  .hero-magic {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-top: 0;
-  }
+  /* The card carries its own frame and fills the column. The wrapper survives
+     because it is what `.hero-grid` places, and the class still names the thing
+     it always named. */
+  min-width: 0;
 }
 
 /* The mockup's `.note-next`: the panel's last word, in the colour the page uses
