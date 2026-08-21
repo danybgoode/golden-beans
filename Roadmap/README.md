@@ -89,6 +89,15 @@ independently shippable slice of value.
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
+- ✅ [The public surface names the category](02-commercial/agentic-pm-public-surface/README.md) —
+  **agentic product management**, defined once in `lib/positioning.ts` and imported by all five
+  outward surfaces (landing, link preview, `/llms.txt`, the workshop, `/methodology`) so no two can
+  drift. The hero hands the reader a prompt for their own agent instead of two illustrations;
+  §product and §proof are retired and the nav is **Ops · Pricing · Methodology**.
+  `/northstar-self-serve.md` is a real North Star workshop — the three games, the
+  North Star → Inputs → Opportunities → Interventions ladder, the seven-question checklist,
+  breadth/depth/frequency/efficiency, worked examples — and `/llms.txt` is an operating brief that
+  tells a visiting agent what to ask before it recommends anything.
 - ✅ [The methodology gets a room of its own](02-commercial/methodology-experience/README.md) —
   `/methodology` plus six chapter URLs, server-rendered and deep-linkable, with the whole method in
   ONE typed module (`lib/methodology-chapters.ts`) that the pages, the index, the sticky
@@ -250,6 +259,15 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-08-20** — `agentic-pm-public-surface` **shipped and live** (PRs #111/#113/#114, deployed
+  `c37fafe`): the landing argued a category it never named. It names it now, once, from one module
+  that five surfaces import — and the page opens with something a reader can *use* rather than two
+  pictures they have to take on trust. Two sections came out with it, including the only
+  non-illustrative evidence on the page, on a deliberate call recorded in the epic. The North Star
+  workshop stopped being eight questions any model could have written and became the framework;
+  `/llms.txt` stopped being a stale sitemap and became a brief. 13 amendments, 19 review rounds, and
+  a copy-button defect that had been live for two epics and was found by looking at a screenshot.
 
 - **2026-08-20** — `methodology-experience` **shipped and live** (PRs #104/#105/#107/#108, deployed
   `727fc04`): the landing has said *"the way to learn it is to use it"* for months over a CTA that

@@ -1,6 +1,6 @@
 # Agentic PM public surface — Sprint 3: The register, everywhere it shows
 
-**Status:** ⬜ not started
+**Status:** ✅ shipped — [`c37fafe`](https://github.com/danybgoode/golden-beans/pull/114)
 
 > **Build contract.** Copy only. No component is added or deleted, no gate is read differently, no
 > capability claim changes. Every surface a stranger reads takes the same register and names the
@@ -135,7 +135,33 @@ assertions for the diagnostic questions, the plain-language rule and the categor
 
 ## Smoke walkthrough
 
-_To be written by the builder before the sprint is called done. Numbered steps, one action + one
-expected result each, real production URLs once deployed. Include a step that fetches
-`https://goldenfrijoles.com/llms.txt` with `curl` and reads it as an agent would — the manifest is
-the one surface no human will notice is wrong._
+Real production URLs. All steps run and recorded green.
+
+1. Open <https://goldenfrijoles.com/>.
+   → Directly under the headline, in mono: *"Agentic product management: the whole product
+   discipline — decide, build, prove, grow — run by one person and their agents, on rails that keep
+   the evidence honest."*
+2. Count visible occurrences of that sentence on the page.
+   → **exactly 1**. (Verified in a real browser against production, not by grepping HTML — the raw
+   response contains a second copy in Next's RSC payload, which no reader sees.)
+3. Read the browser tab title.
+   → `Golden Frijoles — agentic product management`.
+4. Read §ops, §authority, §finops, §methodology, §pricing, §start.
+   → identity/governance/security/spend named as things a maker holds · governance without a
+   department · spend control with the "not built" badge **still there** · taste and demos-well-vs-
+   holds-up · no lock-in · you bring the agent.
+5. `curl -s https://goldenfrijoles.com/ | grep -Ei 'procurement|RFP|seat expansion|enterprise-wide'`
+   → no match. The register was borrowed; the motion was not.
+6. **`curl -s https://goldenfrijoles.com/llms.txt` and read it as an agent would** — this is the one
+   surface no human will notice is wrong.
+   → It opens on the category definition, then *"What this is, in plain language"*, then
+   *"If someone has just arrived, ask these before recommending anything"* with five diagnostic
+   questions, then *"How to talk about this"* with the plain-language rule. The route map lists only
+   routes that exist, and it still closes with
+   *"This manifest lists only what is live in this deployment right now."*
+7. Confirm the manifest's connector entry.
+   → describes **two independent kill switches**, not a single flag, and no longer refers to a
+   launch story that shipped two epics ago.
+8. Open <https://goldenfrijoles.com/methodology>.
+   → Opens on the same definition, word for word. The six chapters, Consider · Operate · Exit and
+   the phase vocabulary are unchanged.

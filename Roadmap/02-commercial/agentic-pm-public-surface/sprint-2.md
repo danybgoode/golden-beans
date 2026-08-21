@@ -1,6 +1,6 @@
 # Agentic PM public surface — Sprint 2: The landing's structure
 
-**Status:** ⬜ not started
+**Status:** ✅ shipped — [`66ea12e`](https://github.com/danybgoode/golden-beans/pull/113)
 
 > **Build contract.** Four structural edits to `/`, and nothing else. No copy rewrite — that is
 > Sprint 3. Two sections and four components are deleted; one component's right column is replaced;
@@ -138,6 +138,26 @@ prompt card overflowing its column.
 
 ## Smoke walkthrough
 
-_To be written by the builder before the sprint is called done. Numbered steps, one action + one
-expected result each, real production URLs once deployed (preview URLs pre-merge). The clipboard
-round-trip and the phone-width read are the two steps most worth doing by hand._
+Real production URLs. All steps run and recorded green.
+
+1. Open <https://goldenfrijoles.com/> on a desktop browser.
+   → The hero's right-hand column is a dark prompt card headed
+   `HANDOFF PROMPT · PASTE INTO YOUR AGENT`. No kraft bag, no illustrated chat window.
+2. Click **copy prompt**.
+   → The label changes to `copied`, and the clipboard holds the prompt exactly as rendered,
+   beginning `Read https://goldenfrijoles.com/llms.txt`.
+3. Look at the copy button itself.
+   → The icon sits **beside** the label with a visible gap, not on top of the first letter. This was
+   broken before this sprint and pinned as geometry afterwards.
+4. Read the nav.
+   → **Ops · Pricing · Methodology**, three links. No "Product", no "Proof".
+5. `curl -s https://goldenfrijoles.com/ | grep -c 'id="proof"'` and the same for `id="product"`
+   → **0** and **0**.
+6. Scroll the whole page.
+   → No numbered kraft stamps anywhere; the argument runs hero → loop → ops → authority → finops →
+   methodology → pricing → start → footer.
+7. Reload at 390px width.
+   → No horizontal scroll. The prompt card sits below the copy, and the `<pre>` scrolls inside its
+   own container rather than widening the page.
+8. `curl -s https://goldenfrijoles.com/llms.txt | grep -i 'proof'`
+   → no match. The manifest does not describe a section that no longer exists.

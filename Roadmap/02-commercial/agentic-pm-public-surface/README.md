@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: agentic-pm-public-surface
 build_order: 23
 ---
@@ -459,15 +459,26 @@ live, `/` is unchanged, and nothing is half-built.
 
 ## Epic Definition of Done
 
-- [ ] All three sprints merged to `main` and smoke-tested (gaps stated).
-- [ ] Each `sprint-N.md` carries a fool-proof smoke walkthrough with real production URLs.
-- [ ] This README marked ✅ complete; every sprint status ticked with commit refs.
-- [ ] `RETROSPECTIVE.md` written.
-- [ ] Product poster updated — `Roadmap/README.md` feature map + Recent highlights.
-- [ ] Landing backfill: `references/landing-end-state.md`'s section map reconciled with the page
+- [x] All three sprints merged to `main` and smoke-tested (gaps stated).
+- [x] Each `sprint-N.md` carries a fool-proof smoke walkthrough with real production URLs.
+- [x] This README marked ✅ complete; every sprint status ticked with commit refs.
+- [x] `RETROSPECTIVE.md` written.
+- [x] Product poster updated — `Roadmap/README.md` feature map + Recent highlights.
+- [x] Landing backfill: `references/landing-end-state.md`'s section map reconciled with the page
       that now exists (two sections fewer).
-- [ ] `Roadmap/LEARNINGS.md` updated — at minimum the "borrow the register, not the motion" rule and
-      the dead-asset find (`handoffPrompt` shipped, specced and call-site-free for two epics).
-- [ ] No kill-switch planned — nothing here is gated, and every change is a copy or composition
+- [x] `Roadmap/LEARNINGS.md` updated — the "borrow the register, not the motion" rule and the
+      dead-asset find (`handoffPrompt` shipped, specced and call-site-free for two epics), plus the
+      scoped-review, scripted-prune and `git checkout` lessons this epic paid for.
+- [x] No kill-switch planned — nothing here is gated, and every change is a copy or composition
       change revertible by a normal revert.
-- [ ] Feature branch deleted; PRs merged.
+- [x] Feature branches deleted; PRs merged.
+
+**Owed, and named rather than closed:** Story 1.4's end-to-end agent run, to Daniel by name, against
+**production** (epic A13). Recorded in `sprint-1.md`'s smoke walkthrough as step 7.
+
+---
+
+## ✅ Complete — shipped 2026-08-20
+
+Live at <https://goldenfrijoles.com>. Three sprints, 12 stories, 13 amendments, three production
+deploys, 19 cross-family review rounds. See [`RETROSPECTIVE.md`](./RETROSPECTIVE.md).
