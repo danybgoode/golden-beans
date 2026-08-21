@@ -146,9 +146,13 @@ that** I neither stall nor over-run nor promise something I did not do.
 we find out whether a facilitation script actually facilitates.
 
 **Acceptance:**
-- The hero prompt is not live yet (Sprint 2), so paste `handoffPrompt`'s text manually into a fresh
-  Claude and a fresh ChatGPT, pointed at the **preview URL**, and run the workshop on a real
-  product — ideally one Daniel is not already certain about.
+- **Corrected 2026-08-20 (epic A13): run this against PRODUCTION, after merge — not the preview.**
+  `SITE_URL` is scoped to Production only, so a preview deployment renders every prompt and every
+  workshop URL as `http://localhost:3000`, which would send the agent to the tester's own machine.
+  Verified with `vercel env ls`, not assumed.
+- Paste `handoffPrompt`'s text into a fresh Claude and a fresh ChatGPT, pointed at
+  `https://goldenfrijoles.com`, and run the workshop on a real product — ideally one Daniel is not
+  already certain about.
 - Judged on four things, written into this doc as findings: did it ask one question at a time · did
   it challenge a vague answer rather than accept it · did the ladder produce inputs he could act on
   this week · did either agent claim at any point to have saved something.

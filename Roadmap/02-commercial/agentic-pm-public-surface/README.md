@@ -372,6 +372,41 @@ actually shipped.
 primitives now have zero call sites anywhere in the app. That is visible and named here; it is not
 this epic's to resolve.
 
+### A13. `SITE_URL` is Production-only, so a PREVIEW renders every prompt as `localhost:3000`
+
+*Found by Codex persisting on PR #113 after the comment it first objected to had been fixed. The
+repeated finding was pointing at something bigger than the comment (LEARNINGS: a reviewer repeating
+a finding is a signal to look again).*
+
+**Verified against the live project, not inferred:** `vercel env ls` shows exactly one `SITE_URL`,
+scoped to **Production**. `getSiteUrl()` reads `SITE_URL` and otherwise returns
+`http://localhost:3000` — deliberately, because AGENTS rule #5 forbids a Host-header fallback.
+
+**Therefore, on any preview deployment:**
+
+- the hero's copied handoff prompt tells the reader's agent to read `http://localhost:3000/llms.txt`;
+- `/northstar-self-serve.md` hands out `http://localhost:3000/install`;
+- and the one-host spec still passes, because everything is consistently *the wrong* host.
+
+**This changes an owed verification.** Sprint 1's Story 1.4 asks the product owner to run the
+workshop end-to-end **"pointed at the preview URL"**. As things stand that cannot work: the
+preview's own document points the agent at the tester's localhost. **Story 1.4 must be run against
+production after merge**, and its acceptance is corrected to say so.
+
+**Not fixed inside this epic, deliberately.** The three options each cost more than a copy sprint
+should spend, and the choice is the product owner's:
+
+1. **Run the verification on production after merge** — free, and what this epic assumes. Chosen.
+2. **Set a Preview-scoped `SITE_URL`** — one env var, but a *static* value cannot match a
+   per-branch preview hostname, so it would be right for one preview and wrong for the rest.
+3. **Teach `getSiteUrl()` about `VERCEL_URL`** — the correct long-term answer, and genuinely safe
+   (a platform-provided env var is not a request Host header, so rule #5 is not weakened). But
+   `getSiteUrl()` is the seam behind *every* absolute URL in the app — the install page's connector
+   URL, `metadataBase`, the sitemap, `robots.txt` — and changing it is a shared-surface decision
+   with its own review, not a line in a copy PR.
+
+**Recommendation: option 3, as its own small epic.** Flagged for Daniel by name at epic close.
+
 ## Scope
 
 | Sprint | Story | Risk |
