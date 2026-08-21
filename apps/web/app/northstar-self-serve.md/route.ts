@@ -43,9 +43,11 @@ import { CATEGORY_DEFINITION } from '@/lib/positioning'
 // The same two reasons app/llms.txt/route.ts is a route (read that file first — this mirrors it
 // deliberately). (1) Every absolute URL comes from `getSiteUrl()`, so this cannot drift to a
 // wrong-environment host the way a checked-in string with a hardcoded prod URL would, and the
-// workshop is exercisable before merge because `e2e/northstar-self-serve.spec.ts` fetches it
-// against the RUN's own base URL. (It is not because a preview rewrites the URLs: `getSiteUrl()`
-// reads `SITE_URL` and never derives the deployment's own hostname.)
+// workshop is exercisable before merge — both because `e2e/northstar-self-serve.spec.ts` fetches it
+// against the RUN's own base URL, and, since site-url-preview-aware, because a PREVIEW deployment
+// now serves its own hostname rather than `http://localhost:3000`. That second half is what makes
+// this document testable by a human with a browser before it merges, which is how Story 1.4 of the
+// epic that wrote it was supposed to work.
 // (2) A static file would be frozen at build time and would keep asserting whatever was true the
 // day it was written.
 //
