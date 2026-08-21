@@ -57,10 +57,14 @@ export function FinOpsSection() {
             section's copy has to keep getting right: it is the only section on this page about
             something that does not exist. The badge and the closing note below say so outright;
             this sentence just does not contradict them. */}
+        {/* Epic D1 — spend control and unit economics. The tense is load-bearing and stays: this
+            is the one section on the page describing something that does not exist, and every
+            sentence in it is future or conditional. The badge and the "not built" line below are
+            untouched by the register pass. */}
         <p className="measure">
-          Token spend is only useful when it can be attributed to the agent, workflow and Bet that consumed
-          it, then connected back to product value. Golden Frijoles will bring AI unit economics into the
-          same operating context as your North Star.
+          Spend control is not a bill you read at the end of the month — it is knowing which agent, which
+          workflow and which Bet consumed the tokens, and whether the thing they bought was worth it.
+          Golden Frijoles will bring AI unit economics into the same operating context as your North Star.
         </p>
 
         <div className="finops-concept section-lead">

@@ -37,10 +37,15 @@ export function MethodologySection() {
         <div>
           <p className="eyebrow">The way of working behind the product</p>
           <h2 className="section-title">Learn it by making something real</h2>
+          {/* Epic D1 — high product taste, and the difference between something that demos well
+              and something that holds up in production. Both are borrowed phrases; neither needed
+              re-pointing, because they are already about the person rather than the org. */}
           <p className="measure">
-            The method came out of building Golden Frijoles, and the way to learn it is to use it: bring your
-            own project, install the rails, design a Bet with your agents, build it, prove it, and find out
-            what actually happened.
+            Agents make it cheap to build something that demos well. What they do not give you is the taste
+            to know whether it should exist, or the evidence that it held up once real people used it. The
+            method came out of building Golden Frijoles, and the way to learn it is to use it: bring your own
+            project, install the rails, design a Bet with your agents, build it, prove it, and find out what
+            actually happened.
           </p>
           <p className="takeaway">Your project. Not our demo.</p>
 
