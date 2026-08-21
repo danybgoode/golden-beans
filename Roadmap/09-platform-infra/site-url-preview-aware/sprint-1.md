@@ -46,14 +46,15 @@ own output, **so that** I can actually exercise the surface before it merges.
 - The value is normalised the same way `SITE_URL` is (trimmed, no trailing slash), so callers that
   string-concatenate `${siteUrl}/install` cannot produce a double slash.
 - Nothing is read from the request. No `headers()`, no `Host`, no `x-forwarded-*`.
-- `lib/site-url.test.ts` covers, with the environment stubbed and restored: SITE_URL wins over a
-  present VERCEL_BRANCH_URL · preview + branch URL · preview + only VERCEL_URL · preview with
-  neither → localhost · **production without SITE_URL → localhost, not the deployment URL** ·
-  development → localhost · trailing-slash and whitespace normalisation.
+- `lib/site-url-resolve.test.ts` covers, as ARGUMENTS rather than stubbed environment variables
+  (epic A1 moved the order into a pure module): SITE_URL wins over a present VERCEL_BRANCH_URL ·
+  preview + branch URL · preview + only VERCEL_URL · preview with neither → localhost ·
+  **production without SITE_URL → localhost, not the deployment URL** · development → localhost ·
+  trailing-slash and whitespace normalisation · an empty-string SITE_URL treated as unset.
 - The header comment explains **why a platform variable is not a Host header**, in the terms the
   epic README uses, so the next reader does not revert it citing AGENTS rule #5.
 **Risk:** medium
-**QA:** `lib/site-url.test.ts`, every branch mutation-checked
+**QA:** `lib/site-url-resolve.test.ts`, every branch mutation-checked
 
 ### Story 1.2 — The comments that now say the opposite
 **As** the next person to read these files, **I want** them to describe the function that exists,
@@ -108,8 +109,8 @@ Vercel actually exposes the variables rather than trusting that it does.
 
 ## Sprint QA
 
-- `lib/site-url.test.ts` — new, every branch observed failing.
-- The Story 1.3 guard — new, mutation-checked.
+- `lib/site-url-resolve.test.ts` — new, all six branches observed failing.
+- `lib/site-url-callers.test.ts` — the Story 1.3 registry guard, three mutations observed failing.
 - Every pre-existing spec that pins a single host (`llms-txt`, `northstar-self-serve`,
   `landing-prompts`) green **without being edited** — they run against localhost, where behaviour is
   unchanged, so an edit to any of them in this diff is a review stop.
