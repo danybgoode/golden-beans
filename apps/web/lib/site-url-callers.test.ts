@@ -190,7 +190,16 @@ test('every durable-URL caller still USES its declared gate, not just imports it
     const source = readFileSync(join(WEB_ROOT, file), 'utf8')
 
     // Strip import statements, so a gate reduced to an unused import fails rather than passes.
-    const body = source.replace(/^\s*import\s[\s\S]*?from\s*['"][^'"]+['"];?\s*$/gm, '')
+    //
+    // Two patterns, and the lookahead in the first is load-bearing: `[\s\S]*?` alone will happily
+    // span from a SIDE-EFFECT import (`import 'server-only'`, which has no `from`) all the way to
+    // the `from` of a later import, swallowing every line between them — including a gate usage.
+    // `(?!\bimport\b)` stops the span at the next import keyword. Reproduced before fixing: the
+    // naive version ate a whole `const` declaration sitting between two imports.
+    // (agy, PR #116 round 3 — a guard gets the same suspicion as the code it guards.)
+    const body = source
+      .replace(/^\s*import\s(?:(?!\bimport\b)[\s\S])*?from\s*['"][^'"]+['"];?\s*$/gm, '')
+      .replace(/^\s*import\s*['"][^'"]+['"];?\s*$/gm, '')
 
     assert.ok(
       body.includes(entry.gatedBy),
