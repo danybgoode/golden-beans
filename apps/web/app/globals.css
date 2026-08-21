@@ -87,10 +87,12 @@ body {
   background: color-mix(in srgb, var(--gold-hot) 34%, transparent);
 }
 
+/* `.baglabel` was dropped from this group when the hero's kraft bag was deleted
+   (agentic-pm-public-surface Sprint 2). `.divider` still renders — MakerLoopSection uses it — so
+   this rule was EDITED rather than deleted with its dead neighbours. A prune that took the whole
+   group would have silently un-styled selection on a live element: valid CSS, wrong page. */
 .divider ::selection,
-.divider::selection,
-.baglabel ::selection,
-.baglabel::selection {
+.divider::selection {
   color: var(--stamp);
   background: color-mix(in srgb, var(--stamp) 26%, transparent);
 }
@@ -164,6 +166,30 @@ body {
   color: var(--crema);
 }
 
+/* ── `.btn-mini` lays out its icon, because tokens.css does not ────────────────────────────────
+   agentic-pm-public-surface · Sprint 2, Story 2.4.
+
+   `tokens.css` gives `.btn-mini` padding, colour and a radius, and no layout: no `display`, no
+   `align-items`, no `gap`. Its one call site — `CopyPromptCard`'s copy button — renders an inline
+   SVG followed by a text node, so the glyph sat ON the first letter of the label at every width.
+
+   This was already true before this sprint and nobody had seen it, because the card lived at the
+   BOTTOM of the page. Story 2.1 put a second one in the hero, which made a pre-existing defect the
+   first interactive thing a reader meets, and Story 2.4's acceptance names the copy button's
+   affordance specifically. Found by taking a screenshot and looking at it — no assertion on this
+   page could have failed for it (LEARNINGS, 2026-08-07: a full green gate does not see layout).
+
+   The fix is HERE and not in `tokens.css`: that file is the byte-mirrored design handoff and this
+   epic does not edit it (epic D1). `globals.css` imports it on line 1, so a plain override at equal
+   specificity wins by order — the mechanism the stylesheet already relies on.
+
+   Blast radius checked rather than assumed: `.btn-mini` has exactly one call site in the app. */
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -216,17 +242,7 @@ body {
    `min-width: auto` lets that push the whole track wider than the viewport. One
    long connector token in a two-column grid is enough. Resetting it to 0 lets
    the track shrink and the content wrap. */
-:where(
-    .row2,
-    .cards3,
-    .hero-grid,
-    .proof-grid,
-    .proof-stack,
-    .comparison-grid,
-    .statrow,
-    .stat-grid,
-    .funnel-layout
-  )
+:where(.row2, .cards3, .hero-grid, .proof-grid, .comparison-grid, .statrow, .stat-grid, .funnel-layout)
   > * {
   min-width: 0;
 }
@@ -677,23 +693,6 @@ body {
   font-size: 16px;
 }
 
-/* Gold, not green. These two are the only readings on the landing that were ever
-   painted `--green`, and the page's green ink was removed wholesale in the
-   2026-08-19 readability pass. The NUMBER stays — it is a real measurement off
-   the demo tenant, not chrome — and it keeps a direction: up reads in the data
-   colour every other figure on the page uses, down stays red, and the arrow
-   glyph beside it (`Icon name="trend-up|trend-down"`) carries the direction
-   independently of colour, which `references/ux-guidelines.md` requires anyway. */
-.trend--up,
-.lift--up {
-  color: var(--gold-hot);
-}
-
-.trend--down,
-.lift--down {
-  color: var(--red);
-}
-
 .experiment-grid {
   display: flex;
   flex-wrap: wrap;
@@ -780,58 +779,11 @@ body {
   flex-wrap: wrap;
 }
 
-/* ── The section stamp ─────────────────────────────────────────────────────
-   landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4).
-
-   Replaces the `①`-`⑩` glyphs `.divider .num` used to set at 12px. The glyph
-   was illegible for a structural reason, not a sizing one: the enclosing ring
-   is part of the character, so the digit inside it renders at roughly a third
-   of the nominal font size and scaling the type scales the ring with it. Drawn
-   as a real disc, the ring is a border and the numeral gets the whole em box.
-
-   Materially this is the packaging family (kraft ground, `--stamp` ink, the
-   fibre texture already on `.divider`), so it reads as an ink stamp on a paper
-   band rather than as a UI chip that wandered in from the product surface. The
-   inset highlight is the paper showing through where a rubber stamp presses
-   least — the same trick `.roundstamp` uses on the bag label, kept consistent
-   on purpose so the two read as one system. */
-.divider__stamp {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--stamp-dim);
-  border-radius: 50%;
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  color: var(--stamp);
-  box-shadow: inset 0 1px 2px rgb(255 244 220 / 35%);
-}
-
 .divider .tag {
   margin-left: 0;
   max-width: 100%;
   white-space: normal;
   text-align: center;
-}
-
-.roundstamp__stars {
-  display: inline-flex;
-  justify-content: center;
-}
-
-.roundstamp {
-  right: 2px;
-}
-
-.baglabel .row b {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .pricing {
@@ -2032,10 +1984,6 @@ a.stat-card:hover {
     white-space: nowrap;
   }
 
-  .roundstamp {
-    right: -18px;
-  }
-
   .hero-cta {
     width: auto;
   }
@@ -2423,22 +2371,6 @@ a.stat-card:hover {
   font-size: 13px;
 }
 
-/* ── The kraft bag label's category pill ────────────────────────────────── */
-
-.baglabel .row .cat {
-  flex: none;
-  padding: 2px 8px;
-  border: 1px solid var(--stamp-dim);
-  border-radius: 99px;
-  color: var(--stamp-dim);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-}
-
-.baglabel .row span:first-child {
-  line-height: 1.25;
-}
-
 /* ── Pricing ───────────────────────────────────────────────────────────── */
 
 .tier {
@@ -2561,24 +2493,6 @@ a.stat-card:hover {
   text-transform: uppercase;
 }
 
-/* §6 stacks two independent proofs (epic D2) with a rule between them, so a
-   reader can see where "our delivery history" ends and "a live engine read"
-   begins. */
-.proof-stack {
-  display: grid;
-  gap: 30px;
-  margin-top: 26px;
-}
-
-.proof-block + .proof-block {
-  padding-top: 30px;
-  border-top: 1px solid var(--line);
-}
-
-.proof-block .section-copy {
-  max-width: 720px;
-}
-
 .row2--center {
   align-items: center;
 }
@@ -2603,16 +2517,6 @@ a.stat-card:hover {
 .center-cta .measure,
 .pricing .measure {
   margin-inline: auto;
-}
-
-@media (min-width: 640px) {
-  .proof-stack {
-    gap: 40px;
-  }
-
-  .proof-block + .proof-block {
-    padding-top: 40px;
-  }
 }
 
 /* ============================================================================
@@ -2973,11 +2877,12 @@ a.stat-card:hover {
    the two rules that actually make a page feel settled rather than twitchy.
 
    `tokens.css` is the byte-mirrored design handoff and is not edited
-   (landing-redesign-v2 D3), so the two surfaces whose shadow is declared there
-   — `.agent-win` and `.baglabel` — are pulled onto the ladder here instead.
-   Both are the same idea: a frame the page is holding up for you to look at. */
-.agent-win,
-.baglabel {
+   (landing-redesign-v2 D3), so a surface whose shadow is declared there is
+   pulled onto the ladder here instead. It used to be two — `.agent-win` and
+   `.baglabel` — until agentic-pm-public-surface Sprint 2 deleted the hero's
+   kraft bag and every rule that styled it. `.agent-win` is a frame the page
+   holds up for you to look at, and it keeps the lifted rung. */
+.agent-win {
   box-shadow: var(--elevation-lifted);
 }
 
@@ -3040,8 +2945,7 @@ a.stat-card:hover {
    starting at zero. */
 .golden-frijol-mark,
 .chat-avatar,
-.journey-node__icon,
-.divider__stamp {
+.journey-node__icon {
   contain: layout paint;
 }
 
@@ -3224,58 +3128,6 @@ a.stat-card:hover {
 .maker-flow__item p {
   color: var(--dim);
   font-size: 13.5px;
-}
-
-/* ── The operating context shell ────────────────────────────────────────────
-   Reuses `.app-shell`/`.app-bar`/`.app-body`, which already model "a picture of
-   the product". Only the navigation column is new.
-
-   The `operating-` prefix is not decoration. The first version of this block
-   named its wrapper `.context-body` — a class `ContextCard` has owned since
-   landing-frijoles-rebrand — so the 900px rule below silently turned every Bet
-   card on the page into a 190px + 1fr grid, and the hero's three-row Bet
-   rendered as "Outcome | Appetite / Evidence". Nothing failed; it just looked
-   like a layout decision somebody had made. Same failure this stylesheet
-   already recorded once for `.hero-cta`/`.button-row`: a shared name for two
-   different things is a selector waiting to over-match. */
-.operating-nav {
-  display: none;
-}
-
-.operating-nav__item {
-  padding: 8px 10px;
-  border-radius: 7px;
-  color: var(--dim);
-  font-size: 12.5px;
-}
-
-.operating-nav__item--on {
-  background: var(--roast-2);
-  color: var(--crema);
-}
-
-.operating-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* The agent's line under the shell. Left rule in gold, same as `.tool` — the
-   agent's contribution is marked the same way everywhere on this page. */
-.operating-rail {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--gold);
-  border-radius: 9px;
-  color: var(--dim);
-  font-size: 13px;
-}
-
-.operating-rail strong {
-  color: var(--gold);
 }
 
 /* ── The Ops panel ──────────────────────────────────────────────────────────
@@ -3693,23 +3545,6 @@ a.stat-card:hover {
     border-right: none;
   }
 
-  /* The navigation column appears only where there is room for it beside the
-     content. On a phone it is hidden rather than stacked: it is a picture of
-     where these things live, and a stacked list of eight labels above the
-     figures reads as a menu the reader is supposed to use. */
-  .operating-nav {
-    display: grid;
-    gap: 4px;
-    align-content: start;
-    padding: 16px;
-    border-right: 1px solid var(--line);
-  }
-
-  .operating-body {
-    display: grid;
-    grid-template-columns: 190px 1fr;
-  }
-
   .finops-facets {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -3734,133 +3569,30 @@ a.stat-card:hover {
 }
 
 /* ── The hero's right-hand column ───────────────────────────────────────────
-   The bag label and the agent window, and the relationship between them is the
-   whole composition: the bag is tilted on the right, the window sits across its
-   bottom-left corner, and the two objects overlap the way they do in
-   `references/golden-frijoles-maker-ops-landing-v0.2.html`.
+   One object: the handoff prompt card (agentic-pm-public-surface Sprint 2).
 
-   The mockup does that with absolute positioning at EVERY width, which on a
-   phone stacks two near-full-width objects on top of each other and buries one.
-   So the overlap is a wide-viewport composition only — see the block below,
-   which is where the breakpoint that governs it is stated. This paragraph named
-   900px, which is `.hero-grid`'s breakpoint and not this composition's; a second
-   copy of a number is a second thing to keep in step, so it names none.
+   This was a composition of TWO — a tilted kraft bag and an illustrated agent
+   window overlapping it in a single grid cell at wide widths, returning to
+   normal flow below 1000px. Roughly sixty lines of this file argued the
+   mechanics of that overlap: why one grid cell rather than two absolutely
+   positioned children (the `min-height` it needed was a guess about how tall
+   the objects were, and it was wrong at the first untuned width), and why the
+   override block had to sit BELOW the base rules to win on source order at
+   equal specificity.
 
-   This file previously argued for stacking at every width. That was a defensible
-   call and it is not the one the page wants: read on a laptop, two stacked
-   rectangles are a list of two things rather than one picture. */
+   All of it went with the second object. Sprint 2 replaced both with a single
+   `CopyPromptCard` — something the reader can use instead of two pictures they
+   have to take on trust — so there is nothing left to overlap, no breakpoint
+   that changes the composition, and no reason for this to be a grid.
+
+   Story 2.4 asked for this to be SIMPLIFIED rather than left as dead rules
+   under a confident explanation. Dead CSS under a good comment is worse than
+   dead CSS: it reads as evidence (LEARNINGS, 2026-08-20). */
 .hero-magic {
-  display: grid;
-  gap: 26px;
-  /* The stamp is positioned outside the bag's top-right corner. Without this the
-     grid clips it on a narrow viewport, where the bag is already at the gutter. */
-  padding-top: 14px;
-}
-
-.hero-window {
-  display: grid;
-  gap: 8px;
-}
-
-/* ── The overlap ────────────────────────────────────────────────────────────
-   Both objects are placed in the SAME grid cell — the bag pinned to the top-right
-   and tilted, the window across the bottom-left and in front.
-
-   ── This block sits BELOW the base rules on purpose ─────────────────────────
-   It overrides `.hero-magic`'s `gap` and `padding-top` at the same specificity
-   (0,1,0), so source order is the only thing deciding the winner. It was written
-   ABOVE them, which made both of those declarations inert: the base values kept
-   applying at every width and the media query only ever contributed
-   `grid-template-columns`. Caught by Antigravity in cross-family review of PR
-   #102 — and it is the SAME defect this PR fixes in `.pricing__intro`, a rule
-   sitting above its target at equal specificity and silently doing nothing. Two
-   instances of one class in one file is why this names the rule rather than the
-   symptom: anything added here stays below the base block.
-
-   ── Why one grid cell and not two absolutely-positioned children ────────────
-   The first version did use `position: absolute` on both, with a `min-height` on
-   the parent to reserve the row (absolutely-positioned children contribute no
-   height). That number is a guess about how tall the two objects are, and it was
-   wrong at the first width I checked that was not the one I tuned it at: at
-   1024px the window's top landed over the bag's masthead and cut the title in
-   half, because the window grows taller as the column narrows and the
-   `min-height` did not.
-
-   Overlapping in one grid cell removes the guess. The row's height is
-   `max(bag, window + its offset)`, measured rather than declared, so the window's
-   top is always exactly `margin-top` below the bag's — whatever either one's
-   content does. That offset is the composition's one real number: it is set to
-   clear the bag's masthead and first row, which is the part of the packet that
-   has to stay readable.
-
-   Below 1000px both objects return to normal flow and keep their whole selves —
-   the stacked layout this page shipped with. (That sentence read "below 900px"
-   for one commit, naming `.hero-grid`'s breakpoint rather than this one's. Same
-   review round.) */
-@media (min-width: 1000px) {
-  .hero-magic {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding-top: 0;
-  }
-
-  .hero-magic > .baglabel {
-    grid-area: 1 / 1;
-    align-self: start;
-    justify-self: end;
-    width: min(340px, 72%);
-    transform: rotate(2deg);
-    /* Room for what hangs off the bag's top-right corner: the `.roundstamp`
-       (-18px) plus the horizontal spread the 2deg tilt adds to the bounding box.
-       Without it the stamp cleared the wrap's gutter by 0.6px at 1024 and put a
-       horizontal scrollbar on the page — which `e2e/mobile-heuristics.browser.
-       spec.ts` sweeps for, at phone widths where this layout does not apply. */
-    margin-right: 26px;
-  }
-
-  .hero-magic > .hero-window {
-    grid-area: 1 / 1;
-    /* `start`, not `end`. With `end` the window's BOTTOM pins to the row's, so the
-       offset below the bag only equals `margin-top` while the window plus that
-       offset is the taller of the two — and silently grows when the bag is taller.
-       Measured: forcing the bag to 542px slid the offset from 194px to 542px, i.e.
-       the window dropped clear of the bag entirely. With `start` the window's top
-       IS `margin-top` below the row's, unconditionally, which is what the comment
-       above claims. Antigravity, round 3 of PR #102 — and the same defect shape as
-       the two it found in round 2: prose asserting a property the code only had in
-       the case I happened to look at. */
-    align-self: start;
-    justify-self: start;
-    width: min(420px, 82%);
-    /* Clears the bag's title and its first row. */
-    margin-top: 160px;
-    /* In front of the bag: the conversation is the subject, the packet is the
-       thing it is about. */
-    z-index: 1;
-  }
-}
-
-/* ── The bag, with its brand plate removed ──────────────────────────────────
-   `tokens.css` gives `.baglabel .brand` the bag's masthead — a 24px name over a
-   3px rule. That block came out (it read "GOLDEN FRIJOLES · MAKER GRADE" over a
-   logo the nav already carries), which left `.netwt` as the topmost element: a
-   12px mono line where the mockup has a 29px title. So `.netwt` becomes the
-   title it is now standing in for, and keeps the heavy rule under it that used
-   to belong to the plate above. */
-.baglabel .netwt {
-  display: block;
-  padding: 2px 0 12px;
-  border-bottom: 3px solid var(--stamp);
-  font: 900 27px/1.05 var(--sans);
-  font-stretch: 112%;
-  letter-spacing: -0.02em;
-}
-
-/* A row on the bag label that is not yet in the packet. Inline with the
-   contents rather than on its own line: the row is one statement, and a badge
-   that wraps to its own line reads as a separate claim about the whole bag. */
-.baglabel__badge {
-  margin-left: 8px;
+  /* The card carries its own frame and fills the column. The wrapper survives
+     because it is what `.hero-grid` places, and the class still names the thing
+     it always named. */
+  min-width: 0;
 }
 
 /* The mockup's `.note-next`: the panel's last word, in the colour the page uses

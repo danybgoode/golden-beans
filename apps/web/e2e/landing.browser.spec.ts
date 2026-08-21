@@ -19,10 +19,15 @@ test('the landing renders the maker-ops narrative', async ({ page }) => {
   await expect(page.locator('nav.gb')).toBeVisible()
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Make more')
 
-  // ONE copy-a-prompt block, not two. `TryItSection`'s handoff prompt retired with the
-  // repositioning (landing-maker-ops D1); the closing decision prompt survived, deliberately —
-  // it is the page's only moment of acting on its own "evidence over assertion" argument.
-  await expect(page.locator('.prompt-card')).toHaveCount(1)
+  // TWO copy-a-prompt blocks, and the count changed WITH its reasoning rather than quietly
+  // (agentic-pm-public-surface, epic D5). `landing-readability-pass` D1 cut the old §try because
+  // two such blocks read as a pattern rather than an invitation — true of two blocks asking the
+  // SAME thing. These ask different things at different moments: the hero offers to teach you
+  // something, and the closing CTA asks your own agent whether to bother with us at all.
+  //
+  // A comment justifying the opposite of what the assertion below checks is CODE-QUALITY #3, and
+  // it is the kind a reviewer reads as evidence and then stops looking.
+  await expect(page.locator('.prompt-card')).toHaveCount(2)
 })
 
 // The copy button's actual contract: what lands on the clipboard is what the reader saw.
@@ -58,40 +63,25 @@ test('the copy button puts the visible prompt on the clipboard, unaltered', asyn
   expect(clipboard.length).toBeGreaterThan(80)
 })
 
-// Epic D4, and the finding that proved it needs a spec rather than a convention.
+// ── The framed-window guard retired with the last framed window (epic A12) ─────────────────────
+// This asserted that every `.agent-win` on `/` carried a `SurfaceNote` committing to "real" or
+// "illustrated" — the fix for a page that once labelled an invented conversation as though it were
+// a live session (PR #92: the hero's note said "In ChatGPT, Claude, or your agent", describing
+// where the conversation happens and never that its figures were invented).
 //
-// This page renders illustrated agent conversations AND one real read of the demo tenant, in
-// deliberately identical chrome. The `SurfaceNote` above each frame is the only thing telling them
-// apart. Cross-family review of PR #92 found the hero's note saying merely "In ChatGPT, Claude, or
-// your agent" — describing where the conversation happens, never that its lift and confidence
-// figures were invented — while the footer's ledger already claimed the hero was labelled as an
-// illustration. The page was asserting a label it did not have.
+// Sprint 2 removed the last three frames: the hero's illustrated agent window, §product's app-shell
+// picture, and §proof's genuinely-live read. The guard's floor (`count > 0`) therefore FAILED
+// rather than passing vacuously, which is the honest outcome and is how this was found.
 //
-// So: every agent window on this page carries a note, and each note commits to real or illustrated.
-test('every framed agent window says whether it is real or an illustration', async ({ page }) => {
-  await page.goto('/')
+// sprint-2.md predicted it would be "vacuously true of the hero and still meaningful elsewhere".
+// There is no elsewhere — checked, not assumed: nothing under `components/landing/` renders
+// `AgentWindow` any more. So the guard is deleted rather than floored at zero, for the same reason
+// as the numbered-stamp spec (epic A5): a test that cannot fail is worse than no test, because the
+// next reader stops there.
+//
+// It is not obsolete, it is unemployed. If an illustrated frame ever returns to this page, this
+// guard returns with it — the failure it prevents is one this page has actually shipped.
 
-  const windows = page.locator('.agent-win')
-  const count = await windows.count()
-  expect(count, 'the page should render agent windows').toBeGreaterThan(0)
-
-  const notes = await page.locator('.surface-note').allInnerTexts()
-  expect(
-    notes.length,
-    'every framed surface needs a note — an unlabelled frame is the failure this guards'
-  ).toBeGreaterThanOrEqual(count)
-
-  for (const note of notes) {
-    expect(
-      /illustration|example|real read/i.test(note),
-      `a surface note must commit to real or illustrated, got: ${note}`
-    ).toBe(true)
-  }
-})
-
-// Every nav link points at a section that exists. A dead in-page anchor is invisible to a
-// type-checker, silently does nothing when clicked, and is exactly the kind of rot a redesign
-// introduces — the nav was rewritten in the same commit as the section ids it points at.
 test('every nav link resolves to something real', async ({ page, request }) => {
   await page.goto('/')
 
@@ -288,22 +278,21 @@ test('canonical public brand assets use Golden Frijoles names and accessible tex
 
 // Story 1.5 (epic D4). The section number is a drawn disc, not a `①` glyph — and the prop that
 // feeds it is typed `number`, so the glyph cannot come back through the front door either.
-test('section dividers carry a legible numbered stamp', async ({ page }) => {
+// ── The numbered-stamp spec retired with the device it measured (epic A5) ──────────────────────
+// `SectionDivider` had two call sites — §proof (1) and §pricing (2) — and agentic-pm-public-surface
+// Sprint 2 deleted §proof. A lone "1" describes a document nobody can read, so the stamp came off
+// §pricing too and the component was deleted.
+//
+// The test that asserted "at least two visible stamps, the first reading 1" was therefore deleted
+// rather than loosened. Relaxing its floor to zero would have left a test that cannot fail, which
+// is worse than no test because the next reader stops there (CODE-QUALITY #5). This suite is not in
+// the blocking gate, so nothing would have caught it going vacuous.
+//
+// Its LAST assertion was never about dividers, and it survives below on its own: no enclosed-numeral
+// glyph may appear anywhere on the page. That guard came from landing-frijoles-rebrand, where ❶-style
+// characters rendered as tofu in the shipped font, and it still has a subject.
+test('no enclosed-numeral glyph survives on the landing page', async ({ page }) => {
   await page.goto('/')
-
-  // Two, not four and not ten: landing-maker-ops replaced §1–§5 and §7 with sections that carry no
-  // stamp, and the 2026-08-19 readability pass cut §connect and §sdk, leaving Proof (1) and
-  // Pricing (2). The assertion is a floor rather than an equality so adding a stamped section does
-  // not fail it — but it moves down with the page, because a floor above what the page has is a
-  // check that can only ever be a bug report about the check.
-  const stamps = page.locator('.divider__stamp')
-  await expect(stamps.first()).toBeVisible()
-  expect(await stamps.count()).toBeGreaterThanOrEqual(2)
-
-  await expect(stamps.first()).toHaveText('1')
-
-  const box = await stamps.first().boundingBox()
-  expect(box!.width, 'the stamp must be a real target, not a text glyph').toBeGreaterThanOrEqual(24)
 
   const body = await page.locator('body').innerText()
   expect(body, 'no enclosed-numeral glyph survives on the page').not.toMatch(/[①-⓿]/)
@@ -678,4 +667,88 @@ test('no link on /talk is a bare in-page fragment', async ({ page }) => {
   expect(bare, 'a bare fragment on /talk resolves against /talk, where these sections do not exist').toEqual(
     []
   )
+})
+
+// ── agentic-pm-public-surface · Sprint 2, Story 2.3 ─────────────────────────────────────────────
+//
+// The nav spec above asserts every link it FINDS resolves. That is necessary and not sufficient
+// here: it would pass just as happily if `Product` and `Proof` were still in the nav pointing at
+// sections that still existed. What this epic claims is the opposite — that both are GONE — and a
+// claim about absence needs its own assertion, because nothing else on the page can fail for it.
+test('the retired sections are gone from the page and from the nav', async ({ page }) => {
+  await page.goto('/')
+
+  for (const id of ['product', 'proof']) {
+    await expect(
+      page.locator(`#${id}`),
+      `#${id} was retired by this epic but is still on the page`
+    ).toHaveCount(0)
+  }
+
+  const hrefs = await page
+    .locator('.landing-nav__links a')
+    .evaluateAll((links) => links.map((link) => link.getAttribute('href') ?? ''))
+
+  expect(hrefs, 'the nav should be Ops · Pricing · Methodology').toEqual([
+    '/#ops',
+    '/#pricing',
+    '/methodology',
+  ])
+
+  // "Product" is RETIRED, not re-pointed at #ops (epic D4): a link labelled Product landing on a
+  // section called Ops is a small lie that costs more than the link. Asserted on the label, because
+  // the href check above would not notice a renamed link.
+  const labels = await page
+    .locator('.landing-nav__links a')
+    .evaluateAll((links) => links.map((link) => link.textContent?.trim() ?? ''))
+  expect(labels).not.toContain('Product')
+  expect(labels).not.toContain('Proof')
+})
+
+// agentic-pm-public-surface · Sprint 2, Story 2.4 — the copy button's icon does not sit on its label.
+//
+// This defect was LIVE before this sprint and nobody had seen it: `tokens.css` gives `.btn-mini`
+// padding and colour but no layout — no `display`, no `align-items`, no `gap` — so the inline SVG
+// and the text node ran together and the glyph overlapped the first letter. It went unnoticed
+// because the only prompt card was at the BOTTOM of the page. Story 2.1 put one in the hero.
+//
+// No existing assertion could have caught it. "The element exists", "the clipboard round-trips" and
+// "no horizontal overflow" are all true of the broken rendering. It was found by taking a
+// screenshot and looking at it, and it is pinned here as GEOMETRY so that specific regression
+// cannot return (LEARNINGS, 2026-08-07 — assertions cover the properties you thought to name).
+test('the copy button lays out its icon beside its label, not on top of it', async ({ page }) => {
+  await page.goto('/')
+
+  const buttons = page.locator('.prompt-card .btn-mini')
+  const count = await buttons.count()
+  expect(count, 'the page should render at least one copy-prompt button').toBeGreaterThan(0)
+
+  for (let i = 0; i < count; i++) {
+    // Measured against the LABEL, not against the button's own right edge. The first version of
+    // this guard compared the icon to the button box and could not fail: a button is wide enough
+    // that there is always room to its right, whether or not the glyph is sitting on the "c" of
+    // "copy". It passed happily with the fix reverted. Caught by mutation-checking it, which is the
+    // only thing that ever catches this (CODE-QUALITY #5b).
+    //
+    // The label is a bare text node with no element to locate, so its rectangle comes from a Range.
+    const boxes = await buttons.nth(i).evaluate((el) => {
+      const svg = el.querySelector('svg')
+      const text = [...el.childNodes].find(
+        (node) => node.nodeType === Node.TEXT_NODE && (node.textContent ?? '').trim().length > 0
+      )
+      if (!svg || !text) return null
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      const icon = svg.getBoundingClientRect()
+      const label = range.getBoundingClientRect()
+      return { iconRight: icon.right, labelLeft: label.left, labelWidth: label.width }
+    })
+
+    expect(boxes, 'the copy button should have both an icon and a text label').not.toBeNull()
+    expect(boxes!.labelWidth, 'the label should render').toBeGreaterThan(0)
+    expect(
+      boxes!.labelLeft - boxes!.iconRight,
+      'the icon overlaps its label — .btn-mini lost the flex layout globals.css gives it'
+    ).toBeGreaterThan(0)
+  }
 })

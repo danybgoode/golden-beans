@@ -27,8 +27,8 @@ export async function GET() {
 ## Public routes
 
 - ${siteUrl}/
-  The landing page — the product pitch, a live proof section reading the real synthetic demo
-  project, and the signup/waitlist entry point.
+  The landing page — the product pitch, a prompt you can hand to your own agent, and the
+  signup/waitlist entry point.
 - ${siteUrl}/install
   Get your own tokenized MCP connector URL ("Add to Claude" deep-link) for the demo project, plus
   the SDK install docs for wiring your own product into the engine.

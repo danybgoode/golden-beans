@@ -3,7 +3,6 @@ import { getSection } from '@/lib/landing-sections'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { Panel } from '@/components/ui/Panel'
-import { SectionDivider } from '@/components/ui/SectionDivider'
 import { WaitlistForm } from './WaitlistForm'
 
 // landing-redesign-v2 · Sprint 2, Story 2.5 — ⑩ Pricing. Replaces WaitlistSection.tsx.
@@ -31,7 +30,6 @@ export function PricingSection() {
 
   return (
     <>
-      <SectionDivider number={2} title="Pricing" />
       <section className="band" id="pricing">
         <div className="wrap pricing">
           <h2 className="section-title">Pricing that doesn&apos;t require a meeting</h2>

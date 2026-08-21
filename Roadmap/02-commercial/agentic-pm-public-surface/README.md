@@ -340,6 +340,73 @@ facilitation skill, which is ours to keep.
 page, and record the map. Do not vendor the artefact. The provenance requirement was always about
 the claims being checkable, not about the bytes being present.
 
+### A12. There is no "elsewhere" — Sprint 2 removes the LAST framed window, and the guard retires with it
+
+Story 2.1 says the framed-window assertion *"stays — it is now vacuously true of the hero and still
+meaningful elsewhere"*. **There is no elsewhere.** After this sprint nothing under
+`components/landing/` renders `AgentWindow`: the hero's illustration, §product's app-shell picture
+and §proof's live read were the only three, and all three go.
+
+The guard's floor is `count > 0`, so it **failed** rather than passing vacuously — which is the
+honest outcome, and is how this was found rather than shipped.
+
+**Ruling, identical to A5:** the guard is deleted, not floored at zero. A test that cannot fail is
+worse than no test. It is recorded in the file as *unemployed rather than obsolete* — if an
+illustrated frame ever returns to this page, the guard returns with it, because the failure it
+prevents (a page labelling an invented conversation as though it were live) is one this page has
+actually shipped.
+
+**Consequences handled in the same commit:**
+
+- `components/landing/SurfaceNote.tsx` is deleted. Its entire contract was labelling a landing
+  illustration, and there are none left.
+- `AgentWindow` / `ChatThread` / `ContextCard` are **kept**, and this is a deliberate difference.
+  They live in `components/ui/`, which is a component *kit* — `app-component-kit-adoption` is a
+  whole epic about growing its use — and an unused kit primitive is inventory, not dead code.
+  Deleting kit components because one page stopped using them is a different decision from the one
+  this epic was bet on.
+- Two comments in those primitives referenced `SurfaceNote` in the present tense and now say what
+  actually happened (CODE-QUALITY #3).
+
+**Stated gap, so it gets scheduled rather than assumed** (LEARNINGS, 2026-08-07): three kit
+primitives now have zero call sites anywhere in the app. That is visible and named here; it is not
+this epic's to resolve.
+
+### A13. `SITE_URL` is Production-only, so a PREVIEW renders every prompt as `localhost:3000`
+
+*Found by Codex persisting on PR #113 after the comment it first objected to had been fixed. The
+repeated finding was pointing at something bigger than the comment (LEARNINGS: a reviewer repeating
+a finding is a signal to look again).*
+
+**Verified against the live project, not inferred:** `vercel env ls` shows exactly one `SITE_URL`,
+scoped to **Production**. `getSiteUrl()` reads `SITE_URL` and otherwise returns
+`http://localhost:3000` — deliberately, because AGENTS rule #5 forbids a Host-header fallback.
+
+**Therefore, on any preview deployment:**
+
+- the hero's copied handoff prompt tells the reader's agent to read `http://localhost:3000/llms.txt`;
+- `/northstar-self-serve.md` hands out `http://localhost:3000/install`;
+- and the one-host spec still passes, because everything is consistently *the wrong* host.
+
+**This changes an owed verification.** Sprint 1's Story 1.4 asks the product owner to run the
+workshop end-to-end **"pointed at the preview URL"**. As things stand that cannot work: the
+preview's own document points the agent at the tester's localhost. **Story 1.4 must be run against
+production after merge**, and its acceptance is corrected to say so.
+
+**Not fixed inside this epic, deliberately.** The three options each cost more than a copy sprint
+should spend, and the choice is the product owner's:
+
+1. **Run the verification on production after merge** — free, and what this epic assumes. Chosen.
+2. **Set a Preview-scoped `SITE_URL`** — one env var, but a *static* value cannot match a
+   per-branch preview hostname, so it would be right for one preview and wrong for the rest.
+3. **Teach `getSiteUrl()` about `VERCEL_URL`** — the correct long-term answer, and genuinely safe
+   (a platform-provided env var is not a request Host header, so rule #5 is not weakened). But
+   `getSiteUrl()` is the seam behind *every* absolute URL in the app — the install page's connector
+   URL, `metadataBase`, the sitemap, `robots.txt` — and changing it is a shared-surface decision
+   with its own review, not a line in a copy PR.
+
+**Recommendation: option 3, as its own small epic.** Flagged for Daniel by name at epic close.
+
 ## Scope
 
 | Sprint | Story | Risk |
