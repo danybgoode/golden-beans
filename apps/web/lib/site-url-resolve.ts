@@ -71,9 +71,13 @@ export function resolveSiteUrl(env: SiteUrlEnv): string {
     // custom preview runner, a local reproduction — `https://${host}` would otherwise produce
     // `https://https://…`, a string that parses as a URL and points nowhere. (agy, PR #116.)
     //
+    // Case-INSENSITIVE, because URL schemes are (RFC 3986) and a hand-set `HTTPS://` would slip a
+    // case-sensitive strip. This is the same class as the host matcher that let `HTTPS://` past it
+    // in agentic-pm-public-surface — worth fixing twice rather than learning twice.
+    //
     // The `if (host)` is what stops a missing variable becoming the plausible-looking
     // `https://undefined`.
-    const host = (env.VERCEL_BRANCH_URL?.trim() || env.VERCEL_URL?.trim())?.replace(/^https?:\/\//, '')
+    const host = (env.VERCEL_BRANCH_URL?.trim() || env.VERCEL_URL?.trim())?.replace(/^https?:\/\//i, '')
     if (host) return normalise(`https://${host}`)
   }
 

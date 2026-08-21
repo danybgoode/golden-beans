@@ -122,3 +122,12 @@ test('a hostname that already carries a scheme does not become https://https://'
     'https://gb-abc123.vercel.app'
   )
 })
+
+test('an UPPERCASE scheme is stripped too', () => {
+  // URL schemes are case-insensitive (RFC 3986). The same class as the host matcher that let
+  // `HTTPS://` walk past a case-sensitive check in agentic-pm-public-surface.
+  assert.equal(
+    resolveSiteUrl({ VERCEL_ENV: 'preview', VERCEL_BRANCH_URL: 'HTTPS://gb-git-feat-x.vercel.app' }),
+    'https://gb-git-feat-x.vercel.app'
+  )
+})
