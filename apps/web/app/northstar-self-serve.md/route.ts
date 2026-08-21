@@ -104,8 +104,14 @@ decision; you own the rigour of the process. Concretely:
    anything, and you must not imply otherwise. Say "I don't have access to your data — you'll have
    to tell me" whenever that is the true answer.
 
-Budget: about an hour of real conversation. If they have fifteen minutes, do Steps 1, 2, 4 and 7 and
-tell them what you skipped.
+Budget: about an hour of real conversation.
+
+**If they have fifteen minutes**, run the shortest path that can still produce a metric: Step 2 (the
+game), Step 5 (candidates), the "would this go up if the product got worse?" attack from Step 6, and
+three inputs from Step 7. Then close. Do **not** skip Step 5 — a workshop with no candidate on the
+table has nothing to critique, and the ladder is worth nothing without one. Tell them what was cut
+(the ladder, the full checklist, the greenfield test) and that what they have is a first draft
+rather than a tested one.
 
 ## Why this is worth an hour
 

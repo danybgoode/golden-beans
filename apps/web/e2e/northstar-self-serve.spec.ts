@@ -69,7 +69,14 @@ test("the workshop's URLs are built from this deployment's own base URL", async 
   const CITATION_HOSTS = new Set(['amplitude.com'])
   const ourHost = new URL(baseURL!).host
 
-  const hosts = new Set((body.match(/https?:\/\/[^/\s)]+/g) ?? []).map((url) => new URL(url).host))
+  // Case-INSENSITIVE, and `.host` lowercases for us. URL schemes and hosts are case-insensitive per
+  // RFC 3986, so a hardcoded `HTTPS://prod.example` is a real wrong-environment URL that a
+  // case-sensitive matcher waves straight through — a guard that cannot see the input it is
+  // guarding against. Found by Codex in round 5, in the widened matcher from round 4: a fix earns
+  // the same suspicion as the code it replaced.
+  const hosts = new Set(
+    (body.match(/https?:\/\/[^/\s)]+/gi) ?? []).map((url) => new URL(url.toLowerCase()).host)
+  )
   expect(hosts.has(ourHost), "this deployment's own host is missing").toBe(true)
 
   for (const host of hosts) {
