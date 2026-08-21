@@ -89,25 +89,43 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
+/** The two seam files themselves. `site-url.ts` imports `site-url-resolve.ts`; neither is a caller. */
+const SEAM_FILES = ['lib/site-url.ts', 'lib/site-url-resolve.ts']
+
 /**
- * Files that actually IMPORT `getSiteUrl`, static or dynamic.
+ * Files that import a site-url module, in ANY form.
  *
- * Deliberately not a search for the string `getSiteUrl()`: this repo's comments discuss that
+ * ── Keyed on the module SPECIFIER, not on the import clause (Codex, PR #116 round 2) ──────────
+ * The first version matched `import { getSiteUrl } from '…site-url'` and two dynamic shapes. That
+ * is a narrow allow-list of syntaxes, and the reviewer was right that it is the wrong thing to key
+ * on: a namespace import (`import * as siteUrl from '…'`), a renamed binding, or a dynamic import
+ * written differently all add a caller while staying invisible to it. A discovery guard that misses
+ * a caller reports success and understands nothing.
+ *
+ * The specifier is the one thing every import form must contain, so matching it cannot be dodged by
+ * syntax. The trade is deliberate: a file that imports the module *only* for
+ * `isSiteUrlMisconfiguredInProduction` is also swept in and must be classified. That is fine — it is
+ * one line in the registry, and "you touched the URL seam, say which kind you are" is exactly the
+ * question this test exists to force.
+ *
+ * Deliberately still not a search for the string `getSiteUrl()`: this repo's comments discuss that
  * function constantly, and a comment-stripping pass is its own bug surface — `check-design-drift.mjs`
  * shipped one that reported the wrong line for every violation of its entire existence. An import
- * cannot appear in prose, so this needs no stripping to be exact.
+ * specifier cannot appear in prose the way a function name does.
  */
 function callersOfGetSiteUrl(): string[] {
   const found: string[] = []
   for (const dir of SEARCH_DIRS) {
     for (const file of walk(join(WEB_ROOT, dir))) {
       if (/\.test\.tsx?$/.test(file)) continue
+      const relative = file.slice(WEB_ROOT.length + 1)
+      if (SEAM_FILES.includes(relative)) continue
       const source = readFileSync(file, 'utf8')
-      const importsIt =
-        /import\s*\{[^}]*\bgetSiteUrl\b[^}]*\}\s*from\s*['"][^'"]*site-url['"]/.test(source) ||
-        /\bgetSiteUrl\b[^\n]*=\s*await\s+import\(['"][^'"]*site-url['"]\)/.test(source) ||
-        /await\s+import\(['"][^'"]*site-url['"]\)[\s\S]{0,80}?\bgetSiteUrl\b/.test(source)
-      if (importsIt) found.push(file.slice(WEB_ROOT.length + 1))
+      // `from '…site-url'` covers static and re-export forms; `import('…site-url')` covers dynamic.
+      const importsModule =
+        /from\s*['"][^'"]*\bsite-url(-resolve)?['"]/.test(source) ||
+        /import\(\s*['"][^'"]*\bsite-url(-resolve)?['"]\s*\)/.test(source)
+      if (importsModule) found.push(relative)
     }
   }
   return found.sort()
@@ -183,4 +201,35 @@ test('the registry does not name a file that no longer imports getSiteUrl', () =
   const callers = new Set(callersOfGetSiteUrl())
   const stale = Object.keys(CALLERS).filter((file) => !callers.has(file))
   assert.deepEqual(stale, [], `CALLERS lists file(s) that no longer import getSiteUrl:\n  ${stale.join('\n  ')}`)
+})
+
+test('nothing re-exports getSiteUrl, which would route callers around this registry', () => {
+  // The remaining hole in specifier-based discovery: a barrel that re-exported `getSiteUrl` would
+  // let a file import it from somewhere this sweep never looks. Rather than chase every possible
+  // barrel path, the barrel itself is forbidden — there is none today, and `getSiteUrl` having
+  // exactly one import specifier is what makes the registry above complete.
+  //
+  // (Codex raised the barrel case in review of PR #116. It is closed by prohibition rather than by
+  // detection, which is the cheaper and more durable half of "make the failure unrepresentable".)
+  const offenders: string[] = []
+  for (const dir of SEARCH_DIRS) {
+    for (const file of walk(join(WEB_ROOT, dir))) {
+      const relative = file.slice(WEB_ROOT.length + 1)
+      if (SEAM_FILES.includes(relative) || /\.test\.tsx?$/.test(file)) continue
+      const source = readFileSync(file, 'utf8')
+      if (
+        /export\s*\{[^}]*\bgetSiteUrl\b[^}]*\}/.test(source) ||
+        /export\s*\*\s*from\s*['"][^'"]*\bsite-url(-resolve)?['"]/.test(source)
+      ) {
+        offenders.push(relative)
+      }
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `These file(s) re-export getSiteUrl:\n  ${offenders.join('\n  ')}\n\n` +
+      `A re-export lets a caller import getSiteUrl from a path this registry does not sweep, so a\n` +
+      `new durable-URL surface could appear unclassified. Import it from '@/lib/site-url' directly.`
+  )
 })
