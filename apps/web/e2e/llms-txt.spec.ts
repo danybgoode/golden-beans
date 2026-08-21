@@ -57,6 +57,15 @@ test('the manifest names the category, once, from lib/positioning.ts', async ({ 
   // than decorative. If a future edit rewrites the sentence here, this fails rather than the two
   // surfaces silently drifting apart.
   expect(body).toContain(CATEGORY_DEFINITION)
+
+  // "Once" is in this test's name, so it is asserted rather than implied. A test title that claims
+  // a property the body does not check is the same defect as a comment that does — the next reader
+  // takes the name as coverage and stops looking. Caught by agy in review of PR #114.
+  //
+  // It matters here specifically: this manifest is read by a model, and a definition repeated in a
+  // short document reads as emphasis — which is how a definition quietly becomes a slogan.
+  const occurrences = body.split(CATEGORY_DEFINITION).length - 1
+  expect(occurrences, 'the manifest should define the category once, not repeat it').toBe(1)
 })
 
 test('the manifest tells the agent what to ask before it recommends anything', async ({ request }) => {
