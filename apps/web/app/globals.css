@@ -242,14 +242,8 @@ body {
    `min-width: auto` lets that push the whole track wider than the viewport. One
    long connector token in a two-column grid is enough. Resetting it to 0 lets
    the track shrink and the content wrap. */
-:where( .row2,
-.cards3,
-.hero-grid,
-.proof-grid,
-.comparison-grid,
-.statrow,
-.stat-grid,
-.funnel-layout ) > * {
+:where(.row2, .cards3, .hero-grid, .proof-grid, .comparison-grid, .statrow, .stat-grid, .funnel-layout)
+  > * {
   min-width: 0;
 }
 
