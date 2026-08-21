@@ -1,6 +1,6 @@
 # Site URL preview-aware — Sprint 1: The seam, its guards, and a preview that proves it
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — [PR #116](https://github.com/danybgoode/golden-beans/pull/116)
 
 > **Build contract.** One function changes. Read the epic README's **D1** (SITE_URL still wins),
 > **D2** (preview only), **D3** (branch URL over deployment URL), **D4** (why the dangerous call
@@ -118,6 +118,35 @@ Vercel actually exposes the variables rather than trusting that it does.
 
 ## Smoke walkthrough
 
-_To be written by the builder before the sprint is called done. Real preview and production URLs.
-Story 1.4's preview observation is the acceptance and is recorded here with the actual hostname
-that came back._
+Steps 1–5 were run against the real preview for PR #116 and are recorded with what came back.
+Steps 6–7 are the post-merge production re-check.
+
+**Preview:** `golden-beans-git-feat-site-url-prev-f68354-danybgoodes-projects.vercel.app`
+
+Note the shape of that hostname: `…-git-feat-site-url-prev-…`. It is the **branch** URL, not the
+per-deployment one, which is the observable proof that `VERCEL_BRANCH_URL` is what resolved (epic
+D3) rather than `VERCEL_URL`.
+
+> Preview deployments on this project are **SSO-protected**, so `curl` gets a 302 to
+> `vercel.com/sso-api`. Use the Vercel MCP `web_fetch_vercel_url`, or mint a temporary link with
+> `get_access_to_vercel_url` and follow cookies (`curl -L -c jar -b jar`). This is not a finding —
+> it is how the project is configured.
+
+1. Fetch `<preview>/llms.txt`.
+   → **200.** Every absolute URL in the body is the preview's own hostname.
+2. Extract every host from that body.
+   → exactly one: the preview host. **Zero occurrences of `localhost`.**
+3. Fetch `<preview>/northstar-self-serve.md`.
+   → **200**, 16,878 bytes. Hosts: the preview host **and** `https://amplitude.com` — the citation
+   allow-listed by `agentic-pm-public-surface` A10, which confirms that guard still behaves on a
+   non-production host. **Zero occurrences of `localhost`.**
+4. Grep that body for the hand-off line.
+   → `Start here: https://golden-beans-git-feat-site-url-prev-…vercel.app/install` — the line that
+   used to read `http://localhost:3000/install`.
+5. **This is the acceptance no unit test could give** (epic D5): before this, nothing in the repo
+   had ever demonstrated that Vercel exposes `VERCEL_ENV` / `VERCEL_BRANCH_URL` to a running
+   function. It does.
+6. **After merge:** `curl -s https://goldenfrijoles.com/llms.txt | grep -oE 'https?://[^/ ]+' | sort -u`
+   → `https://goldenfrijoles.com` only (plus `https://amplitude.com` on the workshop). Proves D1's
+   ordering held and production never reached the new branch.
+7. **After merge:** confirm no `*.vercel.app` deployment hostname appears anywhere on production.
