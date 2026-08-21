@@ -1,6 +1,6 @@
 # Site URL preview-aware — Sprint 1: The seam, its guards, and a preview that proves it
 
-**Status:** 🟦 In review — [PR #116](https://github.com/danybgoode/golden-beans/pull/116)
+**Status:** ✅ shipped — [`c2589e1`](https://github.com/danybgoode/golden-beans/pull/116)
 
 > **Build contract.** One function changes. Read the epic README's **D1** (SITE_URL still wins),
 > **D2** (preview only), **D3** (branch URL over deployment URL), **D4** (why the dangerous call
@@ -147,7 +147,9 @@ D3) rather than `VERCEL_URL`.
 5. **This is the acceptance no unit test could give** (epic D5): before this, nothing in the repo
    had ever demonstrated that Vercel exposes `VERCEL_ENV` / `VERCEL_BRANCH_URL` to a running
    function. It does.
-6. **After merge:** `curl -s https://goldenfrijoles.com/llms.txt | grep -oE 'https?://[^/ ]+' | sort -u`
-   → `https://goldenfrijoles.com` only (plus `https://amplitude.com` on the workshop). Proves D1's
-   ordering held and production never reached the new branch.
-7. **After merge:** confirm no `*.vercel.app` deployment hostname appears anywhere on production.
+6. **After merge — run, and green.** `curl -s https://goldenfrijoles.com/llms.txt | grep -oE 'https?://[^/ ]+' | sort -u`
+   → `https://goldenfrijoles.com`, and nothing else. The workshop returns that plus
+   `https://amplitude.com`, the allow-listed citation. Proves D1's ordering held: production never
+   reached the new branch.
+7. **After merge — run, and green.** `grep -c 'vercel.app'` against `/llms.txt` and `/` → **0** and
+   **0**. `grep -c 'localhost'` → **0**. No deployment hostname leaked onto the canonical domain.
