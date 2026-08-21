@@ -10,16 +10,15 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (2)
+## 🏗️ Building now (1)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 0/4 stories
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
 
-## ✅ Shipped (21)
+## ✅ Shipped (22)
 
 - [Entity journeys — configurable lifecycle projections beyond fixed TARS](../../01-growth-engine/entity-journeys-projections/README.md) — 01 Growth Engine · 6/6 stories · risk: High
 - [Event destination router — reliable fan-out to CRM and downstream tools](../../01-growth-engine/event-destination-router/README.md) — 01 Growth Engine · 7/7 stories · risk: High
@@ -41,6 +40,7 @@
 - [The landing reads at a glance — the maker-ops page, cut down to what it claims](../../02-commercial/landing-readability-pass/README.md) — 02 Commercial · 4/4 stories
 - [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 17/17 stories · risk: Low · wave-2026-08-20
 - [The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL](../../02-commercial/agentic-pm-public-surface/README.md) — 02 Commercial · 12/12 stories · risk: Low · wave-2026-08-20
+- [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories
 
 ## ⬜ Funnel — seeds not yet scaffolded (3)

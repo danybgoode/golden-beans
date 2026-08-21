@@ -1,5 +1,5 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped      # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: site-url-preview-aware
 build_order: 24
 ---
@@ -192,17 +192,21 @@ unaffected by D1.
 
 ## Epic Definition of Done
 
-- [ ] Sprint merged to `main`; production verified unchanged (`SITE_URL` still wins).
-- [ ] **A real preview deployment observed serving its own hostname** — the acceptance that no unit
-      test can give (D5).
-- [ ] `sprint-1.md` carries a fool-proof smoke walkthrough with real URLs.
-- [ ] This README marked ✅ complete; sprint status ticked with commit refs.
-- [ ] `RETROSPECTIVE.md` written.
-- [ ] Product poster updated — `Roadmap/README.md`.
-- [ ] `agentic-pm-public-surface`'s A13 updated to point here as resolved.
-- [ ] `Roadmap/LEARNINGS.md` updated.
-- [ ] No kill-switch: the change is revertible by a normal revert, and production never reaches it.
+- [x] Sprint merged to `main`; production verified unchanged (`SITE_URL` still wins).
+- [x] **A real preview deployment observed serving its own hostname** — the acceptance no unit test
+      could give (D5). It returned the **branch** URL, which is D3 confirmed by observation.
+- [x] `sprint-1.md` carries a fool-proof smoke walkthrough with real URLs and what came back.
+- [x] This README marked ✅ complete; sprint status ticked with commit refs.
+- [x] `RETROSPECTIVE.md` written.
+- [x] Product poster updated — `Roadmap/README.md`.
+- [x] `agentic-pm-public-surface`'s A13 updated to point here as resolved.
+- [x] `Roadmap/LEARNINGS.md` updated.
+- [x] No kill-switch: revertible by a normal revert, and production never reaches the new branch.
 
-## Sprints
+---
 
-- [`sprint-1.md`](./sprint-1.md) — the seam, its guards, and a preview that proves it
+## ✅ Complete — shipped 2026-08-20
+
+Live. A preview deployment now serves its own hostname; production is byte-for-byte unaffected,
+verified after merge. 4 stories, 1 amendment, 9 cross-family review rounds.
+See [`RETROSPECTIVE.md`](./RETROSPECTIVE.md).

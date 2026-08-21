@@ -292,6 +292,54 @@ one-liner + why + date shape.
 
 ## Review quality
 
+- **A reviewer can be handed a STALE diff, and it is indistinguishable from a confident wrong
+  finding — the tell is cheap.** Twice in one PR, agy reported issues that were already fixed and
+  pushed, quoting the pre-fix source verbatim; once it claimed a test failed that was green at the
+  reviewed SHA. **Check whether the code quoted in the finding exists in `origin` at that SHA before
+  accepting OR dismissing it.** The same reviewer's other rounds on that PR produced five real
+  defects, so reflex-dismissing would have been expensive. *(2026-08-20, site-url-preview-aware.)*
+- **A source-scanning guard keyed on SYNTAX is an allow-list of shapes; key it on the one thing every
+  form must contain.** A caller-discovery test matched `import { x } from '…'` and two dynamic
+  shapes — so a namespace import, a renamed binding, an explicit `.ts` extension (which this repo's
+  own tests use) and a differently-written dynamic import all added callers invisibly. Keying on the
+  module SPECIFIER cannot be dodged by syntax. The residual hole — a barrel re-export routing callers
+  around the sweep — was closed by **prohibiting the barrel** rather than detecting it, which is the
+  cheaper half of "make the failure unrepresentable". *(2026-08-20, site-url-preview-aware.)*
+- **Fixing a review finding introduced a worse one, and the guard's own second half caught it.**
+  Replacing a hardcoded directory allow-list with a deny-list matched bare directory names at ANY
+  depth, so `public` skipped `app/api/v1/public/` as well as `apps/web/public` — silently dropping a
+  DURABLE call site out of discovery. The companion "registry names a file that no longer imports
+  this" test went red immediately. **A discovery guard needs a second assertion pointing the other
+  way**, or its coverage can shrink to nothing while it reports success. *(2026-08-20,
+  site-url-preview-aware.)*
+- **Nine review rounds on a nine-line fix, and most late findings were bugs in the previous round's
+  fix.** The pattern LEARNINGS records for concurrency work holds for source-scanning guards too: a
+  dead import passing the gate check · import shapes escaping discovery · a `[\s\S]*?` span
+  swallowing code between two imports · trailing `//` comments defeating a `$` anchor · trailing
+  `/* … */` doing the same · a case-sensitive scheme strip. Every one looked right and reported
+  success. **Budget for this shape when the deliverable IS a guard** — the code under test was
+  trivial and the guard around it was not. *(2026-08-20, site-url-preview-aware.)*
+- **A platform-set environment variable is not a request Host header, and the difference is worth
+  making STRUCTURAL.** AGENTS rule #5 forbids a `Host` fallback because a bare-container Host is
+  attacker-controllable. `VERCEL_BRANCH_URL` is set by the platform into the deployment, is identical
+  for every request it serves, and no caller can influence it. Extracting the decision into
+  `resolveSiteUrl(env)` — a pure function with no request in scope — turned "we promise not to read
+  headers" into "there is nothing here to read". Say this loudly in the source, or the next reader
+  reverts it citing the rule. *(2026-08-20, site-url-preview-aware.)*
+- **`vercel env ls` before designing, not after.** One command established that Supabase and every
+  relevant gate are Production-scoped, which meant the dangerous call sites were already unreachable
+  on previews — turning the epic's hardest design question into an observation and avoiding a
+  two-function split that would have drifted within a quarter. **When a change's safety depends on
+  what an environment can reach, go and read the environment.** And write down that the property is
+  environmental and therefore fragile, because a test in the repo cannot see it change.
+  *(2026-08-20, site-url-preview-aware.)*
+- **`format-changed.mjs` without `PRETTIER_BASE_REF` reports "no added files" and EXITS 0.** A green
+  that means nothing was checked. CI sets the base ref and failed on files a local run had silently
+  skipped. Second epic to pay for "a local gate that is a subset of CI's is worse than no local
+  gate" — the fix is to invoke CI's own scripts *with CI's own environment*.
+  *(2026-08-20, site-url-preview-aware.)*
+
+
 - **Borrow the register, never the motion — and state the translation rule before anyone writes a
   line.** Copy from enterprise job posts (lock-in, capacity constraints, governance, spend control,
   future-proofing as models evolve) transferred cleanly onto a maker product *because the epic wrote

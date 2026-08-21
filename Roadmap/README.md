@@ -89,6 +89,14 @@ independently shippable slice of value.
   signed-in sweep repaired shared sortable-header targets plus scenario/destination table overflow.
   Wire envelope `golden_beans.webhook.test`, historical tenant slugs, and integration addresses stay
   deliberately stable because other systems resolve them.
+- ✅ [A preview deployment stops calling itself localhost](09-platform-infra/site-url-preview-aware/README.md) —
+  `SITE_URL` is Production-scoped, so every preview rendered every absolute URL as
+  `http://localhost:3000` — the hero's copy-a-prompt card told a reader's agent to fetch their own
+  machine. Nothing failed; it was consistently the wrong host, which is how it survived two epics.
+  `getSiteUrl()` now derives a preview's hostname from Vercel's platform variables (**not** a request
+  Host header — AGENTS rule #5 is untouched and now structural), `SITE_URL` still wins so production
+  is unaffected, and a registry test forces every new caller of that seam to declare whether it hands
+  someone a URL they keep.
 - ✅ [The public surface names the category](02-commercial/agentic-pm-public-surface/README.md) —
   **agentic product management**, defined once in `lib/positioning.ts` and imported by all five
   outward surfaces (landing, link preview, `/llms.txt`, the workshop, `/methodology`) so no two can
@@ -259,6 +267,13 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-08-20** — `site-url-preview-aware` **shipped** (PR #116, deployed `c2589e1`): the smallest
+  epic in a while and the one with the most review rounds — nine, most of them finding a hole in the
+  previous round's fix. The nine-line fix was never the work; proving those nine lines cannot mint a
+  URL someone keeps was. `vercel env ls`, run before writing anything, showed that every dangerous
+  call site is already unreachable on a preview because its database is Production-scoped — which
+  turned the epic's scariest question into an observation and avoided a much worse design.
 
 - **2026-08-20** — `agentic-pm-public-surface` **shipped and live** (PRs #111/#113/#114, deployed
   `c37fafe`): the landing argued a category it never named. It names it now, once, from one module

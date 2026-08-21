@@ -407,6 +407,17 @@ should spend, and the choice is the product owner's:
 
 **Recommendation: option 3, as its own small epic.** Flagged for Daniel by name at epic close.
 
+> ### ✅ RESOLVED 2026-08-20 — [`site-url-preview-aware`](../../09-platform-infra/site-url-preview-aware/README.md)
+>
+> Option 3 was built and shipped ([PR #116](https://github.com/danybgoode/golden-beans/pull/116)).
+> `getSiteUrl()` now derives a preview's own hostname from `VERCEL_BRANCH_URL`, verified by fetching
+> a real preview. `SITE_URL` still wins, so production is unaffected — re-checked after merge.
+>
+> **The correction this makes to Story 1.4 stands anyway:** that verification was moved to
+> production-after-merge and is still owed there, because the workshop is now live in production and
+> that is where Daniel will run it. A future epic's owed preview verification, however, can now
+> actually happen on a preview.
+
 ## Scope
 
 | Sprint | Story | Risk |
