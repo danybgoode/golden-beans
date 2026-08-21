@@ -68,6 +68,27 @@ actions → **5** less coordination → **6** proof (Pod Report **and** the live
 **7** yes you can build this yourself → **8** bring your agent → **9** the SDK → **10** pricing →
 ask your own agent whether to bother.
 
+> **⚠️ The section map above is HISTORY, not the page.** Three epics have rewritten this spine since
+> it was written, and this document is a reference end-state rather than signed-off scope
+> (`WAYS-OF-WORKING.md`: *"reference end-states are inspiration, never signed-off scope"*). The
+> registry that actually describes the page is **`apps/web/lib/landing-sections.ts`**, and
+> `e2e/landing.browser.spec.ts` asserts every id in it is a real section on `/` — which is why that
+> file cannot go stale the way this paragraph did.
+>
+> As of **2026-08-20** (`agentic-pm-public-surface`) the live spine is:
+> **hero** (headline, the category defined, a copy-a-prompt handoff card) → **loop**
+> (Consider · Operate · Exit) → **ops** (four surfaces, each resolving its own gate) →
+> **authority** → **finops** *(not built, and it says so)* → **methodology** → **pricing** →
+> **start** → footer. There are **no numbered stamps**: the device retired with the argument it was
+> counting.
+>
+> Two sections named above are gone entirely. **§proof** — the Pod Report and the live engine read —
+> was removed on a deliberate product-owner call; the epic records the risk (every frame on the page
+> is now a labelled illustration) and the mitigation (the hero's prompt sends a reader's own agent
+> to check us). **Do not rebuild §proof**; if the page reads thin on evidence, the live engine read
+> returns as a strip under the hero. **§product** ("One operating context") argued §ops's point
+> under a second heading and was absorbed into its eyebrow.
+
 The `①`-`⑩` glyphs this used to be written with are retired (`landing-frijoles-rebrand` D4): they
 are illegible at the size a text run tolerates, because the enclosing ring is part of the character.
 `scripts/check-design-drift.mjs` now refuses them.

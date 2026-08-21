@@ -1,6 +1,6 @@
 # Agentic PM public surface — Sprint 1: The workshop earns its URL
 
-**Status:** ⬜ not started
+**Status:** ✅ shipped — [`bbb337f`](https://github.com/danybgoode/golden-beans/pull/111)
 
 > **Build contract.** This sprint ships standalone. It touches `lib/positioning.ts` (new),
 > `app/northstar-self-serve.md/route.ts`, `references/` (landing the source guide) and
@@ -171,6 +171,27 @@ script facilitates.
 
 ## Smoke walkthrough
 
-_To be written by the builder before the sprint is called done. Numbered steps, one action + one
-expected result each, real production URLs once deployed (preview URLs pre-merge). Story 1.4's
-end-to-end agent run is flagged as **owed to the product owner by name**._
+Real production URLs. Steps 1–6 were run and are recorded green; step 7 is **owed to the product
+owner by name**.
+
+1. `curl -s https://goldenfrijoles.com/northstar-self-serve.md | head -5`
+   → HTTP 200, `text/markdown`, opening with the category definition.
+2. `curl -s https://goldenfrijoles.com/northstar-self-serve.md | wc -c`
+   → **16,710 bytes** (the document it replaced was ~6,000).
+3. Search the body for `attention game`, `transaction game`, `productivity game`
+   → all three present. The forced choice is the element that makes this the framework rather than
+   a metric exercise.
+4. Search for `Opportunities` and `Interventions`
+   → present, and in ladder order after `North Star` and `Inputs`.
+5. Search for `ONE question at a time`, `NOT connected to a Golden Frijoles workspace`,
+   `Nothing has been saved.`, `basic lift only`, `read-only MCP connector`
+   → all five present. Search for `statistically significant` → **absent**.
+6. `curl -s … | grep -oE 'https?://[^/ ]+' | sort -u`
+   → exactly two hosts: `https://goldenfrijoles.com` and `https://amplitude.com` (the citation,
+   allow-listed deliberately — epic A10).
+7. **OWED TO DANIEL, BY NAME.** Paste `handoffPrompt`'s text into a fresh Claude and a fresh ChatGPT
+   pointed at **`https://goldenfrijoles.com`** — *not* a preview, per epic A13 — and run the whole
+   workshop on a real product. Judge four things and write the findings into this file: did it ask
+   one question at a time · did it challenge a vague answer rather than accept it · did the ladder
+   produce inputs actionable this week · did either agent ever claim to have saved something.
+   No automated smoke can judge whether a facilitation script facilitates.

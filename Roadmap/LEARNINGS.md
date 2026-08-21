@@ -291,6 +291,75 @@ one-liner + why + date shape.
   non-state-mutating and lock that with a test.
 
 ## Review quality
+
+- **Borrow the register, never the motion — and state the translation rule before anyone writes a
+  line.** Copy from enterprise job posts (lock-in, capacity constraints, governance, spend control,
+  future-proofing as models evolve) transferred cleanly onto a maker product *because the epic wrote
+  down, up front, which ideas were taken and which were left* — procurement, RFPs, seat expansion,
+  "the world's largest organizations". Every borrowed phrase was re-pointed at one person and their
+  agents. Without that table the same source produces a page selling to a department that does not
+  exist. **A register is portable; a sales motion is not.** *(2026-08-20, agentic-pm-public-surface.)*
+- **A written, specced, documented function with NO call site is a liability, not an asset — and the
+  tests will hide it.** `handoffPrompt()` shipped in `landing-redesign-v2`, lost its only caller
+  when `landing-readability-pass` cut §try, and sat dead for two epics while
+  `e2e/landing-prompts.spec.ts` faithfully exercised it every CI run — green, meaningful-looking, and
+  testing nothing anybody could reach. A spec passing is not evidence the code is *used*. **When a
+  section is deleted, grep the deleted markup for every helper it called and either re-home the
+  helper or delete it.** *(2026-08-20, agentic-pm-public-surface.)*
+- **Scope the reviewer at the file it could not attach — this is now the second epic where every real
+  CSS finding came from a scoped pass.** `globals.css` is 140 KB and exceeds agy's 256 KB argv cap.
+  Four unscoped rounds returned clean on a diff whose riskiest change was a stylesheet prune; ONE
+  round with `--paths apps/web/app/globals.css` returned four real findings, one of which was a
+  whole class of dead rules the prune had never walked. `landing-readability-pass` recorded exactly
+  this and it still had to be rediscovered. **Read the attachment line before believing a clean
+  round, and re-run scoped at whatever it withheld — reflexively, not as a recovery move.**
+  *(2026-08-20, agentic-pm-public-surface.)*
+- **A scripted CSS prune needs a PARSED-RULE diff, and it will still be wrong the first time.** Two
+  distinct bugs in one prune, neither visible to any test: (1) matching a dead substring against a
+  whole rule deleted **12 live selectors** that were grouped with dead ones — `.hero-grid`,
+  `.statrow`, `.cards3`, `.proof-grid` all went with `.proof-stack` because they shared a
+  `:where(...)` list; (2) the walker only visited TOP-LEVEL blocks, so every dead rule nested inside
+  an `@media` survived untouched. The gate was green after both. **Diff the parsed selector set at
+  ALL nesting depths, before and after, and assert zero collateral and zero additions** — then
+  render the page. *(2026-08-20, agentic-pm-public-surface.)*
+- **`git checkout <file>` is not "undo my mutation" — it is "discard uncommitted work on that
+  file".** Restoring two mutation checks that way silently threw away Stories 3.2 and 3.3, which had
+  been built but not yet committed. Both had to be rebuilt from scratch. The habit that works is a
+  file copy taken *before* the mutation (`cp x /tmp/x.bak` … `cp /tmp/x.bak x`), which restores
+  exactly what was there rather than what the last commit had. The second occurrence was caught only
+  because a spec written earlier in the same sprint went red. **Never revert a mutation with a git
+  command while the file carries uncommitted work.** *(2026-08-20, agentic-pm-public-surface.)*
+- **A relaxed assertion must be mutation-checked HARDER than the one it replaced, and a "widened"
+  guard is where a can't-fail test hides.** Three guards in one epic had to be written twice: a
+  copy-button geometry check that compared the icon to the *button* box (a button always has room to
+  its right, so it passed with the fix reverted); a host matcher widened to an allow-list that was
+  case-SENSITIVE, so `HTTPS://prod.example` walked straight past it — proved by watching a leaked
+  uppercase host leave the suite fully green; and a test *named* "…, once" whose body only asserted
+  `toContain`. **A test title is a comment: it claims a property and owes the same proof.**
+  *(2026-08-20, agentic-pm-public-surface.)*
+- **When two locked acceptance criteria genuinely conflict, that is a product-owner decision — and
+  the builder's instinct will be the wrong one.** Story 1.2 required a citation "with a link"; the
+  pinned safety assertion required "exactly one host". The first resolution preserved the assertion
+  by degrading the criterion, because that is the trade that needs no permission. Codex raised it
+  Blocking **twice**; escalating produced a third option that was strictly better than either — widen
+  the assertion from "how many hosts" (a proxy) to "which hosts" (the actual property), which is
+  *stricter*, since a count cannot tell you what it counted. **A proxy assertion blocking a real
+  requirement is a sign the proxy is wrong, not that the requirement is.** *(2026-08-20,
+  agentic-pm-public-surface.)*
+- **Cite third-party source material by title, author and page; never vendor the artefact.** A
+  1 MB gated Amplitude PDF was committed to `references/` to satisfy "the source lives in the repo,
+  not in a chat log". That is redistribution without permission, and a licence question is not one a
+  copy sprint answers by not asking it. A **page-level provenance map** makes every claim checkable
+  by anyone holding a legitimate copy, carries no licence question, and is what a reviewer actually
+  needs. Caught in cross-family review, not by anyone on the build. *(2026-08-20,
+  agentic-pm-public-surface.)*
+- **Verify a placement decision by RENDERING it, even when the spec offered you the option you
+  picked.** An acceptance criterion said the category definition must appear "where it cannot be
+  missed", and offered two slots. The one chosen rendered as the dimmest, smallest text on the page,
+  below the CTAs, reading as a footnote to the offer rather than the claim the page rests on. The
+  spec was satisfied and the requirement was not. **"Where it cannot be missed" is a claim about
+  pixels, and only a screenshot can settle it.** *(2026-08-20, agentic-pm-public-surface.)*
+
 - **A review finding you rejected on sound reasoning can be a correct PREDICTION about code you have
   not written yet.** Antigravity warned that appending rules below `globals.css`'s reduced-motion
   block reintroduces an ordering hazard. The rejection was right about every transition in the file
