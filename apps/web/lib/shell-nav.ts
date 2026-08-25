@@ -3,6 +3,7 @@ import { getSessionUser } from './supabase-auth'
 import { getUserProjects, type MemberProject } from './membership'
 import {
   isExperimentGovernanceEnabled,
+  isFlagConsoleEnabled,
   isFlagServingEnabled,
   isJourneyProjectionsEnabled,
   isSignalsEnabled,
@@ -95,6 +96,7 @@ export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
         featureHint: DEFAULT_FEATURE_HINT,
         gates: {
           'experiment-governance': isExperimentGovernanceEnabled(),
+          'flag-console': isFlagConsoleEnabled(),
           'flag-serving': isFlagServingEnabled(),
           'journey-projections': isJourneyProjectionsEnabled(),
           signals: isSignalsEnabled(),

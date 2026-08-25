@@ -10,6 +10,7 @@ import {
 
 const allGatesOpen: ProjectSurfaceGates = {
   'experiment-governance': true,
+  'flag-console': true,
   'flag-serving': true,
   'journey-projections': true,
   signals: true,
@@ -40,7 +41,10 @@ test('members see every live member surface but never owner-only or flow-only ro
 
   assert.deepEqual(
     links.map(({ routeSegment }) => routeSegment),
-    ['funnel', 'impact', 'journeys', 'experiments', 'flags', 'tasks', 'scenarios']
+    // `flag-audit` is MEMBER-readable by design (Story 3.2): the audit answers "who changed this",
+    // and gating it to owners would take it from exactly the people a change affects. `flag-credentials`
+    // is absent here and present in the owner test below — that asymmetry is the assertion.
+    ['funnel', 'impact', 'journeys', 'experiments', 'flags', 'tasks', 'scenarios', 'flag-audit']
   )
   assert.deepEqual(
     links.find((link) => link.routeSegment === 'flags'),
@@ -72,6 +76,10 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
       'experiments',
       'scenarios',
       'keys',
+      // Story 3.1 is OWNER-only (it 404s a member); Story 3.2's audit is member-readable and
+      // therefore appears in both lists. The pair being split across the two tests IS the assertion.
+      'flag-credentials',
+      'flag-audit',
       'destinations',
       'shares',
       'agent-keys',

@@ -22,6 +22,11 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
   { label: 'share links', path: (slug) => `/app/shares/${slug}` },
   { label: 'agent write keys', path: (slug) => `/app/agent-keys/${slug}` },
   { label: 'onboarding', path: (slug) => `/app/onboarding/${slug}` },
+  // flags-console-parity · Sprint 3, Story 3.4 — covering a new route is one array entry, which is
+  // the point of this rail. Both 404 while FLAG_CONSOLE_ENABLED is dark; the sweep then reports a
+  // clean 404 page rather than a false pass, and starts asserting the real surface at the flip.
+  { label: 'flag credentials', path: (slug) => `/app/flag-credentials/${slug}` },
+  { label: 'flag audit', path: (slug) => `/app/flag-audit/${slug}` },
 ] as const
 
 function tenantSlug(): string {

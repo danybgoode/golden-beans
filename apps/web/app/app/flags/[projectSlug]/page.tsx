@@ -92,7 +92,9 @@ export default async function FlagsPage({
             capability. With the gate OFF, `showDefinitions` defaults to true and this page is
             byte-for-byte pre-epic (D6/Amendment 1); the authoring textarea and the credential forms
             are untouched in BOTH branches, because moving those is Sprint 3. */}
-        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
+        {consoleEnabled && (
+          <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} canManage={canManage} />
+        )}
         <FlagManager
           slug={projectSlug}
           {...registry}
@@ -102,6 +104,8 @@ export default async function FlagsPage({
           servingEnabled={isFlagServingEnabled()}
           ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
           showDefinitions={!consoleEnabled}
+          showCredentials={!consoleEnabled}
+          showAudit={!consoleEnabled}
         />
       </main>
     </ProductShell>

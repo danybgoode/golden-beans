@@ -3,6 +3,7 @@ import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import {
   isExperimentGovernanceEnabled,
+  isFlagConsoleEnabled,
   isFlagServingEnabled,
   isJourneyProjectionsEnabled,
   isSignalsEnabled,
@@ -51,6 +52,7 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   // are not tenancy — that is `getUserProjects` above, and it is resolved from the session user.
   const gates = {
     'experiment-governance': isExperimentGovernanceEnabled(),
+    'flag-console': isFlagConsoleEnabled(),
     'flag-serving': isFlagServingEnabled(),
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),

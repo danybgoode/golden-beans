@@ -87,8 +87,12 @@ the page I use daily.
 **As a** builder, **I want** the rails to cover what we just built, **so that** the next epic can't
 regress it silently.
 **Acceptance:**
-- Both new routes are added to the `AUTHED_MOBILE_ROUTES` array in `e2e/mobile-heuristics.authed.spec.ts`
-  (and the browser variant). Covering a new route is one array entry — that is the point of the rail.
+- Both new routes are added to the `AUTHED_MOBILE_ROUTES` array in `e2e/mobile-heuristics.authed.spec.ts`.
+  Covering a new route is one array entry — that is the point of the rail.
+  ⚠️ **"(and the browser variant)" was wrong** and is corrected here: `mobile-heuristics.browser.spec.ts`
+  carries `PUBLIC_MOBILE_ROUTES` only — it has no authed array, because it runs without a session.
+  Adding a credential-gated route there would have produced a spec that sweeps a login page and
+  passes, which is worse than no coverage.
 - `node scripts/check-design-drift.mjs` passes against the new surfaces; no raw hex, no bespoke
   `<table>` where `DataTable` fits.
 - The authed flags spec covers the list, the per-feature destination, and both new routes.

@@ -5,7 +5,17 @@
 
 export type ProjectSurfaceAudience = 'member' | 'owner'
 export type ProjectSurfaceGate =
-  'always' | 'experiment-governance' | 'flag-serving' | 'journey-projections' | 'signals'
+  | 'always'
+  | 'experiment-governance'
+  // flags-console-parity · Sprint 3 — the credentials and lifecycle-audit routes exist only while
+  // the console does. Widening this CLOSED union is deliberately a compile error at every caller
+  // that builds a `ProjectSurfaceGates` record (`lib/shell-nav.ts`, `app/app/page.tsx`, and this
+  // module's own test): a new gate that silently defaulted to open would put an unfinished route in
+  // the nav of every tenant.
+  | 'flag-console'
+  | 'flag-serving'
+  | 'journey-projections'
+  | 'signals'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 type ProjectSurface = {
@@ -110,6 +120,38 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     label: 'API keys',
     href: (slug) => `/app/keys/${slug}`,
     description: () => 'issue, rotate, revoke',
+  },
+  // flags-console-parity · Sprint 3, Stories 3.1 and 3.2. Registered here rather than merely linked,
+  // because this file opens with the reason: "so a new page cannot become another URL users must
+  // know." An unregistered route is a URL only its author knows.
+  //
+  // Both are `gate: 'flag-console'` — they hold controls MOVED off the flags page, so while the
+  // console is dark those controls are still on that page and these routes 404. Listing them in the
+  // nav then would be an invitation to a dead end.
+  {
+    routeSegment: 'flag-credentials',
+    // Owner-only, and TIGHTER than the flags page it moves from: there a member could load the page
+    // and simply see no key tables. A standalone credentials route 404s for them — the
+    // `/app/keys/[projectSlug]` precedent. The boundary moves only tighter, never looser.
+    audience: 'owner',
+    gate: 'flag-console',
+    status: 'gated',
+    topLevelProjectRoute: true,
+    label: 'Flag credentials',
+    href: (slug) => `/app/flag-credentials/${slug}`,
+    description: () => 'snapshot and catalog sync keys',
+  },
+  {
+    routeSegment: 'flag-audit',
+    // MEMBER-readable, exactly as the audit is on the flags page today. Moving a table must not
+    // quietly make it owner-only, and `audience: 'owner'` here would do precisely that.
+    audience: 'member',
+    gate: 'flag-console',
+    status: 'gated',
+    topLevelProjectRoute: true,
+    label: 'Flag audit',
+    href: (slug) => `/app/flag-audit/${slug}`,
+    description: () => 'who changed which flag, and why',
   },
   {
     routeSegment: 'destinations',

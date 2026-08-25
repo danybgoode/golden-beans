@@ -2,6 +2,10 @@
 import { useCallback, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
+// flags-console-parity · Sprint 3, Story 3.1 — the two revoke sentences are load-bearing and must
+// stay VERBATIM as they move to the credentials route. One module owns them so the two surfaces
+// cannot drift; the strings themselves are unchanged.
+import { describeRevokeSyncKey, REVOKE_SNAPSHOT_KEY_CONSEQUENCE } from '@/lib/flag-console-copy'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
 import type { FlagReadKeyRow } from '@/lib/flag-read-keys'
@@ -50,6 +54,8 @@ export function FlagManager({
   servingEnabled,
   ruleBuilderEnabled,
   showDefinitions = true,
+  showCredentials = true,
+  showAudit = true,
 }: {
   slug: string
   flags: FlagRegistryRow[]
@@ -81,6 +87,21 @@ export function FlagManager({
    * is on D7's list of storage vocabulary this epic exists to retire.
    */
   showDefinitions?: boolean
+  /**
+   * flags-console-parity · Sprint 3, Stories 3.1 and 3.2 — whether the credential forms/tables and
+   * the lifecycle audit render HERE.
+   *
+   * **Both default to `true`, so with `FLAG_CONSOLE_ENABLED` off this file renders exactly what it
+   * always did.** That is Amendment 1's whole point: the move is GATE-CONDITIONAL. An unconditional
+   * move would delete controls from the gate-off page, and a dark-launch guarantee that holds
+   * "except for the three forms" is not a guarantee.
+   *
+   * With the console on they live on `/app/flag-credentials/[slug]` and `/app/flag-audit/[slug]`,
+   * which themselves 404 while dark — so in EITHER state these controls exist in exactly one place,
+   * never zero.
+   */
+  showCredentials?: boolean
+  showAudit?: boolean
 }) {
   const router = useRouter()
   const [key, setKey] = useState('new-product-details')
@@ -342,7 +363,7 @@ export function FlagManager({
           enabled in a new deployment.
         </p>
       )}
-      {canManage ? (
+      {canManage && showCredentials ? (
         <>
           {/* flags-visual-rule-builder · Story 1.4 (D6/D7). The builder is ADDITIVE: it renders
               alongside the textarea, never instead of it. With the gate unset this whole block is
@@ -566,7 +587,7 @@ export function FlagManager({
           </article>
         ))
       )}
-      {canManage && (
+      {canManage && showCredentials && (
         <>
           <h2>Snapshot keys</h2>
           <DataTable
@@ -592,15 +613,19 @@ export function FlagManager({
           />
         </>
       )}
-      <h2>Lifecycle audit</h2>
-      <DataTable
-        caption="Lifecycle audit"
-        columns={auditColumns}
-        rows={audit}
-        rowKey={(entry) => entry.id}
-        filterLabel="Filter audit"
-        empty="No lifecycle actions recorded yet. Activating or deactivating a version in an environment is recorded here."
-      />
+      {showAudit && (
+        <>
+          <h2>Lifecycle audit</h2>
+          <DataTable
+            caption="Lifecycle audit"
+            columns={auditColumns}
+            rows={audit}
+            rowKey={(entry) => entry.id}
+            filterLabel="Filter audit"
+            empty="No lifecycle actions recorded yet. Activating or deactivating a version in an environment is recorded here."
+          />
+        </>
+      )}
 
       <ConfirmDialog
         open={confirming !== null}
@@ -609,8 +634,8 @@ export function FlagManager({
         subject={confirming?.row.label ?? ''}
         consequence={
           confirming?.kind === 'sync'
-            ? `Catalog publishes from ${confirming.row.source} start failing on the next sync — flag definitions from that publisher stop reaching this project until someone mints a new key and redeploys it. Revoking cannot be undone.`
-            : 'Any client reading the flag snapshot with this key starts getting 401s on its next poll, and falls back to whatever defaults it was built with. Revoking cannot be undone — mint a replacement first if this key is in production.'
+            ? describeRevokeSyncKey(confirming.row.source)
+            : REVOKE_SNAPSHOT_KEY_CONSEQUENCE
         }
         pending={pending}
         onCancel={() => setConfirming(null)}

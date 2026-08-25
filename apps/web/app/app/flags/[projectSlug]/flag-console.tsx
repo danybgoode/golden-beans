@@ -57,10 +57,13 @@ export function FlagConsole({
   slug,
   flags,
   params,
+  canManage,
 }: {
   slug: string
   flags: FlagRegistryRow[]
   params: FlagListParams
+  /** Owner? Decides whether the owner-only credentials route is linked — it 404s for a member. */
+  canManage: boolean
 }) {
   const basePath = `/app/flags/${slug}`
   const view = buildFlagListView(flags, params)
@@ -164,6 +167,16 @@ export function FlagConsole({
           Apply
         </button>
       </form>
+
+      {/* Stories 3.1/3.2 — the two routes the console moves controls to, linked from the surface
+          that lost them. The shell nav lists them too (they are registered in the route inventory),
+          but someone standing on the flags page looking for the key they just minted should not have
+          to go up a level to find where it went. Credentials is owner-only and 404s for a member, so
+          it is rendered only when the caller can actually use it. */}
+      <p className="row-wrap">
+        {canManage && <a href={`/app/flag-credentials/${slug}`}>Flag credentials →</a>}
+        <a href={`/app/flag-audit/${slug}`}>Flag audit →</a>
+      </p>
 
       <div className="data-table">
         <p className="data-table__count">
