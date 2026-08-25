@@ -1,6 +1,14 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 1: The list becomes a list
 
-**Status:** ⬜ not started
+**Status:** ✅ built — all four stories committed on `feat/flags-console-parity`; PR open, awaiting the
+two routed cross-family review passes and the product owner's signed-in walkthrough.
+
+| Story | Commit | Note |
+|---|---|---|
+| 1.1 `FLAG_CONSOLE_ENABLED` | `6cf3230` | Created disabled in dev/preview/production; value verified by reading it back, not by `env ls`. |
+| 1.2 `lib/flag-list-view.ts` | `1de0821` | 48 specs; two mutations observed failing. |
+| 1.3 One feature list | `bb920ba` | Server-rendered, URL-driven; not a `DataTable` (D4). |
+| 1.4 Environment selector | `bb920ba` | Flags-scoped links; `ProductShell` untouched (D3). |
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D1a`, `D2`, `D3`, `D4`,
 > `D5` and `D6` (+ **Amendment 1**) from the epic README; **do not re-derive them.** The prediction
@@ -112,3 +120,31 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → Ordering is stable and the page control never lands you on an empty page.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+## What was verified before the PR, and how
+
+**Deterministic gate, all green:** `npm run test:unit` (1227 pass / 0 fail) · `npm run typecheck` ·
+`npm run lint` · `npm run build` · `node scripts/check-design-drift.mjs`.
+
+**The rendered surface was verified by RENDERING it, not by grepping for strings.** The Playwright
+`authed` project needs a local Supabase, and Docker was not running on this machine, so the console
+was compiled and rendered to static markup out-of-band against fixtures shaped exactly like the
+production registry read during the lock pass. Observed in the actual HTML:
+
+- The three activation states render as three visibly different things — `On · serving v2` (check),
+  `Turned off · switched off <date>` (warning), `Never turned on here` (clock). This is Story 2.3's
+  distinction already visible on the Sprint 1 list.
+- **The per-environment projection is real, not decorative:** a flag deactivated only in production
+  reads *Turned off* under `?env=production` and *Never turned on here* under `?env=development`.
+- A definition carrying **no `metadata` bag** renders `Unclassified` in both columns — never
+  `undefined` (D1a).
+- `?state=on` narrows the table to one row while the chips still report `All (4) · On (1) ·
+  Not on (3)`, so the chips remain a way back rather than collapsing to zero.
+- `?sort=state` orders on → turned off → never, ties alphabetical.
+- **Allow-listing holds against a hostile query.** `?evil=<script>&sort=<img>` produced zero
+  occurrences of `<script`, zero of `<img`, and zero of `evil=` anywhere in the markup; `sort` fell
+  back to `key_asc`. Unknown parameters are dropped, not echoed.
+
+**Still owed, and not claimable from here:** a signed-in walkthrough on a real deployment. The page
+is credential-gated, so no automated rail in this repo can reach past the login redirect — that is
+the browser smoke named at the top of this sprint, and it is the product owner's.
