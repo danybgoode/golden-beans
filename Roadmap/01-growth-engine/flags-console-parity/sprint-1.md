@@ -19,8 +19,13 @@ two routed cross-family review passes and the product owner's signed-in walkthro
 >   `(flags, environment)` and projects rows FIRST; search/filter/sort/paginate run over that
 >   projection. This is the single most important porting difference — get it wrong and every sort
 >   and count on the page is answering about the wrong environment.
-> - **Amendment 1: do not edit `flag-manager.tsx` in this sprint.** The new console is a new
->   component tree. D6 then holds *by construction* and is auditable with `git diff`.
+> - **Amendment 1: keep the gate-off render of `flag-manager.tsx` unchanged.** The new console is a
+>   new component tree, so D6 holds *by construction* and is auditable with `git diff`.
+>   ⚠️ This bullet originally read *"do not edit `flag-manager.tsx` in this sprint"* and was corrected
+>   during the build (cross-review, Codex, round 1): the file takes exactly one optional prop,
+>   `showDefinitions`, defaulting to `true`, because "one list, not a stack of editors" is false
+>   while the stack still renders underneath. Four functional lines, default = old behaviour. See the
+>   epic README's Amendment 1 for the full reasoning.
 
 ## Stories
 
