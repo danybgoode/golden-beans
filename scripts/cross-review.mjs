@@ -41,6 +41,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   AGENTS,
+  headSidePaths,
   die,
   need,
   ensureCmd,
@@ -415,7 +416,7 @@ function main() {
     // Whatever argv budget the diff has not already spent, less a margin for the prompt and the
     // fences. Under-filling is the safe direction: a review that runs on less context still runs.
     const budget = Math.max(0, AGY_ARG_LIMIT - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
-    const touched = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1]);
+    const touched = headSidePaths(diff);
     // ── Read from the PR's HEAD COMMIT, not the working tree ──────────────────────────────────
     // This used to be `readFileSync(path)`, i.e. whatever branch happens to be checked out. With
     // stacked sprint branches — this repo's DEFAULT shape (WAYS-OF-WORKING §6) — that is routinely a

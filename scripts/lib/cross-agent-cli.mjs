@@ -780,6 +780,34 @@ function execAgy(fullArgv, model, spawn) {
 // Naming them matters more than including them. A reviewer given some files and not others, with no
 // list, would conclude an unattached file does not exist — which is the exact failure this function
 // exists to fix, made worse. The manifest says what was attached, what was not, and why.
+/**
+ * The HEAD-side paths of every file a unified diff touches, excluding deletions.
+ *
+ * ── Why the `b/` side, and why deletions are dropped ─────────────────────────────────────────
+ * Callers attach whole-file context read from the PR's HEAD commit. The `a/` (pre-image) path is
+ * the wrong side for that: on a RENAME it is the OLD name, which does not exist at head — so the
+ * lookup misses, the file is silently dropped from the reviewer's context, and the code looks like
+ * it attached it. A DELETED file has no head-side content at all, so asking for it can only fail.
+ *
+ * Both were live: `cross-review.mjs` used `/^diff --git a\/(\S+) b\/\S+$/gm` and read the `a/`
+ * capture (cross-review, Codex, PR #119).
+ *
+ * Split per file rather than scanning the whole diff, because `+++ /dev/null` marks a deletion only
+ * for the file header it belongs to — matched globally it would suppress unrelated files.
+ */
+export function headSidePaths(diff) {
+  return String(diff || '')
+    .split(/^diff --git /m)
+    .slice(1)
+    .map((chunk) => {
+      if (/^\+\+\+ \/dev\/null$/m.test(chunk)) return null;
+      const header = chunk.split('\n', 1)[0];
+      const match = /^\S+ b\/(\S+)$/.exec(header);
+      return match ? match[1] : null;
+    })
+    .filter((path) => path !== null);
+}
+
 export function buildFileContext(paths, readFile, budgetBytes, opts = {}) {
   const { maxFiles = 40 } = opts;
   const seen = new Set();
