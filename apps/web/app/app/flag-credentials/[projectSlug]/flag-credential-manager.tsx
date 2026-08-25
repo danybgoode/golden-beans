@@ -97,44 +97,65 @@ export function FlagCredentialManager({
     [slug, run]
   )
 
-  function onMint(event: FormEvent) {
-    event.preventDefault()
+  /**
+   * Minting shares `run()`'s transition/busy/error handling and differs only in what it does with a
+   * SUCCESS: a minted key returns plaintext shown exactly once, so there is a panel to populate and
+   * a form field to clear rather than a notice to set.
+   *
+   * Folded into one helper after cross-review (Agy, PR #121) pointed out the two mint handlers had
+   * inlined a third and fourth copy of the same transition scaffolding. Four copies of a busy-flag
+   * lifecycle is four places to forget `setBusy(false)` in a catch — which is exactly the class of
+   * bug the in-flight lock exists to prevent.
+   */
+  const mint = (
+    work: () => Promise<{ ok: true; plaintext: string } | { ok: false; error: string }>,
+    onMinted: (plaintext: string) => void,
+    failure: string
+  ) => {
     setError(null)
     setNotice(null)
     setBusy(true)
     startTransition(async () => {
       try {
-        const result = await mintFlagReadKeyAction(slug, keyEnvironment, keyLabel, 30)
+        const result = await work()
         if (result.ok) {
-          setMinted(result.plaintext)
-          setKeyLabel('')
+          onMinted(result.plaintext)
           router.refresh()
-        } else setError(result.error)
+        } else {
+          // `?? failure` is belt-and-braces: the action's return type declares `error: string` on
+          // the failure branch, so an undefined message is unreachable through the type. It costs
+          // nothing and means a future signature change cannot render a silent empty alert.
+          setError(result.error ?? failure)
+        }
       } catch {
-        setError('Could not mint a snapshot key.')
+        setError(failure)
       }
       setBusy(false)
     })
   }
 
+  function onMint(event: FormEvent) {
+    event.preventDefault()
+    mint(
+      () => mintFlagReadKeyAction(slug, keyEnvironment, keyLabel, 30),
+      (plaintext) => {
+        setMinted(plaintext)
+        setKeyLabel('')
+      },
+      'Could not mint a snapshot key.'
+    )
+  }
+
   function onMintSync(event: FormEvent) {
     event.preventDefault()
-    setError(null)
-    setNotice(null)
-    setBusy(true)
-    startTransition(async () => {
-      try {
-        const result = await mintFlagSyncKeyAction(slug, syncKeyLabel, syncKeySource, 30)
-        if (result.ok) {
-          setMintedSync(result.plaintext)
-          setSyncKeyLabel('')
-          router.refresh()
-        } else setError(result.error)
-      } catch {
-        setError('Could not mint a catalog sync key.')
-      }
-      setBusy(false)
-    })
+    mint(
+      () => mintFlagSyncKeyAction(slug, syncKeyLabel, syncKeySource, 30),
+      (plaintext) => {
+        setMintedSync(plaintext)
+        setSyncKeyLabel('')
+      },
+      'Could not mint a catalog sync key.'
+    )
   }
 
   const statusOf = useCallback((key: { revokedAt: string | null; expiresAt: string | null }) => {
