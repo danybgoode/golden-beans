@@ -33,3 +33,29 @@ Lock pass D1-D8 committed (D5/D6/D8 corrected). Stories 1.1 + 1.2 built and comm
 }
 ```
 
+## 2026-08-25T01:21:14.472Z — `feat/flags-console-parity` @ 18c3fab0
+
+_HEAD: style(flags-console-parity): prettier — the gate step I ran last, and should have run first_
+
+Sprint 1 COMPLETE and pushed (PR #118, draft). 5 review rounds; both families clean on 18c3fab. Codex round 3 found a real outage-class bug: suppressing the per-flag stack removed every activate/deactivate control — reverted, flag-manager.tsx now byte-identical to main, Sprint 1 is additive. Sprint 2 Story 2.1 now owns retiring the stack. NEXT: await CI green, then Sprint 2 (feat/flags-console-parity-s2 cut from S1).
+
+**Verified by running (observed output, not believed):**
+- cross-review codex round 5 -> Blocking/Should-fix/Nit all None; cross-review antigravity round 5 -> all None; npm run test:unit -> 1227 pass / 0 fail; format:changed -> All matched files use Prettier code style; git diff main -- flag-manager.tsx -> empty
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-08-25T01:21:14.472Z",
+  "note": "Sprint 1 COMPLETE and pushed (PR #118, draft). 5 review rounds; both families clean on 18c3fab. Codex round 3 found a real outage-class bug: suppressing the per-flag stack removed every activate/deactivate control — reverted, flag-manager.tsx now byte-identical to main, Sprint 1 is additive. Sprint 2 Story 2.1 now owns retiring the stack. NEXT: await CI green, then Sprint 2 (feat/flags-console-parity-s2 cut from S1).",
+  "branch": "feat/flags-console-parity",
+  "head": "18c3fab03d5e7c876e22380060d058306dde4b9b",
+  "headSubject": "style(flags-console-parity): prettier — the gate step I ran last, and should have run first",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "cross-review codex round 5 -> Blocking/Should-fix/Nit all None; cross-review antigravity round 5 -> all None; npm run test:unit -> 1227 pass / 0 fail; format:changed -> All matched files use Prettier code style; git diff main -- flag-manager.tsx -> empty"
+  ]
+}
+```
+

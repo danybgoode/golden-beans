@@ -1,7 +1,14 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 1: The list becomes a list
 
-**Status:** ✅ built — all four stories committed on `feat/flags-console-parity`; PR open, awaiting the
-two routed cross-family review passes and the product owner's signed-in walkthrough.
+**Status:** ✅ built · CI green · cross-family review clean — **PR [#118](https://github.com/danybgoode/golden-beans/pull/118), held as DRAFT.**
+Two gates remain and neither is claimable by the builder: the HIGH-tier **fresh reviewer subagent**
+(mandatory per `review-route.mjs`, not yet run) and the product owner's **signed-in walkthrough**.
+
+**CI (`18c3fab`), all green:** Static gate + build · Playwright vs local Supabase + local server ·
+build-order-fresh · cli-tests · design-system-fresh · Vercel preview deploy.
+
+**Cross-family review: 5 rounds, both families clean on the same head.** Round 3 (Codex) found the
+one that mattered — see the note below.
 
 | Story | Commit | Note |
 |---|---|---|
@@ -9,6 +16,23 @@ two routed cross-family review passes and the product owner's signed-in walkthro
 | 1.2 `lib/flag-list-view.ts` | `1de0821` | 48 specs; two mutations observed failing. |
 | 1.3 One feature list | `bb920ba` | Server-rendered, URL-driven; not a `DataTable` (D4). |
 | 1.4 Environment selector | `bb920ba` | Flags-scoped links; `ProductShell` untouched (D3). |
+
+> ### ⚠️ The defect review caught, recorded because the cause generalises
+>
+> An earlier revision of this sprint suppressed `<FlagManager>`'s per-flag stack when the console was
+> on, via a `showDefinitions` prop. **That stack holds every activate/deactivate control**, and their
+> replacement — the per-feature destination — is Story 2.1, a sprint later. Turning the gate ON would
+> therefore have removed the only way to kill a live flag, `checkout.stripe_enabled` included: an
+> outage wearing a redesign's clothes, and exactly the hazard the epic's Kill-switch section names.
+>
+> **The cause was a weakened constraint, not a missed detail.** Amendment 1 said *"Sprint 1 does not
+> edit `flag-manager.tsx`."* That was weakened mid-build with careful-looking reasoning — four lines,
+> default preserved, gate-off render unchanged — and the weakening was the defect. The constraint was
+> load-bearing for a failure that had not been identified.
+>
+> **A constraint you cannot immediately justify is not thereby unjustified.** Find the failure it was
+> written to prevent before removing it; failing to find it is a reason to look harder, not a licence
+> to proceed. → promote to `LEARNINGS.md` at epic close.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D1a`, `D2`, `D3`, `D4`,
 > `D5` and `D6` (+ **Amendment 1**) from the epic README; **do not re-derive them.** The prediction
