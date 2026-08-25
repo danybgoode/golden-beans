@@ -126,19 +126,30 @@ notice this. Three things are therefore locked:
    is a far stronger guarantee than a spec. (`flags-visual-rule-builder` promised D6 in prose and
    nearly broke it over one CSS class.)
 
-   ⚠️ **Corrected during Sprint 1 (2026-08-24).** This point originally read *"Sprint 1 does not edit
-   `flag-manager.tsx` at all."* That was over-stated and did not survive the build. Story 1.3's
-   acceptance is *"one list, not a stack of editors"*, and that cannot be true while the
-   `<article>`-per-flag stack still renders underneath the console. The two alternatives were both
-   worse: rendering both is the duplication the story exists to remove, and dropping `<FlagManager>`
-   entirely when the console is on would take the authoring form and both credential surfaces with
-   it — **two sprints before Sprint 3 gives them their own routes**, i.e. an outage introduced by a
-   redesign, which is the exact failure this epic's kill-switch exists to prevent.
-   So the file gains **one optional prop, `showDefinitions`, defaulting to `true`**. The functional
-   diff is four lines. **D6 is unchanged in substance** — every existing call site and the entire
-   gate-off branch render exactly what they rendered before, because the default is the old
-   behaviour — and it is still checked by reading the diff, just not by the file being untouched.
-   The weaker claim is the true one, so it is the one that stands.
+   ⚠️ **Weakened during Sprint 1, then RESTORED — and the round trip is the lesson.**
+   Mid-build this point was rewritten to permit one small edit: `<FlagManager>` gained a
+   `showDefinitions` prop so the console could suppress the legacy per-flag stack and satisfy Story
+   1.3's *"one list, not a stack of editors"*. The reasoning looked careful — four lines, default
+   preserved, gate-off render unchanged — and it was **wrong in a way the original constraint would
+   have prevented**.
+
+   **What it actually did:** every activate/deactivate control lives *inside* that stack
+   (`flag-manager.tsx`, the button at the version/environment intersection). The replacement — the
+   per-feature destination — is Story 2.1, a whole sprint later. So turning the console ON would
+   have removed the only way to kill a live flag, `checkout.stripe_enabled` included. That is an
+   **outage wearing a redesign's clothes**, and it is precisely the hazard the Kill-switch section
+   below names: *"a half-landed redesign must never be the only route to that control."* Caught by
+   cross-review (Codex, round 3) after two rounds spent on a different, incorrect finding.
+
+   **So the original text stands: Sprint 1 does not edit `flag-manager.tsx`, and the file is
+   byte-identical to `main`.** Sprint 1 is purely ADDITIVE — the list renders above the existing
+   controls, which keep working. The stack is removed in Sprint 2, in the same story that lands its
+   replacement, which is the only sequencing that is never an outage.
+
+   The durable rule, worth promoting at epic close: **a constraint you cannot immediately justify is
+   not thereby unjustified.** Before weakening one, find the failure it was written to prevent — and
+   if you cannot find it, that is a reason to look harder, not a licence to proceed.
+
 3. **What the merge gate can actually assert is the two new routes.** Both follow the established
    `if (!isFlagConsoleEnabled()) notFound()` pattern — *"dark means nonexistent, before auth or
    project lookup"* (`app/app/journeys/[projectSlug]/page.tsx`). An unauthenticated GET therefore

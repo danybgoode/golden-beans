@@ -53,8 +53,8 @@ export default async function FlagsPage({
           protection.
         </p>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
-            epic — `showDefinitions` defaults to true and no other prop changed. The console is an
-            additional tree, not a rewrite of the one below it.
+            epic — `flag-manager.tsx` is byte-identical to `main` and takes no new prop. The console
+            is an additional tree, not a rewrite of the one below it.
 
             ── Why this is NOT gated on `canManage`, stated here because two review passes asked ──
             "Key" means two different things on this page, and the boundary follows the second one.
@@ -74,7 +74,17 @@ export default async function FlagsPage({
             times, but a finding a reader reaches twice is a readability defect in the code, not just
             a reviewer error — so the distinction is written down here rather than re-argued in a
             third PR comment. If the credentials route (Story 3.1) ever renders here, it needs
-            `requireProjectOwnership`; the feature list does not. */}
+            `requireProjectOwnership`; the feature list does not.
+
+            ── Why the legacy stack still renders BELOW, even with the console on ─────────────────
+            Because this sprint's list is READ-ONLY. Every activate/deactivate control lives inside
+            <FlagManager>'s per-flag stack, and the per-feature destination that replaces them is
+            Story 2.1, next sprint. Suppressing that stack — which an earlier revision of this PR
+            did, via a `showDefinitions` prop — meant that turning the console ON removed the only
+            way to kill a live flag, `checkout.stripe_enabled` included. That is an outage wearing a
+            redesign's clothes, and it is the exact hazard this epic's kill-switch section names.
+            So Sprint 1 is ADDITIVE: list above, existing controls untouched below. The stack goes
+            when its replacement lands, not before. (Cross-review, Codex, round 3.) */}
         {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
@@ -84,7 +94,6 @@ export default async function FlagsPage({
           canManage={canManage}
           servingEnabled={isFlagServingEnabled()}
           ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
-          showDefinitions={!consoleEnabled}
         />
       </main>
     </ProductShell>

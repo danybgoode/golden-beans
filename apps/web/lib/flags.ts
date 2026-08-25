@@ -270,15 +270,14 @@ export function isFlagRuleBuilderEnabled(): boolean {
 // The new console is a NEW component tree, so byte-for-byte holds *because the legacy render is
 // unchanged* — a property auditable with `git diff`, which is strictly stronger than a test.
 //
-// Precisely, because an earlier draft of this comment overstated it (caught in cross-review, Codex,
-// round 1): Sprint 1 DOES touch `flag-manager.tsx`, for exactly one optional prop —
-// `showDefinitions`, defaulting to `true`. Story 1.3's "one list, not a stack of editors" cannot be
-// true while the per-flag stack still renders underneath the console, and the alternative — not
-// rendering `<FlagManager>` at all when the console is on — would remove the authoring form and both
-// credential surfaces two sprints before Sprint 3 gives them their own routes. The functional diff
-// is four lines and the DEFAULT is the old behaviour, so every existing call site and the whole
-// gate-off branch render what they always did. The claim that the file is untouched was the wrong
-// one; this narrower claim is the true one.
+// Sprint 1 does not edit `flag-manager.tsx`; the file is byte-identical to what it was before the
+// epic. A mid-build revision briefly weakened that to allow one prop (`showDefinitions`) so the
+// console could hide the legacy per-flag stack — and it turned out that stack holds every
+// activate/deactivate control, whose replacement is a sprint away. Turning the console ON would have
+// removed the only way to kill a live flag. The constraint was load-bearing; it is back.
+//
+// So the console is ADDITIVE in Sprint 1: it renders above the existing controls, which keep
+// working. The stack is removed in Sprint 2, by the story that lands its replacement.
 //
 // This matters because the guarantee is NOT assertable in the merge gate, and the epic's QA
 // section originally claimed it was. `/app/flags/[projectSlug]` is credential-gated, so the

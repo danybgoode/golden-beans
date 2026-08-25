@@ -19,13 +19,14 @@ two routed cross-family review passes and the product owner's signed-in walkthro
 >   `(flags, environment)` and projects rows FIRST; search/filter/sort/paginate run over that
 >   projection. This is the single most important porting difference — get it wrong and every sort
 >   and count on the page is answering about the wrong environment.
-> - **Amendment 1: keep the gate-off render of `flag-manager.tsx` unchanged.** The new console is a
->   new component tree, so D6 holds *by construction* and is auditable with `git diff`.
->   ⚠️ This bullet originally read *"do not edit `flag-manager.tsx` in this sprint"* and was corrected
->   during the build (cross-review, Codex, round 1): the file takes exactly one optional prop,
->   `showDefinitions`, defaulting to `true`, because "one list, not a stack of editors" is false
->   while the stack still renders underneath. Four functional lines, default = old behaviour. See the
->   epic README's Amendment 1 for the full reasoning.
+> - **Amendment 1: do not edit `flag-manager.tsx` in this sprint.** The new console is a new
+>   component tree. D6 then holds *by construction* and is auditable with `git diff` — the file is
+>   byte-identical to `main`.
+>   ⚠️ This constraint was briefly weakened mid-build and then restored, because weakening it
+>   introduced an outage: the per-flag stack holds every activate/deactivate control, and hiding it
+>   a sprint before the per-feature destination lands would have left no way to kill a live flag.
+>   **Sprint 1 is purely additive** — list above, existing controls untouched below. See the epic
+>   README's Amendment 1.
 
 ## Stories
 
@@ -98,9 +99,8 @@ environment I'm actually asking about.
   which makes such a spec a guard that cannot fail (the exact class LEARNINGS names). What it asserts
   instead is the part that IS observable without a session: **Sprint 3's two new routes return a flat
   404 while the gate is dark**, per the `if (!gate()) notFound()` pattern. Byte-for-byte on the
-  existing page is guaranteed by *construction* — the gate-off branch of `flag-manager.tsx` renders
-  what it always did, because the one prop this epic adds to it defaults to the old behaviour — and
-  audited with `git diff`, not asserted by a spec that could not see it break.
+  existing page is guaranteed by *construction* — `flag-manager.tsx` is byte-identical to `main` —
+  and audited with `git diff`, not asserted by a spec that could not see it break.
 - **browser smoke owed:** yes, to the product owner — the authed `/app/flags/miyagisanchez` list
   itself. Not a money path, but it is credential-gated, so the automated rail can only reach the
   login redirect.
@@ -115,7 +115,11 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
 2. Flip `FLAG_CONSOLE_ENABLED` to `true` in Preview and redeploy by merging to `main`
    (an env edit alone does nothing — Vercel snapshots values at build time).
 3. Reload https://goldenfrijoles.com/app/flags/miyagisanchez
-   → You see **one list** of features, not a stack of editors. There is a search box above it.
+   → A **feature list with a search box and an environment selector appears at the top of the page**.
+   ⚠️ *Corrected during the build:* the per-flag stack of editors is **still below it in Sprint 1,
+   and that is deliberate.* It holds every activate/deactivate control, and its replacement (the
+   per-feature destination) is Story 2.1. Removing it here would have left no way to turn a live
+   flag off. **"One list, not a stack of editors" is Sprint 2's smoke, not this one's.**
 4. Type `stripe` into the search box.
    → The list narrows to `checkout.stripe_enabled`. Nothing else is between you and it.
 5. Change the environment selector from **production** to **development**.

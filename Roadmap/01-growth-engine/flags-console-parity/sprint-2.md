@@ -23,6 +23,12 @@
   render there, **moved, not rewritten**, and behave exactly as they do today.
 - The raw JSON stays reachable one click deeper — it stops being the primary "what changed"
   affordance, and does not disappear.
+- **This story also owns REMOVING the legacy per-flag stack from the flags page** (moved here from
+  Sprint 1 during the build). Sprint 1 deliberately left `flag-manager.tsx` byte-identical and
+  rendered its list *above* the existing controls, because that stack holds every
+  activate/deactivate button and hiding it before this destination existed would have removed the
+  only way to kill a live flag. **Land the destination and retire the stack in the same story** —
+  that ordering is the whole point, and it is the only one that is never an outage.
 - **This is the story that owns the JSON textarea's CSS swap.** `flag-manager.tsx` carries an inline
   `style={{...}}` with a comment recording that Sprint 2 of `flags-visual-rule-builder` swapped it for
   `.code-input`, cross-review rejected it (`.code-input` also sets `white-space: pre`, which would
