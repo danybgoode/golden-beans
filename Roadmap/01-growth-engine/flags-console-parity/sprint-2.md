@@ -13,6 +13,25 @@ Sprint 1, which is **merged** as `2bdb6f7` and live in production dark).
 **Owed to the product owner:** the signed-in walkthrough below, including the money-path confirm on
 preview **and** production (cancel both). Nothing in this repo can reach past the login redirect.
 
+### ⚠️ Logged, not fixed — a repo-wide `useTransition` pattern
+
+React 18.3.1 calls `setPending(false)` **before** invoking the transition callback
+(`react-dom.development.js:16512-13`), so for an `async` callback `isPending` is a flicker, not a
+duration — everything after the first `await` is outside the transition. Any control relying on
+`isPending` to disable itself is therefore **not** protected against a double submit while a server
+action is in flight.
+
+There are **27 `startTransition(async` call sites across 14 files** in this repo. Sprint 2 fixed the
+two on the money path (`flag-switch.tsx`, `flag-version-serve.tsx`) with their own synchronously-set
+in-flight flag, because a double-click there sends a second write with a stale
+`expectedSnapshotVersion` and renders a conflict error *after* the kill succeeded — which mid-incident
+reads as "the kill didn't work".
+
+**The other 25 are untouched and are a real, pre-existing defect** — not a style preference. They are
+out of this epic's scope, and are recorded here rather than left to be rediscovered. Candidate for
+its own chore. Found by the fresh HIGH-tier reviewer on PR #120, verified against the installed React
+source rather than taken on trust.
+
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
 > (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
 > was disproved.** "In a catalog but undefined" is not expressible in Golden — it is unreachable by
