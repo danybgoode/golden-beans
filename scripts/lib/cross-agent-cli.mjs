@@ -231,7 +231,12 @@ export function resolveCodexTier(tier) {
 // Cost note (Daniel's standing preference): Claude's tokens go to security/money/architecture and to
 // BUILDING, not to routine PR review. So Claude is deliberately NOT in either default reviewer set;
 // it is the escalation, named explicitly when a diff earns it, not the baseline.
-export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
+// `vibe` added 2026-08-25 (Daniel: "Agy, codex and vibe should be enabled for cross family
+// reviews"). It was already a first-class REVIEWER in review-route.mjs's preference order and in
+// AGENT_FLAG, but it was missing here — so `--builder vibe` was refused as an unknown family, and a
+// vibe-built diff could only be reviewed by mislabelling who wrote it. That is the same-family guard
+// failing open through a roster gap rather than a logic bug, which is the harder kind to notice.
+export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'vibe', 'human'];
 
 /**
  * Which reviewer agents may review a diff built by `builder`.
@@ -242,10 +247,13 @@ export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
  */
 export function reviewersFor(builder) {
   const b = String(builder || '').toLowerCase();
-  if (b === 'codex') return ['antigravity'];
-  if (b === 'agy') return ['codex'];
-  if (b === 'claude') return ['codex', 'antigravity'];
-  return ['codex', 'antigravity'];
+  // Every set below is "the roster minus the builder's own family". Written out per builder rather
+  // than derived, so the policy reads as a decision and a wrong pairing is visible on one line.
+  if (b === 'codex') return ['antigravity', 'vibe'];
+  if (b === 'agy') return ['codex', 'vibe'];
+  if (b === 'vibe') return ['codex', 'antigravity'];
+  if (b === 'claude') return ['codex', 'antigravity', 'vibe'];
+  return ['codex', 'antigravity', 'vibe'];
 }
 
 /** Normalise the reviewer CLI name to the family it belongs to. */
@@ -933,7 +941,11 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
 // A green probe prints real findings. An EMPTY result is a FAILURE, not a pass — see runVibe below, which
 // treats empty stdout as an error exactly like the agy path does, for the same reason (a quota-capped or
 // misconfigured CLI can exit 0 with nothing).
-// vibe-probe: NOT YET VERIFIED — replace this line with `vibe-probe: verified <date> against <version>`.
+// vibe-probe: verified 2026-08-25 against vibe 2.24.2 — `node scripts/cross-review.mjs 118 --agent vibe
+//   --builder claude --code-only --dry-run` returned a real, substantive review (Blocking: None,
+//   Should-fix: None, and one Nit that independently spotted an unrelated version-pin commit riding
+//   the branch). NOT empty, which is the failure this probe exists to catch. The four flags above
+//   (--agent plan / --max-turns / --output text / --trust) behaved as the docs describe.
 //
 // `vibe-acp` is the WRONG entry point for this use case and is deliberately not wired: it starts a
 // JSON-RPC server that speaks the Agent Client Protocol over stdio for IDE extensions (Zed et al.). It
