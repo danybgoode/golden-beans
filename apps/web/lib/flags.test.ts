@@ -29,6 +29,7 @@ import {
   isScenarioAuthoringEnabled,
   isAgentRailEnabled,
   isFlagRuleBuilderEnabled,
+  isFlagConsoleEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -70,6 +71,7 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   // property of every gate in this file, and a fifteenth one should inherit the whole near-miss
   // matrix automatically rather than depend on whoever added it remembering to re-type it.
   ['FLAG_RULE_BUILDER_ENABLED', isFlagRuleBuilderEnabled],
+  ['FLAG_CONSOLE_ENABLED', isFlagConsoleEnabled],
 ]
 
 for (const [envKey, gate] of singleFlagGates) {

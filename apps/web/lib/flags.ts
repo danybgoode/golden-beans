@@ -240,6 +240,55 @@ export function isFlagRuleBuilderEnabled(): boolean {
   return process.env.FLAG_RULE_BUILDER_ENABLED === 'true'
 }
 
+// flags-console-parity · Sprint 1, Story 1.1 (epic README, D6 + Amendment 1) — the SEVENTEENTH
+// flag. Born unset/OFF, created DISABLED in development, preview and production before Sprint 1
+// merged.
+//
+// Exactly `=== 'true'`, for the reason all sixteen above give: a gate that opens on a typo is not a
+// gate.
+//
+// ── WHY THIS ONE IS A KILL-SWITCH-GRADE CONCERN, NOT A COSMETIC TOGGLE ────────────────────────
+// The surface it replaces is how an operator kills a live checkout on Miyagi Sánchez. A
+// half-landed redesign must never become the only route to that control, which is the whole reason
+// this epic merges dark and flips deliberately after the product owner has walked the surface.
+//
+// ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
+// GATED:     the feature list, the environment selector, the per-feature destination, and the two
+//            new routes (credentials, lifecycle audit) — every surface this epic adds.
+// NOT gated: anything that exists today. **With this OFF the flags page is byte-for-byte what it
+//            was before the epic, textarea and key-minting forms included.**
+//
+// That last clause is load-bearing and is the reason Amendment 1 exists. Stories 3.1/3.2 MOVE the
+// credential forms and the lifecycle audit off the flags page — and an UNCONDITIONAL move would
+// delete controls from the gate-off page, breaking the guarantee this comment just made. So the
+// move is gate-conditional: while this is off, `flag-manager.tsx` still renders them exactly as
+// today. A dark-launch guarantee that holds "except for the three forms" is not a guarantee, and
+// the sibling epic `flags-visual-rule-builder` already nearly broke the same promise over one CSS
+// class (see the textarea's inline style, below in that file, and the comment defending it).
+//
+// ── HOW THE GUARANTEE IS ENFORCED — by construction, not by a spec ────────────────────────────
+// The new console is a NEW component tree. Sprint 1 does not edit `flag-manager.tsx` at all, so
+// byte-for-byte holds *because the legacy code path is untouched* — a property auditable with
+// `git diff`, which is strictly stronger than a test.
+//
+// This matters because the guarantee is NOT assertable in the merge gate, and the epic's QA
+// section originally claimed it was. `/app/flags/[projectSlug]` is credential-gated, so the
+// Playwright `api` project only ever observes the login redirect — identical with this flag on or
+// off. A spec asserting "the page renders as it did" from there is a guard that cannot fail. What
+// IS assertable without a session is the two NEW routes: they follow the established
+// `if (!isFlagConsoleEnabled()) notFound()` pattern, so they return a flat 404 while dark.
+//
+// Note what this flag is NOT: it is not an authorization control. Every surface it gates resolves
+// membership server-side through `requireProjectMembership` (or `requireProjectOwnership` for the
+// credentials route) whether it is on or off. Turning it ON grants nobody the right to read or
+// write anything they could not already reach. It decides whether a SURFACE exists.
+//
+// Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isFlagConsoleEnabled(): boolean {
+  return process.env.FLAG_CONSOLE_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {
