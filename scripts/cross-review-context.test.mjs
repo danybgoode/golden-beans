@@ -101,10 +101,44 @@ test('an empty or absent diff yields nothing rather than throwing', () => {
   }
 });
 
-test('a path with no parseable header is dropped, not emitted as undefined', () => {
-  // Defensive: `\S+` cannot match a path containing spaces (git quotes those). Dropping it loses
-  // context; emitting `undefined` would make the reader throw on a filename.
-  const quoted =
+test('a GIT-QUOTED path is parsed, not dropped', () => {
+  // Git quotes any path containing a space, a control character or a non-ASCII byte. The first
+  // version treated a quoted header as unparseable and silently omitted the file — which is the
+  // exact defect this seam exists to remove (Codex, PR #119 round 2). Losing a renamed file and
+  // losing an accented one are the same bug.
+  const spaced =
     'diff --git "a/with space.ts" "b/with space.ts"\n--- "a/with space.ts"\n+++ "b/with space.ts"\n@@ -1 +1 @@\n-a\n+b';
-  assert.deepEqual(headSidePaths(quoted), []);
+  assert.deepEqual(headSidePaths(spaced), ['with space.ts']);
+});
+
+test('octal escapes are decoded as BYTES, so a non-ASCII filename survives intact', () => {
+  // Git emits one escape per UTF-8 byte: `é` is \303\251. Decoding each escape as its own
+  // character would yield "cafÃ©" — a filename `git show` cannot resolve, i.e. a silent omission
+  // wearing the appearance of success.
+  const accented =
+    'diff --git "a/caf\\303\\251.ts" "b/caf\\303\\251.ts"\n--- "a/caf\\303\\251.ts"\n+++ "b/caf\\303\\251.ts"\n@@ -1 +1 @@\n-a\n+b';
+  assert.deepEqual(headSidePaths(accented), ['café.ts']);
+});
+
+test('a quoted RENAME still yields the new name', () => {
+  const renamed =
+    'diff --git "a/old name.ts" "b/new name.ts"\n--- "a/old name.ts"\n+++ "b/new name.ts"\n@@ -1 +1 @@\n-a\n+b';
+  assert.deepEqual(headSidePaths(renamed), ['new name.ts']);
+});
+
+test('a quoted DELETION is still skipped', () => {
+  const removed =
+    'diff --git "a/with space.ts" "b/with space.ts"\ndeleted file mode 100644\n--- "a/with space.ts"\n+++ /dev/null\n@@ -1 +0,0 @@\n-x';
+  assert.deepEqual(headSidePaths(removed), []);
+});
+
+test('a malformed header is dropped, never emitted as undefined', () => {
+  // Emitting undefined would make the file reader throw on a filename rather than skip it.
+  for (const header of ['diff --git nonsense', 'diff --git "a/unterminated b/x', 'diff --git ']) {
+    const result = headSidePaths(`${header}\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-a\n+b`);
+    assert.ok(
+      result.every((path) => typeof path === 'string' && path.length > 0),
+      `malformed header produced a bad entry: ${JSON.stringify(result)}`
+    );
+  }
 });

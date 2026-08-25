@@ -801,11 +801,88 @@ export function headSidePaths(diff) {
     .slice(1)
     .map((chunk) => {
       if (/^\+\+\+ \/dev\/null$/m.test(chunk)) return null;
-      const header = chunk.split('\n', 1)[0];
-      const match = /^\S+ b\/(\S+)$/.exec(header);
-      return match ? match[1] : null;
+      return headPathFromDiffHeader(chunk.split('\n', 1)[0]);
     })
     .filter((path) => path !== null);
+}
+
+/**
+ * The `b/` path out of one `diff --git` header line, handling Git's quoting.
+ *
+ * Git quotes a pathname whenever it contains a space, a control character or a non-ASCII byte, and
+ * then C-escapes it: `diff --git "a/my file.ts" "b/my file.ts"`. The first version of this function
+ * treated a quoted header as unparseable and dropped the file — silently omitting it from the
+ * reviewer's context, which is precisely the defect this whole seam exists to remove (cross-review,
+ * Codex, PR #119, round 2). Losing a renamed file and losing an accented one are the same bug.
+ */
+function headPathFromDiffHeader(header) {
+  const sides = splitDiffHeaderSides(header);
+  if (sides === null) return null;
+  const head = unquoteGitPath(sides.head);
+  return head !== null && head.startsWith('b/') ? head.slice(2) : null;
+}
+
+/** The two raw (still-quoted) sides of a `diff --git` header, or null if it does not parse. */
+function splitDiffHeaderSides(header) {
+  const text = String(header || '');
+  // Quoted sides are unambiguous — read the closing quote, honouring backslash escapes.
+  if (text.startsWith('"')) {
+    const end = findClosingQuote(text, 0);
+    if (end === -1) return null;
+    const rest = text.slice(end + 1).trimStart();
+    return rest === '' ? null : { pre: text.slice(0, end + 1), head: rest };
+  }
+  // Unquoted `a/…`: the head side starts at the LAST ` b/` or ` "b/`, because an unquoted path
+  // cannot contain a space and therefore cannot itself contain " b/".
+  const marker = text.lastIndexOf(' b/') >= 0 ? text.lastIndexOf(' b/') : text.lastIndexOf(' "b/');
+  if (marker === -1) return null;
+  return { pre: text.slice(0, marker), head: text.slice(marker + 1) };
+}
+
+function findClosingQuote(text, openIndex) {
+  for (let i = openIndex + 1; i < text.length; i++) {
+    if (text[i] === '\\') {
+      i++;
+      continue;
+    }
+    if (text[i] === '"') return i;
+  }
+  return -1;
+}
+
+/**
+ * Reverse Git's C-style path quoting.
+ *
+ * Octal escapes are the reason this collects BYTES before decoding: git emits a non-ASCII character
+ * as one escape per UTF-8 byte (`é` → `\303\251`), so decoding each escape as its own character
+ * would produce mojibake rather than the filename. An unquoted path is returned unchanged.
+ */
+function unquoteGitPath(raw) {
+  const text = String(raw || '');
+  if (!text.startsWith('"')) return text;
+  const end = findClosingQuote(text, 0);
+  if (end === -1) return null;
+  const body = text.slice(1, end);
+  const bytes = [];
+  const SIMPLE = { a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13, '"': 34, '\\': 92 };
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== '\\') {
+      for (const byte of Buffer.from(body[i], 'utf8')) bytes.push(byte);
+      continue;
+    }
+    const next = body[++i];
+    if (next === undefined) return null;
+    if (next >= '0' && next <= '7') {
+      const octal = body.slice(i, i + 3);
+      if (!/^[0-7]{3}$/.test(octal)) return null;
+      bytes.push(parseInt(octal, 8));
+      i += 2;
+      continue;
+    }
+    if (!(next in SIMPLE)) return null;
+    bytes.push(SIMPLE[next]);
+  }
+  return Buffer.from(bytes).toString('utf8');
 }
 
 export function buildFileContext(paths, readFile, budgetBytes, opts = {}) {
