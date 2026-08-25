@@ -363,7 +363,7 @@ export function FlagManager({
           enabled in a new deployment.
         </p>
       )}
-      {canManage && showCredentials ? (
+      {canManage ? (
         <>
           {/* flags-visual-rule-builder · Story 1.4 (D6/D7). The builder is ADDITIVE: it renders
               alongside the textarea, never instead of it. With the gate unset this whole block is
@@ -424,6 +424,19 @@ export function FlagManager({
               {pending ? 'Working…' : 'Create immutable version'}
             </button>
           </form>
+          {/* ── The credential forms are gated SEPARATELY from authoring, and that split matters ──
+              Both used to sit in one `canManage ? (<>…</>)` block. Gating that whole block on
+              `showCredentials` hid the AUTHORING form too — and with the console on, the per-feature
+              destination only versions a flag you can already click, so there would have been NO way
+              to create a new flag at all. That is the third time in this epic that a control was
+              nearly removed before its replacement existed (Sprint 1's stack, Sprint 2's rollback,
+              this). Caught here by grepping rendered copy for D7's retired vocabulary, which is why
+              Story 3.3 runs before the sprint closes rather than after.
+              The authoring form therefore STAYS in both gate states until something replaces it. */}
+        </>
+      ) : null}
+      {canManage && showCredentials ? (
+        <>
           <form onSubmit={onMint}>
             <h2>Mint a scoped snapshot key</h2>
             <p>A key is bound to exactly one environment, stored only as a hash, and shown once.</p>
@@ -504,7 +517,12 @@ export function FlagManager({
             </div>
           )}
         </>
-      ) : (
+      ) : null}
+      {/* The read-only notice belongs to the MEMBER case, not to "the credential forms are absent".
+          After the authoring/credentials split above it was attached to the credentials ternary, so
+          an OWNER with the console on — forms moved to their own route — would have been told they
+          have read-only access. Keyed on `canManage` alone, which is the fact it describes. */}
+      {!canManage && (
         <p>
           <strong>Read-only access.</strong> A project owner creates versions, manages scoped snapshot and
           catalog sync credentials, and changes environment activations.
