@@ -184,3 +184,18 @@ test('a BINARY addition is still included — it exists at head', () => {
   ].join('\n');
   assert.deepEqual(headSidePaths(binaryAdd), ['logo.png']);
 });
+
+test('MIXED quoting is handled — git quotes each side independently', () => {
+  // A reviewer (Mistral Vibe, PR #119) suggested documenting an invariant that "git always quotes
+  // both sides when needed", so the mixed case is impossible. It is not: git quotes a path only if
+  // THAT path needs it, so renaming `old.ts` to `new file.ts` produces exactly one quoted side.
+  // Pinned as a spec rather than written down as a comment, because the comment would have been
+  // false and a false invariant invites someone to "simplify" the code that handles the real case.
+  const unquotedToQuoted =
+    'diff --git a/old.ts "b/new file.ts"\n--- a/old.ts\n+++ "b/new file.ts"\n@@ -1 +1 @@\n-a\n+b';
+  assert.deepEqual(headSidePaths(unquotedToQuoted), ['new file.ts']);
+
+  const quotedToUnquoted =
+    'diff --git "a/old file.ts" b/new.ts\n--- "a/old file.ts"\n+++ b/new.ts\n@@ -1 +1 @@\n-a\n+b';
+  assert.deepEqual(headSidePaths(quotedToUnquoted), ['new.ts']);
+});
