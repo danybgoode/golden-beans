@@ -14,7 +14,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import * as Module from 'node:module'
-import { FLAG_ENVIRONMENTS, evaluateFlag, parseFlagDefinition, type FlagDefinition } from '@golden-frijoles/sdk'
+import {
+  FLAG_ENVIRONMENTS,
+  evaluateFlag,
+  parseFlagDefinition,
+  type FlagDefinition,
+} from '@golden-frijoles/sdk'
 
 type ResolveHook = (
   specifier: string,
@@ -544,4 +549,67 @@ test('an activation pointing at an unknown version is named rather than shown as
   assert.equal(summary.active, false)
   assert.equal(summary.fillPercent, null)
   assert.ok(summary.detail.includes('could not be read'))
+})
+
+// ── Story 2.3 / Amendment 2 — three states, not two ──────────────────────────────────────────
+// `deactivate_flag` KEEPS the activation row and nulls its version, so "somebody turned this off"
+// and "nobody has ever touched this here" are stored differently and must read differently. This
+// seam used to collapse them with `activations.find(…)?.versionId ?? null` and render both as
+// "Nothing is activated here."
+//
+// ⚠️ Note the fixture below does NOT use the `flag()` helper above. That helper synthesises an
+// activation row for EVERY environment, so every "inactive" case in this file is really the
+// turned-off case — which is why none of them caught the collapse, and why the live shape (40 of 42
+// flags have no row at all, in any environment) was untested until now.
+
+function flagWithActivations(activations: Array<{ environment: string; versionId: string | null }>) {
+  return {
+    key: 'checkout.stripe_enabled',
+    versions: [{ id: 'version-1', version: 1, definition: definition() }],
+    activations: activations as never,
+  }
+}
+
+test('NO activation row reads as never-touched, not as switched off', () => {
+  const summary = summariseFlagEnvironments(flagWithActivations([])).production
+  assert.equal(summary.active, false)
+  assert.match(summary.detail, /No one has switched this on or off/)
+  // The old wording, which described both states at once.
+  assert.doesNotMatch(summary.detail, /Nothing is activated here/)
+})
+
+test('an activation row holding NULL reads as a deliberate switch-off', () => {
+  const summary = summariseFlagEnvironments(
+    flagWithActivations([{ environment: 'production', versionId: null }])
+  ).production
+  assert.equal(summary.active, false)
+  assert.match(summary.detail, /Switched off here/)
+})
+
+test('the two inactive states produce DIFFERENT sentences', () => {
+  // The whole point: a reader must be able to tell a kill from an absence. Asserting they differ,
+  // rather than asserting each string, is what keeps this from passing if both are reworded to the
+  // same thing later.
+  const never = summariseFlagEnvironments(flagWithActivations([])).production
+  const off = summariseFlagEnvironments(
+    flagWithActivations([{ environment: 'production', versionId: null }])
+  ).production
+  assert.notEqual(never.detail, off.detail)
+})
+
+test('the distinction is PER ENVIRONMENT — off in one, never touched in another', () => {
+  // The live shape: something deactivated in production while development was never set up at all.
+  const summaries = summariseFlagEnvironments(
+    flagWithActivations([{ environment: 'production', versionId: null }])
+  )
+  assert.match(summaries.production.detail, /Switched off here/)
+  assert.match(summaries.development.detail, /No one has switched this on or off/)
+})
+
+test('an active environment is unaffected by the un-collapse', () => {
+  const summary = summariseFlagEnvironments(
+    flagWithActivations([{ environment: 'production', versionId: 'version-1' }])
+  ).production
+  assert.equal(summary.active, true)
+  assert.equal(summary.version, 1)
 })
