@@ -1,11 +1,56 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 1: The list becomes a list
 
-**Status:** ⬜ not started
+**Status:** ✅ built · CI green · cross-family review clean — **PR [#118](https://github.com/danybgoode/golden-beans/pull/118), held as DRAFT.**
+Two gates remain and neither is claimable by the builder: the HIGH-tier **fresh reviewer subagent**
+(mandatory per `review-route.mjs`, not yet run) and the product owner's **signed-in walkthrough**.
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D1`–`D6` from
-> the epic README; do not re-derive them. They are marked **NOT YET LOCKED** — the architect verifies
-> them against live code *and* the live registry first, and corrects the doc out loud where they are
-> wrong. `D1` and `D5` are the two most likely to be false.
+**CI (`18c3fab`), all green:** Static gate + build · Playwright vs local Supabase + local server ·
+build-order-fresh · cli-tests · design-system-fresh · Vercel preview deploy.
+
+**Cross-family review: 5 rounds, both families clean on the same head.** Round 3 (Codex) found the
+one that mattered — see the note below.
+
+| Story | Commit | Note |
+|---|---|---|
+| 1.1 `FLAG_CONSOLE_ENABLED` | `6cf3230` | Created disabled in dev/preview/production — **all three read back as `"false"`** via `vercel env pull`, not inferred from `env ls` (which never shows values). Preview was re-verified 2026-08-25 after the reviewer noted the original evidence covered only two of the three. |
+| 1.2 `lib/flag-list-view.ts` | `1de0821` | 48 specs; two mutations observed failing. |
+| 1.3 One feature list | `bb920ba` | Server-rendered, URL-driven; not a `DataTable` (D4). |
+| 1.4 Environment selector | `bb920ba` | Flags-scoped links; `ProductShell` untouched (D3). |
+
+> ### ⚠️ The defect review caught, recorded because the cause generalises
+>
+> An earlier revision of this sprint suppressed `<FlagManager>`'s per-flag stack when the console was
+> on, via a `showDefinitions` prop. **That stack holds every activate/deactivate control**, and their
+> replacement — the per-feature destination — is Story 2.1, a sprint later. Turning the gate ON would
+> therefore have removed the only way to kill a live flag, `checkout.stripe_enabled` included: an
+> outage wearing a redesign's clothes, and exactly the hazard the epic's Kill-switch section names.
+>
+> **The cause was a weakened constraint, not a missed detail.** Amendment 1 said *"Sprint 1 does not
+> edit `flag-manager.tsx`."* That was weakened mid-build with careful-looking reasoning — four lines,
+> default preserved, gate-off render unchanged — and the weakening was the defect. The constraint was
+> load-bearing for a failure that had not been identified.
+>
+> **A constraint you cannot immediately justify is not thereby unjustified.** Find the failure it was
+> written to prevent before removing it; failing to find it is a reason to look harder, not a licence
+> to proceed. → promote to `LEARNINGS.md` at epic close.
+
+> **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D1a`, `D2`, `D3`, `D4`,
+> `D5` and `D6` (+ **Amendment 1**) from the epic README; **do not re-derive them.** The prediction
+> held: `D5` was disproved against the live registry and `D6` was found to conflict with Sprint 3.
+> Two consequences bind this sprint directly:
+> - **`D2`: the list projection is per-environment.** Miyagi Sánchez's upstream has one global
+>   `enabled`; Golden's state is per `(flag, environment)`. `lib/flag-list-view.ts` therefore takes
+>   `(flags, environment)` and projects rows FIRST; search/filter/sort/paginate run over that
+>   projection. This is the single most important porting difference — get it wrong and every sort
+>   and count on the page is answering about the wrong environment.
+> - **Amendment 1: do not edit `flag-manager.tsx` in this sprint.** The new console is a new
+>   component tree. D6 then holds *by construction* and is auditable with `git diff` — the file is
+>   byte-identical to `main`.
+>   ⚠️ This constraint was briefly weakened mid-build and then restored, because weakening it
+>   introduced an outage: the per-flag stack holds every activate/deactivate control, and hiding it
+>   a sprint before the per-feature destination lands would have left no way to kill a live flag.
+>   **Sprint 1 is purely additive** — list above, existing controls untouched below. See the epic
+>   README's Amendment 1.
 
 ## Stories
 
@@ -26,7 +71,12 @@ half-landed redesign can never become the only way to reach the control that kil
 gate covers them without a browser.
 **Acceptance:**
 - Search matches a flag's **key or its description**, case-insensitively.
-- Filters for state (all / on / off) and type (all / kill-switch / enablement).
+- Filters for state (all / on / off) and type (all / killswitch / enablement). **The stored value is
+  `killswitch`, one word** (D1a/Amendment 3) — that is what `definition.metadata.polarity` holds live
+  and what the URL parameter carries; the rendered label is D7's business.
+- **A flag whose `metadata` carries no `polarity` or `criticality` is rendered as *unclassified*, and
+  is reachable by a filter** (D1a). The bag is optional in the SDK and unvalidated by the database;
+  one live version already lacks two of its four metadata keys.
 - Five sorts — key A→Z, key Z→A, state, type, recently changed — and **every** sort tie-breaks
   alphabetically by key, so ordering is never "whatever the array happened to be in".
 - `paginate` **clamps** an out-of-range page into range rather than returning an empty page.
@@ -45,7 +95,12 @@ feature in seconds.
 - Typing `stripe` narrows the list to `checkout.stripe_enabled` without a full page of other flags
   above it.
 - **A row whose definition carries a non-empty `rules` array, or which is not a two-variant boolean,
-  still renders sanely** (D5) — it is not assumed to be a Miyagi Sánchez static boolean.
+  still renders sanely** — it is not assumed to be a static boolean. ⚠️ **D5's live-data justification
+  was disproved:** all 44 live `miyagisanchez` versions are rule-less static booleans of one
+  `valueType`, and the `breaker.*` flags are in the **`miyagi`** project, not this one. The
+  requirement stands on **forward-looking** grounds instead — the visual rule builder shipped in #15
+  can author rules today, and `getFlagRegistryView()` serves both tenants. Build for it; do not claim
+  live data demands it.
 - No new database query is added (D1).
 **Risk:** low
 
@@ -60,9 +115,20 @@ environment I'm actually asking about.
 **Risk:** low
 
 ## Sprint QA
-- **api spec(s):** `e2e/flag-console-dark.spec.ts` (new — the gate-off byte-for-byte guarantee for
-  1.1, mirroring the existing `flag-serving-dark.spec.ts` shape); `npm run test:unit` covers 1.2.
-  Extend `e2e/flag-rule-builder.authed.spec.ts` for the authed list assertions in 1.3/1.4.
+- **api spec(s): NONE are added by this sprint, and that is the honest answer.** `npm run test:unit`
+  covers 1.2 in full (48 specs). ⚠️ This bullet used to list `e2e/flag-console-dark.spec.ts` and an
+  extension of `e2e/flag-rule-builder.authed.spec.ts` as if delivered; **neither is on this branch**
+  (fresh HIGH-tier reviewer, PR #118). The reason is the corrected paragraph below: Sprint 1 adds no
+  gate-observable behaviour. `flag-console-dark.spec.ts` is written in **Sprint 2**, where the
+  per-feature route finally gives the gate something an unauthenticated request can see.
+  ⚠️ **Corrected at the lock pass (Amendment 1).** This spec was scoped as *"the gate-off
+  byte-for-byte guarantee"*. **It cannot be that.** `/app/flags/<slug>` is credential-gated, so the
+  Playwright `api` project only ever observes the login redirect — identical with the gate on or off,
+  which makes such a spec a guard that cannot fail (the exact class LEARNINGS names). What it asserts
+  instead is the part that IS observable without a session: **Sprint 3's two new routes return a flat
+  404 while the gate is dark**, per the `if (!gate()) notFound()` pattern. Byte-for-byte on the
+  existing page is guaranteed by *construction* — `flag-manager.tsx` is byte-identical to `main` —
+  and audited with `git diff`, not asserted by a spec that could not see it break.
 - **browser smoke owed:** yes, to the product owner — the authed `/app/flags/miyagisanchez` list
   itself. Not a money path, but it is credential-gated, so the automated rail can only reach the
   login redirect.
@@ -77,7 +143,11 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
 2. Flip `FLAG_CONSOLE_ENABLED` to `true` in Preview and redeploy by merging to `main`
    (an env edit alone does nothing — Vercel snapshots values at build time).
 3. Reload https://goldenfrijoles.com/app/flags/miyagisanchez
-   → You see **one list** of features, not a stack of editors. There is a search box above it.
+   → A **feature list with a search box and an environment selector appears at the top of the page**.
+   ⚠️ *Corrected during the build:* the per-flag stack of editors is **still below it in Sprint 1,
+   and that is deliberate.* It holds every activate/deactivate control, and its replacement (the
+   per-feature destination) is Story 2.1. Removing it here would have left no way to turn a live
+   flag off. **"One list, not a stack of editors" is Sprint 2's smoke, not this one's.**
 4. Type `stripe` into the search box.
    → The list narrows to `checkout.stripe_enabled`. Nothing else is between you and it.
 5. Change the environment selector from **production** to **development**.
@@ -88,3 +158,31 @@ Env: production · https://goldenfrijoles.com   (or the preview URL while testin
    → Ordering is stable and the page control never lands you on an empty page.
 
 If any step fails, note the step number + what you saw — that's the bug report.
+
+## What was verified before the PR, and how
+
+**Deterministic gate, all green:** `npm run test:unit` (1227 pass / 0 fail) · `npm run typecheck` ·
+`npm run lint` · `npm run build` · `node scripts/check-design-drift.mjs`.
+
+**The rendered surface was verified by RENDERING it, not by grepping for strings.** The Playwright
+`authed` project needs a local Supabase, and Docker was not running on this machine, so the console
+was compiled and rendered to static markup out-of-band against fixtures shaped exactly like the
+production registry read during the lock pass. Observed in the actual HTML:
+
+- The three activation states render as three visibly different things — `On · serving v2` (check),
+  `Turned off · switched off <date>` (warning), `Never turned on here` (clock). This is Story 2.3's
+  distinction already visible on the Sprint 1 list.
+- **The per-environment projection is real, not decorative:** a flag deactivated only in production
+  reads *Turned off* under `?env=production` and *Never turned on here* under `?env=development`.
+- A definition carrying **no `metadata` bag** renders `Unclassified` in both columns — never
+  `undefined` (D1a).
+- `?state=on` narrows the table to one row while the chips still report `All (4) · On (1) ·
+  Not on (3)`, so the chips remain a way back rather than collapsing to zero.
+- `?sort=state` orders on → turned off → never, ties alphabetical.
+- **Allow-listing holds against a hostile query.** `?evil=<script>&sort=<img>` produced zero
+  occurrences of `<script`, zero of `<img`, and zero of `evil=` anywhere in the markup; `sort` fell
+  back to `key_asc`. Unknown parameters are dropped, not echoed.
+
+**Still owed, and not claimable from here:** a signed-in walkthrough on a real deployment. The page
+is credential-gated, so no automated rail in this repo can reach past the login redirect — that is
+the browser smoke named at the top of this sprint, and it is the product owner's.

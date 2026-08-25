@@ -1,15 +1,24 @@
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
+import { isFlagConsoleEnabled, isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
+import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
+import { parseFlagListParams } from '@/lib/flag-list-view'
 import { FlagManager } from './flag-manager'
+import { DEFAULT_FLAG_ENVIRONMENT, FlagConsole } from './flag-console'
 import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
 
-export default async function FlagsPage({ params }: { params: Promise<{ projectSlug: string }> }) {
+export default async function FlagsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ projectSlug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
@@ -20,6 +29,17 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
     canManage ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
     canManage ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
   ])
+
+  // flags-console-parity · Story 1.1 — the gate is resolved HERE, server-side, and passed down. One
+  // resolver covers the list, the environment selector and (from Sprint 3) both new routes; no
+  // client ever reads `process.env`. Same boundary `isFlagRuleBuilderEnabled()` already uses.
+  const consoleEnabled = isFlagConsoleEnabled()
+  // Parsed unconditionally so the parse itself cannot differ between the two branches — but it is
+  // only ever READ by the console. With the gate off this is a few microseconds of allow-list
+  // checking and nothing reaches the page, which keeps D6's "byte-for-byte" claim about markup
+  // rather than about control flow.
+  const listParams = parseFlagListParams(await searchParams, FLAG_ENVIRONMENTS, DEFAULT_FLAG_ENVIRONMENT)
+
   return (
     <ProductShell projectSlug={projectSlug}>
       <main>
@@ -32,6 +52,40 @@ export default async function FlagsPage({ params }: { params: Promise<{ projectS
           Activating or deactivating a flag changes one environment snapshot with optimistic revision
           protection.
         </p>
+        {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
+            epic — `flag-manager.tsx` is byte-identical to `main` and takes no new prop. The console
+            is an additional tree, not a rewrite of the one below it.
+
+            ── Why this is NOT gated on `canManage`, stated here because two review passes asked ──
+            "Key" means two different things on this page, and the boundary follows the second one.
+            A FLAG key (`checkout.stripe_enabled`) is a definition identifier and is deliberately
+            MEMBER-READABLE — `getFlagRegistryView` is documented as exactly that, `registry` is
+            spread into <FlagManager> below with no role check, and the comment on the Promise.all
+            above says so in as many words. An API key (a snapshot or catalog-sync credential) is
+            operationally sensitive, and THOSE are what `canManage` gates — see `keys`/`syncKeys`.
+
+            `<FlagConsole>` receives `flags` and nothing else: no `keys`, no `syncKeys`, no
+            `canManage`. It renders strictly LESS about a definition than the stack below it already
+            showed members, which included every version's full JSON. So gating it on `canManage`
+            would not tighten any boundary — it would newly HIDE member-readable data from members,
+            which is a behaviour change this epic has no mandate to make.
+
+            Cross-review (Codex) raised this as Blocking in two consecutive rounds. It was wrong both
+            times, but a finding a reader reaches twice is a readability defect in the code, not just
+            a reviewer error — so the distinction is written down here rather than re-argued in a
+            third PR comment. If the credentials route (Story 3.1) ever renders here, it needs
+            `requireProjectOwnership`; the feature list does not.
+
+            ── Why the legacy stack still renders BELOW, even with the console on ─────────────────
+            Because this sprint's list is READ-ONLY. Every activate/deactivate control lives inside
+            <FlagManager>'s per-flag stack, and the per-feature destination that replaces them is
+            Story 2.1, next sprint. Suppressing that stack — which an earlier revision of this PR
+            did, via a `showDefinitions` prop — meant that turning the console ON removed the only
+            way to kill a live flag, `checkout.stripe_enabled` included. That is an outage wearing a
+            redesign's clothes, and it is the exact hazard this epic's kill-switch section names.
+            So Sprint 1 is ADDITIVE: list above, existing controls untouched below. The stack goes
+            when its replacement lands, not before. (Cross-review, Codex, round 3.) */}
+        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
           {...registry}

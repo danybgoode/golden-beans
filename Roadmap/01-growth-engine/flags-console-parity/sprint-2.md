@@ -2,9 +2,11 @@
 
 **Status:** ⬜ not started
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D1`, `D5`, `D6`
-> and `D8` from the epic README. **`D8` is the one most likely to be disproved** — whether Golden's
-> registry can express "in a catalog but undefined" at all, for any project, is unverified.
+> **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
+> (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
+> was disproved.** "In a catalog but undefined" is not expressible in Golden — it is unreachable by
+> construction, not merely absent from the data — and the flag the smoke names as the example is
+> live in all three environments. **Story 2.3 and smoke step 7 are rewritten below.**
 > Branch: `feat/flags-console-parity-s2`, cut from Sprint 1's branch (WAYS-OF-WORKING §6 — these
 > sprints share `flag-manager.tsx` and `page.tsx`; stack or pay the conflict tax).
 
@@ -21,6 +23,12 @@
   render there, **moved, not rewritten**, and behave exactly as they do today.
 - The raw JSON stays reachable one click deeper — it stops being the primary "what changed"
   affordance, and does not disappear.
+- **This story also owns REMOVING the legacy per-flag stack from the flags page** (moved here from
+  Sprint 1 during the build). Sprint 1 deliberately left `flag-manager.tsx` byte-identical and
+  rendered its list *above* the existing controls, because that stack holds every
+  activate/deactivate button and hiding it before this destination existed would have removed the
+  only way to kill a live flag. **Land the destination and retire the stack in the same story** —
+  that ordering is the whole point, and it is the only one that is never an outage.
 - **This is the story that owns the JSON textarea's CSS swap.** `flag-manager.tsx` carries an inline
   `style={{...}}` with a comment recording that Sprint 2 of `flags-visual-rule-builder` swapped it for
   `.code-input`, cross-review rejected it (`.code-input` also sets `white-space: pre`, which would
@@ -45,17 +53,33 @@ without knowing what stops.
 path. **The product owner merges** (WAYS-OF-WORKING → Review & merge), and a fresh reviewer subagent
 is mandatory on top of the two routed cross-family passes.
 
-### Story 2.3 — "Not created" is not "off"
-**As a** PM, **I want** a feature that was never defined to say so, **so that** I'm not looking at a
-task the UI has hidden from me.
+### Story 2.3 — "Never turned on here" is not "turned off"  *(re-scoped 2026-08-24 — see Amendment 2)*
+**As a** PM, **I want** an environment that was never switched on to say so, **so that** I can tell a
+deliberate "off" from a flag nobody has ever set up here.
+
+> **Why this is not the story that was groomed.** The original asked for "not created" vs "off". The
+> lock pass proved Golden cannot express that: `create_flag_definition_version` writes the registry
+> row and its first version in **one transaction**, so a defined-but-unversioned flag is unreachable,
+> and **no such row exists in production**. Worse, the story's named example is backwards —
+> `partners.recruiting_v3_enabled` has 2 versions and is **active in all three environments**, one of
+> only two flags in the project that are on anywhere. The doc said to re-scope rather than drop, so
+> this is the re-scope: the distinction Golden CAN make, on the same data, with no new query.
+
 **Acceptance:**
-- A catalog key with no definition renders as **not created** — visibly distinct from off — with the
-  create action attached to it.
-- The distinction is real, not cosmetic: this is the `partners.recruiting_v3_enabled` case, where
-  enabling is a *create*, not a flip.
-- If the lock pass finds Golden cannot express this state (D8), **the story is re-scoped in the doc
-  and the reason written down** — it is not quietly dropped, and it is not faked with a client-side
-  guess.
+- Each `(feature, environment)` renders as exactly one of **three** states, never two collapsed into
+  one: **on (serving v*N*)** · **turned off** (deliberately deactivated, and in the audit) ·
+  **never turned on here** (no activation row has ever existed).
+- The distinction is read from data that is already loaded: an activation row holding
+  `version_id = NULL` is a deactivation; **no row at all** is "never turned on here". D1 holds —
+  **no query is added**.
+- `summariseFlagEnvironments()` currently collapses the last two — `activations.find(…)?.versionId ?? null`
+  maps both to `null` and both render *"Nothing is activated here."* **Un-collapsing it is the story**,
+  and it happens in that already-unit-tested pure seam, not in the component.
+- Covered by `npm run test:unit`, with **each spec observed failing at least once**. The three states
+  are directly constructible as fixtures — no browser, no database.
+- This matters at the scale the live data actually has: **40 of 42 flags have never been turned on in
+  any environment.** A console that renders all forty identically to a deliberate kill has not
+  answered the epic's outcome test.
 **Risk:** low
 
 ## Sprint QA
@@ -87,9 +111,16 @@ Env: **preview first** · then production · https://goldenfrijoles.com
    that the Stripe card rail disappears from checkout. **Cancel it.**
 6. Repeat step 5 on production, read the confirmation, and cancel again.
    → Same sentence, naming production. Nothing changed.
-7. Find `partners.recruiting_v3_enabled`.
-   → It reads **not created**, not "off", and offers to create it. *(If Sprint 2's lock pass
-   disproved D8, this step is replaced by whatever the doc was corrected to say — check `sprint-2.md`
-   before reporting it as a failure.)*
+7. *(Rewritten 2026-08-24 — the lock pass disproved D8. The original step told you to expect
+   `partners.recruiting_v3_enabled` to read "not created"; it is in fact **on in all three
+   environments**, so anyone following the old step would have filed a bug against correct
+   behaviour.)*
+   Find `partners.recruiting_v3_enabled` and `checkout.stripe_enabled`, and compare them.
+   → `partners.recruiting_v3_enabled` reads **on** in development, preview **and** production, at a
+   named version. `checkout.stripe_enabled` reads **never turned on here** — *not* "off" — because no
+   one has ever activated it in any environment. Those are two different sentences on the screen.
+   → If you have just cancelled out of a disable in step 5, nothing changed, so nothing reads
+   "turned off" yet. To see the third state, look at any flag you have actually deactivated — the
+   lifecycle audit is what tells them apart, and that is the point of the distinction.
 
 If any step fails, note the step number + what you saw — that's the bug report.
