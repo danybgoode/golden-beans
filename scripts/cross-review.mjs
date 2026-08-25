@@ -169,22 +169,6 @@ function ghDiff(pr, repo) {
 
 // Changed-file stats for the cost guard: [{ path, additions, deletions }, …]. Returns [] on any failure so
 // the guard degrades to "not trivial" (review runs) rather than silently skipping on a transient gh hiccup.
-/**
- * The PR's head commit SHA, or null when it cannot be resolved.
- *
- * Deliberately tolerant: this exists to make the reviewer's FILE CONTEXT match the diff it is
- * reviewing, so a failure here degrades to the old working-tree behaviour with a warning rather
- * than aborting a review. `gh` is presence-checked by ensureGh() before this runs.
- */
-function resolvePrHeadOid(pr, repo) {
-  const args = ['pr', 'view', String(pr), '--json', 'headRefOid', '-q', '.headRefOid'];
-  if (repo) args.push('--repo', repo);
-  const out = spawnSync('gh', args, { encoding: 'utf8' });
-  if (out.status !== 0) return null;
-  const oid = String(out.stdout || '').trim();
-  return /^[0-9a-f]{40}$/.test(oid) ? oid : null;
-}
-
 function ghFiles(pr, repo) {
   const args = ['pr', 'view', String(pr), '--json', 'files'];
   if (repo) args.push('--repo', repo);
@@ -195,6 +179,23 @@ function ghFiles(pr, repo) {
   } catch {
     return [];
   }
+}
+
+/**
+ * The PR's head commit SHA, or null when it cannot be resolved.
+ *
+ * Deliberately tolerant about RESOLVING: a `gh` hiccup returns null rather than aborting a review.
+ * It is NOT tolerant about substituting — when the head cannot be resolved, the caller omits the
+ * file context instead of reading a different version of it from the working tree. Getting that
+ * backwards is what produced a confidently-wrong Blocking finding on PR #118.
+ */
+function resolvePrHeadOid(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'headRefOid', '-q', '.headRefOid'];
+  if (repo) args.push('--repo', repo);
+  const out = spawnSync('gh', args, { encoding: 'utf8' });
+  if (out.status !== 0) return null;
+  const oid = String(out.stdout || '').trim();
+  return /^[0-9a-f]{40}$/.test(oid) ? oid : null;
 }
 
 // agy 1.0.7 has no stdin, so the diff rides embedded in the argv string.
