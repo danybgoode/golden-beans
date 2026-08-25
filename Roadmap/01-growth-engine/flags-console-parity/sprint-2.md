@@ -1,6 +1,7 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 2: One feature, in Flagsmith's shape
 
-**Status:** ⬜ not started
+**Status:** 🟡 in progress — Story 2.1 built on `feat/flags-console-parity-s2` (stacked on Sprint 1).
+2.2 (HIGH, money path) and the stack retirement are next.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
 > (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
@@ -21,15 +22,32 @@
   no-gos).
 - The existing `RuleBuilder`, `FlagInsight` (rollout bars + plain-language diff) and `FlagPreview`
   render there, **moved, not rewritten**, and behave exactly as they do today.
+  - `RuleBuilder` gains ONE optional prop, `initialFlagKey`, defaulting to `''` — the existing call
+    site's exact behaviour. Only the destination passes a value, because there the flag is already
+    chosen and retyping its key invites typing a NEW flag into existence instead of versioning this
+    one. The field stays editable and the write path is unchanged: one action, one validator, one
+    RPC (A1).
+  - ⚠️ **`FlagInsight` lands on History, bars included.** It is one cross-review-hardened component
+    carrying both the rollout bars and the plain-language diff. The bars arguably belong under
+    *Value*; splitting them out would be a rewrite of a component this story is explicitly told to
+    move. History is also where the sprint smoke looks for the diff. Noted here rather than resolved
+    by quietly forking the component.
 - The raw JSON stays reachable one click deeper — it stops being the primary "what changed"
   affordance, and does not disappear.
-- **This story also owns REMOVING the legacy per-flag stack from the flags page** (moved here from
-  Sprint 1 during the build). Sprint 1 deliberately left `flag-manager.tsx` byte-identical and
-  rendered its list *above* the existing controls, because that stack holds every
-  activate/deactivate button and hiding it before this destination existed would have removed the
-  only way to kill a live flag. **Land the destination and retire the stack in the same story** —
-  that ordering is the whole point, and it is the only one that is never an outage.
-- **This is the story that owns the JSON textarea's CSS swap.** `flag-manager.tsx` carries an inline
+- **The legacy per-flag stack is retired in THIS SPRINT — but after Story 2.2, not in this story.**
+  ⚠️ Refined while building 2.1. The stack holds every activate/deactivate control, and this story
+  builds a *read* destination; 2.2 is what puts an enable/disable control on it. Retiring the stack
+  at the end of 2.1 would repeat Sprint 1's defect exactly one story later. **Order: 2.1 destination
+  → 2.2 control on it → then the stack goes.** Never before.
+- ⚠️ **Decision recorded, 2026-08-24 — the JSON textarea's CSS swap does NOT happen in this story.**
+  The rule in `flag-manager.tsx` is *"whoever replaces this control owns the swap"*, and this story
+  does not replace it. The builder now reachable on the destination authors a new VERSION of an
+  existing flag (its key is prefilled); the textarea is still the only way to create a flag that has
+  no definition yet. Swapping `.code-input` onto a control that is still load-bearing would buy a CSS
+  tidy-up at the price of `white-space: pre` breaking long-JSON wrapping — which is exactly what
+  cross-review rejected the first time. It stays until something actually replaces it.
+- **This story owns the JSON textarea's CSS swap** *(see the decision above — exercised as "record
+  why it stays")*. `flag-manager.tsx` carries an inline
   `style={{...}}` with a comment recording that Sprint 2 of `flags-visual-rule-builder` swapped it for
   `.code-input`, cross-review rejected it (`.code-input` also sets `white-space: pre`, which would
   stop long JSON wrapping), and *"whoever replaces this control owns the swap"*. Do the swap

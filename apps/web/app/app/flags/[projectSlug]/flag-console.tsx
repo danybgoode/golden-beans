@@ -31,16 +31,11 @@
 
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
-import {
-  buildFlagListQuery,
-  buildFlagListView,
-  type FlagActivationState,
-  type FlagListParams,
-  type FlagListRow,
-} from '@/lib/flag-list-view'
-import { Badge, type BadgeStatus } from '@/components/ui/Badge'
+import { buildFlagListQuery, buildFlagListView, type FlagListParams } from '@/lib/flag-list-view'
+import { Badge } from '@/components/ui/Badge'
 import { Panel } from '@/components/ui/Panel'
-import { formatUtc } from '@/lib/format-utc'
+// Story 2.1 — the words live in one module now that a second surface renders them (D7).
+import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL } from './flag-vocabulary'
 
 /**
  * Production is the default view.
@@ -49,59 +44,6 @@ import { formatUtc } from '@/lib/format-utc'
  * and defaulting to development would answer a question nobody asked while looking authoritative.
  */
 export const DEFAULT_FLAG_ENVIRONMENT: FlagEnvironment = 'production'
-
-/**
- * The three activation states, said in words rather than left to a colour.
- *
- * ── Why "never turned on here" is not "off" ──────────────────────────────────────────────────
- * This is Story 2.3 / Amendment 2 reaching the screen. `deactivate_flag` keeps the activation row
- * and nulls its version, so a deliberate kill is recorded in the lifecycle audit with an actor and
- * a reason; a flag nobody ever activated has no row and no audit trail, because nothing happened.
- * Live, **40 of 42** flags are in the second state in every environment. Rendering them the same as
- * a deliberate kill is the specific thing that made the old page unanswerable.
- *
- * The badge statuses are borrowed for their SEMANTICS, not their colour: `live` carries a check,
- * `blocked` a warning (somebody did this on purpose), `next` a clock (nobody has got to it).
- */
-const STATE_PRESENTATION: Record<
-  FlagActivationState,
-  { badge: BadgeStatus; label: string; detail: (row: FlagListRow) => string }
-> = {
-  on: {
-    badge: 'live',
-    label: 'On',
-    detail: (row) =>
-      row.version === null ? 'serving a version that could not be read' : `serving v${row.version}`,
-  },
-  off: {
-    badge: 'blocked',
-    label: 'Turned off',
-    detail: (row) =>
-      row.updatedAt === null ? 'switched off here' : `switched off ${formatUtc(row.updatedAt)}`,
-  },
-  never: {
-    badge: 'next',
-    label: 'Never turned on here',
-    detail: () => 'no one has switched this on or off in this environment',
-  },
-}
-
-const TYPE_LABEL: Record<string, string> = {
-  killswitch: 'Kill switch',
-  enablement: 'Enablement',
-  unclassified: 'Unclassified',
-}
-
-// Every criticality is looked up, including the classified ones. An earlier version special-cased
-// only `unclassified` and let the other three fall through as the raw stored value, so a column of
-// `high` / `medium` / `low` sat next to a capitalised `Unclassified` (cross-review, Agy, round 1).
-// A map means the display form of a value cannot depend on which branch produced it.
-const CRITICALITY_LABEL: Record<string, string> = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  unclassified: 'Unclassified',
-}
 
 const SORT_LABEL: Array<{ value: FlagListParams['sort']; label: string }> = [
   { value: 'key_asc', label: 'Name A–Z' },
@@ -251,11 +193,16 @@ export function FlagConsole({
                 </tr>
               ) : (
                 view.pageRows.map((row) => {
-                  const presentation = STATE_PRESENTATION[row.state]
+                  const presentation = FLAG_STATE_PRESENTATION[row.state]
                   return (
                     <tr key={row.id}>
                       <td>
-                        <code>{row.key}</code>
+                        {/* Story 2.1 — the row is the way in. Clicking a feature opens its own
+                            place rather than expanding an editor inline, which is the whole point
+                            of the destination. */}
+                        <a href={`${basePath}/${encodeURIComponent(row.key)}`}>
+                          <code>{row.key}</code>
+                        </a>
                         {row.description !== '' && <p className="data-table__count">{row.description}</p>}
                       </td>
                       <td>
