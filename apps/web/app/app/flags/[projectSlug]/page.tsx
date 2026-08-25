@@ -54,7 +54,27 @@ export default async function FlagsPage({
         </p>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
             epic — `showDefinitions` defaults to true and no other prop changed. The console is an
-            additional tree, not a rewrite of the one below it. */}
+            additional tree, not a rewrite of the one below it.
+
+            ── Why this is NOT gated on `canManage`, stated here because two review passes asked ──
+            "Key" means two different things on this page, and the boundary follows the second one.
+            A FLAG key (`checkout.stripe_enabled`) is a definition identifier and is deliberately
+            MEMBER-READABLE — `getFlagRegistryView` is documented as exactly that, `registry` is
+            spread into <FlagManager> below with no role check, and the comment on the Promise.all
+            above says so in as many words. An API key (a snapshot or catalog-sync credential) is
+            operationally sensitive, and THOSE are what `canManage` gates — see `keys`/`syncKeys`.
+
+            `<FlagConsole>` receives `flags` and nothing else: no `keys`, no `syncKeys`, no
+            `canManage`. It renders strictly LESS about a definition than the stack below it already
+            showed members, which included every version's full JSON. So gating it on `canManage`
+            would not tighten any boundary — it would newly HIDE member-readable data from members,
+            which is a behaviour change this epic has no mandate to make.
+
+            Cross-review (Codex) raised this as Blocking in two consecutive rounds. It was wrong both
+            times, but a finding a reader reaches twice is a readability defect in the code, not just
+            a reviewer error — so the distinction is written down here rather than re-argued in a
+            third PR comment. If the credentials route (Story 3.1) ever renders here, it needs
+            `requireProjectOwnership`; the feature list does not. */}
         {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
