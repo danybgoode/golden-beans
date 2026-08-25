@@ -1,6 +1,36 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 2: One feature, in Flagsmith's shape
 
-**Status:** ⬜ not started
+**Status:** ✅ built — all three stories committed on `feat/flags-console-parity-s2` (stacked on
+Sprint 1, which is **merged** as `2bdb6f7` and live in production dark).
+
+| Story | Commit | Note |
+|---|---|---|
+| 2.1 Per-feature destination | `9ea32ba` | `/app/flags/[slug]/[flagKey]`, tabbed Value · History · Settings. |
+| 2.2 One enable/disable control | `80067cf` | Money path. Confirm sentence is **gate-tested**, not browser-only. |
+| — Rollback + stack retirement | `1655e4e` | Serve-any-version on History; legacy stack retired only once it was a strict subset. |
+| 2.3 Three activation states | `9c5b53f` | Un-collapsed the rollout seam; the list/destination already rendered all three. |
+
+**Owed to the product owner:** the signed-in walkthrough below, including the money-path confirm on
+preview **and** production (cancel both). Nothing in this repo can reach past the login redirect.
+
+### ⚠️ Logged, not fixed — a repo-wide `useTransition` pattern
+
+React 18.3.1 calls `setPending(false)` **before** invoking the transition callback
+(`react-dom.development.js:16512-13`), so for an `async` callback `isPending` is a flicker, not a
+duration — everything after the first `await` is outside the transition. Any control relying on
+`isPending` to disable itself is therefore **not** protected against a double submit while a server
+action is in flight.
+
+There are **27 `startTransition(async` call sites across 14 files** in this repo. Sprint 2 fixed the
+two on the money path (`flag-switch.tsx`, `flag-version-serve.tsx`) with their own synchronously-set
+in-flight flag, because a double-click there sends a second write with a stale
+`expectedSnapshotVersion` and renders a conflict error *after* the kill succeeded — which mid-incident
+reads as "the kill didn't work".
+
+**The other 25 are untouched and are a real, pre-existing defect** — not a style preference. They are
+out of this epic's scope, and are recorded here rather than left to be rediscovered. Candidate for
+its own chore. Found by the fresh HIGH-tier reviewer on PR #120, verified against the installed React
+source rather than taken on trust.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
 > (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
@@ -21,15 +51,32 @@
   no-gos).
 - The existing `RuleBuilder`, `FlagInsight` (rollout bars + plain-language diff) and `FlagPreview`
   render there, **moved, not rewritten**, and behave exactly as they do today.
+  - `RuleBuilder` gains ONE optional prop, `initialFlagKey`, defaulting to `''` — the existing call
+    site's exact behaviour. Only the destination passes a value, because there the flag is already
+    chosen and retyping its key invites typing a NEW flag into existence instead of versioning this
+    one. The field stays editable and the write path is unchanged: one action, one validator, one
+    RPC (A1).
+  - ⚠️ **`FlagInsight` lands on History, bars included.** It is one cross-review-hardened component
+    carrying both the rollout bars and the plain-language diff. The bars arguably belong under
+    *Value*; splitting them out would be a rewrite of a component this story is explicitly told to
+    move. History is also where the sprint smoke looks for the diff. Noted here rather than resolved
+    by quietly forking the component.
 - The raw JSON stays reachable one click deeper — it stops being the primary "what changed"
   affordance, and does not disappear.
-- **This story also owns REMOVING the legacy per-flag stack from the flags page** (moved here from
-  Sprint 1 during the build). Sprint 1 deliberately left `flag-manager.tsx` byte-identical and
-  rendered its list *above* the existing controls, because that stack holds every
-  activate/deactivate button and hiding it before this destination existed would have removed the
-  only way to kill a live flag. **Land the destination and retire the stack in the same story** —
-  that ordering is the whole point, and it is the only one that is never an outage.
-- **This is the story that owns the JSON textarea's CSS swap.** `flag-manager.tsx` carries an inline
+- **The legacy per-flag stack is retired in THIS SPRINT — but after Story 2.2, not in this story.**
+  ⚠️ Refined while building 2.1. The stack holds every activate/deactivate control, and this story
+  builds a *read* destination; 2.2 is what puts an enable/disable control on it. Retiring the stack
+  at the end of 2.1 would repeat Sprint 1's defect exactly one story later. **Order: 2.1 destination
+  → 2.2 control on it → then the stack goes.** Never before.
+- ⚠️ **Decision recorded, 2026-08-24 — the JSON textarea's CSS swap does NOT happen in this story.**
+  The rule in `flag-manager.tsx` is *"whoever replaces this control owns the swap"*, and this story
+  does not replace it. The builder now reachable on the destination authors a new VERSION of an
+  existing flag (its key is prefilled); the textarea is still the only way to create a flag that has
+  no definition yet. Swapping `.code-input` onto a control that is still load-bearing would buy a CSS
+  tidy-up at the price of `white-space: pre` breaking long-JSON wrapping — which is exactly what
+  cross-review rejected the first time. It stays until something actually replaces it.
+- **This story owns the JSON textarea's CSS swap** *(see the decision above — exercised as "record
+  why it stays")*. `flag-manager.tsx` carries an inline
   `style={{...}}` with a comment recording that Sprint 2 of `flags-visual-rule-builder` swapped it for
   `.code-input`, cross-review rejected it (`.code-input` also sets `white-space: pre`, which would
   stop long JSON wrapping), and *"whoever replaces this control owns the swap"*. Do the swap
@@ -51,7 +98,28 @@ without knowing what stops.
 - The write path is untouched: it posts through the same server action as today (D1).
 **Risk:** **high** — this control turns off `checkout.stripe_enabled` on a live marketplace. Money
 path. **The product owner merges** (WAYS-OF-WORKING → Review & merge), and a fresh reviewer subagent
-is mandatory on top of the two routed cross-family passes.
+is mandatory on top of the routed cross-family passes.
+
+> **Built 2026-08-25.** One control per environment on the destination's Value tab, labelled
+> *"Turn off in production"* — it names the environment, not just the act. Only the destructive
+> direction confirms; enabling does not, because confirming both trains the reader to click through.
+>
+> **The confirmation sentence is gate-tested, which is the part worth defending.** The acceptance
+> criterion is about WORDS on the most dangerous control in the product, and words rendered inside a
+> client island are reachable only through a signed-in browser — outside the merge gate. So the
+> sentence is built by a pure function in `lib/flag-console-copy.ts` and pinned by
+> `flag-console-copy.test.ts`: it must name the feature, name the environment (and not a hardcoded
+> one), say what STOPS rather than restate the verb, warn that clients keep the old value until
+> their next poll, and refuse to end on reassurance. Mutation-checked — degrading it to
+> *"This feature will be deactivated"* fails 7 specs.
+>
+> ⚠️ **The legacy stack is still NOT retired, and this is the third time that ordering has bitten.**
+> The per-version buttons in `flag-manager.tsx` are the only way to serve a version OTHER than the
+> newest — i.e. **rollback**. This control deliberately turns on the *latest* version, which is the
+> "one clear control" the story asks for, but that is not a superset of what the stack does.
+> Retiring it now would remove rollback with nothing replacing it — the same class of defect Sprint 1
+> hit and Story 2.1 avoided. **Rollback needs a home on the destination first** (a "serve this
+> version here" action on History is the obvious one). Recorded rather than quietly dropped.
 
 ### Story 2.3 — "Never turned on here" is not "turned off"  *(re-scoped 2026-08-24 — see Amendment 2)*
 **As a** PM, **I want** an environment that was never switched on to say so, **so that** I can tell a

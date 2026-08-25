@@ -29,6 +29,7 @@ import {
   type FlagValueType,
 } from '@golden-frijoles/sdk'
 import { formatRolloutPercent, rolloutBarPercent } from './rollout-percent'
+import { resolveActivationState } from './flag-list-view'
 
 /** Only the fields this derivation reads. Structural, so `flag-registry`'s rows satisfy it as-is. */
 export type FlagVersionView = { id: string; version: number; definition: FlagDefinition }
@@ -249,8 +250,25 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
     detail,
   })
 
-  const versionId = flag.activations.find((row) => row.environment === environment)?.versionId ?? null
-  if (versionId === null) return inactive('Nothing is activated here.')
+  // ── Story 2.3 / Amendment 2: "turned off" and "never turned on here" are DIFFERENT ────────────
+  // This used to be `activations.find(…)?.versionId ?? null`, which mapped BOTH "no activation row
+  // has ever existed" and "a row exists holding NULL" to the same value, and rendered both as
+  // "Nothing is activated here."
+  //
+  // They are not the same fact. `deactivate_flag` keeps the row and nulls its version, so a row
+  // holding NULL is the fingerprint of a deliberate act by a named actor with a stated reason,
+  // recorded in the lifecycle audit. No row at all means nobody has ever switched this on or off
+  // here — there is nothing in the audit because nothing happened.
+  //
+  // At this project's live scale the collapse was not a small imprecision: 40 of 42 flags have no
+  // activation row in ANY environment, so the old wording described forty untouched features and
+  // one deliberate kill with one sentence.
+  //
+  // `resolveActivationState` is imported rather than reimplemented — it is exported from
+  // `flag-list-view` for exactly this, so the list and this seam cannot drift about what "on" means.
+  const { state, versionId } = resolveActivationState(flag.activations, environment)
+  if (state === 'never') return inactive('No one has switched this on or off in this environment.')
+  if (state === 'off') return inactive('Switched off here.')
   const version = flag.versions.find((row) => row.id === versionId)
   // An activation pointing at a version this view does not carry. Not reachable through the app's
   // own write path, and named rather than crashed on: an environment whose activation cannot be
@@ -318,6 +336,42 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
  * three. The seed is cast because the record is only total once the loop below has run; the loop is
  * driven by the constant, which is the part D5 is about.
  */
+/**
+ * What an attribute-free context actually GETS from a version — the variant key AND its value.
+ *
+ * ── Why the VALUE matters, and why "activated" is not "on" ────────────────────────────────────
+ * The console used to equate "an activation row points at a version" with "this feature is on".
+ * Those are different facts, and conflating them is dangerous on the money path.
+ *
+ * A definition's `defaultVariantKey` can name a variant whose value is `false` — that is how the
+ * Miyagi admin console turns a flag off without deactivating it (`set_flag_admin_boolean` rewrites
+ * `defaultVariantKey` and re-activates). **Live, 34 of `miyagisanchez`'s 42 flags have a latest
+ * version that evaluates to `false`.** So "Turn on in production", implemented as "activate the
+ * newest version", would have served `false` to production on most of this project's flags — under
+ * a button labelled Turn on, with no dialog, followed by a notice saying it is on.
+ *
+ * Found by the fresh HIGH-tier reviewer on PR #120, which rated the live likelihood as "medium".
+ * It was 34/42.
+ *
+ * The answer comes from `evaluateFlag` — the SDK's own evaluator, the one production serves from —
+ * for the same reason every other verdict in this file does: a page that re-implemented resolution
+ * to label a button would disagree with production exactly when someone trusted the label.
+ */
+export function evaluateVersionDefault(
+  flagKey: string,
+  version: FlagVersionView
+): { variantKey: string | null; value: unknown; readable: boolean } {
+  const baseline = evaluateBaseline(flagKey, version)
+  if (!baseline.readable || baseline.variantKey === null) {
+    return { variantKey: baseline.variantKey, value: undefined, readable: baseline.readable }
+  }
+  const variants = (version.definition as FlagDefinition | null | undefined)?.variants
+  const match = Array.isArray(variants)
+    ? variants.find((candidate) => candidate?.key === baseline.variantKey)
+    : undefined
+  return { variantKey: baseline.variantKey, value: match?.value, readable: true }
+}
+
 export function summariseFlagEnvironments(flag: FlagView): Record<FlagEnvironment, FlagEnvironmentSummary> {
   const summaries = {} as Record<FlagEnvironment, FlagEnvironmentSummary>
   for (const environment of FLAG_ENVIRONMENTS) summaries[environment] = summarise(flag, environment)

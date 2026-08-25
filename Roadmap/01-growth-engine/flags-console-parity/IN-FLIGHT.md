@@ -59,3 +59,55 @@ Sprint 1 COMPLETE and pushed (PR #118, draft). 5 review rounds; both families cl
 }
 ```
 
+## 2026-08-25T01:30:29.475Z — `feat/flags-console-parity-s2` @ 03207570
+
+_HEAD: feat(flags-console-parity): a per-feature destination — Value, History, Settings_
+
+S2 Story 2.1 built+pushed on feat/flags-console-parity-s2 (stacked). Per-feature route /app/flags/[slug]/[flagKey] with Value/History/Settings; flag-vocabulary.ts extracted; flag-console-dark.spec.ts now asserts real gate-dependent 404-vs-login. STOPPED before Story 2.2 — HIGH risk money path, needs the mandated fresh reviewer subagent which requires Daniel's go-ahead.
+
+**Verified by running (observed output, not believed):**
+- npm run typecheck -> 0 errors; lint -> 0; test:unit -> 1227/0; build -> route /app/flags/[projectSlug]/[flagKey] present in manifest; format:changed -> clean; isolated render -> rows link to the destination, three states render distinctly
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-08-25T01:30:29.475Z",
+  "note": "S2 Story 2.1 built+pushed on feat/flags-console-parity-s2 (stacked). Per-feature route /app/flags/[slug]/[flagKey] with Value/History/Settings; flag-vocabulary.ts extracted; flag-console-dark.spec.ts now asserts real gate-dependent 404-vs-login. STOPPED before Story 2.2 — HIGH risk money path, needs the mandated fresh reviewer subagent which requires Daniel's go-ahead.",
+  "branch": "feat/flags-console-parity-s2",
+  "head": "0320757001827e58b869fd57b455e68a01bef817",
+  "headSubject": "feat(flags-console-parity): a per-feature destination — Value, History, Settings",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "npm run typecheck -> 0 errors; lint -> 0; test:unit -> 1227/0; build -> route /app/flags/[projectSlug]/[flagKey] present in manifest; format:changed -> clean; isolated render -> rows link to the destination, three states render distinctly"
+  ]
+}
+```
+
+## 2026-08-25T18:41:24.936Z — `feat/flags-console-parity-s2` @ 80067cfc
+
+_HEAD: feat(flags-console-parity): one control that says what it will do (money path)_
+
+PR #118 MERGED (2bdb6f7) + deployed to prod dark. PR #119 open (vibe enablement + cross-review PR-head context fix). S2 rebased onto main; Stories 2.1 + 2.2 built and pushed. NEXT: rollback home on the destination, THEN retire the legacy stack, then Story 2.3 + S2 PR + reviews.
+
+**Verified by running (observed output, not believed):**
+- gh pr view 118 -> MERGED; prod deployment sha 2bdb6f7 Production; curl /app/flags/miyagisanchez -> 307 /login; npm run test:unit -> 1234 pass/0 fail; mutation: degraded confirm sentence -> 7 specs red
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-08-25T18:41:24.936Z",
+  "note": "PR #118 MERGED (2bdb6f7) + deployed to prod dark. PR #119 open (vibe enablement + cross-review PR-head context fix). S2 rebased onto main; Stories 2.1 + 2.2 built and pushed. NEXT: rollback home on the destination, THEN retire the legacy stack, then Story 2.3 + S2 PR + reviews.",
+  "branch": "feat/flags-console-parity-s2",
+  "head": "80067cfcce19a32ab114ae2257c368ee29a680aa",
+  "headSubject": "feat(flags-console-parity): one control that says what it will do (money path)",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "gh pr view 118 -> MERGED; prod deployment sha 2bdb6f7 Production; curl /app/flags/miyagisanchez -> 307 /login; npm run test:unit -> 1234 pass/0 fail; mutation: degraded confirm sentence -> 7 specs red"
+  ]
+}
+```
+

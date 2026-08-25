@@ -53,8 +53,12 @@ export default async function FlagsPage({
           protection.
         </p>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
-            epic — `flag-manager.tsx` is byte-identical to `main` and takes no new prop. The console
-            is an additional tree, not a rewrite of the one below it.
+            epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to
+            `true`, so the gate-off render is unchanged — which is the guarantee. (This said the file
+            was "byte-identical and takes no new prop": true while Sprint 1 had the prop reverted,
+            false once Sprint 2 legitimately reintroduced it 45 lines below. Fresh reviewer, PR #120.
+            The behavioural guarantee holds; the stronger wording did not.) The console is an
+            additional tree, not a rewrite of the one below it.
 
             ── Why this is NOT gated on `canManage`, stated here because two review passes asked ──
             "Key" means two different things on this page, and the boundary follows the second one.
@@ -76,15 +80,18 @@ export default async function FlagsPage({
             third PR comment. If the credentials route (Story 3.1) ever renders here, it needs
             `requireProjectOwnership`; the feature list does not.
 
-            ── Why the legacy stack still renders BELOW, even with the console on ─────────────────
-            Because this sprint's list is READ-ONLY. Every activate/deactivate control lives inside
-            <FlagManager>'s per-flag stack, and the per-feature destination that replaces them is
-            Story 2.1, next sprint. Suppressing that stack — which an earlier revision of this PR
-            did, via a `showDefinitions` prop — meant that turning the console ON removed the only
-            way to kill a live flag, `checkout.stripe_enabled` included. That is an outage wearing a
-            redesign's clothes, and it is the exact hazard this epic's kill-switch section names.
-            So Sprint 1 is ADDITIVE: list above, existing controls untouched below. The stack goes
-            when its replacement lands, not before. (Cross-review, Codex, round 3.) */}
+            ── The legacy stack is retired WITH THE CONSOLE ON, and only now ─────────────────────
+            Sprint 1 was additive on purpose: its list was read-only, every activate/deactivate
+            control lived in <FlagManager>'s per-flag stack, and hiding that stack would have
+            removed the only way to kill a live flag (cross-review, Codex, round 3). The ordering
+            written down then was: destination → control on it → rollback → then the stack.
+
+            All three exist now — `[flagKey]/page.tsx` carries the insight, the preview, the version
+            list, the JSON, on/off per environment and serve-any-version — so the destination is a
+            strict superset and `showDefinitions={false}` removes a duplicate rather than a
+            capability. With the gate OFF, `showDefinitions` defaults to true and this page is
+            byte-for-byte pre-epic (D6/Amendment 1); the authoring textarea and the credential forms
+            are untouched in BOTH branches, because moving those is Sprint 3. */}
         {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
@@ -94,6 +101,7 @@ export default async function FlagsPage({
           canManage={canManage}
           servingEnabled={isFlagServingEnabled()}
           ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
+          showDefinitions={!consoleEnabled}
         />
       </main>
     </ProductShell>

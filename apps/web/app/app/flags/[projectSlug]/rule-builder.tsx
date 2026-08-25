@@ -290,13 +290,27 @@ export function RuleBuilder({
   disabled,
   serverError,
   onSubmit,
+  initialFlagKey = '',
 }: {
   disabled: boolean
   /** The server's verbatim rejection, rendered rather than swallowed (D2). */
   serverError: string | null
   onSubmit: (flagKey: string, definitionJson: string, reason: string) => void
+  /**
+   * flags-console-parity · Story 2.1 — the key this builder starts on.
+   *
+   * **Defaults to `''`, which is the existing call site's behaviour exactly.** Only the per-feature
+   * destination passes a value, because there the flag is already chosen and retyping its key would
+   * be an invitation to typo a NEW flag into existence instead of versioning this one.
+   *
+   * The field stays editable. `create_flag_definition_version` appends version N+1 when the key
+   * already exists and creates the registry row when it does not, so a prefilled key makes this the
+   * "change this flag" surface without becoming a second write path — it is still the one action,
+   * the one validator and the one RPC (A1).
+   */
+  initialFlagKey?: string
 }) {
-  const [flagKey, setFlagKey] = useState('')
+  const [flagKey, setFlagKey] = useState(initialFlagKey)
   const [reason, setReason] = useState('')
   const [draft, setDraft] = useState<DefinitionDraft>(newDraft)
   const [showJson, setShowJson] = useState(false)

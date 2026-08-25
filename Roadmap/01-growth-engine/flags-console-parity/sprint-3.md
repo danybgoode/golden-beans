@@ -72,6 +72,12 @@ the page I use daily.
   and **never** borrow a Flagsmith term that already means something else there.
 - Grepping rendered copy for *immutable definition version*, *mint*, *snapshot revision* and
   *activation* returns nothing.
+- ⚠️ **`flag-preview.tsx` carries two of those, and Sprint 2 MOVED it onto the new destination.**
+  `previewFlagEvaluationAction` returns *"Nothing is activated in {env}, so there is nothing to
+  preview there yet."* — which uses `activated` (D7's kill-list) **and** repeats the two-state
+  collapse Story 2.3 removed everywhere else. It was left alone in Sprint 2 under "move, don't
+  rewrite", but the move is exactly what makes it this story's problem: the string now renders on a
+  surface this epic built.
 - **English only.** The reuse source is es-MX; Golden renders `<html lang="en">` and introducing a
   locale layer needs a deliberate scope decision this epic does not make (WAYS-OF-WORKING →
   Conventions → Language).
@@ -86,6 +92,14 @@ regress it silently.
 - `node scripts/check-design-drift.mjs` passes against the new surfaces; no raw hex, no bespoke
   `<table>` where `DataTable` fits.
 - The authed flags spec covers the list, the per-feature destination, and both new routes.
+- ⚠️ **Port the three suites Sprint 2 had to SKIP.** `e2e/flag-rule-builder.authed.spec.ts`'s
+  `the visual rule builder`, `rollout bars and the version diff` and `preview as a user` drive the
+  LEGACY per-flag stack — `locator('article')`, `Activate v1`, `not active` — all of which
+  `showDefinitions={false}` removes once the console is on. Sprint 2 guarded them with
+  `legacyStackOnly()` so they skip rather than fail on timeouts, and stated the cost out loud rather
+  than letting the suite rot silently outside the merge gate. **This story is where they get ported
+  to the destination.** Until then the moved components' "behave exactly as they do today" claim
+  (Story 2.1) has no automated cover with the gate ON.
 - **Every new spec was observed failing at least once** — mutation check, per the story Definition of
   Done.
 **Risk:** low
