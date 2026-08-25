@@ -1,9 +1,17 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 2: One feature, in Flagsmith's shape
 
-**Status:** 🟡 in progress — Stories 2.1 and 2.2 built on `feat/flags-console-parity-s2`.
-Sprint 1 is **merged** (`2bdb6f7`) and deployed to production dark, so this branch is rebased onto
-`main`. Remaining: rollback (choosing which version an environment serves) must have a home on the
-destination **before** the legacy stack is retired — see the note under 2.2.
+**Status:** ✅ built — all three stories committed on `feat/flags-console-parity-s2` (stacked on
+Sprint 1, which is **merged** as `2bdb6f7` and live in production dark).
+
+| Story | Commit | Note |
+|---|---|---|
+| 2.1 Per-feature destination | `9ea32ba` | `/app/flags/[slug]/[flagKey]`, tabbed Value · History · Settings. |
+| 2.2 One enable/disable control | `80067cf` | Money path. Confirm sentence is **gate-tested**, not browser-only. |
+| — Rollback + stack retirement | `1655e4e` | Serve-any-version on History; legacy stack retired only once it was a strict subset. |
+| 2.3 Three activation states | `9c5b53f` | Un-collapsed the rollout seam; the list/destination already rendered all three. |
+
+**Owed to the product owner:** the signed-in walkthrough below, including the money-path confirm on
+preview **and** production (cancel both). Nothing in this repo can reach past the login redirect.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
 > (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
