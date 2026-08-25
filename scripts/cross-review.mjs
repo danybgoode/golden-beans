@@ -62,6 +62,7 @@ import {
   renderFileContext,
   filterDiffToPaths,
   AGY_ARG_LIMIT,
+  VIBE_ARG_LIMIT,
   shortSha,
   checkReviewerPairing,
   reviewersFor,
@@ -370,7 +371,13 @@ function main() {
     }
   }
   // ── The code-only subset, and its honesty requirement ───────────────────────────────────────
-  // agy takes its prompt in argv, so a sprint-sized PR can exceed AGY_ARG_LIMIT and the review
+  // Both argv-based reviewers get THEIR OWN cap. They are the same 256 KB today, which is exactly
+  // why hardcoding agy's went unnoticed — the two would diverge silently the day either CLI changed,
+  // and vibe would be handed a budget computed against another tool's limit (cross-review, Agy,
+  // PR #119). Resolved once, here, so the scope notes and the budget cannot disagree.
+  const argvLimit = agent === 'vibe' ? VIBE_ARG_LIMIT : AGY_ARG_LIMIT;
+
+  // agy takes its prompt in argv, so a sprint-sized PR can exceed that cap and the review
   // refuses to run — which on a high-risk diff is exactly when losing the second family hurts most.
   // Dropping prose usually fits it. But a reviewer who cannot see the sprint doc cannot check the
   // code against its acceptance criteria, so the reduced scope is recorded and posted with the
@@ -381,7 +388,7 @@ function main() {
     diff = codeOnlyDiff.diff;
     scopeNote =
       `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
-      `withheld from this reviewer to fit ${AGENTS[agent] || agent}'s ${AGY_ARG_LIMIT / 1024} KB argv limit, so it did ` +
+      `withheld from this reviewer to fit ${AGENTS[agent] || agent}'s ${argvLimit / 1024} KB argv limit, so it did ` +
       `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
       `code against its own stated acceptance criteria. Withheld: ` +
       `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
@@ -393,7 +400,7 @@ function main() {
     diff = scoped.diff;
     const note =
       `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
-      `subset of the PR — the diff exceeds ${AGENTS[agent] || agent}'s ${AGY_ARG_LIMIT / 1024} KB argv limit in full, so ` +
+      `subset of the PR — the diff exceeds ${AGENTS[agent] || agent}'s ${argvLimit / 1024} KB argv limit in full, so ` +
       `the alternative was no second-family review at all. It saw: ` +
       `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
       `file(s), and could not check any of this against the sprint docs.`;
@@ -414,7 +421,7 @@ function main() {
   if (agent === 'antigravity' || agent === 'vibe') {
     // Whatever argv budget the diff has not already spent, less a margin for the prompt and the
     // fences. Under-filling is the safe direction: a review that runs on less context still runs.
-    const budget = Math.max(0, AGY_ARG_LIMIT - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
+    const budget = Math.max(0, argvLimit - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
     const touched = headSidePaths(diff);
     // ── Read from the PR's HEAD COMMIT, not the working tree ──────────────────────────────────
     // This used to be `readFileSync(path)`, i.e. whatever branch happens to be checked out. With
