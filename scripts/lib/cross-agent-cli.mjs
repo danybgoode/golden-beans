@@ -800,7 +800,14 @@ export function headSidePaths(diff) {
     .split(/^diff --git /m)
     .slice(1)
     .map((chunk) => {
-      if (/^\+\+\+ \/dev\/null$/m.test(chunk)) return null;
+      // The `+++` file marker lives in the HEADER, before the first `@@` hunk. Scanning the whole
+      // chunk was wrong: inside a hunk, an ADDED line is rendered with a leading `+`, so a source
+      // line whose literal text is `++ /dev/null` produces the byte-identical `+++ /dev/null` and
+      // would silently drop a file that was never deleted (cross-review, Codex, PR #119, round 3).
+      // This file's own fixtures contain such strings, so the hazard is not theoretical here.
+      const hunkStart = chunk.search(/^@@ /m);
+      const header = hunkStart === -1 ? chunk : chunk.slice(0, hunkStart);
+      if (/^\+\+\+ \/dev\/null$/m.test(header)) return null;
       return headPathFromDiffHeader(chunk.split('\n', 1)[0]);
     })
     .filter((path) => path !== null);

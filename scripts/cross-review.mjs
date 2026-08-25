@@ -434,7 +434,13 @@ function main() {
     // explicit <PR#> is documented as skipping it. So the content is pinned here independently, and
     // falls back to the working tree only for an object this clone does not have — saying so.
     const prHeadOid = resolvePrHeadOid(pr, repo);
-    let fellBackToWorktree = false;
+    // The head object may not be in this clone at all — an unfetched branch, or a FORK PR, whose
+    // head `git fetch origin` never brings down. Try once, explicitly, before giving up on it.
+    if (prHeadOid) {
+      const have = spawnSync('git', ['cat-file', '-e', `${prHeadOid}^{commit}`]);
+      if (have.status !== 0) spawnSync('git', ['fetch', '--quiet', 'origin', prHeadOid]);
+    }
+    const unavailable = [];
     const readAtPrHead = (path) => {
       if (prHeadOid) {
         const shown = spawnSync('git', ['show', `${prHeadOid}:${path}`], {
@@ -443,15 +449,24 @@ function main() {
         });
         if (shown.status === 0) return shown.stdout;
       }
-      fellBackToWorktree = true;
-      return readFileSync(path, 'utf8');
+      // ── OMIT, never substitute the working tree ───────────────────────────────────────────────
+      // The first version fell back to `readFileSync` with a warning. Codex was right to call that
+      // (PR #119, round 3): a warning on stderr does not stop the review, so the reviewer still
+      // receives the PR's diff beside another branch's file — the exact defect this change exists to
+      // remove, reintroduced in its own fallback. Fork PRs make it likely rather than rare.
+      //
+      // Throwing is the omit path: buildFileContext already catches a failing reader and skips that
+      // file. Less context is the safe direction — a reviewer that cannot see a file says so;
+      // a reviewer shown the WRONG file states a defect that does not exist.
+      unavailable.push(path);
+      throw new Error(`not available at PR head: ${path}`);
     };
     const selection = buildFileContext(touched, readAtPrHead, budget);
-    if (fellBackToWorktree) {
+    if (unavailable.length > 0) {
       process.stderr.write(
-        `\u26a0 some attached files were read from the WORKING TREE, not PR #${pr}'s head` +
-          `${prHeadOid ? ` (${shortSha(prHeadOid)})` : ' (head could not be resolved)'} — ` +
-          `run \`git fetch origin\` so the reviewer sees the code it is reviewing.\n`
+        `\u26a0 ${unavailable.length} file(s) could not be read at PR #${pr}'s head` +
+          `${prHeadOid ? ` (${shortSha(prHeadOid)})` : ' (head could not be resolved)'} and were ` +
+          `OMITTED rather than read from the working tree: ${unavailable.join(', ')}\n`
       );
     }
     fileContext = renderFileContext(selection);

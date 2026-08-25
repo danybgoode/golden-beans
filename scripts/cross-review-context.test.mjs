@@ -142,3 +142,20 @@ test('a malformed header is dropped, never emitted as undefined', () => {
     );
   }
 });
+
+test('an ADDED line that looks like a deletion marker does not drop the file', () => {
+  // Inside a hunk, an added line is rendered with a leading `+`, so a source line whose literal text
+  // is `++ /dev/null` produces the byte-identical `+++ /dev/null`. Scanning the whole chunk read
+  // that as a deletion and silently dropped a file that was never deleted (Codex, PR #119 round 3).
+  // The `+++` marker only means deletion in the HEADER, before the first `@@`.
+  const tricky =
+    'diff --git a/tricky.ts b/tricky.ts\n--- a/tricky.ts\n+++ b/tricky.ts\n@@ -0,0 +1 @@\n+++ /dev/null';
+  assert.deepEqual(headSidePaths(tricky), ['tricky.ts']);
+});
+
+test('a real deletion is still detected when a later hunk contains the same text', () => {
+  // The inverse guard: scoping to the header must not stop finding a genuine deletion.
+  const removed =
+    'diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-+++ /dev/null';
+  assert.deepEqual(headSidePaths(removed), []);
+});
