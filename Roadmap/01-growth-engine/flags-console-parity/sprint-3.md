@@ -86,6 +86,14 @@ regress it silently.
 - `node scripts/check-design-drift.mjs` passes against the new surfaces; no raw hex, no bespoke
   `<table>` where `DataTable` fits.
 - The authed flags spec covers the list, the per-feature destination, and both new routes.
+- ⚠️ **Port the three suites Sprint 2 had to SKIP.** `e2e/flag-rule-builder.authed.spec.ts`'s
+  `the visual rule builder`, `rollout bars and the version diff` and `preview as a user` drive the
+  LEGACY per-flag stack — `locator('article')`, `Activate v1`, `not active` — all of which
+  `showDefinitions={false}` removes once the console is on. Sprint 2 guarded them with
+  `legacyStackOnly()` so they skip rather than fail on timeouts, and stated the cost out loud rather
+  than letting the suite rot silently outside the merge gate. **This story is where they get ported
+  to the destination.** Until then the moved components' "behave exactly as they do today" claim
+  (Story 2.1) has no automated cover with the gate ON.
 - **Every new spec was observed failing at least once** — mutation check, per the story Definition of
   Done.
 **Risk:** low

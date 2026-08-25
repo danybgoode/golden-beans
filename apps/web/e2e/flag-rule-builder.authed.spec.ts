@@ -29,6 +29,7 @@ import {
   type FlagDefinition,
 } from '@golden-frijoles/sdk'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
@@ -84,7 +85,30 @@ async function createVersion(
 const flagOf = (page: import('@playwright/test').Page, key: string) =>
   page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
 
+// ⚠️ flags-console-parity, Sprint 2 — these suites drive the LEGACY per-flag stack.
+//
+// Their selectors are `locator('article')`, `getByRole('button', { name: 'Activate v1' })` and the
+// text 'not active' — every one of which lives inside the block that `showDefinitions={false}`
+// removes once `FLAG_CONSOLE_ENABLED` is on. With the gate on they would fail on TIMEOUTS, which
+// read as flakes rather than as "this surface moved".
+//
+// The `authed` project is opt-in and NOT in the merge gate (playwright.config.ts), so that
+// breakage would have been silent until someone ran the suite by hand — the "a suite outside the
+// gate must be run on purpose" trap in LEARNINGS. Found by the fresh HIGH-tier reviewer, PR #120.
+//
+// Skipped rather than rewritten, deliberately and with the cost stated: porting these assertions to
+// the destination is real work (three suites, ~200 lines, new selectors) and this sprint's appetite
+// is spent. What must NOT happen is flipping the gate in production while believing this suite
+// still covers the surface. Sprint 3, Story 3.4 owns the port — it is the story whose whole job is
+// "guards and specs reach the new surfaces" — and sprint-3.md now names these three suites.
+const legacyStackOnly = () =>
+  test.skip(
+    isFlagConsoleEnabled(),
+    'drives the legacy per-flag stack, which FLAG_CONSOLE_ENABLED replaces — ported in Sprint 3, Story 3.4'
+  )
+
 test.describe('the visual rule builder', () => {
+  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'the builder is gated; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
@@ -209,6 +233,7 @@ test.describe('the visual rule builder', () => {
 // it is the surface that can express a metadata entry, which is what Story 2.3's fallback case
 // needs, and it keeps these assertions independent of the builder's own controls.
 test.describe('rollout bars and the version diff', () => {
+  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'Sprint 2 renders behind the same gate as the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
@@ -344,6 +369,7 @@ test.describe('rollout bars and the version diff', () => {
 // It also proves the read-only claim (Story 3.1's last criterion) the only way it can be proved:
 // count the versions before and after.
 test.describe('preview as a user', () => {
+  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'the preview is gated with the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
