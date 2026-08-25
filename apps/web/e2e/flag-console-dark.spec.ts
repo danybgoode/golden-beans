@@ -33,6 +33,12 @@ import { isFlagConsoleEnabled } from '../lib/flags'
 // which is exactly when someone most wants to know the route behaves. Both directions are real
 // properties, so both are asserted, against whatever state this environment is actually in.
 
+// Sprint 3, Story 3.4 — the two routes the console moves controls to. Both check the gate BEFORE
+// auth, so an anonymous request sees the flag state directly, exactly like the per-feature route.
+// This is the coverage Sprint 1's QA note promised and could not deliver: it had no gate-observable
+// surface to point at, and now there are three.
+const MOVED_ROUTES = ['/app/flag-credentials/miyagisanchez', '/app/flag-audit/miyagisanchez']
+
 const DETAIL_ROUTES = [
   '/app/flags/miyagisanchez/checkout.stripe_enabled',
   // A key that does not exist must behave identically while dark — a 404 that depended on whether
@@ -58,6 +64,27 @@ test.describe('flag console — the per-feature route follows its gate', () => {
       expect(
         response.status(),
         `${path} should 404 while FLAG_CONSOLE_ENABLED is off, not redirect — a redirect would mean the gate is checked after auth`
+      ).toBe(404)
+    })
+  }
+
+  for (const path of MOVED_ROUTES) {
+    test(`${path} is 404 while dark, and a login redirect once lit`, async ({ request }) => {
+      const response = await request.get(path, { maxRedirects: 0 })
+
+      if (isFlagConsoleEnabled()) {
+        // Lit: the route exists, so an anonymous caller is sent to sign in — never rendered. This
+        // holds for BOTH routes even though their auth differs (credentials is owner-only, the
+        // audit is member-readable): neither distinction is reachable without a session, and the
+        // redirect is what an anonymous caller must always get.
+        expect([302, 303, 307]).toContain(response.status())
+        expect(response.headers()['location']).toContain('/login')
+        return
+      }
+
+      expect(
+        response.status(),
+        `${path} should 404 while FLAG_CONSOLE_ENABLED is off — a redirect would mean the gate is checked after auth, which leaks that the route exists`
       ).toBe(404)
     })
   }

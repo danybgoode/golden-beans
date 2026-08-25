@@ -1,6 +1,27 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 3: The split and the language
 
-**Status:** ⬜ not started
+**Status:** ✅ built — all four stories on `feat/flags-console-parity-s3` (stacked on Sprint 2, which
+is **merged** as `62bf561` and live in production dark).
+
+| Story | Commit | Note |
+|---|---|---|
+| — Shared surface (gate union + both callers) | `cf633b1` | Architect-tier, done FIRST. The closed union made every caller a compile error, by design. |
+| 3.1 Credentials route | `cf633b1` | Owner-only via `requireProjectOwnership` — **tighter** than the flags page. Revoke copy moved verbatim. |
+| 3.2 Audit route | `cf633b1` | **Member-readable**, deliberately — the trap next to an owner-only sibling. Now names the flag and version. |
+| 3.3 One vocabulary | `8113b52` | The module *and* the sweep spec; caught a real capability bug (below). |
+| 3.4 Guards and specs | `8113b52` + this | Mobile rail entries, the dark spec extended, the vocabulary sweep. |
+
+> ### ⚠️ Story 3.3 caught a capability bug — the third of its kind this epic
+>
+> Gating the credential forms on `showCredentials` also hid the **authoring form**, because it shared
+> one `canManage ? (…)` block with the mint forms. With the console ON there would have been **no way
+> to create a new flag at all** — the per-feature destination only versions a flag you can already
+> click. Sprint 1's stack, Sprint 2's rollback, and now this: three times a control was nearly
+> removed before its replacement existed.
+>
+> It was found by grepping rendered copy for D7's retired vocabulary. **The vocabulary sweep is also
+> a capability sweep**, because it reads every surface — which is the argument for running 3.3 before
+> a sprint closes rather than as a tidy-up after.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D6` (+ **Amendment 1**) and `D7`
 > from the epic README; do not re-derive them. Branch: `feat/flags-console-parity-s3`, cut from
