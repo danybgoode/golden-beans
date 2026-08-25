@@ -122,9 +122,23 @@ notice this. Three things are therefore locked:
    key forms and the audit table exactly as today. With it **on**, they are absent there and live on
    their own routes. The gate-off branch of that component is not edited by this epic.
 2. **Byte-for-byte is a construction, not a promise to test.** The new console is a **new component
-   tree**; Sprint 1 does not edit `flag-manager.tsx` at all. D6 then holds *because the legacy code
-   path is untouched* — auditable with `git diff`, which is a far stronger guarantee than a spec.
-   (`flags-visual-rule-builder` promised D6 in prose and nearly broke it over one CSS class.)
+   tree**, so D6 holds *because the legacy render is unchanged* — auditable with `git diff`, which
+   is a far stronger guarantee than a spec. (`flags-visual-rule-builder` promised D6 in prose and
+   nearly broke it over one CSS class.)
+
+   ⚠️ **Corrected during Sprint 1 (2026-08-24).** This point originally read *"Sprint 1 does not edit
+   `flag-manager.tsx` at all."* That was over-stated and did not survive the build. Story 1.3's
+   acceptance is *"one list, not a stack of editors"*, and that cannot be true while the
+   `<article>`-per-flag stack still renders underneath the console. The two alternatives were both
+   worse: rendering both is the duplication the story exists to remove, and dropping `<FlagManager>`
+   entirely when the console is on would take the authoring form and both credential surfaces with
+   it — **two sprints before Sprint 3 gives them their own routes**, i.e. an outage introduced by a
+   redesign, which is the exact failure this epic's kill-switch exists to prevent.
+   So the file gains **one optional prop, `showDefinitions`, defaulting to `true`**. The functional
+   diff is four lines. **D6 is unchanged in substance** — every existing call site and the entire
+   gate-off branch render exactly what they rendered before, because the default is the old
+   behaviour — and it is still checked by reading the diff, just not by the file being untouched.
+   The weaker claim is the true one, so it is the one that stands.
 3. **What the merge gate can actually assert is the two new routes.** Both follow the established
    `if (!isFlagConsoleEnabled()) notFound()` pattern — *"dark means nonexistent, before auth or
    project lookup"* (`app/app/journeys/[projectSlug]/page.tsx`). An unauthenticated GET therefore

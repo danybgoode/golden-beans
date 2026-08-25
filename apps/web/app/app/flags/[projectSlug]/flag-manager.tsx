@@ -49,6 +49,7 @@ export function FlagManager({
   canManage,
   servingEnabled,
   ruleBuilderEnabled,
+  showDefinitions = true,
 }: {
   slug: string
   flags: FlagRegistryRow[]
@@ -60,6 +61,21 @@ export function FlagManager({
   servingEnabled: boolean
   /** D6 — the epic's enablement gate, resolved server-side in page.tsx. */
   ruleBuilderEnabled: boolean
+  /**
+   * flags-console-parity · Story 1.3 — whether THIS component renders the per-flag definition
+   * stack. **Defaults to `true`, which is the whole point:** every existing call site, and the
+   * gate-off branch in `page.tsx`, renders exactly what it rendered before the epic. Only the
+   * console branch passes `false`, because there the same definitions are already presented as one
+   * list and showing both would be two devices for one promise.
+   *
+   * This prop is the one concession to the epic's Amendment 1, which said Sprint 1 would not touch
+   * this file at all. That was over-stated: "one list, not a stack of editors" cannot be true while
+   * the stack is still rendered underneath, and the alternative — dropping this component entirely
+   * when the console is on — would take the authoring and credential surfaces away with it, two
+   * sprints before they get their own routes. D6's guarantee is unchanged in substance and still
+   * checkable by reading the diff: nothing here renders differently unless a caller opts out.
+   */
+  showDefinitions?: boolean
 }) {
   const router = useRouter()
   const [key, setKey] = useState('new-product-details')
@@ -470,8 +486,8 @@ export function FlagManager({
       )}
       {error && !errorFromBuilder && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <h2>Definitions</h2>
-      {flags.length === 0 ? (
+      {showDefinitions && <h2>Definitions</h2>}
+      {!showDefinitions ? null : flags.length === 0 ? (
         <p>No flag definitions yet.</p>
       ) : (
         flags.map((flag) => (
