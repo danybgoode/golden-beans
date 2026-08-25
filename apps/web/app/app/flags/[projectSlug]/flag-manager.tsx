@@ -49,6 +49,7 @@ export function FlagManager({
   canManage,
   servingEnabled,
   ruleBuilderEnabled,
+  showDefinitions = true,
 }: {
   slug: string
   flags: FlagRegistryRow[]
@@ -60,6 +61,26 @@ export function FlagManager({
   servingEnabled: boolean
   /** D6 — the epic's enablement gate, resolved server-side in page.tsx. */
   ruleBuilderEnabled: boolean
+  /**
+   * Whether THIS component renders the per-flag definition stack.
+   *
+   * **Defaults to `true`: with `FLAG_CONSOLE_ENABLED` off, this file renders exactly what it always
+   * did.** That is Amendment 1's guarantee, and it is why the default is the old behaviour rather
+   * than the new one. Only the console branch of `page.tsx` opts out.
+   *
+   * ── This prop was added in Sprint 1, REVERTED, and is back deliberately ──────────────────────
+   * Sprint 1 introduced it so the console could hide this stack, and cross-review caught that the
+   * stack holds every activate/deactivate control — hiding it would have removed the only way to
+   * kill a live flag, a sprint before any replacement existed. It was reverted and the ordering was
+   * written into sprint-2.md: destination (2.1) → control on it (2.2) → rollback → then the stack.
+   *
+   * All three now exist. `[flagKey]/page.tsx` carries the insight, the preview, the version list,
+   * the JSON, on/off per environment (`FlagSwitch`) and serve-any-version (`FlagVersionServe`), so
+   * the destination is a strict superset of what this stack does. The one thing not carried across
+   * is the literal string "active (snapshot N)" — dropped on purpose, because "snapshot revision"
+   * is on D7's list of storage vocabulary this epic exists to retire.
+   */
+  showDefinitions?: boolean
 }) {
   const router = useRouter()
   const [key, setKey] = useState('new-product-details')
@@ -470,8 +491,8 @@ export function FlagManager({
       )}
       {error && !errorFromBuilder && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      <h2>Definitions</h2>
-      {flags.length === 0 ? (
+      {showDefinitions && <h2>Definitions</h2>}
+      {!showDefinitions ? null : flags.length === 0 ? (
         <p>No flag definitions yet.</p>
       ) : (
         flags.map((flag) => (

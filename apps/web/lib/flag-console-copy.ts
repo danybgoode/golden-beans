@@ -36,3 +36,48 @@ export function describeTurnOffConsequence(flagKey: string, environment: string)
     `everywhere. Turning it back on is one click, but whatever broke in between still broke.`
   )
 }
+
+/**
+ * What serving a specific version in one environment does — the rollback confirmation.
+ *
+ * Same reasoning as `describeTurnOffConsequence` above, and the same reason it lives here: this is
+ * the sentence someone reads mid-incident, when they have decided to go back to an older version
+ * and are about to discard whatever the newer one changed. Words that matter that much do not
+ * belong somewhere only a signed-in browser can reach.
+ *
+ * It says the three things the decision actually needs:
+ *   1. WHICH version replaces WHICH — "v2 replaces v5", not "this version";
+ *   2. that going backwards DISCARDS the newer versions' behaviour, without deleting them (the
+ *      registry is append-only, so a rollback is reversible — but the reader should not have to
+ *      already know that);
+ *   3. that it is not instant everywhere, for the same polling reason a turn-off is not.
+ */
+export function describeRollback(input: {
+  flagKey: string
+  environment: string
+  version: number
+  latestVersion: number
+  /** Null when the environment is currently serving nothing. */
+  replacing: string | null
+}): string {
+  const goingBack = input.version < input.latestVersion
+  const from =
+    input.replacing === null
+      ? `${input.environment} is not serving ${input.flagKey} right now`
+      : `${input.environment} is currently serving a different version of ${input.flagKey}`
+  // "v5 through v5" is what a naive range renders when exactly one version is being skipped, and it
+  // reads like a bug in the sentence rather than a fact about the flag.
+  const skipped =
+    input.version + 1 === input.latestVersion
+      ? `v${input.latestVersion}`
+      : `v${input.version + 1} through v${input.latestVersion}`
+  const direction = goingBack
+    ? `Serving v${input.version} means ${input.environment} goes BACK to how this feature behaved at ` +
+      `v${input.version}, and whatever changed in ${skipped} stops applying there.`
+    : `Serving v${input.version} makes it the version ${input.environment} runs.`
+  return (
+    `${from}. ${direction} No version is deleted — every one stays in this feature's history, so ` +
+    `this can be undone by serving another. Clients pick the change up on their next snapshot poll, ` +
+    `not instantly.`
+  )
+}

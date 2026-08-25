@@ -12,7 +12,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeTurnOffConsequence } from './flag-console-copy.ts'
+import { describeRollback, describeTurnOffConsequence } from './flag-console-copy.ts'
 
 const SENTENCE = describeTurnOffConsequence('checkout.stripe_enabled', 'production')
 
@@ -69,5 +69,86 @@ test('every flag key and environment produces a sentence naming both', () => {
       assert.ok(sentence.includes(key), `${key}/${environment} did not name the feature`)
       assert.ok(sentence.includes(environment), `${key}/${environment} did not name the environment`)
     }
+  }
+})
+
+// ── Rollback ─────────────────────────────────────────────────────────────────────────────────
+// Same reasoning as the turn-off sentence: this is read mid-incident, by someone about to discard
+// whatever the newer versions changed. It must be specific about WHICH versions stop applying.
+
+const BACK = describeRollback({
+  flagKey: 'checkout.stripe_enabled',
+  environment: 'production',
+  version: 2,
+  latestVersion: 5,
+  replacing: 'a different version',
+})
+
+test('rollback names the feature, the environment and BOTH versions involved', () => {
+  assert.match(BACK, /checkout\.stripe_enabled/)
+  assert.match(BACK, /production/)
+  assert.match(BACK, /v2/)
+  assert.match(BACK, /v5/)
+})
+
+test('rollback says what STOPS APPLYING — the versions being skipped, by number', () => {
+  // "This will change the served version" would be true and useless. The reader needs to know that
+  // v3, v4 and v5's behaviour goes away, because that is the decision they are actually making.
+  assert.match(BACK, /v3 through v5/)
+  assert.match(BACK, /stops applying/)
+})
+
+test('skipping exactly one version does not render an absurd range', () => {
+  // A naive range prints "v5 through v5", which reads as a bug in the sentence rather than a fact
+  // about the flag — and a confirmation the reader distrusts is a confirmation they stop reading.
+  const one = describeRollback({
+    flagKey: 'a.b',
+    environment: 'preview',
+    version: 4,
+    latestVersion: 5,
+    replacing: 'a different version',
+  })
+  assert.match(one, /whatever changed in v5 stops applying/)
+  assert.doesNotMatch(one, /v5 through v5/)
+})
+
+test('rolling FORWARD does not claim anything stops applying', () => {
+  // Serving the newest version discards nothing, and saying otherwise would make the sentence
+  // wrong in the direction that causes hesitation at the wrong moment.
+  const forward = describeRollback({
+    flagKey: 'a.b',
+    environment: 'production',
+    version: 5,
+    latestVersion: 5,
+    replacing: 'a different version',
+  })
+  assert.doesNotMatch(forward, /stops applying/)
+  assert.doesNotMatch(forward, /goes BACK/)
+})
+
+test('rollback says the change is reversible, because the registry is append-only', () => {
+  // True and load-bearing: an operator who believes a rollback destroys the newer versions will
+  // hesitate over a reversible act during an incident.
+  assert.match(BACK, /No version is deleted/)
+})
+
+test('rollback warns it is not instant, like every other change to a served snapshot', () => {
+  assert.match(BACK, /next snapshot poll/)
+})
+
+test('an environment serving nothing is described as such, not as "a different version"', () => {
+  const fresh = describeRollback({
+    flagKey: 'a.b',
+    environment: 'development',
+    version: 1,
+    latestVersion: 1,
+    replacing: null,
+  })
+  assert.match(fresh, /is not serving a\.b right now/)
+})
+
+test('rollback uses no storage vocabulary (D7)', () => {
+  for (const term of ['activation', 'deactivate', 'immutable', 'snapshot revision', 'mint']) {
+    assert.doesNotMatch(BACK, new RegExp(term, 'i'), `rollback still says "${term}"`)
   }
 })

@@ -30,6 +30,7 @@ import { FlagInsight } from '../flag-insight'
 import { FlagPreview } from '../flag-preview'
 import { FlagAuthoring } from './flag-authoring'
 import { FlagSwitch, type FlagSwitchEnvironment } from './flag-switch'
+import { FlagVersionServe, type ServeTarget } from './flag-version-serve'
 import { FLAG_STATE_PRESENTATION, TYPE_LABEL, CRITICALITY_LABEL } from '../flag-vocabulary'
 
 export const dynamic = 'force-dynamic'
@@ -100,6 +101,13 @@ export default async function FlagDetailPage({
   const switchEnvironments: FlagSwitchEnvironment[] = FLAG_ENVIRONMENTS.map((environment) => ({
     environment,
     state: projectFlagRows([flag], environment)[0].state,
+    snapshotVersion: snapshotByEnvironment.get(environment) ?? 0,
+  }))
+  // Rollback's targets. Same source, one extra field: WHICH version each environment serves, so a
+  // row can say "serving in production" instead of offering to re-serve what is already live.
+  const serveTargets: ServeTarget[] = FLAG_ENVIRONMENTS.map((environment) => ({
+    environment,
+    servingVersionId: flag.activations.find((row) => row.environment === environment)?.versionId ?? null,
     snapshotVersion: snapshotByEnvironment.get(environment) ?? 0,
   }))
 
@@ -205,6 +213,7 @@ export default async function FlagDetailPage({
                       <th scope="col">Version</th>
                       <th scope="col">Created</th>
                       <th scope="col">Definition</th>
+                      {canManage && <th scope="col">Serve</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -224,6 +233,24 @@ export default async function FlagDetailPage({
                               <pre>{JSON.stringify(version.definition, null, 2)}</pre>
                             </details>
                           </td>
+                          {/* Rollback. The legacy stack's per-version buttons are the ONLY way to
+                              serve a version other than the newest, so this must exist before that
+                              stack can be retired — see sprint-2.md. Owner-only, same boundary as
+                              every other write on this page. */}
+                          {canManage && (
+                            <td>
+                              <FlagVersionServe
+                                slug={projectSlug}
+                                flagKey={flag.key}
+                                flagId={flag.id}
+                                versionId={version.id}
+                                version={version.version}
+                                latestVersion={latest?.version ?? version.version}
+                                targets={serveTargets}
+                                servingEnabled={servingEnabled}
+                              />
+                            </td>
+                          )}
                         </tr>
                       ))}
                   </tbody>
