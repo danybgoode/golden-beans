@@ -1,5 +1,5 @@
 ---
-status: scaffolded   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: flags-console-parity
 build_order: null    # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
@@ -76,8 +76,10 @@ public; the two new routes sit behind the same `requireProjectMembership` path a
 - `app/(shell)/admin/flags/FlagsFilterBar.tsx` — a zero-JS filter bar: status chips as `Link`s plus a
   plain GET `<form>`, URL-driven so filters are shareable, bookmarkable and survive a refresh, with
   the client bundle carrying only the toggle interactivity.
-- ⚠️ **Both files are es-MX.** Golden is English-only by explicit policy (WAYS-OF-WORKING →
-  Conventions → Language). **Copy the shape, never the copy.**
+- ⚠️ **`FlagsFilterBar.tsx` is es-MX** (and Tailwind-classed, so it was always shape-only reuse).
+  `flags-admin-view.ts` is **English** and ports as-is — the original claim that both were es-MX was
+  corrected at the lock pass (Amendment 3). Golden is English-only by explicit policy
+  (WAYS-OF-WORKING → Conventions → Language). **Copy the shape, never the copy.**
 
 **Flagsmith — the reference IA** (product owner's own live dashboard, screenshots 2026-08-24): an
 environment switcher above a left rail; a Features list with Search plus Tags/Value/Users/Groups/View/Sort
@@ -85,26 +87,97 @@ controls, a toggle and a kebab per row; an Edit Feature modal tabbed
 Value · Segment Overrides · Identity Overrides · Usage · Health · History · Settings, carrying
 Enabled, Value, *Compare across environments*, and Schedule Update / Update Feature Value.
 
-## Decisions — ⚠️ NOT YET LOCKED
+## Decisions — ✅ LOCKED 2026-08-24 (architect, against live code **and** the live production registry)
 
-These are **groom-stage candidates**, derived from reading the code but **not** verified against live
-data. Per WAYS-OF-WORKING §5 the architect locks `D1…Dn` against live code **and live data** before
-any builder starts, and **the locking pass must disprove scope** — an acceptance criterion describing
-a guard, table or flag state the live system doesn't have is fiction, and gets corrected out loud.
-Two of this epic's own ancestors had a locked decision disproved this way (`app-component-kit-adoption`
-D5; `flags-visual-rule-builder` D4/D5). Expect the same here.
+Locked per WAYS-OF-WORKING §5. Every row below was verified against the code as it is on `main`
+(`b57ccdb`) and against the **production** Supabase registry (`slweidgffcfndnskcskc`, project
+`miyagisanchez`, 42 definitions / 44 versions, read 2026-08-24). Builders **cite** these; they do not
+re-derive them.
 
-| # | Candidate decision | What the lock pass must verify |
+**The locking pass disproved scope, as the groom predicted it would.** `D5` and `D8` were both wrong
+about live data, and `D6` was in direct conflict with Stories 3.1/3.2. Corrections are stated out
+loud below and the affected sprint docs were edited, not silently reinterpreted.
+
+| # | Locked decision | Evidence |
 |---|---|---|
-| D1 | The console reads only `getFlagRegistryView()`; no query is added. | That its return shape actually carries description, polarity and criticality for the list columns — **the seed assumes this and it is unconfirmed.** |
-| D2 | List math lives in a new pure `lib/flag-list-view.ts`, unit-tested, ported from Miyagi Sánchez's semantics. | Whether it belongs there or as an extension of `lib/data-table.ts`. |
-| D3 | The environment selector is flags-scoped; `ProductShell` is untouched. | Product owner's decision, 2026-08-25. Locked as scope, not architecture. |
-| D4 | `DataTable` gains **no** pagination prop. | Its D3 comment forbids quiet prop growth. Either the list is a different component, or this becomes a written, argued exception. |
-| D5 | Not every registry row is a Miyagi Sánchez static boolean. | Two disposable `breaker.*` proof flags from a 2026-07-29 circuit-breaker test sit in production, and definitions may carry non-empty `rules`. **Read the live registry.** |
-| D6 | With `FLAG_CONSOLE_ENABLED` off, the page is byte-for-byte pre-epic. | The D6 promise `flags-visual-rule-builder` made and nearly broke over one CSS class. |
-| D7 | One module owns every user-facing flag word (`lib/positioning.ts` pattern). | That no Flagsmith term is reused for a Golden concept that differs. |
-| D8 | "Not created" is a distinct rendered state from "off". | Whether Golden's registry can even express "in a catalog but undefined" for a project other than Miyagi Sánchez. |
+| D1 | ✅ **CONFIRMED — with a correction about *where* the fields live.** The console reads only `getFlagRegistryView()`; no query is added. | `description` is a **required, non-blank** field of `FlagDefinition` (`packages/sdk/src/flags.ts`). `polarity` and `criticality` are **not** typed fields — they live inside the optional `definition.metadata` bag. Live: **44/44** versions carry both (`polarity` ∈ `killswitch\|enablement`, `criticality` ∈ `high\|medium\|low`); `enforcement` and `source` are on **43/44**. So the data the list needs is all there — but see D1a. |
+| D1a | ✅ **NEW — polarity and criticality are a convention, not a guarantee.** The list renders an explicit *unclassified* state for either. | `metadata?: Record<string, FlagMetadataValue>` is optional in the SDK and unvalidated by `private.flag_definition_is_valid`. Nothing stops a definition arriving without them, and **one live version already lacks `enforcement`/`source`**. A list that assumes the bag is populated is one sync away from rendering `undefined`. |
+| D2 | ✅ **LOCKED — a new pure `lib/flag-list-view.ts`, NOT an extension of `lib/data-table.ts`.** | Three reasons. (a) `data-table.ts` is generic arithmetic over `CellValue`, deliberately paired with the `DataTable` island under its own frozen-API rule. (b) The flag list needs **domain** sorts (state, type, recently-changed) which are not column sorts. (c) **The decisive one:** Miyagi Sánchez's model has one global `enabled`; **Golden's state is per-environment**. So this module's real signature is `(flags, environment) → row projection`, and sort/filter/paginate run over that projection. That is domain logic, not table arithmetic. |
+| D3 | ✅ **LOCKED as scope** — the environment selector is flags-scoped; `ProductShell` is untouched. | Product owner's decision, 2026-08-25. Unchanged by the lock pass. |
+| D4 | ✅ **LOCKED — `DataTable` gains no pagination prop, and the feature list is not a `DataTable`.** No written exception is needed. | Its D3 comment forbids quiet prop growth (*"a finding to log, not a prop to add quietly"*), and its filter box renders **unconditionally** — the open finding from `app-component-kit-adoption`. Decisive on its own: `DataTable`'s search and sort are **client state**, and Story 1.3 requires URL-driven filters that survive a refresh and can be shared. Those are incompatible; this is a different component, not a bigger `DataTable`. |
+| D5 | ❌ **DISPROVED as written. Re-stated on honest grounds.** | Two claims, both false. (1) *"Two disposable `breaker.*` proof flags sit in production"* — they do, but in the **`miyagi`** project, **not** `miyagisanchez` (`breaker.auto_prd_g_20260729`, `breaker.manual_prd_g_20260729`, `scenario.miyagi_readiness_epic_20260729`). Every one of `miyagisanchez`'s 42 keys carries `source: miyagi` metadata and none is a `breaker.*`. (2) *"definitions may carry non-empty `rules`"* — **zero of the 44 live versions have a single rule**, and all share **one** `valueType`. The live registry is 100% rule-less static booleans. **The robustness requirement survives, on forward-looking grounds:** the visual rule builder shipped in #15 can author rules today, and `getFlagRegistryView()` serves both tenants. The list must not *assume* a static boolean — but the sprint doc must stop claiming live data proves it. |
+| D6 | ✅ **LOCKED, strengthened into a construction, and a conflict with 3.1/3.2 resolved.** | See **Amendment 1** below. |
+| D7 | ✅ **CONFIRMED.** One module owns every user-facing flag word, `lib/positioning.ts` pattern. | That module exists (52 lines) and its own comment names the three prior epics that paid for the alternative. It is pinned by `e2e/positioning-surfaces.spec.ts`, which asserts the string renders identically on every surface — **Story 3.3 mirrors that spec shape**, so a sixth surface retyping a term is a failing test rather than a slow drift. No Flagsmith term is reused for a Golden concept that differs (checked against D8's re-scope: *Environment*, *Feature*, *Enabled*, *Value*, *History* all match; Golden's three-state activation gets plain-language names of its own). |
+| D8 | ❌ **DISPROVED, decisively — and re-scoped into the distinction that IS real.** | See **Amendment 2** below. |
 
+### Amendment 1 (2026-08-24) — D6 conflicts with Stories 3.1/3.2, and the move is therefore gate-conditional
+
+D6 promises that with `FLAG_CONSOLE_ENABLED` off the flags page is byte-for-byte pre-epic. Stories
+3.1 and 3.2 move the credential forms and the lifecycle audit **off** that page. Taken literally the
+two cannot both hold: an unconditional move deletes controls from the gate-off page, and a
+dark-launch guarantee that holds "except for the three forms" is not a guarantee. The groom did not
+notice this. Three things are therefore locked:
+
+1. **The move is gate-conditional.** With the console **off**, `flag-manager.tsx` still renders the
+   key forms and the audit table exactly as today. With it **on**, they are absent there and live on
+   their own routes. The gate-off branch of that component is not edited by this epic.
+2. **Byte-for-byte is a construction, not a promise to test.** The new console is a **new component
+   tree**; Sprint 1 does not edit `flag-manager.tsx` at all. D6 then holds *because the legacy code
+   path is untouched* — auditable with `git diff`, which is a far stronger guarantee than a spec.
+   (`flags-visual-rule-builder` promised D6 in prose and nearly broke it over one CSS class.)
+3. **What the merge gate can actually assert is the two new routes.** Both follow the established
+   `if (!isFlagConsoleEnabled()) notFound()` pattern — *"dark means nonexistent, before auth or
+   project lookup"* (`app/app/journeys/[projectSlug]/page.tsx`). An unauthenticated GET therefore
+   returns a flat **404** while dark and a **login redirect** once open, and both are reachable by
+   the Playwright `api` project. **Sprint 1's QA section was corrected:** the planned
+   `e2e/flag-console-dark.spec.ts` cannot assert "the page renders as it does today", because that
+   page is credential-gated and the `api` project only ever sees the login redirect — identical with
+   the gate on or off. It asserts the two routes' 404 instead.
+
+### Amendment 2 (2026-08-24) — D8 is disproved; Story 2.3 becomes the distinction Golden can actually make
+
+**"In a catalog but undefined" is not expressible in Golden, and not merely absent from the data.**
+`create_flag_definition_version` (`20260807100000_flag_serving.sql`) inserts the `flag_registries`
+row and its **first `flag_definition_versions` row in the same transaction, unconditionally**. A
+registry row with no version is unreachable by construction — and, consistently, **zero such rows
+exist across every project in production**.
+
+**The doc's named example is exactly backwards.** Sprint 2's smoke step 7 says
+`partners.recruiting_v3_enabled` *"reads **not created**, not 'off', and offers to create it."* Live,
+that flag has **2 versions and is activated in all three environments** — it is one of only **two**
+flags in the entire project that are on anywhere. Anyone running that smoke would have reported a bug
+against correct behaviour.
+
+**What IS real, expressible, and needs no new query.** `deactivate_flag` sets `version_id = NULL` and
+**keeps the activation row**. So each `(flag, environment)` pair has **three** distinct states:
+
+| State | How it is stored | Live count (`miyagisanchez`) |
+|---|---|---|
+| **On** — serving version *N* | activation row with a `version_id` | 2 flags × 3 environments |
+| **Turned off** — deliberately deactivated, and audited | activation row with `version_id = NULL` | 0 today; reachable, and written by `deactivate_flag` |
+| **Never turned on here** | **no activation row at all** | **40 of 42 flags, in every environment** |
+
+`summariseFlagEnvironments()` currently **collapses the last two** — `activations.find(…)?.versionId ?? null`
+maps "no row" and "row holding NULL" to the same `null`, and both render as
+*"Nothing is activated here."* That collapse is the real defect behind the audit's complaint, and
+un-collapsing it is a pure change to an already-unit-tested seam: `FlagActivationRow` already carries
+`environment` and a nullable `versionId`, so **D1 holds — no query is added**.
+
+**Story 2.3 is re-scoped to that distinction** ("never turned on here" vs "turned off" vs "on"), and
+Sprint 2's smoke step 7 is rewritten. This is not a consolation prize: with 40 of 42 flags never
+activated anywhere, it is precisely the epic's outcome test — *"which of these are on, in which
+environment, and which aren't created yet"* — answered with a state the system can actually defend.
+
+### Amendment 3 (2026-08-24) — two smaller corrections found while locking
+
+- **The reuse sources are not both es-MX.** The README says *"⚠️ Both files are es-MX."*
+  `lib/flags-admin-view.ts` is **entirely English** and ports as-is (modulo the D2 per-environment
+  projection). Only `FlagsFilterBar.tsx` is es-MX — and it is also Tailwind-classed, so it was always
+  shape-only reuse. The English-only policy is unaffected; the warning was simply over-broad.
+- **The live filter value is `killswitch`, one word.** The sprint docs write "kill-switch". The
+  *label* may render however D7's vocabulary module decides, but the value matched against
+  `definition.metadata.polarity` — and the URL parameter — is `killswitch`, exactly as
+  `filterFlagsByPolarity` already spells it upstream.
 ## Scope — stories
 
 | Sprint | Story | Risk |

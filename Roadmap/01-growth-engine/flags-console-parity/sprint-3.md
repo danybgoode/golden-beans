@@ -2,11 +2,22 @@
 
 **Status:** ⬜ not started
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D6` and `D7`
-> from the epic README. Branch: `feat/flags-console-parity-s3`, cut from Sprint 2's branch.
-> **Shared-surface warning:** `lib/project-route-inventory.ts`, `lib/shell-nav.ts` and the
-> `mobile-heuristics` route arrays are touched by 3.1/3.2/3.4. Per WAYS-OF-WORKING, shared surface is
-> the architect's, done first — a mistake here breaks every branch opened after it.
+> **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D6` (+ **Amendment 1**) and `D7`
+> from the epic README; do not re-derive them. Branch: `feat/flags-console-parity-s3`, cut from
+> Sprint 2's branch.
+>
+> **Amendment 1 binds this sprint hardest: the move is GATE-CONDITIONAL.** D6 promises the flags page
+> is byte-for-byte pre-epic while the gate is off; 3.1/3.2 move controls off that page. Both hold
+> only if the move is conditional. With `FLAG_CONSOLE_ENABLED` **off**, `flag-manager.tsx` still
+> renders the key forms and the audit table exactly as today; with it **on**, they are absent there
+> and live on their own routes, which themselves `notFound()` while dark. An unconditional move is a
+> D6 violation, and the groom did not catch it.
+>
+> **Shared-surface warning — bigger than the groom stated.** `lib/project-route-inventory.ts` carries
+> a **closed union**, `ProjectSurfaceGate`, and `ProjectSurfaceGates = Record<Exclude<…,'always'>, boolean>`.
+> Adding a `'flag-console'` gate widens that union and every caller that builds the record
+> (`lib/shell-nav.ts`, `app/app/page.tsx`, `lib/project-route-inventory.test.ts`). That plus the
+> `mobile-heuristics` route arrays is architect-tier, done FIRST, before any 3.1/3.2 work opens.
 
 ## Stories
 
@@ -20,8 +31,13 @@ starts at the top of the flags page instead of below three forms.
   opens with the reason: *"Keep its links and the classification of every top-level project route
   together so a new page cannot become another URL users must know."* An unregistered route is a URL
   only its author knows.
-- Owner-only, exactly as today: `canManage` still gates enumeration, and a member still cannot list
-  keys. **The authorization boundary does not move with the markup.**
+- Owner-only, and **strengthened deliberately rather than transplanted**. Today a member may LOAD
+  `/app/flags/<slug>` and simply sees no key tables (`requireProjectMembership` + `canManage`). A
+  standalone credentials route uses **`requireProjectOwnership`**, so a member gets a **404** — the
+  `/app/keys/[projectSlug]` precedent, itself cross-review-hardened in 2026-07-20 round 2, and what
+  the inventory's `audience: 'owner'` already declares. Both satisfy "a member cannot list keys";
+  this one also stops a member learning the route exists. **The boundary moves only tighter, never
+  looser** — state it in the PR body so review sees it as intended, not accidental.
 - Both revoke confirmations keep their current consequence text verbatim — the wording naming 401s on
   the next poll, and catalog publishes failing from a named source, is load-bearing and was
   cross-review-hardened.
@@ -44,6 +60,13 @@ the page I use daily.
 **Acceptance:**
 - Every user-facing flag term is defined once in a single module and imported — the `lib/positioning.ts`
   pattern, which exists precisely so five surfaces cannot drift.
+- **Mirror its spec, not just its shape** (D7): `e2e/positioning-surfaces.spec.ts` asserts the string
+  renders identically on every surface that claims it, so a sixth surface retyping a term is a
+  failing test rather than a slow divergence. A vocabulary module with no such spec is a convention,
+  and conventions drift.
+- The three activation states from Story 2.3 (**on** · **turned off** · **never turned on here**) are
+  Golden concepts with no Flagsmith equivalent, so they get plain-language names of their own and
+  borrow no Flagsmith term that already means something else there.
 - Flagsmith's words are adopted **where the concept genuinely matches**: Feature, Enabled, Value,
   History, Environment. Golden's genuinely-different concepts get plain-language names of their own
   and **never** borrow a Flagsmith term that already means something else there.
