@@ -72,6 +72,12 @@ the page I use daily.
   and **never** borrow a Flagsmith term that already means something else there.
 - Grepping rendered copy for *immutable definition version*, *mint*, *snapshot revision* and
   *activation* returns nothing.
+- ⚠️ **`flag-preview.tsx` carries two of those, and Sprint 2 MOVED it onto the new destination.**
+  `previewFlagEvaluationAction` returns *"Nothing is activated in {env}, so there is nothing to
+  preview there yet."* — which uses `activated` (D7's kill-list) **and** repeats the two-state
+  collapse Story 2.3 removed everywhere else. It was left alone in Sprint 2 under "move, don't
+  rewrite", but the move is exactly what makes it this story's problem: the string now renders on a
+  surface this epic built.
 - **English only.** The reuse source is es-MX; Golden renders `<html lang="en">` and introducing a
   locale layer needs a deliberate scope decision this epic does not make (WAYS-OF-WORKING →
   Conventions → Language).

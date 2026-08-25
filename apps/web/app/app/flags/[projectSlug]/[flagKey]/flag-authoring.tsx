@@ -21,17 +21,31 @@ export function FlagAuthoring({ slug, flagKey }: { slug: string; flagKey: string
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  // Same in-flight lock as `flag-switch.tsx` and `flag-version-serve.tsx`, and here for the same
+  // reason: React 18.3.1 clears `isPending` BEFORE the async callback's first await resolves
+  // (react-dom.development.js:16512-13), so `disabled={pending}` re-enables the submit button while
+  // `createFlagDefinitionVersionAction` is still on the wire. A double-click then writes a SECOND
+  // immutable version — the registry is append-only, so that duplicate is permanent.
+  //
+  // ⚠️ Worth naming: I fixed this class in the other two files of this PR and missed this one. That
+  // is the "fix the CLASS, not the instance" rule failing on the very finding that established the
+  // class, one round later (cross-review, Agy, PR #120). The sweep is now: every
+  // `startTransition(async` in THIS epic's surfaces holds its own flag; the other 25 in the repo are
+  // logged in sprint-2.md as a chore.
+  const [busy, setBusy] = useState(false)
+  const inFlight = busy || pending
 
   return (
     <>
       {notice && <p role="status">{notice}</p>}
       <RuleBuilder
-        disabled={pending}
+        disabled={inFlight}
         serverError={error}
         initialFlagKey={flagKey}
         onSubmit={(builtKey, builtDefinition, builtReason) => {
           setError(null)
           setNotice(null)
+          setBusy(true)
           startTransition(async () => {
             try {
               const result = await createFlagDefinitionVersionAction(
@@ -63,6 +77,7 @@ export function FlagAuthoring({ slug, flagKey }: { slug: string; flagKey: string
               // error message.
               setError('The change could not be applied. Try again.')
             }
+            setBusy(false)
           })
         }}
       />
