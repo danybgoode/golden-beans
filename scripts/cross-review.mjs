@@ -168,6 +168,22 @@ function ghDiff(pr, repo) {
 
 // Changed-file stats for the cost guard: [{ path, additions, deletions }, …]. Returns [] on any failure so
 // the guard degrades to "not trivial" (review runs) rather than silently skipping on a transient gh hiccup.
+/**
+ * The PR's head commit SHA, or null when it cannot be resolved.
+ *
+ * Deliberately tolerant: this exists to make the reviewer's FILE CONTEXT match the diff it is
+ * reviewing, so a failure here degrades to the old working-tree behaviour with a warning rather
+ * than aborting a review. `gh` is presence-checked by ensureGh() before this runs.
+ */
+function resolvePrHeadOid(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'headRefOid', '-q', '.headRefOid'];
+  if (repo) args.push('--repo', repo);
+  const out = spawnSync('gh', args, { encoding: 'utf8' });
+  if (out.status !== 0) return null;
+  const oid = String(out.stdout || '').trim();
+  return /^[0-9a-f]{40}$/.test(oid) ? oid : null;
+}
+
 function ghFiles(pr, repo) {
   const args = ['pr', 'view', String(pr), '--json', 'files'];
   if (repo) args.push('--repo', repo);
@@ -400,7 +416,43 @@ function main() {
     // fences. Under-filling is the safe direction: a review that runs on less context still runs.
     const budget = Math.max(0, AGY_ARG_LIMIT - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
     const touched = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1]);
-    const selection = buildFileContext(touched, (path) => readFileSync(path, 'utf8'), budget);
+    // ── Read from the PR's HEAD COMMIT, not the working tree ──────────────────────────────────
+    // This used to be `readFileSync(path)`, i.e. whatever branch happens to be checked out. With
+    // stacked sprint branches — this repo's DEFAULT shape (WAYS-OF-WORKING §6) — that is routinely a
+    // DIFFERENT branch than the PR under review, and the reviewer then receives the PR's diff
+    // alongside another branch's file contents.
+    //
+    // Not hypothetical: reviewing PR #118 while checked out on its `-s2` child, Mistral Vibe raised a
+    // confident Blocking finding that the diff "would fail to compile", because an import present in
+    // the diff was absent from the file text it was handed. It reasoned correctly from contradictory
+    // inputs. That is this very block's own failure mode inverted (see its header: "three wrong
+    // findings in two days came from a reviewer reasoning about code it could not see") — and the
+    // inverted form is worse, because the reviewer is confidently wrong rather than visibly blind.
+    //
+    // The stale-HEAD guard above does NOT cover this: it runs only when <PR#> is omitted, and an
+    // explicit <PR#> is documented as skipping it. So the content is pinned here independently, and
+    // falls back to the working tree only for an object this clone does not have — saying so.
+    const prHeadOid = resolvePrHeadOid(pr, repo);
+    let fellBackToWorktree = false;
+    const readAtPrHead = (path) => {
+      if (prHeadOid) {
+        const shown = spawnSync('git', ['show', `${prHeadOid}:${path}`], {
+          encoding: 'utf8',
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        if (shown.status === 0) return shown.stdout;
+      }
+      fellBackToWorktree = true;
+      return readFileSync(path, 'utf8');
+    };
+    const selection = buildFileContext(touched, readAtPrHead, budget);
+    if (fellBackToWorktree) {
+      process.stderr.write(
+        `\u26a0 some attached files were read from the WORKING TREE, not PR #${pr}'s head` +
+          `${prHeadOid ? ` (${shortSha(prHeadOid)})` : ' (head could not be resolved)'} — ` +
+          `run \`git fetch origin\` so the reviewer sees the code it is reviewing.\n`
+      );
+    }
     fileContext = renderFileContext(selection);
     if (selection.attached.length || selection.omitted.length) {
       process.stderr.write(
