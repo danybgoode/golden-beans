@@ -98,8 +98,9 @@ environment I'm actually asking about.
   which makes such a spec a guard that cannot fail (the exact class LEARNINGS names). What it asserts
   instead is the part that IS observable without a session: **Sprint 3's two new routes return a flat
   404 while the gate is dark**, per the `if (!gate()) notFound()` pattern. Byte-for-byte on the
-  existing page is guaranteed by *construction* — `flag-manager.tsx` is untouched — and audited with
-  `git diff`, not asserted by a spec that could not see it break.
+  existing page is guaranteed by *construction* — the gate-off branch of `flag-manager.tsx` renders
+  what it always did, because the one prop this epic adds to it defaults to the old behaviour — and
+  audited with `git diff`, not asserted by a spec that could not see it break.
 - **browser smoke owed:** yes, to the product owner — the authed `/app/flags/miyagisanchez` list
   itself. Not a money path, but it is credential-gated, so the automated rail can only reach the
   login redirect.

@@ -16,9 +16,15 @@
 // every other table in the product without pretending to be the same component.
 //
 // ── D6 / Amendment 1 ─────────────────────────────────────────────────────────────────────────
-// Nothing in this file is reachable while `FLAG_CONSOLE_ENABLED` is off. `page.tsx` renders the
-// legacy `<FlagManager>` instead, and that component is not edited by this sprint — which is what
-// makes "byte-for-byte pre-epic" a property of the diff rather than a promise in prose.
+// Nothing in this file is reachable while `FLAG_CONSOLE_ENABLED` is off — `page.tsx` renders the
+// legacy `<FlagManager>` instead, unchanged, which is what makes "byte-for-byte pre-epic" a property
+// of the diff rather than a promise in prose.
+//
+// `<FlagManager>` does take one new optional prop, `showDefinitions`, DEFAULTING TO TRUE: with the
+// gate off it renders exactly what it always did, and only the console branch opts out (otherwise
+// the per-flag stack would still sit underneath this list, which is the duplication Story 1.3 exists
+// to remove). See the epic README's Amendment 1 — this comment previously said the component was not
+// edited at all, which was the amendment's original over-statement rather than the truth.
 
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
@@ -78,6 +84,17 @@ const STATE_PRESENTATION: Record<
 const TYPE_LABEL: Record<string, string> = {
   killswitch: 'Kill switch',
   enablement: 'Enablement',
+  unclassified: 'Unclassified',
+}
+
+// Every criticality is looked up, including the classified ones. An earlier version special-cased
+// only `unclassified` and let the other three fall through as the raw stored value, so a column of
+// `high` / `medium` / `low` sat next to a capitalised `Unclassified` (cross-review, Agy, round 1).
+// A map means the display form of a value cannot depend on which branch produced it.
+const CRITICALITY_LABEL: Record<string, string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
   unclassified: 'Unclassified',
 }
 
@@ -241,7 +258,7 @@ export function FlagConsole({
                         <p className="data-table__count">{presentation.detail(row)}</p>
                       </td>
                       <td>{TYPE_LABEL[row.polarity]}</td>
-                      <td>{row.criticality === 'unclassified' ? 'Unclassified' : row.criticality}</td>
+                      <td>{CRITICALITY_LABEL[row.criticality]}</td>
                     </tr>
                   )
                 })
