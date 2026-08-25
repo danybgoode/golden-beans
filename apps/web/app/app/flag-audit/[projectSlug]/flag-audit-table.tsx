@@ -93,7 +93,7 @@ export function FlagAuditTable({
       rows={entries}
       rowKey={(entry) => entry.id}
       filterLabel="Filter the audit"
-      empty="Nothing has changed yet. Creating a version, or turning a feature on or off in an environment, is recorded here."
+      empty="Nothing has changed yet. Publishing a new version of a feature, or turning one on or off in an environment, is recorded here."
     />
   )
 }

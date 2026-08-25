@@ -54,6 +54,12 @@ const RETIRED = [
   'scoped snapshot key',
   'Deactivate',
   'Activate v',
+  // Added after cross-review (Vibe, PR #121) found "Creating a version" in an empty state this
+  // epic wrote. The list was phrases the AUDIT named, so it caught the nouns and missed the verb
+  // family around them — a sweep is only as good as its list, and the honest fix when something
+  // slips through is to widen the list rather than to fix the one instance.
+  'Creating a version',
+  'Create a version',
 ] as const
 
 /** Strip `//` line comments and block comments, then JSX `{/* … *\/}` blocks. */
