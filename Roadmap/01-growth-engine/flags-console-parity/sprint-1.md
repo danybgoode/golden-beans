@@ -48,7 +48,7 @@ gate covers them without a browser.
 **Acceptance:**
 - Search matches a flag's **key or its description**, case-insensitively.
 - Filters for state (all / on / off) and type (all / killswitch / enablement). **The stored value is
-  `killswitch`, one word** (D5/Amendment 3) — that is what `definition.metadata.polarity` holds live
+  `killswitch`, one word** (D1a/Amendment 3) — that is what `definition.metadata.polarity` holds live
   and what the URL parameter carries; the rendered label is D7's business.
 - **A flag whose `metadata` carries no `polarity` or `criticality` is rendered as *unclassified*, and
   is reachable by a filter** (D1a). The bag is optional in the SDK and unvalidated by the database;

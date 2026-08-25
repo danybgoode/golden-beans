@@ -20,11 +20,14 @@
 // legacy `<FlagManager>` instead, unchanged, which is what makes "byte-for-byte pre-epic" a property
 // of the diff rather than a promise in prose.
 //
-// `<FlagManager>` does take one new optional prop, `showDefinitions`, DEFAULTING TO TRUE: with the
-// gate off it renders exactly what it always did, and only the console branch opts out (otherwise
-// the per-flag stack would still sit underneath this list, which is the duplication Story 1.3 exists
-// to remove). See the epic README's Amendment 1 — this comment previously said the component was not
-// edited at all, which was the amendment's original over-statement rather than the truth.
+// `<FlagManager>` is NOT edited by this sprint and takes no new prop — it is byte-identical to
+// `main`. With the console ON it still renders below this list, deliberately: it holds every
+// activate/deactivate control, and the per-feature destination that replaces them is Story 2.1.
+// Sprint 1 is additive; Sprint 2 retires the stack in the same story that lands its replacement.
+//
+// An earlier revision of this file claimed the opposite (a `showDefinitions` prop that hid the
+// stack). That prop is gone — hiding those controls a sprint early would have left no way to kill a
+// live flag. See the epic README's Amendment 1.
 
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
