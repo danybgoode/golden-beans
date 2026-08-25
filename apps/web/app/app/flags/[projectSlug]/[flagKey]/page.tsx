@@ -70,10 +70,14 @@ export default async function FlagDetailPage({
   const membership = await requireProjectMembership(projectSlug)
   const registry = await getFlagRegistryView(membership.projectId)
 
-  // Decoded because a flag key travels through the URL and `checkout.stripe_enabled` is only the
-  // easy case — the key grammar allows characters a browser will percent-encode.
-  const wanted = decodeURIComponent(flagKey)
-  const flag = registry.flags.find((row) => row.key === wanted)
+  // ── NOT decoded here — Next.js already did it ─────────────────────────────────────────────────
+  // An earlier version called `decodeURIComponent(flagKey)`, reasoning that a key travels through a
+  // URL segment. The App Router already decodes route params, so that was a SECOND decode, and it
+  // turned a bad URL into a 500: `decodeURIComponent` throws `URIError` on a lone `%` or a malformed
+  // escape, and an uncaught throw in a server component is a crash, not the `notFound()` this route
+  // means. `/app/flags/miyagisanchez/100%` was a 500. No sibling route double-decodes; this one was
+  // alone in doing it (cross-review, Agy, PR #120, Blocking).
+  const flag = registry.flags.find((row) => row.key === flagKey)
   // A key this project does not have is a 404, not an empty page. It is also the honest answer for a
   // member of a DIFFERENT project guessing at URLs: the membership check above already resolved the
   // tenant server-side, so this can only ever miss within a project the caller can read.
@@ -91,6 +95,11 @@ export default async function FlagDetailPage({
     undefined
   )
   const basePath = `/app/flags/${projectSlug}/${encodeURIComponent(flag.key)}`
+  // The Settings tab reads description/type/criticality, none of which vary by environment — so the
+  // projection is computed ONCE here rather than three times inline (cross-review, Agy, PR #120).
+  // The environment argument is arbitrary for these fields, which is exactly why repeating the call
+  // with a hardcoded `FLAG_ENVIRONMENTS[0]` at each use invited someone to read it as significant.
+  const [descriptive] = projectFlagRows([flag], FLAG_ENVIRONMENTS[0])
   // The snapshot revision per environment, for the actions' optimistic-concurrency check. Straight
   // off `getFlagRegistryView()` — no query is added (D1). A missing row means the environment has
   // never had a snapshot, whose revision is 0; that is the same default the legacy surface uses, and
@@ -105,11 +114,22 @@ export default async function FlagDetailPage({
   }))
   // Rollback's targets. Same source, one extra field: WHICH version each environment serves, so a
   // row can say "serving in production" instead of offering to re-serve what is already live.
-  const serveTargets: ServeTarget[] = FLAG_ENVIRONMENTS.map((environment) => ({
-    environment,
-    servingVersionId: flag.activations.find((row) => row.environment === environment)?.versionId ?? null,
-    snapshotVersion: snapshotByEnvironment.get(environment) ?? 0,
-  }))
+  const serveTargets: ServeTarget[] = FLAG_ENVIRONMENTS.map((environment) => {
+    const servingVersionId =
+      flag.activations.find((row) => row.environment === environment)?.versionId ?? null
+    return {
+      environment,
+      servingVersionId,
+      // Resolved server-side rather than in the client component: the version NUMBER is what the
+      // confirmation reasons about ("going back" is relative to what this environment RUNS), and
+      // looking it up here keeps the component free of registry shape.
+      servingVersion:
+        servingVersionId === null
+          ? null
+          : (flag.versions.find((row) => row.id === servingVersionId)?.version ?? null),
+      snapshotVersion: snapshotByEnvironment.get(environment) ?? 0,
+    }
+  })
 
   return (
     <ProductShell projectSlug={projectSlug}>
@@ -277,21 +297,18 @@ export default async function FlagDetailPage({
                     <tr>
                       <th scope="row">Description</th>
                       <td>
-                        {(() => {
-                          const [row] = projectFlagRows([flag], FLAG_ENVIRONMENTS[0])
-                          return row.description === '' ? 'No description recorded.' : row.description
-                        })()}
+                        {descriptive.description === ''
+                          ? 'No description recorded.'
+                          : descriptive.description}
                       </td>
                     </tr>
                     <tr>
                       <th scope="row">Type</th>
-                      <td>{TYPE_LABEL[projectFlagRows([flag], FLAG_ENVIRONMENTS[0])[0].polarity]}</td>
+                      <td>{TYPE_LABEL[descriptive.polarity]}</td>
                     </tr>
                     <tr>
                       <th scope="row">Criticality</th>
-                      <td>
-                        {CRITICALITY_LABEL[projectFlagRows([flag], FLAG_ENVIRONMENTS[0])[0].criticality]}
-                      </td>
+                      <td>{CRITICALITY_LABEL[descriptive.criticality]}</td>
                     </tr>
                     <tr>
                       <th scope="row">Created</th>

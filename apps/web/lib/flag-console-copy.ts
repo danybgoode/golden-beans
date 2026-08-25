@@ -56,21 +56,30 @@ export function describeRollback(input: {
   flagKey: string
   environment: string
   version: number
-  latestVersion: number
-  /** Null when the environment is currently serving nothing. */
-  replacing: string | null
+  /**
+   * The version this environment SERVES RIGHT NOW, or null when it serves nothing.
+   *
+   * ── Why not `latestVersion` ───────────────────────────────────────────────────────────────
+   * The first version of this took `latestVersion` and called any target below it "going BACK".
+   * That is the wrong reference point and it produced a confidently false sentence: with
+   * production on v1 and the newest at v5, choosing v3 was described as going back and losing
+   * "v4 through v5" — when production was in fact rolling FORWARD from v1, and v4/v5 were never
+   * applying there to begin with (cross-review, Agy, PR #120, Blocking).
+   *
+   * Direction is relative to where the environment IS, never to where the flag's history ends.
+   */
+  currentVersion: number | null
 }): string {
-  const goingBack = input.version < input.latestVersion
+  const goingBack = input.currentVersion !== null && input.version < input.currentVersion
   const from =
-    input.replacing === null
+    input.currentVersion === null
       ? `${input.environment} is not serving ${input.flagKey} right now`
-      : `${input.environment} is currently serving a different version of ${input.flagKey}`
-  // "v5 through v5" is what a naive range renders when exactly one version is being skipped, and it
-  // reads like a bug in the sentence rather than a fact about the flag.
-  const skipped =
-    input.version + 1 === input.latestVersion
-      ? `v${input.latestVersion}`
-      : `v${input.version + 1} through v${input.latestVersion}`
+      : `${input.environment} is currently serving v${input.currentVersion} of ${input.flagKey}`
+  // The versions being SKIPPED are the ones between the target and what is running — not everything
+  // up to the newest. "v5 through v5" is what a naive range renders when exactly one is skipped, and
+  // it reads like a bug in the sentence rather than a fact about the flag.
+  const highest = input.currentVersion ?? input.version
+  const skipped = input.version + 1 === highest ? `v${highest}` : `v${input.version + 1} through v${highest}`
   const direction = goingBack
     ? `Serving v${input.version} means ${input.environment} goes BACK to how this feature behaved at ` +
       `v${input.version}, and whatever changed in ${skipped} stops applying there.`

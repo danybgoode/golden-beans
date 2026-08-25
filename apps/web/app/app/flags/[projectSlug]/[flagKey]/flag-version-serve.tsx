@@ -34,6 +34,14 @@ export type ServeTarget = {
   environment: FlagEnvironment
   /** The version id this environment currently serves, or `null` when it serves nothing. */
   servingVersionId: string | null
+  /**
+   * The version NUMBER this environment serves, or null when it serves nothing.
+   *
+   * Carried alongside the id because the confirmation's direction ("going back" vs "rolling
+   * forward") is relative to what this environment RUNS, not to where the flag's history ends —
+   * see `describeRollback`.
+   */
+  servingVersion: number | null
   snapshotVersion: number
 }
 
@@ -101,12 +109,18 @@ export function FlagVersionServe({
               type="button"
               className="btn btn-ghost btn-mini"
               disabled={pending || !servingEnabled}
-              // Going BACKWARDS always confirms, going forwards does not. Serving an older version
-              // over a newer one is the move most likely to be a mistake — a stale tab, a misread
-              // row — and it silently discards whatever the newer version fixed. Rolling FORWARD to
-              // the newest is the same act Story 2.2's "turn on" performs without a dialog, so
-              // asking there would be inconsistent for no gain.
-              onClick={() => (version < latestVersion ? setConfirming(target) : serve(target))}
+              // Going BACKWARDS confirms, going forwards does not — and "backwards" is relative to
+              // what THIS environment serves, not to the newest version that exists. Comparing
+              // against `latestVersion` asked for confirmation when production was on v1 and moving
+              // forward to v3, and the dialog then described a rollback that was not happening
+              // (cross-review, Agy, PR #120). Serving an older version than the one running is the
+              // move most likely to be a mistake and it discards what the newer one fixed; rolling
+              // forward is the same act "turn on" performs without a dialog.
+              onClick={() =>
+                target.servingVersion !== null && version < target.servingVersion
+                  ? setConfirming(target)
+                  : serve(target)
+              }
             >
               Serve in {target.environment}
             </button>
@@ -125,8 +139,7 @@ export function FlagVersionServe({
                 flagKey,
                 environment: confirming.environment,
                 version,
-                latestVersion,
-                replacing: confirming.servingVersionId === null ? null : 'a different version',
+                currentVersion: confirming.servingVersion,
               })
             : ''
         }

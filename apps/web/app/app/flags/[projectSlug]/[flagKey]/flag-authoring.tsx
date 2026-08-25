@@ -42,7 +42,18 @@ export function FlagAuthoring({ slug, flagKey }: { slug: string; flagKey: string
               )
               if (result.ok) {
                 setNotice(`Saved a new version of ${builtKey}.`)
-                router.refresh()
+                // ── Follow the key, because the key is editable ────────────────────────────────
+                // This page is ABOUT one feature, but `RuleBuilder`'s key field stays editable (a
+                // sync-created flag sometimes needs its key corrected). Change it and save, and the
+                // write lands on a DIFFERENT feature — while `router.refresh()` would reload the
+                // page for the old one, showing no trace of what was just written. The reader is
+                // then looking at the wrong feature being told the save succeeded (cross-review,
+                // Agy, PR #120).
+                if (builtKey !== flagKey) {
+                  router.push(`/app/flags/${slug}/${encodeURIComponent(builtKey)}`)
+                } else {
+                  router.refresh()
+                }
               } else {
                 setError(result.error ?? 'The change could not be applied.')
               }
