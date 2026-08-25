@@ -265,7 +265,6 @@ export default async function FlagDetailPage({
                                 flagId={flag.id}
                                 versionId={version.id}
                                 version={version.version}
-                                latestVersion={latest?.version ?? version.version}
                                 targets={serveTargets}
                                 servingEnabled={servingEnabled}
                               />

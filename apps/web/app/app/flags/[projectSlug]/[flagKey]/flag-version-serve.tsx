@@ -51,7 +51,6 @@ export function FlagVersionServe({
   flagId,
   versionId,
   version,
-  latestVersion,
   targets,
   servingEnabled,
 }: {
@@ -60,7 +59,6 @@ export function FlagVersionServe({
   flagId: string
   versionId: string
   version: number
-  latestVersion: number
   targets: ServeTarget[]
   servingEnabled: boolean
 }) {
