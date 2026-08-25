@@ -133,8 +133,13 @@ test('when nothing is serving, the row falls back to the highest-numbered versio
   const flags = [
     flag({
       key: 'a',
-      // Deliberately out of order: the fallback must not depend on the query's ordering.
-      versions: [version('v2', 2, { description: 'newest' }), version('v1', 1, { description: 'oldest' })],
+      // ASCENDING, which is what `getFlagRegistryView` actually returns (`.order('version')`).
+      // This fixture used to be [v2, v1] with a comment claiming it proved order-independence — but
+      // highest-first makes "take the highest" and "take the first" indistinguishable, so the
+      // assertion could not see the property it named break, AND the fixture was unlike production.
+      // With ascending input, a `take the first` mutant returns 'oldest' and this spec goes red.
+      // (Fresh HIGH-tier reviewer, PR #118 — mutation-verified.)
+      versions: [version('v1', 1, { description: 'oldest' }), version('v2', 2, { description: 'newest' })],
       activations: [],
     }),
   ]
@@ -365,12 +370,14 @@ test('an out-of-range page is CLAMPED into range, not answered with an empty tab
 
 test('page 0, a negative page and a non-finite page all land on page 1', () => {
   const rows = [row({ key: 'a' }), row({ key: 'b' })]
-  for (const page of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
-    assert.equal(paginateFlagRows(rows, page, 1).page >= 1, true)
+  // Asserted as `=== 1`, not `>= 1`. The old version used `>= 1`, which is true for EVERY possible
+  // implementation — `page` is clamped into `[1, totalPages]` and `totalPages >= 1` — so it proved
+  // nothing, and it was the ONLY coverage `POSITIVE_INFINITY` had. Dropping the `Number.isFinite`
+  // guard sent Infinity to the LAST page while all 48 specs stayed green.
+  // (Fresh HIGH-tier reviewer, PR #118 — mutation-verified.)
+  for (const page of [0, -5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    assert.equal(paginateFlagRows(rows, page, 1).page, 1, `page=${String(page)} should clamp to 1`)
   }
-  assert.equal(paginateFlagRows(rows, 0, 1).page, 1)
-  assert.equal(paginateFlagRows(rows, -5, 1).page, 1)
-  assert.equal(paginateFlagRows(rows, Number.NaN, 1).page, 1)
 })
 
 test('an empty list still reports one page, so the control never renders "page 1 of 0"', () => {

@@ -12,7 +12,7 @@ one that mattered — see the note below.
 
 | Story | Commit | Note |
 |---|---|---|
-| 1.1 `FLAG_CONSOLE_ENABLED` | `6cf3230` | Created disabled in dev/preview/production; value verified by reading it back, not by `env ls`. |
+| 1.1 `FLAG_CONSOLE_ENABLED` | `6cf3230` | Created disabled in dev/preview/production — **all three read back as `"false"`** via `vercel env pull`, not inferred from `env ls` (which never shows values). Preview was re-verified 2026-08-25 after the reviewer noted the original evidence covered only two of the three. |
 | 1.2 `lib/flag-list-view.ts` | `1de0821` | 48 specs; two mutations observed failing. |
 | 1.3 One feature list | `bb920ba` | Server-rendered, URL-driven; not a `DataTable` (D4). |
 | 1.4 Environment selector | `bb920ba` | Flags-scoped links; `ProductShell` untouched (D3). |
@@ -115,8 +115,12 @@ environment I'm actually asking about.
 **Risk:** low
 
 ## Sprint QA
-- **api spec(s):** `e2e/flag-console-dark.spec.ts` (new), `npm run test:unit` covers 1.2. Extend
-  `e2e/flag-rule-builder.authed.spec.ts` for the authed list assertions in 1.3/1.4.
+- **api spec(s): NONE are added by this sprint, and that is the honest answer.** `npm run test:unit`
+  covers 1.2 in full (48 specs). ⚠️ This bullet used to list `e2e/flag-console-dark.spec.ts` and an
+  extension of `e2e/flag-rule-builder.authed.spec.ts` as if delivered; **neither is on this branch**
+  (fresh HIGH-tier reviewer, PR #118). The reason is the corrected paragraph below: Sprint 1 adds no
+  gate-observable behaviour. `flag-console-dark.spec.ts` is written in **Sprint 2**, where the
+  per-feature route finally gives the gate something an unauthenticated request can see.
   ⚠️ **Corrected at the lock pass (Amendment 1).** This spec was scoped as *"the gate-off
   byte-for-byte guarantee"*. **It cannot be that.** `/app/flags/<slug>` is credential-gated, so the
   Playwright `api` project only ever observes the login redirect — identical with the gate on or off,

@@ -253,16 +253,24 @@ export function isFlagRuleBuilderEnabled(): boolean {
 // this epic merges dark and flips deliberately after the product owner has walked the surface.
 //
 // ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
-// GATED:     the feature list, the environment selector, the per-feature destination, and the two
-//            new routes (credentials, lifecycle audit) — every surface this epic adds.
-// NOT gated: anything that exists today. **With this OFF the flags page is byte-for-byte what it
-//            was before the epic, textarea and key-minting forms included.**
+// TODAY (Sprint 1):  the feature list and the environment selector on /app/flags/[projectSlug].
+//                    That is ALL that exists behind this gate right now.
+// PLANNED:           the per-feature destination (Sprint 2) and the credentials + lifecycle-audit
+//                    routes (Sprint 3) join it as they land.
+// NOT gated, ever:   anything that existed before the epic. **With this OFF the flags page is
+//                    byte-for-byte what it was, textarea and key-minting forms included.**
 //
-// That last clause is load-bearing and is the reason Amendment 1 exists. Stories 3.1/3.2 MOVE the
-// credential forms and the lifecycle audit off the flags page — and an UNCONDITIONAL move would
-// delete controls from the gate-off page, breaking the guarantee this comment just made. So the
-// move is gate-conditional: while this is off, `flag-manager.tsx` still renders them exactly as
-// today. A dark-launch guarantee that holds "except for the three forms" is not a guarantee, and
+// The TODAY/PLANNED split is deliberate (fresh HIGH-tier reviewer, PR #118). This comment first
+// listed all four surfaces in the present tense, describing a gate scope the code did not yet have
+// — the same "prose asserting a property the code lacks" defect that CODE-QUALITY rule 3 names and
+// that this very file's `isAgentRailEnabled` comment was already corrected for once. A gate comment
+// is read as an inventory of what is dark; listing an unbuilt surface makes it a wrong one.
+//
+// That last clause is load-bearing and is the reason Amendment 1 exists. Stories 3.1/3.2 WILL move
+// the credential forms and the lifecycle audit off the flags page — and an unconditional move would
+// delete controls from the gate-off page, breaking the guarantee this comment just made. So when
+// that lands it must be gate-conditional: while this is off, `flag-manager.tsx` keeps rendering
+// them exactly as today. (Future tense on purpose: nothing has moved yet.) A dark-launch guarantee that holds "except for the three forms" is not a guarantee, and
 // the sibling epic `flags-visual-rule-builder` already nearly broke the same promise over one CSS
 // class (see the textarea's inline style, below in that file, and the comment defending it).
 //
