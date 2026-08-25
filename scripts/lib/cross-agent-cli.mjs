@@ -807,7 +807,14 @@ export function headSidePaths(diff) {
       // This file's own fixtures contain such strings, so the hazard is not theoretical here.
       const hunkStart = chunk.search(/^@@ /m);
       const header = hunkStart === -1 ? chunk : chunk.slice(0, hunkStart);
-      if (/^\+\+\+ \/dev\/null$/m.test(header)) return null;
+      // TWO deletion signals, because neither covers every case on its own:
+      //   `deleted file mode` — git emits it for every deletion, text or BINARY.
+      //   `+++ /dev/null`     — the text-diff marker.
+      // A BINARY deletion has no `+++` line at all (it renders as
+      // `Binary files a/x and /dev/null differ`), so checking only the marker attached a path that
+      // cannot exist at head and then reported it as "unavailable" — a misleading warning about a
+      // file that is correctly absent (cross-review, Codex, PR #119, round 4).
+      if (/^deleted file mode /m.test(header) || /^\+\+\+ \/dev\/null$/m.test(header)) return null;
       return headPathFromDiffHeader(chunk.split('\n', 1)[0]);
     })
     .filter((path) => path !== null);

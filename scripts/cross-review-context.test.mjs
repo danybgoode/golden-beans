@@ -159,3 +159,28 @@ test('a real deletion is still detected when a later hunk contains the same text
     'diff --git a/gone.ts b/gone.ts\ndeleted file mode 100644\n--- a/gone.ts\n+++ /dev/null\n@@ -1 +0,0 @@\n-+++ /dev/null';
   assert.deepEqual(headSidePaths(removed), []);
 });
+
+test('a BINARY deletion is skipped — it has no `+++ /dev/null` line at all', () => {
+  // Git renders a binary deletion as `Binary files a/x and /dev/null differ`, with no `+++` marker.
+  // Checking only that marker attached a path that cannot exist at head, then reported it as
+  // "unavailable" — a misleading warning about a file that is correctly gone (Codex, PR #119 r4).
+  const binaryDelete = [
+    'diff --git a/logo.png b/logo.png',
+    'deleted file mode 100644',
+    'index 1234567..0000000',
+    'Binary files a/logo.png and /dev/null differ',
+  ].join('\n');
+  assert.deepEqual(headSidePaths(binaryDelete), []);
+});
+
+test('a BINARY addition is still included — it exists at head', () => {
+  // The inverse: `new file mode` plus `Binary files /dev/null and b/x differ`. Matching /dev/null
+  // loosely, or treating any binary chunk as a deletion, would drop every added asset.
+  const binaryAdd = [
+    'diff --git a/logo.png b/logo.png',
+    'new file mode 100644',
+    'index 0000000..1234567',
+    'Binary files /dev/null and b/logo.png differ',
+  ].join('\n');
+  assert.deepEqual(headSidePaths(binaryAdd), ['logo.png']);
+});
