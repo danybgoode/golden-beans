@@ -85,3 +85,29 @@ S2 Story 2.1 built+pushed on feat/flags-console-parity-s2 (stacked). Per-feature
 }
 ```
 
+## 2026-08-25T18:41:24.936Z — `feat/flags-console-parity-s2` @ 80067cfc
+
+_HEAD: feat(flags-console-parity): one control that says what it will do (money path)_
+
+PR #118 MERGED (2bdb6f7) + deployed to prod dark. PR #119 open (vibe enablement + cross-review PR-head context fix). S2 rebased onto main; Stories 2.1 + 2.2 built and pushed. NEXT: rollback home on the destination, THEN retire the legacy stack, then Story 2.3 + S2 PR + reviews.
+
+**Verified by running (observed output, not believed):**
+- gh pr view 118 -> MERGED; prod deployment sha 2bdb6f7 Production; curl /app/flags/miyagisanchez -> 307 /login; npm run test:unit -> 1234 pass/0 fail; mutation: degraded confirm sentence -> 7 specs red
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-08-25T18:41:24.936Z",
+  "note": "PR #118 MERGED (2bdb6f7) + deployed to prod dark. PR #119 open (vibe enablement + cross-review PR-head context fix). S2 rebased onto main; Stories 2.1 + 2.2 built and pushed. NEXT: rollback home on the destination, THEN retire the legacy stack, then Story 2.3 + S2 PR + reviews.",
+  "branch": "feat/flags-console-parity-s2",
+  "head": "80067cfcce19a32ab114ae2257c368ee29a680aa",
+  "headSubject": "feat(flags-console-parity): one control that says what it will do (money path)",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "gh pr view 118 -> MERGED; prod deployment sha 2bdb6f7 Production; curl /app/flags/miyagisanchez -> 307 /login; npm run test:unit -> 1234 pass/0 fail; mutation: degraded confirm sentence -> 7 specs red"
+  ]
+}
+```
+
