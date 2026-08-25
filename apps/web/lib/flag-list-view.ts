@@ -170,10 +170,7 @@ export function resolveActivationState(
  * describe production using a draft production has never seen, which is precisely the kind of
  * confident-and-false line this epic is replacing.
  */
-export function projectFlagRows(
-  flags: readonly FlagListFlagInput[],
-  environment: string
-): FlagListRow[] {
+export function projectFlagRows(flags: readonly FlagListFlagInput[], environment: string): FlagListRow[] {
   return flags.map((flag) => {
     const { state, versionId, updatedAt } = resolveActivationState(flag.activations, environment)
     const served = versionId === null ? undefined : flag.versions.find((row) => row.id === versionId)
@@ -264,8 +261,7 @@ export function filterFlagRowsByQuery(rows: readonly FlagListRow[], query: strin
   const needle = query.trim().toLowerCase()
   if (needle === '') return [...rows]
   return rows.filter(
-    (row) =>
-      row.key.toLowerCase().includes(needle) || row.description.toLowerCase().includes(needle)
+    (row) => row.key.toLowerCase().includes(needle) || row.description.toLowerCase().includes(needle)
   )
 }
 
@@ -279,10 +275,7 @@ export function filterFlagRowsByQuery(rows: readonly FlagListRow[], query: strin
  * on the row itself, which is where a reader asks *why* something is not on. The filter answers
  * "what can I not see", the row answers "why".
  */
-export function filterFlagRowsByState(
-  rows: readonly FlagListRow[],
-  state: FlagStateFilter
-): FlagListRow[] {
+export function filterFlagRowsByState(rows: readonly FlagListRow[], state: FlagStateFilter): FlagListRow[] {
   if (state === 'all') return [...rows]
   return rows.filter((row) => (state === 'on' ? row.state === 'on' : row.state !== 'on'))
 }

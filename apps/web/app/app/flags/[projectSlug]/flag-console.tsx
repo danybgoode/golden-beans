@@ -70,12 +70,14 @@ const STATE_PRESENTATION: Record<
   on: {
     badge: 'live',
     label: 'On',
-    detail: (row) => (row.version === null ? 'serving a version that could not be read' : `serving v${row.version}`),
+    detail: (row) =>
+      row.version === null ? 'serving a version that could not be read' : `serving v${row.version}`,
   },
   off: {
     badge: 'blocked',
     label: 'Turned off',
-    detail: (row) => (row.updatedAt === null ? 'switched off here' : `switched off ${formatUtc(row.updatedAt)}`),
+    detail: (row) =>
+      row.updatedAt === null ? 'switched off here' : `switched off ${formatUtc(row.updatedAt)}`,
   },
   never: {
     badge: 'next',

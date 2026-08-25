@@ -145,7 +145,11 @@ test('when nothing is serving, the row falls back to the highest-numbered versio
 
 test('an activation pointing at a version the view does not carry stays "on" with an unreadable version', () => {
   const flags = [
-    flag({ key: 'a', versions: [version('v1', 1)], activations: [{ environment: 'production', versionId: 'ghost' }] }),
+    flag({
+      key: 'a',
+      versions: [version('v1', 1)],
+      activations: [{ environment: 'production', versionId: 'ghost' }],
+    }),
   ]
   const [projected] = projectFlagRows(flags, 'production')
   assert.equal(projected.state, 'on')
@@ -163,7 +167,10 @@ test('a definition with no metadata bag reads as unclassified, never undefined',
 
 test('an unrecognised metadata value is unclassified rather than echoed into the page', () => {
   const flags = [
-    flag({ key: 'a', versions: [version('v1', 1, { metadata: { polarity: 'KILLSWITCH', criticality: 'urgent' } })] }),
+    flag({
+      key: 'a',
+      versions: [version('v1', 1, { metadata: { polarity: 'KILLSWITCH', criticality: 'urgent' } })],
+    }),
   ]
   const [projected] = projectFlagRows(flags, 'production')
   assert.equal(projected.polarity, 'unclassified')
@@ -224,7 +231,11 @@ test('an all-whitespace query matches everything — a typed space is not an int
 // ── Filters ───────────────────────────────────────────────────────────────────────────────────
 
 test('the "off" filter means NOT ON — it includes never-turned-on rows', () => {
-  const rows = [row({ key: 'a', state: 'on' }), row({ key: 'b', state: 'off' }), row({ key: 'c', state: 'never' })]
+  const rows = [
+    row({ key: 'a', state: 'on' }),
+    row({ key: 'b', state: 'off' }),
+    row({ key: 'c', state: 'never' }),
+  ]
   assert.deepEqual(
     filterFlagRowsByState(rows, 'off').map((r) => r.key),
     ['b', 'c']
@@ -253,13 +264,22 @@ test('the type filter can reach unclassified rows, so a flag cannot hide from ev
 
 test('key_asc and key_desc are exact reverses', () => {
   const rows = [row({ key: 'b' }), row({ key: 'a' }), row({ key: 'c' })]
-  assert.deepEqual(sortFlagRows(rows, 'key_asc').map((r) => r.key), ['a', 'b', 'c'])
-  assert.deepEqual(sortFlagRows(rows, 'key_desc').map((r) => r.key), ['c', 'b', 'a'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'key_asc').map((r) => r.key),
+    ['a', 'b', 'c']
+  )
+  assert.deepEqual(
+    sortFlagRows(rows, 'key_desc').map((r) => r.key),
+    ['c', 'b', 'a']
+  )
 })
 
 test('key sorting is numeric-aware: key-2 before key-10', () => {
   const rows = [row({ key: 'key-10' }), row({ key: 'key-2' })]
-  assert.deepEqual(sortFlagRows(rows, 'key_asc').map((r) => r.key), ['key-2', 'key-10'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'key_asc').map((r) => r.key),
+    ['key-2', 'key-10']
+  )
 })
 
 test('state sort orders on → off → never, and ties break alphabetically', () => {
@@ -269,7 +289,10 @@ test('state sort orders on → off → never, and ties break alphabetically', ()
     row({ key: 'a-off', state: 'off' }),
     row({ key: 'a-on', state: 'on' }),
   ]
-  assert.deepEqual(sortFlagRows(rows, 'state').map((r) => r.key), ['a-on', 'b-on', 'a-off', 'z-never'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'state').map((r) => r.key),
+    ['a-on', 'b-on', 'a-off', 'z-never']
+  )
 })
 
 test('type sort puts kill-switches first, unclassified last, ties alphabetical', () => {
@@ -279,7 +302,10 @@ test('type sort puts kill-switches first, unclassified last, ties alphabetical',
     row({ key: 'b', polarity: 'killswitch' }),
     row({ key: 'a', polarity: 'enablement' }),
   ]
-  assert.deepEqual(sortFlagRows(rows, 'type').map((r) => r.key), ['b', 'a', 'm', 'z'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'type').map((r) => r.key),
+    ['b', 'a', 'm', 'z']
+  )
 })
 
 test('recent sort is newest first, and never-changed rows sort LAST', () => {
@@ -288,12 +314,18 @@ test('recent sort is newest first, and never-changed rows sort LAST', () => {
     row({ key: 'old', updatedAt: '2026-01-01T00:00:00Z' }),
     row({ key: 'new', updatedAt: '2026-08-01T00:00:00Z' }),
   ]
-  assert.deepEqual(sortFlagRows(rows, 'recent').map((r) => r.key), ['new', 'old', 'never'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'recent').map((r) => r.key),
+    ['new', 'old', 'never']
+  )
 })
 
 test('recent sort ties — including two never-changed rows — break alphabetically', () => {
   const rows = [row({ key: 'z', updatedAt: null }), row({ key: 'a', updatedAt: null })]
-  assert.deepEqual(sortFlagRows(rows, 'recent').map((r) => r.key), ['a', 'z'])
+  assert.deepEqual(
+    sortFlagRows(rows, 'recent').map((r) => r.key),
+    ['a', 'z']
+  )
 })
 
 test('every sort is total: no branch leaves order to the input array', () => {
@@ -312,7 +344,10 @@ test('every sort is total: no branch leaves order to the input array', () => {
 test('sorting never mutates its input', () => {
   const rows = [row({ key: 'b' }), row({ key: 'a' })]
   sortFlagRows(rows, 'key_asc')
-  assert.deepEqual(rows.map((r) => r.key), ['b', 'a'])
+  assert.deepEqual(
+    rows.map((r) => r.key),
+    ['b', 'a']
+  )
 })
 
 // ── Pagination: clamps, never returns an empty page ───────────────────────────────────────────
@@ -322,7 +357,10 @@ test('an out-of-range page is CLAMPED into range, not answered with an empty tab
   const result = paginateFlagRows(rows, 99, 2)
   assert.equal(result.page, 2)
   assert.equal(result.totalPages, 2)
-  assert.deepEqual(result.pageRows.map((r) => r.key), ['c'])
+  assert.deepEqual(
+    result.pageRows.map((r) => r.key),
+    ['c']
+  )
 })
 
 test('page 0, a negative page and a non-finite page all land on page 1', () => {
@@ -423,7 +461,10 @@ test('an override replaces one field and leaves the rest of the view intact', ()
 const LIVE_SHAPED: FlagListFlagInput[] = [
   flag({
     key: 'partners.recruiting_v3_enabled',
-    versions: [version('p1', 1), version('p2', 2, { metadata: { polarity: 'enablement', criticality: 'high' } })],
+    versions: [
+      version('p1', 1),
+      version('p2', 2, { metadata: { polarity: 'enablement', criticality: 'high' } }),
+    ],
     activations: ENVIRONMENTS.map((environment) => ({
       environment,
       versionId: 'p2',
@@ -441,7 +482,10 @@ const LIVE_SHAPED: FlagListFlagInput[] = [
 test('the pipeline projects BEFORE it filters — a state filter answers about the chosen environment', () => {
   const base = parseFlagListParams({ state: 'on' }, ENVIRONMENTS, 'development')
   const view = buildFlagListView(LIVE_SHAPED, base)
-  assert.deepEqual(view.pageRows.map((r) => r.key), ['partners.recruiting_v3_enabled'])
+  assert.deepEqual(
+    view.pageRows.map((r) => r.key),
+    ['partners.recruiting_v3_enabled']
+  )
 })
 
 test('chip counts are computed BEFORE the state filter, so the chips stay a way back', () => {
@@ -473,18 +517,28 @@ test('the epic outcome test in miniature: on, in which environment, and which we
 
 test('typing `stripe` narrows 42-shaped input to the one flag, with nothing above it', () => {
   const many: FlagListFlagInput[] = [
-    ...Array.from({ length: 41 }, (_, index) => flag({ key: `noise.flag_${String(index).padStart(2, '0')}` })),
+    ...Array.from({ length: 41 }, (_, index) =>
+      flag({ key: `noise.flag_${String(index).padStart(2, '0')}` })
+    ),
     flag({ key: 'checkout.stripe_enabled' }),
   ]
   const view = buildFlagListView(many, parseFlagListParams({ q: 'stripe' }, ENVIRONMENTS, 'development'))
-  assert.deepEqual(view.pageRows.map((r) => r.key), ['checkout.stripe_enabled'])
+  assert.deepEqual(
+    view.pageRows.map((r) => r.key),
+    ['checkout.stripe_enabled']
+  )
   assert.equal(view.totalRows, 1)
   assert.equal(view.totalPages, 1)
 })
 
 test('a filter that narrows under a deep page still lands the reader on rows, not a blank table', () => {
-  const many = Array.from({ length: 60 }, (_, index) => flag({ key: `flag_${String(index).padStart(2, '0')}` }))
-  const view = buildFlagListView(many, parseFlagListParams({ page: '3', q: 'flag_0' }, ENVIRONMENTS, 'development'))
+  const many = Array.from({ length: 60 }, (_, index) =>
+    flag({ key: `flag_${String(index).padStart(2, '0')}` })
+  )
+  const view = buildFlagListView(
+    many,
+    parseFlagListParams({ page: '3', q: 'flag_0' }, ENVIRONMENTS, 'development')
+  )
   assert.equal(view.pageRows.length > 0, true)
   assert.equal(view.page, 1)
   assert.equal(view.totalRows, 10)
@@ -501,5 +555,8 @@ test('the pipeline does not mutate the flags it was handed', () => {
   const flags = [flag({ key: 'b' }), flag({ key: 'a' })]
   const params: FlagListParams = parseFlagListParams({ sort: 'key_asc' }, ENVIRONMENTS, 'development')
   buildFlagListView(flags, params)
-  assert.deepEqual(flags.map((f) => f.key), ['b', 'a'])
+  assert.deepEqual(
+    flags.map((f) => f.key),
+    ['b', 'a']
+  )
 })
