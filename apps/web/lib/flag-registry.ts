@@ -285,6 +285,26 @@ async function changeActivation(
   const row = data?.[0] as { snapshot_version?: number; changed?: boolean } | undefined
   if (error || !row || !Number.isSafeInteger(Number(row.snapshot_version))) {
     console.error('[flag-registry] activation change failed:', error)
+    // ── A concurrency conflict is not a permissions problem, and must not read like one ─────────
+    // Every RPC outcome used to collapse into "This flag lifecycle change is not allowed." —
+    // P0001 optimistic-concurrency conflicts included. That is the one failure whose correct
+    // response is "reload and look again", and a permissions-shaped message gives the operator no
+    // reason to. It matters most exactly where it was worst: two people on one environment during
+    // an incident, or one stale tab. The snapshot counter is per (project, environment), so ANY
+    // other flag changing in that environment — including from the Miyagi admin console — trips it.
+    //
+    // Matched on the ERRCODE the migration deliberately raises
+    // (`20260807160000_flag_activation_conflict_code.sql`), not on the message text, so rewording
+    // the exception cannot silently reroute this back into the generic branch.
+    // Found by the fresh HIGH-tier reviewer on PR #120: `flag-switch.tsx` carried a comment
+    // asserting this distinction already reached the operator. It did not.
+    if (error?.code === 'P0001') {
+      return {
+        ok: false as const,
+        error:
+          'Someone else changed this environment while you were looking at it. Reload the page to see the current state, then try again.',
+      }
+    }
     return { ok: false as const, error: 'This flag lifecycle change is not allowed.' }
   }
   return { ok: true as const, snapshotVersion: Number(row.snapshot_version), changed: row.changed === true }

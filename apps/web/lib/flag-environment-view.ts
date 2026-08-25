@@ -336,6 +336,42 @@ function summarise(flag: FlagView, environment: FlagEnvironment): FlagEnvironmen
  * three. The seed is cast because the record is only total once the loop below has run; the loop is
  * driven by the constant, which is the part D5 is about.
  */
+/**
+ * What an attribute-free context actually GETS from a version — the variant key AND its value.
+ *
+ * ── Why the VALUE matters, and why "activated" is not "on" ────────────────────────────────────
+ * The console used to equate "an activation row points at a version" with "this feature is on".
+ * Those are different facts, and conflating them is dangerous on the money path.
+ *
+ * A definition's `defaultVariantKey` can name a variant whose value is `false` — that is how the
+ * Miyagi admin console turns a flag off without deactivating it (`set_flag_admin_boolean` rewrites
+ * `defaultVariantKey` and re-activates). **Live, 34 of `miyagisanchez`'s 42 flags have a latest
+ * version that evaluates to `false`.** So "Turn on in production", implemented as "activate the
+ * newest version", would have served `false` to production on most of this project's flags — under
+ * a button labelled Turn on, with no dialog, followed by a notice saying it is on.
+ *
+ * Found by the fresh HIGH-tier reviewer on PR #120, which rated the live likelihood as "medium".
+ * It was 34/42.
+ *
+ * The answer comes from `evaluateFlag` — the SDK's own evaluator, the one production serves from —
+ * for the same reason every other verdict in this file does: a page that re-implemented resolution
+ * to label a button would disagree with production exactly when someone trusted the label.
+ */
+export function evaluateVersionDefault(
+  flagKey: string,
+  version: FlagVersionView
+): { variantKey: string | null; value: unknown; readable: boolean } {
+  const baseline = evaluateBaseline(flagKey, version)
+  if (!baseline.readable || baseline.variantKey === null) {
+    return { variantKey: baseline.variantKey, value: undefined, readable: baseline.readable }
+  }
+  const variants = (version.definition as FlagDefinition | null | undefined)?.variants
+  const match = Array.isArray(variants)
+    ? variants.find((candidate) => candidate?.key === baseline.variantKey)
+    : undefined
+  return { variantKey: baseline.variantKey, value: match?.value, readable: true }
+}
+
 export function summariseFlagEnvironments(flag: FlagView): Record<FlagEnvironment, FlagEnvironmentSummary> {
   const summaries = {} as Record<FlagEnvironment, FlagEnvironmentSummary>
   for (const environment of FLAG_ENVIRONMENTS) summaries[environment] = summarise(flag, environment)

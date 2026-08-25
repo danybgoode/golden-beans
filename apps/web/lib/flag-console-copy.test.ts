@@ -12,7 +12,11 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeRollback, describeTurnOffConsequence } from './flag-console-copy.ts'
+import {
+  describeActivationSurprise,
+  describeRollback,
+  describeTurnOffConsequence,
+} from './flag-console-copy.ts'
 
 const SENTENCE = describeTurnOffConsequence('checkout.stripe_enabled', 'production')
 
@@ -162,4 +166,59 @@ test('rollback uses no storage vocabulary (D7)', () => {
   for (const term of ['activation', 'deactivate', 'immutable', 'snapshot revision', 'mint']) {
     assert.doesNotMatch(BACK, new RegExp(term, 'i'), `rollback still says "${term}"`)
   }
+})
+
+// ── "Activated" is not "on" ──────────────────────────────────────────────────────────────────
+// A version whose default variant is falsey serves `false` while the console reports the feature as
+// on. Live, that is the LATEST version of 34 of 42 miyagisanchez flags — the common case, not a
+// corner. A "Turn on in production" button that silently activates such a version is the money-path
+// defect the fresh reviewer found on PR #120.
+
+const base = { flagKey: 'checkout.stripe_enabled', environment: 'production', version: 3 }
+
+test('activating a TRUE-by-default version needs no confirmation', () => {
+  // The ordinary case stays one click. A dialog on every enable is how a dialog stops being read,
+  // which would cost more than it buys — including on the turn-OFF path that genuinely needs one.
+  assert.equal(describeActivationSurprise({ ...base, defaultValue: true, readable: true }), null)
+})
+
+test('activating a FALSE-by-default version DOES warn, and says "on" will not mean what it says', () => {
+  const message = describeActivationSurprise({ ...base, defaultValue: false, readable: true })
+  assert.ok(message, 'a false-by-default activation must be confirmed')
+  assert.match(message, /checkout\.stripe_enabled/)
+  assert.match(message, /production/)
+  assert.match(message, /v3/)
+  assert.match(message, /will NOT\s+appear|will NOT appear/)
+  // The distinction itself, stated — not just a warning that something is odd.
+  assert.match(message, /not that the feature\s+is live|not that the feature is live/)
+})
+
+test('a NON-BOOLEAN default is not treated as "off"', () => {
+  // A string, number or JSON flag is not off — it is a multivariate flag doing its job. Warning on
+  // those would make the dialog cry wolf until nobody reads the one that matters.
+  for (const value of ['treatment', 0, 1, '', { a: 1 }, [], null]) {
+    assert.equal(
+      describeActivationSurprise({ ...base, defaultValue: value, readable: true }),
+      null,
+      `${JSON.stringify(value)} should not be reported as off`
+    )
+  }
+})
+
+test('an UNREADABLE version warns rather than activating silently', () => {
+  const message = describeActivationSurprise({ ...base, defaultValue: undefined, readable: false })
+  assert.ok(message)
+  assert.match(message, /cannot be evaluated/)
+})
+
+test('the warning names the environment it was asked about', () => {
+  const dev = describeActivationSurprise({
+    ...base,
+    environment: 'development',
+    defaultValue: false,
+    readable: true,
+  })
+  assert.ok(dev)
+  assert.match(dev, /development/)
+  assert.doesNotMatch(dev, /production/)
 })

@@ -30,7 +30,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagActivationState } from '@/lib/flag-list-view'
 import { activateFlagAction, deactivateFlagAction } from '../actions'
-import { describeTurnOffConsequence } from '@/lib/flag-console-copy'
+import { describeActivationSurprise, describeTurnOffConsequence } from '@/lib/flag-console-copy'
 
 export type FlagSwitchEnvironment = {
   environment: FlagEnvironment
@@ -46,6 +46,8 @@ export function FlagSwitch({
   environments,
   latestVersionId,
   latestVersion,
+  latestDefaultValue,
+  latestReadable,
   canManage,
   servingEnabled,
 }: {
@@ -56,6 +58,16 @@ export function FlagSwitch({
   /** The newest immutable version — what "turn on" serves. `null` when the flag has none. */
   latestVersionId: string | null
   latestVersion: number | null
+  /**
+   * What the version "turn on" would activate evaluates to for an attribute-free context, and
+   * whether it could be evaluated at all.
+   *
+   * Carried because ACTIVATED IS NOT ON: a version whose `defaultVariantKey` names a falsey variant
+   * serves `false` while the console reports the feature as on. Live that is the latest version of
+   * 34 of 42 flags, so it is the common case, not the corner (fresh reviewer, PR #120).
+   */
+  latestDefaultValue: unknown
+  latestReadable: boolean
   canManage: boolean
   servingEnabled: boolean
 }) {
@@ -63,7 +75,11 @@ export function FlagSwitch({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState<FlagSwitchEnvironment | null>(null)
+  const [confirming, setConfirming] = useState<{
+    row: FlagSwitchEnvironment
+    direction: 'off' | 'on'
+    message: string
+  } | null>(null)
 
   // Not a free-text box. Every write to this control plane requires a non-blank reason (the RPC
   // rejects an empty one), and asking for prose mid-incident is how a kill switch gets slower to
@@ -93,7 +109,7 @@ export function FlagSwitch({
     })
   }
 
-  const turnOn = (row: FlagSwitchEnvironment) => {
+  const activate = (row: FlagSwitchEnvironment) => {
     if (latestVersionId === null) {
       setError('This feature has no definition version to serve yet.')
       return
@@ -108,8 +124,33 @@ export function FlagSwitch({
           row.snapshotVersion,
           reasonFor(row.environment, true)
         ),
-      `${flagKey} is on in ${row.environment}, serving v${latestVersion}.`
+      // Says what it is SERVING, not merely that it is "on" — the whole point of the surprise
+      // check above. A notice reading "is on" over a false-valued version is the same lie the
+      // button used to tell, one step later.
+      `${flagKey} in ${row.environment} is now serving v${latestVersion}.`
     )
+  }
+
+  /**
+   * Turning on confirms ONLY when "on" would not mean what it says — i.e. when the version being
+   * activated serves `false`, or cannot be evaluated. In the ordinary case it stays a single click,
+   * because a dialog on every enable is how a dialog stops being read (which is why the destructive
+   * direction gets one and the safe direction does not).
+   */
+  const turnOn = (row: FlagSwitchEnvironment) => {
+    if (latestVersionId === null) {
+      setError('This feature has no definition version to serve yet.')
+      return
+    }
+    const surprise = describeActivationSurprise({
+      flagKey,
+      environment: row.environment,
+      version: latestVersion ?? 0,
+      defaultValue: latestDefaultValue,
+      readable: latestReadable,
+    })
+    if (surprise === null) activate(row)
+    else setConfirming({ row, direction: 'on', message: surprise })
   }
 
   const turnOff = (row: FlagSwitchEnvironment) =>
@@ -157,7 +198,15 @@ export function FlagSwitch({
               type="button"
               className="btn btn-ghost"
               disabled={pending || !servingEnabled || (!isOn && latestVersionId === null)}
-              onClick={() => (isOn ? setConfirming(row) : turnOn(row))}
+              onClick={() =>
+                isOn
+                  ? setConfirming({
+                      row,
+                      direction: 'off',
+                      message: describeTurnOffConsequence(flagKey, row.environment),
+                    })
+                  : turnOn(row)
+              }
             >
               {/* The control names the environment, so a reader who has scrolled past the heading
                   still knows which one they are about to change. "Turn off"/"Turn on" rather than
@@ -173,14 +222,18 @@ export function FlagSwitch({
 
       <ConfirmDialog
         open={confirming !== null}
-        verb="Turn off"
+        // The verb matches the button that opened it — ux-guidelines: a control's name does not
+        // change mid-flow.
+        verb={confirming?.direction === 'on' ? 'Turn on' : 'Turn off'}
         noun="feature"
         // The dialog names the SPECIFIC feature and environment — never "Are you sure?".
-        subject={confirming ? `${flagKey} in ${confirming.environment}` : ''}
-        consequence={confirming ? describeTurnOffConsequence(flagKey, confirming.environment) : ''}
+        subject={confirming ? `${flagKey} in ${confirming.row.environment}` : ''}
+        consequence={confirming?.message ?? ''}
         pending={pending}
         onCancel={() => setConfirming(null)}
-        onConfirm={() => confirming && turnOff(confirming)}
+        onConfirm={() =>
+          confirming && (confirming.direction === 'on' ? activate(confirming.row) : turnOff(confirming.row))
+        }
       />
     </div>
   )

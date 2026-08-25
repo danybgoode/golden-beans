@@ -53,8 +53,12 @@ export default async function FlagsPage({
           protection.
         </p>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
-            epic — `flag-manager.tsx` is byte-identical to `main` and takes no new prop. The console
-            is an additional tree, not a rewrite of the one below it.
+            epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to
+            `true`, so the gate-off render is unchanged — which is the guarantee. (This said the file
+            was "byte-identical and takes no new prop": true while Sprint 1 had the prop reverted,
+            false once Sprint 2 legitimately reintroduced it 45 lines below. Fresh reviewer, PR #120.
+            The behavioural guarantee holds; the stronger wording did not.) The console is an
+            additional tree, not a rewrite of the one below it.
 
             ── Why this is NOT gated on `canManage`, stated here because two review passes asked ──
             "Key" means two different things on this page, and the boundary follows the second one.

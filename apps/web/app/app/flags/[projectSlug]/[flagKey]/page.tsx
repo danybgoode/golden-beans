@@ -22,6 +22,7 @@ import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
 import { projectFlagRows } from '@/lib/flag-list-view'
+import { evaluateVersionDefault } from '@/lib/flag-environment-view'
 import { formatUtc } from '@/lib/format-utc'
 import { Panel } from '@/components/ui/Panel'
 import { Badge } from '@/components/ui/Badge'
@@ -95,11 +96,22 @@ export default async function FlagDetailPage({
     undefined
   )
   const basePath = `/app/flags/${projectSlug}/${encodeURIComponent(flag.key)}`
-  // The Settings tab reads description/type/criticality, none of which vary by environment — so the
-  // projection is computed ONCE here rather than three times inline (cross-review, Agy, PR #120).
-  // The environment argument is arbitrary for these fields, which is exactly why repeating the call
-  // with a hardcoded `FLAG_ENVIRONMENTS[0]` at each use invited someone to read it as significant.
-  const [descriptive] = projectFlagRows([flag], FLAG_ENVIRONMENTS[0])
+  // ⚠️ These fields DO vary by version. `projectFlagRows` describes whatever version the given
+  // environment SERVES, falling back to the newest only when nothing is — so this is NOT
+  // environment-independent, as an earlier comment here claimed. With development on v1 and
+  // production on v5, the Description/Type/Criticality rows described v1 while the generic metadata
+  // rows beside them read v5, and nothing on screen named either (fresh reviewer, PR #120).
+  //
+  // Settings now describes ONE version throughout — the latest — and the caption says which, so a
+  // reader is never silently shown two.
+  const describedVersion = latest?.version ?? null
+  const [descriptive] = projectFlagRows([{ ...flag, activations: [] }], FLAG_ENVIRONMENTS[0])
+  // What "turn on" would actually serve. ACTIVATED IS NOT ON: a version whose default variant is
+  // falsey serves `false` while the page would otherwise report the feature as on — the latest
+  // version of 34 of 42 live flags. Asked of the SDK's evaluator, server-side, so the label and
+  // production cannot disagree (fresh reviewer, PR #120, Blocking).
+  const latestDefault =
+    latest === undefined ? { value: undefined, readable: false } : evaluateVersionDefault(flag.key, latest)
   // The snapshot revision per environment, for the actions' optimistic-concurrency check. Straight
   // off `getFlagRegistryView()` — no query is added (D1). A missing row means the environment has
   // never had a snapshot, whose revision is 0; that is the same default the legacy surface uses, and
@@ -185,6 +197,8 @@ export default async function FlagDetailPage({
               environments={switchEnvironments}
               latestVersionId={latest?.id ?? null}
               latestVersion={latest?.version ?? null}
+              latestDefaultValue={latestDefault.value}
+              latestReadable={latestDefault.readable}
               canManage={canManage}
               servingEnabled={servingEnabled}
             />
@@ -285,7 +299,10 @@ export default async function FlagDetailPage({
             <div className="data-table">
               <div className="data-table__scroll">
                 <table>
-                  <caption>Feature settings</caption>
+                  <caption>
+                    Feature settings
+                    {describedVersion === null ? '' : ` — as defined in v${describedVersion}`}
+                  </caption>
                   <tbody>
                     <tr>
                       <th scope="row">Name</th>

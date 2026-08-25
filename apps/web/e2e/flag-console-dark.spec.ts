@@ -62,17 +62,20 @@ test.describe('flag console — the per-feature route follows its gate', () => {
     })
   }
 
-  test('a dark console leaks no console markup to an anonymous caller', async ({ request }) => {
-    test.skip(isFlagConsoleEnabled(), 'the dark-body assertion requires FLAG_CONSOLE_ENABLED to be off')
-    // The list lives on the credential-gated page, so this cannot assert the list is absent for a
-    // signed-in user — see the header. What it CAN assert is that none of the console's strings
-    // reach someone with no session at all, whatever the flag says.
+  test('the list page never serves 200 to an anonymous caller, in EITHER flag state', async ({ request }) => {
+    // ⚠️ This replaces a spec that could not fail (fresh reviewer, PR #120). Its body was wrapped in
+    // `if (response.status() === 200)` and checked that the console's markers were absent — but
+    // `/app/flags/[projectSlug]` calls `requireProjectMembership`, which redirects an anonymous
+    // caller, and the request sets `maxRedirects: 0`. The status was ALWAYS 302, the block never
+    // ran, and the test reported green having asserted nothing. Its own file header said the page
+    // was credential-gated; the spec did not act like it.
+    //
+    // Asserted as the REDIRECT instead, which is the real and reachable property: whatever the flag
+    // is doing, a stranger must never receive this tenant's flag list. Unlike the old form it also
+    // fails loudly if the route ever starts answering 200 anonymously, which would be a finding in
+    // itself. (Same correction the agent-rail dark spec already carries for /app.)
     const response = await request.get('/app/flags/miyagisanchez', { maxRedirects: 0 })
-    if (response.status() === 200) {
-      const body = await response.text()
-      for (const marker of ['Never turned on here', 'flag-console-environment', 'Features in ']) {
-        expect(body, `anonymous caller saw the console marker "${marker}"`).not.toContain(marker)
-      }
-    }
+    expect([302, 303, 307]).toContain(response.status())
+    expect(response.headers()['location']).toContain('/login')
   })
 })

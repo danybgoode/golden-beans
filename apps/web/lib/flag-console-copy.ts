@@ -90,3 +90,45 @@ export function describeRollback(input: {
     `not instantly.`
   )
 }
+
+/**
+ * What "turning on" a version will actually serve — said before the click, not after.
+ *
+ * ── The defect this exists to prevent ─────────────────────────────────────────────────────────
+ * "On" in the console means an activation row points at a version. What a PM means by on is "the
+ * feature is being served". They come apart whenever a version's `defaultVariantKey` names a
+ * falsey variant — which, live, is the LATEST version of **34 of 42** `miyagisanchez` flags.
+ *
+ * So a button reading "Turn on in production" could activate a version that serves `false`, and the
+ * page would then report the feature as on while nothing changed for a user. That is the epic's own
+ * outcome test ("which of these are on") answered with the storage fact instead of the operational
+ * one, on the surface that kills a live checkout.
+ *
+ * Returns null when activating is unambiguous — the version serves a truthy default, so "on" means
+ * what it says and no dialog is warranted. A string means the caller must confirm.
+ */
+export function describeActivationSurprise(input: {
+  flagKey: string
+  environment: string
+  version: number
+  defaultValue: unknown
+  readable: boolean
+}): string | null {
+  if (!input.readable) {
+    return (
+      `v${input.version} of ${input.flagKey} cannot be evaluated, so there is no way to say what ` +
+      `${input.environment} would serve. Turning it on anyway means ${input.environment} starts ` +
+      `serving a definition this console could not read.`
+    )
+  }
+  // Only a literal `false` is called out. A string, a number or a JSON value is not "off" — it is a
+  // non-boolean flag doing its job, and claiming otherwise would make the dialog cry wolf on every
+  // multivariate flag until nobody reads it.
+  if (input.defaultValue !== false) return null
+  return (
+    `Turning ${input.flagKey} on in ${input.environment} makes it serve v${input.version} — and ` +
+    `v${input.version} evaluates to false by default, so the feature it guards still will NOT ` +
+    `appear. "On" here means ${input.environment} is serving this definition, not that the feature ` +
+    `is live. To actually switch the feature on, publish a version whose default variant is true.`
+  )
+}
