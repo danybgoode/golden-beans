@@ -36,11 +36,11 @@
 // lockfile itself.
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   AGENTS,
+  headSidePaths,
   die,
   need,
   ensureCmd,
@@ -62,6 +62,7 @@ import {
   renderFileContext,
   filterDiffToPaths,
   AGY_ARG_LIMIT,
+  VIBE_ARG_LIMIT,
   shortSha,
   checkReviewerPairing,
   reviewersFor,
@@ -178,6 +179,23 @@ function ghFiles(pr, repo) {
   } catch {
     return [];
   }
+}
+
+/**
+ * The PR's head commit SHA, or null when it cannot be resolved.
+ *
+ * Deliberately tolerant about RESOLVING: a `gh` hiccup returns null rather than aborting a review.
+ * It is NOT tolerant about substituting — when the head cannot be resolved, the caller omits the
+ * file context instead of reading a different version of it from the working tree. Getting that
+ * backwards is what produced a confidently-wrong Blocking finding on PR #118.
+ */
+function resolvePrHeadOid(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'headRefOid', '-q', '.headRefOid'];
+  if (repo) args.push('--repo', repo);
+  const out = spawnSync('gh', args, { encoding: 'utf8' });
+  if (out.status !== 0) return null;
+  const oid = String(out.stdout || '').trim();
+  return /^[0-9a-f]{40}$/.test(oid) ? oid : null;
 }
 
 // agy 1.0.7 has no stdin, so the diff rides embedded in the argv string.
@@ -354,7 +372,13 @@ function main() {
     }
   }
   // ── The code-only subset, and its honesty requirement ───────────────────────────────────────
-  // agy takes its prompt in argv, so a sprint-sized PR can exceed AGY_ARG_LIMIT and the review
+  // Both argv-based reviewers get THEIR OWN cap. They are the same 256 KB today, which is exactly
+  // why hardcoding agy's went unnoticed — the two would diverge silently the day either CLI changed,
+  // and vibe would be handed a budget computed against another tool's limit (cross-review, Agy,
+  // PR #119). Resolved once, here, so the scope notes and the budget cannot disagree.
+  const argvLimit = agent === 'vibe' ? VIBE_ARG_LIMIT : AGY_ARG_LIMIT;
+
+  // agy takes its prompt in argv, so a sprint-sized PR can exceed that cap and the review
   // refuses to run — which on a high-risk diff is exactly when losing the second family hurts most.
   // Dropping prose usually fits it. But a reviewer who cannot see the sprint doc cannot check the
   // code against its acceptance criteria, so the reduced scope is recorded and posted with the
@@ -365,7 +389,7 @@ function main() {
     diff = codeOnlyDiff.diff;
     scopeNote =
       `**Scope: CODE ONLY.** ${codeOnlyDiff.strippedFiles.length} documentation file(s) were ` +
-      `withheld from this reviewer to fit agy's ${AGY_ARG_LIMIT / 1024} KB argv limit, so it did ` +
+      `withheld from this reviewer to fit ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit, so it did ` +
       `NOT see the sprint docs, the epic README or any migration prose — it could not check the ` +
       `code against its own stated acceptance criteria. Withheld: ` +
       `${codeOnlyDiff.strippedFiles.join(', ') || '(none)'}.`;
@@ -377,7 +401,7 @@ function main() {
     diff = scoped.diff;
     const note =
       `**Scope: ${scoped.keptFiles.length} FILE(S) ONLY.** This reviewer was given a targeted ` +
-      `subset of the PR — the diff exceeds agy's ${AGY_ARG_LIMIT / 1024} KB argv limit in full, so ` +
+      `subset of the PR — the diff exceeds ${AGENTS[agent]}'s ${argvLimit / 1024} KB argv limit in full, so ` +
       `the alternative was no second-family review at all. It saw: ` +
       `${scoped.keptFiles.join(', ')}. It did NOT see ${scoped.droppedFiles.length} other changed ` +
       `file(s), and could not check any of this against the sprint docs.`;
@@ -398,9 +422,60 @@ function main() {
   if (agent === 'antigravity' || agent === 'vibe') {
     // Whatever argv budget the diff has not already spent, less a margin for the prompt and the
     // fences. Under-filling is the safe direction: a review that runs on less context still runs.
-    const budget = Math.max(0, AGY_ARG_LIMIT - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
-    const touched = [...diff.matchAll(/^diff --git a\/(\S+) b\/\S+$/gm)].map((m) => m[1]);
-    const selection = buildFileContext(touched, (path) => readFileSync(path, 'utf8'), budget);
+    const budget = Math.max(0, argvLimit - Buffer.byteLength(diff, 'utf8') - 16 * 1024);
+    const touched = headSidePaths(diff);
+    // ── Read from the PR's HEAD COMMIT, not the working tree ──────────────────────────────────
+    // This used to be `readFileSync(path)`, i.e. whatever branch happens to be checked out. With
+    // stacked sprint branches — this repo's DEFAULT shape (WAYS-OF-WORKING §6) — that is routinely a
+    // DIFFERENT branch than the PR under review, and the reviewer then receives the PR's diff
+    // alongside another branch's file contents.
+    //
+    // Not hypothetical: reviewing PR #118 while checked out on its `-s2` child, Mistral Vibe raised a
+    // confident Blocking finding that the diff "would fail to compile", because an import present in
+    // the diff was absent from the file text it was handed. It reasoned correctly from contradictory
+    // inputs. That is this very block's own failure mode inverted (see its header: "three wrong
+    // findings in two days came from a reviewer reasoning about code it could not see") — and the
+    // inverted form is worse, because the reviewer is confidently wrong rather than visibly blind.
+    //
+    // The stale-HEAD guard above does NOT cover this: it runs only when <PR#> is omitted, and an
+    // explicit <PR#> is documented as skipping it. So the content is pinned here independently, and
+    // falls back to the working tree only for an object this clone does not have — saying so.
+    const prHeadOid = resolvePrHeadOid(pr, repo);
+    // The head object may not be in this clone at all — an unfetched branch, or a FORK PR, whose
+    // head `git fetch origin` never brings down. Try once, explicitly, before giving up on it.
+    if (prHeadOid) {
+      const have = spawnSync('git', ['cat-file', '-e', `${prHeadOid}^{commit}`]);
+      if (have.status !== 0) spawnSync('git', ['fetch', '--quiet', 'origin', prHeadOid]);
+    }
+    const unavailable = [];
+    const readAtPrHead = (path) => {
+      if (prHeadOid) {
+        const shown = spawnSync('git', ['show', `${prHeadOid}:${path}`], {
+          encoding: 'utf8',
+          maxBuffer: 64 * 1024 * 1024,
+        });
+        if (shown.status === 0) return shown.stdout;
+      }
+      // ── OMIT, never substitute the working tree ───────────────────────────────────────────────
+      // The first version fell back to `readFileSync` with a warning. Codex was right to call that
+      // (PR #119, round 3): a warning on stderr does not stop the review, so the reviewer still
+      // receives the PR's diff beside another branch's file — the exact defect this change exists to
+      // remove, reintroduced in its own fallback. Fork PRs make it likely rather than rare.
+      //
+      // Throwing is the omit path: buildFileContext already catches a failing reader and skips that
+      // file. Less context is the safe direction — a reviewer that cannot see a file says so;
+      // a reviewer shown the WRONG file states a defect that does not exist.
+      unavailable.push(path);
+      throw new Error(`not available at PR head: ${path}`);
+    };
+    const selection = buildFileContext(touched, readAtPrHead, budget);
+    if (unavailable.length > 0) {
+      process.stderr.write(
+        `\u26a0 ${unavailable.length} file(s) could not be read at PR #${pr}'s head` +
+          `${prHeadOid ? ` (${shortSha(prHeadOid)})` : ' (head could not be resolved)'} and were ` +
+          `OMITTED rather than read from the working tree: ${unavailable.join(', ')}\n`
+      );
+    }
     fileContext = renderFileContext(selection);
     if (selection.attached.length || selection.omitted.length) {
       process.stderr.write(

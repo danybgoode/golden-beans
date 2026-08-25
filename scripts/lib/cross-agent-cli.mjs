@@ -51,10 +51,10 @@ export const AGENT_BIN = {
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-08-25 against 1.1.19.
+// agy-doctor: last verified 2026-08-25 against 1.1.20.
 //   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.1.19';
+export const AGY_PINNED = '1.1.20';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -231,7 +231,12 @@ export function resolveCodexTier(tier) {
 // Cost note (Daniel's standing preference): Claude's tokens go to security/money/architecture and to
 // BUILDING, not to routine PR review. So Claude is deliberately NOT in either default reviewer set;
 // it is the escalation, named explicitly when a diff earns it, not the baseline.
-export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
+// `vibe` added 2026-08-25 (Daniel: "Agy, codex and vibe should be enabled for cross family
+// reviews"). It was already a first-class REVIEWER in review-route.mjs's preference order and in
+// AGENT_FLAG, but it was missing here — so `--builder vibe` was refused as an unknown family, and a
+// vibe-built diff could only be reviewed by mislabelling who wrote it. That is the same-family guard
+// failing open through a roster gap rather than a logic bug, which is the harder kind to notice.
+export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'vibe', 'human'];
 
 /**
  * Which reviewer agents may review a diff built by `builder`.
@@ -242,10 +247,13 @@ export const BUILDER_FAMILIES = ['claude', 'codex', 'agy', 'human'];
  */
 export function reviewersFor(builder) {
   const b = String(builder || '').toLowerCase();
-  if (b === 'codex') return ['antigravity'];
-  if (b === 'agy') return ['codex'];
-  if (b === 'claude') return ['codex', 'antigravity'];
-  return ['codex', 'antigravity'];
+  // Every set below is "the roster minus the builder's own family". Written out per builder rather
+  // than derived, so the policy reads as a decision and a wrong pairing is visible on one line.
+  if (b === 'codex') return ['antigravity', 'vibe'];
+  if (b === 'agy') return ['codex', 'vibe'];
+  if (b === 'vibe') return ['codex', 'antigravity'];
+  if (b === 'claude') return ['codex', 'antigravity', 'vibe'];
+  return ['codex', 'antigravity', 'vibe'];
 }
 
 /** Normalise the reviewer CLI name to the family it belongs to. */
@@ -772,6 +780,125 @@ function execAgy(fullArgv, model, spawn) {
 // Naming them matters more than including them. A reviewer given some files and not others, with no
 // list, would conclude an unattached file does not exist — which is the exact failure this function
 // exists to fix, made worse. The manifest says what was attached, what was not, and why.
+/**
+ * The HEAD-side paths of every file a unified diff touches, excluding deletions.
+ *
+ * ── Why the `b/` side, and why deletions are dropped ─────────────────────────────────────────
+ * Callers attach whole-file context read from the PR's HEAD commit. The `a/` (pre-image) path is
+ * the wrong side for that: on a RENAME it is the OLD name, which does not exist at head — so the
+ * lookup misses, the file is silently dropped from the reviewer's context, and the code looks like
+ * it attached it. A DELETED file has no head-side content at all, so asking for it can only fail.
+ *
+ * Both were live: `cross-review.mjs` used `/^diff --git a\/(\S+) b\/\S+$/gm` and read the `a/`
+ * capture (cross-review, Codex, PR #119).
+ *
+ * Split per file rather than scanning the whole diff, because `+++ /dev/null` marks a deletion only
+ * for the file header it belongs to — matched globally it would suppress unrelated files.
+ */
+export function headSidePaths(diff) {
+  return String(diff || '')
+    .split(/^diff --git /m)
+    .slice(1)
+    .map((chunk) => {
+      // The `+++` file marker lives in the HEADER, before the first `@@` hunk. Scanning the whole
+      // chunk was wrong: inside a hunk, an ADDED line is rendered with a leading `+`, so a source
+      // line whose literal text is `++ /dev/null` produces the byte-identical `+++ /dev/null` and
+      // would silently drop a file that was never deleted (cross-review, Codex, PR #119, round 3).
+      // This file's own fixtures contain such strings, so the hazard is not theoretical here.
+      const hunkStart = chunk.search(/^@@ /m);
+      const header = hunkStart === -1 ? chunk : chunk.slice(0, hunkStart);
+      // TWO deletion signals, because neither covers every case on its own:
+      //   `deleted file mode` — git emits it for every deletion, text or BINARY.
+      //   `+++ /dev/null`     — the text-diff marker.
+      // A BINARY deletion has no `+++` line at all (it renders as
+      // `Binary files a/x and /dev/null differ`), so checking only the marker attached a path that
+      // cannot exist at head and then reported it as "unavailable" — a misleading warning about a
+      // file that is correctly absent (cross-review, Codex, PR #119, round 4).
+      if (/^deleted file mode /m.test(header) || /^\+\+\+ \/dev\/null$/m.test(header)) return null;
+      return headPathFromDiffHeader(chunk.split('\n', 1)[0]);
+    })
+    .filter((path) => path !== null);
+}
+
+/**
+ * The `b/` path out of one `diff --git` header line, handling Git's quoting.
+ *
+ * Git quotes a pathname whenever it contains a space, a control character or a non-ASCII byte, and
+ * then C-escapes it: `diff --git "a/my file.ts" "b/my file.ts"`. The first version of this function
+ * treated a quoted header as unparseable and dropped the file — silently omitting it from the
+ * reviewer's context, which is precisely the defect this whole seam exists to remove (cross-review,
+ * Codex, PR #119, round 2). Losing a renamed file and losing an accented one are the same bug.
+ */
+function headPathFromDiffHeader(header) {
+  const sides = splitDiffHeaderSides(header);
+  if (sides === null) return null;
+  const head = unquoteGitPath(sides.head);
+  return head !== null && head.startsWith('b/') ? head.slice(2) : null;
+}
+
+/** The two raw (still-quoted) sides of a `diff --git` header, or null if it does not parse. */
+function splitDiffHeaderSides(header) {
+  const text = String(header || '');
+  // Quoted sides are unambiguous — read the closing quote, honouring backslash escapes.
+  if (text.startsWith('"')) {
+    const end = findClosingQuote(text, 0);
+    if (end === -1) return null;
+    const rest = text.slice(end + 1).trimStart();
+    return rest === '' ? null : { pre: text.slice(0, end + 1), head: rest };
+  }
+  // Unquoted `a/…`: the head side starts at the LAST ` b/` or ` "b/`, because an unquoted path
+  // cannot contain a space and therefore cannot itself contain " b/".
+  const marker = text.lastIndexOf(' b/') >= 0 ? text.lastIndexOf(' b/') : text.lastIndexOf(' "b/');
+  if (marker === -1) return null;
+  return { pre: text.slice(0, marker), head: text.slice(marker + 1) };
+}
+
+function findClosingQuote(text, openIndex) {
+  for (let i = openIndex + 1; i < text.length; i++) {
+    if (text[i] === '\\') {
+      i++;
+      continue;
+    }
+    if (text[i] === '"') return i;
+  }
+  return -1;
+}
+
+/**
+ * Reverse Git's C-style path quoting.
+ *
+ * Octal escapes are the reason this collects BYTES before decoding: git emits a non-ASCII character
+ * as one escape per UTF-8 byte (`é` → `\303\251`), so decoding each escape as its own character
+ * would produce mojibake rather than the filename. An unquoted path is returned unchanged.
+ */
+function unquoteGitPath(raw) {
+  const text = String(raw || '');
+  if (!text.startsWith('"')) return text;
+  const end = findClosingQuote(text, 0);
+  if (end === -1) return null;
+  const body = text.slice(1, end);
+  const bytes = [];
+  const SIMPLE = { a: 7, b: 8, t: 9, n: 10, v: 11, f: 12, r: 13, '"': 34, '\\': 92 };
+  for (let i = 0; i < body.length; i++) {
+    if (body[i] !== '\\') {
+      for (const byte of Buffer.from(body[i], 'utf8')) bytes.push(byte);
+      continue;
+    }
+    const next = body[++i];
+    if (next === undefined) return null;
+    if (next >= '0' && next <= '7') {
+      const octal = body.slice(i, i + 3);
+      if (!/^[0-7]{3}$/.test(octal)) return null;
+      bytes.push(parseInt(octal, 8));
+      i += 2;
+      continue;
+    }
+    if (!(next in SIMPLE)) return null;
+    bytes.push(SIMPLE[next]);
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
 export function buildFileContext(paths, readFile, budgetBytes, opts = {}) {
   const { maxFiles = 40 } = opts;
   const seen = new Set();
@@ -933,7 +1060,11 @@ export function runAntigravity(fullArgv, opts = {}, deps = {}) {
 // A green probe prints real findings. An EMPTY result is a FAILURE, not a pass — see runVibe below, which
 // treats empty stdout as an error exactly like the agy path does, for the same reason (a quota-capped or
 // misconfigured CLI can exit 0 with nothing).
-// vibe-probe: NOT YET VERIFIED — replace this line with `vibe-probe: verified <date> against <version>`.
+// vibe-probe: verified 2026-08-25 against vibe 2.24.2 — `node scripts/cross-review.mjs 118 --agent vibe
+//   --builder claude --code-only --dry-run` returned a real, substantive review (Blocking: None,
+//   Should-fix: None, and one Nit that independently spotted an unrelated version-pin commit riding
+//   the branch). NOT empty, which is the failure this probe exists to catch. The four flags above
+//   (--agent plan / --max-turns / --output text / --trust) behaved as the docs describe.
 //
 // `vibe-acp` is the WRONG entry point for this use case and is deliberately not wired: it starts a
 // JSON-RPC server that speaks the Agent Client Protocol over stdio for IDE extensions (Zed et al.). It
