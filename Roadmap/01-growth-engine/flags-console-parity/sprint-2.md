@@ -1,7 +1,9 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 2: One feature, in Flagsmith's shape
 
-**Status:** 🟡 in progress — Story 2.1 built on `feat/flags-console-parity-s2` (stacked on Sprint 1).
-2.2 (HIGH, money path) and the stack retirement are next.
+**Status:** 🟡 in progress — Stories 2.1 and 2.2 built on `feat/flags-console-parity-s2`.
+Sprint 1 is **merged** (`2bdb6f7`) and deployed to production dark, so this branch is rebased onto
+`main`. Remaining: rollback (choosing which version an environment serves) must have a home on the
+destination **before** the legacy stack is retired — see the note under 2.2.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D1`, `D5`, `D6` and `D8`
 > (+ **Amendment 2**) from the epic README; do not re-derive them. **The prediction was right: `D8`
@@ -69,7 +71,28 @@ without knowing what stops.
 - The write path is untouched: it posts through the same server action as today (D1).
 **Risk:** **high** — this control turns off `checkout.stripe_enabled` on a live marketplace. Money
 path. **The product owner merges** (WAYS-OF-WORKING → Review & merge), and a fresh reviewer subagent
-is mandatory on top of the two routed cross-family passes.
+is mandatory on top of the routed cross-family passes.
+
+> **Built 2026-08-25.** One control per environment on the destination's Value tab, labelled
+> *"Turn off in production"* — it names the environment, not just the act. Only the destructive
+> direction confirms; enabling does not, because confirming both trains the reader to click through.
+>
+> **The confirmation sentence is gate-tested, which is the part worth defending.** The acceptance
+> criterion is about WORDS on the most dangerous control in the product, and words rendered inside a
+> client island are reachable only through a signed-in browser — outside the merge gate. So the
+> sentence is built by a pure function in `lib/flag-console-copy.ts` and pinned by
+> `flag-console-copy.test.ts`: it must name the feature, name the environment (and not a hardcoded
+> one), say what STOPS rather than restate the verb, warn that clients keep the old value until
+> their next poll, and refuse to end on reassurance. Mutation-checked — degrading it to
+> *"This feature will be deactivated"* fails 7 specs.
+>
+> ⚠️ **The legacy stack is still NOT retired, and this is the third time that ordering has bitten.**
+> The per-version buttons in `flag-manager.tsx` are the only way to serve a version OTHER than the
+> newest — i.e. **rollback**. This control deliberately turns on the *latest* version, which is the
+> "one clear control" the story asks for, but that is not a superset of what the stack does.
+> Retiring it now would remove rollback with nothing replacing it — the same class of defect Sprint 1
+> hit and Story 2.1 avoided. **Rollback needs a home on the destination first** (a "serve this
+> version here" action on History is the obvious one). Recorded rather than quietly dropped.
 
 ### Story 2.3 — "Never turned on here" is not "turned off"  *(re-scoped 2026-08-24 — see Amendment 2)*
 **As a** PM, **I want** an environment that was never switched on to say so, **so that** I can tell a

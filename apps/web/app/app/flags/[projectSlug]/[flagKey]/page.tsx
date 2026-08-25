@@ -29,6 +29,7 @@ import { ProductShell } from '@/components/product/ProductShell'
 import { FlagInsight } from '../flag-insight'
 import { FlagPreview } from '../flag-preview'
 import { FlagAuthoring } from './flag-authoring'
+import { FlagSwitch, type FlagSwitchEnvironment } from './flag-switch'
 import { FLAG_STATE_PRESENTATION, TYPE_LABEL, CRITICALITY_LABEL } from '../flag-vocabulary'
 
 export const dynamic = 'force-dynamic'
@@ -89,6 +90,18 @@ export default async function FlagDetailPage({
     undefined
   )
   const basePath = `/app/flags/${projectSlug}/${encodeURIComponent(flag.key)}`
+  // The snapshot revision per environment, for the actions' optimistic-concurrency check. Straight
+  // off `getFlagRegistryView()` — no query is added (D1). A missing row means the environment has
+  // never had a snapshot, whose revision is 0; that is the same default the legacy surface uses, and
+  // the RPC rejects a mismatch either way, so a wrong guess fails loudly rather than overwriting.
+  const snapshotByEnvironment = new Map(
+    registry.environments.map((row) => [row.environment, row.snapshotVersion])
+  )
+  const switchEnvironments: FlagSwitchEnvironment[] = FLAG_ENVIRONMENTS.map((environment) => ({
+    environment,
+    state: projectFlagRows([flag], environment)[0].state,
+    snapshotVersion: snapshotByEnvironment.get(environment) ?? 0,
+  }))
 
   return (
     <ProductShell projectSlug={projectSlug}>
@@ -135,6 +148,18 @@ export default async function FlagDetailPage({
         {tab === 'value' && (
           <Panel className="stack">
             <h2>Value</h2>
+            {/* Story 2.2 — ONE control per environment, naming the environment, with the confirm on
+                the destructive direction only. Money path: this is how a live checkout gets killed. */}
+            <FlagSwitch
+              slug={projectSlug}
+              flagId={flag.id}
+              flagKey={flag.key}
+              environments={switchEnvironments}
+              latestVersionId={latest?.id ?? null}
+              latestVersion={latest?.version ?? null}
+              canManage={canManage}
+              servingEnabled={servingEnabled}
+            />
             {/* MOVED, not rewritten — same component, same props, same behaviour as on the list
                 page. It answers "what would this user get, and why", which is the question Value
                 exists for. */}
@@ -150,12 +175,6 @@ export default async function FlagDetailPage({
               <p className="data-table__count">
                 The rule builder is off. Definition JSON can still be authored on the{' '}
                 <a href={`/app/flags/${projectSlug}`}>features list</a>.
-              </p>
-            )}
-            {!canManage && (
-              <p>
-                <strong>Read-only access.</strong> A project owner changes this feature&apos;s definition and
-                its environment activations.
               </p>
             )}
           </Panel>
