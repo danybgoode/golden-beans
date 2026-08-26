@@ -253,26 +253,27 @@ it needs its own commit to `main`, not an env edit alone.
 - [x] Team memory + `MEMORY.md` index updated
 - [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
 - [x] **Kill-switch:** `FLAG_CONSOLE_ENABLED` exists in all three Vercel environments, born `false`.
-      Verified 2026-08-25 by reading each value back with `vercel env pull` — **not** by `vercel env
-      ls`, which never shows values. Still `false` in all three as shipped.
-- [ ] ⛔ **The outcome test — NOT RUN, and it is the epic's real definition of done.** The product
-      owner opens `/app/flags/miyagisanchez` cold and answers *"which of these are on, in which
-      environment, and which aren't created yet"* without a second question. **It cannot be run
-      until the gate is flipped**, and the flip needs its own commit to `main` (Vercel snapshots env
-      values at build time). Ticking this box is Daniel's, not mine.
+      Verified by reading each value back with `vercel env pull` — **not** by `vercel env ls`, which
+      never shows values. **FLIPPED TO `true` in all three on 2026-08-26** at Daniel's explicit
+      instruction, read back to confirm, and made live by the commit that carries this line.
+- [ ] **The outcome test — the gate is now ON, so it is finally RUNNABLE.** Daniel opens
+      `/app/flags/miyagisanchez` cold and answers *"which of these are on, in which environment, and
+      which aren't created yet"* without a second question. **This box stays unticked until he has
+      actually done it** — it is the epic's real definition of done and it is his to tick, not mine.
+      Everything else on this list is now true.
 - [x] Feature branches deleted; **frontmatter `status: shipped`**; board regenerated with
       `node scripts/build-order.mjs`
 
-### ⚠️ Owed, and not claimable from CI
+### Owed, and not claimable from CI
 
 1. **The signed-in walkthroughs for all three sprints.** Every surface is credential-gated, so
    nothing in this repo reaches past the login redirect. Sprint 2's includes the money-path confirm
    on preview **and** production (cancel both).
-2. **Story 3.4 is PARTIAL.** Three `legacyStackOnly()` suites are unported and neither new route has
-   an authed spec on its *rendered* surface. **Until that lands, the moved components have no
-   automated cover with the gate ON** — worth closing before the flip, not after.
-3. **The flip itself.** `FLAG_CONSOLE_ENABLED=true` is a deliberate act after the walkthrough, and it
-   needs a commit to `main`, not an env edit alone.
+2. ✅ **Story 3.4 is COMPLETE.** The three suites are ported — they follow the move, so the same
+   assertions run on both sides of the flip — and `e2e/flag-console.authed.spec.ts` covers both new
+   routes' rendered surfaces. Closed BEFORE the flip, which was the point of naming it.
+3. ✅ **The flip is done.** `FLAG_CONSOLE_ENABLED=true` in all three environments, read back to
+   confirm, and live via the commit that carries this line.
 
-**"Shipped" here means the code is in production and dark.** Every surface this epic built is
-deployed and unreachable; the epic's user-visible value arrives at the flip, not at this commit.
+**The console is LIVE in production.** Every surface this epic built is now reachable by a signed-in
+owner. What remains is Daniel's own walk of it — the outcome test above.
