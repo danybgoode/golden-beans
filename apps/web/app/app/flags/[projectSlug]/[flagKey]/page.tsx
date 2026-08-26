@@ -350,8 +350,8 @@ export default async function FlagDetailPage({
             {!servingEnabled && (
               <p role="status">
                 <strong>Flag serving is currently switched off.</strong> Definitions stay readable and
-                editable; activation changes are unavailable until <code>FLAG_SERVING_ENABLED</code> is
-                enabled in a new deployment.
+                editable; turning features on and off is unavailable until <code>FLAG_SERVING_ENABLED</code>{' '}
+                is enabled in a new deployment.
               </p>
             )}
           </Panel>

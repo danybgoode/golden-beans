@@ -79,3 +79,19 @@ export const CRITICALITY_LABEL: Record<string, string> = {
   low: 'Low',
   unclassified: 'Unclassified',
 }
+
+/**
+ * The lifecycle audit's actions, in the reader's words.
+ *
+ * `definition_created` / `activated` / `deactivated` are the stored values, and two of the three are
+ * on D7's kill-list — "activation" describes the row that was written, never what changed for
+ * anyone. The stored values are untouched; only what a person reads changes.
+ *
+ * Deliberately the SAME verbs the controls use ("Turned on" beside a button that says "Turn on"),
+ * so a reader can match an audit line to the act that produced it without translating.
+ */
+export const AUDIT_ACTION_LABEL: Record<string, string> = {
+  definition_created: 'New version',
+  activated: 'Turned on',
+  deactivated: 'Turned off',
+}

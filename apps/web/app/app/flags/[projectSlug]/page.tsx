@@ -22,18 +22,27 @@ export default async function FlagsPage({
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
+  const consoleEnabled = isFlagConsoleEnabled()
   // Credential metadata is operationally sensitive. Definitions and audit are member-readable,
   // but only an owner may enumerate the keys they are allowed to mint or revoke.
+  //
+  // ── ...and only while this page still RENDERS them ────────────────────────────────────────────
+  // With the console on, the key tables live on /app/flag-credentials and `showCredentials={false}`
+  // means nothing here displays them — so fetching them was two dead DB round-trips per owner page
+  // load, and it put key ids, labels, environments and created/expiry/revoked timestamps into the
+  // RSC payload of a page that no longer shows them. Not a privilege leak (the fetch is owner-gated
+  // and the data is the owner's own), but dead credential payload on the sprint whose entire point
+  // is that credentials moved (fresh reviewer, PR #121).
+  const wantsKeys = canManage && !consoleEnabled
   const [registry, keys, syncKeys] = await Promise.all([
     getFlagRegistryView(membership.projectId),
-    canManage ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
-    canManage ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
+    wantsKeys ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
+    wantsKeys ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
   ])
 
   // flags-console-parity · Story 1.1 — the gate is resolved HERE, server-side, and passed down. One
   // resolver covers the list, the environment selector and (from Sprint 3) both new routes; no
   // client ever reads `process.env`. Same boundary `isFlagRuleBuilderEnabled()` already uses.
-  const consoleEnabled = isFlagConsoleEnabled()
   // Parsed unconditionally so the parse itself cannot differ between the two branches — but it is
   // only ever READ by the console. With the gate off this is a few microseconds of allow-list
   // checking and nothing reaches the page, which keeps D6's "byte-for-byte" claim about markup
@@ -92,7 +101,9 @@ export default async function FlagsPage({
             capability. With the gate OFF, `showDefinitions` defaults to true and this page is
             byte-for-byte pre-epic (D6/Amendment 1); the authoring textarea and the credential forms
             are untouched in BOTH branches, because moving those is Sprint 3. */}
-        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
+        {consoleEnabled && (
+          <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} canManage={canManage} />
+        )}
         <FlagManager
           slug={projectSlug}
           {...registry}
@@ -102,6 +113,8 @@ export default async function FlagsPage({
           servingEnabled={isFlagServingEnabled()}
           ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
           showDefinitions={!consoleEnabled}
+          showCredentials={!consoleEnabled}
+          showAudit={!consoleEnabled}
         />
       </main>
     </ProductShell>

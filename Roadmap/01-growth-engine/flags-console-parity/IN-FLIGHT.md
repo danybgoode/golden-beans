@@ -111,3 +111,29 @@ PR #118 MERGED (2bdb6f7) + deployed to prod dark. PR #119 open (vibe enablement 
 }
 ```
 
+## 2026-08-25T23:52:44.862Z — `feat/flags-console-parity-s3` @ e7025905
+
+_HEAD: refactor(flags-console-parity): one mint helper, not two inline copies_
+
+Sprints 1+2 MERGED & LIVE in prod (2bdb6f7, 62bf561) — gate dark. Sprint 3 built, PR #121 open (draft): shared surface, credentials route (owner-only), audit route (member-readable), vocabulary module + sweep spec, dark spec extended. Agy round 1 clean of Blocking; mint handlers consolidated. Awaiting CI + vibe + fresh reviewer. NEXT: fixes, merge on green, verify prod, then epic close (retro, poster, LEARNINGS, board).
+
+**Verified by running (observed output, not believed):**
+- dark spec run against a real local server in BOTH states: 6/6 with FLAG_CONSOLE_ENABLED=false (all 404) and 6/6 with =true (all 307 to /login); gate all six steps PASS by exit code; unit 1288/0; D6 checked behaviourally — gate-off heading sequence identical to main
+
+**In flight:** nothing — the working tree was clean.
+
+```json session-trail-state
+{
+  "at": "2026-08-25T23:52:44.862Z",
+  "note": "Sprints 1+2 MERGED & LIVE in prod (2bdb6f7, 62bf561) — gate dark. Sprint 3 built, PR #121 open (draft): shared surface, credentials route (owner-only), audit route (member-readable), vocabulary module + sweep spec, dark spec extended. Agy round 1 clean of Blocking; mint handlers consolidated. Awaiting CI + vibe + fresh reviewer. NEXT: fixes, merge on green, verify prod, then epic close (retro, poster, LEARNINGS, board).",
+  "branch": "feat/flags-console-parity-s3",
+  "head": "e702590554d0096eb0022a97b18b1570cde681f0",
+  "headSubject": "refactor(flags-console-parity): one mint helper, not two inline copies",
+  "dirty": [],
+  "untracked": [],
+  "verified": [
+    "dark spec run against a real local server in BOTH states: 6/6 with FLAG_CONSOLE_ENABLED=false (all 404) and 6/6 with =true (all 307 to /login); gate all six steps PASS by exit code; unit 1288/0; D6 checked behaviourally — gate-off heading sequence identical to main"
+  ]
+}
+```
+

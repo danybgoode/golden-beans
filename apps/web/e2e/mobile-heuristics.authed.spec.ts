@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { IMPACT_FEATURE_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { assertMobileClean } from './helpers/mobile-heuristics'
+import { isFlagConsoleEnabled } from '../lib/flags'
 
 // frijoles-rebrand-closeout · Story 1.4 — the signed-in half of the shared mobile rail.
 //
@@ -22,6 +23,22 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
   { label: 'share links', path: (slug) => `/app/shares/${slug}` },
   { label: 'agent write keys', path: (slug) => `/app/agent-keys/${slug}` },
   { label: 'onboarding', path: (slug) => `/app/onboarding/${slug}` },
+  // flags-console-parity · Sprint 3, Story 3.4 — covering a new route is one array entry, which is
+  // the point of this rail.
+  //
+  // ⚠️ GATED, and the comment that used to sit here was WRONG. It claimed the sweep "reports a clean
+  // 404 page rather than a false pass" while the console is dark. There is no such code path: the
+  // assertion below is `expect(status).toBe(200)`, so both entries simply FAILED — and because the
+  // `authed` project is outside the merge gate, they would have failed silently until someone ran
+  // the suite by hand. A comment asserting a behaviour the code does not have, guarding a suite
+  // nothing runs, is the worst combination of this repo's two recurring defect classes.
+  // (Fresh HIGH-tier reviewer, PR #121.)
+  ...(isFlagConsoleEnabled()
+    ? ([
+        { label: 'flag credentials', path: (slug: string) => `/app/flag-credentials/${slug}` },
+        { label: 'flag audit', path: (slug: string) => `/app/flag-audit/${slug}` },
+      ] as const)
+    : []),
 ] as const
 
 function tenantSlug(): string {

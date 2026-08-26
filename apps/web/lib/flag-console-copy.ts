@@ -132,3 +132,30 @@ export function describeActivationSurprise(input: {
     `is live. To actually switch the feature on, publish a version whose default variant is true.`
   )
 }
+
+/**
+ * What revoking a snapshot key breaks.
+ *
+ * ── Why this moved here, VERBATIM ─────────────────────────────────────────────────────────────
+ * Sprint 3 Story 3.1's acceptance: "Both revoke confirmations keep their current consequence text
+ * verbatim — the wording naming 401s on the next poll, and catalog publishes failing from a named
+ * source, is load-bearing and was cross-review-hardened."
+ *
+ * "Verbatim" and "in two places" are incompatible over time: the moment the credentials route had
+ * its own copy, the two could drift and nothing would notice. So the string moved to one module
+ * that both surfaces import, and `flag-console-copy.test.ts` pins the load-bearing clauses. The
+ * words are unchanged from `flag-manager.tsx` — this is a move, not a rewrite.
+ */
+export const REVOKE_SNAPSHOT_KEY_CONSEQUENCE =
+  'Any client reading the flag snapshot with this key starts getting 401s on its next poll, and ' +
+  'falls back to whatever defaults it was built with. Revoking cannot be undone — mint a ' +
+  'replacement first if this key is in production.'
+
+/** What revoking a catalog sync key breaks. Same reasoning as above; `source` names the publisher. */
+export function describeRevokeSyncKey(source: string): string {
+  return (
+    `Catalog publishes from ${source} start failing on the next sync — flag definitions from that ` +
+    `publisher stop reaching this project until someone mints a new key and redeploys it. ` +
+    `Revoking cannot be undone.`
+  )
+}

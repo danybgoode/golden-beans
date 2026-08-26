@@ -1,6 +1,45 @@
 # The flag console a human can operate — Flagsmith-grade IA, terminology and list ergonomics — Sprint 3: The split and the language
 
-**Status:** ⬜ not started
+**Status:** ✅ built — all four stories on `feat/flags-console-parity-s3` (stacked on Sprint 2, which
+is **merged** as `62bf561` and live in production dark).
+
+| Story | Commit | Note |
+|---|---|---|
+| — Shared surface (gate union + both callers) | `cf633b1` | Architect-tier, done FIRST. The closed union made every caller a compile error, by design. |
+| 3.1 Credentials route | `cf633b1` | Owner-only via `requireProjectOwnership` — **tighter** than the flags page. Revoke copy moved verbatim. |
+| 3.2 Audit route | `cf633b1` | **Member-readable**, deliberately — the trap next to an owner-only sibling. Now names the flag and version. |
+| 3.3 One vocabulary | `8113b52` | The module *and* the sweep spec; caught a real capability bug (below). |
+| 3.4 Guards and specs | `8113b52` + `878d97e` | ⚠️ **PARTIAL — see below.** Mobile rail entries (gated), the dark spec extended, the vocabulary sweep. |
+
+> ### ⚠️ Story 3.4 is PARTIAL, and the remainder is named rather than implied
+>
+> What landed: both new routes in `AUTHED_MOBILE_ROUTES` (gate-guarded), `e2e/flag-console-dark.spec.ts`
+> extended to both, and the D7 vocabulary sweep.
+>
+> **What did NOT land, and is owed before the gate is flipped:**
+> 1. **The three `legacyStackOnly()` suites are still not ported.** `flag-rule-builder.authed.spec.ts`
+>    still says *"ported in Sprint 3, Story 3.4"* and is untouched.
+> 2. **Neither new route has an authed spec asserting its rendered surface.** The dark spec proves the
+>    gate; nothing proves the credentials page mints or the audit page lists.
+> 3. **`flag-sync-keys.authed.spec.ts` now FOLLOWS the move** (it picks its URL from the gate) — so the
+>    mint/revoke flow keeps coverage in both states. That was a genuine coverage hole found by the
+>    fresh reviewer on PR #121, and it is the **fourth** instance in this epic of something being left
+>    pointing at a surface that moved.
+>
+> Marking this ✅ while (1) and (2) were open would have been the same defect this epic keeps paying
+> for: a doc asserting a property the code does not have.
+
+> ### ⚠️ Story 3.3 caught a capability bug — the third of its kind this epic
+>
+> Gating the credential forms on `showCredentials` also hid the **authoring form**, because it shared
+> one `canManage ? (…)` block with the mint forms. With the console ON there would have been **no way
+> to create a new flag at all** — the per-feature destination only versions a flag you can already
+> click. Sprint 1's stack, Sprint 2's rollback, and now this: three times a control was nearly
+> removed before its replacement existed.
+>
+> It was found by grepping rendered copy for D7's retired vocabulary. **The vocabulary sweep is also
+> a capability sweep**, because it reads every surface — which is the argument for running 3.3 before
+> a sprint closes rather than as a tidy-up after.
 
 > **Build contract — ✅ LOCKED by the architect 2026-08-24.** Cite `D6` (+ **Amendment 1**) and `D7`
 > from the epic README; do not re-derive them. Branch: `feat/flags-console-parity-s3`, cut from
@@ -87,8 +126,12 @@ the page I use daily.
 **As a** builder, **I want** the rails to cover what we just built, **so that** the next epic can't
 regress it silently.
 **Acceptance:**
-- Both new routes are added to the `AUTHED_MOBILE_ROUTES` array in `e2e/mobile-heuristics.authed.spec.ts`
-  (and the browser variant). Covering a new route is one array entry — that is the point of the rail.
+- Both new routes are added to the `AUTHED_MOBILE_ROUTES` array in `e2e/mobile-heuristics.authed.spec.ts`.
+  Covering a new route is one array entry — that is the point of the rail.
+  ⚠️ **"(and the browser variant)" was wrong** and is corrected here: `mobile-heuristics.browser.spec.ts`
+  carries `PUBLIC_MOBILE_ROUTES` only — it has no authed array, because it runs without a session.
+  Adding a credential-gated route there would have produced a spec that sweeps a login page and
+  passes, which is worse than no coverage.
 - `node scripts/check-design-drift.mjs` passes against the new surfaces; no raw hex, no bespoke
   `<table>` where `DataTable` fits.
 - The authed flags spec covers the list, the per-feature destination, and both new routes.

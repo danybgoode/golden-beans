@@ -20,7 +20,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AGENTS, BUILDER_FAMILIES, reviewersFor } from './lib/cross-agent-cli.mjs';
+import { AGENTS, BUILDER_FAMILIES, isTruncatedReview, reviewersFor } from './lib/cross-agent-cli.mjs';
 import { BUILDERS, CROSS_FAMILY_PREFERENCE } from './review-route.mjs';
 
 /** The reviewer CLI name → the model family it belongs to. `antigravity` is agy's CLI name. */
@@ -74,4 +74,39 @@ test('every cross-family reviewer is reachable from at least one builder', () =>
       `${family} is on the routing roster but is never suggested to any builder`
     );
   }
+});
+
+// ── A truncated review must never reach a PR ─────────────────────────────────────────────────
+// On PR #121 vibe exhausted its turn budget mid-read and exited 0 with a bare tool call as its
+// whole output. The runner's two guards — non-zero status, empty output — both passed, so it was
+// posted, where it renders as a review that found nothing. That is worse than an empty result: an
+// empty one looks wrong, a truncated one looks like a clean pass and silently drops a family from
+// the gate on the exact PR it was supposed to review.
+
+test('a bare tool call is recognised as a stopped review, not a clean pass', () => {
+  assert.equal(isTruncatedReview('read_file{"file_path": "/x/y.ts", "offset": 180, "limit": 40}'), true);
+  assert.equal(isTruncatedReview('grep{"pattern": "foo"}'), true);
+});
+
+test('prose with no findings section is a stopped review', () => {
+  // The prompt REQUIRES a findings heading, so its absence means the model never got there.
+  assert.equal(isTruncatedReview('I read the diff and it looks reasonable to me.'), true);
+  assert.equal(isTruncatedReview(''), true);
+});
+
+test('a real review is NOT flagged — in either of the shapes the reviewers actually emit', () => {
+  // Both forms are taken from reviews these agents have posted to this repo. Flagging either would
+  // make the guard worse than the bug: it would reject genuine clean passes and stall every merge.
+  assert.equal(isTruncatedReview('## Findings\n\n**Blocking**\n- None\n\n**Should-fix**\n- None'), false);
+  assert.equal(
+    isTruncatedReview('The diff is clean. No Blocking, Should-fix, or Nit findings were identified.'),
+    false
+  );
+});
+
+test('a review that found something real is never flagged', () => {
+  assert.equal(
+    isTruncatedReview('**Blocking**\n- `page.tsx` double-decodes the route param and 500s.'),
+    false
+  );
 });

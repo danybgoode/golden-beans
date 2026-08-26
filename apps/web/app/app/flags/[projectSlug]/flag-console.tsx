@@ -57,10 +57,13 @@ export function FlagConsole({
   slug,
   flags,
   params,
+  canManage,
 }: {
   slug: string
   flags: FlagRegistryRow[]
   params: FlagListParams
+  /** Owner? Decides whether the owner-only credentials route is linked — it 404s for a member. */
+  canManage: boolean
 }) {
   const basePath = `/app/flags/${slug}`
   const view = buildFlagListView(flags, params)
@@ -145,9 +148,15 @@ export function FlagConsole({
           <span className="field__label">Type</span>
           <select id="flag-console-type" name="type" defaultValue={params.type}>
             <option value="all">All types</option>
-            <option value="killswitch">Kill switch</option>
-            <option value="enablement">Enablement</option>
-            <option value="unclassified">Unclassified</option>
+            {/* Built from the vocabulary map rather than retyped. The three labels were hardcoded
+                here, which is precisely the drift the module exists to stop — the filter would have
+                kept saying "Kill switch" if the table's word ever changed. Caught by the widened
+                ownership assertion (fresh reviewer, PR #121, N2). */}
+            {(['killswitch', 'enablement', 'unclassified'] as const).map((value) => (
+              <option key={value} value={value}>
+                {TYPE_LABEL[value]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="field" htmlFor="flag-console-sort">
@@ -164,6 +173,16 @@ export function FlagConsole({
           Apply
         </button>
       </form>
+
+      {/* Stories 3.1/3.2 — the two routes the console moves controls to, linked from the surface
+          that lost them. The shell nav lists them too (they are registered in the route inventory),
+          but someone standing on the flags page looking for the key they just minted should not have
+          to go up a level to find where it went. Credentials is owner-only and 404s for a member, so
+          it is rendered only when the caller can actually use it. */}
+      <p className="row-wrap">
+        {canManage && <a href={`/app/flag-credentials/${slug}`}>Flag credentials →</a>}
+        <a href={`/app/flag-audit/${slug}`}>Flag audit →</a>
+      </p>
 
       <div className="data-table">
         <p className="data-table__count">

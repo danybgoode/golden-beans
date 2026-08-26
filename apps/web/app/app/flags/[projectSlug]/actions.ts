@@ -88,11 +88,11 @@ export async function activateFlagAction(
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeEnvironment = parseEnvironment(environment)
   if (!safeEnvironment || typeof flagId !== 'string' || typeof versionId !== 'string')
-    return { ok: false as const, error: 'Invalid flag activation command.' }
+    return { ok: false as const, error: 'Invalid request to turn this feature on.' }
   const revision = parseRevision(expectedSnapshotVersion)
   const safeReason = parseReason(reason)
   if (revision === null || !safeReason)
-    return { ok: false as const, error: 'Invalid flag activation command.' }
+    return { ok: false as const, error: 'Invalid request to turn this feature on.' }
   const result = await setFlagActivation({
     projectId,
     environment: safeEnvironment,
@@ -119,11 +119,11 @@ export async function deactivateFlagAction(
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const safeEnvironment = parseEnvironment(environment)
   if (!safeEnvironment || typeof flagId !== 'string')
-    return { ok: false as const, error: 'Invalid flag deactivation command.' }
+    return { ok: false as const, error: 'Invalid request to turn this feature off.' }
   const revision = parseRevision(expectedSnapshotVersion)
   const safeReason = parseReason(reason)
   if (revision === null || !safeReason)
-    return { ok: false as const, error: 'Invalid flag deactivation command.' }
+    return { ok: false as const, error: 'Invalid request to turn this feature off.' }
   const result = await deactivateFlag({
     projectId,
     environment: safeEnvironment,
@@ -282,7 +282,7 @@ export async function previewFlagEvaluationAction(
   if (!version)
     return {
       ok: false as const,
-      error: `Nothing is activated in ${safeEnvironment}, so there is nothing to preview there yet.`,
+      error: `${safeEnvironment} is not serving this feature, so there is nothing to preview there yet.`,
     }
 
   return {

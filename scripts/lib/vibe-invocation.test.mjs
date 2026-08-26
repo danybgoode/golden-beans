@@ -20,7 +20,12 @@ function argvFor(prompt = 'review this') {
   let captured = null;
   const spawn = (_bin, args) => {
     captured = args;
-    return { status: 0, stdout: 'findings', stderr: '' };
+    // A REVIEW-SHAPED placeholder, not the bare word 'findings'. These tests only inspect the argv
+    // runVibe builds, but runVibe now rejects output that looks like a stopped-mid-review — a bare
+    // tool call, or prose with no findings heading — so a stub must look like a real review or it
+    // trips a guard it was never about. (Guard added after vibe truncated on PR #121 and the
+    // runner posted the fragment as if it were a clean pass.)
+    return { status: 0, stdout: '**Blocking**\n- None\n\n**Should-fix**\n- None', stderr: '' };
   };
   runVibe(prompt, {}, { spawn });
   return captured;
