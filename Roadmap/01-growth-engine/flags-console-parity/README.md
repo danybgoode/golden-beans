@@ -1,5 +1,5 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: flags-console-parity
 build_order: null    # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
@@ -245,16 +245,34 @@ The flip to `true` is a separate, deliberate act after the product owner has wal
 it needs its own commit to `main`, not an env edit alone.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** `FLAG_CONSOLE_ENABLED` exists in all three Vercel environments with the stated
-      enablement polarity (born `false`). *Verify-only — not a new gate.*
-- [ ] **The outcome test:** the product owner opens `/app/flags/miyagisanchez` cold and answers
-      "which of these are on, in which environment, and which aren't created yet" **without asking a
-      second question.**
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
+- [x] All sprints merged to `main` + smoke-tested — **gaps stated below, and they are real**
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch:** `FLAG_CONSOLE_ENABLED` exists in all three Vercel environments, born `false`.
+      Verified 2026-08-25 by reading each value back with `vercel env pull` — **not** by `vercel env
+      ls`, which never shows values. Still `false` in all three as shipped.
+- [ ] ⛔ **The outcome test — NOT RUN, and it is the epic's real definition of done.** The product
+      owner opens `/app/flags/miyagisanchez` cold and answers *"which of these are on, in which
+      environment, and which aren't created yet"* without a second question. **It cannot be run
+      until the gate is flipped**, and the flip needs its own commit to `main` (Vercel snapshots env
+      values at build time). Ticking this box is Daniel's, not mine.
+- [x] Feature branches deleted; **frontmatter `status: shipped`**; board regenerated with
+      `node scripts/build-order.mjs`
+
+### ⚠️ Owed, and not claimable from CI
+
+1. **The signed-in walkthroughs for all three sprints.** Every surface is credential-gated, so
+   nothing in this repo reaches past the login redirect. Sprint 2's includes the money-path confirm
+   on preview **and** production (cancel both).
+2. **Story 3.4 is PARTIAL.** Three `legacyStackOnly()` suites are unported and neither new route has
+   an authed spec on its *rendered* surface. **Until that lands, the moved components have no
+   automated cover with the gate ON** — worth closing before the flip, not after.
+3. **The flip itself.** `FLAG_CONSOLE_ENABLED=true` is a deliberate act after the walkthrough, and it
+   needs a commit to `main`, not an env edit alone.
+
+**"Shipped" here means the code is in production and dark.** Every surface this epic built is
+deployed and unreachable; the epic's user-visible value arrives at the flip, not at this commit.

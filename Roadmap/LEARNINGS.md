@@ -290,8 +290,52 @@ one-liner + why + date shape.
   silently advancing state a scheduled run depends on — keep on-demand modes explicitly
   non-state-mutating and lock that with a test.
 
+- **Moving a control is not one change — it is a change plus everything that pointed at it.** In one
+  epic, FOUR things were nearly removed before their replacement existed: the definitions stack
+  (hidden a sprint before the destination), rollback (the per-version buttons were the only way to
+  serve an older version), the authoring form (gated along with the credential forms it shared a JSX
+  block with), and a spec still driving mint/revoke at the old URL. Three were capability losses; the
+  fourth was a COVERAGE loss, which is the same defect in disguise — the flow would have had zero
+  automated cover at exactly the moment it became reachable at a new address. **The rule: land the
+  replacement and retire the original in the SAME story**, and before retiring anything, enumerate
+  what the old surface did and name each item's new home. Any other ordering has a window where the
+  capability does not exist. *(2026-08-26, flags-console-parity.)*
+- **A constraint you cannot immediately justify is not thereby unjustified.** An architecture
+  amendment said "this sprint does not edit `flag-manager.tsx`." It was weakened mid-build with
+  careful-looking reasoning — four lines, default preserved, gate-off render unchanged — and the
+  weakening WAS the defect: that file held every activate/deactivate control, whose replacement was a
+  sprint away. Before removing a constraint, find the failure it was written to prevent; failing to
+  find it is a reason to look harder, not a licence to proceed. *(2026-08-26, flags-console-parity.)*
+- **A PR that CONFLICTS with its base silently stops CI from creating any run.** Not queued, not
+  failed — absent, while other event types still fire and every workflow reads `state: active`. It
+  presents exactly like a quota outage, and on a public repo (unlimited minutes) that diagnosis is
+  wrong. `gh pr view <N> --json mergeable` FIRST; the tell is in the timeline, not the symptom — an
+  outage starts when the provider breaks, a conflict starts when you push the commit that creates it.
+  Expect it after every stacked merge, and rebase the children immediately.
+  *(2026-08-25, flags-console-parity.)*
+
 ## Review quality
 
+- **A truncated review posts as a clean pass — guard the SHAPE of the output, not just its
+  presence.** A reviewer CLI exhausted its turn budget mid-read and exited 0 with a bare
+  `read_file{…}` tool call as its entire output. The runner's guards (non-zero status, empty output)
+  both passed, so it was posted, where it renders as a review that found nothing. That is worse than
+  an empty result: an empty one looks wrong and gets investigated; a truncated one silently drops a
+  whole family from the gate on the PR it was reviewing. Detect by shape — output starting with a
+  bare tool call, or missing the findings heading the prompt requires. *(2026-08-25.)*
+- **Feed reviewers the PR HEAD, never the working tree.** `cross-review.mjs` attached whole-file
+  context with `readFileSync`, so reviewing a PR while checked out on its stacked child handed the
+  reviewer one branch's diff beside another branch's files — and produced a confident Blocking
+  finding that the diff "would not compile." With stacked sprint branches as the default shape this
+  is routine, not exotic. When a file cannot be read at the head, OMIT it rather than substituting: a
+  reviewer that cannot see a file says so, one shown the WRONG file states defects that do not exist.
+  *(2026-08-25.)*
+- **Check a reviewer's SEVERITY estimate against live data, not just its mechanism.** A fresh
+  reviewer found that the console equated "an activation row exists" with "the feature is on" and
+  rated live likelihood "medium", reasoning that few flags had been re-versioned. Production said the
+  latest version of **34 of 42** flags evaluated `false` — the common case, not the corner. It was
+  right about the mechanism and wrong about the blast radius, in the direction that sounds safe.
+  *(2026-08-26, flags-console-parity.)*
 - **A reviewer can be handed a STALE diff, and it is indistinguishable from a confident wrong
   finding — the tell is cheap.** Twice in one PR, agy reported issues that were already fixed and
   pushed, quoting the pre-fix source verbatim; once it claimed a test failed that was green at the

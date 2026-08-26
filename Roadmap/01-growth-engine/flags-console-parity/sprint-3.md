@@ -159,9 +159,12 @@ regress it silently.
 ## Sprint 3 — Smoke walkthrough (do these in order)
 Env: production · https://goldenfrijoles.com
 
+0. **Before any of this**, the gate must be ON. `FLAG_CONSOLE_ENABLED` is `false` in all three
+   environments as shipped, so every step below shows the PRE-epic page until it is flipped — and
+   flipping needs its own commit to `main`, because Vercel snapshots env values at build time.
 1. Go to https://goldenfrijoles.com/app/flags/miyagisanchez
    → The **first thing** on the page is the environment selector and the feature list. No key-minting
-   forms above it.
+   forms above it. The authoring form is still further down — it is not moved by this epic.
 2. Open the shell nav.
    → The credentials route and the audit route are both listed. You did not have to know their URLs.
 3. Click through to the credentials route.
@@ -170,11 +173,20 @@ Env: production · https://goldenfrijoles.com
    → It names the key and says exactly what breaks: clients using it start getting 401s on their next
    poll and fall back to their built-in defaults.
 5. Sign in as a **member** (not an owner) and open the credentials route.
-   → You cannot enumerate keys — same boundary as before this epic.
+   → You get a **404** — not a page with the tables missing. ⚠️ *This is TIGHTER than before the
+   epic, deliberately:* on the flags page a member could load the page and simply see no key tables.
+   A standalone credentials route uses `requireProjectOwnership`, so a member never learns the URL
+   exists. Both satisfy "a member cannot list keys"; this one also hides the door.
 6. As that same member, open the audit route.
    → You **can** read it. The audit is member-readable and stayed that way.
 7. Read any three labels on the flags page out loud.
-   → None of them say "immutable definition version", "mint", "snapshot revision" or "activation".
+   → None of them say "immutable definition version", "snapshot revision" or "activation".
+   ⚠️ *"mint" survives in exactly one place and it is on purpose:* the snapshot-key revoke
+   confirmation ends "mint a replacement first if this key is in production." Story 3.1 requires
+   that sentence VERBATIM — it is cross-review-hardened copy telling an operator how not to break
+   production — so 3.3 gives way to 3.1 there. The exemption is written down in
+   `lib/flag-vocabulary-surfaces.test.ts` with its reason, not hidden by omitting the word from the
+   sweep.
 8. **The epic's outcome test.** Open https://goldenfrijoles.com/app/flags/miyagisanchez cold and
    answer, from the screen alone: *which of these are on, in which environment, and which aren't
    created yet?*

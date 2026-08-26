@@ -189,6 +189,16 @@ independently shippable slice of value.
   reuses the same `getProjectOutcome` the client-facing Pod Report reads, so an owner's numbers and a
   client's cannot drift. The rail is **dark in production** behind `AGENT_RAIL_ENABLED`, born OFF —
   and the var does not exist in Vercel yet, which is the one item owed.
+- ✅ [The flag console a human can operate](01-growth-engine/flags-console-parity/README.md)
+  (one feature list · a per-feature destination · a control that says what it stops · credentials and
+  the audit on their own routes · one vocabulary) — **all three sprints merged and deployed, DARK**
+  behind `FLAG_CONSOLE_ENABLED` (PRs #118/#120/#121). The page used to render the engine's shape
+  rather than the operator's job: a JSON textarea, three key-minting forms, an `<article>` per flag,
+  then three more tables. At 42 definitions nobody reached the bottom. Now: one scannable,
+  URL-driven list; each feature with its own address; and three activation states said in words —
+  **on**, **turned off**, and **never turned on here**, which 40 of 42 live flags actually are and
+  which the old page drew identically to a deliberate kill. Owed before it is worth anything: the
+  **flip** (its own commit to `main`), the signed-in walkthrough, and the epic's outcome test.
 - 🟡 [Flags — a visual rule builder](01-growth-engine/flags-visual-rule-builder/README.md) (rule
   builder · rollout bars · plain-language version diff · preview-as-a-user) — **all three sprints
   built, Sprint 1 merged and dark in production; Sprints 2 and 3 await the owner's merge**
@@ -340,6 +350,18 @@ independently shippable slice of value.
   not exist) and all four were resolved in favour of what can be verified, without losing the design.
   Five review rounds, nine findings; round 2's "clean" verdict came from a reviewer that had attached
   **zero files**, which is the session's sharpest lesson: read the scope line before the findings.
+
+- **2026-08-26** — `flags-console-parity` **shipped to production, dark** (PRs #118/#120/#121, plus
+  #119 in the reviewer tooling): the flag console a human can operate. Four sprints' worth of near-
+  misses taught the epic's one durable rule — **moving a control is not one change, it is a change
+  plus everything that pointed at it**; four times something was nearly removed before its
+  replacement existed, three caught by review and one by a vocabulary sweep that happened to read
+  every surface. The money-path find was mine to own: the console equated *an activation row exists*
+  with *the feature is on*, and production says the latest version of **34 of 42** flags evaluates
+  `false` — so "Turn on in production" would have served `false` on most of them, under a success
+  notice. Enabling a third reviewer family also shook two real bugs out of the review rail itself: it
+  was feeding reviewers file content from the working tree rather than the PR head, and a truncated
+  review was posting as a clean pass.
 
 - **2026-08-10** — `flags-visual-rule-builder` **built out end to end** (PRs #87/#88/#89; Sprint 1
   merged dark, Sprints 2 and 3 awaiting the owner's merge): the flag control plane finally has an
