@@ -51,10 +51,15 @@ export function FlagAuditTable({
         // a deactivation — so it reads as an em dash rather than as v0 or a blank.
         value: (entry) =>
           entry.newVersionId === null ? null : (versionNumberById[entry.newVersionId] ?? null),
-        cell: (entry) =>
-          entry.newVersionId === null || versionNumberById[entry.newVersionId] === undefined
-            ? '—'
-            : `v${versionNumberById[entry.newVersionId]}`,
+        // Three outcomes, not two. An em dash means "no version, by design" — a deactivation. An
+        // UNRESOLVED id is a different fact: the row references a version this view does not carry,
+        // and collapsing it into the same dash tells an operator a version change was a deactivation
+        // (cross-review, Agy, PR #121). In an audit, a wrong answer is worse than an unreadable one.
+        cell: (entry) => {
+          if (entry.newVersionId === null) return '—'
+          const version = versionNumberById[entry.newVersionId]
+          return version === undefined ? 'version not in view' : `v${version}`
+        },
       },
       {
         key: 'environment',
