@@ -157,8 +157,24 @@ for (const surface of CONSOLE_SURFACES) {
 test('the vocabulary module is the single owner of the state words', () => {
   // Every surface that names a state must import it, not retype it. The check is that the literal
   // strings appear in exactly ONE file — which is what stops the sixth surface drifting.
+  // EVERY label the module owns, not a sample. A partial list is how "Kill switch" came to be
+  // retyped in the type filter while this test was green (fresh reviewer N2), and the same argument
+  // applies to the labels that were still unlisted afterwards (cross-review, Vibe, PR #121).
+  const OWNED_LABELS = [
+    // state
+    'Never turned on here',
+    'Turned off',
+    // type
+    'Kill switch',
+    'Enablement',
+    'Unclassified',
+    // criticality
+    'High',
+    'Medium',
+    'Low',
+  ]
   const owner = read('../app/app/flags/[projectSlug]/flag-vocabulary.ts')
-  for (const label of ['Never turned on here', 'Turned off', 'Kill switch']) {
+  for (const label of OWNED_LABELS) {
     assert.ok(owner.includes(label), `flag-vocabulary.ts should own "${label}"`)
   }
   // Absence is asserted for EVERY owned label, not just the first. The earlier version checked only
@@ -167,10 +183,16 @@ test('the vocabulary module is the single owner of the state words', () => {
   const others = CONSOLE_SURFACES.filter((path) => !path.endsWith('flag-vocabulary.ts'))
   for (const surface of others) {
     const text = renderedTextOnly(read(surface))
-    for (const label of ['Never turned on here', 'Kill switch']) {
+    // Absence is asserted only for the MULTI-WORD labels. 'High', 'Medium', 'Low' and 'Enablement'
+    // are ordinary English that legitimately appears in prose and in comments-turned-text, so
+    // sweeping them for absence would fire on sentences rather than on retyped labels — a guard
+    // that cries wolf gets suppressed, which is worse than one with a stated limit. Their OWNERSHIP
+    // is still asserted above; what is pinned here is that no surface re-declares a distinctive
+    // label of its own.
+    for (const label of ['Never turned on here', 'Kill switch', 'Turned off']) {
       assert.ok(
         !text.includes(label),
-        `${surface} retypes the state label "${label}" instead of importing it from flag-vocabulary.ts`
+        `${surface} retypes the label "${label}" instead of importing it from flag-vocabulary.ts`
       )
     }
   }

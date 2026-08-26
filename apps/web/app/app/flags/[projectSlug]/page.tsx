@@ -22,8 +22,6 @@ export default async function FlagsPage({
   const { projectSlug } = await params
   const membership = await requireProjectMembership(projectSlug)
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
-  // Credential metadata is operationally sensitive. Definitions and audit are member-readable,
-  // but only an owner may enumerate the keys they are allowed to mint or revoke.
   const consoleEnabled = isFlagConsoleEnabled()
   // Credential metadata is operationally sensitive. Definitions and audit are member-readable,
   // but only an owner may enumerate the keys they are allowed to mint or revoke.
