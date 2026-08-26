@@ -256,19 +256,30 @@ it needs its own commit to `main`, not an env edit alone.
       Verified by reading each value back with `vercel env pull` — **not** by `vercel env ls`, which
       never shows values. **FLIPPED TO `true` in all three on 2026-08-26** at Daniel's explicit
       instruction, read back to confirm, and made live by the commit that carries this line.
-- [ ] **The outcome test — the gate is now ON, so it is finally RUNNABLE.** Daniel opens
-      `/app/flags/miyagisanchez` cold and answers *"which of these are on, in which environment, and
-      which aren't created yet"* without a second question. **This box stays unticked until he has
-      actually done it** — it is the epic's real definition of done and it is his to tick, not mine.
-      Everything else on this list is now true.
+- [ ] **The outcome test — the gate is ON and the console answers it, but Daniel has not walked it.**
+      Open `/app/flags/miyagisanchez` cold and answer *"which of these are on, in which environment,
+      and which aren't created yet"* without a second question.
+
+      **Rendered against the real production registry (2026-08-26), the console says:**
+      `All (42) · On (3) · Not on (39)` in production, with every row naming its own state —
+      `catalog.owned_shop_only_enabled` **On · serving v2**, `checkout.stripe_enabled` **Never turned
+      on here**, and so on. Typing `stripe` narrows 42 rows to one. That is the question answered
+      from one screen, which is what the epic bought.
+
+      **The box stays unticked anyway**, because the criterion is Daniel reading it — not me
+      rendering it. His to tick.
 - [x] Feature branches deleted; **frontmatter `status: shipped`**; board regenerated with
       `node scripts/build-order.mjs`
 
 ### Owed, and not claimable from CI
 
 1. **The signed-in walkthroughs for all three sprints.** Every surface is credential-gated, so
-   nothing in this repo reaches past the login redirect. Sprint 2's includes the money-path confirm
-   on preview **and** production (cancel both).
+   nothing in this repo reaches past the login redirect — I can prove the routes exist and render,
+   never that a real session sees them. Sprint 2's includes the money-path confirm on preview **and**
+   production (cancel both).
+   ⚠️ **The whole authed Playwright project now runs green in BOTH gate states** (53 passed lit, 43
+   passed dark, 0 failed either way), which is as close as automation gets to the walkthrough — but
+   it is not the same as your eyes on the screen.
 2. ✅ **Story 3.4 is COMPLETE.** The three suites are ported — they follow the move, so the same
    assertions run on both sides of the flip — and `e2e/flag-console.authed.spec.ts` covers both new
    routes' rendered surfaces. Closed BEFORE the flip, which was the point of naming it.
