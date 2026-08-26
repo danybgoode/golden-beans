@@ -1186,7 +1186,40 @@ export function runVibe(fullArgv, opts = {}, deps = {}) {
         `\`vibe --prompt "say OK" --output text --trust\`; if that is empty too, re-authenticate. ` +
         `(An empty result is a failure, never "no findings" — see runVibe's header.)`
     );
+  // ── A TRUNCATED review is a failure too, and it is the dangerous shape ────────────────────────
+  // On PR #121 vibe exhausted its turn budget mid-read and exited 0 with a bare tool call as its
+  // entire output — `read_file{"file_path": …}`. Both guards above passed (status 0, output
+  // non-empty), so the runner posted it to the PR, where it renders as a review with no findings.
+  // An empty result at least LOOKS wrong; a truncated one reads as a clean pass and quietly removes
+  // a family from the gate.
+  //
+  // Detected by shape rather than by scanning for an error string: a real review always contains a
+  // findings heading, because the prompt demands one. Anything that does not is not a review.
+  if (isTruncatedReview(out)) {
+    return fail(
+      opts.soft,
+      `vibe stopped mid-review — its output is a bare tool call or has no findings section, which ` +
+        `means it ran out of turns rather than finishing. Raise VIBE_MAX_TURNS (currently ` +
+        `${VIBE_MAX_TURNS}) and re-run. Posting this would look like a clean pass.`
+    );
+  }
   return out;
+}
+
+/**
+ * Does this look like a stopped-mid-review rather than a review?
+ *
+ * Two signals, both cheap and neither dependent on the model's wording:
+ *   1. the output STARTS with a tool call (`read_file{…}`, `grep{…}`) — the literal shape vibe emits
+ *      when it is cut off between turns;
+ *   2. it never mentions Blocking / Should-fix / Nit, which the review prompt requires.
+ *
+ * Exported for the unit layer: this is the guard whose absence let a non-review reach a PR.
+ */
+export function isTruncatedReview(out) {
+  const text = String(out || '').trim();
+  if (/^\s*\w+\{\s*"/.test(text)) return true;
+  return !/\b(blocking|should-fix|nit)\b/i.test(text);
 }
 
 // One `claude -p "<prompt>"` invocation with the context piped on stdin (same shape as codex, which is why
