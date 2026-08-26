@@ -24,16 +24,27 @@ export default async function FlagsPage({
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
   // Credential metadata is operationally sensitive. Definitions and audit are member-readable,
   // but only an owner may enumerate the keys they are allowed to mint or revoke.
+  const consoleEnabled = isFlagConsoleEnabled()
+  // Credential metadata is operationally sensitive. Definitions and audit are member-readable,
+  // but only an owner may enumerate the keys they are allowed to mint or revoke.
+  //
+  // ── ...and only while this page still RENDERS them ────────────────────────────────────────────
+  // With the console on, the key tables live on /app/flag-credentials and `showCredentials={false}`
+  // means nothing here displays them — so fetching them was two dead DB round-trips per owner page
+  // load, and it put key ids, labels, environments and created/expiry/revoked timestamps into the
+  // RSC payload of a page that no longer shows them. Not a privilege leak (the fetch is owner-gated
+  // and the data is the owner's own), but dead credential payload on the sprint whose entire point
+  // is that credentials moved (fresh reviewer, PR #121).
+  const wantsKeys = canManage && !consoleEnabled
   const [registry, keys, syncKeys] = await Promise.all([
     getFlagRegistryView(membership.projectId),
-    canManage ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
-    canManage ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
+    wantsKeys ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
+    wantsKeys ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
   ])
 
   // flags-console-parity · Story 1.1 — the gate is resolved HERE, server-side, and passed down. One
   // resolver covers the list, the environment selector and (from Sprint 3) both new routes; no
   // client ever reads `process.env`. Same boundary `isFlagRuleBuilderEnabled()` already uses.
-  const consoleEnabled = isFlagConsoleEnabled()
   // Parsed unconditionally so the parse itself cannot differ between the two branches — but it is
   // only ever READ by the console. With the gate off this is a few microseconds of allow-list
   // checking and nothing reaches the page, which keeps D6's "byte-for-byte" claim about markup

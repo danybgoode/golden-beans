@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
@@ -7,9 +8,30 @@ function tenantSlug(): string {
   return slug
 }
 
+/**
+ * Where the catalog sync controls live, which depends on the gate.
+ *
+ * ── Why this FOLLOWS the move instead of skipping ─────────────────────────────────────────────
+ * flags-console-parity Sprint 3 moved the mint/revoke controls to `/app/flag-credentials/[slug]`
+ * when `FLAG_CONSOLE_ENABLED` is on. This spec drove them on the flags page, and Sprint 3 did not
+ * repoint it — so with the gate on `getByLabel('Publisher source')` would have timed out, reading
+ * as a flake rather than as "this surface moved", and the credential mint/revoke flow would have
+ * had ZERO automated coverage at exactly the moment it became reachable at a new URL. Found by the
+ * fresh HIGH-tier reviewer on PR #121; it is the FOURTH time in this epic that something was nearly
+ * lost because its replacement landed elsewhere.
+ *
+ * Skipping it (as Sprint 2 did for the three rule-builder suites) would have been the cheap answer
+ * and the wrong one here: those suites drive a surface that is being RETIRED, whereas these controls
+ * still exist — they only changed address. Every selector below is unchanged on the new route, so
+ * following the URL keeps the assertions honest in both states rather than trading one for the other.
+ */
+function credentialsPath(slug: string): string {
+  return isFlagConsoleEnabled() ? `/app/flag-credentials/${slug}` : `/app/flags/${slug}`
+}
+
 test('an owner can mint and revoke a separately sourced catalog sync key', async ({ page }) => {
   const slug = tenantSlug()
-  await page.goto(`/app/flags/${slug}`)
+  await page.goto(credentialsPath(slug))
 
   await page.getByLabel('Publisher source').fill('backend')
   await page.locator('#flag-sync-label').fill('backend catalog publisher')

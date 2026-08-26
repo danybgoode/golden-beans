@@ -66,7 +66,7 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
     <section className="flag-preview">
       <FormSection
         title="Preview as a user"
-        description="Ask what a given context would see. This reads the version activated in the chosen environment and evaluates it with the same code that serves production — it creates nothing and changes nothing."
+        description="Ask what a given context would see. This reads the version the chosen environment is serving and evaluates it with the same code that serves production — it creates nothing and changes nothing."
       >
         <Field label="Environment">
           {(control) => (
@@ -132,7 +132,7 @@ export function FlagPreview({ slug, flagId }: { slug: string; flagId: string }) 
           <div role="status" className="flag-preview__result">
             <p className="flag-preview__verdict">{describeEvaluationOutcome(result.explanation)}</p>
             <p className="note">
-              Evaluated against v{result.version}, the version activated in {result.environment}.
+              Evaluated against v{result.version}, the version {result.environment} is serving.
             </p>
 
             {/* The conditions that held, or — for a rule that has none — the fact that it has none;

@@ -317,7 +317,14 @@ export function FlagCredentialManager({
       {minted && (
         <div role="alert">
           <strong>Copy this snapshot key now — it won&apos;t be shown again:</strong>
-          <pre className="copy-url">{minted}</pre>
+          {/* The legacy inline style, kept VERBATIM rather than swapped for a class. An earlier revision
+              used `.copy-url`, which is the landing page's input+button ROW — flex with a gap, and no
+              wrapping at all — so the `<pre>` kept UA `white-space: pre` and a credential shown
+              exactly once rendered as a single horizontally-scrollable line on a narrow viewport
+              (fresh reviewer, PR #121). `check-design-drift` passed because the class exists, which
+              is what made it invisible. This is the same trap flag-manager.tsx's textarea comment
+              records: a class that looks right and drops a property the control depends on. */}
+          <pre style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{minted}</pre>
           <button type="button" onClick={() => setMinted(null)}>
             I&apos;ve saved it
           </button>
@@ -326,7 +333,7 @@ export function FlagCredentialManager({
       {mintedSync && (
         <div role="alert">
           <strong>Copy this catalog sync key now — it won&apos;t be shown again:</strong>
-          <pre className="copy-url">{mintedSync}</pre>
+          <pre style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{mintedSync}</pre>
           <button type="button" onClick={() => setMintedSync(null)}>
             I&apos;ve saved it
           </button>

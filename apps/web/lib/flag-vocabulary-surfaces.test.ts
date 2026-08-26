@@ -31,9 +31,14 @@ const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, 
 const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/flag-console.tsx',
   '../app/app/flags/[projectSlug]/flag-vocabulary.ts',
+  '../app/app/flags/[projectSlug]/flag-preview.tsx',
+  '../app/app/flags/[projectSlug]/flag-insight.tsx',
+  '../app/app/flags/[projectSlug]/rule-builder.tsx',
+  '../app/app/flags/[projectSlug]/actions.ts',
   '../app/app/flags/[projectSlug]/[flagKey]/page.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-switch.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-version-serve.tsx',
+  '../app/app/flags/[projectSlug]/[flagKey]/flag-authoring.tsx',
   '../app/app/flag-credentials/[projectSlug]/page.tsx',
   '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
   '../app/app/flag-audit/[projectSlug]/page.tsx',
@@ -60,20 +65,86 @@ const RETIRED = [
   // slips through is to widen the list rather than to fix the one instance.
   'Creating a version',
   'Create a version',
+  // Story 3.3 names FOUR terms: "immutable definition version, mint, snapshot revision and
+  // activation". The list carried a paraphrase of one ('scoped snapshot key' for `mint`) and
+  // omitted `activation` entirely — drawn, in effect, around the offences it would have flagged
+  // (fresh reviewer, PR #121). Both are now swept as the story wrote them.
+  //
+  // `mint` is deliberately matched as ' mint' / 'Mint ' rather than bare: it is a substring of
+  // ordinary words, and the goal is the VERB in rendered copy. The credentials surface is exempted
+  // below for the reason 3.1 pins — its revoke sentences are required verbatim and one contains
+  // "mint a replacement", so retiring the word there would break a criterion this epic also holds.
+  'activation',
+  'Activation',
 ] as const
 
-/** Strip `//` line comments and block comments, then JSX `{/* … *\/}` blocks. */
+/**
+ * `mint` survives on ONE surface, and only because two acceptance criteria collide there.
+ *
+ * Story 3.3 retires the word; Story 3.1 requires the revoke consequence sentences VERBATIM, and the
+ * snapshot-key sentence ends "mint a replacement first if this key is in production." One of the two
+ * has to give on that surface, and it is 3.3: the sentence is cross-review-hardened copy that tells
+ * an operator how not to break production, and rewording it to satisfy a vocabulary sweep would
+ * trade a real safety property for a stylistic one.
+ *
+ * Written down as an exemption with its reason rather than resolved by omitting `mint` from the
+ * list — which is what hid it before.
+ */
+const MINT_EXEMPT = [
+  '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
+  './flag-console-copy.ts',
+]
+
+/**
+ * Rendered text only: line comments out, block comments out, whitespace normalised.
+ *
+ * ── Why the whitespace normalisation is load-bearing (fresh reviewer, PR #121) ────────────────
+ * Without it the sweep was defeated by a LINE BREAK, which is how new copy actually arrives:
+ * Prettier wraps JSX text at print width, so a retired phrase that happened to straddle a wrap was
+ * invisible to `includes()` while rendering identically in the browser. A guard that catches a term
+ * in a heading but not in a paragraph is worse than none, because the green suite is the reason
+ * nobody looks.
+ *
+ * ── Line comments are stripped BEFORE block comments ─────────────────────────────────────────
+ * The original did the reverse, so a `//` comment containing `/*` swallowed source up to the next
+ * `*\/` — every false PASS, never a false failure, which is the direction that hides things.
+ */
 function renderedTextOnly(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .split('\n')
-    .map((line) => line.replace(/^\s*\/\/.*$/, ''))
-    .join('\n')
+  return (
+    source
+      .split('\n')
+      .map((line) => line.replace(/^\s*\/\/.*$/, ''))
+      .join('\n')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      // ── Identifiers are not rendered copy ────────────────────────────────────────────────────
+      // `FlagActivationState`, `setFlagActivation`, `flag.activations` and `describeActivationSurprise`
+      // all contain a retired WORD without ever reaching a screen. Sweeping them would force renaming
+      // a type to satisfy a copy rule, so the first version of this hardening reported five failures
+      // of which only two were real. Import lines go entirely; elsewhere a dotted access, a camelCase
+      // identifier and a PascalCase type are removed, which leaves prose and JSX text.
+      .split('\n')
+      .filter((line) => !/^\s*import\b/.test(line) && !/^\s*}\s*from\s/.test(line))
+      .join(' ')
+      .replace(/\.\w+/g, ' ')
+      // An object-literal KEY is an identifier too — `{ ...flag, activations: [] }` is code, not copy.
+      .replace(/\b\w+\s*:/g, ' ')
+      .replace(/\b[a-z]+[A-Z]\w*/g, ' ')
+      .replace(/\b[A-Z][a-z]+[A-Z]\w*/g, ' ')
+      .replace(/\s+/g, ' ')
+  )
 }
 
 for (const surface of CONSOLE_SURFACES) {
   test(`${surface.split('/').pop()} renders no retired storage vocabulary`, () => {
     const text = renderedTextOnly(read(surface))
+    if (!MINT_EXEMPT.includes(surface)) {
+      for (const term of [' mint ', 'Mint ', ' minting ']) {
+        assert.ok(
+          !text.includes(term),
+          `${surface} renders "${term.trim()}" — Story 3.3 retires it (the credentials surface is the one exemption, and it is listed)`
+        )
+      }
+    }
     for (const term of RETIRED) {
       assert.ok(
         !text.includes(term),
