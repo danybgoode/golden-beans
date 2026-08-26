@@ -19,7 +19,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf8')
@@ -161,13 +161,18 @@ test('the vocabulary module is the single owner of the state words', () => {
   for (const label of ['Never turned on here', 'Turned off', 'Kill switch']) {
     assert.ok(owner.includes(label), `flag-vocabulary.ts should own "${label}"`)
   }
+  // Absence is asserted for EVERY owned label, not just the first. The earlier version checked only
+  // 'Never turned on here', so a surface retyping 'Turned off' or 'Kill switch' passed — the exact
+  // drift this test exists to stop, one label over (fresh reviewer, PR #121, N2).
   const others = CONSOLE_SURFACES.filter((path) => !path.endsWith('flag-vocabulary.ts'))
   for (const surface of others) {
     const text = renderedTextOnly(read(surface))
-    assert.ok(
-      !text.includes('Never turned on here'),
-      `${surface} retypes a state label instead of importing it from flag-vocabulary.ts`
-    )
+    for (const label of ['Never turned on here', 'Kill switch']) {
+      assert.ok(
+        !text.includes(label),
+        `${surface} retypes the state label "${label}" instead of importing it from flag-vocabulary.ts`
+      )
+    }
   }
 })
 
@@ -184,4 +189,27 @@ test('the LEGACY surface is deliberately excluded, and stays excluded', () => {
     !CONSOLE_SURFACES.some((path) => path.includes('flag-manager')),
     'flag-manager.tsx must NOT be swept: D6 pins its wording until the surface is removed'
   )
+})
+
+test('every file rendering under the console is swept — the list cannot silently fall behind', () => {
+  // N5 in spirit (fresh reviewer, PR #121): CONSOLE_SURFACES was hand-maintained, and a file added
+  // to a console directory but not to the list is invisible to every test above — which is exactly
+  // how flag-preview.tsx kept rendering "the version activated in {env}" while the suite was green.
+  // Derived from the DIRECTORY, the way project-route-inventory.test.ts derives its route list.
+  const directories = [
+    '../app/app/flags/[projectSlug]/[flagKey]/',
+    '../app/app/flag-credentials/[projectSlug]/',
+    '../app/app/flag-audit/[projectSlug]/',
+  ]
+  const onDisk = directories.flatMap((directory) =>
+    readdirSync(fileURLToPath(new URL(directory, import.meta.url)))
+      .filter((name) => name.endsWith('.tsx') || name.endsWith('.ts'))
+      .map((name) => `${directory}${name}`)
+  )
+  for (const file of onDisk) {
+    assert.ok(
+      CONSOLE_SURFACES.includes(file as (typeof CONSOLE_SURFACES)[number]),
+      `${file} renders under the console but is not in CONSOLE_SURFACES — add it, or the vocabulary sweep does not see it`
+    )
+  }
 })

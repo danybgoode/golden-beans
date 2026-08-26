@@ -148,9 +148,15 @@ export function FlagConsole({
           <span className="field__label">Type</span>
           <select id="flag-console-type" name="type" defaultValue={params.type}>
             <option value="all">All types</option>
-            <option value="killswitch">Kill switch</option>
-            <option value="enablement">Enablement</option>
-            <option value="unclassified">Unclassified</option>
+            {/* Built from the vocabulary map rather than retyped. The three labels were hardcoded
+                here, which is precisely the drift the module exists to stop — the filter would have
+                kept saying "Kill switch" if the table's word ever changed. Caught by the widened
+                ownership assertion (fresh reviewer, PR #121, N2). */}
+            {(['killswitch', 'enablement', 'unclassified'] as const).map((value) => (
+              <option key={value} value={value}>
+                {TYPE_LABEL[value]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="field" htmlFor="flag-console-sort">
