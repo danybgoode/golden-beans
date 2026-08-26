@@ -70,10 +70,19 @@ const textareaSubmit = (page: import('@playwright/test').Page) =>
  */
 async function createVersion(
   page: import('@playwright/test').Page,
+  slug: string,
   key: string,
   value: FlagDefinition,
   reason: string
 ) {
+  // ── Navigates itself, rather than assuming the caller is already here ────────────────────────
+  // The authoring textarea lives on the FLAGS PAGE in both gate states. Once the ported tests began
+  // navigating to the per-feature destination first, every caller of this helper was on a page with
+  // no `#flag-key`, and each failed on a 30s timeout that said nothing about the cause. Owning the
+  // navigation makes the precondition impossible to get wrong — and this helper is called from
+  // suites that afterwards go somewhere else entirely, so "wherever we happen to be" was never a
+  // safe assumption. (Found by RUNNING the port; the same lesson the file already records twice.)
+  await page.goto(`/app/flags/${slug}`)
   await page.locator('#flag-key').fill(key)
   await page.locator('#flag-definition').fill(JSON.stringify(value, null, 2))
   await page.locator('#flag-reason').fill(reason)
@@ -137,6 +146,8 @@ const flagOf = (page: Page, key: string) =>
  */
 async function turnOnInDevelopment(page: Page, slug: string, key: string) {
   if (!consoleLit()) {
+    // The legacy per-version button, scoped to the development cell by the environment's own label
+    // rather than by position — the three buttons in that row are identically worded (A9).
     await flagOf(page, key)
       .locator('td div')
       .filter({ has: page.getByText('development', { exact: true }) })
@@ -147,6 +158,21 @@ async function turnOnInDevelopment(page: Page, slug: string, key: string) {
   }
   await gotoFlag(page, slug, key, 'value')
   await page.getByRole('button', { name: 'Turn on in development' }).click()
+
+  // ── These fixtures default to `off`, so turning them on CONFIRMS first ────────────────────────
+  // Sprint 2's "activated is not on" guard: a version whose defaultVariantKey names a falsey variant
+  // serves `false`, so turning it on warns that "on" will not mean what it says. Every definition in
+  // this file has `defaultVariantKey: 'off'`, which makes that the norm here rather than the corner.
+  //
+  // Confirmed rather than avoided. Rewriting the fixtures to default `on` would dodge the dialog and
+  // silently stop exercising the money-path warning on the surface that owns it — and these suites
+  // exist to catch exactly that kind of quiet loss.
+  const confirm = page.locator('dialog.confirm-dialog')
+  if (await confirm.isVisible()) {
+    await expect(confirm).toContainText('evaluates to false by default')
+    await confirm.getByRole('button', { name: 'Turn on' }).click()
+  }
+
   await expect(
     page.getByRole('status').filter({ hasText: `${key} in development is now serving v1` })
   ).toBeVisible()
@@ -228,10 +254,12 @@ test.describe('the visual rule builder', () => {
     // article. Sprint 2 adds a second disclosure to that article (the version diff's "Show JSON"),
     // and a positional `.first()` would have started reading the wrong one the moment a flag had
     // two versions.
-    const versions = page
-      .locator('article')
-      .filter({ has: page.getByRole('heading', { name: key }) })
-      .locator('table')
+    // The stored version's table is on the destination's History tab once the console is lit, and
+    // in the flag's article while dark. `gotoFlag` resolves that; `flagOf` then scopes to whichever
+    // container this state uses. (An inline `locator('article')` survived the first pass of the
+    // port here — the reason `flagOf` exists is so exactly one place knows the answer.)
+    await gotoFlag(page, slug, key, 'history')
+    const versions = flagOf(page, key).locator('table')
     const storedDefinition = versions.locator('pre').first()
     await versions.getByText('Inspect immutable JSON').click()
     // Parsed, for the same reason as above: this is the round-trip claim — what the CONTROLS built
@@ -320,8 +348,8 @@ test.describe('rollout bars and the version diff', () => {
   test('every environment gets a bar and production is set apart', async ({ page }) => {
     const slug = tenantSlug()
     const key = flagKey()
+    await createVersion(page, slug, key, definition(), 'Rollout bar smoke.')
     await gotoFlag(page, slug, key, 'history')
-    await createVersion(page, key, definition(), 'Rollout bar smoke.')
 
     const rows = flagOf(page, key).locator('.rollout-bar__row')
     // Driven from the constant, not from a literal 3: the component reads FLAG_ENVIRONMENTS and so
@@ -352,29 +380,26 @@ test.describe('rollout bars and the version diff', () => {
 
     const slug = tenantSlug()
     const key = flagKey()
+    await createVersion(page, slug, key, definition(), 'Rollout bar activation smoke.')
     await gotoFlag(page, slug, key, 'history')
-    await createVersion(page, key, definition(), 'Rollout bar activation smoke.')
 
     // Scoped to the development cell by the environment's own label rather than by position —
     // the three buttons in that row are identically worded, which is exactly A9's defect.
-    const flag = flagOf(page, key)
-    await flag
-      .locator('td div')
-      .filter({ has: page.getByText('development', { exact: true }) })
-      .getByRole('button', { name: 'Activate v1' })
-      .click()
-    await expect(page.getByRole('status').filter({ hasText: 'Activated v1 in development' })).toBeVisible()
+    await turnOnInDevelopment(page, slug, key)
+    // Back to History for the bars: `turnOnInDevelopment` leaves the page on the Value tab when the
+    // console is lit, because that is where the control lives.
+    await gotoFlag(page, slug, key, 'history')
 
-    const development = flag.locator('.rollout-bar__row').filter({ hasText: 'development' })
+    const development = flagOf(page, key).locator('.rollout-bar__row').filter({ hasText: 'development' })
     await expect(development).toHaveAttribute('data-active', 'true')
     await expect(development.locator('.rollout-bar__fill')).toHaveCount(1)
     await expect(development.locator('.rollout-bar__label')).toHaveText('10%')
     await expect(development).not.toContainText('1000')
 
     // The environments that were NOT activated must not borrow the number.
-    await expect(flag.locator('.rollout-bar__row').filter({ hasText: 'production' })).toContainText(
-      'not active'
-    )
+    await expect(
+      flagOf(page, key).locator('.rollout-bar__row').filter({ hasText: 'production' })
+    ).toContainText('not active')
   })
 
   test('the diff describes a rollout change in percent on both sides', async ({ page }) => {
@@ -382,19 +407,22 @@ test.describe('rollout bars and the version diff', () => {
     // only true statement about what the PM did, and this asserts it survives the whole stack.
     const slug = tenantSlug()
     const key = flagKey()
+    await createVersion(page, slug, key, definition(), 'Initial 10% rollout.')
     await gotoFlag(page, slug, key, 'history')
-    await createVersion(page, key, definition(), 'Initial 10% rollout.')
 
     const widened = definition()
     widened.rules[0].rollout = { basisPoints: 5000 }
-    await createVersion(page, key, widened, 'Widen the rollout to half.')
+    await createVersion(page, slug, key, widened, 'Widen the rollout to half.')
+    // Re-navigate: `createVersion` writes from the flags page, so after a SECOND version the page is
+    // no longer the destination this test asserts on.
+    await gotoFlag(page, slug, key, 'history')
 
     // The two most recent versions are compared by default, which is the comparison this walkthrough
     // is about — no selection needed.
     const flag = flagOf(page, key)
-    await expect(flag.locator('.flag-insight__changes')).toContainText('rollout 10% → 50%')
-    await expect(flag.locator('.flag-insight__changes')).not.toContainText('1000')
-    await expect(flag.locator('.flag-insight__changes')).not.toContainText('5000')
+    await expect(flagOf(page, key).locator('.flag-insight__changes')).toContainText('rollout 10% → 50%')
+    await expect(flagOf(page, key).locator('.flag-insight__changes')).not.toContainText('1000')
+    await expect(flagOf(page, key).locator('.flag-insight__changes')).not.toContainText('5000')
     await expect(flag.locator('.flag-insight__unexplained')).toHaveCount(0)
   })
 
@@ -403,13 +431,13 @@ test.describe('rollout bars and the version diff', () => {
     // deliberately does not describe. It must not invent a description and must not show nothing.
     const slug = tenantSlug()
     const key = flagKey()
+    await createVersion(page, slug, key, definition(), 'Initial 10% rollout.')
+    await createVersion(page, slug, key, definition({ metadata: { owner: 'growth' } }), 'Record the owner.')
     await gotoFlag(page, slug, key, 'history')
-    await createVersion(page, key, definition(), 'Initial 10% rollout.')
-    await createVersion(page, key, definition({ metadata: { owner: 'growth' } }), 'Record the owner.')
 
     const flag = flagOf(page, key)
     await expect(flag.locator('.flag-insight__unexplained')).toHaveText('definition changed — show JSON')
-    await flag.locator('.flag-insight__json').getByText('Show JSON').click()
+    await flagOf(page, key).locator('.flag-insight__json').getByText('Show JSON').click()
     await expect(flag.locator('.flag-insight__json pre')).toContainText('"owner": "growth"')
   })
 })
@@ -470,7 +498,7 @@ test.describe('preview as a user', () => {
     const slug = tenantSlug()
     const key = flagKey()
     await page.goto(`/app/flags/${slug}`)
-    await createVersion(page, key, previewDefinition, 'Preview smoke.')
+    await createVersion(page, slug, key, previewDefinition, 'Preview smoke.')
 
     await turnOnInDevelopment(page, slug, key)
 
@@ -522,7 +550,11 @@ test.describe('preview as a user', () => {
 
     // Story 3.1's last criterion, and smoke step 5: nothing was written. Three evaluations, and the
     // flag still has exactly the one immutable version it started with.
-    await page.reload()
+    //
+    // Counted on HISTORY, because that is where the versions table lives once the console is lit —
+    // the preview runs on Value, so a bare `reload()` would re-render the tab with no table on it
+    // and count zero rows. `gotoFlag` is a reload plus the right address.
+    await gotoFlag(page, slug, key, 'history')
     await expect(flagOf(page, key).locator('tbody tr')).toHaveCount(1)
   })
 })

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { IMPACT_FEATURE_KEY, IMPACT_SERIES, readTenantRecord } from './helpers/authed-fixture'
+import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug() {
   const slug = readTenantRecord()?.slug
@@ -266,7 +267,13 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
 // the thing that silently regresses when a later change reverts a route to a hand-rolled table.
 // Behaviour parity is proven elsewhere and better — by each route's EXISTING api spec passing
 // unchanged (api-keys, destinations, experiments, flag-serving, experiment-decisions, impact).
-const CONVERTED_ROUTES: Array<{ name: string; path: (slug: string) => string; expect: string[] }> = [
+const CONVERTED_ROUTES: Array<{
+  name: string
+  path: (slug: string) => string
+  expect: string[]
+  /** Reuses `.data-table`'s look WITHOUT being a `DataTable` — see the flags entry below. */
+  skipFilter?: boolean
+}> = [
   { name: 'keys', path: (s) => `/app/keys/${s}`, expect: ['.data-table', '.form-section'] },
   { name: 'agent-keys', path: (s) => `/app/agent-keys/${s}`, expect: ['.data-table', '.form-section'] },
   { name: 'destinations', path: (s) => `/app/destinations/${s}`, expect: ['.data-table', '.form-section'] },
@@ -274,7 +281,31 @@ const CONVERTED_ROUTES: Array<{ name: string; path: (slug: string) => string; ex
   // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
   // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
   { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.form-section'] },
-  { name: 'flags', path: (s) => `/app/flags/${s}`, expect: ['.data-table'] },
+  // flags-console-parity · the flags page now depends on the console gate, and BOTH states are
+  // covered rather than one being dropped:
+  //   DARK — the legacy tables are `DataTable` islands, filter box and all.
+  //   LIT  — the feature list REUSES `.data-table`'s visual language without being a `DataTable`
+  //          (epic D4): its search/sort/filters are URL-driven, so they survive a refresh and can be
+  //          shared, which client state cannot do. So `.data-table__filter` is legitimately absent
+  //          there, and asserting it would demand the client filter D4 exists to refuse.
+  // The credentials route is the LIT home of the real DataTable islands, so the kit's filter/sort
+  // affordances are still asserted somewhere — just where they actually live now.
+  ...(isFlagConsoleEnabled()
+    ? [
+        {
+          name: 'flags (console)',
+          path: (s: string) => `/app/flags/${s}`,
+          expect: ['.data-table'],
+          skipFilter: true,
+        },
+        {
+          name: 'flag credentials',
+          path: (s: string) => `/app/flag-credentials/${s}`,
+          expect: ['.data-table'],
+        },
+        { name: 'flag audit', path: (s: string) => `/app/flag-audit/${s}`, expect: ['.data-table'] },
+      ]
+    : [{ name: 'flags', path: (s: string) => `/app/flags/${s}`, expect: ['.data-table'] }]),
   // The sixth route. It needs a feature with a linked input and a recorded series, so auth.setup.ts
   // now seeds one (cross-review, Agy, PR #83 — the fixture provisioned a bare tenant and the page
   // 500s without data). Worth closing rather than deferring: `impact.spec.ts` does NOT cover this,
@@ -302,7 +333,7 @@ for (const route of CONVERTED_ROUTES) {
       await expect(page.locator(selector).first()).toBeVisible()
     }
     // Every converted table carries its sort/filter affordances, not just the class name.
-    if (route.expect.includes('.data-table')) {
+    if (route.expect.includes('.data-table') && !route.skipFilter) {
       await expect(page.locator('.data-table__filter').first()).toBeVisible()
       await expect(page.locator('.data-table thead th').first()).toBeVisible()
     }

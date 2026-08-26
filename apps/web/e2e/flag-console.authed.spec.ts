@@ -55,11 +55,23 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flags/${slug}?sort=%3Cimg%3E&evil=%3Cscript%3E`)
 
-    // The allow-list, asserted where it matters: in the rendered HTML, not in a unit test over the
-    // parser. An unrecognised sort falls back rather than reaching a link on the page.
-    const html = await page.content()
-    expect(html).not.toContain('evil=')
-    expect(html).not.toContain('<script>alert')
+    // ── Asserted on the LINKS the page builds, not on the whole document ──────────────────────
+    // The first version checked `page.content()` for 'evil=' and failed on a CORRECT build: Next's
+    // RSC payload embeds the request URL in a <script> on every page, so the raw parameter is in the
+    // document no matter what the app does. That is framework plumbing, not an echo — the property
+    // that actually matters is that no CONTROL on the page carries an unrecognised parameter
+    // forward, because `buildFlagListQuery` writes from the parsed struct.
+    //
+    // Found by running this suite for the first time; it is the same lesson this epic keeps
+    // relearning — a guard asserting the wrong SCOPE reports on something other than its claim.
+    const hrefs = await page
+      .locator('main a')
+      .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).getAttribute('href') ?? ''))
+    for (const href of hrefs) {
+      expect(href, 'a control carried an unknown parameter forward').not.toContain('evil=')
+      expect(href, 'a control echoed an unrecognised sort').not.toContain('sort=%3Cimg')
+    }
+    // ...and the page still renders rather than erroring on the junk.
     await expect(page.getByRole('table').filter({ hasText: 'Features in' })).toBeVisible()
   })
 
@@ -129,6 +141,17 @@ test.describe('the flag console, signed in', () => {
 
     // ...and the authoring form STAYS, which is the near-miss Story 3.3 caught: it shared a JSX
     // block with the credential forms, so gating them hid it too — leaving no way to create a flag.
-    await expect(page.getByRole('button', { name: 'Create immutable version' })).toBeVisible()
+    //
+    // Scoped to the TEXTAREA form, because two controls carry this exact label: the rule builder's
+    // (disabled until its draft validates) and this one. An unscoped `getByRole` resolves to both
+    // and fails on strict mode — which is what it did the first time this suite was run, and the
+    // same ambiguous-locator class `flag-rule-builder.authed.spec.ts` already records twice.
+    // `textareaSubmit` there solves it identically; this is that shape, not a new one.
+    await expect(
+      page
+        .locator('form')
+        .filter({ has: page.locator('#flag-definition') })
+        .getByRole('button', { name: 'Create immutable version' })
+    ).toBeVisible()
   })
 })
