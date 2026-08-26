@@ -81,34 +81,89 @@ async function createVersion(
   await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
 }
 
-/** One flag's article, located by its own heading rather than by position (A9). */
-const flagOf = (page: import('@playwright/test').Page, key: string) =>
-  page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
+type Page = import('@playwright/test').Page
 
-// ⚠️ flags-console-parity, Sprint 2 — these suites drive the LEGACY per-flag stack.
+/**
+ * Where one flag's surfaces live — which depends on the console gate.
+ *
+ * ── The port these suites were skipped waiting for (Sprint 3, Story 3.4) ─────────────────────
+ * flags-console-parity moved the per-flag surfaces off the flags page. With `FLAG_CONSOLE_ENABLED`
+ * on, each feature has its own route and the `<article>` stack is gone:
+ *
+ *   DARK                                    LIT
+ *   /app/flags/<slug>  → <article> per flag  /app/flags/<slug>/<key>
+ *     · versions table                         · History tab
+ *     · FlagInsight (bars + diff)              · History tab
+ *     · FlagPreview                            · Value tab
+ *
+ * Sprint 2 skipped these suites rather than porting them, with the cost stated. This is the port.
+ * It follows the move instead of pinning either state, so the same assertions hold on both sides of
+ * the flip — which is what makes them useful DURING a flip, the one moment they matter most.
+ */
+const consoleLit = () => isFlagConsoleEnabled()
+
+/** Navigate to where `key`'s surfaces are. `tab` is ignored while the console is dark. */
+async function gotoFlag(page: Page, slug: string, key: string, tab: 'value' | 'history' = 'history') {
+  if (!consoleLit()) {
+    await page.goto(`/app/flags/${slug}`)
+    return
+  }
+  const base = `/app/flags/${slug}/${encodeURIComponent(key)}`
+  await page.goto(tab === 'value' ? base : `${base}?tab=${tab}`)
+}
+
+/**
+ * The scope one flag's assertions run in.
+ *
+ * Dark: its `<article>`, located by its own heading rather than by position (A9).
+ * Lit: the whole `<main>` — the destination is ALREADY scoped to one flag by its URL, so scoping
+ * again would look symmetrical and mean nothing.
+ */
+const flagOf = (page: Page, key: string) =>
+  consoleLit()
+    ? page.locator('main')
+    : page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
+
+/**
+ * Turn `key` on in development, wherever that control now lives.
+ *
+ * DARK: the per-version button in the definitions stack, labelled `Activate v1`.
+ * LIT:  `FlagSwitch` on the destination's Value tab, labelled `Turn on in development` — Story 2.2
+ *       replaced N per-version buttons with ONE control per environment, and D7 retired the word
+ *       "Activate". Both activate the same version through the same server action; only the surface
+ *       and the wording changed.
+ *
+ * Leaves the page on the destination's Value tab when lit, which is where the preview lives.
+ */
+async function turnOnInDevelopment(page: Page, slug: string, key: string) {
+  if (!consoleLit()) {
+    await flagOf(page, key)
+      .locator('td div')
+      .filter({ has: page.getByText('development', { exact: true }) })
+      .getByRole('button', { name: 'Activate v1' })
+      .click()
+    await expect(page.getByRole('status').filter({ hasText: 'Activated v1 in development' })).toBeVisible()
+    return
+  }
+  await gotoFlag(page, slug, key, 'value')
+  await page.getByRole('button', { name: 'Turn on in development' }).click()
+  await expect(
+    page.getByRole('status').filter({ hasText: `${key} in development is now serving v1` })
+  ).toBeVisible()
+}
+
+// ✅ flags-console-parity, Sprint 3, Story 3.4 — these suites are PORTED, not skipped.
 //
-// Their selectors are `locator('article')`, `getByRole('button', { name: 'Activate v1' })` and the
-// text 'not active' — every one of which lives inside the block that `showDefinitions={false}`
-// removes once `FLAG_CONSOLE_ENABLED` is on. With the gate on they would fail on TIMEOUTS, which
-// read as flakes rather than as "this surface moved".
+// Sprint 2 guarded them with `legacyStackOnly()` because their selectors (`locator('article')`,
+// `Activate v1`) live in the stack the console removes, and stated the cost: with the gate on they
+// had no cover at all. That debt is paid here.
 //
-// The `authed` project is opt-in and NOT in the merge gate (playwright.config.ts), so that
-// breakage would have been silent until someone ran the suite by hand — the "a suite outside the
-// gate must be run on purpose" trap in LEARNINGS. Found by the fresh HIGH-tier reviewer, PR #120.
-//
-// Skipped rather than rewritten, deliberately and with the cost stated: porting these assertions to
-// the destination is real work (three suites, ~200 lines, new selectors) and this sprint's appetite
-// is spent. What must NOT happen is flipping the gate in production while believing this suite
-// still covers the surface. Sprint 3, Story 3.4 owns the port — it is the story whose whole job is
-// "guards and specs reach the new surfaces" — and sprint-3.md now names these three suites.
-const legacyStackOnly = () =>
-  test.skip(
-    isFlagConsoleEnabled(),
-    'drives the legacy per-flag stack, which FLAG_CONSOLE_ENABLED replaces — ported in Sprint 3, Story 3.4'
-  )
+// They now FOLLOW the move via `gotoFlag` / `flagOf` / `turnOnInDevelopment`, so the same assertions
+// run on both sides of the flip. That is deliberately stronger than pinning either state: the one
+// moment this coverage matters most is DURING a flip, when a regression would otherwise look like
+// the flip working.
 
 test.describe('the visual rule builder', () => {
-  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'the builder is gated; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
@@ -117,6 +172,9 @@ test.describe('the visual rule builder', () => {
   test('a rule built from controls stores 10% as 1000 basis points', async ({ page }) => {
     const slug = tenantSlug()
     const key = flagKey()
+    // The BUILDER stays on the flags page in both gate states — Sprint 3 deliberately kept
+    // authoring there, because the per-feature destination only versions a flag you can already
+    // click. Only the verification below has to follow the move.
     await page.goto(`/app/flags/${slug}`)
 
     const builder = page.locator('.rule-builder')
@@ -233,7 +291,6 @@ test.describe('the visual rule builder', () => {
 // it is the surface that can express a metadata entry, which is what Story 2.3's fallback case
 // needs, and it keeps these assertions independent of the builder's own controls.
 test.describe('rollout bars and the version diff', () => {
-  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'Sprint 2 renders behind the same gate as the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
@@ -263,7 +320,7 @@ test.describe('rollout bars and the version diff', () => {
   test('every environment gets a bar and production is set apart', async ({ page }) => {
     const slug = tenantSlug()
     const key = flagKey()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoFlag(page, slug, key, 'history')
     await createVersion(page, key, definition(), 'Rollout bar smoke.')
 
     const rows = flagOf(page, key).locator('.rollout-bar__row')
@@ -295,7 +352,7 @@ test.describe('rollout bars and the version diff', () => {
 
     const slug = tenantSlug()
     const key = flagKey()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoFlag(page, slug, key, 'history')
     await createVersion(page, key, definition(), 'Rollout bar activation smoke.')
 
     // Scoped to the development cell by the environment's own label rather than by position —
@@ -325,7 +382,7 @@ test.describe('rollout bars and the version diff', () => {
     // only true statement about what the PM did, and this asserts it survives the whole stack.
     const slug = tenantSlug()
     const key = flagKey()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoFlag(page, slug, key, 'history')
     await createVersion(page, key, definition(), 'Initial 10% rollout.')
 
     const widened = definition()
@@ -346,7 +403,7 @@ test.describe('rollout bars and the version diff', () => {
     // deliberately does not describe. It must not invent a description and must not show nothing.
     const slug = tenantSlug()
     const key = flagKey()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoFlag(page, slug, key, 'history')
     await createVersion(page, key, definition(), 'Initial 10% rollout.')
     await createVersion(page, key, definition({ metadata: { owner: 'growth' } }), 'Record the owner.')
 
@@ -369,7 +426,6 @@ test.describe('rollout bars and the version diff', () => {
 // It also proves the read-only claim (Story 3.1's last criterion) the only way it can be proved:
 // count the versions before and after.
 test.describe('preview as a user', () => {
-  legacyStackOnly()
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
     'the preview is gated with the builder; this pass needs FLAG_RULE_BUILDER_ENABLED=true'
@@ -416,15 +472,9 @@ test.describe('preview as a user', () => {
     await page.goto(`/app/flags/${slug}`)
     await createVersion(page, key, previewDefinition, 'Preview smoke.')
 
-    const flag = flagOf(page, key)
-    await flag
-      .locator('td div')
-      .filter({ has: page.getByText('development', { exact: true }) })
-      .getByRole('button', { name: 'Activate v1' })
-      .click()
-    await expect(page.getByRole('status').filter({ hasText: 'Activated v1 in development' })).toBeVisible()
+    await turnOnInDevelopment(page, slug, key)
 
-    const preview = flag.locator('.flag-preview')
+    const preview = flagOf(page, key).locator('.flag-preview')
     await expect(preview).toBeVisible()
     // Story 3.3's empty state: it tells a PM what to do rather than showing a blank result.
     await expect(preview.locator('.flag-preview__empty')).toBeVisible()

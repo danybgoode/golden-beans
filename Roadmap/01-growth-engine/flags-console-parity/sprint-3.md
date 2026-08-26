@@ -9,25 +9,24 @@ is **merged** as `62bf561` and live in production dark).
 | 3.1 Credentials route | `cf633b1` | Owner-only via `requireProjectOwnership` — **tighter** than the flags page. Revoke copy moved verbatim. |
 | 3.2 Audit route | `cf633b1` | **Member-readable**, deliberately — the trap next to an owner-only sibling. Now names the flag and version. |
 | 3.3 One vocabulary | `8113b52` | The module *and* the sweep spec; caught a real capability bug (below). |
-| 3.4 Guards and specs | `8113b52` + `878d97e` | ⚠️ **PARTIAL — see below.** Mobile rail entries (gated), the dark spec extended, the vocabulary sweep. |
+| 3.4 Guards and specs | `8113b52` + `878d97e` + the port | ✅ **COMPLETE.** Mobile rail entries, the dark spec extended, the vocabulary sweep, **the three suites ported**, and an authed spec on both new routes. |
 
-> ### ⚠️ Story 3.4 is PARTIAL, and the remainder is named rather than implied
+> ### ✅ Story 3.4 is COMPLETE — the port landed
 >
-> What landed: both new routes in `AUTHED_MOBILE_ROUTES` (gate-guarded), `e2e/flag-console-dark.spec.ts`
-> extended to both, and the D7 vocabulary sweep.
->
-> **What did NOT land, and is owed before the gate is flipped:**
-> 1. **The three `legacyStackOnly()` suites are still not ported.** `flag-rule-builder.authed.spec.ts`
->    still says *"ported in Sprint 3, Story 3.4"* and is untouched.
-> 2. **Neither new route has an authed spec asserting its rendered surface.** The dark spec proves the
->    gate; nothing proves the credentials page mints or the audit page lists.
-> 3. **`flag-sync-keys.authed.spec.ts` now FOLLOWS the move** (it picks its URL from the gate) — so the
->    mint/revoke flow keeps coverage in both states. That was a genuine coverage hole found by the
->    fresh reviewer on PR #121, and it is the **fourth** instance in this epic of something being left
->    pointing at a surface that moved.
->
-> Marking this ✅ while (1) and (2) were open would have been the same defect this epic keeps paying
-> for: a doc asserting a property the code does not have.
+> It shipped PARTIAL and is now closed:
+> 1. **The three `legacyStackOnly()` suites are ported.** They FOLLOW the move rather than pinning
+>    either state — `gotoFlag` / `flagOf` / `turnOnInDevelopment` resolve to the article stack while
+>    dark and to the per-feature destination while lit, so the same assertions run on both sides of
+>    the flip. That is deliberately stronger than porting them to the new surface alone: the moment
+>    this coverage matters most is DURING a flip, when a regression would otherwise look like the
+>    flip working.
+> 2. **`e2e/flag-console.authed.spec.ts` asserts the RENDERED surfaces** — the list and its
+>    URL-driven filters, the credentials route's two tables and two mint forms, the audit route's
+>    sentences (and that it never renders `definition_created` / `activated` / `deactivated`), the
+>    per-feature destination's three tabs, and — from the side that lost them — that the flags page
+>    no longer carries the credential forms while the console owns them, **but still carries the
+>    authoring form**, which is the near-miss Story 3.3 caught.
+> 3. `flag-sync-keys.authed.spec.ts` already follows the move (Sprint 3's fourth capability-loss fix).
 
 > ### ⚠️ Story 3.3 caught a capability bug — the third of its kind this epic
 >
