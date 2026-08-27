@@ -414,6 +414,33 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A17 — ⚠️ **The three legacy credential routes are NOT redirected. They keep their forms.** *(2026-08-27, deviation from Story 2.3)*
+
+Story 2.3 says: *"The three old routes stay reachable and redirect here while the gate is on."*
+**They stay reachable; they are not redirected**, and the difference is the ordering rule this epic
+exists to respect.
+
+Minting is not merged in this sprint — the story's own escape hatch allows exactly that (*"if the
+three pages' minting forms turn out to have materially different shapes, ship the LIST merged and
+leave minting on the existing routes — and say so"*), and they do differ materially: `flag_read`
+needs an environment, `flag_sync` needs a source string, `agent_write` needs an expiry from an
+allow-list, ingest needs none of those.
+
+So `/app/keys`, `/app/flag-credentials` and `/app/agent-keys` remain **the only surfaces that can
+issue those credentials.** A redirect would send an owner who came to mint a key away from the one
+page that can mint it — a control removed before its replacement exists, which is the exact hazard
+A3, A7 and `flags-console-parity` Amendment 1 all record.
+
+**What actually happens with the gate on:** the three routes leave the NAV (A7's derived
+`legacy-keys` gate), `Setup › Keys` becomes the single place that answers *"what has access to this
+project"*, and every row there links to the surface that manages its kind. The list moved; the
+controls did not. Both surfaces work in both gate states, and neither is ever the only route to a
+control.
+
+**Consequence for Story 3.5:** nothing to unwind. There is no redirect to remove, and the three
+routes do not become dead — a later epic may merge the forms, at which point redirecting is safe
+because there would finally be somewhere to redirect *to*.
+
 #### A16 — ⚠️ **Sprint 1 made `header === null` permanently reachable; Story 3.5's deletion plan is corrected** *(2026-08-27)*
 
 `header === null` no longer means "the gate is off" — it means the console chrome does not apply, and

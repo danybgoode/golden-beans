@@ -151,8 +151,12 @@ I do not have to know which subsystem minted a key in order to find it.
 - Minting shows the key value **once**, on its own, with a copy button. It is never a value read back
   off a table.
 - Revoking names what stops working before asking to confirm.
-- The three old routes stay reachable and redirect here while the gate is on; with the gate off they
-  are untouched.
+- ⚠️ **CORRECTED by A17 — the three old routes stay reachable and are NOT redirected.** They keep
+  their minting forms, because minting is not merged this sprint (see the bullet below, which the
+  story itself anticipated) and they are therefore the only surfaces that can issue those
+  credentials. A redirect would send an owner who came to mint a key away from the one page that can
+  mint it. What changes with the gate on: they leave the NAV (A7), `Setup › Keys` becomes the single
+  answer to "what has access", and every row there links to the surface that manages its kind.
 - **This story is the one most likely to grow.** If the three pages' minting forms turn out to have
   materially different shapes, ship the *list* merged and leave minting on the existing routes —
   and say so. A half-merged page that still answers "what has access to this project" is worth more

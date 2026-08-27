@@ -269,7 +269,9 @@ test('every credential surface is reachable in BOTH gate states — never zero',
     )
     // And specifically: something in Setup answers "what has access to this project".
     const answersAccess = setup.some((link) =>
-      consoleShell ? link.routeSegment === mergedCredentialRoute : legacyCredentialRoutes.includes(link.routeSegment)
+      consoleShell
+        ? link.routeSegment === mergedCredentialRoute
+        : legacyCredentialRoutes.includes(link.routeSegment)
     )
     assert.ok(answersAccess, `no credential surface in Setup with console-shell=${consoleShell}`)
   }

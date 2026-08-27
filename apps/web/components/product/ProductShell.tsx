@@ -128,7 +128,15 @@ export async function ProductShell({
                 </details>
               )}
 
-              <a href="/install">
+              {/* Story 2.2 — where `Connect` goes depends on whether we know whose project this is.
+                  A signed-in member goes to THEIR connector URL; an anonymous visitor (the two demo
+                  dashboards render this branch) still goes to `/install`, which serves the demo
+                  project's token and is correct for them under AGENTS rule #2.
+
+                  The defect was never `/install` itself. It was sending a signed-in operator there,
+                  where they would copy a working URL for somebody else's data. `/install` is
+                  byte-identical this sprint; only this href moved. */}
+              <a href={activeProject ? `/app/setup/connect/${activeProject.slug}` : '/install'}>
                 <Icon name="cable" />
                 Connect
               </a>

@@ -16,9 +16,7 @@ export function generateConnectorToken(): string {
   return `${TOKEN_PREFIX}${randomBytes(24).toString('base64url')}`
 }
 
-export type ResolvedConnectorToken =
-  | { ok: true; projectId: string; projectSlug: string }
-  | { ok: false }
+export type ResolvedConnectorToken = { ok: true; projectId: string; projectSlug: string } | { ok: false }
 
 // Same 401 for "malformed", "unknown", and "revoked" — no oracle on which reason, matching the
 // mb pattern this is lifted from.
@@ -71,4 +69,117 @@ export async function getActiveConnectorUrl(projectSlug: string): Promise<string
   if (tokenError || !tokenRow) return null
 
   return `${getSiteUrl()}/api/v1/public/mcp/c/${tokenRow.token}`
+}
+
+// console-ia-overhaul · Sprint 2, Story 2.1 (epic README, A10) — the signed-in Connect surface.
+
+export type ConnectorStatus =
+  | { state: 'absent' }
+  /** `tokenId` is the row id, for the revoke path. NOT the token — that is the credential itself. */
+  | { state: 'active'; url: string; createdAt: string; tokenId: string }
+
+/**
+ * What `Setup › Connect` can honestly say about this project's connector.
+ *
+ * ── Two states, and "last used" is deliberately NOT one of them (A10) ─────────────────────────
+ * The story originally asked for "Connected · last used <when>". There is no source of truth for
+ * that anywhere in this product: `connector_tokens` has five columns (`id, project_id, token,
+ * revoked_at, created_at`), the MCP route resolves a token and writes nothing, and `audit_log` has
+ * no connector action among its thirteen. Answering it would need a migration plus a write on a
+ * public read path.
+ *
+ * Daniel's decision (2026-08-27) was to drop it rather than build it, so this returns what the data
+ * supports: a URL exists since a date, or it does not exist. **The page must say, in words, that a
+ * URL existing is not the same as Claude having used it** — a status line that blurs those is the
+ * `CODE-QUALITY` rule 3 defect of prose asserting a property the system cannot observe.
+ *
+ * Read-only, like `getActiveConnectorUrl` above and for the same reason: a page render must never
+ * mint a credential as a side effect.
+ */
+export async function getConnectorStatus(projectId: string): Promise<ConnectorStatus> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('connector_tokens')
+    .select('id, token, created_at')
+    .eq('project_id', projectId)
+    .is('revoked_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  // A failed read is `absent`, which is the safe direction: the page offers to mint, and minting is
+  // an explicit owner action that would surface its own error. Reporting `active` on a failed read
+  // would show a reader a URL that is not there.
+  if (error) {
+    console.error('[connector-tokens] status lookup failed:', error)
+    return { state: 'absent' }
+  }
+  if (!data) return { state: 'absent' }
+  return {
+    state: 'active',
+    url: `${getSiteUrl()}/api/v1/public/mcp/c/${data.token}`,
+    createdAt: data.created_at as string,
+    tokenId: data.id as string,
+  }
+}
+
+export type MintedConnectorToken =
+  { ok: true; url: string; tokenId: string } | { ok: false; reason: 'already-active' | 'write-failed' }
+
+/**
+ * Mint this project's connector token — the FIRST self-serve connector credential in the product.
+ *
+ * `getActiveConnectorUrl`'s comment says "v1 has no self-serve token minting", and that was true
+ * until Daniel authorized this (A10). Building the surface is this epic's work; **pressing it
+ * against production is his, by name.**
+ *
+ * ── Refuses when one is already active, and that is not politeness ────────────────────────────
+ * `getActiveConnectorUrl` and `getConnectorStatus` both take the NEWEST unrevoked row, so minting a
+ * second would silently orphan the first: still valid, still authorizing reads, and no longer
+ * visible on any screen. A credential you cannot see is a credential you cannot revoke. Rotation is
+ * therefore revoke-then-mint, two deliberate acts, rather than a mint that quietly leaves a live key
+ * behind it.
+ *
+ * The caller re-checks ownership AND `CONNECTOR_ENABLED` before reaching here (AGENTS rule #3: the
+ * two kill switches are independent, and minting the second must never route around the first).
+ */
+export async function mintConnectorToken(projectId: string): Promise<MintedConnectorToken> {
+  const supabase = getSupabaseServiceClient()
+  const existing = await getConnectorStatus(projectId)
+  if (existing.state === 'active') return { ok: false, reason: 'already-active' }
+
+  const token = generateConnectorToken()
+  const { data, error } = await supabase
+    .from('connector_tokens')
+    .insert({ project_id: projectId, token })
+    .select('id')
+    .single()
+  if (error || !data) {
+    console.error('[connector-tokens] mint failed:', error)
+    return { ok: false, reason: 'write-failed' }
+  }
+  return { ok: true, url: `${getSiteUrl()}/api/v1/public/mcp/c/${token}`, tokenId: data.id as string }
+}
+
+/**
+ * Revoke a connector token, scoped to the project that owns it.
+ *
+ * `project_id` is in the WHERE clause, not just the id: pod-report S3's cross-review established
+ * that an endpoint whose mutation is not discriminator-scoped lets a caller revoke a row they can
+ * name while the audit trail records the wrong thing. Here it means a token id from another project
+ * matches nothing rather than being revoked under this project's audit label.
+ */
+export async function revokeConnectorToken(projectId: string, tokenId: string): Promise<boolean> {
+  const supabase = getSupabaseServiceClient()
+  const { data, error } = await supabase
+    .from('connector_tokens')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('id', tokenId)
+    .eq('project_id', projectId)
+    .is('revoked_at', null)
+    .select('id')
+  if (error) {
+    console.error('[connector-tokens] revoke failed:', error)
+    return false
+  }
+  return (data?.length ?? 0) > 0
 }

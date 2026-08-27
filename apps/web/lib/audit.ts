@@ -28,6 +28,14 @@ export type AuditAction =
   // Metadata carries the row id, the lens and the label — never the token.
   | 'report_share_minted'
   | 'report_share_revoked'
+  // console-ia-overhaul · Sprint 2, Story 2.1 — the connector credential's lifecycle, and the gap
+  // this closes is worth naming: production carries THIRTEEN distinct audit actions and not one of
+  // them is connector-related, so until now a credential authorizing reads of a tenant's data could
+  // be created and revoked leaving no trace anywhere. Minting was not self-serve before (A10), which
+  // is how the gap survived — but the token could still be revoked, silently.
+  // Metadata carries the row id only; the token IS the credential and never appears here.
+  | 'connector_token_minted'
+  | 'connector_token_revoked'
   // signals-loop · Sprint 2, Story 2.2 — the task lifecycle. ONE action with the transition in its
   // metadata, rather than task_claimed/task_resolved/task_dismissed as separate labels: the three
   // share a single code path (transition_task), and three labels over one path is how a record ends
