@@ -11,7 +11,7 @@ import {
   isSignupEnabled,
 } from '@/lib/flags'
 import { getProjectSurfaceLinks } from '@/lib/project-route-inventory'
-import { SignOutButton } from './sign-out-button'
+import { SignOutButton } from '@/components/product/SignOutButton'
 import { ProductShell } from '@/components/product/ProductShell'
 import { CommandCenter } from '@/components/product/CommandCenter'
 

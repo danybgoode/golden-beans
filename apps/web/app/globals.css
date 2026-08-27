@@ -1092,7 +1092,9 @@ body {
 
 /* app-shell-and-agent-rail S1.3 — the section nav.
    One disclosure serves both widths: a pull-up sheet on a phone, an inline wrapping row from
-   720px up (see the @media block below). `list-style: none` on the summary is Safari's
+   640px up (see the @media block below — the breakpoint this comment claimed was 720px until
+   2026-08-27; cross-review found the discrepancy, and it had been wrong since the rule was written).
+   `list-style: none` on the summary is Safari's
    requirement, not a preference — without it the marker triangle survives ::-webkit-details-marker
    removal in some versions. */
 .product-shell__sections summary {
@@ -1157,7 +1159,7 @@ body {
    These rules sit ABOVE `.product-shell main` and below the legacy `__sections` block on purpose:
    a selector gets ONE base block and it goes above every override of it (LEARNINGS — the same
    cascade defect landed three times in one epic in this file). The mobile/desktop switch for
-   `.product-shell__header nav` in the 720px media query already covers `__tabs`, which is why
+   `.product-shell__header nav` in the 640px media query already covers `__tabs`, which is why
    `__tabs` is a second class on the same element rather than a replacement for `__nav`. */
 .product-shell__tab {
   white-space: nowrap;

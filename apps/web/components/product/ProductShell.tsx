@@ -3,7 +3,7 @@ import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
 import { railLinksFor, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
-import { SignOutButton } from '@/app/app/sign-out-button'
+import { SignOutButton } from './SignOutButton'
 import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
 import { CommandPalette } from './CommandPalette'
@@ -81,7 +81,7 @@ export async function ProductShell({
                 able to break all of them at once. Native disclosure also works before hydration.
 
                 One element serves both widths — a pull-up sheet above the bottom tab bar on a phone, a
-                dropdown under the header from 720px up. It is NOT expanded inline on desktop because
+                dropdown under the header from 640px up. It is NOT expanded inline on desktop because
                 revealing a closed <details>' content with CSS is not reliable across engines, and the
                 alternative (rendering the list twice and hiding one copy per width) would read every
                 section name twice to a screen reader.
