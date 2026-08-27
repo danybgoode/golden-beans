@@ -1308,6 +1308,19 @@ body {
   text-transform: uppercase;
 }
 
+/* console-ia-overhaul S2.3 — the credential inventory's two-line cell.
+   `<small>` is inline by default, so the name and the capability ran together as "first keyAPI key
+   — …" with no break. Caught by looking at the render, not by any assertion: the text was all
+   present and correct, and only its layout was wrong. Scoped to this table so no other `.data-table`
+   inherits a block `small`. */
+.credential-cell small {
+  display: block;
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* console-ia-overhaul S1.5 — the ⌘K palette. One base block per selector, above any override. */
 .command-palette {
   position: fixed;

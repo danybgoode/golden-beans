@@ -73,8 +73,16 @@ test.describe('Setup surfaces with the console on', () => {
     expect(response?.status()).toBe(200)
 
     // The fixture provisions one ingest key at signup, so there is at least one row to read.
-    await expect(page.getByRole('columnheader', { name: 'What it may do' })).toBeVisible()
-    await expect(page.locator('main')).toContainText('Send events into this project')
+    //
+    // Asserted on the CAPABILITY SENTENCE, not on a column header. The header was "What it may do"
+    // until the table went from seven columns to four (the seven-column version put "Manage" off
+    // the right edge between the two rails, and was unreadable at 390px) — the capability now sits
+    // under the credential's name. The sentence is the deliverable; which column it lives in is
+    // layout, and a spec pinned to the layout broke the moment the layout was fixed.
+    await expect(page.getByRole('columnheader', { name: 'Credential' })).toBeVisible()
+    await expect(page.locator('table')).toContainText('Send events into this project')
+    // The kind is still named, just beside the capability rather than in its own column.
+    await expect(page.locator('table')).toContainText('API key')
 
     // The story's point: an operator must not need to know which subsystem minted a key. A scope
     // identifier leaking into the rendered page would defeat that.
@@ -98,7 +106,7 @@ test.describe('Setup surfaces with the console on', () => {
     await page.goto(`/app/setup/keys/${tenantSlug()}`)
     // Three of the five live scopes carry no expiry, so blank cells would be the common case — and
     // a blank cell reads as missing data rather than as "never expires".
-    const expiryCells = page.locator('table tbody tr td:nth-child(6)')
+    const expiryCells = page.locator('table tbody tr td:nth-child(4)')
     const count = await expiryCells.count()
     expect(count, 'no credential rows to check').toBeGreaterThan(0)
     for (let index = 0; index < count; index += 1) {

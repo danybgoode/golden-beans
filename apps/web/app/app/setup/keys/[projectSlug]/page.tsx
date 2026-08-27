@@ -89,31 +89,41 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
                   </caption>
                   <thead>
                     <tr>
-                      <th scope="col">Name</th>
-                      <th scope="col">Kind</th>
-                      {/* The story's actual deliverable. Plain words, from lib/credential-inventory.ts
-                          where the merge gate can read them — not a scope identifier. */}
-                      <th scope="col">What it may do</th>
+                      {/* FOUR columns, not seven, and that is a layout decision made by opening the
+                          page. Seven put "Manage" off the right edge: this route renders between the
+                          section rail and the agent rail, so `main` is ~540px at 1440 and the
+                          capability sentence is the widest thing on it. On a phone the same table
+                          was unreadable.
+
+                          The capability now sits UNDER the name — the same shape the rail uses for
+                          its descriptions — which reads better at every width and is the natural
+                          place for a sentence anyway. A green gate does not see this; a screenshot
+                          does. */}
+                      <th scope="col">Credential</th>
                       <th scope="col">Where</th>
                       <th scope="col">Created</th>
                       <th scope="col">Expiry</th>
-                      <th scope="col">Manage</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((row) => (
                       <tr key={`${row.kind}:${row.id}`}>
-                        <td>{row.label === '' ? 'untitled' : row.label}</td>
-                        <td>{credentialTitle(row.kind)}</td>
-                        <td>{row.capability}</td>
+                        <td className="credential-cell">
+                          <a href={manageHref(row.kind, projectSlug)}>
+                            {row.label === '' ? 'untitled' : row.label}
+                          </a>
+                          {/* The kind and what it may do, together, because they answer one
+                              question. The link above goes to the surface that mints and revokes
+                              this kind — which is why "Manage" no longer needs a column of its own. */}
+                          <small>
+                            {credentialTitle(row.kind)} — {row.capability}
+                          </small>
+                        </td>
                         {/* An em dash, not a blank: this kind has no scope, which is a fact rather
                             than missing data — the same reasoning as the expiry column. */}
                         <td>{row.scope ?? '—'}</td>
                         <td>{formatUtc(row.createdAt)}</td>
                         <td>{formatExpiry(row.expiresAt)}</td>
-                        <td>
-                          <a href={manageHref(row.kind, projectSlug)}>Manage</a>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
