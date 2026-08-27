@@ -142,6 +142,12 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
                 role="option"
                 aria-selected={index === cursor}
                 href={entry.href}
+                // OUT of the tab order on purpose. The input owns the keyboard here and points at
+                // the active row with `aria-activedescendant`; leaving the anchors tabbable meant
+                // Tab moved REAL focus onto a row, where the highlight (driven by `cursor`) and the
+                // focus ring pointed at different things and ↑/↓ stopped working — that handler is
+                // on the input. Escape still closes from anywhere, via the document listener.
+                tabIndex={-1}
                 onMouseEnter={() => setCursor(index)}
               >
                 {entry.label}
@@ -152,9 +158,15 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
         </ul>
         {/* An honest empty state rather than a silently empty list — the reader needs to know the
             query ran and matched nothing, not wonder whether the palette is broken. */}
+        {/* Two different empty states, because they are two different facts. A query that matched
+            nothing is the reader's search failing; an empty list with an EMPTY query means this
+            viewer is entitled to no surface at all (a zero-project session, gate on) — and
+            “Nothing here matches ””” would have been quoted emptiness rather than an answer. */}
         {matches.length === 0 && (
           <p className="command-palette__empty" role="status">
-            Nothing here matches “{query.trim()}”.
+            {query.trim() === ''
+              ? 'There is nothing here to go to yet.'
+              : `Nothing here matches “${query.trim()}”.`}
           </p>
         )}
       </div>

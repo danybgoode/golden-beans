@@ -237,3 +237,35 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(account.locator('p')).toContainText('@')
   })
 })
+
+// ── The zero-project session — OWED, and here is exactly what is and is not covered ───────────
+//
+// The fresh reviewer's S2 asked for an end-to-end guard on the state the original Blocking defect
+// lived in: gate ON, a signed-in user with no project, exactly one sign-out control. It is not in
+// this file, and that is a stated gap rather than an oversight.
+//
+// **What WAS verified, by hand, on 2026-08-27.** A version of this spec that removed the shared
+// fixture's `project_members` row caught the defect: with `shell-nav.ts`'s zero-project branch
+// reverted to its original `return EMPTY`, it failed with `Expected: 1, Received: 0` — the bug,
+// observed. Restored, it passed. So the guard works; what follows is why it could not ship.
+//
+// **Why the shared-fixture form cannot ship.** Playwright runs spec FILES in parallel. For the few
+// hundred milliseconds that row was missing, every other authed spec was pointed at a tenant with no
+// member — and `flag-rule-builder.authed.spec.ts` went red in the full run while passing alone. That
+// is the classic shared-fixture pollution tell, and a guard that breaks other tests is worse than no
+// guard.
+//
+// **Why the isolated form is not here yet.** Creating a second auth user and driving the real login
+// form in a hand-made `browser.newContext()` hung repeatedly (it does not inherit the project's
+// `use` options; passing `baseURL` explicitly did not resolve it). Four attempts is this repo's
+// escalate-don't-hammer threshold, so it stops here rather than absorbing more of the sprint.
+//
+// **What holds the property in the meantime, and it is not nothing.** The class is closed by
+// construction rather than by observation: `shellRendersAccountMenu` is ONE predicate, the shell
+// renders the menu when it is true and `/app` renders its line when it is false, and the predicate's
+// two inputs (`consoleEnabled`, `userEmail`) are provably independent of the arguments either caller
+// passes — pinned by `lib/console-shell.test.ts`. Exactly one of the two branches is taken for every
+// possible input, because they are complements of the same boolean.
+//
+// **What is therefore still uncovered:** that both call sites actually ASK that predicate. A future
+// edit re-introducing a separate condition on either side would not be caught by any test here.

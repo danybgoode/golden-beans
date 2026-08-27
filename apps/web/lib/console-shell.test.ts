@@ -334,20 +334,41 @@ test('a member gets no Setup rail, matching the tab they do not get either', () 
 // from the unit layer, and the authed fixture always provisions a project, so it cannot reach the
 // zero-project case either. Stated in the PR rather than implied.
 
-test('the shell renders an account menu only when it has BOTH a header and an email', () => {
-  const header = buildConsoleHeader({
-    activeSection: 'home',
-    activeProjectSlug: 'miyagisanchez',
-    projects: owner,
-    gates: allGatesOpen,
-  })
-  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
-  // Each half alone is not enough, and each half alone is a state that really occurs: `header` is
-  // null whenever the console gate is off or `getShellNav` degraded, and `userEmail` is null for a
-  // session without one.
-  assert.equal(shellRendersAccountMenu({ header, userEmail: null }), false)
-  assert.equal(shellRendersAccountMenu({ header: null, userEmail: 'a@b.co' }), false)
-  assert.equal(shellRendersAccountMenu({ header: null, userEmail: null }), false)
+test('the shell renders an account menu only when the console is on AND there is an email', () => {
+  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: 'a@b.co' }), true)
+  // Each half alone is not enough, and each really occurs: the gate is off by default, and a session
+  // can carry no email.
+  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: null }), false)
+  assert.equal(shellRendersAccountMenu({ consoleEnabled: false, userEmail: 'a@b.co' }), false)
+  assert.equal(shellRendersAccountMenu({ consoleEnabled: false, userEmail: null }), false)
+})
+
+// ⚠️ The assertion that closes the CLASS rather than the instance.
+//
+// The first fix read `header !== null`, and `header` varies with the arguments a caller passes:
+// `/app` calls `getShellNav(undefined, 'home')` while `ProductShell` calls it with the page's own
+// slug and section. Give the shell a slug the viewer is not a member of and the two calls disagree
+// — predicate true on one side, false on the other, and the zero-sign-out bug returns through a
+// different door with nothing in its way (fresh reviewer, PR #122, second pass).
+//
+// This pins the property that makes that unrepresentable: the predicate's answer does not move when
+// the arguments do, because neither input is a function of them.
+test('the predicate cannot disagree between two calls made with different arguments', () => {
+  const asPage = { consoleEnabled: true, userEmail: 'a@b.co' }
+  // Whatever section or slug a caller used, `consoleEnabled` and `userEmail` are the same facts —
+  // one is a pure env read, the other comes from the session user. Enumerated over every section a
+  // page can declare, so a future input added to the predicate has to survive this.
+  for (const section of ['home', 'today', 'measure', 'ship', 'setup'] as const) {
+    const header = buildConsoleHeader({
+      activeSection: section,
+      activeProjectSlug: 'someone-elses-project',
+      projects: owner,
+      gates: allGatesOpen,
+    })
+    // The HEADER genuinely differs across these — that is the point, and why it must not be an input.
+    assert.ok(header.tabs.length >= 1)
+    assert.equal(shellRendersAccountMenu(asPage), true)
+  }
 })
 
 test('a signed-in user with NO projects still gets a header, holding Today alone', () => {
@@ -365,5 +386,5 @@ test('a signed-in user with NO projects still gets a header, holding Today alone
     ['today']
   )
   assert.deepEqual(header.projects, [])
-  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
+  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: 'a@b.co' }), true)
 })

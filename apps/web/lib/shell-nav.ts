@@ -53,6 +53,16 @@ export type ShellNav = {
    */
   header: ConsoleHeader | null
   /**
+   * Is the console shell switched on for this request?
+   *
+   * Kept SEPARATE from `header` because the two answer different questions and one value cannot do
+   * both jobs: `header` is null when the gate is off AND when the nav could not be resolved, so
+   * anything branching on it conflates "the old chrome" with "we could not read your sections".
+   * `ProductShell` picks its chrome from this; `shellRendersAccountMenu` reads this and never
+   * `header`, so it cannot vary with the arguments a caller passed (see that function's comment).
+   */
+  consoleEnabled: boolean
+  /**
    * The signed-in address, for the console header's account menu. `null` when anonymous — the two
    * demo dashboards render this shell without a session.
    *
@@ -61,6 +71,20 @@ export type ShellNav = {
    * appears once either way.
    */
   userEmail: string | null
+}
+
+/**
+ * The header for a viewer entitled to nothing here — a zero-project session, or a slug they are not
+ * a member of. `buildConsoleHeader` finds no surface for an empty membership list, so this is the
+ * Today tab and nothing else, which is exactly right: `/app` is the only place they can go.
+ */
+function emptyHeader(activeSection: ShellSection) {
+  return buildConsoleHeader({
+    activeSection,
+    activeProjectSlug: '',
+    projects: [],
+    gates: readGates(),
+  })
 }
 
 /** The gate values, read once per call. One resolution point, two consumers (header and rail). */
@@ -74,7 +98,7 @@ function readGates(): ProjectSurfaceGates {
   }
 }
 
-const EMPTY: ShellNav = {
+const EMPTY: Omit<ShellNav, 'consoleEnabled'> = {
   activeProject: null,
   projects: [],
   links: [],
@@ -120,11 +144,14 @@ export async function getShellNav(
    */
   activeSection: ShellSection = 'home'
 ): Promise<ShellNav> {
+  // Read before anything can throw, so the chrome choice survives a nav-read failure: a pure env
+  // read cannot fail, and `ProductShell` needs it in every branch including the catch below.
+  const consoleEnabled = isConsoleShellEnabled()
   try {
     const user = await getSessionUser()
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
     // (lib/dashboard-auth.ts' allow-listed carve-out), and they use this same shell.
-    if (!user) return EMPTY
+    if (!user) return { ...EMPTY, consoleEnabled }
 
     const projects = await getUserProjects(user.id)
     // ── A signed-in user with NO project still gets the console chrome ────────────────────────
@@ -139,15 +166,9 @@ export async function getShellNav(
     if (projects.length === 0) {
       return {
         ...EMPTY,
+        consoleEnabled,
         userEmail: user.email ?? null,
-        header: isConsoleShellEnabled()
-          ? buildConsoleHeader({
-              activeSection,
-              activeProjectSlug: '',
-              projects: [],
-              gates: readGates(),
-            })
-          : null,
+        header: consoleEnabled ? emptyHeader(activeSection) : null,
       }
     }
 
@@ -162,7 +183,20 @@ export async function getShellNav(
     // No slug at all (the /app home) still defaults to the first project: there is nothing to
     // contradict there.
     const activeProject = projectSlug ? (projects.find((p) => p.slug === projectSlug) ?? null) : projects[0]
-    if (!activeProject) return EMPTY
+    // A foreign slug yields no SECTIONS — unchanged, and the tenancy reason above is why. What it no
+    // longer yields is the LEGACY chrome: with the console on, this now degrades to a console header
+    // holding Today alone, the same honest shape a zero-project session gets. Two states that both
+    // mean "you are entitled to nothing here" were being answered two different ways, and Story 3.5
+    // deletes the legacy branch — after which the old answer would have been a bare logo with no nav
+    // and no account menu (fresh reviewer, PR #122, second pass).
+    if (!activeProject) {
+      return {
+        ...EMPTY,
+        consoleEnabled,
+        userEmail: user.email ?? null,
+        header: consoleEnabled ? emptyHeader(activeSection) : null,
+      }
+    }
 
     // Read once, per render, and passed to both consumers. Two reads of the same gates could not
     // disagree today (they are pure env reads), but one resolution point is what keeps the header
@@ -172,13 +206,14 @@ export async function getShellNav(
     return {
       activeProject,
       projects,
+      consoleEnabled,
       userEmail: user.email ?? null,
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,
         gates,
       }),
-      header: isConsoleShellEnabled()
+      header: consoleEnabled
         ? buildConsoleHeader({
             activeSection,
             activeProjectSlug: activeProject.slug,
@@ -189,6 +224,6 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    return EMPTY
+    return { ...EMPTY, consoleEnabled }
   }
 }

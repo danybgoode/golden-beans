@@ -22,8 +22,13 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
  *              failure that matters here, because it is the one that unmounts the tree: verified by
  *              making the palette throw on open and watching the page survive, and then by REMOVING
  *              this boundary and watching one keystroke unmount the entire signed-in page.
- * DOES NOT:    a throw inside a React event handler (`onClick`, `onKeyDown`, …), or inside a native
- *              `addEventListener` callback. React does not route either to `getDerivedStateFromError`.
+ * DOES NOT:    (a) a throw inside a React event handler (`onClick`, `onKeyDown`, …); (b) a throw
+ *              inside a native `addEventListener` callback — React routes neither to
+ *              `getDerivedStateFromError`; and (c) the SERVER-render pass, where error boundaries do
+ *              not engage at all. (c) matters less than it sounds: `CommandPalette` returns `null` on
+ *              the server (`open` is false), so only its two pure `useMemo` bodies run there. Listed
+ *              because a DOES-NOT list presented as precise has to be complete — the second reviewer
+ *              pass caught this one missing from the first correction.
  *
  * An earlier version of this comment, and of `ProductShell`'s, said flatly that "a throw here
  * removes the palette and leaves the page" — true of the render path and overstated for the other

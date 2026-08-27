@@ -205,13 +205,23 @@ export function railLinksFor(
  * the gate exists.
  *
  * The fix is not a longer condition on `/app`. It is ONE predicate, asked by both sides: the shell
- * renders the menu when this is true, and the page renders its own line when it is false. They
- * cannot both be absent, because they branch on the same value rather than on two things that are
- * supposed to agree.
+ * renders the menu when this is true, and the page renders its own line when it is false.
+ *
+ * ── Why its inputs are deliberately the two that DO NOT vary with the caller ──────────────────
+ * `/app` and `ProductShell` each call `getShellNav` separately, with different arguments — the page
+ * passes `(undefined, 'home')`, the shell passes `(projectSlug, section)`. A first version of this
+ * predicate read `header !== null`, and `header` DOES depend on those arguments: give the shell a
+ * slug the viewer is not a member of and it degrades to `EMPTY`, while the page's own argument-free
+ * call still resolves one. Predicate true on one side, false on the other, and the zero-sign-out bug
+ * walks back in through a different door — with no compiler and no test in its way. Named exactly
+ * that way by the fresh reviewer's second pass on PR #122; the first fix closed the path, not the
+ * class.
+ *
+ * So it reads only `consoleEnabled` (a pure env read) and `userEmail` (from the session user).
+ * **Neither is a function of `projectSlug` or `activeSection`**, so two calls with different
+ * arguments cannot disagree about it. That is a property of the inputs rather than a promise about
+ * how callers spell their arguments, which is the difference between a fix and a guard.
  */
-export function shellRendersAccountMenu(nav: {
-  header: ConsoleHeader | null
-  userEmail: string | null
-}): boolean {
-  return nav.header !== null && nav.userEmail !== null
+export function shellRendersAccountMenu(nav: { consoleEnabled: boolean; userEmail: string | null }): boolean {
+  return nav.consoleEnabled && nav.userEmail !== null
 }

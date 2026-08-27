@@ -59,10 +59,13 @@
 say otherwise, **so that** it can merge in pieces without any of it reaching me half-built.
 **Acceptance:**
 - `CONSOLE_SHELL_ENABLED` is a new `isConsoleShellEnabled()` in `apps/web/lib/flags.ts`, exactly
-  `=== 'true'` like its **17** siblings — it is the eighteenth env gate. (`flags.ts` exports 21
-  functions, but three of those compose other gates rather than reading an env var; "20 siblings"
-  counted the composites. Corrected after the fresh reviewer noticed this file and `flags.ts`
-  disagreeing.) The comment names its **enablement** polarity.
+  `=== 'true'` like its **17** siblings — it is the eighteenth env gate. (`flags.ts` exports **22**
+  functions, **four** of which compose other gates rather than reading an env var: 22 − 4 = 18. The
+  original "20 siblings" counted composites; my first correction said "21 functions, three
+  composites" and was itself off by one in both terms — the right conclusion reached twice with the
+  wrong arithmetic, which the reviewer's second pass caught. Counted at HEAD this time, and it agrees
+  with `flags.ts`' own "eighteenth", with the 18 unique `process.env` reads, and with the
+  exhaustiveness test's floor.) The comment names its **enablement** polarity.
 - The flag is **created DISABLED in every environment** (local, preview, production). A flag that
   exists only in code is not created.
 - It is resolved **server-side** and passed down. No client reads `process.env`.
