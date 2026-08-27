@@ -1,6 +1,6 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 1: The shell
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all five stories built (`28d6955`, `7c84cfa`, `ce64b1e`, `e62a872`, `7489813`, `765ec58`)
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -126,18 +126,39 @@ nothing.
 - **Features are NOT indexed in this sprint** (D7 is unresolved and Story 3.4 owns it).
 **Risk:** low
 
-## Sprint QA
-- **api spec(s):** `e2e/console-shell-dark.spec.ts` — with the gate off, an unauthenticated GET of the
-  two Sprint-2 routes returns a flat **404** (dark means nonexistent, before auth). Plus unit specs on
-  `project-route-inventory.ts` (every surface sectioned; the union exhaustive) and on the palette's
-  pure filter function, extracted to a `lib/` seam so it is testable with zero DOM.
-- **Note on what the gate spec can and cannot assert:** it cannot assert "`/app` renders as it does
-  today" — that page is credential-gated and the `api` project only ever sees the login redirect,
-  identical with the gate on or off. `flags-console-parity` Sprint 1 corrected exactly this mistake.
-  It asserts the **route status** instead, and the byte-identical claim is carried by `git diff`.
-- **browser smoke owed:** yes, to the product owner — the header render with the gate on is
-  credential-gated. One opt-in `browser` spec can cover the anonymous half; the authed chrome is owed.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+## Sprint QA — what was actually run
+
+- ⚠️ **`e2e/console-shell-dark.spec.ts` was NOT written, and writing it here would have been a
+  tautology.** It was specced to assert that the two **Sprint-2** routes 404 while dark — but those
+  routes do not exist until Sprint 2, so a 404 from them proves only that Next.js 404s an absent
+  path. That is precisely the guard-that-cannot-fail this repo has shipped three times. **The dark
+  route spec moves to Sprint 2, with the routes it is about.**
+- **Sprint 1 changes NO anonymously-observable response at all.** `/app` redirects to `/login` in
+  both gate states, which is what the `api` project sees. So the coverage that means anything is:
+  - **Unit (in the blocking gate): 1,359 tests.** `console-shell.test.ts` (19) — tab set, exactly one
+    `current` for all five section values, a tab never rendering without a destination, the switcher
+    resolving the TARGET project's role, the rail's two no-rail cases.
+    `console-palette.test.ts` (13) — matching by label and by section, the honest no-match result, the
+    cursor total over an empty list. `project-route-inventory.test.ts` (9) — every surface sectioned,
+    no dead section, no placeholder in any href. `flags.test.ts` (205) — including the new
+    exhaustiveness guard.
+  - **`e2e/console-shell.authed.spec.ts` (NEW): 12 specs, run in BOTH gate states.**
+    Full authed suite: **59 passed / 0 failed** gate-off, **64 passed / 0 failed** gate-on.
+  - **`api` gate: 482 passed, 1 failed** — `scenario-registry.spec.ts:365`, **pre-existing**,
+    reproduced identically on clean `main` (e076b5d) in a throwaway worktree.
+- **Mutation checks, all observed red and restored from file copies:** the placeholder-href guard,
+  the "swap the key" description guard, an emptied section, Today given a rail, `getSectionEntryHref`
+  returning `''` instead of `null`, the flags-registry exhaustiveness guard in both directions, and
+  the palette's panel geometry (346px of slack against a 48px bound).
+- **A9 verified end to end, twice.** Palette throwing + boundary present → page intact. Palette
+  throwing + boundary **removed** → one keystroke unmounted the whole signed-in page. The second run
+  is what proves the guard is load-bearing.
+- **browser smoke still owed to the product owner:** the authed rail runs against a *disposable*
+  tenant with every gate open. It cannot tell you what `miyagisanchez` looks like in **production**,
+  where four gates are Production-only (A2) and the slug and data are real. That is the walkthrough
+  below, and it runs after Story 3.5's flip.
+- **deterministic gate:** lint · typecheck · 1,359 unit tests · build · design-drift ·
+  `format:changed` — all green.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
 
