@@ -56,6 +56,29 @@
 > route and its dark 404, the shell placement with no landing `Nav`/`Footer`/sales headline, the copy
 > button, the Add-to-Claude link, the docs link in place of the SDK snippet, Story 2.2 and Story 2.3.
 >
+> ### Live credential facts for Story 2.3, read from production 2026-08-27
+>
+> `miyagisanchez` has **five** active credential scopes, not four:
+>
+> | scope | active | total | carries an expiry |
+> |---|---|---|---|
+> | `ingest` | 2 | 3 | no |
+> | `flag_read` | 1 | 1 | yes |
+> | `flag_sync` | 1 | 3 | yes |
+> | `agent_write` | 1 | 1 | no |
+> | **`share`** | **2** | 2 | no |
+>
+> Two consequences the story must handle rather than discover:
+>
+> 1. **The page's promise is "everything that has access to this project", and the merged page will
+>    NOT list share links** — they are their own Setup surface (`/app/shares`), and a sixth scope
+>    (`flag_admin`) exists in the schema too. So the page must either include them or **say what it
+>    excludes**. A page that claims completeness and omits two live bearer tokens is worse than one
+>    that scopes its claim honestly.
+> 2. **Three of the five kinds carry no expiry at all**, so the "expiry" column is empty for most
+>    rows today. Render "no expiry" as words. A blank cell in a credentials table reads as "unknown",
+>    and unknown-vs-never is exactly the distinction an owner is scanning that column to make.
+>
 > ### The `Add to Claude` link is copy-then-paste, and that is verified, not assumed
 >
 > `https://claude.ai/customize/connectors?modal=add-custom-connector` takes **no URL parameter** —
