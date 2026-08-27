@@ -2,20 +2,95 @@
 
 **Status:** ⬜ not started
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D6`, `D7` and
-> `D9` from the epic README. Three of this sprint's five stories depend on a lock that must be done
-> against **live code and the live production registry**, not inferred:
+> ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
-> - **D6 gates Story 3.3.** Deleting the JSON stack is only safe if `[flagKey]/page.tsx` already
->   carries every control it removes. Verify that on `main` first. If anything is missing, 3.3 moves
->   behind the story that lands it — *"a half-landed redesign must never be the only route to that
->   control"* (`flags-console-parity`, Amendment 1).
-> - **D7 is an open either/or that Story 3.4 resolves**, with a measured number, not a preference.
-> - **D9 decides how big Story 3.2 is.** If TARS features and flag definitions are one registry the
->   tabs are trivial; if they are two, the tabs must say so honestly.
+> **Cite `D6`, `D7`, `D9`, `A2`, `A3`, `A4`, `A6` from the epic README. Do not re-derive them.**
+> Three of this sprint's five stories rested on a lock that had to be done against live code and the
+> live production registry. Two of those locks came back **disproved**, and the corrections below are
+> the contract — not the sentences they replace.
 >
-> **Story 3.5 is the only story in this epic that changes what a user sees in production.** It is a
-> product-owner merge.
+> **Where the rules live:** every user-facing flag word → `app/app/flags/[projectSlug]/flag-vocabulary.ts` ·
+> the three activation states and all list arithmetic → `lib/flag-list-view.ts` · gate polarity →
+> `lib/flags.ts` · "merge to `main` is the deploy, and a var needs a new deployment" → `AGENTS.md` rule #4.
+>
+> ### ⚠️ A3 — Story 3.3 is RE-SCOPED. D6 is a superset for four controls and NOT for the fifth.
+>
+> `[flagKey]/page.tsx` carries the insight, the preview, the immutable version list with its JSON,
+> per-environment on/off, and serve-any-version. It **cannot create a flag key that does not yet
+> exist** — it renders `<FlagAuthoring flagKey={flag.key} />`, fixed from the route.
+>
+> The `<form onSubmit={onCreate}>` in `flag-manager.tsx` (lines 386–427), whose `<h2>` reads *"Create an
+> immutable definition version"*, is **the only surface in the product that can create a new feature.**
+> `flag-manager.tsx` lines 429–436 already say so, because it nearly happened once already: *"there
+> would have been NO way to create a new flag at all… The authoring form therefore STAYS in both gate
+> states until something replaces it."* Story 3.3's own escape hatch — *"authoring remains possible on
+> the per-feature route"* — is **false**.
+>
+> **So Story 3.3 deletes the duplicate AND lands the replacement, in the same story:**
+> - **Deleted** (console gate ON only): the per-flag definitions stack, `RuleBuilder`, the raw-JSON
+>   authoring textarea, and the retired vocabulary — no `<textarea>`, no *"Create an immutable
+>   definition version"*, no *"Rules" / "Save" / "Show JSON"*.
+> - **Landed in the same commit:** a **"New feature"** control on the features list, written in
+>   `flag-vocabulary.ts` words, posting through the **same** `createFlagDefinitionVersionAction` — one
+>   write path, one validator (`flags-visual-rule-builder` A1).
+> - **Untouched:** the gate-off branch, byte-for-byte, provable by `git diff`.
+>
+> *This is LEARNINGS' rule applied before a builder could break it: land the replacement and retire the
+> original in the SAME story. Before retiring anything, enumerate what the old surface did and name each
+> item's new home — that enumeration is above, and creation is the row that had no home.*
+>
+> ### ⚠️ A4 — Story 3.2's tabs are EMPTY for 42 of 42 features, and the empty state is the deliverable.
+>
+> Live production, `miyagisanchez`, 2026-08-27: `features` (TARS) holds **1** row — `setup_guide`.
+> `flag_registries` holds **42**. **The join on `key` returns 0.** They are separate tables with separate
+> lifecycles and separate naming conventions, and not one flag has a TARS counterpart.
+>
+> Build the tabs. For every feature in the registry today they render the sentence naming *which*
+> absence this is — *"…is a feature flag. It has no funnel because nothing in the TARS registry is
+> measuring it"* — never a zero. Two hard constraints:
+>
+> 1. **The tab must not call `notFound()`.** `app/app/funnel/[projectSlug]/[featureKey]/page.tsx:26`
+>    does exactly that on `feature_not_found`. A tab that 404s the whole feature page because the *other*
+>    registry has no row is a regression caused by a missing measurement.
+> 2. **The "funnel renders numbers" spec belongs on `setup_guide`**, which is not a flag — so it lives at
+>    `/app/funnel/miyagisanchez/setup_guide`. The feature-page tab spec asserts the **empty state**.
+>    Asserting numbers on a flag's tab is a test that cannot pass.
+>
+> ### A6 — Story 3.4's shape, and the number it must state
+>
+> `GET /api/internal/feature-index/[projectSlug]` — `requireProjectMembership` first (no new auth
+> boundary), then the **existing** `getFlagRegistryView()`, projected **server-side** to
+> `{ key, description }[]`. Measured: the full registry is **5 round trips, 15,639 bytes of definition
+> JSONB and 55 audit rows**; the keys alone are **1,102 bytes**. Fetch on **first `⌘K`**, never on page
+> load. **The number Story 3.4 states: `/app` load cost is unchanged — zero added queries, zero added
+> bytes.** The one stated deviation is that this is a new *route* (no new SQL) — decided in A6, not
+> discovered here.
+>
+> ### Story 3.1 — where the arithmetic lives
+>
+> The grouping and collapse arithmetic goes in `lib/flag-list-view.ts` — pure, zero DOM, unit-tested,
+> extending `buildFlagListView`. Not in the component. The three states stay visually distinct **in the
+> switch itself** (on filled · turned off red · never-turned-on a dashed empty track): a plain
+> off-switch for "never" re-collapses the distinction `flags-console-parity` Amendment 2 paid to
+> separate, and **34 of 42 flags' latest version evaluates `false`**, so "activated ≠ on" is the common
+> case, not a corner.
+>
+> ### Story 3.5 — the flip
+>
+> Product-owner merge. `CONSOLE_SHELL_ENABLED=true` in **preview first, then production**, each via a
+> **commit to `main`** (AGENTS rule #4 — setting the var is half the job; never `vercel deploy`).
+> **Per A2, the gate-on walkthrough steps run on PRODUCTION**, because `FLAG_SERVING_ENABLED`,
+> `EXPERIMENT_GOVERNANCE_ENABLED`, `SIGNALS_ENABLED` and `JOURNEY_PROJECTIONS_ENABLED` are
+> Production-only and a preview therefore shows 9 surfaces where production shows 13.
+> **Only after the production flip is verified** are the dead header links, the `<details>` disclosure
+> and the gate-off branch deleted, and `isConsoleShellEnabled()` retired with them.
+>
+> ### Every new spec is observed failing at least once
+>
+> Especially 3.3's string assertions: break the deletion and watch them go red, or they are a tautology
+> that would also pass on an empty page. `landing-frijoles-rebrand` shipped three guards that could not
+> fail; `flags-visual-rule-builder`'s single most important check asserted nothing because Playwright's
+> `toContainText` normalises whitespace. **Assert on parsed values, not rendered substrings.**
 
 ## Stories
 
@@ -45,12 +120,18 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
 **Acceptance:**
 - `/app/flags/[projectSlug]/[flagKey]` gains **Funnel** and **Impact** tabs, reading the existing
   query libs with the key **from the route** — no picker, no placeholder, no new query.
-- A feature that is off, or has no measured counterpart, gets an **honest empty state** naming which
-  it is: "never turned on here, so there is nothing to measure" is different from "this feature is
-  not in the TARS registry" (D9).
+- ⚠️ **A4 — the honest empty state IS the deliverable, for 42 of 42 features today.** `features`
+  (TARS) holds **1** row for `miyagisanchez` — `setup_guide` — against **42** flag definitions, and the
+  join on `key` returns **0**. The tab names *which* absence this is ("…is a feature flag; nothing in
+  the TARS registry is measuring it") and never renders a zero.
+- **The tab must NOT call `notFound()`.** `app/app/funnel/[projectSlug]/[featureKey]/page.tsx:26` does
+  exactly that on `feature_not_found`; a tab that 404s the whole feature page because the *other*
+  registry has no row is a regression caused by a missing measurement.
 - `/app/funnel/[projectSlug]/[featureKey]` and `/app/impact/…` keep working and keep their URLs. Old
   links do not break; they simply stop being the only way in.
-- One spec asserts a feature page renders funnel numbers for a feature that is on.
+- **Two specs, because one cannot cover both:** funnel numbers are asserted at
+  `/app/funnel/miyagisanchez/setup_guide` (the only key that has any), and the feature-page tab spec
+  asserts the **empty state**. Asserting numbers on a flag's tab is a test that cannot pass.
 **Risk:** low
 
 ### Story 3.3 — Delete the JSON authoring stack and the rule builder
@@ -62,14 +143,23 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
   These currently render **regardless of `FLAG_CONSOLE_ENABLED`** because they sit outside the three
   `show*` props — that is the actual bug, and it is why `flags-console-parity` closed with them still
   on the page.
-- **D6 must be verified first:** `[flagKey]/page.tsx` carries the insight, the preview, the version
-  list, per-environment on/off and serve-any-version. The deletion removes a duplicate, not a
-  capability.
+- ⚠️ **A3 — D6 was verified and came back PARTIALLY DISPROVED.** `[flagKey]/page.tsx` carries the
+  insight, the preview, the version list, per-environment on/off and serve-any-version — and it
+  **cannot create a flag key that does not yet exist** (`<FlagAuthoring flagKey={flag.key} />`, fixed
+  from the route). The `<form onSubmit={onCreate}>` block in `flag-manager.tsx:386–427` is the **only**
+  surface in the product that can create a new feature, and lines 429–436 of that file already say so.
+- **So this story lands the replacement in the same commit as the deletion:** a **"New feature"**
+  control on the features list, in `flag-vocabulary.ts` words, posting through the **same**
+  `createFlagDefinitionVersionAction` — one write path, one validator. The deletion removes a
+  duplicate; without this control it would remove a capability.
 - The **gate-off branch is untouched** — with `FLAG_CONSOLE_ENABLED` unset the legacy page is
   byte-identical to `main`, provable by `git diff`.
 - A spec asserts the rendered page contains none of those strings with the gate on.
-- Authoring a definition by hand remains possible where it belongs (the per-feature route and the
-  catalog sync); this story removes the *console's* copy of it, not the capability.
+- ~~Authoring a definition by hand remains possible where it belongs (the per-feature route and the
+  catalog sync)~~ — **false for the per-feature route, corrected by A3.** Creating a *new* key remains
+  possible on the features list's new control (above) and through catalog sync; **versioning an
+  existing** key remains possible on the per-feature route. This story removes the console's
+  *duplicate*, not the capability.
 **Risk:** high (removes a control — the ordering rule applies)
 
 ### Story 3.4 — `⌘K` indexes feature keys
@@ -110,9 +200,14 @@ product has one navigation rather than two behind a switch.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-Env: production · `https://golden-beans-gamma.vercel.app` (preview URL while pre-merge)
+Env: **production · `https://goldenfrijoles.com`**, after Story 3.5's flip.
 
-1. With the gate on, open `https://golden-beans-gamma.vercel.app/app/flags/miyagisanchez`.
+⚠️ Two corrections to what this walkthrough used to say. The host is `goldenfrijoles.com` (the
+product was renamed in `landing-frijoles-rebrand`; `golden-beans-gamma.vercel.app` is the old
+deployment host). And per A2 there is **no useful pre-merge preview run** for these steps —
+`FLAG_SERVING_ENABLED` is Production-only, so the flags page's own gate is closed on a preview.
+
+1. With the gate on, open `https://goldenfrijoles.com/app/flags/miyagisanchez`.
    → You see **two feature rows** and one line reading "N features have never been turned on in
    Production". No scrolling needed to reach the bottom of the list.
 2. Use your browser's find-on-page for `immutable`, then for `JSON`.
@@ -122,12 +217,21 @@ Env: production · `https://golden-beans-gamma.vercel.app` (preview URL while pr
 4. Click `checkout.stripe_enabled`.
    → Its own page opens with tabs including **Funnel** and **Impact**.
 5. Click **Funnel**.
-   → Targeted / Adopted / Retained numbers render. You did not type a key anywhere.
+   → ⚠️ **Expect a sentence, not numbers, and that is CORRECT (A4).** It reads that this is a feature
+   flag and nothing in the TARS registry is measuring it. Production holds **1** TARS feature
+   (`setup_guide`) against **42** flags, and the two sets do not intersect at all. The old walkthrough
+   promised numbers here; they cannot exist, and the sentence is what the tab was worth building for.
 6. Click **Impact**.
-   → Either real numbers, or a sentence naming exactly why there are none.
+   → The same shape: a sentence naming exactly why there are no numbers.
+6b. Open `https://goldenfrijoles.com/app/funnel/miyagisanchez/setup_guide`.
+   → **Targeted / Adopted / Retained numbers render.** This is the one key in this tenant that has a
+   funnel, and it proves the read path works — the empty tabs above are an honest absence, not a break.
+6c. On the features list, click **New feature**.
+   → A creation form opens, in plain words, with no JSON. **This is A3's replacement control** — it
+   must exist, because this story deleted the only other way to create a feature.
 7. Press `⌘K` and type `stripe`.
    → `checkout.stripe_enabled` appears as a Feature. Press `↵` — it opens.
-8. Open `https://golden-beans-gamma.vercel.app/llms.txt`.
+8. Open `https://goldenfrijoles.com/llms.txt`.
    → The manifest still serves. Only its nav link is gone.
 9. From `/app`, reach **every** section of the product using only clicks and `⌘K`.
    → No step requires editing a URL. *(This is the epic's acceptance test.)*

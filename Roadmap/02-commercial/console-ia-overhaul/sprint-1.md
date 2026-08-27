@@ -2,15 +2,52 @@
 
 **Status:** ⬜ not started
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D1`, `D2`,
-> `D3` and `D4` from the epic README. Do not re-derive them. In particular: the nav is generated
-> from the inventory (D2) and **the gate stays OFF for the whole epic** (D4) — this sprint merges
-> dark by construction, and that is what makes the rest of it safe to build.
+> ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
-> **This sprint touches the shared surface every other branch inherits** — `ProductShell` wraps every
-> signed-in route, and `project-route-inventory.ts` is imported by the shell *and* `/app`. Per
-> WAYS-OF-WORKING → *Assembly line, not a relay*, shared-surface work is done **first and by the
-> architect**, not fanned out.
+> **Cite `D1`, `D2`, `D3`, `D4`, `A1`, `A2`, `A7`, `A8`, `A9` from the epic README. Do not re-derive
+> them.** A paraphrased contract drifts permissive; if something here looks wrong, escalate — do not
+> reinterpret.
+>
+> **Where the rules live (imported, never restated):** gate polarity and `=== 'true'` →
+> `apps/web/lib/flags.ts`'s own comments · what a surface is → `lib/project-route-inventory.ts` ·
+> auth → `lib/dashboard-auth.ts` · house style → `CODE-QUALITY.md` · tenancy → `AGENTS.md` rules #1–#5.
+>
+> ### The five things this sprint may not get wrong
+>
+> 1. **The gate stays OFF for the whole epic (D4).** This sprint merges dark by construction, and that
+>    is what makes Sprints 2 and 3 safe to build. `CONSOLE_SHELL_ENABLED` is created **DISABLED in all
+>    three Vercel scopes** before the PR merges — a flag that exists only in code is not created.
+> 2. **The nav is generated from the inventory (D2).** A hardcoded list in `ProductShell` is forbidden
+>    by `lib/shell-nav.ts`'s own D1 comment. `section` is a **closed union**, so a new surface without
+>    a section is a compile error at every caller — the same technique and the same reason as
+>    `ProjectSurfaceGate`.
+> 3. **`DEFAULT_FEATURE_HINT` has FOUR references and all four die together (D3):**
+>    `lib/shell-nav.ts:44` (declares) · `lib/shell-nav.ts:96` (uses) · `app/app/page.tsx:13` (imports) ·
+>    `app/app/page.tsx:90` (uses), plus the two literal `'your-feature-key'` strings in
+>    `lib/project-route-inventory.test.ts:38,66`. Leaving any one of them is leaving the constant alive
+>    with one user. `grep -rn "your-feature-key" apps/web` must return nothing outside this epic's docs.
+> 4. **`ProductShell` gains a REQUIRED `section` prop (A8), and there are 18 call sites.** Required, not
+>    optional: the compiler is what makes "every page declares where it lives" true. No client island
+>    reading `usePathname()` — the file's own comments forbid it twice, and for a reason.
+> 5. **The palette fails to nothing (A9).** There is no `ErrorBoundary` anywhere in `apps/web` today, so
+>    Story 1.5 writes one. The pure filter lives in `lib/` with zero DOM imports and unit tests; the
+>    client component is wrapped so a throw renders `null` rather than taking down every signed-in
+>    route. **Mutation-check it by throwing on purpose** — an unobserved guard is not a guard.
+>
+> ### Shared surface — architect-built, first
+>
+> Stories **1.1, 1.2 and 1.3** are built by the architect and are **not fanned out**: `flags.ts`,
+> `project-route-inventory.ts` and `ProductShell` are imported by every signed-in route, so every
+> branch opened after them inherits them and every branch opened before them conflicts.
+> Stories **1.4 and 1.5** route to **Codex** (`--tier build`) over this locked contract.
+>
+> ### What Sprint 1 does NOT do
+>
+> - It does **not** index features in `⌘K` (that is Story 3.4, over A6's resolution).
+> - It does **not** delete `Home` / `Sections` / `Connect` / `Agent notes` from the file — only hides
+>   them with the gate on. Deletion is Story 3.5, **after** the production flip is verified.
+> - It does **not** add the `'console-shell'` or `'legacy-keys'` gate values (A7) — those arrive in
+>   Sprint 2 with the routes that need them, in one commit with all three `ProjectSurfaceGates` callers.
 
 ## Stories
 
@@ -99,16 +136,28 @@ nothing.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: preview · `https://<branch-preview>.vercel.app` (production URLs once merged)
 
-1. Open `https://<preview>/app` while `CONSOLE_SHELL_ENABLED` is unset.
+⚠️ **Each step names its own environment, and that is A2, not fussiness.**
+`FLAG_SERVING_ENABLED`, `EXPERIMENT_GOVERNANCE_ENABLED`, `SIGNALS_ENABLED` and
+`JOURNEY_PROJECTIONS_ENABLED` are **Production-only** — a branch preview shows **9** surfaces where
+production shows **13**, so Flags, Experiments, Journeys and Tasks are all legitimately missing from a
+preview's rail. Steps 1–3 (the dark state) run on **preview**, because they depend on no other epic's
+gate. Steps 4–7 (the lit state) run on **production, after Story 3.5's flip**, where the sentence
+"Features, Experiments and Activity" is actually true.
+
+### On preview — `https://<branch-preview>.vercel.app`, gate unset
+
+1. Open `https://<preview>/app`.
    → The header looks exactly as it does today: logo, Home, Sections, Connect, Agent notes.
 2. Open `https://<preview>/app/setup/connect/miyagisanchez` in a private window.
    → A plain **404** page. Not a login redirect — dark means the route does not exist.
-3. Set `CONSOLE_SHELL_ENABLED=true` in the preview scope and **push a commit** to the branch (per
-   AGENTS rule #4 the var only reaches running functions on a new deployment).
-4. Reload `https://<preview>/app`.
-   → The header now shows: the logo, `miyagisanchez ▾`, and four sections — Today · Measure · Ship ·
+3. Open `https://<preview>/app/setup/keys/miyagisanchez` in a private window.
+   → A plain **404**, same reason.
+
+### On production — `https://goldenfrijoles.com`, after Story 3.5 flips the gate
+
+4. Open `https://goldenfrijoles.com/app`.
+   → The header shows: the logo, `miyagisanchez ▾`, and four sections — Today · Measure · Ship ·
    Setup. Home, Sections, Connect and Agent notes are gone.
 5. Click **Ship**.
    → The left rail shows an Environment picker set to Production, then Features, Experiments and
@@ -116,7 +165,8 @@ Env: preview · `https://<branch-preview>.vercel.app` (production URLs once merg
 6. Press `⌘K` and type `dest`.
    → "Destinations" appears, labelled Setup. Press `↵`.
    → You land on the Destinations page.
-7. Set `CONSOLE_SHELL_ENABLED` back to unset and push again.
-   → `/app` is back to today's header. **Leave it unset — the flip is Story 3.5.**
+7. Press `⌘K` and type `stripe`.
+   → **Nothing matches.** Feature keys are deliberately *not* indexed until Story 3.4 — an empty
+   result here is the correct answer for this sprint, not a bug.
 
 If any step fails, note the step number + what you saw — that's the bug report.
