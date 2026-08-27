@@ -305,6 +305,48 @@ export function isFlagConsoleEnabled(): boolean {
   return process.env.FLAG_CONSOLE_ENABLED === 'true'
 }
 
+// console-ia-overhaul · Sprint 1, Story 1.1 (epic README, D4) — the EIGHTEENTH env gate. Born
+// unset/OFF, created DISABLED in development, preview and production before Sprint 1 merged.
+//
+// Exactly `=== 'true'`, for the reason all seventeen above give: a gate that opens on a typo is not
+// a gate.
+//
+// ── WHAT IT GATES, PRECISELY ──────────────────────────────────────────────────────────────────
+// TODAY (Sprint 1):  the four-section header, the per-section rail and the ⌘K palette in
+//                    `components/product/ProductShell.tsx`. That is ALL that exists behind it now.
+// PLANNED:           `/app/setup/connect/[projectSlug]` and `/app/setup/keys/[projectSlug]`
+//                    (Sprint 2), and the features list's deletions (Sprint 3), as they land.
+// NOT gated, ever:   anything that existed before the epic. **With this OFF, ProductShell renders
+//                    today's header — logo, Home, Sections, Connect, Agent notes — byte-for-byte.**
+//
+// The TODAY/PLANNED split is deliberate and is copied from `isFlagConsoleEnabled` above, which was
+// corrected for exactly this: a gate comment is read as an inventory of what is dark, so listing an
+// unbuilt surface in the present tense makes it a wrong one.
+//
+// ── WHY THE OFF POSITION IS LOAD-BEARING FOR THE WHOLE EPIC (D4) ──────────────────────────────
+// The new nav names destinations that do not exist until Sprints 2 and 3 — `Setup › Connect`,
+// `Setup › Keys`, a feature's Funnel tab. Turning this on early would publish a navigation whose
+// entries lead nowhere. Worse, `'legacy-keys'` (epic README, A7) is derived from this flag: the
+// moment it opens, `/app/keys`, `/app/flag-credentials` and `/app/agent-keys` LEAVE the nav and
+// redirect to their merged replacement. If that replacement has not shipped, this flag removes the
+// only route to a credential surface.
+//
+// That is the same hazard `flags-console-parity` Amendment 1 records one level down — a half-landed
+// redesign becoming the only route to a control — and the architecture lock found two more instances
+// of it in this epic (A3: the only way to create a feature; A7: the three credential routes). Three
+// epics in a row have paid for it. The gate is what makes the ordering safe rather than promised.
+//
+// Note what this flag is NOT: it is not an authorization control. Every surface it gates resolves
+// membership server-side through `requireProjectMembership` (or `requireProjectOwnership` for the
+// credential surfaces) whether it is on or off. Turning it ON grants nobody the right to read or
+// write anything they could not already reach. It decides whether a SURFACE exists.
+//
+// Read fresh per request; on Vercel a changed value still needs a new Git-tracked deployment
+// (AGENTS.md rule #4 — "set" and "live" are two separate facts).
+export function isConsoleShellEnabled(): boolean {
+  return process.env.CONSOLE_SHELL_ENABLED === 'true'
+}
+
 /** Registration predicate for journey-only MCP tools. The route still performs its connector gate
  * before token resolution; this shared pure predicate pins that a journey tool needs BOTH gates. */
 export function isJourneyMcpToolEnabled(): boolean {

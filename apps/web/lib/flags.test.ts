@@ -11,12 +11,14 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   isConnectorEnabled,
   isSignupEnabled,
   isDestinationDeliveryEnabled,
   isJourneyProjectionsEnabled,
   isExperimentGovernanceEnabled,
+  isReportSharesEnabled,
   isJourneyMcpToolEnabled,
   isExperimentGovernanceMcpToolEnabled,
   isSignalsEnabled,
@@ -30,6 +32,7 @@ import {
   isAgentRailEnabled,
   isFlagRuleBuilderEnabled,
   isFlagConsoleEnabled,
+  isConsoleShellEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -52,6 +55,21 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   ['DESTINATION_DELIVERY_ENABLED', isDestinationDeliveryEnabled],
   ['JOURNEY_PROJECTIONS_ENABLED', isJourneyProjectionsEnabled],
   ['EXPERIMENT_GOVERNANCE_ENABLED', isExperimentGovernanceEnabled],
+  // ⚠️ NOT added by the epic that built it — added 2026-08-27 by console-ia-overhaul Story 1.1,
+  // because the exhaustiveness test below went red on its FIRST run and named this flag. It had
+  // been reading `process.env.REPORT_SHARES_ENABLED` since pod-report S3 while inheriting NONE of
+  // the born-dark or near-miss assertions above.
+  //
+  // Of the seventeen gates in flags.ts this is the worst one to have missed, and its own comment
+  // says why: it is "the only one whose OFF state is protecting data from ANONYMOUS readers rather
+  // than protecting a feature from being used early" — while it is off, `/s/<token>` must 404 for
+  // every token, valid or invented. `REPORT_SHARES_ENABLED=TRUE` opening that surface would have
+  // been a data exposure, and nothing in the suite would have noticed.
+  //
+  // Now covered, and it passes — the gate was written correctly all along. What was missing was the
+  // proof, which is the whole argument for a registry a checker walks rather than a list an author
+  // remembers.
+  ['REPORT_SHARES_ENABLED', isReportSharesEnabled],
   // signals-loop · Story 1.0. Added to the SHARED table rather than tested separately on purpose:
   // the contract is a property of every gate in the file, so a new flag should inherit the whole
   // near-miss matrix automatically instead of relying on whoever adds it remembering to. Same
@@ -72,7 +90,55 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   // matrix automatically rather than depend on whoever added it remembering to re-type it.
   ['FLAG_RULE_BUILDER_ENABLED', isFlagRuleBuilderEnabled],
   ['FLAG_CONSOLE_ENABLED', isFlagConsoleEnabled],
+  // console-ia-overhaul · Story 1.1 (epic README, D4). The eighteenth, added to the shared table
+  // for the reason the two notes above give — and from this sprint on, membership of this table is
+  // no longer a thing the next author has to remember. See the exhaustiveness test below.
+  ['CONSOLE_SHELL_ENABLED', isConsoleShellEnabled],
 ]
+
+// ── The table is now SELF-ENFORCING, and that is the point of adding it here ──────────────────
+//
+// `singleFlagGates` above gives every gate the whole born-dark + near-miss matrix for free. Until
+// now, being IN the table was a thing each author had to remember, and LEARNINGS records exactly
+// what that costs: "the fix for a predicted-but-unguarded failure is structural, not a re-typing —
+// put every instance in ONE registry the checker walks, so a new consumer inherits the check
+// instead of needing to remember it." Two comments in this file already predicted this hazard in
+// prose; prose does not fail a build.
+//
+// Keyed on the ONE thing every env gate must contain — a `process.env.<NAME>` read in flags.ts —
+// rather than on the shape of the function around it. A source scan keyed on syntax is an
+// allow-list of shapes (LEARNINGS, site-url-preview-aware): a renamed binding, a different
+// formatting, an early return or a `??` default would each dodge a function-shaped matcher, and
+// none of them can dodge this. Adding a nineteenth gate turns this test red until it is registered.
+//
+// It asserts in BOTH directions on purpose. A discovery guard with only one assertion can shrink
+// its own coverage to nothing and still report success — that is precisely how the
+// site-url-preview-aware sweep silently dropped a durable call site.
+test('every env gate in flags.ts is registered in singleFlagGates, and vice versa', () => {
+  const source = readFileSync(new URL('./flags.ts', import.meta.url), 'utf8')
+  const readInSource = new Set(Array.from(source.matchAll(/process\.env\.([A-Z0-9_]+)/g), (m) => m[1]))
+  const registered = new Set(singleFlagGates.map(([envKey]) => envKey))
+
+  const unregistered = [...readInSource].filter((key) => !registered.has(key)).sort()
+  assert.deepEqual(
+    unregistered,
+    [],
+    `flags.ts reads these env vars but singleFlagGates does not cover them, so they inherit none of ` +
+      `the born-dark/near-miss assertions: ${unregistered.join(', ')}`
+  )
+
+  const orphaned = [...registered].filter((key) => !readInSource.has(key)).sort()
+  assert.deepEqual(
+    orphaned,
+    [],
+    `singleFlagGates names env vars flags.ts no longer reads, so the table is testing nothing for ` +
+      `them: ${orphaned.join(', ')}`
+  )
+
+  // A bare count, so a future refactor that made BOTH sets empty (a regex that stops matching, a
+  // table that gets cleared) fails loudly instead of passing two vacuous deepEquals.
+  assert.ok(registered.size >= 18, `expected at least 18 registered gates, found ${registered.size}`)
+})
 
 for (const [envKey, gate] of singleFlagGates) {
   test(`${envKey}: unset reads as OFF (born-dark default)`, () => {
