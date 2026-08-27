@@ -323,7 +323,7 @@ and mutation-checked by throwing from the palette on purpose and confirming the 
 *A guard that has never been observed catching anything is not a guard — `landing-frijoles-rebrand`
 shipped three that could not fail.*
 
-#### A10 — ⚠️ **Two of Story 2.1's acceptance criteria are unbuildable as written. ESCALATED to Daniel 2026-08-27.**
+#### A10 — ⚠️ **Two of Story 2.1's acceptance criteria were unbuildable as written. ESCALATED and ✅ ANSWERED 2026-08-27.**
 
 Both are facts about the live system, not preferences:
 
@@ -340,8 +340,36 @@ Both are facts about the live system, not preferences:
    so "offer to mint one" is a **new production credential-minting surface**, which is outside this
    epic's pre-authorized merge scope by name.
 
-**Status: awaiting Daniel. Sprint 1 does not depend on either and proceeds.** The answer is recorded
-here as a dated amendment when it arrives.
+**✅ ANSWERED BY DANIEL 2026-08-27. Story 2.1 is unblocked; both answers are the contract now.**
+
+1. **"Last used" is dropped. The status is provisioned / not-provisioned, and it says which it is.**
+   *"No connector URL for this project yet"* or *"Connector URL active since &lt;created_at&gt;"* — both
+   derivable from the five columns that exist. **No migration, and no write added to the connector's
+   public read path.** The Platform-first note's "no new table, no new SQL" therefore holds after all.
+   **The page must say, in words, what it does and does not know:** that a connector URL exists is not
+   the same claim as that Claude ever used it, and a status line that blurs the two would be exactly
+   the `CODE-QUALITY` rule 3 defect — prose asserting a property the system cannot observe.
+2. **The owner-gated mint button IS built, and the production mint stays Daniel's act.**
+   - An **explicit owner-only server action** — never on render. `lib/connector-tokens.ts`'s own
+     comment forbids minting as a render side effect ("a bot crawl or prerender hitting this page
+     shouldn't create credentials"), and that constraint is untouched: a mint requires a POST from an
+     owner.
+   - **Audited**, like every other mint in this product — `connector_token_minted` into `audit_log`,
+     alongside `api_key_issued`, `flag_read_key_minted`, `agent_write_key_minted` and the rest. There
+     are 13 audited actions today and **not one of them is connector-related**; that gap closes here.
+   - **Shown once**, on its own, with a copy button — never read back off a table.
+   - **AGENTS rule #3 is unchanged and must stay unchanged:** the connector has two independent kill
+     switches, `CONNECTOR_ENABLED` and the revocable per-project token. Minting adds a way to create
+     the second one. It must not become a way around the first — **the mint control does not render,
+     and the action refuses, while `CONNECTOR_ENABLED` is off.**
+   - **Pressing it against production is Daniel's, by name.** Building the surface is this epic's
+     work; minting a real production credential is not something a merge authorization covers
+     (team memory: *env vars pre-authorized, minting production credentials never*).
+
+**A2's answer, same date: previews are left alone.** The five Production-only gates are not mirrored —
+mirroring them would change what every preview serves for four other epics' features this epic does
+not own. The walkthroughs are already written for it: dark-state steps on preview, lit-state steps on
+production after the flip.
 
 ---
 

@@ -76,21 +76,31 @@ product, **so that** I can connect Claude to my data instead of to the demo proj
   `https://claude.ai/customize/connectors?modal=add-custom-connector`. The modal takes no URL
   parameter (verified in `app/install/page.tsx` against Miyagi's shipped panel), so the flow stays
   copy-then-paste. Do not invent a deep link.
-- ⛔ **BLOCKED ON A10 — "Connected · last used &lt;when&gt;" has no source of truth.**
-  `connector_tokens` has five columns (`id, project_id, token, revoked_at, created_at`); there is no
-  `last_used_at`, the MCP route writes nothing, and `audit_log` has no connector action among its 13.
-  A status line ships either way — what it can honestly *say* is Daniel's amendment, not the builder's.
-  Do not invent a source and do not silently downgrade the sentence.
+- ✅ **A10, answered by Daniel 2026-08-27 — the status is PROVISIONED / NOT-PROVISIONED, not "last
+  used".** `connector_tokens` has five columns (`id, project_id, token, revoked_at, created_at`); there
+  is no `last_used_at`, the MCP route writes nothing, and `audit_log` has no connector action among its
+  13. So the page renders *"No connector URL for this project yet"* or *"Connector URL active since
+  &lt;created_at&gt;"* — **and says in words that a URL existing is not the same as Claude having used
+  it.** No migration; no write added to the connector's public read path.
 - No landing `Nav`, no `Footer`, no sales headline. The reader is already signed in.
 - The SDK snippet is **not** on this page — one link to the docs. Two audiences, two places.
 - **Platform-first:** `app/app/onboarding/[projectSlug]/page.tsx` already renders this URL inside
   `ProductShell` today. Lift what is there; do not rebuild it. If `onboarding` still needs to exist
   as a first-run flow, it links here rather than duplicating the panel.
-- ⛔ **BLOCKED ON A10 — this is the ONLY state `miyagisanchez` can render.** It has **zero** connector
-  tokens; production holds three rows in total (`golden-beans-demo` active, `miyagi` active,
-  `golden-beans` revoked). The honest "no connector yet" copy is built now. **"Offer to mint one" is a
-  new production credential-minting surface** (`lib/connector-tokens.ts`: *"v1 has no self-serve token
-  minting"*) and is outside this epic's pre-authorized scope by name — it waits for Daniel.
+- ✅ **A10, answered by Daniel 2026-08-27 — the owner-gated mint button IS built.** `miyagisanchez`
+  has **zero** connector tokens (production holds three rows: `golden-beans-demo` active, `miyagi`
+  active, `golden-beans` revoked), so the "no connector yet" state is the **only** one this tenant can
+  render until one is minted. Four hard constraints on the mint:
+  - **An explicit owner-only server action, never on render.** `lib/connector-tokens.ts` forbids
+    minting as a render side effect and that constraint is untouched.
+  - **Audited as `connector_token_minted`**, alongside `api_key_issued` and the other 12 — there is no
+    connector action in `audit_log` today, and this closes that gap.
+  - **Shown once, on its own, with a copy button.** Never read back off a table.
+  - **AGENTS rule #3 holds:** the control does not render, and the action refuses, while
+    `CONNECTOR_ENABLED` is off. Minting creates the second kill switch; it must never route around the
+    first.
+  - **Pressing it on production is owed to Daniel by name** — building the surface is this epic's work,
+    minting a real credential is not covered by a merge authorization.
   Never render an empty field that looks like a URL.
 **Risk:** high (credential surface)
 
@@ -159,8 +169,11 @@ all — a correct render that reads like a broken one.
    → The page is inside the product — no marketing header, no footer, no sales headline.
    → ⚠️ **Expect the honest "no connector yet" state, not a URL.** `miyagisanchez` has **zero**
    connector tokens (A10). That is the accurate answer, and it is what makes this page worth having.
-6. **A10, steps 6–8 depend on Daniel's answer** and are written once it lands: whether a connector is
-   minted for `miyagisanchez`, and what the status line may honestly claim.
+6. Click **Mint a connector URL** and confirm. *(**Owed to Daniel by name** — this writes a real
+   production credential; building the button is mine, pressing it is yours.)*
+   → The token is shown **once**, with a copy button. Reload the page: the value is gone and the status
+   now reads "Connector URL active since &lt;date&gt;". ⚠️ It does **not** claim Claude has connected —
+   nothing in the product records a connector read, and the page says so.
 7. Click **Keys** in the rail.
    → One list with all four credential kinds and a "what it may do" column. ⚠️ **Share links are NOT
    on this page** — they are their own Setup surface, and the page says so rather than implying it
