@@ -1,6 +1,6 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 2: Setup
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all three stories built (`695866a`, `55432c3`, `e293082`)
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -172,6 +172,29 @@ I do not have to know which subsystem minted a key in order to find it.
   Named here so it is not glossed at close.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
+## Sprint 2 QA — what was actually run
+
+- **Unit (in the blocking gate): 1,385 tests.** `credential-inventory.test.ts` (15) — the merge, the
+  capability words, the three expiry states, and a guard keyed on the DATABASE's own scope set so a
+  seventh scope shows up as a failure rather than a silent omission.
+  `setup-route-guards.test.ts` (6) — the authorization boundary, at the source.
+  `project-route-inventory.test.ts` (11) — including A7's atomic swap in both directions.
+- **`api` gate: 484 passed, 1 failed** — `scenario-registry.spec.ts:365`, **pre-existing**, baselined
+  on clean `main` in Sprint 1. `setup-routes-dark.spec.ts` is new and covers both gate states.
+- **`authed`: 72 passed / 0 failed** lit, **59 / 0** dark. Both new routes are in the mobile sweep.
+- **Mutation checks, all observed red:** revoked rows kept (2 red) · a blank expiry cell (2) · a
+  capability leaking its scope name (2) · a legacy route listed beside its replacement (3) · the
+  merged route deleted (4) · the merged page weakened to `requireProjectMembership` (2) · mint no
+  longer checking `CONNECTOR_ENABLED` (1) · the gate moved below auth (2 dark-route specs).
+- ⚠️ **The member-vs-owner boundary is asserted at the SOURCE, not in a browser.** Three attempts at
+  driving a second session through the login form hung; the source guard proves every owner-only
+  Setup route calls `requireProjectOwnership` before any read, and that the merged page uses the
+  **same** gate as the three it replaces — which is D5's actual claim, and stronger than one 404 on
+  one run. **Still owed: the live member session.** Step 7 below.
+- ⚠️ **Two defects the green gate did not see**, both found by opening the page: a seven-column table
+  clipped "Manage" off the right edge at 1440 and was unreadable at 390, and the fix's two-line cell
+  ran together because `<small>` is inline. Both now covered by the mobile sweep.
+
 ## Sprint 2 — Smoke walkthrough (do these in order)
 
 ⚠️ **Per A2, the dark steps run on preview and the lit steps run on production after Story 3.5's
@@ -191,7 +214,10 @@ all — a correct render that reads like a broken one.
 
 4. Sign in, open `https://goldenfrijoles.com/app`, click **Setup**.
    → The rail shows Connect your agent · Keys · Destinations · Share links. `/app/keys`,
-   `/app/flag-credentials` and `/app/agent-keys` are **no longer listed** — they redirect to Keys (A7).
+   `/app/flag-credentials` and `/app/agent-keys` are **no longer listed** (A7).
+   → ⚠️ **They are NOT redirected — corrected by A17.** Open `https://goldenfrijoles.com/app/keys/miyagisanchez`
+   directly: it still works and still holds the minting form, because minting is not merged this
+   sprint and it is the only surface that can issue an API key. The list moved; the controls did not.
 5. Click **Connect your agent**.
    → The page is inside the product — no marketing header, no footer, no sales headline.
    → ⚠️ **Expect the honest "no connector yet" state, not a URL.** `miyagisanchez` has **zero**
@@ -202,12 +228,22 @@ all — a correct render that reads like a broken one.
    now reads "Connector URL active since &lt;date&gt;". ⚠️ It does **not** claim Claude has connected —
    nothing in the product records a connector read, and the page says so.
 7. Click **Keys** in the rail.
-   → One list with all four credential kinds and a "what it may do" column. ⚠️ **Share links are NOT
-   on this page** — they are their own Setup surface, and the page says so rather than implying it
-   lists everything with access.
+   → One list with all four credential kinds. Each row is the credential's **name**, with what it may
+   do in plain words underneath — four columns, not a column per attribute (a seven-column version
+   put "Manage" off the right edge between the two rails; corrected before merge).
+   → Each name links to the page that mints and revokes that kind.
+   → ⚠️ **Share links are NOT on this page** — they are their own Setup surface, and the page says so
+   in a "Not listed here" line rather than implying it lists everything with access.
+   → Revoked keys are absent: this answers what has access **now**.
 8. Sign in as a **non-owner member** of the project (or ask one to) and open the same Keys URL.
-   → A **404**, not an empty page. *(auth path — **owed to Daniel by name**; no automated smoke covers
-   a second real session.)*
+   → A **404**, not an empty page, and not a 403.
+   → Then open `/app/setup/connect/miyagisanchez` as that same member.
+   → It **opens** (200). The asymmetry is the design: reading your connector URL is not credential
+   administration, minting one is. Without this second half, the 404 above could mean "members are
+   locked out of Setup entirely", which is a weaker and different property.
+   *(auth path — **owed to Daniel by name**. This is the one thing the source guard cannot prove:
+   three attempts at driving a second browser session hung, so what is automated is that the route
+   calls `requireProjectOwnership` before any read, not that a live member actually gets the 404.)*
 9. Copy the connector URL and paste it into
    `https://claude.ai/customize/connectors?modal=add-custom-connector`.
    → Claude accepts the connector. *(**Owed to Daniel by name** — a real-account, real-session flow no
