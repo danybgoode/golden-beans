@@ -1240,6 +1240,49 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* console-ia-overhaul S1.4 — the per-section rail.
+   Mobile-first: below 1100px it is a plain block that scrolls with the page, ABOVE the content.
+   That is the honest narrow-width answer — a 320px sidebar squeezed onto a phone is worse than a
+   short list, and the same reasoning the agent rail's own comment gives for staying a sheet. */
+.console-rail {
+  width: min(1120px, calc(100% - 36px));
+  margin: 24px auto 0;
+}
+
+.console-rail ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.console-rail a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--roast-2);
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.console-rail a small {
+  display: block;
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+/* Same rule and same wording as the legacy disclosure's gated affordance, keyed on the same
+   attribute — one visual language for "this can be switched off", not a second copy of it. */
+.console-rail a[data-surface-status='gated']::after {
+  content: 'gated';
+  margin-left: 8px;
+  color: var(--dim);
+  font: 600 9px var(--mono);
+  text-transform: uppercase;
+}
+
 .product-shell main {
   width: min(1120px, calc(100% - 36px));
   margin: 0 auto;
@@ -2186,6 +2229,33 @@ a.stat-card:hover {
      at all and the page must be byte-identical to today. */
   .product-shell:has(.agent-rail) .product-shell__body {
     padding-right: calc(var(--rail-gutter) + var(--rail-width) + 24px);
+  }
+
+  /* console-ia-overhaul S1.4 — the section rail becomes the LEFT sidebar, at the same breakpoint
+     and by the same method as the agent rail on the right: ONE derived pair of numbers, consumed
+     twice. The first version of the agent rail shipped a sidebar sitting on top of the page because
+     the gutter and the width were two independent values; deriving them once is what fixed it, and
+     copying that shape is deliberate rather than incidental.
+
+     Scoped with `:has(.console-rail)` for the reason the block above gives: with the console gate
+     OFF the rail is not in the DOM at all, so none of this can reach the legacy render. */
+  .product-shell:has(.console-rail) {
+    --section-rail-gutter: max(12px, calc((100vw - 1180px) / 2));
+    --section-rail-width: 232px;
+  }
+
+  .product-shell:has(.console-rail) .console-rail {
+    position: fixed;
+    top: 84px;
+    left: var(--section-rail-gutter);
+    width: var(--section-rail-width);
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+    margin: 0;
+  }
+
+  .product-shell:has(.console-rail) .product-shell__body {
+    padding-left: calc(var(--section-rail-gutter) + var(--section-rail-width) + 24px);
   }
 }
 

@@ -414,6 +414,41 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A15 — DISPROVED: Ship's rail must NOT carry the environment picker *(re-scopes Story 1.4)*
+
+Story 1.4 says: *"Ship's rail carries the environment picker — flags-scoped, exactly as
+`flags-console-parity` D3 decided, because it scopes Ship and nothing else."* **That cites D3 for the
+opposite of what D3 says.** `app/app/flags/[projectSlug]/flag-console.tsx` records it in its own
+words, at the picker itself:
+
+> *"Flags-scoped and rendered as links, so the chosen environment is in the URL and travels with a
+> copied address. **`ProductShell` is untouched (D3): this is not ambient chrome, and a switcher in
+> the shell would imply it governs pages that do not read it.**"*
+
+Two facts, both read on `main` 2026-08-27, make the move wrong rather than merely unsupported:
+
+1. **It is not a picker, it is a URL rewriter for one page.** Each option's href is
+   `buildFlagListQuery(params, { environment }, DEFAULT_FLAG_ENVIRONMENT)` — it carries the flags
+   list's `q`, `state`, `type`, `sort` and `page` through the switch. The shell does not have those
+   params and cannot get them without threading a flags-page prop through every Ship route. **A rail
+   picker would silently drop the reader's search and filters on every environment change.**
+2. **Two of Ship's three surfaces do not read an environment.**
+   `app/app/experiments/[projectSlug]/page.tsx` contains the string `environment` **zero** times;
+   `flag-audit` mentions it once, in prose describing what the audit records, not as a parameter it
+   reads. A picker in Ship's rail would therefore sit above two pages it does not govern — precisely
+   the failure D3's sentence names.
+
+Duplicating it instead of moving it is worse: two pickers on `/app/flags`, which is the "two devices
+for one promise" that `app-shell-and-agent-rail`'s D5 already refused once.
+
+**Locked: the environment picker stays exactly where it is, on the flags page, and Ship's rail does
+not carry one.** The rest of Story 1.4 is unchanged. Nothing is lost — the control is not moving, so
+the ordering rule does not even engage.
+
+*This is the second acceptance criterion in this epic that cited a prior decision for the opposite of
+what it said (A3 was the first). Both were caught by opening the file the citation named. The habit
+that works is reading the source of a citation, not the citation.*
+
 ### Routing — who builds what, and why
 
 Stated so the choice is auditable (WAYS-OF-WORKING → *Routing a build by model tier*).
@@ -426,6 +461,24 @@ Stated so the choice is auditable (WAYS-OF-WORKING → *Routing a build by model
 | **2.2 The `/install` link** | **Codex** (`--tier standard`) | One link and one comment; `/install` itself is provably untouched by `git diff`. |
 | **3.1 Answer line + dormant collapse** · **3.2 Funnel/Impact tabs** · **3.4 `⌘K` feature index** | **Codex** (`--tier build`) | Arithmetic in `flag-list-view.ts` (pure, unit-tested), a tab over existing query libs, a filter over A6's projection. All three are downhill over a locked contract. |
 | **3.3 Delete the JSON stack + land "New feature"** · **3.5 The flip** | **Architect, never delegated** | 3.3 removes a control *and* lands its replacement (A3) — the ordering rule, and the epic's single most-repeated hazard. 3.5 is what users see, and it is a product-owner merge. |
+
+> ### ⚠️ Amendment A14 — **Codex is quota-capped for this entire epic. The six mechanical stories move to the architect.** *(2026-08-27, Daniel's call)*
+>
+> The first delegation (`codex-task --tier build`, Stories 1.4 + 1.5) exited 1 in five seconds with
+> `You've hit your usage limit … try again at Sep 23rd, 2026`. The tool's own tree snapshot confirmed
+> **nothing was written** — which is exactly why it reports the tree separately from the transcript.
+> Sep 23 is roughly four weeks out, so Codex is unavailable for the whole epic, not for one story.
+>
+> **Stories 1.4, 1.5, 2.2, 3.1, 3.2 and 3.4 are therefore built by the architect**, and the rows above
+> stay as written with this amendment beside them rather than being quietly rewritten — the routing
+> table is meant to be auditable, and an edited-in-place table would hide that the plan changed.
+>
+> **The review layer is NOT short, and that distinction matters.** The refund rule exists because a
+> missing review layer must never read like a clean one. Here nothing is missing: the builder is
+> `claude`, so the router's order (codex → agy → vibe → claude) excludes Claude and would have picked
+> **codex + agy**; with codex capped it picks **agy + vibe**, both probed ALIVE, both foreign to this
+> diff. Two cross-family passes, exactly as policy requires. A refund was offered and declined
+> because the capped pool was the BUILD pool, not the review pool.
 
 **Review is inverted from the build, by the router, never hand-picked** —
 `node scripts/review-route.mjs --builder <who-wrote-it> --tier <low|high> <PR#>`. Two cross-family

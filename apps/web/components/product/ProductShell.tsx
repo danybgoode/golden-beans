@@ -2,9 +2,10 @@ import 'server-only'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
-import { TODAY_HREF, type ShellSection } from '@/lib/console-shell'
+import { railLinksFor, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
 import { SignOutButton } from '@/app/app/sign-out-button'
 import { AgentRail } from './AgentRail'
+import { ConsoleRail } from './ConsoleRail'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -225,6 +226,16 @@ export async function ProductShell({
         )}
       </header>
       <div className="product-shell__body">
+        {/*
+          Story 1.4 — the per-section rail. FIRST in the DOM, unlike the agent rail below: this is
+          navigation for the page you are on, so a screen reader and a keyboard user should meet it
+          before the content, in the same order a sighted reader meets it on the left.
+
+          `railLinksFor` returns [] for Today (which IS /app — A11) and for a section whose every
+          surface is gated off, and `ConsoleRail` renders null on an empty list. So "Today renders
+          full width" and "no empty rail" are one branch, decided in the pure module.
+        */}
+        {header !== null && <ConsoleRail links={railLinksFor(section, links)} />}
         {children}
         {/*
           Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app

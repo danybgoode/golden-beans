@@ -40,7 +40,8 @@ registerHooks({
   },
 })
 
-const { buildConsoleHeader, getSectionEntryHref, TODAY_HREF } = await import('./console-shell.ts')
+const { buildConsoleHeader, getSectionEntryHref, railLinksFor, TODAY_HREF } =
+  await import('./console-shell.ts')
 type ShellSection = import('./console-shell.ts').ShellSection
 
 const allGatesOpen: ProjectSurfaceGates = {
@@ -251,5 +252,71 @@ test('a slug the viewer is not a member of yields no tabs beyond Today', () => {
   assert.deepEqual(
     tabs.map((tab) => tab.id),
     ['today']
+  )
+})
+
+// ── Story 1.4: which surfaces the rail renders ────────────────────────────────────────────────
+
+const ownerLinks = getProjectSurfaceLinks({
+  projectSlug: 'miyagisanchez',
+  role: 'owner',
+  gates: allGatesOpen,
+})
+
+test('the rail lists the active section’s surfaces, in inventory order', () => {
+  assert.deepEqual(
+    railLinksFor('setup', ownerLinks).map((link) => link.routeSegment),
+    ['keys', 'flag-credentials', 'destinations', 'shares', 'agent-keys']
+  )
+  assert.deepEqual(
+    railLinksFor('ship', ownerLinks).map((link) => link.routeSegment),
+    ['experiments', 'flags', 'flag-audit']
+  )
+})
+
+test('the rail’s first entry is where that section’s tab points', () => {
+  // Not a coincidence worth leaving to chance: the tab lands you on the top of the list you are
+  // about to read, so the two must be derived from the same order rather than agreeing by accident.
+  for (const section of ['measure', 'ship', 'setup'] as const) {
+    assert.equal(
+      railLinksFor(section, ownerLinks)[0]?.href,
+      getSectionEntryHref(ownerLinks, section),
+      `${section}'s tab and rail disagree about where the section starts`
+    )
+  }
+})
+
+test('Today and home have NO rail — the page renders full width', () => {
+  // A11: Today IS /app. A rail listing the single surface classified under it would be a sidebar
+  // containing one link, and Story 1.4 says Today renders full width.
+  assert.deepEqual(railLinksFor('today', ownerLinks), [])
+  assert.deepEqual(railLinksFor('home', ownerLinks), [])
+})
+
+test('a section with every surface gated off yields NO rail, not an empty one', () => {
+  const links = getProjectSurfaceLinks({
+    projectSlug: 'miyagisanchez',
+    role: 'owner',
+    gates: { ...previewGates, 'flag-console': false },
+  })
+  assert.deepEqual(railLinksFor('ship', links), [])
+  // ...and the emptiness is specific: Measure still has scenarios, so this is not the links read
+  // having failed altogether. `ConsoleRail` renders null on [], which is the "no empty rail" half.
+  assert.ok(railLinksFor('measure', links).length > 0)
+})
+
+test('a member gets no Setup rail, matching the tab they do not get either', () => {
+  const memberLinks = getProjectSurfaceLinks({
+    projectSlug: 'miyagisanchez',
+    role: 'member',
+    gates: allGatesOpen,
+  })
+  assert.deepEqual(railLinksFor('setup', memberLinks), [])
+  // The header and the rail must agree about what a member may reach. Two seams, one answer.
+  assert.equal(
+    header('setup', allGatesOpen, [{ slug: 'miyagisanchez', role: 'member' }]).tabs.some(
+      (tab) => tab.id === 'setup'
+    ),
+    false
   )
 })

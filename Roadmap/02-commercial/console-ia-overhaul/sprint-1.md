@@ -103,9 +103,13 @@ one click instead of a menu of everything.
 **Acceptance:**
 - The rail renders the surfaces whose `section` matches the active one, with their existing
   inventory descriptions.
-- **Ship's rail carries the environment picker** — flags-scoped, exactly as `flags-console-parity`
-  D3 decided, because it scopes Ship and nothing else. Putting it in the header would imply it
-  governs Measure and Setup too.
+- ⚠️ **DISPROVED by A15 — Ship's rail does NOT carry the environment picker; it stays on the flags
+  page.** This criterion cited `flags-console-parity` D3, which says the opposite in as many words
+  (*"a switcher in the shell would imply it governs pages that do not read it"*). Two facts on `main`
+  settle it: the picker's links are built from `buildFlagListQuery(params, …)`, carrying the flags
+  list's own search/filter/sort/page — so a rail copy would drop the reader's filters on every switch
+  — and `experiments` contains the string `environment` **zero** times, so a Ship-wide picker would
+  sit above a page it does not govern. Nothing moves, so nothing is lost.
 - Today has no rail and renders full width.
 - A section whose surfaces are all gated off renders no empty rail.
 **Risk:** low

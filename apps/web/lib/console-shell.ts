@@ -162,3 +162,24 @@ export function buildConsoleHeader(input: {
 
   return { tabs, projects }
 }
+
+/**
+ * The surfaces the per-section rail renders — Story 1.4.
+ *
+ * Returns `[]` in the two cases where there must be NO rail, so the component has one branch rather
+ * than three and the decision is assertable without a DOM:
+ *
+ *   • **Today (and `home`, which is the same destination — A11) has no rail and renders full
+ *     width.** Today IS `/app`, whose whole job is to be the page you land on; a rail listing the
+ *     one surface classified under it would be a sidebar containing a single link.
+ *   • **A section whose every surface is gated off renders no rail** — not an empty one. An empty
+ *     container is a promise that something belongs there, and on a Vercel preview this is a real
+ *     state rather than a hypothetical (A2).
+ */
+export function railLinksFor(
+  section: ShellSection,
+  links: readonly ProjectSurfaceLink[]
+): ProjectSurfaceLink[] {
+  if (section === 'home' || section === 'today') return []
+  return getSectionLinks(links, section)
+}
