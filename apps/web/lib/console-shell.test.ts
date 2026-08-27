@@ -343,33 +343,20 @@ test('the shell renders an account menu only when the console is on AND there is
   assert.equal(shellRendersAccountMenu({ consoleEnabled: false, userEmail: null }), false)
 })
 
-// ⚠️ The assertion that closes the CLASS rather than the instance.
+// ── DELIBERATELY NOT TESTED HERE: "the predicate's inputs are argument-independent" ──────────
 //
-// The first fix read `header !== null`, and `header` varies with the arguments a caller passes:
-// `/app` calls `getShellNav(undefined, 'home')` while `ProductShell` calls it with the page's own
-// slug and section. Give the shell a slug the viewer is not a member of and the two calls disagree
-// — predicate true on one side, false on the other, and the zero-sign-out bug returns through a
-// different door with nothing in its way (fresh reviewer, PR #122, second pass).
+// A test claiming that property lived here for one commit and **could not fail** — it passed against
+// `return true`. It computed a header per section, never passed it to the predicate, and asserted
+// the same literal call five times. The fresh reviewer measured it rather than reading it.
 //
-// This pins the property that makes that unrepresentable: the predicate's answer does not move when
-// the arguments do, because neither input is a function of them.
-test('the predicate cannot disagree between two calls made with different arguments', () => {
-  const asPage = { consoleEnabled: true, userEmail: 'a@b.co' }
-  // Whatever section or slug a caller used, `consoleEnabled` and `userEmail` are the same facts —
-  // one is a pure env read, the other comes from the session user. Enumerated over every section a
-  // page can declare, so a future input added to the predicate has to survive this.
-  for (const section of ['home', 'today', 'measure', 'ship', 'setup'] as const) {
-    const header = buildConsoleHeader({
-      activeSection: section,
-      activeProjectSlug: 'someone-elses-project',
-      projects: owner,
-      gates: allGatesOpen,
-    })
-    // The HEADER genuinely differs across these — that is the point, and why it must not be an input.
-    assert.ok(header.tabs.length >= 1)
-    assert.equal(shellRendersAccountMenu(asPage), true)
-  }
-})
+// The property is real; the test was the wrong instrument. `shellRendersAccountMenu` takes
+// `{ consoleEnabled: boolean; userEmail: string | null }` — a header cannot be handed to it, because
+// the parameter type has no place to put one. **TypeScript is what closes this class**, exactly as
+// the comment 240 lines above refuses a runtime test of the closed `ConsoleSection` union for the
+// same reason: asserting something the compiler already makes unrepresentable is the shape of guard
+// that passes forever while proving nothing.
+//
+// What IS tested below is the predicate's truth table, which the compiler does NOT give for free.
 
 test('a signed-in user with NO projects still gets a header, holding Today alone', () => {
   // This is the shape `getShellNav` now returns for a zero-project session, and it is what makes the

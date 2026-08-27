@@ -220,7 +220,15 @@ export function railLinksFor(
  * So it reads only `consoleEnabled` (a pure env read) and `userEmail` (from the session user).
  * **Neither is a function of `projectSlug` or `activeSection`**, so two calls with different
  * arguments cannot disagree about it. That is a property of the inputs rather than a promise about
- * how callers spell their arguments, which is the difference between a fix and a guard.
+ * how callers spell their arguments, which is the difference between a fix and a guard. What closes
+ * it is the parameter TYPE — a header cannot be passed here, because there is nowhere to put one.
+ *
+ * One residual, noted rather than coded around: if React's `cache()` did not memoize a REJECTED
+ * promise, one `getShellNav` call could succeed while the other hit its catch, and the two sides
+ * would disagree again. It is moot on `/app` — the only page carrying the fallback line — because
+ * that page already awaits `getSessionUser()` and `getUserProjects()` successfully before it calls
+ * `getShellNav`, so the catch is unreachable there. Raised by the fresh reviewer as NOT VERIFIED,
+ * and left as a sentence because that is what it is worth.
  */
 export function shellRendersAccountMenu(nav: { consoleEnabled: boolean; userEmail: string | null }): boolean {
   return nav.consoleEnabled && nav.userEmail !== null

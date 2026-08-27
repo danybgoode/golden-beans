@@ -58,7 +58,11 @@ export async function ProductShell({
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
-          With `CONSOLE_SHELL_ENABLED` unset, `consoleEnabled` is false, so this
+          `header === null` means the console chrome does not apply to this render — the gate is
+          unset, OR there is no session (the two demo dashboards render this shell anonymously), OR
+          `getShellNav` degraded. All three want the same public/legacy chrome, and all three set
+          `consoleEnabled` false too, so the two conditions agree; this one is used because it also
+          narrows the type. With the gate unset this
           renders exactly the markup it rendered before this epic — logo, Home, Sections, Connect,
           Agent notes, and the project signal. Not "equivalent"; the same JSX, moved into a branch.
           `git diff` is what checks that, which is strictly stronger than a spec: /app is
@@ -78,7 +82,7 @@ export async function ProductShell({
           loses its only entry: `CommandCenter` still links both with a real feature key. Raised by
           the fresh reviewer on PR #122.
         */}
-        {!consoleEnabled ? (
+        {header === null ? (
           <>
             <BrandLockup compact href="/app" />
             <nav aria-label="Product" className="product-shell__nav">
@@ -171,11 +175,8 @@ export async function ProductShell({
                 A section with no entitled surface is ABSENT rather than disabled: on a Vercel
                 preview three of Ship's gates are closed (A2), and a tab that 404s is worse than a
                 tab that is not there. */}
-            {/* `header` can be null inside this branch — the gate is on but `getShellNav` could not
-                resolve a nav (its catch). The chrome still belongs to the console; what is missing is
-                the list of destinations, so the nav element is simply absent rather than empty. */}
             <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
-              {(header?.tabs ?? []).map((tab) => (
+              {header.tabs.map((tab) => (
                 <a
                   key={tab.id}
                   href={tab.href}
@@ -206,7 +207,7 @@ export async function ProductShell({
                     </summary>
                     <div className="product-shell__menu">
                       <ul>
-                        {(header?.projects ?? []).map((project) => (
+                        {header.projects.map((project) => (
                           <li key={project.slug}>
                             <a href={project.href} aria-current={project.current ? 'true' : undefined}>
                               {project.slug}
@@ -256,7 +257,7 @@ export async function ProductShell({
           surface is gated off, and `ConsoleRail` renders null on an empty list. So "Today renders
           full width" and "no empty rail" are one branch, decided in the pure module.
         */}
-        {consoleEnabled && <ConsoleRail links={railLinksFor(section, links)} />}
+        {header !== null && <ConsoleRail links={railLinksFor(section, links)} />}
         {/*
           Story 1.5 — ⌘K, the ONE client island in the shell, inside the ONE error boundary in
           apps/web (A9). If it throws, the boundary renders null and the page it sits on is
@@ -267,7 +268,7 @@ export async function ProductShell({
           second read, which is also what makes it safe for a client component to hold: it inherits
           the server's entitlement filtering rather than re-implementing it.
         */}
-        {consoleEnabled && (
+        {header !== null && (
           <ShellErrorBoundary>
             <CommandPalette links={links} />
           </ShellErrorBoundary>

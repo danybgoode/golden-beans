@@ -53,13 +53,15 @@ export type ShellNav = {
    */
   header: ConsoleHeader | null
   /**
-   * Is the console shell switched on for this request?
+   * Does the SIGNED-IN console chrome apply to this render?
    *
-   * Kept SEPARATE from `header` because the two answer different questions and one value cannot do
-   * both jobs: `header` is null when the gate is off AND when the nav could not be resolved, so
-   * anything branching on it conflates "the old chrome" with "we could not read your sections".
-   * `ProductShell` picks its chrome from this; `shellRendersAccountMenu` reads this and never
-   * `header`, so it cannot vary with the arguments a caller passed (see that function's comment).
+   * `CONSOLE_SHELL_ENABLED` **and** a resolved session — not the env var alone. The console's every
+   * element (switcher, account menu, palette over entitled surfaces) presupposes a session, and the
+   * two demo dashboards render this shell anonymously, so the gate on its own is the wrong question.
+   *
+   * Kept separate from `header` because they answer different questions: `header` also carries WHICH
+   * destinations exist, which varies with the arguments a caller passed. `shellRendersAccountMenu`
+   * reads this and never `header`, which is what makes it argument-independent — see that function.
    */
   consoleEnabled: boolean
   /**
@@ -144,14 +146,23 @@ export async function getShellNav(
    */
   activeSection: ShellSection = 'home'
 ): Promise<ShellNav> {
-  // Read before anything can throw, so the chrome choice survives a nav-read failure: a pure env
-  // read cannot fail, and `ProductShell` needs it in every branch including the catch below.
-  const consoleEnabled = isConsoleShellEnabled()
+  const gateOpen = isConsoleShellEnabled()
   try {
     const user = await getSessionUser()
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
     // (lib/dashboard-auth.ts' allow-listed carve-out), and they use this same shell.
-    if (!user) return { ...EMPTY, consoleEnabled }
+    // ── Anonymous keeps the PUBLIC chrome, gate or no gate ───────────────────────────────────
+    // `consoleEnabled` is false here on purpose. The console is *an information architecture for the
+    // signed-in console* — it has a project switcher, an account menu and a palette over surfaces
+    // that all require a session. An anonymous visitor is not a degraded signed-in user.
+    //
+    // This is not hypothetical: `/app/funnel/golden-beans-demo/<key>` and its impact twin are
+    // ANONYMOUSLY readable (lib/public-demo.ts' allow-list) and render this shell. A previous
+    // revision keyed the chrome on the env var alone, which would have given that public page a logo,
+    // an empty sections nav, an empty identity slot and a ⌘K palette listing nothing — on a page with
+    // no session to have surfaces for. Caught by the fresh reviewer's third pass on PR #122, as a
+    // regression this epic introduced rather than one it inherited.
+    if (!user) return { ...EMPTY, consoleEnabled: false }
 
     const projects = await getUserProjects(user.id)
     // ── A signed-in user with NO project still gets the console chrome ────────────────────────
@@ -166,9 +177,9 @@ export async function getShellNav(
     if (projects.length === 0) {
       return {
         ...EMPTY,
-        consoleEnabled,
+        consoleEnabled: gateOpen,
         userEmail: user.email ?? null,
-        header: consoleEnabled ? emptyHeader(activeSection) : null,
+        header: gateOpen ? emptyHeader(activeSection) : null,
       }
     }
 
@@ -192,9 +203,9 @@ export async function getShellNav(
     if (!activeProject) {
       return {
         ...EMPTY,
-        consoleEnabled,
+        consoleEnabled: gateOpen,
         userEmail: user.email ?? null,
-        header: consoleEnabled ? emptyHeader(activeSection) : null,
+        header: gateOpen ? emptyHeader(activeSection) : null,
       }
     }
 
@@ -206,14 +217,14 @@ export async function getShellNav(
     return {
       activeProject,
       projects,
-      consoleEnabled,
+      consoleEnabled: gateOpen,
       userEmail: user.email ?? null,
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,
         gates,
       }),
-      header: consoleEnabled
+      header: gateOpen
         ? buildConsoleHeader({
             activeSection,
             activeProjectSlug: activeProject.slug,
@@ -224,6 +235,9 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    return { ...EMPTY, consoleEnabled }
+    // `consoleEnabled: false` — we do not know whether there is a session, so we cannot claim the
+    // signed-in chrome. The legacy header degrades honestly ("we could not list your sections"), and
+    // `/app` renders its own sign-out because the predicate is false. Sign-out survives a nav outage.
+    return { ...EMPTY, consoleEnabled: false }
   }
 }

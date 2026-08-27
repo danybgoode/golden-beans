@@ -262,10 +262,14 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
 //
 // **What holds the property in the meantime, and it is not nothing.** The class is closed by
 // construction rather than by observation: `shellRendersAccountMenu` is ONE predicate, the shell
-// renders the menu when it is true and `/app` renders its line when it is false, and the predicate's
-// two inputs (`consoleEnabled`, `userEmail`) are provably independent of the arguments either caller
-// passes — pinned by `lib/console-shell.test.ts`. Exactly one of the two branches is taken for every
-// possible input, because they are complements of the same boolean.
+// renders the menu when it is true and `/app` renders its line when it is false, and exactly one of
+// those branches is taken for every input because they are complements of the same boolean.
+//
+// Its two inputs (`consoleEnabled`, `userEmail`) are independent of the arguments either caller
+// passes — and what closes THAT is the parameter TYPE, which has no place to put a header, not a
+// test. An earlier version of this comment said "pinned by lib/console-shell.test.ts"; the test it
+// named could not fail and has been deleted (fresh reviewer, PR #122, third pass). Naming the wrong
+// guarantor is the same defect as claiming coverage that does not exist, one level up.
 //
 // **What is therefore still uncovered:** that both call sites actually ASK that predicate. A future
 // edit re-introducing a separate condition on either side would not be caught by any test here.
