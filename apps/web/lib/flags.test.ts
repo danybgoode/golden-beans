@@ -109,7 +109,11 @@ const singleFlagGates: Array<[string, () => boolean]> = [
 // rather than on the shape of the function around it. A source scan keyed on syntax is an
 // allow-list of shapes (LEARNINGS, site-url-preview-aware): a renamed binding, a different
 // formatting, an early return or a `??` default would each dodge a function-shaped matcher, and
-// none of them can dodge this. Adding a nineteenth gate turns this test red until it is registered.
+// none of them can dodge the SPECIFIER-keyed match the way they would dodge a function-shaped one.
+// It is not unconditional: `process.env['X']` or a destructure would escape it. Both are absent
+// today (18 reads, 18 unique, 18 registered) and neither is this file's style, but "cannot be
+// dodged" was overstated — a guard's own description earns the same scrutiny as the guard
+// (fresh reviewer, PR #122). Adding a nineteenth gate the normal way turns this red until registered.
 //
 // It asserts in BOTH directions on purpose. A discovery guard with only one assertion can shrink
 // its own coverage to nothing and still report success — that is precisely how the

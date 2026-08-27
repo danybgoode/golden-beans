@@ -17,6 +17,24 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
  * `componentDidCatch` have no hook equivalent. It is the single deliberate class in this codebase,
  * and this comment is why.
  *
+ * ── WHAT IT CATCHES, PRECISELY — and what it does not ─────────────────────────────────────────
+ * CATCHES:     a throw during RENDER or in a lifecycle method of anything below it. That is the
+ *              failure that matters here, because it is the one that unmounts the tree: verified by
+ *              making the palette throw on open and watching the page survive, and then by REMOVING
+ *              this boundary and watching one keystroke unmount the entire signed-in page.
+ * DOES NOT:    a throw inside a React event handler (`onClick`, `onKeyDown`, …), or inside a native
+ *              `addEventListener` callback. React does not route either to `getDerivedStateFromError`.
+ *
+ * An earlier version of this comment, and of `ProductShell`'s, said flatly that "a throw here
+ * removes the palette and leaves the page" — true of the render path and overstated for the other
+ * two (fresh reviewer, PR #122). The practical damage from those is smaller, not larger: an
+ * event-handler throw does not unmount anything either, it just makes that one interaction a no-op.
+ * But an inaccurate claim about a safety net is exactly the CODE-QUALITY rule 3 defect this repo
+ * keeps paying for, so the sentence is now the narrow true one.
+ *
+ * The palette's own listener is hardened at the point the reviewer identified rather than left to
+ * this net — see `CommandPalette`'s keydown guard.
+ *
  * ── It renders NOTHING, not a fallback ────────────────────────────────────────────────────────
  * There is no "the palette is broken" message, on purpose. The palette is an accelerator; every
  * destination it offers is also one click away in the header and the rail. A broken-shortcut notice

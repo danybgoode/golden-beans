@@ -102,9 +102,16 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(tabs.filter({ hasText: 'Setup' })).toHaveCount(1)
 
     // Absent, not merely unstyled. Story 1.3's acceptance names all four.
-    for (const gone of ['Home', 'Sections', 'Connect', 'Agent notes']) {
+    //
+    // ⚠️ `Sections` is deliberately NOT in this loop. It is a <summary> inside <details>, never an
+    // <a>, so `getByRole('link', { name: 'Sections' })` is 0 in BOTH gate states — a guard that
+    // passes even if the legacy disclosure were rendered in the console branch too. Caught by the
+    // fresh reviewer on PR #122, who named the exact undetected mutation. It gets the locator the
+    // gate-off half of this file already uses.
+    for (const gone of ['Home', 'Connect', 'Agent notes']) {
       await expect(page.getByRole('link', { name: gone, exact: true })).toHaveCount(0)
     }
+    await expect(page.locator('.product-shell__sections')).toHaveCount(0)
   })
 
   test('exactly one tab is marked current, and it is the one for the page you are on', async ({ page }) => {
@@ -140,7 +147,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     const palette = page.locator('.command-palette')
 
     await page.keyboard.type('dest')
-    const options = palette.locator('li[role="option"]')
+    const options = palette.locator('[role="option"]')
     await expect(options).toHaveCount(1)
     await expect(options.first()).toContainText('Destinations')
     // The row states its section, which is what makes the list readable at 13 entries.
@@ -160,7 +167,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await page.goto('/app')
     await openPalette(page)
     await page.keyboard.type('se')
-    const options = page.locator('.command-palette li[role="option"]')
+    const options = page.locator('.command-palette [role="option"]')
     await expect(options.first()).toBeVisible()
 
     const panel = await page.locator('.command-palette__panel').boundingBox()
@@ -181,7 +188,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await page.goto('/app')
     await openPalette(page)
     await page.keyboard.type('zzzz-no-such-surface')
-    await expect(page.locator('.command-palette li[role="option"]')).toHaveCount(0)
+    await expect(page.locator('.command-palette [role="option"]')).toHaveCount(0)
     await expect(page.locator('.command-palette__empty')).toBeVisible()
   })
 

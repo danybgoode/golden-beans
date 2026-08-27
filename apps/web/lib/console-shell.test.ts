@@ -40,7 +40,7 @@ registerHooks({
   },
 })
 
-const { buildConsoleHeader, getSectionEntryHref, railLinksFor, TODAY_HREF } =
+const { buildConsoleHeader, getSectionEntryHref, railLinksFor, shellRendersAccountMenu, TODAY_HREF } =
   await import('./console-shell.ts')
 type ShellSection = import('./console-shell.ts').ShellSection
 
@@ -319,4 +319,51 @@ test('a member gets no Setup rail, matching the tab they do not get either', () 
     ),
     false
   )
+})
+
+// ── The account menu, and the reason this predicate exists at all ─────────────────────────────
+//
+// `/app` drops its own "Signed in as … [Sign out]" line exactly when the shell rendered an account
+// menu. That used to be two DIFFERENT questions — the page asked `isConsoleShellEnabled()`, the
+// shell asked `header && userEmail` — and a signed-in user with no project answered them opposite
+// ways: gate on (page suppresses its line), header null (shell falls back to the legacy chrome,
+// which has no account menu). The result was a page with NO sign-out control at all, reachable via
+// `/app?provision=failed`. Found by the fresh HIGH-tier reviewer on PR #122.
+//
+// These assert the predicate itself. The WIRING — that both call sites ask it — is not reachable
+// from the unit layer, and the authed fixture always provisions a project, so it cannot reach the
+// zero-project case either. Stated in the PR rather than implied.
+
+test('the shell renders an account menu only when it has BOTH a header and an email', () => {
+  const header = buildConsoleHeader({
+    activeSection: 'home',
+    activeProjectSlug: 'miyagisanchez',
+    projects: owner,
+    gates: allGatesOpen,
+  })
+  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
+  // Each half alone is not enough, and each half alone is a state that really occurs: `header` is
+  // null whenever the console gate is off or `getShellNav` degraded, and `userEmail` is null for a
+  // session without one.
+  assert.equal(shellRendersAccountMenu({ header, userEmail: null }), false)
+  assert.equal(shellRendersAccountMenu({ header: null, userEmail: 'a@b.co' }), false)
+  assert.equal(shellRendersAccountMenu({ header: null, userEmail: null }), false)
+})
+
+test('a signed-in user with NO projects still gets a header, holding Today alone', () => {
+  // This is the shape `getShellNav` now returns for a zero-project session, and it is what makes the
+  // account menu reachable for them. Today must be there — it is the only place they can go — and
+  // nothing else must be, because they are entitled to nothing.
+  const header = buildConsoleHeader({
+    activeSection: 'home',
+    activeProjectSlug: '',
+    projects: [],
+    gates: allGatesOpen,
+  })
+  assert.deepEqual(
+    header.tabs.map((tab) => tab.id),
+    ['today']
+  )
+  assert.deepEqual(header.projects, [])
+  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
 })

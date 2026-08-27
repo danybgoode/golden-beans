@@ -183,3 +183,35 @@ export function railLinksFor(
   if (section === 'home' || section === 'today') return []
   return getSectionLinks(links, section)
 }
+
+/**
+ * Did the shell render an account menu on this request?
+ *
+ * ── This exists because "sign-out is never reachable zero times" was a CLAIM, and it was FALSE ──
+ * `/app` used to drop its own `Signed in as … [Sign out]` line whenever `isConsoleShellEnabled()`
+ * was true, on the assumption that the shell's account menu had taken over. The shell's account menu
+ * needs TWO more things to be true — a resolved header and an email — and there are several ordinary
+ * ways for those to be missing while the env var is set:
+ *
+ *   • a user whose tenant provisioning failed lands on `/app?provision=failed` with zero projects;
+ *   • a user removed from their last project;
+ *   • a session with no email;
+ *   • any error inside `getShellNav`, which degrades to the legacy header by design.
+ *
+ * In every one of those, the gate was on, `/app` suppressed its copy, and the legacy header has no
+ * account menu — so the page rendered **no sign-out control at all**. Found by the fresh HIGH-tier
+ * reviewer on PR #122; it could not bite production (the gate is born off) but it was armed for the
+ * Story 3.5 flip, and it is the exact defect class `lib/flags.ts`' gate comment cites as the reason
+ * the gate exists.
+ *
+ * The fix is not a longer condition on `/app`. It is ONE predicate, asked by both sides: the shell
+ * renders the menu when this is true, and the page renders its own line when it is false. They
+ * cannot both be absent, because they branch on the same value rather than on two things that are
+ * supposed to agree.
+ */
+export function shellRendersAccountMenu(nav: {
+  header: ConsoleHeader | null
+  userEmail: string | null
+}): boolean {
+  return nav.header !== null && nav.userEmail !== null
+}

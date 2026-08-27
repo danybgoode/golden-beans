@@ -18,8 +18,9 @@ import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
  * component is asserted only in a browser with a real session — which the blocking gate has neither
  * of.
  *
- * It is wrapped in `ShellErrorBoundary` by its caller, so a throw here removes the palette and
- * leaves the page (A9).
+ * It is wrapped in `ShellErrorBoundary` by its caller, so a throw during RENDER removes the palette
+ * and leaves the page (A9). That net does not extend to event handlers or to the native keydown
+ * listener — see the boundary's own comment — so the listener guards its input directly.
  *
  * ── No new query, no new route ────────────────────────────────────────────────────────────────
  * `links` are the ones `getShellNav()` already resolved server-side for the header and the rail.
@@ -40,6 +41,18 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
   // wherever you are on the page, including with focus in a table or a form.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // `event.key` is optional on a synthetic `new Event('keydown')`, and this is a NATIVE listener
+      // — a throw here is not caught by ShellErrorBoundary (which sees render and lifecycle only),
+      // so `undefined.toLowerCase()` would silently kill the shortcut for the rest of the page's
+      // life. Guarded at the source rather than left to a net that does not extend here (fresh
+      // reviewer, PR #122).
+      if (typeof event.key !== 'string') return
+      // Escape closes from ANYWHERE, not only from the input. Tabbing onto a row and pressing
+      // Escape used to be inert, because the only Escape handler was the input's own.
+      if (event.key === 'Escape') {
+        setOpen(false)
+        return
+      }
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         // Chrome binds ⌘K to the address bar's search shortcut, so without this the palette opens
         // AND the browser steals focus.
@@ -118,10 +131,19 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
             }
           }}
         />
+        {/* `role="option"` sits on the ANCHOR below, not on the <li>: a listbox option must not
+            contain a separately focusable control, and the anchor is what carries the href, the
+            click target and the keyboard target. The <li> is presentational (fresh reviewer, #122). */}
         <ul id="command-palette-list" role="listbox" aria-label="Surfaces">
           {matches.map((entry, index) => (
-            <li key={entry.id} id={`palette-${entry.id}`} role="option" aria-selected={index === cursor}>
-              <a href={entry.href} onMouseEnter={() => setCursor(index)}>
+            <li key={entry.id} role="presentation">
+              <a
+                id={`palette-${entry.id}`}
+                role="option"
+                aria-selected={index === cursor}
+                href={entry.href}
+                onMouseEnter={() => setCursor(index)}
+              >
                 {entry.label}
                 <small>{entry.hint}</small>
               </a>

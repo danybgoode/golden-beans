@@ -2,6 +2,7 @@ import 'server-only'
 import { getSessionUser } from './supabase-auth'
 import { getUserProjects, type MemberProject } from './membership'
 import {
+  isConsoleShellEnabled,
   isExperimentGovernanceEnabled,
   isFlagConsoleEnabled,
   isFlagServingEnabled,
@@ -14,7 +15,6 @@ import {
   type ProjectSurfaceLink,
 } from './project-route-inventory'
 import { buildConsoleHeader, type ConsoleHeader, type ShellSection } from './console-shell'
-import { isConsoleShellEnabled } from './flags'
 
 // app-shell-and-agent-rail · Sprint 1, Story 1.3 — what the shell's section nav renders.
 //
@@ -61,6 +61,17 @@ export type ShellNav = {
    * appears once either way.
    */
   userEmail: string | null
+}
+
+/** The gate values, read once per call. One resolution point, two consumers (header and rail). */
+function readGates(): ProjectSurfaceGates {
+  return {
+    'experiment-governance': isExperimentGovernanceEnabled(),
+    'flag-console': isFlagConsoleEnabled(),
+    'flag-serving': isFlagServingEnabled(),
+    'journey-projections': isJourneyProjectionsEnabled(),
+    signals: isSignalsEnabled(),
+  }
 }
 
 const EMPTY: ShellNav = {
@@ -116,7 +127,29 @@ export async function getShellNav(
     if (!user) return EMPTY
 
     const projects = await getUserProjects(user.id)
-    if (projects.length === 0) return EMPTY
+    // ── A signed-in user with NO project still gets the console chrome ────────────────────────
+    // This used to `return EMPTY`, which routed them to the LEGACY header — and `/app` had already
+    // dropped its own sign-out because the gate was on, so the page carried no sign-out at all
+    // (fresh reviewer, PR #122; reachable via `/app?provision=failed`). They are signed in; the
+    // shell owes them a way out.
+    //
+    // The header it gets is honest rather than empty: `buildConsoleHeader` finds no entitled surface
+    // for a slug that is not in an empty membership list, so it renders the Today tab alone — which
+    // is exactly right, because `/app` is the only place they can go.
+    if (projects.length === 0) {
+      return {
+        ...EMPTY,
+        userEmail: user.email ?? null,
+        header: isConsoleShellEnabled()
+          ? buildConsoleHeader({
+              activeSection,
+              activeProjectSlug: '',
+              projects: [],
+              gates: readGates(),
+            })
+          : null,
+      }
+    }
 
     // A slug the caller supplied that the viewer is NOT a member of does not silently fall back to
     // their first project (fresh-reviewer finding). The two anonymously-readable demo dashboards
@@ -134,13 +167,7 @@ export async function getShellNav(
     // Read once, per render, and passed to both consumers. Two reads of the same gates could not
     // disagree today (they are pure env reads), but one resolution point is what keeps the header
     // and the rail describing the same product.
-    const gates: ProjectSurfaceGates = {
-      'experiment-governance': isExperimentGovernanceEnabled(),
-      'flag-console': isFlagConsoleEnabled(),
-      'flag-serving': isFlagServingEnabled(),
-      'journey-projections': isJourneyProjectionsEnabled(),
-      signals: isSignalsEnabled(),
-    }
+    const gates = readGates()
 
     return {
       activeProject,

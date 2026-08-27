@@ -2,7 +2,7 @@ import 'server-only'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
-import { railLinksFor, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
+import { railLinksFor, shellRendersAccountMenu, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
 import { SignOutButton } from './SignOutButton'
 import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
@@ -32,7 +32,7 @@ import { ShellErrorBoundary } from './ShellErrorBoundary'
  * component able to break all of them at once.
  *
  * So each page declares where it lives. Making the prop required rather than optional turns "every
- * page belongs to a section" into a compile error at all 18 call sites instead of a convention that
+ * page belongs to a section" into a compile error at all 26 render sites (18 files) instead of a convention that
  * decays the first time someone adds a route. `home` is `/app` itself, and it has to be said out
  * loud rather than achieved by leaving the prop off.
  *
@@ -65,6 +65,15 @@ export async function ProductShell({
 
           The four legacy links are NOT deleted here. They go in Story 3.5, AFTER the production
           flip is verified — because until then this branch is the only navigation there is.
+
+          ── One honest qualification, because "unchanged" was too strong ──────────────────────
+          This BRANCH is byte-identical. The DATA it renders is not: Story 1.2 removes `funnel` and
+          `impact` from the inventory unconditionally (D3), so with the gate off the Sections
+          disclosure lists eleven surfaces where it listed thirteen. That is the intended change —
+          both were nav entries whose own description told you to edit the URL — but `git diff` on
+          this file cannot show it, and the guarantee was being stated absolutely. Neither dashboard
+          loses its only entry: `CommandCenter` still links both with a real feature key. Raised by
+          the fresh reviewer on PR #122.
         */}
         {header === null ? (
           <>
@@ -208,10 +217,14 @@ export async function ProductShell({
                   </span>
                 ))}
 
-              {/* The account menu. It carries the sign-out that used to sit in /app's own header —
-                  and /app drops its copy while this gate is on, so it appears once in either state
-                  rather than twice in one of them. */}
-              {userEmail && (
+              {/* The account menu carries the sign-out that used to sit in /app's own header.
+                  `/app` drops its own copy exactly when THIS renders — both sides ask
+                  `shellRendersAccountMenu`, so the control appears once and can never appear zero
+                  times. It previously branched on the env var on one side and on `userEmail` here,
+                  which is two conditions that were supposed to agree and did not: a signed-in user
+                  with no project got the legacy header AND a suppressed page line, and therefore no
+                  sign-out anywhere (fresh reviewer, PR #122). */}
+              {shellRendersAccountMenu({ header, userEmail }) && (
                 <details className="product-shell__account">
                   <summary>
                     <Icon name="panels" />

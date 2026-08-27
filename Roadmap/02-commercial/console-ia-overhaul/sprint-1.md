@@ -26,7 +26,10 @@
 >    `app/app/page.tsx:90` (uses), plus the two literal `'your-feature-key'` strings in
 >    `lib/project-route-inventory.test.ts:38,66`. Leaving any one of them is leaving the constant alive
 >    with one user. `grep -rn "your-feature-key" apps/web` must return nothing outside this epic's docs.
-> 4. **`ProductShell` gains a REQUIRED `section` prop (A8), and there are 18 call sites.** Required, not
+> 4. **`ProductShell` gains a REQUIRED `section` prop (A8): 26 render sites across 18 files.**
+>    (The first draft of this line said "18 call sites", conflating files with renders — eight of the
+>    26 are second renders in error and empty states, which is exactly the set an *optional* prop
+>    would have let slip through.) Required, not
 >    optional: the compiler is what makes "every page declares where it lives" true. No client island
 >    reading `usePathname()` — the file's own comments forbid it twice, and for a reason.
 > 5. **The palette fails to nothing (A9).** There is no `ErrorBoundary` anywhere in `apps/web` today, so
@@ -56,12 +59,21 @@
 say otherwise, **so that** it can merge in pieces without any of it reaching me half-built.
 **Acceptance:**
 - `CONSOLE_SHELL_ENABLED` is a new `isConsoleShellEnabled()` in `apps/web/lib/flags.ts`, exactly
-  `=== 'true'` like its 20 siblings, with the comment naming its **enablement** polarity.
+  `=== 'true'` like its **17** siblings — it is the eighteenth env gate. (`flags.ts` exports 21
+  functions, but three of those compose other gates rather than reading an env var; "20 siblings"
+  counted the composites. Corrected after the fresh reviewer noticed this file and `flags.ts`
+  disagreeing.) The comment names its **enablement** polarity.
 - The flag is **created DISABLED in every environment** (local, preview, production). A flag that
   exists only in code is not created.
 - It is resolved **server-side** and passed down. No client reads `process.env`.
-- With it unset, `/app` and `/app/flags/miyagisanchez` are unchanged — provable by `git diff` showing
-  the gate-off branch untouched, not by a promise in prose.
+- With it unset, `/app` and `/app/flags/miyagisanchez` render the same CHROME — provable by `git diff`
+  showing the gate-off branch untouched, not by a promise in prose.
+- ⚠️ **One honest qualification (fresh reviewer, PR #122): the chrome is unchanged, the DATA in it is
+  not.** Story 1.2 removes `funnel` and `impact` from the inventory unconditionally, so with the gate
+  off the Sections disclosure lists eleven surfaces where it listed thirteen. That is D3's intended
+  change — both were entries whose own description read "swap the feature key in the URL" — but
+  `git diff` on `ProductShell.tsx` cannot see it, and stating the guarantee absolutely would hide it.
+  Neither dashboard loses its only entry: `CommandCenter` still links both with a real feature key.
 **Risk:** high (shared infra + the gate the whole epic depends on)
 
 ### Story 1.2 — `section` on the route inventory
@@ -182,11 +194,18 @@ gate. Steps 4–7 (the lit state) run on **production, after Story 3.5's flip**,
 ### On production — `https://goldenfrijoles.com`, after Story 3.5 flips the gate
 
 4. Open `https://goldenfrijoles.com/app`.
-   → The header shows: the logo, `miyagisanchez ▾`, and four sections — Today · Measure · Ship ·
-   Setup. Home, Sections, Connect and Agent notes are gone.
+   → The header shows: the logo; the four sections **Today · Measure · Ship · Setup** with Today
+   marked as current; the project name; and an **Account** menu. Home, Sections, Connect and Agent
+   notes are gone.
+   → ⚠️ The project name is a plain label, **not** a `▾` menu, because you belong to one project.
+   The switcher only becomes a disclosure with two or more — the earlier draft of this step promised
+   `miyagisanchez ▾` and would have had you file a bug against correct behaviour.
 5. Click **Ship**.
-   → The left rail shows an Environment picker set to Production, then Features, Experiments and
-   Activity.
+   → The left rail shows **Experiment governance · Flags · Flag audit**.
+   → ⚠️ **No environment picker, and no entry called "Features".** The earlier draft of this step
+   promised both. A15 disproved the picker (it belongs to the flags page, whose search and filters
+   its links carry), and there is no surface named `Features` in the inventory — the flags surface
+   is labelled **Flags**. Corrected after the fresh reviewer found the two documents disagreeing.
 6. Press `⌘K` and type `dest`.
    → "Destinations" appears, labelled Setup. Press `↵`.
    → You land on the Destinations page.
