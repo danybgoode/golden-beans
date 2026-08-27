@@ -48,10 +48,7 @@ export async function ProductShell({
   projectSlug?: string
   section: ShellSection
 }) {
-  const { activeProject, projects, links, header, userEmail } = await getShellNav(
-    projectSlug,
-    section
-  )
+  const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
   return (
     <div className="product-shell">

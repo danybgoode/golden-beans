@@ -46,9 +46,17 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   // So: a public visitor must still get public navigation. `Connect` and `Agent notes` both point at
   // genuinely public destinations (`/install`, `/llms.txt`), which is why they are the right two to
   // name here (fresh reviewer, PR #122, fourth pass).
-  await expect(page.locator('.product-shell__nav')).toHaveCount(1)
-  await expect(page.getByRole('link', { name: 'Connect', exact: true })).toHaveCount(1)
-  await expect(page.getByRole('link', { name: 'Agent notes', exact: true })).toHaveCount(1)
+  // Asserted on the DESTINATION, not the label. `getByRole('link', { name: 'Connect' })` passes if
+  // the href is changed to a dead path, and what Story 3.5 risks is what a public visitor can still
+  // REACH. `.product-shell__nav` alone would be weak too — the console branch's tab nav carries that
+  // class as well, so only these two links distinguish public chrome from console chrome.
+  await expect(page.getByRole('link', { name: 'Connect', exact: true })).toHaveAttribute('href', '/install')
+  await expect(page.getByRole('link', { name: 'Agent notes', exact: true })).toHaveAttribute(
+    'href',
+    '/llms.txt'
+  )
+  // Present in every state and asserted nowhere until now, so deleting the logo would have passed.
+  await expect(page.locator('.brand-lockup')).toHaveCount(1)
 
   // None of the signed-in chrome. Each of these needs a session to mean anything: the tabs list
   // surfaces you are entitled to, the identity slot names your project and your account, and the

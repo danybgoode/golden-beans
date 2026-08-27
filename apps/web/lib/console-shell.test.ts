@@ -384,3 +384,41 @@ test('a signed-in user with NO projects still gets a header, holding Today alone
   assert.deepEqual(header.projects, [])
   assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
 })
+
+test('with no projects the gates cannot affect the header — every combination gives the same one', () => {
+  // Pins what `shell-nav.ts`'s `emptyHeader` asserts in prose: on this path no gate is consulted, so
+  // it passes an all-false record rather than reading the real ones. The claim was previously only a
+  // comment (cross-review, Mistral Vibe → fresh reviewer N3), and a comment asserting a property is
+  // a claim that earns the same proof as the code.
+  //
+  // Enumerated over ALL 32 gate combinations rather than two, because "gates cannot matter here" is a
+  // statement about every one of them.
+  const header = (gates: ProjectSurfaceGates) =>
+    buildConsoleHeader({
+      activeSection: 'home',
+      activeProjectSlug: '',
+      projects: [],
+      gates,
+    })
+  const allFalse = header({
+    'experiment-governance': false,
+    'flag-console': false,
+    'flag-serving': false,
+    'journey-projections': false,
+    signals: false,
+  })
+
+  const keys = [
+    'experiment-governance',
+    'flag-console',
+    'flag-serving',
+    'journey-projections',
+    'signals',
+  ] as const
+  for (let mask = 0; mask < 32; mask += 1) {
+    const gates = Object.fromEntries(
+      keys.map((key, index) => [key, Boolean(mask & (1 << index))])
+    ) as ProjectSurfaceGates
+    assert.deepEqual(header(gates), allFalse, `gate combination ${mask} produced a different header`)
+  }
+})
