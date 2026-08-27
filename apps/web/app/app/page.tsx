@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import {
+  isConsoleShellEnabled,
   isExperimentGovernanceEnabled,
   isFlagConsoleEnabled,
   isFlagServingEnabled,
@@ -56,12 +57,18 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
 
   // Read once, per render, and pass down. The gates decide which SURFACES a member may reach; they
   // are not tenancy — that is `getUserProjects` above, and it is resolved from the session user.
+  const consoleShell = isConsoleShellEnabled()
   const gates = {
     'experiment-governance': isExperimentGovernanceEnabled(),
     'flag-console': isFlagConsoleEnabled(),
     'flag-serving': isFlagServingEnabled(),
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),
+    'console-shell': consoleShell,
+    // A7: derived, never a second env var — the legacy credential routes are listed exactly while
+    // `Setup › Keys` is not. Command Center reads the same inventory as the shell, so both surfaces
+    // stop offering the old routes at the same instant.
+    'legacy-keys': !consoleShell,
   }
 
   return (

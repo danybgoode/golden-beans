@@ -8,7 +8,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import * as Module from 'node:module'
-import { getProjectSurfaceLinks, type ProjectSurfaceGates } from './project-route-inventory.ts'
+import {
+  getProjectSurfaceLinks,
+  getSectionLinks,
+  type ProjectSurfaceGates,
+} from './project-route-inventory.ts'
 
 // `console-shell.ts` imports its sibling extensionless, the way every module under lib/ does, and
 // node's runner needs the extension. Same resolve hook as flag-environment-view.test.ts and five
@@ -50,6 +54,10 @@ const allGatesOpen: ProjectSurfaceGates = {
   'flag-serving': true,
   'journey-projections': true,
   signals: true,
+  // Console ON, so `legacy-keys` is its inverse (A7). These two are never independently true: the
+  // merged Setup route and the three it replaces are never in the nav at the same time.
+  'console-shell': true,
+  'legacy-keys': false,
 }
 
 // What a Vercel PREVIEW actually serves (epic README, A2): four gates are Production-scoped, so a
@@ -61,6 +69,10 @@ const previewGates: ProjectSurfaceGates = {
   'flag-serving': false,
   'journey-projections': false,
   signals: false,
+  // `CONSOLE_SHELL_ENABLED` is created disabled in every scope, preview included — so a preview
+  // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
+  'console-shell': false,
+  'legacy-keys': true,
 }
 
 const owner = [{ slug: 'miyagisanchez', role: 'owner' }]
@@ -87,7 +99,9 @@ test('each tab points at the first entitled surface of its section', () => {
   assert.equal(href('today'), '/app')
   assert.equal(href('measure'), '/app/journeys/miyagisanchez')
   assert.equal(href('ship'), '/app/experiments/miyagisanchez')
-  assert.equal(href('setup'), '/app/keys/miyagisanchez')
+  // Sprint 2 (A7): Setup now opens onto `Connect your agent`, not API keys — the two new routes are
+  // listed ahead of the legacy ones, and with the console gate open the legacy three are absent.
+  assert.equal(href('setup'), '/app/setup/connect/miyagisanchez')
 })
 
 test('the active section is the only one marked current', () => {
@@ -159,11 +173,28 @@ test('a section with ZERO entitled surfaces renders no tab at all', () => {
   )
 })
 
-test('a member sees no Setup tab, because every Setup surface is owner-only', () => {
+test('a member DOES see Setup now, because Connect your agent is member-readable', () => {
+  // ⚠️ This test asserted the opposite until Sprint 2, and the change is a real product decision
+  // rather than a fixture update. Every Setup surface used to be owner-only, so a member got no
+  // Setup tab at all. `setup/connect` is member-readable — the connector URL is how a project's own
+  // operators point an agent at their data, and reading it is not credential administration (minting
+  // one is, and that action re-checks ownership).
+  //
+  // So a member now sees Setup, containing exactly the one surface they are entitled to.
+  const links = getProjectSurfaceLinks({
+    projectSlug: 'miyagisanchez',
+    role: 'member',
+    gates: allGatesOpen,
+  })
   const tabs = header('home', allGatesOpen, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
   assert.deepEqual(
     tabs.map((tab) => tab.id),
-    ['today', 'measure', 'ship']
+    ['today', 'measure', 'ship', 'setup']
+  )
+  assert.deepEqual(
+    getSectionLinks(links, 'setup').map((link) => link.routeSegment),
+    ['setup/connect'],
+    'a member was offered a Setup surface they cannot open'
   )
 })
 
@@ -174,6 +205,8 @@ test('Today always renders, even when every gate is closed and the viewer owns n
     'flag-serving': false,
     'journey-projections': false,
     signals: false,
+    'console-shell': false,
+    'legacy-keys': true,
   }
   const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
@@ -208,10 +241,11 @@ test('switching project lands on the SAME section, resolved with THAT project’
   ])
   const href = (slug: string) => projects.find((project) => project.slug === slug)?.href
 
-  assert.equal(href('miyagisanchez'), '/app/keys/miyagisanchez')
-  // `acme` entitles NO Setup surface for a member, so the switch degrades to /app rather than
-  // linking a member at a route that will 404 them.
-  assert.equal(href('acme'), TODAY_HREF)
+  assert.equal(href('miyagisanchez'), '/app/setup/connect/miyagisanchez')
+  // `acme` DOES entitle a Setup surface for a member now (`setup/connect`), so the switch keeps you
+  // in Setup — and lands on the member-readable one, never the owner-only `setup/keys`. That is the
+  // assertion: the target's own role decides, not the role you hold in the project you came from.
+  assert.equal(href('acme'), '/app/setup/connect/acme')
 })
 
 test('switching from a section both projects entitle keeps you in that section', () => {
@@ -240,7 +274,14 @@ test('getSectionEntryHref returns null rather than an empty string for an unenti
   })
   // `null` and `''` are different answers and the caller branches on it. An empty string would be
   // rendered as `href=""`, which navigates to the current page — a tab that silently does nothing.
-  assert.equal(getSectionEntryHref(memberLinks, 'setup'), null)
+  // A member entitles no SHIP surface once flags/experiments/audit are gated off, which is the
+  // unentitled case now that Setup has a member-readable member (Sprint 2).
+  const noShip = getProjectSurfaceLinks({
+    projectSlug: 'acme',
+    role: 'member',
+    gates: { ...allGatesOpen, 'experiment-governance': false, 'flag-serving': false, 'flag-console': false },
+  })
+  assert.equal(getSectionEntryHref(noShip, 'ship'), null)
   assert.equal(getSectionEntryHref(memberLinks, 'measure'), '/app/journeys/acme')
 })
 
@@ -266,7 +307,7 @@ const ownerLinks = getProjectSurfaceLinks({
 test('the rail lists the active section’s surfaces, in inventory order', () => {
   assert.deepEqual(
     railLinksFor('setup', ownerLinks).map((link) => link.routeSegment),
-    ['keys', 'flag-credentials', 'destinations', 'shares', 'agent-keys']
+    ['setup/connect', 'setup/keys', 'destinations', 'shares']
   )
   assert.deepEqual(
     railLinksFor('ship', ownerLinks).map((link) => link.routeSegment),
@@ -305,19 +346,23 @@ test('a section with every surface gated off yields NO rail, not an empty one', 
   assert.ok(railLinksFor('measure', links).length > 0)
 })
 
-test('a member gets no Setup rail, matching the tab they do not get either', () => {
+test('the rail and the tab agree about what a member may reach in Setup', () => {
   const memberLinks = getProjectSurfaceLinks({
     projectSlug: 'miyagisanchez',
     role: 'member',
     gates: allGatesOpen,
   })
-  assert.deepEqual(railLinksFor('setup', memberLinks), [])
-  // The header and the rail must agree about what a member may reach. Two seams, one answer.
+  // One surface, not five: the member-readable connector page, and none of the credential ones.
+  assert.deepEqual(
+    railLinksFor('setup', memberLinks).map((link) => link.routeSegment),
+    ['setup/connect']
+  )
+  // Two seams, one answer — the tab exists exactly when the rail has something to put under it.
   assert.equal(
     header('setup', allGatesOpen, [{ slug: 'miyagisanchez', role: 'member' }]).tabs.some(
       (tab) => tab.id === 'setup'
     ),
-    false
+    true
   )
 })
 
@@ -399,7 +444,7 @@ test('a signed-in user with NO projects still gets a header, holding Today alone
   assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
 })
 
-test('with no projects the gates cannot affect the header — every combination gives the same one', () => {
+test('with no projects the gates cannot affect the header — EVERY combination gives the same one', () => {
   // Pins what `shell-nav.ts`'s `emptyHeader` asserts in prose: on this path no gate is consulted, so
   // it passes an all-false record rather than reading the real ones. The claim was previously only a
   // comment (cross-review, Mistral Vibe → fresh reviewer N3), and a comment asserting a property is
@@ -420,6 +465,8 @@ test('with no projects the gates cannot affect the header — every combination 
     'flag-serving': false,
     'journey-projections': false,
     signals: false,
+    'console-shell': false,
+    'legacy-keys': false,
   })
   // ANCHORED absolutely, not just relatively. Every comparison below is `header(x)` against
   // `header(allFalse)` — both sides from the same function — so deleting the unconditional Today
@@ -431,14 +478,12 @@ test('with no projects the gates cannot affect the header — every combination 
     ['today']
   )
 
-  const keys = [
-    'experiment-governance',
-    'flag-console',
-    'flag-serving',
-    'journey-projections',
-    'signals',
-  ] as const
-  for (let mask = 0; mask < 32; mask += 1) {
+  // Derived from the type rather than retyped, so a new gate joins the enumeration automatically —
+  // the same reason `singleFlagGates` in flags.test.ts is walked rather than listed. Sprint 2 added
+  // two gates and this loop needed no edit beyond the count, which is the point.
+  const keys = Object.keys(allGatesOpen) as (keyof ProjectSurfaceGates)[]
+  const combinations = 2 ** keys.length
+  for (let mask = 0; mask < combinations; mask += 1) {
     const gates = Object.fromEntries(
       keys.map((key, index) => [key, Boolean(mask & (1 << index))])
     ) as ProjectSurfaceGates

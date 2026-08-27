@@ -99,18 +99,25 @@ function emptyHeader(activeSection: ShellSection) {
       'flag-serving': false,
       'journey-projections': false,
       signals: false,
+      'console-shell': false,
+      'legacy-keys': false,
     },
   })
 }
 
 /** The gate values, read once per call. One resolution point, two consumers (header and rail). */
 function readGates(): ProjectSurfaceGates {
+  const consoleShell = isConsoleShellEnabled()
   return {
     'experiment-governance': isExperimentGovernanceEnabled(),
     'flag-console': isFlagConsoleEnabled(),
     'flag-serving': isFlagServingEnabled(),
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),
+    'console-shell': consoleShell,
+    // A7: the INVERSE, derived here rather than read from a second env var. The three legacy
+    // credential routes are nav entries exactly while their merged replacement is not.
+    'legacy-keys': !consoleShell,
   }
 }
 

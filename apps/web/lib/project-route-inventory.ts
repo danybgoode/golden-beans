@@ -16,6 +16,21 @@ export type ProjectSurfaceGate =
   | 'flag-serving'
   | 'journey-projections'
   | 'signals'
+  // console-ia-overhaul · Sprint 2 (epic README, A7) — two values, added together on purpose.
+  //
+  // `console-shell` gates the two NEW Setup routes, exactly as `flag-console` gates its two.
+  //
+  // `legacy-keys` is the other half, and it is what makes the move safe rather than merely tidy: it
+  // is supplied as `!isConsoleShellEnabled()`, so `/app/keys`, `/app/flag-credentials` and
+  // `/app/agent-keys` LEAVE the nav at the exact instant their merged replacement enters it. Not one
+  // deploy earlier (a dead end) and not one later (the same destination listed twice, one of which
+  // redirects). A route that redirects must not also be a nav entry.
+  //
+  // It is a DERIVED value, not a second env var. There is no `LEGACY_KEYS_ENABLED` to set, get wrong,
+  // or leave inconsistent with the gate it must mirror — the inversion happens once, in each caller's
+  // `ProjectSurfaceGates` record, where the compiler demands it.
+  | 'console-shell'
+  | 'legacy-keys'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D2) — the four destinations.
@@ -141,10 +156,42 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     href: (slug: string) => `/app/scenarios/${slug}`,
     description: () => 'read-only drills, impact evidence and protective trips',
   },
+  // console-ia-overhaul · Sprint 2. The two new Setup destinations, listed BEFORE the routes they
+  // replace: inventory order is nav order and rail order, so with the console on these are what
+  // Setup opens onto, and with it off they are absent and the legacy three take their place.
+  {
+    routeSegment: 'setup/connect',
+    // MEMBER-readable. The connector URL is how this project's own operators point an agent at their
+    // data; minting one is owner-only (the action re-checks), but reading the page is not.
+    audience: 'member',
+    gate: 'console-shell',
+    status: 'gated',
+    topLevelProjectRoute: false,
+    section: 'setup',
+    label: 'Connect your agent',
+    href: (slug: string) => `/app/setup/connect/${slug}`,
+    description: () => 'your own project’s connector URL',
+  },
+  {
+    routeSegment: 'setup/keys',
+    // OWNER-only, matching all three routes it merges — the boundary moves tighter or identical,
+    // never looser (D5/A5). A member gets a flat 404, exactly as on `/app/keys` today.
+    audience: 'owner',
+    gate: 'console-shell',
+    status: 'gated',
+    topLevelProjectRoute: false,
+    section: 'setup',
+    label: 'Keys',
+    href: (slug: string) => `/app/setup/keys/${slug}`,
+    description: () => 'everything with access to this project',
+  },
   {
     routeSegment: 'keys',
     audience: 'owner',
-    gate: 'always',
+    // A7: 'legacy-keys' is `!isConsoleShellEnabled()`, so this leaves the nav at the same instant
+    // `Setup › Keys` enters it. The ROUTE keeps working and redirects; it simply stops being listed,
+    // because a destination that redirects must not also be a nav entry.
+    gate: 'legacy-keys',
     status: 'linked',
     topLevelProjectRoute: true,
     section: 'setup',
@@ -165,7 +212,11 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     // and simply see no key tables. A standalone credentials route 404s for them — the
     // `/app/keys/[projectSlug]` precedent. The boundary moves only tighter, never looser.
     audience: 'owner',
-    gate: 'flag-console',
+    // A7: was `flag-console`. Both must hold — the flags console must be on for this route to exist
+    // at all, and the merged Setup page must be OFF for it to still be the place you go. Expressed
+    // as one gate value rather than two because `ProjectSurfaceGate` is a single-valued field; the
+    // route itself still checks `isFlagConsoleEnabled()` and 404s without it.
+    gate: 'legacy-keys',
     status: 'gated',
     topLevelProjectRoute: true,
     section: 'setup',
@@ -215,7 +266,8 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   {
     routeSegment: 'agent-keys',
     audience: 'owner',
-    gate: 'always',
+    // A7, same as `keys` above: listed only while `Setup › Keys` is not.
+    gate: 'legacy-keys',
     status: 'linked',
     topLevelProjectRoute: true,
     section: 'setup',
