@@ -48,7 +48,10 @@
 >
 > - It does **not** index features in `⌘K` (that is Story 3.4, over A6's resolution).
 > - It does **not** delete `Home` / `Sections` / `Connect` / `Agent notes` from the file — only hides
->   them with the gate on. Deletion is Story 3.5, **after** the production flip is verified.
+>   them with the gate on. **Only `Home` and the disclosure are ever deleted** (Story 3.5, after the
+>   production flip is verified) — `Connect` and `Agent notes` are permanent public chrome, because
+>   the two demo dashboards render this branch anonymously and it is their only route to `/install`
+>   and `/llms.txt`. See A16.
 > - It does **not** add the `'console-shell'` or `'legacy-keys'` gate values (A7) — those arrive in
 >   Sprint 2 with the routes that need them, in one commit with all three `ProjectSurfaceGates` callers.
 

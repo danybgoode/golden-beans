@@ -67,8 +67,13 @@ export async function ProductShell({
           could not tell the two branches apart. flags-console-parity Sprint 1 corrected exactly
           this mistake, and its QA note is worth re-reading before adding a spec that cannot fail.
 
-          The four legacy links are NOT deleted here. They go in Story 3.5, AFTER the production
-          flip is verified — because until then this branch is the only navigation there is.
+          ⚠️ Story 3.5 deletes `Home` and the `<details>` disclosure from this branch, and NOTHING
+          else. `Connect` and `Agent notes` are PERMANENT: this branch is what an anonymous visitor
+          to the two demo dashboards gets (they have no session, so no console header), and it is
+          their only route to `/install` and `/llms.txt`. `Home` is safe only because its destination
+          is duplicated — the logo above links `/app` in both branches — so it loses a link, not a
+          route. Pinned by `e2e/console-shell-public.browser.spec.ts`, which asserts both hrefs.
+          See A16 in the epic README.
 
           ── One honest qualification, because "unchanged" was too strong ──────────────────────
           This BRANCH is byte-identical. The DATA it renders is not: Story 1.2 removes `funnel` and

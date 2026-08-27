@@ -234,8 +234,11 @@ product has one navigation rather than two behind a switch.
 - `CONSOLE_SHELL_ENABLED=true` in **preview first**, verified against the Sprint 1–3 walkthroughs,
   **then production** — each via a commit to `main` (AGENTS rule #4; never `vercel deploy`).
 - ⚠️ **CORRECTED by A16 — the gate-off branch is NOT "now-dead" after the flip, and deleting it as
-  written would strip the public demo dashboards of all header content.** Only the four **signed-in**
-  legacy links go. See A16 below for what must survive and what an anonymous viewer must still see.
+  written would strip the public demo dashboards of all header content.** **`Home` and the
+  `<details>` disclosure go. `Connect` and `Agent notes` STAY** — they are the public chrome's only
+  route to `/install` and `/llms.txt`, and they never rendered in the console branch at all. `Home`
+  is safe because its destination is duplicated: both branches link `/app` from the logo, so deleting
+  it removes a link and not a route. See A16.
 - ⚠️ **CORRECTED by A16 —** `/llms.txt` **still exists, is still served, and KEEPS its `Agent notes`
   link in the public chrome.** The original bullet said "only its human nav link is removed"; that
   link is `Agent notes`, which lives only in the branch an anonymous visitor gets. Removing it would
@@ -291,7 +294,21 @@ deployment host). And per A2 there is **no useful pre-merge preview run** for th
 7. Press `⌘K` and type `stripe`.
    → `checkout.stripe_enabled` appears as a Feature. Press `↵` — it opens.
 8. Open `https://goldenfrijoles.com/llms.txt`.
-   → The manifest still serves. Only its nav link is gone.
+   → The manifest still serves.
+   → ⚠️ **CORRECTED by A16 — this step used to end "Only its nav link is gone", which is now wrong in
+   the one direction that costs something.** The `Agent notes` link is gone from the SIGNED-IN console
+   (where it never rendered anyway), and **retained in the public chrome**. Anyone following the old
+   sentence literally would delete the public link and turn
+   `e2e/console-shell-public.browser.spec.ts` red. Found by cross-review (agy) as a FOURTH sentence
+   saying the old thing, after A16 corrected three — which is the "grep for the sibling" rule: I fixed
+   the bullet I was looking at and left its twin in the walkthrough.
+8b. On the same production deploy, open
+   `https://goldenfrijoles.com/app/funnel/golden-beans-demo/setup_guide` in a **private window**.
+   → You are NOT signed in, and the page still renders: the funnel numbers, plus a header carrying
+   **Connect** and **Agent notes**. No Today/Measure/Ship/Setup tabs, no project name, no Account
+   menu. `⌘K` does nothing.
+   → This is A16's acceptance criterion, and it is the step that proves the flip did not strip the
+   public demo dashboards of their chrome.
 9. From `/app`, reach **every** section of the product using only clicks and `⌘K`.
    → No step requires editing a URL. *(This is the epic's acceptance test.)*
 

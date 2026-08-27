@@ -34,7 +34,11 @@ const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 
 test('the public demo dashboard renders public chrome, never the signed-in console', async ({ page }) => {
   const response = await page.goto(DEMO)
-  expect(response?.status(), 'the demo dashboard must stay anonymously readable').toBe(200)
+  // `response` itself, not `response?.status()` — a null response (a navigation the browser handled
+  // without one) would otherwise assert `undefined === 200` and report a confusing mismatch instead
+  // of the real problem (cross-review, agy).
+  expect(response, 'no navigation response for the demo dashboard').not.toBeNull()
+  expect(response!.status(), 'the demo dashboard must stay anonymously readable').toBe(200)
 
   // The page itself still works — this is a real dashboard, not a redirect.
   await expect(page.getByRole('heading', { name: /Funnel/i })).toBeVisible()
@@ -68,11 +72,33 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   await expect(page.locator('.product-shell__account')).toHaveCount(0)
   await expect(page.locator('.console-rail')).toHaveCount(0)
 
-  // And ⌘K does nothing, because there is no palette mounted at all. Asserted after the network
-  // settles so this cannot pass merely because the island had not hydrated yet.
-  await page.waitForLoadState('networkidle')
+  // ── ⌘K does nothing, and proving that needs a HYDRATED page ─────────────────────────────────
+  // `networkidle` plus a fixed wait was the first version, and agy was right that it does not
+  // establish hydration: if the keydown listener has not attached, the palette cannot open for a
+  // reason that has nothing to do with this page being public, and `toHaveCount(0)` passes
+  // trivially. That is the same hydration trap the authed spec hit from the other direction — there
+  // a press before hydration made a real palette look absent.
+  //
+  // ⚠️ There is no client island on this page to wait on — and that is a FINDING, not an obstacle.
+  // With no session the shell renders no palette, no rail and no agent rail, and the page's own
+  // content is server-rendered, so an interactive marker does not exist to poll for. My first
+  // attempt waited for a copy button that this page does not have; the spec failed loudly, which is
+  // the right behaviour and worth more than the assertion I was trying to write.
+  //
+  // So the wait is on Next's own client runtime instead — `window.next` exists only once the
+  // framework's JS has executed, which is the closest signal available on a page that deliberately
+  // ships no interactivity of its own. After that a keypress is meaningful: any listener that WOULD
+  // have been attached has been.
+  await page.waitForFunction(() => typeof (window as { next?: unknown }).next !== 'undefined', null, {
+    timeout: 15_000,
+  })
+
+  // The stronger half, and it does not depend on timing at all: the palette is not in the DOM to
+  // begin with. `ProductShell` mounts it inside `{header !== null && …}`, so on a public page there
+  // is no component to open — the keypress below is belt-and-braces over a structural absence.
+  await expect(page.locator('.command-palette')).toHaveCount(0)
   await page.keyboard.press('ControlOrMeta+k')
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(300)
   await expect(page.locator('.command-palette')).toHaveCount(0)
 
   // Named in the run output, so a green result cannot be mistaken for the discriminating one.

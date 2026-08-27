@@ -166,7 +166,7 @@ export async function getShellNav(
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
     // (lib/dashboard-auth.ts' allow-listed carve-out), and they use this same shell.
     // ── Anonymous keeps the PUBLIC chrome, gate or no gate ───────────────────────────────────
-    // `consoleEnabled` is false here on purpose. The console is *an information architecture for the
+    // This returns `EMPTY`, so `header` is null here on purpose. The console is *an information architecture for the
     // signed-in console* — it has a project switcher, an account menu and a palette over surfaces
     // that all require a session. An anonymous visitor is not a degraded signed-in user.
     //

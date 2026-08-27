@@ -356,14 +356,28 @@ test('the shell renders an account menu only when the console applies AND there 
 // `return true`. It computed a header per section, never passed it to the predicate, and asserted
 // the same literal call five times. The fresh reviewer measured it rather than reading it.
 //
-// The property is real; the test was the wrong instrument. `shellRendersAccountMenu` takes
-// `{ consoleEnabled: boolean; userEmail: string | null }` — a header cannot be handed to it, because
-// the parameter type has no place to put one. **TypeScript is what closes this class**, exactly as
-// `project-route-inventory.test.ts` refuses a runtime test of the closed `ConsoleSection` union for
-// the same reason (an earlier version of this note said "240 lines above", pointing inside THIS
-// file, where there is no such comment — third round running that a self-correcting note carried a
-// wrong detail): asserting something the compiler already makes unrepresentable is the shape of guard
-// that passes forever while proving nothing.
+// The property is real; the test was the wrong instrument — and then the CORRECTION was wrong too,
+// twice, which is the part worth writing down.
+//
+// Correction #1 said the predicate takes `{ consoleEnabled, userEmail }`, so "a header cannot be
+// handed to it" and **TypeScript closes the class**. True when written, false one commit later: the
+// SF-3 restructure collapsed the pair and the signature now takes `header`, so a header is exactly
+// what is handed to it. The compile-time guarantee this note credited had stopped existing.
+//
+// Correction #2 (this text) was written, asserted against the wrong anchor, and SILENTLY DID NOT
+// APPLY — the edit failed, the gate ran green, and the stale note shipped for another commit until
+// the reviewer diffed the file and found it byte-identical. That is LEARNINGS' "an unasserted
+// `replace()` is a no-op waiting to happen", except mine DID assert and I read the next green line
+// instead of the failure.
+//
+// So, accurately: what closes this class is a RUNTIME invariant, held by hand at the three `header:`
+// assignments in `getShellNav` (the zero-project, foreign-slug and normal returns), each of which
+// reads `gateOpen ? <a header> : null`. The other two returns yield `EMPTY`, whose `header` is null
+// structurally. Revert the foreign-slug branch to a bare `return EMPTY` and the predicate disagrees
+// between two calls again — nothing prevents that, and certainly not the compiler.
+//
+// It is NOT unit-testable here: `shell-nav.ts` is `import 'server-only'`, so this layer cannot call
+// `getShellNav` at all. A weaker guarantee than the note used to claim, stated as what it is.
 //
 // What IS tested below is the predicate's truth table, which the compiler does NOT give for free.
 
@@ -407,6 +421,15 @@ test('with no projects the gates cannot affect the header — every combination 
     'journey-projections': false,
     signals: false,
   })
+  // ANCHORED absolutely, not just relatively. Every comparison below is `header(x)` against
+  // `header(allFalse)` — both sides from the same function — so deleting the unconditional Today
+  // push in `buildConsoleHeader` would collapse both to `{tabs: [], projects: []}` and all 32
+  // comparisons would still pass. The neighbouring test catches that, but this one should not depend
+  // on its neighbour surviving (fresh reviewer, PR #122, sixth pass).
+  assert.deepEqual(
+    allFalse.tabs.map((tab) => tab.id),
+    ['today']
+  )
 
   const keys = [
     'experiment-governance',

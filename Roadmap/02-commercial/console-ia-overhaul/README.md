@@ -421,9 +421,11 @@ two states reach it permanently regardless of the gate: an **anonymous** viewer 
 dashboards are allow-listed public surfaces that render this shell) and the **`getShellNav` catch**.
 
 So Story 3.5's *"the now-dead gate-off branch is deleted"* would strip the public demo dashboards of
-all header content. Amended in `sprint-3.md`: 3.5 deletes the four **signed-in** legacy links, keeps
-a public chrome, and gains an acceptance criterion naming what an anonymous visitor sees after the
-flip. Recorded now rather than at 3.5, because the reason is legible in Sprint 1's code today and
+all header content. Amended in `sprint-3.md`: **3.5 deletes `Home` and the `<details>` disclosure
+only.** `Connect` and `Agent notes` STAY — they are the public chrome's only route to `/install` and
+`/llms.txt`, and they never rendered in the console branch. (`Home` is safe because its destination is
+duplicated: both branches link `/app` from the logo, so it loses a link, not a route.) 3.5 also gains
+an acceptance criterion naming what an anonymous visitor sees after the flip. Recorded now rather than at 3.5, because the reason is legible in Sprint 1's code today and
 will not be in three sprints.
 
 #### A15 — DISPROVED: Ship's rail must NOT carry the environment picker *(re-scopes Story 1.4)*
