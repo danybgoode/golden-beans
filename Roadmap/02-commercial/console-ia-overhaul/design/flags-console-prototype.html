@@ -1,0 +1,1867 @@
+<title>Flag Console Parity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────────────────
+   Golden Beans · flags console — Flagsmith's structure, Golden's skin.
+   Palette lifted verbatim from references/design/assets/tokens.css.
+   Single-theme by commitment: the product sets color-scheme: dark.
+   ───────────────────────────────────────────────────────────────────────── */
+:root{
+  --roast:#16120d; --roast-2:#1c1710; --card:#241d14; --card-2:#2b2318; --card-3:#332a1d;
+  --line:#3a3023; --line-soft:#2e2619;
+  --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+  --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+  --green:#7fd069; --green-deep:#2c5e22; --red:#e86a5e; --red-deep:#6e2a22; --blue:#6db3e8;
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --r:8px; --r-lg:12px;
+  --shadow:0 18px 44px rgb(0 0 0 / 44%);
+  --shadow-hi:0 24px 64px rgb(0 0 0 / 62%);
+  --t:140ms cubic-bezier(.2,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark}
+body{
+  margin:0; background:var(--roast); color:var(--crema);
+  font-family:var(--sans); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,ul,ol{margin:0}
+ul{list-style:none;padding:0}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--gold-hot)}
+code,.mono{font-family:var(--mono);font-variant-ligatures:none}
+:focus-visible{outline:2px solid var(--gold-hot);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── chrome ─────────────────────────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:14px;height:54px;padding:0 20px;
+  background:var(--roast-2);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:40;
+}
+.mark{
+  width:26px;height:26px;border-radius:7px;flex:none;
+  background:linear-gradient(140deg,var(--gold-hot),var(--gold-deep));
+  display:grid;place-items:center;color:#241d14;font-weight:700;font-size:12px;letter-spacing:-.02em;
+}
+.crumb{display:flex;align-items:center;gap:8px;font-size:13px}
+.crumb b{font-weight:600}
+.crumb .sep{color:var(--dim-2)}
+.crumb-btn{
+  display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;
+  border:1px solid transparent;color:var(--crema);transition:background var(--t),border-color var(--t);
+}
+.crumb-btn:hover{background:var(--card);border-color:var(--line)}
+.crumb-btn .chev{color:var(--dim-2);font-size:10px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.proto-pill{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--gold);border:1px solid var(--gold-deep);background:rgb(232 185 60 / 9%);
+  padding:3px 8px;border-radius:999px;
+}
+.cmdk{
+  display:flex;align-items:center;gap:10px;padding:5px 9px 5px 12px;border-radius:7px;
+  border:1px solid var(--line);background:var(--card);color:var(--dim-2);font-size:13px;
+  transition:border-color var(--t),color var(--t);
+}
+.cmdk:hover{border-color:var(--dim-2);color:var(--crema)}
+.cmdk kbd{
+  font-family:var(--mono);font-size:10.5px;padding:2px 5px;border-radius:4px;
+  border:1px solid var(--line);background:var(--roast-2);color:var(--dim-2);
+}
+.avatar{
+  width:27px;height:27px;border-radius:50%;flex:none;font-size:11.5px;font-weight:700;
+  background:var(--card-3);border:1px solid var(--line);color:var(--crema);
+  display:grid;place-items:center;transition:border-color var(--t);
+}
+.avatar:hover{border-color:var(--gold-deep)}
+.badge-dot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--gold);
+  margin-left:6px;vertical-align:middle;
+}
+.palette{
+  width:100%;max-width:560px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-hi);overflow:hidden;
+  animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.palette input{
+  width:100%;padding:16px 20px;background:transparent;border:none;border-bottom:1px solid var(--line);
+  color:var(--crema);font:inherit;font-size:16px;
+}
+.palette input:focus{outline:none}
+.palette input::placeholder{color:var(--dim-2)}
+.palette .results{max-height:340px;overflow-y:auto;padding:6px}
+.palette .res{
+  display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:7px;width:100%;
+  text-align:left;transition:background var(--t);
+}
+.palette .res:hover,.palette .res.sel{background:var(--card-3)}
+.palette .res .kind{
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;flex:none;
+}
+.palette .res .nm{font-size:13.5px}
+.palette .res .nm.mono{font-family:var(--mono);font-size:13px}
+.palette .res .whr{margin-left:auto;font-size:12px;color:var(--dim-2)}
+.palette .none{padding:26px;text-align:center;color:var(--dim-2);font-size:13.5px}
+.palette .foot{
+  padding:9px 16px;border-top:1px solid var(--line);background:var(--roast-2);
+  font-size:11.5px;color:var(--dim-2);font-family:var(--mono);
+}
+.dormant{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;width:100%;text-align:left;
+  background:var(--roast-2);transition:background var(--t);border-top:1px solid var(--line);
+}
+.dormant:hover{background:var(--card-2)}
+.dormant .tw{
+  width:26px;height:26px;border-radius:7px;border:1px dashed var(--line);flex:none;
+  display:grid;place-items:center;color:var(--dim-2);font-size:11px;
+}
+.dormant .t{display:block;font-size:14px;font-weight:600}
+.dormant .d{display:block;font-size:12.5px;color:var(--dim-2);margin-top:3px;max-width:78ch}
+.dormant .go{margin-left:auto;font-size:12.5px;color:var(--gold);font-weight:600;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:22px}
+.tile{padding:16px 18px;border-radius:var(--r-lg);background:var(--card);border:1px solid var(--line)}
+.tile .k{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);font-weight:600}
+.tile .n{font-family:var(--mono);font-size:28px;font-weight:600;margin-top:8px;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12.5px;color:var(--dim);margin-top:4px}
+.tile .n.up{color:var(--green)} .tile .n.warn{color:var(--gold-hot)}
+.copyrow{
+  display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--roast-2);overflow:hidden;
+}
+.copyrow code{
+  flex:1;padding:12px 14px;font-size:13px;color:var(--gold-hot);overflow-x:auto;white-space:nowrap;
+}
+.copyrow button{
+  padding:12px 16px;border-left:1px solid var(--line);background:var(--card-2);
+  font-size:13px;font-weight:600;color:var(--crema);white-space:nowrap;transition:background var(--t);
+}
+.copyrow button:hover{background:var(--card-3)}
+.steplist{counter-reset:s;display:flex;flex-direction:column;gap:14px;list-style:none;padding:0;margin:0}
+.steplist li{
+  counter-increment:s;position:relative;padding-left:38px;font-size:14px;color:var(--dim);line-height:1.6;
+}
+.steplist li::before{
+  content:counter(s);position:absolute;left:0;top:0;width:25px;height:25px;border-radius:50%;
+  border:1px solid var(--gold-deep);color:var(--gold);display:grid;place-items:center;
+  font-family:var(--mono);font-size:12px;
+}
+.steplist li b{color:var(--crema)}
+
+.tabs{
+  display:flex;gap:2px;padding:0 20px;background:var(--roast-2);
+  border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:11px 12px 10px;font-size:13px;color:var(--dim);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color var(--t),border-color var(--t);
+}
+.tab:hover{color:var(--crema)}
+.tab[aria-selected="true"]{color:var(--crema);border-bottom-color:var(--gold);font-weight:500}
+
+/* ── frame ──────────────────────────────────────────────────────────────── */
+.frame{display:grid;grid-template-columns:236px minmax(0,1fr);align-items:start;gap:0}
+.rail{
+  border-right:1px solid var(--line);padding:18px 14px 40px;
+  position:sticky;top:98px;height:calc(100vh - 98px);overflow-y:auto;
+}
+.rail-label{
+  font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;margin-bottom:7px;display:block;
+}
+.envpick{position:relative;margin-bottom:22px}
+.envpick>button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:9px 11px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  text-align:left;transition:border-color var(--t),background var(--t);
+}
+.envpick>button:hover{border-color:var(--gold-deep)}
+.envpick>button .nm{font-weight:600;font-size:13.5px}
+.envpick>button .chev{margin-left:auto;color:var(--dim-2);font-size:10px}
+.env-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.env-dot.production{background:var(--gold)}
+.env-dot.preview{background:var(--blue)}
+.env-dot.development{background:var(--dim-2)}
+.envmenu{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:30;
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:5px;
+}
+.envmenu button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;
+  text-align:left;font-size:13.5px;transition:background var(--t);
+}
+.envmenu button:hover{background:var(--card-3)}
+.envmenu .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim-2)}
+
+.railnav{display:flex;flex-direction:column;gap:1px}
+.railnav button{
+  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;
+  font-size:13.5px;color:var(--dim);text-align:left;transition:background var(--t),color var(--t);
+}
+.railnav button:hover{background:var(--card);color:var(--crema)}
+.railnav button[aria-current="true"]{background:var(--card-2);color:var(--crema);font-weight:600}
+.railnav .ico{width:15px;flex:none;color:var(--dim-2);display:grid;place-items:center}
+.railnav button[aria-current="true"] .ico{color:var(--gold)}
+.railnav .pip{
+  margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim-2);
+}
+
+.content{padding:26px 30px 90px;max-width:1180px}
+.page-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.page-head h1{font-size:23px;font-weight:700;letter-spacing:-.01em}
+.page-head p{color:var(--dim);font-size:13.5px;margin-top:4px;max-width:62ch}
+.page-head .spacer{margin-left:auto}
+
+/* ── buttons ────────────────────────────────────────────────────────────── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r);
+  font-size:13.5px;font-weight:600;border:1px solid transparent;white-space:nowrap;
+  transition:background var(--t),border-color var(--t),color var(--t),transform 90ms;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--gold);color:#241d14;box-shadow:0 2px 0 var(--gold-deep)}
+.btn-primary:hover{background:var(--gold-hot)}
+.btn-ghost{border-color:var(--line);color:var(--crema);background:var(--card)}
+.btn-ghost:hover{border-color:var(--dim-2);background:var(--card-2)}
+.btn-quiet{color:var(--dim);padding:8px 10px}
+.btn-quiet:hover{color:var(--crema);background:var(--card)}
+.btn-danger{background:var(--red);color:#2a100c;box-shadow:0 2px 0 var(--red-deep)}
+.btn-danger:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+
+/* ── summary strip ──────────────────────────────────────────────────────── */
+.summary{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:18px;
+}
+.stat{
+  display:block;width:100%;text-align:left;padding:13px 15px;border-radius:var(--r-lg);
+  background:var(--card);border:1px solid var(--line);
+  transition:border-color var(--t),background var(--t);
+}
+.stat:hover{border-color:var(--dim-2)}
+.stat[aria-pressed="true"]{border-color:var(--gold);background:var(--card-2)}
+.stat .n{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .k{font-size:12.5px;color:var(--dim);margin-top:3px;display:flex;align-items:center;gap:6px}
+.stat.on .n{color:var(--green)}
+.stat.off .n{color:var(--red)}
+.stat.never .n{color:var(--dim-2)}
+.stat.all .n{color:var(--crema)}
+.answer{
+  margin-bottom:18px;padding:12px 15px;border-radius:var(--r-lg);
+  background:linear-gradient(90deg,rgb(232 185 60 / 8%),transparent 70%);
+  border:1px solid var(--line);border-left:2px solid var(--gold);
+  font-size:13.5px;color:var(--crema);
+}
+.answer b{font-weight:600}
+.answer .mono{color:var(--gold-hot)}
+
+/* ── toolbar ────────────────────────────────────────────────────────────── */
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;
+}
+.search{
+  position:relative;flex:1 1 250px;min-width:190px;
+}
+.search input{
+  width:100%;padding:8px 11px 8px 32px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);color:var(--crema);
+  font:inherit;font-size:13.5px;transition:border-color var(--t);
+}
+.search input::placeholder{color:var(--dim-2)}
+.search input:focus{border-color:var(--gold-deep);outline:none}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--dim-2)}
+.sel{position:relative}
+.sel select{
+  appearance:none;padding:8px 28px 8px 11px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line);color:var(--crema);
+  font:inherit;font-size:13.5px;cursor:pointer;transition:border-color var(--t);
+}
+.sel select:hover{border-color:var(--dim-2)}
+.sel::after{
+  content:"";position:absolute;right:11px;top:50%;width:5px;height:5px;pointer-events:none;
+  border-right:1.5px solid var(--dim-2);border-bottom:1.5px solid var(--dim-2);
+  transform:translateY(-70%) rotate(45deg);
+}
+.sel select option{background:var(--card-2)}
+
+/* ── feature list ───────────────────────────────────────────────────────── */
+.listcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.listhead{
+  display:flex;align-items:center;gap:12px;padding:9px 16px;
+  border-bottom:1px solid var(--line);background:var(--roast-2);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);font-weight:600;
+}
+.listhead .h-state{width:190px;flex:none}
+.listhead .h-meta{width:150px;flex:none}
+.listhead .h-act{width:96px;flex:none;text-align:right}
+
+.grp{
+  padding:8px 16px;background:var(--roast-2);border-bottom:1px solid var(--line-soft);
+  border-top:1px solid var(--line);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600;
+  display:flex;align-items:center;gap:8px;
+}
+.grp .cnt{font-family:var(--mono);color:var(--dim-2);letter-spacing:0;text-transform:none;font-size:11.5px}
+.grp .bar{width:3px;height:12px;border-radius:2px;background:var(--dim-2)}
+.grp.on .bar{background:var(--green)}
+.grp.off .bar{background:var(--red)}
+
+.row{
+  display:flex;align-items:center;gap:12px;padding:12px 16px;width:100%;text-align:left;
+  border-bottom:1px solid var(--line-soft);transition:background var(--t);position:relative;
+}
+.row:last-child{border-bottom:none}
+.row:hover{background:var(--card-2)}
+.row-main{flex:1 1 auto;min-width:0;cursor:pointer}
+.row-key{
+  font-family:var(--mono);font-size:13.5px;font-weight:500;color:var(--crema);
+  display:flex;align-items:center;gap:8px;
+}
+.row:hover .row-key{color:var(--gold-hot)}
+.row-desc{
+  font-size:12.5px;color:var(--dim);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60ch;
+}
+.row-state{width:190px;flex:none}
+.row-meta{width:150px;flex:none;display:flex;gap:6px;flex-wrap:wrap}
+.row-act{width:96px;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:6px}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;
+  font-size:12px;font-weight:600;border:1px solid;
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.pill.on{color:var(--green);border-color:var(--green-deep);background:rgb(127 208 105 / 10%)}
+.pill.on .dot{background:var(--green)}
+.pill.off{color:var(--red);border-color:var(--red-deep);background:rgb(232 106 94 / 10%)}
+.pill.off .dot{background:var(--red)}
+.pill.never{color:var(--dim);border-color:var(--line);border-style:dashed;background:transparent}
+.pill.never .dot{background:var(--dim-2)}
+.state-detail{font-size:11.5px;color:var(--dim-2);margin-top:3px;font-family:var(--mono)}
+
+.tag{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:5px;
+  font-size:11.5px;border:1px solid var(--line);color:var(--dim);background:var(--roast-2);
+  white-space:nowrap;
+}
+.tag.kill{color:var(--red);border-color:var(--red-deep)}
+.tag.risk-high{color:var(--gold-hot);border-color:var(--gold-deep)}
+.tag.unclassified{border-style:dashed;color:var(--dim-2)}
+
+/* the switch — three states, because Golden has three */
+.sw{
+  width:38px;height:21px;border-radius:999px;position:relative;flex:none;
+  border:1px solid var(--line);background:var(--roast-2);transition:background var(--t),border-color var(--t);
+}
+.sw::after{
+  content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+  background:var(--dim-2);transition:transform var(--t),background var(--t);
+}
+.sw:hover{border-color:var(--dim-2)}
+.sw.on{background:var(--green-deep);border-color:var(--green)}
+.sw.on::after{transform:translateX(17px);background:var(--green)}
+.sw.off{background:rgb(232 106 94 / 14%);border-color:var(--red-deep)}
+.sw.off::after{background:var(--red)}
+.sw.never{border-style:dashed;background:transparent}
+.sw.never::after{background:transparent;border:1.5px dashed var(--dim-2);width:15px;height:15px}
+
+.kebab{
+  width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--dim-2);
+  transition:background var(--t),color var(--t);
+}
+.kebab:hover{background:var(--card-3);color:var(--crema)}
+
+.menu{
+  position:fixed;z-index:60;min-width:214px;padding:5px;
+  background:var(--card-2);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-hi);
+}
+.menu button{
+  width:100%;display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;
+  font-size:13px;text-align:left;color:var(--crema);transition:background var(--t);
+}
+.menu button:hover{background:var(--card-3)}
+.menu button.danger{color:var(--red)}
+.menu hr{border:none;border-top:1px solid var(--line);margin:4px 0}
+
+.empty{padding:44px 20px;text-align:center;color:var(--dim)}
+.empty b{display:block;color:var(--crema);font-size:15px;margin-bottom:5px;font-weight:600}
+
+/* ── modal ──────────────────────────────────────────────────────────────── */
+.scrim{
+  position:fixed;inset:0;z-index:70;background:rgb(8 6 4 / 66%);
+  display:flex;align-items:flex-start;justify-content:center;padding:44px 20px;overflow-y:auto;
+  animation:fade 120ms ease-out;
+}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{
+  width:100%;max-width:720px;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-hi);overflow:hidden;
+  animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.modal.wide{max-width:900px}
+.modal.narrow{max-width:460px}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px 14px}
+.modal-head h2{font-size:16px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.modal-head h2 .k{font-family:var(--mono);font-size:15px}
+.modal-head .sub{color:var(--dim);font-size:12.5px;margin-top:4px}
+.x{
+  margin-left:auto;width:28px;height:28px;border-radius:6px;display:grid;place-items:center;
+  color:var(--dim-2);flex:none;transition:background var(--t),color var(--t);
+}
+.x:hover{background:var(--card-3);color:var(--crema)}
+.modal-tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.modal-tabs::-webkit-scrollbar{display:none}
+.modal-tab{
+  padding:9px 11px;font-size:13px;color:var(--dim);white-space:nowrap;
+  border-bottom:2px solid transparent;transition:color var(--t),border-color var(--t);
+}
+.modal-tab:hover{color:var(--crema)}
+.modal-tab[aria-selected="true"]{color:var(--crema);border-bottom-color:var(--gold);font-weight:500}
+.modal-body{padding:20px}
+.modal-foot{
+  display:flex;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--line);
+  background:var(--roast-2);
+}
+.modal-foot .note{font-size:12px;color:var(--dim-2);margin-right:auto;max-width:40ch}
+
+.field{margin-bottom:20px}
+.field:last-child{margin-bottom:0}
+.field>.lab{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;display:block;margin-bottom:8px;
+}
+.field .hint{font-size:12.5px;color:var(--dim);margin-top:7px;max-width:64ch}
+
+.seg{display:inline-flex;padding:3px;background:var(--roast-2);border:1px solid var(--line);border-radius:9px;gap:3px}
+.seg button{
+  padding:7px 16px;border-radius:7px;font-size:13.5px;font-weight:600;color:var(--dim);
+  transition:background var(--t),color var(--t);
+}
+.seg button:hover{color:var(--crema)}
+.seg button[aria-pressed="true"]{background:var(--card-3);color:var(--crema)}
+.seg button.yes[aria-pressed="true"]{background:var(--green-deep);color:var(--green)}
+.seg button.no[aria-pressed="true"]{background:rgb(232 106 94 / 18%);color:var(--red)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{
+  padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--roast-2);
+  font-size:12.5px;color:var(--dim);transition:all var(--t);
+}
+.chip:hover{border-color:var(--dim-2);color:var(--crema)}
+.chip[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 12%);color:var(--gold-hot);font-weight:600}
+
+.picklist{display:flex;flex-direction:column;gap:6px}
+.pick{
+  display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--roast-2);text-align:left;width:100%;
+  transition:border-color var(--t),background var(--t);
+}
+.pick:hover{border-color:var(--dim-2)}
+.pick[aria-pressed="true"]{border-color:var(--gold);background:rgb(232 185 60 / 8%)}
+.pick .radio{
+  width:15px;height:15px;border-radius:50%;border:1.5px solid var(--dim-2);flex:none;
+  display:grid;place-items:center;transition:border-color var(--t);
+}
+.pick[aria-pressed="true"] .radio{border-color:var(--gold)}
+.pick[aria-pressed="true"] .radio::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.pick .t{display:block;font-size:13.5px;font-weight:500}
+.pick .t .mono{font-size:13px}
+.pick .d{display:block;font-size:12px;color:var(--dim-2);margin-top:2px;line-height:1.45}
+.pick .badge{
+  margin-left:auto;font-size:11px;padding:2px 8px;border-radius:999px;
+  border:1px solid var(--gold-deep);color:var(--gold);white-space:nowrap;
+}
+
+.envtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.envtable th{
+  text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;padding:0 12px 8px 0;border-bottom:1px solid var(--line);
+}
+.envtable td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.envtable tr:last-child td{border-bottom:none}
+.envtable .who{font-size:12px;color:var(--dim-2);margin-top:3px}
+.envtable td:last-child{padding-right:0;text-align:right}
+.envname{display:flex;align-items:center;gap:8px;font-weight:600}
+.here{font-size:10.5px;color:var(--gold);border:1px solid var(--gold-deep);border-radius:999px;padding:1px 7px;font-weight:600}
+
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl{display:flex;gap:13px;padding:0 0 18px;position:relative}
+.tl:last-child{padding-bottom:0}
+.tl::before{
+  content:"";position:absolute;left:6px;top:16px;bottom:0;width:1px;background:var(--line);
+}
+.tl:last-child::before{display:none}
+.tl .dot{
+  width:13px;height:13px;border-radius:50%;flex:none;margin-top:3px;z-index:1;
+  border:2px solid var(--roast);background:var(--dim-2);
+}
+.tl.on .dot{background:var(--green)}
+.tl.off .dot{background:var(--red)}
+.tl.ver .dot{background:var(--blue)}
+.tl .t{font-size:13.5px}
+.tl .t b{font-weight:600}
+.tl .m{font-size:12px;color:var(--dim-2);margin-top:3px;font-family:var(--mono)}
+.tl .reason{
+  display:inline-block;margin-top:6px;font-size:12px;color:var(--dim);
+  border-left:2px solid var(--line);padding-left:9px;
+}
+
+.bars{display:flex;align-items:flex-end;gap:3px;height:88px;margin-top:6px}
+.bars i{flex:1;background:linear-gradient(180deg,var(--gold),var(--gold-deep));border-radius:2px 2px 0 0;min-height:2px}
+.bars i.dim{background:var(--card-3)}
+.barscale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--dim-2);margin-top:6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.kpi{padding:12px 14px;border-radius:var(--r);background:var(--roast-2);border:1px solid var(--line)}
+.kpi .n{font-family:var(--mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .k{font-size:11.5px;color:var(--dim-2);margin-top:2px}
+
+.inline-edit{
+  display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--r);
+  background:var(--roast-2);border:1px solid var(--line);
+}
+.inline-edit .val{flex:1;font-size:13.5px;line-height:1.55}
+.inline-edit input{
+  flex:1;background:var(--card);border:1px solid var(--gold-deep);border-radius:6px;
+  padding:7px 10px;color:var(--crema);font:inherit;font-size:13.5px;
+}
+.inline-edit input:focus{outline:none;border-color:var(--gold)}
+.note-box{
+  padding:11px 13px;border-radius:var(--r);background:var(--roast-2);border:1px dashed var(--line);
+  font-size:12.5px;color:var(--dim-2);line-height:1.55;
+}
+.note-box .lab2{
+  display:block;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim-2);font-weight:600;margin-bottom:6px;
+}
+
+.rule{
+  display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:11px;border-radius:var(--r);
+  background:var(--roast-2);border:1px solid var(--line);margin-bottom:8px;
+}
+.rule .as{font-size:12.5px;color:var(--dim-2);padding:0 2px}
+.rule .sel select{padding:6px 26px 6px 9px;font-size:13px}
+.rule .rm{margin-left:auto;color:var(--dim-2);padding:4px 6px;border-radius:5px}
+.rule .rm:hover{color:var(--red);background:var(--card-3)}
+.slider{display:flex;align-items:center;gap:13px}
+.slider input[type=range]{flex:1;accent-color:var(--gold);height:4px}
+.slider .v{font-family:var(--mono);font-size:15px;font-weight:600;width:52px;text-align:right;color:var(--gold-hot)}
+
+.callout{
+  display:flex;gap:11px;padding:13px 15px;border-radius:var(--r);font-size:13px;line-height:1.55;
+  background:rgb(232 106 94 / 8%);border:1px solid var(--red-deep);color:var(--crema);
+}
+.callout.info{background:rgb(109 179 232 / 7%);border-color:#2f4d63}
+.callout .ico{flex:none;color:var(--red);margin-top:1px}
+.callout.info .ico{color:var(--blue)}
+.callout b{font-weight:600}
+
+/* compare matrix */
+.matrix{width:100%;border-collapse:collapse;font-size:13px}
+.matrix th{
+  position:sticky;top:0;background:var(--roast-2);z-index:2;
+  text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);
+}
+.matrix th.env{text-align:center;width:132px}
+.matrix td{padding:9px 12px;border-bottom:1px solid var(--line-soft)}
+.matrix td.c{text-align:center}
+.matrix tbody tr:hover{background:var(--card-2)}
+.matrix .key{font-family:var(--mono);font-size:13px}
+.cell{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px}
+.cell.on{background:rgb(127 208 105 / 16%);color:var(--green)}
+.cell.off{background:rgb(232 106 94 / 16%);color:var(--red)}
+.cell.never{color:var(--dim-2);border:1px dashed var(--line)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);margin-bottom:14px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+
+/* wizard */
+.steps{display:flex;gap:0;margin-bottom:22px}
+.step{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dim-2);flex:1}
+.step .n{
+  width:21px;height:21px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--mono);font-size:11px;flex:none;
+}
+.step[data-on="true"]{color:var(--crema)}
+.step[data-on="true"] .n{border-color:var(--gold);color:var(--gold);background:rgb(232 185 60 / 10%)}
+.step[data-done="true"] .n{background:var(--gold);border-color:var(--gold);color:#241d14}
+.step .line{flex:1;height:1px;background:var(--line);margin:0 4px}
+.step:last-child .line{display:none}
+.keyfield{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--roast-2);overflow:hidden}
+.keyfield .sel select{border:none;border-right:1px solid var(--line);border-radius:0;background:var(--card-2);font-family:var(--mono)}
+.keyfield input{
+  flex:1;background:transparent;border:none;padding:9px 11px;color:var(--crema);
+  font-family:var(--mono);font-size:13.5px;
+}
+.keyfield input:focus{outline:none}
+.keyfield .suffix{padding:0 12px;font-family:var(--mono);font-size:13.5px;color:var(--dim-2)}
+.cardpick{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cardpick .pick{flex-direction:column;align-items:flex-start;gap:5px;padding:13px}
+.cardpick .pick .radio{display:none}
+.review{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.review div{display:flex;gap:12px;padding:10px 13px;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+.review div:last-child{border-bottom:none}
+.review .k{width:112px;flex:none;color:var(--dim-2);font-size:12.5px}
+
+.placeholder{
+  padding:40px 30px;border-radius:var(--r-lg);border:1px dashed var(--line);background:var(--card);
+  text-align:center;
+}
+.placeholder h3{font-size:17px;font-weight:600;margin-bottom:7px}
+.placeholder p{color:var(--dim);font-size:13.5px;max-width:56ch;margin:0 auto}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;
+  display:flex;align-items:center;gap:10px;padding:11px 17px;border-radius:999px;
+  background:var(--card-2);border:1px solid var(--line);box-shadow:var(--shadow-hi);
+  font-size:13.5px;animation:rise 140ms cubic-bezier(.2,0,.2,1);
+}
+.toast .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
+.toast button{color:var(--gold);font-weight:600;font-size:13px}
+
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.diff>div{padding:16px 18px}
+.diff>div:first-child{border-right:1px solid var(--line);background:rgb(232 106 94 / 5%)}
+.diff h4{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;margin-bottom:11px;
+}
+.diff>div:first-child h4{color:var(--red)}
+.diff>div:last-child h4{color:var(--green)}
+.diff li{font-size:13px;padding:5px 0;border-bottom:1px solid var(--line-soft);color:var(--dim)}
+.diff li:last-child{border-bottom:none}
+.diff li b{color:var(--crema);font-weight:500}
+.diff li .mono{font-size:12.5px}
+.wordlist{display:flex;flex-direction:column;gap:0;margin-top:16px}
+.wordlist div{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.wordlist div:last-child{border-bottom:none}
+.wordlist .was{flex:1;color:var(--dim-2);text-decoration:line-through;text-decoration-color:var(--red-deep)}
+.wordlist .arw{color:var(--dim-2)}
+.wordlist .now{flex:1;color:var(--crema);font-weight:500}
+
+@media (max-width:900px){
+  .frame{grid-template-columns:1fr}
+  .rail{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+  .content{padding:20px 16px 70px}
+  .listhead{display:none}
+  .row{flex-wrap:wrap}
+  .row-main{flex:1 1 100%}
+  .row-state,.row-meta{width:auto}
+  .row-act{width:auto;margin-left:auto}
+  .diff{grid-template-columns:1fr}
+  .diff>div:first-child{border-right:none;border-bottom:1px solid var(--line)}
+}
+</style>
+
+<div class="topbar">
+  <button class="mark" onclick="setSection('today')" title="Golden Beans — go to Today">GB</button>
+  <div class="crumb">
+    <button class="crumb-btn" onclick="toggleProjMenu(event)" id="projbtn">
+      <b>miyagisanchez</b> <span class="chev">▼</span></button>
+    <div class="envmenu" id="projmenu" hidden style="min-width:230px">
+      <button><span class="env-dot production"></span>miyagisanchez<span class="cnt">owner</span></button>
+      <button><span class="env-dot development"></span>golden-beans-demo<span class="cnt">member</span></button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="cmdk" onclick="openPalette()"><span>Search</span><kbd>⌘K</kbd></button>
+    <button class="btn btn-quiet btn-sm" onclick="openDiff()">What changed &amp; why</button>
+    <button class="avatar" onclick="toast('Account · Sign out')" title="Daniel">D</button>
+    <span class="proto-pill">Prototype</span>
+  </div>
+</div>
+
+<div class="tabs" role="tablist" id="sectionnav"></div>
+
+<div class="frame">
+  <aside class="rail">
+    <div id="railscope"></div>
+    <nav class="railnav" id="railnav"></nav>
+  </aside>
+  <main class="content" id="content"></main>
+</div>
+
+<div id="overlays"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATA — the 42 features of miyagisanchezmarketplace.
+   Descriptions are the OPERATOR line. The engineer's paragraph moves to
+   Settings › Engineering note, where it stops being the thing you read first.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const FEATURES = [
+ ["catalog.bulk_enabled","Editing many products at once from the catalog list.","release","medium",2],
+ ["catalog.inventory_channels_enabled","Separate stock counts per sales channel instead of one shared number.","release","medium",1],
+ ["catalog.media_reorder_enabled","Dragging product photos into a different order.","release","low",1],
+ ["catalog.owned_shop_only_enabled","Restricting a seller to listing only in shops they own.","kill","high",1],
+ ["catalog.variants_v2_enabled","The rebuilt size and colour variant editor.","release","medium",3],
+ ["checkout.guest_enabled","Buying without creating an account.","kill","high",1],
+ ["checkout.oxxo_enabled","Paying cash at OXXO.","kill","high",1],
+ ["checkout.rental_pricing_enabled","Daily and weekly rental prices shown at checkout.","release","medium",2],
+ ["checkout.spei_enabled","Paying by SPEI bank transfer.","kill","high",1],
+ ["checkout.stripe_enabled","Paying by card at checkout.","kill","high",3],
+ ["content.blocks_enabled","The drag-and-drop block editor on storefront pages.","release","medium",2],
+ ["content.overrides_enabled","Per-shop wording overrides on storefront pages.","release","low",1],
+ ["domain.paywall_enabled","Requiring a paid plan before a custom domain can be connected.","release","high",2],
+ ["events.door_scan_enabled","Scanning ticket QR codes at the door.","release","high",1],
+ ["events.quantity_enabled","Buying more than one admission to the same event.","release","medium",2],
+ ["events.waitlist_enabled","A waitlist once an event sells out.","release","low",1],
+ ["growth.email_digest_enabled","The weekly summary email to sellers.","kill","low",1],
+ ["growth.founding_merchants_enabled","Founding-merchant pricing offered at signup.","release","medium",1],
+ ["growth.referrals_enabled","Rewards for sellers who refer other sellers.","release","medium",1],
+ ["growth.telemetry_enabled","Product analytics collected from the storefront.","kill","low",2],
+ ["migrations.connector_enabled","One-click import from a seller's existing store.","release","medium",1],
+ ["ml.connect_enabled","Connecting a Mercado Libre seller account.","kill","high",2],
+ ["ml.orders_enabled","Pulling Mercado Libre orders into the dashboard.","kill","high",1],
+ ["ml.questions_enabled","Answering Mercado Libre buyer questions from the inbox.","release","medium",1],
+ ["ml.sync_enabled","Pushing catalog changes out to Mercado Libre.","kill","high",2],
+ ["onboarding.checklist_enabled","The setup checklist shown on first sign-in.","release","low",1],
+ ["onboarding.three_doors_enabled","The three-path signup instead of one long form.","release","medium",2],
+ ["ops.payouts_enabled","Scheduling payouts to sellers.","kill","high",1],
+ ["ops.profit_enabled","Profit and margin columns in the operations report.","release","low",1],
+ ["ops.refunds_enabled","Issuing refunds from the dashboard.","kill","high",1],
+ ["partners.commissions_enabled","Tracking what partners have earned.","release","medium",1],
+ ["partners.recruiting_v3_enabled","The rebuilt partner recruiting flow.","release","medium",2],
+ ["promoter.guestlist_enabled","Guest lists on an event.","release","low",1],
+ ["promoter.transfer_enabled","Handing an event over to another promoter.","release","medium",1],
+ ["seller.reviews_enabled","Buyer reviews shown on a seller's shop.","release","medium",1],
+ ["seller.shell_on_sell_enabled","The seller dashboard shell on the sell surface.","release","low",1],
+ ["seller_agent.connector_url_enabled","Agent-generated connector links for sellers.","","",1],
+ ["shipping.arranged_only_enabled","Restricting sellers to shipping they arrange themselves.","kill","high",1],
+ ["shipping.correos_enabled","Correos de México as a shipping carrier.","kill","medium",1],
+ ["shipping.envia_enabled","Envía as a shipping carrier.","kill","medium",1],
+ ["shipping.labels_enabled","Printing a shipping label from an order.","release","medium",1],
+ ["subdomain.paywall_enabled","Requiring a paid plan for a custom subdomain.","release","high",1],
+].map(([key,desc,type,risk,versions])=>({key,desc,type:type||"unclassified",risk:risk||"unclassified",versions}));
+
+/* The engineer's own words, kept but demoted. Verbatim from the current registry. */
+const ENG_NOTE = {
+ "checkout.stripe_enabled":"Kill-switch: when OFF, hides the Stripe card payment rail from checkout (frontend checkout-options proxy). Fail-open: default ON, and stays ON if the flag service is unreachable. Admin-only. Owner: platform.",
+ "domain.paywall_enabled":"Custom-domain paywall (epic 07 · custom-domain-paywall). ENABLEMENT flag (NOT a kill-switch): OFF = ungated (today's free custom-domain behavior, fail-open default; ON = connecting a custom domain requires entitlement (grandfather/comp grant or an active custom-domain subscription) else 402. Flip ON only AFTER the backend deploy + seed-custom-domain-plan.mjs have run. Read server-side by lib/flags.ts.",
+ "events.quantity_enabled":"Events: quantity selector (epic 10). ENABLEMENT polarity, default OFF => buying >1 admission for one event is capped at 1 (today's behavior). Flip ON only after Daniel's live buy-N -> N-QR -> door scan -> roster-N -> aforo-minus-N smoke passes. Enforced server-side via lib/ticket-quantity.ts at the PDP cap, /checkout clamp, and UCP checkout-session.",
+};
+
+const ENVS = [
+  {id:"production", name:"Production", blurb:"What customers are getting right now."},
+  {id:"preview",    name:"Preview",    blurb:"What the team sees on preview deploys."},
+  {id:"development",name:"Development",blurb:"What runs on local machines."},
+];
+
+/* Live state, honest to the registry: 2 on in Production, 40 never turned on. */
+const STATE = {
+  production:{
+    "checkout.stripe_enabled":{s:"on",v:3,who:"Daniel",when:"2026-08-11 09:14",reason:"Planned rollout"},
+    "domain.paywall_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-19 17:02",reason:"Planned rollout"},
+  },
+  preview:{
+    "checkout.stripe_enabled":{s:"on",v:3,who:"Daniel",when:"2026-08-10 11:40",reason:"Testing"},
+    "domain.paywall_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-18 12:20",reason:"Testing"},
+    "events.quantity_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-24 15:31",reason:"Testing"},
+  },
+  development:{
+    "checkout.stripe_enabled":{s:"on",v:3,who:"Daniel",when:"2026-08-09 08:05",reason:"Testing"},
+    "domain.paywall_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-17 10:11",reason:"Testing"},
+    "events.quantity_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-23 19:44",reason:"Testing"},
+    "catalog.bulk_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-25 14:02",reason:"Testing"},
+    "onboarding.three_doors_enabled":{s:"on",v:2,who:"Daniel",when:"2026-08-26 09:30",reason:"Testing"},
+    "ml.sync_enabled":{s:"off",v:null,who:"Daniel",when:"2026-08-26 16:48",reason:"Rolling back"},
+  },
+};
+
+const REASONS = ["Planned rollout","Rolling back","Incident response","Testing","Cleaning up"];
+const STATE_WORDS = {
+  on:{label:"On", detail:r=>`serving v${r.v}`},
+  off:{label:"Turned off", detail:r=>`switched off ${r.when.slice(0,10)}`},
+  never:{label:"Never turned on here", detail:()=>"nobody has ever switched this"},
+};
+const TYPE_WORDS = {kill:"Kill switch", release:"Release toggle", unclassified:"Not classified"};
+const RISK_WORDS = {high:"High risk", medium:"Medium risk", low:"Low risk", unclassified:"Risk not set"};
+
+/* ═══ app state ═══ */
+const APP = {
+  env:"production", section:"ship", rail:"features",
+  q:"", type:"all", risk:"all", sort:"state", group:true,
+  view:"list", dormantOpen:false, page:1,
+  overlay:null, modalTab:"value", wizard:null, menu:null, editingDesc:false,
+};
+
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+
+function stateOf(key, env=APP.env){
+  const r = STATE[env][key];
+  if(!r) return {s:"never", v:null, who:null, when:null, reason:null};
+  return r;
+}
+function counts(env=APP.env){
+  const c={on:0,off:0,never:0};
+  FEATURES.forEach(f=>c[stateOf(f.key,env).s]++);
+  return c;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NAVIGATION — three tiers. Project (top bar) → the four questions → the rail.
+   Nothing below a tier can change what is above it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const SECTIONS = [
+  ["today","Today"],["measure","Measure"],["ship","Ship"],["setup","Setup"],
+];
+/* Each section owns its own rail. Flags need an environment; that scope belongs to
+   Ship and nowhere else, which is why it sits in this rail and not in the top bar. */
+const RAILS = {
+  today:   [],
+  measure: [["overview","North Star","◈"],["journeys","Journeys","◇"],["scenarios","Scenarios & drills","◆"]],
+  ship:    [["features","Features","◧"],["experiments","Experiments","◑"],
+            ["scheduled","Scheduled changes","◔"],["activity","Activity","≡"]],
+  setup:   [["connect","Connect your agent","⌁"],["keys","Keys","⌗"],
+            ["destinations","Destinations","→"],["shares","Share links","◫"]],
+};
+const DEFAULT_RAIL = {today:"", measure:"overview", ship:"features", setup:"connect"};
+/* Setup carries a badge until it is done, then goes quiet. Progressive reduction. */
+let SETUP_DONE = false;
+
+function renderChrome(){
+  $("#sectionnav").innerHTML = SECTIONS.map(([id,l])=>{
+    const badge = id==="setup" && !SETUP_DONE ? '<span class="badge-dot"></span>' : "";
+    return `<button class="tab" role="tab" aria-selected="${APP.section===id}"
+      onclick="setSection('${id}')">${l}${badge}</button>`;
+  }).join("");
+
+  const rails = RAILS[APP.section];
+  const scope = $("#railscope");
+  if(APP.section==="ship"){
+    const e = ENVS.find(x=>x.id===APP.env);
+    scope.innerHTML = `<span class="rail-label">Environment</span>
+      <div class="envpick">
+        <button onclick="toggleEnvMenu(event)" id="envbtn">
+          <span class="env-dot ${e.id}"></span><span class="nm">${e.name}</span><span class="chev">▼</span></button>
+        <div class="envmenu" id="envmenu" hidden>${ENVS.map(x=>
+          `<button onclick="setEnv('${x.id}')"><span class="env-dot ${x.id}"></span>${x.name}
+            <span class="cnt">${counts(x.id).on} on</span></button>`).join("")}</div>
+      </div>
+      <span class="rail-label">In Ship</span>`;
+  } else {
+    scope.innerHTML = rails.length ? `<span class="rail-label">In ${SECTIONS.find(s=>s[0]===APP.section)[1]}</span>` : "";
+  }
+
+  $("#railnav").innerHTML = rails.map(([id,l,ico])=>{
+    const pip = id==="features" ? FEATURES.length : id==="keys" ? 4 : id==="scheduled" ? 0 : "";
+    return `<button aria-current="${APP.rail===id}" onclick="setRail('${id}')">
+      <span class="ico">${ico}</span>${l}${pip!==""?`<span class="pip">${pip}</span>`:""}</button>`;
+  }).join("");
+
+  const hasRail = rails.length>0;
+  document.querySelector(".rail").hidden = !hasRail;
+  document.querySelector(".frame").style.gridTemplateColumns = hasRail ? "236px minmax(0,1fr)" : "1fr";
+}
+
+function setSection(s){
+  APP.section=s; APP.rail=DEFAULT_RAIL[s]; APP.overlay=null;
+  $("#projmenu").hidden=true; render();
+}
+function setEnv(id){ APP.env=id; const m=$("#envmenu"); if(m) m.hidden=true; render(); }
+function setRail(r){ APP.rail=r; render(); }
+function toggleEnvMenu(ev){ ev.stopPropagation(); const m=$("#envmenu"); m.hidden=!m.hidden; }
+function toggleProjMenu(ev){ ev.stopPropagation(); const m=$("#projmenu"); m.hidden=!m.hidden; }
+document.addEventListener("click",()=>{
+  const e=$("#envmenu"); if(e) e.hidden=true;
+  $("#projmenu").hidden=true; closeMenu();
+});
+
+/* ── ⌘K: with 42 features across 3 environments, typing the name is the real nav ── */
+function openPalette(){ APP.overlay={kind:"palette", q:""}; renderOverlay();
+  setTimeout(()=>{ const i=$("#pq"); if(i) i.focus(); },30); }
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==="k"){ e.preventDefault(); openPalette(); }
+});
+function paletteResults(q){
+  const s = q.trim().toLowerCase();
+  const places = [
+    ...SECTIONS.map(([id,l])=>({kind:"Go to", nm:l, mono:false, where:"section", go:`setSection('${id}')`})),
+    ...Object.entries(RAILS).flatMap(([sec,rows])=>rows.map(([id,l])=>
+      ({kind:"Go to", nm:l, mono:false, where:SECTIONS.find(x=>x[0]===sec)[1],
+        go:`setSection('${sec}');setRail('${id}')`}))),
+  ];
+  const feats = FEATURES.map(f=>({kind:"Feature", nm:f.key, mono:true,
+    where:STATE_WORDS[stateOf(f.key).s].label, go:`setSection('ship');setRail('features');openFeature('${f.key}')`}));
+  const all = [...feats, ...places];
+  if(!s) return all.slice(0,8);
+  return all.filter(r=>r.nm.toLowerCase().includes(s)).slice(0,10);
+}
+function paletteModal(o){
+  const rows = paletteResults(o.q);
+  return `<div class="palette" onclick="event.stopPropagation()">
+    <input id="pq" placeholder="Jump to a feature or a section…" value="${esc(o.q)}"
+      oninput="APP.overlay.q=this.value;paletteRefresh()">
+    <div class="results" id="presults">${paletteRows(rows)}</div>
+    <div class="foot">↑↓ to move · ↵ to open · esc to close</div>
+  </div>`;
+}
+function paletteRows(rows){
+  if(!rows.length) return `<div class="none">Nothing matches that.</div>`;
+  return rows.map((r,i)=>`<button class="res ${i===0?"sel":""}" onclick="closeOverlay();${r.go}">
+    <span class="kind">${r.kind}</span><span class="nm ${r.mono?"mono":""}">${esc(r.nm)}</span>
+    <span class="whr">${esc(r.where)}</span></button>`).join("");
+}
+function paletteRefresh(){ $("#presults").innerHTML = paletteRows(paletteResults(APP.overlay.q)); }
+
+/* ═══ features screen ═══ */
+function visibleRows(){
+  const q = APP.q.trim().toLowerCase();
+  let rows = FEATURES.filter(f=>{
+    if(q && !(f.key.toLowerCase().includes(q) || f.desc.toLowerCase().includes(q))) return false;
+    if(APP.type!=="all" && f.type!==APP.type) return false;
+    if(APP.risk!=="all" && f.risk!==APP.risk) return false;
+    if(APP.stateFilter && APP.stateFilter!=="all" && stateOf(f.key).s!==APP.stateFilter) return false;
+    return true;
+  });
+  const order = {on:0, off:1, never:2};
+  const bySort = {
+    state:(a,b)=> order[stateOf(a.key).s]-order[stateOf(b.key).s] || a.key.localeCompare(b.key),
+    key_asc:(a,b)=> a.key.localeCompare(b.key),
+    key_desc:(a,b)=> b.key.localeCompare(a.key),
+    type:(a,b)=> (a.type==="kill"?0:1)-(b.type==="kill"?0:1) || a.key.localeCompare(b.key),
+    recent:(a,b)=> (stateOf(b.key).when||"").localeCompare(stateOf(a.key).when||"") || a.key.localeCompare(b.key),
+  };
+  return rows.sort(bySort[APP.sort]);
+}
+
+function featuresScreen(){
+  const c = counts(), env = ENVS.find(x=>x.id===APP.env), rows = visibleRows();
+  const sf = APP.stateFilter||"all";
+  const onKeys = FEATURES.filter(f=>stateOf(f.key).s==="on").map(f=>f.key);
+
+  const answer = `<div class="answer">
+    Right now <b>${env.name}</b> is serving
+    ${onKeys.length ? onKeys.map(k=>`<span class="mono">${k}</span>`).join(" and ") : "nothing"}.
+    ${c.off ? `<b>${c.off}</b> ${c.off===1?"feature was":"features were"} deliberately switched off here. ` : ""}
+    The other <b>${c.never}</b> have never been switched on in ${env.name} — nobody turned them off, nobody ever turned them on.
+  </div>`;
+
+  const stat = (id,label,n,cls)=>`
+    <button class="stat ${cls}" aria-pressed="${sf===id}" onclick="setStateFilter('${id}')">
+      <span class="n">${n}</span><span class="k">${label}</span></button>`;
+
+  /* ── Why this list is not simply truncated ───────────────────────────────────
+     Truncating 42 identical rows to 15 gives you 15 rows that say the same thing.
+     40 of them are "never turned on here": no information apart, a lot of
+     information together. So the uniform majority collapses to ONE row and the
+     exceptional few stay expanded — and pagination only exists inside the
+     collapsed group, where it is the rare case rather than the default. */
+  const filtering = APP.q || APP.type!=="all" || APP.risk!=="all" || APP.stateFilter;
+  const grouped = APP.sort==="state" && !filtering;
+  const live = grouped ? rows.filter(f=>stateOf(f.key).s!=="never") : rows;
+  const dormant = grouped ? rows.filter(f=>stateOf(f.key).s==="never") : [];
+  const PER = 15;
+  const pages = Math.max(1, Math.ceil(dormant.length/PER));
+  const page = Math.min(APP.page, pages);
+
+  let body="", last=null;
+  if(!rows.length){
+    body = `<div class="empty"><b>Nothing matches this view</b>
+      <span>Clear the filters to see all ${FEATURES.length} features again.</span>
+      <div style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear filters</button></div></div>`;
+  } else {
+    live.forEach(f=>{
+      const st = stateOf(f.key);
+      if(grouped && st.s!==last){
+        last = st.s;
+        const n = live.filter(r=>stateOf(r.key).s===st.s).length;
+        const head = {on:"On in "+env.name, off:"Turned off here", never:"Never turned on here"}[st.s];
+        body += `<div class="grp ${st.s}"><span class="bar"></span>${head}<span class="cnt">${n}</span></div>`;
+      }
+      body += rowHTML(f, st);
+    });
+    if(dormant.length){
+      body += `<button class="dormant" onclick="APP.dormantOpen=!APP.dormantOpen;APP.page=1;render()">
+        <span class="tw">${APP.dormantOpen?"▾":"▸"}</span>
+        <span><span class="t">${dormant.length} features have never been turned on in ${env.name}</span>
+        <span class="d">No one has ever switched them on or off here. Nothing is wrong with them — nothing has happened to them.</span></span>
+        <span class="go">${APP.dormantOpen?"Hide":"Show them"}</span></button>`;
+      if(APP.dormantOpen){
+        dormant.slice((page-1)*PER, page*PER).forEach(f=>{ body += rowHTML(f, stateOf(f.key)); });
+        if(pages>1){
+          body += `<div class="row" style="justify-content:center;gap:14px;background:var(--roast-2)">
+            ${page>1?`<button class="btn btn-ghost btn-sm" onclick="APP.page=${page-1};render()">Previous</button>`:""}
+            <span class="state-detail" style="margin:0">Page ${page} of ${pages}</span>
+            ${page<pages?`<button class="btn btn-ghost btn-sm" onclick="APP.page=${page+1};render()">Next</button>`:""}
+          </div>`;
+        }
+      }
+    }
+  }
+  const shown = grouped ? live.length + (APP.dormantOpen ? Math.min(PER, dormant.length-(page-1)*PER) : 0) : rows.length;
+
+  if(APP.view==="compare") return compareScreen();
+
+  return `
+  <div class="page-head">
+    <div>
+      <h1>Features</h1>
+      <p>Everything this project can switch, and what ${env.name} is doing with it. ${env.blurb}</p>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" onclick="APP.view='compare';render()">Compare environments</button>
+    <button class="btn btn-primary" onclick="openWizard()">+ New feature</button>
+  </div>
+  ${answer}
+  <div class="summary">
+    ${stat("all","All features",FEATURES.length,"all")}
+    ${stat("on","On in "+env.name,c.on,"on")}
+    ${stat("off","Turned off here",c.off,"off")}
+    ${stat("never","Never turned on here",c.never,"never")}
+  </div>
+  <div class="toolbar">
+    <label class="search">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6">
+        <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+      <input type="search" placeholder="Search features" value="${esc(APP.q)}"
+        oninput="APP.q=this.value;renderContent();restoreSearch()" id="searchbox">
+    </label>
+    <span class="sel"><select onchange="APP.type=this.value;render()">
+      <option value="all"${APP.type==="all"?" selected":""}>All types</option>
+      <option value="kill"${APP.type==="kill"?" selected":""}>Kill switches</option>
+      <option value="release"${APP.type==="release"?" selected":""}>Release toggles</option>
+      <option value="unclassified"${APP.type==="unclassified"?" selected":""}>Not classified</option>
+    </select></span>
+    <span class="sel"><select onchange="APP.risk=this.value;render()">
+      <option value="all"${APP.risk==="all"?" selected":""}>Any risk</option>
+      <option value="high"${APP.risk==="high"?" selected":""}>High risk</option>
+      <option value="medium"${APP.risk==="medium"?" selected":""}>Medium risk</option>
+      <option value="low"${APP.risk==="low"?" selected":""}>Low risk</option>
+      <option value="unclassified"${APP.risk==="unclassified"?" selected":""}>Risk not set</option>
+    </select></span>
+    <span class="sel"><select onchange="APP.sort=this.value;render()">
+      <option value="state"${APP.sort==="state"?" selected":""}>Group by state</option>
+      <option value="recent"${APP.sort==="recent"?" selected":""}>Recently changed</option>
+      <option value="key_asc"${APP.sort==="key_asc"?" selected":""}>Name A–Z</option>
+      <option value="key_desc"${APP.sort==="key_desc"?" selected":""}>Name Z–A</option>
+      <option value="type"${APP.sort==="type"?" selected":""}>Kill switches first</option>
+    </select></span>
+  </div>
+  <div class="listcard">
+    <div class="listhead">
+      <span style="flex:1">Feature</span>
+      <span class="h-state">State in ${env.name}</span>
+      <span class="h-meta">Type &amp; risk</span>
+      <span class="h-act">On / off</span>
+    </div>
+    ${body}
+  </div>
+  <p style="margin-top:12px;font-size:12.5px;color:var(--dim-2)">
+    Showing ${shown} rows for ${rows.length} features${grouped&&!APP.dormantOpen?` — ${dormant.length} of them summarised in one line`:""}.
+  </p>`;
+}
+
+function rowHTML(f, st){
+  const w = STATE_WORDS[st.s];
+  return `<div class="row">
+    <div class="row-main" onclick="openFeature('${f.key}')">
+      <div class="row-key">${f.key}</div>
+      <div class="row-desc">${esc(f.desc)}</div>
+    </div>
+    <div class="row-state">
+      <span class="pill ${st.s}"><span class="dot"></span>${w.label}</span>
+      <div class="state-detail">${w.detail(st)}</div>
+    </div>
+    <div class="row-meta">
+      <span class="tag ${f.type==="kill"?"kill":""} ${f.type==="unclassified"?"unclassified":""}">${TYPE_WORDS[f.type]}</span>
+      <span class="tag ${f.risk==="high"?"risk-high":""} ${f.risk==="unclassified"?"unclassified":""}">${RISK_WORDS[f.risk]}</span>
+    </div>
+    <div class="row-act">
+      <button class="sw ${st.s}" title="${st.s==="on"?"Turn off":"Turn on"} in ${APP.env}"
+        aria-label="${st.s==="on"?"Turn off":"Turn on"} ${f.key} in ${APP.env}"
+        onclick="event.stopPropagation();requestToggle('${f.key}')"></button>
+      <button class="kebab" aria-label="More actions for ${f.key}"
+        onclick="event.stopPropagation();openMenu(event,'${f.key}')">⋯</button>
+    </div>
+  </div>`;
+}
+
+function setStateFilter(v){ APP.stateFilter = v==="all"?null:v; render(); }
+function clearFilters(){ APP.q=""; APP.type="all"; APP.risk="all"; APP.stateFilter=null; render(); }
+function restoreSearch(){
+  const el=$("#searchbox"); if(el){ el.focus(); el.setSelectionRange(el.value.length,el.value.length); }
+}
+
+/* ═══ row menu ═══ */
+function openMenu(ev,key){
+  ev.stopPropagation(); closeMenu();
+  const st = stateOf(key);
+  const d = document.createElement("div");
+  d.className="menu"; d.id="rowmenu";
+  d.innerHTML = `
+    <button onclick="closeMenu();openFeature('${key}')">Open feature</button>
+    <button onclick="closeMenu();openFeature('${key}','environments')">Where is it on?</button>
+    <button onclick="closeMenu();openFeature('${key}','history')">See its history</button>
+    <hr>
+    <button onclick="closeMenu();copyKey('${key}')">Copy name</button>
+    <hr>
+    <button class="${st.s==="on"?"danger":""}" onclick="closeMenu();requestToggle('${key}')">
+      ${st.s==="on"?"Turn off in "+APP.env:"Turn on in "+APP.env}</button>`;
+  document.body.appendChild(d);
+  const r = ev.currentTarget.getBoundingClientRect();
+  d.style.top = Math.min(r.bottom+6, innerHeight-230)+"px";
+  d.style.left = Math.max(12, r.right-214)+"px";
+}
+function closeMenu(){ const m=$("#rowmenu"); if(m) m.remove(); }
+function copyKey(k){ navigator.clipboard?.writeText(k); toast(`Copied ${k}`); }
+
+/* ═══ toggling — never silent, never a typed reason ═══ */
+function requestToggle(key){
+  const f = FEATURES.find(x=>x.key===key), st = stateOf(key);
+  if(st.s==="on"){ openConfirm(f); return; }
+  openConfirm(f, true);
+}
+function applyChange(key, turnOn, reason){
+  const f = FEATURES.find(x=>x.key===key);
+  if(turnOn){
+    STATE[APP.env][key] = {s:"on", v:f.versions, who:"Daniel", when:nowStamp(), reason};
+  } else {
+    STATE[APP.env][key] = {s:"off", v:null, who:"Daniel", when:nowStamp(), reason};
+  }
+  closeOverlay();
+  toast(`${f.key} is ${turnOn?"on":"off"} in ${APP.env}`, key);
+  render();
+}
+let UNDO = null;
+function undoChange(key){
+  if(UNDO && UNDO.key===key){ if(UNDO.prev) STATE[APP.env][key]=UNDO.prev; else delete STATE[APP.env][key]; }
+  UNDO=null; toast("Change undone"); render();
+}
+function nowStamp(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ═══ overlays ═══ */
+function closeOverlay(){ APP.overlay=null; APP.wizard=null; APP.editingDesc=false; renderOverlay(); }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeOverlay(); closeMenu(); } });
+
+function openFeature(key, tab){ APP.overlay={kind:"feature",key}; APP.modalTab=tab||"value"; renderOverlay(); }
+function openConfirm(f, turningOn){
+  UNDO = {key:f.key, prev: STATE[APP.env][f.key] ? {...STATE[APP.env][f.key]} : null};
+  APP.overlay={kind:"confirm", key:f.key, turningOn:!!turningOn, reason:null};
+  renderOverlay();
+}
+function openWizard(){ APP.wizard={step:1, ns:"catalog", name:"", type:null, risk:null, envs:["development"]};
+  APP.overlay={kind:"wizard"}; renderOverlay(); }
+function openDiff(){ APP.overlay={kind:"diff"}; renderOverlay(); }
+
+function renderOverlay(){
+  const o = APP.overlay, host = $("#overlays");
+  if(!o){ host.innerHTML=""; return; }
+  const inner = o.kind==="feature" ? featureModal(o) :
+                o.kind==="confirm" ? confirmModal(o) :
+                o.kind==="wizard"  ? wizardModal() :
+                o.kind==="palette" ? paletteModal(o) : diffModal();
+  host.innerHTML = `<div class="scrim" onclick="if(event.target===this)closeOverlay()">${inner}</div>`;
+}
+
+/* ── the feature modal: depth, not height ── */
+/* Funnel and Impact are here, not in the nav. They were never destinations — each is
+   one view of one feature, which is exactly why the old nav could not link to them
+   without telling you to edit the URL. */
+const MODAL_TABS = [
+  ["value","Value"],["targeting","Targeting"],["environments","Environments"],
+  ["funnel","Funnel"],["impact","Impact"],["history","History"],["settings","Settings"],
+];
+function featureModal(o){
+  const f = FEATURES.find(x=>x.key===o.key), st = stateOf(f.key), env = ENVS.find(x=>x.id===APP.env);
+  const panes = {
+    value: valuePane(f,st,env), targeting: targetingPane(f,env), environments: envPane(f),
+    funnel: funnelPane(f,st,env), impact: impactPane(f,st), history: historyPane(f),
+    settings: settingsPane(f),
+  };
+  const foot = o2foot(o, f, st);
+  return `<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <h2><span class="k">${f.key}</span>
+          <span class="tag ${f.type==="kill"?"kill":""} ${f.type==="unclassified"?"unclassified":""}">${TYPE_WORDS[f.type]}</span></h2>
+        <div class="sub">${esc(f.desc)}</div>
+      </div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-tabs" role="tablist">
+      ${MODAL_TABS.map(([id,l])=>`<button class="modal-tab" role="tab" aria-selected="${APP.modalTab===id}"
+        onclick="APP.modalTab='${id}';renderOverlay()">${l}</button>`).join("")}
+    </div>
+    <div class="modal-body">${panes[APP.modalTab]}</div>
+    ${foot}
+  </div>`;
+}
+function o2foot(o,f,st){
+  if(["history","funnel","impact","environments"].includes(APP.modalTab))
+    return `<div class="modal-foot"><span class="note">Nothing on this tab changes anything.</span>
+      <button class="btn btn-ghost" onclick="closeOverlay()">Close</button></div>`;
+  return `<div class="modal-foot">
+    <span class="note">Changes apply to <b>${ENVS.find(x=>x.id===APP.env).name}</b> only.</span>
+    <button class="btn btn-ghost" onclick="toast('Scheduling is a picker, not a text field — same three clicks')">Schedule for later</button>
+    <button class="btn btn-primary" onclick="closeOverlay();toast('Saved to ${esc(f.key)}')">Save change</button>
+  </div>`;
+}
+
+function valuePane(f,st,env){
+  const isOn = st.s==="on";
+  const vers = Array.from({length:f.versions},(_,i)=>f.versions-i);
+  return `
+  <div class="field">
+    <span class="lab">Is it on in ${env.name}?</span>
+    <div class="seg" role="group">
+      <button class="yes" aria-pressed="${isOn}" onclick="requestToggle('${f.key}')">On</button>
+      <button class="no" aria-pressed="${st.s==="off"}" onclick="requestToggle('${f.key}')">Off</button>
+    </div>
+    <p class="hint">${isOn
+      ? `Everyone in ${env.name} gets this. Turning it off is one click and is recorded with a reason.`
+      : st.s==="off"
+        ? `Switched off by ${st.who} on ${st.when}. Reason given: ${st.reason}.`
+        : `Nobody has ever switched this on or off in ${env.name}. Turning it on is the first thing that will happen to it here.`}</p>
+  </div>
+  <div class="field">
+    <span class="lab">Which version is served</span>
+    <div class="picklist">
+      ${vers.map(v=>`<button class="pick" aria-pressed="${(st.v||f.versions)===v}"
+        onclick="toast('${f.key} would serve v${v}')">
+        <span class="radio"></span>
+        <span><span class="t">Version <span class="mono">${v}</span></span>
+        <span class="d">${v===f.versions?"Newest — created by the catalog sync":"Kept so you can go back to it"}</span></span>
+        ${v===f.versions?'<span class="badge">Newest</span>':""}
+      </button>`).join("")}
+    </div>
+    <p class="hint">Versions are made by the code that owns this feature. You pick one; you never write one.</p>
+  </div>
+  <div class="callout info">
+    <span class="ico">◆</span>
+    <span>This feature is a plain on/off switch, like all ${FEATURES.length} of them. If the code ever gives it
+    something to choose between, the choices appear here as buttons — never as a box to type in.</span>
+  </div>`;
+}
+
+function targetingPane(f,env){
+  return `
+  <div class="field">
+    <span class="lab">Who gets it in ${env.name}</span>
+    <div class="callout info"><span class="ico">◆</span>
+      <span><b>Everyone.</b> This feature has no targeting rules, and neither do the other ${FEATURES.length-1}.
+      Adding one below narrows it from everyone to a group.</span></div>
+  </div>
+  <div class="field">
+    <span class="lab">Rules</span>
+    <div class="rule">
+      <span class="sel"><select><option>Seller plan</option><option>Country</option><option>Signed up</option>
+        <option>Shop type</option><option>Account age</option></select></span>
+      <span class="as">is</span>
+      <span class="sel"><select><option>one of</option><option>not one of</option></select></span>
+      <span class="sel"><select><option>Founding merchant</option><option>Pro</option><option>Free</option></select></span>
+      <button class="rm" onclick="toast('Rule removed')" aria-label="Remove rule">✕</button>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="toast('Another row of pickers appears — still nothing to type')">+ Add rule</button>
+    <p class="hint">Every part of a rule is a list you choose from. There is no expression to write and nothing to get syntactically wrong.</p>
+  </div>
+  <div class="field">
+    <span class="lab">Then give it to</span>
+    <div class="slider">
+      <input type="range" min="0" max="100" step="5" value="100"
+        oninput="this.nextElementSibling.textContent=this.value+'%'">
+      <span class="v">100%</span>
+    </div>
+    <p class="hint">Of the people who match the rules above. Drag to roll it out gradually.</p>
+  </div>`;
+}
+
+function envPane(f){
+  return `
+  <p style="color:var(--dim);font-size:13.5px;margin-bottom:16px;max-width:64ch">
+    The one screen that answers “is this on, where, and who did it”.
+  </p>
+  <table class="envtable">
+    <thead><tr><th>Environment</th><th>State</th><th>Last touched by</th><th></th></tr></thead>
+    <tbody>${ENVS.map(e=>{
+      const st = stateOf(f.key, e.id), w = STATE_WORDS[st.s];
+      return `<tr>
+        <td><span class="envname"><span class="env-dot ${e.id}"></span>${e.name}
+          ${e.id===APP.env?'<span class="here">you are here</span>':""}</span></td>
+        <td><span class="pill ${st.s}"><span class="dot"></span>${w.label}</span>
+          <div class="who">${st.s==="on"?`serving v${st.v}`:st.s==="off"?"serving nothing":"no record at all"}</div></td>
+        <td>${st.who ? `${st.who}<div class="who">${st.when} · ${st.reason}</div>` : `<span style="color:var(--dim-2)">—</span>`}</td>
+        <td>${e.id===APP.env
+          ? `<button class="btn btn-ghost btn-sm" onclick="requestToggle('${f.key}')">${st.s==="on"?"Turn off":"Turn on"}</button>`
+          : `<button class="btn btn-quiet btn-sm" onclick="setEnv('${e.id}');openFeature('${f.key}','environments')">Go there</button>`}</td>
+      </tr>`;
+    }).join("")}</tbody>
+  </table>
+  <div class="callout info" style="margin-top:18px"><span class="ico">◆</span>
+    <span><b>“Never turned on here” is not “off”.</b> Off means somebody decided, and there is a name and a
+    reason next to it. Never means nothing has ever happened to this feature in that environment.
+    ${counts('production').never} of the ${FEATURES.length} features are in that state in Production.</span></div>`;
+}
+
+/* Was /app/funnel/[projectSlug]/[featureKey] — the page whose nav entry read
+   "swap the feature key in the URL". Here the key comes from the feature you opened. */
+function funnelPane(f,st,env){
+  if(st.s!=="on"){
+    return `<div class="empty"><b>Nothing to measure yet in ${env.name}</b>
+      <span>The funnel starts filling the moment this is switched on here.</span></div>`;
+  }
+  const data = [820,910,760,1180,1340,990,1420,1610,1550,1290,1730,1880,1810,2040];
+  const max = Math.max(...data);
+  const tars = [["Targeted",24330,100],["Adopted",9420,39],["Retained",5180,21]];
+  return `
+  <div class="kpis">
+    ${tars.map(([k,n,p])=>`<div class="kpi"><div class="n">${n.toLocaleString()}</div>
+      <div class="k">${k} · ${p}%</div></div>`).join("")}
+  </div>
+  <div class="field">
+    <span class="lab">Targeted → adopted → retained</span>
+    ${tars.map(([k,n,p])=>`<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--dim);margin-bottom:4px">
+        <span>${k}</span><span class="mono">${n.toLocaleString()}</span></div>
+      <div style="height:9px;border-radius:5px;background:var(--roast-2);overflow:hidden">
+        <div style="height:100%;width:${p}%;background:linear-gradient(90deg,var(--gold),var(--gold-deep))"></div></div>
+    </div>`).join("")}
+    <p class="hint">Reaching this used to mean typing the feature key into the address bar. It is a
+    view of a feature, so it lives on the feature.</p>
+  </div>
+  <div class="field">
+    <span class="lab">Times served, last 14 days</span>
+    <div class="bars">${data.map(v=>`<i style="height:${Math.round(v/max*100)}%"></i>`).join("")}</div>
+    <div class="barscale"><span>14 Aug</span><span>27 Aug</span></div>
+    <p class="hint">If this drops to zero without anybody turning it off, something upstream stopped asking.</p>
+  </div>`;
+}
+
+/* Was /app/impact/[projectSlug]/[featureKey] — same story. */
+function impactPane(f,st){
+  if(st.s!=="on"){
+    return `<div class="empty"><b>No impact to attribute</b>
+      <span>This has never run in front of anyone, so it has moved nothing.</span></div>`;
+  }
+  return `
+  <div class="kpis">
+    <div class="kpi"><div class="n" style="color:var(--green)">+38</div><div class="k">Sellers signed up</div></div>
+    <div class="kpi"><div class="n">1,284</div><div class="k">North Star today</div></div>
+    <div class="kpi"><div class="n">2.9%</div><div class="k">Of the total</div></div>
+  </div>
+  <div class="callout info"><span class="ico">◆</span>
+    <span>Since <span class="mono">${f.key}</span> went on, the North Star has moved
+    <b>+38 sellers</b>. That is a correlation this page can see, not a causal claim — to make it
+    causal, run it as an experiment from <b>Ship › Experiments</b>.</span></div>`;
+}
+
+function historyPane(f){
+  const items = [];
+  ENVS.forEach(e=>{
+    const st = STATE[e.id][f.key];
+    if(st) items.push({when:st.when, s:st.s, txt:`<b>${st.who}</b> turned this ${st.s==="on"?"on":"off"} in <b>${ENVS.find(x=>x.id===e.id).name}</b>`, reason:st.reason});
+  });
+  for(let v=f.versions; v>=1; v--)
+    items.push({when:`2026-0${v>1?8:7}-0${v+1} 10:0${v}`, s:"ver", txt:`Version <b>${v}</b> arrived from the catalog sync`, reason:null});
+  items.sort((a,b)=>b.when.localeCompare(a.when));
+  return `<div class="timeline">${items.map(i=>`
+    <div class="tl ${i.s}"><span class="dot"></span>
+      <div><div class="t">${i.txt}</div><div class="m">${i.when}</div>
+      ${i.reason?`<div class="reason">Reason: ${i.reason}</div>`:""}</div></div>`).join("")}</div>
+  <p class="hint" style="margin-top:14px">Every line is something a person or the sync actually did. The words here match the
+  words on the buttons — “turned off” in the history, “Turn off” on the control.</p>`;
+}
+
+function settingsPane(f){
+  const note = ENG_NOTE[f.key];
+  return `
+  <div class="field">
+    <span class="lab">What this controls</span>
+    ${APP.editingDesc
+      ? `<div class="inline-edit">
+          <input id="descedit" value="${esc(f.desc)}" maxlength="120">
+          <button class="btn btn-primary btn-sm" onclick="saveDesc('${f.key}')">Save</button>
+          <button class="btn btn-quiet btn-sm" onclick="APP.editingDesc=false;renderOverlay()">Cancel</button>
+        </div>`
+      : `<div class="inline-edit">
+          <span class="val">${esc(f.desc)}</span>
+          <button class="btn btn-ghost btn-sm" onclick="APP.editingDesc=true;renderOverlay();document.getElementById('descedit').focus()">Edit</button>
+        </div>`}
+    <p class="hint">One sentence, in the words a person would use. This is the line the list shows.</p>
+  </div>
+  <div class="field">
+    <span class="lab">Type</span>
+    <div class="chips">
+      ${Object.entries(TYPE_WORDS).map(([k,v])=>`<button class="chip" aria-pressed="${f.type===k}"
+        onclick="setMeta('${f.key}','type','${k}')">${v}</button>`).join("")}
+    </div>
+    <p class="hint">A <b>kill switch</b> is on until something goes wrong. A <b>release toggle</b> is off until you ship.
+    The difference decides how loudly this screen warns you before flipping it.</p>
+  </div>
+  <div class="field">
+    <span class="lab">Risk if it goes the wrong way</span>
+    <div class="chips">
+      ${["high","medium","low"].map(k=>`<button class="chip" aria-pressed="${f.risk===k}"
+        onclick="setMeta('${f.key}','risk','${k}')">${RISK_WORDS[k]}</button>`).join("")}
+      <button class="chip" aria-pressed="${f.risk==="unclassified"}" onclick="setMeta('${f.key}','risk','unclassified')">Risk not set</button>
+    </div>
+  </div>
+  ${note?`<div class="field"><span class="lab">Engineering note</span>
+    <div class="note-box"><span class="lab2">Written by the code that owns this feature · read-only</span>${esc(note)}</div>
+    <p class="hint">This used to be the description on the list. It belongs here, where somebody debugging can find it,
+    not in front of somebody deciding.</p></div>`:""}
+  <div class="field">
+    <span class="lab">Retiring it</span>
+    <button class="btn btn-ghost btn-sm" onclick="toast('Archiving asks which environments to clear first')">Archive this feature</button>
+    <p class="hint">Archiving hides it from the list. Its history stays.</p>
+  </div>`;
+}
+function saveDesc(key){
+  const v = $("#descedit").value.trim();
+  if(v) FEATURES.find(f=>f.key===key).desc = v;
+  APP.editingDesc=false; renderOverlay(); render(); toast("Description updated");
+}
+function setMeta(key, field, val){
+  FEATURES.find(f=>f.key===key)[field]=val; renderOverlay(); render();
+}
+
+/* ── the confirm: names the consequence, reason is chips ── */
+function confirmModal(o){
+  const f = FEATURES.find(x=>x.key===o.key), env = ENVS.find(x=>x.id===APP.env);
+  const on = o.turningOn, dangerous = f.type==="kill" && f.risk==="high" && !on && APP.env==="production";
+  const consequence = on
+    ? `<b>${esc(f.desc.replace(/\.$/,""))}</b> starts working for everyone in ${env.name}.`
+    : `<b>${esc(f.desc.replace(/\.$/,""))}</b> stops working for everyone in ${env.name}.`;
+  return `<div class="modal narrow" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div><h2>${on?"Turn on":"Turn off"} <span class="k">${f.key}</span></h2>
+        <div class="sub">In ${env.name}${dangerous?" — this is a live kill switch":""}</div></div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="callout ${dangerous?"":"info"}">
+        <span class="ico">${dangerous?"▲":"◆"}</span>
+        <span>${consequence}${dangerous?" Customers will notice within seconds.":""}</span>
+      </div>
+      <div class="field" style="margin-top:20px">
+        <span class="lab">Why (recorded in the history)</span>
+        <div class="chips">
+          ${REASONS.map(r=>`<button class="chip" aria-pressed="${o.reason===r}"
+            onclick="APP.overlay.reason='${r}';renderOverlay()">${r}</button>`).join("")}
+        </div>
+        <p class="hint">Pick one. There is nothing to type, and the history reads better for it.</p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="note">You can undo this for 10 seconds.</span>
+      <button class="btn btn-ghost" onclick="closeOverlay()">Cancel</button>
+      <button class="btn ${on?"btn-primary":"btn-danger"}" ${o.reason?"":"disabled"}
+        onclick="applyChange('${f.key}',${on},'${o.reason}')">${on?"Turn on":"Turn off"} in ${env.name}</button>
+    </div>
+  </div>`;
+}
+
+/* ── create: three steps, one typed word ── */
+const NAMESPACES = ["catalog","checkout","content","domain","events","growth","migrations","ml",
+  "onboarding","ops","partners","promoter","seller","seller_agent","shipping","subdomain"];
+function wizardModal(){
+  const w = APP.wizard;
+  const step = n=>`data-on="${w.step===n}" data-done="${w.step>n}"`;
+  const full = `${w.ns}.${w.name||"…"}_enabled`;
+  const bodies = {
+    1:`<div class="field">
+        <span class="lab">Name it</span>
+        <div class="keyfield">
+          <span class="sel"><select onchange="APP.wizard.ns=this.value;renderOverlay()">
+            ${NAMESPACES.map(n=>`<option${n===w.ns?" selected":""}>${n}</option>`).join("")}</select></span>
+          <input id="wname" placeholder="what_it_controls" value="${esc(w.name)}" oninput="wizardName(this)">
+          <span class="suffix">_enabled</span>
+        </div>
+        <p class="hint">The area comes from a list and the ending is fixed — the middle is the only thing anyone types
+        in this whole console, because it is the word the code will import.</p>
+        <div class="note-box" style="margin-top:12px"><span class="lab2">Code will import</span>
+          <span class="mono" id="wprev" style="color:var(--gold-hot);font-size:13.5px">${full}</span></div>
+      </div>`,
+    2:`<div class="field">
+        <span class="lab">What kind of switch is it?</span>
+        <div class="cardpick">
+          <button class="pick" aria-pressed="${w.type==="kill"}" onclick="APP.wizard.type='kill';renderOverlay()">
+            <span class="t">Kill switch</span><span class="d">On by default. You turn it off when something breaks.</span></button>
+          <button class="pick" aria-pressed="${w.type==="release"}" onclick="APP.wizard.type='release';renderOverlay()">
+            <span class="t">Release toggle</span><span class="d">Off by default. You turn it on when you ship.</span></button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lab">If it goes the wrong way, how bad is it?</span>
+        <div class="chips">
+          ${["high","medium","low"].map(k=>`<button class="chip" aria-pressed="${w.risk===k}"
+            onclick="APP.wizard.risk='${k}';renderOverlay()">${RISK_WORDS[k]}</button>`).join("")}
+        </div>
+        <p class="hint">High risk means this screen will spell out the consequence before letting anyone flip it in Production.</p>
+      </div>`,
+    3:`<div class="field">
+        <span class="lab">Where should it exist?</span>
+        <div class="chips">
+          ${ENVS.map(e=>`<button class="chip" aria-pressed="${w.envs.includes(e.id)}"
+            onclick="toggleWizEnv('${e.id}')">${e.name}</button>`).join("")}
+        </div>
+        <p class="hint">It arrives switched ${w.type==="kill"?"on":"off"} in each of these, which is what a
+        ${w.type==="kill"?"kill switch":"release toggle"} should do on day one.</p>
+      </div>
+      <div class="field">
+        <span class="lab">Check it over</span>
+        <div class="review">
+          <div><span class="k">Name</span><span class="mono">${full}</span></div>
+          <div><span class="k">Kind</span><span>${TYPE_WORDS[w.type]||"—"}</span></div>
+          <div><span class="k">Risk</span><span>${RISK_WORDS[w.risk]||"—"}</span></div>
+          <div><span class="k">Exists in</span><span>${w.envs.map(e=>ENVS.find(x=>x.id===e).name).join(", ")||"—"}</span></div>
+          <div><span class="k">Starts</span><span>${w.type==="kill"?"On":"Off"} everywhere it exists</span></div>
+        </div>
+      </div>`,
+  };
+  const canNext = w.step===1 ? w.name.length>2 : w.step===2 ? (w.type&&w.risk) : w.envs.length>0;
+  return `<div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div><h2>New feature</h2><div class="sub">Three steps. One word to type.</div></div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="steps">
+        <span class="step" ${step(1)}><span class="n">1</span>Name<span class="line"></span></span>
+        <span class="step" ${step(2)}><span class="n">2</span>Kind<span class="line"></span></span>
+        <span class="step" ${step(3)}><span class="n">3</span>Where<span class="line"></span></span>
+      </div>
+      ${bodies[w.step]}
+    </div>
+    <div class="modal-foot">
+      <span class="note">Nothing exists until you finish step 3.</span>
+      ${w.step>1?`<button class="btn btn-ghost" onclick="APP.wizard.step--;renderOverlay()">Back</button>`:""}
+      ${w.step<3
+        ? `<button class="btn btn-primary" id="wnext" ${canNext?"":"disabled"} onclick="APP.wizard.step++;renderOverlay()">Continue</button>`
+        : `<button class="btn btn-primary" id="wnext" ${canNext?"":"disabled"} onclick="createFeature()">Create feature</button>`}
+    </div>
+  </div>`;
+}
+/* Typing must not re-render (it would steal the caret), so the one control whose
+   state depends on the typing is updated by hand. */
+function wizardName(el){
+  const clean = el.value.toLowerCase().replace(/[^a-z0-9_]/g,"");
+  if(el.value!==clean) el.value = clean;
+  APP.wizard.name = clean;
+  const prev = $("#wprev"); if(prev) prev.textContent = `${APP.wizard.ns}.${clean||"…"}_enabled`;
+  const next = $("#wnext"); if(next) next.disabled = clean.length<3;
+}
+function toggleWizEnv(id){
+  const w=APP.wizard, i=w.envs.indexOf(id);
+  if(i<0) w.envs.push(id); else w.envs.splice(i,1);
+  renderOverlay();
+}
+function createFeature(){
+  const w = APP.wizard, key = `${w.ns}.${w.name}_enabled`;
+  FEATURES.push({key, desc:"No description yet — add one in Settings.", type:w.type, risk:w.risk, versions:1});
+  if(w.type==="kill") w.envs.forEach(e=>{
+    STATE[e][key]={s:"on",v:1,who:"Daniel",when:nowStamp(),reason:"Planned rollout"};
+  });
+  FEATURES.sort((a,b)=>a.key.localeCompare(b.key));
+  closeOverlay(); toast(`${key} created`); render();
+}
+
+/* ── the argument, one click from the top bar ── */
+function diffModal(){
+  return `<div class="modal wide" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div><h2>What changed &amp; why</h2>
+        <div class="sub">The old page showed the storage model. This one shows the job.</div></div>
+      <button class="x" onclick="closeOverlay()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="diff">
+        <div>
+          <h4>Gone</h4>
+          <ul>
+            <li><b>The JSON box</b> and <b>“Create an immutable definition version”</b> — a textarea and a heading describing how a row is stored.</li>
+            <li><b>“Build a rule” · “Rules” · “Save” · “Show JSON”.</b> A four-section authoring form under every list.</li>
+            <li><b>An editor per feature, stacked.</b> 42 of them is why the page had no bottom.</li>
+            <li><b>Free-text “Reason”, 1–500 characters.</b> Now five chips.</li>
+            <li><b>The Sections disclosure</b> — a flat list of all 15 routes, ordered by the sprint that built them.</li>
+            <li><b>Home, Connect and Agent notes</b> in the header. The logo goes home; Connect moved into Setup; Agent notes pointed at <span class="mono">/llms.txt</span>, a manifest for crawlers.</li>
+            <li><b>Two nav items that told you to edit the URL</b> — Funnel and Impact, and the <span class="mono">your-feature-key</span> placeholder behind them.</li>
+            <li><b>Three of the four pages that issue keys</b>, and two of the three audit tables.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>What replaced it</h4>
+          <ul>
+            <li><b>Four destinations</b> — Today, Measure, Ship, Setup — one per question anyone arrives with. Ordered by how often you need them.</li>
+            <li><b>One project switcher.</b> Golden Beans has no organisation layer, so there is no second breadcrumb level to draw.</li>
+            <li><b>⌘K.</b> With 42 features the fastest path to anything is typing its name.</li>
+            <li><b>Funnel and Impact as tabs on a feature</b>, because that is what they always were — one view of one feature.</li>
+            <li><b>One row per feature</b>, switch in the row, and <b>40 identical rows collapsed into one line</b>.</li>
+            <li><b>Three states kept apart:</b> On, Turned off, Never turned on here.</li>
+            <li><b>A consequence sentence</b> before any kill switch flips, in the words of the thing that breaks.</li>
+            <li><b>Connect that hands you your own token</b>, inside the product, with a connection status.</li>
+          </ul>
+        </div>
+      </div>
+      <h4 style="margin-top:22px;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);font-weight:600">
+        Every word that described storage, replaced by a word that describes work</h4>
+      <div class="wordlist">
+        ${[["immutable definition version","version"],
+           ["Create an immutable definition version","(deleted — versions come from the code)"],
+           ["activation / activation row","on in Production"],
+           ["deactivated","turned off"],
+           ["snapshot revision","(deleted — internal)"],
+           ["mint a scoped snapshot key","create an SDK key"],
+           ["definition","feature"],
+           ["polarity: killswitch / enablement","Kill switch / Release toggle"],
+           ["criticality","risk if it goes the wrong way"],
+           ["Nothing is activated here","Never turned on here"],
+           ["Show JSON","(deleted)"],
+          ].map(([a,b])=>`<div><span class="was">${esc(a)}</span><span class="arw">→</span><span class="now">${esc(b)}</span></div>`).join("")}
+      </div>
+      <div class="callout info" style="margin-top:20px"><span class="ico">◆</span>
+        <span><b>The rule behind all of it:</b> a person opening this page is answering “is the thing customers
+        touch working, and if not, who decided that”. Nothing that fails to help answer that question earns a
+        place on the screen.</span></div>
+    </div>
+    <div class="modal-foot"><span class="note"></span>
+      <button class="btn btn-primary" onclick="closeOverlay()">Back to the console</button></div>
+  </div>`;
+}
+
+/* ═══ other screens ═══ */
+/* ── Today: the front door. "Did anything need me?" ── */
+function todayScreen(){
+  const c = counts("production");
+  return `
+  <div class="page-head">
+    <div><h1>Today</h1>
+      <p>Thursday 27 August. Nothing is on fire. Here is what changed while you were away.</p></div>
+  </div>
+  <div class="tiles">
+    <div class="tile"><div class="k">North Star · signed-up sellers</div>
+      <div class="n up">1,284</div><div class="d">+38 this week</div></div>
+    <div class="tile"><div class="k">On in Production</div>
+      <div class="n">${c.on}</div><div class="d">of ${FEATURES.length} features</div></div>
+    <div class="tile"><div class="k">Needs a decision</div>
+      <div class="n warn">2</div><div class="d">waiting on you</div></div>
+    <div class="tile"><div class="k">Failed deliveries</div>
+      <div class="n">0</div><div class="d">last 24 hours</div></div>
+  </div>
+  <h3 style="font-size:15px;font-weight:600;margin-bottom:10px">Waiting on you</h3>
+  <div class="listcard" style="margin-bottom:22px">
+    <div class="row"><div class="row-main" onclick="setSection('setup')">
+      <div class="row-key" style="font-family:var(--sans);font-weight:600">Connect your agent</div>
+      <div class="row-desc">Your connector URL is ready and has never been used.</div></div>
+      <div class="row-act"><span class="btn btn-ghost btn-sm">Set up</span></div></div>
+    <div class="row"><div class="row-main" onclick="setSection('ship');setRail('features');openFeature('events.quantity_enabled','environments')">
+      <div class="row-key" style="font-family:var(--sans);font-weight:600">events.quantity_enabled has been on in Preview for 3 days</div>
+      <div class="row-desc">Its smoke test passed. Nothing is stopping it from going to Production.</div></div>
+      <div class="row-act"><span class="btn btn-ghost btn-sm">Review</span></div></div>
+  </div>
+  <h3 style="font-size:15px;font-weight:600;margin-bottom:10px">What changed</h3>
+  <div class="listcard" style="padding:20px">${recentTimeline(5)}</div>
+  <div class="callout info" style="margin-top:18px"><span class="ico">◆</span>
+    <span>This page is the old Command Center plus the task queue, which is the same question asked
+    twice. Everything else in the product is one click from the four sections above.</span></div>`;
+}
+function recentTimeline(limit){
+  const items=[];
+  ENVS.forEach(e=>Object.entries(STATE[e.id]).forEach(([k,st])=>items.push(
+    {when:st.when,s:st.s,key:k,env:ENVS.find(x=>x.id===e.id).name,who:st.who,reason:st.reason})));
+  items.sort((a,b)=>b.when.localeCompare(a.when));
+  return `<div class="timeline">${items.slice(0,limit||items.length).map(i=>`
+    <div class="tl ${i.s}"><span class="dot"></span>
+      <div><div class="t"><b>${i.who}</b> turned <span class="mono">${i.key}</span>
+        ${i.s==="on"?"on":"off"} in <b>${i.env}</b></div>
+        <div class="m">${i.when}</div><div class="reason">Reason: ${i.reason}</div></div></div>`).join("")}</div>`;
+}
+
+/* ── Setup › Connect: the page that already exists, unburied and fixed ── */
+function connectScreen(){
+  return `
+  <div class="page-head">
+    <div><h1>Connect your agent</h1>
+      <p>Your own URL, with your own token, for the project in the switcher above. Paste it into
+      Claude and it can read this project's numbers.</p></div>
+  </div>
+  <div class="listcard" style="padding:22px;margin-bottom:16px">
+    <div class="field">
+      <span class="lab">Your connector URL · miyagisanchez</span>
+      <div class="copyrow">
+        <code>https://golden-beans.app/mcp/gb_connector_8Kq2mF7xR4wL9pT3vN6cJ1sD5hY0bZ</code>
+        <button onclick="toast('Copied your connector URL')">Copy</button>
+      </div>
+      <p class="hint">Read-only and revocable. Revoke the token and access stops — no deploy.
+      Switching project in the top bar switches this URL.</p>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <span class="lab">Status</span>
+      <span class="pill never" style="border-style:solid"><span class="dot"></span>Not connected yet</span>
+      <p class="hint">This turns into “Connected · last used …” the first time Claude calls it. A setup
+      page that cannot tell you whether setup worked is a document, not a tool.</p>
+    </div>
+  </div>
+  <div class="listcard" style="padding:22px;margin-bottom:16px">
+    <span class="lab" style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim-2);font-weight:600;display:block;margin-bottom:14px">Three steps</span>
+    <ol class="steplist">
+      <li><b>Copy the URL above.</b></li>
+      <li><b>Open Claude's connector settings.</b>
+        <div style="margin-top:8px"><button class="btn btn-primary btn-sm" onclick="toast('Opens claude.ai/customize/connectors?modal=add-custom-connector')">Add to Claude ↗</button></div></li>
+      <li><b>Paste it into the modal and save.</b> Claude can then read this project's funnels,
+        features and North Star.</li>
+    </ol>
+  </div>
+  <div class="callout info"><span class="ico">◆</span>
+    <span>Today this link goes to <span class="mono">/install</span> — a marketing page with the
+    website's header and footer, serving the <b>demo project's</b> token rather than yours. The
+    per-project version above already exists in the code at
+    <span class="mono">/app/onboarding/[projectSlug]</span>; it is marked <span class="mono">flow-only</span>,
+    so the navigation filters it out. The feature is finished and hidden.</span></div>
+  <p style="margin-top:16px;font-size:13px;color:var(--dim-2)">
+    Wiring up data-in with the SDK? That's an engineer's job, not this one —
+    <a href="#" onclick="toast('Docs, in one link, not a code block on this page');return false">read the SDK guide</a>.</p>`;
+}
+
+function compareScreen(){
+  return `
+  <div class="page-head">
+    <div><h1>Compare environments</h1>
+      <p>All ${FEATURES.length} features against all three environments. This grid is the short answer to
+      “which of these are on, and where”.</p></div>
+    <div class="spacer"></div>
+    <button class="btn btn-ghost" onclick="APP.view='list';render()">← Back to the list</button>
+  </div>
+  <div class="legend">
+    <span><span class="cell on">●</span> On</span>
+    <span><span class="cell off">●</span> Turned off — somebody decided, with a reason</span>
+    <span><span class="cell never">·</span> Never turned on here</span>
+  </div>
+  <div class="listcard" style="max-height:70vh;overflow:auto">
+    <table class="matrix">
+      <thead><tr><th>Feature</th>${ENVS.map(e=>`<th class="env">${e.name}</th>`).join("")}</tr></thead>
+      <tbody>${FEATURES.map(f=>`<tr>
+        <td><span class="key">${f.key}</span></td>
+        ${ENVS.map(e=>{const s=stateOf(f.key,e.id).s;
+          return `<td class="c"><span class="cell ${s}" title="${STATE_WORDS[s].label}">${s==="never"?"·":"●"}</span></td>`;
+        }).join("")}
+      </tr>`).join("")}</tbody>
+    </table>
+  </div>`;
+}
+
+function historyScreen(){
+  const items=[];
+  ENVS.forEach(e=>Object.entries(STATE[e.id]).forEach(([k,st])=>{
+    items.push({when:st.when, s:st.s, key:k, env:ENVS.find(x=>x.id===e.id).name, who:st.who, reason:st.reason});
+  }));
+  items.sort((a,b)=>b.when.localeCompare(a.when));
+  return `
+  <div class="page-head"><div><h1>History</h1>
+    <p>Everything anyone has done to a feature in this project, newest first — written as sentences,
+    not as rows of a table nobody reads.</p></div></div>
+  <div class="listcard" style="padding:20px">
+    <div class="timeline">${items.map(i=>`
+      <div class="tl ${i.s}"><span class="dot"></span>
+        <div><div class="t"><b>${i.who}</b> turned <span class="mono">${i.key}</span>
+          ${i.s==="on"?"on":"off"} in <b>${i.env}</b></div>
+          <div class="m">${i.when}</div>
+          <div class="reason">Reason: ${i.reason}</div></div></div>`).join("")}</div>
+  </div>`;
+}
+
+/* Four pages issue secrets today: API keys, flag credentials, agent write keys and the
+   connector token. Nobody thinks "I need a flag credential" — they think "I need to give
+   something access". One page, and what a key may do is a column. */
+function keysScreen(){
+  const keys=[
+    ["Storefront read key","Read the numbers","production","Used by the storefront to ask which features are on.","never"],
+    ["Preview read key","Read the numbers","preview","Used by preview deploys.","2026-12-31"],
+    ["Catalog sync key","Register features","production","Lets your code register features. Cannot turn anything on.","2026-11-01"],
+    ["Agent write key","Claim & resolve tasks","production","Lets your own agent work the task queue.","2026-10-15"],
+  ];
+  return `
+  <div class="page-head">
+    <div><h1>Keys</h1><p>Everything that gives something else access to this project. These used to be
+    four separate pages — API keys, flag credentials, agent write keys, and the connector token.</p></div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" onclick="toast('Same three steps as New feature: what it may do, where, when it expires')">+ New key</button>
+  </div>
+  <div class="listcard">
+    <div class="listhead"><span style="flex:1">Key</span><span class="h-state">What it may do</span>
+      <span class="h-meta">Where · expires</span><span class="h-act"></span></div>
+    ${keys.map(([n,can,e,d,x])=>`<div class="row">
+      <div class="row-main"><div class="row-key" style="font-family:var(--sans);font-weight:600">${n}</div>
+        <div class="row-desc">${d}</div></div>
+      <div class="row-state"><span class="pill never" style="border-style:solid"><span class="dot"></span>${can}</span></div>
+      <div class="row-meta"><span class="tag"><span class="env-dot ${e}"></span>${ENVS.find(v=>v.id===e).name}</span>
+        <span class="tag">${x==="never"?"No expiry":x}</span></div>
+      <div class="row-act"><button class="kebab" onclick="toast('Revoke names exactly what stops working, then asks you to confirm')">⋯</button></div>
+    </div>`).join("")}
+  </div>
+  <div class="callout info" style="margin-top:16px"><span class="ico">◆</span>
+    <span>The key value is shown once, on a screen of its own, with a copy button. It is never a
+    value you read off a table or type back in. Which subsystem minted a key is a column here,
+    not a page of its own — the permission checks are unchanged.</span></div>`;
+}
+
+function placeholderScreen(title, body){
+  return `<div class="page-head"><div><h1>${title}</h1></div></div>
+    <div class="placeholder"><h3>Not part of this redesign</h3><p>${body}</p></div>`;
+}
+
+function scheduledScreen(){
+  return `
+  <div class="page-head"><div><h1>Scheduled changes</h1>
+    <p>Changes that will happen to ${ENVS.find(e=>e.id===APP.env).name} on their own.</p></div></div>
+  <div class="listcard"><div class="empty"><b>Nothing is scheduled</b>
+    <span>When you pick “Schedule for later” on a feature, it waits here where you can see it coming.</span></div></div>`;
+}
+
+/* ═══ render ═══ */
+/* One screen per rail entry. The router is flat on purpose: a section plus a rail
+   entry is the whole address, which is what makes the nav explainable. */
+const SCREENS = {
+  today:      todayScreen,
+  overview:   ()=>placeholderScreen("North Star",
+                "The one number this project is trying to move, and what fed it this week. Today's headline tile, in full."),
+  journeys:   ()=>placeholderScreen("Journeys",
+                "Project-wide funnels across features. Already built at /app/journeys — it keeps its own page because it is not about one feature."),
+  scenarios:  ()=>placeholderScreen("Scenarios & drills",
+                "Drills, impact evidence and protective trips. Already built at /app/scenarios."),
+  features:   featuresScreen,
+  experiments:()=>placeholderScreen("Experiments",
+                "An experiment is a lever with consequences, like a flag — so it lives beside flags rather than in a governance silo of its own. Already built at /app/experiments."),
+  scheduled:  scheduledScreen,
+  activity:   historyScreen,
+  connect:    connectScreen,
+  keys:       keysScreen,
+  destinations:()=>placeholderScreen("Destinations",
+                "Signed webhook delivery. Correctly built, wrongly prominent — plumbing belongs in Setup."),
+  shares:     ()=>placeholderScreen("Share links",
+                "Scoped, revocable report links. Also reachable as “Share this” from any report, which is where you will actually want it."),
+};
+function renderContent(){
+  const c = $("#content");
+  if(APP.section==="today"){ c.innerHTML = todayScreen(); return; }
+  c.innerHTML = (SCREENS[APP.rail] || featuresScreen)();
+}
+function render(){ renderChrome(); renderContent(); renderOverlay(); }
+
+let toastTimer;
+function toast(msg, undoKey){
+  const old=$("#toast"); if(old) old.remove();
+  const d=document.createElement("div");
+  d.className="toast"; d.id="toast";
+  d.innerHTML=`<span class="dot"></span><span>${esc(msg)}</span>`+
+    (undoKey?`<button onclick="undoChange('${esc(undoKey)}')">Undo</button>`:"");
+  document.body.appendChild(d);
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>d.remove(), undoKey?10000:3200);
+}
+
+render();
+</script>

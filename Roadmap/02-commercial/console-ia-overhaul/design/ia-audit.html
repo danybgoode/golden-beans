@@ -1,0 +1,563 @@
+<title>Golden Beans Navigation Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --roast:#16120d; --roast-2:#1c1710; --card:#241d14; --card-2:#2b2318; --card-3:#332a1d;
+  --line:#3a3023; --line-soft:#2e2619;
+  --crema:#f5ead6; --dim:#b8a888; --dim-2:#8d8069;
+  --gold:#e8b93c; --gold-hot:#ffd45e; --gold-deep:#8a6a1e;
+  --green:#7fd069; --green-deep:#2c5e22; --red:#e86a5e; --red-deep:#6e2a22; --blue:#6db3e8;
+  --sans:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark}
+body{
+  margin:0;background:var(--roast);color:var(--crema);
+  font-family:var(--sans);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,p,ul,ol,figure{margin:0}
+ul{list-style:none;padding:0}
+code,.mono{font-family:var(--mono);font-size:.9em}
+a{color:var(--gold)}
+:focus-visible{outline:2px solid var(--gold-hot);outline-offset:2px}
+
+.wrap{max-width:1000px;margin:0 auto;padding:0 26px}
+.masthead{border-bottom:1px solid var(--line);background:var(--roast-2);padding:52px 0 40px;margin-bottom:52px}
+.eyebrow{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:16px;
+}
+h1{font-size:clamp(30px,5.2vw,46px);line-height:1.08;font-weight:700;letter-spacing:-.022em;text-wrap:balance;max-width:19ch}
+.lede{margin-top:20px;font-size:17px;color:var(--dim);max-width:66ch;line-height:1.6}
+.lede b{color:var(--crema);font-weight:600}
+
+section{margin-bottom:60px}
+.num{
+  display:flex;align-items:baseline;gap:14px;margin-bottom:8px;
+  padding-bottom:12px;border-bottom:1px solid var(--line);
+}
+.num .n{font-family:var(--mono);font-size:12px;color:var(--gold-deep);letter-spacing:.1em;flex:none}
+h2{font-size:24px;font-weight:700;letter-spacing:-.015em;text-wrap:balance}
+.sub{color:var(--dim);font-size:15px;margin:14px 0 26px;max-width:70ch}
+h3{font-size:17px;font-weight:600;margin:32px 0 10px;letter-spacing:-.005em}
+p{max-width:72ch;margin-bottom:14px}
+p:last-child{margin-bottom:0}
+b,strong{color:var(--crema);font-weight:600}
+em{color:var(--dim);font-style:italic}
+
+.qa{
+  border:1px solid var(--line);border-radius:12px;background:var(--card);
+  padding:22px 24px;margin-bottom:14px;
+}
+.qa .q{font-size:16px;font-weight:600;margin-bottom:12px;color:var(--gold-hot);max-width:64ch}
+.qa p{font-size:14.5px;color:var(--dim);margin-bottom:11px}
+.qa p b{color:var(--crema)}
+.verdict{
+  display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border-radius:999px;
+  font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  border:1px solid;margin-bottom:12px;
+}
+.verdict.bad{color:var(--red);border-color:var(--red-deep);background:rgb(232 106 94 / 9%)}
+.verdict.mixed{color:var(--gold);border-color:var(--gold-deep);background:rgb(232 185 60 / 9%)}
+.verdict.good{color:var(--green);border-color:var(--green-deep);background:rgb(127 208 105 / 9%)}
+
+.callout{
+  border-left:2px solid var(--gold);background:linear-gradient(90deg,rgb(232 185 60 / 8%),transparent 72%);
+  border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;font-size:14.5px;
+}
+.callout.warn{border-left-color:var(--red);background:linear-gradient(90deg,rgb(232 106 94 / 8%),transparent 72%)}
+.callout p{margin-bottom:8px}
+.callout p:last-child{margin-bottom:0}
+
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:680px}
+thead th{
+  position:sticky;top:0;background:var(--roast-2);text-align:left;padding:11px 14px;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim-2);font-weight:600;
+  border-bottom:1px solid var(--line);
+}
+td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--card-2)}
+td.surface{font-family:var(--mono);font-size:12.5px;color:var(--crema);white-space:nowrap}
+td.why{color:var(--dim);font-size:13px;line-height:1.5}
+.act{
+  display:inline-block;padding:2px 9px;border-radius:5px;font-size:11px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;border:1px solid;
+}
+.act.keep{color:var(--green);border-color:var(--green-deep);background:rgb(127 208 105 / 10%)}
+.act.move{color:var(--blue);border-color:#2f4d63;background:rgb(109 179 232 / 10%)}
+.act.merge{color:var(--gold);border-color:var(--gold-deep);background:rgb(232 185 60 / 10%)}
+.act.kill{color:var(--red);border-color:var(--red-deep);background:rgb(232 106 94 / 10%)}
+.act.build{color:var(--crema);border-color:var(--line);background:var(--card-3)}
+.dest{font-size:12.5px;color:var(--crema);font-weight:500;white-space:nowrap}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(224px,1fr));gap:14px;margin:24px 0}
+.col{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:18px 20px}
+.col .k{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:9px;
+}
+.col h4{font-size:15.5px;font-weight:600;margin-bottom:8px;line-height:1.35;text-wrap:balance}
+.col p{font-size:13.5px;color:var(--dim);margin:0;line-height:1.55}
+.col .freq{
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft);
+  font-size:12px;color:var(--dim-2);font-family:var(--mono);
+}
+
+figure{margin:26px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:22px;overflow-x:auto}
+figcaption{margin-top:16px;font-size:13px;color:var(--dim-2);text-align:center;font-family:var(--mono)}
+svg{display:block;margin:0 auto;max-width:100%;height:auto}
+
+.list{margin:14px 0;display:flex;flex-direction:column;gap:0}
+.list li{
+  padding:11px 0 11px 26px;border-bottom:1px solid var(--line-soft);position:relative;
+  font-size:14.5px;color:var(--dim);max-width:76ch;
+}
+.list li:last-child{border-bottom:none}
+.list li::before{
+  content:"";position:absolute;left:6px;top:20px;width:5px;height:5px;border-radius:50%;background:var(--gold-deep);
+}
+.list li b{color:var(--crema)}
+.list.kills li::before{background:var(--red-deep)}
+
+.evidence{
+  font-family:var(--mono);font-size:12px;color:var(--dim-2);
+  border:1px dashed var(--line);border-radius:8px;padding:11px 14px;margin:16px 0;
+  line-height:1.6;overflow-x:auto;
+}
+.evidence b{color:var(--gold);font-weight:500}
+
+.navdemo{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);margin:24px 0}
+.nd-top{
+  display:flex;align-items:center;gap:12px;padding:11px 16px;background:var(--roast-2);
+  border-bottom:1px solid var(--line);font-size:13.5px;flex-wrap:wrap;
+}
+.nd-mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,var(--gold-hot),var(--gold-deep));
+  display:grid;place-items:center;color:#241d14;font-weight:700;font-size:10px}
+.nd-proj{display:flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+.nd-proj .chev{color:var(--dim-2);font-size:9px}
+.nd-right{margin-left:auto;display:flex;gap:9px;align-items:center;color:var(--dim-2);font-size:12.5px}
+.nd-nav{display:flex;gap:3px;padding:0 12px;background:var(--roast-2);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.nd-nav span{padding:10px 13px;font-size:13.5px;color:var(--dim);border-bottom:2px solid transparent}
+.nd-nav span.on{color:var(--crema);border-bottom-color:var(--gold);font-weight:600}
+.nd-body{display:grid;grid-template-columns:190px 1fr}
+.nd-rail{border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:2px}
+.nd-rail i{
+  font-style:normal;padding:7px 10px;border-radius:6px;font-size:13px;color:var(--dim);
+}
+.nd-rail i.on{background:var(--card-2);color:var(--crema);font-weight:600}
+.nd-rail .lbl{
+  font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim-2);
+  font-weight:600;padding:6px 10px 4px;
+}
+.nd-main{padding:20px;color:var(--dim-2);font-size:13px;display:flex;align-items:center;justify-content:center;min-height:120px;text-align:center}
+
+.footer{
+  border-top:1px solid var(--line);margin-top:70px;padding:30px 0 60px;
+  color:var(--dim-2);font-size:13px;
+}
+@media (max-width:640px){
+  .nd-body{grid-template-columns:1fr}
+  .nd-rail{border-right:none;border-bottom:1px solid var(--line)}
+  body{font-size:14.5px}
+}
+</style>
+
+<div class="masthead">
+  <div class="wrap">
+    <div class="eyebrow">Golden Beans · information architecture audit</div>
+    <h1>Fifteen sections, four bolted-on links, and no object model</h1>
+    <p class="lede">
+      You asked where the nav items should go. The honest answer is that the question can't be
+      answered one item at a time, because the product has <b>no unit of work</b> — a single feature
+      is spread across five URLs, three of which ask you to edit the address bar by hand.
+      Fix the object model and the navigation falls out of it. This audit reads every surface that
+      exists on <code>main</code> today and places all nineteen.
+    </p>
+  </div>
+</div>
+
+<div class="wrap">
+
+<section>
+  <div class="num"><span class="n">01</span><h2>Your three questions, answered first</h2></div>
+
+  <div class="qa">
+    <div class="q">The <code>miyagisanchez / miyagisanchezmarketplace</code> breadcrumb — real or invented?</div>
+    <span class="verdict bad">Invented. My mistake.</span>
+    <p>In <b>Flagsmith</b> those are real: Organisation, then Project. In <b>Golden Beans</b> there is no
+    organisation layer at all. <code>getUserProjects(user.id)</code> returns a flat list of projects a
+    user is a member of, each with a slug and a role — that's it. I copied Flagsmith's two-level
+    breadcrumb without checking whether the second level existed in your data. It doesn't.</p>
+    <p><b>What it should be:</b> one project switcher. Golden Beans is single-tenant-per-project, so the
+    top bar names the project you're in and lets you change it. Nothing above it, because there is
+    nothing above it.</p>
+    <p><b>Am I proposing you build an org layer?</b> No. Multi-project accounts already work
+    (<code>projects.length &gt; 1</code> is handled in the shell today). An org tier would be a data
+    migration in exchange for a breadcrumb, and you have one user with one project.</p>
+  </div>
+
+  <div class="qa">
+    <div class="q">Is the prototype what I'd see at <code>/app/flags/miyagisanchez</code>?</div>
+    <span class="verdict bad">No — and the gap is exactly what you're now asking me to fix.</span>
+    <p>Your real page is wrapped in <code>ProductShell</code>: the logo, Home, Sections, Connect, Agent
+    notes, a project signal chip, and the AgentRail down the side. My prototype threw all of that
+    away and drew Flagsmith's chrome instead, so it showed you a flags console that couldn't
+    navigate anywhere. That's the same sin as the page it replaced — designing one screen as if it
+    were the whole product.</p>
+    <p>It also still renders <code>FlagManager</code>'s authoring stack underneath the list, which is why
+    the JSON box is on your screen no matter what the console gate says.</p>
+  </div>
+
+  <div class="qa">
+    <div class="q">Why isn't the features list truncated?</div>
+    <span class="verdict mixed">Fair hit — but truncation is the wrong fix.</span>
+    <p>Truncating 42 rows to 15 gives you 15 rows that say the same thing. <b>40 of the 42 are
+    identical:</b> never turned on, in any environment, by anyone. They carry no information
+    individually and a lot of information collectively.</p>
+    <p>The standard heuristic here isn't pagination, it's <b>summarise the uniform, expand the
+    exceptional</b>. Default view: the 2 that are on, the 1 that's off, and <em>one row</em> that reads
+    "40 features have never been turned on here" with a disclosure arrow. Three rows, one screen,
+    no scroll. Pagination at 15 only applies once you open that row — which is the rare case, not
+    the default.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num"><span class="n">02</span><h2>What is actually on the screen today</h2></div>
+  <p class="sub">Counted from <code>lib/project-route-inventory.ts</code> and
+  <code>components/product/ProductShell.tsx</code> on <code>main</code>. Nothing here is estimated.</p>
+
+  <div class="evidence">
+<b>Project surfaces in the inventory:</b> 15 — funnel · impact · journeys · experiments · flags · tasks ·
+scenarios · keys · flag-credentials · flag-audit · destinations · shares · agent-keys · onboarding
+<br><b>Rendered in the "Sections" disclosure:</b> 13 (onboarding is <code>flow-only</code>, filtered out; the rest gate-dependent)
+<br><b>Bolted into the header, outside the inventory:</b> 4 — Home · Sections · Connect · Agent notes
+<br><b>Also always present:</b> the AgentRail, plus a project chip that links to <code>/app</code>
+  </div>
+
+  <p>Seventeen destinations, presented as one flat list inside a <code>&lt;details&gt;</code> disclosure,
+  ordered by the sprint that happened to build them. There is no grouping, no frequency signal, and
+  no hierarchy — which is precisely what you described: bolted on as each feature landed.</p>
+
+  <div class="callout warn">
+    <p><b>Two of them instruct you to edit the URL.</b> <code>Funnel</code> and <code>Impact</code> are
+    keyed by feature, and the inventory has no feature picker, so it emits a literal placeholder:</p>
+    <p class="mono" style="color:var(--gold-hot);font-size:13px">
+      href: /app/funnel/miyagisanchez/<b style="color:var(--red)">your-feature-key</b><br>
+      description: "swap the feature key in the URL"
+    </p>
+    <p>That string is exported as <code>DEFAULT_FEATURE_HINT</code> and shared between the nav and the
+    home page, with a comment saying a picker will land eventually. That is the incoherence you hit.
+    It is not a copy problem — it's a missing object.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num"><span class="n">03</span><h2>The finding underneath every other finding</h2></div>
+  <p class="sub">Before any nav can be designed, the product needs a noun.</p>
+
+  <p>Golden Beans is a growth engine: you ship a thing, you switch it on for some people, you watch
+  whether it moved the number. That is <b>one loop about one object</b> — a feature. But the product
+  has no page for a feature. It has five pages that each hold one aspect of one:</p>
+
+  <figure>
+    <svg viewBox="0 0 900 260" role="img" aria-label="Diagram: one feature is currently spread across five separate URLs with no page that holds it together">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#8d8069"/>
+        </marker>
+      </defs>
+      <rect x="330" y="18" width="240" height="52" rx="10" fill="#2b2318" stroke="#e8b93c" stroke-width="1.5"/>
+      <text x="450" y="41" text-anchor="middle" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="15" font-weight="600">One feature</text>
+      <text x="450" y="59" text-anchor="middle" fill="#b8a888" font-family="IBM Plex Mono,monospace" font-size="11">checkout.stripe_enabled</text>
+
+      <g stroke="#8d8069" stroke-width="1.2" fill="none" marker-end="url(#ar)" stroke-dasharray="3 3">
+        <path d="M370 74 L110 128"/><path d="M410 74 L285 128"/><path d="M450 74 L450 128"/>
+        <path d="M490 74 L615 128"/><path d="M530 74 L790 128"/>
+      </g>
+
+      <g font-family="IBM Plex Mono,monospace" font-size="10.5" text-anchor="middle">
+        <rect x="20" y="134" width="180" height="62" rx="9" fill="#241d14" stroke="#3a3023"/>
+        <text x="110" y="156" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="12.5" font-weight="600">Its switch</text>
+        <text x="110" y="174" fill="#b8a888">/app/flags/[slug]</text>
+        <text x="110" y="188" fill="#7fd069">reachable</text>
+
+        <rect x="212" y="134" width="146" height="62" rx="9" fill="#241d14" stroke="#3a3023"/>
+        <text x="285" y="156" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="12.5" font-weight="600">Its funnel</text>
+        <text x="285" y="174" fill="#b8a888">/app/funnel/…/[key]</text>
+        <text x="285" y="188" fill="#e86a5e">type the URL</text>
+
+        <rect x="372" y="134" width="156" height="62" rx="9" fill="#241d14" stroke="#3a3023"/>
+        <text x="450" y="156" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="12.5" font-weight="600">Its impact</text>
+        <text x="450" y="174" fill="#b8a888">/app/impact/…/[key]</text>
+        <text x="450" y="188" fill="#e86a5e">type the URL</text>
+
+        <rect x="542" y="134" width="160" height="62" rx="9" fill="#241d14" stroke="#3a3023"/>
+        <text x="622" y="156" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="12.5" font-weight="600">Its experiment</text>
+        <text x="622" y="174" fill="#b8a888">/app/experiments/…</text>
+        <text x="622" y="188" fill="#b8a888">separate list</text>
+
+        <rect x="716" y="134" width="164" height="62" rx="9" fill="#241d14" stroke="#3a3023"/>
+        <text x="798" y="156" fill="#f5ead6" font-family="Archivo,sans-serif" font-size="12.5" font-weight="600">Its history</text>
+        <text x="798" y="174" fill="#b8a888">/app/flag-audit/…</text>
+        <text x="798" y="188" fill="#b8a888">separate list</text>
+      </g>
+      <text x="450" y="230" text-anchor="middle" fill="#8d8069" font-family="Archivo,sans-serif" font-size="13">
+        Nowhere in the product do these five appear on one screen.</text>
+      <text x="450" y="249" text-anchor="middle" fill="#8d8069" font-family="Archivo,sans-serif" font-size="13">
+        The nav lists the five containers, because there is nothing else to list.</text>
+    </svg>
+    <figcaption>The reason the nav reads as bolted on: it is a list of storage locations, not of work.</figcaption>
+  </figure>
+
+  <p><b>This is the same defect as the flags page, one level up.</b> The flags page showed the storage
+  model instead of the job; the navigation shows the route table instead of the work. Both were
+  built by adding a link per sprint.</p>
+
+  <div class="callout">
+    <p><b>One caveat, stated rather than glossed.</b> There are two registries today: TARS features
+    (measured, keys like <code>setup_guide</code>) and flag definitions (switched, keys like
+    <code>checkout.stripe_enabled</code>). They are not the same table and not the same naming
+    convention. Unifying them is a data decision, not a design one, and it is yours to make.</p>
+    <p>The IA below works either way — a feature page shows the tabs it has data for, and says plainly
+    when a feature is measured but not switched, or switched but not measured. That honesty is
+    useful on its own: it tells you which of your 42 flags nobody is measuring.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num"><span class="n">04</span><h2>The content strategy: four questions, four destinations</h2></div>
+  <p class="sub">Everything a person opens Golden Beans to do is one of four questions. Nav items are
+  answers to those questions, not names of subsystems.</p>
+
+  <div class="cols">
+    <div class="col">
+      <div class="k">Question 1</div>
+      <h4>“Did anything need me?”</h4>
+      <p>The front door. Headline numbers, what moved, what broke, what's waiting. You should be able
+      to close the tab from here on a good day.</p>
+      <div class="freq">→ Today · daily</div>
+    </div>
+    <div class="col">
+      <div class="k">Question 2</div>
+      <h4>“Is the thing I shipped working?”</h4>
+      <p>Funnels, impact on the North Star, journeys, drills. Measurement, always about a feature or
+      about the whole project.</p>
+      <div class="freq">→ Measure · weekly</div>
+    </div>
+    <div class="col">
+      <div class="k">Question 3</div>
+      <h4>“Change something.”</h4>
+      <p>The levers: switch a feature on or off, run an experiment, roll something back. The only
+      place in the product where an action has consequences for customers.</p>
+      <div class="freq">→ Ship · weekly, and in an incident</div>
+    </div>
+    <div class="col">
+      <div class="k">Question 4</div>
+      <h4>“Wire it up.”</h4>
+      <p>Connect your agent, get your keys, point your webhooks, share a report. Done once, changed
+      rarely, and never while you're trying to work.</p>
+      <div class="freq">→ Setup · once, then almost never</div>
+    </div>
+  </div>
+
+  <p>Four destinations, not seventeen. The ordering is not aesthetic — it is <b>frequency of use</b>,
+  which is the only defensible way to rank nav items and the standard every mature console follows.
+  Setup is last and quietest because a nav item you need once should not compete daily for
+  attention.</p>
+
+  <h3>The one rule that keeps it from re-inflating</h3>
+  <p>Every new surface must answer one of those four questions, and it joins that section's rail.
+  It does <b>not</b> get a new top-level item. If it genuinely answers none of them, that is the
+  signal to question the surface, not to extend the nav. This is the rule the current inventory
+  never had — which is why fifteen entries accumulated without anyone deciding to have fifteen.</p>
+</section>
+
+<section>
+  <div class="num"><span class="n">05</span><h2>The nav, cascaded into three tiers</h2></div>
+  <p class="sub">Scope narrows once per tier, and nothing below a tier can change what's above it.</p>
+
+  <div class="navdemo">
+    <div class="nd-top">
+      <span class="nd-mark">GB</span>
+      <span class="nd-proj">miyagisanchez <span class="chev">▼</span></span>
+      <span class="nd-right"><span>⌘K</span><span>?</span><span>◑ Daniel</span></span>
+    </div>
+    <div class="nd-nav">
+      <span>Today</span><span>Measure</span><span class="on">Ship</span><span>Setup</span>
+    </div>
+    <div class="nd-body">
+      <div class="nd-rail">
+        <span class="lbl">Environment</span>
+        <i class="on">● Production ▼</i>
+        <span class="lbl">In Ship</span>
+        <i class="on">Features</i>
+        <i>Experiments</i>
+        <i>Scheduled changes</i>
+        <i>Activity</i>
+      </div>
+      <div class="nd-main">the features list, and nothing else</div>
+    </div>
+  </div>
+
+  <div class="list">
+    <li><b>Tier 1 — the project.</b> One switcher in the top bar. Everything below it belongs to that
+    project. Also here: search (⌘K, which is how anyone with 42 features actually navigates), help,
+    and your account menu. That's four controls, and every one of them is global rather than
+    section-specific — which is the test for whether something belongs in a top bar.</li>
+    <li><b>Tier 2 — the four questions.</b> Today · Measure · Ship · Setup. Never more.</li>
+    <li><b>Tier 3 — the rail.</b> What's inside the section you picked, plus any scope that section
+    needs. Flags need an environment; the rail is where that lives, because it scopes this section
+    and nothing else. Putting it in the top bar would imply it governs Measure and Setup too.</li>
+  </div>
+
+  <div class="callout">
+    <p><b>Why ⌘K matters more than any menu here.</b> With 42 features, 3 environments and a dozen
+    surfaces, the fastest path to anything is typing its name. Every console at this size ships one,
+    and it is the single highest-leverage nav element you could build — it makes the depth of tier 3
+    free, because nobody has to walk the tree to get there.</p>
+  </div>
+</section>
+
+<section>
+  <div class="num"><span class="n">06</span><h2>Every surface, placed</h2></div>
+  <p class="sub">All nineteen — the fifteen in the inventory plus the four bolted into the header.
+  Nothing is left unaccounted for.</p>
+
+  <div class="tblwrap">
+  <table>
+    <thead><tr><th>Surface today</th><th>Verdict</th><th>Where it goes</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td class="surface">/app</td><td><span class="act keep">Keep</span></td><td class="dest">Today</td>
+        <td class="why">Already the right idea — Command Center answers “did anything need me”. Rename to Today; it's a place you return to, not a home you leave.</td></tr>
+      <tr><td class="surface">funnel/[key]</td><td><span class="act move">Move</span></td><td class="dest">A feature → Funnel tab</td>
+        <td class="why">Not a destination. It is one view of one feature, which is why it can't be linked without a placeholder. Reached by opening the feature.</td></tr>
+      <tr><td class="surface">impact/[key]</td><td><span class="act move">Move</span></td><td class="dest">A feature → Impact tab</td>
+        <td class="why">Same. Two nav items and the URL-editing instruction all disappear together.</td></tr>
+      <tr><td class="surface">journeys</td><td><span class="act keep">Keep</span></td><td class="dest">Measure → rail</td>
+        <td class="why">Project-wide measurement, not per feature. A real destination.</td></tr>
+      <tr><td class="surface">experiments</td><td><span class="act keep">Keep</span></td><td class="dest">Ship → rail</td>
+        <td class="why">An experiment is a lever with consequences, like a flag. It belongs beside flags, not in a governance silo. Drop “governance” from the label.</td></tr>
+      <tr><td class="surface">flags</td><td><span class="act keep">Keep</span></td><td class="dest">Ship → Features</td>
+        <td class="why">The main event. Environment scope lives in this section's rail.</td></tr>
+      <tr><td class="surface">tasks</td><td><span class="act move">Move</span></td><td class="dest">Today</td>
+        <td class="why">“Your evidence-backed queue” is the definition of what needs you today. It is the Today page's second half, not a separate stop.</td></tr>
+      <tr><td class="surface">scenarios</td><td><span class="act keep">Keep</span></td><td class="dest">Measure → rail</td>
+        <td class="why">Drills and protective trips are evidence about whether the engine holds. Measurement.</td></tr>
+      <tr><td class="surface">keys</td><td><span class="act merge">Merge</span></td><td class="dest">Setup → Keys</td>
+        <td class="why">One of four credential surfaces. See the merge note below.</td></tr>
+      <tr><td class="surface">flag-credentials</td><td><span class="act merge">Merge</span></td><td class="dest">Setup → Keys</td>
+        <td class="why">Same. A key is a key; which subsystem minted it is a column, not a page.</td></tr>
+      <tr><td class="surface">agent-keys</td><td><span class="act merge">Merge</span></td><td class="dest">Setup → Keys</td>
+        <td class="why">Same.</td></tr>
+      <tr><td class="surface">flag-audit</td><td><span class="act merge">Merge</span></td><td class="dest">Activity</td>
+        <td class="why">“Who changed what, and why” is one question. Answering it in three places means checking three places during an incident.</td></tr>
+      <tr><td class="surface">destinations</td><td><span class="act keep">Keep</span></td><td class="dest">Setup → rail</td>
+        <td class="why">Webhook delivery is plumbing. Correctly placed, wrongly prominent today.</td></tr>
+      <tr><td class="surface">shares</td><td><span class="act keep">Keep</span></td><td class="dest">Setup → rail</td>
+        <td class="why">Same. Also reachable as “Share this” from any report, which is where you'll actually want it.</td></tr>
+      <tr><td class="surface">onboarding</td><td><span class="act build">Promote</span></td><td class="dest">Setup → Connect</td>
+        <td class="why"><b>The buried one.</b> It already renders your project's real connector URL — and it's <code>flow-only</code>, so the nav filters it out. See §7.</td></tr>
+      <tr><td class="surface">Header: Home</td><td><span class="act merge">Merge</span></td><td class="dest">The logo</td>
+        <td class="why">A logo that goes home is universal. A separate Home link beside it is a duplicate.</td></tr>
+      <tr><td class="surface">Header: Sections</td><td><span class="act kill">Delete</span></td><td class="dest">—</td>
+        <td class="why">A disclosure holding a flat list of every route is a symptom, not a feature. Tier 2 replaces it.</td></tr>
+      <tr><td class="surface">Header: Connect</td><td><span class="act kill">Delete</span></td><td class="dest">Setup → Connect</td>
+        <td class="why">It points at <code>/install</code>, a marketing page, from inside the signed-in product. See §7.</td></tr>
+      <tr><td class="surface">Header: Agent notes</td><td><span class="act kill">Delete</span></td><td class="dest">—</td>
+        <td class="why">Links to <code>/llms.txt</code>, a plain-text manifest for crawlers. Keep the file; it has no business in human navigation.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>On merging the four credential surfaces</h3>
+  <p>Golden Beans currently has <b>four separate pages that issue secrets</b>: API keys, flag
+  credentials, agent write keys, and the connector token. Nobody thinks “I need a flag credential” —
+  they think “I need to give something access”. One <b>Keys</b> page, with a column for what each key
+  may do and a filter, is the standard shape and removes three nav items. The permission boundaries
+  don't change: each row still enforces its own owner check exactly as its page does today.</p>
+</section>
+
+<section>
+  <div class="num"><span class="n">07</span><h2>Connect — you were right, and it's nearly built</h2></div>
+
+  <span class="verdict bad">Confirmed broken, in two distinct ways</span>
+
+  <p><b>One: it's a marketing page wearing product chrome.</b> <code>/install</code> imports
+  <code>Nav</code> and <code>Footer</code> from <code>components/landing/</code>. Clicking Connect from
+  inside your dashboard drops you out of the product and onto the website, with the website's header,
+  a sales headline, and a footer.</p>
+
+  <p><b>Two — and this is the real one: it hands you the wrong token.</b></p>
+
+  <div class="evidence">
+app/install/page.tsx:31 &nbsp; await getActiveConnectorUrl(<b>DEMO_PROJECT_SLUG</b>)
+  </div>
+
+  <p>Signed in as you, on your own project, the Connect link gives you the <b>demo project's</b>
+  connector URL. Not yours. Your instinct that Golden Beans can't really be connected that way was
+  right — that URL points at demo data.</p>
+
+  <div class="callout">
+    <p><b>The good news is that what you asked for already exists.</b> You described exactly this:
+    a signed-in experience where users get their personal URL with their own token baked in, ready
+    to paste into <code>claude.ai/customize/connectors</code>. That page is written:</p>
+    <div class="evidence" style="margin:12px 0">
+app/app/onboarding/[projectSlug]/page.tsx:60 &nbsp; await getActiveConnectorUrl(<b>projectSlug</b>)
+    </div>
+    <p>It resolves <em>your</em> project's real, revocable token. It is unreachable from any
+    navigation, because the inventory marks it <code>status: 'flow-only'</code> and
+    <code>getProjectSurfaceLinks</code> filters those out. <b>The feature is finished and hidden.</b></p>
+  </div>
+
+  <h3>What Connect should be</h3>
+  <div class="list">
+    <li><b>Setup → Connect, inside the product shell.</b> No landing Nav, no Footer, no sales
+    headline. You are already sold; you signed in.</li>
+    <li><b>Your URL, your token, one copy button</b>, and the Add-to-Claude deep link right beside it —
+    the flow you named. The token is scoped to the project in the switcher, so switching project
+    switches the URL, which is the behaviour anyone would assume.</li>
+    <li><b>Connection state, not instructions.</b> “Connected · last used 2 hours ago” or “Not
+    connected yet”. A setup page that can't tell you whether setup worked is a document, not a tool.</li>
+    <li><b>The SDK snippet moves to docs</b>, with one link from here. It is for the engineer wiring
+    up data-in, not for the operator connecting an agent. Two audiences, two places — putting the
+    npm install block on the same panel as your personal token is what makes that page feel like
+    three products stapled together.</li>
+    <li><b>Setup shows a badge until it's done, then goes quiet.</b> Standard progressive reduction:
+    prominent while it's the most valuable thing you could do, demoted the moment it isn't.</li>
+  </div>
+</section>
+
+<section>
+  <div class="num"><span class="n">08</span><h2>What this deletes</h2></div>
+  <p class="sub">A content strategy is only real if it removes things. This one removes more than it adds.</p>
+  <ul class="list kills">
+    <li><b>Thirteen top-level destinations</b> become four, with everything reachable in at most three clicks or one ⌘K.</li>
+    <li><b>The Sections disclosure</b> — the flat list of every route in the product.</li>
+    <li><b>Two nav items that instruct you to edit the URL</b>, and the <code>DEFAULT_FEATURE_HINT</code> placeholder behind them.</li>
+    <li><b>Three of the four key-issuing pages.</b></li>
+    <li><b>Two of the three audit surfaces.</b></li>
+    <li><b>The Agent notes link</b> to a crawler manifest.</li>
+    <li><b>The marketing header and footer</b> from inside a signed-in session.</li>
+    <li><b>The demo project's token</b> being handed to real users as if it were theirs.</li>
+  </ul>
+  <p style="margin-top:22px">Two things get <b>built</b>, and both are small: the feature page that
+  holds the switch, the funnel, the impact and the history together — which is mostly re-pointing
+  routes that already render — and ⌘K, which is a filter over a list you already have.</p>
+</section>
+
+<div class="footer">
+  <div>Read against <code>main</code> · <code>lib/project-route-inventory.ts</code>,
+  <code>lib/shell-nav.ts</code>, <code>components/product/ProductShell.tsx</code>,
+  <code>app/install/page.tsx</code>, <code>app/app/onboarding/[projectSlug]/page.tsx</code>,
+  <code>app/app/funnel/[projectSlug]/[featureKey]/page.tsx</code>. Every count and quotation is from
+  the code as it stands, not from the epic docs.</div>
+</div>
+
+</div>
