@@ -1176,6 +1176,25 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  /* `min-width: 0` is load-bearing, not defensive. A grid/flex item's default `min-width: auto`
+     refuses to shrink below its content, and a project SLUG is unbounded — the authed fixture's
+     `gb-e2e-authed-1787859297750-69508` pushed this row 4px past a 360px viewport and took the
+     account menu with it (10 mobile-heuristics specs, caught with the gate ON). A real slug like
+     `miyagisanchez` is short enough to hide this forever, which is exactly why the least-convenient
+     realistic input is the one worth testing. */
+  min-width: 0;
+}
+
+/* Scoped INSIDE `__identity` so the legacy header's own `.product-shell__signal` is untouched — D4
+   promises the gate-off render is what it was, and that promise covers CSS as much as markup. The
+   legacy signal is not a child of this container, so these rules cannot reach it. */
+.product-shell__identity .product-shell__signal,
+.product-shell__switcher summary {
+  min-width: 0;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .product-shell__switcher,
@@ -1201,6 +1220,10 @@ body {
   right: 0;
   z-index: 70;
   min-width: 220px;
+  /* The menu opens leftward from a control near the right edge, so on a narrow screen its 220px
+     floor is what would push the document wider. Bounded by the viewport, not by the header's
+     padding, because `right: 0` is relative to the control and the control moves. */
+  max-width: calc(100vw - 24px);
   max-height: 60vh;
   overflow-y: auto;
   padding: 10px;
@@ -1291,6 +1314,12 @@ body {
   z-index: 90;
   display: flex;
   justify-content: center;
+  /* `flex-start`, NOT the default `stretch`. Found by looking at a screenshot, not by a spec: with
+     `stretch` the panel filled the whole 88vh container, so five short rows sat at the top of a
+     600px slab of empty card. Every assertion passed — "the palette is visible" and "one option
+     matched" are both true of a box ten times taller than its contents. A geometry assertion in
+     console-shell.authed.spec.ts now pins it. */
+  align-items: flex-start;
   padding: 12vh 18px 18px;
 }
 
