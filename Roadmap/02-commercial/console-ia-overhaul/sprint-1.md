@@ -1,16 +1,59 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 1: The shell
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all five stories built (`28d6955`, `7c84cfa`, `ce64b1e`, `e62a872`, `7489813`, `765ec58`)
 
-> **Build contract (to be locked by the architect before the builder starts).** Cite `D1`, `D2`,
-> `D3` and `D4` from the epic README. Do not re-derive them. In particular: the nav is generated
-> from the inventory (D2) and **the gate stays OFF for the whole epic** (D4) — this sprint merges
-> dark by construction, and that is what makes the rest of it safe to build.
+> ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
-> **This sprint touches the shared surface every other branch inherits** — `ProductShell` wraps every
-> signed-in route, and `project-route-inventory.ts` is imported by the shell *and* `/app`. Per
-> WAYS-OF-WORKING → *Assembly line, not a relay*, shared-surface work is done **first and by the
-> architect**, not fanned out.
+> **Cite `D1`, `D2`, `D3`, `D4`, `A1`, `A2`, `A7`, `A8`, `A9` from the epic README. Do not re-derive
+> them.** A paraphrased contract drifts permissive; if something here looks wrong, escalate — do not
+> reinterpret.
+>
+> **Where the rules live (imported, never restated):** gate polarity and `=== 'true'` →
+> `apps/web/lib/flags.ts`'s own comments · what a surface is → `lib/project-route-inventory.ts` ·
+> auth → `lib/dashboard-auth.ts` · house style → `CODE-QUALITY.md` · tenancy → `AGENTS.md` rules #1–#5.
+>
+> ### The five things this sprint may not get wrong
+>
+> 1. **The gate stays OFF for the whole epic (D4).** This sprint merges dark by construction, and that
+>    is what makes Sprints 2 and 3 safe to build. `CONSOLE_SHELL_ENABLED` is created **DISABLED in all
+>    three Vercel scopes** before the PR merges — a flag that exists only in code is not created.
+> 2. **The nav is generated from the inventory (D2).** A hardcoded list in `ProductShell` is forbidden
+>    by `lib/shell-nav.ts`'s own D1 comment. `section` is a **closed union**, so a new surface without
+>    a section is a compile error at every caller — the same technique and the same reason as
+>    `ProjectSurfaceGate`.
+> 3. **`DEFAULT_FEATURE_HINT` has FOUR references and all four die together (D3):**
+>    `lib/shell-nav.ts:44` (declares) · `lib/shell-nav.ts:96` (uses) · `app/app/page.tsx:13` (imports) ·
+>    `app/app/page.tsx:90` (uses), plus the two literal `'your-feature-key'` strings in
+>    `lib/project-route-inventory.test.ts:38,66`. Leaving any one of them is leaving the constant alive
+>    with one user. `grep -rn "your-feature-key" apps/web` must return nothing outside this epic's docs.
+> 4. **`ProductShell` gains a REQUIRED `section` prop (A8): 26 render sites across 18 files.**
+>    (The first draft of this line said "18 call sites", conflating files with renders — eight of the
+>    26 are second renders in error and empty states, which is exactly the set an *optional* prop
+>    would have let slip through.) Required, not
+>    optional: the compiler is what makes "every page declares where it lives" true. No client island
+>    reading `usePathname()` — the file's own comments forbid it twice, and for a reason.
+> 5. **The palette fails to nothing (A9).** There is no `ErrorBoundary` anywhere in `apps/web` today, so
+>    Story 1.5 writes one. The pure filter lives in `lib/` with zero DOM imports and unit tests; the
+>    client component is wrapped so a throw renders `null` rather than taking down every signed-in
+>    route. **Mutation-check it by throwing on purpose** — an unobserved guard is not a guard.
+>
+> ### Shared surface — architect-built, first
+>
+> Stories **1.1, 1.2 and 1.3** are built by the architect and are **not fanned out**: `flags.ts`,
+> `project-route-inventory.ts` and `ProductShell` are imported by every signed-in route, so every
+> branch opened after them inherits them and every branch opened before them conflicts.
+> Stories **1.4 and 1.5** route to **Codex** (`--tier build`) over this locked contract.
+>
+> ### What Sprint 1 does NOT do
+>
+> - It does **not** index features in `⌘K` (that is Story 3.4, over A6's resolution).
+> - It does **not** delete `Home` / `Sections` / `Connect` / `Agent notes` from the file — only hides
+>   them with the gate on. **Only `Home` and the disclosure are ever deleted** (Story 3.5, after the
+>   production flip is verified) — `Connect` and `Agent notes` are permanent public chrome, because
+>   the two demo dashboards render this branch anonymously and it is their only route to `/install`
+>   and `/llms.txt`. See A16.
+> - It does **not** add the `'console-shell'` or `'legacy-keys'` gate values (A7) — those arrive in
+>   Sprint 2 with the routes that need them, in one commit with all three `ProjectSurfaceGates` callers.
 
 ## Stories
 
@@ -19,12 +62,24 @@
 say otherwise, **so that** it can merge in pieces without any of it reaching me half-built.
 **Acceptance:**
 - `CONSOLE_SHELL_ENABLED` is a new `isConsoleShellEnabled()` in `apps/web/lib/flags.ts`, exactly
-  `=== 'true'` like its 20 siblings, with the comment naming its **enablement** polarity.
+  `=== 'true'` like its **17** siblings — it is the eighteenth env gate. (`flags.ts` exports **22**
+  functions, **four** of which compose other gates rather than reading an env var: 22 − 4 = 18. The
+  original "20 siblings" counted composites; my first correction said "21 functions, three
+  composites" and was itself off by one in both terms — the right conclusion reached twice with the
+  wrong arithmetic, which the reviewer's second pass caught. Counted at HEAD this time, and it agrees
+  with `flags.ts`' own "eighteenth", with the 18 unique `process.env` reads, and with the
+  exhaustiveness test's floor.) The comment names its **enablement** polarity.
 - The flag is **created DISABLED in every environment** (local, preview, production). A flag that
   exists only in code is not created.
 - It is resolved **server-side** and passed down. No client reads `process.env`.
-- With it unset, `/app` and `/app/flags/miyagisanchez` are unchanged — provable by `git diff` showing
-  the gate-off branch untouched, not by a promise in prose.
+- With it unset, `/app` and `/app/flags/miyagisanchez` render the same CHROME — provable by `git diff`
+  showing the gate-off branch untouched, not by a promise in prose.
+- ⚠️ **One honest qualification (fresh reviewer, PR #122): the chrome is unchanged, the DATA in it is
+  not.** Story 1.2 removes `funnel` and `impact` from the inventory unconditionally, so with the gate
+  off the Sections disclosure lists eleven surfaces where it listed thirteen. That is D3's intended
+  change — both were entries whose own description read "swap the feature key in the URL" — but
+  `git diff` on `ProductShell.tsx` cannot see it, and stating the guarantee absolutely would hide it.
+  Neither dashboard loses its only entry: `CommandCenter` still links both with a real feature key.
 **Risk:** high (shared infra + the gate the whole epic depends on)
 
 ### Story 1.2 — `section` on the route inventory
@@ -66,9 +121,13 @@ one click instead of a menu of everything.
 **Acceptance:**
 - The rail renders the surfaces whose `section` matches the active one, with their existing
   inventory descriptions.
-- **Ship's rail carries the environment picker** — flags-scoped, exactly as `flags-console-parity`
-  D3 decided, because it scopes Ship and nothing else. Putting it in the header would imply it
-  governs Measure and Setup too.
+- ⚠️ **DISPROVED by A15 — Ship's rail does NOT carry the environment picker; it stays on the flags
+  page.** This criterion cited `flags-console-parity` D3, which says the opposite in as many words
+  (*"a switcher in the shell would imply it governs pages that do not read it"*). Two facts on `main`
+  settle it: the picker's links are built from `buildFlagListQuery(params, …)`, carrying the flags
+  list's own search/filter/sort/page — so a rail copy would drop the reader's filters on every switch
+  — and `experiments` contains the string `environment` **zero** times, so a Ship-wide picker would
+  sit above a page it does not govern. Nothing moves, so nothing is lost.
 - Today has no rail and renders full width.
 - A section whose surfaces are all gated off renders no empty rail.
 **Risk:** low
@@ -85,38 +144,79 @@ nothing.
 - **Features are NOT indexed in this sprint** (D7 is unresolved and Story 3.4 owns it).
 **Risk:** low
 
-## Sprint QA
-- **api spec(s):** `e2e/console-shell-dark.spec.ts` — with the gate off, an unauthenticated GET of the
-  two Sprint-2 routes returns a flat **404** (dark means nonexistent, before auth). Plus unit specs on
-  `project-route-inventory.ts` (every surface sectioned; the union exhaustive) and on the palette's
-  pure filter function, extracted to a `lib/` seam so it is testable with zero DOM.
-- **Note on what the gate spec can and cannot assert:** it cannot assert "`/app` renders as it does
-  today" — that page is credential-gated and the `api` project only ever sees the login redirect,
-  identical with the gate on or off. `flags-console-parity` Sprint 1 corrected exactly this mistake.
-  It asserts the **route status** instead, and the byte-identical claim is carried by `git diff`.
-- **browser smoke owed:** yes, to the product owner — the header render with the gate on is
-  credential-gated. One opt-in `browser` spec can cover the anonymous half; the authed chrome is owed.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+## Sprint QA — what was actually run
+
+- ⚠️ **`e2e/console-shell-dark.spec.ts` was NOT written, and writing it here would have been a
+  tautology.** It was specced to assert that the two **Sprint-2** routes 404 while dark — but those
+  routes do not exist until Sprint 2, so a 404 from them proves only that Next.js 404s an absent
+  path. That is precisely the guard-that-cannot-fail this repo has shipped three times. **The dark
+  route spec moves to Sprint 2, with the routes it is about.**
+- **Sprint 1 changes NO anonymously-observable response at all.** `/app` redirects to `/login` in
+  both gate states, which is what the `api` project sees. So the coverage that means anything is:
+  - **Unit (in the blocking gate): 1,359 tests.** `console-shell.test.ts` (19) — tab set, exactly one
+    `current` for all five section values, a tab never rendering without a destination, the switcher
+    resolving the TARGET project's role, the rail's two no-rail cases.
+    `console-palette.test.ts` (13) — matching by label and by section, the honest no-match result, the
+    cursor total over an empty list. `project-route-inventory.test.ts` (9) — every surface sectioned,
+    no dead section, no placeholder in any href. `flags.test.ts` (205) — including the new
+    exhaustiveness guard.
+  - **`e2e/console-shell.authed.spec.ts` (NEW): 12 specs, run in BOTH gate states.**
+    Full authed suite: **59 passed / 0 failed** gate-off, **64 passed / 0 failed** gate-on.
+  - **`api` gate: 482 passed, 1 failed** — `scenario-registry.spec.ts:365`, **pre-existing**,
+    reproduced identically on clean `main` (e076b5d) in a throwaway worktree.
+- **Mutation checks, all observed red and restored from file copies:** the placeholder-href guard,
+  the "swap the key" description guard, an emptied section, Today given a rail, `getSectionEntryHref`
+  returning `''` instead of `null`, the flags-registry exhaustiveness guard in both directions, and
+  the palette's panel geometry (346px of slack against a 48px bound).
+- **A9 verified end to end, twice.** Palette throwing + boundary present → page intact. Palette
+  throwing + boundary **removed** → one keystroke unmounted the whole signed-in page. The second run
+  is what proves the guard is load-bearing.
+- **browser smoke still owed to the product owner:** the authed rail runs against a *disposable*
+  tenant with every gate open. It cannot tell you what `miyagisanchez` looks like in **production**,
+  where four gates are Production-only (A2) and the slug and data are real. That is the walkthrough
+  below, and it runs after Story 3.5's flip.
+- **deterministic gate:** lint · typecheck · 1,359 unit tests · build · design-drift ·
+  `format:changed` — all green.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: preview · `https://<branch-preview>.vercel.app` (production URLs once merged)
 
-1. Open `https://<preview>/app` while `CONSOLE_SHELL_ENABLED` is unset.
+⚠️ **Each step names its own environment, and that is A2, not fussiness.**
+`FLAG_SERVING_ENABLED`, `EXPERIMENT_GOVERNANCE_ENABLED`, `SIGNALS_ENABLED` and
+`JOURNEY_PROJECTIONS_ENABLED` are **Production-only** — a branch preview shows **9** surfaces where
+production shows **13**, so Flags, Experiments, Journeys and Tasks are all legitimately missing from a
+preview's rail. Steps 1–3 (the dark state) run on **preview**, because they depend on no other epic's
+gate. Steps 4–7 (the lit state) run on **production, after Story 3.5's flip**, where the sentence
+"Features, Experiments and Activity" is actually true.
+
+### On preview — `https://<branch-preview>.vercel.app`, gate unset
+
+1. Open `https://<preview>/app`.
    → The header looks exactly as it does today: logo, Home, Sections, Connect, Agent notes.
 2. Open `https://<preview>/app/setup/connect/miyagisanchez` in a private window.
    → A plain **404** page. Not a login redirect — dark means the route does not exist.
-3. Set `CONSOLE_SHELL_ENABLED=true` in the preview scope and **push a commit** to the branch (per
-   AGENTS rule #4 the var only reaches running functions on a new deployment).
-4. Reload `https://<preview>/app`.
-   → The header now shows: the logo, `miyagisanchez ▾`, and four sections — Today · Measure · Ship ·
-   Setup. Home, Sections, Connect and Agent notes are gone.
+3. Open `https://<preview>/app/setup/keys/miyagisanchez` in a private window.
+   → A plain **404**, same reason.
+
+### On production — `https://goldenfrijoles.com`, after Story 3.5 flips the gate
+
+4. Open `https://goldenfrijoles.com/app`.
+   → The header shows: the logo; the four sections **Today · Measure · Ship · Setup** with Today
+   marked as current; the project name; and an **Account** menu. Home, Sections, Connect and Agent
+   notes are gone.
+   → ⚠️ The project name is a plain label, **not** a `▾` menu, because you belong to one project.
+   The switcher only becomes a disclosure with two or more — the earlier draft of this step promised
+   `miyagisanchez ▾` and would have had you file a bug against correct behaviour.
 5. Click **Ship**.
-   → The left rail shows an Environment picker set to Production, then Features, Experiments and
-   Activity.
+   → The left rail shows **Experiment governance · Flags · Flag audit**.
+   → ⚠️ **No environment picker, and no entry called "Features".** The earlier draft of this step
+   promised both. A15 disproved the picker (it belongs to the flags page, whose search and filters
+   its links carry), and there is no surface named `Features` in the inventory — the flags surface
+   is labelled **Flags**. Corrected after the fresh reviewer found the two documents disagreeing.
 6. Press `⌘K` and type `dest`.
    → "Destinations" appears, labelled Setup. Press `↵`.
    → You land on the Destinations page.
-7. Set `CONSOLE_SHELL_ENABLED` back to unset and push again.
-   → `/app` is back to today's header. **Leave it unset — the flip is Story 3.5.**
+7. Press `⌘K` and type `stripe`.
+   → **Nothing matches.** Feature keys are deliberately *not* indexed until Story 3.4 — an empty
+   result here is the correct answer for this sprint, not a bug.
 
 If any step fails, note the step number + what you saw — that's the bug report.

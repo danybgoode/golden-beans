@@ -10,8 +10,9 @@ import {
   isSignupEnabled,
 } from '@/lib/flags'
 import { getProjectSurfaceLinks } from '@/lib/project-route-inventory'
-import { DEFAULT_FEATURE_HINT } from '@/lib/shell-nav'
-import { SignOutButton } from './sign-out-button'
+import { getShellNav } from '@/lib/shell-nav'
+import { shellRendersAccountMenu } from '@/lib/console-shell'
+import { SignOutButton } from '@/components/product/SignOutButton'
 import { ProductShell } from '@/components/product/ProductShell'
 import { CommandCenter } from '@/components/product/CommandCenter'
 
@@ -43,6 +44,11 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   //
   // `?provision=failed` breaks the loop: after a failed attempt we render the honest empty state
   // below instead of bouncing back and retrying forever.
+  // Resolved from the SAME seam the shell uses, so the page and its chrome cannot disagree about
+  // whether an account menu was rendered. `getSessionUser` and `getUserProjects` are both React
+  // `cache()`d per request, so this adds no query — only the pure header arithmetic.
+  const shellNav = await getShellNav(undefined, 'home')
+
   const { provision } = await searchParams
   if (projects.length === 0 && isSignupEnabled() && provision !== 'failed') {
     redirect('/app/provision')
@@ -59,16 +65,29 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   }
 
   return (
-    <ProductShell>
+    <ProductShell section="home">
       <main>
         <header>
           {/* Names what the page IS. The slug lives on each project's own card, where it belongs —
               putting it in the h1 as well rendered a long tenant slug at clamp(30px, 7vw, 48px) and
               said the same thing twice. */}
           <h1>{projects.length === 0 ? 'Your projects' : 'Command center'}</h1>
-          <p>
-            Signed in as {user.email} · <SignOutButton />
-          </p>
+          {/* console-ia-overhaul · Story 1.3 — this line renders exactly when the shell did NOT
+              render an account menu, so sign-out is present once and never zero times.
+
+              It used to test `!isConsoleShellEnabled()`, which is a DIFFERENT question: the shell
+              also needs a resolved header and an email, and a signed-in user with no project (say,
+              `/app?provision=failed`) has neither — so the gate being on suppressed this line while
+              the shell fell back to the legacy header that has no account menu, leaving the page
+              with no way to sign out at all. Found by the fresh reviewer on PR #122.
+
+              Both sides now ask the same predicate rather than two conditions that are supposed to
+              agree. With the gate off it is always false, so the old page is untouched (D4). */}
+          {!shellRendersAccountMenu(shellNav) && (
+            <p>
+              Signed in as {user.email} · <SignOutButton />
+            </p>
+          )}
         </header>
 
         {projects.length === 0 ? (
@@ -87,7 +106,6 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
               links={getProjectSurfaceLinks({
                 projectSlug: project.slug,
                 role: project.role,
-                featureHint: DEFAULT_FEATURE_HINT,
                 gates,
               })}
             />

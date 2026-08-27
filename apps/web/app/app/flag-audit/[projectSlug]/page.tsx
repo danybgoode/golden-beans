@@ -39,7 +39,7 @@ export default async function FlagAuditPage({ params }: { params: Promise<{ proj
   )
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="ship">
       <main>
         <h1>Flag audit — {projectSlug}</h1>
         <p>

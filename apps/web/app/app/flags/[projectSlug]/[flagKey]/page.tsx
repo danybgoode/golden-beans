@@ -144,7 +144,7 @@ export default async function FlagDetailPage({
   })
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="ship">
       <main>
         <h1>
           <code>{flag.key}</code>

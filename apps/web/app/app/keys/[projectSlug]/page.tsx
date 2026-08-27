@@ -14,7 +14,7 @@ export default async function KeysPage({ params }: { params: Promise<{ projectSl
   const keys = await listProjectKeys(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="setup">
       <main>
         <h1>API keys — {projectSlug}</h1>
         <p>

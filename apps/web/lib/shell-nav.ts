@@ -2,13 +2,19 @@ import 'server-only'
 import { getSessionUser } from './supabase-auth'
 import { getUserProjects, type MemberProject } from './membership'
 import {
+  isConsoleShellEnabled,
   isExperimentGovernanceEnabled,
   isFlagConsoleEnabled,
   isFlagServingEnabled,
   isJourneyProjectionsEnabled,
   isSignalsEnabled,
 } from './flags'
-import { getProjectSurfaceLinks, type ProjectSurfaceLink } from './project-route-inventory'
+import {
+  getProjectSurfaceLinks,
+  type ProjectSurfaceGates,
+  type ProjectSurfaceLink,
+} from './project-route-inventory'
+import { buildConsoleHeader, type ConsoleHeader, type ShellSection } from './console-shell'
 
 // app-shell-and-agent-rail · Sprint 1, Story 1.3 — what the shell's section nav renders.
 //
@@ -33,15 +39,95 @@ export type ShellNav = {
   projects: MemberProject[]
   /** Entitled, gate-open surfaces for `activeProject`, straight from the inventory. */
   links: ProjectSurfaceLink[]
+  /**
+   * console-ia-overhaul · Story 1.3 — the four-section header, or `null` while the console gate is
+   * off (and whenever there is no active project to build one for).
+   *
+   * Resolved HERE rather than in the component, for the same reason `links` is: this is the one
+   * module that has already read the session, the memberships and the gates, and a second resolution
+   * point is a second thing that can disagree. `ProductShell` renders what it is handed.
+   *
+   * `null` is what makes D4 auditable: with `CONSOLE_SHELL_ENABLED` unset this is never populated,
+   * so the component takes its legacy branch and the gate-off render is unchanged by construction —
+   * a property `git diff` can check, not one prose promises.
+   */
+  /**
+   * The console chrome for this render, or `null` when it does not apply — the SINGLE field that
+   * decides, deliberately.
+   *
+   * Non-null exactly when `CONSOLE_SHELL_ENABLED` is open **and** there is a session. Not the env
+   * var alone: every element of the console (switcher, account menu, palette over entitled surfaces)
+   * presupposes a session, and the two demo dashboards render this shell anonymously. An anonymous
+   * visitor is not a degraded signed-in user.
+   *
+   * A previous revision carried a separate `consoleEnabled` boolean beside this, with the chrome
+   * branching on one and the account menu on the other — an invariant maintained by hand at four
+   * return sites, where one mismatch reopens the zero-sign-out bug. One field cannot disagree with
+   * itself. See `shellRendersAccountMenu`.
+   */
+  header: ConsoleHeader | null
+  /**
+   * The signed-in address, for the console header's account menu. `null` when anonymous — the two
+   * demo dashboards render this shell without a session.
+   *
+   * It is the VIEWER'S OWN email and it is already rendered on `/app` today; this moves where it is
+   * shown, not who can see it. Story 1.3 drops `/app`'s own copy when the console gate is on, so it
+   * appears once either way.
+   */
+  userEmail: string | null
 }
 
-const EMPTY: ShellNav = { activeProject: null, projects: [], links: [] }
+/**
+ * The header for a viewer entitled to nothing here — a zero-project session, or a slug they are not
+ * a member of. `buildConsoleHeader` finds no surface for an empty membership list, so this is the
+ * Today tab and nothing else, which is exactly right: `/app` is the only place they can go.
+ */
+function emptyHeader(activeSection: ShellSection) {
+  return buildConsoleHeader({
+    activeSection,
+    activeProjectSlug: '',
+    projects: [],
+    // ALL FALSE, not `readGates()`. With an empty project list no surface can be entitled whatever
+    // the gates say, so the real values were a read whose result could not matter — and a call that
+    // looks like it feeds a decision, but cannot, is the kind of thing a later reader trusts
+    // (cross-review, Mistral Vibe). Passing the closed record explicitly says "no gate is consulted
+    // on this path"; it also keeps `ProjectSurfaceGates` a closed record, so adding a fifth gate is
+    // still a compile error here rather than a silently-defaulted `{}`.
+    gates: {
+      'experiment-governance': false,
+      'flag-console': false,
+      'flag-serving': false,
+      'journey-projections': false,
+      signals: false,
+    },
+  })
+}
 
-// The funnel/impact dashboards are addressed per FEATURE key, and which features a project has
-// registered is the registry's business, not the shell's — so their links carry a placeholder the
-// user edits. Same constant and same reasoning as app/app/page.tsx, which is why it is exported:
-// two copies of this string would be two things to change when a feature picker finally lands.
-export const DEFAULT_FEATURE_HINT = 'your-feature-key'
+/** The gate values, read once per call. One resolution point, two consumers (header and rail). */
+function readGates(): ProjectSurfaceGates {
+  return {
+    'experiment-governance': isExperimentGovernanceEnabled(),
+    'flag-console': isFlagConsoleEnabled(),
+    'flag-serving': isFlagServingEnabled(),
+    'journey-projections': isJourneyProjectionsEnabled(),
+    signals: isSignalsEnabled(),
+  }
+}
+
+const EMPTY: ShellNav = {
+  activeProject: null,
+  projects: [],
+  links: [],
+  header: null,
+  userEmail: null,
+}
+
+// console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D3) — DEFAULT_FEATURE_HINT is DELETED, and
+// so is the parameter it was passed to. It read `'your-feature-key'`, and its comment explained that
+// funnel/impact links "carry a placeholder the user edits". Both surfaces have left the inventory,
+// `ProjectSurface['href']` no longer takes a feature hint at all, and the routes are reached from a
+// feature's own page in Sprint 3 — so there is no longer anywhere for a placeholder to go. That is
+// the difference between deleting a constant and making it unrepresentable.
 
 /**
  * Resolve the section nav for the current request.
@@ -49,7 +135,7 @@ export const DEFAULT_FEATURE_HINT = 'your-feature-key'
  * Never throws. The shell wraps every signed-in page, including error and gated states, so a nav
  * that could throw would be able to turn a working page into a crash — the shell is the one
  * component in the tree with no useful failure mode of its own. A read failure degrades to the
- * static links (Home / Connect / Agent notes), which is honest: we could not list your sections.
+ * logo alone, which is honest: we could not list your sections.
  *
  * ── Why swallowing getUserProjects' throw here is NOT the bug that function exists to prevent ──
  * (cross-review, Mistral Vibe, PR #71.) `getUserProjects` throws rather than returning [] on a
@@ -64,15 +150,51 @@ export const DEFAULT_FEATURE_HINT = 'your-feature-key'
  * misconfiguration, the fix is a louder log — never a throw from the component that wraps every
  * page in the product.
  */
-export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
+export async function getShellNav(
+  projectSlug?: string,
+  /**
+   * Which of the four destinations the calling page lives in (A8). Defaults to `home` so the two
+   * anonymously-readable demo dashboards — which render this shell without a session — need no
+   * ceremony; every authenticated page passes its own, and `ProductShell`'s prop is REQUIRED, so the
+   * compiler is what makes each of the 18 call sites answer.
+   */
+  activeSection: ShellSection = 'home'
+): Promise<ShellNav> {
+  const gateOpen = isConsoleShellEnabled()
   try {
     const user = await getSessionUser()
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
     // (lib/dashboard-auth.ts' allow-listed carve-out), and they use this same shell.
+    // ── Anonymous keeps the PUBLIC chrome, gate or no gate ───────────────────────────────────
+    // This returns `EMPTY`, so `header` is null here on purpose. The console is *an information architecture for the
+    // signed-in console* — it has a project switcher, an account menu and a palette over surfaces
+    // that all require a session. An anonymous visitor is not a degraded signed-in user.
+    //
+    // This is not hypothetical: `/app/funnel/golden-beans-demo/<key>` and its impact twin are
+    // ANONYMOUSLY readable (lib/public-demo.ts' allow-list) and render this shell. A previous
+    // revision keyed the chrome on the env var alone, which would have given that public page a logo,
+    // an empty sections nav, an empty identity slot and a ⌘K palette listing nothing — on a page with
+    // no session to have surfaces for. Caught by the fresh reviewer's third pass on PR #122, as a
+    // regression this epic introduced rather than one it inherited.
     if (!user) return EMPTY
 
     const projects = await getUserProjects(user.id)
-    if (projects.length === 0) return EMPTY
+    // ── A signed-in user with NO project still gets the console chrome ────────────────────────
+    // This used to `return EMPTY`, which routed them to the LEGACY header — and `/app` had already
+    // dropped its own sign-out because the gate was on, so the page carried no sign-out at all
+    // (fresh reviewer, PR #122; reachable via `/app?provision=failed`). They are signed in; the
+    // shell owes them a way out.
+    //
+    // The header it gets is honest rather than empty: `buildConsoleHeader` finds no entitled surface
+    // for a slug that is not in an empty membership list, so it renders the Today tab alone — which
+    // is exactly right, because `/app` is the only place they can go.
+    if (projects.length === 0) {
+      return {
+        ...EMPTY,
+        userEmail: user.email ?? null,
+        header: gateOpen ? emptyHeader(activeSection) : null,
+      }
+    }
 
     // A slug the caller supplied that the viewer is NOT a member of does not silently fall back to
     // their first project (fresh-reviewer finding). The two anonymously-readable demo dashboards
@@ -85,26 +207,48 @@ export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
     // No slug at all (the /app home) still defaults to the first project: there is nothing to
     // contradict there.
     const activeProject = projectSlug ? (projects.find((p) => p.slug === projectSlug) ?? null) : projects[0]
-    if (!activeProject) return EMPTY
+    // A foreign slug yields no SECTIONS — unchanged, and the tenancy reason above is why. What it no
+    // longer yields is the LEGACY chrome: with the console on, this now degrades to a console header
+    // holding Today alone, the same honest shape a zero-project session gets. Two states that both
+    // mean "you are entitled to nothing here" were being answered two different ways, and Story 3.5
+    // deletes the legacy branch — after which the old answer would have been a bare logo with no nav
+    // and no account menu (fresh reviewer, PR #122, second pass).
+    if (!activeProject) {
+      return {
+        ...EMPTY,
+        userEmail: user.email ?? null,
+        header: gateOpen ? emptyHeader(activeSection) : null,
+      }
+    }
+
+    // Read once, per render, and passed to both consumers. Two reads of the same gates could not
+    // disagree today (they are pure env reads), but one resolution point is what keeps the header
+    // and the rail describing the same product.
+    const gates = readGates()
 
     return {
       activeProject,
       projects,
+      userEmail: user.email ?? null,
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,
-        featureHint: DEFAULT_FEATURE_HINT,
-        gates: {
-          'experiment-governance': isExperimentGovernanceEnabled(),
-          'flag-console': isFlagConsoleEnabled(),
-          'flag-serving': isFlagServingEnabled(),
-          'journey-projections': isJourneyProjectionsEnabled(),
-          signals: isSignalsEnabled(),
-        },
+        gates,
       }),
+      header: gateOpen
+        ? buildConsoleHeader({
+            activeSection,
+            activeProjectSlug: activeProject.slug,
+            projects,
+            gates,
+          })
+        : null,
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
+    // `EMPTY` — we do not know whether there is a session, so we cannot claim the signed-in chrome.
+    // The legacy header degrades honestly ("we could not list your sections"), and `/app` renders its
+    // own sign-out because the predicate is false. Sign-out survives a nav outage.
     return EMPTY
   }
 }

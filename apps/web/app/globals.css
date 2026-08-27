@@ -258,8 +258,7 @@ body {
    `min-width: auto` lets that push the whole track wider than the viewport. One
    long connector token in a two-column grid is enough. Resetting it to 0 lets
    the track shrink and the content wrap. */
-:where(.row2, .cards3, .hero-grid, .proof-grid, .comparison-grid, .statrow, .stat-grid, .funnel-layout)
-  > * {
+:where(.row2, .cards3, .hero-grid, .proof-grid, .comparison-grid, .statrow, .stat-grid, .funnel-layout) > * {
   min-width: 0;
 }
 
@@ -1093,7 +1092,9 @@ body {
 
 /* app-shell-and-agent-rail S1.3 — the section nav.
    One disclosure serves both widths: a pull-up sheet on a phone, an inline wrapping row from
-   720px up (see the @media block below). `list-style: none` on the summary is Safari's
+   640px up (see the @media block below — the breakpoint this comment claimed was 720px until
+   2026-08-27; cross-review found the discrepancy, and it had been wrong since the rule was written).
+   `list-style: none` on the summary is Safari's
    requirement, not a preference — without it the marker triangle survives ::-webkit-details-marker
    removal in some versions. */
 .product-shell__sections summary {
@@ -1152,6 +1153,246 @@ body {
   color: var(--dim);
   font: 600 9px var(--mono);
   text-transform: uppercase;
+}
+
+/* console-ia-overhaul S1.3 — the four-destination header.
+   These rules sit ABOVE `.product-shell main` and below the legacy `__sections` block on purpose:
+   a selector gets ONE base block and it goes above every override of it (LEARNINGS — the same
+   cascade defect landed three times in one epic in this file). The mobile/desktop switch for
+   `.product-shell__header nav` in the 640px media query already covers `__tabs`, which is why
+   `__tabs` is a second class on the same element rather than a replacement for `__nav`. */
+.product-shell__tab {
+  white-space: nowrap;
+}
+
+/* The current section, marked for the eye and for a screen reader by the same attribute. Keyed on
+   `aria-current` rather than a class so the two cannot drift: there is no way to paint this state
+   without also announcing it. */
+.product-shell__tab[aria-current='page'] {
+  color: var(--crema);
+  background: var(--card);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.product-shell__identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  /* `min-width: 0` is load-bearing, not defensive. A grid/flex item's default `min-width: auto`
+     refuses to shrink below its content, and a project SLUG is unbounded — the authed fixture's
+     `gb-e2e-authed-1787859297750-69508` pushed this row 4px past a 360px viewport and took the
+     account menu with it (10 mobile-heuristics specs, caught with the gate ON). A real slug like
+     `miyagisanchez` is short enough to hide this forever, which is exactly why the least-convenient
+     realistic input is the one worth testing. */
+  min-width: 0;
+}
+
+/* Scoped INSIDE `__identity` so the legacy header's own `.product-shell__signal` is untouched — D4
+   promises the gate-off render is what it was, and that promise covers CSS as much as markup. The
+   legacy signal is not a child of this container, so these rules cannot reach it. */
+.product-shell__identity .product-shell__signal,
+.product-shell__switcher summary {
+  min-width: 0;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-shell__switcher,
+.product-shell__account {
+  position: relative;
+}
+
+.product-shell__switcher summary,
+.product-shell__account summary {
+  cursor: pointer;
+  /* Safari's requirement, not a preference — see the legacy `__sections summary` note above. */
+  list-style: none;
+}
+
+.product-shell__switcher summary::-webkit-details-marker,
+.product-shell__account summary::-webkit-details-marker {
+  display: none;
+}
+
+.product-shell__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 70;
+  min-width: 220px;
+  /* The menu opens leftward from a control near the right edge, so on a narrow screen its 220px
+     floor is what would push the document wider. Bounded by the viewport, not by the header's
+     padding, because `right: 0` is relative to the control and the control moves. */
+  max-width: calc(100vw - 24px);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--espresso);
+  box-shadow: var(--elevation-overlay);
+}
+
+.product-shell__menu ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-shell__menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--roast-2);
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.product-shell__menu a[aria-current='true'] {
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.product-shell__menu p {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 12px;
+  /* An email address has no spaces to break at, and the menu is 220px wide. Without this a long
+     address widens the panel off the right edge of a phone. */
+  overflow-wrap: anywhere;
+}
+
+/* console-ia-overhaul S1.4 — the per-section rail.
+   Mobile-first: below 1100px it is a plain block that scrolls with the page, ABOVE the content.
+   That is the honest narrow-width answer — a 320px sidebar squeezed onto a phone is worse than a
+   short list, and the same reasoning the agent rail's own comment gives for staying a sheet. */
+.console-rail {
+  width: min(1120px, calc(100% - 36px));
+  margin: 24px auto 0;
+}
+
+.console-rail ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.console-rail a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--roast-2);
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.console-rail a small {
+  display: block;
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+/* Same rule and same wording as the legacy disclosure's gated affordance, keyed on the same
+   attribute — one visual language for "this can be switched off", not a second copy of it. */
+.console-rail a[data-surface-status='gated']::after {
+  content: 'gated';
+  margin-left: 8px;
+  color: var(--dim);
+  font: 600 9px var(--mono);
+  text-transform: uppercase;
+}
+
+/* console-ia-overhaul S1.5 — the ⌘K palette. One base block per selector, above any override. */
+.command-palette {
+  position: fixed;
+  inset: 0;
+  /* Above the header (z-index 50) and above the agent rail's overlay chrome. */
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  /* `flex-start`, NOT the default `stretch`. Found by looking at a screenshot, not by a spec: with
+     `stretch` the panel filled the whole 88vh container, so five short rows sat at the top of a
+     600px slab of empty card. Every assertion passed — "the palette is visible" and "one option
+     matched" are both true of a box ten times taller than its contents. A geometry assertion in
+     console-shell.authed.spec.ts now pins it. */
+  align-items: flex-start;
+  padding: 12vh 18px 18px;
+}
+
+.command-palette__scrim {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 12, 8, 0.72);
+  cursor: default;
+}
+
+.command-palette__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--espresso);
+  box-shadow: var(--elevation-overlay);
+}
+
+.command-palette__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--crema);
+  font: 500 14px var(--mono);
+}
+
+.command-palette__panel ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command-palette__panel a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.command-palette__panel a small {
+  color: var(--dim);
+  font: 600 10px var(--mono);
+  text-transform: uppercase;
+}
+
+/* The cursor is painted from `aria-selected`, the same attribute that tells a screen reader which
+   row is active — so the highlight and the announcement cannot drift apart. Same reasoning as
+   `.product-shell__tab[aria-current='page']` above. */
+.command-palette__panel li[aria-selected='true'] a {
+  background: var(--card);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.command-palette__empty {
+  margin: 10px 2px 2px;
+  color: var(--dim);
+  font-size: 13px;
 }
 
 .product-shell main {
@@ -2100,6 +2341,33 @@ a.stat-card:hover {
      at all and the page must be byte-identical to today. */
   .product-shell:has(.agent-rail) .product-shell__body {
     padding-right: calc(var(--rail-gutter) + var(--rail-width) + 24px);
+  }
+
+  /* console-ia-overhaul S1.4 — the section rail becomes the LEFT sidebar, at the same breakpoint
+     and by the same method as the agent rail on the right: ONE derived pair of numbers, consumed
+     twice. The first version of the agent rail shipped a sidebar sitting on top of the page because
+     the gutter and the width were two independent values; deriving them once is what fixed it, and
+     copying that shape is deliberate rather than incidental.
+
+     Scoped with `:has(.console-rail)` for the reason the block above gives: with the console gate
+     OFF the rail is not in the DOM at all, so none of this can reach the legacy render. */
+  .product-shell:has(.console-rail) {
+    --section-rail-gutter: max(12px, calc((100vw - 1180px) / 2));
+    --section-rail-width: 232px;
+  }
+
+  .product-shell:has(.console-rail) .console-rail {
+    position: fixed;
+    top: 84px;
+    left: var(--section-rail-gutter);
+    width: var(--section-rail-width);
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
+    margin: 0;
+  }
+
+  .product-shell:has(.console-rail) .product-shell__body {
+    padding-left: calc(var(--section-rail-gutter) + var(--section-rail-width) + 24px);
   }
 }
 

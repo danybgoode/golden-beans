@@ -17,7 +17,7 @@ export default async function AgentKeysPage({ params }: { params: Promise<{ proj
   const keys = await listAgentWriteKeys(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="setup">
       <main>
         <h1>Agent write keys — {projectSlug}</h1>
         <p>

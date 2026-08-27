@@ -29,7 +29,7 @@ export default async function FunnelPage({
   const { feature, tars } = result
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="measure">
       <main>
         <h1>
           Funnel — {feature.key} <small>({projectSlug})</small>

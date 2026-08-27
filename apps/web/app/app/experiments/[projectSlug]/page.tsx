@@ -26,7 +26,7 @@ export default async function ExperimentGovernancePage({
   ])
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="ship">
       <main>
         <h1>Experiment governance — {projectSlug}</h1>
         <p>

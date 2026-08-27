@@ -16,7 +16,7 @@ export default async function SharesPage({ params }: { params: Promise<{ project
   const shares = await listShareLinks(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="setup">
       <main>
         <h1>Share links — {projectSlug}</h1>
         <p>
