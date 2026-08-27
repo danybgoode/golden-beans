@@ -87,7 +87,19 @@ function emptyHeader(activeSection: ShellSection) {
     activeSection,
     activeProjectSlug: '',
     projects: [],
-    gates: readGates(),
+    // ALL FALSE, not `readGates()`. With an empty project list no surface can be entitled whatever
+    // the gates say, so the real values were a read whose result could not matter — and a call that
+    // looks like it feeds a decision, but cannot, is the kind of thing a later reader trusts
+    // (cross-review, Mistral Vibe). Passing the closed record explicitly says "no gate is consulted
+    // on this path"; it also keeps `ProjectSurfaceGates` a closed record, so adding a fifth gate is
+    // still a compile error here rather than a silently-defaulted `{}`.
+    gates: {
+      'experiment-governance': false,
+      'flag-console': false,
+      'flag-serving': false,
+      'journey-projections': false,
+      signals: false,
+    },
   })
 }
 
