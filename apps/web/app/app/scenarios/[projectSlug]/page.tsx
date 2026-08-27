@@ -24,7 +24,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
     (capabilities.resilience || capabilities.security)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="measure">
       <ScenarioWorkspace
         projectSlug={projectSlug}
         view={view}

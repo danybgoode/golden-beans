@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { getUserProjects } from '@/lib/membership'
 import {
+  isConsoleShellEnabled,
   isExperimentGovernanceEnabled,
   isFlagConsoleEnabled,
   isFlagServingEnabled,
@@ -58,16 +59,23 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   }
 
   return (
-    <ProductShell>
+    <ProductShell section="home">
       <main>
         <header>
           {/* Names what the page IS. The slug lives on each project's own card, where it belongs —
               putting it in the h1 as well rendered a long tenant slug at clamp(30px, 7vw, 48px) and
               said the same thing twice. */}
           <h1>{projects.length === 0 ? 'Your projects' : 'Command center'}</h1>
-          <p>
-            Signed in as {user.email} · <SignOutButton />
-          </p>
+          {/* console-ia-overhaul · Story 1.3 — with the console shell on, the header carries an
+              account menu holding this exact address and this exact button, so rendering it here as
+              well would be the same control twice on one screen. With the gate off this line is
+              untouched, which is what keeps the old page identical (D4). It is a MOVE, not a
+              deletion: sign-out exists in exactly one place in either state, never zero. */}
+          {!isConsoleShellEnabled() && (
+            <p>
+              Signed in as {user.email} · <SignOutButton />
+            </p>
+          )}
         </header>
 
         {projects.length === 0 ? (

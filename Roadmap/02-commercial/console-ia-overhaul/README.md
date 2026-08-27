@@ -373,6 +373,47 @@ production after the flip.
 
 ---
 
+#### A11 — **`Today` IS `/app`.** Two stories asked for things that only fit if it is
+
+Story 1.3 says the logo links to Today. Story 1.4 says *"Today has no rail and renders full width"*.
+Those fit together only if Today is a **page** rather than a container — and it already is one: `/app`
+is Command Center, whose entire subject is *"did anything need me today"*.
+
+**Locked:** Today's href is `/app`, the logo points at the same place, and `tasks` — the one `today`
+surface — is reached from Command Center and from `⌘K` rather than from a rail Story 1.4 says must
+not exist. `lib/console-shell.ts` exports it once as `TODAY_HREF`.
+
+A consequence worth stating: `ShellSection` is `ConsoleSection | 'home'`, and `home` and `today` mark
+the **same** tab. They are kept as two names because they answer different questions — `home` is where
+`/app` itself says it lives, `today` is what a surface classified into that section says — and a spec
+asserts that exactly one tab is current for every one of the five values, never zero and never two.
+
+#### A12 — **A tab with no entitled surface behind it is ABSENT, not disabled**
+
+`Ship` holds three surfaces on three independent gates; `Setup` holds five owner-only ones. A member
+entitles none of Setup, and on a preview `Ship` is down to one surface (A2). Rendering the tab anyway
+would give a member a tab that 404s them.
+
+**Locked:** a section renders only when the viewer entitles ≥1 surface in it. **`Today` is the
+exception and always renders**, because `/app` cannot be gated away. `getSectionEntryHref` returns
+`null` rather than `''` for an unentitled section, and a spec pins that distinction — an empty string
+renders as `href=""`, which navigates to the current page: a tab that silently does nothing.
+
+#### A13 — **The switcher moves you to the same SECTION, and resolves the target project's own role**
+
+`ProductShell`'s old comment explained why it linked to `/app` instead of offering a switcher: *"a
+real switcher has to know the CURRENT surface to move you to the same page in another project, and
+this component is deliberately not told the route segment."* A8 changed that premise — the shell is
+now told its section. It is still not told the route segment, and the switcher does not pretend
+otherwise: it moves you to the equivalent **section**, a promise it can keep, not the equivalent
+**page**, which it cannot.
+
+**The tenancy detail that needed a spec:** the target project's landing is resolved with **that
+project's role**, never the active one's. A viewer who owns project A and is only a member of project
+B must not be offered B's owner-only Setup landing on the strength of a role held in A. Gates are
+process-wide; roles are per project. Where the target entitles nothing in the section, the switch
+degrades to `/app` rather than linking someone at a route that will 404 them.
+
 ### Routing — who builds what, and why
 
 Stated so the choice is auditable (WAYS-OF-WORKING → *Routing a build by model tier*).

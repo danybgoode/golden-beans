@@ -21,7 +21,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
   ])
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="setup">
       <main>
         <h1>Destinations — {projectSlug}</h1>
         <p>
@@ -42,42 +42,42 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
           <p>No destinations configured yet.</p>
         ) : (
           <div className="scroll-x">
-          <table>
-            <thead>
-              <tr>
-                <th>Destination</th>
-                <th>State</th>
-                <th>Delivered</th>
-                <th>Failed attempts</th>
-                <th>Awaiting retry</th>
-                <th>Dead-lettered</th>
-                <th>Queued</th>
-                <th>Total attempts</th>
-                <th>Last delivery</th>
-              </tr>
-            </thead>
-            <tbody>
-              {health.map((h) => (
-                <tr key={h.destinationId}>
-                  <td>{h.name}</td>
-                  <td>{h.enabled ? 'enabled' : 'disabled'}</td>
-                  {/* "Delivered" and "Failed attempts" are CUMULATIVE (from the attempt log, survive
-                    replay); "Awaiting retry", "Dead-lettered" and "Queued" are CURRENT row state. */}
-                  <td>{h.delivered}</td>
-                  <td>{h.failedAttempts}</td>
-                  <td>{h.awaitingRetry}</td>
-                  <td>{h.dead}</td>
-                  <td>{h.pending + h.inFlight}</td>
-                  <td>{h.totalAttempts}</td>
-                  <td>
-                    {h.lastDeliveryAt
-                      ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`
-                      : 'never'}
-                  </td>
+            <table>
+              <thead>
+                <tr>
+                  <th>Destination</th>
+                  <th>State</th>
+                  <th>Delivered</th>
+                  <th>Failed attempts</th>
+                  <th>Awaiting retry</th>
+                  <th>Dead-lettered</th>
+                  <th>Queued</th>
+                  <th>Total attempts</th>
+                  <th>Last delivery</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {health.map((h) => (
+                  <tr key={h.destinationId}>
+                    <td>{h.name}</td>
+                    <td>{h.enabled ? 'enabled' : 'disabled'}</td>
+                    {/* "Delivered" and "Failed attempts" are CUMULATIVE (from the attempt log, survive
+                    replay); "Awaiting retry", "Dead-lettered" and "Queued" are CURRENT row state. */}
+                    <td>{h.delivered}</td>
+                    <td>{h.failedAttempts}</td>
+                    <td>{h.awaitingRetry}</td>
+                    <td>{h.dead}</td>
+                    <td>{h.pending + h.inFlight}</td>
+                    <td>{h.totalAttempts}</td>
+                    <td>
+                      {h.lastDeliveryAt
+                        ? `${new Date(h.lastDeliveryAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`
+                        : 'never'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -95,42 +95,42 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
           </small>
         </p>
         <div className="scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th>When</th>
-              <th>Event</th>
-              <th>Destination</th>
-              <th>Attempt</th>
-              <th>Outcome</th>
-              <th>HTTP</th>
-              <th>Latency</th>
-              <th>Error</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attempts.length === 0 ? (
+          <table>
+            <thead>
               <tr>
-                <td colSpan={8}>No attempts yet.</td>
+                <th>When</th>
+                <th>Event</th>
+                <th>Destination</th>
+                <th>Attempt</th>
+                <th>Outcome</th>
+                <th>HTTP</th>
+                <th>Latency</th>
+                <th>Error</th>
               </tr>
-            ) : (
-              attempts.map((a) => (
-                <tr key={a.id}>
-                  <td>{new Date(a.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
-                  <td>{a.eventName ?? '—'}</td>
-                  <td>{a.destinationName ?? '—'}</td>
-                  <td>#{a.attemptNo}</td>
-                  <td>{a.outcome}</td>
-                  <td>{a.httpStatus ?? '—'}</td>
-                  <td>{a.latencyMs != null ? `${a.latencyMs}ms` : '—'}</td>
-                  <td>
-                    <small>{a.error ?? '—'}</small>
-                  </td>
+            </thead>
+            <tbody>
+              {attempts.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>No attempts yet.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                attempts.map((a) => (
+                  <tr key={a.id}>
+                    <td>{new Date(a.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</td>
+                    <td>{a.eventName ?? '—'}</td>
+                    <td>{a.destinationName ?? '—'}</td>
+                    <td>#{a.attemptNo}</td>
+                    <td>{a.outcome}</td>
+                    <td>{a.httpStatus ?? '—'}</td>
+                    <td>{a.latencyMs != null ? `${a.latencyMs}ms` : '—'}</td>
+                    <td>
+                      <small>{a.error ?? '—'}</small>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </main>
     </ProductShell>

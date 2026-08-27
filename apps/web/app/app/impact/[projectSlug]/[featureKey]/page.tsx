@@ -31,7 +31,7 @@ export default async function ImpactPage({
   const { feature, inputs } = result
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="measure">
       <main>
         <h1>
           Impact — {feature.key} <small>({projectSlug})</small>

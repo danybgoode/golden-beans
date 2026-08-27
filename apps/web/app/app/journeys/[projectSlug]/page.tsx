@@ -16,7 +16,7 @@ export default async function JourneysPage({ params }: { params: Promise<{ proje
   const journeys = await listJourneyRegistries(membership.projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="measure">
       <main>
         <h1>Journey definitions — {projectSlug}</h1>
         <p>

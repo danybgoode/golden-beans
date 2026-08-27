@@ -8,7 +8,13 @@ import {
   isJourneyProjectionsEnabled,
   isSignalsEnabled,
 } from './flags'
-import { getProjectSurfaceLinks, type ProjectSurfaceLink } from './project-route-inventory'
+import {
+  getProjectSurfaceLinks,
+  type ProjectSurfaceGates,
+  type ProjectSurfaceLink,
+} from './project-route-inventory'
+import { buildConsoleHeader, type ConsoleHeader, type ShellSection } from './console-shell'
+import { isConsoleShellEnabled } from './flags'
 
 // app-shell-and-agent-rail · Sprint 1, Story 1.3 — what the shell's section nav renders.
 //
@@ -33,9 +39,37 @@ export type ShellNav = {
   projects: MemberProject[]
   /** Entitled, gate-open surfaces for `activeProject`, straight from the inventory. */
   links: ProjectSurfaceLink[]
+  /**
+   * console-ia-overhaul · Story 1.3 — the four-section header, or `null` while the console gate is
+   * off (and whenever there is no active project to build one for).
+   *
+   * Resolved HERE rather than in the component, for the same reason `links` is: this is the one
+   * module that has already read the session, the memberships and the gates, and a second resolution
+   * point is a second thing that can disagree. `ProductShell` renders what it is handed.
+   *
+   * `null` is what makes D4 auditable: with `CONSOLE_SHELL_ENABLED` unset this is never populated,
+   * so the component takes its legacy branch and the gate-off render is unchanged by construction —
+   * a property `git diff` can check, not one prose promises.
+   */
+  header: ConsoleHeader | null
+  /**
+   * The signed-in address, for the console header's account menu. `null` when anonymous — the two
+   * demo dashboards render this shell without a session.
+   *
+   * It is the VIEWER'S OWN email and it is already rendered on `/app` today; this moves where it is
+   * shown, not who can see it. Story 1.3 drops `/app`'s own copy when the console gate is on, so it
+   * appears once either way.
+   */
+  userEmail: string | null
 }
 
-const EMPTY: ShellNav = { activeProject: null, projects: [], links: [] }
+const EMPTY: ShellNav = {
+  activeProject: null,
+  projects: [],
+  links: [],
+  header: null,
+  userEmail: null,
+}
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D3) — DEFAULT_FEATURE_HINT is DELETED, and
 // so is the parameter it was passed to. It read `'your-feature-key'`, and its comment explained that
@@ -65,7 +99,16 @@ const EMPTY: ShellNav = { activeProject: null, projects: [], links: [] }
  * misconfiguration, the fix is a louder log — never a throw from the component that wraps every
  * page in the product.
  */
-export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
+export async function getShellNav(
+  projectSlug?: string,
+  /**
+   * Which of the four destinations the calling page lives in (A8). Defaults to `home` so the two
+   * anonymously-readable demo dashboards — which render this shell without a session — need no
+   * ceremony; every authenticated page passes its own, and `ProductShell`'s prop is REQUIRED, so the
+   * compiler is what makes each of the 18 call sites answer.
+   */
+  activeSection: ShellSection = 'home'
+): Promise<ShellNav> {
   try {
     const user = await getSessionUser()
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
@@ -88,20 +131,34 @@ export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
     const activeProject = projectSlug ? (projects.find((p) => p.slug === projectSlug) ?? null) : projects[0]
     if (!activeProject) return EMPTY
 
+    // Read once, per render, and passed to both consumers. Two reads of the same gates could not
+    // disagree today (they are pure env reads), but one resolution point is what keeps the header
+    // and the rail describing the same product.
+    const gates: ProjectSurfaceGates = {
+      'experiment-governance': isExperimentGovernanceEnabled(),
+      'flag-console': isFlagConsoleEnabled(),
+      'flag-serving': isFlagServingEnabled(),
+      'journey-projections': isJourneyProjectionsEnabled(),
+      signals: isSignalsEnabled(),
+    }
+
     return {
       activeProject,
       projects,
+      userEmail: user.email ?? null,
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,
-        gates: {
-          'experiment-governance': isExperimentGovernanceEnabled(),
-          'flag-console': isFlagConsoleEnabled(),
-          'flag-serving': isFlagServingEnabled(),
-          'journey-projections': isJourneyProjectionsEnabled(),
-          signals: isSignalsEnabled(),
-        },
+        gates,
       }),
+      header: isConsoleShellEnabled()
+        ? buildConsoleHeader({
+            activeSection,
+            activeProjectSlug: activeProject.slug,
+            projects,
+            gates,
+          })
+        : null,
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)

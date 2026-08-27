@@ -50,7 +50,7 @@ export default async function FlagsPage({
   const listParams = parseFlagListParams(await searchParams, FLAG_ENVIRONMENTS, DEFAULT_FLAG_ENVIRONMENT)
 
   return (
-    <ProductShell projectSlug={projectSlug}>
+    <ProductShell projectSlug={projectSlug} section="ship">
       <main>
         <h1>Feature flags — {projectSlug}</h1>
         <p>
