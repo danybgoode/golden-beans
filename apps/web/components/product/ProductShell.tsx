@@ -6,6 +6,8 @@ import { railLinksFor, TODAY_HREF, type ShellSection } from '@/lib/console-shell
 import { SignOutButton } from '@/app/app/sign-out-button'
 import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
+import { CommandPalette } from './CommandPalette'
+import { ShellErrorBoundary } from './ShellErrorBoundary'
 
 /**
  * Product chrome is rendered inside each page after its auth/flag guard resolves.
@@ -236,6 +238,21 @@ export async function ProductShell({
           full width" and "no empty rail" are one branch, decided in the pure module.
         */}
         {header !== null && <ConsoleRail links={railLinksFor(section, links)} />}
+        {/*
+          Story 1.5 — ⌘K, the ONE client island in the shell, inside the ONE error boundary in
+          apps/web (A9). If it throws, the boundary renders null and the page it sits on is
+          untouched. Without the boundary the nearest one is Next's own error page, which would mean
+          a bad keystroke replacing every signed-in route in the product with an error screen.
+
+          Seeded from the links getShellNav already resolved — a second VIEW of that list, never a
+          second read, which is also what makes it safe for a client component to hold: it inherits
+          the server's entitlement filtering rather than re-implementing it.
+        */}
+        {header !== null && (
+          <ShellErrorBoundary>
+            <CommandPalette links={links} />
+          </ShellErrorBoundary>
+        )}
         {children}
         {/*
           Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app

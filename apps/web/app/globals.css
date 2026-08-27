@@ -1283,6 +1283,87 @@ body {
   text-transform: uppercase;
 }
 
+/* console-ia-overhaul S1.5 — the ⌘K palette. One base block per selector, above any override. */
+.command-palette {
+  position: fixed;
+  inset: 0;
+  /* Above the header (z-index 50) and above the agent rail's overlay chrome. */
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  padding: 12vh 18px 18px;
+}
+
+.command-palette__scrim {
+  position: fixed;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(15, 12, 8, 0.72);
+  cursor: default;
+}
+
+.command-palette__panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--espresso);
+  box-shadow: var(--elevation-overlay);
+}
+
+.command-palette__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--crema);
+  font: 500 14px var(--mono);
+}
+
+.command-palette__panel ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.command-palette__panel a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.command-palette__panel a small {
+  color: var(--dim);
+  font: 600 10px var(--mono);
+  text-transform: uppercase;
+}
+
+/* The cursor is painted from `aria-selected`, the same attribute that tells a screen reader which
+   row is active — so the highlight and the announcement cannot drift apart. Same reasoning as
+   `.product-shell__tab[aria-current='page']` above. */
+.command-palette__panel li[aria-selected='true'] a {
+  background: var(--card);
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.command-palette__empty {
+  margin: 10px 2px 2px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
 .product-shell main {
   width: min(1120px, calc(100% - 36px));
   margin: 0 auto;
