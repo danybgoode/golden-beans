@@ -37,11 +37,12 @@ export type ShellNav = {
 
 const EMPTY: ShellNav = { activeProject: null, projects: [], links: [] }
 
-// The funnel/impact dashboards are addressed per FEATURE key, and which features a project has
-// registered is the registry's business, not the shell's — so their links carry a placeholder the
-// user edits. Same constant and same reasoning as app/app/page.tsx, which is why it is exported:
-// two copies of this string would be two things to change when a feature picker finally lands.
-export const DEFAULT_FEATURE_HINT = 'your-feature-key'
+// console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D3) — DEFAULT_FEATURE_HINT is DELETED, and
+// so is the parameter it was passed to. It read `'your-feature-key'`, and its comment explained that
+// funnel/impact links "carry a placeholder the user edits". Both surfaces have left the inventory,
+// `ProjectSurface['href']` no longer takes a feature hint at all, and the routes are reached from a
+// feature's own page in Sprint 3 — so there is no longer anywhere for a placeholder to go. That is
+// the difference between deleting a constant and making it unrepresentable.
 
 /**
  * Resolve the section nav for the current request.
@@ -49,7 +50,7 @@ export const DEFAULT_FEATURE_HINT = 'your-feature-key'
  * Never throws. The shell wraps every signed-in page, including error and gated states, so a nav
  * that could throw would be able to turn a working page into a crash — the shell is the one
  * component in the tree with no useful failure mode of its own. A read failure degrades to the
- * static links (Home / Connect / Agent notes), which is honest: we could not list your sections.
+ * logo alone, which is honest: we could not list your sections.
  *
  * ── Why swallowing getUserProjects' throw here is NOT the bug that function exists to prevent ──
  * (cross-review, Mistral Vibe, PR #71.) `getUserProjects` throws rather than returning [] on a
@@ -93,7 +94,6 @@ export async function getShellNav(projectSlug?: string): Promise<ShellNav> {
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,
-        featureHint: DEFAULT_FEATURE_HINT,
         gates: {
           'experiment-governance': isExperimentGovernanceEnabled(),
           'flag-console': isFlagConsoleEnabled(),

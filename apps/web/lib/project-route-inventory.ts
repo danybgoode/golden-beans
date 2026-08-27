@@ -18,6 +18,33 @@ export type ProjectSurfaceGate =
   | 'signals'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
+// console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D2) — the four destinations.
+//
+// A CLOSED union, for exactly the reason `ProjectSurfaceGate` above is one: adding a surface
+// without choosing a section must be a compile error at every caller, not a silent default. A
+// surface that defaulted into a section would be a page nobody decided where to put — which is the
+// condition this epic exists to end.
+//
+// Why four, and why these four: they are the phases of the loop this engine is for. You look at
+// what needs you (`today`), you look at what happened (`measure`), you change what is running
+// (`ship`), and you wire the thing up once (`setup`). Every surface in the product answers exactly
+// one of those questions, and the one that does not have a home is the one worth arguing about.
+export type ConsoleSection = 'today' | 'measure' | 'ship' | 'setup'
+
+/**
+ * The sections in nav order, with the words the header renders.
+ *
+ * ONE list. `ProductShell` does not hold a second copy and neither does the rail — the same D1
+ * argument `lib/shell-nav.ts` makes about the inventory, one level up: a hardcoded list in a
+ * component is a duplicate source of truth that drifts the first time a section is renamed.
+ */
+export const CONSOLE_SECTIONS: readonly { id: ConsoleSection; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'measure', label: 'Measure' },
+  { id: 'ship', label: 'Ship' },
+  { id: 'setup', label: 'Setup' },
+]
+
 type ProjectSurface = {
   routeSegment: string
   audience: ProjectSurfaceAudience
@@ -25,50 +52,49 @@ type ProjectSurface = {
   status: ProjectSurfaceStatus
   /** True when this route has `app/<segment>/[projectSlug]/page.tsx`. */
   topLevelProjectRoute: boolean
+  /** Which of the four destinations this surface lives under. Closed union — see ConsoleSection. */
+  section: ConsoleSection
   label: string
-  href: (projectSlug: string, featureHint: string) => string
+  // Story 1.2 (D3): `href` used to take a second argument, `featureHint`, so that the two
+  // feature-keyed dashboards could be linked with a placeholder the user was expected to edit. Both
+  // of those surfaces have left this inventory and the parameter went with them, which is what makes
+  // "no navigation entry tells anyone to edit a URL" a property of the TYPE rather than a promise.
+  href: (projectSlug: string) => string
   description: (role: string) => string
 }
 
 export type ProjectSurfaceGates = Record<Exclude<ProjectSurfaceGate, 'always'>, boolean>
 
-export type ProjectSurfaceLink = Pick<ProjectSurface, 'routeSegment' | 'label' | 'status'> & {
+export type ProjectSurfaceLink = Pick<ProjectSurface, 'routeSegment' | 'label' | 'status' | 'section'> & {
   href: string
   description: string
 }
 
-// The feature-keyed dashboards are deliberately inventory entries despite not having a direct
-// `[projectSlug]/page.tsx`: they are still entry points rendered on `/app`. Their key placeholder
-// remains here rather than being reintroduced as a second home-page-only convention.
+// console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D3) — `funnel` and `impact` are GONE from
+// this list, and the comment that used to sit here defending them is gone with them.
+//
+// It read: "The feature-keyed dashboards are deliberately inventory entries despite not having a
+// direct `[projectSlug]/page.tsx`: they are still entry points rendered on /app. Their key
+// placeholder remains here rather than being reintroduced as a second home-page-only convention."
+// That was an honest description of a bad situation. Both surfaces are addressed per FEATURE key,
+// so neither could be linked without a placeholder — their own `description` said, out loud, "swap
+// the feature key in the URL". A navigation entry that instructs you to edit an address bar is not
+// a navigation entry.
+//
+// **The ROUTES are not deleted.** `/app/funnel/[projectSlug]/[featureKey]` and `/app/impact/...`
+// still exist, still render and still keep their URLs — Sprint 3 makes them a feature's tabs, so
+// they become reachable by clicking the feature instead of by knowing its key. What is deleted is
+// their status as top-level destinations, and with it the last caller of DEFAULT_FEATURE_HINT.
 export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
-  {
-    routeSegment: 'funnel',
-    audience: 'member',
-    gate: 'always',
-    status: 'linked',
-    topLevelProjectRoute: false,
-    label: 'Funnel',
-    href: (slug, featureHint) => `/app/funnel/${slug}/${featureHint}`,
-    description: () => 'swap the feature key in the URL',
-  },
-  {
-    routeSegment: 'impact',
-    audience: 'member',
-    gate: 'always',
-    status: 'linked',
-    topLevelProjectRoute: false,
-    label: 'Impact',
-    href: (slug, featureHint) => `/app/impact/${slug}/${featureHint}`,
-    description: () => 'swap the feature key in the URL',
-  },
   {
     routeSegment: 'journeys',
     audience: 'member',
     gate: 'journey-projections',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'measure',
     label: 'Journeys',
-    href: (slug) => `/app/journeys/${slug}`,
+    href: (slug: string) => `/app/journeys/${slug}`,
     description: (role) => (role === 'owner' ? 'define and activate' : 'read-only'),
   },
   {
@@ -77,8 +103,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'experiment-governance',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'ship',
     label: 'Experiment governance',
-    href: (slug) => `/app/experiments/${slug}`,
+    href: (slug: string) => `/app/experiments/${slug}`,
     description: (role) => (role === 'owner' ? 'plan and operate' : 'read-only'),
   },
   {
@@ -87,8 +114,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'flag-serving',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'ship',
     label: 'Flags',
-    href: (slug) => `/app/flags/${slug}`,
+    href: (slug: string) => `/app/flags/${slug}`,
     description: (role) => (role === 'owner' ? 'define and operate' : 'read-only'),
   },
   {
@@ -97,8 +125,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'signals',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'today',
     label: 'Tasks',
-    href: (slug) => `/app/tasks/${slug}`,
+    href: (slug: string) => `/app/tasks/${slug}`,
     description: () => 'review your evidence-backed queue',
   },
   {
@@ -107,8 +136,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'linked',
     topLevelProjectRoute: true,
+    section: 'measure',
     label: 'Scenarios & breakers',
-    href: (slug) => `/app/scenarios/${slug}`,
+    href: (slug: string) => `/app/scenarios/${slug}`,
     description: () => 'read-only drills, impact evidence and protective trips',
   },
   {
@@ -117,8 +147,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'linked',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'API keys',
-    href: (slug) => `/app/keys/${slug}`,
+    href: (slug: string) => `/app/keys/${slug}`,
     description: () => 'issue, rotate, revoke',
   },
   // flags-console-parity · Sprint 3, Stories 3.1 and 3.2. Registered here rather than merely linked,
@@ -137,8 +168,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'flag-console',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'Flag credentials',
-    href: (slug) => `/app/flag-credentials/${slug}`,
+    href: (slug: string) => `/app/flag-credentials/${slug}`,
     description: () => 'snapshot and catalog sync keys',
   },
   {
@@ -149,8 +181,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'flag-console',
     status: 'gated',
     topLevelProjectRoute: true,
+    section: 'ship',
     label: 'Flag audit',
-    href: (slug) => `/app/flag-audit/${slug}`,
+    href: (slug: string) => `/app/flag-audit/${slug}`,
     description: () => 'who changed which flag, and why',
   },
   {
@@ -159,8 +192,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'linked',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'Destinations',
-    href: (slug) => `/app/destinations/${slug}`,
+    href: (slug: string) => `/app/destinations/${slug}`,
     description: () => 'signed webhook delivery',
   },
   // The share-link gate controls whether a minted link serves. Owners must still be able to
@@ -171,8 +205,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'linked',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'Share links',
-    href: (slug) => `/app/shares/${slug}`,
+    href: (slug: string) => `/app/shares/${slug}`,
     description: () => 'scoped, revocable report links',
   },
   // The agent-write gate controls mutations, not credential preparation: an owner needs a key
@@ -183,8 +218,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'linked',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'Agent write keys',
-    href: (slug) => `/app/agent-keys/${slug}`,
+    href: (slug: string) => `/app/agent-keys/${slug}`,
     description: () => 'let your own agent claim and resolve tasks',
   },
   {
@@ -193,8 +229,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     gate: 'always',
     status: 'flow-only',
     topLevelProjectRoute: true,
+    section: 'setup',
     label: 'Onboarding',
-    href: (slug) => `/app/onboarding/${slug}`,
+    href: (slug: string) => `/app/onboarding/${slug}`,
     description: () => 'first-key and starter-feature handoff',
   },
 ]
@@ -208,7 +245,6 @@ function isGateOpen(gate: ProjectSurfaceGate, gates: ProjectSurfaceGates): boole
 export function getProjectSurfaceLinks(input: {
   projectSlug: string
   role: string
-  featureHint: string
   gates: ProjectSurfaceGates
 }): ProjectSurfaceLink[] {
   return PROJECT_ROUTE_INVENTORY.filter((surface) => {
@@ -219,7 +255,23 @@ export function getProjectSurfaceLinks(input: {
     routeSegment: surface.routeSegment,
     label: surface.label,
     status: surface.status,
-    href: surface.href(input.projectSlug, input.featureHint),
+    section: surface.section,
+    href: surface.href(input.projectSlug),
     description: surface.description(input.role),
   }))
+}
+
+/**
+ * The entitled links of ONE section, in inventory order.
+ *
+ * Story 1.4's rail is this function and nothing else — a filter over what `getProjectSurfaceLinks`
+ * already resolved, never a second read and never a second list. A section whose surfaces are all
+ * gated off returns `[]`, and the caller renders no rail at all rather than an empty one: an empty
+ * container is a promise that something belongs there.
+ */
+export function getSectionLinks(
+  links: readonly ProjectSurfaceLink[],
+  section: ConsoleSection
+): ProjectSurfaceLink[] {
+  return links.filter((link) => link.section === section)
 }

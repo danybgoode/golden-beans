@@ -10,7 +10,6 @@ import {
   isSignupEnabled,
 } from '@/lib/flags'
 import { getProjectSurfaceLinks } from '@/lib/project-route-inventory'
-import { DEFAULT_FEATURE_HINT } from '@/lib/shell-nav'
 import { SignOutButton } from './sign-out-button'
 import { ProductShell } from '@/components/product/ProductShell'
 import { CommandCenter } from '@/components/product/CommandCenter'
@@ -87,7 +86,6 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
               links={getProjectSurfaceLinks({
                 projectSlug: project.slug,
                 role: project.role,
-                featureHint: DEFAULT_FEATURE_HINT,
                 gates,
               })}
             />
