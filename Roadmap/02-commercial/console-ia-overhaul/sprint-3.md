@@ -75,7 +75,39 @@
 > separate, and **34 of 42 flags' latest version evaluates `false`**, so "activated ≠ on" is the common
 > case, not a corner.
 >
-> ### Story 3.5 — the flip
+> ### ⚠️ A16 — Sprint 1 made `header === null` permanently reachable, so Story 3.5's deletion plan is wrong
+
+*(Recorded 2026-08-27, from the fresh reviewer's fourth pass on PR #122. Written now because the
+reason is fresh in Sprint 1's code and will not be by the time 3.5 runs.)*
+
+Story 3.5 said it deletes *"the `Home` / `Sections` / `Connect` / `Agent notes` links, the `<details>`
+disclosure and **the now-dead gate-off branch**"*. After Sprint 1, that branch is **not dead after the
+flip**, because `header === null` no longer means "the gate is off". It means *"the console chrome
+does not apply to this render"*, and two states reach it permanently, neither about the gate:
+
+1. **Anonymous.** `/app/funnel/golden-beans-demo/<key>` and `/app/impact/golden-beans-demo/<key>` are
+   permanently anonymous, permanently allow-listed (`lib/public-demo.ts`, AGENTS rule #2) and
+   permanently render this shell. The console needs a session; they have none.
+2. **The `getShellNav` catch.** A nav-read failure cannot claim signed-in chrome.
+
+**Follow 3.5 as written and the public demo dashboards render a `<div class="product-shell">` with no
+header content at all** — no logo nav, no Connect, no Agent notes. (The louder failure is safer: if
+3.5 instead deletes the ternary and always renders the console branch, `header.tabs` is a null deref
+and TypeScript stops it. The silent degradation is the one to plan against.)
+
+**So Story 3.5 is amended, and it gains an acceptance criterion:**
+
+- It deletes the four **signed-in** legacy links and the `<details>` disclosure.
+- It **keeps a public/degraded chrome** for the `header === null` branch.
+- **New acceptance:** *after the flip, an anonymous visitor to
+  `https://goldenfrijoles.com/app/funnel/golden-beans-demo/setup_guide` still gets working public
+  navigation — at minimum Connect and Agent notes — and no console chrome.* Pinned by
+  `e2e/console-shell-public.browser.spec.ts`, which asserts both halves; note that only its
+  **gate-on** run discriminates, and after the flip that is the default run.
+- `isConsoleShellEnabled()` cannot simply be "retired with them": it becomes constant-true for the
+  three signed-in branches, and the anonymous and catch branches never consulted it at all.
+
+### Story 3.5 — the flip
 >
 > Product-owner merge. `CONSOLE_SHELL_ENABLED=true` in **preview first, then production**, each via a
 > **commit to `main`** (AGENTS rule #4 — setting the var is half the job; never `vercel deploy`).
@@ -179,9 +211,9 @@ product has one navigation rather than two behind a switch.
 **Acceptance:**
 - `CONSOLE_SHELL_ENABLED=true` in **preview first**, verified against the Sprint 1–3 walkthroughs,
   **then production** — each via a commit to `main` (AGENTS rule #4; never `vercel deploy`).
-- **Only after the production flip is verified:** the `Home` / `Sections` / `Connect` / `Agent notes`
-  links, the `<details>` disclosure and the now-dead gate-off branch are deleted, and
-  `isConsoleShellEnabled()` is retired with them.
+- ⚠️ **CORRECTED by A16 — the gate-off branch is NOT "now-dead" after the flip, and deleting it as
+  written would strip the public demo dashboards of all header content.** Only the four **signed-in**
+  legacy links go. See A16 below for what must survive and what an anonymous viewer must still see.
 - `/llms.txt` **still exists and is still served** — it is an agent manifest, and only its human nav
   link is removed.
 - The epic-level acceptance check runs clean: every surface reachable in ≤3 clicks or one `⌘K`, with

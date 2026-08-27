@@ -51,19 +51,21 @@ export type ShellNav = {
    * so the component takes its legacy branch and the gate-off render is unchanged by construction —
    * a property `git diff` can check, not one prose promises.
    */
-  header: ConsoleHeader | null
   /**
-   * Does the SIGNED-IN console chrome apply to this render?
+   * The console chrome for this render, or `null` when it does not apply — the SINGLE field that
+   * decides, deliberately.
    *
-   * `CONSOLE_SHELL_ENABLED` **and** a resolved session — not the env var alone. The console's every
-   * element (switcher, account menu, palette over entitled surfaces) presupposes a session, and the
-   * two demo dashboards render this shell anonymously, so the gate on its own is the wrong question.
+   * Non-null exactly when `CONSOLE_SHELL_ENABLED` is open **and** there is a session. Not the env
+   * var alone: every element of the console (switcher, account menu, palette over entitled surfaces)
+   * presupposes a session, and the two demo dashboards render this shell anonymously. An anonymous
+   * visitor is not a degraded signed-in user.
    *
-   * Kept separate from `header` because they answer different questions: `header` also carries WHICH
-   * destinations exist, which varies with the arguments a caller passed. `shellRendersAccountMenu`
-   * reads this and never `header`, which is what makes it argument-independent — see that function.
+   * A previous revision carried a separate `consoleEnabled` boolean beside this, with the chrome
+   * branching on one and the account menu on the other — an invariant maintained by hand at four
+   * return sites, where one mismatch reopens the zero-sign-out bug. One field cannot disagree with
+   * itself. See `shellRendersAccountMenu`.
    */
-  consoleEnabled: boolean
+  header: ConsoleHeader | null
   /**
    * The signed-in address, for the console header's account menu. `null` when anonymous — the two
    * demo dashboards render this shell without a session.
@@ -100,7 +102,7 @@ function readGates(): ProjectSurfaceGates {
   }
 }
 
-const EMPTY: Omit<ShellNav, 'consoleEnabled'> = {
+const EMPTY: ShellNav = {
   activeProject: null,
   projects: [],
   links: [],
@@ -162,7 +164,7 @@ export async function getShellNav(
     // an empty sections nav, an empty identity slot and a ⌘K palette listing nothing — on a page with
     // no session to have surfaces for. Caught by the fresh reviewer's third pass on PR #122, as a
     // regression this epic introduced rather than one it inherited.
-    if (!user) return { ...EMPTY, consoleEnabled: false }
+    if (!user) return EMPTY
 
     const projects = await getUserProjects(user.id)
     // ── A signed-in user with NO project still gets the console chrome ────────────────────────
@@ -177,7 +179,6 @@ export async function getShellNav(
     if (projects.length === 0) {
       return {
         ...EMPTY,
-        consoleEnabled: gateOpen,
         userEmail: user.email ?? null,
         header: gateOpen ? emptyHeader(activeSection) : null,
       }
@@ -203,7 +204,6 @@ export async function getShellNav(
     if (!activeProject) {
       return {
         ...EMPTY,
-        consoleEnabled: gateOpen,
         userEmail: user.email ?? null,
         header: gateOpen ? emptyHeader(activeSection) : null,
       }
@@ -217,7 +217,6 @@ export async function getShellNav(
     return {
       activeProject,
       projects,
-      consoleEnabled: gateOpen,
       userEmail: user.email ?? null,
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
@@ -235,9 +234,9 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    // `consoleEnabled: false` — we do not know whether there is a session, so we cannot claim the
-    // signed-in chrome. The legacy header degrades honestly ("we could not list your sections"), and
-    // `/app` renders its own sign-out because the predicate is false. Sign-out survives a nav outage.
-    return { ...EMPTY, consoleEnabled: false }
+    // `EMPTY` — we do not know whether there is a session, so we cannot claim the signed-in chrome.
+    // The legacy header degrades honestly ("we could not list your sections"), and `/app` renders its
+    // own sign-out because the predicate is false. Sign-out survives a nav outage.
+    return EMPTY
   }
 }

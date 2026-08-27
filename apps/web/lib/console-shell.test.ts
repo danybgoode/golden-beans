@@ -334,13 +334,20 @@ test('a member gets no Setup rail, matching the tab they do not get either', () 
 // from the unit layer, and the authed fixture always provisions a project, so it cannot reach the
 // zero-project case either. Stated in the PR rather than implied.
 
-test('the shell renders an account menu only when the console is on AND there is an email', () => {
-  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: 'a@b.co' }), true)
-  // Each half alone is not enough, and each really occurs: the gate is off by default, and a session
-  // can carry no email.
-  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: null }), false)
-  assert.equal(shellRendersAccountMenu({ consoleEnabled: false, userEmail: 'a@b.co' }), false)
-  assert.equal(shellRendersAccountMenu({ consoleEnabled: false, userEmail: null }), false)
+test('the shell renders an account menu only when the console applies AND there is an email', () => {
+  const header = buildConsoleHeader({
+    activeSection: 'home',
+    activeProjectSlug: 'miyagisanchez',
+    projects: owner,
+    gates: allGatesOpen,
+  })
+  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
+  // Each half alone is not enough, and each really occurs: `header` is null whenever the gate is
+  // off, the viewer is anonymous, or the nav read failed; `userEmail` is null for a session without
+  // one.
+  assert.equal(shellRendersAccountMenu({ header, userEmail: null }), false)
+  assert.equal(shellRendersAccountMenu({ header: null, userEmail: 'a@b.co' }), false)
+  assert.equal(shellRendersAccountMenu({ header: null, userEmail: null }), false)
 })
 
 // ── DELIBERATELY NOT TESTED HERE: "the predicate's inputs are argument-independent" ──────────
@@ -352,8 +359,10 @@ test('the shell renders an account menu only when the console is on AND there is
 // The property is real; the test was the wrong instrument. `shellRendersAccountMenu` takes
 // `{ consoleEnabled: boolean; userEmail: string | null }` — a header cannot be handed to it, because
 // the parameter type has no place to put one. **TypeScript is what closes this class**, exactly as
-// the comment 240 lines above refuses a runtime test of the closed `ConsoleSection` union for the
-// same reason: asserting something the compiler already makes unrepresentable is the shape of guard
+// `project-route-inventory.test.ts` refuses a runtime test of the closed `ConsoleSection` union for
+// the same reason (an earlier version of this note said "240 lines above", pointing inside THIS
+// file, where there is no such comment — third round running that a self-correcting note carried a
+// wrong detail): asserting something the compiler already makes unrepresentable is the shape of guard
 // that passes forever while proving nothing.
 //
 // What IS tested below is the predicate's truth table, which the compiler does NOT give for free.
@@ -373,5 +382,5 @@ test('a signed-in user with NO projects still gets a header, holding Today alone
     ['today']
   )
   assert.deepEqual(header.projects, [])
-  assert.equal(shellRendersAccountMenu({ consoleEnabled: true, userEmail: 'a@b.co' }), true)
+  assert.equal(shellRendersAccountMenu({ header, userEmail: 'a@b.co' }), true)
 })

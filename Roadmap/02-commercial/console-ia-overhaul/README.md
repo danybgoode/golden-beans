@@ -414,6 +414,18 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A16 — ⚠️ **Sprint 1 made `header === null` permanently reachable; Story 3.5's deletion plan is corrected** *(2026-08-27)*
+
+`header === null` no longer means "the gate is off" — it means the console chrome does not apply, and
+two states reach it permanently regardless of the gate: an **anonymous** viewer (the two demo
+dashboards are allow-listed public surfaces that render this shell) and the **`getShellNav` catch**.
+
+So Story 3.5's *"the now-dead gate-off branch is deleted"* would strip the public demo dashboards of
+all header content. Amended in `sprint-3.md`: 3.5 deletes the four **signed-in** legacy links, keeps
+a public chrome, and gains an acceptance criterion naming what an anonymous visitor sees after the
+flip. Recorded now rather than at 3.5, because the reason is legible in Sprint 1's code today and
+will not be in three sprints.
+
 #### A15 — DISPROVED: Ship's rail must NOT carry the environment picker *(re-scopes Story 1.4)*
 
 Story 1.4 says: *"Ship's rail carries the environment picker — flags-scoped, exactly as

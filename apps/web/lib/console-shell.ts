@@ -217,11 +217,23 @@ export function railLinksFor(
  * that way by the fresh reviewer's second pass on PR #122; the first fix closed the path, not the
  * class.
  *
- * So it reads only `consoleEnabled` (a pure env read) and `userEmail` (from the session user).
- * **Neither is a function of `projectSlug` or `activeSection`**, so two calls with different
- * arguments cannot disagree about it. That is a property of the inputs rather than a promise about
- * how callers spell their arguments, which is the difference between a fix and a guard. What closes
- * it is the parameter TYPE — a header cannot be passed here, because there is nowhere to put one.
+ * So it reads `header`'s NULLNESS and `userEmail`, and — this is the load-bearing part —
+ * `getShellNav` now builds a header on **every** signed-in path when the gate is open, including the
+ * zero-project and foreign-slug ones that used to return `EMPTY`. So `header !== null` means exactly
+ * "the gate is open and there is a session", neither of which is a function of `projectSlug` or
+ * `activeSection`. Two calls with different arguments cannot disagree about it.
+ *
+ * ── Why ONE field and not two ─────────────────────────────────────────────────────────────────
+ * A previous revision carried a separate `consoleEnabled` boolean beside `header`, with the chrome
+ * branching on one and the account menu on the other. The invariant held, but only because four
+ * return sites set them in lockstep BY HAND — and nothing forced them to match. Any future return
+ * with `consoleEnabled: true, header: null` would put the shell on its legacy branch (no account
+ * menu) while `/app` read the predicate as true and suppressed its line: **the original Blocking bug
+ * again**, with no test in the way, because the authed fixture makes both true. Raised by the fresh
+ * reviewer's fourth pass as a change in KIND — the previous round fixed a cosmetic failure mode and
+ * re-opened a correctness one in the counterfactual.
+ *
+ * Collapsing them removes the pair. There is nothing left to agree.
  *
  * One residual, noted rather than coded around: if React's `cache()` did not memoize a REJECTED
  * promise, one `getShellNav` call could succeed while the other hit its catch, and the two sides
@@ -230,6 +242,9 @@ export function railLinksFor(
  * `getShellNav`, so the catch is unreachable there. Raised by the fresh reviewer as NOT VERIFIED,
  * and left as a sentence because that is what it is worth.
  */
-export function shellRendersAccountMenu(nav: { consoleEnabled: boolean; userEmail: string | null }): boolean {
-  return nav.consoleEnabled && nav.userEmail !== null
+export function shellRendersAccountMenu(nav: {
+  header: ConsoleHeader | null
+  userEmail: string | null
+}): boolean {
+  return nav.header !== null && nav.userEmail !== null
 }

@@ -48,7 +48,7 @@ export async function ProductShell({
   projectSlug?: string
   section: ShellSection
 }) {
-  const { activeProject, projects, links, header, consoleEnabled, userEmail } = await getShellNav(
+  const { activeProject, projects, links, header, userEmail } = await getShellNav(
     projectSlug,
     section
   )
@@ -60,9 +60,9 @@ export async function ProductShell({
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
           `header === null` means the console chrome does not apply to this render — the gate is
           unset, OR there is no session (the two demo dashboards render this shell anonymously), OR
-          `getShellNav` degraded. All three want the same public/legacy chrome, and all three set
-          `consoleEnabled` false too, so the two conditions agree; this one is used because it also
-          narrows the type. With the gate unset this
+          `getShellNav` degraded. All three want the same public/legacy chrome. It is ONE field, and
+          the account menu below reads the same one, so the chrome and the menu cannot disagree about
+          whether this is a console render. With the gate unset this
           renders exactly the markup it rendered before this epic — logo, Home, Sections, Connect,
           Agent notes, and the project signal. Not "equivalent"; the same JSX, moved into a branch.
           `git diff` is what checks that, which is strictly stronger than a spec: /app is
@@ -231,7 +231,7 @@ export async function ProductShell({
                   which is two conditions that were supposed to agree and did not: a signed-in user
                   with no project got the legacy header AND a suppressed page line, and therefore no
                   sign-out anywhere (fresh reviewer, PR #122). */}
-              {shellRendersAccountMenu({ consoleEnabled, userEmail }) && (
+              {shellRendersAccountMenu({ header, userEmail }) && (
                 <details className="product-shell__account">
                   <summary>
                     <Icon name="panels" />
