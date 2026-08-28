@@ -89,7 +89,26 @@ export function NewFeature({
   const [busy, setBusy] = useState(false)
   const [pending, startTransition] = useTransition()
   const inFlight = busy || pending
+  /**
+   * The key that was just created, once the write has landed.
+   *
+   * ⚠️ **This exists because of what cross-review (vibe) found and what its FIX would have broken.**
+   * The finding: `create()` returned before `setBusy(false)` on success, so a create that wrote the
+   * row and then failed to navigate left the dialog locked — with Escape refusing, because Escape
+   * refuses while in flight. Real, and the bite is that there is no way out.
+   *
+   * Its suggested fix — clear `busy` in a `finally` — reintroduces the defect the in-flight lock
+   * exists to prevent: the Create button would come back live while the browser is leaving the
+   * page, and the registry is append-only, so a second click writes a permanent duplicate version.
+   *
+   * So neither the instance nor "no change". The write SUCCEEDED; the only open question is whether
+   * the navigation did. Recording the key retires the Create button (it cannot be pressed twice),
+   * unlocks the dialog (Escape works again) and leaves the reader a LINK to the thing that now
+   * exists. If the navigation happens, none of this is ever seen.
+   */
+  const [created, setCreated] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   const step = NEW_FEATURE_STEPS[stepIndex]
   const key = composeFeatureKey(draft.area, draft.name)
@@ -103,31 +122,33 @@ export function NewFeature({
     setStepIndex(0)
     setDraft(EMPTY_NEW_FEATURE_DRAFT)
     setError(null)
+    setCreated(null)
   }, [])
+
+  // ── A native <dialog>, driven by an effect — the pattern `ConfirmDialog` already proves here ──
+  //
+  // ⚠️ The first version was a `<div role="dialog" aria-modal="true">` over a scrim, and
+  // `aria-modal="true"` on a container that does not trap focus is a claim the markup cannot keep:
+  // Tab walked straight out of the wizard onto the page behind it, and closing restored focus
+  // nowhere. `showModal()` gives the trap, the inert background, the top layer and — the part that
+  // matters most for a keyboard user — focus RESTORATION to the "+ New feature" button.
+  //
+  // It is rendered ALWAYS, never `{open && …}`, for the reason `ConfirmDialog`'s own comment
+  // records: unmounting removes the node before the effect can call `close()`, so the browser never
+  // performs that restoration and the user is left on `<body>` with no way back to the control they
+  // came from.
+  useEffect(() => {
+    const element = dialogRef.current
+    if (!element) return
+    if (open && !element.open) element.showModal()
+    if (!open && element.open) element.close()
+  }, [open])
 
   // The field a step is about gets focus when that step arrives, so the wizard is usable without
   // reaching for the mouse between steps.
   useEffect(() => {
     if (open && step === 'name') nameRef.current?.focus()
   }, [open, step])
-
-  // Escape closes from anywhere in the dialog, matching the palette. Bound to the document for the
-  // same reason: focus can legitimately be on a chip, a select or the scrim.
-  //
-  // ⚠️ It refuses while a write is in flight. Closing mid-create would drop the surface that is
-  // about to report whether the write succeeded — and the write itself does not stop.
-  useEffect(() => {
-    if (!open) return
-    function onKeyDown(event: KeyboardEvent) {
-      // `event.key` is optional on a synthetic `new Event('keydown')`, and this is a NATIVE
-      // listener — a throw here is caught by nothing, so it is guarded at the source rather than
-      // left to a boundary that does not extend here (the same fix `CommandPalette` carries).
-      if (typeof event.key !== 'string') return
-      if (event.key === 'Escape' && !inFlight) close()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open, inFlight, close])
 
   function create() {
     setError(null)
@@ -141,6 +162,10 @@ export function NewFeature({
           newFeatureReason(key)
         )
         if (result.ok) {
+          // Recorded BEFORE the navigation, so the dialog has something true to say if the
+          // navigation never happens. See `created`'s own note.
+          setCreated(key)
+          setBusy(false)
           // A full navigation rather than a router push, for the same reason every link in the
           // console is a plain `<a>`: the destination is a server-rendered route whose guards run on
           // the request. Landing ON the new feature is also the answer to "what now" — it is where
@@ -163,19 +188,25 @@ export function NewFeature({
         + New feature
       </button>
 
-      {open && (
-        // Not a native <dialog>: `showModal()` cannot be driven from render, and the palette made
-        // the same call for the same reason. The scrim is a button so a pointer user can click away
-        // without the keyboard path (Escape) being the only exit.
-        <div className="scrim" role="presentation">
-          <button
-            type="button"
-            className="scrim-close"
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={() => !inFlight && close()}
-          />
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="new-feature-title">
+      <dialog
+        ref={dialogRef}
+        className="modal"
+        aria-labelledby="new-feature-title"
+        // `Esc` fires `cancel` before `close`. Routing it through the same handler as the ✕ button
+        // is what makes "Esc dismisses without acting" true by construction rather than by review —
+        // there is no second path that could grow an action later (`ConfirmDialog`'s rule).
+        //
+        // ⚠️ It refuses while a write is in flight: closing mid-create would drop the surface that
+        // is about to report whether the write succeeded, and the write itself does not stop.
+        // `preventDefault()` runs either way, so the browser cannot close the dialog behind React's
+        // back and leave `open` saying otherwise.
+        onCancel={(event) => {
+          event.preventDefault()
+          if (!inFlight) close()
+        }}
+      >
+        {open && (
+          <>
             <div className="modal-head">
               <div>
                 <h2 id="new-feature-title">New feature</h2>
@@ -371,44 +402,66 @@ export function NewFeature({
               )}
             </div>
 
+            {/* ── The terminal state, which normally nobody sees ──────────────────────────────
+                The write has landed and the browser is leaving for the new feature's page. If that
+                navigation happens, this frame is never painted. If it does NOT, the reader is
+                looking at a dialog whose Create button is gone — so it cannot write twice — with a
+                link to the thing that now exists and a sentence saying it exists. That is the whole
+                answer to the finding: the failure mode used to be a locked dialog with no exit. */}
             <div className="modal-foot">
-              {/* The note carries the step's own reason when there is one, so a disabled Continue
-                  always says why. A dead control with no explanation is the interface version of a
-                  guard that cannot fail. */}
-              <span className="note">{blocked ?? 'Nothing exists until you finish step 3.'}</span>
-              {stepIndex > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  disabled={inFlight}
-                  onClick={() => setStepIndex(stepIndex - 1)}
-                >
-                  Back
-                </button>
-              )}
-              {step === 'check' ? (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={blocked !== null || inFlight}
-                  onClick={create}
-                >
-                  {inFlight ? 'Working…' : 'Create feature'}
-                </button>
+              {created !== null ? (
+                <>
+                  <span className="note">
+                    Created. Opening <span className="mono">{created}</span>…
+                  </span>
+                  <button type="button" className="btn btn-ghost" onClick={close}>
+                    Close
+                  </button>
+                  <a className="btn btn-primary" href={`/app/flags/${slug}/${encodeURIComponent(created)}`}>
+                    Open it
+                  </a>
+                </>
               ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={blocked !== null}
-                  onClick={() => setStepIndex(stepIndex + 1)}
-                >
-                  Continue
-                </button>
+                <>
+                  {/* The note carries the step's own reason when there is one, so a disabled
+                      Continue always says why. A dead control with no explanation is the interface
+                      version of a guard that cannot fail. */}
+                  <span className="note">{blocked ?? 'Nothing exists until you finish step 3.'}</span>
+                  {stepIndex > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      disabled={inFlight}
+                      onClick={() => setStepIndex(stepIndex - 1)}
+                    >
+                      Back
+                    </button>
+                  )}
+                  {step === 'check' ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={blocked !== null || inFlight}
+                      onClick={create}
+                    >
+                      {inFlight ? 'Working…' : 'Create feature'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={blocked !== null}
+                      onClick={() => setStepIndex(stepIndex + 1)}
+                    >
+                      Continue
+                    </button>
+                  )}
+                </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </dialog>
     </>
   )
 }

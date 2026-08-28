@@ -123,7 +123,6 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   }
 })
 
-
 test('the manifest the public chrome links to actually serves', async ({ page }) => {
   // ⚠️ A16's correction, asserted end to end. Story 3.5 as originally written removed `/llms.txt`'s
   // "human nav link" — which IS `Agent notes`, and lives only in the branch an anonymous visitor

@@ -202,6 +202,42 @@ test.describe('the flag console, signed in', () => {
     await expect(page.getByRole('button', { name: '+ New feature' })).toBeVisible()
   })
 
+  test('the wizard is a real modal — focus stays in, and comes back out to the trigger', async ({ page }) => {
+    // ⚠️ **This is the assertion the FIRST version of this control could not have passed.** It was a
+    // `<div role="dialog" aria-modal="true">` over a scrim, and `aria-modal="true"` on a container
+    // that does not trap focus is a claim the markup cannot keep: Tab walked out onto the page
+    // behind it, and closing restored focus nowhere. It is a native `<dialog>` + `showModal()` now,
+    // the pattern `ConfirmDialog` already proves in this repo.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+    await page.getByRole('button', { name: '+ New feature' }).click()
+    await expect(page.locator('dialog[open]')).toBeVisible()
+
+    // Twenty-five tabs. Focus may legitimately pass through the BROWSER's own chrome — where
+    // `document.activeElement` reports `<body>` — but it must never land on a control belonging to
+    // the page behind the dialog. Asserted as "which element", not as a boolean, so a failure names
+    // what it escaped to.
+    const escapes: string[] = []
+    for (let press = 0; press < 25; press += 1) {
+      await page.keyboard.press('Tab')
+      const where = await page.evaluate(() => {
+        const element = document.activeElement as HTMLElement | null
+        if (element === null) return 'null'
+        if (element.closest('dialog[open]') !== null) return 'dialog'
+        return element.tagName
+      })
+      if (where !== 'dialog' && where !== 'BODY') escapes.push(where)
+    }
+    expect(escapes, 'focus left the dialog for a control on the page behind it').toEqual([])
+
+    // And it comes back. `showModal()`'s focus restoration only happens if the element is closed
+    // through the native `close()` — which is why this component never unmounts the dialog, the
+    // same trap `ConfirmDialog` records paying for once.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('dialog[open]')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '+ New feature' })).toBeFocused()
+  })
+
   test('the "New feature" wizard creates a feature and lands on it', async ({ page }) => {
     // ⚠️ **The end-to-end proof that the deletion above did not remove a capability.** Every other
     // assertion in this file is about what is absent; this one is about what replaced it, and it

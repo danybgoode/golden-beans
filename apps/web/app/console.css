@@ -986,38 +986,29 @@
   font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
 }
 
-.is-console .scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
+/* ⚠️ **A native `<dialog>`, so the scrim is `::backdrop` and there is no click-away button.**
+   The first version was a `<div role="dialog" aria-modal="true">` over a scrim `<button>`, and
+   `aria-modal="true"` on a container that does not trap focus is a claim the markup cannot keep —
+   Tab walked out of the wizard onto the page behind it. `showModal()` gives the trap, the inert
+   background, the top layer and focus restoration; the platform's own scrim comes with it. */
+.is-console .modal::backdrop {
   background: rgb(8 6 4 / 66%);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 44px 20px;
-  overflow-y: auto;
-}
-/* The click-away target. It is a real `<button>` so a pointer user has an exit that is not the
-   keyboard's, and it sits UNDER the dialog rather than wrapping it — a wrapper would put every
-   control inside a button. */
-.is-console .scrim-close {
-  position: fixed;
-  inset: 0;
-  border: none;
-  background: transparent;
-  /* `min-height: 44px` from globals.css' WCAG target floor would otherwise fight `inset: 0`. */
-  min-height: 0;
-  cursor: default;
 }
 .is-console .modal {
-  position: relative;
-  width: 100%;
-  max-width: 720px;
+  /* The UA centres a modal dialog with `inset: 0; margin: auto`, which `globals.css`'s
+     `* { margin: 0 }` reset defeats — the same defect this branch fixes for `.confirm-dialog`. The
+     design puts the wizard near the TOP of the viewport rather than dead centre, so the vertical
+     margin is stated instead of auto. */
+  margin: 8vh auto auto;
+  width: min(720px, calc(100vw - 40px));
+  max-height: 84vh;
+  padding: 0;
   background: var(--card);
+  color: var(--crema);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-hi);
-  overflow: hidden;
+  overflow: hidden auto;
 }
 .is-console .modal-head {
   display: flex;
