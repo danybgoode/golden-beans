@@ -179,8 +179,20 @@ I do not have to know which subsystem minted a key in order to find it.
   seventh scope shows up as a failure rather than a silent omission.
   `setup-route-guards.test.ts` (6) — the authorization boundary, at the source.
   `project-route-inventory.test.ts` (11) — including A7's atomic swap in both directions.
-- **`api` gate: 484 passed, 1 failed** — `scenario-registry.spec.ts:365`, **pre-existing**, baselined
-  on clean `main` in Sprint 1. `setup-routes-dark.spec.ts` is new and covers both gate states.
+- **`api` gate: 486 passed, 0 failed** lit; **13 passed** on the gates-OFF `:3100` server.
+  `setup-routes-dark.spec.ts` is new and both its halves now actually run — the dark half on `:3100`,
+  the lit half on the main server.
+  - ⚠️ **A correction to this document.** An earlier revision recorded `scenario-registry.spec.ts:365`
+    as a *pre-existing failure baselined on clean `main`*. **That was wrong, and the mistake is the
+    interesting part**: my local env was missing three flags CI sets (`RESILIENCE_SCENARIOS_ENABLED`,
+    `SECURITY_SIMULATIONS_ENABLED`, `AUTOMATIC_CIRCUIT_BREAKERS_ENABLED`), so the route 404'd instead
+    of 401'ing and I read a gate-off artefact as a product defect. CI was green on that spec the whole
+    time — which is what should have made me suspicious, and did not. **A local failure that CI does
+    not share is a claim about the ENVIRONMENT until proven otherwise**, and "baselined on clean
+    `main`" is a strong claim I had not actually earned.
+  - The other seven failures seen during the same session were seed drift (`supabase db reset` wipes
+    the demo and self projects, and the self project's API key changes, so the already-running server
+    authenticates with a stale one) plus one contended parallel run. Re-running clean: 486/0.
 - **`authed`: 72 passed / 0 failed** lit, **59 / 0** dark. Both new routes are in the mobile sweep.
 - **Mutation checks, all observed red:** revoked rows kept (2 red) · a blank expiry cell (2) · a
   capability leaking its scope name (2) · a legacy route listed beside its replacement (3) · the
@@ -191,6 +203,13 @@ I do not have to know which subsystem minted a key in order to find it.
   Setup route calls `requireProjectOwnership` before any read, and that the merged page uses the
   **same** gate as the three it replaces — which is D5's actual claim, and stronger than one 404 on
   one run. **Still owed: the live member session.** Step 7 below.
+- ⚠️ **One genuinely pre-existing failure, and it is NOT this epic's**: `landing.browser.spec.ts:630`
+  expects more than 3 in-page anchors on the landing page; there are 2. The assertion dates to #100
+  (maker-ops); the readability pass and the public-surface epic each deleted sections after it. It
+  fails identically with `CONSOLE_SHELL_ENABLED=false`, and this epic touches no landing file — so it
+  is left out of Sprint 2's diff rather than folded in, and flagged for its own fix. It is in the
+  opt-in `browser` project, which is exactly how it decayed unnoticed (LEARNINGS: *a suite outside the
+  gate must be run on purpose*).
 - ⚠️ **Two defects the green gate did not see**, both found by opening the page: a seven-column table
   clipped "Manage" off the right edge at 1440 and was unreadable at 390, and the fix's two-line cell
   ran together because `<small>` is inline. Both now covered by the mobile sweep.
