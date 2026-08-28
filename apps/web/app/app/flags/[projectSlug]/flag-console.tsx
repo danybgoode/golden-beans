@@ -68,6 +68,25 @@ export const DEFAULT_FLAG_ENVIRONMENT: FlagEnvironment = 'production'
  * marked rather than neither, and the reader can see which view they are in. Its chip reads "Not on"
  * and old bookmarks carry it, so its meaning is not changed here.
  */
+/**
+ * The sort options, restored as ONE owned list.
+ *
+ * ⚠️ Hand-typing these into the `<select>` dropped `type` ("Type (kill switches first)") entirely —
+ * a capability removed with no note, while `FlagListSort` and `sortFlagRows` still implement it, so
+ * `?sort=type` kept working with no control to reach it. It also turned the en-dashes into hyphens
+ * and renamed "On first" to "State" (cross-review, vibe, round 4).
+ *
+ * That is the same failure D7's vocabulary guard exists for: a label with an owner, retyped
+ * somewhere else. The list is the owner again.
+ */
+const SORT_LABEL: Array<{ value: FlagListParams['sort']; label: string }> = [
+  { value: 'key_asc', label: 'Name A–Z' },
+  { value: 'key_desc', label: 'Name Z–A' },
+  { value: 'state', label: 'On first' },
+  { value: 'type', label: 'Type (kill switches first)' },
+  { value: 'recent', label: 'Recently changed' },
+]
+
 /** One place the card-to-count mapping lives, so the number and the `data-nonzero` flag agree. */
 function cardCount(key: 'all' | 'on' | 'off' | 'never', summary: FlagListSummary): number {
   if (key === 'all') return summary.total
@@ -199,10 +218,11 @@ export function FlagConsole({
         </span>
         <span className="sel">
           <select name="sort" defaultValue={params.sort} aria-label="Sort">
-            <option value="key_asc">Name A-Z</option>
-            <option value="key_desc">Name Z-A</option>
-            <option value="state">State</option>
-            <option value="recent">Recently changed</option>
+            {SORT_LABEL.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </span>
         <button type="submit" className="btn btn-ghost">
@@ -324,18 +344,25 @@ export function FlagConsole({
             whole one until someone dumps the tree. */}
         {grouping.grouped && (
           <div className="dormant" data-dormant-summary role="row">
+            {/* ⚠️ The link is INSIDE the cell. Round 2 found it announced as a sibling of the row;
+                round 3 "fixed" it by rewriting this comment to say it was inside while leaving the
+                element a direct child of `role="row"` — so the comment asserted a property the code
+                lacked, which is the exact class of defect the two previous rounds were about
+                (cross-review, vibe, round 4, Blocking).
+
+                A `role="row"` may own only cells, so an orphaned `<a>` is both an invalid structure
+                and an action with no column. Verified by dumping the tree this time, not by reading
+                the diff. */}
             <span className="dormant-text" role="cell" aria-colspan={3}>
               <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
               <span className="d">
                 No one has ever switched them on or off here. Nothing is wrong with them — nothing has
                 happened to them.
               </span>
+              <a className="go" href={linkTo({ state: 'never' })}>
+                Show them
+              </a>
             </span>
-            {/* Inside the same cell as the text it belongs to. As its own cell it was announced
-                under "State in production", which is not where a "Show them" action lives. */}
-            <a className="go" href={linkTo({ state: 'never' })}>
-              Show them
-            </a>
           </div>
         )}
       </div>
