@@ -284,7 +284,12 @@ export function flagListAnswerSegments(
 
   // Sentence 3 — the dormant majority, said as its own fact rather than appended to the first.
   if (summary.neverSwitched > 0) {
-    segments.push({ text: ' The other ' }, { text: String(summary.neverSwitched), emphasis: 'strong' })
+    // ⚠️ "The other N" implies a set the previous sentence established. When nothing is serving,
+    // nothing was established — "is serving nothing. The other 40 have never been switched on"
+    // refers back to a baseline that does not exist (cross-review, agy, round 3). That is the
+    // common case on two of this product's three environments, not an edge.
+    const lead = summary.serving === 0 && summary.switchedOff === 0 ? ' All ' : ' The other '
+    segments.push({ text: lead }, { text: String(summary.neverSwitched), emphasis: 'strong' })
     segments.push({
       text: ` have never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
     })

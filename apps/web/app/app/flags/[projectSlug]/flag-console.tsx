@@ -185,20 +185,24 @@ export function FlagConsole({
         {/* The type filter's options come from `TYPE_LABEL`, not from four retyped strings. D7's
             guard caught the first version writing "Kill switches" beside a `TYPE_LABEL` that says
             "Kill switch" — a plural that would have drifted the moment either was reworded. */}
-        <select name="type" defaultValue={params.type} aria-label="Type">
-          <option value="all">All types</option>
-          {(['killswitch', 'enablement', 'unclassified'] as const).map((polarity) => (
-            <option key={polarity} value={polarity}>
-              {TYPE_LABEL[polarity]}
-            </option>
-          ))}
-        </select>
-        <select name="sort" defaultValue={params.sort} aria-label="Sort">
-          <option value="key_asc">Name A-Z</option>
-          <option value="key_desc">Name Z-A</option>
-          <option value="state">State</option>
-          <option value="recent">Recently changed</option>
-        </select>
+        <span className="sel">
+          <select name="type" defaultValue={params.type} aria-label="Type">
+            <option value="all">All types</option>
+            {(['killswitch', 'enablement', 'unclassified'] as const).map((polarity) => (
+              <option key={polarity} value={polarity}>
+                {TYPE_LABEL[polarity]}
+              </option>
+            ))}
+          </select>
+        </span>
+        <span className="sel">
+          <select name="sort" defaultValue={params.sort} aria-label="Sort">
+            <option value="key_asc">Name A-Z</option>
+            <option value="key_desc">Name Z-A</option>
+            <option value="state">State</option>
+            <option value="recent">Recently changed</option>
+          </select>
+        </span>
         <button type="submit" className="btn btn-ghost">
           Apply
         </button>

@@ -260,8 +260,9 @@ test('nothing serving says "nothing", which is this product\'s own common case',
   // `off` is 0 in every environment and two of three serve nothing (A20). Not an edge.
   assert.equal(
     flagListAnswerLine(counts({ total: 40, neverSwitched: 40 }), 'preview'),
+    // "The other 40" would refer back to a set the first sentence never established.
     'Right now preview is serving nothing.' +
-      ' The other 40 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+      ' All 40 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
   )
 })
 
@@ -330,4 +331,19 @@ test('the dormant summary line is plural-safe', () => {
   // be on screen for any tenant with exactly one dormant flag.
   assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
   assert.equal(dormantGroupLabel(39, 'Production'), '39 features have never been turned on in Production')
+})
+
+test('"The other N" only appears when a previous sentence established a set', () => {
+  // With something serving, "the other" is correct — it refers to the named features.
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, serving: 1, neverSwitched: 2 }), 'production', ['a']),
+    /The other 2 have never/
+  )
+  // With a switch-off sentence, "the other" also has a referent.
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, switchedOff: 1, neverSwitched: 2 }), 'production'),
+    /The other 2 have never/
+  )
+  // With nothing serving and nothing switched off, there is no set to be "other" than.
+  assert.match(flagListAnswerLine(counts({ total: 2, neverSwitched: 2 }), 'production'), /All 2 have never/)
 })

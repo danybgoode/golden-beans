@@ -750,6 +750,27 @@
   min-width: 190px;
   flex: 1 1 250px;
 }
+/* ⚠️ `appearance: none` strips the native dropdown arrow, and the first port supplied no
+   replacement — so the two selects were visually indistinguishable from the search box beside them
+   (cross-review, agy, round 3). The reference solves this with a `.sel` wrapper drawing a CSS
+   chevron via `::after` (`console-reference.css:293-299`); this ports that mechanism rather than
+   inventing a different one. */
+.is-console .sel {
+  position: relative;
+  display: inline-flex;
+}
+.is-console .sel::after {
+  content: '';
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+  border-right: 1.5px solid var(--dim-2);
+  border-bottom: 1.5px solid var(--dim-2);
+  transform: translateY(-70%) rotate(45deg);
+}
 .is-console .toolbar select {
   appearance: none;
   padding: 8px 28px 8px 11px;

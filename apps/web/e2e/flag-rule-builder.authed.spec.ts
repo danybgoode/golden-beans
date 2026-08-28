@@ -318,6 +318,20 @@ test.describe('the visual rule builder', () => {
 // Both versions below are created through the JSON textarea rather than the builder, deliberately:
 // it is the surface that can express a metadata entry, which is what Story 2.3's fallback case
 // needs, and it keeps these assertions independent of the builder's own controls.
+// ⚠️ **Serial: these tests share one optimistic lock and `fullyParallel` splits them.**
+// This file activates versions five times on the SAME tenant, and every activation reads
+// `flag_environment_states.snapshot_version` and writes back expecting it unchanged. Split across
+// workers, two of them collide and one is correctly rejected — so the suite failed roughly every
+// other full run with "an ACTIVATED 10% rollout reads 10% on its bar, never 1000".
+//
+// That is a correct database refusing a lost update, not a product bug: the same protection is what
+// `experiment-governance` and the connector mint rely on. The test was racing itself.
+//
+// Surfaced while running the full `authed` suite for console-ia-overhaul (PR #124); this file is
+// otherwise untouched by that work. Serialising the describe is the smallest fix that makes the
+// contention impossible rather than unlikely.
+test.describe.configure({ mode: 'serial' })
+
 test.describe('rollout bars and the version diff', () => {
   test.skip(
     process.env.FLAG_RULE_BUILDER_ENABLED !== 'true',
