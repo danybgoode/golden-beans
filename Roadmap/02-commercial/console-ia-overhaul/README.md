@@ -52,8 +52,9 @@ already exists and is already unit-tested; the funnel and impact pages already w
 rather than rewritten; the per-project connector URL already renders inside `ProductShell` at a route
 the nav filters out; the three credential pages already enforce owner checks that move with them.
 
-> **Sharpened 2026-08-27 by the architecture lock.** "No new query" was too strong in one place and
-> unproven in another, and both are now decided rather than left for a builder to discover:
+> **Sharpened 2026-08-27 by the architecture lock, then AMENDED by A18.** ⚠️ **This epic does ship
+> one migration** — a partial unique index closing a race both cross-family reviewers raised as
+> Blocking (A18). "No new table" still holds. The rest of this note stands:
 > - **One new route handler** — `⌘K`'s feature index (A6) — which writes **no new SQL**: it calls the
 >   existing `getFlagRegistryView()` behind the existing `requireProjectMembership`, and projects to
 >   1.1 KB server-side so a page load pays nothing.
@@ -413,6 +414,29 @@ project's role**, never the active one's. A viewer who owns project A and is onl
 B must not be offered B's owner-only Setup landing on the strength of a role held in A. Gates are
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
+
+#### A18 — ⚠️ **This epic ships ONE migration after all.** *(2026-08-27, authorized by Daniel)*
+
+The Platform-first note says "no new table, no new SQL". That held until cross-review: **both**
+external families independently raised `mintConnectorToken` as **Blocking** — a check-then-act with
+nothing behind it, so two concurrent mints could both insert.
+
+`20260827120000_connector_token_uniqueness.sql` — a **partial** unique index on `(project_id) WHERE
+revoked_at IS NULL`. Partial is the correctness argument, not a detail: revocation is soft, so a
+rotating project accumulates revoked rows by design, and a plain `UNIQUE (project_id)` would forbid
+ever minting a second token.
+
+**Applied to production BEFORE the merge that deploys the code** (AGENTS rule #4 — merging is the
+deploy). Verified by attempting the forbidden write against production and watching it be rejected,
+and by confirming rotation still works; row counts unchanged afterwards.
+
+**Why the read-side fix was not enough on its own.** Returning every active token made a duplicate
+*visible and revocable* rather than live and hidden behind a `LIMIT 1` — that removed the danger,
+and it is what shipped first. It could not remove the race. Only a constraint can: an application
+check is a promise about interleaving the application is not in a position to make.
+
+The note's claim is corrected rather than quietly dropped: **one migration, additive, no backfill,
+no data change.** "No new table" still holds.
 
 #### A17 — ⚠️ **The three legacy credential routes are NOT redirected. They keep their forms.** *(2026-08-27, deviation from Story 2.3)*
 
