@@ -28,7 +28,13 @@ test('a project member can discover the live Flags and Tasks operating surfaces 
 
   const flagsResponse = await page.goto(`/app/flags/${slug}`)
   expect(flagsResponse?.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: `Feature flags — ${slug}` })).toBeVisible()
+  // ⚠️ The heading is "Features", not "Feature flags — <slug>" (console-ia-overhaul). The project
+  // is already named in the top bar's switcher; repeating it in the h1 was the same fact twice, and
+  // at 48px it wrapped to four lines on a real slug. What this spec actually cares about is that
+  // the destination rendered its own page rather than an error or an empty shell — so it asserts
+  // the heading AND that the list arrived, which the old title check never did.
+  await expect(page.getByRole('heading', { name: 'Features', exact: true })).toBeVisible()
+  await expect(page.locator('[data-feature-list]')).toBeVisible()
 
   const tasksResponse = await page.goto(`/app/tasks/${slug}`)
   expect(tasksResponse?.status()).toBe(200)

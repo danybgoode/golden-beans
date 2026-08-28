@@ -43,8 +43,16 @@ test.describe('the flag console, signed in', () => {
     await expect(page.locator('.listhead')).toContainText('Feature')
     await expect(page.locator('.listhead')).toContainText('State in')
 
-    // Story 1.4: the environment selector, and the sentence that says what the list reports on.
-    await expect(page.getByText('What this list reports is what')).toBeVisible()
+    // Story 1.4: the environment selector — now in the RAIL, not as chips in the page body
+    // (CONSOLE-CONTRACT.md Do-not #5; Story 1.4 asked for this and it never landed).
+    await expect(page.locator('.console-rail .envpick')).toBeVisible()
+    await expect(page.locator('.console-rail .envpick')).toContainText('production')
+
+    // The sentence that says what the list reports on. It used to read "WHAT THIS LIST REPORTS IS
+    // WHAT PRODUCTION IS SERVING" in uppercase mono — a column-label style used as body copy
+    // (Do-not #3). The approved design replaces it with the answer line, which says the same thing
+    // and also names WHICH features are serving.
+    await expect(page.locator('.answer')).toContainText('serving')
 
     // Story 1.3's actual promise — a filtered view is an ADDRESS. Asserted by navigating to one
     // directly rather than by clicking, because "survives a refresh and a paste into another
