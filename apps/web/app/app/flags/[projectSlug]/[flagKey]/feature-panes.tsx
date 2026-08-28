@@ -32,13 +32,33 @@ import type { FeatureImpactResult } from '@/lib/north-star-query'
  */
 function absence(reason: string, flagKey: string, what: 'funnel' | 'impact'): { head: string; body: string } {
   if (reason === 'feature_not_found') {
-    return {
-      head: what === 'funnel' ? 'Nothing is measuring this yet' : 'No impact to attribute yet',
-      body:
-        `${flagKey} is a feature flag. It has no ${what} because nothing in the TARS registry is ` +
-        `measuring it — those are two separate registries, and a flag gets a ${what} only once a ` +
-        `signal is registered under the same key.`,
-    }
+    // ⚠️ **The two absences have DIFFERENT causes, and one sentence for both sent the operator to
+    // fix the wrong thing** (cross-review, agy, round 2 — correctly).
+    //
+    //   Funnel  → `getFeatureFunnelByProjectId` misses when `features` (the TARS registry) has no
+    //             row for this key.
+    //   Impact  → `getFeatureImpactByProjectId` misses when `feature_inputs` has no row — a North
+    //             Star input has to be LINKED to the key, which is a different act in a different
+    //             table from registering a TARS signal.
+    //
+    // A feature can have one and not the other, which is precisely why naming which absence this is
+    // was the deliverable (A4). Saying "TARS" on the Impact tab was the same defect A4 exists to
+    // prevent, one table over.
+    return what === 'funnel'
+      ? {
+          head: 'Nothing is measuring this yet',
+          body:
+            `${flagKey} is a feature flag. It has no funnel because nothing in the TARS registry is ` +
+            `measuring it — those are two separate registries, and a flag gets a funnel only once a ` +
+            `signal is registered under the same key.`,
+        }
+      : {
+          head: 'No impact to attribute yet',
+          body:
+            `${flagKey} is a feature flag, and no North Star input is linked to it. Impact is the ` +
+            `movement of an input you have attached to a feature, so there is nothing here until ` +
+            `one is — which is a different act from registering it for a funnel.`,
+        }
   }
   if (reason === 'project_not_found') {
     return {
@@ -71,6 +91,12 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
   // rather than three unrelated counts. Guarded at zero: `0/0` is `NaN`, and a funnel reading
   // "NaN%" is worse than one reading nothing.
   const share = (value: number) => (tars.targeted === 0 ? null : Math.round((value / tars.targeted) * 100))
+  // ⚠️ The BAR is clamped and the NUMBER is not, deliberately (cross-review, agy, round 2 — Nit).
+  // A bar cannot be more than full, so an anomalous `adopted > targeted` must not paint outside its
+  // track. The percentage beside it stays whatever the data says, because "133%" is information —
+  // it tells a reader something upstream is wrong, and silently clamping it to 100 would hide the
+  // one signal that a count is impossible.
+  const barWidth = (value: number) => Math.min(100, Math.max(0, share(value) ?? 0))
   const rows: Array<[string, number]> = [
     ['Targeted', tars.targeted],
     ['Adopted', tars.adopted],
@@ -98,7 +124,7 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
               <span className="mono">{value.toLocaleString('en-US')}</span>
             </div>
             <div className="funnel-bar__track">
-              <div className="funnel-bar__fill" style={{ width: `${share(value) ?? 0}%` }} />
+              <div className="funnel-bar__fill" style={{ width: `${barWidth(value)}%` }} />
             </div>
           </div>
         ))}

@@ -386,6 +386,13 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
     const impact = await page.goto(`${base}?tab=impact`)
     expect(impact?.status(), 'the Impact tab must not 404 a feature that exists').toBe(200)
     await expect(page.getByText('No impact to attribute yet')).toBeVisible()
+    // ⚠️ **The two absences say DIFFERENT things**, and asserting only the headline would have
+    // passed on the version that blamed the TARS registry for both (cross-review, agy). Impact
+    // misses on `feature_inputs`, not on `features` — a North Star input has to be LINKED, which is
+    // a different act in a different table, and telling an operator otherwise sends them to fix the
+    // wrong thing.
+    await expect(page.getByText(/no North Star input is linked to it/)).toBeVisible()
+    await expect(page.getByText(/TARS registry/)).toHaveCount(0)
     await expect(page.locator('.kpi')).toHaveCount(0)
   })
 

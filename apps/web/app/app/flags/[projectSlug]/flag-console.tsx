@@ -203,6 +203,18 @@ export function FlagConsole({
 
   // Every link on the page is built from the PARSED params, never from the raw query string, so an
   // unrecognised parameter cannot survive a round trip through a control on this page.
+  // ⚠️ **How many columns this table has, in ONE place.** The banner rows below span the whole width,
+  // and `aria-colspan` is a NUMBER — so it has to agree with the number of `columnheader`s actually
+  // rendered. Story 3.3 added a fourth (`On / off`) for owners and left two hardcoded `3`s behind,
+  // which is a structurally wrong table for exactly the viewers who have the extra column
+  // (cross-review, agy, round 2). Derived from the same condition that renders the header, so the
+  // two cannot disagree again.
+  //
+  // (agy also called `aria-colspan` "not a recognized WAI-ARIA attribute". It is — ARIA 1.1 defines
+  // `aria-colspan` alongside `aria-rowspan` for grid and table roles, and React passes `aria-*`
+  // through verbatim. The COUNT half of the finding was right, which is the half that mattered.)
+  const columnCount = canManage ? 4 : 3
+
   const linkTo = (overrides: Partial<FlagListParams>) =>
     `${basePath}${buildFlagListQuery(params, { page: 1, ...overrides }, DEFAULT_FLAG_ENVIRONMENT)}`
 
@@ -380,13 +392,13 @@ export function FlagConsole({
               {/* `role="cell"`, NOT `columnheader`: this heading labels a RUN OF ROWS, and telling
                   assistive tech it heads a COLUMN is a different and false claim. The decorative bar
                   is hidden rather than left as an unlabelled cell. */}
-              {/* ⚠️ `aria-colspan`: this banner is ONE cell across a three-column table. Without it
+              {/* ⚠️ `aria-colspan`: this banner is ONE cell across the whole table. Without it
                   the run's count was announced under "State in production" — the second column —
                   because a 2-cell row in a 3-column table is positional (fresh reviewer, round 3). */}
               {run.state !== null && (
                 <div className={`grp ${run.state}`} role="row">
                   <span className="bar" aria-hidden="true" />
-                  <span role="cell" aria-colspan={3}>
+                  <span role="cell" aria-colspan={columnCount}>
                     {run.state === 'on'
                       ? `${FLAG_STATE_PRESENTATION.on.label} in ${params.environment}`
                       : FLAG_STATE_PRESENTATION[run.state].label}{' '}
@@ -494,7 +506,7 @@ export function FlagConsole({
                 A `role="row"` may own only cells, so an orphaned `<a>` is both an invalid structure
                 and an action with no column. Verified by dumping the tree this time, not by reading
                 the diff. */}
-            <span className="dormant-text" role="cell" aria-colspan={3}>
+            <span className="dormant-text" role="cell" aria-colspan={columnCount}>
               <span className="dormant-copy">
                 <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
                 <span className="d">
