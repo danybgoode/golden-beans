@@ -38,5 +38,5 @@ test('a project member can discover the live Flags and Tasks operating surfaces 
 
   const tasksResponse = await page.goto(`/app/tasks/${slug}`)
   expect(tasksResponse?.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: `Tasks — ${slug}` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tasks', exact: true })).toBeVisible()
 })

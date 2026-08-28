@@ -46,10 +46,7 @@ export default async function TasksPage({
   return (
     <ProductShell projectSlug={projectSlug} section="today">
       <main>
-        <h1>Tasks — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Tasks</h1>
         <p>
           Errors and friction the engine grouped, ranked by{' '}
           <strong>users affected × frequency</strong> and decayed by recency. Every field of every

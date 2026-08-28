@@ -100,7 +100,10 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flag-credentials/${slug}`)
 
-    await expect(page.getByRole('heading', { name: `Flag credentials — ${slug}` })).toBeVisible()
+    // ⚠️ The heading no longer names the project. Story 3.5's console-wide sweep removed the
+    // `— <slug>` suffix and the back-link from every signed-in page: the top bar's switcher already
+    // says which project this is, and on a real tenant slug the title wrapped (Do-not #1).
+    await expect(page.getByRole('heading', { name: 'Flag credentials', exact: true })).toBeVisible()
     // Both tables and both minting forms — the four things Story 3.1 moved.
     await expect(page.getByRole('table').filter({ hasText: 'Snapshot keys' })).toBeVisible()
     await expect(page.getByRole('table').filter({ hasText: 'Catalog sync keys' })).toBeVisible()
@@ -112,7 +115,7 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flag-audit/${slug}`)
 
-    await expect(page.getByRole('heading', { name: `Flag audit — ${slug}` })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Flag audit', exact: true })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'What changed' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Feature' })).toBeVisible()
 

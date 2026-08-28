@@ -48,10 +48,7 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Connect your agent — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Connect your agent</h1>
         <p>
           Point Claude at <strong>this project&apos;s</strong> data. The URL below is a bearer credential
           scoped to {projectSlug} — it is not the demo project&apos;s, and it is not shared with any other

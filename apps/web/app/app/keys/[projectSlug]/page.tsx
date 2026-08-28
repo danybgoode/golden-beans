@@ -25,10 +25,7 @@ export default async function KeysPage({ params }: { params: Promise<{ projectSl
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>API keys — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>API keys</h1>
         <p>
           Keys authorize <code>POST /api/v1/track</code> and the SDK. Issue one per integration; revoke a
           leaked key instantly (revocation takes effect on the next request, no deploy).

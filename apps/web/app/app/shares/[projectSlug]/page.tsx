@@ -18,10 +18,7 @@ export default async function SharesPage({ params }: { params: Promise<{ project
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Share links — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Share links</h1>
         <p>
           A share link renders this project&apos;s Pod Report at a public URL, through one audience lens. It
           is a bearer token: anyone holding the URL can read it, so treat it like a password and revoke it

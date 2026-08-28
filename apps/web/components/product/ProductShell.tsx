@@ -225,6 +225,14 @@ export async function ProductShell({
                   the production schema has no table that could support one. A `<details>` again, for
                   the same reason as the legacy disclosure: no client island in the shell.
 
+                  ⚠️ **This is why no console page's `<h1>` names the project any more.** Every
+                  signed-in route used to render `<h1>Keys — miyagisanchez</h1>` and a
+                  "← Your projects" link, which spent a heading and a line on facts this control
+                  already carries two inches above them — and on a real tenant slug the title
+                  wrapped, which is CONSOLE-CONTRACT.md's Do-not #1 measured on twelve pages instead
+                  of one. The sweep is recorded HERE, at the control that makes the repetition
+                  redundant, rather than as the same paragraph pasted into twelve files.
+
                   With one project there is nothing to switch to, so it renders as a label rather
                   than a menu that opens onto a list of one. */}
               {activeProject &&

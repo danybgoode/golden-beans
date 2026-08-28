@@ -41,10 +41,7 @@ export default async function FlagAuditPage({ params }: { params: Promise<{ proj
   return (
     <ProductShell projectSlug={projectSlug} section="ship">
       <main>
-        <h1>Flag audit — {projectSlug}</h1>
-        <p>
-          <a href={`/app/flags/${projectSlug}`}>← All features</a>
-        </p>
+        <h1>Flag audit</h1>
         <p>
           Every change to a feature definition or to what an environment serves, with who made it and why.
           Readable by any member of this project.

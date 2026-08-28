@@ -33,10 +33,7 @@ export default async function AgentKeysPage({ params }: { params: Promise<{ proj
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Agent write keys — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Agent write keys</h1>
         <p>
           An agent write key lets your own agent <em>claim</em>, <em>resolve</em> and <em>dismiss</em> tasks
           in this project over MCP. It is the second half of a write: your agent also needs this

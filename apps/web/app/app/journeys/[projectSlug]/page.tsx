@@ -18,10 +18,7 @@ export default async function JourneysPage({ params }: { params: Promise<{ proje
   return (
     <ProductShell projectSlug={projectSlug} section="measure">
       <main>
-        <h1>Journey definitions — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Journey definitions</h1>
         <p>
           Definitions turn canonical subject events into an ordered lifecycle. Versions are immutable: create
           a new draft for every change, then activate it when its meaning is ready to use.

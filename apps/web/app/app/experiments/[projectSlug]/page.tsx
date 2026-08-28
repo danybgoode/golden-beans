@@ -28,10 +28,7 @@ export default async function ExperimentGovernancePage({
   return (
     <ProductShell projectSlug={projectSlug} section="ship">
       <main>
-        <h1>Experiment governance — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Experiment governance</h1>
         <p>
           Declare hypothesis, assignment, metrics, direction, planned window and minimum sample per variant
           before exposure. Assignment remains local in the SDK; this registry governs trust, not feature

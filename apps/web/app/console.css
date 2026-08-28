@@ -1591,6 +1591,53 @@
   }
 }
 
+/* ── Do-not #3, applied to EVERY console route rather than to the flags page ───────────────────
+   > *"Uppercase appears in exactly two places, and never in mono. Measured: the list header row and
+   > the group heading, both 11px Archivo 600. Everything else is sentence case."*
+   > — CONSOLE-CONTRACT.md
+
+   Part A ported the flags list and left every other signed-in route rendering the landing's
+   uppercase-mono label style: `FILTER THE AUDIT`, `2 ROWS`, `WHAT THIS PROJECT IS NOT MEASURING YET
+   (2)`, and every `<th>` in every `DataTable`. A22 makes the design binding for **every signed-in
+   route**, and those are shared component classes — so this is one block, not a dozen page edits.
+   Fix the class, not the instance (Roadmap/LEARNINGS.md).
+
+   The split is the contract's own: something that LABELS A COLUMN keeps its uppercase and gets the
+   measured 11px Archivo 600; everything else is body copy and becomes sentence-case sans.
+
+   ⚠️ Scoped to `.is-console`, so the landing and the public demo dashboards are untouched — the
+   same boundary the rest of this file uses, and the reason a shared class can be restyled here at
+   all. */
+
+/* Column labels — the one place uppercase survives, at the measured size and in Archivo. */
+.is-console .data-table thead th,
+.is-console .data-table caption,
+.is-console .flag-insight__diff > label {
+  font: 600 11px var(--sans, 'Archivo', system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+}
+
+/* Body copy that had been wearing a column label's clothes. `2 rows`, `Showing 25 of 42 features`,
+   a stat's caption and a disclosure's summary are all sentences, and rendering a sentence as tracked
+   uppercase mono is a column-label style used as a body style — the contract's own words for it. */
+.is-console .data-table__count,
+.is-console .stat-card__label,
+.is-console .command-center__gaps summary {
+  font: 400 12.5px var(--sans, 'Archivo', system-ui, sans-serif);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--dim);
+}
+
+/* A stat's NUMBER is mono and tabular — the contract measures it at 26/600 on the flags page, and
+   `StatCard` is the same object on every other console route. */
+.is-console .stat-card__value {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Story 3.4 — `⌘K`, in the approved design's shape ──────────────────────────────────────────
    Ported from `console-reference.css`'s `.palette` onto the class names the component already has.
    The markup is not renamed: `CommandPalette` is the shell's one client island and its structure is

@@ -95,10 +95,7 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Keys — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Keys</h1>
         <p>
           Everything that can reach this project with a credential, in one list. Revoked keys are not shown —
           this is what has access <strong>now</strong>.
