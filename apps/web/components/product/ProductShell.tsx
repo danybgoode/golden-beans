@@ -318,7 +318,28 @@ export async function ProductShell({
           It sits after {children} in the DOM on purpose: a screen reader and a keyboard user reach
           the page's own content first, and the rail is positioned into the sidebar by CSS.
         */}
-        {activeProject && <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />}
+        {/* ── console-ia-overhaul · the AgentRail does NOT render on console routes ─────────────
+            Decided by Daniel, 2026-08-28, closing CONSOLE-CONTRACT.md's Do-not #4 — which the epic
+            had left open ("a decision the epic never made, and it must be made explicitly rather
+            than inherited"). The rail is in none of the ten approved reference states, and inside
+            the console grid it squeezed the content column to 544px against the approved 1180,
+            which is why every table clipped.
+
+            ⚠️ **`header !== null` is the console, and after A19 that is every signed-in /app route.**
+            So this condition does not merely narrow the rail — it retires it from the signed-in
+            product. `activeProject` requires a session, and an anonymous visitor has none, so the
+            remaining branch renders nothing in practice. Said plainly because the honest version of
+            this change is "the agent rail is gone", not "the agent rail is conditional".
+
+            That is a control removed, so the ordering rule applies: what did it carry, and where
+            does each thing live now? It carried the agent's recent activity and its waiting-on-you
+            queue. The approved design gives both a destination — **"What changed & why"** in the top
+            bar — which is a real place rather than a deletion. Building that is the replacement, and
+            until it exists this trades a squeezed console for a missing surface. Flagged rather than
+            filed as done. */}
+        {header === null && activeProject && (
+          <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />
+        )}
       </div>
     </div>
   )
