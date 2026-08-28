@@ -1,6 +1,6 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 2: Setup
 
-**Status:** 🟦 In review — all three stories built (`695866a`, `55432c3`, `e293082`)
+**Status:** 🟦 In review — all three stories built; ships ENABLED per A19
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -197,37 +197,42 @@ I do not have to know which subsystem minted a key in order to find it.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 
-⚠️ **Per A2, the dark steps run on preview and the lit steps run on production after Story 3.5's
-flip.** `CONNECTOR_ENABLED` is Production-only too, so a preview would render no connector panel at
-all — a correct render that reads like a broken one.
+⚠️ **A19 changed where these run.** The console ships **enabled** at this sprint, not dark until
+Story 3.5 — so every step below is on **production**, immediately after the Sprint 2 merge deploys.
+There is no preview half left: previews are SSO-gated with no bypass secret, and `CONNECTOR_ENABLED`
+is Production-only anyway, so a preview would render no connector panel at all.
 
-### On preview — `https://<branch-preview>.vercel.app`, gate unset
+### The dark contract, verified before the flip rather than on a preview
 
-1. Open `https://<preview>/app/setup/keys/miyagisanchez` in a private window.
-   → A plain **404**. Not a login redirect.
-2. Open `https://<preview>/app/setup/connect/miyagisanchez` in a private window.
-   → A plain **404**.
-3. Open `https://<preview>/app/keys/miyagisanchez` signed in as the owner.
-   → It still works, unchanged. Nothing was moved out from under you while the gate is off.
+The two Setup routes returning a flat **404** while `CONSOLE_SHELL_ENABLED` is unset is pinned by
+`e2e/setup-routes-dark.spec.ts` in the blocking `api` gate, run in both gate states. That is a
+stronger check than a manual preview visit and it is the one thing the gate can actually assert
+without a session — so it is not owed to you as a walkthrough step.
 
-### On production — `https://goldenfrijoles.com`, after the flip
+### On production — `https://goldenfrijoles.com`, after the Sprint 2 deploy
 
-4. Sign in, open `https://goldenfrijoles.com/app`, click **Setup**.
+1. Sign in and open `https://goldenfrijoles.com/app`.
+   → The header shows **Today · Measure · Ship · Setup**, the project name, and an **Account** menu.
+   Home, Sections, Connect and Agent notes are gone. This is the flip, live.
+2. Open `https://goldenfrijoles.com/app/keys/miyagisanchez` directly.
+   → It still works and still holds the minting form. It is no longer in the nav (A7), and it is
+   **not** redirected (A17) — the list moved, the controls did not.
+3. Click **Setup**.
    → The rail shows Connect your agent · Keys · Destinations · Share links. `/app/keys`,
    `/app/flag-credentials` and `/app/agent-keys` are **no longer listed** (A7).
    → ⚠️ **They are NOT redirected — corrected by A17.** Open `https://goldenfrijoles.com/app/keys/miyagisanchez`
    directly: it still works and still holds the minting form, because minting is not merged this
    sprint and it is the only surface that can issue an API key. The list moved; the controls did not.
-5. Click **Connect your agent**.
+4. Click **Connect your agent**.
    → The page is inside the product — no marketing header, no footer, no sales headline.
    → ⚠️ **Expect the honest "no connector yet" state, not a URL.** `miyagisanchez` has **zero**
    connector tokens (A10). That is the accurate answer, and it is what makes this page worth having.
-6. Click **Mint a connector URL** and confirm. *(**Owed to Daniel by name** — this writes a real
+5. Click **Mint a connector URL** and confirm. *(**Owed to Daniel by name** — this writes a real
    production credential; building the button is mine, pressing it is yours.)*
    → The token is shown **once**, with a copy button. Reload the page: the value is gone and the status
    now reads "Connector URL active since &lt;date&gt;". ⚠️ It does **not** claim Claude has connected —
    nothing in the product records a connector read, and the page says so.
-7. Click **Keys** in the rail.
+6. Click **Keys** in the rail.
    → One list with all four credential kinds. Each row is the credential's **name**, with what it may
    do in plain words underneath — four columns, not a column per attribute (a seven-column version
    put "Manage" off the right edge between the two rails; corrected before merge).
@@ -235,7 +240,7 @@ all — a correct render that reads like a broken one.
    → ⚠️ **Share links are NOT on this page** — they are their own Setup surface, and the page says so
    in a "Not listed here" line rather than implying it lists everything with access.
    → Revoked keys are absent: this answers what has access **now**.
-8. Sign in as a **non-owner member** of the project (or ask one to) and open the same Keys URL.
+7. Sign in as a **non-owner member** of the project (or ask one to) and open the same Keys URL.
    → A **404**, not an empty page, and not a 403.
    → Then open `/app/setup/connect/miyagisanchez` as that same member.
    → It **opens** (200). The asymmetry is the design: reading your connector URL is not credential
@@ -244,7 +249,12 @@ all — a correct render that reads like a broken one.
    *(auth path — **owed to Daniel by name**. This is the one thing the source guard cannot prove:
    three attempts at driving a second browser session hung, so what is automated is that the route
    calls `requireProjectOwnership` before any read, not that a live member actually gets the 404.)*
-9. Copy the connector URL and paste it into
+   → ⚠️ **And while signed in as that member on `/app/setup/connect/miyagisanchez`, open View Source
+   and search for `gb_connector_`.** There must be **no match**. Cross-review found the URL being
+   serialized into the page payload for every member even though the UI did not render it — a
+   credential hidden by a conditional render is not hidden. It is filtered on the server now, and
+   this is the check that proves it, because nothing on screen can.*
+8. Copy the connector URL and paste it into
    `https://claude.ai/customize/connectors?modal=add-custom-connector`.
    → Claude accepts the connector. *(**Owed to Daniel by name** — a real-account, real-session flow no
    automated smoke reaches.)*
