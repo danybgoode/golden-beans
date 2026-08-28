@@ -154,12 +154,27 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
 **Acceptance:**
 - A one-line answer above the list, in plain words — which features Production is serving, how many
   were deliberately switched off, and how many have never been switched at all.
+- ⚠️ **A20 — a clause whose count is ZERO is DROPPED from the sentence, not rendered as "0".** On
+  production the "deliberately switched off" count is **0** (see below), so this is the common path,
+  not an edge. A summary line that announces an empty category reads worse than one that omits it.
+  This is list arithmetic: it lives in `lib/flag-list-view.ts` and is unit-tested at every combination
+  of the three counts.
 - The three states stay **visually distinct**, including in the switch itself: on is filled, turned
   off is red, **never turned on here is a dashed empty track**. A plain off-switch for "never" would
   re-collapse the distinction `flags-console-parity` Amendment 2 paid to separate.
+- ⚠️ **A20 — the red `off` switch has NO live instance and CANNOT be asserted on production.** Its
+  spec needs a constructed fixture; a browser check against the live tenant would pass vacuously,
+  because there is no such row to render. (`landing-frijoles-rebrand` shipped three guards that could
+  not fail. This is how.)
 - **The dormant group collapses to one row** — "N features have never been turned on in
   <environment>" — with a disclosure. Expanded, it paginates at 15.
-- Production therefore renders **two rows and one summary line** with no scroll on a 900px viewport.
+- ⚠️ **A20 — measured on live production, 2026-08-28: 3 on · 0 off · 39 never, of 42.** So the page
+  renders **three feature rows and one summary line reading "39 features have never been turned on in
+  Production"** — not "two rows", which is what this story used to say. No scroll on a 900px viewport.
+- ⚠️ **The contract's "34 of 42" is a DIFFERENT axis and must not be conflated.** It is confirmed (34
+  flags' latest version has `defaultVariantKey: "off"`, 8 have `"on"`) but it describes what a
+  definition *defaults to*, not whether an environment has *activated* it. A flag can default to
+  `false` and have never been switched on. The number behind "activated ≠ on" on this page is **39**.
 - Filtering or searching turns grouping off, because a filtered view has no uniform majority to
   summarise.
 - The grouping/collapse arithmetic lives in `lib/flag-list-view.ts` — pure, unit-tested, zero DOM —
@@ -273,8 +288,11 @@ deployment host). And per A2 there is **no useful pre-merge preview run** for th
 `FLAG_SERVING_ENABLED` is Production-only, so the flags page's own gate is closed on a preview.
 
 1. With the gate on, open `https://goldenfrijoles.com/app/flags/miyagisanchez`.
-   → You see **two feature rows** and one line reading "N features have never been turned on in
-   Production". No scrolling needed to reach the bottom of the list.
+   → You see **three feature rows** and one line reading **"39 features have never been turned on in
+   Production"**. No scrolling needed to reach the bottom of the list.
+   → ⚠️ **Do not look for a red "turned off" switch — there is none, and that is correct.** Nobody has
+   ever deliberately switched a flag off in production (0 of 42), so that state has nothing to render.
+   Its styling is covered by unit tests against a constructed fixture instead (A20).
 2. Use your browser's find-on-page for `immutable`, then for `JSON`.
    → **No matches.**
 3. Click the summary line.

@@ -415,6 +415,49 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A20 — ⚠️ **Story 3.1's "two rows" is wrong, and one of its three states has ZERO live instances.** *(2026-08-28, measured against production)*
+
+Story 3.1 says *"Production therefore renders **two rows** and one summary line"*. Measured on live
+production (`miyagisanchez`, Production environment, 2026-08-28):
+
+| Activation state | Live count | How it is stored |
+|---|---|---|
+| **on** — serving a version | **3** | a `flag_environment_activations` row with a non-null `version_id` |
+| **off** — deliberately switched off | **0** | a row with a **null** `version_id` |
+| **never** — nobody has ever touched it here | **39** | **no row at all** |
+| | **42** | |
+
+Two corrections follow, and the second is the one that changes the work.
+
+**1. It is three rows, not two, and the dormant line reads 39.** A cosmetic fix to the story and its
+walkthrough — but a walkthrough step that says "you see two rows" when the page shows three is a step
+that fails on a correct build, and this epic has already shipped guards that could not fail.
+
+**2. ⚠️ The `off` state has NO live instance, so nothing on production can show it.** This is the real
+finding. Story 3.1 asks for three visually distinct switch states, one of which is *"turned off →
+red"*. On production that styling is **unreachable**: every one of the 42 flags is either serving or
+untouched. Consequences, decided here rather than discovered by whoever builds it:
+
+- **The answer line's middle clause renders "0 deliberately switched off" for every reader today.**
+  The line must read naturally at zero rather than emitting a limp "0 switched off" — a summary that
+  states an empty category as if it were news is worse than one that omits it. **DECIDED: a clause
+  with a zero count is dropped from the sentence, not rendered with a `0`.** That is list arithmetic,
+  so it belongs in `lib/flag-list-view.ts` with the rest, and it is unit-testable at every
+  combination — which is the only place all three states can be exercised at all.
+- **The red `off` switch cannot be asserted against the live tenant.** Its spec needs a constructed
+  fixture. A browser check on production would pass vacuously — there is no such row to render — and
+  a vacuous pass is how `landing-frijoles-rebrand` shipped three guards that could not fail.
+- **The smoke walkthrough must not ask Daniel to look for a red switch.** He would not find one, and
+  the honest reason is that nobody has ever deliberately switched a flag off in production — not that
+  the build is broken.
+
+**Why this was worth measuring rather than assuming.** The sprint contract's own figure — *34 of 42
+flags' latest version defaults to `false`* — is **confirmed** (34 `defaultVariantKey: "off"`, 8 `"on"`),
+but it is a **different axis** from the three states, and conflating them is the trap. A flag can
+default to `false` and have **never been activated**: 34 defaulting off does not mean 34 render as
+"off". Today it means 39 render as "never" and 0 render as "off". "Activated ≠ on" remains the point
+of the three states; the number that supports it is 39, not 34.
+
 #### A19 — ⚠️ **D4 IS OVERRULED. The console ships ENABLED at Sprint 2, not dark until Sprint 3.** *(2026-08-27, Daniel)*
 
 > *"done means shipped to production always. and not dark, always enabled"*
