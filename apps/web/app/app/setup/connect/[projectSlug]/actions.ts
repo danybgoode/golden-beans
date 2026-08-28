@@ -3,6 +3,7 @@ import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { isConnectorEnabled, isConsoleShellEnabled } from '@/lib/flags'
 import { mintConnectorToken, revokeConnectorToken } from '@/lib/connector-tokens'
 import { recordAudit } from '@/lib/audit'
+import { closedConnectorGate, type ConnectorGate } from '@/lib/connector-gates'
 
 // console-ia-overhaul · Sprint 2, Story 2.1 (epic README, A10) — the connector credential's
 // lifecycle. Daniel authorized this surface on 2026-08-27; before that, `lib/connector-tokens.ts`
@@ -39,10 +40,20 @@ function requireString(value: unknown, field: string): string {
  * `CONSOLE_SHELL_ENABLED` is checked because this action exists only to serve a page that 404s
  * without it, and a server action is reachable by POST whether or not its page ever rendered.
  */
-function closedGate(): 'connector' | 'console' | null {
-  if (!isConnectorEnabled()) return 'connector'
-  if (!isConsoleShellEnabled()) return 'console'
-  return null
+// The two env reads, handed to the pure predicate in `lib/connector-gates.ts`.
+//
+// The DECISION lives there, not here, so it can be run as a truth table by the unit layer — this
+// action cannot be imported by `node --test` (its `@/…` aliases do not resolve), so anything decided
+// in this file can only ever be source-scanned. AGENTS rule #3 is too load-bearing for that: it
+// rested on one unasserted line until cross-review pointed it out (PR #123).
+//
+// What remains here is only the wiring, and `setup-route-guards.test.ts` pins that BOTH values reach
+// the predicate — the one thing a source scan is actually good for.
+function closedGate(): ConnectorGate {
+  return closedConnectorGate({
+    connectorEnabled: isConnectorEnabled(),
+    consoleEnabled: isConsoleShellEnabled(),
+  })
 }
 
 export async function mintConnectorAction(slug: unknown) {

@@ -18,6 +18,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { closedConnectorGate } from './connector-gates.ts'
 
 function source(relative: string): string {
   return readFileSync(fileURLToPath(new URL(`../app/app/${relative}`, import.meta.url)), 'utf8')
@@ -61,13 +62,29 @@ test('the merged Keys page uses the SAME gate as the three routes it replaces', 
   }
 })
 
-test('the gate runs BEFORE any credential list is read', () => {
-  // Ordering, not just presence. A page that listed keys and then checked ownership would have
-  // already done the read — and on a slow render, already spent it. The auth call must come first.
+test('the gate runs BEFORE any credential list is read, and the reads are not hoisted away', () => {
+  // Ordering, not just presence. A page that listed keys and then checked ownership would already
+  // have done the read — and on a slow render, already spent it.
+  //
+  // ⚠️ Comparing textual positions is NOT enough, and the first version of this did exactly that.
+  // Move the four reads into a helper declared BELOW `export default` and call it from the top of
+  // the page body before the gate: `gateAt` lands on the later gate call, `readAt` lands further
+  // down inside the helper, `readAt > gateAt` holds, and the test stays green while the reads
+  // genuinely run first (fresh reviewer, PR #123). So this also pins that the reads are INLINE in
+  // the default export's body — the shape the position comparison is only valid for.
   const code = source('setup/keys/[projectSlug]/page.tsx')
-  const gateAt = code.indexOf('requireProjectOwnership(')
-  for (const read of ['listProjectKeys', 'listFlagReadKeys', 'listFlagSyncKeys', 'listAgentWriteKeys']) {
-    const readAt = code.indexOf(`${read}(`, code.indexOf('export default'))
+  const defaultAt = code.indexOf('export default')
+  const body = code.slice(defaultAt)
+  const gateAt = body.indexOf('requireProjectOwnership(')
+  assert.ok(gateAt >= 0, 'the ownership gate is not inside the default export')
+
+  const reads = ['listProjectKeys', 'listFlagReadKeys', 'listFlagSyncKeys', 'listAgentWriteKeys']
+  for (const read of reads) {
+    // Exactly one call site, and it is in the page body — not in a helper the body calls, where
+    // position tells you nothing about order.
+    const occurrences = code.split(`${read}(`).length - 1
+    assert.equal(occurrences, 1, `${read} is called ${occurrences} times; ordering is unprovable`)
+    const readAt = body.indexOf(`${read}(`)
     assert.ok(readAt > gateAt, `${read} is called before the ownership check`)
   }
 })
@@ -237,4 +254,82 @@ test('the migration adds a PARTIAL index, so rotation still works', () => {
     'the index is not partial — this would forbid rotation, not just duplicates'
   )
   assert.match(migration, /connector_tokens \(project_id\)/i)
+})
+
+// ── S4: what `closedGate` CHECKS, not just that it is called ──────────────────────────────────
+
+test('closedConnectorGate refuses when the CONNECTOR gate is off — AGENTS rule #3, asserted', () => {
+  // The rule that says minting the second kill switch must never route around the first. It rested
+  // on one unasserted line: deleting `if (!connectorEnabled)` left every other guard in this file
+  // green while minting became reachable with the connector switched off.
+  //
+  // Behavioural — all four combinations, run — not a source scan.
+  assert.equal(closedConnectorGate({ connectorEnabled: true, consoleEnabled: true }), null)
+  assert.equal(
+    closedConnectorGate({ connectorEnabled: false, consoleEnabled: true }),
+    'connector',
+    'minting is permitted with the connector switched off'
+  )
+  assert.equal(
+    closedConnectorGate({ connectorEnabled: true, consoleEnabled: false }),
+    'console',
+    'minting is permitted while the console is dark'
+  )
+  // Both closed names the CONNECTOR first, deliberately: it is the one rule #3 is about, and an
+  // operator told "the console is off" while the connector was also off would fix the wrong thing.
+  assert.equal(closedConnectorGate({ connectorEnabled: false, consoleEnabled: false }), 'connector')
+})
+
+test('the mint action feeds BOTH env gates into the predicate', () => {
+  // The half a source scan is actually good for: the decision is unit-tested above, but nothing
+  // there can see whether this action still passes it the real values.
+  const actions = readFileSync(
+    fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
+    'utf8'
+  )
+  const start = actions.indexOf('function closedGate()')
+  const body = actions.slice(start, actions.indexOf('\n}', start))
+  assert.match(body, /connectorEnabled: isConnectorEnabled\(\)/, 'the connector gate is not read')
+  assert.match(body, /consoleEnabled: isConsoleShellEnabled\(\)/, 'the console gate is not read')
+})
+
+// ── B1: the legacy Connect link must never point at a gated route ─────────────────────────────
+
+test('the legacy header links Connect to /install, never to a console-gated route', () => {
+  // ⚠️ This SHIPPED for several commits and would have 404'd every signed-in operator on merge.
+  //
+  // The legacy branch renders whenever `header === null`, which INCLUDES the console gate being off
+  // — its production value. Pointing Connect at `/app/setup/connect/<slug>` there sent every member
+  // to a route whose first statement is `if (!isConsoleShellEnabled()) notFound()`.
+  //
+  // The existing browser specs could not see it: the authed one asserts the link is VISIBLE, not
+  // where it goes, and the one that does assert the href runs anonymously, where the slug is null
+  // and the href was still `/install`. Assert-presence is what let this through.
+  const shell = readFileSync(
+    fileURLToPath(new URL('../components/product/ProductShell.tsx', import.meta.url)),
+    'utf8'
+  )
+  const legacyStart = shell.indexOf('header === null ? (')
+  const legacyEnd = shell.indexOf('      ) : (', legacyStart)
+  assert.ok(legacyStart >= 0 && legacyEnd > legacyStart, 'the legacy branch is not where this expects')
+  const legacy = shell.slice(legacyStart, legacyEnd)
+
+  // ⚠️ Keyed on the CODE, not on the prose. The first version scanned the whole branch for
+  // `/app/setup/` and matched the COMMENT above the link explaining this very defect — the third
+  // time this session that a guard fired on an honest description of the thing it forbids. A guard
+  // has to distinguish code from writing about code.
+  const codeLines = legacy
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim()
+      return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('{/*')
+    })
+    .join('\n')
+
+  assert.match(codeLines, /href="\/install"/, 'the legacy Connect link no longer points at /install')
+  assert.doesNotMatch(
+    codeLines,
+    /href=\{[^}]*\/app\/setup\//,
+    'the legacy branch links a console-gated route — it 404s whenever this branch renders'
+  )
 })

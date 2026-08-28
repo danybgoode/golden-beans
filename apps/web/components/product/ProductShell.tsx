@@ -128,15 +128,23 @@ export async function ProductShell({
                 </details>
               )}
 
-              {/* Story 2.2 — where `Connect` goes depends on whether we know whose project this is.
-                  A signed-in member goes to THEIR connector URL; an anonymous visitor (the two demo
-                  dashboards render this branch) still goes to `/install`, which serves the demo
-                  project's token and is correct for them under AGENTS rule #2.
+              {/* ⚠️ THIS HREF STAYS `/install`, and reverting it here is Story 2.2's actual fix.
+                  (Fresh reviewer, PR #123, Blocking.)
 
-                  The defect was never `/install` itself. It was sending a signed-in operator there,
-                  where they would copy a working URL for somebody else's data. `/install` is
-                  byte-identical this sprint; only this href moved. */}
-              <a href={activeProject ? `/app/setup/connect/${activeProject.slug}` : '/install'}>
+                  A previous revision pointed this at `/app/setup/connect/<slug>` whenever a project
+                  was resolved. But this is the LEGACY branch — it renders when `header === null`,
+                  which includes **the console gate being off** — and that route's first statement is
+                  `if (!isConsoleShellEnabled()) notFound()`. So with the gate unset (its value in
+                  production right now) every signed-in operator clicking `Connect` got a hard 404,
+                  on a link that worked before this epic. A nav entry pointing at a route that 404s
+                  is the exact defect this epic exists to remove.
+
+                  Story 2.2's criterion is "**with the gate on**, nothing in the signed-in shell links
+                  to `/install`" — and with the gate on this branch does not render at all. The
+                  console branch has no Connect link; `Setup › Connect your agent` in the rail is the
+                  destination (project-route-inventory.ts). The story is satisfied by construction,
+                  which is why this line needed no change and should never have had one. */}
+              <a href="/install">
                 <Icon name="cable" />
                 Connect
               </a>

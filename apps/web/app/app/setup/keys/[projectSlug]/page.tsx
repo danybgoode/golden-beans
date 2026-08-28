@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isConsoleShellEnabled, isFlagConsoleEnabled } from '@/lib/flags'
+import { isConsoleShellEnabled } from '@/lib/flags'
 import { listProjectKeys } from '@/lib/api-keys'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
@@ -49,14 +49,21 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
 
-  // The flag credential lists exist only while the flags console does — the same condition
-  // `/app/flag-credentials` itself checks. With it off we do not read them at all rather than
-  // rendering an empty section that implies this project has no flag keys.
-  const flagsAvailable = isFlagConsoleEnabled()
+  // ⚠️ ALWAYS read, and keying this on `FLAG_CONSOLE_ENABLED` was wrong (fresh reviewer, PR #123).
+  //
+  // That flag gates the flags *UI*. It does not gate whether these credentials SERVE: `flag_read`
+  // serves via `/api/v1/flags/snapshot` behind `FLAG_SERVING_ENABLED`, and `flag_sync` via
+  // `/api/v1/flags/sync` behind `FLAG_DEFINITION_SYNC_ENABLED`. Neither reads the console flag.
+  //
+  // So suppressing them meant a project with live, serving flag credentials rendered a page that
+  // listed none of them, under a heading claiming to list everything, with a count that said
+  // "3 active credentials" when there were five. The original justification — avoiding "an empty
+  // section that implies this project has no flag keys" — did not survive the four kinds being
+  // merged into ONE table: there is no empty section to avoid, the rows simply vanish.
   const [apiKeys, flagReadKeys, flagSyncKeys, agentWriteKeys] = await Promise.all([
     listProjectKeys(projectId),
-    flagsAvailable ? listFlagReadKeys(projectId) : Promise.resolve([]),
-    flagsAvailable ? listFlagSyncKeys(projectId) : Promise.resolve([]),
+    listFlagReadKeys(projectId),
+    listFlagSyncKeys(projectId),
     listAgentWriteKeys(projectId),
   ])
 

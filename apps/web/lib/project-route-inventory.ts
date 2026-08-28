@@ -23,8 +23,8 @@ export type ProjectSurfaceGate =
   // `legacy-keys` is the other half, and it is what makes the move safe rather than merely tidy: it
   // is supplied as `!isConsoleShellEnabled()`, so `/app/keys`, `/app/flag-credentials` and
   // `/app/agent-keys` LEAVE the nav at the exact instant their merged replacement enters it. Not one
-  // deploy earlier (a dead end) and not one later (the same destination listed twice, one of which
-  // redirects). A route that redirects must not also be a nav entry.
+  // deploy earlier (a dead end) and not one later (the same destination listed twice). The routes
+  // themselves are NOT redirected — they keep their minting forms (A17); only the listing moves.
   //
   // It is a DERIVED value, not a second env var. There is no `LEGACY_KEYS_ENABLED` to set, get wrong,
   // or leave inconsistent with the gate it must mirror — the inversion happens once, in each caller's
@@ -195,8 +195,9 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     routeSegment: 'keys',
     audience: 'owner',
     // A7: 'legacy-keys' is `!isConsoleShellEnabled()`, so this leaves the nav at the same instant
-    // `Setup › Keys` enters it. The ROUTE keeps working and redirects; it simply stops being listed,
-    // because a destination that redirects must not also be a nav entry.
+    // `Setup › Keys` enters it. The ROUTE keeps working and is NOT redirected (A17) — it still holds
+    // the minting form, and is still the only surface that can issue this kind of credential. It
+    // simply stops being LISTED, because the merged page is where you go to see what has access.
     gate: 'legacy-keys',
     status: 'linked',
     topLevelProjectRoute: true,

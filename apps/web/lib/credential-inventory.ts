@@ -97,6 +97,22 @@ export function credentialCapability(kind: CredentialKind): string {
  */
 export const CREDENTIAL_KINDS_NOT_LISTED = [
   {
+    // ⚠️ THE ONE THIS PAGE MOST NEEDED, and it was missing until cross-review found it (fresh
+    // reviewer, PR #123, Blocking). A `connector_tokens` row is a bearer credential that reads the
+    // WHOLE project through `/api/v1/public/mcp/c/<token>`; it is stored plaintext, it is a URL (so
+    // it travels through history, Referer headers, proxy logs and screenshots), and **this very
+    // sprint made it self-serve mintable by any project owner.**
+    //
+    // It was invisible to the completeness test because that test was keyed on `api_keys.scope`, and
+    // connector tokens live in a different table — the universe was wrong, not the list. An owner
+    // investigating a suspected leak would have read "everything that can reach this project",
+    // seen four rows and one exclusion, and concluded nothing else had access.
+    kind: 'connector',
+    label: 'Connector URLs',
+    where: '/app/setup/connect',
+    why: 'A bearer URL that reads this whole project over MCP — managed on its own Setup surface.',
+  },
+  {
     kind: 'share',
     label: 'Share links',
     where: '/app/shares',

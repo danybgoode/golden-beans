@@ -6,6 +6,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import * as Module from 'node:module'
+import { readdirSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 type ResolveHook = (
   specifier: string,
@@ -220,18 +222,52 @@ test('share links are named as an exclusion, with somewhere to go', () => {
 })
 
 test('the exclusion list covers every scope the database allows but this page omits', () => {
-  // The production `api_keys.scope` CHECK permits six values. Four are listed by the projection and
-  // two are not; both of the two must be named. Keyed on the database's own set rather than on what
-  // someone remembered, so a seventh scope added later shows up here as a failure.
-  const scopesInDatabase = ['ingest', 'flag_read', 'flag_sync', 'agent_write', 'share', 'flag_admin']
+  // ⚠️ REWRITTEN. The first version declared `const scopesInDatabase = [...]` under a comment
+  // claiming it was "keyed on the database's own set rather than on what someone remembered, so a
+  // seventh scope added later shows up here as a failure". The array WAS what someone remembered:
+  // adding a scope in a migration could not make it fail, because a human had to retype the literal
+  // first. A guard that cannot fail, wearing a comment asserting a property it does not have — this
+  // repo's exact recurring defect, and cross-review caught it (PR #123).
+  //
+  // It reads the migrations now. `scope` is redefined by successive CHECK constraints, so the
+  // authoritative set is the one in the LAST migration that names it.
+  const migrationsDir = fileURLToPath(new URL('../supabase/migrations/', import.meta.url))
+  const defining = readdirSync(migrationsDir)
+    .filter((name) => name.endsWith('.sql'))
+    .sort()
+    .filter((name) => /scope IN \(/.test(readFileSync(`${migrationsDir}${name}`, 'utf8')))
+  assert.ok(defining.length > 0, 'no migration defines the api_keys scope set')
+
+  const newest = readFileSync(`${migrationsDir}${defining[defining.length - 1]}`, 'utf8')
+  // The widest `scope IN (...)` in that file is the column's own CHECK; the narrower ones are arms
+  // of the composite share_lens constraint.
+  const sets = [...newest.matchAll(/scope IN \(([^)]*)\)/g)].map((match) =>
+    match[1].split(',').map((raw) => raw.trim().replace(/'/g, ''))
+  )
+  const scopesInDatabase = sets.reduce((widest, next) => (next.length > widest.length ? next : widest), [])
+  assert.ok(scopesInDatabase.length >= 5, `parsed only ${scopesInDatabase.length} scopes — the parse broke`)
+
   const listed = ['ingest', 'flag_read', 'flag_sync', 'agent_write']
   const excluded = CREDENTIAL_KINDS_NOT_LISTED.map((entry) => entry.kind)
   for (const scope of scopesInDatabase) {
     assert.ok(
       listed.includes(scope) || excluded.includes(scope as (typeof excluded)[number]),
-      `${scope} is neither listed nor named as an exclusion — the page's claim is wrong for it`
+      `${scope} is in the database's scope set but is neither listed nor named as an exclusion`
     )
   }
+})
+
+test('connector tokens are named as an exclusion — they are a DIFFERENT table, and were missed', () => {
+  // ⚠️ The completeness test above reads `api_keys.scope`, and connector tokens do not live there.
+  // So the page claimed to list "everything that can reach this project with a credential" while
+  // omitting a plaintext bearer URL that reads the whole project over MCP — one this very sprint
+  // made self-serve mintable. The universe was wrong, not the list (fresh reviewer, PR #123).
+  //
+  // This asserts the second universe explicitly, because no scope-based check ever will.
+  const connector = CREDENTIAL_KINDS_NOT_LISTED.find((entry) => entry.kind === 'connector')
+  assert.ok(connector, "connector tokens are neither listed nor named — the page's claim is false")
+  assert.equal(connector.where, '/app/setup/connect')
+  assert.match(connector.why, /whole project|MCP/i)
 })
 
 test('an empty project renders an empty list, not a crash', () => {

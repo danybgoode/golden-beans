@@ -85,44 +85,62 @@ export function ConnectorManager({
         </>
       )}
 
-      {tokens.map((token) => (
-        <div key={token.tokenId} className="stack-sm">
-          {/* Skipped when this is the one just minted: the reveal above already shows it, and two
+      {/* ⚠️ THE URL IS OWNER-ONLY. A member sees that a connector exists, not what it is.
+          (Fresh reviewer, PR #123, Should-fix — and the failure scenario is the convincing part.)
+          A previous revision rendered the URL to every member, reasoning that a member can read the
+          dashboards anyway so the capability is no wider. That holds only for SESSION-scoped access.
+          This token is durable and is not revoked by a membership change: a member could copy it, be
+          removed from `project_members`, and keep full read access to the project's funnels, North
+          Star and experiments over MCP indefinitely — with nothing in `audit_log` recording that
+          they ever saw it, and no way for them to revoke it themselves.
+          Every other credential in this product is hashed and shown exactly once, to an owner. This
+          one is re-displayed on every page load, so its audience is the thing to bound. */}
+      {!canManage && tokens.length > 0 && (
+        <p role="status" className="data-table__count">
+          A connector URL exists for this project. Ask an owner for it — the URL itself is a bearer credential
+          that keeps working after someone leaves the project, so only owners see it here.
+        </p>
+      )}
+
+      {canManage &&
+        tokens.map((token) => (
+          <div key={token.tokenId} className="stack-sm">
+            {/* Skipped when this is the one just minted: the reveal above already shows it, and two
               identical copy fields would read as two different credentials. */}
-          {token.url !== minted && <CopyUrlField url={token.url} />}
-          {canManage && (
-            <>
-              <p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setConfirming(token.tokenId)}
-                  disabled={pending}
-                >
-                  Revoke this URL
-                </Button>
-              </p>
-              <ConfirmDialog
-                open={confirming === token.tokenId}
-                /* `verb` matches the button that opened this, unchanged — the component requires it,
+            {token.url !== minted && <CopyUrlField url={token.url} />}
+            {canManage && (
+              <>
+                <p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setConfirming(token.tokenId)}
+                    disabled={pending}
+                  >
+                    Revoke this URL
+                  </Button>
+                </p>
+                <ConfirmDialog
+                  open={confirming === token.tokenId}
+                  /* `verb` matches the button that opened this, unchanged — the component requires it,
                    because a control's name must not change mid-flow. */
-                verb="Revoke"
-                noun="connector URL"
-                /* The SPECIFIC object. A connector URL has no label, so the project plus the token's
+                  verb="Revoke"
+                  noun="connector URL"
+                  /* The SPECIFIC object. A connector URL has no label, so the project plus the token's
                    own tail identifies it — with two active URLs on screen, the project alone would
                    not say WHICH one is about to be killed. */
-                subject={`${slug} · …${token.url.slice(-8)}`}
-                /* What STOPS WORKING, in plain words, not a restatement of the verb. */
-                consequence="Any agent using this URL stops being able to read this project immediately — no deploy needed."
-                details="Rotating means creating a new URL afterwards and pasting it into Claude again."
-                pending={pending}
-                onConfirm={() => onRevoke(token.tokenId)}
-                onCancel={() => setConfirming(null)}
-              />
-            </>
-          )}
-        </div>
-      ))}
+                  subject={`${slug} · …${token.url.slice(-8)}`}
+                  /* What STOPS WORKING, in plain words, not a restatement of the verb. */
+                  consequence="Any agent using this URL stops being able to read this project immediately — no deploy needed."
+                  details="Rotating means creating a new URL afterwards and pasting it into Claude again."
+                  pending={pending}
+                  onConfirm={() => onRevoke(token.tokenId)}
+                  onCancel={() => setConfirming(null)}
+                />
+              </>
+            )}
+          </div>
+        ))}
 
       {hasAny && (
         <>
