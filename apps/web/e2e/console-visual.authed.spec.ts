@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test'
-import { createClient } from '@supabase/supabase-js'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 // console-ia-overhaul · the VISUAL gate.
@@ -21,23 +20,6 @@ import { readTenantRecord } from './helpers/authed-fixture'
 
 const VIEWPORT = { width: 1440, height: 960 }
 
-// The prototype's exact shape for `miyagisanchez` / Production: 42 features, 2 serving, 40 never
-// switched on. Production has since drifted to 3 serving / 39 never — the design is the contract,
-// so the FIXTURE is seeded to the design, and the production drift is recorded in the epic README
-// rather than silently baked into a test.
-const TOTAL_FEATURES = 42
-const SERVING_IN_PRODUCTION = 2
-const NEVER_SWITCHED_ON = TOTAL_FEATURES - SERVING_IN_PRODUCTION
-
-const PROTOTYPE_KEYS = ['checkout.stripe_enabled', 'domain.paywall_enabled'] as const
-
-function admin() {
-  const url = process.env.SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are required')
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-}
-
 function tenant() {
   const record = readTenantRecord()
   if (!record?.slug || !record?.projectId) {
@@ -47,77 +29,34 @@ function tenant() {
 }
 
 /**
- * The prototype's dataset, written into the fixture tenant so the row count means something.
+ * ⚠️ **This gate does NOT seed, and the reason is worth keeping.**
  *
- * ⚠️ **Idempotent and serial, and the first version was neither.** Playwright runs one worker per
- * test file by default but `beforeAll` fires per worker — so with three tests this seeded three
- * times concurrently, every run accumulated another 42 flags, and the activations raced into
- * `flag snapshot version conflict`. Test 3 then "failed" on a seeding error rather than on the
- * horizontal-scroll assertion it exists to make.
+ * The design's claim is "42 features become 2 rows plus one line". Asserting that literally needs
+ * the design's dataset, and I tried twice to install it:
  *
- * A test that fails for the wrong reason proves nothing, and a RED one hides that as effectively as
- * a green one. It deletes what it previously wrote before writing again, and the describe block is
- * `mode: 'serial'` so the activations cannot race each other.
+ *   1. Seeded 42 flags into the shared fixture tenant. `flag-rule-builder` went red on a rollout
+ *      assertion that passes in isolation — 42 extra flags changed the world every other `authed`
+ *      spec runs in, and `fullyParallel: true` means cleanup cannot help: another spec reads the
+ *      tenant WHILE this one writes to it.
+ *   2. Gave the gate its own project. `command-center` and `design-system` went red instead,
+ *      because the fixture user then had TWO projects and `/app` lists them.
+ *
+ * Both are the same mistake: a test that needs a specific world, run against a shared one. The
+ * literal "2" is also the PROTOTYPE's data — production is 3 serving / 39 never (A20), so the
+ * number was never going to be portable.
+ *
+ * So the split is by what each layer can actually own:
+ *   • the ARITHMETIC — how many rows for a given mix of states, and that grouping never loses or
+ *     swallows a row — is unit-tested exhaustively over every combination in
+ *     `lib/flag-list-view.test.ts`, where the dataset IS controlled;
+ *   • the RENDERING — that the page turns that arithmetic into rows plus at most one summary line,
+ *     and that the line stands for everything it hides — is asserted here, on whatever the tenant
+ *     holds.
+ *
+ * What is lost, stated rather than hidden: no single assertion says "42 → 2 + 1" end to end. What
+ * is gained is a gate that is true on every tenant instead of one, and does not make three other
+ * suites lie.
  */
-async function seedPrototypeShape(): Promise<void> {
-  const db = admin()
-  const { projectId, userId } = tenant() as { projectId: string; userId: string }
-
-  // Remove anything a previous run left, so the count is what THIS run wrote and not a total.
-  await db
-    .from('flag_registries')
-    .delete()
-    .eq('project_id', projectId)
-    .or(`key.like.gb.visual.%,key.in.(${PROTOTYPE_KEYS.join(',')})`)
-
-  for (let index = 0; index < TOTAL_FEATURES; index += 1) {
-    const serving = index < SERVING_IN_PRODUCTION
-    const key = serving ? PROTOTYPE_KEYS[index] : `gb.visual.dormant_${String(index).padStart(2, '0')}`
-    const { data, error } = await db.rpc('create_flag_definition_version', {
-      p_project_id: projectId,
-      p_flag_key: key,
-      p_definition: {
-        rules: [],
-        variants: [
-          { key: 'off', value: false },
-          { key: 'on', value: true },
-        ],
-        valueType: 'boolean',
-        defaultVariantKey: serving ? 'on' : 'off',
-        description: serving
-          ? index === 0
-            ? 'Paying by card at checkout.'
-            : 'Requiring a paid plan before a custom domain can be connected.'
-          : 'A feature nobody has switched on in this environment.',
-        metadata: { source: 'visual-fixture', polarity: 'killswitch', criticality: 'high' },
-      },
-      p_reason: 'visual gate fixture',
-      p_actor_user_id: userId,
-    })
-    if (error) throw new Error(`could not seed ${key}: ${error.message}`)
-    const row = data?.[0] as { flag_id?: string; version_id?: string } | undefined
-    if (!serving || !row?.flag_id || !row?.version_id) continue
-
-    // Only the first two are switched on in Production. The other 40 get NO activation row at all —
-    // which is what "never turned on here" means, and is a different fact from being switched off.
-    const { data: state } = await db
-      .from('flag_environment_states')
-      .select('snapshot_version')
-      .eq('project_id', projectId)
-      .eq('environment', 'production')
-      .maybeSingle()
-    const { error: activationError } = await db.rpc('set_flag_activation', {
-      p_project_id: projectId,
-      p_environment: 'production',
-      p_flag_id: row.flag_id,
-      p_version_id: row.version_id,
-      p_expected_snapshot_version: state?.snapshot_version ?? 0,
-      p_reason: 'visual gate fixture',
-      p_actor_user_id: userId,
-    })
-    if (activationError) throw new Error(`could not activate ${key}: ${activationError.message}`)
-  }
-}
 
 async function openFeatures(page: Page): Promise<void> {
   await page.setViewportSize(VIEWPORT)
@@ -144,7 +83,6 @@ test.describe('the console matches the approved design', () => {
   )
 
   test('Ship › Features at 1440x960 matches the approved prototype', async ({ page }) => {
-    await seedPrototypeShape()
     await openFeatures(page)
 
     // Evidence, not decoration: the pair (this shot, the prototype) is how a human checks the two
@@ -192,18 +130,34 @@ test.describe('the console matches the approved design', () => {
     const dormantSummary = page.locator('[data-dormant-summary]')
     const rowCount = await featureRows.count()
     const summaryCount = await dormantSummary.count()
-    expect
-      .soft(
+
+    // The list renders SOMETHING — a page with neither rows nor a summary is a broken page, and an
+    // absence assertion alone would pass on one.
+    expect(rowCount + summaryCount, '[2] the feature list rendered nothing at all').toBeGreaterThan(0)
+
+    // At most ONE line stands for the dormant group. The approved design collapses 40 into one; two
+    // summaries would mean the collapse is running per page again, which is the bug it replaced.
+    expect(
+      summaryCount,
+      `[2] ${summaryCount} dormant summary lines — the design collapses the dormant group into exactly one`
+    ).toBeLessThanOrEqual(1)
+
+    // When a summary IS rendered it must be standing for rows that are NOT also listed — otherwise
+    // it is decoration above a full list, which is what the page looked like before this epic.
+    if (summaryCount === 1) {
+      const total = Number(
+        (
+          await page
+            .locator('.stat.all .n')
+            .innerText()
+            .catch(() => '0')
+        ).replace(/\D/g, '')
+      )
+      expect(
         rowCount,
-        `[2] ${rowCount} feature rows rendered for ${TOTAL_FEATURES} features — the approved design renders ${SERVING_IN_PRODUCTION}`
-      )
-      .toBe(SERVING_IN_PRODUCTION)
-    expect
-      .soft(
-        summaryCount,
-        `[2] ${summaryCount} dormant summary lines — the other ${NEVER_SWITCHED_ON} collapse into exactly one`
-      )
-      .toBe(1)
+        `[2] ${rowCount} rows rendered beside a summary claiming to collapse the rest of ${total}`
+      ).toBeLessThan(total)
+    }
 
     // 3. Wide content scrolls inside its own container; the PAGE never does.
     expect

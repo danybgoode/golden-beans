@@ -245,10 +245,7 @@ test('a zero count is DROPPED from the answer line, never rendered as "0"', () =
   // "0 deliberately switched off" would be the sentence every reader gets, forever.
   const clauses = answerLineClauses(counts({ total: 42, serving: 3, neverSwitched: 39 }))
   assert.deepEqual(clauses, ['serving 3 features', '39 never turned on here'])
-  assert.ok(
-    !clauses.some((clause) => /\b0\b/.test(clause)),
-    'a zero-count clause reached the answer line'
-  )
+  assert.ok(!clauses.some((clause) => /\b0\b/.test(clause)), 'a zero-count clause reached the answer line')
 })
 
 test('the clauses present are exactly the states with a non-zero count', () => {
@@ -256,12 +253,8 @@ test('the clauses present are exactly the states with a non-zero count', () => {
   // important check asserted nothing because Playwright normalises whitespace inside
   // `toContainText`; a list of clauses cannot fail that way.
   assert.deepEqual(answerLineClauses(counts({ total: 1, serving: 1 })), ['serving 1 feature'])
-  assert.deepEqual(answerLineClauses(counts({ total: 1, switchedOff: 1 })), [
-    '1 deliberately switched off',
-  ])
-  assert.deepEqual(answerLineClauses(counts({ total: 1, neverSwitched: 1 })), [
-    '1 never turned on here',
-  ])
+  assert.deepEqual(answerLineClauses(counts({ total: 1, switchedOff: 1 })), ['1 deliberately switched off'])
+  assert.deepEqual(answerLineClauses(counts({ total: 1, neverSwitched: 1 })), ['1 never turned on here'])
   assert.equal(
     answerLineClauses(counts({ total: 3, serving: 1, switchedOff: 1, neverSwitched: 1 })).length,
     3
@@ -272,10 +265,7 @@ test('one feature is a feature, not "1 features"', () => {
   assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'Production'), /1 feature\b/)
   assert.match(flagListAnswerLine(counts({ total: 2, serving: 2 }), 'Production'), /2 features\b/)
   assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
-  assert.equal(
-    dormantGroupLabel(39, 'Production'),
-    '39 features have never been turned on in Production'
-  )
+  assert.equal(dormantGroupLabel(39, 'Production'), '39 features have never been turned on in Production')
 })
 
 test("production's real answer line reads as a sentence, with no empty category in it", () => {
@@ -294,4 +284,43 @@ test('three clauses join with commas and a final "and", not three "and"s', () =>
 test('a project with no features says so, rather than trailing off', () => {
   // Every new tenant starts here. A dangling "Production is ." reads as a bug.
   assert.equal(flagListAnswerLine(counts(), 'Production'), 'No features in Production yet.')
+})
+
+test('with NOTHING serving, the line is a sentence rather than a stem plus a fragment', () => {
+  // The bug this pins: "production is 2 never turned on here." The stem "<env> is …" assumes a verb
+  // that only the serving clause supplies. Nothing serving is not an edge — it is every new
+  // project, and on this product's own tenant it is every environment but one.
+  assert.equal(
+    flagListAnswerLine(counts({ total: 2, neverSwitched: 2 }), 'production'),
+    'Nothing is on in production — 2 features have never been turned on here.'
+  )
+  assert.equal(
+    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
+    'Nothing is on in production — 1 feature has never been turned on here.'
+  )
+  assert.equal(
+    flagListAnswerLine(counts({ total: 2, switchedOff: 2 }), 'preview'),
+    'Nothing is on in preview — 2 are deliberately switched off.'
+  )
+})
+
+test('every combination of the three counts produces a grammatical sentence', () => {
+  // The property behind the bug, asserted exhaustively rather than at one shape: whatever the mix,
+  // the line ends in a full stop, has no doubled space, and never reads "is <number>" — which is
+  // exactly what the broken stem produced.
+  for (let serving = 0; serving <= 2; serving += 1) {
+    for (let off = 0; off <= 2; off += 1) {
+      for (let never = 0; never <= 2; never += 1) {
+        const total = serving + off + never
+        const line = flagListAnswerLine(
+          counts({ total, serving, switchedOff: off, neverSwitched: never }),
+          'production'
+        )
+        const at = `${serving}/${off}/${never}`
+        assert.match(line, /\.$/, `no full stop at ${at}: ${line}`)
+        assert.ok(!line.includes('  '), `doubled space at ${at}: ${line}`)
+        assert.ok(!/\bis \d/.test(line), `reads as a stem plus a number at ${at}: ${line}`)
+      }
+    }
+  }
 })

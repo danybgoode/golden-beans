@@ -54,6 +54,7 @@ export default async function FlagsPage({
     <ProductShell
       projectSlug={projectSlug}
       section="ship"
+      railActive="flags"
       railTop={<EnvironmentPicker basePath={`/app/flags/${projectSlug}`} params={listParams} />}
     >
       <main>

@@ -216,6 +216,28 @@ export function flagListAnswerLine(summary: FlagListSummaryCounts, environment: 
   // Kept as a real sentence rather than an assertion because a fourth state added later would land
   // here, and a page reading "42 features." is a degraded answer, not a crash.
   if (clauses.length === 0) return `${summary.total} features in ${environment}.`
+
+  // ⚠️ **"<env> is …" only reads as English when something IS serving.** The first version glued
+  // that stem onto whatever clauses survived, so a project with nothing switched on rendered
+  // "production is 2 never turned on here." Caught by the authed suite once the fixture stopped
+  // being polluted with seeded flags — NOT by the unit tests, which asserted the CLAUSES and never
+  // the assembled sentence for this case.
+  //
+  // Nothing serving is not an edge: it is every new project, and on this product's own tenant it is
+  // every environment but one. So it gets its own sentence rather than a stem that assumes a verb.
+  if (summary.serving === 0) {
+    const off =
+      summary.switchedOff > 0
+        ? `${summary.switchedOff} ${summary.switchedOff === 1 ? 'is' : 'are'} deliberately switched off`
+        : ''
+    const dormant =
+      summary.neverSwitched > 0
+        ? `${summary.neverSwitched} ${summary.neverSwitched === 1 ? 'feature has' : 'features have'} never been turned on here`
+        : ''
+    const tail = [off, dormant].filter((part) => part !== '').join(', and ')
+    return tail === '' ? `Nothing is on in ${environment}.` : `Nothing is on in ${environment} — ${tail}.`
+  }
+
   const last = clauses[clauses.length - 1]
   const sentence = clauses.length === 1 ? last : `${clauses.slice(0, -1).join(', ')} and ${last}`
   return `${environment} is ${sentence}.`

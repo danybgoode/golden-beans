@@ -44,6 +44,7 @@ export async function ProductShell({
   projectSlug,
   section,
   railTop,
+  railActive,
 }: {
   children: React.ReactNode
   projectSlug?: string
@@ -54,6 +55,8 @@ export async function ProductShell({
    * environment is, so the section that HAS one supplies it.
    */
   railTop?: React.ReactNode
+  /** Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`. */
+  railActive?: string
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
@@ -307,6 +310,7 @@ export async function ProductShell({
           <ConsoleRail
             links={railLinksFor(section, links)}
             top={railTop}
+            activeSegment={railActive}
             label={section === 'today' ? undefined : `In ${section[0].toUpperCase()}${section.slice(1)}`}
           />
         )}

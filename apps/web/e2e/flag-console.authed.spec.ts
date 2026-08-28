@@ -52,7 +52,12 @@ test.describe('the flag console, signed in', () => {
     // WHAT PRODUCTION IS SERVING" in uppercase mono — a column-label style used as body copy
     // (Do-not #3). The approved design replaces it with the answer line, which says the same thing
     // and also names WHICH features are serving.
-    await expect(page.locator('.answer')).toContainText('serving')
+    // Asserted on the SHAPE, not the word "serving": this fixture tenant has nothing switched on,
+    // where the correct sentence is "Nothing is on in production — …". The first version demanded
+    // "serving" and failed on a correct page, which is the same mistake as the broken stem it was
+    // meant to guard — assuming every project has something on.
+    await expect(page.locator('.answer')).toContainText('production')
+    await expect(page.locator('.answer')).toContainText(/\.$/)
 
     // Story 1.3's actual promise — a filtered view is an ADDRESS. Asserted by navigating to one
     // directly rather than by clicking, because "survives a refresh and a paste into another
@@ -214,7 +219,7 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
       // Fewer than two dormant flags in this fixture — the collapse is deliberately not rendered
       // (it would hide as many rows as the summary it adds). Assert THAT, rather than passing
       // silently on an absence that could equally mean the feature was never built.
-      const rows = await page.locator('table tbody tr').count()
+      const rows = await page.locator('[data-feature-list] .row').count()
       expect(rows, 'no disclosure AND no rows — the list did not render at all').toBeGreaterThan(0)
       return
     }

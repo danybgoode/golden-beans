@@ -24,6 +24,7 @@ export function ConsoleRail({
   links,
   top,
   label,
+  activeSegment,
 }: {
   links: readonly ProjectSurfaceLink[]
   /**
@@ -37,6 +38,18 @@ export function ConsoleRail({
   top?: React.ReactNode
   /** The group label above the links. "In Ship" in the design, not a generic word. */
   label?: string
+  /**
+   * The route segment currently being viewed, so the rail can mark it.
+   *
+   * ⚠️ Without this the active-state rule in `console.css` was DEAD CSS: the rail rendered a plain
+   * `<a>` with no `aria-current`, so nothing ever matched `a[aria-current='page']` and no rail item
+   * was ever highlighted (cross-review, agy, PR #124). A styling rule that can never match looks
+   * exactly like a rule that works until someone opens the page.
+   *
+   * `aria-current="page"` rather than a class, so the state a sighted reader sees and the one a
+   * screen reader hears are the same attribute.
+   */
+  activeSegment?: string
 }) {
   if (links.length === 0 && top === undefined) return null
 
@@ -60,7 +73,9 @@ export function ConsoleRail({
               The badge went with it. A surface only ever appears here when its gate is OPEN, so
               `GATED` was labelling the one state it could never be in.
             */}
-            <a href={link.href}>{link.label}</a>
+            <a href={link.href} aria-current={link.routeSegment === activeSegment ? 'page' : undefined}>
+              {link.label}
+            </a>
           </li>
         ))}
       </ul>

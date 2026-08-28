@@ -204,10 +204,19 @@
 
 .is-console .console-rail {
   padding: 18px 14px 40px;
-  position: sticky;
-  top: 98px;
-  height: calc(100vh - 98px);
-  overflow-y: auto;
+}
+/* ⚠️ `position: sticky` + `height: calc(100vh - 98px)` are DESKTOP-ONLY, and leaving them out of
+   this query was a real bug (cross-review, agy, PR #124, Blocking — and correct). Below 1100px the
+   body is block layout, so a full-viewport-height rail pushes the entire page content off screen.
+   Same class as the grid bug one commit earlier: a rule written for the two-column frame, applied
+   at every width. `mobile-heuristics` did not catch it because its routes render no rail. */
+@media (min-width: 1100px) {
+  .is-console .console-rail {
+    position: sticky;
+    top: 98px;
+    height: calc(100vh - 98px);
+    overflow-y: auto;
+  }
 }
 .is-console .console-rail ul {
   display: flex;
@@ -263,6 +272,62 @@
     border-right: 1px solid var(--line);
   }
 }
+/* ── the environment picker, in the rail (Do-not #5) ──────────────────────────────────────
+   It rendered completely unstyled: `.envpick` and `.env-dot` had no rules at all, so the control
+   the design puts at the top of the rail came out as three bare links (cross-review, agy). */
+.is-console .envpick {
+  margin-bottom: 22px;
+}
+.is-console .envpick ul {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.is-console .envpick a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  color: var(--dim);
+  text-decoration: none;
+  transition:
+    border-color var(--t),
+    background var(--t),
+    color var(--t);
+}
+.is-console .envpick a:hover {
+  border-color: var(--gold-deep);
+  color: var(--crema);
+}
+.is-console .envpick a[aria-current='true'] {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--crema);
+  font-weight: 600;
+}
+.is-console .env-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--dim-2);
+}
+.is-console .env-dot.production {
+  background: var(--gold);
+}
+.is-console .env-dot.preview {
+  background: var(--blue);
+}
+.is-console .env-dot.development {
+  background: var(--dim-2);
+}
+
 .is-console .rail-label {
   display: block;
   font-size: 10.5px;

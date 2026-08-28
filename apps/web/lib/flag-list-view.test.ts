@@ -630,7 +630,10 @@ test('the dormant group collapses, and takes ONLY the never-touched rows', () =>
     ['a', 'c'],
     'a deliberately switched-off flag was collapsed into the dormant group'
   )
-  assert.deepEqual(grouped.dormant.map((r) => r.id), ['b', 'd'])
+  assert.deepEqual(
+    grouped.dormant.map((r) => r.id),
+    ['b', 'd']
+  )
   // Nothing may be lost or duplicated by the split — the reason to assert this separately is that
   // the two filters are written independently and could both drop a state.
   assert.equal(grouped.active.length + grouped.dormant.length, rows.length)
@@ -652,12 +655,14 @@ test('a single dormant row is NOT collapsed — the disclosure would hide one ro
   // Two dormant rows ARE worth collapsing — but only when there is something for them to be
   // collapsed away FROM. This case needs an active row; `[never, never]` alone is the
   // entirely-dormant list, which deliberately does not group (see the regression test below).
-  const two = groupDormantFlagRows(
-    [stateRow('a', 'on'), stateRow('b', 'never'), stateRow('c', 'never')],
-    { narrowed: false }
-  )
+  const two = groupDormantFlagRows([stateRow('a', 'on'), stateRow('b', 'never'), stateRow('c', 'never')], {
+    narrowed: false,
+  })
   assert.equal(two.grouped, true, 'two dormant rows beside an active one are worth collapsing')
-  assert.deepEqual(two.dormant.map((r) => r.id), ['b', 'c'])
+  assert.deepEqual(
+    two.dormant.map((r) => r.id),
+    ['b', 'c']
+  )
 })
 
 test('the dormant group pages at 15, not at the list page size', () => {
@@ -665,20 +670,34 @@ test('the dormant group pages at 15, not at the list page size', () => {
   assert.notEqual(DORMANT_PAGE_SIZE, FLAG_LIST_PAGE_SIZE)
 })
 
-test("the `never` filter is EXACT, while `off` stays the union its chip is labelled with", () => {
+test('the `never` filter is EXACT, while `off` stays the union its chip is labelled with', () => {
   // Added additively by Story 3.1. `off` must keep meaning "not on" — its chip reads "Not on" and
   // existing bookmarks carry `state=off` — while `never` gives the dormant disclosure an exact
   // destination. Asserting both in one test is the point: it is the pair that could drift.
   const rows = [stateRow('a', 'on'), stateRow('b', 'off'), stateRow('c', 'never')]
-  assert.deepEqual(filterFlagRowsByState(rows, 'never').map((r) => r.id), ['c'])
-  assert.deepEqual(filterFlagRowsByState(rows, 'off').map((r) => r.id), ['b', 'c'], '`off` stopped meaning "not on"')
-  assert.deepEqual(filterFlagRowsByState(rows, 'on').map((r) => r.id), ['a'])
+  assert.deepEqual(
+    filterFlagRowsByState(rows, 'never').map((r) => r.id),
+    ['c']
+  )
+  assert.deepEqual(
+    filterFlagRowsByState(rows, 'off').map((r) => r.id),
+    ['b', 'c'],
+    '`off` stopped meaning "not on"'
+  )
+  assert.deepEqual(
+    filterFlagRowsByState(rows, 'on').map((r) => r.id),
+    ['a']
+  )
   assert.equal(filterFlagRowsByState(rows, 'all').length, 3)
 })
 
 test('`state=never` survives a round trip through the URL, so the dormant link is bookmarkable', () => {
   const parsed = parseFlagListParams({ state: 'never' }, ENVIRONMENTS, 'production')
-  assert.equal(parsed.state, 'never', 'an unrecognised state falls back to `all` — `never` was not allow-listed')
+  assert.equal(
+    parsed.state,
+    'never',
+    'an unrecognised state falls back to `all` — `never` was not allow-listed'
+  )
 })
 
 test('a list that is ENTIRELY dormant is not grouped — otherwise the page renders nothing', () => {
