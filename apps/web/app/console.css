@@ -543,9 +543,21 @@
   flex: 1 1 auto;
   min-width: 0;
 }
+/* ⚠️ The font must be set on the `<code>` too. `.row-key` is the `<a>`; the browser's default
+   `code { font-family: monospace }` wins inside it, so the feature key rendered in bare `monospace`
+   while every rule here said IBM Plex Mono. The measured-spec check caught it the first time it
+   ran — which is the entire argument for having that layer rather than describing the table in
+   prose (fresh reviewer, round 2, S8). */
+.is-console .row-key,
+.is-console .row-key code,
+.is-console .answer .mono {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+.is-console .answer .mono {
+  color: var(--gold-hot);
+}
 .is-console .row-key {
   display: block;
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
   font-size: 13.5px;
   font-weight: 500;
   color: var(--crema);

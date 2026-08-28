@@ -270,3 +270,100 @@ test('the feature list survives a 390px phone', async ({ page }) => {
   // And the page itself must not scroll sideways.
   expect(measured.bodyScrollWidth).toBeLessThanOrEqual(measured.innerWidth)
 })
+
+// ── The measured spec, asserted instead of described ──────────────────────────────────────────
+//
+// `CONSOLE-CONTRACT.md` §"How the gate works" specifies three layers: the three numbers above, a
+// computed-style table over every row of the measured spec, and a screenshot diff. Only the first
+// existed, so the spec table — feature row h78, pill h26, stat number 26/600 mono, rail item h36 —
+// was enforced by PROSE, which is the failure mode the contract was written to end (fresh reviewer,
+// round 2, S8).
+//
+// This is layer 2. Every number below is quoted from the contract's table, and each row names the
+// element it measures so a failure says which line of the design was broken.
+//
+// ⚠️ Layer 3 (the screenshot diff against `render-reference.mjs`) is NOT built. Stated rather than
+// implied: it needs a committed baseline per reference state, and a baseline that drifts from the
+// design is worse than none. The style table catches what it was for — sizes, weights and box
+// heights — and the pair of screenshots in the PR is the human check meanwhile.
+
+type SpecRow = {
+  what: string
+  selector: string
+  fontSize?: string
+  fontWeight?: string
+  fontFamily?: RegExp
+  height?: number
+  width?: number
+  /** Heights tolerate ±1px per the contract; font size and weight are exact. */
+  tolerance?: number
+}
+
+const MEASURED_SPEC: SpecRow[] = [
+  { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
+  { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
+  { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },
+  { what: 'stat number', selector: '.stat .n', fontSize: '26px', fontWeight: '600', fontFamily: /Plex Mono/ },
+  { what: 'stat label', selector: '.stat .k', fontSize: '12.5px', fontWeight: '400' },
+  { what: 'list header row', selector: '.listhead', fontSize: '11px', fontWeight: '600', height: 36 },
+  { what: 'feature key', selector: '.row-key code', fontSize: '13.5px', fontFamily: /Plex Mono/ },
+  { what: 'feature description', selector: '.row-desc', fontSize: '12.5px', fontWeight: '400' },
+  { what: 'state pill', selector: '.pill', fontSize: '12px', fontWeight: '600', height: 26 },
+  { what: 'rail item', selector: '.console-rail a', fontSize: '13.5px', fontWeight: '600', height: 36 },
+]
+
+test('every row of the measured spec matches the built stylesheet', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the measured spec describes the LIT console; run with both gates on')
+
+  await page.setViewportSize(VIEWPORT)
+  await page.goto(`/app/flags/${tenant().slug}?env=production`)
+  await page.waitForLoadState('networkidle')
+
+  const measured = await page.evaluate(
+    (rows) => {
+      return rows.map((row) => {
+        const element = document.querySelector(row.selector)
+        if (element === null) return { what: row.what, missing: true }
+        const style = getComputedStyle(element)
+        const box = element.getBoundingClientRect()
+        return {
+          what: row.what,
+          missing: false,
+          fontSize: style.fontSize,
+          fontWeight: style.fontWeight,
+          fontFamily: style.fontFamily,
+          height: Math.round(box.height),
+          width: Math.round(box.width),
+        }
+      })
+    },
+    MEASURED_SPEC.map(({ what, selector }) => ({ what, selector }))
+  )
+
+  for (const [index, spec] of MEASURED_SPEC.entries()) {
+    const got = measured[index]
+    // A missing element is reported, never skipped: "the selector found nothing" and "the value is
+    // right" must not look the same from the outside.
+    expect.soft(got.missing, `[spec] ${spec.what} (${spec.selector}) did not render`).toBe(false)
+    if (got.missing) continue
+
+    if (spec.fontSize !== undefined) {
+      expect.soft(got.fontSize, `[spec] ${spec.what} font-size`).toBe(spec.fontSize)
+    }
+    if (spec.fontWeight !== undefined) {
+      expect.soft(got.fontWeight, `[spec] ${spec.what} font-weight`).toBe(spec.fontWeight)
+    }
+    if (spec.fontFamily !== undefined) {
+      expect.soft(got.fontFamily, `[spec] ${spec.what} font-family`).toMatch(spec.fontFamily)
+    }
+    if (spec.height !== undefined) {
+      const slack = spec.tolerance ?? 1
+      expect
+        .soft(
+          Math.abs((got.height ?? 0) - spec.height),
+          `[spec] ${spec.what} height is ${got.height}px, contract says ${spec.height}px`
+        )
+        .toBeLessThanOrEqual(slack)
+    }
+  }
+})
