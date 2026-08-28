@@ -61,6 +61,17 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   )
   // Present in every state and asserted nowhere until now, so deleting the logo would have passed.
   await expect(page.locator('.brand-lockup')).toHaveCount(1)
+  // ⚠️ And it goes to `/app`. Story 3.5 deletes the `Home` link on the strength of this being its
+  // duplicate — "it loses a link, not a route" — so the claim is asserted where it is relied on
+  // rather than left in the comment that makes it.
+  await expect(page.locator('.brand-lockup')).toHaveAttribute('href', '/app')
+
+  // ── What Story 3.5 removed from THIS page ───────────────────────────────────────────────────
+  // `Home` did render anonymously — it sat outside the `activeProject` guard — so its deletion is a
+  // real change to what a public visitor sees, and this is the assertion that records it. `Sections`
+  // never rendered here (it needs a session), which is why its absence is asserted in the authed
+  // suite instead: an absence that was already true proves nothing about a deletion.
+  await expect(page.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0)
 
   // None of the signed-in chrome. Each of these needs a session to mean anything: the tabs list
   // surfaces you are entitled to, the identity slot names your project and your account, and the
@@ -109,5 +120,20 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
         'CONSOLE_SHELL_ENABLED is unset for this run: the absence assertions above hold trivially. ' +
         'Re-run with CONSOLE_SHELL_ENABLED=true to exercise the regression this spec guards.',
     })
+  }
+})
+
+
+test('the manifest the public chrome links to actually serves', async ({ page }) => {
+  // ⚠️ A16's correction, asserted end to end. Story 3.5 as originally written removed `/llms.txt`'s
+  // "human nav link" — which IS `Agent notes`, and lives only in the branch an anonymous visitor
+  // gets. Following that sentence literally would have left the public demo dashboards with a route
+  // to the manifest that nobody can click, and the obvious repair when this suite went red would
+  // have been deleting the assertion that caught it.
+  //
+  // So the link's DESTINATION is followed, not just read: `/install` and `/llms.txt` both answer.
+  for (const path of ['/install', '/llms.txt']) {
+    const response = await page.goto(path)
+    expect(response?.status(), `${path} must still serve`).toBe(200)
   }
 })

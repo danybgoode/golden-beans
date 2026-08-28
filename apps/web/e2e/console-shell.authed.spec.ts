@@ -50,14 +50,29 @@ function tenantSlug(): string {
 test.describe('with CONSOLE_SHELL_ENABLED off', () => {
   test.skip(GATE_ON, 'the gate is on for this run')
 
-  test('the legacy header is intact — Home, Sections, Connect and Agent notes all render', async ({
+  test('the gate-off header is the PUBLIC chrome — Connect and Agent notes, and nothing else', async ({
     page,
   }) => {
+    // ⚠️ **This assertion was reduced by Story 3.5, and the reduction IS the story.** It used to
+    // read "the legacy header is intact — Home, Sections, Connect and Agent notes all render",
+    // because Sprints 1 and 2 kept this branch byte-identical for the dark launch. That guarantee
+    // is discharged (A19 — the console shipped enabled), and 3.5 deletes the two entries the
+    // console replaced.
+    //
+    // What survives is asserted POSITIVELY as well as negatively, which is the half that matters:
+    // `Connect` and `Agent notes` are an anonymous visitor's only route to `/install` and
+    // `/llms.txt`, and the original Story 3.5 would have deleted them with "the now-dead gate-off
+    // branch" (A16).
     await page.goto('/app')
-    await expect(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Connect', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Agent notes', exact: true })).toBeVisible()
-    await expect(page.locator('.product-shell__sections summary')).toBeVisible()
+
+    // Gone, in the ONE state where they used to render: signed in, gate off.
+    await expect(page.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0)
+    await expect(page.locator('.product-shell__sections')).toHaveCount(0)
+
+    // ...and the logo still goes to /app, which is why deleting `Home` lost a link and not a route.
+    await expect(page.locator('.brand-lockup')).toHaveAttribute('href', '/app')
   })
 
   test('none of the new console chrome exists while the gate is off', async ({ page }) => {

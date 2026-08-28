@@ -1090,70 +1090,16 @@ body {
   color: inherit;
 }
 
-/* app-shell-and-agent-rail S1.3 — the section nav.
-   One disclosure serves both widths: a pull-up sheet on a phone, an inline wrapping row from
-   640px up (see the @media block below — the breakpoint this comment claimed was 720px until
-   2026-08-27; cross-review found the discrepancy, and it had been wrong since the rule was written).
-   `list-style: none` on the summary is Safari's
-   requirement, not a preference — without it the marker triangle survives ::-webkit-details-marker
-   removal in some versions. */
-.product-shell__sections summary {
-  cursor: pointer;
-  list-style: none;
-}
+/* ── The `Sections` disclosure's styling is DELETED with the disclosure (Story 3.5) ─────────
+   `app-shell-and-agent-rail` S1.3's section nav — `.product-shell__sections`,
+   `.product-shell__sections-panel` and the `[data-surface-status='gated']` badge — rendered in the
+   legacy branch only, and console-ia-overhaul Story 3.5 removes that markup. Its rules go with it,
+   here and in the >=640px block below.
 
-.product-shell__sections summary::-webkit-details-marker {
-  display: none;
-}
-
-.product-shell__sections-panel {
-  position: absolute;
-  right: 8px;
-  bottom: calc(100% + 10px);
-  left: 8px;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--espresso);
-  box-shadow: var(--elevation-overlay);
-}
-
-.product-shell__sections-panel ul {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.product-shell__sections-panel a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--roast-2);
-  color: var(--crema);
-  font-size: 13px;
-}
-
-.product-shell__sections-panel a small {
-  display: block;
-  margin-top: 2px;
-  color: var(--dim);
-  font-size: 11px;
-}
-
-/* A surface that rides an enablement gate is labelled as one. It is only linked when its gate is
-   open (lib/project-route-inventory.ts filters the closed ones out), so this says "this can be
-   switched off", never "this is broken". */
-.product-shell__sections-panel a[data-surface-status='gated']::after {
-  content: 'gated';
-  margin-left: 8px;
-  color: var(--dim);
-  font: 600 9px var(--mono);
-  text-transform: uppercase;
-}
+   Swept rather than left: "deleting a component leaves a trail in the stylesheet, and the trail
+   comes with confident prose attached" (Roadmap/LEARNINGS.md) — the block that used to sit here
+   carried a paragraph explaining why the disclosure was not expanded inline on desktop, which is
+   exactly the shape of dead CSS that reads as evidence to the next reader. */
 
 /* console-ia-overhaul S1.3 — the four-destination header.
    These rules sit ABOVE `.product-shell main` and below the legacy `__sections` block on purpose:
@@ -2310,22 +2256,6 @@ a.stat-card:hover {
     border: 0;
     background: transparent;
     box-shadow: none;
-  }
-
-  /* Same disclosure, other direction: a dropdown under the header rather than a sheet above the
-     bottom bar. Deliberately NOT an always-open inline row — revealing a closed <details>' content
-     with CSS is not reliable across engines (the content lives in an unassigned shadow slot), and
-     duplicating the list in the DOM to work around that would read it twice to a screen reader. */
-  .product-shell__sections {
-    position: relative;
-  }
-
-  .product-shell__sections-panel {
-    top: calc(100% + 10px);
-    right: auto;
-    bottom: auto;
-    left: 0;
-    width: max(280px, 24vw);
   }
 
   .product-shell main {
