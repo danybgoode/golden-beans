@@ -429,6 +429,69 @@ const DEFERRED_SPEC_ROWS = [
   },
 ] as const
 
+// ── The FEATURE page, which the gate did not look at until Story 3.2 ─────────────────────────
+//
+// ⚠️ A22 makes the design binding for **every signed-in route**, and this gate covered exactly one:
+// Ship › Features. The feature's own page is the second-most-visited surface in the console (every
+// row on that list leads here), it was still rendering the pre-contract shape — a 48px `h1`, a
+// `Panel` stack, tag-styled tabs — and nothing could go red about it. Story 3.2 rebuilt it and this
+// is the assertion that keeps it rebuilt.
+//
+// Deliberately the SAME two properties as the list's, not a second full spec table: the h1 shape and
+// the no-scroll promise are what the contract's Do-not list is mostly about, and a page-specific
+// table would drift from the one above rather than extend it.
+test('the feature page matches the contract too', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the feature page renders behind both gates; run with both on')
+
+  await page.setViewportSize(VIEWPORT)
+  await page.goto(`/app/flags/${tenant().slug}?env=production`)
+  await page.waitForLoadState('networkidle')
+
+  // Reached by CLICKING, not by constructing a URL — which is the epic's outcome test in miniature
+  // and also means this cannot pass against a key that no longer exists.
+  const firstFeature = page.locator('[data-feature-list] .row-key').first()
+  test.skip((await firstFeature.count()) === 0, 'this tenant renders no feature rows')
+  await firstFeature.click()
+  await page.waitForLoadState('networkidle')
+  await page.screenshot({ path: 'test-results/console-visual/feature.png' })
+
+  const measured = await page.evaluate(() => {
+    const h1 = document.querySelector('main h1')
+    const style = h1 === null ? null : getComputedStyle(h1)
+    return {
+      hasH1: h1 !== null,
+      fontSize: style?.fontSize ?? '',
+      fontWeight: style?.fontWeight ?? '',
+      lines: h1 === null ? 0 : h1.getClientRects().length,
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      tabs: document.querySelectorAll('.tabs a').length,
+      current: document.querySelectorAll('.tabs a[aria-current="page"]').length,
+    }
+  })
+
+  expect(measured.hasH1, 'the feature page has no h1').toBe(true)
+  expect.soft(measured.fontSize, '[spec] feature page h1 font-size').toBe('23px')
+  expect.soft(measured.fontWeight, '[spec] feature page h1 font-weight').toBe('700')
+  // Do-not #1 is about the CONSEQUENCE, not the number: at 48px a real tenant's key wrapped to four
+  // lines and spent ~200px before any content. One line is the property that was lost.
+  expect.soft(measured.lines, '[spec] the feature page h1 wraps to more than one line').toBe(1)
+  expect
+    .soft(
+      measured.scrollHeight,
+      `[1] the feature page is ${measured.scrollHeight}px tall in a ${measured.innerHeight}px viewport`
+    )
+    .toBeLessThanOrEqual(measured.innerHeight)
+  // Six tabs, exactly one current. Zero would leave a reader with no idea where they are; two is
+  // the `home`/`today` class of bug the shell's own spec pins one level up.
+  //
+  // ⚠️ Counted on `.tabs a[aria-current]`, not on `[role="tab"]`. These are LINKS — activating one
+  // navigates — so promising a tablist widget with no arrow-key handling behind it would be an ARIA
+  // claim the page cannot keep. Same markup the shell's section tabs use.
+  expect.soft(measured.tabs, '[spec] the feature page renders six tabs').toBe(6)
+  expect.soft(measured.current, '[spec] exactly one tab is current').toBe(1)
+})
+
 test('the deferred spec rows are named, so the gate does not look complete', () => {
   // This test exists to make the omission visible in the suite's own output rather than in a
   // comment nobody runs. It cannot fail; that is deliberate and stated — its job is to print.

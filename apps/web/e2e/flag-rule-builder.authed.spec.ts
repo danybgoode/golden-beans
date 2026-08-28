@@ -28,20 +28,14 @@ import {
   explainFlagEvaluation,
   type FlagDefinition,
 } from '@golden-frijoles/sdk'
-import { createClient } from '@supabase/supabase-js'
 import { SCENARIO_FLAG_KEY, readTenantRecord } from './helpers/authed-fixture'
+import { seedFlagVersion } from './helpers/seed-flag'
 import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
   if (!slug) throw new Error('the flag rule builder smoke requires the auth-setup project')
   return slug
-}
-
-function tenant(): { projectId: string; userId: string } {
-  const record = readTenantRecord()
-  if (!record?.projectId) throw new Error('the flag rule builder smoke requires the auth-setup project')
-  return { projectId: record.projectId, userId: record.userId }
 }
 
 const flagKey = () => `builder.smoke_${Date.now().toString(36)}`
@@ -55,11 +49,10 @@ const flagKey = () => `builder.smoke_${Date.now().toString(36)}`
  * with the "New feature" wizard — which creates a plain on/off definition and cannot express the
  * arbitrary rules, rollouts and metadata these suites need as FIXTURES.
  *
- * So the fixture is written the way `auth.setup.ts` writes its own: through
- * `create_flag_definition_version`, the same RPC `createFlagDefinitionVersionAction` calls after it
- * has resolved ownership and parsed the definition. Nothing about what these tests ASSERT changes —
- * they are about how a version RENDERS (its bars, its diff, its preview), and the surface that used
- * to supply them was never the subject.
+ * The write itself lives in `helpers/seed-flag.ts`, shared with the Story 3.2 suite that needed the
+ * same thing in the same story. Nothing about what these tests ASSERT changes — they are about how
+ * a version RENDERS (its bars, its diff, its preview), and the surface that used to supply them was
+ * never the subject.
  *
  * ⚠️ Stated rather than quietly swapped: this trades one thing away. While the textarea existed,
  * every one of these tests incidentally exercised it. It does not exist on the console any more, so
@@ -74,23 +67,7 @@ async function createVersion(
   value: FlagDefinition,
   reason: string
 ) {
-  const url = process.env.SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !serviceKey) {
-    throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set to seed a fixture version')
-  }
-  const { projectId, userId } = tenant()
-  const db = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
-  const { error } = await db.rpc('create_flag_definition_version', {
-    p_project_id: projectId,
-    p_flag_key: key,
-    p_definition: value,
-    p_reason: reason,
-    p_actor_user_id: userId,
-  })
-  if (error) throw new Error(`could not seed ${key}: ${error.message}`)
+  await seedFlagVersion(key, value, reason)
 }
 
 type Page = import('@playwright/test').Page
@@ -128,9 +105,11 @@ async function gotoFlag(page: Page, slug: string, key: string, tab: 'value' | 'h
  * Where the rule BUILDER now lives, which — like everything else in this file — depends on the gate.
  *
  * DARK: on the flags list, beside the JSON textarea (`flag-manager.tsx`).
- * LIT:  on a feature's own page, Value tab (`[flagKey]/flag-authoring.tsx`) — console-ia-overhaul
- *       Story 3.3 removed the list's copy along with the textarea, because both carried a FREE-TEXT
- *       flag key and the console's creation control is the "New feature" wizard now (A21).
+ * LIT:  on a feature's own page, **Targeting** tab (`[flagKey]/flag-authoring.tsx`) —
+ *       console-ia-overhaul Story 3.3 removed the list's copy along with the textarea, because both
+ *       carried a FREE-TEXT flag key and the console's creation control is the "New feature" wizard
+ *       now (A21); Story 3.2 then moved it off Value, where it and the preview together made the
+ *       page 3346px tall in a 960px viewport.
  *
  * The builder's own key field stays editable on the feature page, which is why these tests can
  * still create a new key from it: `FlagAuthoring` follows the key when it changes rather than
@@ -141,7 +120,7 @@ async function gotoBuilder(page: Page, slug: string) {
     await page.goto(`/app/flags/${slug}`)
     return
   }
-  await page.goto(`/app/flags/${slug}/${encodeURIComponent(SCENARIO_FLAG_KEY)}`)
+  await page.goto(`/app/flags/${slug}/${encodeURIComponent(SCENARIO_FLAG_KEY)}?tab=targeting`)
 }
 
 /**
@@ -157,6 +136,16 @@ const flagOf = (page: Page, key: string) =>
     : page.locator('article').filter({ has: page.getByRole('heading', { name: key }) })
 
 /**
+ * The rows of the IMMUTABLE VERSIONS table, wherever it now lives.
+ *
+ * Lit, the feature page carries two tables — the per-environment summary Story 3.2 put above the
+ * tabs, and the versions table on History — so "the tbody rows under main" is no longer one thing.
+ * Dark, the flag's `<article>` has only the one.
+ */
+const versionRows = (page: Page, key: string) =>
+  consoleLit() ? page.locator('.data-table tbody tr') : flagOf(page, key).locator('tbody tr')
+
+/**
  * Turn `key` on in development, wherever that control now lives.
  *
  * DARK: the per-version button in the definitions stack, labelled `Activate v1`.
@@ -165,7 +154,10 @@ const flagOf = (page: Page, key: string) =>
  *       "Activate". Both activate the same version through the same server action; only the surface
  *       and the wording changed.
  *
- * Leaves the page on the destination's Value tab when lit, which is where the preview lives.
+ * ⚠️ Leaves the page on the destination's **Value** tab when lit, which is where the SWITCH lives.
+ * The preview moved to Targeting in Story 3.2, so a caller that wants it navigates again — see the
+ * preview suite below, which now does. (The old sentence said Value "is where the preview lives",
+ * and it was true when it was written.)
  */
 async function turnOnInDevelopment(page: Page, slug: string, key: string) {
   if (!consoleLit()) {
@@ -567,6 +559,8 @@ test.describe('preview as a user', () => {
 
     await turnOnInDevelopment(page, slug, key)
 
+    // The preview lives on Targeting since Story 3.2 — `turnOnInDevelopment` leaves us on Value.
+    if (consoleLit()) await page.goto(`/app/flags/${slug}/${encodeURIComponent(key)}?tab=targeting`)
     const preview = flagOf(page, key).locator('.flag-preview')
     await expect(preview).toBeVisible()
     // Story 3.3's empty state: it tells a PM what to do rather than showing a blank result.
@@ -620,6 +614,11 @@ test.describe('preview as a user', () => {
     // the preview runs on Value, so a bare `reload()` would re-render the tab with no table on it
     // and count zero rows. `gotoFlag` is a reload plus the right address.
     await gotoFlag(page, slug, key, 'history')
-    await expect(flagOf(page, key).locator('tbody tr')).toHaveCount(1)
+    // ⚠️ Scoped to the VERSIONS table, not to every `tbody tr` under `main`. Story 3.2 added a
+    // second table to this page — the per-environment summary above the tabs — so the loose
+    // locator counted 4 rows for a flag with one version and failed on a correct build. Fourth
+    // over-broad locator in this file, and the same lesson each time: scope by the thing that
+    // distinguishes the surface, never by the tag.
+    await expect(versionRows(page, key)).toHaveCount(1)
   })
 })

@@ -42,6 +42,7 @@ const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/[flagKey]/flag-switch.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-version-serve.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-authoring.tsx',
+  '../app/app/flags/[projectSlug]/[flagKey]/feature-panes.tsx',
   '../app/app/flag-credentials/[projectSlug]/page.tsx',
   '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
   '../app/app/flag-audit/[projectSlug]/page.tsx',

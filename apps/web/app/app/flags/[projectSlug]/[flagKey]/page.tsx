@@ -20,12 +20,12 @@ import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { isFlagConsoleEnabled, isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
+import { getFeatureFunnelByProjectId } from '@/lib/tars-query'
+import { getFeatureImpactByProjectId } from '@/lib/north-star-query'
 import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
 import { projectFlagRows } from '@/lib/flag-list-view'
 import { evaluateVersionDefault } from '@/lib/flag-environment-view'
 import { formatUtc } from '@/lib/format-utc'
-import { Panel } from '@/components/ui/Panel'
-import { Badge } from '@/components/ui/Badge'
 import { ProductShell } from '@/components/product/ProductShell'
 import { FlagInsight } from '../flag-insight'
 import { FlagPreview } from '../flag-preview'
@@ -33,10 +33,11 @@ import { FlagAuthoring } from './flag-authoring'
 import { FlagSwitch, type FlagSwitchEnvironment } from './flag-switch'
 import { FlagVersionServe, type ServeTarget } from './flag-version-serve'
 import { FLAG_STATE_PRESENTATION, TYPE_LABEL, CRITICALITY_LABEL } from '../flag-vocabulary'
+import { FunnelPane, ImpactPane } from './feature-panes'
 
 export const dynamic = 'force-dynamic'
 
-const TABS = ['value', 'history', 'settings'] as const
+const TABS = ['value', 'targeting', 'funnel', 'impact', 'history', 'settings'] as const
 type Tab = (typeof TABS)[number]
 
 // Flagsmith's Edit Feature modal is tabbed Value · Segment Overrides · Identity Overrides · Usage ·
@@ -48,6 +49,22 @@ type Tab = (typeof TABS)[number]
 // becomes code.
 const TAB_LABEL: Record<Tab, string> = {
   value: 'Value',
+  // console-ia-overhaul · Story 3.2 — four of the design's seven tabs, and each earns its place.
+  //
+  // `Targeting` holds what used to be crammed onto Value: the rule builder and "preview as a user".
+  // Both answer "WHO gets this", which is what targeting means, and moving them is what makes Value
+  // the one-screen answer to "is it on" that the contract's no-scroll assertion requires — measured
+  // at 3346px in a 960px viewport before this split.
+  //
+  // `Funnel` and `Impact` used to be ROUTES whose own nav descriptions told the reader to edit the
+  // URL — the single line the epic's outcome test is written against.
+  //
+  // `Environments` is the design's seventh; it renders ABOVE the tabs here instead, because "is this
+  // on, and where" is the question somebody opening a feature arrives with, and a tab you have to
+  // find first is not an answer.
+  targeting: 'Targeting',
+  funnel: 'Funnel',
+  impact: 'Impact',
   history: 'History',
   settings: 'Settings',
 }
@@ -143,53 +160,129 @@ export default async function FlagDetailPage({
     }
   })
 
+  // ── Story 3.2 — read ONLY the tab that is open ──────────────────────────────────────────────
+  // Both reads are real queries, so they are paid for only when their pane is being rendered. A
+  // page that fetched a funnel AND an impact on every visit would put two round trips behind the
+  // Value tab, which is the one nearly every visit is for.
+  //
+  // ⚠️ **`…ByProjectId`, not the slug-taking wrapper.** `getFeatureFunnel(slug, key)` resolves the
+  // project from the slug all over again; `requireProjectMembership` above already resolved it
+  // server-side, and re-resolving a tenant from a URL string when you are holding its id is the
+  // shape AGENTS rule #1 exists to keep out of this codebase. Same id, one fewer query, and no
+  // second place where a slug becomes a tenant.
+  const funnel =
+    tab === 'funnel' ? await getFeatureFunnelByProjectId(membership.projectId, projectSlug, flag.key) : null
+  const impact =
+    tab === 'impact' ? await getFeatureImpactByProjectId(membership.projectId, projectSlug, flag.key) : null
+
   return (
     <ProductShell projectSlug={projectSlug} section="ship">
       <main>
-        <h1>
-          <code>{flag.key}</code>
-        </h1>
-        <p>
-          <a href={`/app/flags/${projectSlug}`}>← All features</a>
-        </p>
+        {/* ── The page header, to the contract's shape (A22) ──────────────────────────────────
+            A short title then one sentence of subtitle, `h1` at 23/700 — not the `display` clamp,
+            which rendered a real flag key at 48px across four lines. The key is mono because it is
+            a key; the sentence under it is what the feature DOES, which is the line the list shows.
+
+            "← All features" is gone: the rail's Flags entry is the way back, and it is on screen. */}
+        <div className="page-head">
+          <div>
+            <h1>
+              <code>{flag.key}</code>
+            </h1>
+            <p>
+              {descriptive.description === ''
+                ? 'No description recorded for this feature yet.'
+                : descriptive.description}
+            </p>
+          </div>
+          <div className="spacer" />
+          <span className="tag" aria-label={`Type: ${TYPE_LABEL[descriptive.polarity]}`}>
+            {TYPE_LABEL[descriptive.polarity]}
+          </span>
+          <span className="tag" aria-label={`Risk: ${CRITICALITY_LABEL[descriptive.criticality]}`}>
+            {CRITICALITY_LABEL[descriptive.criticality]}
+          </span>
+        </div>
 
         {/* Story 2.3 reaching this surface: one line per environment, and the three states named.
             The same `projectFlagRows` the list uses, asked once per environment — so this page and
-            the list can never disagree about what "on" means. */}
-        <Panel className="stack-sm">
-          {FLAG_ENVIRONMENTS.map((environment) => {
-            const [row] = projectFlagRows([flag], environment)
-            const presentation = FLAG_STATE_PRESENTATION[row.state]
-            return (
-              <p key={environment} className="row-wrap">
-                <strong>{environment}</strong>
-                <Badge status={presentation.badge}>{presentation.label}</Badge>
-                <span className="data-table__count">{presentation.detail(row)}</span>
-              </p>
-            )
-          })}
-        </Panel>
+            the list can never disagree about what "on" means.
+
+            ⚠️ It sits ABOVE the tabs, not inside one. The design gives this its own "Environments"
+            tab; here it is the page's standing answer to "is this on, and where", because that is
+            the question somebody opening a feature came with, and a tab you have to find first is
+            not an answer. Stated as a deviation rather than left to be spotted. */}
+        <table className="envtable">
+          <caption className="lab">Where this is on</caption>
+          <thead>
+            <tr>
+              <th scope="col">Environment</th>
+              <th scope="col">State</th>
+              <th scope="col">Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FLAG_ENVIRONMENTS.map((environment) => {
+              const [row] = projectFlagRows([flag], environment)
+              const presentation = FLAG_STATE_PRESENTATION[row.state]
+              return (
+                <tr key={environment}>
+                  <td>
+                    <span className="envname">
+                      <span className={`env-dot ${environment}`} />
+                      {environment}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`pill ${row.state}`}>
+                      <span className="dot" />
+                      {presentation.label}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="who">{presentation.detail(row)}</span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
 
         {/* Tabs are links, not client state — same reason the list's filters are (Story 1.3): a tab
-            worth reading is a tab worth sending someone. */}
-        <div className="row-wrap" role="group" aria-label="Feature sections">
+            worth reading is a tab worth sending someone. `.tabs` / `.tab` are the prototype's own
+            page-level tab classes, ported with their `aria-selected` painting, so what a reader
+            sees and what a screen reader hears are one attribute. */}
+        {/* ⚠️ A `<nav>` with `aria-current`, NOT `role="tablist"`.
+            These are links: activating one is a full navigation to a URL, which is the whole point
+            (Story 1.3 — a tab worth reading is a tab worth sending someone). `role="tab"` would
+            promise a JS widget with arrow-key movement between panels, and there is no JS here at
+            all. A first version of this strip did exactly that; the honest markup is the one
+            `ProductShell`'s own section tabs already use, and using the same one twice means a
+            reader learns the pattern once. */}
+        <nav className="tabs" aria-label="Feature sections">
           {TABS.map((candidateTab) => (
             <a
               key={candidateTab}
-              className={`tag ${candidateTab === tab ? 'tag-live' : 'tag-next'}`}
-              aria-current={candidateTab === tab ? 'true' : undefined}
+              className="tab"
+              aria-current={candidateTab === tab ? 'page' : undefined}
               href={candidateTab === 'value' ? basePath : `${basePath}?tab=${candidateTab}`}
             >
               {TAB_LABEL[candidateTab]}
             </a>
           ))}
-        </div>
+        </nav>
 
         {tab === 'value' && (
-          <Panel className="stack">
-            <h2>Value</h2>
+          <div className="pane">
             {/* Story 2.2 — ONE control per environment, naming the environment, with the confirm on
-                the destructive direction only. Money path: this is how a live checkout gets killed. */}
+                the destructive direction only. Money path: this is how a live checkout gets killed.
+
+                ⚠️ **This pane holds ONE thing now.** It used to carry the preview and the rule
+                builder as well, which made the feature page 3346px tall in a 960px viewport — the
+                contract's no-scroll promise broken on the second-most-visited surface in the
+                console. Both moved to Targeting, where they answer the question they were always
+                answering. No heading: the tab above IS the heading, and a 34px `<h2>Value</h2>`
+                under a tab reading "Value" said the same word twice at four times the size. */}
             <FlagSwitch
               slug={projectSlug}
               flagId={flag.id}
@@ -202,29 +295,55 @@ export default async function FlagDetailPage({
               canManage={canManage}
               servingEnabled={servingEnabled}
             />
-            {/* MOVED, not rewritten — same component, same props, same behaviour as on the list
-                page. It answers "what would this user get, and why", which is the question Value
-                exists for. */}
+          </div>
+        )}
+
+        {tab === 'targeting' && (
+          <div className="pane">
+            {/* MOVED, not rewritten — same components, same props, same behaviour. "Preview as a
+                user" answers *what would this person see, and why*, and the rule builder decides
+                *who matches*. Those are one question asked twice, which is what a Targeting tab is
+                for; splitting them across Value and Targeting is what the design does too. */}
             {ruleBuilderEnabled ? (
               <FlagPreview slug={projectSlug} flagId={flag.id} />
             ) : (
-              <p className="data-table__count">
+              <p className="hint">
                 Preview is unavailable while <code>FLAG_RULE_BUILDER_ENABLED</code> is off.
               </p>
             )}
             {canManage && ruleBuilderEnabled && <FlagAuthoring slug={projectSlug} flagKey={flag.key} />}
             {canManage && !ruleBuilderEnabled && (
-              <p className="data-table__count">
-                The rule builder is off. Definition JSON can still be authored on the{' '}
-                <a href={`/app/flags/${projectSlug}`}>features list</a>.
+              <p className="hint">
+                The rule builder is off, so this feature&apos;s rules cannot be changed from here. Its
+                versions are still readable on History.
               </p>
             )}
-          </Panel>
+            {!canManage && (
+              <p className="hint">
+                <strong>Read-only access.</strong> A project owner changes who a feature is served to.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ⚠️ **Neither pane may call `notFound()`** — A4. The pages these came from do exactly that
+            on `feature_not_found`, and a tab that 404s the whole feature page because the OTHER
+            registry has no row would be a regression caused by a missing measurement. The panes take
+            the result and render the absence. */}
+        {tab === 'funnel' && funnel !== null && (
+          <div className="pane">
+            <FunnelPane flagKey={flag.key} result={funnel} />
+          </div>
+        )}
+
+        {tab === 'impact' && impact !== null && (
+          <div className="pane">
+            <ImpactPane flagKey={flag.key} result={impact} />
+          </div>
         )}
 
         {tab === 'history' && (
-          <Panel className="stack">
-            <h2>History</h2>
+          <div className="pane">
             {/* MOVED, not rewritten. FlagInsight carries BOTH the rollout bars and the
                 plain-language version diff, and it is one component — so it lands whole, here,
                 because the diff is what someone opening History came for. The bars appearing under
@@ -290,12 +409,11 @@ export default async function FlagDetailPage({
                 </table>
               </div>
             </div>
-          </Panel>
+          </div>
         )}
 
         {tab === 'settings' && (
-          <Panel className="stack">
-            <h2>Settings</h2>
+          <div className="pane">
             <div className="data-table">
               <div className="data-table__scroll">
                 <table>
@@ -354,7 +472,7 @@ export default async function FlagDetailPage({
                 is enabled in a new deployment.
               </p>
             )}
-          </Panel>
+          </div>
         )}
       </main>
     </ProductShell>

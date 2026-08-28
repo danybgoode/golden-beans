@@ -1412,6 +1412,185 @@
   }
 }
 
+/* ── Story 3.2 — the feature's tabs and the two panes behind them ─────────────────────────────
+   Ported from `console-reference.css`: `.tabs` / `.tab` (the prototype's PAGE-level tab strip —
+   `.modal-tab` is the same control in its modal, and this is a page), `.kpis` / `.kpi`, `.empty`,
+   `.envtable`. The funnel's bars are the prototype's inline `<div>` gradient, given class names
+   here because a repeated inline style is a rule that cannot be diffed against its source. */
+.is-console .tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r) var(--r) 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-top: 22px;
+}
+.is-console .tabs::-webkit-scrollbar {
+  display: none;
+}
+.is-console .tab {
+  padding: 11px 12px 10px;
+  font-size: 13px;
+  color: var(--dim);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  transition:
+    color var(--t),
+    border-color var(--t);
+}
+.is-console .tab:hover {
+  color: var(--crema);
+}
+.is-console .tab[aria-current='page'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+}
+
+/* The body a tab reveals. It shares the tab strip's border so the two read as one card — the
+   prototype's modal does the same with `.modal-tabs` above `.modal-body`. */
+.is-console .pane,
+.is-console .tabs + .panel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--card);
+}
+
+/* The Value tab's environment controls, side by side. `flag-switch.tsx`'s panel variant wraps each
+   button in a `.row-wrap` paragraph, which `globals.css` stacks — three full-width buttons down the
+   page. The design puts the on/off decision on one line. */
+.is-console .pane .stack-sm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.is-console .pane .stack-sm > p {
+  margin: 0;
+}
+.is-console .pane > * + * {
+  margin-top: 16px;
+}
+
+.is-console .kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.is-console .kpi {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+}
+.is-console .kpi .n {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.is-console .kpi .k {
+  font-size: 11.5px;
+  color: var(--dim-2);
+  margin-top: 2px;
+}
+
+.is-console .empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--dim);
+}
+.is-console .empty b {
+  display: block;
+  color: var(--crema);
+  font-size: 15px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.is-console .empty span {
+  display: block;
+  max-width: 64ch;
+  margin: 0 auto;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* The three funnel bars. Class names rather than the prototype's inline styles, so the gradient and
+   the track have one definition each. */
+.is-console .funnel-bar {
+  margin-bottom: 9px;
+}
+.is-console .funnel-bar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.is-console .funnel-bar__track {
+  height: 9px;
+  border-radius: 5px;
+  background: var(--roast-2);
+  overflow: hidden;
+}
+.is-console .funnel-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-deep));
+}
+
+.is-console .envtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin-top: 4px;
+}
+.is-console .envtable caption {
+  text-align: left;
+  margin-bottom: 8px;
+}
+.is-console .envtable th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  padding: 0 12px 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+.is-console .envtable td {
+  padding: 12px 12px 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.is-console .envtable tr:last-child td {
+  border-bottom: none;
+}
+.is-console .envtable .who {
+  font-size: 12px;
+  color: var(--dim-2);
+}
+.is-console .envname {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .is-console .kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
    `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
    ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY
