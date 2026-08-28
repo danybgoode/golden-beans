@@ -21,7 +21,18 @@
    dashboards or the legacy branch, and the anonymous surfaces keep the styling they shipped with.
    ───────────────────────────────────────────────────────────────────────────────────────── */
 
+/* ⚠️ Declared at the root of the console, not inside the desktop media query. It was defined only
+   there, so it resolved to nothing at 390/768/900 and the `var(…, 55px)` fallbacks written beside
+   its consumers were unreachable — a dead guard added by the fix for a dead guard (fresh reviewer,
+   round 3, N3).
+
+   ── N4: it is 54, not 55 ────────────────────────────────────────────────────────────────────
+   `box-sizing: border-box` is set on everything, so `height: 54px` INCLUDES the 1px bottom border
+   and the header's bottom edge sits at 54. A round-2 comment said 55 from a mis-measurement, which
+   left a 1px gap where it claimed to have closed a 43px one. */
 .is-console {
+  --console-chrome-height: 54px;
+
   /* Tokens are the prototype's, which are `references/design/assets/tokens.css` verbatim — the
      design introduced no new colours. Declared locally so this file is self-contained and can be
      diffed against the prototype's `:root` without chasing an import. */
@@ -109,6 +120,25 @@
    the account menu sat mid-bar instead of at the right edge (fresh reviewer, round 2). */
 .is-console .product-shell__identity {
   margin-left: auto;
+}
+
+/* ⚠️ **Do-not #3 was open in the console's own top bar** — the one piece of chrome this epic
+   rebuilt. `globals.css` styles `.product-shell__signal` as `600 10px var(--mono)` with
+   `text-transform: uppercase`, so the project switcher rendered UPPERCASE MONO: exactly the
+   combination the contract says appears nowhere ("uppercase appears in exactly two places, and
+   never in mono"). Measured 10/600 mono, 284×34; the contract says 13/400, 140×30 (fresh reviewer,
+   round 3).
+
+   The width is not forced here: 140px is the prototype's slug, and a real tenant slug is longer.
+   Constraining it would truncate the one thing the control exists to show. The TYPOGRAPHY is what
+   Do-not #3 is about, and that is what this fixes. */
+.is-console .product-shell__identity .product-shell__signal,
+.is-console .product-shell__switcher summary {
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 /* ── chrome, tier 2: the four sections ────────────────────────────────────────────────────── */
@@ -207,9 +237,6 @@
    changes in one place. That is the "one derived pair of numbers" rule the file already invokes for
    the rail's own width. */
 @media (min-width: 1100px) {
-  .product-shell.is-console {
-    --console-chrome-height: 55px;
-  }
   .product-shell.is-console:has(.console-rail) .product-shell__body {
     padding-left: 0;
   }
@@ -234,8 +261,8 @@
 @media (min-width: 1100px) {
   .is-console .console-rail {
     position: sticky;
-    top: var(--console-chrome-height, 55px);
-    height: calc(100vh - var(--console-chrome-height, 55px));
+    top: var(--console-chrome-height);
+    height: calc(100vh - var(--console-chrome-height));
     overflow-y: auto;
   }
 }
@@ -254,7 +281,11 @@
    Story 1.4 asked for the rail to render surfaces "with their existing inventory descriptions",
    and that instruction produced the three-line cards on screen. What a surface IS belongs on the
    surface, not in the navigation. */
-.is-console .console-rail a {
+/* ⚠️ `ul a`, not `a`. This rule was reaching the environment picker's links, which the reference
+   styles separately as a dropdown control (`console-reference.css:183-191`) — so the picker
+   inherited a rail item's 36px height and 600 weight, and the measured-spec check "passed" while
+   pointing at the wrong element (fresh reviewer, round 3). */
+.is-console .console-rail ul a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -271,18 +302,18 @@
     background var(--t),
     color var(--t);
 }
-.is-console .console-rail a:hover {
+.is-console .console-rail ul a:hover {
   background: var(--card);
   color: var(--crema);
 }
-.is-console .console-rail a[aria-current='page'] {
+.is-console .console-rail ul a[aria-current='page'] {
   background: var(--card-2);
   color: var(--crema);
 }
 /* Belt and braces: the markup drops these, and the stylesheet refuses to paint them if they come
    back. A regression that reintroduces the badge should look broken, not merely wrong. */
-.is-console .console-rail a small,
-.is-console .console-rail a[data-surface-status]::after {
+.is-console .console-rail ul a small,
+.is-console .console-rail ul a[data-surface-status]::after {
   display: none;
   content: none;
 }
@@ -391,10 +422,6 @@
 .is-console .answer b {
   font-weight: 600;
 }
-.is-console .answer code {
-  color: var(--gold-hot);
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-}
 
 /* ── the summary strip ────────────────────────────────────────────────────────────────────── */
 .is-console .summary {
@@ -448,7 +475,14 @@
 .is-console .stat.on .n {
   color: var(--green);
 }
+/* ⚠️ Red only when there IS something switched off. A20 measured `off` as 0 in every environment,
+   so a red 0 was permanent on every tenant — an alarm colour on a structural zero (fresh reviewer,
+   round 3, N6). The answer line drops the clause entirely for the same reason; the strip cannot
+   drop the card, so it stops shouting instead. */
 .is-console .stat.off .n {
+  color: var(--dim-2);
+}
+.is-console .stat.off[data-nonzero='true'] .n {
   color: var(--red);
 }
 .is-console .stat.never .n {
@@ -662,7 +696,12 @@
 .is-console .dormant:hover {
   background: var(--card-2);
 }
-.is-console .dormant .tw {
+/* ⚠️ `.tw` means something ELSE in the reference: a 26×26 dashed box holding the ▸/▾ disclosure
+   glyph (`console-reference.css:125-128`). Reusing the name for a text wrapper defeats this file's
+   founding premise — that keeping the prototype's selectors lets the two be diffed line by line.
+   Renamed to `.dormant-text`; the reference's `.tw` affordance is not ported because this design
+   LINKS rather than expands (fresh reviewer, round 3, N5). */
+.is-console .dormant .dormant-text {
   min-width: 0;
 }
 .is-console .dormant .t {
@@ -814,7 +853,6 @@
    render self-describing, and it is set in `flag-console.tsx` rather than here, because a stylesheet
    cannot fix a semantics problem. */
 @media (max-width: 900px) {
-  .is-console .content,
   .is-console .product-shell__body > main {
     padding: 20px 16px 70px;
   }

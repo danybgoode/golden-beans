@@ -330,6 +330,9 @@ test.describe('the visual rule builder', () => {
 // Surfaced while running the full `authed` suite for console-ia-overhaul (PR #124); this file is
 // otherwise untouched by that work. Serialising the describe is the smallest fix that makes the
 // contention impossible rather than unlikely.
+// ⚠️ FILE scope, not describe scope — `test.describe.configure` at the top level covers every
+// describe in the file. That is stronger than the comment above originally claimed, and correct:
+// the activations are spread across two of them.
 test.describe.configure({ mode: 'serial' })
 
 test.describe('rollout bars and the version diff', () => {

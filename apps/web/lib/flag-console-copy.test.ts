@@ -275,7 +275,7 @@ test('a deliberate switch-off gets its own sentence', () => {
   assert.equal(
     line,
     'Right now preview is serving a. 1 feature was deliberately switched off here.' +
-      ' The other 1 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+      ' The other 1 has never been switched on in preview — nobody turned them off, nobody ever turned them on.'
   )
 })
 
@@ -346,4 +346,26 @@ test('"The other N" only appears when a previous sentence established a set', ()
   )
   // With nothing serving and nothing switched off, there is no set to be "other" than.
   assert.match(flagListAnswerLine(counts({ total: 2, neverSwitched: 2 }), 'production'), /All 2 have never/)
+})
+
+test('the dormant sentence agrees with its subject', () => {
+  // ⚠️ "The other 1 have never been switched on" shipped, and a test asserted it as correct. The
+  // property sweep below checks four MECHANICAL shapes; agreement is not one of them, which is the
+  // whole lesson — a property test is exhaustive only over the properties it names.
+  assert.match(
+    flagListAnswerLine(counts({ total: 2, serving: 1, neverSwitched: 1 }), 'production', ['a']),
+    /The other 1 has never been switched on/
+  )
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, serving: 1, neverSwitched: 2 }), 'production', ['a']),
+    /The other 2 have never been switched on/
+  )
+  assert.match(flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'), /All 1 has never/)
+})
+
+test('a serving count with no keys still names a noun', () => {
+  // Exported through `flag-vocabulary.ts` as D7's single source, so it must read correctly for any
+  // caller — not only the one that always supplies keys.
+  assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'production'), /serving 1 feature\./)
+  assert.match(flagListAnswerLine(counts({ total: 3, serving: 3 }), 'production'), /serving 3 features\./)
 })

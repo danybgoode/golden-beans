@@ -20,6 +20,18 @@ import { readTenantRecord } from './helpers/authed-fixture'
 
 const VIEWPORT = { width: 1440, height: 960 }
 
+// ⚠️ **NOTHING IN CI RUNS THIS FILE.** `ci.yml` runs the `api` project only, and
+// `FLAG_CONSOLE_ENABLED` appears nowhere in the workflow — so the epic's flagship visual gate
+// executes only when a human exports both vars, and skips silently otherwise (fresh reviewer,
+// round 3, N9). "The gate is red until Story 3.3" is therefore a property of a suite no automation
+// runs.
+//
+// It is NOT wired into CI in this PR, and the reason is specific rather than an oversight:
+// assertion [1] is deliberately red until Story 3.3 deletes the JSON authoring stack, so adding
+// this project to the workflow now would make CI permanently red and block every merge behind it.
+// Wiring it is Story 3.3's closing step, when the gate can go green — and that ordering is the same
+// rule this epic applies to every control it removes: the replacement lands with the deletion.
+
 /**
  * ⚠️ **Exactly `'true'`, matching `lib/flags.ts`.** The first version skipped on truthiness, so
  * `FLAG_CONSOLE_ENABLED=false` did NOT skip — the string "false" is truthy — while the app read it
@@ -213,11 +225,14 @@ test.describe('the console matches the approved design', () => {
 })
 
 test('the feature list survives a 390px phone', async ({ page }) => {
-  // ⚠️ **This test sat outside the describe's skip and went red on the configuration live in
-  // production today.** `CONSOLE_SHELL_ENABLED` is off in prod until Story 3.5, and without
-  // `.is-console` the console stylesheet does not apply — so the legacy render, which D4 guarantees
-  // is untouched, tripped the overlap check. A false red whose obvious repair is to weaken the
-  // assertion (fresh reviewer, round 2).
+  // ⚠️ **This test sat outside the describe's skip and went red whenever the console gate is off.**
+  // Without `.is-console` the console stylesheet does not apply, so the legacy render tripped the
+  // overlap check — a false red whose obvious repair is to weaken the assertion (fresh reviewer,
+  // round 2).
+  //
+  // An earlier version of this note said the gate is "off in prod until Story 3.5". That was D4,
+  // and **A19 overruled it in this same PR's epic README** — the console ships ENABLED. The stale
+  // sentence is exactly the drift A19 exists to prevent (fresh reviewer, round 3, N8).
   test.skip(!gatesAreLit(), 'the phone contract is about the LIT console; run with both gates on')
   // ⚠️ **Nothing covered this route at phone width.** `mobile-heuristics.authed.spec.ts`'s
   // `AUTHED_MOBILE_ROUTES` does not include `/app/flags/<slug>`, which is how the console shipped
@@ -300,6 +315,16 @@ type SpecRow = {
 }
 
 const MEASURED_SPEC: SpecRow[] = [
+  // ⚠️ The chrome had NO row at all, so nothing in the epic's own gate looked at the part of the
+  // page the epic rebuilt — and Do-not #3 was open there (uppercase mono in the project switcher)
+  // for three review rounds (fresh reviewer, round 3).
+  {
+    what: 'project switcher',
+    selector: '.product-shell__identity .product-shell__signal',
+    fontSize: '13px',
+    fontWeight: '400',
+  },
+  { what: 'section tab', selector: '.product-shell__tab', fontSize: '13px' },
   { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
   { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
   { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },
@@ -309,8 +334,69 @@ const MEASURED_SPEC: SpecRow[] = [
   { what: 'feature key', selector: '.row-key code', fontSize: '13.5px', fontFamily: /Plex Mono/ },
   { what: 'feature description', selector: '.row-desc', fontSize: '12.5px', fontWeight: '400' },
   { what: 'state pill', selector: '.pill', fontSize: '12px', fontWeight: '600', height: 26 },
-  { what: 'rail item', selector: '.console-rail a', fontSize: '13.5px', fontWeight: '600', height: 36 },
+  // ⚠️ `.console-rail ul a`, not `.console-rail a`. `ConsoleRail` renders the environment picker
+  // BEFORE the list, so the bare selector matched an `.envpick` link — and it passed only because
+  // the rail-item rule was leaking onto a control the reference styles separately (fresh reviewer,
+  // round 3). Two defects in one line: the wrong element, and a rule reaching past its subject.
+  { what: 'rail item', selector: '.console-rail ul a', fontSize: '13.5px', fontWeight: '600', height: 36 },
 ]
+
+/**
+ * ⚠️ **Rows the contract specifies that the build does NOT meet.**
+ *
+ * The previous version of this file carried ten rows, was named "every row of the measured spec",
+ * and its own header cited "feature row h78" as something it asserted. It did not — and the three
+ * rows it left out are exactly the three that fail (fresh reviewer, round 3):
+ *
+ *   feature row          contract 78   built 90 when the row's state is `never`
+ *   dormant summary row  contract 89   built 91
+ *   primary/secondary    contract 38   built 44
+ *
+ * A gate that asserts what passes and describes what fails is the failure mode this whole layer was
+ * added to end, one level up. So they are listed, with the reason each is deferred rather than
+ * silently dropped.
+ *
+ * **The 90px row is not an edge case.** It is the state 39 of 42 production flags are in, and every
+ * row of the authed fixture — so the suite ran against 90px rows and stayed green. The cause is
+ * real copy: `FLAG_STATE_PRESENTATION.never.detail` wraps to two lines in the 190px state column.
+ *
+ * And the contract's own numbers deserve scrutiny here: `console-reference.css` sets **no** height
+ * on `.row` or `.btn` at all. 78 and 38 are emergent measurements of the prototype's shorter copy,
+ * not declared design intent — which makes "the build is wrong" the wrong conclusion to jump to.
+ *
+ * `38px` is additionally **unreachable by decision**: `globals.css` sets `min-height: 44px` on every
+ * interactive element for WCAG 2.5.5 target size, and used height is `max(min-height, height)`. The
+ * accessibility floor wins over a measured pixel, and that is a decision rather than an oversight.
+ */
+const DEFERRED_SPEC_ROWS = [
+  {
+    what: 'feature row',
+    contract: 78,
+    built: 'up to 90',
+    why: 'the never-state detail wraps to two lines in a 190px column',
+  },
+  {
+    what: 'dormant summary row',
+    contract: 89,
+    built: '91',
+    why: 'two-line body copy; within 3px of the contract',
+  },
+  {
+    what: 'primary/secondary button',
+    contract: 38,
+    built: '44',
+    why: 'globals.css enforces a 44px WCAG 2.5.5 target floor, and the floor wins',
+  },
+] as const
+
+test('the deferred spec rows are named, so the gate does not look complete', () => {
+  // This test exists to make the omission visible in the suite's own output rather than in a
+  // comment nobody runs. It cannot fail; that is deliberate and stated — its job is to print.
+  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed').toBe(3)
+  for (const row of DEFERRED_SPEC_ROWS) {
+    expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)
+  }
+})
 
 test('every row of the measured spec matches the built stylesheet', async ({ page }) => {
   test.skip(!gatesAreLit(), 'the measured spec describes the LIT console; run with both gates on')

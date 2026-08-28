@@ -42,6 +42,7 @@ import {
   runsByState,
   projectFlagRows,
   summariseFlagList,
+  type FlagListSummary,
   type FlagListParams,
 } from '@/lib/flag-list-view'
 import { dormantGroupLabel, flagListAnswerSegments } from '@/lib/flag-console-copy'
@@ -67,6 +68,14 @@ export const DEFAULT_FLAG_ENVIRONMENT: FlagEnvironment = 'production'
  * marked rather than neither, and the reader can see which view they are in. Its chip reads "Not on"
  * and old bookmarks carry it, so its meaning is not changed here.
  */
+/** One place the card-to-count mapping lives, so the number and the `data-nonzero` flag agree. */
+function cardCount(key: 'all' | 'on' | 'off' | 'never', summary: FlagListSummary): number {
+  if (key === 'all') return summary.total
+  if (key === 'on') return summary.serving
+  if (key === 'off') return summary.switchedOff
+  return summary.neverSwitched
+}
+
 function isCurrent(active: FlagListParams['state'], card: FlagListParams['state']): boolean {
   if (active === 'off') return card === 'switched_off' || card === 'never'
   return active === card
@@ -152,18 +161,11 @@ export function FlagConsole({
           <a
             key={card.key}
             className={`stat ${card.key}`}
+            data-nonzero={String(cardCount(card.key, summary) > 0)}
             href={linkTo({ state: card.state })}
             aria-current={isCurrent(params.state, card.state) ? 'true' : undefined}
           >
-            <span className="n">
-              {card.key === 'all'
-                ? summary.total
-                : card.key === 'on'
-                  ? summary.serving
-                  : card.key === 'off'
-                    ? summary.switchedOff
-                    : summary.neverSwitched}
-            </span>
+            <span className="n">{cardCount(card.key, summary)}</span>
             <span className="k">{card.label}</span>
           </a>
         ))}
@@ -251,15 +253,18 @@ export function FlagConsole({
               {/* `role="cell"`, NOT `columnheader`: this heading labels a RUN OF ROWS, and telling
                   assistive tech it heads a COLUMN is a different and false claim. The decorative bar
                   is hidden rather than left as an unlabelled cell. */}
+              {/* ⚠️ `aria-colspan`: this banner is ONE cell across a three-column table. Without it
+                  the run's count was announced under "State in production" — the second column —
+                  because a 2-cell row in a 3-column table is positional (fresh reviewer, round 3). */}
               {run.state !== null && (
                 <div className={`grp ${run.state}`} role="row">
                   <span className="bar" aria-hidden="true" />
-                  <span role="cell">
+                  <span role="cell" aria-colspan={3}>
                     {run.state === 'on'
                       ? `${FLAG_STATE_PRESENTATION.on.label} in ${params.environment}`
                       : FLAG_STATE_PRESENTATION[run.state].label}
                   </span>
-                  <span className="cnt" role="cell">
+                  <span className="cnt" aria-hidden="true">
                     {run.rows.length}
                   </span>
                 </div>
@@ -268,17 +273,22 @@ export function FlagConsole({
                 const presentation = FLAG_STATE_PRESENTATION[row.state]
                 return (
                   <div className="row" key={row.id} role="row">
-                    <span className="row-main" role="cell" aria-label="Feature">
+                    <span className="row-main" role="cell">
                       <a className="row-key" href={`${basePath}/${encodeURIComponent(row.key)}`}>
                         <code>{row.key}</code>
                       </a>
                       {row.description !== '' && <span className="row-desc">{row.description}</span>}
                     </span>
-                    {/* ⚠️ `aria-label` on the CELL, because the column headers are `display: none`
-                        below 900px and that removes them from the accessibility tree entirely — a
-                        phone user otherwise hears "Unclassified Unclassified" with no way to tell
-                        type from risk. A stylesheet cannot fix this; only the markup can. */}
-                    <span className="row-state" role="cell" aria-label={`State in ${params.environment}`}>
+                    {/* ⚠️ **No `aria-label` on the cells.** An earlier fix put the column label on
+                        each cell, reasoning that `display: none` removes the headers on a phone.
+                        `aria-label` is name-from-author and BEATS name-from-content, so the cell
+                        holding `checkout.stripe_enabled` announced itself as "Feature" — the label
+                        replaced the value it was meant to caption (fresh reviewer, round 3).
+
+                        What actually disambiguates type from risk is the label on the TAGS below,
+                        which caption a value rather than replacing one. The comment credited a
+                        mechanism that was not the one working. */}
+                    <span className="row-state" role="cell">
                       {/* A dot AND a word — never colour alone. The three states are the distinction
                           `flags-console-parity` Amendment 2 paid to separate, and a colour-only pill
                           re-collapses it for anyone who cannot see the difference. */}
@@ -314,16 +324,18 @@ export function FlagConsole({
             whole one until someone dumps the tree. */}
         {grouping.grouped && (
           <div className="dormant" data-dormant-summary role="row">
-            <span className="tw" role="cell">
+            <span className="dormant-text" role="cell" aria-colspan={3}>
               <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
               <span className="d">
                 No one has ever switched them on or off here. Nothing is wrong with them — nothing has
                 happened to them.
               </span>
             </span>
-            <span className="go" role="cell">
-              <a href={linkTo({ state: 'never' })}>Show them</a>
-            </span>
+            {/* Inside the same cell as the text it belongs to. As its own cell it was announced
+                under "State in production", which is not where a "Show them" action lives. */}
+            <a className="go" href={linkTo({ state: 'never' })}>
+              Show them
+            </a>
           </div>
         )}
       </div>

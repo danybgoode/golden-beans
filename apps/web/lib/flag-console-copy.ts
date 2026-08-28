@@ -259,7 +259,14 @@ export function flagListAnswerSegments(
   // product's own tenant in two environments out of three.
   if (summary.serving === 0 || servingKeys.length === 0) {
     segments.push({
-      text: summary.serving === 0 ? ' is serving nothing.' : ` is serving ${summary.serving}.`,
+      // `is serving 3.` — a bare numeral with no noun — was reachable whenever the count and the
+      // key list disagreed. Unreachable from the console today (both derive from one array), but
+      // this is exported through `flag-vocabulary.ts` as D7's single source of these words, so it
+      // must read correctly for any caller (fresh reviewer, round 3, N1).
+      text:
+        summary.serving === 0
+          ? ' is serving nothing.'
+          : ` is serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}.`,
     })
   } else {
     segments.push({ text: ' is serving ' })
@@ -290,8 +297,14 @@ export function flagListAnswerSegments(
     // common case on two of this product's three environments, not an edge.
     const lead = summary.serving === 0 && summary.switchedOff === 0 ? ' All ' : ' The other '
     segments.push({ text: lead }, { text: String(summary.neverSwitched), emphasis: 'strong' })
+    // ⚠️ Subject-verb agreement. "The other 1 have never been switched on" shipped, and a test
+    // asserted that exact string as CORRECT (fresh reviewer, round 3). The property sweep checked
+    // four MECHANICAL shapes — ends in a full stop, no doubled space, no doubled conjunction, no
+    // "undefined" — and agreement is none of them. A property test is exhaustive only over the
+    // properties it names.
+    const verb = summary.neverSwitched === 1 ? ' has' : ' have'
     segments.push({
-      text: ` have never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
+      text: `${verb} never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
     })
   }
 
