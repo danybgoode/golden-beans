@@ -7,6 +7,7 @@ import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
 import { listAgentWriteKeys } from '@/lib/agent-write-keys'
 import {
   buildCredentialInventory,
+  type CredentialKind,
   credentialTitle,
   formatExpiry,
   CREDENTIAL_KINDS_NOT_LISTED,
@@ -37,8 +38,15 @@ import { ProductShell } from '@/components/product/ProductShell'
 // and keep their own forms; they simply stop being the only way to see the whole picture.
 export const dynamic = 'force-dynamic'
 
-/** Where each kind is minted and revoked, until the forms are merged. */
-function manageHref(kind: string, slug: string): string {
+/**
+ * Where each kind is minted and revoked, until the forms are merged.
+ *
+ * `CredentialKind`, not `string` (cross-review, vibe). `CredentialKind` is a CLOSED union precisely
+ * so a fifth kind is a compile error at every consumer — typing this parameter as `string` opted
+ * this function out of that, and its `return` would have silently sent the new kind to
+ * `/app/flag-credentials`. A closed union only pays for itself where it is actually spelled.
+ */
+function manageHref(kind: CredentialKind, slug: string): string {
   if (kind === 'ingest') return `/app/keys/${slug}`
   if (kind === 'agent_write') return `/app/agent-keys/${slug}`
   return `/app/flag-credentials/${slug}`
