@@ -24,6 +24,73 @@ function source(relative: string): string {
   return readFileSync(fileURLToPath(new URL(`../app/app/${relative}`, import.meta.url)), 'utf8')
 }
 
+/**
+ * Strip comments, tracking BLOCK STATE rather than matching how a line begins.
+ *
+ * ⚠️ Every guard below that looks for a CALL must go through this, and the reason is a mistake made
+ * four times in one sprint: a line in the MIDDLE of a `{/* … *\/}` block starts with ordinary prose,
+ * so a line-prefix filter kept it — and the guards then matched against my own written explanation
+ * of the defect they exist to forbid. "The line starts with //" is not the distinction between code
+ * and writing about code.
+ *
+ * It also closes a real hole in the ownership guards, which matched the whole file: weakening the
+ * merged Keys page to `requireProjectMembership` while leaving any comment mentioning
+ * `requireProjectOwnership(` kept all three green, and the ordering check's `gateAt` landed on the
+ * comment offset — above the reads — so `readAt > gateAt` held too. Three guards passing while the
+ * page became readable by any member (fresh reviewer, PR #123).
+ */
+function stripComments(text: string): string {
+  let out = ''
+  let inBlock = false
+  for (const line of text.split('\n')) {
+    let rest = line
+    let kept = ''
+    while (rest.length > 0) {
+      if (inBlock) {
+        const close = rest.indexOf('*/')
+        if (close === -1) {
+          rest = ''
+          break
+        }
+        inBlock = false
+        rest = rest.slice(close + 2)
+        continue
+      }
+      // ⚠️ NOT a bare `indexOf('//')`. That eats every `https://` — the exact trap LEARNINGS
+      // records ("stripping them naively eats every https://, turning a loud false positive into a
+      // quiet false negative"), and here it silently truncated a route file at its first URL so the
+      // import assertion below failed on correct code. A `//` only opens a comment when it is not
+      // preceded by `:`.
+      const lineComment = (() => {
+        for (let at = rest.indexOf('//'); at !== -1; at = rest.indexOf('//', at + 2)) {
+          if (at === 0 || rest[at - 1] !== ':') return at
+        }
+        return -1
+      })()
+      const blockOpen = rest.indexOf('/*')
+      if (blockOpen !== -1 && (lineComment === -1 || blockOpen < lineComment)) {
+        kept += rest.slice(0, blockOpen)
+        inBlock = true
+        rest = rest.slice(blockOpen + 2)
+        continue
+      }
+      if (lineComment !== -1) {
+        kept += rest.slice(0, lineComment)
+        break
+      }
+      kept += rest
+      break
+    }
+    out += `${kept}\n`
+  }
+  return out
+}
+
+/** A route's source with comments removed — what every call-site guard must read. */
+function code(relative: string): string {
+  return stripComments(source(relative))
+}
+
 const OWNER_ONLY = [
   // The merged page, and the three it takes over from. All four must agree, because D5's whole
   // claim is that the boundary moves "tighter or identical, never looser" — and the way to check
@@ -36,13 +103,13 @@ const OWNER_ONLY = [
 
 test('every owner-only Setup route calls requireProjectOwnership', () => {
   for (const route of OWNER_ONLY) {
-    const code = source(route)
+    const body = code(route)
     assert.match(
-      code,
+      body,
       /requireProjectOwnership\(/,
       `${route} does not call requireProjectOwnership — a member could read it`
     )
-    assert.match(code, /from '@\/lib\/dashboard-auth'/, `${route} does not import the canonical auth seam`)
+    assert.match(body, /from '@\/lib\/dashboard-auth'/, `${route} does not import the canonical auth seam`)
   }
 })
 
@@ -51,7 +118,7 @@ test('the merged Keys page uses the SAME gate as the three routes it replaces', 
   // `requireProjectMembership`, this goes red — and that is the precise defect D5 forbids, because
   // it would make a page listing every credential in the project readable by any member.
   const gateOf = (route: string) =>
-    /requireProjectOwnership\(/.test(source(route)) ? 'ownership' : 'membership'
+    /requireProjectOwnership\(/.test(code(route)) ? 'ownership' : 'membership'
   const merged = gateOf('setup/keys/[projectSlug]/page.tsx')
   for (const legacy of OWNER_ONLY.slice(1)) {
     assert.equal(
@@ -72,9 +139,9 @@ test('the gate runs BEFORE any credential list is read, and the reads are not ho
   // down inside the helper, `readAt > gateAt` holds, and the test stays green while the reads
   // genuinely run first (fresh reviewer, PR #123). So this also pins that the reads are INLINE in
   // the default export's body — the shape the position comparison is only valid for.
-  const code = source('setup/keys/[projectSlug]/page.tsx')
-  const defaultAt = code.indexOf('export default')
-  const body = code.slice(defaultAt)
+  const stripped = code('setup/keys/[projectSlug]/page.tsx')
+  const defaultAt = stripped.indexOf('export default')
+  const body = stripped.slice(defaultAt)
   const gateAt = body.indexOf('requireProjectOwnership(')
   assert.ok(gateAt >= 0, 'the ownership gate is not inside the default export')
 
@@ -82,7 +149,7 @@ test('the gate runs BEFORE any credential list is read, and the reads are not ho
   for (const read of reads) {
     // Exactly one call site, and it is in the page body — not in a helper the body calls, where
     // position tells you nothing about order.
-    const occurrences = code.split(`${read}(`).length - 1
+    const occurrences = stripped.split(`${read}(`).length - 1
     assert.equal(occurrences, 1, `${read} is called ${occurrences} times; ordering is unprovable`)
     const readAt = body.indexOf(`${read}(`)
     assert.ok(readAt > gateAt, `${read} is called before the ownership check`)
@@ -93,7 +160,7 @@ test('Setup › Connect is MEMBER-readable, and deliberately so', () => {
   // The asymmetry is the design, not an oversight: reading your project's connector URL is how its
   // operators point an agent at their data. Minting one is credential administration, and THAT is
   // owner-gated in the action rather than on the page.
-  const page = source('setup/connect/[projectSlug]/page.tsx')
+  const page = code('setup/connect/[projectSlug]/page.tsx')
   assert.match(page, /requireProjectMembership\(/)
   assert.doesNotMatch(
     page,
@@ -335,18 +402,19 @@ test('the legacy header links Connect to /install, never to a console-gated rout
   // `/app/setup/` and matched the COMMENT above the link explaining this very defect — the third
   // time this session that a guard fired on an honest description of the thing it forbids. A guard
   // has to distinguish code from writing about code.
-  const codeLines = legacy
-    .split('\n')
-    .filter((line) => {
-      const t = line.trim()
-      return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('{/*')
-    })
-    .join('\n')
+  const codeLines = stripComments(legacy)
 
   assert.match(codeLines, /href="\/install"/, 'the legacy Connect link no longer points at /install')
+  // Any `/app/setup/` in the branch's CODE, whatever syntax carries it. The first version banned
+  // only `href={…/app/setup/…}`, so a plain string literal `href="/app/setup/connect/demo"` walked
+  // straight past it (fresh reviewer, PR #123). Keyed on the PATH, which every form must contain.
   assert.doesNotMatch(
     codeLines,
-    /href=\{[^}]*\/app\/setup\//,
-    'the legacy branch links a console-gated route — it 404s whenever this branch renders'
+    /\/app\/setup\//,
+    'the legacy branch references a console-gated route — it 404s whenever this branch renders'
   )
+  // ⚠️ NOT "every href must be a literal" — that was my own over-reach and it failed on correct
+  // code: the Sections disclosure legitimately renders `href={link.href}` from the inventory, which
+  // is the whole point of generating the nav from one list. The property that actually matters is
+  // the one above: no console-gated PATH anywhere in this branch, in any syntax.
 })

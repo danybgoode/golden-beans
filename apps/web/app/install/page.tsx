@@ -31,10 +31,17 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 // page require a session — the first is a tenancy bug, the second is not a marketing page.
 //
 // console-ia-overhaul · Sprint 2, Story 2.2: the real defect was that the SIGNED-IN shell linked
-// here, so an operator followed "Connect" and got a working URL for somebody else's data. That is
-// fixed at the link (`components/product/ProductShell.tsx`), which now sends a member to
-// `/app/setup/connect/<their-slug>` and only an anonymous visitor here. This file is untouched —
-// provable by `git diff` showing nothing but this comment.
+// here, so an operator followed "Connect" and got a working URL for somebody else's data.
+//
+// ⚠️ It is fixed by the console REPLACING that header, not by rewriting its link. An earlier
+// revision made the legacy `Connect` href conditional — and that shipped a hard 404 for every
+// signed-in operator, because the legacy branch renders precisely when the console gate is OFF and
+// `/app/setup/connect` 404s in that state. It was reverted; `setup-route-guards.test.ts` keeps it
+// reverted. With the console ON the legacy header does not render at all and `Setup › Connect your
+// agent` in the rail is the destination; with it off, every signed-in member still lands here, which
+// is pre-epic behaviour.
+//
+// This file is untouched — provable by `git diff` showing nothing but this comment.
 
 export default async function InstallPage() {
   // A cross-review catch: if this ever runs in real Vercel production without SITE_URL set, show

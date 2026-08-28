@@ -191,10 +191,27 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
           </p>
         </Panel>
 
+        {/* ⚠️ Every minting surface, listed UNCONDITIONALLY — not only the kinds that already have
+            a row (fresh reviewer, PR #123). With the console lit, `/app/keys`, `/app/agent-keys` and
+            `/app/flag-credentials` leave the nav, Command Center and ⌘K (A7), and the only inbound
+            links left were the per-row `Manage` links above — which exist only once you already
+            hold that kind of credential. So minting a FIRST agent-write key meant typing the URL:
+            the exact "you have to know the URL" defect this epic exists to remove, reintroduced one
+            level down.
+            It matters now rather than at the flip: A19 ships this console ENABLED, so there is no
+            dark period in which the gap would have gone unnoticed. */}
         <p className="data-table__count">
-          Minting and revoking still happen on each kind&apos;s own page — the four forms take genuinely
-          different inputs, so this sprint merged the list rather than half-merging the forms. Every row above
-          links to its own.
+          Minting and revoking happen on each kind&apos;s own page — the forms take genuinely different
+          inputs, so this sprint merged the list rather than half-merging the forms. Issue a new credential:{' '}
+          <a href={`/app/keys/${projectSlug}`}>API key</a>
+          {flagConsoleOpen ? (
+            <>
+              {' · '}
+              <a href={`/app/flag-credentials/${projectSlug}`}>flag snapshot or catalog sync key</a>
+            </>
+          ) : null}
+          {' · '}
+          <a href={`/app/agent-keys/${projectSlug}`}>agent write key</a>.
         </p>
       </main>
     </ProductShell>

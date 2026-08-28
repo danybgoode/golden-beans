@@ -154,8 +154,10 @@ export async function ProductShell({
                   That is a wrong-tenant confusion, not a leak — rule #2 means `/install` only ever
                   serves the demo project — it is bounded to an outage, and it is exactly what
                   happened before this epic. It is left alone deliberately: the alternative (console
-                  chrome from the catch) hands an ANONYMOUS visitor to the public demo dashboards a
-                  switcher and an account menu, which is strictly worse. Fixing it properly means
+                  chrome from the catch) puts console chrome on the public demo dashboards — a logo,
+                  a lone Today tab and an empty palette (measured; the switcher and account menu are
+                  already suppressed by `EMPTY`'s null project and null email). Still wrong for a
+                  public page, and the worse trade of the two. Fixing it properly means
                   narrowing that `try` so a session read failing is distinguishable from a nav read
                   failing, which is a change this sprint does not need to make.
                   (Both halves found by the fresh reviewer, PR #123, rounds 2 and 3.) */}

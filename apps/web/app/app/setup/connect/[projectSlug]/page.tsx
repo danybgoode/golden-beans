@@ -130,7 +130,19 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
 
               <ConnectorManager
                 slug={projectSlug}
-                tokens={status.state === 'active' ? status.tokens : []}
+                /* ⚠️ FILTERED HERE, on the server, and that is the whole fix (fresh reviewer, PR
+                   #123, Blocking). The previous revision passed every token and let the client
+                   component decide what to render — but this page is a Server Component and
+                   `ConnectorManager` is `'use client'`, so props crossing that boundary are
+                   serialized into the RSC flight payload and shipped inside the HTML. A member
+                   could read the plaintext bearer URL out of View Source while the page politely
+                   told them to ask an owner.
+                   Hiding a credential with a conditional render is not hiding it. The `canManage`
+                   check has to happen before the data leaves the server. */
+                tokens={canManage && status.state === 'active' ? status.tokens : []}
+                /* Separate from `tokens` precisely BECAUSE tokens is now empty for a member: the
+                   member notice cannot be derived from `tokens.length` any more. */
+                hasConnector={status.state === 'active'}
                 canManage={canManage}
                 /* Withheld while unreadable: the mint action refuses anyway, but offering a button
                    that is guaranteed to fail is worse than not offering one. */

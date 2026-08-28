@@ -269,12 +269,18 @@ export async function getShellNav(
     //     whose `Connect` goes to `/install` — the demo project's URL.
     //
     // (2) So I changed this to return a console header when the gate is open... which reintroduced
-    //     the BLOCKING defect the same reviewer caught one round earlier. `getSessionUser()` is the
-    //     first statement in the `try`; if it REJECTS (a transport failure — it returns null for an
-    //     ordinary auth error, but a rejection is not that), we land here knowing nothing about
-    //     whether a session exists. The two demo dashboards are anonymously readable and render this
-    //     shell, so an anonymous visitor would have got a project switcher, an account menu and a
-    //     palette over surfaces that all require a session.
+    //     a version of the defect the same reviewer caught one round earlier. `getSessionUser()` is
+    //     the first statement in the `try`; if it REJECTS (a transport failure — it returns null for
+    //     an ordinary auth error, but a rejection is not that), we land here knowing nothing about
+    //     whether a session exists, and the two demo dashboards are anonymously readable and render
+    //     this shell.
+    //
+    //     ⚠️ MEASURED, because the first two versions of this note overstated it: with `EMPTY`'s
+    //     null `activeProject` and null `userEmail`, the switcher (`{activeProject && …}`) and the
+    //     account menu (`shellRendersAccountMenu`) are both already suppressed. What an anonymous
+    //     visitor would actually have got is a logo, a lone "Today" tab and an empty ⌘K palette —
+    //     which is still console chrome on a public page, and still wrong, but it is not a switcher
+    //     and not an account menu. The accurate version is the one 90 lines above.
     //
     // Trading a bounded Should-fix for a Blocking is the wrong direction. The catch does not know
     // who is asking, so it must return the answer that is safe for BOTH: the public chrome. A

@@ -16,6 +16,7 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 export function ConnectorManager({
   slug,
   tokens,
+  hasConnector,
   canManage,
   canMint,
 }: {
@@ -30,6 +31,14 @@ export function ConnectorManager({
    * its own revoke control instead. (Cross-review, agy, PR #123, Blocking.)
    */
   tokens: readonly ActiveConnector[]
+  /**
+   * Whether a connector exists at all — supplied separately, and it must be.
+   *
+   * `tokens` is filtered on the SERVER by `canManage`, so a member receives `[]` and the plaintext
+   * URL never enters the RSC payload. That means "does one exist" can no longer be derived from
+   * `tokens.length`; a member would see "no connector yet" when there is one.
+   */
+  hasConnector: boolean
   canManage: boolean
   /** False when a token already exists AND when the state could not be read — see the page. */
   canMint: boolean
@@ -123,7 +132,7 @@ export function ConnectorManager({
           they ever saw it, and no way for them to revoke it themselves.
           Every other credential in this product is hashed and shown exactly once, to an owner. This
           one is re-displayed on every page load, so its audience is the thing to bound. */}
-      {!canManage && tokens.length > 0 && (
+      {!canManage && hasConnector && (
         <p role="status" className="data-table__count">
           A connector URL exists for this project. Ask an owner for it — the URL itself is a bearer credential
           that keeps working after someone leaves the project, so only owners see it here.

@@ -18,8 +18,13 @@ export const dynamic = 'force-dynamic'
 // the four kinds take materially different inputs and merging the forms was explicitly out of
 // scope. A redirect would send an owner away from the only surface that can issue this kind.
 //
-// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states, and neither is
-// ever the only route to a control — the ordering rule this epic exists to respect.
+// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states.
+//
+// ⚠️ "Neither is ever the only route to a control" was briefly FALSE for this route, and the fix is
+// on the other side: with the console lit this leaves the nav, Command Center and ⌘K, and the only
+// inbound links were the per-row `Manage` links on the merged page — which exist only once you
+// already hold an agent-write key. Minting the FIRST one meant typing the URL. `Setup › Keys` now
+// links every minting surface unconditionally (fresh reviewer, PR #123).
 export default async function AgentKeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
