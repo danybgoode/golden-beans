@@ -37,6 +37,7 @@ registerHooks({
 
 const {
   buildCredentialInventory,
+  isCurrentlyUsable,
   credentialCapability,
   credentialTitle,
   formatExpiry,
@@ -286,4 +287,61 @@ test('connector tokens are named as an exclusion — they are a DIFFERENT table,
 
 test('an empty project renders an empty list, not a crash', () => {
   assert.deepEqual(buildCredentialInventory(EMPTY), [])
+})
+
+// ── An expired key cannot authenticate, so it must not be COUNTED as access ───────────────────
+
+test('an expired but unrevoked credential is not currently usable', () => {
+  // Revoked is not the only way a key stops working: every serving path requires
+  // `expires_at IS NULL OR expires_at > now()`. Counting one would make the page's own lede —
+  // "this is what has access now" — false. Re-graded from Nit once A19 put this page in front of
+  // every owner on day one (fresh reviewer, PR #123).
+  const now = new Date('2026-08-27T00:00:00Z')
+  const row = (expiresAt: string | null) => ({
+    id: 'x',
+    kind: 'flag_read' as const,
+    label: 'snapshot',
+    capability: 'anything',
+    scope: 'production',
+    createdAt: '2026-01-01T00:00:00Z',
+    expiresAt,
+  })
+
+  assert.equal(isCurrentlyUsable(row('2026-01-01T00:00:00Z'), now), false, 'an expired key counted as access')
+  assert.equal(isCurrentlyUsable(row('2027-01-01T00:00:00Z'), now), true)
+  assert.equal(isCurrentlyUsable(row(null), now), true, 'no expiry means it never expires')
+  // Unparseable errs toward SHOWING it: we cannot prove it is dead, and over-counting gives an
+  // owner something to check rather than hiding live access.
+  assert.equal(isCurrentlyUsable(row('not-a-date'), now), true)
+})
+
+test('the count and the rendered list can legitimately differ, and only in one direction', () => {
+  // The row still renders (an owner cleaning up wants to see it) — it is the COUNT that must not
+  // claim it. So usable <= listed, always.
+  const rows = buildCredentialInventory({
+    ...EMPTY,
+    flagReadKeys: [
+      {
+        id: 'r1',
+        label: 'live',
+        environment: 'production' as const,
+        createdAt: '2026-08-01T00:00:00Z',
+        expiresAt: '2027-01-01T00:00:00Z',
+        revokedAt: null,
+      },
+      {
+        id: 'r2',
+        label: 'stale',
+        environment: 'production' as const,
+        createdAt: '2026-08-02T00:00:00Z',
+        expiresAt: '2026-01-01T00:00:00Z',
+        revokedAt: null,
+      },
+    ],
+  })
+  const now = new Date('2026-08-27T00:00:00Z')
+  const usable = rows.filter((row) => isCurrentlyUsable(row, now))
+  assert.equal(rows.length, 2, 'the expired row stopped rendering — it should still be visible')
+  assert.equal(usable.length, 1, 'the expired row is still counted as access')
+  assert.ok(usable.length <= rows.length)
 })

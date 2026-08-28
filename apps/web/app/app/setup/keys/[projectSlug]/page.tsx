@@ -10,6 +10,7 @@ import {
   type CredentialKind,
   credentialTitle,
   formatExpiry,
+  isCurrentlyUsable,
   CREDENTIAL_KINDS_NOT_LISTED,
 } from '@/lib/credential-inventory'
 import { formatUtc } from '@/lib/format-utc'
@@ -89,6 +90,7 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   const rows = buildCredentialInventory({ apiKeys, flagReadKeys, flagSyncKeys, agentWriteKeys })
   // Read once for the whole table: whether the surface that manages flag credentials is reachable.
   const flagConsoleOpen = isFlagConsoleEnabled()
+  const usableCount = rows.filter((row) => isCurrentlyUsable(row)).length
 
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
@@ -113,7 +115,12 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
               <div className="data-table__scroll">
                 <table>
                   <caption>
-                    {rows.length} active credential{rows.length === 1 ? '' : 's'}
+                    {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An
+                        expired key is rejected on every serving path, so counting it would make
+                        this page's own "what has access now" false. Expired rows still render — an
+                        owner cleaning up wants to see them — they just are not counted. */}
+                    {usableCount} active credential{usableCount === 1 ? '' : 's'}
+                    {rows.length > usableCount ? `, ${rows.length - usableCount} expired` : ''}
                   </caption>
                   <thead>
                     <tr>

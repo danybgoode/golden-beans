@@ -107,7 +107,7 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
                     used&quot; would be guessing. To check a connection actually works, ask your agent for
                     this project&apos;s funnel.
                   </p>
-                  {status.tokens.length > 1 && (
+                  {status.tokens.length > 1 && canManage && (
                     // Should not happen, and is shown rather than hidden when it does. Two concurrent
                     // mints can both pass the check-then-act in `mintConnectorToken`; listing every
                     // active token is what keeps the extra one revocable instead of invisible.

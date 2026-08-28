@@ -127,6 +127,31 @@ export const CREDENTIAL_KINDS_NOT_LISTED = [
 ] as const
 
 /**
+ * Is this credential currently able to authenticate?
+ *
+ * Revoked is not the only way a key stops working. Every serving path requires
+ * `expires_at IS NULL OR expires_at > now()` — the flag-serving and agent-write migrations both
+ * spell it out — so an expired-but-unrevoked row has exactly zero access.
+ *
+ * This page's lede is "Revoked keys are not shown — this is what has access **now**", and its
+ * caption counts what it lists. Counting a key that cannot authenticate makes that sentence false
+ * (fresh reviewer, PR #123). It was graded a Nit while the console was dark and re-graded once A19
+ * put this page in front of every owner on day one — the surface whose entire job is being an
+ * accurate access inventory.
+ *
+ * The row still RENDERS, saying "Expired" in its own column: an owner cleaning up wants to see it.
+ * It is the COUNT that must not claim it.
+ */
+export function isCurrentlyUsable(row: CredentialRow, now: Date = new Date()): boolean {
+  if (row.expiresAt === null) return true
+  const at = new Date(row.expiresAt)
+  // An unparseable expiry counts as usable: we cannot prove it is dead, and over-counting errs
+  // toward showing an owner something to check rather than hiding live access.
+  if (Number.isNaN(at.getTime())) return true
+  return at.getTime() > now.getTime()
+}
+
+/**
  * Merge the four reads into one list, newest first.
  *
  * REVOKED ROWS ARE DROPPED. Each source list may contain them (`revokedAt` is on every row shape),

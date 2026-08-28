@@ -173,9 +173,11 @@ test('every connector MUTATION re-asserts ownership itself', () => {
   // The page guard is never the only thing between a member and a mint (A5). A server action is a
   // public HTTP surface reachable by POST whether or not its page rendered, so each action resolves
   // ownership again rather than trusting the page that linked to it.
-  const actions = readFileSync(
-    fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
-    'utf8'
+  const actions = stripComments(
+    readFileSync(
+      fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
+      'utf8'
+    )
   )
   const mintAt = actions.indexOf('export async function mintConnectorAction')
   const revokeAt = actions.indexOf('export async function revokeConnectorAction')
@@ -197,9 +199,11 @@ test('minting requires the connector gate; revoking deliberately does not', () =
   // Revoke is the deliberate asymmetry. A kill switch that stops working when the feature is
   // disabled is backwards: if the flag were flipped off mid-incident, an owner must still be able to
   // permanently kill the credential. Separate eligibility to BEGIN from authority to END.
-  const actions = readFileSync(
-    fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
-    'utf8'
+  const actions = stripComments(
+    readFileSync(
+      fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
+      'utf8'
+    )
   )
   const revokeAt = actions.indexOf('export async function revokeConnectorAction')
   const mint = actions.slice(actions.indexOf('export async function mintConnectorAction'), revokeAt)
@@ -209,11 +213,8 @@ test('minting requires the connector gate; revoking deliberately does not', () =
   // whole function body and failed — on revoke's own comment explaining why it is not gated. Same
   // trap as a substring ban that cannot tell an honest denial from the claim it denies; a guard has
   // to distinguish code from prose about code.
-  const callsGate = (body: string) =>
-    body
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
-      .some((line) => /closedGate\(\)/.test(line))
+  // `stripComments`, not a line-prefix filter — the same lesson as everywhere else in this file.
+  const callsGate = (body: string) => /closedGate\(\)/.test(stripComments(body))
 
   assert.equal(callsGate(mint), true, 'mint does not check the connector gate')
   assert.equal(
@@ -234,7 +235,9 @@ test('minting requires the connector gate; revoking deliberately does not', () =
 // two visible URLs is a mess an owner cleans up, one invisible one is a credential nobody can kill.
 
 test('getConnectorStatus returns EVERY active token, never just the newest', () => {
-  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const lib = stripComments(
+    readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  )
   const start = lib.indexOf('export async function getConnectorStatus')
   const body = lib.slice(start, lib.indexOf('\n}', start))
   assert.ok(start >= 0, 'getConnectorStatus is not where this guard expects')
@@ -250,7 +253,9 @@ test('getConnectorStatus returns EVERY active token, never just the newest', () 
 })
 
 test('a failed read is UNREADABLE, and mint refuses on it rather than creating a second token', () => {
-  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const lib = stripComments(
+    readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  )
   const statusStart = lib.indexOf('export async function getConnectorStatus')
   const status = lib.slice(statusStart, lib.indexOf('\n}', statusStart))
   const mintStart = lib.indexOf('export async function mintConnectorToken')
@@ -276,7 +281,9 @@ test('revoke is scoped to the project, not just the row id', () => {
   // pod-report S3's lesson: a mutation that is not discriminator-scoped lets a caller revoke a row
   // they can name while the audit trail records the wrong thing. A token id from another project
   // must match nothing here rather than being revoked under this project's label.
-  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const lib = stripComments(
+    readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  )
   const start = lib.indexOf('export async function revokeConnectorToken')
   const body = lib.slice(start, lib.indexOf('\n}', start))
   assert.match(body, /\.eq\('project_id', projectId\)/, 'revoke is not scoped to the project')
@@ -292,7 +299,9 @@ test('the mint path translates the unique-index violation instead of surfacing a
   //
   // Asserted at the source because reproducing a lost race in a test is not practical: it needs two
   // inserts interleaved inside the window between the pre-check and the write.
-  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const lib = stripComments(
+    readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  )
   const start = lib.indexOf('export async function mintConnectorToken')
   const body = lib.slice(start, lib.indexOf('\n}', start))
   assert.match(body, /'23505'/, 'the mint path does not recognise the unique-violation code')
@@ -350,9 +359,11 @@ test('closedConnectorGate refuses when the CONNECTOR gate is off — AGENTS rule
 test('the mint action feeds BOTH env gates into the predicate', () => {
   // The half a source scan is actually good for: the decision is unit-tested above, but nothing
   // there can see whether this action still passes it the real values.
-  const actions = readFileSync(
-    fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
-    'utf8'
+  const actions = stripComments(
+    readFileSync(
+      fileURLToPath(new URL('../app/app/setup/connect/[projectSlug]/actions.ts', import.meta.url)),
+      'utf8'
+    )
   )
   const start = actions.indexOf('function closedGate()')
   const body = actions.slice(start, actions.indexOf('\n}', start))
