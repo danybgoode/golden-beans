@@ -48,10 +48,7 @@ export default async function FlagCredentialsPage({ params }: { params: Promise<
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Flag credentials — {projectSlug}</h1>
-        <p>
-          <a href={`/app/flags/${projectSlug}`}>← All features</a>
-        </p>
+        <h1>Flag credentials</h1>
         <p>
           Two kinds of key, revocable independently. A <strong>snapshot key</strong> lets a client read this
           project&apos;s flags for one environment. A <strong>catalog sync key</strong> lets one service

@@ -80,6 +80,19 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [Four destinations — an information architecture for the signed-in console](02-commercial/console-ia-overhaul/README.md)
+  — the signed-in product had **sixteen destinations and no information architecture**, presented as
+  one flat list ordered by the sprint that built each. It now has **four sections** (Today · Measure ·
+  Ship · Setup) generated from the route inventory, a per-section rail, `⌘K` over every surface AND
+  every feature key, and a per-feature destination carrying the whole loop — its switch, its rules,
+  its **Funnel** and its **Impact**, the last two of which used to be routes whose own nav
+  descriptions told you to edit the URL. **Live in production** (PRs #122/#123/#124 + Sprint 3B):
+  `CONSOLE_SHELL_ENABLED=true` in all three Vercel scopes, proved by both Setup routes going
+  **404 → 307** across the deploy. The flags page carries no JSON and no talk of immutable versions;
+  creating a feature is a three-step wizard where the only thing anyone types is the word the code
+  will import. The approved design is **binding and measured** —
+  `design/CONSOLE-CONTRACT.md` plus a visual gate that runs in CI and can go red on the way a page
+  looks, which is the thing this epic's own plan could not do until it was rewritten mid-flight.
 - ✅ [Golden Frijoles rebrand close-out](02-commercial/frijoles-rebrand-closeout/README.md)
   (published `@golden-frijoles/sdk@0.4.0` · explicit OpenFeature identity break · deprecated old SDK
   pointer · footer-ledger deletion · authenticated mobile sweep) — **live in production 2026-08-13**
@@ -278,6 +291,19 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-08-28** — `console-ia-overhaul` **shipped and live** (PRs #122/#123/#124 + Sprint 3B). The
+  epic that had to correct its own plan to finish: Sprints 1 and 2 shipped a *correct* information
+  architecture and a visual result the product owner rejected on sight, because the plan had demoted
+  the approved design to "inspiration" — thirteen structural acceptance criteria, all satisfied, and
+  **not one that could fail on the way a page looked**. A22 withdrew that sentence, made
+  `design/CONSOLE-CONTRACT.md` binding for every signed-in route, and turned the contract into a
+  spec that measures the page. It was red at **2889px in a 960px viewport**; Story 3.3 — deleting
+  both free-key authoring paths and landing the "New feature" wizard in the same commit — is what
+  turned it green, and it now runs in CI. Six defects in this sprint were found by opening the page
+  rather than reading the diff, including **every confirmation dialog in the product pinned to the
+  top-left corner of the viewport** since the component shipped. Six of nine locked decisions
+  survived contact with the live database; the three that did not became numbered amendments before
+  a builder could inherit them.
 - **2026-08-20** — `site-url-preview-aware` **shipped** (PR #116, deployed `c2589e1`): the smallest
   epic in a while and the one with the most review rounds — nine, most of them finding a hole in the
   previous round's fix. The nine-line fix was never the work; proving those nine lines cannot mint a

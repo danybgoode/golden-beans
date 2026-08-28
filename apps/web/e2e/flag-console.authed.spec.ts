@@ -14,7 +14,13 @@
 // outside the merge gate by design. Run it deliberately — `npm run test:e2e:authed`.
 
 import { test, expect } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import {
+  IMPACT_FEATURE_KEY,
+  IMPACT_SERIES,
+  SCENARIO_FLAG_KEY,
+  readTenantRecord,
+} from './helpers/authed-fixture'
+import { booleanDefinition, seedFlagVersion } from './helpers/seed-flag'
 import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
@@ -94,7 +100,10 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flag-credentials/${slug}`)
 
-    await expect(page.getByRole('heading', { name: `Flag credentials — ${slug}` })).toBeVisible()
+    // ⚠️ The heading no longer names the project. Story 3.5's console-wide sweep removed the
+    // `— <slug>` suffix and the back-link from every signed-in page: the top bar's switcher already
+    // says which project this is, and on a real tenant slug the title wrapped (Do-not #1).
+    await expect(page.getByRole('heading', { name: 'Flag credentials', exact: true })).toBeVisible()
     // Both tables and both minting forms — the four things Story 3.1 moved.
     await expect(page.getByRole('table').filter({ hasText: 'Snapshot keys' })).toBeVisible()
     await expect(page.getByRole('table').filter({ hasText: 'Catalog sync keys' })).toBeVisible()
@@ -106,7 +115,7 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flag-audit/${slug}`)
 
-    await expect(page.getByRole('heading', { name: `Flag audit — ${slug}` })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Flag audit', exact: true })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'What changed' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Feature' })).toBeVisible()
 
@@ -120,7 +129,7 @@ test.describe('the flag console, signed in', () => {
     }
   })
 
-  test('a feature has its own address, with the three tabs', async ({ page }) => {
+  test('a feature has its own address, with the six tabs', async ({ page }) => {
     const slug = tenantSlug()
     await page.goto(`/app/flags/${slug}`)
 
@@ -131,9 +140,23 @@ test.describe('the flag console, signed in', () => {
     await firstFeature.click()
 
     await expect(page.getByRole('heading', { name: key })).toBeVisible()
-    for (const tab of ['Value', 'History', 'Settings']) {
-      await expect(page.getByRole('link', { name: tab, exact: true })).toBeVisible()
+    // ⚠️ THREE → SIX. Story 3.2 added Funnel and Impact — the two surfaces whose own nav entries
+    // used to tell the reader to edit the URL — and split Targeting out of Value, which is what
+    // makes Value fit on one screen. The list is exhaustive on purpose: asserting a subset would
+    // stay green if a tab silently disappeared.
+    //
+    // They are LINKS with `aria-current`, not `role="tab"`: activating one navigates, and there is
+    // no JS on this page to give a tablist its arrow keys. Same markup the shell's section tabs use.
+    const tabs = ['Value', 'Targeting', 'Funnel', 'Impact', 'History', 'Settings']
+    const strip = page.getByRole('navigation', { name: 'Feature sections' })
+    for (const tab of tabs) {
+      await expect(strip.getByRole('link', { name: tab, exact: true })).toBeVisible()
     }
+    await expect(strip.getByRole('link')).toHaveCount(tabs.length)
+    // Exactly one is current, and it is the default. `aria-current` carries it to a screen reader,
+    // not just to the pixels.
+    await expect(strip.locator('[aria-current="page"]')).toHaveCount(1)
+    await expect(strip.locator('[aria-current="page"]')).toHaveText('Value')
 
     // Each environment named with its state — the epic's outcome test in miniature, and the reason
     // "never turned on here" exists as a distinct state at all.
@@ -154,20 +177,97 @@ test.describe('the flag console, signed in', () => {
     await expect(page.getByRole('button', { name: 'Mint 30-day snapshot key' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Lifecycle audit' })).toHaveCount(0)
 
-    // ...and the authoring form STAYS, which is the near-miss Story 3.3 caught: it shared a JSX
-    // block with the credential forms, so gating them hid it too — leaving no way to create a flag.
+    // ⚠️ **This assertion is INVERTED as of Story 3.3, and the inversion is the story.**
     //
-    // Scoped to the TEXTAREA form, because two controls carry this exact label: the rule builder's
-    // (disabled until its draft validates) and this one. An unscoped `getByRole` resolves to both
-    // and fails on strict mode — which is what it did the first time this suite was run, and the
-    // same ambiguous-locator class `flag-rule-builder.authed.spec.ts` already records twice.
-    // `textareaSubmit` there solves it identically; this is that shape, not a new one.
-    await expect(
-      page
-        .locator('form')
-        .filter({ has: page.locator('#flag-definition') })
-        .getByRole('button', { name: 'Create immutable version' })
-    ).toBeVisible()
+    // It used to read "…and the authoring form STAYS" — because at the time it did, and had to:
+    // deleting it would have left no way to create a feature at all. Story 3.3 lands the
+    // replacement (`new-feature.tsx`) in the same commit as the deletion, so the form goes, and
+    // this line now pins the deletion rather than the near-miss that preceded it.
+    //
+    // Both halves are asserted together on purpose. An absence assertion alone would pass on a
+    // blank page, and this epic has shipped guards that could not fail; a presence assertion alone
+    // would not notice the duplicate surviving. Together they say the thing that matters: **exactly
+    // one creation surface, and it is the new one.**
+    await expect(page.locator('#flag-definition')).toHaveCount(0)
+    await expect(page.locator('textarea')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Create immutable version' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Create an immutable definition version' })).toHaveCount(0)
+    // The rule builder is the SECOND free-key creation path (A21 — A3 said there was one). It goes
+    // with the first, and its own strings go with it.
+    await expect(page.locator('.rule-builder')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Build a rule' })).toHaveCount(0)
+    await expect(page.getByText('Show JSON')).toHaveCount(0)
+
+    // The replacement, on the same page, in the same render.
+    await expect(page.getByRole('button', { name: '+ New feature' })).toBeVisible()
+  })
+
+  test('the wizard is a real modal — focus stays in, and comes back out to the trigger', async ({ page }) => {
+    // ⚠️ **This is the assertion the FIRST version of this control could not have passed.** It was a
+    // `<div role="dialog" aria-modal="true">` over a scrim, and `aria-modal="true"` on a container
+    // that does not trap focus is a claim the markup cannot keep: Tab walked out onto the page
+    // behind it, and closing restored focus nowhere. It is a native `<dialog>` + `showModal()` now,
+    // the pattern `ConfirmDialog` already proves in this repo.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+    await page.getByRole('button', { name: '+ New feature' }).click()
+    await expect(page.locator('dialog[open]')).toBeVisible()
+
+    // Twenty-five tabs. Focus may legitimately pass through the BROWSER's own chrome — where
+    // `document.activeElement` reports `<body>` — but it must never land on a control belonging to
+    // the page behind the dialog. Asserted as "which element", not as a boolean, so a failure names
+    // what it escaped to.
+    const escapes: string[] = []
+    for (let press = 0; press < 25; press += 1) {
+      await page.keyboard.press('Tab')
+      const where = await page.evaluate(() => {
+        const element = document.activeElement as HTMLElement | null
+        if (element === null) return 'null'
+        if (element.closest('dialog[open]') !== null) return 'dialog'
+        return element.tagName
+      })
+      if (where !== 'dialog' && where !== 'BODY') escapes.push(where)
+    }
+    expect(escapes, 'focus left the dialog for a control on the page behind it').toEqual([])
+
+    // And it comes back. `showModal()`'s focus restoration only happens if the element is closed
+    // through the native `close()` — which is why this component never unmounts the dialog, the
+    // same trap `ConfirmDialog` records paying for once.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('dialog[open]')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '+ New feature' })).toBeFocused()
+  })
+
+  test('the "New feature" wizard creates a feature and lands on it', async ({ page }) => {
+    // ⚠️ **The end-to-end proof that the deletion above did not remove a capability.** Every other
+    // assertion in this file is about what is absent; this one is about what replaced it, and it
+    // goes all the way through the real server action to a real row.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+    await page.getByRole('button', { name: '+ New feature' }).click()
+
+    const name = `probe_${Date.now().toString(36)}`
+    await page.getByLabel('Feature name').fill(name)
+    await page.getByLabel('What this controls').fill('Story 3.3 replacement-control smoke.')
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    // Step 2 cannot be left without BOTH answers — the footer says which one is missing rather than
+    // leaving a dead button, so the note is asserted, not just the disabled state.
+    const continueButton = page.getByRole('button', { name: 'Continue' })
+    await expect(continueButton).toBeDisabled()
+    await page.getByRole('button', { name: 'Release toggle' }).click()
+    await expect(continueButton).toBeDisabled()
+    await page.getByRole('button', { name: 'Medium risk' }).click()
+    await continueButton.click()
+
+    // The review names the key the code will import, composed from the area and the fixed ending.
+    await expect(page.getByText(`${name}_enabled`).first()).toBeVisible()
+    await page.getByRole('button', { name: 'Create feature' }).click()
+
+    // It lands ON the new feature — which is where its switch is, because the wizard turns nothing
+    // on (one write path, one validator: it creates a definition and nothing else).
+    await page.waitForURL(new RegExp(`/app/flags/${slug}/${name}_enabled$`))
+    await expect(page.getByRole('heading', { name: `${name}_enabled` })).toBeVisible()
   })
 })
 
@@ -272,5 +372,108 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     await page.goto(`/app/flags/${tenantSlug()}?q=gb`)
     await page.waitForLoadState('networkidle')
     await expect(page.locator('[data-dormant-summary]')).toHaveCount(0)
+  })
+})
+
+// ── console-ia-overhaul · Sprint 3, Story 3.2 — Funnel and Impact, on the feature ─────────────
+//
+// ⚠️ **The honest empty state IS the deliverable, and that is what most of this asserts** (A4).
+// Live production 2026-08-27: the TARS registry holds ONE row for `miyagisanchez` — `setup_guide` —
+// against 42 flag definitions, and the join on `key` returns ZERO. So for every feature a reader
+// can click today, these tabs render a sentence rather than a number, and the thing worth pinning
+// is that the sentence names WHICH absence it is and that the page still serves 200.
+//
+// Both halves are covered, which is the part that needed arranging: a flag with no TARS twin (the
+// common case) and one WITH a linked input (the case that proves the read path is real). The second
+// needs a flag whose key matches the impact fixture's `feature_key`, so this suite seeds one.
+
+test.describe('Story 3.2 — a feature carries its own funnel and impact', () => {
+  test.skip(
+    () => !isFlagConsoleEnabled(),
+    'the console renders behind FLAG_CONSOLE_ENABLED; this pass needs it on'
+  )
+
+  test('the Funnel tab explains the absence — it does not 404 and it does not show a zero', async ({
+    page,
+  }) => {
+    const slug = tenantSlug()
+    const base = `/app/flags/${slug}/${encodeURIComponent(SCENARIO_FLAG_KEY)}`
+
+    // ⚠️ **The status code is the assertion, not decoration.** A4's first hard constraint is that
+    // the tab must NOT call `notFound()` — `app/app/funnel/[projectSlug]/[featureKey]/page.tsx:26`
+    // does exactly that on `feature_not_found`, and a tab that 404s the whole feature page because
+    // the OTHER registry has no row is a regression caused by a missing measurement. Asserted on
+    // the response, because the rendered sentence looks the same either way to a reader.
+    const response = await page.goto(`${base}?tab=funnel`)
+    expect(response?.status(), 'the Funnel tab must not 404 a feature that exists').toBe(200)
+
+    // It names which absence this is — two registries, not one broken number.
+    await expect(page.getByText('Nothing is measuring this yet')).toBeVisible()
+    await expect(page.getByText(/nothing in the TARS registry is measuring it/)).toBeVisible()
+
+    // ⚠️ And NEVER a zero. "Measured, and the answer is nothing" is a different claim from "nobody
+    // is measuring this", and rendering the first when the second is true is the failure this repo
+    // has shipped to production before (`lib/tars-query.ts` filters on a tag the realistic caller
+    // has no reason to set — LEARNINGS records four instances).
+    await expect(page.locator('.kpi')).toHaveCount(0)
+
+    // The same shape on Impact, whose absence has a different sentence because it is a different
+    // fact: nothing is linked, rather than nothing is measured.
+    const impact = await page.goto(`${base}?tab=impact`)
+    expect(impact?.status(), 'the Impact tab must not 404 a feature that exists').toBe(200)
+    await expect(page.getByText('No impact to attribute yet')).toBeVisible()
+    // ⚠️ **The two absences say DIFFERENT things**, and asserting only the headline would have
+    // passed on the version that blamed the TARS registry for both (cross-review, agy). Impact
+    // misses on `feature_inputs`, not on `features` — a North Star input has to be LINKED, which is
+    // a different act in a different table, and telling an operator otherwise sends them to fix the
+    // wrong thing.
+    await expect(page.getByText(/no North Star input is linked to it/)).toBeVisible()
+    await expect(page.getByText(/TARS registry/)).toHaveCount(0)
+    await expect(page.locator('.kpi')).toHaveCount(0)
+  })
+
+  test('the Impact tab renders NUMBERS when an input is actually linked', async ({ page }) => {
+    // ⚠️ **Without this the suite would only ever have proved the empty state**, which is the
+    // failure mode A4's own note warns about from the other direction: a tab that renders nothing
+    // and a tab that cannot render anything look identical from the outside.
+    //
+    // The auth fixture already links a North Star input to `IMPACT_FEATURE_KEY` and seeds its
+    // series; what it has no reason to create is a FLAG with that key, because the two registries
+    // are unrelated. Seeding one here is the whole trick, and it is also a live demonstration of
+    // A4's point: the join hits only when somebody deliberately makes the two keys match.
+    const slug = tenantSlug()
+    await seedFlagVersion(
+      IMPACT_FEATURE_KEY,
+      booleanDefinition('Story 3.2 impact-tab fixture.'),
+      'Story 3.2 impact-tab fixture.'
+    )
+
+    const base = `/app/flags/${slug}/${encodeURIComponent(IMPACT_FEATURE_KEY)}`
+    const response = await page.goto(`${base}?tab=impact`)
+    expect(response?.status()).toBe(200)
+
+    // Three readings, from the series the fixture seeded — asserted as a COUNT of tiles plus the
+    // latest value, so a pane that rendered the right shape with the wrong numbers still fails.
+    await expect(page.locator('.kpi')).toHaveCount(3)
+    const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
+    await expect(page.locator('.kpi .n').first()).toHaveText(String(latest.value))
+    // The correlation caveat rides with the numbers. It is the one claim this pane could overstate.
+    await expect(page.getByText(/not a causal claim/)).toBeVisible()
+
+    // ⚠️ And its FUNNEL is still empty, on the same feature, in the same run — because
+    // `feature_inputs` and `features` are two different tables. That pairing is A4 stated as a test
+    // rather than as a paragraph.
+    await page.goto(`${base}?tab=funnel`)
+    await expect(page.getByText('Nothing is measuring this yet')).toBeVisible()
+  })
+
+  test('the standalone funnel and impact routes still work and keep their URLs', async ({ page }) => {
+    // Story 3.2's own criterion: old links do not break, they simply stop being the only way in.
+    // Both left the NAV in Story 1.2 (their descriptions told the reader to edit the URL); neither
+    // left the product.
+    const slug = tenantSlug()
+    const impact = await page.goto(`/app/impact/${slug}/${encodeURIComponent(IMPACT_FEATURE_KEY)}`)
+    expect(impact?.status()).toBe(200)
+    await expect(page.getByRole('heading', { name: new RegExp(IMPACT_FEATURE_KEY) })).toBeVisible()
   })
 })

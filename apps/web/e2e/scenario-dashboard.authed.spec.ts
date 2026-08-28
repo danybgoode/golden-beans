@@ -19,7 +19,7 @@ test('a project member can inspect the tenant-scoped scenario operating lens', a
 
   const response = await page.goto(`/app/scenarios/${slug}`)
   expect(response?.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: `Scenarios & breakers — ${slug}` })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Scenarios & breakers', exact: true })).toBeVisible()
   await expect(page.getByRole('cell', { name: SCENARIO_TARGET_KEY, exact: true })).toBeVisible()
   await expect(page.getByText(`${SCENARIO_FIXTURE_KEY} v1`, { exact: true }).first()).toBeVisible()
   await expect(page.getByText(`${SCENARIO_UNDISCLOSED_KEY} v1`, { exact: true }).first()).toBeVisible()

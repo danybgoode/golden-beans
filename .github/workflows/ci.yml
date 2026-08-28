@@ -138,6 +138,18 @@ jobs:
           # now that A19 ships the console ENABLED — the main server below runs with it ON, so a
           # dark assertion there would assert the opposite of production.
           CONSOLE_SHELL_ENABLED: 'false'
+          # ⚠️ Sprint 3 — `FLAG_CONSOLE_ENABLED` was set NOWHERE in this workflow, so the whole
+          # blocking gate ran with the flag console dark while production has served it ON since
+          # flags-console-parity. That is the same defect A19 caught for `CONSOLE_SHELL_ENABLED`,
+          # one flag over: CI matched production by accident, and stopped when production moved.
+          # Explicitly OFF here, ON below, and `flag-console-dark.spec.ts` branches on it — so both
+          # states are asserted rather than whichever one the environment happened to be in.
+          FLAG_CONSOLE_ENABLED: 'false'
+          # ⚠️ Sprint 3 — `SIGNUP_ENABLED` moves to the MAIN server (production has it ON), so the
+          # signup DARK contract moves here, where it is the only place it can still be asserted.
+          # `signup.spec.ts`'s two dark tests skip themselves when the gate is on, so leaving them
+          # only on the lit server would have silently retired them.
+          SIGNUP_ENABLED: 'false'
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
         run: |
           set -euo pipefail
@@ -177,6 +189,8 @@ jobs:
             apps/web/e2e/flag-serving-dark.spec.ts \
             apps/web/e2e/scenario-dark.spec.ts \
             apps/web/e2e/setup-routes-dark.spec.ts \
+            apps/web/e2e/flag-console-dark.spec.ts \
+            apps/web/e2e/signup.spec.ts \
             --project=api; then
             cat /tmp/journey-dark-server.log
             exit 1
@@ -209,6 +223,21 @@ jobs:
           # all of `setup-surfaces.authed` would skip permanently — three suites silently inverting
           # on the day this merges. The dark contract moved to the OFF server above.
           CONSOLE_SHELL_ENABLED: 'true'
+          # Same argument, the flag console's own gate: ON in production since
+          # flags-console-parity, and set nowhere in this workflow until Sprint 3. The visual gate
+          # below needs it too — it asserts the LIT console and skips silently without it.
+          FLAG_CONSOLE_ENABLED: 'true'
+          # The rule builder rides its own gate and is ON in production; the feature page's
+          # Targeting tab is where it renders now.
+          FLAG_RULE_BUILDER_ENABLED: 'true'
+          # ⚠️ **Required by the authed browser rail, and it matches production.**
+          # `SIGNUP_ENABLED` gates the PROVISIONING redirect, not just the `/signup` page:
+          # `auth.setup.ts` signs in through the real form and then waits for the app to create the
+          # tenant, which never happens with the gate off — it fails with "sign-in succeeded but no
+          # tenant was provisioned", which is exactly what the first CI run of the visual gate said.
+          # It has been ON in production since multi-tenant-activation, so this is CI catching up
+          # rather than CI being loosened. The dark contract moved to the OFF server above.
+          SIGNUP_ENABLED: 'true'
           # Journey projection HTTP specs exercise the live API seam. The preceding dedicated
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
@@ -276,12 +305,86 @@ jobs:
           # Both places, per this block's own rule — `setup-routes-dark.spec.ts` BRANCHES on this to
           # decide which half to run, so the server and the test process must agree about it.
           CONSOLE_SHELL_ENABLED: 'true'
+          # `flag-console-dark.spec.ts` branches on this one the same way, and it is now set on the
+          # server above — a mismatch here would make it assert the dark contract against a lit
+          # server, which is the single most confusing CI-only failure this repo records.
+          FLAG_CONSOLE_ENABLED: 'true'
+          FLAG_RULE_BUILDER_ENABLED: 'true'
+          # `signup.spec.ts` BRANCHES on this — its two dark tests skip when the gate is on — so the
+          # test process has to agree with the server or it asserts the dark contract against a lit
+          # one. That half now runs on the `:3100` server instead.
+          SIGNUP_ENABLED: 'true'
           SIGNALS_ENABLED: 'true'
           FLAG_SERVING_ENABLED: 'true'
           RESILIENCE_SCENARIOS_ENABLED: 'true'
           SECURITY_SIMULATIONS_ENABLED: 'true'
           AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
         run: npm run test:e2e
+
+      # ── console-ia-overhaul · Story 3.3's closing step — the VISUAL gate joins CI ─────────────
+      #
+      # `e2e/console-visual.authed.spec.ts` was written in Part A and deliberately NOT wired in,
+      # for a stated reason: its assertion [1] was RED until Story 3.3 deleted the JSON authoring
+      # stack, so adding it then would have made CI permanently red and blocked every merge behind
+      # it. Story 3.3 landed; the gate is green; this is the step that was promised.
+      #
+      # It is the epic's flagship guard — the one thing in the plan that can go red on the way a
+      # page LOOKS — and until now it executed only when a human exported two variables and skipped
+      # silently otherwise. A gate nothing runs is a gate that decays: `landing.browser.spec.ts` is
+      # in this repo right now, red on `main`, because the `browser` project runs nowhere.
+      #
+      # ⚠️ Deliberately NOT the whole `authed` project. That is 84 specs of opt-in browser smoke,
+      # and WAYS-OF-WORKING is explicit that the browser rails are not the blocking gate; adding
+      # them all would spend Actions minutes (a recurring account-wide constraint here) and put 84
+      # chances of flake in front of every merge. This adds the ONE file the epic argued for.
+      - name: Install Chromium for the visual gate
+        run: npx playwright install --with-deps chromium
+
+      - name: Console visual gate (the approved design, asserted)
+        # Every flag a spec BRANCHES on is read in two places — the server decides behaviour, the
+        # test decides expectation — and `gatesAreLit()` in this spec reads two of these. Set in both
+        # places or the suite skips silently and reports green having asserted nothing.
+        #
+        # ⚠️ The FULL set is mirrored from the api step above, not just the two this spec reads.
+        # Cross-review (agy) flagged the partial list: the running server has twelve gates open, and
+        # a test process that disagrees with it about any of them is the single most confusing
+        # CI-only failure this repo records. Mirroring costs nothing and removes the class rather
+        # than the instance.
+        env:
+          CONSOLE_SHELL_ENABLED: 'true'
+          FLAG_CONSOLE_ENABLED: 'true'
+          FLAG_RULE_BUILDER_ENABLED: 'true'
+          FLAG_SERVING_ENABLED: 'true'
+          CONNECTOR_ENABLED: 'true'
+          JOURNEY_PROJECTIONS_ENABLED: 'true'
+          EXPERIMENT_GOVERNANCE_ENABLED: 'true'
+          REPORT_SHARES_ENABLED: 'true'
+          SIGNALS_ENABLED: 'true'
+          RESILIENCE_SCENARIOS_ENABLED: 'true'
+          SECURITY_SIMULATIONS_ENABLED: 'true'
+          AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
+          SIGNUP_ENABLED: 'true'
+        # ⚠️ ONE positional filter, and `auth-setup` / `auth-teardown` are NOT named.
+        # An earlier version listed all three files, and cross-review (agy) read that as forcing the
+        # teardown to run as an ordinary test that could invalidate the session mid-suite. It does
+        # not — `dependencies` and `teardown` are a project GRAPH, not a filter — but the argument
+        # only has to be made because the extra arguments were there. Verified by running it both
+        # ways: with the spec file alone, `auth-setup` still runs first and `auth-teardown` still
+        # runs last (7 passed, teardown reported after every assertion). Fewer arguments, nothing to
+        # explain.
+        run: |
+          npx playwright test \
+            --config=apps/web/playwright.config.ts \
+            --project=authed \
+            apps/web/e2e/console-visual.authed.spec.ts
+
+      - name: Upload the visual gate's screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: console-visual
+          path: test-results/console-visual/
+          if-no-files-found: ignore
 
       - name: Dump Next.js server log (diagnostics)
         if: always()

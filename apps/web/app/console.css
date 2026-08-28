@@ -57,6 +57,9 @@
   --r: 8px;
   --r-lg: 12px;
   --shadow: 0 18px 44px rgb(0 0 0 / 44%);
+  /* The dialog layer sits above the page and needs a deeper one — `console-reference.css`'s
+     own second shadow token, ported with the modal it belongs to. */
+  --shadow-hi: 0 24px 64px rgb(0 0 0 / 62%);
   --t: 140ms cubic-bezier(0.2, 0, 0.2, 1);
 
   background: var(--roast);
@@ -636,6 +639,115 @@
   gap: 8px;
 }
 
+/* ── The switch — three states, because Golden has three (Story 3.3) ────────────────────────
+   Ported verbatim from `console-reference.css`, and it is the contract's `Switch · 38 × 21` row —
+   which the visual gate carried as a DEFERRED spec row ("not built · the row-act cell has no
+   controls until Story 3.3 lands the toggle alongside its replacement authoring path") until this.
+
+   ⚠️ The `never` track is DASHED and EMPTY, and that is the whole reason this control has three
+   looks instead of two. `flags-console-parity` Amendment 2 paid to separate "somebody switched this
+   off" from "nothing has ever happened to this here"; a plain off-switch for the second re-collapses
+   the distinction, and 39 of 42 production flags are in it. The colour is never the only carrier —
+   the pill beside it says the state in words. */
+.is-console .sw {
+  width: 38px;
+  height: 21px;
+  /* `globals.css` sets a 44px WCAG 2.5.5 target floor on every `button`. The design's switch is
+     21px tall, so the floor is met by a transparent pseudo-element that extends the HIT area
+     without moving a pixel — the target is real, the ink is the design's. */
+  min-height: 21px;
+  border-radius: 999px;
+  position: relative;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  transition:
+    background var(--t),
+    border-color var(--t);
+}
+.is-console .sw::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.is-console .sw::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--dim-2);
+  transition:
+    transform var(--t),
+    background var(--t);
+}
+.is-console .sw:hover:not([disabled]) {
+  border-color: var(--dim-2);
+}
+.is-console .sw.on {
+  background: var(--green-deep);
+  border-color: var(--green);
+}
+.is-console .sw.on::after {
+  transform: translateX(17px);
+  background: var(--green);
+}
+.is-console .sw.off {
+  background: rgb(232 106 94 / 14%);
+  border-color: var(--red-deep);
+}
+.is-console .sw.off::after {
+  background: var(--red);
+}
+.is-console .sw.never {
+  border-style: dashed;
+  background: transparent;
+}
+.is-console .sw.never::after {
+  background: transparent;
+  border: 1.5px dashed var(--dim-2);
+  width: 15px;
+  height: 15px;
+}
+.is-console .sw[disabled] {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* The header cell over the switches. Same fixed width as `.row-act`, so the label sits over the
+   column it names rather than near it. */
+.is-console .listhead .h-act {
+  width: 96px;
+  flex: none;
+  text-align: right;
+}
+
+/* A rejection from the server, in a row. `.row` is `flex-wrap`, so a full-width child takes the
+   next line instead of being squeezed into a 96px cell — which is what makes rendering it here
+   possible at all. Red and unmissable: a snapshot conflict's correct response is "reload and look
+   again", and an operator who cannot see it will pull the lever twice. */
+.is-console .row-alert {
+  flex: 1 1 100%;
+  margin-top: 8px;
+  color: var(--red);
+  font-size: 12.5px;
+}
+
+/* The two honest sentences above the list use `.callout`, whose ported rule carries a top margin
+   for its use inside a modal body. Standing on the page it needs the pair, or the summary strip
+   below it sits flush against it. Scoped to a direct child of `main` so the modal's own callout —
+   which sits inside `.field` and gets its spacing from there — is untouched. */
+.is-console main > .callout {
+  margin-bottom: 14px;
+}
+
 /* The state pill: a dot AND a word, never colour alone. */
 .is-console .pill {
   display: inline-flex;
@@ -680,6 +792,12 @@
 .is-console .tag {
   display: inline-flex;
   align-items: center;
+  /* Undoes `tokens.css`'s `font:` SHORTHAND — a shorthand resets family, weight and style, so
+     restating only `font-size` (as this rule did) leaves the mono and the tracking in place. */
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: normal;
   padding: 2px 7px;
   border-radius: 5px;
   font-size: 11.5px;
@@ -842,6 +960,757 @@
   letter-spacing: normal;
 }
 
+/* ── Story 3.3 — the dialog layer, ported from the approved stylesheet ────────────────────────
+   Source rows: `console-reference.css` `.scrim`/`.modal`/`.field`/`.steps`/`.keyfield`/`.cardpick`/
+   `.chips`/`.review`/`.note-box`/`.callout`. Ported from the CSS, not from a description of it
+   (CONSOLE-CONTRACT.md → Porting); where the reference and the contract's measured table disagree,
+   the table wins.
+
+   The prototype uses this layer for the feature modal, the confirm and the "New feature" wizard.
+   Story 3.3 lands the wizard, Story 3.2 reuses `.modal-tabs`, `.kpis` and `.empty` for the feature
+   tabs. Ported together because they are one visual system, not because 3.3 needs all of it —
+   splitting a stylesheet across the stories that happen to reach it first is how a port drifts. */
+
+/* ⚠️ **`section { padding: 36px 0 }` is a LANDING rule, and it applies here.**
+   `references/design/assets/tokens.css` sets it for the public page's bands. Inside the console it
+   opens 72px of dead air around `<section>` — which was invisible while `FlagManager` rendered the
+   authoring stack inside one, and became 72px of nothing the moment Story 3.3 emptied it. Exactly
+   the class `app-shell-and-agent-rail` recorded when the same rule opened 72px per section inside a
+   320px rail, and it is measured against directly by the visual gate's assertion [1]. */
+.is-console main > section {
+  padding: 0;
+}
+
+.is-console .mono,
+.is-console code {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+
+/* ⚠️ **A native `<dialog>`, so the scrim is `::backdrop` and there is no click-away button.**
+   The first version was a `<div role="dialog" aria-modal="true">` over a scrim `<button>`, and
+   `aria-modal="true"` on a container that does not trap focus is a claim the markup cannot keep —
+   Tab walked out of the wizard onto the page behind it. `showModal()` gives the trap, the inert
+   background, the top layer and focus restoration; the platform's own scrim comes with it. */
+.is-console .modal::backdrop {
+  background: rgb(8 6 4 / 66%);
+}
+.is-console .modal {
+  /* The UA centres a modal dialog with `inset: 0; margin: auto`, which `globals.css`'s
+     `* { margin: 0 }` reset defeats — the same defect this branch fixes for `.confirm-dialog`. The
+     design puts the wizard near the TOP of the viewport rather than dead centre, so the vertical
+     margin is stated instead of auto. */
+  margin: 8vh auto auto;
+  width: min(720px, calc(100vw - 40px));
+  max-height: 84vh;
+  padding: 0;
+  background: var(--card);
+  color: var(--crema);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-hi);
+  overflow: hidden auto;
+}
+.is-console .modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+}
+.is-console .modal-head h2 {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.is-console .modal-head .sub {
+  color: var(--dim);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+.is-console .modal .x {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--dim-2);
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+}
+.is-console .modal .x:hover {
+  background: var(--card-3);
+  color: var(--crema);
+}
+.is-console .modal-body {
+  padding: 20px;
+}
+.is-console .modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--roast-2);
+  flex-wrap: wrap;
+}
+.is-console .modal-foot .note {
+  /* Same shorthand problem as `.tag` above: `tokens.css` sets `font: italic 400 12.5px var(--mono)`
+     on `.note`, so family and style have to be named, not just the size. */
+  font: 400 12px var(--sans, 'Archivo', system-ui, sans-serif);
+  font-style: normal;
+  color: var(--dim-2);
+  margin-right: auto;
+  max-width: 40ch;
+}
+
+/* ⚠️ **Three landing rules leak into the console through class names it shares.** Found by looking
+   at the built page beside the prototype, not by reading the diff — each one renders as a
+   plausible-looking style rather than as a break, which is why the epic's own rule is to open the
+   page (`app-shell-and-agent-rail` S2).
+
+     `tokens.css` `.tag`   → `font: 600 10px var(--mono)` + `letter-spacing: .08em`. The console's
+                             own `.tag` set only `font-size`, so the SHORTHAND's family and weight
+                             survived and every type/risk chip rendered as tracked-out mono. The
+                             reference's `.tag` is sans; the contract's Do-not #3 is that uppercase
+                             (and mono) belong in exactly the two places it measures.
+     `tokens.css` `.note`  → `font: italic 400 12.5px var(--mono)`. The modal footer's note is the
+                             only `.note` in the console, and it rendered as italic mono.
+     `globals.css` `.field`→ `display: grid; gap: 6px`. The reference's `.field` is a block with a
+                             bottom margin; a grid gap stacks on top of `.hint`'s own `margin-top`.
+
+   Each is overridden here rather than renamed, because renaming the class would break the port's
+   one durable property: the prototype's selectors are kept so the two files can be diffed forever
+   (this file's own header). */
+.is-console .field {
+  display: block;
+  margin-bottom: 20px;
+}
+.is-console .field:last-child {
+  margin-bottom: 0;
+}
+.is-console .field > .lab {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+/* Do-not #3: uppercase appears in exactly two places and NEVER in mono. `.lab` is the third
+   measured instance the contract names (11px Archivo 600, the same as the list header), so it is
+   declared with the same family rather than inheriting whatever a parent set. */
+.is-console .field .hint {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 7px;
+  max-width: 64ch;
+}
+
+.is-console .steps {
+  display: flex;
+  gap: 0;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+.is-console .step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  flex: 1;
+}
+.is-console .step .n {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 11px;
+  flex: none;
+}
+.is-console .step[data-on='true'] {
+  color: var(--crema);
+}
+.is-console .step[data-on='true'] .n {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgb(232 185 60 / 10%);
+}
+.is-console .step[data-done='true'] .n {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #241d14;
+}
+.is-console .step .line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  margin: 0 4px;
+}
+.is-console .step:last-child .line {
+  display: none;
+}
+
+.is-console .keyfield {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--roast-2);
+  overflow: hidden;
+}
+.is-console .keyfield .sel select {
+  border: none;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--card-2);
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+.is-console .keyfield input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  padding: 9px 11px;
+  color: var(--crema);
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 13.5px;
+}
+.is-console .keyfield input:focus {
+  outline: none;
+}
+.is-console .keyfield .suffix {
+  padding: 0 12px;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 13.5px;
+  color: var(--dim-2);
+}
+/* The plain one-line text field. The reference has no rule for it — the prototype's only free-text
+   inputs are the key field and the inline description editor — so this borrows the latter's
+   (`.inline-edit input`) rather than inventing a shape. */
+.is-console .text-input {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  color: var(--crema);
+  font: inherit;
+  font-size: 13.5px;
+}
+.is-console .text-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.is-console .note-box {
+  padding: 11px 13px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.is-console .note-box .lab2 {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  margin-bottom: 5px;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+.is-console .note-box .key-preview {
+  color: var(--gold-hot);
+  font-size: 13.5px;
+}
+
+.is-console .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.is-console .chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  font-size: 12.5px;
+  color: var(--dim);
+  transition:
+    border-color var(--t),
+    background var(--t),
+    color var(--t);
+}
+.is-console .chip:hover {
+  border-color: var(--dim-2);
+  color: var(--crema);
+}
+/* `aria-pressed`, not a class — what a reader sees and what a screen reader hears are one
+   attribute, which is the rule the summary strip's `aria-current` already follows. */
+.is-console .chip[aria-pressed='true'] {
+  border-color: var(--gold);
+  background: rgb(232 185 60 / 12%);
+  color: var(--gold-hot);
+  font-weight: 600;
+}
+
+.is-console .picklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.is-console .pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  text-align: left;
+  width: 100%;
+  color: var(--crema);
+}
+.is-console .pick:hover {
+  border-color: var(--dim-2);
+}
+.is-console .pick[aria-pressed='true'] {
+  border-color: var(--gold);
+  background: rgb(232 185 60 / 8%);
+}
+.is-console .pick .t {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.is-console .pick .d {
+  display: block;
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 2px;
+  line-height: 1.45;
+}
+.is-console .cardpick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.is-console .cardpick .pick {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 13px;
+}
+
+.is-console .review {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.is-console .review > div {
+  display: flex;
+  gap: 12px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13.5px;
+}
+.is-console .review > div:last-child {
+  border-bottom: none;
+}
+.is-console .review .k {
+  width: 112px;
+  flex: none;
+  color: var(--dim-2);
+  font-size: 12.5px;
+}
+
+.is-console .callout {
+  display: flex;
+  gap: 11px;
+  padding: 13px 15px;
+  border-radius: var(--r);
+  font-size: 13px;
+  line-height: 1.55;
+  background: rgb(232 106 94 / 8%);
+  border: 1px solid var(--red-deep);
+  color: var(--crema);
+  margin-top: 14px;
+}
+.is-console .callout.info {
+  background: rgb(109 179 232 / 7%);
+  border-color: #2f4d63;
+}
+.is-console .callout .ico {
+  flex: none;
+  color: var(--red);
+  margin-top: 1px;
+}
+.is-console .callout.info .ico {
+  color: var(--blue);
+}
+
+/* The server's verbatim rejection. Red, and never quiet: a creation that looks like it succeeded
+   and did not is worse than an error message (`flag-authoring.tsx` records the same rule). */
+.is-console .form-error {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 13px;
+}
+
+.is-console .btn-sm {
+  padding: 6px 11px;
+  font-size: 12.5px;
+}
+.is-console .btn-quiet {
+  color: var(--dim);
+  padding: 8px 10px;
+}
+.is-console .btn-quiet:hover {
+  color: var(--crema);
+  background: var(--card);
+}
+.is-console .btn[disabled] {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .is-console .cardpick {
+    grid-template-columns: 1fr;
+  }
+  .is-console .scrim {
+    padding: 16px 12px;
+  }
+}
+
+/* ── Story 3.2 — the feature's tabs and the two panes behind them ─────────────────────────────
+   Ported from `console-reference.css`: `.tabs` / `.tab` (the prototype's PAGE-level tab strip —
+   `.modal-tab` is the same control in its modal, and this is a page), `.kpis` / `.kpi`, `.empty`,
+   `.envtable`. The funnel's bars are the prototype's inline `<div>` gradient, given class names
+   here because a repeated inline style is a rule that cannot be diffed against its source. */
+.is-console .tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r) var(--r) 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-top: 22px;
+}
+.is-console .tabs::-webkit-scrollbar {
+  display: none;
+}
+.is-console .tab {
+  padding: 11px 12px 10px;
+  font-size: 13px;
+  color: var(--dim);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  transition:
+    color var(--t),
+    border-color var(--t);
+}
+.is-console .tab:hover {
+  color: var(--crema);
+}
+.is-console .tab[aria-current='page'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+}
+
+/* The body a tab reveals. It shares the tab strip's border so the two read as one card — the
+   prototype's modal does the same with `.modal-tabs` above `.modal-body`. */
+.is-console .pane,
+.is-console .tabs + .panel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--card);
+}
+
+/* The Value tab's environment controls, side by side. `flag-switch.tsx`'s panel variant wraps each
+   button in a `.row-wrap` paragraph, which `globals.css` stacks — three full-width buttons down the
+   page. The design puts the on/off decision on one line. */
+.is-console .pane .stack-sm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.is-console .pane .stack-sm > p {
+  margin: 0;
+}
+.is-console .pane > * + * {
+  margin-top: 16px;
+}
+
+.is-console .kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.is-console .kpi {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+}
+.is-console .kpi .n {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.is-console .kpi .k {
+  font-size: 11.5px;
+  color: var(--dim-2);
+  margin-top: 2px;
+}
+
+.is-console .empty {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--dim);
+}
+.is-console .empty b {
+  display: block;
+  color: var(--crema);
+  font-size: 15px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+.is-console .empty span {
+  display: block;
+  max-width: 64ch;
+  margin: 0 auto;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+/* The three funnel bars. Class names rather than the prototype's inline styles, so the gradient and
+   the track have one definition each. */
+.is-console .funnel-bar {
+  margin-bottom: 9px;
+}
+.is-console .funnel-bar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.is-console .funnel-bar__track {
+  height: 9px;
+  border-radius: 5px;
+  background: var(--roast-2);
+  overflow: hidden;
+}
+.is-console .funnel-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-deep));
+}
+
+.is-console .envtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin-top: 4px;
+}
+.is-console .envtable caption {
+  text-align: left;
+  margin-bottom: 8px;
+}
+.is-console .envtable th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  padding: 0 12px 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+.is-console .envtable td {
+  padding: 12px 12px 12px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+.is-console .envtable tr:last-child td {
+  border-bottom: none;
+}
+.is-console .envtable .who {
+  font-size: 12px;
+  color: var(--dim-2);
+}
+.is-console .envname {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .is-console .kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Do-not #3, applied to EVERY console route rather than to the flags page ───────────────────
+   > *"Uppercase appears in exactly two places, and never in mono. Measured: the list header row and
+   > the group heading, both 11px Archivo 600. Everything else is sentence case."*
+   > — CONSOLE-CONTRACT.md
+
+   Part A ported the flags list and left every other signed-in route rendering the landing's
+   uppercase-mono label style: `FILTER THE AUDIT`, `2 ROWS`, `WHAT THIS PROJECT IS NOT MEASURING YET
+   (2)`, and every `<th>` in every `DataTable`. A22 makes the design binding for **every signed-in
+   route**, and those are shared component classes — so this is one block, not a dozen page edits.
+   Fix the class, not the instance (Roadmap/LEARNINGS.md).
+
+   The split is the contract's own: something that LABELS A COLUMN keeps its uppercase and gets the
+   measured 11px Archivo 600; everything else is body copy and becomes sentence-case sans.
+
+   ⚠️ Scoped to `.is-console`, so the landing and the public demo dashboards are untouched — the
+   same boundary the rest of this file uses, and the reason a shared class can be restyled here at
+   all. */
+
+/* Column labels — the one place uppercase survives, at the measured size and in Archivo. */
+.is-console .data-table thead th,
+.is-console .data-table caption,
+.is-console .flag-insight__diff > label {
+  font: 600 11px var(--sans, 'Archivo', system-ui, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+}
+
+/* Body copy that had been wearing a column label's clothes. `2 rows`, `Showing 25 of 42 features`,
+   a stat's caption and a disclosure's summary are all sentences, and rendering a sentence as tracked
+   uppercase mono is a column-label style used as a body style — the contract's own words for it. */
+.is-console .data-table__count,
+.is-console .stat-card__label,
+.is-console .command-center__gaps summary {
+  font: 400 12.5px var(--sans, 'Archivo', system-ui, sans-serif);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--dim);
+}
+
+/* A stat's NUMBER is mono and tabular — the contract measures it at 26/600 on the flags page, and
+   `StatCard` is the same object on every other console route. */
+.is-console .stat-card__value {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Story 3.4 — `⌘K`, in the approved design's shape ──────────────────────────────────────────
+   Ported from `console-reference.css`'s `.palette` onto the class names the component already has.
+   The markup is not renamed: `CommandPalette` is the shell's one client island and its structure is
+   load-bearing (a listbox whose options are anchors, `aria-activedescendant` on the input), so this
+   restyles it rather than rebuilding it. */
+.is-console .command-palette__panel {
+  padding: 0;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-hi);
+  overflow: hidden;
+}
+.is-console .command-palette__input {
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--crema);
+  font: 400 16px var(--sans, 'Archivo', system-ui, sans-serif);
+}
+.is-console .command-palette__input:focus {
+  outline: none;
+}
+.is-console .command-palette__panel ul {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+  margin: 0;
+  gap: 0;
+}
+.is-console .command-palette__panel a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+/* Which KIND of thing this row is — Story 3.4's "labelled so the two kinds are distinguishable".
+   The design's `.res .kind`: a small outlined caps chip at the head of the row, so the eye reads
+   the category before the name rather than after it. */
+.is-console .command-palette__kind {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex: none;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+/* The hint sits at the far right, where the design puts "where" — so the names line up down the
+   left edge and can be scanned. */
+.is-console .command-palette__panel a small {
+  margin-left: auto;
+  font: 400 12px var(--sans, 'Archivo', system-ui, sans-serif);
+  text-transform: none;
+  color: var(--dim-2);
+  text-align: right;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.is-console .command-palette__panel a[aria-selected='true'] {
+  background: var(--card-3);
+  box-shadow: none;
+}
+.is-console .command-palette__empty {
+  padding: 20px 26px;
+  text-align: center;
+  color: var(--dim-2);
+  font-size: 13.5px;
+  margin: 0;
+}
+
 /* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
    `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
    ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY
@@ -878,8 +1747,27 @@
   .is-console .product-shell__body > main {
     padding: 20px 16px 70px;
   }
+  /* ⚠️ **Visually hidden, NOT `display: none` — the reduction this file used to record is closed.**
+     The block above says: *"below 900px the cells have no column association, and this file will not
+     pretend otherwise… the honest fix is a visually-hidden header row instead of `display: none`,
+     which is a change to the markup this stylesheet cannot make."*
+     It turned out not to need one. The list is an ARIA table — `role="table"/"row"/"columnheader"/
+     "cell"` — so the association is POSITIONAL, and all that was required was keeping the
+     columnheaders in the accessibility tree while taking them out of the visual flow. `display:
+     none` removes an element from that tree entirely (measured: 3 columnheader nodes at 1440, 0 at
+     390); this keeps all three at every width.
+     Raised again by cross-review (agy) on the scoped stylesheet pass, which is what prompted trying
+     it rather than re-reading the note explaining why it had not been. */
   .is-console .listhead {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
   .is-console .row {
     flex-wrap: wrap;

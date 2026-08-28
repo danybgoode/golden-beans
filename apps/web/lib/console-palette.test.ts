@@ -35,7 +35,13 @@ registerHooks({
   },
 })
 
-const { buildPaletteEntries, filterPaletteEntries, movePaletteCursor } = await import('./console-palette.ts')
+const {
+  buildFeatureEntries,
+  buildPaletteEntries,
+  filterPaletteEntries,
+  movePaletteCursor,
+  projectFeatureIndex,
+} = await import('./console-palette.ts')
 
 const allGatesOpen: ProjectSurfaceGates = {
   'experiment-governance': true,
@@ -186,4 +192,84 @@ test('the cursor is always a valid index into a list of that length', () => {
       }
     }
   }
+})
+
+// ── console-ia-overhaul · Sprint 3, Story 3.4 — the feature half ──────────────────────────────
+
+const registryFlags = [
+  {
+    key: 'checkout.stripe_enabled',
+    versions: [
+      { version: 1, definition: { description: 'Old wording.' } },
+      { version: 3, definition: { description: 'Offer Stripe at checkout.' } },
+      { version: 2, definition: { description: 'Middle wording.' } },
+    ],
+  },
+  { key: 'catalog.owned_shop_only_enabled', versions: [{ version: 1, definition: {} }] },
+  { key: 'legacy_enabled', versions: [] },
+]
+
+test('the index describes each feature with its NEWEST version, not the first row returned', () => {
+  // ⚠️ Ordering is not assumed. `flag-registry.ts` happens to order versions, and an assumption
+  // about that is invisible until the day it changes — so the fixture above deliberately puts v3 in
+  // the MIDDLE. Taking `versions[0]` or `.at(-1)` both give the wrong answer here.
+  const index = projectFeatureIndex(registryFlags)
+  assert.equal(index[0].description, 'Offer Stripe at checkout.')
+})
+
+test('a feature with no readable description gets an empty string, never "undefined"', () => {
+  // The component renders the hint only when it is non-empty, so this is what stops the word
+  // "undefined" appearing beside a feature key in the palette.
+  const index = projectFeatureIndex(registryFlags)
+  assert.equal(index[1].description, '')
+  // …and a feature with no versions at all still appears. It exists; it simply says nothing.
+  assert.deepEqual(index[2], { key: 'legacy_enabled', description: '' })
+})
+
+test('the index carries ONLY the key and the description', () => {
+  // A6's whole argument is the byte count: ~1.1 KB instead of ~16 KB, because the projection happens
+  // server-side. A field creeping in here is the projection quietly becoming a copy.
+  for (const entry of projectFeatureIndex(registryFlags)) {
+    assert.deepEqual(Object.keys(entry).sort(), ['description', 'key'])
+  }
+})
+
+test('a feature row opens the feature, with its key escaped for the URL', () => {
+  const [entry] = buildFeatureEntries([{ key: 'a b.c', description: 'x' }], 'miyagisanchez')
+  assert.equal(entry.href, '/app/flags/miyagisanchez/a%20b.c')
+  assert.equal(entry.kind, 'feature')
+  assert.equal(entry.label, 'a b.c')
+})
+
+test('feature ids cannot collide with surface ids', () => {
+  // A feature legitimately called `flags` must not share an id with the Flags surface — the id is
+  // what React keys on and what `aria-activedescendant` points at, so a collision would move the
+  // cursor's announcement onto the wrong row.
+  const feature = buildFeatureEntries([{ key: 'flags', description: '' }], 'miyagisanchez')[0]
+  assert.ok(!entries.some((surface) => surface.id === feature.id))
+})
+
+test('the filter matches a feature by its key AND by its description', () => {
+  const featureEntries = buildFeatureEntries(projectFeatureIndex(registryFlags), 'miyagisanchez')
+  const all = [...featureEntries, ...entries]
+  assert.deepEqual(
+    filterPaletteEntries(all, 'stripe').map((entry) => entry.label),
+    ['checkout.stripe_enabled']
+  )
+  // Typing a word from what the feature DOES finds it, which is the point of indexing the
+  // description at all — a reader who remembers "the Stripe one" and a reader who remembers
+  // "checkout payments" are the same person on different days.
+  assert.deepEqual(
+    filterPaletteEntries(all, 'Offer Stripe').map((entry) => entry.label),
+    ['checkout.stripe_enabled']
+  )
+})
+
+test('surfaces are still reachable once features are in the list', () => {
+  // The regression this guards is a merge that pushed 42 features in front of 13 surfaces and left
+  // no way to reach a surface by name.
+  const all = [...buildFeatureEntries(projectFeatureIndex(registryFlags), 'miyagisanchez'), ...entries]
+  const flagsSurface = filterPaletteEntries(all, 'Flag audit')
+  assert.equal(flagsSurface.length, 1)
+  assert.equal(flagsSurface[0].kind, 'surface')
 })

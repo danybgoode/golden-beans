@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  buildFeatureEntries,
   buildPaletteEntries,
   filterPaletteEntries,
   movePaletteCursor,
+  type FeatureIndexEntry,
   type PaletteEntry,
 } from '@/lib/console-palette'
 import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
@@ -22,20 +24,111 @@ import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
  * and leaves the page (A9). That net does not extend to event handlers or to the native keydown
  * listener — see the boundary's own comment — so the listener guards its input directly.
  *
- * ── No new query, no new route ────────────────────────────────────────────────────────────────
+ * ── The SURFACES cost nothing, and the FEATURES cost nothing until you press the key ──────────
  * `links` are the ones `getShellNav()` already resolved server-side for the header and the rail.
- * The palette is a second VIEW of that list, never a second READ of it — and it therefore inherits
- * the entitlement filtering rather than re-implementing it, which is the only reason a client
- * component may hold this list at all.
+ * That half is a second VIEW of a list the shell has already paid for, never a second READ — and it
+ * therefore inherits the entitlement filtering rather than re-implementing it, which is the only
+ * reason a client component may hold it at all.
+ *
+ * The FEATURES half (Story 3.4) is fetched from `/api/internal/feature-index/<slug>` on the FIRST
+ * `⌘K` and cached for the life of this component. That is D7's answer, and it was measured rather
+ * than preferred: the alternative — seeding from the server on every render — means paying the
+ * registry's 5 round trips and ~16 KB on every signed-in page load to serve a control most sessions
+ * never press. **`/app` route load cost is unchanged: zero added queries, zero added bytes.**
  */
-export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[] }) {
+export function CommandPalette({
+  links,
+  projectSlug,
+}: {
+  links: readonly ProjectSurfaceLink[]
+  /**
+   * The project whose features `⌘K` indexes, or `null` when there is none to index.
+   *
+   * Null is a real state, not a defensive default: a signed-in user with no project reaches this
+   * shell, and so does a viewer whose nav read degraded. The palette then lists surfaces only,
+   * which is honest — there is no project whose features it could name.
+   */
+  projectSlug: string | null
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  // ── The cache is KEYED BY SLUG, and that is a correctness property, not tidiness ─────────────
+  // `null` = not fetched yet. `[]` = fetched and this project has no features. The distinction is
+  // the whole point of a nullable here: one of those states should say "loading" and the other
+  // should say nothing at all, and a bare empty array cannot tell them apart.
+  //
+  // ⚠️ **It carries the slug it was fetched FOR.** Cross-review (agy) raised a bare
+  // `FeatureIndexEntry[] | null` as Blocking: switch project without remounting and the palette
+  // would list the OLD project's keys under the NEW project's URLs — `/app/flags/<new>/<old-key>`,
+  // a link to a feature that does not exist there.
+  //
+  // It is not reachable today, and the reachability is not the point. Every navigation in this
+  // console is a full document load: the header, the rail, the switcher and the palette's own `go()`
+  // are all plain `<a>`/`window.location`, never `next/link`, so the component remounts and the
+  // cache starts empty. What makes the finding worth acting on is that the hazard is one
+  // `next/link` away, and it fails by showing a reader the WRONG TENANT'S KEYS — the one class of
+  // bug this codebase treats as unrepresentable rather than prevented (AGENTS rule #1's own
+  // reasoning). Keying the cache means a stale entry cannot be READ for the wrong project, which is
+  // stronger than remembering to clear it.
+  const [index, setIndex] = useState<{ slug: string; features: FeatureIndexEntry[] } | null>(null)
+  const [indexFailed, setIndexFailed] = useState<string | null>(null)
 
-  const entries = useMemo(() => buildPaletteEntries(links), [links])
+  // Only the index fetched for THIS project counts. A cache from another slug reads as "not fetched
+  // yet", which is exactly what it is from this page's point of view.
+  const features = index !== null && index.slug === projectSlug ? index.features : null
+
+  const entries = useMemo(
+    () => [
+      // Features first — the design's order, and the useful one: 42 features against 13 surfaces,
+      // and every surface is already one click away in the header and the rail.
+      ...(projectSlug === null || features === null ? [] : buildFeatureEntries(features, projectSlug)),
+      ...buildPaletteEntries(links),
+    ],
+    [links, features, projectSlug]
+  )
   const matches = useMemo(() => filterPaletteEntries(entries, query), [entries, query])
+
+  // ── The fetch, on FIRST open and once per page ──────────────────────────────────────────────
+  // Keyed on `open` rather than on mount, which is the whole of D7's answer. `features !== null`
+  // stops a second fetch when the palette is reopened; `indexFailed` stops it retrying forever on a
+  // tenant whose index genuinely cannot be read.
+  useEffect(() => {
+    if (!open || projectSlug === null || features !== null || indexFailed === projectSlug) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const response = await fetch(`/api/internal/feature-index/${encodeURIComponent(projectSlug)}`, {
+          headers: { Accept: 'application/json' },
+        })
+        // ⚠️ The content type is checked, not just `ok`. `requireProjectMembership` REDIRECTS an
+        // unauthenticated caller to /login, `fetch` follows redirects by default, and the login page
+        // answers 200 with HTML — so `response.ok` alone would hand `json()` a document and throw
+        // inside the try for a reason that has nothing to do with the index.
+        const contentType = response.headers.get('content-type') ?? ''
+        if (!response.ok || !contentType.includes('application/json')) throw new Error('not an index')
+        const body = (await response.json()) as { features?: FeatureIndexEntry[] }
+        if (cancelled) return
+        setIndex({ slug: projectSlug, features: Array.isArray(body.features) ? body.features : [] })
+        // ⚠️ **The cursor goes back to the top when the list changes under it.** The rows arrive
+        // asynchronously and go in FRONT of the surfaces, so a reader who pressed ↓ twice while the
+        // fetch was in flight would have the highlight land on a different row than the one they
+        // were looking at — and ↵ would open something they did not choose. Typing already resets
+        // it; this is the other way the list can change without a keystroke (cross-review, agy).
+        setCursor(0)
+      } catch {
+        // Degrade to surfaces only, and SAY SO below rather than quietly listing fewer things — a
+        // reader who types a feature name and sees nothing would otherwise conclude the feature does
+        // not exist. Keyed by slug for the same reason the cache is: a failure for one project must
+        // not stop the palette ever trying for another.
+        if (!cancelled) setIndexFailed(projectSlug)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectSlug, features, indexFailed])
 
   // ⌘K / Ctrl-K toggles. Bound to the document because the point of the shortcut is that it works
   // wherever you are on the page, including with focus in a table or a form.
@@ -150,8 +243,15 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
                 tabIndex={-1}
                 onMouseEnter={() => setCursor(index)}
               >
+                {/* The kind is on the row, which is Story 3.4's acceptance in one word: a reader
+                    scanning results has to be able to tell "the Flags page" from "a feature called
+                    flags". Derived from the closed union rather than from where the row came from,
+                    so a third kind cannot be added without deciding what it says. */}
+                <span className="command-palette__kind">
+                  {entry.kind === 'feature' ? 'Feature' : 'Go to'}
+                </span>
                 {entry.label}
-                <small>{entry.hint}</small>
+                {entry.hint !== '' && <small>{entry.hint}</small>}
               </a>
             </li>
           ))}
@@ -167,6 +267,14 @@ export function CommandPalette({ links }: { links: readonly ProjectSurfaceLink[]
             {query.trim() === ''
               ? 'There is nothing here to go to yet.'
               : `Nothing here matches “${query.trim()}”.`}
+          </p>
+        )}
+        {/* ⚠️ Stated, never silent. If the feature index could not be read, this palette is missing
+            most of what it normally holds — and a reader who types a feature key, sees nothing and
+            concludes the feature was deleted is worse off than one who is told the list is short. */}
+        {indexFailed === projectSlug && (
+          <p className="command-palette__empty" role="status">
+            Features could not be listed just now, so this only shows places to go.
           </p>
         )}
       </div>

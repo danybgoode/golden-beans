@@ -1,6 +1,22 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 3: Ship
 
-**Status:** ⬜ not started
+**Status:** ✅ shipped — Part A `4ba9665` (#124); Part B `270faa0` · `88dccd0` · `54fa594` ·
+`68a593f` · `05e857c` · `f825f46`
+
+| Story | | Where |
+|---|---|---|
+| **Part A** — the design made binding and measurable | ✅ | `4ba9665` (#124): `design/CONSOLE-CONTRACT.md`, `app/console.css`, `e2e/console-visual.authed.spec.ts`, Ship › Features rebuilt, the environment picker moved to the rail, the AgentRail removed from console routes (A22a) |
+| **3.1** The answer line and the dormant collapse | ✅ | `4ba9665`, corrected by A20 (three rows, not two; a zero-count clause is dropped) |
+| **3.3** Delete the JSON authoring stack and the rule builder | ✅ | `270faa0` — and the replacement in the same commit |
+| **3.2** Funnel and Impact as tabs on a feature | ✅ | `88dccd0` |
+| **3.4** `⌘K` indexes feature keys | ✅ | `54fa594` |
+| **3.5** Delete the dead nav | ✅ | `68a593f` (reduced by A19, corrected by A16) |
+| *(beyond the stories)* A22 for every signed-in route | ✅ | `05e857c` (A25) |
+| *(beyond the stories)* the visual gate joins CI | ✅ | `f825f46` — Story 3.3's promised closing step |
+
+> **Story 3.3 ran FIRST, and that was the point.** It is the only story that turns the visual gate's
+> assertion [1] green: measured at **2889px in a 960px viewport** on `4ba9665` and `<= 960` after.
+> Everything else in Part B was built against a page that already fits on one screen.
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -148,7 +164,7 @@
 
 ## Stories
 
-### Story 3.1 — The features list: the answer line and the dormant collapse
+### Story 3.1 — ✅ The features list: the answer line and the dormant collapse
 **As an** operator, **I want** the flags page to answer "what is on here, and why" in the first
 screen, **so that** I stop scrolling past forty rows that all say the same thing.
 **Acceptance:**
@@ -183,7 +199,7 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
   retyped in a component.
 **Risk:** low
 
-### Story 3.2 — Funnel and Impact as tabs on a feature
+### Story 3.2 — ✅ Funnel and Impact as tabs on a feature
 **As an** operator, **I want** a feature's funnel and its impact on the same page as its switch,
 **so that** I never have to type a key into the address bar again.
 **Acceptance:**
@@ -203,7 +219,7 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
   asserts the **empty state**. Asserting numbers on a flag's tab is a test that cannot pass.
 **Risk:** low
 
-### Story 3.3 — Delete the JSON authoring stack and the rule builder
+### Story 3.3 — ✅ Delete the JSON authoring stack and the rule builder
 **As an** operator, **I want** the flags page to contain no JSON and no talk of immutable versions,
 **so that** the page is about my job rather than about how a row is stored.
 **Acceptance:**
@@ -231,7 +247,7 @@ screen, **so that** I stop scrolling past forty rows that all say the same thing
   *duplicate*, not the capability.
 **Risk:** high (removes a control — the ordering rule applies)
 
-### Story 3.4 — `⌘K` indexes feature keys
+### Story 3.4 — ✅ `⌘K` indexes feature keys
 **As an** operator with 42 features, **I want** to type a feature's name from anywhere, **so that**
 the fastest path to anything is its name.
 **Acceptance:**
@@ -242,7 +258,7 @@ the fastest path to anything is its name.
 - Whichever option D7 picks, `/app` route load time does not regress measurably. State the number.
 **Risk:** low
 
-### Story 3.5 — ⚠️ REDUCED by A19: the flip already happened; this deletes the dead nav
+### Story 3.5 — ✅ REDUCED by A19: the flip already happened; this deletes the dead nav
 **As a** product owner, **I want** the new console live and the old chrome gone, **so that** the
 product has one navigation rather than two behind a switch.
 **Acceptance:**
@@ -268,69 +284,128 @@ product has one navigation rather than two behind a switch.
   no URL typed.
 **Risk:** high (product-owner merge — this is what users see)
 
-## Sprint QA
-- **api spec(s):** the flags-page string assertions (no textarea / no `Show JSON` / no *immutable*
-  with the gate on); a feature-page funnel-render spec; unit specs on the collapse arithmetic in
-  `lib/flag-list-view.ts` and on the palette's feature filter.
-- **Every new spec must be observed failing at least once** — for 3.3, break the deletion and watch
-  the string assertion go red, so it is not a tautology that would pass on an empty page.
-- **browser smoke owed:** yes, to the product owner — the flags page renders behind credentials, so
-  the "two rows and a summary line" claim is a rendered-page check. The opt-in `browser` project can
-  cover it once an authed rail exists; otherwise it is owed by name.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+## Sprint QA — what was run, and what it found
+
+**The deterministic gate, in CI's own order** (`lint` → `format:changed` → `test:unit` →
+`typecheck` → `build` → Playwright `api`): green. **1457 unit tests · 486 api specs · 0 failures.**
+
+**The `authed` browser rail: 84 specs green**, run on purpose — it is not in the blocking gate, and
+`landing.browser.spec.ts` is the standing proof of what happens to a suite nothing runs. Both gate
+states were exercised against **two real servers**, because a test process with a flag unset talking
+to a server that has it set asserts the opposite of what it claims: the lit run on `:3000` and a
+`:3100` process with `CONSOLE_SHELL_ENABLED` and `FLAG_CONSOLE_ENABLED` unset (19 dark specs green,
+including the reduced gate-off header).
+
+**Every new spec was observed failing at least once**, each against a specific mutation and each
+reported here with what it said:
+
+| Mutation | What went red |
+|---|---|
+| `showAuthoring={true}` (un-delete the JSON stack) | the deletion spec, **and** visual `[1]` at *"the page is 2748px tall in a 960px viewport"* |
+| Remove `<NewFeature>` from the page head | the presence assertion **and** the end-to-end wizard run |
+| `.sw { width: 30px }` | `[spec] the row switch width is 30px, contract says 38px` |
+| `notFound()` on `feature_not_found` in the Funnel pane | `the Funnel tab must not 404 a feature that exists · Expected 200, Received 404` |
+| A zero KPI inside the empty state | `expect(.kpi).toHaveCount(0) · Received: 1` |
+| The feature index returns nothing | `⌘K finds a FEATURE by its key and opens it` |
+
+**The gate-off guarantee was proved by RENDERING, in both off-states** (A21: the promise is about
+two gates). The flags page was rendered on this branch and on `4ba9665`, with `FLAG_CONSOLE_ENABLED`
+unset and then with `FLAG_RULE_BUILDER_ENABLED` unset as well, and the four DOMs diffed after
+normalising per-run ids and timestamps. **Identical, both times.** The one residual difference is a
+preloaded chunk in the RSC payload — the new client component joins the route's manifest even though
+it does not render — which is stated rather than folded into "byte-for-byte".
+
+**The visual gate now runs in CI** (`f825f46`), which was Story 3.3's promised closing step. Wiring
+it surfaced that **`FLAG_CONSOLE_ENABLED` was set nowhere in the workflow**: the whole blocking gate
+had been running with the flag console dark while production served it lit. Fixed the same way A19
+fixed `CONSOLE_SHELL_ENABLED` — explicitly off on the `:3100` server, on everywhere else.
+
+**browser smoke owed to the product owner:** the walkthrough below. The mechanical half is now
+automated (the visual gate, in CI); what is left is the judgement — and the two steps that write to
+production, which are flagged by name in it.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
-Env: **production · `https://goldenfrijoles.com`**, after Story 3.5's flip.
 
-⚠️ Two corrections to what this walkthrough used to say. The host is `goldenfrijoles.com` (the
-product was renamed in `landing-frijoles-rebrand`; `golden-beans-gamma.vercel.app` is the old
-deployment host). And per A2 there is **no useful pre-merge preview run** for these steps —
-`FLAG_SERVING_ENABLED` is Production-only, so the flags page's own gate is closed on a preview.
+Env: **production · `https://goldenfrijoles.com`**, signed in as an owner of `miyagisanchez`.
 
-1. With the gate on, open `https://goldenfrijoles.com/app/flags/miyagisanchez`.
-   → You see **three feature rows** and one line reading **"39 features have never been turned on in
-   Production"**. No scrolling needed to reach the bottom of the list.
-   → ⚠️ **Do not look for a red "turned off" switch — there is none, and that is correct.** Nobody has
-   ever deliberately switched a flag off in production (0 of 42), so that state has nothing to render.
-   Its styling is covered by unit tests against a constructed fixture instead (A20).
-2. Use your browser's find-on-page for `immutable`, then for `JSON`.
-   → **No matches.**
-3. Click the summary line.
-   → The dormant features expand, 15 at a time, with Previous/Next.
-4. Click `checkout.stripe_enabled`.
-   → Its own page opens with tabs including **Funnel** and **Impact**.
-5. Click **Funnel**.
-   → ⚠️ **Expect a sentence, not numbers, and that is CORRECT (A4).** It reads that this is a feature
+⚠️ Two things this walkthrough used to get wrong, kept here because they still apply. The host is
+`goldenfrijoles.com` (`golden-beans-gamma.vercel.app` is the old deployment host). And per **A2**
+there is **no useful pre-merge preview run** for these steps: `FLAG_SERVING_ENABLED` is
+Production-only, so the flags page's own gate is closed on a preview.
+
+Each step is one action and one expected result. If any of them disagrees, note the step number and
+what you saw — that is the bug report.
+
+1. Open `https://goldenfrijoles.com/app/flags/miyagisanchez`.
+   → **Three feature rows** and one line reading **"39 features have never been turned on in
+   Production"**. The whole page fits without scrolling.
+   → ⚠️ **Do not look for a red "turned off" switch — there is none, and that is correct.** Nobody
+   has ever deliberately switched a flag off in production (0 of 42), so that state has nothing to
+   render (A20). Its styling is unit-tested against a constructed fixture instead.
+2. Use find-on-page for `immutable`, then for `JSON`.
+   → **No matches.** This is Story 3.3: both free-key authoring surfaces are gone from this page.
+3. Click the summary line ("Show them").
+   → The dormant features expand.
+4. Look at the right-hand column, headed **On / off**.
+   → A **switch** on every row: filled green for the three that are on, a **dashed empty track** for
+   the ones nobody has ever touched. Three states, not two.
+5. Click the switch on a feature that is ON, in Production.
+   → A dialog naming **that** feature and **that** environment, and saying what stops working.
+   Cancel it. → Nothing changed.
+   → ⚠️ **This is a real kill switch on a real tenant.** Cancelling is the whole of this step.
+6. Click **+ New feature** (top right).
+   → A three-step wizard: **Name · Kind · Check**. Step 1 has an area picker, one field to type in,
+   and a fixed `_enabled` ending, with a box showing the key the code will import.
+   → ⚠️ **This control is why step 2 is allowed to be true.** Before Story 3.3 the page had TWO ways
+   to create a feature and both were deleted; this replaced them, in the same commit.
+7. In the wizard, type a name and a sentence, press **Continue**, pick a kind and a risk, press
+   **Continue**, then **Create feature**.
+   → It lands you **on the new feature's own page**. The review step said it before you pressed:
+   *"Nothing is switched on yet, so nothing changes for anyone today."*
+   → ⚠️ **This writes a real definition version to production.** Use a name you are happy to keep —
+   a definition is immutable and cannot be deleted, only superseded.
+8. On any feature's page, look at the tab strip.
+   → Six tabs: **Value · Targeting · Funnel · Impact · History · Settings**. Above them, one row per
+   environment saying whether it is on there and who did it.
+9. Click **Funnel**.
+   → ⚠️ **Expect a SENTENCE, not numbers, and that is CORRECT (A4).** It reads that this is a feature
    flag and nothing in the TARS registry is measuring it. Production holds **1** TARS feature
-   (`setup_guide`) against **42** flags, and the two sets do not intersect at all. The old walkthrough
-   promised numbers here; they cannot exist, and the sentence is what the tab was worth building for.
-6. Click **Impact**.
-   → The same shape: a sentence naming exactly why there are no numbers.
-6b. Open `https://goldenfrijoles.com/app/funnel/miyagisanchez/setup_guide`.
-   → **Targeted / Adopted / Retained numbers render.** This is the one key in this tenant that has a
-   funnel, and it proves the read path works — the empty tabs above are an honest absence, not a break.
-6c. On the features list, click **New feature**.
-   → A creation form opens, in plain words, with no JSON. **This is A3's replacement control** — it
-   must exist, because this story deleted the only other way to create a feature.
-7. Press `⌘K` and type `stripe`.
-   → `checkout.stripe_enabled` appears as a Feature. Press `↵` — it opens.
-8. Open `https://goldenfrijoles.com/llms.txt`.
-   → The manifest still serves.
-   → ⚠️ **CORRECTED by A16 — this step used to end "Only its nav link is gone", which is now wrong in
-   the one direction that costs something.** The `Agent notes` link is gone from the SIGNED-IN console
-   (where it never rendered anyway), and **retained in the public chrome**. Anyone following the old
-   sentence literally would delete the public link and turn
-   `e2e/console-shell-public.browser.spec.ts` red. Found by cross-review (agy) as a FOURTH sentence
-   saying the old thing, after A16 corrected three — which is the "grep for the sibling" rule: I fixed
-   the bullet I was looking at and left its twin in the walkthrough.
-8b. On the same production deploy, open
-   `https://goldenfrijoles.com/app/funnel/golden-beans-demo/setup_guide` in a **private window**.
-   → You are NOT signed in, and the page still renders: the funnel numbers, plus a header carrying
-   **Connect** and **Agent notes**. No Today/Measure/Ship/Setup tabs, no project name, no Account
-   menu. `⌘K` does nothing.
-   → This is A16's acceptance criterion, and it is the step that proves the flip did not strip the
-   public demo dashboards of their chrome.
-9. From `/app`, reach **every** section of the product using only clicks and `⌘K`.
-   → No step requires editing a URL. *(This is the epic's acceptance test.)*
+   (`setup_guide`) against **42** flags and the two sets do not intersect at all. The page must NOT
+   404 — a tab that 404s a feature because the *other* registry has no row is a regression caused by
+   a missing measurement.
+10. Click **Impact**.
+    → The same shape: a sentence naming exactly why there are no numbers.
+11. Open `https://goldenfrijoles.com/app/funnel/miyagisanchez/setup_guide`.
+    → **Targeted / Adopted / Retained numbers render.** This is the one key in this tenant that has a
+    funnel, and it proves the read path works — the empty tabs above are an honest absence, not a
+    break. The old route still works and still has its own URL.
+12. Press `⌘K` (Ctrl-K on Windows) and type `stripe`.
+    → `checkout.stripe_enabled` appears, tagged **FEATURE**. Press `↵` — its page opens.
+    → Then type `Flag audit`. → It appears tagged **GO TO**. Both kinds, one palette.
+13. Look at the top of `/app/flag-audit/miyagisanchez`, then `/app/setup/keys/miyagisanchez`.
+    → Each heading is just **"Flag audit"** / **"Keys"** — no `— miyagisanchez` suffix and no
+    "← Your projects" link. The project is named once, in the switcher at the top right (A25).
+    → Column headers read as small caps in the UI font, never as tracked monospace.
+14. Open `https://goldenfrijoles.com/llms.txt`.
+    → The manifest still serves.
+15. In a **private window**, open
+    `https://goldenfrijoles.com/app/funnel/golden-beans-demo/setup_guide`.
+    → You are NOT signed in, and the page still renders: the funnel numbers, plus a header carrying
+    **Connect** and **Agent notes**. No Today/Measure/Ship/Setup tabs, no project name, no Account
+    menu, no `Home` link. `⌘K` does nothing.
+    → This is A16's acceptance criterion, and it is the step that proves Story 3.5 did not strip the
+    public demo dashboards of their chrome.
+16. From `/app`, reach **every** section of the product using only clicks and `⌘K`.
+    → No step requires editing a URL. *(This is the epic's acceptance test.)*
 
-If any step fails, note the step number + what you saw — that's the bug report.
+### What this walkthrough deliberately does not cover
+
+- **Mint a connector URL** (`Setup › Connect`) — a real production credential mint, which is never
+  pre-authorized and is owed to Daniel by name from Sprint 2.
+- **Command Center's own layout.** `/app` still renders the pre-contract page: mono-italic caveats
+  and a wide vertical gap between the stat row and the funnel figures. A25 records why it was left —
+  it is a page redesign, no story in this epic covers it, and half-doing it would leave a route that
+  is neither. Owed.
+- **`landing.browser.spec.ts:630`** is red on `main` (`expected > 3, received 2` in-page anchors),
+  reproduced identically on `4ba9665`. It belongs to a landing epic and decayed because the `browser`
+  project runs in no pipeline. Reported, not patched here.

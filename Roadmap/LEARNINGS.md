@@ -965,6 +965,73 @@ one-liner + why + date shape.
   "just flip the flag" step, and never treat a CLI listing as evidence the flag is in effect.
   *(2026-07-21, multi-tenant-activation Story 3.3.)*
 
+- **A `font:` SHORTHAND resets family, weight and style, so an override that restates only
+  `font-size` leaves the rest of it in place — and it looks applied.** `tokens.css` sets
+  `.tag { font: 600 10px var(--mono); letter-spacing: .08em }` for the landing; the console's own
+  `.tag` restated `font-size` and every type/risk chip rendered as tracked-out mono anyway. The same
+  trap on `.note` (italic mono) one rule over. **When you override a rule written as a shorthand,
+  override its FIELDS.** Found by putting the built page beside the prototype, not by reading the
+  diff. *(2026-08-28, console-ia-overhaul S3.)*
+- **A universal `* { margin: 0 }` reset defeats the UA's `margin: auto` on `dialog:modal`, and
+  nothing will tell you.** Every confirmation dialog in this product — money-path kill switches
+  included — had been pinned to the viewport's TOP-LEFT corner since the component shipped, measured
+  at `x: 0, y: 0` in 1440×960. No spec looks at where a dialog *is*, and no screenshot of one had
+  been read. `dialog` is the one element whose UA margin means something; restate it rather than
+  weakening the reset. *(2026-08-28, console-ia-overhaul S3.)*
+- **A selector written against markup that later MOVED is dead CSS that reads as live CSS.** The
+  command palette's keyboard cursor was painted by `li[aria-selected='true'] a`; a later fix moved
+  `role="option"` and `aria-selected` onto the ANCHOR (a listbox option must not contain a separately
+  focusable control) and left the rule behind. So ↑/↓ moved an announcement a screen reader could
+  hear and a sighted reader could not see — the exact defect that rule's own comment claimed to
+  prevent, pointing the other way. **When you move an attribute, grep the stylesheet for it.**
+  *(2026-08-28, console-ia-overhaul S3.)*
+- **Prove a gate-off guarantee by RENDERING both off-states, not by reading the diff — and let the
+  render tell you the ONE thing that is not identical.** Story 3.3's promise ("with the gate off the
+  page is byte-for-byte what it was") is a promise about TWO gates (A21), so the check is four page
+  renders — this branch × the merge base × two off-states — normalised for per-run ids and diffed.
+  The rendered DOM was identical both times, and the exercise surfaced the residual difference a
+  `git diff` cannot show: the new client component joins the route's chunk manifest even though it
+  never renders. That sentence is what keeps "byte-for-byte" honest, and this file already records
+  the same claim being overstated twice. *(2026-08-28, console-ia-overhaul S3.)*
+- **When a design and the control plane disagree about a WORD, the control plane wins and the
+  disagreement is the finding.** The approved wizard says *"a release toggle is off by default"*,
+  which maps onto `defaultVariantKey: 'off'`. In this system that creates a feature you cannot turn
+  on — activation and what the served version EVALUATES to are different things, and the console's
+  own `describeActivationSurprise` raises a confirm on every activation of a version that evaluates
+  to `false` (the latest version of 34 of 42 live flags). Following the design literally would have
+  manufactured features whose own switch warns about them, forever. Write the deviation down as an
+  amendment; a design is a contract about the product, not about the storage model underneath it.
+  *(2026-08-28, console-ia-overhaul S3.)*
+- **A number an acceptance criterion owes is cheaper to MEASURE than to argue about.** Story 3.4 owed
+  "the `/app` load cost does not regress". Counting requests in a browser gave `0 / 1 / 1` — page
+  load, first `⌘K`, reopen — in one spec, which is worth more than any amount of reasoning about
+  when a fetch fires. The same session measured `2889px → ≤960px`, `3346px → ≤960px`, `x:0 → x:505`
+  and `~16 KB → 1.1 KB`. Every one of those started life as an adjective in a story.
+  *(2026-08-28, console-ia-overhaul S3.)*
+- **When you stop shipping dark, audit CI's flag env — for EVERY flag, not the one you flipped.**
+  A19 caught `CONSOLE_SHELL_ENABLED` inverting three suites on merge day. Sprint 3 found its sibling:
+  **`FLAG_CONSOLE_ENABLED` was set nowhere in the workflow at all**, so the entire blocking gate had
+  been asserting a dark flag console against a production that served it lit — and
+  `flag-console-dark.spec.ts` only ever ran its dark branch. CI matched production by accident and
+  stopped when production moved. The fix is the shape already in the file: explicitly OFF on the
+  differently-enved server, ON everywhere else, with the branching spec listed in both runs.
+  *(2026-08-28, console-ia-overhaul S3.)*
+- **Kill the server before every rebuild, or you are testing a build you did not make.** Twice in one
+  session a clean restore "still failed" because a `next start` from the previous build was still
+  holding :3000 and the new one silently failed to bind. It reads exactly like a regression that
+  survived a revert. `lsof -tiTCP:3000 -sTCP:LISTEN | xargs -r kill` belongs in FRONT of the build,
+  not after it. *(2026-08-28; the local-gate recipe already says this for stale servers, and it was
+  still learned again.)*
+- **A plan whose every acceptance criterion is STRUCTURAL cannot fail on a bad-looking page, and the
+  build will satisfy all of them.** `console-ia-overhaul` shipped two sprints of correct information
+  architecture and a visual result the product owner rejected on sight — thirteen criteria, all met.
+  The plan had demoted an approved design to "inspiration" by misapplying WAYS-OF-WORKING's
+  reference-end-state rule, which exists to stop a *speculative spec doc* being treated as signed-off
+  scope and says nothing about a design somebody approved. **Where a design has been approved, it is
+  scope: measure the contract (sizes, weights, counts, scroll height) out of the artefact with a
+  script, and write the spec that fails BEFORE the work starts.** The gate that caught it was red at
+  `2889px in a 960px viewport` on day one. *(2026-08-28, console-ia-overhaul A20/A22.)*
+
 ## Delegating prose to a cheap model
 - **A cheap model summarising a dense engineering commit will fabricate, and its two failure modes are
   predictable enough to write into the prompt.** Measured over three live runs of

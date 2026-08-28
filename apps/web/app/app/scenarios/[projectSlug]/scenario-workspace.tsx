@@ -366,7 +366,7 @@ export function ScenarioWorkspace({
       <header className="page-header">
         <div>
           <p className="eyebrow">OPERATE · LEARN · PROTECT</p>
-          <h1>Scenarios &amp; breakers — {projectSlug}</h1>
+          <h1>Scenarios &amp; breakers</h1>
           <p>
             Bounded resilience and defensive-security exercises for <strong>{projectSlug}</strong>. Runtime
             gates may stay OFF while definitions, stopped runs, immutable impact snapshots and breaker

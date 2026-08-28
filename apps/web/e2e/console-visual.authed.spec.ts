@@ -277,6 +277,9 @@ test('the feature list survives a 390px phone', async ({ page }) => {
         return a.right > b.left + 1 && b.right > a.left + 1 && a.bottom > b.top + 1 && b.bottom > a.top + 1
       })(),
       headDisplay: head === null ? 'none' : getComputedStyle(head).display,
+      // The header row must be out of the VISUAL flow and still in the ACCESSIBILITY tree — those
+      // are two different questions, and `display: none` answers both with "gone".
+      headBox: head === null ? null : Math.round(head.getBoundingClientRect().height),
       bodyScrollWidth: document.body.scrollWidth,
       innerWidth: window.innerWidth,
     }
@@ -291,8 +294,35 @@ test('the feature list survives a 390px phone', async ({ page }) => {
     measured.overlap,
     'the feature cell and the state cell overlap — the fixed column widths are still applying'
   ).toBe(false)
-  // The column header row labels nothing once cells stack, so the design hides it.
-  expect(measured.headDisplay, 'the column headers still render over stacked cells').toBe('none')
+  // ⚠️ **Hidden from the EYE, kept for the SCREEN READER — and both halves are asserted.**
+  // The design hides the header row once the cells stack, because a header row over stacked cells
+  // labels nothing visually. It used to be `display: none`, which also deleted it from the
+  // accessibility tree (measured: 3 `columnheader` nodes at 1440, 0 at 390) — and the list is an
+  // ARIA table, so those nodes are what associate a cell with its column at ANY width.
+  //
+  // Asserting only "it is not visible" would pass on the version that threw the semantics away, and
+  // asserting only "the roles exist" would pass on a header row painted over the rows. Both.
+  expect(measured.headBox, 'the column header row still takes visual space on a phone').toBeLessThan(2)
+  // ⚠️ **`getByRole`, not `querySelectorAll('[role=…]')`.** The first version of this assertion
+  // counted DOM nodes, and `display: none` removes an element from the ACCESSIBILITY TREE while
+  // leaving it in the DOM — so it passed against the very build it was written to reject. Caught by
+  // mutation-checking it, which is the only reason it is not still in this file looking like
+  // coverage. Playwright's role engine excludes hidden elements, so this asks the question the
+  // assertion is actually about.
+  // ⚠️ Compared against the DESKTOP count, never against a literal. The number depends on the
+  // viewer — an owner gets a fourth column (`On / off`) — so hardcoding it made this fail on a
+  // correct page for an owner, which is how a guard gets "fixed" by being weakened. The property is
+  // that hiding the row visually does not change the SEMANTIC column set, and that is what a
+  // comparison says.
+  const headersOnAPhone = await page.locator('[data-feature-list]').getByRole('columnheader').count()
+  await page.setViewportSize(VIEWPORT)
+  await page.waitForTimeout(100)
+  const headersOnDesktop = await page.locator('[data-feature-list]').getByRole('columnheader').count()
+  expect(headersOnDesktop, 'the list rendered no column headers at all').toBeGreaterThan(0)
+  expect(
+    headersOnAPhone,
+    'the column headers left the accessibility tree on a phone — `display: none` deletes them from it'
+  ).toBe(headersOnDesktop)
   // And the page itself must not scroll sideways.
   expect(measured.bodyScrollWidth).toBeLessThanOrEqual(measured.innerWidth)
 })
@@ -353,6 +383,17 @@ const MEASURED_SPEC: SpecRow[] = [
   // `<ul>` inside the rail — so this row measured the wrong element for a SECOND round, and passed
   // (fresh reviewer, round 4).
   { what: 'rail item', selector: '.console-rail > ul a', fontSize: '13.5px', fontWeight: '600', height: 36 },
+  // ⚠️ **Was a DEFERRED row until Story 3.3.** It read: *"switch · contract 21 · not built · the
+  // row-act cell has no controls until Story 3.3 lands the toggle alongside its replacement
+  // authoring path."* It is built, so it moves from the list of things this gate does not check to
+  // the list it does — which is the only honest way for a deferred row to be closed.
+  //
+  // The 21px height needs `min-height` on the element: `globals.css` applies a 44px WCAG 2.5.5
+  // target floor to every `button`, and used height is `max(min-height, height)`. The floor is met
+  // by a transparent 44px pseudo-element instead, so the TARGET is 44 and the INK is the design's
+  // 38 × 21 — which is the resolution the `primary/secondary button` row below could not have,
+  // because a button's ink IS its target.
+  { what: 'the row switch', selector: '.row-act .sw', height: 21, width: 38 },
 ]
 
 /**
@@ -416,18 +457,78 @@ const DEFERRED_SPEC_ROWS = [
     built: 'not built',
     why: 'ProductShell renders the tabs INSIDE the 54px header, so the second tier does not exist — splitting it touches every console route and is out of this PR',
   },
-  {
-    what: 'switch',
-    contract: 21,
-    built: 'not built',
-    why: 'the row-act cell has no controls until Story 3.3 lands the toggle alongside its replacement authoring path',
-  },
 ] as const
+
+// ── The FEATURE page, which the gate did not look at until Story 3.2 ─────────────────────────
+//
+// ⚠️ A22 makes the design binding for **every signed-in route**, and this gate covered exactly one:
+// Ship › Features. The feature's own page is the second-most-visited surface in the console (every
+// row on that list leads here), it was still rendering the pre-contract shape — a 48px `h1`, a
+// `Panel` stack, tag-styled tabs — and nothing could go red about it. Story 3.2 rebuilt it and this
+// is the assertion that keeps it rebuilt.
+//
+// Deliberately the SAME two properties as the list's, not a second full spec table: the h1 shape and
+// the no-scroll promise are what the contract's Do-not list is mostly about, and a page-specific
+// table would drift from the one above rather than extend it.
+test('the feature page matches the contract too', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the feature page renders behind both gates; run with both on')
+
+  await page.setViewportSize(VIEWPORT)
+  await page.goto(`/app/flags/${tenant().slug}?env=production`)
+  await page.waitForLoadState('networkidle')
+
+  // Reached by CLICKING, not by constructing a URL — which is the epic's outcome test in miniature
+  // and also means this cannot pass against a key that no longer exists.
+  const firstFeature = page.locator('[data-feature-list] .row-key').first()
+  test.skip((await firstFeature.count()) === 0, 'this tenant renders no feature rows')
+  await firstFeature.click()
+  await page.waitForLoadState('networkidle')
+  await page.screenshot({ path: 'test-results/console-visual/feature.png' })
+
+  const measured = await page.evaluate(() => {
+    const h1 = document.querySelector('main h1')
+    const style = h1 === null ? null : getComputedStyle(h1)
+    return {
+      hasH1: h1 !== null,
+      fontSize: style?.fontSize ?? '',
+      fontWeight: style?.fontWeight ?? '',
+      lines: h1 === null ? 0 : h1.getClientRects().length,
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      tabs: document.querySelectorAll('.tabs a').length,
+      current: document.querySelectorAll('.tabs a[aria-current="page"]').length,
+    }
+  })
+
+  expect(measured.hasH1, 'the feature page has no h1').toBe(true)
+  expect.soft(measured.fontSize, '[spec] feature page h1 font-size').toBe('23px')
+  expect.soft(measured.fontWeight, '[spec] feature page h1 font-weight').toBe('700')
+  // Do-not #1 is about the CONSEQUENCE, not the number: at 48px a real tenant's key wrapped to four
+  // lines and spent ~200px before any content. One line is the property that was lost.
+  expect.soft(measured.lines, '[spec] the feature page h1 wraps to more than one line').toBe(1)
+  expect
+    .soft(
+      measured.scrollHeight,
+      `[1] the feature page is ${measured.scrollHeight}px tall in a ${measured.innerHeight}px viewport`
+    )
+    .toBeLessThanOrEqual(measured.innerHeight)
+  // Six tabs, exactly one current. Zero would leave a reader with no idea where they are; two is
+  // the `home`/`today` class of bug the shell's own spec pins one level up.
+  //
+  // ⚠️ Counted on `.tabs a[aria-current]`, not on `[role="tab"]`. These are LINKS — activating one
+  // navigates — so promising a tablist widget with no arrow-key handling behind it would be an ARIA
+  // claim the page cannot keep. Same markup the shell's section tabs use.
+  expect.soft(measured.tabs, '[spec] the feature page renders six tabs').toBe(6)
+  expect.soft(measured.current, '[spec] exactly one tab is current').toBe(1)
+})
 
 test('the deferred spec rows are named, so the gate does not look complete', () => {
   // This test exists to make the omission visible in the suite's own output rather than in a
   // comment nobody runs. It cannot fail; that is deliberate and stated — its job is to print.
-  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(6)
+  // ⚠️ 6 → 5. Story 3.3 built the switch, so its row moved into MEASURED_SPEC above. This number is
+  // deliberately a hard-coded literal rather than derived: a count that updates itself would let a
+  // row be dropped silently, and the point of this test is that dropping one is a decision.
+  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(5)
   for (const row of DEFERRED_SPEC_ROWS) {
     expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)
   }
@@ -483,6 +584,19 @@ test('every row of the measured spec matches the built stylesheet', async ({ pag
         .soft(
           Math.abs((got.height ?? 0) - spec.height),
           `[spec] ${spec.what} height is ${got.height}px, contract says ${spec.height}px`
+        )
+        .toBeLessThanOrEqual(slack)
+    }
+    // ⚠️ `width` was in `SpecRow` and MEASURED here and never asserted — a field that looks like
+    // coverage and is not, which is this file's own subject. The switch is the first row to use it,
+    // and the contract states it as a PAIR (38 × 21): a toggle at the right height and the wrong
+    // width is not the control that was approved.
+    if (spec.width !== undefined) {
+      const slack = spec.tolerance ?? 1
+      expect
+        .soft(
+          Math.abs((got.width ?? 0) - spec.width),
+          `[spec] ${spec.what} width is ${got.width}px, contract says ${spec.width}px`
         )
         .toBeLessThanOrEqual(slack)
     }

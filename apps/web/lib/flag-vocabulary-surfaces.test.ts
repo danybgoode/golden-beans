@@ -36,11 +36,13 @@ const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/flag-preview.tsx',
   '../app/app/flags/[projectSlug]/flag-insight.tsx',
   '../app/app/flags/[projectSlug]/rule-builder.tsx',
+  '../app/app/flags/[projectSlug]/new-feature.tsx',
   '../app/app/flags/[projectSlug]/actions.ts',
   '../app/app/flags/[projectSlug]/[flagKey]/page.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-switch.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-version-serve.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-authoring.tsx',
+  '../app/app/flags/[projectSlug]/[flagKey]/feature-panes.tsx',
   '../app/app/flag-credentials/[projectSlug]/page.tsx',
   '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
   '../app/app/flag-audit/[projectSlug]/page.tsx',
@@ -166,14 +168,16 @@ test('the vocabulary module is the single owner of the state words', () => {
     // state
     'Never turned on here',
     'Turned off',
-    // type
+    // type — relabelled to the approved design's words (console-ia-overhaul A22). The STORED
+    // spellings (`enablement`, `unclassified`) are unchanged; only these display forms moved.
     'Kill switch',
-    'Enablement',
-    'Unclassified',
+    'Release toggle',
+    'Not classified',
     // criticality
-    'High',
-    'Medium',
-    'Low',
+    'High risk',
+    'Medium risk',
+    'Low risk',
+    'Risk not set',
   ]
   const owner = read('../app/app/flags/[projectSlug]/flag-vocabulary.ts')
   for (const label of OWNED_LABELS) {
@@ -185,13 +189,26 @@ test('the vocabulary module is the single owner of the state words', () => {
   const others = CONSOLE_SURFACES.filter((path) => !path.endsWith('flag-vocabulary.ts'))
   for (const surface of others) {
     const text = renderedTextOnly(read(surface))
-    // Absence is asserted only for the MULTI-WORD labels. 'High', 'Medium', 'Low' and 'Enablement'
-    // are ordinary English that legitimately appears in prose and in comments-turned-text, so
-    // sweeping them for absence would fire on sentences rather than on retyped labels — a guard
-    // that cries wolf gets suppressed, which is worse than one with a stated limit. Their OWNERSHIP
-    // is still asserted above; what is pinned here is that no surface re-declares a distinctive
-    // label of its own.
-    for (const label of ['Never turned on here', 'Kill switch', 'Turned off']) {
+    // Absence is asserted only for the DISTINCTIVE labels — a phrase that would not appear in
+    // ordinary prose by accident. The earlier version could sweep only three, because 'High',
+    // 'Medium', 'Low' and 'Enablement' are ordinary English and a guard that cries wolf gets
+    // suppressed.
+    //
+    // ⚠️ A22's relabel WIDENED this list rather than leaving it where it was: every criticality
+    // label now carries "risk", and every type label is a phrase, so all of them are distinctive
+    // enough to sweep. That is a real gain in coverage from a copy change, and it is the reason to
+    // re-derive this list when the words move instead of copying the old one forward.
+    for (const label of [
+      'Never turned on here',
+      'Turned off',
+      'Kill switch',
+      'Release toggle',
+      'Not classified',
+      'High risk',
+      'Medium risk',
+      'Low risk',
+      'Risk not set',
+    ]) {
       assert.ok(
         !text.includes(label),
         `${surface} retypes the label "${label}" instead of importing it from flag-vocabulary.ts`

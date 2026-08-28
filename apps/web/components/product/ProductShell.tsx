@@ -73,21 +73,20 @@ export async function ProductShell({
           unset, OR there is no session (the two demo dashboards render this shell anonymously), OR
           `getShellNav` degraded. All three want the same public/legacy chrome. It is ONE field, and
           the account menu below reads the same one, so the chrome and the menu cannot disagree about
-          whether this is a console render. With the gate unset this
-          renders exactly the markup it rendered before this epic — logo, Home, Sections, Connect,
-          Agent notes, and the project signal. Not "equivalent"; the same JSX, moved into a branch.
-          `git diff` is what checks that, which is strictly stronger than a spec: /app is
-          credential-gated, so the `api` Playwright project only ever sees the login redirect and
-          could not tell the two branches apart. flags-console-parity Sprint 1 corrected exactly
-          this mistake, and its QA note is worth re-reading before adding a spec that cannot fail.
+          whether this is a console render.
 
-          ⚠️ Story 3.5 deletes `Home` and the `<details>` disclosure from this branch, and NOTHING
-          else. `Connect` and `Agent notes` are PERMANENT: this branch is what an anonymous visitor
-          to the two demo dashboards gets (they have no session, so no console header), and it is
-          their only route to `/install` and `/llms.txt`. `Home` is safe only because its destination
-          is duplicated — the logo above links `/app` in both branches — so it loses a link, not a
-          route. Pinned by `e2e/console-shell-public.browser.spec.ts`, which asserts both hrefs.
-          See A16 in the epic README.
+          ⚠️ **This branch is no longer the pre-epic markup, and Story 3.5 is why.** Sprints 1 and 2
+          kept it byte-identical so `git diff` could check the dark-launch guarantee; that guarantee
+          has been discharged — the console has been LIVE in production since Sprint 2 (A19) — and
+          3.5's whole content is the reduction below. What it is now is the PUBLIC chrome: a logo,
+          `Connect`, `Agent notes`, and the project signal.
+
+          ⚠️ **`isConsoleShellEnabled()` is NOT retired with it**, and A16 says why: `header === null`
+          stopped meaning "the gate is off" in Sprint 1. Two states reach this branch permanently and
+          neither is about the gate — an anonymous viewer, and `getShellNav`'s catch. The flag stays
+          a real kill switch; what changed is that flipping it back now lands a signed-in operator on
+          a header with no section nav, navigating from Command Center's own links. Said out loud
+          rather than discovered by whoever flips it.
 
           ── One honest qualification, because "unchanged" was too strong ──────────────────────
           This BRANCH is byte-identical. The DATA it renders is not: Story 1.2 removes `funnel` and
@@ -102,45 +101,26 @@ export async function ProductShell({
           <>
             <BrandLockup compact href="/app" />
             <nav aria-label="Product" className="product-shell__nav">
-              <a href="/app" className="product-shell__nav-home">
-                <Icon name="panels" />
-                Home
-              </a>
+              {/* ── Story 3.5 — what this branch LOST, and what it kept ──────────────────────────
+                  **`Home` and the `<details>` disclosure are deleted** (epic README, A16). What
+                  remains is the PUBLIC chrome, and that is the whole point of the reduction.
 
-              {/*
-                A `<details>` disclosure, not a JS menu. The shell renders on every signed-in route
-                including error and gated states, and a client island here would be the one component
-                able to break all of them at once. Native disclosure also works before hydration.
+                  `Home` was safe to delete because its destination is duplicated: `BrandLockup`
+                  above links `/app` in both branches, so this loses a LINK, not a route.
 
-                One element serves both widths — a pull-up sheet above the bottom tab bar on a phone, a
-                dropdown under the header from 640px up. It is NOT expanded inline on desktop because
-                revealing a closed <details>' content with CSS is not reliable across engines, and the
-                alternative (rendering the list twice and hiding one copy per width) would read every
-                section name twice to a screen reader.
+                  The `Sections` disclosure required `activeProject`, which requires a session — so
+                  it never rendered anonymously, and its deletion is signed-in-only by construction.
+                  The one state that loses it is "signed in with `CONSOLE_SHELL_ENABLED` off", which
+                  is the kill-switch state; Command Center still lists every entitled surface as a
+                  link, so nothing becomes unreachable, and the console's own four-section nav is
+                  what replaced it.
 
-                Each entry carries the inventory's own one-line description. Reaching a surface was
-                half the audit's complaint; relating them to each other was the other half.
-              */}
-              {activeProject && links.length > 0 && (
-                <details className="product-shell__sections">
-                  <summary>
-                    <Icon name="map-pin" />
-                    Sections
-                  </summary>
-                  <div className="product-shell__sections-panel">
-                    <ul>
-                      {links.map((link) => (
-                        <li key={link.routeSegment}>
-                          <a href={link.href} data-surface-status={link.status}>
-                            {link.label}
-                            <small>{link.description}</small>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </details>
-              )}
+                  ⚠️ **`Connect` and `Agent notes` STAY, permanently.** This branch is what an
+                  anonymous visitor to the two demo dashboards gets — they have no session, so no
+                  console header — and it is their ONLY route to `/install` and `/llms.txt`. Story
+                  3.5 as originally written would have deleted them along with "the now-dead
+                  gate-off branch"; A16 corrected that, and `console-shell-public.browser.spec.ts`
+                  asserts both hrefs so the correction cannot be undone by someone tidying up. */}
 
               {/* ⚠️ THIS HREF STAYS `/install`, and reverting it here is Story 2.2's actual fix.
                   (Fresh reviewer, PR #123, Blocking.)
@@ -245,6 +225,14 @@ export async function ProductShell({
                   the production schema has no table that could support one. A `<details>` again, for
                   the same reason as the legacy disclosure: no client island in the shell.
 
+                  ⚠️ **This is why no console page's `<h1>` names the project any more.** Every
+                  signed-in route used to render `<h1>Keys — miyagisanchez</h1>` and a
+                  "← Your projects" link, which spent a heading and a line on facts this control
+                  already carries two inches above them — and on a real tenant slug the title
+                  wrapped, which is CONSOLE-CONTRACT.md's Do-not #1 measured on twelve pages instead
+                  of one. The sweep is recorded HERE, at the control that makes the repetition
+                  redundant, rather than as the same paragraph pasted into twelve files.
+
                   With one project there is nothing to switch to, so it renders as a label rather
                   than a menu that opens onto a list of one. */}
               {activeProject &&
@@ -326,7 +314,7 @@ export async function ProductShell({
         */}
         {header !== null && (
           <ShellErrorBoundary>
-            <CommandPalette links={links} />
+            <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
           </ShellErrorBoundary>
         )}
         {children}

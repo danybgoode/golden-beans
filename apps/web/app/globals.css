@@ -1090,70 +1090,16 @@ body {
   color: inherit;
 }
 
-/* app-shell-and-agent-rail S1.3 — the section nav.
-   One disclosure serves both widths: a pull-up sheet on a phone, an inline wrapping row from
-   640px up (see the @media block below — the breakpoint this comment claimed was 720px until
-   2026-08-27; cross-review found the discrepancy, and it had been wrong since the rule was written).
-   `list-style: none` on the summary is Safari's
-   requirement, not a preference — without it the marker triangle survives ::-webkit-details-marker
-   removal in some versions. */
-.product-shell__sections summary {
-  cursor: pointer;
-  list-style: none;
-}
+/* ── The `Sections` disclosure's styling is DELETED with the disclosure (Story 3.5) ─────────
+   `app-shell-and-agent-rail` S1.3's section nav — `.product-shell__sections`,
+   `.product-shell__sections-panel` and the `[data-surface-status='gated']` badge — rendered in the
+   legacy branch only, and console-ia-overhaul Story 3.5 removes that markup. Its rules go with it,
+   here and in the >=640px block below.
 
-.product-shell__sections summary::-webkit-details-marker {
-  display: none;
-}
-
-.product-shell__sections-panel {
-  position: absolute;
-  right: 8px;
-  bottom: calc(100% + 10px);
-  left: 8px;
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--espresso);
-  box-shadow: var(--elevation-overlay);
-}
-
-.product-shell__sections-panel ul {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.product-shell__sections-panel a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--roast-2);
-  color: var(--crema);
-  font-size: 13px;
-}
-
-.product-shell__sections-panel a small {
-  display: block;
-  margin-top: 2px;
-  color: var(--dim);
-  font-size: 11px;
-}
-
-/* A surface that rides an enablement gate is labelled as one. It is only linked when its gate is
-   open (lib/project-route-inventory.ts filters the closed ones out), so this says "this can be
-   switched off", never "this is broken". */
-.product-shell__sections-panel a[data-surface-status='gated']::after {
-  content: 'gated';
-  margin-left: 8px;
-  color: var(--dim);
-  font: 600 9px var(--mono);
-  text-transform: uppercase;
-}
+   Swept rather than left: "deleting a component leaves a trail in the stylesheet, and the trail
+   comes with confident prose attached" (Roadmap/LEARNINGS.md) — the block that used to sit here
+   carried a paragraph explaining why the disclosure was not expanded inline on desktop, which is
+   exactly the shape of dead CSS that reads as evidence to the next reader. */
 
 /* console-ia-overhaul S1.3 — the four-destination header.
    These rules sit ABOVE `.product-shell main` and below the legacy `__sections` block on purpose:
@@ -1396,8 +1342,16 @@ body {
 
 /* The cursor is painted from `aria-selected`, the same attribute that tells a screen reader which
    row is active — so the highlight and the announcement cannot drift apart. Same reasoning as
-   `.product-shell__tab[aria-current='page']` above. */
-.command-palette__panel li[aria-selected='true'] a {
+   `.product-shell__tab[aria-current='page']` above.
+
+   ⚠️ **This selector matched NOTHING and the palette had no visible cursor at all.** It was written
+   against `<li aria-selected>`, and a later fix moved `role="option"` and `aria-selected` onto the
+   ANCHOR — a listbox option must not contain a separately focusable control — without moving the
+   rule that painted it. So ↑/↓ moved an announcement a screen reader could hear and a sighted
+   reader could not see, which is the same defect the comment above claims to prevent, pointing the
+   other way. Found while building Story 3.4 (console-ia-overhaul) by reading the CSS beside the
+   markup it styles. */
+.command-palette__panel a[aria-selected='true'] {
   background: var(--card);
   box-shadow: inset 2px 0 0 var(--gold);
 }
@@ -1855,6 +1809,19 @@ a.stat-card:hover {
 
 .confirm-dialog {
   width: min(430px, calc(100vw - 32px));
+  /* ⚠️ **Every confirmation dialog in this product has been pinned to the TOP-LEFT corner of the
+     viewport since the component shipped**, and nothing noticed because no spec looks at where a
+     dialog is and no screenshot of one had been read.
+
+     Chromium's UA sheet centres a modal `<dialog>` with `position: fixed; inset: 0; margin: auto`.
+     This stylesheet's `* { margin: 0 }` reset matches `dialog` too, wins on the cascade, and turns
+     `auto` into `0` — so `inset: 0` resolves the box to the origin instead of the centre. Measured
+     at `x: 0, y: 0` in a 1440x960 viewport (console-ia-overhaul, Story 3.3, found by opening the
+     page rather than by reading the diff — `app-shell-and-agent-rail` S2's rule again).
+
+     Restated rather than fixed at the reset, because a universal reset is load-bearing for
+     everything else on the page and `dialog` is the one element whose UA margin means something. */
+  margin: auto;
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -2289,22 +2256,6 @@ a.stat-card:hover {
     border: 0;
     background: transparent;
     box-shadow: none;
-  }
-
-  /* Same disclosure, other direction: a dropdown under the header rather than a sheet above the
-     bottom bar. Deliberately NOT an always-open inline row — revealing a closed <details>' content
-     with CSS is not reliable across engines (the content lives in an unassigned shadow slot), and
-     duplicating the list in the DOM to work around that would read it twice to a screen reader. */
-  .product-shell__sections {
-    position: relative;
-  }
-
-  .product-shell__sections-panel {
-    top: calc(100% + 10px);
-    right: auto;
-    bottom: auto;
-    left: 0;
-    width: max(280px, 24vw);
   }
 
   .product-shell main {

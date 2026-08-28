@@ -23,10 +23,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
       <main>
-        <h1>Destinations — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
+        <h1>Destinations</h1>
         <p>
           A destination reliably delivers this project&apos;s events to an external webhook. Each delivery is
           signed (HMAC-SHA256) so your receiver can verify it came from Golden Frijoles. New destinations

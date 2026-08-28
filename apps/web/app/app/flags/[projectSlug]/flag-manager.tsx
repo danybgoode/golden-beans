@@ -53,6 +53,7 @@ export function FlagManager({
   canManage,
   servingEnabled,
   ruleBuilderEnabled,
+  showAuthoring = true,
   showDefinitions = true,
   showCredentials = true,
   showAudit = true,
@@ -87,6 +88,34 @@ export function FlagManager({
    * is on D7's list of storage vocabulary this epic exists to retire.
    */
   showDefinitions?: boolean
+  /**
+   * console-ia-overhaul · Sprint 3, Story 3.3 — whether THIS component renders the two free-key
+   * creation paths: the raw-JSON `<form onSubmit={onCreate}>` and the `RuleBuilder` above it.
+   *
+   * **Defaults to `true`, so with `FLAG_CONSOLE_ENABLED` off this file renders exactly what it
+   * always did.** Only the console branch of `page.tsx` opts out. That default is the whole
+   * guarantee, and it is why the prop is `showAuthoring` rather than `hideAuthoring`.
+   *
+   * ── Why both, and why in ONE prop (epic README, A21) ────────────────────────────────────────
+   * The product has TWO surfaces that can create a flag key that does not yet exist, not one:
+   * `<form onSubmit={onCreate}>` below, and `RuleBuilder`, whose "Flag key" field is a free-text
+   * `<input>` posting through the same action. A3 said "the only surface" and was wrong about the
+   * count; A21 records the correction rather than quietly fixing it, because a reader who believed
+   * A3 could conclude that deleting one of the two is safe. Gating them together means the console
+   * branch cannot end up with one creation path and no other.
+   *
+   * ⚠️ **They ride DIFFERENT gates, which is why this prop does not simply mirror one of them.**
+   * The textarea renders whenever `canManage`; `RuleBuilder` additionally requires
+   * `FLAG_RULE_BUILDER_ENABLED`. So "the gate-off branch is untouched" is a promise about TWO
+   * gates, and its `git diff` proof has to be run in both off-states.
+   *
+   * ── The replacement landed in the same commit ───────────────────────────────────────────────
+   * `new-feature.tsx` — the "New feature" wizard on the features list — posts through the SAME
+   * `createFlagDefinitionVersionAction`. Retiring these two without it would have removed the only
+   * way to create a feature at all, which is the hazard the comment further down this file records
+   * from the time it nearly happened.
+   */
+  showAuthoring?: boolean
   /**
    * flags-console-parity · Sprint 3, Stories 3.1 and 3.2 — whether the credential forms/tables and
    * the lifecycle audit render HERE.
@@ -354,6 +383,21 @@ export function FlagManager({
     []
   )
 
+  // ── Nothing left to render is a REAL state now, and it must render nothing ──────────────────
+  // With the console on, `page.tsx` switches all four sections off (Story 3.3 added the fourth), so
+  // this component's entire output became a `<section>` holding two notices about controls that are
+  // no longer in it. Two costs, both measured: `tokens.css`'s `section { padding: 36px 0 }` opened
+  // 72px of dead air on the page the visual gate asserts does not scroll, and the notices sat BELOW
+  // the list they were explaining.
+  //
+  // A notice about controls belongs with the controls, so `FlagConsole` carries its own copies for
+  // the console branch. Here the honest answer is `null`.
+  //
+  // ⚠️ Deliberately NOT `!canManage`-shaped: this asks whether the COMPONENT has a section to show,
+  // which is the thing the four props decide. With every prop at its default — the gate-off render,
+  // and D6's guarantee — it is always true and nothing changes.
+  if (!showAuthoring && !showDefinitions && !showCredentials && !showAudit) return null
+
   return (
     <section>
       {!servingEnabled && (
@@ -363,7 +407,7 @@ export function FlagManager({
           enabled in a new deployment.
         </p>
       )}
-      {canManage ? (
+      {canManage && showAuthoring ? (
         <>
           {/* flags-visual-rule-builder · Story 1.4 (D6/D7). The builder is ADDITIVE: it renders
               alongside the textarea, never instead of it. With the gate unset this whole block is
@@ -432,7 +476,24 @@ export function FlagManager({
               nearly removed before its replacement existed (Sprint 1's stack, Sprint 2's rollback,
               this). Caught here by grepping rendered copy for D7's retired vocabulary, which is why
               Story 3.3 runs before the sprint closes rather than after.
-              The authoring form therefore STAYS in both gate states until something replaces it. */}
+
+              ── The constraint this comment stated is now DISCHARGED, not weakened ──────────────
+              It read: *"The authoring form therefore STAYS in both gate states until something
+              replaces it."* The replacement exists as of Story 3.3 — `new-feature.tsx`, the "New
+              feature" wizard on the features list, posting through the SAME
+              `createFlagDefinitionVersionAction` — and it landed in the same commit that added
+              `showAuthoring`. So the condition the sentence named has been MET; the sentence is not
+              being reasoned around.
+
+              That distinction is the point. `Roadmap/LEARNINGS.md` records this exact file's
+              constraint being weakened once with careful-looking reasoning, and records that the
+              weakening WAS the defect. The test for "may I remove this now" is not whether the
+              argument sounds good, it is whether the replacement is on the page — and with the
+              console LIVE in production since Sprint 2 (A19) there is no dark period in which a
+              missing control would go unnoticed.
+
+              Both creation paths go together, and A21 is why: `RuleBuilder`'s "Flag key" field is
+              also free text, so the product had TWO of them. One prop gates both. */}
         </>
       ) : null}
       {canManage && showCredentials ? (

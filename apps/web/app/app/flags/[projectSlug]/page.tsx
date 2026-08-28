@@ -6,9 +6,11 @@ import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
 import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
 import { parseFlagListParams } from '@/lib/flag-list-view'
+import { featureAreas } from '@/lib/new-feature-draft'
 import { FlagManager } from './flag-manager'
 import { DEFAULT_FLAG_ENVIRONMENT, FlagConsole } from './flag-console'
 import { EnvironmentPicker } from './environment-picker'
+import { NewFeature } from './new-feature'
 import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
@@ -95,13 +97,25 @@ export default async function FlagsPage({
               </p>
             </div>
             <div className="spacer" />
-            {/* ⚠️ **No page actions yet, and the empty space is the honest state.**
-                The design has two — "Compare environments" and "+ New feature". Neither exists: there
-                is no comparison surface, and the creation control is Story 3.3's, which may only land
-                WITH the deletion of the JSON authoring stack it replaces (A3/A21).
+            {/* ⚠️ **ONE page action, not the design's two.**
+                The design has "Compare environments" and "+ New feature". The second is here as of
+                Story 3.3, landed in the same commit that deleted the two free-key creation paths it
+                replaces (A3/A21). The first still does not exist — there is no comparison surface —
+                and a first version of this head shipped it as a button pointing at this same page
+                with the filters reset, which is a control labelled as a feature that does not exist.
 
-                A first version shipped "Compare environments" pointing at this same page with the
-                filters reset — a button labelled as a feature that does not exist. */}
+                Owner-only, because `createFlagDefinitionVersionAction` calls
+                `requireProjectOwnership`. A member who saw the button would get a rejection from
+                the server for a control the page offered them. The action re-resolves ownership
+                itself either way — this hides a control it would refuse, it does not enforce
+                anything. */}
+            {canManage && (
+              <NewFeature
+                slug={projectSlug}
+                areas={featureAreas(registry.flags.map((flag) => flag.key))}
+                existingKeys={registry.flags.map((flag) => flag.key)}
+              />
+            )}
           </div>
         ) : (
           <>
@@ -159,7 +173,29 @@ export default async function FlagsPage({
         {/* `canManage` is no longer passed: the owner-only credential link used to sit in this
             page's body, and in the approved design it is a rail entry like every other surface —
             the rail already filters by entitlement, so gating it twice was the duplication. */}
-        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
+        {consoleEnabled && (
+          <FlagConsole
+            slug={projectSlug}
+            flags={registry.flags}
+            params={listParams}
+            // The selected environment's snapshot revision, for the row switch's optimistic
+            // concurrency check. Straight off the registry read above — no query is added. A missing
+            // row means this environment has never had a snapshot, whose revision is 0; that is the
+            // same default `[flagKey]/page.tsx` uses, and the RPC rejects a mismatch either way.
+            snapshotVersion={
+              registry.environments.find((row) => row.environment === listParams.environment)
+                ?.snapshotVersion ?? 0
+            }
+            // ⚠️ `canManage` IS passed now, and the comment above needs reading with that in mind.
+            // It said `<FlagConsole>` receives "no `canManage`" — true while the list was read-only.
+            // Story 3.3 puts a WRITE control in every row, and a write control is exactly what the
+            // owner boundary is for. Nothing about the DATA changed: keys, descriptions and states
+            // stay member-readable, as that comment argues at length. What this decides is whether a
+            // member is offered a switch `requireProjectOwnership` would refuse them.
+            canManage={canManage}
+            servingEnabled={isFlagServingEnabled()}
+          />
+        )}
         <FlagManager
           slug={projectSlug}
           {...registry}
@@ -168,6 +204,12 @@ export default async function FlagsPage({
           canManage={canManage}
           servingEnabled={isFlagServingEnabled()}
           ruleBuilderEnabled={isFlagRuleBuilderEnabled()}
+          // Story 3.3 — the two free-key creation paths (the raw-JSON textarea and `RuleBuilder`'s
+          // own key field) leave the console branch, and their replacement is the `<NewFeature>`
+          // control in the head above. Both go in ONE prop because the product had TWO of them
+          // (A21), and gating them separately is how a branch ends up with one creation path and no
+          // other. With the gate off this is `true` and the file below renders what it always did.
+          showAuthoring={!consoleEnabled}
           showDefinitions={!consoleEnabled}
           showCredentials={!consoleEnabled}
           showAudit={!consoleEnabled}
