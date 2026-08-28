@@ -28,7 +28,8 @@ import {
   explainFlagEvaluation,
   type FlagDefinition,
 } from '@golden-frijoles/sdk'
-import { readTenantRecord } from './helpers/authed-fixture'
+import { createClient } from '@supabase/supabase-js'
+import { SCENARIO_FLAG_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
@@ -37,57 +38,59 @@ function tenantSlug(): string {
   return slug
 }
 
+function tenant(): { projectId: string; userId: string } {
+  const record = readTenantRecord()
+  if (!record?.projectId) throw new Error('the flag rule builder smoke requires the auth-setup project')
+  return { projectId: record.projectId, userId: record.userId }
+}
+
 const flagKey = () => `builder.smoke_${Date.now().toString(36)}`
 
 /**
- * The TEXTAREA form's submit button, scoped by the control only that form contains.
+ * Create an immutable version for a fixture flag.
  *
- * ── Why this helper exists (found while building Sprint 2) ────────────────────────────────────
- * Sprint 1's rejection probe below reached for `getByRole('button', { name: 'Create immutable
- * version' }).first()`. The builder and the textarea form use the same words on their submit
- * buttons, and the builder renders FIRST — so `.first()` was the BUILDER's button, which is
- * disabled whenever its form has problems, which an untouched form always does. The probe would
- * have hung on an unclickable element rather than testing the textarea. It was never caught because
- * the `authed` Playwright project does not run in CI (see playwright.config.ts) and Sprint 1's
- * signed-in walkthrough is still owed to the product owner.
+ * ── It no longer drives the UI, and that is Story 3.3's doing ─────────────────────────────────
+ * This used to fill the JSON textarea on the flags page. console-ia-overhaul Story 3.3 DELETES that
+ * form (and the builder's own free-key field beside it) from the console branch, replacing them
+ * with the "New feature" wizard — which creates a plain on/off definition and cannot express the
+ * arbitrary rules, rollouts and metadata these suites need as FIXTURES.
  *
- * Positional locators over two identically-worded buttons are the defect; scoping by the control
- * that distinguishes the two forms is the fix, and it cannot silently re-point if a third form with
- * the same verb ever lands on this page.
- */
-const textareaSubmit = (page: import('@playwright/test').Page) =>
-  page
-    .locator('form')
-    .filter({ has: page.locator('#flag-definition') })
-    .getByRole('button', { name: 'Create immutable version' })
-
-/**
- * Create an immutable version through the JSON TEXTAREA.
+ * So the fixture is written the way `auth.setup.ts` writes its own: through
+ * `create_flag_definition_version`, the same RPC `createFlagDefinitionVersionAction` calls after it
+ * has resolved ownership and parsed the definition. Nothing about what these tests ASSERT changes —
+ * they are about how a version RENDERS (its bars, its diff, its preview), and the surface that used
+ * to supply them was never the subject.
  *
- * Module scope because Sprints 2 and 3 both need it: the textarea is the surface that can express a
- * metadata entry (Story 2.3's fallback case) and an arbitrary rule shape (Sprint 3's fixtures), and
- * using it keeps those assertions independent of the builder's own controls.
+ * ⚠️ Stated rather than quietly swapped: this trades one thing away. While the textarea existed,
+ * every one of these tests incidentally exercised it. It does not exist on the console any more, so
+ * that cover is gone rather than moved — and the thing it covered is covered directly instead, by
+ * `flag-console.authed.spec.ts`'s assertion that the form is absent with the gate on and by
+ * `lib/new-feature-draft.test.ts` against the real parser.
  */
 async function createVersion(
-  page: import('@playwright/test').Page,
-  slug: string,
+  _page: import('@playwright/test').Page,
+  _slug: string,
   key: string,
   value: FlagDefinition,
   reason: string
 ) {
-  // ── Navigates itself, rather than assuming the caller is already here ────────────────────────
-  // The authoring textarea lives on the FLAGS PAGE in both gate states. Once the ported tests began
-  // navigating to the per-feature destination first, every caller of this helper was on a page with
-  // no `#flag-key`, and each failed on a 30s timeout that said nothing about the cause. Owning the
-  // navigation makes the precondition impossible to get wrong — and this helper is called from
-  // suites that afterwards go somewhere else entirely, so "wherever we happen to be" was never a
-  // safe assumption. (Found by RUNNING the port; the same lesson the file already records twice.)
-  await page.goto(`/app/flags/${slug}`)
-  await page.locator('#flag-key').fill(key)
-  await page.locator('#flag-definition').fill(JSON.stringify(value, null, 2))
-  await page.locator('#flag-reason').fill(reason)
-  await textareaSubmit(page).click()
-  await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
+  const url = process.env.SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) {
+    throw new Error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY must be set to seed a fixture version')
+  }
+  const { projectId, userId } = tenant()
+  const db = createClient(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const { error } = await db.rpc('create_flag_definition_version', {
+    p_project_id: projectId,
+    p_flag_key: key,
+    p_definition: value,
+    p_reason: reason,
+    p_actor_user_id: userId,
+  })
+  if (error) throw new Error(`could not seed ${key}: ${error.message}`)
 }
 
 type Page = import('@playwright/test').Page
@@ -119,6 +122,26 @@ async function gotoFlag(page: Page, slug: string, key: string, tab: 'value' | 'h
   }
   const base = `/app/flags/${slug}/${encodeURIComponent(key)}`
   await page.goto(tab === 'value' ? base : `${base}?tab=${tab}`)
+}
+
+/**
+ * Where the rule BUILDER now lives, which — like everything else in this file — depends on the gate.
+ *
+ * DARK: on the flags list, beside the JSON textarea (`flag-manager.tsx`).
+ * LIT:  on a feature's own page, Value tab (`[flagKey]/flag-authoring.tsx`) — console-ia-overhaul
+ *       Story 3.3 removed the list's copy along with the textarea, because both carried a FREE-TEXT
+ *       flag key and the console's creation control is the "New feature" wizard now (A21).
+ *
+ * The builder's own key field stays editable on the feature page, which is why these tests can
+ * still create a new key from it: `FlagAuthoring` follows the key when it changes rather than
+ * refreshing the page for the old one.
+ */
+async function gotoBuilder(page: Page, slug: string) {
+  if (!consoleLit()) {
+    await page.goto(`/app/flags/${slug}`)
+    return
+  }
+  await page.goto(`/app/flags/${slug}/${encodeURIComponent(SCENARIO_FLAG_KEY)}`)
 }
 
 /**
@@ -198,10 +221,10 @@ test.describe('the visual rule builder', () => {
   test('a rule built from controls stores 10% as 1000 basis points', async ({ page }) => {
     const slug = tenantSlug()
     const key = flagKey()
-    // The BUILDER stays on the flags page in both gate states — Sprint 3 deliberately kept
-    // authoring there, because the per-feature destination only versions a flag you can already
-    // click. Only the verification below has to follow the move.
-    await page.goto(`/app/flags/${slug}`)
+    // ⚠️ The builder FOLLOWS THE MOVE now. It used to stay on the flags page in both gate states;
+    // console-ia-overhaul Story 3.3 removed the list's copy with the textarea beside it, because
+    // both were free-key creation paths (A21). Lit, it is on a feature's own page.
+    await gotoBuilder(page, slug)
 
     const builder = page.locator('.rule-builder')
     await expect(builder).toBeVisible()
@@ -247,7 +270,19 @@ test.describe('the visual rule builder', () => {
     expect(built.rules[0].rollout?.basisPoints).toBe(1000)
 
     await builder.getByRole('button', { name: 'Create immutable version' }).click()
-    await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
+    // ⚠️ The CONFIRMATION follows the move too, and it is a different shape on each side — which is
+    // exactly the kind of detail a port loses. Dark, `flag-manager.tsx` renders a status line and
+    // stays put. Lit, `flag-authoring.tsx` navigates to the key that was actually written, because
+    // the builder's key field is editable and a refresh would otherwise reload the page for the OLD
+    // feature while telling the reader the save succeeded (its own comment records that finding).
+    //
+    // So the lit assertion is the stronger one available: the URL now names the key, which is proof
+    // the write landed on the feature the reader typed.
+    if (consoleLit()) {
+      await page.waitForURL(`**/app/flags/${slug}/${key}`)
+    } else {
+      await expect(page.getByRole('status').filter({ hasText: `Created ${key}` })).toBeVisible()
+    }
 
     // Stored → re-read → same. The immutable version's own JSON, not the builder's preview of it —
     // so the locator is scoped to the VERSIONS TABLE rather than to the first `pre` in the flag's
@@ -275,7 +310,7 @@ test.describe('the visual rule builder', () => {
     // Smoke step 6. The cap and the sentence both come from MAX_FLAG_CLAUSES, so this asserts the
     // constant reached the UI rather than that someone typed five twice.
     const slug = tenantSlug()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoBuilder(page, slug)
     const builder = page.locator('.rule-builder')
     await builder.getByRole('button', { name: 'Add a rule' }).click()
 
@@ -293,18 +328,30 @@ test.describe('the visual rule builder', () => {
   })
 
   test('a server-side rejection is shown on screen, never swallowed', async ({ page }) => {
-    // D2. The builder cannot easily produce an invalid definition — that is the point of it — so
-    // this drives the TEXTAREA, which is the surface that can, and asserts the same error channel
-    // the builder renders through. Smoke step 7.
+    // D2 — the server is the authority on validity, and whatever it says has to reach the screen.
+    //
+    // ⚠️ **This used to drive the JSON textarea**, which was the only surface that could express an
+    // invalid definition. Story 3.3 deleted it from the console, so the probe had to find another
+    // way to be rejected — and there is exactly one left, which is worth knowing: the builder's
+    // "Flag key" field is FREE TEXT and its only local check is that the field is non-empty
+    // (`argumentProblems` in `rule-builder.tsx`). A key the SDK's `validateFlagKey` refuses
+    // therefore reaches the server and comes back rejected, through the same `serverError` channel
+    // the builder renders.
+    //
+    // That is a stronger probe than the old one in one respect: it proves the SERVER is still the
+    // authority on a key the CLIENT was willing to send. Smoke step 7.
     const slug = tenantSlug()
-    await page.goto(`/app/flags/${slug}`)
+    await gotoBuilder(page, slug)
 
-    await page.locator('#flag-key').fill('builder.invalid_probe')
-    await page.locator('#flag-definition').fill('{"valueType":"boolean"}')
-    await page.locator('#flag-reason').fill('Deliberate rejection probe.')
-    await textareaSubmit(page).click()
+    const builder = page.locator('.rule-builder')
+    await builder.getByLabel('Flag key').fill('Not A Valid Key!')
+    await builder.getByLabel('Description').fill('Deliberate rejection probe.')
+    await builder.getByLabel('Reason').fill('Deliberate rejection probe.')
+    await builder.getByRole('button', { name: 'Create immutable version' }).click()
 
-    await expect(page.getByRole('alert').first()).toBeVisible()
+    // The server's own words, not a generic failure — `createFlagDefinitionVersionAction` returns
+    // "Invalid flag key." and the reader has to be able to act on it.
+    await expect(page.getByRole('alert').filter({ hasText: 'Invalid flag key' })).toBeVisible()
   })
 })
 
@@ -315,9 +362,10 @@ test.describe('the visual rule builder', () => {
 // lib/flag-definition-diff.test.ts the four diff cases and the fallback); what neither of them can
 // see is whether those sentences and those bars actually REACH the page. That is this block.
 //
-// Both versions below are created through the JSON textarea rather than the builder, deliberately:
-// it is the surface that can express a metadata entry, which is what Story 2.3's fallback case
-// needs, and it keeps these assertions independent of the builder's own controls.
+// Both versions below are SEEDED through `create_flag_definition_version` rather than built from
+// controls, deliberately: the fixture needs an arbitrary metadata entry (Story 2.3's fallback case)
+// and an arbitrary rule shape, neither of which the builder or the "New feature" wizard can express
+// — and how the version got there was never what these tests assert. See `createVersion`.
 // ⚠️ **Serial: these tests share one optimistic lock and `fullyParallel` splits them.**
 // This file activates versions five times on the SAME tenant, and every activation reads
 // `flag_environment_states.snapshot_version` and writes back expecting it unchanged. Split across

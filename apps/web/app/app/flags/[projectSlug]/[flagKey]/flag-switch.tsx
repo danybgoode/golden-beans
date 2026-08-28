@@ -50,6 +50,7 @@ export function FlagSwitch({
   latestReadable,
   canManage,
   servingEnabled,
+  variant = 'panel',
 }: {
   slug: string
   flagId: string
@@ -70,6 +71,22 @@ export function FlagSwitch({
   latestReadable: boolean
   canManage: boolean
   servingEnabled: boolean
+  /**
+   * How this renders. **Same component, same write path, same confirm — only the markup differs.**
+   *
+   * - `panel` (default): one labelled button per environment, on the feature's own page.
+   * - `switch`: the approved design's 38 × 21 toggle, for ONE environment, in a feature list row
+   *   (console-ia-overhaul, Story 3.3 — the `.row-act` cell and CONSOLE-CONTRACT.md's `Switch` row,
+   *   which the visual gate carried as a deferred spec row until this landed).
+   *
+   * ⚠️ **A variant, not a second component, and that is the whole point.** The list is the second
+   * place in the product where a live feature can be killed, and this file's own header records why
+   * every line of it is shaped the way it is: the asymmetric confirm, the React-18 in-flight lock,
+   * the verbatim server rejection, the optimistic snapshot revision. A compact copy would have had
+   * to reproduce all four, and `app-shell-and-agent-rail`'s D5 already refused "two devices for one
+   * promise" once. So the surface is new and the authority, the validation and the wording are not.
+   */
+  variant?: 'panel' | 'switch'
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -190,11 +207,86 @@ export function FlagSwitch({
       `${flagKey} is off in ${row.environment}.`
     )
 
+  // ⚠️ **ONE dialog, used by both variants.** It was written twice while the switch variant was
+  // being added, which is two copies of the sentence that stands between an operator and a dead
+  // checkout — and this repo's own rule is that the second copy drifts. The verb matches the control
+  // that opened it (a control's name does not change mid-flow), and the subject names the SPECIFIC
+  // feature and environment, never "Are you sure?".
+  const dialog = (
+    <ConfirmDialog
+      open={confirming !== null}
+      verb={confirming?.direction === 'on' ? 'Turn on' : 'Turn off'}
+      noun="feature"
+      subject={confirming ? `${flagKey} in ${confirming.row.environment}` : ''}
+      consequence={confirming?.message ?? ''}
+      pending={inFlight}
+      onCancel={() => setConfirming(null)}
+      onConfirm={() =>
+        confirming && (confirming.direction === 'on' ? activate(confirming.row) : turnOff(confirming.row))
+      }
+    />
+  )
+
   if (!canManage) {
+    // In a list row there is nowhere to put a sentence, and repeating "read-only access" once per
+    // row would be 42 copies of one fact. The list says it once, above the table.
+    if (variant === 'switch') return null
     return (
       <p>
         <strong>Read-only access.</strong> A project owner turns this feature on and off.
       </p>
+    )
+  }
+
+  if (variant === 'switch') {
+    // Exactly one environment — the list has already resolved which one the reader is looking at,
+    // and a row is not the place to offer three. `environments[0]` is what the caller passed.
+    const row = environments[0]
+    if (row === undefined) return null
+    const isOn = row.state === 'on'
+    const noVersion = !isOn && latestVersionId === null
+    return (
+      <>
+        <button
+          type="button"
+          // `role="switch"` + `aria-checked` rather than a pressed button: this control has two
+          // states and a screen reader should say which one it is in, not just that it exists.
+          //
+          // ⚠️ THREE visual states, TWO checked states. `never` and `off` are both `aria-checked
+          // ="false"` because that is all the ARIA role can say — so the distinction this epic paid
+          // to separate reaches assistive tech through the LABEL and the pill beside it, never
+          // through the switch's colour or its border style alone.
+          role="switch"
+          aria-checked={isOn}
+          className={`sw ${row.state}`}
+          disabled={inFlight || !servingEnabled || noVersion}
+          aria-label={
+            noVersion
+              ? `${flagKey} has no version to serve in ${row.environment}`
+              : isOn
+                ? `Turn ${flagKey} off in ${row.environment}`
+                : `Turn ${flagKey} on in ${row.environment}`
+          }
+          onClick={() =>
+            isOn
+              ? setConfirming({
+                  row,
+                  direction: 'off',
+                  message: describeTurnOffConsequence(flagKey, row.environment),
+                })
+              : turnOn(row)
+          }
+        />
+        {/* A row is a flex line that wraps, so an alert takes the whole next line rather than
+            squeezing into a 96px cell. It is rendered rather than swallowed for the reason this
+            file's `run()` gives: a snapshot conflict must reach the operator as itself. */}
+        {error !== null && (
+          <span className="row-alert" role="alert">
+            {error}
+          </span>
+        )}
+        {dialog}
+      </>
     )
   }
 
@@ -244,21 +336,7 @@ export function FlagSwitch({
         )
       })}
 
-      <ConfirmDialog
-        open={confirming !== null}
-        // The verb matches the button that opened it — ux-guidelines: a control's name does not
-        // change mid-flow.
-        verb={confirming?.direction === 'on' ? 'Turn on' : 'Turn off'}
-        noun="feature"
-        // The dialog names the SPECIFIC feature and environment — never "Are you sure?".
-        subject={confirming ? `${flagKey} in ${confirming.row.environment}` : ''}
-        consequence={confirming?.message ?? ''}
-        pending={inFlight}
-        onCancel={() => setConfirming(null)}
-        onConfirm={() =>
-          confirming && (confirming.direction === 'on' ? activate(confirming.row) : turnOff(confirming.row))
-        }
-      />
+      {dialog}
     </div>
   )
 }

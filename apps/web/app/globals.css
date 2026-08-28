@@ -1855,6 +1855,19 @@ a.stat-card:hover {
 
 .confirm-dialog {
   width: min(430px, calc(100vw - 32px));
+  /* ⚠️ **Every confirmation dialog in this product has been pinned to the TOP-LEFT corner of the
+     viewport since the component shipped**, and nothing noticed because no spec looks at where a
+     dialog is and no screenshot of one had been read.
+
+     Chromium's UA sheet centres a modal `<dialog>` with `position: fixed; inset: 0; margin: auto`.
+     This stylesheet's `* { margin: 0 }` reset matches `dialog` too, wins on the cascade, and turns
+     `auto` into `0` — so `inset: 0` resolves the box to the origin instead of the centre. Measured
+     at `x: 0, y: 0` in a 1440x960 viewport (console-ia-overhaul, Story 3.3, found by opening the
+     page rather than by reading the diff — `app-shell-and-agent-rail` S2's rule again).
+
+     Restated rather than fixed at the reset, because a universal reset is load-bearing for
+     everything else on the page and `dialog` is the one element whose UA margin means something. */
+  margin: auto;
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: 14px;

@@ -154,20 +154,61 @@ test.describe('the flag console, signed in', () => {
     await expect(page.getByRole('button', { name: 'Mint 30-day snapshot key' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Lifecycle audit' })).toHaveCount(0)
 
-    // ...and the authoring form STAYS, which is the near-miss Story 3.3 caught: it shared a JSX
-    // block with the credential forms, so gating them hid it too — leaving no way to create a flag.
+    // ⚠️ **This assertion is INVERTED as of Story 3.3, and the inversion is the story.**
     //
-    // Scoped to the TEXTAREA form, because two controls carry this exact label: the rule builder's
-    // (disabled until its draft validates) and this one. An unscoped `getByRole` resolves to both
-    // and fails on strict mode — which is what it did the first time this suite was run, and the
-    // same ambiguous-locator class `flag-rule-builder.authed.spec.ts` already records twice.
-    // `textareaSubmit` there solves it identically; this is that shape, not a new one.
-    await expect(
-      page
-        .locator('form')
-        .filter({ has: page.locator('#flag-definition') })
-        .getByRole('button', { name: 'Create immutable version' })
-    ).toBeVisible()
+    // It used to read "…and the authoring form STAYS" — because at the time it did, and had to:
+    // deleting it would have left no way to create a feature at all. Story 3.3 lands the
+    // replacement (`new-feature.tsx`) in the same commit as the deletion, so the form goes, and
+    // this line now pins the deletion rather than the near-miss that preceded it.
+    //
+    // Both halves are asserted together on purpose. An absence assertion alone would pass on a
+    // blank page, and this epic has shipped guards that could not fail; a presence assertion alone
+    // would not notice the duplicate surviving. Together they say the thing that matters: **exactly
+    // one creation surface, and it is the new one.**
+    await expect(page.locator('#flag-definition')).toHaveCount(0)
+    await expect(page.locator('textarea')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Create immutable version' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Create an immutable definition version' })).toHaveCount(0)
+    // The rule builder is the SECOND free-key creation path (A21 — A3 said there was one). It goes
+    // with the first, and its own strings go with it.
+    await expect(page.locator('.rule-builder')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Build a rule' })).toHaveCount(0)
+    await expect(page.getByText('Show JSON')).toHaveCount(0)
+
+    // The replacement, on the same page, in the same render.
+    await expect(page.getByRole('button', { name: '+ New feature' })).toBeVisible()
+  })
+
+  test('the "New feature" wizard creates a feature and lands on it', async ({ page }) => {
+    // ⚠️ **The end-to-end proof that the deletion above did not remove a capability.** Every other
+    // assertion in this file is about what is absent; this one is about what replaced it, and it
+    // goes all the way through the real server action to a real row.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+    await page.getByRole('button', { name: '+ New feature' }).click()
+
+    const name = `probe_${Date.now().toString(36)}`
+    await page.getByLabel('Feature name').fill(name)
+    await page.getByLabel('What this controls').fill('Story 3.3 replacement-control smoke.')
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    // Step 2 cannot be left without BOTH answers — the footer says which one is missing rather than
+    // leaving a dead button, so the note is asserted, not just the disabled state.
+    const continueButton = page.getByRole('button', { name: 'Continue' })
+    await expect(continueButton).toBeDisabled()
+    await page.getByRole('button', { name: 'Release toggle' }).click()
+    await expect(continueButton).toBeDisabled()
+    await page.getByRole('button', { name: 'Medium risk' }).click()
+    await continueButton.click()
+
+    // The review names the key the code will import, composed from the area and the fixed ending.
+    await expect(page.getByText(`${name}_enabled`).first()).toBeVisible()
+    await page.getByRole('button', { name: 'Create feature' }).click()
+
+    // It lands ON the new feature — which is where its switch is, because the wizard turns nothing
+    // on (one write path, one validator: it creates a definition and nothing else).
+    await page.waitForURL(new RegExp(`/app/flags/${slug}/${name}_enabled$`))
+    await expect(page.getByRole('heading', { name: `${name}_enabled` })).toBeVisible()
   })
 })
 

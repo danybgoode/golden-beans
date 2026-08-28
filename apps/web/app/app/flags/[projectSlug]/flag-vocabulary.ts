@@ -68,11 +68,29 @@ export const FLAG_STATE_PRESENTATION: Record<
   },
 }
 
-/** `killswitch` is the STORED spelling, one word. "Kill switch" is what a person reads. */
+/**
+ * `killswitch` is the STORED spelling, one word. "Kill switch" is what a person reads.
+ *
+ * ⚠️ **`enablement` and `unclassified` were relabelled to the APPROVED design's words**
+ * (console-ia-overhaul A22, 2026-08-28): `Enablement` → **Release toggle**, `Unclassified` →
+ * **Not classified**. The stored values are untouched — `definition.metadata.polarity` still holds
+ * `enablement`, the `?type=` URL parameter still carries that spelling, and no bookmark changes
+ * meaning. Only what a person reads changes, which is the whole scope of this module.
+ *
+ * The design's word is better on its own terms, which is why this is a relabel rather than a
+ * concession to a mockup: *"Enablement"* names the category a flag belongs to in the registry;
+ * *"Release toggle"* says what the thing DOES, and it pairs with "Kill switch" — one is off until
+ * you ship, the other is on until something breaks. That pairing is what the "New feature" wizard's
+ * two cards are built on.
+ *
+ * `Not classified` additionally fixes a defect `flag-console.tsx` records in its own comment: with
+ * both maps returning `Unclassified`, a screen reader on an unclassified row heard "Unclassified
+ * Unclassified" with no way to tell type from risk. Two different absences now read differently.
+ */
 export const TYPE_LABEL: Record<string, string> = {
   killswitch: 'Kill switch',
-  enablement: 'Enablement',
-  unclassified: 'Unclassified',
+  enablement: 'Release toggle',
+  unclassified: 'Not classified',
 }
 
 /**
@@ -80,12 +98,18 @@ export const TYPE_LABEL: Record<string, string> = {
  * only `unclassified` and let the other three fall through as the raw stored value, so a column of
  * `high` / `medium` / `low` sat next to a capitalised `Unclassified` (cross-review, Agy, round 1).
  * A map means the display form of a value cannot depend on which branch produced it.
+ *
+ * ⚠️ **Relabelled to the approved design's words (A22, 2026-08-28)**: `High` → **High risk**, and
+ * `Unclassified` → **Risk not set**. Same rule as `TYPE_LABEL` above — stored values untouched, and
+ * the same defect fixed: a bare `Unclassified` beside another bare `Unclassified` told a reader
+ * nothing about which absence was which. The suffix also carries the column's meaning into a cell
+ * that loses its header on a phone, where `display: none` removes the column association entirely.
  */
 export const CRITICALITY_LABEL: Record<string, string> = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  unclassified: 'Unclassified',
+  high: 'High risk',
+  medium: 'Medium risk',
+  low: 'Low risk',
+  unclassified: 'Risk not set',
 }
 
 /**

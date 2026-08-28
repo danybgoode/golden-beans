@@ -33,7 +33,7 @@
 // exists and is what keeps the gate-off render byte-identical. See the epic README's Amendment 1.
 
 import { Fragment } from 'react'
-import type { FlagEnvironment } from '@/lib/flag-definition'
+import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
 import {
   buildFlagListQuery,
@@ -46,6 +46,8 @@ import {
   type FlagListParams,
 } from '@/lib/flag-list-view'
 import { dormantGroupLabel, flagListAnswerSegments } from '@/lib/flag-console-copy'
+import { evaluateVersionDefault } from '@/lib/flag-environment-view'
+import { FlagSwitch } from './[flagKey]/flag-switch'
 // Story 2.1 — the words live in one module now that a second surface renders them (D7).
 import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL, summaryCardLabels } from './flag-vocabulary'
 
@@ -104,12 +106,43 @@ export function FlagConsole({
   slug,
   flags,
   params,
+  snapshotVersion,
+  canManage,
+  servingEnabled,
 }: {
   slug: string
   flags: FlagRegistryRow[]
   params: FlagListParams
+  /**
+   * The selected environment's snapshot revision, for the row switch's optimistic-concurrency
+   * check. Straight off `getFlagRegistryView()` — no query is added. A missing row means the
+   * environment has never had a snapshot, whose revision is 0; the RPC rejects a mismatch either
+   * way, so a wrong guess fails loudly rather than overwriting.
+   */
+  snapshotVersion: number
+  /**
+   * Whether the viewer may turn features on and off.
+   *
+   * ⚠️ **This is about CONTROLS, not about data**, and the distinction is the one `page.tsx`'s own
+   * comment spends a paragraph on. Flag keys, descriptions and activation states stay
+   * member-readable — nothing below is hidden by this. What it decides is whether a member sees a
+   * switch the server would refuse them: `activateFlagAction` / `deactivateFlagAction` both call
+   * `requireProjectOwnership`, so the boundary is theirs and this only avoids offering a control
+   * that cannot work.
+   */
+  canManage: boolean
+  /** `FLAG_SERVING_ENABLED`. With it off the switches are disabled and the list says why, once. */
+  servingEnabled: boolean
 }) {
   const basePath = `/app/flags/${slug}`
+  // ⚠️ Narrowed, not cast. `FlagListParams.environment` is `string` because `lib/flag-list-view.ts`
+  // is import-free by design and cannot name `FlagEnvironment`; `parseFlagListParams` has already
+  // checked it against the allow-list, so this always finds a match in practice. A `as
+  // FlagEnvironment` here would be the one place the compiler stops checking that the row switch is
+  // handed an environment the server actions accept — and the actions re-validate it anyway, so a
+  // wrong value would fail loudly rather than silently. The fallback keeps the type total.
+  const environment: FlagEnvironment =
+    FLAG_ENVIRONMENTS.find((candidate) => candidate === params.environment) ?? DEFAULT_FLAG_ENVIRONMENT
 
   // ── Story 3.1, rebuilt against the approved design ───────────────────────────────────────
   // The summary describes the ENVIRONMENT, not the filtered view: it is the page's lede, and a lede
@@ -137,6 +170,36 @@ export function FlagConsole({
   const grouping = groupDormantFlagRows(visible, { narrowed })
   // Runs are empty when not grouped: the design shows no headers over a filtered list.
   const runs = runsByState(grouping.active, { grouped: grouping.grouped })
+
+  // ── What each row's switch needs, resolved ONCE ────────────────────────────────────────────
+  // The list already holds every version of every flag (`getFlagRegistryView`), so this is a
+  // projection, not a fetch — the same "no query is added" property `[flagKey]/page.tsx` states.
+  //
+  // `latestDefault` is carried for the reason that page's own comment gives: ACTIVATED IS NOT ON. A
+  // version whose default variant is falsey serves `false` while the console reports the feature as
+  // on, and `describeActivationSurprise` raises a confirm on exactly that. Asking the SDK's own
+  // evaluator here means the row and the feature page cannot disagree about it.
+  const switchable = new Map(
+    flags.map((flag) => {
+      const latest = flag.versions.reduce<(typeof flag.versions)[number] | undefined>(
+        (best, row) => (best === undefined || row.version > best.version ? row : best),
+        undefined
+      )
+      const evaluated =
+        latest === undefined
+          ? { value: undefined, readable: false }
+          : evaluateVersionDefault(flag.key, latest)
+      return [
+        flag.id,
+        {
+          latestVersionId: latest?.id ?? null,
+          latestVersion: latest?.version ?? null,
+          latestDefaultValue: evaluated.value,
+          latestReadable: evaluated.readable,
+        },
+      ]
+    })
+  )
 
   // Every link on the page is built from the PARSED params, never from the raw query string, so an
   // unrecognised parameter cannot survive a round trip through a control on this page.
@@ -170,6 +233,38 @@ export function FlagConsole({
           )
         )}
       </p>
+
+      {/* ── The two sentences that used to live under the list ─────────────────────────────
+          Both moved here from `flag-manager.tsx` when Story 3.3 emptied it (it now renders null
+          when every section is off). They are ABOVE the list on purpose: each explains why the
+          switches in it look the way they do, and an explanation below the thing it explains is
+          read after the reader has already drawn a conclusion.
+
+          The serving notice is preserved VERBATIM from the legacy surface, and deliberately not
+          reworded: with serving dark the switches are disabled and this sentence is the only thing
+          that says why. It names the variable because the person who can change it is reading. */}
+      {!servingEnabled && (
+        <p className="callout" role="status">
+          <span className="ico" aria-hidden="true">
+            ◆
+          </span>
+          <span>
+            <b>Flag serving is currently switched off.</b> Features can be prepared, but turning them on and
+            off is unavailable until <code>FLAG_SERVING_ENABLED</code> is enabled in a new deployment.
+          </span>
+        </p>
+      )}
+      {!canManage && (
+        <p className="callout info" role="status">
+          <span className="ico" aria-hidden="true">
+            ◆
+          </span>
+          <span>
+            <b>Read-only access.</b> A project owner turns features on and off, creates them, and manages this
+            project&apos;s credentials.
+          </span>
+        </p>
+      )}
 
       {/* ── The summary strip ──────────────────────────────────────────────────────────────
           Four counts, each a link that filters the list to itself. `aria-current` marks the one in
@@ -250,9 +345,21 @@ export function FlagConsole({
           <span className="h-meta" role="columnheader">
             Type &amp; risk
           </span>
-          {/* ⚠️ No "On / off" header. The prototype puts a toggle and a kebab in `.row-act`; those
-              controls do not land until Story 3.3, and a column header advertising controls that do
-              not exist is a promise the page cannot keep. The header returns with its cells. */}
+          {/* ⚠️ The header RETURNED WITH ITS CELLS (Story 3.3), which is what the note it replaces
+              promised. It said: *"a column header advertising controls that do not exist is a
+              promise the page cannot keep"* — so it is here now, and only now, because the switch
+              below is here too.
+
+              It is owner-only for the same reason the cells are: a member gets neither, and a
+              column header over an empty column is the same broken promise pointing the other
+              way. */}
+          {canManage && (
+            <span className="h-act" role="columnheader">
+              {/* The design's own words. A first version read "On in {environment}", which wraps to
+                  two lines in a 96px column and repeats what the header beside it already says. */}
+              On / off
+            </span>
+          )}
         </div>
 
         {grouping.active.length === 0 && grouping.dormant.length === 0 ? (
@@ -328,6 +435,38 @@ export function FlagConsole({
                         {CRITICALITY_LABEL[row.criticality]}
                       </span>
                     </span>
+                    {/* ── Story 3.3 — the design's 38 × 21 switch, in the cell its header names ──
+                        `FlagSwitch` in its `switch` variant: the SAME component the feature's own
+                        page uses, so the write path, the asymmetric confirm, the in-flight lock and
+                        the verbatim server rejection are one implementation rather than two. It is
+                        given ONE environment — the one the reader is looking at — because a row is
+                        not the place to offer three.
+
+                        Owner-only, and the component itself returns null for a member; the cell is
+                        gated too so a member gets no empty column beside a header. */}
+                    {canManage && (
+                      <span className="row-act" role="cell">
+                        <FlagSwitch
+                          slug={slug}
+                          flagId={row.id}
+                          flagKey={row.key}
+                          environments={[
+                            {
+                              environment,
+                              state: row.state,
+                              snapshotVersion,
+                            },
+                          ]}
+                          latestVersionId={switchable.get(row.id)?.latestVersionId ?? null}
+                          latestVersion={switchable.get(row.id)?.latestVersion ?? null}
+                          latestDefaultValue={switchable.get(row.id)?.latestDefaultValue}
+                          latestReadable={switchable.get(row.id)?.latestReadable ?? false}
+                          canManage={canManage}
+                          servingEnabled={servingEnabled}
+                          variant="switch"
+                        />
+                      </span>
+                    )}
                   </div>
                 )
               })}
