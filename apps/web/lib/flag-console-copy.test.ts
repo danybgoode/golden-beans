@@ -13,6 +13,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  answerLineClauses,
+  dormantGroupLabel,
+  flagListAnswerLine,
+  type FlagListSummaryCounts,
+} from './flag-console-copy.ts'
+
+import {
   describeActivationSurprise,
   describeRollback,
   describeTurnOffConsequence,
@@ -221,4 +228,70 @@ test('the warning names the environment it was asked about', () => {
   assert.ok(dev)
   assert.match(dev, /development/)
   assert.doesNotMatch(dev, /production/)
+})
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line ───────────────────────────────
+
+const counts = (over: Partial<FlagListSummaryCounts> = {}): FlagListSummaryCounts => ({
+  total: 0,
+  serving: 0,
+  switchedOff: 0,
+  neverSwitched: 0,
+  ...over,
+})
+
+test('a zero count is DROPPED from the answer line, never rendered as "0"', () => {
+  // A20. This is production's ACTUAL shape: `switchedOff` is 0 in EVERY environment, so a rendered
+  // "0 deliberately switched off" would be the sentence every reader gets, forever.
+  const clauses = answerLineClauses(counts({ total: 42, serving: 3, neverSwitched: 39 }))
+  assert.deepEqual(clauses, ['serving 3 features', '39 never turned on here'])
+  assert.ok(
+    !clauses.some((clause) => /\b0\b/.test(clause)),
+    'a zero-count clause reached the answer line'
+  )
+})
+
+test('the clauses present are exactly the states with a non-zero count', () => {
+  // Asserted on the PARTS, not the rendered sentence. `flags-visual-rule-builder`'s single most
+  // important check asserted nothing because Playwright normalises whitespace inside
+  // `toContainText`; a list of clauses cannot fail that way.
+  assert.deepEqual(answerLineClauses(counts({ total: 1, serving: 1 })), ['serving 1 feature'])
+  assert.deepEqual(answerLineClauses(counts({ total: 1, switchedOff: 1 })), [
+    '1 deliberately switched off',
+  ])
+  assert.deepEqual(answerLineClauses(counts({ total: 1, neverSwitched: 1 })), [
+    '1 never turned on here',
+  ])
+  assert.equal(
+    answerLineClauses(counts({ total: 3, serving: 1, switchedOff: 1, neverSwitched: 1 })).length,
+    3
+  )
+})
+
+test('one feature is a feature, not "1 features"', () => {
+  assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'Production'), /1 feature\b/)
+  assert.match(flagListAnswerLine(counts({ total: 2, serving: 2 }), 'Production'), /2 features\b/)
+  assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
+  assert.equal(
+    dormantGroupLabel(39, 'Production'),
+    '39 features have never been turned on in Production'
+  )
+})
+
+test("production's real answer line reads as a sentence, with no empty category in it", () => {
+  const line = flagListAnswerLine(counts({ total: 42, serving: 3, neverSwitched: 39 }), 'Production')
+  assert.equal(line, 'Production is serving 3 features and 39 never turned on here.')
+  assert.ok(!line.includes('0 '), 'the live sentence announces an empty category')
+})
+
+test('three clauses join with commas and a final "and", not three "and"s', () => {
+  assert.equal(
+    flagListAnswerLine(counts({ total: 6, serving: 1, switchedOff: 2, neverSwitched: 3 }), 'Preview'),
+    'Preview is serving 1 feature, 2 deliberately switched off and 3 never turned on here.'
+  )
+})
+
+test('a project with no features says so, rather than trailing off', () => {
+  // Every new tenant starts here. A dangling "Production is ." reads as a bug.
+  assert.equal(flagListAnswerLine(counts(), 'Production'), 'No features in Production yet.')
 })

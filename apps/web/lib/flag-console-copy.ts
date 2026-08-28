@@ -159,3 +159,73 @@ export function describeRevokeSyncKey(source: string): string {
     `Revoking cannot be undone.`
   )
 }
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the features list's answer line ───────────────
+//
+// Here rather than in `flag-vocabulary.ts` for this file's founding reason: these words are
+// load-bearing and this is the only place the gate can read them without module aliasing. The
+// vocabulary module re-exports them, so D7's "one place to look for a flag word" still holds.
+//
+// The COUNTS are `summariseFlagList` in `lib/flag-list-view.ts`. Only the phrasing is here.
+
+/** Structurally what `summariseFlagList` returns — restated so this module stays import-free. */
+export type FlagListSummaryCounts = {
+  total: number
+  serving: number
+  switchedOff: number
+  neverSwitched: number
+}
+
+/**
+ * The clauses of the answer line, with **zero-count clauses dropped** (A20).
+ *
+ * Returned as parts rather than a string so a test can assert *which clauses exist* — the property
+ * that actually matters — instead of matching a rendered sentence. A `toContainText` assertion on
+ * the whole line is what `flags-visual-rule-builder` learned not to trust: Playwright normalises
+ * whitespace, so the check passed while asserting nothing.
+ *
+ * Dropping rather than rendering `0` is not tidiness. On live production `switchedOff` is **0 in
+ * every environment**, so "0 deliberately switched off" would be the sentence every reader gets,
+ * forever — a summary announcing an empty category as though it were news.
+ */
+export function answerLineClauses(summary: FlagListSummaryCounts): string[] {
+  const clauses: string[] = []
+  if (summary.serving > 0) {
+    clauses.push(`serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}`)
+  }
+  if (summary.switchedOff > 0) {
+    clauses.push(`${summary.switchedOff} deliberately switched off`)
+  }
+  if (summary.neverSwitched > 0) {
+    clauses.push(`${summary.neverSwitched} never turned on here`)
+  }
+  return clauses
+}
+
+/**
+ * The whole answer line for one environment.
+ *
+ * The empty case says so in words rather than rendering a bare environment name with nothing after
+ * it. A project with no features at all is a real state — every new tenant starts there — and a
+ * dangling "Production is" reads as a bug.
+ */
+export function flagListAnswerLine(summary: FlagListSummaryCounts, environment: string): string {
+  if (summary.total === 0) return `No features in ${environment} yet.`
+  const clauses = answerLineClauses(summary)
+  // Unreachable while `total > 0` — the three states are exhaustive, so some clause is non-zero.
+  // Kept as a real sentence rather than an assertion because a fourth state added later would land
+  // here, and a page reading "42 features." is a degraded answer, not a crash.
+  if (clauses.length === 0) return `${summary.total} features in ${environment}.`
+  const last = clauses[clauses.length - 1]
+  const sentence =
+    clauses.length === 1 ? last : `${clauses.slice(0, -1).join(', ')} and ${last}`
+  return `${environment} is ${sentence}.`
+}
+
+/** The one row a collapsed dormant group renders. Plural-safe: "1 feature has", "39 features have". */
+export function dormantGroupLabel(count: number, environment: string): string {
+  return count === 1
+    ? `1 feature has never been turned on in ${environment}`
+    : `${count} features have never been turned on in ${environment}`
+}
+

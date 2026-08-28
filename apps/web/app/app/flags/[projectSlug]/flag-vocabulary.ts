@@ -15,7 +15,7 @@
 // derivation lives in `lib/flag-list-view.ts`, which is where it can be unit-tested.
 
 import type { BadgeStatus } from '@/components/ui/Badge'
-import type { FlagActivationState, FlagListRow } from '@/lib/flag-list-view'
+import type { FlagActivationState, FlagListRow, FlagListSummary } from '@/lib/flag-list-view'
 import { formatUtc } from '@/lib/format-utc'
 
 /**
@@ -36,6 +36,14 @@ import { formatUtc } from '@/lib/format-utc'
  * Value, History, Settings. These three states have no Flagsmith equivalent, because Flagsmith has
  * no "never activated in this environment" state to name, so they get plain-language names of
  * their own rather than borrowing a word that already means something else there.
+ *
+ * ⚠️ **The "40 of 42" above was measured in one environment and stated as if it held in all.**
+ * Re-measured 2026-08-28 (never/on/off): development **40/2/0**, preview **40/2/0**, production
+ * **39/3/0**. The shape of the claim survives — the dormant state is overwhelmingly the common one —
+ * but the number is per-environment, and production has moved. The figure that did NOT move, and is
+ * the more interesting one: **`off` is 0 in every environment.** Nobody has ever deliberately
+ * switched a flag off anywhere, so `FLAG_STATE_PRESENTATION.off` has never rendered in production.
+ * It is exercised by unit tests against a constructed row, and by nothing else (A20).
  */
 export const FLAG_STATE_PRESENTATION: Record<
   FlagActivationState,
@@ -95,3 +103,24 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   activated: 'Turned on',
   deactivated: 'Turned off',
 }
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line lives in `lib/`, and re-exports here
+//
+// D7 says every user-facing flag word is reachable from this module, and it still is. But the
+// DEFINITIONS moved to `lib/flag-console-copy.ts`, and the reason is written in that file's own
+// header: it is import-free precisely so `npm run test:unit` — which IS the merge gate — can cover
+// it with no DOM and **no module aliasing**.
+//
+// This file cannot be that. It imports `@/components/ui/Badge` and `@/lib/*`, and `node --test`
+// resolves neither, so a test sitting beside it fails to load rather than failing an assertion. I
+// tried the other repair first — widening the unit glob to `apps/web/app/**` — and it produced a
+// suite that could not even be COLLECTED. That is worse than an untested module: it is an untested
+// module with a test file next to it implying otherwise.
+//
+// So the arithmetic is in `lib/flag-list-view.ts`, the words are in `lib/flag-console-copy.ts`, and
+// the flag vocabulary re-exports them so there is still exactly one name to import.
+export {
+  answerLineClauses,
+  dormantGroupLabel,
+  flagListAnswerLine,
+} from '@/lib/flag-console-copy'

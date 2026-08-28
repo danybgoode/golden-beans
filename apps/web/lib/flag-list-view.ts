@@ -419,3 +419,69 @@ export function buildFlagListView(
   const ordered = sortFlagRows(filterFlagRowsByState(narrowed, params.state), params.sort)
   return { ...paginateFlagRows(ordered, params.page, pageSize), stateCounts }
 }
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line and the dormant collapse ──────
+//
+// The COUNTS live here; the WORDS live in `flag-vocabulary.ts` (D7). That split is forced rather
+// than stylistic: `flag-vocabulary.ts` already imports `FlagListRow` from this file, so a sentence
+// built here would be a cycle. It is also the right seam — every count below is unit-testable with
+// zero DOM, and the vocabulary module owns the one place a term is spelled.
+
+/**
+ * How many features are in each of the three states, for one environment.
+ *
+ * ⚠️ **`switchedOff` is 0 in EVERY environment on live production** (A20) — development 40/2/0,
+ * preview 40/2/0, production 39/3/0 (never/on/off), measured 2026-08-28. That is not a quirk to
+ * code around; it is the common case this summary must read well in, and it is why
+ * `answerLineClauses` drops a zero clause instead of rendering "0 deliberately switched off".
+ */
+export type FlagListSummary = {
+  total: number
+  serving: number
+  switchedOff: number
+  neverSwitched: number
+}
+
+export function summariseFlagList(rows: readonly FlagListRow[]): FlagListSummary {
+  return {
+    total: rows.length,
+    serving: rows.filter((row) => row.state === 'on').length,
+    switchedOff: rows.filter((row) => row.state === 'off').length,
+    neverSwitched: rows.filter((row) => row.state === 'never').length,
+  }
+}
+
+/**
+ * Split the list into the rows worth reading and the dormant ones that collapse behind a
+ * disclosure.
+ *
+ * **Grouping is OFF whenever the reader has narrowed the list**, which is Story 3.1's own rule: a
+ * filtered view has no uniform majority to summarise, and collapsing rows the reader just searched
+ * for would hide the answer they asked for. `narrowed` is passed in rather than re-derived, because
+ * this module must not guess at what the query string meant.
+ */
+export type FlagListGrouping = {
+  /** False when the reader has filtered or searched — then `dormant` is empty and `active` is all. */
+  grouped: boolean
+  active: FlagListRow[]
+  dormant: FlagListRow[]
+}
+
+export function groupDormantFlagRows(
+  rows: readonly FlagListRow[],
+  options: { narrowed: boolean }
+): FlagListGrouping {
+  if (options.narrowed) return { grouped: false, active: [...rows], dormant: [] }
+  const dormant = rows.filter((row) => row.state === 'never')
+  // Collapsing a single dormant row saves nothing and costs a click — the disclosure would hide
+  // exactly as many rows as the summary line it adds. Below two, render them inline.
+  if (dormant.length < 2) return { grouped: false, active: [...rows], dormant: [] }
+  return {
+    grouped: true,
+    active: rows.filter((row) => row.state !== 'never'),
+    dormant,
+  }
+}
+
+/** Story 3.1: expanded, the dormant group pages at 15 — not at the list's own 25. */
+export const DORMANT_PAGE_SIZE = 15

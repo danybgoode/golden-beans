@@ -8,8 +8,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  DORMANT_PAGE_SIZE,
+  FLAG_LIST_PAGE_SIZE,
   buildFlagListQuery,
   buildFlagListView,
+  groupDormantFlagRows,
+  summariseFlagList,
   filterFlagRowsByQuery,
   filterFlagRowsByState,
   filterFlagRowsByType,
@@ -566,4 +570,85 @@ test('the pipeline does not mutate the flags it was handed', () => {
     flags.map((f) => f.key),
     ['b', 'a']
   )
+})
+
+// ── Story 3.1: the answer line's counts, and the dormant collapse ─────────────────────────────
+
+function stateRow(id: string, state: 'on' | 'off' | 'never'): FlagListRow {
+  return {
+    id,
+    key: id,
+    description: '',
+    state,
+    polarity: 'unclassified',
+    criticality: 'unclassified',
+    version: state === 'on' ? 1 : null,
+    updatedAt: state === 'never' ? null : '2026-08-01T00:00:00Z',
+  }
+}
+
+test('summariseFlagList counts the three states exhaustively', () => {
+  const rows = [stateRow('a', 'on'), stateRow('b', 'never'), stateRow('c', 'never'), stateRow('d', 'off')]
+  const summary = summariseFlagList(rows)
+  assert.deepEqual(summary, { total: 4, serving: 1, switchedOff: 1, neverSwitched: 2 })
+  // The three states must account for every row — a fourth state slipping in silently would make
+  // the answer line under-report without anything going red.
+  assert.equal(
+    summary.serving + summary.switchedOff + summary.neverSwitched,
+    summary.total,
+    'the three counts do not sum to the total'
+  )
+})
+
+test("summariseFlagList reproduces production's ACTUAL shape: nothing switched off", () => {
+  // Measured 2026-08-28 on the live tenant: 3 on, 0 off, 39 never (A20). Pinned as a named case
+  // because it is the shape every reader gets today, and the one a "0 switched off" clause would
+  // have been rendered into.
+  const rows = [
+    ...Array.from({ length: 3 }, (_, index) => stateRow(`on-${index}`, 'on')),
+    ...Array.from({ length: 39 }, (_, index) => stateRow(`never-${index}`, 'never')),
+  ]
+  assert.deepEqual(summariseFlagList(rows), {
+    total: 42,
+    serving: 3,
+    switchedOff: 0,
+    neverSwitched: 39,
+  })
+})
+
+test('the dormant group collapses, and takes ONLY the never-touched rows', () => {
+  const rows = [stateRow('a', 'on'), stateRow('b', 'never'), stateRow('c', 'off'), stateRow('d', 'never')]
+  const grouped = groupDormantFlagRows(rows, { narrowed: false })
+  assert.equal(grouped.grouped, true)
+  assert.deepEqual(
+    grouped.active.map((r) => r.id),
+    ['a', 'c'],
+    'a deliberately switched-off flag was collapsed into the dormant group'
+  )
+  assert.deepEqual(grouped.dormant.map((r) => r.id), ['b', 'd'])
+  // Nothing may be lost or duplicated by the split — the reason to assert this separately is that
+  // the two filters are written independently and could both drop a state.
+  assert.equal(grouped.active.length + grouped.dormant.length, rows.length)
+})
+
+test('narrowing the list turns grouping OFF — a filtered view has no majority to summarise', () => {
+  const rows = [stateRow('a', 'never'), stateRow('b', 'never'), stateRow('c', 'never')]
+  const grouped = groupDormantFlagRows(rows, { narrowed: true })
+  assert.equal(grouped.grouped, false)
+  assert.equal(grouped.dormant.length, 0, 'rows the reader just searched for were hidden')
+  assert.equal(grouped.active.length, 3)
+})
+
+test('a single dormant row is NOT collapsed — the disclosure would hide one row and add one', () => {
+  const one = groupDormantFlagRows([stateRow('a', 'on'), stateRow('b', 'never')], { narrowed: false })
+  assert.equal(one.grouped, false)
+  assert.equal(one.active.length, 2)
+
+  const two = groupDormantFlagRows([stateRow('a', 'never'), stateRow('b', 'never')], { narrowed: false })
+  assert.equal(two.grouped, true, 'two dormant rows are worth collapsing')
+})
+
+test('the dormant group pages at 15, not at the list page size', () => {
+  assert.equal(DORMANT_PAGE_SIZE, 15)
+  assert.notEqual(DORMANT_PAGE_SIZE, FLAG_LIST_PAGE_SIZE)
 })
