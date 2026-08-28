@@ -217,8 +217,7 @@ export function flagListAnswerLine(summary: FlagListSummaryCounts, environment: 
   // here, and a page reading "42 features." is a degraded answer, not a crash.
   if (clauses.length === 0) return `${summary.total} features in ${environment}.`
   const last = clauses[clauses.length - 1]
-  const sentence =
-    clauses.length === 1 ? last : `${clauses.slice(0, -1).join(', ')} and ${last}`
+  const sentence = clauses.length === 1 ? last : `${clauses.slice(0, -1).join(', ')} and ${last}`
   return `${environment} is ${sentence}.`
 }
 
@@ -228,4 +227,3 @@ export function dormantGroupLabel(count: number, environment: string): string {
     ? `1 feature has never been turned on in ${environment}`
     : `${count} features have never been turned on in ${environment}`
 }
-

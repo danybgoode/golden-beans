@@ -119,8 +119,30 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
 //
 // So the arithmetic is in `lib/flag-list-view.ts`, the words are in `lib/flag-console-copy.ts`, and
 // the flag vocabulary re-exports them so there is still exactly one name to import.
-export {
-  answerLineClauses,
-  dormantGroupLabel,
-  flagListAnswerLine,
-} from '@/lib/flag-console-copy'
+export { answerLineClauses, dormantGroupLabel, flagListAnswerLine } from '@/lib/flag-console-copy'
+
+/**
+ * The four cards of the summary strip.
+ *
+ * ⚠️ **Derived from `FLAG_STATE_PRESENTATION`, not written again.** The first version of this strip
+ * lived in `lib/flag-console-copy.ts` with four literal strings, and D7's guard
+ * (`flag-vocabulary-surfaces.test.ts`) rejected it twice — first for "Never turned on here", then
+ * for "Turned off". Both already existed here, and two copies drift the moment one is reworded.
+ *
+ * It could not simply move to the copy module either: that file is import-free ON PURPOSE, which is
+ * what lets the merge gate read it without module aliasing. So the words stay with their owner and
+ * the strip composes them.
+ *
+ * The `state` values are the list's own filter values, so a card links to the view it describes and
+ * cannot link somewhere its label does not mean.
+ */
+export function summaryCardLabels(
+  environment: string
+): ReadonlyArray<{ key: 'all' | 'on' | 'off' | 'never'; state: string; label: string }> {
+  return [
+    { key: 'all', state: 'all', label: 'All features' },
+    { key: 'on', state: 'on', label: `${FLAG_STATE_PRESENTATION.on.label} in ${environment}` },
+    { key: 'off', state: 'off', label: FLAG_STATE_PRESENTATION.off.label },
+    { key: 'never', state: 'never', label: FLAG_STATE_PRESENTATION.never.label },
+  ]
+}

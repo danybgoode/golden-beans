@@ -43,10 +43,17 @@ export async function ProductShell({
   children,
   projectSlug,
   section,
+  railTop,
 }: {
   children: React.ReactNode
   projectSlug?: string
   section: ShellSection
+  /**
+   * Section-level controls rendered above the rail's links — today, Ship's environment picker.
+   * See `ConsoleRail`'s `top` prop: the rail is shared across sections and must not learn what an
+   * environment is, so the section that HAS one supplies it.
+   */
+  railTop?: React.ReactNode
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
@@ -296,7 +303,13 @@ export async function ProductShell({
           surface is gated off, and `ConsoleRail` renders null on an empty list. So "Today renders
           full width" and "no empty rail" are one branch, decided in the pure module.
         */}
-        {header !== null && <ConsoleRail links={railLinksFor(section, links)} />}
+        {header !== null && (
+          <ConsoleRail
+            links={railLinksFor(section, links)}
+            top={railTop}
+            label={section === 'today' ? undefined : `In ${section[0].toUpperCase()}${section.slice(1)}`}
+          />
+        )}
         {/*
           Story 1.5 — ⌘K, the ONE client island in the shell, inside the ONE error boundary in
           apps/web (A9). If it throws, the boundary renders null and the page it sits on is

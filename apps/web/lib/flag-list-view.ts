@@ -477,6 +477,17 @@ export type FlagListGrouping = {
   dormant: FlagListRow[]
 }
 
+/**
+ * ⚠️ **Pass the FULL projection, never a page of it.**
+ *
+ * The first version of Story 3.1 grouped `view.pageRows` — the paginated slice — so the disclosure
+ * read "23 features have never been turned on" on a tenant with 40 dormant flags, because 23 was
+ * how many landed on page one. The collapse then had to coexist with a pager, and the design has
+ * neither: one summary row stands for ALL of them, and the list itself does not paginate.
+ *
+ * Caught by putting the built page beside the approved design, which is the only place a number
+ * that plausible shows up as wrong.
+ */
 export function groupDormantFlagRows(
   rows: readonly FlagListRow[],
   options: { narrowed: boolean }

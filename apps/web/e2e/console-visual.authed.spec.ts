@@ -185,7 +185,10 @@ test.describe('the console matches the approved design', () => {
     // dormant group is built as the prototype has it: ONE summary row inside the list, not a
     // <details> holding fifteen more rows.
     const featureList = page.locator('[data-feature-list]')
-    const featureRows = featureList.locator('tbody tr').filter({ has: page.locator('code') })
+    // `.row` inside the list, not `tbody tr`: the approved design's list is flex rows, not a table.
+    // The locator originally assumed a table and read 0 against a correct page — a green-looking
+    // hook pointing at markup that no longer exists.
+    const featureRows = featureList.locator('.row').filter({ has: page.locator('code') })
     const dormantSummary = page.locator('[data-dormant-summary]')
     const rowCount = await featureRows.count()
     const summaryCount = await dormantSummary.count()

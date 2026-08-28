@@ -20,11 +20,30 @@ import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
  * state and not a hypothetical: three of Ship's surfaces ride Production-only gates (epic README,
  * A2), so a preview can legitimately leave a section with nothing in it.
  */
-export function ConsoleRail({ links }: { links: readonly ProjectSurfaceLink[] }) {
-  if (links.length === 0) return null
+export function ConsoleRail({
+  links,
+  top,
+  label,
+}: {
+  links: readonly ProjectSurfaceLink[]
+  /**
+   * Section-level controls that belong ABOVE the navigation — today, the environment picker.
+   *
+   * CONSOLE-CONTRACT.md Do-not #5: "Environment is a rail control, not chips in the page body."
+   * Story 1.4 said so and it did not land, so `development / preview / production` kept rendering
+   * as tags inside the flags page. A slot is the seam because the rail is shared across sections
+   * and only Ship has an environment — the rail must not learn what an environment is.
+   */
+  top?: React.ReactNode
+  /** The group label above the links. "In Ship" in the design, not a generic word. */
+  label?: string
+}) {
+  if (links.length === 0 && top === undefined) return null
 
   return (
     <nav className="console-rail" aria-label="Section">
+      {top}
+      {label !== undefined && <span className="rail-label">{label}</span>}
       <ul>
         {links.map((link) => (
           <li key={link.routeSegment}>

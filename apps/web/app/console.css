@@ -147,22 +147,35 @@
 }
 
 /* ── chrome, tier 3: the rail, and the frame it sits in ───────────────────────────────────── */
-.is-console .product-shell__body {
-  display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  align-items: start;
-  gap: 0;
-}
+/* ⚠️ **Desktop only, at the breakpoint the shell already uses (1100px).**
+   The first version declared the two-column grid at EVERY width, so a 390px phone got a 236px
+   fixed column and a ~150px content column. Six `mobile-heuristics` specs went red across pages
+   this epic never touched — the rail is in the shell, so a shell-level layout bug is a whole-product
+   bug. The prototype is a 1440x960 design and says nothing about phones; the existing shell already
+   had the answer, and matching its breakpoint means there is one place where "when does the rail
+   become a sidebar" is decided rather than two that must agree. */
 .is-console .product-shell__body > main,
 .is-console .product-shell__body > .content {
-  padding: 26px 30px 90px;
-  max-width: 1180px;
   min-width: 0;
 }
-/* Today has no rail (`railLinksFor` returns [] and ConsoleRail renders null), so the grid must
-   collapse to one column rather than leave a 236px gutter where navigation would have been. */
-.is-console .product-shell__body:not(:has(.console-rail)) {
-  grid-template-columns: minmax(0, 1fr);
+
+@media (min-width: 1100px) {
+  .is-console .product-shell__body {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+  }
+  .is-console .product-shell__body > main,
+  .is-console .product-shell__body > .content {
+    padding: 26px 30px 90px;
+    max-width: 1180px;
+  }
+  /* Today has no rail (`railLinksFor` returns [] and ConsoleRail renders null), so the grid must
+     collapse to one column rather than leave a 236px gutter where navigation would have been. */
+  .is-console .product-shell__body:not(:has(.console-rail)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ⚠️ These undo a DIFFERENT layout, not just different colours.
@@ -175,22 +188,21 @@
    Specificity is deliberate. `.product-shell:has(.console-rail) .console-rail` scores (0,3,0)
    because `:has()` carries its argument's specificity, so `.is-console .console-rail` (0,2,0) lost
    silently. Matching their shape and adding `.is-console` scores (0,4,0) and wins. */
-.product-shell.is-console:has(.console-rail) .product-shell__body {
-  padding-left: 0;
-}
-.product-shell.is-console:has(.console-rail) .console-rail {
-  position: sticky;
-  top: 98px;
-  left: auto;
-  width: auto;
-  max-height: none;
-  height: calc(100vh - 98px);
+@media (min-width: 1100px) {
+  .product-shell.is-console:has(.console-rail) .product-shell__body {
+    padding-left: 0;
+  }
+  .product-shell.is-console:has(.console-rail) .console-rail {
+    position: sticky;
+    top: 98px;
+    left: auto;
+    width: auto;
+    max-height: none;
+    height: calc(100vh - 98px);
+  }
 }
 
 .is-console .console-rail {
-  width: auto;
-  margin: 0;
-  border-right: 1px solid var(--line);
   padding: 18px 14px 40px;
   position: sticky;
   top: 98px;
@@ -243,6 +255,13 @@
 .is-console .console-rail a[data-surface-status]::after {
   display: none;
   content: none;
+}
+@media (min-width: 1100px) {
+  .is-console .console-rail {
+    width: auto;
+    margin: 0;
+    border-right: 1px solid var(--line);
+  }
 }
 .is-console .rail-label {
   display: block;
@@ -616,6 +635,16 @@
   gap: 8px;
   align-items: center;
   margin-bottom: 14px;
+}
+/* `globals.css` gives form controls `width: 100%` inside a form, which makes every child of the
+   toolbar its own row. The design is one row: a search box that grows, then fixed-width selects. */
+.is-console .toolbar > * {
+  width: auto;
+}
+.is-console .toolbar select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 150px;
 }
 .is-console .toolbar input[type='search'],
 .is-console .toolbar input[type='text'] {

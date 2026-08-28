@@ -8,6 +8,7 @@ import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
 import { parseFlagListParams } from '@/lib/flag-list-view'
 import { FlagManager } from './flag-manager'
 import { DEFAULT_FLAG_ENVIRONMENT, FlagConsole } from './flag-console'
+import { EnvironmentPicker } from './environment-picker'
 import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
@@ -50,17 +51,49 @@ export default async function FlagsPage({
   const listParams = parseFlagListParams(await searchParams, FLAG_ENVIRONMENTS, DEFAULT_FLAG_ENVIRONMENT)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="ship">
+    <ProductShell
+      projectSlug={projectSlug}
+      section="ship"
+      railTop={<EnvironmentPicker basePath={`/app/flags/${projectSlug}`} params={listParams} />}
+    >
       <main>
-        <h1>Feature flags — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
-        <p>
-          Definitions, immutable versions and their audit remain visible while flag serving is dark.
-          Activating or deactivating a flag changes one environment snapshot with optimistic revision
-          protection.
-        </p>
+        {/* ── The page head, from the approved design ────────────────────────────────────────
+            Three corrections, each a Do-not in CONSOLE-CONTRACT.md.
+
+            The TITLE is "Features". It was "Feature flags — <slug>", which at 48px wrapped to four
+            lines on a real tenant slug and spent ~200px before any content. The project is already
+            named in the top bar's switcher; repeating it in the h1 is the same fact twice, and the
+            expensive copy.
+
+            The SUBTITLE was: "Definitions, immutable versions and their audit remain visible while
+            flag serving is dark. Activating or deactivating a flag changes one environment snapshot
+            with optimistic revision protection." That is page copy about STORAGE (Do-not #7) — it
+            describes how a row is written, to a reader who came to see what is switched on. The
+            design's sentence answers the reader's question instead. `flags-console-parity` D7 says
+            every user-facing flag word goes through `flag-vocabulary.ts`; this sentence went through
+            nothing, because no story in the epic covered it.
+
+            "← Your projects" is gone: the top bar's switcher is the way back to a project list, and
+            a second one here is a link competing with the navigation. */}
+        <div className="page-head">
+          <div>
+            <h1>Features</h1>
+            <p>
+              Everything this project can switch, and what {listParams.environment} is doing with it. What
+              customers are getting right now.
+            </p>
+          </div>
+          <div className="spacer" />
+          {/* The design's two page actions. "New feature" is Story 3.3's replacement control — the
+              deletion of the JSON authoring stack lands with it, never before it (A3/A21), so this
+              is a placeholder position rather than a live control until that story. */}
+          <a
+            className="btn btn-ghost"
+            href={`/app/flags/${projectSlug}?env=${listParams.environment}&state=all`}
+          >
+            Compare environments
+          </a>
+        </div>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
             epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to
             `true`, so the gate-off render is unchanged — which is the guarantee. (This said the file
@@ -101,9 +134,10 @@ export default async function FlagsPage({
             capability. With the gate OFF, `showDefinitions` defaults to true and this page is
             byte-for-byte pre-epic (D6/Amendment 1); the authoring textarea and the credential forms
             are untouched in BOTH branches, because moving those is Sprint 3. */}
-        {consoleEnabled && (
-          <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} canManage={canManage} />
-        )}
+        {/* `canManage` is no longer passed: the owner-only credential link used to sit in this
+            page's body, and in the approved design it is a rail entry like every other surface —
+            the rail already filters by entitlement, so gating it twice was the duplication. */}
+        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
           {...registry}

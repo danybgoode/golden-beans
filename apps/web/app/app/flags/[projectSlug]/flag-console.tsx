@@ -29,10 +29,9 @@
 // stack). That prop is gone — hiding those controls a sprint early would have left no way to kill a
 // live flag. See the epic README's Amendment 1.
 
-import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
+import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
 import {
-  DORMANT_PAGE_SIZE,
   buildFlagListQuery,
   buildFlagListView,
   groupDormantFlagRows,
@@ -41,10 +40,8 @@ import {
   type FlagListParams,
 } from '@/lib/flag-list-view'
 import { dormantGroupLabel, flagListAnswerLine } from '@/lib/flag-console-copy'
-import { Badge } from '@/components/ui/Badge'
-import { Panel } from '@/components/ui/Panel'
 // Story 2.1 — the words live in one module now that a second surface renders them (D7).
-import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL } from './flag-vocabulary'
+import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL, summaryCardLabels } from './flag-vocabulary'
 
 /**
  * Production is the default view.
@@ -54,296 +51,196 @@ import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL } from './flag-v
  */
 export const DEFAULT_FLAG_ENVIRONMENT: FlagEnvironment = 'production'
 
-const SORT_LABEL: Array<{ value: FlagListParams['sort']; label: string }> = [
-  { value: 'key_asc', label: 'Name A–Z' },
-  { value: 'key_desc', label: 'Name Z–A' },
-  { value: 'state', label: 'On first' },
-  { value: 'type', label: 'Type (kill switches first)' },
-  { value: 'recent', label: 'Recently changed' },
-]
-
 export function FlagConsole({
   slug,
   flags,
   params,
-  canManage,
 }: {
   slug: string
   flags: FlagRegistryRow[]
   params: FlagListParams
-  /** Owner? Decides whether the owner-only credentials route is linked — it 404s for a member. */
-  canManage: boolean
 }) {
   const basePath = `/app/flags/${slug}`
-  const view = buildFlagListView(flags, params)
 
-  // ── Story 3.1 — the answer line, and the dormant collapse ────────────────────────────────
-  // The summary describes the ENVIRONMENT, not the filtered view: it is the page's lede, and a
-  // lede that changed every time you typed in the search box would not be an answer to "what is on
+  // ── Story 3.1, rebuilt against the approved design ───────────────────────────────────────
+  // The summary describes the ENVIRONMENT, not the filtered view: it is the page's lede, and a lede
+  // that changed every time you typed in the search box would not be an answer to "what is on
   // here". So it projects the unfiltered rows.
-  const summary = summariseFlagList(projectFlagRows(flags, params.environment))
+  const projected = projectFlagRows(flags, params.environment)
+  const summary = summariseFlagList(projected)
+
   // Grouping is off the moment the reader narrows the list — collapsing rows somebody just searched
-  // for would hide the answer they asked for. `narrowed` is computed here, from the parsed params,
-  // because only this file knows which controls count as narrowing.
+  // for would hide the answer they asked for.
   const narrowed = params.q !== '' || params.state !== 'all' || params.type !== 'all'
-  const grouping = groupDormantFlagRows(view.pageRows, { narrowed })
-  const dormantShown = grouping.dormant.slice(0, DORMANT_PAGE_SIZE)
+
+  // ⚠️ The FULL projection, not a page of it. This was `view.pageRows`, so the disclosure read
+  // "23 features have never been turned on" on a tenant with 40 — 23 was simply how many landed on
+  // page one. The design has no pager on this list precisely because ONE summary row stands for all
+  // of them, and pagination is what made that impossible.
+  const narrowedRows = narrowed
+    ? buildFlagListView(flags, params, Number.MAX_SAFE_INTEGER).pageRows
+    : projected
+  const grouping = groupDormantFlagRows(narrowedRows, { narrowed })
+
   // Every link on the page is built from the PARSED params, never from the raw query string, so an
   // unrecognised parameter cannot survive a round trip through a control on this page.
   const linkTo = (overrides: Partial<FlagListParams>) =>
     `${basePath}${buildFlagListQuery(params, { page: 1, ...overrides }, DEFAULT_FLAG_ENVIRONMENT)}`
 
   return (
-    <Panel className="stack">
-      {/* ── Story 1.4: the environment selector ──────────────────────────────────────────────
-          Flags-scoped and rendered as links, so the chosen environment is in the URL and travels
-          with a copied address. `ProductShell` is untouched (D3): this is not ambient chrome, and
-          a switcher in the shell would imply it governs pages that do not read it. */}
-      <div className="stack-sm">
-        <p className="field__label" id="flag-console-environment">
-          Environment
-        </p>
-        <div className="row-wrap" role="group" aria-labelledby="flag-console-environment">
-          {FLAG_ENVIRONMENTS.map((environment) => {
-            const selected = environment === params.environment
-            return (
-              <a
-                key={environment}
-                className={`tag ${selected ? 'tag-live' : 'tag-next'}`}
-                aria-current={selected ? 'true' : undefined}
-                href={linkTo({ environment })}
-              >
-                {environment}
-              </a>
-            )
-          })}
-        </div>
-        <p className="data-table__count">
-          What this list reports is what <strong>{params.environment}</strong> is serving.
-        </p>
+    <>
+      {/* ── The answer line ────────────────────────────────────────────────────────────────
+          The design's lede, and the reason this page exists: it names WHICH features are serving
+          rather than only counting them. Its words come from `lib/flag-console-copy.ts` and its
+          arithmetic from `lib/flag-list-view.ts`, so both halves sit where the merge gate can read
+          them — this component is only reachable through a signed-in browser. A zero-count clause is
+          DROPPED, never rendered as "0" (A20). */}
+      <p className="answer">{flagListAnswerLine(summary, params.environment)}</p>
+
+      {/* ── The summary strip ──────────────────────────────────────────────────────────────
+          Four counts, each a link that filters the list to itself. `aria-current` marks the one in
+          force and is also what paints the selected card — so what a reader sees and what a screen
+          reader hears are one attribute, not two kept in agreement by hand. */}
+      <div className="summary">
+        {summaryCardLabels(params.environment).map((card) => (
+          <a
+            key={card.key}
+            className={`stat ${card.key}`}
+            href={linkTo({ state: card.state as FlagListParams['state'] })}
+            aria-current={params.state === card.state ? 'true' : undefined}
+          >
+            <span className="n">
+              {card.key === 'all'
+                ? summary.total
+                : card.key === 'on'
+                  ? summary.serving
+                  : card.key === 'off'
+                    ? summary.switchedOff
+                    : summary.neverSwitched}
+            </span>
+            <span className="k">{card.label}</span>
+          </a>
+        ))}
       </div>
 
-      {/* ── Story 1.3: search, filters, sort ─────────────────────────────────────────────────
-          State chips sit OUTSIDE the form (they are links), so the form carries `state` and `env`
-          as hidden inputs — otherwise submitting a search would silently reset them, which is the
-          bug the upstream's comment records solving the same way. */}
-      <div className="row-wrap">
-        {(
-          [
-            ['all', 'All', view.stateCounts.all],
-            ['on', 'On', view.stateCounts.on],
-            ['off', 'Not on', view.stateCounts.off],
-          ] as const
-        ).map(([value, label, count]) => {
-          const selected = params.state === value
-          return (
-            <a
-              key={value}
-              className={`tag ${selected ? 'tag-live' : 'tag-next'}`}
-              aria-current={selected ? 'true' : undefined}
-              href={linkTo({ state: value })}
-            >
-              {label} ({count})
-            </a>
-          )
-        })}
-      </div>
-
-      <form method="GET" action={basePath} className="row-wrap">
-        {params.environment !== DEFAULT_FLAG_ENVIRONMENT && (
-          <input type="hidden" name="env" value={params.environment} />
-        )}
-        {params.state !== 'all' && <input type="hidden" name="state" value={params.state} />}
-        <label className="field" htmlFor="flag-console-q">
-          <span className="field__label">Search</span>
-          <input
-            id="flag-console-q"
-            type="search"
-            name="q"
-            defaultValue={params.q}
-            placeholder="Search by name or description"
-            maxLength={200}
-          />
-        </label>
-        <label className="field" htmlFor="flag-console-type">
-          <span className="field__label">Type</span>
-          <select id="flag-console-type" name="type" defaultValue={params.type}>
-            <option value="all">All types</option>
-            {/* Built from the vocabulary map rather than retyped. The three labels were hardcoded
-                here, which is precisely the drift the module exists to stop — the filter would have
-                kept saying "Kill switch" if the table's word ever changed. Caught by the widened
-                ownership assertion (fresh reviewer, PR #121, N2). */}
-            {(['killswitch', 'enablement', 'unclassified'] as const).map((value) => (
-              <option key={value} value={value}>
-                {TYPE_LABEL[value]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field" htmlFor="flag-console-sort">
-          <span className="field__label">Sort</span>
-          <select id="flag-console-sort" name="sort" defaultValue={params.sort}>
-            {SORT_LABEL.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="btn btn-ghost" type="submit">
+      {/* Still a plain GET form: search, filters and sort live in the URL, so a filtered view can be
+          bookmarked and sent to someone. Story 1.3's requirement; the design changes how it looks,
+          not what it is. */}
+      <form className="toolbar" method="get" action={basePath}>
+        <input type="hidden" name="env" value={params.environment} />
+        <input type="hidden" name="state" value={params.state} />
+        <input
+          type="search"
+          name="q"
+          defaultValue={params.q}
+          placeholder="Search features"
+          aria-label="Search features"
+        />
+        {/* The type filter's options come from `TYPE_LABEL`, not from four retyped strings. D7's
+            guard caught the first version writing "Kill switches" beside a `TYPE_LABEL` that says
+            "Kill switch" — a plural that would have drifted the moment either was reworded. */}
+        <select name="type" defaultValue={params.type} aria-label="Type">
+          <option value="all">All types</option>
+          {(['killswitch', 'enablement', 'unclassified'] as const).map((polarity) => (
+            <option key={polarity} value={polarity}>
+              {TYPE_LABEL[polarity]}
+            </option>
+          ))}
+        </select>
+        <select name="sort" defaultValue={params.sort} aria-label="Sort">
+          <option value="key_asc">Name A-Z</option>
+          <option value="key_desc">Name Z-A</option>
+          <option value="state">State</option>
+          <option value="recent">Recently changed</option>
+        </select>
+        <button type="submit" className="btn btn-ghost">
           Apply
         </button>
       </form>
 
-      {/* Stories 3.1/3.2 — the two routes the console moves controls to, linked from the surface
-          that lost them. The shell nav lists them too (they are registered in the route inventory),
-          but someone standing on the flags page looking for the key they just minted should not have
-          to go up a level to find where it went. Credentials is owner-only and 404s for a member, so
-          it is rendered only when the caller can actually use it. */}
-      <p className="row-wrap">
-        {canManage && <a href={`/app/flag-credentials/${slug}`}>Flag credentials →</a>}
-        <a href={`/app/flag-audit/${slug}`}>Flag audit →</a>
-      </p>
-
-      <div className="data-table">
-        {/* ── Story 3.1: the answer line ───────────────────────────────────────────────────
-            The first thing on the page, and the one claim the page makes about itself. Its words
-            and its arithmetic both live outside this component (`lib/flag-console-copy.ts` and
-            `lib/flag-list-view.ts`) so the merge gate can read them — this file is only reachable
-            through a signed-in browser. A zero-count clause is DROPPED rather than rendered as a
-            "0", which on production is every reader's sentence: nothing has ever been deliberately
-            switched off, in any environment (A20). */}
-        <p className="lede">{flagListAnswerLine(summary, params.environment)}</p>
-        <p className="data-table__count">
-          {view.totalRows === 0
-            ? 'No features match this view'
-            : `Showing ${view.pageRows.length} of ${view.totalRows} features`}
-        </p>
-        <div className="data-table__scroll">
-          <table>
-            <caption>Features in {params.environment}</caption>
-            <thead>
-              <tr>
-                <th scope="col">Feature</th>
-                <th scope="col">State</th>
-                <th scope="col">Type</th>
-                <th scope="col">Criticality</th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.pageRows.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>
-                    {flags.length === 0
-                      ? 'No features are defined for this project yet.'
-                      : 'No features match this search. Clear the filters to see all of them again.'}
-                  </td>
-                </tr>
-              ) : (
-                (grouping.grouped ? grouping.active : view.pageRows).map((row) => {
-                  const presentation = FLAG_STATE_PRESENTATION[row.state]
-                  return (
-                    <tr key={row.id}>
-                      <td>
-                        {/* Story 2.1 — the row is the way in. Clicking a feature opens its own
-                            place rather than expanding an editor inline, which is the whole point
-                            of the destination. */}
-                        <a href={`${basePath}/${encodeURIComponent(row.key)}`}>
-                          <code>{row.key}</code>
-                        </a>
-                        {row.description !== '' && <p className="data-table__count">{row.description}</p>}
-                      </td>
-                      <td>
-                        <Badge status={presentation.badge}>{presentation.label}</Badge>
-                        <p className="data-table__count">{presentation.detail(row)}</p>
-                      </td>
-                      <td>{TYPE_LABEL[row.polarity]}</td>
-                      <td>{CRITICALITY_LABEL[row.criticality]}</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+      {/* `data-feature-list` is the visual gate's hook. A class would work until someone renamed it
+          for styling; a data attribute says "something asserts on this". */}
+      <div className="listcard" data-feature-list>
+        <div className="listhead">
+          <span className="row-main">Feature</span>
+          <span className="h-state">State in {params.environment}</span>
+          <span className="h-meta">Type &amp; risk</span>
+          <span className="h-act">On / off</span>
         </div>
 
-        {/* ── Story 3.1: the dormant group, collapsed to one row ───────────────────────────────
-            39 of 42 features on production have never been turned on in any environment, and
-            rendering them inline is what made this page unreadable — forty rows all saying the same
-            thing, with the three that matter somewhere among them.
-
-            A native <details>, so it costs no JavaScript and this file stays a server component.
-
-            ⚠️ It shows the first 15 and then LINKS rather than paginating in place. Paging inside a
-            <details> would navigate, and a navigation re-collapses it — every "next page" click
-            would shut the thing you opened. The link goes to `?state=never`, which is the exact
-            filter (added additively; `state=off` still means "not on", matching its chip), so the
-            full list arrives in the ordinary paginated table where paging already works. */}
-        {grouping.grouped && (
-          <details className="stack-sm">
-            <summary>{dormantGroupLabel(grouping.dormant.length, params.environment)}</summary>
-            <div className="data-table__scroll">
-              <table>
-                <caption>
-                  Never turned on in {params.environment}
-                  {grouping.dormant.length > dormantShown.length &&
-                    ` — showing the first ${dormantShown.length}`}
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Feature</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Criticality</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dormantShown.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        <a href={`${basePath}/${encodeURIComponent(row.key)}`}>
-                          <code>{row.key}</code>
-                        </a>
-                        {row.description !== '' && (
-                          <p className="data-table__count">{row.description}</p>
-                        )}
-                      </td>
-                      <td>{TYPE_LABEL[row.polarity]}</td>
-                      <td>{CRITICALITY_LABEL[row.criticality]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {grouping.dormant.length > dormantShown.length && (
-              <p className="data-table__count">
-                <a href={linkTo({ state: 'never' })}>
-                  See all {grouping.dormant.length} never turned on in {params.environment} →
-                </a>
-              </p>
-            )}
-          </details>
+        {grouping.active.length > 0 && (
+          <div className="grp on">
+            <span className="bar" />
+            <span>On in {params.environment}</span>
+            <span className="cnt">{grouping.active.length}</span>
+          </div>
         )}
 
-        {/* Rendered only when there is more than one page: a "Page 1 of 1" control is furniture
-            that implies there is somewhere else to go. */}
-        {view.totalPages > 1 && (
-          <div className="row-wrap">
-            {view.page > 1 && (
-              <a className="btn btn-ghost" href={linkTo({ page: view.page - 1 })} rel="prev">
-                Previous
-              </a>
-            )}
-            <span className="data-table__count">
-              Page {view.page} of {view.totalPages}
+        {grouping.active.length === 0 && grouping.dormant.length === 0 ? (
+          <div className="row">
+            <span className="row-main">
+              {flags.length === 0
+                ? 'No features are defined for this project yet.'
+                : 'No features match this search. Clear the filters to see all of them again.'}
             </span>
-            {view.page < view.totalPages && (
-              <a className="btn btn-ghost" href={linkTo({ page: view.page + 1 })} rel="next">
-                Next
-              </a>
-            )}
+          </div>
+        ) : (
+          grouping.active.map((row) => {
+            const presentation = FLAG_STATE_PRESENTATION[row.state]
+            return (
+              <div className="row" key={row.id}>
+                <span className="row-main">
+                  <a className="row-key" href={`${basePath}/${encodeURIComponent(row.key)}`}>
+                    <code>{row.key}</code>
+                  </a>
+                  {row.description !== '' && <span className="row-desc">{row.description}</span>}
+                </span>
+                <span className="row-state">
+                  {/* A dot AND a word — never colour alone. The three states are the distinction
+                      `flags-console-parity` Amendment 2 paid to separate, and a colour-only pill
+                      re-collapses it for anyone who cannot see the difference. */}
+                  <span className={`pill ${row.state}`}>
+                    <span className="dot" />
+                    {presentation.label}
+                  </span>
+                  <span className="state-detail">{presentation.detail(row)}</span>
+                </span>
+                <span className="row-meta">
+                  <span className="tag">{TYPE_LABEL[row.polarity]}</span>
+                  <span className="tag">{CRITICALITY_LABEL[row.criticality]}</span>
+                </span>
+                <span className="row-act" />
+              </div>
+            )
+          })
+        )}
+
+        {/* ── One row replacing forty ────────────────────────────────────────────────────────
+            ⚠️ It stands for EVERY dormant feature, not the ones that happened to land on this page.
+            The first version grouped the paginated slice and read "23 features have never been
+            turned on" on a tenant with 40 — a number plausible enough that only putting the built
+            page beside the design caught it. */}
+        {grouping.grouped && (
+          <div className="dormant" data-dormant-summary>
+            <span className="tw">
+              <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
+              <span className="d">
+                No one has ever switched them on or off here. Nothing is wrong with them — nothing has
+                happened to them.
+              </span>
+            </span>
+            <a className="go" href={linkTo({ state: 'never' })}>
+              Show them
+            </a>
           </div>
         )}
       </div>
-    </Panel>
+
+      <p className="foot">
+        {grouping.grouped
+          ? `Showing ${grouping.active.length} rows for ${summary.total} features — ${grouping.dormant.length} of them summarised in one line.`
+          : `Showing ${grouping.active.length} of ${summary.total} features.`}
+      </p>
+    </>
   )
 }

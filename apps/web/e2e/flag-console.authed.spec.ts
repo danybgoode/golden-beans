@@ -36,10 +36,12 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flags/${slug}`)
 
-    // The list itself — a real table, not the article stack it replaced.
-    await expect(page.getByRole('table').filter({ hasText: 'Features in' })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: 'Feature' })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: 'State' })).toBeVisible()
+    // ⚠️ The list is no longer a <table>. The approved design (console-ia-overhaul) renders flex
+    // rows, so `getByRole('table')` asserted markup that no longer exists — and would have kept
+    // failing on a correct page. Pinned on the list's own hook and its rendered column labels.
+    await expect(page.locator('[data-feature-list]')).toBeVisible()
+    await expect(page.locator('.listhead')).toContainText('Feature')
+    await expect(page.locator('.listhead')).toContainText('State in')
 
     // Story 1.4: the environment selector, and the sentence that says what the list reports on.
     await expect(page.getByText('What this list reports is what')).toBeVisible()
@@ -48,7 +50,7 @@ test.describe('the flag console, signed in', () => {
     // directly rather than by clicking, because "survives a refresh and a paste into another
     // session" is the property, and clicking would prove only that the click worked.
     await page.goto(`/app/flags/${slug}?env=development&sort=state`)
-    await expect(page.getByRole('table').filter({ hasText: 'Features in development' })).toBeVisible()
+    await expect(page.locator('[data-feature-list] .listhead')).toContainText('State in development')
   })
 
   test('an unknown parameter is dropped rather than echoed back into the page', async ({ page }) => {
@@ -72,7 +74,7 @@ test.describe('the flag console, signed in', () => {
       expect(href, 'a control echoed an unrecognised sort').not.toContain('sort=%3Cimg')
     }
     // ...and the page still renders rather than erroring on the junk.
-    await expect(page.getByRole('table').filter({ hasText: 'Features in' })).toBeVisible()
+    await expect(page.locator('[data-feature-list]')).toBeVisible()
   })
 
   test('the credentials route renders both key kinds for an owner', async ({ page }) => {
@@ -110,7 +112,7 @@ test.describe('the flag console, signed in', () => {
     await page.goto(`/app/flags/${slug}`)
 
     // Click through from the list, which is Story 2.1's promise — the row IS the way in.
-    const firstFeature = page.getByRole('table').filter({ hasText: 'Features in' }).getByRole('link').first()
+    const firstFeature = page.locator('[data-feature-list] .row-key').first()
     const key = (await firstFeature.innerText()).trim()
     test.skip(key === '', 'this tenant has no flag definitions yet')
     await firstFeature.click()
@@ -171,15 +173,15 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     'the console renders behind FLAG_CONSOLE_ENABLED; this pass needs it on'
   )
 
-  test('the answer line is the first thing on the list, and never announces a zero', async ({
-    page,
-  }) => {
+  test('the answer line is the first thing on the list, and never announces a zero', async ({ page }) => {
     const slug = tenantSlug()
     await page.goto(`/app/flags/${slug}`)
 
     // Asserted on a PARSED value, not a rendered substring: `toContainText` normalises whitespace,
     // which is how `flags-visual-rule-builder`'s most important check ended up asserting nothing.
-    const lede = page.locator('.lede').first()
+    // `.answer` is the approved design's name for the page's lede — a gold-bordered line, not the
+    // generic `.lede` class the pre-redesign page used.
+    const lede = page.locator('.answer').first()
     await expect(lede).toBeVisible()
     const line = ((await lede.innerText()) ?? '').trim()
 
@@ -196,7 +198,9 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
   test('never-turned-on features collapse behind ONE disclosure row', async ({ page }) => {
     await page.goto(`/app/flags/${tenantSlug()}`)
 
-    const disclosure = page.locator('details', { hasText: 'never been turned on' })
+    // One summary ROW, not a <details> holding fifteen more rows — the approved design collapses
+    // every dormant feature into a single line with a "Show them" link.
+    const disclosure = page.locator('[data-dormant-summary]')
     const count = await disclosure.count()
     if (count === 0) {
       // Fewer than two dormant flags in this fixture — the collapse is deliberately not rendered
@@ -207,16 +211,23 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
       return
     }
 
-    // Collapsed by default: the dormant rows must not be in the layout until asked for.
-    const inner = disclosure.locator('table')
-    await expect(inner).toBeHidden()
-    await disclosure.locator('summary').click()
-    await expect(inner).toBeVisible()
+    // ⚠️ The design does not expand in place — it LINKS. A <details> that pages inside itself
+    // re-collapses on every navigation, so the dormant group is one row plus "Show them", which
+    // goes to the exact `state=never` view where paging already works.
+    //
+    // So the property is no longer "collapsed then expands". It is: one line stands for many, and
+    // it offers a way to see them. Asserting the old behaviour here would be asserting a control
+    // the approved design deliberately does not have.
+    await expect(disclosure).toContainText('never been turned on')
+    const showThem = disclosure.getByRole('link', { name: /Show them/i })
+    await expect(showThem).toBeVisible()
+    await showThem.click()
+    await expect(page).toHaveURL(/state=never/)
+    // And the destination actually lists them, rather than being a link to nowhere.
+    await expect(page.locator('[data-feature-list] .row').first()).toBeVisible()
   })
 
-  test('searching turns grouping off — the rows you asked for are never collapsed away', async ({
-    page,
-  }) => {
+  test('searching turns grouping off — the rows you asked for are never collapsed away', async ({ page }) => {
     // Story 3.1's own rule. A filtered view has no uniform majority to summarise, and hiding a row
     // the reader just searched for hides the answer they asked for.
     await page.goto(`/app/flags/${tenantSlug()}?q=gb`)
