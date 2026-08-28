@@ -259,26 +259,31 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    // ⚠️ With the gate OPEN this now returns a console header, not `EMPTY` — and the reason is a
-    // claim that was false (fresh reviewer, PR #123, S7).
+    // ── `EMPTY`, and the reasoning here was WRONG TWICE. Both corrections are worth keeping. ──
     //
-    // `ProductShell`'s comment said Story 2.2 is "satisfied by construction: with the gate on, the
-    // legacy branch does not render at all". `header !== null ⟹ gate-on-and-session` is true, but
-    // the CONVERSE is not — and this catch was the sole exception. `getSessionUser()` and
-    // `getUserProjects()` are both inside the `try`, so an auth blip or a `project_members` outage
-    // with the console lit sent a signed-in operator to the LEGACY branch, whose `Connect` link goes
-    // to `/install` — the demo project's connector URL. Exactly the "working URL for somebody else's
-    // data" Story 2.2 exists to prevent, reachable only during an outage.
+    // (1) The original comment said Story 2.2 is "satisfied by construction: with the gate on, the
+    //     legacy branch does not render at all". That is FALSE, and the fresh reviewer was right to
+    //     say so: `header !== null` implies gate-on-and-session, but the converse does not, and this
+    //     catch is the sole exception. `getSessionUser()` and `getUserProjects()` are both inside the
+    //     `try`, so with the console lit an outage drops a signed-in operator onto the legacy branch,
+    //     whose `Connect` goes to `/install` — the demo project's URL.
     //
-    // Returning the same honest header the zero-project and foreign-slug paths use makes the claim
-    // true rather than lucky: with the gate on, the console chrome renders and its `Connect` is the
-    // Setup rail's own entry, never `/install`.
+    // (2) So I changed this to return a console header when the gate is open... which reintroduced
+    //     the BLOCKING defect the same reviewer caught one round earlier. `getSessionUser()` is the
+    //     first statement in the `try`; if it REJECTS (a transport failure — it returns null for an
+    //     ordinary auth error, but a rejection is not that), we land here knowing nothing about
+    //     whether a session exists. The two demo dashboards are anonymously readable and render this
+    //     shell, so an anonymous visitor would have got a project switcher, an account menu and a
+    //     palette over surfaces that all require a session.
     //
-    // `userEmail` stays null — `getSessionUser()` may be the very thing that threw, so we do not
-    // know it — which means `shellRendersAccountMenu` is false and `/app` renders its own sign-out
-    // line. That is exactly the same guarantee as before this change, not a new one: sign-out
-    // appears once on `/app` and the degraded chrome elsewhere carries none. Said plainly rather
-    // than claimed as an improvement it is not.
-    return { ...EMPTY, header: gateOpen ? emptyHeader(activeSection) : null }
+    // Trading a bounded Should-fix for a Blocking is the wrong direction. The catch does not know
+    // who is asking, so it must return the answer that is safe for BOTH: the public chrome. A
+    // signed-in operator seeing `/install` during an outage is a wrong-tenant confusion, bounded
+    // (rule #2 means `/install` only ever serves the demo project) and identical to pre-epic
+    // behaviour — not something this epic introduced.
+    //
+    // The right response to "your claim is false" was to fix the CLAIM, not to make a worse change.
+    // The claim is fixed in `ProductShell`'s comment instead.
+    return EMPTY
   }
 }

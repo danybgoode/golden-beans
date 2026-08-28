@@ -140,10 +140,25 @@ export async function ProductShell({
                   is the exact defect this epic exists to remove.
 
                   Story 2.2's criterion is "**with the gate on**, nothing in the signed-in shell links
-                  to `/install`" — and with the gate on this branch does not render at all. The
-                  console branch has no Connect link; `Setup › Connect your agent` in the rail is the
-                  destination (project-route-inventory.ts). The story is satisfied by construction,
-                  which is why this line needed no change and should never have had one. */}
+                  to `/install`". The console branch has no Connect link at all — `Setup › Connect
+                  your agent` in the rail is the destination — so on every normal path the criterion
+                  holds and this line needed no change.
+
+                  ⚠️ It is NOT satisfied "by construction", and an earlier version of this comment
+                  said it was. There is one path where the gate is on and this branch still renders:
+                  `getShellNav`'s catch, which cannot know whether a session exists (`getSessionUser`
+                  is the first thing inside its `try`) and therefore returns the PUBLIC chrome. So
+                  during a Supabase outage with the console lit, a signed-in operator can reach
+                  `/install` from here and copy the demo project's connector URL.
+
+                  That is a wrong-tenant confusion, not a leak — rule #2 means `/install` only ever
+                  serves the demo project — it is bounded to an outage, and it is exactly what
+                  happened before this epic. It is left alone deliberately: the alternative (console
+                  chrome from the catch) hands an ANONYMOUS visitor to the public demo dashboards a
+                  switcher and an account menu, which is strictly worse. Fixing it properly means
+                  narrowing that `try` so a session read failing is distinguishable from a nav read
+                  failing, which is a change this sprint does not need to make.
+                  (Both halves found by the fresh reviewer, PR #123, rounds 2 and 3.) */}
               <a href="/install">
                 <Icon name="cable" />
                 Connect
