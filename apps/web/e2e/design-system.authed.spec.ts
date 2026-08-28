@@ -293,9 +293,22 @@ const CONVERTED_ROUTES: Array<{
   ...(isFlagConsoleEnabled()
     ? [
         {
+          // ⚠️ **Re-pointed, not relaxed** (console-ia-overhaul, 2026-08-28).
+          //
+          // This asserted `.data-table`. The flags console's list is no longer a table: the
+          // APPROVED design (`design/flags-console-prototype.html`, binding per
+          // `design/CONSOLE-CONTRACT.md`) renders flex rows in a `.listcard`, with a `.summary`
+          // strip above it.
+          //
+          // The temptation was to delete the entry, which is exactly the repair LEARNINGS warns
+          // about — the obvious fix for a guard that fails is to remove the assertion, and then the
+          // guard that was added to catch drift is the thing that got dropped. So it keeps its
+          // force and changes its target: this route must still render through a NAMED visual
+          // system, and for console routes that system is the design contract rather than the
+          // generic kit. Ad-hoc markup still fails.
           name: 'flags (console)',
           path: (s: string) => `/app/flags/${s}`,
-          expect: ['.data-table'],
+          expect: ['.listcard', '.summary'],
           skipFilter: true,
         },
         {

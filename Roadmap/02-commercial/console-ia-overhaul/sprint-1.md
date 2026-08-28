@@ -1,6 +1,6 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 1: The shell
 
-**Status:** 🟦 In review — all five stories built (`28d6955`, `7c84cfa`, `ce64b1e`, `e62a872`, `7489813`, `765ec58`)
+**Status:** ✅ SHIPPED 2026-08-27 — PR #122, squash-merged to `main` and deployed.
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >

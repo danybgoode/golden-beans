@@ -58,7 +58,13 @@ export type FlagPolarity = 'killswitch' | 'enablement' | 'unclassified'
 export type FlagCriticality = 'high' | 'medium' | 'low' | 'unclassified'
 
 export type FlagListSort = 'key_asc' | 'key_desc' | 'state' | 'type' | 'recent'
-export type FlagStateFilter = 'all' | 'on' | 'off'
+/**
+ * ⚠️ `'off'` means **"not on"** — it includes never-touched flags, and the chip that drives it is
+ * labelled "Not on" for exactly that reason. It is NOT the `off` activation STATE. Story 3.1 added
+ * `'never'` as the exact filter, additively, so the dormant disclosure has somewhere to link; `'off'`
+ * keeps its meaning so no existing bookmark changes what it returns.
+ */
+export type FlagStateFilter = 'all' | 'on' | 'off' | 'never' | 'switched_off'
 export type FlagTypeFilter = 'all' | 'killswitch' | 'enablement' | 'unclassified'
 
 /** Only the fields this projection reads. Structural, so `flag-registry`'s rows satisfy it as-is. */
@@ -277,6 +283,9 @@ export function filterFlagRowsByQuery(rows: readonly FlagListRow[], query: strin
  */
 export function filterFlagRowsByState(rows: readonly FlagListRow[], state: FlagStateFilter): FlagListRow[] {
   if (state === 'all') return [...rows]
+  if (state === 'never') return rows.filter((row) => row.state === 'never')
+  // The EXACT off state, as distinct from `'off'`, which means "not on" and includes `never`.
+  if (state === 'switched_off') return rows.filter((row) => row.state === 'off')
   return rows.filter((row) => (state === 'on' ? row.state === 'on' : row.state !== 'on'))
 }
 
@@ -330,7 +339,7 @@ export type FlagListParams = {
 }
 
 const SORTS = new Set<string>(['key_asc', 'key_desc', 'state', 'type', 'recent'])
-const STATE_FILTERS = new Set<string>(['all', 'on', 'off'])
+const STATE_FILTERS = new Set<string>(['all', 'on', 'off', 'never', 'switched_off'])
 const TYPE_FILTERS = new Set<string>(['all', 'killswitch', 'enablement', 'unclassified'])
 
 /**
@@ -408,14 +417,143 @@ export function buildFlagListView(
   flags: readonly FlagListFlagInput[],
   params: FlagListParams,
   pageSize: number = FLAG_LIST_PAGE_SIZE
-): FlagPageResult & { stateCounts: { all: number; on: number; off: number } } {
+): FlagPageResult & { stateCounts: { all: number; on: number; off: number; never: number } } {
   const projected = projectFlagRows(flags, params.environment)
   const narrowed = filterFlagRowsByType(filterFlagRowsByQuery(projected, params.q), params.type)
   const stateCounts = {
     all: narrowed.length,
     on: narrowed.filter((row) => row.state === 'on').length,
+    // "Not on" — deliberately the union of `off` and `never`, matching the chip's label and the
+    // `'off'` filter above. `never` is the exact count beside it, not a replacement for it.
     off: narrowed.filter((row) => row.state !== 'on').length,
+    never: narrowed.filter((row) => row.state === 'never').length,
   }
   const ordered = sortFlagRows(filterFlagRowsByState(narrowed, params.state), params.sort)
   return { ...paginateFlagRows(ordered, params.page, pageSize), stateCounts }
+}
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line and the dormant collapse ──────
+//
+// The COUNTS live here; the WORDS live in `flag-vocabulary.ts` (D7). That split is forced rather
+// than stylistic: `flag-vocabulary.ts` already imports `FlagListRow` from this file, so a sentence
+// built here would be a cycle. It is also the right seam — every count below is unit-testable with
+// zero DOM, and the vocabulary module owns the one place a term is spelled.
+
+/**
+ * How many features are in each of the three states, for one environment.
+ *
+ * ⚠️ **`switchedOff` is 0 in EVERY environment on live production** (A20) — development 40/2/0,
+ * preview 40/2/0, production 39/3/0 (never/on/off), measured 2026-08-28. That is not a quirk to
+ * code around; it is the common case this summary must read well in, and it is why
+ * `answerLineClauses` drops a zero clause instead of rendering "0 deliberately switched off".
+ */
+export type FlagListSummary = {
+  total: number
+  serving: number
+  switchedOff: number
+  neverSwitched: number
+}
+
+export function summariseFlagList(rows: readonly FlagListRow[]): FlagListSummary {
+  return {
+    total: rows.length,
+    serving: rows.filter((row) => row.state === 'on').length,
+    switchedOff: rows.filter((row) => row.state === 'off').length,
+    neverSwitched: rows.filter((row) => row.state === 'never').length,
+  }
+}
+
+/**
+ * Split the list into the rows worth reading and the dormant ones that collapse behind a
+ * disclosure.
+ *
+ * **Grouping is OFF whenever the reader has narrowed the list**, which is Story 3.1's own rule: a
+ * filtered view has no uniform majority to summarise, and collapsing rows the reader just searched
+ * for would hide the answer they asked for. `narrowed` is passed in rather than re-derived, because
+ * this module must not guess at what the query string meant.
+ */
+export type FlagListGrouping = {
+  /** False when the reader has filtered or searched — then `dormant` is empty and `active` is all. */
+  grouped: boolean
+  active: FlagListRow[]
+  dormant: FlagListRow[]
+}
+
+/**
+ * ⚠️ **Pass the FULL projection, never a page of it.**
+ *
+ * The first version of Story 3.1 grouped `view.pageRows` — the paginated slice — so the disclosure
+ * read "23 features have never been turned on" on a tenant with 40 dormant flags, because 23 was
+ * how many landed on page one. The collapse then had to coexist with a pager, and the design has
+ * neither: one summary row stands for ALL of them, and the list itself does not paginate.
+ *
+ * Caught by putting the built page beside the approved design, which is the only place a number
+ * that plausible shows up as wrong.
+ */
+export function groupDormantFlagRows(
+  rows: readonly FlagListRow[],
+  options: { narrowed: boolean }
+): FlagListGrouping {
+  if (options.narrowed) return { grouped: false, active: [...rows], dormant: [] }
+  const dormant = rows.filter((row) => row.state === 'never')
+  // Collapsing a single dormant row saves nothing and costs a click — the disclosure would hide
+  // exactly as many rows as the summary line it adds. Below two, render them inline.
+  if (dormant.length < 2) return { grouped: false, active: [...rows], dormant: [] }
+  const active = rows.filter((row) => row.state !== 'never')
+  // ⚠️ **If EVERY row is dormant, do not group.** The collapse exists to stop dormant rows burying
+  // the active ones; with no active rows there is nothing to bury, and hiding the entire list behind
+  // a disclosure leaves a table with no rows AND no empty state — the page looks broken rather than
+  // tidy. Caught by the authed fixture, whose tenant has only never-touched flags: an existing spec
+  // that clicks a feature link timed out because there was no longer a link to click.
+  if (active.length === 0) return { grouped: false, active: [...rows], dormant: [] }
+  return { grouped: true, active, dormant }
+}
+
+/**
+ * ⚠️ **The console's feature list no longer paginates, and that is a removal worth saying out loud.**
+ *
+ * Story 3.1's acceptance said "expanded, it paginates at 15". The approved design has no pager on
+ * this list at all: one summary row stands for every dormant feature, and paging inside it was what
+ * made that impossible — a `<details>` that navigates re-collapses on every click.
+ *
+ * So `DORMANT_PAGE_SIZE` is gone rather than left as an ornament. It had become a constant nothing
+ * consumed, asserted only by a test comparing it to another constant — a test that could not fail,
+ * about a number with no reader (fresh reviewer, PR #124).
+ *
+ * `FLAG_LIST_PAGE_SIZE` and `paginateFlagRows` stay: they are still the projection's contract and
+ * still unit-tested, and a future surface that needs paging should not have to rebuild them. What
+ * changed is that the console does not call them.
+ */
+
+/**
+ * The active rows, split into runs by state, in the order the design shows them.
+ *
+ * ⚠️ **The first version rendered ONE hardcoded header reading "On in <env>" with
+ * `active.length` as its count.** `active` is "not dormant", so it includes `off` rows — and when
+ * grouping is off it is the ENTIRE list. On the fixture tenant the page rendered
+ *
+ *     Nothing is on in production — 2 features have never been turned on here.
+ *     [On in production · 2]
+ *     gb.e2e.owner.fault      Never turned on here
+ *     gb.e2e.undisclosed      Never turned on here
+ *
+ * — a header confidently naming a state none of the rows beneath it were in, four elements after
+ * the page said nothing was on. That is the exact class of confidently-false line this whole epic
+ * exists to remove, on its flagship page (fresh reviewer, PR #124, Blocking).
+ *
+ * The approved prototype emits a `.grp` per state TRANSITION with a per-state label and a per-state
+ * count, and only when grouped. This is that, moved somewhere it can be unit-tested.
+ *
+ * Returns `[]` when not grouped — the design shows no headers over an ungrouped list, because a
+ * filtered view is already one thing and a heading over it would be restating the filter.
+ */
+export type FlagStateRun = { state: FlagActivationState; rows: FlagListRow[] }
+
+export function runsByState(rows: readonly FlagListRow[], options: { grouped: boolean }): FlagStateRun[] {
+  if (!options.grouped) return []
+  // `on` before `off` before `never`: serving first, because it is what a reader came to check.
+  const order: FlagActivationState[] = ['on', 'off', 'never']
+  return order
+    .map((state) => ({ state, rows: rows.filter((row) => row.state === state) }))
+    .filter((run) => run.rows.length > 0)
 }

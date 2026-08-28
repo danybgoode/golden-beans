@@ -30,6 +30,8 @@ const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, 
  */
 const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/flag-console.tsx',
+  '../app/app/flags/[projectSlug]/environment-picker.tsx',
+  '../app/app/flags/[projectSlug]/page.tsx',
   '../app/app/flags/[projectSlug]/flag-vocabulary.ts',
   '../app/app/flags/[projectSlug]/flag-preview.tsx',
   '../app/app/flags/[projectSlug]/flag-insight.tsx',
@@ -218,7 +220,13 @@ test('every file rendering under the console is swept — the list cannot silent
   // to a console directory but not to the list is invisible to every test above — which is exactly
   // how flag-preview.tsx kept rendering "the version activated in {env}" while the suite was green.
   // Derived from the DIRECTORY, the way project-route-inventory.test.ts derives its route list.
+  // ⚠️ `app/app/flags/[projectSlug]/` — the console's LANDING page — was missing from this list,
+  // so the sweep's own promise ("the list cannot silently fall behind") was false for the directory
+  // holding `flag-console.tsx`, `environment-picker.tsx` and the page's h1 and subtitle. The
+  // console-ia-overhaul redesign rewrote every user-facing word in that directory while this test
+  // stayed green (fresh reviewer, PR #124). Adding it caught a retyped label immediately.
   const directories = [
+    '../app/app/flags/[projectSlug]/',
     '../app/app/flags/[projectSlug]/[flagKey]/',
     '../app/app/flag-credentials/[projectSlug]/',
     '../app/app/flag-audit/[projectSlug]/',
@@ -228,7 +236,12 @@ test('every file rendering under the console is swept — the list cannot silent
       .filter((name) => name.endsWith('.tsx') || name.endsWith('.ts'))
       .map((name) => `${directory}${name}`)
   )
+  // The ONE deliberate exemption, named here rather than left as an unexplained gap: D6 keeps the
+  // legacy surface byte-for-byte identical while the gate is dark, so it must NOT adopt the console
+  // vocabulary. The test below this one asserts that exclusion holds from the other direction.
+  const EXEMPT = ['flag-manager.tsx']
   for (const file of onDisk) {
+    if (EXEMPT.some((name) => file.endsWith(name))) continue
     assert.ok(
       CONSOLE_SURFACES.includes(file as (typeof CONSOLE_SURFACES)[number]),
       `${file} renders under the console but is not in CONSOLE_SURFACES — add it, or the vocabulary sweep does not see it`

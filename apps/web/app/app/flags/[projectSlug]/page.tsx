@@ -8,6 +8,7 @@ import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
 import { parseFlagListParams } from '@/lib/flag-list-view'
 import { FlagManager } from './flag-manager'
 import { DEFAULT_FLAG_ENVIRONMENT, FlagConsole } from './flag-console'
+import { EnvironmentPicker } from './environment-picker'
 import { ProductShell } from '@/components/product/ProductShell'
 
 export const dynamic = 'force-dynamic'
@@ -50,17 +51,71 @@ export default async function FlagsPage({
   const listParams = parseFlagListParams(await searchParams, FLAG_ENVIRONMENTS, DEFAULT_FLAG_ENVIRONMENT)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="ship">
+    <ProductShell
+      projectSlug={projectSlug}
+      section="ship"
+      railActive="flags"
+      // ⚠️ Gated. The picker only means anything when `FlagConsole` renders — it is the ONLY reader
+      // of `listParams.environment` — so with the console off its three links reloaded the identical
+      // legacy page: a control that does nothing, in the rail (fresh reviewer, round 4, Blocking).
+      railTop={
+        consoleEnabled ? (
+          <EnvironmentPicker basePath={`/app/flags/${projectSlug}`} params={listParams} />
+        ) : undefined
+      }
+    >
       <main>
-        <h1>Feature flags — {projectSlug}</h1>
-        <p>
-          <a href="/app">← Your projects</a>
-        </p>
-        <p>
-          Definitions, immutable versions and their audit remain visible while flag serving is dark.
-          Activating or deactivating a flag changes one environment snapshot with optimistic revision
-          protection.
-        </p>
+        {/* ⚠️ **Gated, and the reason is the D6 guarantee two comments below.**
+            This head sat OUTSIDE `consoleEnabled` while the comment below promised the gate-off
+            render is "byte-for-byte pre-epic". With the gate off the page rendered the NEW h1 and
+            subtitle above the LEGACY body, and dropped "← Your projects" — a hybrid that is neither
+            state (fresh reviewer, round 4, Blocking).
+
+            That matters most in the one situation the gate exists for: flipping it off to back out
+            a bad console. A kill switch that leaves half the new page is not a kill switch. Third
+            consecutive round where the load-bearing claim was in a comment rather than the code.
+
+            ── What the head says, and why (each a Do-not in CONSOLE-CONTRACT.md) ──────────────
+            The TITLE is "Features". It was "Feature flags — <slug>", which at 48px wrapped to four
+            lines on a real tenant slug and spent ~200px before any content. The project is already
+            named in the top bar's switcher.
+
+            The SUBTITLE no longer describes STORAGE (Do-not #7) — "immutable versions… optimistic
+            revision protection" told a reader who came to see what is switched on how a row is
+            written.
+
+            "← Your projects" is gone with it: the top bar's switcher is the way back. */}
+        {consoleEnabled ? (
+          <div className="page-head">
+            <div>
+              <h1>Features</h1>
+              <p>
+                Everything this project can switch, and what {listParams.environment} is doing with it. What
+                customers are getting right now.
+              </p>
+            </div>
+            <div className="spacer" />
+            {/* ⚠️ **No page actions yet, and the empty space is the honest state.**
+                The design has two — "Compare environments" and "+ New feature". Neither exists: there
+                is no comparison surface, and the creation control is Story 3.3's, which may only land
+                WITH the deletion of the JSON authoring stack it replaces (A3/A21).
+
+                A first version shipped "Compare environments" pointing at this same page with the
+                filters reset — a button labelled as a feature that does not exist. */}
+          </div>
+        ) : (
+          <>
+            <h1>Feature flags — {projectSlug}</h1>
+            <p>
+              <a href="/app">← Your projects</a>
+            </p>
+            <p>
+              Definitions, immutable versions and their audit remain visible while flag serving is dark.
+              Activating or deactivating a flag changes one environment snapshot with optimistic revision
+              protection.
+            </p>
+          </>
+        )}
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
             epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to
             `true`, so the gate-off render is unchanged — which is the guarantee. (This said the file
@@ -101,9 +156,10 @@ export default async function FlagsPage({
             capability. With the gate OFF, `showDefinitions` defaults to true and this page is
             byte-for-byte pre-epic (D6/Amendment 1); the authoring textarea and the credential forms
             are untouched in BOTH branches, because moving those is Sprint 3. */}
-        {consoleEnabled && (
-          <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} canManage={canManage} />
-        )}
+        {/* `canManage` is no longer passed: the owner-only credential link used to sit in this
+            page's body, and in the approved design it is a rail entry like every other surface —
+            the rail already filters by entitlement, so gating it twice was the duplication. */}
+        {consoleEnabled && <FlagConsole slug={projectSlug} flags={registry.flags} params={listParams} />}
         <FlagManager
           slug={projectSlug}
           {...registry}

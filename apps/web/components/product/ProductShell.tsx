@@ -43,15 +43,29 @@ export async function ProductShell({
   children,
   projectSlug,
   section,
+  railTop,
+  railActive,
 }: {
   children: React.ReactNode
   projectSlug?: string
   section: ShellSection
+  /**
+   * Section-level controls rendered above the rail's links — today, Ship's environment picker.
+   * See `ConsoleRail`'s `top` prop: the rail is shared across sections and must not learn what an
+   * environment is, so the section that HAS one supplies it.
+   */
+  railTop?: React.ReactNode
+  /** Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`. */
+  railActive?: string
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
   return (
-    <div className="product-shell">
+    // `is-console` is set by the SAME field that decides whether console chrome renders at all,
+    // so the approved design's stylesheet cannot reach the public demo dashboards or the legacy
+    // branch. One condition, one answer — the alternative is two flags kept in lockstep by hand,
+    // which is the bug this shell already paid for once (see the `header`/`consoleEnabled` note).
+    <div className={`product-shell${header === null ? '' : ' is-console'}`}>
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
@@ -292,7 +306,14 @@ export async function ProductShell({
           surface is gated off, and `ConsoleRail` renders null on an empty list. So "Today renders
           full width" and "no empty rail" are one branch, decided in the pure module.
         */}
-        {header !== null && <ConsoleRail links={railLinksFor(section, links)} />}
+        {header !== null && (
+          <ConsoleRail
+            links={railLinksFor(section, links)}
+            top={railTop}
+            activeSegment={railActive}
+            label={section === 'today' ? undefined : `In ${section[0].toUpperCase()}${section.slice(1)}`}
+          />
+        )}
         {/*
           Story 1.5 — ⌘K, the ONE client island in the shell, inside the ONE error boundary in
           apps/web (A9). If it throws, the boundary renders null and the page it sits on is
@@ -318,7 +339,28 @@ export async function ProductShell({
           It sits after {children} in the DOM on purpose: a screen reader and a keyboard user reach
           the page's own content first, and the rail is positioned into the sidebar by CSS.
         */}
-        {activeProject && <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />}
+        {/* ── console-ia-overhaul · the AgentRail does NOT render on console routes ─────────────
+            Decided by Daniel, 2026-08-28, closing CONSOLE-CONTRACT.md's Do-not #4 — which the epic
+            had left open ("a decision the epic never made, and it must be made explicitly rather
+            than inherited"). The rail is in none of the ten approved reference states, and inside
+            the console grid it squeezed the content column to 544px against the approved 1180,
+            which is why every table clipped.
+
+            ⚠️ **`header !== null` is the console, and after A19 that is every signed-in /app route.**
+            So this condition does not merely narrow the rail — it retires it from the signed-in
+            product. `activeProject` requires a session, and an anonymous visitor has none, so the
+            remaining branch renders nothing in practice. Said plainly because the honest version of
+            this change is "the agent rail is gone", not "the agent rail is conditional".
+
+            That is a control removed, so the ordering rule applies: what did it carry, and where
+            does each thing live now? It carried the agent's recent activity and its waiting-on-you
+            queue. The approved design gives both a destination — **"What changed & why"** in the top
+            bar — which is a real place rather than a deletion. Building that is the replacement, and
+            until it exists this trades a squeezed console for a missing surface. Flagged rather than
+            filed as done. */}
+        {header === null && activeProject && (
+          <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />
+        )}
       </div>
     </div>
   )

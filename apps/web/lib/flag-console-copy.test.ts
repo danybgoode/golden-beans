@@ -13,6 +13,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  dormantGroupLabel,
+  flagListAnswerLine,
+  flagListAnswerSegments,
+  type FlagListSummaryCounts,
+} from './flag-console-copy.ts'
+
+import {
   describeActivationSurprise,
   describeRollback,
   describeTurnOffConsequence,
@@ -221,4 +228,161 @@ test('the warning names the environment it was asked about', () => {
   assert.ok(dev)
   assert.match(dev, /development/)
   assert.doesNotMatch(dev, /production/)
+})
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line ───────────────────────────────
+
+const counts = (over: Partial<FlagListSummaryCounts> = {}): FlagListSummaryCounts => ({
+  total: 0,
+  serving: 0,
+  switchedOff: 0,
+  neverSwitched: 0,
+  ...over,
+})
+
+// ── The answer line: one sentence per fact, as the prototype writes it ────────────────────────
+
+test("production's real shape reads as separate sentences, not one glued list", () => {
+  // ⚠️ The bug this replaces: gluing every clause into one sentence put the dormant count inside
+  // the list of things being SERVED — "serving checkout.stripe_enabled and domain.paywall_enabled
+  // and 40 never turned on here." Live production gets exactly that shape (3 on / 39 never, A20).
+  assert.equal(
+    flagListAnswerLine(counts({ total: 42, serving: 2, neverSwitched: 40 }), 'Production', [
+      'checkout.stripe_enabled',
+      'domain.paywall_enabled',
+    ]),
+    'Right now Production is serving checkout.stripe_enabled and domain.paywall_enabled.' +
+      ' The other 40 have never been switched on in Production — nobody turned them off, nobody ever turned them on.'
+  )
+})
+
+test('nothing serving says "nothing", which is this product\'s own common case', () => {
+  // `off` is 0 in every environment and two of three serve nothing (A20). Not an edge.
+  assert.equal(
+    flagListAnswerLine(counts({ total: 40, neverSwitched: 40 }), 'preview'),
+    // "The other 40" would refer back to a set the first sentence never established.
+    'Right now preview is serving nothing.' +
+      ' All 40 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+  )
+})
+
+test('a deliberate switch-off gets its own sentence', () => {
+  const line = flagListAnswerLine(
+    counts({ total: 3, serving: 1, switchedOff: 1, neverSwitched: 1 }),
+    'preview',
+    ['a']
+  )
+  assert.equal(
+    line,
+    'Right now preview is serving a. 1 feature was deliberately switched off here.' +
+      ' The other one has never been switched on in preview — nobody turned it off, nobody ever turned it on.'
+  )
+})
+
+test('a project with no features says so, rather than trailing off', () => {
+  assert.equal(flagListAnswerLine(counts(), 'Production'), 'No features in Production yet.')
+})
+
+test('the keys are MONO segments, which is how the design paints them gold', () => {
+  // A plain string could not carry this, and the ported `.answer code` rule matched nothing because
+  // there was no element to match.
+  const segments = flagListAnswerSegments(counts({ total: 2, serving: 2 }), 'Production', ['a.b', 'c.d'])
+  assert.deepEqual(
+    segments.filter((segment) => segment.emphasis === 'mono').map((segment) => segment.text),
+    ['a.b', 'c.d']
+  )
+  assert.ok(segments.some((segment) => segment.emphasis === 'strong' && segment.text === 'Production'))
+})
+
+test('EVERY combination is grammatical — including the NAMED path the old test never reached', () => {
+  // ⚠️ The previous "exhaustive" test called the function with no `servingKeys`, so the branch the
+  // whole naming fix added was outside the property test (fresh reviewer, round 2). A property test
+  // that misses the new code path is a property test in name only.
+  const keyPool = ['a.one', 'b.two', 'c.three', 'd.four', 'e.five']
+  for (let serving = 0; serving <= 5; serving += 1) {
+    for (let off = 0; off <= 2; off += 1) {
+      for (let never = 0; never <= 2; never += 1) {
+        for (const named of [true, false]) {
+          const total = serving + off + never
+          const line = flagListAnswerLine(
+            counts({ total, serving, switchedOff: off, neverSwitched: never }),
+            'production',
+            named ? keyPool.slice(0, serving) : []
+          )
+          const at = `${serving}/${off}/${never}${named ? ' named' : ''}`
+          assert.match(line, /\.$/, `no full stop at ${at}: ${line}`)
+          assert.ok(!line.includes('  '), `doubled space at ${at}: ${line}`)
+          assert.ok(!line.includes(' and and '), `doubled conjunction at ${at}: ${line}`)
+          assert.ok(!line.includes('undefined'), `undefined leaked at ${at}: ${line}`)
+          // The dormant count must never sit inside the "serving" clause — the bug this replaces.
+          const servingClause = line.slice(0, line.indexOf('.') + 1)
+          assert.ok(
+            !/never (been )?switched on/.test(servingClause),
+            `the dormant count is inside the serving sentence at ${at}: ${line}`
+          )
+        }
+      }
+    }
+  }
+})
+
+test('the dormant summary line is plural-safe', () => {
+  // Rendered on the one row that stands for every never-touched feature, so "1 features have" would
+  // be on screen for any tenant with exactly one dormant flag.
+  assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
+  assert.equal(dormantGroupLabel(39, 'Production'), '39 features have never been turned on in Production')
+})
+
+test('"The other N" only appears when a previous sentence established a set', () => {
+  // With something serving, "the other" is correct — it refers to the named features.
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, serving: 1, neverSwitched: 2 }), 'production', ['a']),
+    /The other 2 have never/
+  )
+  // With a switch-off sentence, "the other" also has a referent.
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, switchedOff: 1, neverSwitched: 2 }), 'production'),
+    /The other 2 have never/
+  )
+  // With nothing serving and nothing switched off, there is no set to be "other" than.
+  assert.match(flagListAnswerLine(counts({ total: 2, neverSwitched: 2 }), 'production'), /All 2 have never/)
+})
+
+test('the dormant sentence agrees with its subject', () => {
+  // ⚠️ "The other 1 have never been switched on" shipped, and a test asserted it as correct. The
+  // property sweep below checks four MECHANICAL shapes; agreement is not one of them, which is the
+  // whole lesson — a property test is exhaustive only over the properties it names.
+  assert.match(
+    flagListAnswerLine(counts({ total: 2, serving: 1, neverSwitched: 1 }), 'production', ['a']),
+    /The other one has never been switched on/
+  )
+  assert.match(
+    flagListAnswerLine(counts({ total: 3, serving: 1, neverSwitched: 2 }), 'production', ['a']),
+    /The other 2 have never been switched on/
+  )
+  assert.match(
+    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
+    /The one feature here has never been switched on/
+  )
+})
+
+test('a serving count with no keys still names a noun', () => {
+  // Exported through `flag-vocabulary.ts` as D7's single source, so it must read correctly for any
+  // caller — not only the one that always supplies keys.
+  assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'production'), /serving 1 feature\./)
+  assert.match(flagListAnswerLine(counts({ total: 3, serving: 3 }), 'production'), /serving 3 features\./)
+})
+
+test('a singular dormant sentence agrees with ITSELF, pronouns included', () => {
+  // ⚠️ "All 1 has never been switched on … nobody turned THEM off" — singular verb, plural
+  // pronouns — shipped, and a test asserted it as correct. Reachable by every tenant whose first
+  // sync creates one flag, so it is a first-run sentence, not an edge (fresh reviewer, round 4).
+  for (const line of [
+    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
+    flagListAnswerLine(counts({ total: 2, serving: 1, neverSwitched: 1 }), 'production', ['a']),
+  ]) {
+    assert.ok(!/\bhas\b[^.]*\bthem\b/.test(line), `singular verb with plural pronouns: ${line}`)
+    assert.ok(!/\bhave\b[^.]*\bit\b/.test(line), `plural verb with a singular pronoun: ${line}`)
+    assert.ok(!/(All|other) 1 /.test(line), `a bare "1" reads as a stub: ${line}`)
+  }
 })

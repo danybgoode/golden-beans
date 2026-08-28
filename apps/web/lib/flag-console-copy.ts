@@ -159,3 +159,180 @@ export function describeRevokeSyncKey(source: string): string {
     `Revoking cannot be undone.`
   )
 }
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the features list's answer line ───────────────
+//
+// Here rather than in `flag-vocabulary.ts` for this file's founding reason: these words are
+// load-bearing and this is the only place the gate can read them without module aliasing. The
+// vocabulary module re-exports them, so D7's "one place to look for a flag word" still holds.
+//
+// The COUNTS are `summariseFlagList` in `lib/flag-list-view.ts`. Only the phrasing is here.
+
+/** Structurally what `summariseFlagList` returns — restated so this module stays import-free. */
+export type FlagListSummaryCounts = {
+  total: number
+  serving: number
+  switchedOff: number
+  neverSwitched: number
+}
+
+/**
+ * The clauses of the answer line, with **zero-count clauses dropped** (A20).
+ *
+ * Returned as parts rather than a string so a test can assert *which clauses exist* — the property
+ * that actually matters — instead of matching a rendered sentence. A `toContainText` assertion on
+ * the whole line is what `flags-visual-rule-builder` learned not to trust: Playwright normalises
+ * whitespace, so the check passed while asserting nothing.
+ *
+ * Dropping rather than rendering `0` is not tidiness. On live production `switchedOff` is **0 in
+ * every environment**, so "0 deliberately switched off" would be the sentence every reader gets,
+ * forever — a summary announcing an empty category as though it were news.
+ */
+export function answerLineClauses(summary: FlagListSummaryCounts): string[] {
+  const clauses: string[] = []
+  if (summary.serving > 0) {
+    clauses.push(`serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}`)
+  }
+  if (summary.switchedOff > 0) {
+    clauses.push(`${summary.switchedOff} deliberately switched off`)
+  }
+  if (summary.neverSwitched > 0) {
+    clauses.push(`${summary.neverSwitched} never turned on here`)
+  }
+  return clauses
+}
+
+/**
+ * The whole answer line for one environment.
+ *
+ * The empty case says so in words rather than rendering a bare environment name with nothing after
+ * it. A project with no features at all is a real state — every new tenant starts there — and a
+ * dangling "Production is" reads as a bug.
+ */
+/**
+ * The keys the answer line will name, and how it says "and the rest".
+ *
+ * The approved design does not merely count what is serving — it NAMES it:
+ * *"Right now Production is serving `checkout.stripe_enabled` and `domain.paywall_enabled`."*
+ * That is the difference between a page that reports a number and one that answers a question, and
+ * a comment in `flag-console.tsx` claimed this behaviour for a function that only counted (fresh
+ * reviewer, PR #124).
+ *
+ * Capped at three because the line is prose, not a list: a tenant serving twenty flags would push
+ * the summary off the screen it is meant to fit on.
+ */
+const NAMED_KEYS_LIMIT = 3
+
+/**
+ * The answer line, as SEGMENTS rather than a string.
+ *
+ * ⚠️ **The string version was ungrammatical, and in the design's own shape.** Gluing every clause
+ * into one sentence produced
+ *
+ *     Production is serving checkout.stripe_enabled and domain.paywall_enabled and 40 never turned
+ *     on here.
+ *
+ * — where the 40 dormant flags are grammatically inside the list of things being served. Live
+ * production (3 on / 39 never, A20) gets exactly that. With more than three serving it got worse:
+ * `…and 2 more and 37 never turned on here.` (fresh reviewer, PR #124, round 2.)
+ *
+ * The prototype does not glue: it uses **separate sentences** — *"Right now Production is serving X
+ * and Y. The other 40 have never been switched on in Production…"* — and that is the fix. One
+ * sentence per fact.
+ *
+ * Segments rather than a string because the design renders the keys in gold mono (`.mono`) and the
+ * environment and counts in bold. A plain string cannot carry that, and the ported `.answer code`
+ * rule matched nothing because there was no element to match (N1).
+ */
+export type AnswerSegment = { text: string; emphasis?: 'strong' | 'mono' }
+
+export function flagListAnswerSegments(
+  summary: FlagListSummaryCounts,
+  environment: string,
+  servingKeys: readonly string[] = []
+): AnswerSegment[] {
+  if (summary.total === 0) return [{ text: `No features in ${environment} yet.` }]
+
+  const segments: AnswerSegment[] = [{ text: 'Right now ' }, { text: environment, emphasis: 'strong' }]
+
+  // Sentence 1 — what is serving, named. "nothing" when none are, which is the common case on this
+  // product's own tenant in two environments out of three.
+  if (summary.serving === 0 || servingKeys.length === 0) {
+    segments.push({
+      // `is serving 3.` — a bare numeral with no noun — was reachable whenever the count and the
+      // key list disagreed. Unreachable from the console today (both derive from one array), but
+      // this is exported through `flag-vocabulary.ts` as D7's single source of these words, so it
+      // must read correctly for any caller (fresh reviewer, round 3, N1).
+      text:
+        summary.serving === 0
+          ? ' is serving nothing.'
+          : ` is serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}.`,
+    })
+  } else {
+    segments.push({ text: ' is serving ' })
+    const shown = servingKeys.slice(0, NAMED_KEYS_LIMIT)
+    const rest = servingKeys.length - shown.length
+    shown.forEach((key, index) => {
+      if (index > 0) segments.push({ text: index === shown.length - 1 && rest === 0 ? ' and ' : ', ' })
+      segments.push({ text: key, emphasis: 'mono' })
+    })
+    if (rest > 0) segments.push({ text: ` and ${rest} more` })
+    segments.push({ text: '.' })
+  }
+
+  // Sentence 2 — only when something was deliberately switched off. On live production this is
+  // never rendered: `off` is 0 in every environment (A20).
+  if (summary.switchedOff > 0) {
+    segments.push({ text: ' ' }, { text: String(summary.switchedOff), emphasis: 'strong' })
+    segments.push({
+      text: `${summary.switchedOff === 1 ? ' feature was' : ' features were'} deliberately switched off here.`,
+    })
+  }
+
+  // Sentence 3 — the dormant majority, said as its own fact rather than appended to the first.
+  if (summary.neverSwitched > 0) {
+    // ⚠️ "The other N" implies a set the previous sentence established. When nothing is serving,
+    // nothing was established — "is serving nothing. The other 40 have never been switched on"
+    // refers back to a baseline that does not exist (cross-review, agy, round 3). That is the
+    // common case on two of this product's three environments, not an edge.
+    // ⚠️ **The whole sentence, not just the verb.** Round 3 made the verb agree and left the rest:
+    // "All 1 has never been switched on … nobody turned THEM off, nobody ever turned THEM on" —
+    // singular verb, plural pronouns, one sentence. And a test pinned that exact string as correct,
+    // which is the failure round 3's own note describes and then repeated (fresh reviewer, round 4).
+    //
+    // Reachable by every tenant whose first sync creates one flag, so it is a first-run sentence.
+    const one = summary.neverSwitched === 1
+    const lead = summary.serving === 0 && summary.switchedOff === 0 ? ' All ' : ' The other '
+    if (one) {
+      // "The other 1" reads as a stub. With exactly one, name it as one thing.
+      segments.push({
+        text: `${lead === ' All ' ? ' The one feature here' : ' The other one'} has never been switched on in ${environment} — nobody turned it off, nobody ever turned it on.`,
+      })
+    } else {
+      segments.push({ text: lead }, { text: String(summary.neverSwitched), emphasis: 'strong' })
+      segments.push({
+        text: ` have never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
+      })
+    }
+  }
+
+  return segments
+}
+
+/** The same line as plain text. Used by tests and by anything that cannot render markup. */
+export function flagListAnswerLine(
+  summary: FlagListSummaryCounts,
+  environment: string,
+  servingKeys: readonly string[] = []
+): string {
+  return flagListAnswerSegments(summary, environment, servingKeys)
+    .map((segment) => segment.text)
+    .join('')
+}
+
+/** The one row a collapsed dormant group renders. Plural-safe: "1 feature has", "39 features have". */
+export function dormantGroupLabel(count: number, environment: string): string {
+  return count === 1
+    ? `1 feature has never been turned on in ${environment}`
+    : `${count} features have never been turned on in ${environment}`
+}

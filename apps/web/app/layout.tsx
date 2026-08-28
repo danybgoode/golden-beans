@@ -4,6 +4,7 @@ import { getSiteUrl } from '@/lib/site-url'
 import { CATEGORY } from '@/lib/positioning'
 import { NavigationLoader } from '@/components/brand/NavigationLoader'
 import './globals.css'
+import './console.css'
 
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })

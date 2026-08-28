@@ -1,0 +1,901 @@
+/* ─────────────────────────────────────────────────────────────────────────────────────────────
+   The signed-in console's visual contract, ported from the APPROVED design.
+
+   Source: Roadmap/02-commercial/console-ia-overhaul/design/flags-console-prototype.html
+   Spec:   .../design/CONSOLE-CONTRACT.md   Gate: apps/web/e2e/console-visual.authed.spec.ts
+
+   ── Why this file exists rather than more of globals.css ──────────────────────────────────
+   Sprints 1 and 2 shipped a correct information architecture and a rejected visual result. The
+   epic README had demoted the approved prototype to "inspiration", so every acceptance criterion
+   was structural and the build satisfied all of them while looking like a different product.
+
+   The prototype's own selectors are kept — `.topbar`, `.tabs`, `.rail`, `.content`, `.answer`,
+   `.stat`, `.listcard`, `.row` — rather than translated into `.product-shell__*`. Translation is
+   where a port drifts from its source: a renamed selector cannot be diffed against the design it
+   claims to implement, and CONSOLE-CONTRACT.md's rule is "port from the stylesheet, not from the
+   prose". Keeping the names means the two can be compared line by line forever.
+
+   ── Everything here is scoped to `.is-console` ────────────────────────────────────────────
+   `.is-console` is set by ProductShell exactly when `header !== null` — the same single field that
+   decides whether console chrome applies at all. So these rules cannot reach the public demo
+   dashboards or the legacy branch, and the anonymous surfaces keep the styling they shipped with.
+   ───────────────────────────────────────────────────────────────────────────────────────── */
+
+/* ⚠️ Declared at the root of the console, not inside the desktop media query. It was defined only
+   there, so it resolved to nothing at 390/768/900 and the `var(…, 55px)` fallbacks written beside
+   its consumers were unreachable — a dead guard added by the fix for a dead guard (fresh reviewer,
+   round 3, N3).
+
+   ── N4: it is 54, not 55 ────────────────────────────────────────────────────────────────────
+   `box-sizing: border-box` is set on everything, so `height: 54px` INCLUDES the 1px bottom border
+   and the header's bottom edge sits at 54. A round-2 comment said 55 from a mis-measurement, which
+   left a 1px gap where it claimed to have closed a 43px one. */
+.is-console {
+  --console-chrome-height: 54px;
+
+  /* Tokens are the prototype's, which are `references/design/assets/tokens.css` verbatim — the
+     design introduced no new colours. Declared locally so this file is self-contained and can be
+     diffed against the prototype's `:root` without chasing an import. */
+  --roast: #16120d;
+  --roast-2: #1c1710;
+  --card: #241d14;
+  --card-2: #2b2318;
+  --card-3: #332a1d;
+  --line: #3a3023;
+  --line-soft: #2e2619;
+  --crema: #f5ead6;
+  --dim: #b8a888;
+  --dim-2: #8d8069;
+  --gold: #e8b93c;
+  --gold-hot: #ffd45e;
+  --gold-deep: #8a6a1e;
+  --green: #7fd069;
+  --green-deep: #2c5e22;
+  --red: #e86a5e;
+  --red-deep: #6e2a22;
+  --blue: #6db3e8;
+  --r: 8px;
+  --r-lg: 12px;
+  --shadow: 0 18px 44px rgb(0 0 0 / 44%);
+  --t: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+
+  background: var(--roast);
+  color: var(--crema);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Do-not #1: the page h1 is 23/700 on ONE line, not the display class ───────────────────
+   `globals.css` sets `.product-shell main > h1 { font-size: clamp(30px, 7vw, 48px) }`. At 1440
+   that is 48px, and "Feature flags — <a long slug>" wrapped to four lines and spent ~200px of
+   vertical space before any content. That single rule is most of why the page scrolled. */
+.is-console main > h1,
+.is-console main > header h1,
+.is-console .page-head h1 {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+
+/* ── Do-not #3: uppercase appears in exactly TWO places, and never in mono ─────────────────
+   Measured on the prototype: 7 uppercase elements, all of them short labels (the rail's group
+   labels and the list's column headers). The shipped build rendered "WHAT THIS LIST REPORTS IS
+   WHAT PRODUCTION IS SERVING", "SHOWING 25 OF 44 FEATURES" and "RECENT ACTIVITY" in uppercase
+   mono — a column-label style used as a body style.
+
+   This resets body copy inside the console, then the two legitimate uses opt back IN below
+   (`.rail-label`, `.listhead`, `.grp`). Opt-in is the safer direction: a new element added later
+   is sentence case by default and has to ask to shout. */
+.is-console .data-table__count,
+.is-console main p,
+.is-console main small,
+.is-console main figcaption,
+.is-console main caption {
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+/* ── chrome, tier 1: the top bar ──────────────────────────────────────────────────────────── */
+.is-console .product-shell__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+  min-height: 54px;
+  padding: 0 20px;
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* `.topbar-right{margin-left:auto}` in the reference — the port dropped it, so the project chip and
+   the account menu sat mid-bar instead of at the right edge (fresh reviewer, round 2). */
+.is-console .product-shell__identity {
+  margin-left: auto;
+}
+
+/* ⚠️ **Do-not #3 was open in the console's own top bar** — the one piece of chrome this epic
+   rebuilt. `globals.css` styles `.product-shell__signal` as `600 10px var(--mono)` with
+   `text-transform: uppercase`, so the project switcher rendered UPPERCASE MONO: exactly the
+   combination the contract says appears nowhere ("uppercase appears in exactly two places, and
+   never in mono"). Measured 10/600 mono, 284×34; the contract says 13/400, 140×30 (fresh reviewer,
+   round 3).
+
+   The width is not forced here: 140px is the prototype's slug, and a real tenant slug is longer.
+   Constraining it would truncate the one thing the control exists to show. The TYPOGRAPHY is what
+   Do-not #3 is about, and that is what this fixes. */
+.is-console .product-shell__identity .product-shell__signal,
+.is-console .product-shell__switcher summary {
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ── chrome, tier 2: the four sections ────────────────────────────────────────────────────── */
+/* ⚠️ No `border-bottom` and no `background`. These belong to a SEPARATE 44px tier; nested inside
+   the 54px header they paint a stray second horizontal rule a few pixels above the header's own —
+   visible as a doubled line in the gate's screenshot. The tab underline is the only rule this
+   element should draw. */
+.is-console .product-shell__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.is-console .product-shell__tabs::-webkit-scrollbar {
+  display: none;
+}
+.is-console .product-shell__tab {
+  display: flex;
+  align-items: center;
+  padding: 11px 12px 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--dim);
+  white-space: nowrap;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  transition:
+    color var(--t),
+    border-color var(--t);
+}
+.is-console .product-shell__tab:hover {
+  color: var(--crema);
+  background: none;
+}
+.is-console .product-shell__tab[aria-current='page'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+  background: none;
+}
+
+/* ── chrome, tier 3: the rail, and the frame it sits in ───────────────────────────────────── */
+/* ⚠️ **Desktop only, at the breakpoint the shell already uses (1100px).**
+   The first version declared the two-column grid at EVERY width, so a 390px phone got a 236px
+   fixed column and a ~150px content column. Six `mobile-heuristics` specs went red across pages
+   this epic never touched — the rail is in the shell, so a shell-level layout bug is a whole-product
+   bug. The prototype is a 1440x960 design and says nothing about phones; the existing shell already
+   had the answer, and matching its breakpoint means there is one place where "when does the rail
+   become a sidebar" is decided rather than two that must agree. */
+.is-console .product-shell__body > main,
+.is-console .product-shell__body > .content {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .is-console .product-shell__body {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+  }
+  .is-console .product-shell__body > main,
+  .is-console .product-shell__body > .content {
+    padding: 26px 30px 90px;
+    max-width: 1180px;
+  }
+  /* Today has no rail (`railLinksFor` returns [] and ConsoleRail renders null), so the grid must
+     collapse to one column rather than leave a 236px gutter where navigation would have been. */
+  .is-console .product-shell__body:not(:has(.console-rail)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ⚠️ These undo a DIFFERENT layout, not just different colours.
+   `globals.css` positions the rail `fixed` and compensates with `padding-left` on the body — one
+   derived pair of numbers, which was the right shape for a floating sidebar. The approved design
+   is a two-column grid with the rail as an ordinary sticky child, so the fixed positioning and the
+   padding both have to go or they fight the grid. They did: the first version of this port left
+   the padding in place and squeezed `main` to 200px.
+
+   Specificity is deliberate. `.product-shell:has(.console-rail) .console-rail` scores (0,3,0)
+   because `:has()` carries its argument's specificity, so `.is-console .console-rail` (0,2,0) lost
+   silently. Matching their shape and adding `.is-console` scores (0,4,0) and wins. */
+/* ⚠️ **`98px` was 54 + 44 — the height of two chrome tiers, one of which is not built.**
+   The contract specifies a 54px top bar and a separate 44px section-nav bar. `ProductShell` renders
+   the tabs INSIDE the header, so the real chrome is a single 54px bar — measured, the header's
+   bottom edge is at 54 while the rail stuck at 98, leaving a 44px dead gap and under-computing the
+   rail's height by the same amount (fresh reviewer, round 2; the figure corrected in round 4, where
+   the round-2 comment had survived the very fix that named it wrong).
+
+   Building the second tier is a `ProductShell` change that touches every console route, and it is
+   not this PR's scope. So the offset is derived from ONE custom property instead of two magic
+   numbers, and the property names the height that actually exists. When the tiers are split, this
+   changes in one place. That is the "one derived pair of numbers" rule the file already invokes for
+   the rail's own width. */
+@media (min-width: 1100px) {
+  .product-shell.is-console:has(.console-rail) .product-shell__body {
+    padding-left: 0;
+  }
+  .product-shell.is-console:has(.console-rail) .console-rail {
+    position: sticky;
+    top: var(--console-chrome-height);
+    left: auto;
+    width: auto;
+    max-height: none;
+    height: calc(100vh - var(--console-chrome-height));
+  }
+}
+
+.is-console .console-rail {
+  padding: 18px 14px 40px;
+}
+/* ⚠️ `position: sticky` + `height: calc(100vh - 98px)` are DESKTOP-ONLY, and leaving them out of
+   this query was a real bug (cross-review, agy, PR #124, Blocking — and correct). Below 1100px the
+   body is block layout, so a full-viewport-height rail pushes the entire page content off screen.
+   Same class as the grid bug one commit earlier: a rule written for the two-column frame, applied
+   at every width. `mobile-heuristics` did not catch it because its routes render no rail. */
+@media (min-width: 1100px) {
+  .is-console .console-rail {
+    position: sticky;
+    top: var(--console-chrome-height);
+    height: calc(100vh - var(--console-chrome-height));
+    overflow-y: auto;
+  }
+}
+.is-console .console-rail > ul {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.is-console .console-rail li {
+  margin: 0;
+}
+/* ⚠️ Do-not #2 — a rail item is ONE line, 36px. No description, no GATED badge.
+   Story 1.4 asked for the rail to render surfaces "with their existing inventory descriptions",
+   and that instruction produced the three-line cards on screen. What a surface IS belongs on the
+   surface, not in the navigation. */
+/* ⚠️ **`> ul`, a DIRECT child — and the two previous attempts both missed why.**
+   `.console-rail a` leaked onto the environment picker. Round 3 changed it to `.console-rail ul a`,
+   which still matched: `EnvironmentPicker` renders its OWN `<ul>` inside the rail, so the descendant
+   combinator reached it anyway — and the added specificity (0,2,2 vs the picker's 0,2,1) made it
+   worse, overriding the picker's padding, radius AND weight instead of only leaking a height. The
+   picker's `aria-current` cue is `font-weight: 600`, so forcing 600 on all three killed the cue
+   (fresh reviewer, round 4, Blocking).
+
+   The rail's own list is a direct child of `.console-rail`; the picker's is nested inside `.envpick`.
+   The child combinator is the difference, and it is what should have been written the first time. */
+.is-console .console-rail > ul a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--dim);
+  text-decoration: none;
+  transition:
+    background var(--t),
+    color var(--t);
+}
+.is-console .console-rail > ul a:hover {
+  background: var(--card);
+  color: var(--crema);
+}
+.is-console .console-rail > ul a[aria-current='page'] {
+  background: var(--card-2);
+  color: var(--crema);
+}
+/* Belt and braces: the markup drops these, and the stylesheet refuses to paint them if they come
+   back. A regression that reintroduces the badge should look broken, not merely wrong. */
+.is-console .console-rail > ul a small,
+.is-console .console-rail > ul a[data-surface-status]::after {
+  display: none;
+  content: none;
+}
+@media (min-width: 1100px) {
+  .is-console .console-rail {
+    width: auto;
+    margin: 0;
+    border-right: 1px solid var(--line);
+  }
+}
+/* ── the environment picker, in the rail (Do-not #5) ──────────────────────────────────────
+   It rendered completely unstyled: `.envpick` and `.env-dot` had no rules at all, so the control
+   the design puts at the top of the rail came out as three bare links (cross-review, agy). */
+.is-console .envpick {
+  margin-bottom: 22px;
+}
+.is-console .envpick ul {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.is-console .envpick a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  color: var(--dim);
+  text-decoration: none;
+  transition:
+    border-color var(--t),
+    background var(--t),
+    color var(--t);
+}
+.is-console .envpick a:hover {
+  border-color: var(--gold-deep);
+  color: var(--crema);
+}
+.is-console .envpick a[aria-current='true'] {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--crema);
+  font-weight: 600;
+}
+.is-console .env-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--dim-2);
+}
+.is-console .env-dot.production {
+  background: var(--gold);
+}
+.is-console .env-dot.preview {
+  background: var(--blue);
+}
+.is-console .env-dot.development {
+  background: var(--dim-2);
+}
+
+.is-console .rail-label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+
+/* ── the page head ────────────────────────────────────────────────────────────────────────── */
+.is-console .page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.is-console .page-head p {
+  color: var(--dim);
+  font-size: 13.5px;
+  margin-top: 4px;
+  max-width: 62ch;
+}
+.is-console .page-head .spacer {
+  margin-left: auto;
+}
+
+/* ── the answer line ──────────────────────────────────────────────────────────────────────── */
+.is-console .answer {
+  margin-bottom: 18px;
+  padding: 12px 15px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(90deg, rgb(232 185 60 / 8%), transparent 70%);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--gold);
+  font-size: 13.5px;
+  color: var(--crema);
+}
+.is-console .answer b {
+  font-weight: 600;
+}
+
+/* ── the summary strip ────────────────────────────────────────────────────────────────────── */
+.is-console .summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.is-console .stat {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 13px 15px;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color var(--t),
+    background var(--t);
+}
+.is-console .stat:hover {
+  border-color: var(--dim-2);
+}
+.is-console .stat[aria-current='true'] {
+  border-color: var(--gold);
+  background: var(--card-2);
+}
+.is-console .stat .n {
+  display: block;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.is-console .stat .k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 3px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.is-console .stat.all .n {
+  color: var(--crema);
+}
+.is-console .stat.on .n {
+  color: var(--green);
+}
+/* ⚠️ Red only when there IS something switched off. A20 measured `off` as 0 in every environment,
+   so a red 0 was permanent on every tenant — an alarm colour on a structural zero (fresh reviewer,
+   round 3, N6). The answer line drops the clause entirely for the same reason; the strip cannot
+   drop the card, so it stops shouting instead. */
+.is-console .stat.off .n {
+  color: var(--dim-2);
+}
+.is-console .stat.off[data-nonzero='true'] .n {
+  color: var(--red);
+}
+.is-console .stat.never .n {
+  color: var(--dim-2);
+}
+
+/* ── the feature list ─────────────────────────────────────────────────────────────────────── */
+.is-console .listcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.is-console .listhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--roast-2);
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+}
+.is-console .listhead .h-state {
+  width: 190px;
+  flex: none;
+}
+.is-console .listhead .h-meta {
+  width: 150px;
+  flex: none;
+}
+
+.is-console .grp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+}
+.is-console .grp .cnt {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  color: var(--dim-2);
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 11.5px;
+}
+.is-console .grp .bar {
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--dim-2);
+}
+.is-console .grp.on .bar {
+  background: var(--green);
+}
+.is-console .grp.off .bar {
+  background: var(--red);
+}
+
+.is-console .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 78px;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  transition: background var(--t);
+  position: relative;
+}
+.is-console .row:last-child {
+  border-bottom: none;
+}
+.is-console .row:hover {
+  background: var(--card-2);
+}
+.is-console .row-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* ⚠️ The font must be set on the `<code>` too. `.row-key` is the `<a>`; the browser's default
+   `code { font-family: monospace }` wins inside it, so the feature key rendered in bare `monospace`
+   while every rule here said IBM Plex Mono. The measured-spec check caught it the first time it
+   ran — which is the entire argument for having that layer rather than describing the table in
+   prose (fresh reviewer, round 2, S8). */
+.is-console .row-key,
+.is-console .row-key code,
+.is-console .answer .mono {
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+.is-console .answer .mono {
+  color: var(--gold-hot);
+}
+.is-console .row-key {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--crema);
+  text-decoration: none;
+}
+.is-console .row-key:hover {
+  color: var(--gold-hot);
+}
+.is-console .row-desc {
+  display: block;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.is-console .row-state {
+  width: 190px;
+  flex: none;
+}
+.is-console .row-meta {
+  width: 150px;
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.is-console .row-act {
+  width: 96px;
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The state pill: a dot AND a word, never colour alone. */
+.is-console .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--dim);
+}
+.is-console .pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+  flex: none;
+}
+.is-console .pill.on {
+  color: var(--green);
+  border-color: var(--green-deep);
+}
+.is-console .pill.off {
+  color: var(--red);
+  border-color: var(--red-deep);
+}
+.is-console .pill.never {
+  color: var(--dim-2);
+}
+.is-console .state-detail {
+  display: block;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+  font-size: 11.5px;
+  color: var(--dim-2);
+  margin-top: 4px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.is-console .tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--dim);
+}
+
+/* ── the dormant summary: ONE row replacing forty ─────────────────────────────────────────── */
+.is-console .dormant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 89px;
+  padding: 14px 16px;
+  text-align: left;
+  border-top: 1px solid var(--line);
+  transition: background var(--t);
+}
+.is-console .dormant:hover {
+  background: var(--card-2);
+}
+/* ⚠️ `.tw` means something ELSE in the reference: a 26×26 dashed box holding the ▸/▾ disclosure
+   glyph (`console-reference.css:125-128`). Reusing the name for a text wrapper defeats this file's
+   founding premise — that keeping the prototype's selectors lets the two be diffed line by line.
+   Renamed to `.dormant-text`; the reference's `.tw` affordance is not ported because this design
+   LINKS rather than expands (fresh reviewer, round 3, N5). */
+/* ⚠️ **The CELL is the flex row now, not `.dormant`.**
+   The link has to be inside the cell (a `role="row"` may own only cells) AND pushed to the right
+   edge by `margin-left: auto` — which needs a flex PARENT. Moving it into a plain span satisfied the
+   first and silently broke the second: `margin-left: auto` in a non-flex container does nothing
+   (fresh reviewer, round 4, S1).
+
+   So the cell spans the row and lays out its own children. `.dormant-copy` holds the stacked text;
+   the link is its sibling inside the same cell. Both constraints hold instead of trading. */
+.is-console .dormant .dormant-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.is-console .dormant .dormant-copy {
+  min-width: 0;
+}
+.is-console .dormant .t {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--crema);
+}
+.is-console .dormant .d {
+  display: block;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-top: 3px;
+  max-width: 78ch;
+}
+.is-console .dormant .go {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--gold);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── buttons ──────────────────────────────────────────────────────────────────────────────── */
+.is-console .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background var(--t),
+    border-color var(--t);
+}
+.is-console .btn-primary {
+  background: var(--gold);
+  color: #241d14;
+  box-shadow: 0 2px 0 var(--gold-deep);
+}
+.is-console .btn-primary:hover {
+  background: var(--gold-hot);
+}
+.is-console .btn-ghost {
+  border-color: var(--line);
+  color: var(--crema);
+  background: var(--card);
+}
+.is-console .btn-ghost:hover {
+  border-color: var(--dim-2);
+  background: var(--card-2);
+}
+
+/* ── the toolbar ──────────────────────────────────────────────────────────────────────────── */
+.is-console .toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+/* `globals.css` gives form controls `width: 100%` inside a form, which makes every child of the
+   toolbar its own row. The design is one row: a search box that grows, then fixed-width selects. */
+.is-console .toolbar > * {
+  width: auto;
+}
+.is-console .toolbar select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 150px;
+}
+.is-console .toolbar input[type='search'] {
+  padding: 8px 11px;
+  border-radius: var(--r);
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--crema);
+  font: inherit;
+  font-size: 13.5px;
+  min-width: 190px;
+  flex: 1 1 250px;
+}
+/* ⚠️ `appearance: none` strips the native dropdown arrow, and the first port supplied no
+   replacement — so the two selects were visually indistinguishable from the search box beside them
+   (cross-review, agy, round 3). The reference solves this with a `.sel` wrapper drawing a CSS
+   chevron via `::after` (`console-reference.css:293-299`); this ports that mechanism rather than
+   inventing a different one. */
+.is-console .sel {
+  position: relative;
+  display: inline-flex;
+}
+.is-console .sel::after {
+  content: '';
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  pointer-events: none;
+  border-right: 1.5px solid var(--dim-2);
+  border-bottom: 1.5px solid var(--dim-2);
+  transform: translateY(-70%) rotate(45deg);
+}
+
+/* ── the foot line ────────────────────────────────────────────────────────────────────────── */
+.is-console .foot {
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
+   `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
+   ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY
+   width — 340px of fixed columns plus gaps in a 390px viewport.
+
+   Measured on the built stylesheet at 390px before this block existed: `.row-main` had width **0**,
+   the feature key painted on top of the state pill, and the description column vanished.
+   `mobile-heuristics.authed.spec.ts` did not catch it because `AUTHED_MOBILE_ROUTES` does not
+   include `/app/flags/<slug>` — the same blind spot that hid the 100vh rail (fresh reviewer, PR
+   #124, Blocking).
+
+   The column headers hide rather than wrap, because a header row over stacked cells labels nothing.
+
+   ⚠️ **An earlier version of this comment claimed their semantics survive** — that `role=
+   "columnheader"` keeps the association `display: none` removes visually. **That is false.**
+   `display: none` removes an element from the accessibility tree entirely: measured, 3 columnheader
+   nodes at 1440 and **0** at 900 and 390 (fresh reviewer, round 2).
+
+   ⚠️ **An `aria-label` on each cell was the first answer, and it was WORSE**: name-from-author beats
+   name-from-content, so the cell holding a feature key announced itself as "Feature" — the label
+   replaced the value. Those labels are gone.
+
+   ⚠️ **So below 900px the cells have no column association, and this file will not pretend
+   otherwise.** What survives is the labelling that CAPTIONS rather than replaces: the type and risk
+   tags carry their own `aria-label`s, which is the pair a reader could not otherwise tell apart.
+   The state cell reads its own contents ("Never turned on here"), which is self-describing without
+   a header. The feature cell reads the key.
+
+   That is a real reduction from the desktop experience, recorded rather than closed: the honest fix
+   is a visually-hidden header row instead of `display: none`, which is a change to the markup this
+   stylesheet cannot make. Named in the PR rather than left in a comment claiming it is handled
+   (fresh reviewer, round 4, S2). */
+@media (max-width: 900px) {
+  .is-console .product-shell__body > main {
+    padding: 20px 16px 70px;
+  }
+  .is-console .listhead {
+    display: none;
+  }
+  .is-console .row {
+    flex-wrap: wrap;
+  }
+  .is-console .row-main {
+    flex: 1 1 100%;
+  }
+  .is-console .row-state,
+  .is-console .row-meta {
+    width: auto;
+  }
+  .is-console .row-act {
+    width: auto;
+    margin-left: auto;
+  }
+  .is-console .summary {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}

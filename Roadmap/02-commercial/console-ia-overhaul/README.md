@@ -93,8 +93,15 @@ signed-in user to it. All new routes sit behind the same `requireProjectMembersh
 
 **Design — the reference IA** (product owner approved 2026-08-27): `design/ia-audit.html` places all
 19 surfaces with the code evidence for each claim; `design/flags-console-prototype.html` is clickable.
-Per WAYS-OF-WORKING, **a reference end-state is inspiration, never signed-off scope** — the acceptance
-criteria below are the contract, not the pixels.
+~~Per WAYS-OF-WORKING, **a reference end-state is inspiration, never signed-off scope** — the
+acceptance criteria below are the contract, not the pixels.~~
+
+⚠️ **WITHDRAWN by A22 (2026-08-28).** That sentence is why Sprints 1 and 2 shipped a correct
+information architecture and a rejected visual result: every criterion below is structural, the
+build satisfies all of them, and it looked like a different product. **Where the product owner has
+approved a design, the design IS the contract** — `design/CONSOLE-CONTRACT.md` and
+`design/flags-console-prototype.html` are binding for every signed-in route, and
+`e2e/console-visual.authed.spec.ts` is the assertion that can go red on the way a page looks.
 
 ## Decisions — ✅ LOCKED BY THE ARCHITECT 2026-08-27, BEFORE ANY BUILDER STARTED
 
@@ -414,6 +421,144 @@ project's role**, never the active one's. A viewer who owns project A and is onl
 B must not be offered B's owner-only Setup landing on the strength of a role held in A. Gates are
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
+
+#### A22 — ⚠️ **The approved design is BINDING, the AgentRail leaves the console, and the flags page is rebuilt against the prototype.** *(2026-08-28, Daniel)*
+
+> *"The signed-in console must look like that file. Every page under /app. … The current UI/UX is
+> completely wrong, including all the text. It should match the mockup perfectly. Nothing else is
+> approved."*
+
+**The sentence this amendment withdraws is this document's own:**
+
+> *"a reference end-state is inspiration, never signed-off scope — the acceptance criteria below are
+> the contract, not the pixels."*
+
+That sentence is why Sprints 1 and 2 shipped a correct information architecture and a **rejected
+visual result.** Every acceptance criterion in this epic is structural — *"the header renders one
+project switcher and four sections"* — and the shipped build **satisfies all of them** while looking
+like a different product: a 48px `h1` wrapping to four lines, three-line rail cards with `GATED`
+badges, uppercase mono body copy, and a list that scrolls forever. **Nothing in the plan could go red
+on the way a page looked.**
+
+WAYS-OF-WORKING's rule about reference end-states exists to stop a *spec doc* being treated as
+signed-off scope. It does not mean an explicitly approved design has no force. **Where the product
+owner has approved a design, the design is the contract.**
+
+`design/CONSOLE-CONTRACT.md` and `design/flags-console-prototype.html` are now committed to the repo
+and binding for every signed-in route. ⚠️ **They were cited twelve times across nine source files
+before either was committed** — every numbered "Do-not" was unresolvable, including the one
+authorising the AgentRail removal (fresh reviewer, PR #124, Blocking). A contract that cannot be read
+is not a contract.
+
+**A22a — the AgentRail does not render on console routes.** This closes Do-not #4, which the contract
+correctly identifies as *"a decision the epic never made, and it must be made explicitly rather than
+inherited."* The rail appears in none of the ten approved reference states, and inside the console
+grid it squeezed the content column to **544px** against the approved **1180** — which is why every
+table clipped.
+
+⚠️ **The honest description is "the rail is gone", not "the rail is conditional."** `header !== null`
+IS the console, and after A19 that is every signed-in `/app` route; the remaining branch needs
+`activeProject`, which needs a session. Nothing renders it in practice.
+
+So it is a **control removed**, and this epic's own ordering rule applies: name what it carried and
+where each thing goes. It carried the agent's recent activity and its waiting-on-you queue. The
+approved design gives both a home — **"What changed & why"** in the top bar — **which is not built.**
+Until it is, this trades a squeezed console for a missing surface. `e2e/agent-rail.authed.spec.ts` is
+skipped with a forwarding address rather than deleted, so the removed capability leaves a trace.
+
+**A22b — Do-not #6 does not reproduce, and the contract is wrong about it.** `CONSOLE-CONTRACT.md`
+predicts `body.scrollWidth > innerWidth` on the shipped build. It is **false** at 1440×960: the tables
+already scroll inside their own `overflow-x: auto` containers, which is what that same Do-not asks
+for. That assertion would have passed on day one and caught nothing. The gate asserts the **content
+column width** instead, which fails honestly. Recorded because the contract is binding and this is
+the one number in it that is not true.
+
+**A22c — the visual gate does not seed, and no assertion says "42 → 2 + 1" end to end.** Asserting the
+design's row count literally needs the design's dataset; installing it into the shared `authed`
+fixture broke `flag-rule-builder`, and giving the gate its own project broke `command-center` and
+`design-system`. The literal "2" is also the prototype's data — production is 3 serving / 39 never
+(A20). So the arithmetic is unit-tested exhaustively where the dataset IS controlled, and the
+rendering is asserted on whatever the tenant holds. Stated as a loss, not filed as a pass.
+
+#### A21 — ⚠️ **A3 is WRONG on a fact: there are TWO surfaces that can create a new feature, not one.** *(2026-08-28, verified in code)*
+
+A3 says the `<form onSubmit={onCreate}>` in `flag-manager.tsx` is *"**the only surface in the product**
+that can create a new feature."* It is not. **`RuleBuilder` can too**, and it is the surface Story 3.3
+also deletes:
+
+- `rule-builder.tsx:349` renders a **free-text "Flag key" `<input>`** (`value={flagKey}`,
+  `onChange={setFlagKey}`) — not a key fixed from the route.
+- `flag-manager.tsx:380` posts it through the **same** `createFlagDefinitionVersionAction(slug,
+  builtKey, …)`.
+
+So the product has **two** free-key creation paths, both on the features list, both behind
+`flag-manager.tsx`, and Story 3.3 deletes **both**.
+
+**A3's CONCLUSION is unchanged and now better supported.** "Land the replacement in the same commit as
+the deletion" was right; it was under-argued. The deletion removes two creation paths, not one.
+
+**But the wrong fact is dangerous in a specific way, which is why this is recorded rather than quietly
+fixed.** A reader who believes "only the textarea can create" could reasonably conclude that deleting
+*only* the `RuleBuilder` is safe, or that after deleting the textarea the `RuleBuilder` still covers
+creation. Both conclusions are false, and both leave the product unable to create a feature — the
+exact outcome A3 exists to prevent, reached *by trusting A3*.
+
+**They ride DIFFERENT gates, and this constrains the deletion.** The textarea is inside the
+`FLAG_CONSOLE_ENABLED` branch; `RuleBuilder` additionally rides **`FLAG_RULE_BUILDER_ENABLED`**
+(`page.tsx:114`). Story 3.3's promise that *"the gate-off branch is untouched, byte-for-byte"* is
+therefore a promise about **two** gates, and the `git diff` proof must be run in both off-states, not
+one. Note `flag-manager.tsx`'s own comment already warns that gating the wrong block once hid the
+authoring form entirely — *"there would have been NO way to create a new flag at all"*.
+
+⚠️ **One thing I could NOT measure: `FLAG_RULE_BUILDER_ENABLED`'s live production value.** It is
+stored **Sensitive** in Vercel, so the value cannot be read back. `flags-visual-rule-builder` (#15)
+records it as ON in production and verified on the real flags page, and that is the best evidence
+available — but it is a *record*, not a measurement, and it is the difference between production
+having two creation paths today or one. **Confirm it during the Story 3.3 walkthrough** rather than
+assuming; the replacement control is required either way, so nothing is blocked on the answer.
+
+#### A20 — ⚠️ **Story 3.1's "two rows" is wrong, and one of its three states has ZERO live instances.** *(2026-08-28, measured against production)*
+
+Story 3.1 says *"Production therefore renders **two rows** and one summary line"*. Measured on live
+production (`miyagisanchez`, Production environment, 2026-08-28):
+
+| Activation state | Live count | How it is stored |
+|---|---|---|
+| **on** — serving a version | **3** | a `flag_environment_activations` row with a non-null `version_id` |
+| **off** — deliberately switched off | **0** | a row with a **null** `version_id` |
+| **never** — nobody has ever touched it here | **39** | **no row at all** |
+| | **42** | |
+
+Two corrections follow, and the second is the one that changes the work.
+
+**1. It is three rows, not two, and the dormant line reads 39.** A cosmetic fix to the story and its
+walkthrough — but a walkthrough step that says "you see two rows" when the page shows three is a step
+that fails on a correct build, and this epic has already shipped guards that could not fail.
+
+**2. ⚠️ The `off` state has NO live instance, so nothing on production can show it.** This is the real
+finding. Story 3.1 asks for three visually distinct switch states, one of which is *"turned off →
+red"*. On production that styling is **unreachable**: every one of the 42 flags is either serving or
+untouched. Consequences, decided here rather than discovered by whoever builds it:
+
+- **The answer line's middle clause renders "0 deliberately switched off" for every reader today.**
+  The line must read naturally at zero rather than emitting a limp "0 switched off" — a summary that
+  states an empty category as if it were news is worse than one that omits it. **DECIDED: a clause
+  with a zero count is dropped from the sentence, not rendered with a `0`.** That is list arithmetic,
+  so it belongs in `lib/flag-list-view.ts` with the rest, and it is unit-testable at every
+  combination — which is the only place all three states can be exercised at all.
+- **The red `off` switch cannot be asserted against the live tenant.** Its spec needs a constructed
+  fixture. A browser check on production would pass vacuously — there is no such row to render — and
+  a vacuous pass is how `landing-frijoles-rebrand` shipped three guards that could not fail.
+- **The smoke walkthrough must not ask Daniel to look for a red switch.** He would not find one, and
+  the honest reason is that nobody has ever deliberately switched a flag off in production — not that
+  the build is broken.
+
+**Why this was worth measuring rather than assuming.** The sprint contract's own figure — *34 of 42
+flags' latest version defaults to `false`* — is **confirmed** (34 `defaultVariantKey: "off"`, 8 `"on"`),
+but it is a **different axis** from the three states, and conflating them is the trap. A flag can
+default to `false` and have **never been activated**: 34 defaulting off does not mean 34 render as
+"off". Today it means 39 render as "never" and 0 render as "off". "Activated ≠ on" remains the point
+of the three states; the number that supports it is 39, not 34.
 
 #### A19 — ⚠️ **D4 IS OVERRULED. The console ships ENABLED at Sprint 2, not dark until Sprint 3.** *(2026-08-27, Daniel)*
 

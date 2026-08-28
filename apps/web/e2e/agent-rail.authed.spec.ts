@@ -18,10 +18,26 @@ function tenantSlug(): string {
   return slug
 }
 
+// ── ⚠️ The agent rail does not render on console routes (Daniel, 2026-08-28) ─────────────────
+//
+// CONSOLE-CONTRACT.md Do-not #4: the rail is in none of the ten approved reference states, and
+// inside the console grid it squeezed the content column to 544px against the approved 1180 —
+// which is why every table clipped. The epic had left this undecided; it is decided now.
+//
+// `header !== null` IS the console, and after A19 that is every signed-in /app route, so in
+// practice the rail no longer renders anywhere. These specs asserted the opposite on every route,
+// and they are the correct place to record what replaced them rather than being deleted quietly:
+// a deleted spec leaves no trace of a capability that used to exist.
+//
+// What the rail carried — the agent's recent activity and its waiting-on-you queue — has a home in
+// the approved design: "What changed & why" in the top bar. **That is not built yet.** Until it is,
+// this suite is the record that a surface was removed ahead of its replacement, which is the thing
+// this epic keeps promising not to do.
 test.describe('agent rail', () => {
-  // Skipped rather than inverted when the gate is off, because with AGENT_RAIL_ENABLED unset there
-  // is nothing to smoke — and a skip that says why is more honest than a test that asserts absence
-  // and reads as coverage of the rail.
+  test.skip(
+    true,
+    'the agent rail is not rendered on console routes (Do-not #4). Re-point these at "What changed & why" when that surface lands.'
+  )
   test.skip(!isAgentRailEnabled(), 'set AGENT_RAIL_ENABLED=true to smoke the rail')
 
   test('the rail renders on every /app route and never claims completeness', async ({ page }) => {
