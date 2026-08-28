@@ -15,23 +15,28 @@ import { CONSOLE_SECTIONS, type ProjectSurfaceLink } from './project-route-inven
 /**
  * One row in the palette.
  *
- * `kind` is a union with a single member today, on purpose. Story 3.4 adds `'feature'`, and a
- * closed union means that story cannot add feature rows without every consumer being made to say
- * what it does with them — the same technique as `ProjectSurfaceGate` and `ConsoleSection`.
+ * ⚠️ **`kind` opened to two members in Story 3.4, which is what the closed union was for.** Story
+ * 1.5 wrote it with one on purpose — *"a closed union means that story cannot add feature rows
+ * without every consumer being made to say what it does with them"* — and that is exactly what
+ * happened: adding `'feature'` failed the component until it rendered a label distinguishing the
+ * two, which is Story 3.4's own acceptance ("labelled so the two kinds are distinguishable").
  *
- * **Features are deliberately NOT indexed in this sprint** (Story 1.5's own acceptance): D7 is
- * resolved, but the index it describes is Story 3.4's, and shipping it here would be shipping a
- * later story early with none of its cost measured.
+ * `hint` means different things per kind, and deliberately: a surface's is its SECTION (where you
+ * would find it in the header), a feature's is its DESCRIPTION (what it controls). Both answer
+ * "which one is this" for their own kind, which is the only job the column has.
  */
 export type PaletteEntry = {
-  kind: 'surface'
+  kind: 'surface' | 'feature'
   /** Stable identity for React keys and for the cursor — unique within one palette. */
   id: string
   label: string
-  /** The section this lives in, in the words the header uses. Rendered beside the label. */
+  /** For a surface, the section it lives in; for a feature, what it controls. Rendered beside it. */
   hint: string
   href: string
 }
+
+/** One feature, as the index route hands it over. */
+export type FeatureIndexEntry = { key: string; description: string }
 
 const SECTION_LABEL = new Map(CONSOLE_SECTIONS.map((section) => [section.id, section.label]))
 
@@ -52,11 +57,67 @@ export function buildPaletteEntries(links: readonly ProjectSurfaceLink[]): Palet
 }
 
 /**
+ * Project the flag registry down to what `⌘K` matches on.
+ *
+ * ⚠️ **Server-side, in the route handler** (A6). The registry a real tenant holds is ~16 KB of
+ * definition JSONB across 5 round trips; this is ~1.1 KB. Projecting in the browser would move the
+ * whole thing over the wire to throw most of it away.
+ *
+ * Pure and here rather than in the route, for this module's usual reason: `npm run test:unit` can
+ * reach it, and a route handler behind `requireProjectMembership` can only be exercised with a real
+ * session.
+ *
+ * `description` is normalised to a string so the component never has to think about `undefined` —
+ * an empty description renders as no hint, not as the word "undefined".
+ */
+export function projectFeatureIndex(
+  flags: ReadonlyArray<{ key: string; versions: ReadonlyArray<{ version: number; definition: unknown }> }>
+): FeatureIndexEntry[] {
+  return flags.map((flag) => {
+    // The NEWEST version describes the feature here — not whichever version an environment serves.
+    // The list page makes the finer distinction because it is answering about one environment; the
+    // palette is answering "what is this feature", which has no environment in it.
+    const latest = flag.versions.reduce<{ version: number; definition: unknown } | undefined>(
+      (best, row) => (best === undefined || row.version > best.version ? row : best),
+      undefined
+    )
+    const definition = latest?.definition
+    const description =
+      definition !== null && typeof definition === 'object' && !Array.isArray(definition)
+        ? (definition as { description?: unknown }).description
+        : undefined
+    return { key: flag.key, description: typeof description === 'string' ? description : '' }
+  })
+}
+
+/**
+ * The feature rows, from the index the palette fetched on first open.
+ *
+ * They come FIRST in the merged list, which is the approved design's order and also the useful one:
+ * somebody who presses `⌘K` and types is nearly always naming a feature — there are 42 of those and
+ * 13 surfaces, and the surfaces are all one click away in the header and the rail anyway.
+ */
+export function buildFeatureEntries(
+  features: readonly FeatureIndexEntry[],
+  projectSlug: string
+): PaletteEntry[] {
+  return features.map((feature) => ({
+    kind: 'feature' as const,
+    // Namespaced against the surface ids so a feature called `flags` cannot collide with the Flags
+    // surface — same reason `surface:` is prefixed.
+    id: `feature:${feature.key}`,
+    label: feature.key,
+    hint: feature.description,
+    href: `/app/flags/${projectSlug}/${encodeURIComponent(feature.key)}`,
+  }))
+}
+
+/**
  * Filter by what the reader typed.
  *
- * Matches the label AND the section, so typing `setup` lists everything in Setup — the palette
- * answers "where do I want to go" in either vocabulary, which is the point of labelling the rows
- * with their section at all.
+ * Matches the label AND the hint, so typing `setup` lists everything in Setup and typing a word
+ * from a feature's description finds the feature — the palette answers "where do I want to go" in
+ * either vocabulary, which is the point of labelling the rows at all.
  *
  * Case- and whitespace-insensitive. An empty query returns everything rather than nothing: the
  * palette opens as a list of where you can go, not as a blank box that must be guessed at.

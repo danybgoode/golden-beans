@@ -1591,6 +1591,88 @@
   }
 }
 
+/* ── Story 3.4 — `⌘K`, in the approved design's shape ──────────────────────────────────────────
+   Ported from `console-reference.css`'s `.palette` onto the class names the component already has.
+   The markup is not renamed: `CommandPalette` is the shell's one client island and its structure is
+   load-bearing (a listbox whose options are anchors, `aria-activedescendant` on the input), so this
+   restyles it rather than rebuilding it. */
+.is-console .command-palette__panel {
+  padding: 0;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-hi);
+  overflow: hidden;
+}
+.is-console .command-palette__input {
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--crema);
+  font: 400 16px var(--sans, 'Archivo', system-ui, sans-serif);
+}
+.is-console .command-palette__input:focus {
+  outline: none;
+}
+.is-console .command-palette__panel ul {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+  margin: 0;
+  gap: 0;
+}
+.is-console .command-palette__panel a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
+}
+/* Which KIND of thing this row is — Story 3.4's "labelled so the two kinds are distinguishable".
+   The design's `.res .kind`: a small outlined caps chip at the head of the row, so the eye reads
+   the category before the name rather than after it. */
+.is-console .command-palette__kind {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex: none;
+  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
+}
+/* The hint sits at the far right, where the design puts "where" — so the names line up down the
+   left edge and can be scanned. */
+.is-console .command-palette__panel a small {
+  margin-left: auto;
+  font: 400 12px var(--sans, 'Archivo', system-ui, sans-serif);
+  text-transform: none;
+  color: var(--dim-2);
+  text-align: right;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.is-console .command-palette__panel a[aria-selected='true'] {
+  background: var(--card-3);
+  box-shadow: none;
+}
+.is-console .command-palette__empty {
+  padding: 20px 26px;
+  text-align: center;
+  color: var(--dim-2);
+  font-size: 13.5px;
+  margin: 0;
+}
+
 /* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
    `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
    ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY

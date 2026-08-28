@@ -326,7 +326,7 @@ export async function ProductShell({
         */}
         {header !== null && (
           <ShellErrorBoundary>
-            <CommandPalette links={links} />
+            <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
           </ShellErrorBoundary>
         )}
         {children}

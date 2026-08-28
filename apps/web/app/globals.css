@@ -1396,8 +1396,16 @@ body {
 
 /* The cursor is painted from `aria-selected`, the same attribute that tells a screen reader which
    row is active — so the highlight and the announcement cannot drift apart. Same reasoning as
-   `.product-shell__tab[aria-current='page']` above. */
-.command-palette__panel li[aria-selected='true'] a {
+   `.product-shell__tab[aria-current='page']` above.
+
+   ⚠️ **This selector matched NOTHING and the palette had no visible cursor at all.** It was written
+   against `<li aria-selected>`, and a later fix moved `role="option"` and `aria-selected` onto the
+   ANCHOR — a listbox option must not contain a separately focusable control — without moving the
+   rule that painted it. So ↑/↓ moved an announcement a screen reader could hear and a sighted
+   reader could not see, which is the same defect the comment above claims to prevent, pointing the
+   other way. Found while building Story 3.4 (console-ia-overhaul) by reading the CSS beside the
+   markup it styles. */
+.command-palette__panel a[aria-selected='true'] {
   background: var(--card);
   box-shadow: inset 2px 0 0 var(--gold);
 }

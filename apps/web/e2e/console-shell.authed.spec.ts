@@ -173,6 +173,49 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     expect(new URL(page.url()).pathname).toBe(`/app/destinations/${slug}`)
   })
 
+  // ── console-ia-overhaul · Sprint 3, Story 3.4 — ⌘K indexes feature keys ────────────────────
+  test('⌘K finds a FEATURE by its key and opens it', async ({ page }) => {
+    const slug = tenantSlug()
+    // ⚠️ Started from `/app` deliberately. The index is fetched on FIRST ⌘K from a route handler,
+    // not rendered into the page — so this also proves the fetch happens on a page that knows
+    // nothing about flags, which is the whole of D7's answer. Command Center makes no registry read.
+    await page.goto('/app')
+    await openPalette(page)
+
+    // The list is fetched, so the row does not exist on the first frame. Waiting for it IS the
+    // assertion that the fetch happened.
+    const options = page.locator('.command-palette [role="option"]')
+    await page.keyboard.type('gb.e2e.owner')
+    await expect(options.first()).toBeVisible({ timeout: 5000 })
+
+    // Labelled by kind — Story 3.4's acceptance. Without it a reader cannot tell "the Flags page"
+    // from "a feature called flags".
+    await expect(options.first()).toContainText('Feature')
+    const key = (await options
+      .first()
+      .locator('.command-palette__kind')
+      .evaluate((el) => {
+        return el.parentElement?.textContent?.replace('Feature', '').trim() ?? ''
+      })) as string
+    expect(key.startsWith('gb.e2e.owner')).toBe(true)
+
+    await page.keyboard.press('Enter')
+    // It opens the FEATURE, on the route Story 2.1 built — not the list, and not a URL anybody typed.
+    await page.waitForURL(new RegExp(`/app/flags/${slug}/gb.e2e.owner`))
+  })
+
+  test('⌘K still finds a SURFACE once features are in the list', async ({ page }) => {
+    // The regression this guards is a merge that put 42 features in front of 13 surfaces and left no
+    // way to reach a surface by name. Asserted through the browser because the ORDER is decided in
+    // the component, which no unit test can reach.
+    await page.goto('/app')
+    await openPalette(page)
+    await page.keyboard.type('Flag audit')
+    const options = page.locator('.command-palette [role="option"]')
+    await expect(options).toHaveCount(1)
+    await expect(options.first()).toContainText('Go to')
+  })
+
   test('the palette hugs its contents rather than filling the viewport', async ({ page }) => {
     // A geometry assertion, because this is what the other palette specs cannot see: "visible" and
     // "one option matched" are both true of a panel ten times taller than its rows. The first build
