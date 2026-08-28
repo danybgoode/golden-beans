@@ -15,28 +15,48 @@ import { recordAudit } from '@/lib/audit'
 // Server Actions are a public HTTP surface and TypeScript types are erased at runtime, so every
 // argument is validated as a real string before use.
 function requireString(value: unknown, field: string): string {
-  if (typeof value !== 'string') throw new Error(`Invalid ${field}`)
+  // Non-empty, not merely a string. `''` fails closed downstream (no project has an empty slug, so
+  // `requireProjectOwnership` 404s) — but "it fails for a reason two layers away" is a weaker
+  // guarantee than refusing it here, and the reason could change. Cross-review nit, taken.
+  if (typeof value !== 'string' || value.trim() === '') throw new Error(`Invalid ${field}`)
   return value
 }
 
 /**
- * Both gates, checked before the write — AGENTS rule #3, stated as code rather than as a promise.
+ * Which gate is closed, or `null` when minting may proceed.
  *
- * The connector has TWO independent kill switches: `CONNECTOR_ENABLED` and the revocable per-project
- * token. Minting creates the second one. If it did not also require the first, then flipping
- * `CONNECTOR_ENABLED` off would stop the connector serving while still letting an owner mint
- * credentials for it — a switch you can route around is not a switch.
+ * ── Two gates, named separately, because they fail for different reasons ──────────────────────
+ * This was one `gatesOpen(): boolean`. Cross-review (vibe) was right that bundling them muddies
+ * the intent: a caller could not tell WHICH gate refused, so the error said "the connector is not
+ * enabled" even when the connector was fine and the console was dark. Two different operator
+ * actions, one message.
  *
- * `CONSOLE_SHELL_ENABLED` is checked too, because this action only exists to serve a page that
- * 404s without it. A server action is reachable by POST regardless of whether its page rendered.
+ * `CONNECTOR_ENABLED` is AGENTS rule #3: the connector has two independent kill switches, and
+ * minting creates the second one. If minting did not also require the first, flipping the connector
+ * off would stop it serving while still letting an owner mint credentials for it — a switch you can
+ * route around is not a switch.
+ *
+ * `CONSOLE_SHELL_ENABLED` is checked because this action exists only to serve a page that 404s
+ * without it, and a server action is reachable by POST whether or not its page ever rendered.
  */
-function gatesOpen(): boolean {
-  return isConnectorEnabled() && isConsoleShellEnabled()
+function closedGate(): 'connector' | 'console' | null {
+  if (!isConnectorEnabled()) return 'connector'
+  if (!isConsoleShellEnabled()) return 'console'
+  return null
 }
 
 export async function mintConnectorAction(slug: unknown) {
   const safeSlug = requireString(slug, 'project')
-  if (!gatesOpen()) return { ok: false as const, error: 'The connector is not enabled.' }
+  const blocked = closedGate()
+  if (blocked !== null) {
+    return {
+      ok: false as const,
+      error:
+        blocked === 'connector'
+          ? 'The MCP connector is switched off for this deployment, so a URL would not serve.'
+          : 'The new console is not enabled for this deployment.',
+    }
+  }
 
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const result = await mintConnectorToken(projectId)
@@ -80,7 +100,7 @@ export async function revokeConnectorAction(slug: unknown, tokenId: unknown) {
   const safeSlug = requireString(slug, 'project')
   const safeTokenId = requireString(tokenId, 'token id')
 
-  // Deliberately NOT gated on `gatesOpen()`. Revoking is the safe direction, and a kill switch that
+  // Deliberately NOT gated on `closedGate()`. Revoking is the safe direction, and a kill switch that
   // stops working when a feature is disabled is backwards — if `CONNECTOR_ENABLED` were flipped off
   // mid-incident, an owner must still be able to permanently kill the credential rather than wait
   // for the flag to come back. Same reasoning as the scenario-stop path (LEARNINGS: separate

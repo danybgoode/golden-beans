@@ -129,7 +129,7 @@ test('minting requires the connector gate; revoking deliberately does not', () =
     body
       .split('\n')
       .filter((line) => !line.trim().startsWith('//') && !line.trim().startsWith('*'))
-      .some((line) => /(?:if \(!|return )gatesOpen\(\)/.test(line))
+      .some((line) => /closedGate\(\)/.test(line))
 
   assert.equal(callsGate(mint), true, 'mint does not check the connector gate')
   assert.equal(
