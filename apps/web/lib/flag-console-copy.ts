@@ -295,17 +295,25 @@ export function flagListAnswerSegments(
     // nothing was established — "is serving nothing. The other 40 have never been switched on"
     // refers back to a baseline that does not exist (cross-review, agy, round 3). That is the
     // common case on two of this product's three environments, not an edge.
+    // ⚠️ **The whole sentence, not just the verb.** Round 3 made the verb agree and left the rest:
+    // "All 1 has never been switched on … nobody turned THEM off, nobody ever turned THEM on" —
+    // singular verb, plural pronouns, one sentence. And a test pinned that exact string as correct,
+    // which is the failure round 3's own note describes and then repeated (fresh reviewer, round 4).
+    //
+    // Reachable by every tenant whose first sync creates one flag, so it is a first-run sentence.
+    const one = summary.neverSwitched === 1
     const lead = summary.serving === 0 && summary.switchedOff === 0 ? ' All ' : ' The other '
-    segments.push({ text: lead }, { text: String(summary.neverSwitched), emphasis: 'strong' })
-    // ⚠️ Subject-verb agreement. "The other 1 have never been switched on" shipped, and a test
-    // asserted that exact string as CORRECT (fresh reviewer, round 3). The property sweep checked
-    // four MECHANICAL shapes — ends in a full stop, no doubled space, no doubled conjunction, no
-    // "undefined" — and agreement is none of them. A property test is exhaustive only over the
-    // properties it names.
-    const verb = summary.neverSwitched === 1 ? ' has' : ' have'
-    segments.push({
-      text: `${verb} never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
-    })
+    if (one) {
+      // "The other 1" reads as a stub. With exactly one, name it as one thing.
+      segments.push({
+        text: `${lead === ' All ' ? ' The one feature here' : ' The other one'} has never been switched on in ${environment} — nobody turned it off, nobody ever turned it on.`,
+      })
+    } else {
+      segments.push({ text: lead }, { text: String(summary.neverSwitched), emphasis: 'strong' })
+      segments.push({
+        text: ` have never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
+      })
+    }
   }
 
   return segments

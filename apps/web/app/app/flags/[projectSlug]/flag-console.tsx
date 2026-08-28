@@ -282,10 +282,12 @@ export function FlagConsole({
                   <span role="cell" aria-colspan={3}>
                     {run.state === 'on'
                       ? `${FLAG_STATE_PRESENTATION.on.label} in ${params.environment}`
-                      : FLAG_STATE_PRESENTATION[run.state].label}
-                  </span>
-                  <span className="cnt" aria-hidden="true">
-                    {run.rows.length}
+                      : FLAG_STATE_PRESENTATION[run.state].label}{' '}
+                    {/* ⚠️ Read, not hidden. It was `aria-hidden` to dodge the column-position
+                      problem, which withheld real information (how many rows the run holds) from AT
+                      users to solve a layout concern — when the fix applied to "Show them" in the
+                      same commit, putting it in the cell, keeps it (round 4, N2). */}
+                    <span className="cnt">{run.rows.length}</span>
                   </span>
                 </div>
               )}
@@ -354,10 +356,12 @@ export function FlagConsole({
                 and an action with no column. Verified by dumping the tree this time, not by reading
                 the diff. */}
             <span className="dormant-text" role="cell" aria-colspan={3}>
-              <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
-              <span className="d">
-                No one has ever switched them on or off here. Nothing is wrong with them — nothing has
-                happened to them.
+              <span className="dormant-copy">
+                <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
+                <span className="d">
+                  No one has ever switched them on or off here. Nothing is wrong with them — nothing has
+                  happened to them.
+                </span>
               </span>
               <a className="go" href={linkTo({ state: 'never' })}>
                 Show them

@@ -165,6 +165,17 @@ test.describe('the console matches the approved design', () => {
       `[2] ${summaryCount} dormant summary lines — the design collapses the dormant group into exactly one`
     ).toBeLessThanOrEqual(1)
 
+    // ⚠️ **On the current fixture `summaryCount` is 0, and both assertions above pass vacuously.**
+    // The tenant is all-dormant, so `groupDormantFlagRows` declines to group and
+    // `[data-dormant-summary]` never renders on any input. An earlier PR comment of mine reported
+    // "1 dormant summary line ✅" — that was measured during a run when my own seeding had polluted
+    // the shared fixture, and it is not reproducible (fresh reviewer, round 4, N4).
+    //
+    // Left as-is rather than forced: seeding this tenant to produce a summary is exactly what broke
+    // three other suites two rounds ago. The collapse is pinned at production's real shape in
+    // `lib/flag-list-view.test.ts`, where the dataset is controlled. Stated so nobody reads a green
+    // [2] as proof the collapse renders.
+    //
     // When a summary IS rendered it must be standing for rows that are NOT also listed — otherwise
     // it is decoration above a full list, which is what the page looked like before this epic.
     if (summaryCount === 1) {
@@ -338,7 +349,10 @@ const MEASURED_SPEC: SpecRow[] = [
   // BEFORE the list, so the bare selector matched an `.envpick` link — and it passed only because
   // the rail-item rule was leaking onto a control the reference styles separately (fresh reviewer,
   // round 3). Two defects in one line: the wrong element, and a rule reaching past its subject.
-  { what: 'rail item', selector: '.console-rail ul a', fontSize: '13.5px', fontWeight: '600', height: 36 },
+  // ⚠️ `> ul a`. `.console-rail ul a` still matched the environment picker, which renders its own
+  // `<ul>` inside the rail — so this row measured the wrong element for a SECOND round, and passed
+  // (fresh reviewer, round 4).
+  { what: 'rail item', selector: '.console-rail > ul a', fontSize: '13.5px', fontWeight: '600', height: 36 },
 ]
 
 /**
@@ -385,14 +399,35 @@ const DEFERRED_SPEC_ROWS = [
     what: 'primary/secondary button',
     contract: 38,
     built: '44',
-    why: 'globals.css enforces a 44px WCAG 2.5.5 target floor, and the floor wins',
+    // ⚠️ Round 3's stated mechanism was imprecise: globals.css's floor covers button/summary/select/
+    // textarea/input and explicitly NOT links, so an `<a class="btn">` is saved by the design
+    // system's own `.btn` rule instead. The conclusion holds; the reason did not (round 4, N5).
+    why: 'a 44px WCAG 2.5.5 target floor applies (globals.css for controls, the .btn rule for links) and the floor wins over a measured pixel',
+  },
+  {
+    what: 'project switcher',
+    contract: 30,
+    built: '34',
+    why: "height follows the shell chrome; the contract's 140px width is waived too because a real tenant slug is longer than the prototype's and truncating it would hide the one thing the control shows",
+  },
+  {
+    what: 'section nav (tier 2)',
+    contract: 44,
+    built: 'not built',
+    why: 'ProductShell renders the tabs INSIDE the 54px header, so the second tier does not exist — splitting it touches every console route and is out of this PR',
+  },
+  {
+    what: 'switch',
+    contract: 21,
+    built: 'not built',
+    why: 'the row-act cell has no controls until Story 3.3 lands the toggle alongside its replacement authoring path',
   },
 ] as const
 
 test('the deferred spec rows are named, so the gate does not look complete', () => {
   // This test exists to make the omission visible in the suite's own output rather than in a
   // comment nobody runs. It cannot fail; that is deliberate and stated — its job is to print.
-  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed').toBe(3)
+  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(6)
   for (const row of DEFERRED_SPEC_ROWS) {
     expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)
   }

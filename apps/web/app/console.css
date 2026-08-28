@@ -227,9 +227,10 @@
    silently. Matching their shape and adding `.is-console` scores (0,4,0) and wins. */
 /* ⚠️ **`98px` was 54 + 44 — the height of two chrome tiers, one of which is not built.**
    The contract specifies a 54px top bar and a separate 44px section-nav bar. `ProductShell` renders
-   the tabs INSIDE the header, so the real chrome is a single 55px bar — measured, the header's
-   bottom edge is at 55 while the rail stuck at 98, leaving a 43px dead gap and under-computing the
-   rail's height by the same amount (fresh reviewer, round 2).
+   the tabs INSIDE the header, so the real chrome is a single 54px bar — measured, the header's
+   bottom edge is at 54 while the rail stuck at 98, leaving a 44px dead gap and under-computing the
+   rail's height by the same amount (fresh reviewer, round 2; the figure corrected in round 4, where
+   the round-2 comment had survived the very fix that named it wrong).
 
    Building the second tier is a `ProductShell` change that touches every console route, and it is
    not this PR's scope. So the offset is derived from ONE custom property instead of two magic
@@ -266,7 +267,7 @@
     overflow-y: auto;
   }
 }
-.is-console .console-rail ul {
+.is-console .console-rail > ul {
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -281,11 +282,17 @@
    Story 1.4 asked for the rail to render surfaces "with their existing inventory descriptions",
    and that instruction produced the three-line cards on screen. What a surface IS belongs on the
    surface, not in the navigation. */
-/* ⚠️ `ul a`, not `a`. This rule was reaching the environment picker's links, which the reference
-   styles separately as a dropdown control (`console-reference.css:183-191`) — so the picker
-   inherited a rail item's 36px height and 600 weight, and the measured-spec check "passed" while
-   pointing at the wrong element (fresh reviewer, round 3). */
-.is-console .console-rail ul a {
+/* ⚠️ **`> ul`, a DIRECT child — and the two previous attempts both missed why.**
+   `.console-rail a` leaked onto the environment picker. Round 3 changed it to `.console-rail ul a`,
+   which still matched: `EnvironmentPicker` renders its OWN `<ul>` inside the rail, so the descendant
+   combinator reached it anyway — and the added specificity (0,2,2 vs the picker's 0,2,1) made it
+   worse, overriding the picker's padding, radius AND weight instead of only leaking a height. The
+   picker's `aria-current` cue is `font-weight: 600`, so forcing 600 on all three killed the cue
+   (fresh reviewer, round 4, Blocking).
+
+   The rail's own list is a direct child of `.console-rail`; the picker's is nested inside `.envpick`.
+   The child combinator is the difference, and it is what should have been written the first time. */
+.is-console .console-rail > ul a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -302,18 +309,18 @@
     background var(--t),
     color var(--t);
 }
-.is-console .console-rail ul a:hover {
+.is-console .console-rail > ul a:hover {
   background: var(--card);
   color: var(--crema);
 }
-.is-console .console-rail ul a[aria-current='page'] {
+.is-console .console-rail > ul a[aria-current='page'] {
   background: var(--card-2);
   color: var(--crema);
 }
 /* Belt and braces: the markup drops these, and the stylesheet refuses to paint them if they come
    back. A regression that reintroduces the badge should look broken, not merely wrong. */
-.is-console .console-rail ul a small,
-.is-console .console-rail ul a[data-surface-status]::after {
+.is-console .console-rail > ul a small,
+.is-console .console-rail > ul a[data-surface-status]::after {
   display: none;
   content: none;
 }
@@ -701,7 +708,22 @@
    founding premise — that keeping the prototype's selectors lets the two be diffed line by line.
    Renamed to `.dormant-text`; the reference's `.tw` affordance is not ported because this design
    LINKS rather than expands (fresh reviewer, round 3, N5). */
+/* ⚠️ **The CELL is the flex row now, not `.dormant`.**
+   The link has to be inside the cell (a `role="row"` may own only cells) AND pushed to the right
+   edge by `margin-left: auto` — which needs a flex PARENT. Moving it into a plain span satisfied the
+   first and silently broke the second: `margin-left: auto` in a non-flex container does nothing
+   (fresh reviewer, round 4, S1).
+
+   So the cell spans the row and lays out its own children. `.dormant-copy` holds the stacked text;
+   the link is its sibling inside the same cell. Both constraints hold instead of trading. */
 .is-console .dormant .dormant-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.is-console .dormant .dormant-copy {
   min-width: 0;
 }
 .is-console .dormant .t {
@@ -810,17 +832,6 @@
   border-bottom: 1.5px solid var(--dim-2);
   transform: translateY(-70%) rotate(45deg);
 }
-.is-console .toolbar select {
-  appearance: none;
-  padding: 8px 28px 8px 11px;
-  border-radius: var(--r);
-  background: var(--card);
-  border: 1px solid var(--line);
-  color: var(--crema);
-  font: inherit;
-  font-size: 13.5px;
-  cursor: pointer;
-}
 
 /* ── the foot line ────────────────────────────────────────────────────────────────────────── */
 .is-console .foot {
@@ -849,9 +860,20 @@
    `display: none` removes an element from the accessibility tree entirely: measured, 3 columnheader
    nodes at 1440 and **0** at 900 and 390 (fresh reviewer, round 2).
 
-   So the cells carry their own labels instead. `aria-label` on each cell is what makes a phone
-   render self-describing, and it is set in `flag-console.tsx` rather than here, because a stylesheet
-   cannot fix a semantics problem. */
+   ⚠️ **An `aria-label` on each cell was the first answer, and it was WORSE**: name-from-author beats
+   name-from-content, so the cell holding a feature key announced itself as "Feature" — the label
+   replaced the value. Those labels are gone.
+
+   ⚠️ **So below 900px the cells have no column association, and this file will not pretend
+   otherwise.** What survives is the labelling that CAPTIONS rather than replaces: the type and risk
+   tags carry their own `aria-label`s, which is the pair a reader could not otherwise tell apart.
+   The state cell reads its own contents ("Never turned on here"), which is self-describing without
+   a header. The feature cell reads the key.
+
+   That is a real reduction from the desktop experience, recorded rather than closed: the honest fix
+   is a visually-hidden header row instead of `display: none`, which is a change to the markup this
+   stylesheet cannot make. Named in the PR rather than left in a comment claiming it is handled
+   (fresh reviewer, round 4, S2). */
 @media (max-width: 900px) {
   .is-console .product-shell__body > main {
     padding: 20px 16px 70px;

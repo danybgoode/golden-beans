@@ -275,7 +275,7 @@ test('a deliberate switch-off gets its own sentence', () => {
   assert.equal(
     line,
     'Right now preview is serving a. 1 feature was deliberately switched off here.' +
-      ' The other 1 has never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+      ' The other one has never been switched on in preview — nobody turned it off, nobody ever turned it on.'
   )
 })
 
@@ -354,13 +354,16 @@ test('the dormant sentence agrees with its subject', () => {
   // whole lesson — a property test is exhaustive only over the properties it names.
   assert.match(
     flagListAnswerLine(counts({ total: 2, serving: 1, neverSwitched: 1 }), 'production', ['a']),
-    /The other 1 has never been switched on/
+    /The other one has never been switched on/
   )
   assert.match(
     flagListAnswerLine(counts({ total: 3, serving: 1, neverSwitched: 2 }), 'production', ['a']),
     /The other 2 have never been switched on/
   )
-  assert.match(flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'), /All 1 has never/)
+  assert.match(
+    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
+    /The one feature here has never been switched on/
+  )
 })
 
 test('a serving count with no keys still names a noun', () => {
@@ -368,4 +371,18 @@ test('a serving count with no keys still names a noun', () => {
   // caller — not only the one that always supplies keys.
   assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'production'), /serving 1 feature\./)
   assert.match(flagListAnswerLine(counts({ total: 3, serving: 3 }), 'production'), /serving 3 features\./)
+})
+
+test('a singular dormant sentence agrees with ITSELF, pronouns included', () => {
+  // ⚠️ "All 1 has never been switched on … nobody turned THEM off" — singular verb, plural
+  // pronouns — shipped, and a test asserted it as correct. Reachable by every tenant whose first
+  // sync creates one flag, so it is a first-run sentence, not an edge (fresh reviewer, round 4).
+  for (const line of [
+    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
+    flagListAnswerLine(counts({ total: 2, serving: 1, neverSwitched: 1 }), 'production', ['a']),
+  ]) {
+    assert.ok(!/\bhas\b[^.]*\bthem\b/.test(line), `singular verb with plural pronouns: ${line}`)
+    assert.ok(!/\bhave\b[^.]*\bit\b/.test(line), `plural verb with a singular pronoun: ${line}`)
+    assert.ok(!/(All|other) 1 /.test(line), `a bare "1" reads as a stub: ${line}`)
+  }
 })

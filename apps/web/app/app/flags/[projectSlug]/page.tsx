@@ -55,46 +55,67 @@ export default async function FlagsPage({
       projectSlug={projectSlug}
       section="ship"
       railActive="flags"
-      railTop={<EnvironmentPicker basePath={`/app/flags/${projectSlug}`} params={listParams} />}
+      // ⚠️ Gated. The picker only means anything when `FlagConsole` renders — it is the ONLY reader
+      // of `listParams.environment` — so with the console off its three links reloaded the identical
+      // legacy page: a control that does nothing, in the rail (fresh reviewer, round 4, Blocking).
+      railTop={
+        consoleEnabled ? (
+          <EnvironmentPicker basePath={`/app/flags/${projectSlug}`} params={listParams} />
+        ) : undefined
+      }
     >
       <main>
-        {/* ── The page head, from the approved design ────────────────────────────────────────
-            Three corrections, each a Do-not in CONSOLE-CONTRACT.md.
+        {/* ⚠️ **Gated, and the reason is the D6 guarantee two comments below.**
+            This head sat OUTSIDE `consoleEnabled` while the comment below promised the gate-off
+            render is "byte-for-byte pre-epic". With the gate off the page rendered the NEW h1 and
+            subtitle above the LEGACY body, and dropped "← Your projects" — a hybrid that is neither
+            state (fresh reviewer, round 4, Blocking).
 
+            That matters most in the one situation the gate exists for: flipping it off to back out
+            a bad console. A kill switch that leaves half the new page is not a kill switch. Third
+            consecutive round where the load-bearing claim was in a comment rather than the code.
+
+            ── What the head says, and why (each a Do-not in CONSOLE-CONTRACT.md) ──────────────
             The TITLE is "Features". It was "Feature flags — <slug>", which at 48px wrapped to four
             lines on a real tenant slug and spent ~200px before any content. The project is already
-            named in the top bar's switcher; repeating it in the h1 is the same fact twice, and the
-            expensive copy.
+            named in the top bar's switcher.
 
-            The SUBTITLE was: "Definitions, immutable versions and their audit remain visible while
-            flag serving is dark. Activating or deactivating a flag changes one environment snapshot
-            with optimistic revision protection." That is page copy about STORAGE (Do-not #7) — it
-            describes how a row is written, to a reader who came to see what is switched on. The
-            design's sentence answers the reader's question instead. `flags-console-parity` D7 says
-            every user-facing flag word goes through `flag-vocabulary.ts`; this sentence went through
-            nothing, because no story in the epic covered it.
+            The SUBTITLE no longer describes STORAGE (Do-not #7) — "immutable versions… optimistic
+            revision protection" told a reader who came to see what is switched on how a row is
+            written.
 
-            "← Your projects" is gone: the top bar's switcher is the way back to a project list, and
-            a second one here is a link competing with the navigation. */}
-        <div className="page-head">
-          <div>
-            <h1>Features</h1>
-            <p>
-              Everything this project can switch, and what {listParams.environment} is doing with it. What
-              customers are getting right now.
-            </p>
+            "← Your projects" is gone with it: the top bar's switcher is the way back. */}
+        {consoleEnabled ? (
+          <div className="page-head">
+            <div>
+              <h1>Features</h1>
+              <p>
+                Everything this project can switch, and what {listParams.environment} is doing with it. What
+                customers are getting right now.
+              </p>
+            </div>
+            <div className="spacer" />
+            {/* ⚠️ **No page actions yet, and the empty space is the honest state.**
+                The design has two — "Compare environments" and "+ New feature". Neither exists: there
+                is no comparison surface, and the creation control is Story 3.3's, which may only land
+                WITH the deletion of the JSON authoring stack it replaces (A3/A21).
+
+                A first version shipped "Compare environments" pointing at this same page with the
+                filters reset — a button labelled as a feature that does not exist. */}
           </div>
-          <div className="spacer" />
-          {/* ⚠️ **No page actions yet, and the empty space is the honest state.**
-              The design has two here — "Compare environments" and "+ New feature". Neither exists:
-              there is no comparison surface, and the creation control is Story 3.3's, which may only
-              land WITH the deletion of the JSON authoring stack it replaces (A3/A21).
-
-              A first version shipped "Compare environments" pointing at this same page with the
-              filters reset. It behaved as "Clear filters" while being labelled as a feature that
-              does not exist — a button that lies about where it goes is worse than a gap where a
-              button will be (fresh reviewer, PR #124). */}
-        </div>
+        ) : (
+          <>
+            <h1>Feature flags — {projectSlug}</h1>
+            <p>
+              <a href="/app">← Your projects</a>
+            </p>
+            <p>
+              Definitions, immutable versions and their audit remain visible while flag serving is dark.
+              Activating or deactivating a flag changes one environment snapshot with optimistic revision
+              protection.
+            </p>
+          </>
+        )}
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
             epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to
             `true`, so the gate-off render is unchanged — which is the guarantee. (This said the file
