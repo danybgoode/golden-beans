@@ -73,25 +73,49 @@ export async function getActiveConnectorUrl(projectSlug: string): Promise<string
 
 // console-ia-overhaul · Sprint 2, Story 2.1 (epic README, A10) — the signed-in Connect surface.
 
+export type ActiveConnector = { url: string; createdAt: string; tokenId: string }
+
 export type ConnectorStatus =
   | { state: 'absent' }
-  /** `tokenId` is the row id, for the revoke path. NOT the token — that is the credential itself. */
-  | { state: 'active'; url: string; createdAt: string; tokenId: string }
+  /**
+   * ⚠️ `unreadable` is NOT `absent`, and collapsing them is how a duplicate credential gets minted.
+   *
+   * A failed read used to return `absent`, which reads as "this project has no connector" — so the
+   * page offered to mint one, and `mintConnectorToken` (which asks this same question) would have
+   * agreed. A transient database error could therefore produce a SECOND live token while the first
+   * was merely unread. Cross-review (agy) raised this as the compounding half of the race below.
+   */
+  | { state: 'unreadable' }
+  /**
+   * EVERY active token, not just the newest — and that is the fix for the race, not a nicety.
+   *
+   * Nothing at the database level stops two active tokens for one project: there is no unique index
+   * on `(project_id) WHERE revoked_at IS NULL` (checked against production 2026-08-27 — the table
+   * has exactly three indexes, none of them this), and `mintConnectorToken` is a check-then-act.
+   *
+   * The old shape returned only the newest, which turned that race into something far worse than a
+   * duplicate: the older token stayed **valid for API access and invisible on every screen**, so no
+   * owner could ever revoke it. A credential you cannot see is a credential you cannot revoke.
+   *
+   * Returning all of them makes the race survivable rather than preventing it — an owner sees two
+   * URLs and can kill one. Preventing it needs a partial unique index, which is a migration.
+   */
+  | { state: 'active'; tokens: ActiveConnector[] }
 
 /**
  * What `Setup › Connect` can honestly say about this project's connector.
  *
- * ── Two states, and "last used" is deliberately NOT one of them (A10) ─────────────────────────
+ * ── "Last used" is deliberately NOT one of the states (A10) ───────────────────────────────────
  * The story originally asked for "Connected · last used <when>". There is no source of truth for
  * that anywhere in this product: `connector_tokens` has five columns (`id, project_id, token,
- * revoked_at, created_at`), the MCP route resolves a token and writes nothing, and `audit_log` has
- * no connector action among its thirteen. Answering it would need a migration plus a write on a
- * public read path.
+ * revoked_at, created_at`), the MCP route resolves a token and writes nothing, and `audit_log` had
+ * no connector action at all before this sprint. Answering it would need a migration plus a write on
+ * a public read path.
  *
  * Daniel's decision (2026-08-27) was to drop it rather than build it, so this returns what the data
- * supports: a URL exists since a date, or it does not exist. **The page must say, in words, that a
- * URL existing is not the same as Claude having used it** — a status line that blurs those is the
- * `CODE-QUALITY` rule 3 defect of prose asserting a property the system cannot observe.
+ * supports. **The page must say, in words, that a URL existing is not the same as Claude having used
+ * it** — a status line that blurs those is the `CODE-QUALITY` rule 3 defect of prose asserting a
+ * property the system cannot observe.
  *
  * Read-only, like `getActiveConnectorUrl` above and for the same reason: a page render must never
  * mint a credential as a side effect.
@@ -104,26 +128,27 @@ export async function getConnectorStatus(projectId: string): Promise<ConnectorSt
     .eq('project_id', projectId)
     .is('revoked_at', null)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  // A failed read is `absent`, which is the safe direction: the page offers to mint, and minting is
-  // an explicit owner action that would surface its own error. Reporting `active` on a failed read
-  // would show a reader a URL that is not there.
+  // A failed read is `unreadable`, NOT `absent`. The page says it could not check rather than
+  // claiming there is nothing, and `mintConnectorToken` refuses rather than minting a second token
+  // on the strength of a question that was never answered.
   if (error) {
     console.error('[connector-tokens] status lookup failed:', error)
-    return { state: 'absent' }
+    return { state: 'unreadable' }
   }
-  if (!data) return { state: 'absent' }
+  if (!data || data.length === 0) return { state: 'absent' }
   return {
     state: 'active',
-    url: `${getSiteUrl()}/api/v1/public/mcp/c/${data.token}`,
-    createdAt: data.created_at as string,
-    tokenId: data.id as string,
+    tokens: data.map((row) => ({
+      url: `${getSiteUrl()}/api/v1/public/mcp/c/${row.token}`,
+      createdAt: row.created_at as string,
+      tokenId: row.id as string,
+    })),
   }
 }
 
 export type MintedConnectorToken =
-  { ok: true; url: string; tokenId: string } | { ok: false; reason: 'already-active' | 'write-failed' }
+  | { ok: true; url: string; tokenId: string }
+  | { ok: false; reason: 'already-active' | 'unreadable' | 'write-failed' }
 
 /**
  * Mint this project's connector token — the FIRST self-serve connector credential in the product.
@@ -133,12 +158,21 @@ export type MintedConnectorToken =
  * against production is his, by name.**
  *
  * ── Refuses when one is already active, and that is not politeness ────────────────────────────
- * `getActiveConnectorUrl` and `getConnectorStatus` both take the NEWEST unrevoked row, so minting a
- * second would silently orphan the first: still valid, still authorizing reads, and no longer
- * visible on any screen. A credential you cannot see is a credential you cannot revoke. Rotation is
- * therefore revoke-then-mint, two deliberate acts, rather than a mint that quietly leaves a live key
- * behind it.
+ * Rotation is revoke-then-mint, two deliberate acts, rather than a mint that quietly leaves a live
+ * key behind it.
  *
+ * ⚠️ **This check is NOT atomic, and the application cannot make it so.** It is a check-then-act
+ * with no unique index behind it: two concurrent mints both see "none active" and both insert.
+ * Cross-review (agy) raised this as Blocking, correctly.
+ *
+ * What makes it survivable is on the READ side — `getConnectorStatus` returns every active token, so
+ * a duplicate is *visible and revocable* rather than a live credential hidden behind a `LIMIT 1`.
+ * That was the actual danger; two visible URLs is a mess an owner can clean up, one invisible one is
+ * not. A credential you cannot see is a credential you cannot revoke.
+ *
+ * Closing the race properly needs `CREATE UNIQUE INDEX … ON connector_tokens (project_id) WHERE
+ * revoked_at IS NULL`, which is a migration and therefore Daniel's call — raised rather than
+ * assumed, because this epic's platform note says "no new table, no new SQL".
  * The caller re-checks ownership AND `CONNECTOR_ENABLED` before reaching here (AGENTS rule #3: the
  * two kill switches are independent, and minting the second must never route around the first).
  */
@@ -146,6 +180,9 @@ export async function mintConnectorToken(projectId: string): Promise<MintedConne
   const supabase = getSupabaseServiceClient()
   const existing = await getConnectorStatus(projectId)
   if (existing.state === 'active') return { ok: false, reason: 'already-active' }
+  // Refuse on a failed read rather than minting. "I could not check" is not "there is none", and
+  // treating them the same is what let a transient error create a second live credential.
+  if (existing.state === 'unreadable') return { ok: false, reason: 'unreadable' }
 
   const token = generateConnectorToken()
   const { data, error } = await supabase

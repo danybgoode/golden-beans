@@ -71,11 +71,26 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
                   nothing; `audit_log` had no connector action at all before this sprint. So this
                   says whether a URL EXISTS, and says out loud that existing is not the same as
                   being used — rather than showing a "last used" that would be invented. */}
-              {status.state === 'active' ? (
+              {status.state === 'unreadable' && (
+                // Not "there is none" — we could not check. The mint control is withheld below for
+                // the same reason: minting on the strength of an unanswered question is how a
+                // second live credential appears.
+                <p role="alert">
+                  <strong>Could not read this project&apos;s connector state.</strong> Reload in a moment.
+                  Nothing has been changed, and no URL is being offered until we can check.
+                </p>
+              )}
+
+              {status.state === 'active' && (
                 <>
                   <p role="status">
-                    <strong>A connector URL exists for this project</strong>, created{' '}
-                    {formatUtc(status.createdAt)}.
+                    <strong>
+                      {status.tokens.length === 1
+                        ? 'A connector URL exists for this project'
+                        : `${status.tokens.length} connector URLs exist for this project`}
+                    </strong>
+                    , created {formatUtc(status.tokens[0].createdAt)}
+                    {status.tokens.length > 1 ? ' (most recent)' : ''}.
                   </p>
                   <p className="data-table__count">
                     That means the URL is live and will serve — <strong>not</strong> that Claude has ever used
@@ -83,8 +98,19 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
                     used&quot; would be guessing. To check a connection actually works, ask your agent for
                     this project&apos;s funnel.
                   </p>
+                  {status.tokens.length > 1 && (
+                    // Should not happen, and is shown rather than hidden when it does. Two concurrent
+                    // mints can both pass the check-then-act in `mintConnectorToken`; listing every
+                    // active token is what keeps the extra one revocable instead of invisible.
+                    <p role="alert">
+                      <strong>More than one connector URL is active.</strong> Each one below can read this
+                      project until it is revoked. Revoke the ones you are not using.
+                    </p>
+                  )}
                 </>
-              ) : (
+              )}
+
+              {status.state === 'absent' && (
                 <p role="status">
                   <strong>No connector URL yet.</strong>{' '}
                   {canManage
@@ -95,10 +121,11 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
 
               <ConnectorManager
                 slug={projectSlug}
-                tokenId={status.state === 'active' ? status.tokenId : null}
-                url={status.state === 'active' ? status.url : null}
+                tokens={status.state === 'active' ? status.tokens : []}
                 canManage={canManage}
-                connectorEnabled={connectorEnabled}
+                /* Withheld while unreadable: the mint action refuses anyway, but offering a button
+                   that is guaranteed to fail is worse than not offering one. */
+                canMint={status.state === 'absent'}
               />
             </>
           )}

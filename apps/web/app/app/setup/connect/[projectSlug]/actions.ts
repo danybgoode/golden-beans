@@ -1,7 +1,6 @@
 'use server'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isConnectorEnabled } from '@/lib/flags'
-import { isConsoleShellEnabled } from '@/lib/flags'
+import { isConnectorEnabled, isConsoleShellEnabled } from '@/lib/flags'
 import { mintConnectorToken, revokeConnectorToken } from '@/lib/connector-tokens'
 import { recordAudit } from '@/lib/audit'
 
@@ -51,7 +50,12 @@ export async function mintConnectorAction(slug: unknown) {
       error:
         result.reason === 'already-active'
           ? 'This project already has an active connector URL. Reload to see it, or revoke it first to rotate.'
-          : 'Could not create a connector URL. Try again.',
+          : result.reason === 'unreadable'
+            ? // Refusing on a failed READ is deliberate. "I could not check" is not "there is none",
+              // and minting on an unanswered question is exactly how a second live credential
+              // appears — the compounding half of the race cross-review found.
+              'Could not check this project’s existing connector URLs, so nothing was created. Reload and try again.'
+            : 'Could not create a connector URL. Try again.',
     }
   }
 

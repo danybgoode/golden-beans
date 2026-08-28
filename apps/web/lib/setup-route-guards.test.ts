@@ -138,3 +138,65 @@ test('minting requires the connector gate; revoking deliberately does not', () =
     'revoke was gated — an owner must be able to kill a credential even with the feature switched off'
   )
 })
+
+// ── The connector race, and the half of it the application CAN close ──────────────────────────
+//
+// Cross-review (agy, PR #123) raised `mintConnectorToken` as Blocking: it is a check-then-act with
+// no unique index behind it, so two concurrent mints both see "none active" and both insert.
+//
+// The application cannot make that atomic. What it CAN do — and what these assert — is make the
+// outcome survivable: every active token is returned and rendered, so a duplicate is visible and
+// revocable instead of live and hidden behind a `LIMIT 1`. That distinction is the whole finding;
+// two visible URLs is a mess an owner cleans up, one invisible one is a credential nobody can kill.
+
+test('getConnectorStatus returns EVERY active token, never just the newest', () => {
+  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const start = lib.indexOf('export async function getConnectorStatus')
+  const body = lib.slice(start, lib.indexOf('\n}', start))
+  assert.ok(start >= 0, 'getConnectorStatus is not where this guard expects')
+
+  // A `.limit(1)` or `.maybeSingle()` here is the defect: it is what made the older of two live
+  // tokens invisible. Keyed on the query builder rather than on the return shape, because the return
+  // shape can be widened while the query still fetches one row.
+  assert.doesNotMatch(
+    body,
+    /\.limit\(1\)|\.maybeSingle\(\)/,
+    'getConnectorStatus fetches a single row again — a second live token would be invisible'
+  )
+})
+
+test('a failed read is UNREADABLE, and mint refuses on it rather than creating a second token', () => {
+  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const statusStart = lib.indexOf('export async function getConnectorStatus')
+  const status = lib.slice(statusStart, lib.indexOf('\n}', statusStart))
+  const mintStart = lib.indexOf('export async function mintConnectorToken')
+  const mint = lib.slice(mintStart, lib.indexOf('\n}', mintStart))
+
+  // "I could not check" must not read as "there is none": that is what let a transient database
+  // error produce a duplicate live credential while the first was merely unread.
+  assert.match(status, /state: 'unreadable'/, 'a failed status read no longer reports unreadable')
+  // Scoped to the ERROR BLOCK only. The first version sliced from `if (error)` to the end of the
+  // function and matched the legitimate `absent` return for a genuinely empty project — a guard that
+  // fired on correct code. The block is `if (error) { … }`, and what it returns is the whole claim.
+  const errorBlock = status.slice(status.indexOf('if (error)'), status.indexOf('if (!data'))
+  assert.match(errorBlock, /state: 'unreadable'/, 'the error path does not report unreadable')
+  assert.doesNotMatch(
+    errorBlock,
+    /state: 'absent'/,
+    'a failed read reports absent again — mint would then create a second token'
+  )
+  assert.match(mint, /state === 'unreadable'/, 'mint no longer refuses on an unreadable state')
+})
+
+test('revoke is scoped to the project, not just the row id', () => {
+  // pod-report S3's lesson: a mutation that is not discriminator-scoped lets a caller revoke a row
+  // they can name while the audit trail records the wrong thing. A token id from another project
+  // must match nothing here rather than being revoked under this project's label.
+  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const start = lib.indexOf('export async function revokeConnectorToken')
+  const body = lib.slice(start, lib.indexOf('\n}', start))
+  assert.match(body, /\.eq\('project_id', projectId\)/, 'revoke is not scoped to the project')
+  assert.match(body, /\.eq\('id', tokenId\)/, 'revoke does not scope to the row id')
+  // ...and it must not resurrect an already-revoked row's timestamp.
+  assert.match(body, /\.is\('revoked_at', null\)/, 'revoke can rewrite an already-revoked row')
+})
