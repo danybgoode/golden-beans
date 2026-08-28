@@ -343,8 +343,19 @@ test('naming is capped, because the line is prose and not a list', () => {
   assert.equal(namedServingKeys(['a', 'b']), 'a and b')
   assert.equal(namedServingKeys(['a', 'b', 'c']), 'a, b and c')
   // A tenant serving twenty would push the summary off the screen it exists to fit on.
-  assert.equal(namedServingKeys(['a', 'b', 'c', 'd']), 'a, b and c and 1 more')
-  assert.equal(namedServingKeys(['a', 'b', 'c', 'd', 'e']), 'a, b and c and 2 more')
+  // One conjunction per phrase: with a remainder, the remainder is the final item.
+  assert.equal(namedServingKeys(['a', 'b', 'c', 'd']), 'a, b, c and 1 more')
+  assert.equal(namedServingKeys(['a', 'b', 'c', 'd', 'e']), 'a, b, c and 2 more')
+  for (const keys of [
+    ['a', 'b', 'c', 'd'],
+    ['a', 'b', 'c', 'd', 'e', 'f'],
+  ]) {
+    assert.equal(
+      (namedServingKeys(keys).match(/ and /g) ?? []).length,
+      1,
+      `two conjunctions in one phrase: ${namedServingKeys(keys)}`
+    )
+  }
 })
 
 test('with no keys supplied it still counts, so the function is usable without them', () => {

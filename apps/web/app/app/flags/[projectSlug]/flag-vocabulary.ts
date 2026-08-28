@@ -15,7 +15,7 @@
 // derivation lives in `lib/flag-list-view.ts`, which is where it can be unit-tested.
 
 import type { BadgeStatus } from '@/components/ui/Badge'
-import type { FlagActivationState, FlagListRow } from '@/lib/flag-list-view'
+import type { FlagActivationState, FlagListRow, FlagStateFilter } from '@/lib/flag-list-view'
 import { formatUtc } from '@/lib/format-utc'
 
 /**
@@ -138,7 +138,10 @@ export { answerLineClauses, dormantGroupLabel, flagListAnswerLine } from '@/lib/
  */
 export function summaryCardLabels(
   environment: string
-): ReadonlyArray<{ key: 'all' | 'on' | 'off' | 'never'; state: string; label: string }> {
+  // ⚠️ `FlagStateFilter`, not `string`. A widened return type forced `as FlagListParams['state']`
+  // at the call site — and a cast is exactly where the compiler stops checking that a card links
+  // somewhere the filter understands (cross-review, agy, round 2).
+): ReadonlyArray<{ key: 'all' | 'on' | 'off' | 'never'; state: FlagStateFilter; label: string }> {
   return [
     { key: 'all', state: 'all', label: 'All features' },
     { key: 'on', state: 'on', label: `${FLAG_STATE_PRESENTATION.on.label} in ${environment}` },

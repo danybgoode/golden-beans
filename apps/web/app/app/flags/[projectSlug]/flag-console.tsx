@@ -126,7 +126,7 @@ export function FlagConsole({
           <a
             key={card.key}
             className={`stat ${card.key}`}
-            href={linkTo({ state: card.state as FlagListParams['state'] })}
+            href={linkTo({ state: card.state })}
             aria-current={params.state === card.state ? 'true' : undefined}
           >
             <span className="n">

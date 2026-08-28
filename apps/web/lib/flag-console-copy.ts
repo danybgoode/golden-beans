@@ -226,9 +226,13 @@ const NAMED_KEYS_LIMIT = 3
 export function namedServingKeys(keys: readonly string[]): string {
   const shown = keys.slice(0, NAMED_KEYS_LIMIT)
   const rest = keys.length - shown.length
-  const list =
-    shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
-  return rest > 0 ? `${list} and ${rest} more` : list
+  // ⚠️ The conjunction belongs to whatever ENDS the list, and only one thing can end it. Joining
+  // "a, b and c" and then appending "and 1 more" produced "a, b and c and 1 more" — two
+  // conjunctions in one phrase (cross-review, agy, round 2). With a remainder, the remainder is the
+  // final item, so the earlier names are a plain comma list.
+  if (rest > 0) return `${shown.join(', ')} and ${rest} more`
+  if (shown.length === 1) return shown[0]
+  return `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
 }
 
 export function flagListAnswerLine(
