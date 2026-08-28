@@ -31,7 +31,16 @@
 
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
-import { buildFlagListQuery, buildFlagListView, type FlagListParams } from '@/lib/flag-list-view'
+import {
+  DORMANT_PAGE_SIZE,
+  buildFlagListQuery,
+  buildFlagListView,
+  groupDormantFlagRows,
+  projectFlagRows,
+  summariseFlagList,
+  type FlagListParams,
+} from '@/lib/flag-list-view'
+import { dormantGroupLabel, flagListAnswerLine } from '@/lib/flag-console-copy'
 import { Badge } from '@/components/ui/Badge'
 import { Panel } from '@/components/ui/Panel'
 // Story 2.1 — the words live in one module now that a second surface renders them (D7).
@@ -67,6 +76,18 @@ export function FlagConsole({
 }) {
   const basePath = `/app/flags/${slug}`
   const view = buildFlagListView(flags, params)
+
+  // ── Story 3.1 — the answer line, and the dormant collapse ────────────────────────────────
+  // The summary describes the ENVIRONMENT, not the filtered view: it is the page's lede, and a
+  // lede that changed every time you typed in the search box would not be an answer to "what is on
+  // here". So it projects the unfiltered rows.
+  const summary = summariseFlagList(projectFlagRows(flags, params.environment))
+  // Grouping is off the moment the reader narrows the list — collapsing rows somebody just searched
+  // for would hide the answer they asked for. `narrowed` is computed here, from the parsed params,
+  // because only this file knows which controls count as narrowing.
+  const narrowed = params.q !== '' || params.state !== 'all' || params.type !== 'all'
+  const grouping = groupDormantFlagRows(view.pageRows, { narrowed })
+  const dormantShown = grouping.dormant.slice(0, DORMANT_PAGE_SIZE)
   // Every link on the page is built from the PARSED params, never from the raw query string, so an
   // unrecognised parameter cannot survive a round trip through a control on this page.
   const linkTo = (overrides: Partial<FlagListParams>) =>
@@ -185,6 +206,14 @@ export function FlagConsole({
       </p>
 
       <div className="data-table">
+        {/* ── Story 3.1: the answer line ───────────────────────────────────────────────────
+            The first thing on the page, and the one claim the page makes about itself. Its words
+            and its arithmetic both live outside this component (`lib/flag-console-copy.ts` and
+            `lib/flag-list-view.ts`) so the merge gate can read them — this file is only reachable
+            through a signed-in browser. A zero-count clause is DROPPED rather than rendered as a
+            "0", which on production is every reader's sentence: nothing has ever been deliberately
+            switched off, in any environment (A20). */}
+        <p className="lede">{flagListAnswerLine(summary, params.environment)}</p>
         <p className="data-table__count">
           {view.totalRows === 0
             ? 'No features match this view'
@@ -211,7 +240,7 @@ export function FlagConsole({
                   </td>
                 </tr>
               ) : (
-                view.pageRows.map((row) => {
+                (grouping.grouped ? grouping.active : view.pageRows).map((row) => {
                   const presentation = FLAG_STATE_PRESENTATION[row.state]
                   return (
                     <tr key={row.id}>
@@ -237,6 +266,63 @@ export function FlagConsole({
             </tbody>
           </table>
         </div>
+
+        {/* ── Story 3.1: the dormant group, collapsed to one row ───────────────────────────────
+            39 of 42 features on production have never been turned on in any environment, and
+            rendering them inline is what made this page unreadable — forty rows all saying the same
+            thing, with the three that matter somewhere among them.
+
+            A native <details>, so it costs no JavaScript and this file stays a server component.
+
+            ⚠️ It shows the first 15 and then LINKS rather than paginating in place. Paging inside a
+            <details> would navigate, and a navigation re-collapses it — every "next page" click
+            would shut the thing you opened. The link goes to `?state=never`, which is the exact
+            filter (added additively; `state=off` still means "not on", matching its chip), so the
+            full list arrives in the ordinary paginated table where paging already works. */}
+        {grouping.grouped && (
+          <details className="stack-sm">
+            <summary>{dormantGroupLabel(grouping.dormant.length, params.environment)}</summary>
+            <div className="data-table__scroll">
+              <table>
+                <caption>
+                  Never turned on in {params.environment}
+                  {grouping.dormant.length > dormantShown.length &&
+                    ` — showing the first ${dormantShown.length}`}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Feature</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Criticality</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dormantShown.map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <a href={`${basePath}/${encodeURIComponent(row.key)}`}>
+                          <code>{row.key}</code>
+                        </a>
+                        {row.description !== '' && (
+                          <p className="data-table__count">{row.description}</p>
+                        )}
+                      </td>
+                      <td>{TYPE_LABEL[row.polarity]}</td>
+                      <td>{CRITICALITY_LABEL[row.criticality]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {grouping.dormant.length > dormantShown.length && (
+              <p className="data-table__count">
+                <a href={linkTo({ state: 'never' })}>
+                  See all {grouping.dormant.length} never turned on in {params.environment} →
+                </a>
+              </p>
+            )}
+          </details>
+        )}
 
         {/* Rendered only when there is more than one page: a "Page 1 of 1" control is furniture
             that implies there is somewhere else to go. */}

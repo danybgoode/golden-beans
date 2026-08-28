@@ -15,7 +15,7 @@
 // derivation lives in `lib/flag-list-view.ts`, which is where it can be unit-tested.
 
 import type { BadgeStatus } from '@/components/ui/Badge'
-import type { FlagActivationState, FlagListRow, FlagListSummary } from '@/lib/flag-list-view'
+import type { FlagActivationState, FlagListRow } from '@/lib/flag-list-view'
 import { formatUtc } from '@/lib/format-utc'
 
 /**

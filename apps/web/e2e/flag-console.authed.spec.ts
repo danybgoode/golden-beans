@@ -155,3 +155,71 @@ test.describe('the flag console, signed in', () => {
     ).toBeVisible()
   })
 })
+
+// ── console-ia-overhaul · Sprint 3, Story 3.1 — the answer line and the dormant collapse ──────
+//
+// ⚠️ NOT in the blocking gate (`authed` is opt-in). Run with `npm run test:e2e:authed` and
+// `FLAG_CONSOLE_ENABLED=true`; the PR body states the run and its result rather than implying CI
+// covered it. The arithmetic and the words are unit-tested in `lib/`; what only a browser can show
+// is that they reached the page and that the disclosure actually collapses.
+
+test.describe('Story 3.1 — the features list answers in one line', () => {
+  // Same predicate the file already uses above — `isFlagConsoleEnabled()` rather than a raw env
+  // read, so this suite cannot disagree with the gate the page itself consults.
+  test.skip(
+    () => !isFlagConsoleEnabled(),
+    'the console renders behind FLAG_CONSOLE_ENABLED; this pass needs it on'
+  )
+
+  test('the answer line is the first thing on the list, and never announces a zero', async ({
+    page,
+  }) => {
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+
+    // Asserted on a PARSED value, not a rendered substring: `toContainText` normalises whitespace,
+    // which is how `flags-visual-rule-builder`'s most important check ended up asserting nothing.
+    const lede = page.locator('.lede').first()
+    await expect(lede).toBeVisible()
+    const line = ((await lede.innerText()) ?? '').trim()
+
+    // The shape that must hold in EVERY tenant, including this fixture: it is a sentence about an
+    // environment, and no clause in it reports an empty category.
+    expect(line, 'the answer line is empty').not.toBe('')
+    expect(line, 'the answer line does not end as a sentence').toMatch(/\.$/)
+    expect(
+      /\b0 (features?|deliberately|never)/.test(line),
+      `the answer line announced an empty category: ${line}`
+    ).toBe(false)
+  })
+
+  test('never-turned-on features collapse behind ONE disclosure row', async ({ page }) => {
+    await page.goto(`/app/flags/${tenantSlug()}`)
+
+    const disclosure = page.locator('details', { hasText: 'never been turned on' })
+    const count = await disclosure.count()
+    if (count === 0) {
+      // Fewer than two dormant flags in this fixture — the collapse is deliberately not rendered
+      // (it would hide as many rows as the summary it adds). Assert THAT, rather than passing
+      // silently on an absence that could equally mean the feature was never built.
+      const rows = await page.locator('table tbody tr').count()
+      expect(rows, 'no disclosure AND no rows — the list did not render at all').toBeGreaterThan(0)
+      return
+    }
+
+    // Collapsed by default: the dormant rows must not be in the layout until asked for.
+    const inner = disclosure.locator('table')
+    await expect(inner).toBeHidden()
+    await disclosure.locator('summary').click()
+    await expect(inner).toBeVisible()
+  })
+
+  test('searching turns grouping off — the rows you asked for are never collapsed away', async ({
+    page,
+  }) => {
+    // Story 3.1's own rule. A filtered view has no uniform majority to summarise, and hiding a row
+    // the reader just searched for hides the answer they asked for.
+    await page.goto(`/app/flags/${tenantSlug()}?q=gb`)
+    await expect(page.locator('details', { hasText: 'never been turned on' })).toHaveCount(0)
+  })
+})

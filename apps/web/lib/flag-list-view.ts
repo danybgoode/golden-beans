@@ -58,7 +58,13 @@ export type FlagPolarity = 'killswitch' | 'enablement' | 'unclassified'
 export type FlagCriticality = 'high' | 'medium' | 'low' | 'unclassified'
 
 export type FlagListSort = 'key_asc' | 'key_desc' | 'state' | 'type' | 'recent'
-export type FlagStateFilter = 'all' | 'on' | 'off'
+/**
+ * ⚠️ `'off'` means **"not on"** — it includes never-touched flags, and the chip that drives it is
+ * labelled "Not on" for exactly that reason. It is NOT the `off` activation STATE. Story 3.1 added
+ * `'never'` as the exact filter, additively, so the dormant disclosure has somewhere to link; `'off'`
+ * keeps its meaning so no existing bookmark changes what it returns.
+ */
+export type FlagStateFilter = 'all' | 'on' | 'off' | 'never'
 export type FlagTypeFilter = 'all' | 'killswitch' | 'enablement' | 'unclassified'
 
 /** Only the fields this projection reads. Structural, so `flag-registry`'s rows satisfy it as-is. */
@@ -277,6 +283,7 @@ export function filterFlagRowsByQuery(rows: readonly FlagListRow[], query: strin
  */
 export function filterFlagRowsByState(rows: readonly FlagListRow[], state: FlagStateFilter): FlagListRow[] {
   if (state === 'all') return [...rows]
+  if (state === 'never') return rows.filter((row) => row.state === 'never')
   return rows.filter((row) => (state === 'on' ? row.state === 'on' : row.state !== 'on'))
 }
 
@@ -330,7 +337,7 @@ export type FlagListParams = {
 }
 
 const SORTS = new Set<string>(['key_asc', 'key_desc', 'state', 'type', 'recent'])
-const STATE_FILTERS = new Set<string>(['all', 'on', 'off'])
+const STATE_FILTERS = new Set<string>(['all', 'on', 'off', 'never'])
 const TYPE_FILTERS = new Set<string>(['all', 'killswitch', 'enablement', 'unclassified'])
 
 /**
@@ -408,13 +415,16 @@ export function buildFlagListView(
   flags: readonly FlagListFlagInput[],
   params: FlagListParams,
   pageSize: number = FLAG_LIST_PAGE_SIZE
-): FlagPageResult & { stateCounts: { all: number; on: number; off: number } } {
+): FlagPageResult & { stateCounts: { all: number; on: number; off: number; never: number } } {
   const projected = projectFlagRows(flags, params.environment)
   const narrowed = filterFlagRowsByType(filterFlagRowsByQuery(projected, params.q), params.type)
   const stateCounts = {
     all: narrowed.length,
     on: narrowed.filter((row) => row.state === 'on').length,
+    // "Not on" — deliberately the union of `off` and `never`, matching the chip's label and the
+    // `'off'` filter above. `never` is the exact count beside it, not a replacement for it.
     off: narrowed.filter((row) => row.state !== 'on').length,
+    never: narrowed.filter((row) => row.state === 'never').length,
   }
   const ordered = sortFlagRows(filterFlagRowsByState(narrowed, params.state), params.sort)
   return { ...paginateFlagRows(ordered, params.page, pageSize), stateCounts }
@@ -476,11 +486,14 @@ export function groupDormantFlagRows(
   // Collapsing a single dormant row saves nothing and costs a click — the disclosure would hide
   // exactly as many rows as the summary line it adds. Below two, render them inline.
   if (dormant.length < 2) return { grouped: false, active: [...rows], dormant: [] }
-  return {
-    grouped: true,
-    active: rows.filter((row) => row.state !== 'never'),
-    dormant,
-  }
+  const active = rows.filter((row) => row.state !== 'never')
+  // ⚠️ **If EVERY row is dormant, do not group.** The collapse exists to stop dormant rows burying
+  // the active ones; with no active rows there is nothing to bury, and hiding the entire list behind
+  // a disclosure leaves a table with no rows AND no empty state — the page looks broken rather than
+  // tidy. Caught by the authed fixture, whose tenant has only never-touched flags: an existing spec
+  // that clicks a feature link timed out because there was no longer a link to click.
+  if (active.length === 0) return { grouped: false, active: [...rows], dormant: [] }
+  return { grouped: true, active, dormant }
 }
 
 /** Story 3.1: expanded, the dormant group pages at 15 — not at the list's own 25. */
