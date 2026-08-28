@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { IMPACT_FEATURE_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { assertMobileClean } from './helpers/mobile-heuristics'
-import { isFlagConsoleEnabled } from '../lib/flags'
+import { isConsoleShellEnabled, isFlagConsoleEnabled } from '../lib/flags'
 
 // frijoles-rebrand-closeout · Story 1.4 — the signed-in half of the shared mobile rail.
 //
@@ -37,6 +37,16 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
     ? ([
         { label: 'flag credentials', path: (slug: string) => `/app/flag-credentials/${slug}` },
         { label: 'flag audit', path: (slug: string) => `/app/flag-audit/${slug}` },
+      ] as const)
+    : []),
+  // console-ia-overhaul · Sprint 2. Same gated-entry shape as the two above, and added because the
+  // FIRST render of `Setup › Keys` was broken at both widths and no assertion saw it: a seven-column
+  // table between the section rail and the agent rail put "Manage" off the right edge at 1440 and was
+  // unreadable at 390. A screenshot caught it; this is what stops it coming back.
+  ...(isConsoleShellEnabled()
+    ? ([
+        { label: 'setup connect', path: (slug: string) => `/app/setup/connect/${slug}` },
+        { label: 'setup keys', path: (slug: string) => `/app/setup/keys/${slug}` },
       ] as const)
     : []),
 ] as const

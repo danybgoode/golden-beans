@@ -43,6 +43,11 @@ const allGatesOpen: ProjectSurfaceGates = {
   'flag-serving': true,
   'journey-projections': true,
   signals: true,
+  // The console is ON here, so `legacy-keys` is its inverse — the palette indexes `Setup › Keys`
+  // and NOT the three routes it replaces. A7: they are never both listed.
+  'console-shell': true,
+  'legacy-keys': false,
+  'legacy-flag-credentials': false,
 }
 
 const links = getProjectSurfaceLinks({
@@ -81,7 +86,7 @@ test('a member’s palette cannot contain an owner-only surface', () => {
   const memberEntries = buildPaletteEntries(
     getProjectSurfaceLinks({ projectSlug: 'miyagisanchez', role: 'member', gates: allGatesOpen })
   )
-  for (const owned of ['API keys', 'Destinations', 'Share links', 'Agent write keys']) {
+  for (const owned of ['Keys', 'Destinations', 'Share links']) {
     assert.equal(
       memberEntries.some((entry) => entry.label === owned),
       false,
@@ -113,7 +118,7 @@ test('typing a SECTION name lists everything in that section', () => {
   const found = filterPaletteEntries(entries, 'setup')
   assert.deepEqual(
     found.map((entry) => entry.label),
-    ['API keys', 'Flag credentials', 'Destinations', 'Share links', 'Agent write keys']
+    ['Connect your agent', 'Keys', 'Destinations', 'Share links']
   )
 })
 

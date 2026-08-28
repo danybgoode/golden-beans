@@ -134,6 +134,10 @@ jobs:
           RESILIENCE_SCENARIOS_ENABLED: 'false'
           SECURITY_SIMULATIONS_ENABLED: 'false'
           AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false'
+          # console-ia-overhaul. The dark CONTRACT belongs here, on the differently-enved server,
+          # now that A19 ships the console ENABLED — the main server below runs with it ON, so a
+          # dark assertion there would assert the opposite of production.
+          CONSOLE_SHELL_ENABLED: 'false'
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
         run: |
           set -euo pipefail
@@ -172,6 +176,7 @@ jobs:
             apps/web/e2e/experiment-governance-dark.spec.ts \
             apps/web/e2e/flag-serving-dark.spec.ts \
             apps/web/e2e/scenario-dark.spec.ts \
+            apps/web/e2e/setup-routes-dark.spec.ts \
             --project=api; then
             cat /tmp/journey-dark-server.log
             exit 1
@@ -198,6 +203,12 @@ jobs:
         # same as SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY above.
         env:
           CONNECTOR_ENABLED: 'true'
+          # console-ia-overhaul · A19. The console ships ENABLED, so the gate MUST be on here or the
+          # blocking gate asserts the opposite of production: `setup-routes-dark.spec.ts` would
+          # assert 404 on two routes that serve, and the lit halves of `console-shell.authed` and
+          # all of `setup-surfaces.authed` would skip permanently — three suites silently inverting
+          # on the day this merges. The dark contract moved to the OFF server above.
+          CONSOLE_SHELL_ENABLED: 'true'
           # Journey projection HTTP specs exercise the live API seam. The preceding dedicated
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
@@ -262,6 +273,9 @@ jobs:
           # live. Every flag a spec BRANCHES on has to be set in both places or the two halves of the
           # test disagree about what they are testing.
           CONNECTOR_ENABLED: 'true'
+          # Both places, per this block's own rule — `setup-routes-dark.spec.ts` BRANCHES on this to
+          # decide which half to run, so the server and the test process must agree about it.
+          CONSOLE_SHELL_ENABLED: 'true'
           SIGNALS_ENABLED: 'true'
           FLAG_SERVING_ENABLED: 'true'
           RESILIENCE_SCENARIOS_ENABLED: 'true'

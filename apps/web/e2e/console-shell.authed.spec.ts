@@ -131,12 +131,27 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await page.goto('/app')
     await expect(page.locator('.console-rail')).toHaveCount(0)
 
-    await page.goto(`/app/keys/${tenantSlug()}`)
+    // Sprint 2 (A7): `/app/keys` is no longer a NAV entry with the console on — it still works and
+    // still holds the minting form, but `Setup › Keys` is the listed destination. So the rail is
+    // exercised from the surface that is actually in it.
+    await page.goto(`/app/setup/keys/${tenantSlug()}`)
     const rail = page.locator('.console-rail')
     await expect(rail).toHaveCount(1)
     // The rail names what is inside the section, which is the half of the audit's complaint the
     // header does not answer.
-    await expect(rail.getByRole('link', { name: 'API keys' })).toBeVisible()
+    // Located by HREF, not by accessible name. Each rail entry renders its label AND the inventory's
+    // one-line description inside the same <a>, so the accessible name is "Keys everything with
+    // access to this project" — `{ name: 'Keys', exact: true }` matches nothing, and a non-exact
+    // 'Keys' would also match "API keys" and "Agent write keys", which is precisely what this test
+    // needs to tell apart. The href is the unambiguous identity.
+    const slug = tenantSlug()
+    await expect(rail.locator(`a[href="/app/setup/keys/${slug}"]`)).toBeVisible()
+    await expect(rail.locator(`a[href="/app/setup/connect/${slug}"]`)).toBeVisible()
+    // ...and the three routes it replaces are NOT listed beside it. A7's swap, seen in the browser
+    // rather than only in the projection.
+    await expect(rail.locator(`a[href="/app/keys/${slug}"]`)).toHaveCount(0)
+    await expect(rail.locator(`a[href="/app/agent-keys/${slug}"]`)).toHaveCount(0)
+    await expect(rail.locator(`a[href="/app/flag-credentials/${slug}"]`)).toHaveCount(0)
   })
 
   test('⌘K opens, filters, and ↵ navigates — no URL typed anywhere', async ({ page }) => {

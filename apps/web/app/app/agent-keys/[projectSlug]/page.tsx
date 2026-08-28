@@ -11,6 +11,20 @@ import { ProductShell } from '@/components/product/ProductShell'
 // so an ordinary member gets a 404 here even for a project they can otherwise read.
 export const dynamic = 'force-dynamic'
 
+// ── console-ia-overhaul · Sprint 2, Story 2.3: this route STAYS, and keeps its forms ──────────
+// With `CONSOLE_SHELL_ENABLED` on, `/app/setup/keys/[projectSlug]` is the one place that answers
+// "what has access to this project", and this route leaves the nav at that same instant (A7's
+// derived `legacy-keys` gate). It is NOT redirected: minting and revoking still live here, because
+// the four kinds take materially different inputs and merging the forms was explicitly out of
+// scope. A redirect would send an owner away from the only surface that can issue this kind.
+//
+// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states.
+//
+// ⚠️ "Neither is ever the only route to a control" was briefly FALSE for this route, and the fix is
+// on the other side: with the console lit this leaves the nav, Command Center and ⌘K, and the only
+// inbound links were the per-row `Manage` links on the merged page — which exist only once you
+// already hold an agent-write key. Minting the FIRST one meant typing the URL. `Setup › Keys` now
+// links every minting surface unconditionally (fresh reviewer, PR #123).
 export default async function AgentKeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)

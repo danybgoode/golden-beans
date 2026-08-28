@@ -99,18 +99,31 @@ function emptyHeader(activeSection: ShellSection) {
       'flag-serving': false,
       'journey-projections': false,
       signals: false,
+      'console-shell': false,
+      'legacy-keys': false,
+      'legacy-flag-credentials': false,
     },
   })
 }
 
 /** The gate values, read once per call. One resolution point, two consumers (header and rail). */
 function readGates(): ProjectSurfaceGates {
+  const consoleShell = isConsoleShellEnabled()
   return {
     'experiment-governance': isExperimentGovernanceEnabled(),
     'flag-console': isFlagConsoleEnabled(),
     'flag-serving': isFlagServingEnabled(),
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),
+    'console-shell': consoleShell,
+    // A7: the INVERSE, derived here rather than read from a second env var. The legacy credential
+    // routes are nav entries exactly while their merged replacement is not.
+    'legacy-keys': !consoleShell,
+    // ...and the flags console's credential route additionally needs its own console ON, because
+    // the route 404s without it. Listing it on `!consoleShell` alone put a dead link in the nav for
+    // the (flags console off, shell off) combination — a conjunction the single-valued `gate` field
+    // cannot express, so it is derived here where both values are in hand.
+    'legacy-flag-credentials': !consoleShell && isFlagConsoleEnabled(),
   }
 }
 
@@ -246,9 +259,37 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    // `EMPTY` — we do not know whether there is a session, so we cannot claim the signed-in chrome.
-    // The legacy header degrades honestly ("we could not list your sections"), and `/app` renders its
-    // own sign-out because the predicate is false. Sign-out survives a nav outage.
+    // ── `EMPTY`, and the reasoning here was WRONG TWICE. Both corrections are worth keeping. ──
+    //
+    // (1) The original comment said Story 2.2 is "satisfied by construction: with the gate on, the
+    //     legacy branch does not render at all". That is FALSE, and the fresh reviewer was right to
+    //     say so: `header !== null` implies gate-on-and-session, but the converse does not, and this
+    //     catch is the sole exception. `getSessionUser()` and `getUserProjects()` are both inside the
+    //     `try`, so with the console lit an outage drops a signed-in operator onto the legacy branch,
+    //     whose `Connect` goes to `/install` — the demo project's URL.
+    //
+    // (2) So I changed this to return a console header when the gate is open... which reintroduced
+    //     a version of the defect the same reviewer caught one round earlier. `getSessionUser()` is
+    //     the first statement in the `try`; if it REJECTS (a transport failure — it returns null for
+    //     an ordinary auth error, but a rejection is not that), we land here knowing nothing about
+    //     whether a session exists, and the two demo dashboards are anonymously readable and render
+    //     this shell.
+    //
+    //     ⚠️ MEASURED, because the first two versions of this note overstated it: with `EMPTY`'s
+    //     null `activeProject` and null `userEmail`, the switcher (`{activeProject && …}`) and the
+    //     account menu (`shellRendersAccountMenu`) are both already suppressed. What an anonymous
+    //     visitor would actually have got is a logo, a lone "Today" tab and an empty ⌘K palette —
+    //     which is still console chrome on a public page, and still wrong, but it is not a switcher
+    //     and not an account menu. The accurate version is the one 90 lines above.
+    //
+    // Trading a bounded Should-fix for a Blocking is the wrong direction. The catch does not know
+    // who is asking, so it must return the answer that is safe for BOTH: the public chrome. A
+    // signed-in operator seeing `/install` during an outage is a wrong-tenant confusion, bounded
+    // (rule #2 means `/install` only ever serves the demo project) and identical to pre-epic
+    // behaviour — not something this epic introduced.
+    //
+    // The right response to "your claim is false" was to fix the CLAIM, not to make a worse change.
+    // The claim is fixed in `ProductShell`'s comment instead.
     return EMPTY
   }
 }

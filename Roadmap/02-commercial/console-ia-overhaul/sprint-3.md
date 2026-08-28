@@ -227,12 +227,15 @@ the fastest path to anything is its name.
 - Whichever option D7 picks, `/app` route load time does not regress measurably. State the number.
 **Risk:** low
 
-### Story 3.5 — Flip the gate; delete the dead header nav
+### Story 3.5 — ⚠️ REDUCED by A19: the flip already happened; this deletes the dead nav
 **As a** product owner, **I want** the new console live and the old chrome gone, **so that** the
 product has one navigation rather than two behind a switch.
 **Acceptance:**
-- `CONSOLE_SHELL_ENABLED=true` in **preview first**, verified against the Sprint 1–3 walkthroughs,
-  **then production** — each via a commit to `main` (AGENTS rule #4; never `vercel deploy`).
+- ⚠️ **DONE AT SPRINT 2 (A19).** Daniel overruled D4 — *"done means shipped to production always. and
+  not dark, always enabled"* — so `CONSOLE_SHELL_ENABLED=true` was set in all three scopes and made
+  live by the Sprint 2 merge. Sprint 3 therefore builds against a LIVE console, which makes A3's
+  "land the replacement in the same commit as the deletion" load-bearing rather than prudent: there is
+  no dark period in which a missing control would go unnoticed.
 - ⚠️ **CORRECTED by A16 — the gate-off branch is NOT "now-dead" after the flip, and deleting it as
   written would strip the public demo dashboards of all header content.** **`Home` and the
   `<details>` disclosure go. `Connect` and `Agent notes` STAY** — they are the public chrome's only

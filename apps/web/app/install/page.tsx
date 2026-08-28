@@ -23,6 +23,26 @@ export const dynamic = 'force-dynamic'
 // URL), so the visitor pastes the copied URL themselves — same UX mb ships.
 const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector'
 
+// ⚠️ THIS PAGE SERVES THE DEMO PROJECT'S CONNECTOR TOKEN, AND THAT IS CORRECT — do not "fix" it.
+//
+// AGENTS rule #2: a public read path may only ever serve the demo project. `/install` is public
+// marketing, so `DEMO_PROJECT_SLUG` is the only tenant it may resolve. Pointing it at the viewer's
+// own project would mean either serving a credential to an anonymous visitor or making a public
+// page require a session — the first is a tenancy bug, the second is not a marketing page.
+//
+// console-ia-overhaul · Sprint 2, Story 2.2: the real defect was that the SIGNED-IN shell linked
+// here, so an operator followed "Connect" and got a working URL for somebody else's data.
+//
+// ⚠️ It is fixed by the console REPLACING that header, not by rewriting its link. An earlier
+// revision made the legacy `Connect` href conditional — and that shipped a hard 404 for every
+// signed-in operator, because the legacy branch renders precisely when the console gate is OFF and
+// `/app/setup/connect` 404s in that state. It was reverted; `setup-route-guards.test.ts` keeps it
+// reverted. With the console ON the legacy header does not render at all and `Setup › Connect your
+// agent` in the rail is the destination; with it off, every signed-in member still lands here, which
+// is pre-epic behaviour.
+//
+// This file is untouched — provable by `git diff` showing nothing but this comment.
+
 export default async function InstallPage() {
   // A cross-review catch: if this ever runs in real Vercel production without SITE_URL set, show
   // the honest "not ready" state instead of a live-looking but broken localhost URL.

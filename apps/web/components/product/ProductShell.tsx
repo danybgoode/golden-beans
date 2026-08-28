@@ -128,6 +128,39 @@ export async function ProductShell({
                 </details>
               )}
 
+              {/* ⚠️ THIS HREF STAYS `/install`, and reverting it here is Story 2.2's actual fix.
+                  (Fresh reviewer, PR #123, Blocking.)
+
+                  A previous revision pointed this at `/app/setup/connect/<slug>` whenever a project
+                  was resolved. But this is the LEGACY branch — it renders when `header === null`,
+                  which includes **the console gate being off** — and that route's first statement is
+                  `if (!isConsoleShellEnabled()) notFound()`. So with the gate unset (its value in
+                  production right now) every signed-in operator clicking `Connect` got a hard 404,
+                  on a link that worked before this epic. A nav entry pointing at a route that 404s
+                  is the exact defect this epic exists to remove.
+
+                  Story 2.2's criterion is "**with the gate on**, nothing in the signed-in shell links
+                  to `/install`". The console branch has no Connect link at all — `Setup › Connect
+                  your agent` in the rail is the destination — so on every normal path the criterion
+                  holds and this line needed no change.
+
+                  ⚠️ It is NOT satisfied "by construction", and an earlier version of this comment
+                  said it was. There is one path where the gate is on and this branch still renders:
+                  `getShellNav`'s catch, which cannot know whether a session exists (`getSessionUser`
+                  is the first thing inside its `try`) and therefore returns the PUBLIC chrome. So
+                  during a Supabase outage with the console lit, a signed-in operator can reach
+                  `/install` from here and copy the demo project's connector URL.
+
+                  That is a wrong-tenant confusion, not a leak — rule #2 means `/install` only ever
+                  serves the demo project — it is bounded to an outage, and it is exactly what
+                  happened before this epic. It is left alone deliberately: the alternative (console
+                  chrome from the catch) puts console chrome on the public demo dashboards — a logo,
+                  a lone Today tab and an empty palette (measured; the switcher and account menu are
+                  already suppressed by `EMPTY`'s null project and null email). Still wrong for a
+                  public page, and the worse trade of the two. Fixing it properly means
+                  narrowing that `try` so a session read failing is distinguishable from a nav read
+                  failing, which is a change this sprint does not need to make.
+                  (Both halves found by the fresh reviewer, PR #123, rounds 2 and 3.) */}
               <a href="/install">
                 <Icon name="cable" />
                 Connect

@@ -1,6 +1,6 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 2: Setup
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all three stories built; ships ENABLED per A19
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -151,8 +151,12 @@ I do not have to know which subsystem minted a key in order to find it.
 - Minting shows the key value **once**, on its own, with a copy button. It is never a value read back
   off a table.
 - Revoking names what stops working before asking to confirm.
-- The three old routes stay reachable and redirect here while the gate is on; with the gate off they
-  are untouched.
+- ⚠️ **CORRECTED by A17 — the three old routes stay reachable and are NOT redirected.** They keep
+  their minting forms, because minting is not merged this sprint (see the bullet below, which the
+  story itself anticipated) and they are therefore the only surfaces that can issue those
+  credentials. A redirect would send an owner who came to mint a key away from the one page that can
+  mint it. What changes with the gate on: they leave the NAV (A7), `Setup › Keys` becomes the single
+  answer to "what has access", and every row there links to the surface that manages its kind.
 - **This story is the one most likely to grow.** If the three pages' minting forms turn out to have
   materially different shapes, ship the *list* merged and leave minting on the existing routes —
   and say so. A half-merged page that still answers "what has access to this project" is worth more
@@ -168,43 +172,108 @@ I do not have to know which subsystem minted a key in order to find it.
   Named here so it is not glossed at close.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
+## Sprint 2 QA — what was actually run
+
+- **Unit (in the blocking gate): 1,385 tests.** `credential-inventory.test.ts` (15) — the merge, the
+  capability words, the three expiry states, and a guard keyed on the DATABASE's own scope set so a
+  seventh scope shows up as a failure rather than a silent omission.
+  `setup-route-guards.test.ts` (6) — the authorization boundary, at the source.
+  `project-route-inventory.test.ts` (11) — including A7's atomic swap in both directions.
+- **`api` gate: 486 passed, 0 failed** lit; **13 passed** on the gates-OFF `:3100` server.
+  `setup-routes-dark.spec.ts` is new and both its halves now actually run — the dark half on `:3100`,
+  the lit half on the main server.
+  - ⚠️ **A correction to this document.** An earlier revision recorded `scenario-registry.spec.ts:365`
+    as a *pre-existing failure baselined on clean `main`*. **That was wrong, and the mistake is the
+    interesting part**: my local env was missing three flags CI sets (`RESILIENCE_SCENARIOS_ENABLED`,
+    `SECURITY_SIMULATIONS_ENABLED`, `AUTOMATIC_CIRCUIT_BREAKERS_ENABLED`), so the route 404'd instead
+    of 401'ing and I read a gate-off artefact as a product defect. CI was green on that spec the whole
+    time — which is what should have made me suspicious, and did not. **A local failure that CI does
+    not share is a claim about the ENVIRONMENT until proven otherwise**, and "baselined on clean
+    `main`" is a strong claim I had not actually earned.
+  - The other seven failures seen during the same session were seed drift (`supabase db reset` wipes
+    the demo and self projects, and the self project's API key changes, so the already-running server
+    authenticates with a stale one) plus one contended parallel run. Re-running clean: 486/0.
+- **`authed`: 72 passed / 0 failed** lit, **59 / 0** dark. Both new routes are in the mobile sweep.
+- **Mutation checks, all observed red:** revoked rows kept (2 red) · a blank expiry cell (2) · a
+  capability leaking its scope name (2) · a legacy route listed beside its replacement (3) · the
+  merged route deleted (4) · the merged page weakened to `requireProjectMembership` (2) · mint no
+  longer checking `CONNECTOR_ENABLED` (1) · the gate moved below auth (2 dark-route specs).
+- ⚠️ **The member-vs-owner boundary is asserted at the SOURCE, not in a browser.** Three attempts at
+  driving a second session through the login form hung; the source guard proves every owner-only
+  Setup route calls `requireProjectOwnership` before any read, and that the merged page uses the
+  **same** gate as the three it replaces — which is D5's actual claim, and stronger than one 404 on
+  one run. **Still owed: the live member session.** Step 7 below.
+- ⚠️ **One genuinely pre-existing failure, and it is NOT this epic's**: `landing.browser.spec.ts:630`
+  expects more than 3 in-page anchors on the landing page; there are 2. The assertion dates to #100
+  (maker-ops); the readability pass and the public-surface epic each deleted sections after it. It
+  fails identically with `CONSOLE_SHELL_ENABLED=false`, and this epic touches no landing file — so it
+  is left out of Sprint 2's diff rather than folded in, and flagged for its own fix. It is in the
+  opt-in `browser` project, which is exactly how it decayed unnoticed (LEARNINGS: *a suite outside the
+  gate must be run on purpose*).
+- ⚠️ **Two defects the green gate did not see**, both found by opening the page: a seven-column table
+  clipped "Manage" off the right edge at 1440 and was unreadable at 390, and the fix's two-line cell
+  ran together because `<small>` is inline. Both now covered by the mobile sweep.
+
 ## Sprint 2 — Smoke walkthrough (do these in order)
 
-⚠️ **Per A2, the dark steps run on preview and the lit steps run on production after Story 3.5's
-flip.** `CONNECTOR_ENABLED` is Production-only too, so a preview would render no connector panel at
-all — a correct render that reads like a broken one.
+⚠️ **A19 changed where these run.** The console ships **enabled** at this sprint, not dark until
+Story 3.5 — so every step below is on **production**, immediately after the Sprint 2 merge deploys.
+There is no preview half left: previews are SSO-gated with no bypass secret, and `CONNECTOR_ENABLED`
+is Production-only anyway, so a preview would render no connector panel at all.
 
-### On preview — `https://<branch-preview>.vercel.app`, gate unset
+### The dark contract, verified before the flip rather than on a preview
 
-1. Open `https://<preview>/app/setup/keys/miyagisanchez` in a private window.
-   → A plain **404**. Not a login redirect.
-2. Open `https://<preview>/app/setup/connect/miyagisanchez` in a private window.
-   → A plain **404**.
-3. Open `https://<preview>/app/keys/miyagisanchez` signed in as the owner.
-   → It still works, unchanged. Nothing was moved out from under you while the gate is off.
+The two Setup routes returning a flat **404** while `CONSOLE_SHELL_ENABLED` is unset is pinned by
+`e2e/setup-routes-dark.spec.ts` in the blocking `api` gate, run in both gate states. That is a
+stronger check than a manual preview visit and it is the one thing the gate can actually assert
+without a session — so it is not owed to you as a walkthrough step.
 
-### On production — `https://goldenfrijoles.com`, after the flip
+### On production — `https://goldenfrijoles.com`, after the Sprint 2 deploy
 
-4. Sign in, open `https://goldenfrijoles.com/app`, click **Setup**.
+1. Sign in and open `https://goldenfrijoles.com/app`.
+   → The header shows **Today · Measure · Ship · Setup**, the project name, and an **Account** menu.
+   Home, Sections, Connect and Agent notes are gone. This is the flip, live.
+2. Open `https://goldenfrijoles.com/app/keys/miyagisanchez` directly.
+   → It still works and still holds the minting form. It is no longer in the nav (A7), and it is
+   **not** redirected (A17) — the list moved, the controls did not.
+3. Click **Setup**.
    → The rail shows Connect your agent · Keys · Destinations · Share links. `/app/keys`,
-   `/app/flag-credentials` and `/app/agent-keys` are **no longer listed** — they redirect to Keys (A7).
-5. Click **Connect your agent**.
+   `/app/flag-credentials` and `/app/agent-keys` are **no longer listed** (A7).
+   → ⚠️ **They are NOT redirected — corrected by A17.** Open `https://goldenfrijoles.com/app/keys/miyagisanchez`
+   directly: it still works and still holds the minting form, because minting is not merged this
+   sprint and it is the only surface that can issue an API key. The list moved; the controls did not.
+4. Click **Connect your agent**.
    → The page is inside the product — no marketing header, no footer, no sales headline.
    → ⚠️ **Expect the honest "no connector yet" state, not a URL.** `miyagisanchez` has **zero**
    connector tokens (A10). That is the accurate answer, and it is what makes this page worth having.
-6. Click **Mint a connector URL** and confirm. *(**Owed to Daniel by name** — this writes a real
+5. Click **Mint a connector URL** and confirm. *(**Owed to Daniel by name** — this writes a real
    production credential; building the button is mine, pressing it is yours.)*
    → The token is shown **once**, with a copy button. Reload the page: the value is gone and the status
    now reads "Connector URL active since &lt;date&gt;". ⚠️ It does **not** claim Claude has connected —
    nothing in the product records a connector read, and the page says so.
-7. Click **Keys** in the rail.
-   → One list with all four credential kinds and a "what it may do" column. ⚠️ **Share links are NOT
-   on this page** — they are their own Setup surface, and the page says so rather than implying it
-   lists everything with access.
-8. Sign in as a **non-owner member** of the project (or ask one to) and open the same Keys URL.
-   → A **404**, not an empty page. *(auth path — **owed to Daniel by name**; no automated smoke covers
-   a second real session.)*
-9. Copy the connector URL and paste it into
+6. Click **Keys** in the rail.
+   → One list with all four credential kinds. Each row is the credential's **name**, with what it may
+   do in plain words underneath — four columns, not a column per attribute (a seven-column version
+   put "Manage" off the right edge between the two rails; corrected before merge).
+   → Each name links to the page that mints and revokes that kind.
+   → ⚠️ **Share links are NOT on this page** — they are their own Setup surface, and the page says so
+   in a "Not listed here" line rather than implying it lists everything with access.
+   → Revoked keys are absent: this answers what has access **now**.
+7. Sign in as a **non-owner member** of the project (or ask one to) and open the same Keys URL.
+   → A **404**, not an empty page, and not a 403.
+   → Then open `/app/setup/connect/miyagisanchez` as that same member.
+   → It **opens** (200). The asymmetry is the design: reading your connector URL is not credential
+   administration, minting one is. Without this second half, the 404 above could mean "members are
+   locked out of Setup entirely", which is a weaker and different property.
+   *(auth path — **owed to Daniel by name**. This is the one thing the source guard cannot prove:
+   three attempts at driving a second browser session hung, so what is automated is that the route
+   calls `requireProjectOwnership` before any read, not that a live member actually gets the 404.)*
+   → ⚠️ **And while signed in as that member on `/app/setup/connect/miyagisanchez`, open View Source
+   and search for `gb_connector_`.** There must be **no match**. Cross-review found the URL being
+   serialized into the page payload for every member even though the UI did not render it — a
+   credential hidden by a conditional render is not hidden. It is filtered on the server now, and
+   this is the check that proves it, because nothing on screen can.*
+8. Copy the connector URL and paste it into
    `https://claude.ai/customize/connectors?modal=add-custom-connector`.
    → Claude accepts the connector. *(**Owed to Daniel by name** — a real-account, real-session flow no
    automated smoke reaches.)*

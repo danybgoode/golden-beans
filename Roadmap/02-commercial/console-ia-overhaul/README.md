@@ -52,8 +52,9 @@ already exists and is already unit-tested; the funnel and impact pages already w
 rather than rewritten; the per-project connector URL already renders inside `ProductShell` at a route
 the nav filters out; the three credential pages already enforce owner checks that move with them.
 
-> **Sharpened 2026-08-27 by the architecture lock.** "No new query" was too strong in one place and
-> unproven in another, and both are now decided rather than left for a builder to discover:
+> **Sharpened 2026-08-27 by the architecture lock, then AMENDED by A18.** ⚠️ **This epic does ship
+> one migration** — a partial unique index closing a race both cross-family reviewers raised as
+> Blocking (A18). "No new table" still holds. The rest of this note stands:
 > - **One new route handler** — `⌘K`'s feature index (A6) — which writes **no new SQL**: it calls the
 >   existing `getFlagRegistryView()` behind the existing `requireProjectMembership`, and projects to
 >   1.1 KB server-side so a page load pays nothing.
@@ -413,6 +414,91 @@ project's role**, never the active one's. A viewer who owns project A and is onl
 B must not be offered B's owner-only Setup landing on the strength of a role held in A. Gates are
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
+
+#### A19 — ⚠️ **D4 IS OVERRULED. The console ships ENABLED at Sprint 2, not dark until Sprint 3.** *(2026-08-27, Daniel)*
+
+> *"done means shipped to production always. and not dark, always enabled"*
+
+D4 said `CONSOLE_SHELL_ENABLED` stays OFF until Story 3.5, and called itself "the epic's single largest
+risk". Daniel has overruled it as a standing principle, and the principle has evidence behind it:
+`flags-console-parity` **SHIPPED DARK** and its flip, its walkthroughs and its outcome test were all
+still owed weeks later. Shipping dark has repeatedly meant shipping nothing.
+
+**Checked before flipping, because D4's stated risk deserved a real answer rather than a dismissal.**
+D4's reasoning was: *"the new nav names destinations (`Setup › Connect`, `Setup › Keys`, a feature's
+Funnel tab) that do not exist until Sprints 2 and 3."* Two of those three now exist — Sprint 2 built
+them — and **the third was never a nav destination**: a feature's Funnel tab is a tab on the flag
+detail page, not an entry in the inventory. So the premise is spent.
+
+Verified against the live production gates (`CONNECTOR_ENABLED`, `EXPERIMENT_GOVERNANCE_ENABLED`,
+`FLAG_CONSOLE_ENABLED`, `JOURNEY_PROJECTIONS_ENABLED`, `SIGNALS_ENABLED` all `true`;
+`FLAG_SERVING_ENABLED` proved on by `/api/v1/flags/snapshot` returning 401 rather than 404), the lit
+nav for `miyagisanchez` resolves to: **Today** → `/app` · **Measure** → journeys, scenarios ·
+**Ship** → experiments, flags, flag-audit · **Setup** → connect, keys, destinations, shares. Every one
+exists and serves.
+
+**None of Sprint 3's unbuilt stories is a nav destination.** 3.1 improves the flags list, 3.2 adds
+tabs to a page, 3.3 removes a duplicate, 3.4 extends `⌘K`. The console does not name any of them.
+
+**The real consequence, stated rather than discovered:** Sprint 3 now builds against a LIVE console.
+Story 3.3 — which deletes the JSON authoring stack — stops being a dark change and becomes a
+user-visible one on merge. A3 already re-scoped it to land its replacement in the same commit, and
+that requirement is now load-bearing rather than prudent: there is no dark period in which a missing
+control would go unnoticed.
+
+**Story 3.5 is consequently reduced.** Its flip is done here; what remains for it is deleting the dead
+legacy header, the `<details>` disclosure, and `isConsoleShellEnabled()` — under A16's correction
+(`Connect` and `Agent notes` survive as public chrome).
+
+#### A18 — ⚠️ **This epic ships ONE migration after all.** *(2026-08-27, authorized by Daniel)*
+
+The Platform-first note says "no new table, no new SQL". That held until cross-review: **both**
+external families independently raised `mintConnectorToken` as **Blocking** — a check-then-act with
+nothing behind it, so two concurrent mints could both insert.
+
+`20260827120000_connector_token_uniqueness.sql` — a **partial** unique index on `(project_id) WHERE
+revoked_at IS NULL`. Partial is the correctness argument, not a detail: revocation is soft, so a
+rotating project accumulates revoked rows by design, and a plain `UNIQUE (project_id)` would forbid
+ever minting a second token.
+
+**Applied to production BEFORE the merge that deploys the code** (AGENTS rule #4 — merging is the
+deploy). Verified by attempting the forbidden write against production and watching it be rejected,
+and by confirming rotation still works; row counts unchanged afterwards.
+
+**Why the read-side fix was not enough on its own.** Returning every active token made a duplicate
+*visible and revocable* rather than live and hidden behind a `LIMIT 1` — that removed the danger,
+and it is what shipped first. It could not remove the race. Only a constraint can: an application
+check is a promise about interleaving the application is not in a position to make.
+
+The note's claim is corrected rather than quietly dropped: **one migration, additive, no backfill,
+no data change.** "No new table" still holds.
+
+#### A17 — ⚠️ **The three legacy credential routes are NOT redirected. They keep their forms.** *(2026-08-27, deviation from Story 2.3)*
+
+Story 2.3 says: *"The three old routes stay reachable and redirect here while the gate is on."*
+**They stay reachable; they are not redirected**, and the difference is the ordering rule this epic
+exists to respect.
+
+Minting is not merged in this sprint — the story's own escape hatch allows exactly that (*"if the
+three pages' minting forms turn out to have materially different shapes, ship the LIST merged and
+leave minting on the existing routes — and say so"*), and they do differ materially: `flag_read`
+needs an environment, `flag_sync` needs a source string, `agent_write` needs an expiry from an
+allow-list, ingest needs none of those.
+
+So `/app/keys`, `/app/flag-credentials` and `/app/agent-keys` remain **the only surfaces that can
+issue those credentials.** A redirect would send an owner who came to mint a key away from the one
+page that can mint it — a control removed before its replacement exists, which is the exact hazard
+A3, A7 and `flags-console-parity` Amendment 1 all record.
+
+**What actually happens with the gate on:** the three routes leave the NAV (A7's derived
+`legacy-keys` gate), `Setup › Keys` becomes the single place that answers *"what has access to this
+project"*, and every row there links to the surface that manages its kind. The list moved; the
+controls did not. Both surfaces work in both gate states, and neither is ever the only route to a
+control.
+
+**Consequence for Story 3.5:** nothing to unwind. There is no redirect to remove, and the three
+routes do not become dead — a later epic may merge the forms, at which point redirecting is safe
+because there would finally be somewhere to redirect *to*.
 
 #### A16 — ⚠️ **Sprint 1 made `header === null` permanently reachable; Story 3.5's deletion plan is corrected** *(2026-08-27)*
 
