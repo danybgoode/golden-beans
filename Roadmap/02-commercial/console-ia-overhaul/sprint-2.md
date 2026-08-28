@@ -1,6 +1,7 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 2: Setup
 
-**Status:** 🟦 In review — all three stories built; ships ENABLED per A19
+**Status:** ✅ **SHIPPED & LIVE 2026-08-28** — PR #123, squash `e6bb22b`, deployed to production
+with `CONSOLE_SHELL_ENABLED=true` in all three scopes. **Verified live, anonymously** (below).
 
 > ## Build contract (locked by the architect before the builder started — 2026-08-27)
 >
@@ -213,6 +214,29 @@ I do not have to know which subsystem minted a key in order to find it.
 - ⚠️ **Two defects the green gate did not see**, both found by opening the page: a seven-column table
   clipped "Manage" off the right edge at 1440 and was unreadable at 390, and the fix's two-line cell
   ran together because `<small>` is inline. Both now covered by the mobile sweep.
+
+## What was verified LIVE on production, without a session
+
+The gate flip is provable without logging in, which makes it a check that cannot pass for the wrong
+reason — no stale session, no cached page, no slug that never existed.
+
+| Check | Before the deploy | After |
+|---|---|---|
+| `/app/setup/keys/miyagisanchez` | **404** | **307** |
+| `/app/setup/connect/miyagisanchez` | **404** | **307** |
+| `/app/keys/…`, `/app/agent-keys/…`, `/app/flag-credentials/…` | 307 | **307** — still exist, unredirected (A17) |
+
+404 → 307 is the whole assertion: dark, the route does not exist; lit, it exists and asks you to sign
+in. It is the same property `e2e/setup-routes-dark.spec.ts` pins in CI, now observed on the real host.
+
+**The anonymous public demo dashboard was checked too**, because A16 says this is where a careless
+Story 3.5 does damage — and because reverting an earlier "fix" of mine turned on exactly this:
+`/app/funnel/golden-beans-demo/setup_guide` still returns 200, still reaches `/install` and
+`/llms.txt` through `Connect` and `Agent notes`, renders **no** console chrome (no Measure tab, no
+Account menu, no console header), and contains **no** `gb_connector_` string.
+
+The production index `connector_tokens_one_active_per_project_idx` was confirmed present **before**
+the merge that deployed the code depending on it (A18, AGENTS rule #4).
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
 
