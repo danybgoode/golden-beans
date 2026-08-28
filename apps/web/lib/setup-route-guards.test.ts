@@ -200,3 +200,41 @@ test('revoke is scoped to the project, not just the row id', () => {
   // ...and it must not resurrect an already-revoked row's timestamp.
   assert.match(body, /\.is\('revoked_at', null\)/, 'revoke can rewrite an already-revoked row')
 })
+
+test('the mint path translates the unique-index violation instead of surfacing a raw error', () => {
+  // The partial unique index (20260827120000) is what actually prevents two active tokens. When it
+  // fires, the loser of the race must get "this project already has an active connector URL" — a
+  // sentence naming a state that is now TRUE — rather than a Postgres constraint name.
+  //
+  // Asserted at the source because reproducing a lost race in a test is not practical: it needs two
+  // inserts interleaved inside the window between the pre-check and the write.
+  const lib = readFileSync(fileURLToPath(new URL('./connector-tokens.ts', import.meta.url)), 'utf8')
+  const start = lib.indexOf('export async function mintConnectorToken')
+  const body = lib.slice(start, lib.indexOf('\n}', start))
+  assert.match(body, /'23505'/, 'the mint path does not recognise the unique-violation code')
+  assert.match(
+    body.slice(body.indexOf("'23505'")),
+    /reason: 'already-active'/,
+    'a lost race reports a raw write failure instead of the state that is now true'
+  )
+})
+
+test('the migration adds a PARTIAL index, so rotation still works', () => {
+  // A plain `UNIQUE (project_id)` would forbid ever minting a second token and break rotation
+  // entirely — revocation here is soft, so a rotating project accumulates revoked rows by design.
+  // The predicate is the whole correctness argument, and it is worth pinning against a future
+  // "simplification" that drops it.
+  const migration = readFileSync(
+    fileURLToPath(
+      new URL('../supabase/migrations/20260827120000_connector_token_uniqueness.sql', import.meta.url)
+    ),
+    'utf8'
+  )
+  assert.match(migration, /CREATE UNIQUE INDEX/i)
+  assert.match(
+    migration,
+    /WHERE\s+revoked_at\s+IS\s+NULL/i,
+    'the index is not partial — this would forbid rotation, not just duplicates'
+  )
+  assert.match(migration, /connector_tokens \(project_id\)/i)
+})

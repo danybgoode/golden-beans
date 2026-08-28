@@ -170,9 +170,15 @@ export type MintedConnectorToken =
  * That was the actual danger; two visible URLs is a mess an owner can clean up, one invisible one is
  * not. A credential you cannot see is a credential you cannot revoke.
  *
- * Closing the race properly needs `CREATE UNIQUE INDEX … ON connector_tokens (project_id) WHERE
- * revoked_at IS NULL`, which is a migration and therefore Daniel's call — raised rather than
- * assumed, because this epic's platform note says "no new table, no new SQL".
+ * ✅ **CLOSED at the database, 2026-08-27.** Daniel authorized the migration;
+ * `20260827120000_connector_token_uniqueness.sql` adds a PARTIAL unique index on `(project_id)
+ * WHERE revoked_at IS NULL`, applied to production BEFORE the merge that deploys this code. Verified
+ * by attempting the forbidden write against production and watching it be rejected — and by
+ * confirming rotation (revoke, then mint) is still permitted, which a plain `UNIQUE (project_id)`
+ * would have broken.
+ *
+ * So the race is now impossible rather than merely survivable. The `already-active` pre-check stays
+ * because it produces a readable sentence; the index is what makes the guarantee true.
  * The caller re-checks ownership AND `CONNECTOR_ENABLED` before reaching here (AGENTS rule #3: the
  * two kill switches are independent, and minting the second must never route around the first).
  */
@@ -191,6 +197,15 @@ export async function mintConnectorToken(projectId: string): Promise<MintedConne
     .select('id')
     .single()
   if (error || !data) {
+    // 23505 is the partial unique index doing its job: another request won the race between our
+    // pre-check and this insert. That is the ONE outcome here that is not a failure — the project
+    // has exactly one active token, which is what the caller wanted, so it reports `already-active`
+    // and the page tells the reader to reload rather than showing a raw constraint error.
+    //
+    // The pre-check above is not redundant with the index. The index guarantees correctness under
+    // concurrency; the check turns the common case into a sentence an operator can act on. They
+    // answer different questions, which is why both are here.
+    if (error?.code === '23505') return { ok: false, reason: 'already-active' }
     console.error('[connector-tokens] mint failed:', error)
     return { ok: false, reason: 'write-failed' }
   }
