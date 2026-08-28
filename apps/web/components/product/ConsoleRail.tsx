@@ -29,15 +29,19 @@ export function ConsoleRail({ links }: { links: readonly ProjectSurfaceLink[] })
         {links.map((link) => (
           <li key={link.routeSegment}>
             {/*
-              `data-surface-status` is the same attribute the legacy disclosure uses, so the "gated"
-              affordance is painted by one existing rule rather than a second copy of it. A surface
-              only appears here when its gate is OPEN, so the label reads "this can be switched
-              off", never "this is broken".
+              ⚠️ ONE LINE, 36px. No description, no `GATED` badge — CONSOLE-CONTRACT.md Do-not #2.
+
+              Story 1.4 asked for the rail to render surfaces "with their existing inventory
+              descriptions", and `data-surface-status` painted a GATED chip beside each. That
+              instruction is what produced the three-line cards on screen, and it was wrong: what a
+              surface IS belongs on the surface, not in the navigation. A rail is for getting
+              somewhere, and a description you must read to navigate is a description in the wrong
+              place.
+
+              The badge went with it. A surface only ever appears here when its gate is OPEN, so
+              `GATED` was labelling the one state it could never be in.
             */}
-            <a href={link.href} data-surface-status={link.status}>
-              {link.label}
-              <small>{link.description}</small>
-            </a>
+            <a href={link.href}>{link.label}</a>
           </li>
         ))}
       </ul>

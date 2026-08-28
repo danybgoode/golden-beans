@@ -51,7 +51,11 @@ export async function ProductShell({
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
   return (
-    <div className="product-shell">
+    // `is-console` is set by the SAME field that decides whether console chrome renders at all,
+    // so the approved design's stylesheet cannot reach the public demo dashboards or the legacy
+    // branch. One condition, one answer — the alternative is two flags kept in lockstep by hand,
+    // which is the bug this shell already paid for once (see the `header`/`consoleEnabled` note).
+    <div className={`product-shell${header === null ? '' : ' is-console'}`}>
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
