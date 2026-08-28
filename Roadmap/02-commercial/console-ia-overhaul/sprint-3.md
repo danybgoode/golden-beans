@@ -1,18 +1,39 @@
 # Four destinations — an information architecture for the signed-in console — Sprint 3: Ship
 
-**Status:** ✅ shipped — Part A `4ba9665` (#124); Part B `270faa0` · `88dccd0` · `54fa594` ·
-`68a593f` · `05e857c` · `f825f46`
+**Status:** ✅ **SHIPPED & LIVE** — Part A `4ba9665` (#124); Part B `8f556ce` (**#125**),
+deployed to production 2026-08-28 and verified there (below).
+
+⚠️ Part B's per-story commits (`270faa0`, `88dccd0`, `54fa594`, `68a593f`, `05e857c`, `f825f46`,
+`2e6f08f`) were **squashed** and are not on `main`. `8f556ce` is the one that is; the PR carries the
+individual messages. Recorded because "a squash-merged branch's commits are not on `main`" is a trap
+this repo has paid for before, and a doc citing a SHA nobody can `git show` is worse than one citing
+the PR.
 
 | Story | | Where |
 |---|---|---|
 | **Part A** — the design made binding and measurable | ✅ | `4ba9665` (#124): `design/CONSOLE-CONTRACT.md`, `app/console.css`, `e2e/console-visual.authed.spec.ts`, Ship › Features rebuilt, the environment picker moved to the rail, the AgentRail removed from console routes (A22a) |
 | **3.1** The answer line and the dormant collapse | ✅ | `4ba9665`, corrected by A20 (three rows, not two; a zero-count clause is dropped) |
-| **3.3** Delete the JSON authoring stack and the rule builder | ✅ | `270faa0` — and the replacement in the same commit |
-| **3.2** Funnel and Impact as tabs on a feature | ✅ | `88dccd0` |
-| **3.4** `⌘K` indexes feature keys | ✅ | `54fa594` |
-| **3.5** Delete the dead nav | ✅ | `68a593f` (reduced by A19, corrected by A16) |
-| *(beyond the stories)* A22 for every signed-in route | ✅ | `05e857c` (A25) |
-| *(beyond the stories)* the visual gate joins CI | ✅ | `f825f46` — Story 3.3's promised closing step |
+| **3.3** Delete the JSON authoring stack and the rule builder | ✅ | #125 — and the replacement in the same commit |
+| **3.2** Funnel and Impact as tabs on a feature | ✅ | #125 |
+| **3.4** `⌘K` indexes feature keys | ✅ | #125 |
+| **3.5** Delete the dead nav | ✅ | #125 (reduced by A19, corrected by A16) |
+| *(beyond the stories)* A22 for every signed-in route | ✅ | #125 (A25) |
+| *(beyond the stories)* the visual gate joins CI | ✅ | #125 — Story 3.3's promised closing step |
+
+### Verified on production, 2026-08-28, after `8f556ce` deployed
+
+Anonymous — no session, so nothing here can pass for the wrong reason:
+
+| Check | Result |
+|---|---|
+| `/app/flags/miyagisanchez` and the four new tab URLs | **307 → /login** (they exist and ask you to sign in) |
+| `/api/internal/feature-index/miyagisanchez` | **307 → /login** — the route exists and `requireProjectMembership` holds |
+| `/app/funnel/golden-beans-demo/setup_guide` in a private window | **200**, funnel numbers render |
+| …its chrome | `Connect` → `/install` and `Agent notes` → `/llms.txt` both present |
+| …**Story 3.5's deletion** | `product-shell__nav-home` **0** · `product-shell__sections` **0** |
+| …no console chrome for a stranger | tabs **0** · account menu **0** · `command-palette` **0** · `is-console` **0** |
+| …no credential leak | `gb_connector_` **0** |
+| `/llms.txt` · `/install` | **200** · **200** |
 
 > **Story 3.3 ran FIRST, and that was the point.** It is the only story that turns the visual gate's
 > assertion [1] green: measured at **2889px in a 960px viewport** on `4ba9665` and `<= 960` after.
