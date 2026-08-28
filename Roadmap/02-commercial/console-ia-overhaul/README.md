@@ -1,5 +1,5 @@
 ---
-status: in-progress  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped  # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: console-ia-overhaul
 build_order: 25      # integer position in the ONE global build sequence — the SSOT once the epic
                      # exists (the seed's value is only a fallback). Fill it in at the betting
@@ -422,6 +422,96 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A26 — ⚠️ **A3 and A21 are BOTH still wrong about one thing: the per-feature route CAN create a new key.** *(2026-08-28, verified by reading `flag-authoring.tsx`)*
+
+A3 says `[flagKey]/page.tsx` *"cannot create a flag key that does not yet exist"* because it renders
+`<FlagAuthoring flagKey={flag.key} />` with the key fixed from the route. A21 corrected the COUNT of
+creation paths from one to two and left that sentence standing. It is false.
+
+`FlagAuthoring` passes `initialFlagKey`, and **`RuleBuilder`'s key field stays editable** — the
+component's own comment says so, and explains that it follows the key on save precisely because *"a
+sync-created flag sometimes needs its key corrected"*. So an owner on any feature's page can retype
+the key and create a different feature. That path survives Story 3.3 untouched, and it rides
+`FLAG_RULE_BUILDER_ENABLED`.
+
+**Nothing about the plan changes, and that is worth saying rather than leaving implied.** Story 3.3's
+"New feature" control is still required, for two reasons that outlive this correction:
+
+1. It is gated independently. With `FLAG_RULE_BUILDER_ENABLED` off — its born state, and a state a
+   kill switch exists to reach — the per-feature builder does not render, and the console would have
+   no creation path at all.
+2. *"Open an unrelated feature and retype its key"* is not a creation control. Nobody looking to add
+   a feature finds it, which is the same defect as a nav entry telling you to edit the URL.
+
+Recorded because a reader who trusts A3's sentence draws a wrong conclusion in the dangerous
+direction — *"the per-feature page cannot create, so nothing else can"* — and this epic has now
+corrected the same claim twice. The habit that works is reading the file the citation names.
+
+#### A25 — **A22 applies to every signed-in route, so the sweep is at the CLASS.** *(2026-08-28)*
+
+A22's scope line — *"the console visual language applies to **every signed-in route**, not only the
+flags surfaces"* — was implemented for the shell and Ship › Features in Part A and for nothing else.
+The other twelve routes were still rendering the landing's label style. Two sweeps, both keyed on the
+shared component classes rather than on the pages:
+
+- **Do-not #3.** `FILTER THE AUDIT`, `2 ROWS`, `WHAT THIS PROJECT IS NOT MEASURING YET (2)` and every
+  `<th>` in every `DataTable` were tracked uppercase MONO — a column-label style used as a body
+  style. Split the contract's own way: what labels a COLUMN keeps uppercase at the measured 11px
+  Archivo 600; everything else becomes sentence-case sans. One `.is-console` block, twelve routes.
+- **Do-not #1.** Every route rendered `<h1>Keys — miyagisanchez</h1>` above a "← Your projects" link.
+  Both are gone: the top bar's switcher names the project on every console route, and the rail is the
+  way back. The flags page's LEGACY branch keeps both, because that markup IS the gate-off render and
+  D6 promises flipping the flag returns the pre-epic page.
+
+**⚠️ What the sweep does NOT reach, stated rather than implied.** Command Center's own layout is
+still pre-contract — mono-italic caveats, a wide vertical gap between the stat row and the funnel
+figures. It is a page redesign, no story in this epic covers it, and half-doing it here would leave a
+route that is neither. Owed, and named in `sprint-3.md`.
+
+#### A24 — **Targeting is split out of Value, and the environment summary sits ABOVE the tabs.** *(2026-08-28, deviation from the design's tab list)*
+
+The approved design gives a feature seven tabs: Value · Targeting · Environments · Funnel · Impact ·
+History · Settings. This ships **six**, and the two differences are decisions rather than omissions.
+
+- **`Targeting` exists, and it is not optional.** Story 3.2 added Funnel and Impact to a page whose
+  Value tab already carried the rule builder AND "preview as a user". Measured at 1440 × 960 the page
+  was **3346px tall** — the contract's no-scroll promise broken on the second-most-visited surface in
+  the console. Both moved to Targeting, where they answer the question the tab is named for.
+- **`Environments` does NOT exist as a tab.** Its content — one row per environment, with the state
+  and who did it — renders above the tab strip instead. *"Is this on, and where"* is the question
+  somebody opening a feature arrives with, and a tab they have to find first is not an answer to it.
+
+⚠️ **The tab strip is a `<nav>` with `aria-current`, not a `role="tablist"`.** A first version used
+`role="tab"`; these are links whose activation is a full navigation, and there is no JS on the page
+to give a tablist its arrow keys, so the role would have been an ARIA claim the page cannot keep. It
+is now the same markup `ProductShell`'s section tabs use — one pattern, learned once.
+
+#### A23 — **The "New feature" wizard has no environment step, and creates a definition that defaults to `on`.** *(2026-08-28, deviations from the prototype's wizard)*
+
+Two deviations, both forced by the difference between the prototype's model and this control plane's.
+
+**1. Step 3 is a review, not "Where should it exist?".** The design's third step activates the new
+feature in the chosen environments. That is a SECOND write — `activateFlagAction`, once per
+environment, each carrying an optimistic snapshot revision and each gated on `FLAG_SERVING_ENABLED` —
+and a create-then-activate sequence has a partial-failure state this control would then have to
+explain. Story 3.3's locked contract is *"posting through the SAME
+`createFlagDefinitionVersionAction` — one write path, one validator"*. So the feature arrives
+switched on nowhere, the review says so in words, and turning it on is one click from the row switch
+this story also lands.
+
+**2. `defaultVariantKey` is `on` for BOTH kinds.** The obvious reading of the design — *a kill switch
+is on by default, a release toggle is off by default* — maps `enablement` onto
+`defaultVariantKey: 'off'`. In Golden that creates a feature you cannot turn on: **activation and
+what the served version EVALUATES to are two different things**, and a definition defaulting to `off`
+serves `false` while the console reports the feature as on. That is the "activated ≠ on" trap the
+latest version of 34 of 42 live flags is already in, and `describeActivationSurprise` raises a
+confirm on every activation of such a version — so the wizard would have manufactured features whose
+own switch warns about them, forever.
+
+What the KIND decides instead is `metadata.polarity`, which drives how loudly the console warns
+before a flip and how the list sorts and filters. That is exactly what the design's own copy claims
+for it: *"the difference decides how loudly this screen warns you before flipping it."*
+
 #### A22 — ⚠️ **The approved design is BINDING, the AgentRail leaves the console, and the flags page is rebuilt against the prototype.** *(2026-08-28, Daniel)*
 
 > *"The signed-in console must look like that file. Every page under /app. … The current UI/UX is
@@ -783,17 +873,29 @@ immediately: **a conflicted PR stops CI from creating any run at all**, which pr
 | 3 | 3.4 `⌘K` indexes feature keys (resolves D7) | low |
 | 3 | 3.5 Flip the gate; delete the dead header nav | high |
 
-## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated — the **02 · Commercial** section
-- [ ] **Landing backfill check:** this epic changes no public offer (`/install` is untouched, D-note
-      above), so no landing section moves. State that explicitly at close rather than skipping it.
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch:** `CONSOLE_SHELL_ENABLED` exists in **every env**, created **DISABLED**
-      (enablement polarity), and Story 3.5's flip is verified live. *Verify-only — decided at
-      grooming, not a new gate here.*
-- [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — run `node scripts/build-order.mjs`)
+## Definition of Done (epic) — ✅ COMPLETE
+- [x] All sprints merged to `main` + smoke-tested (gaps stated — see each sprint's QA section)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] This README marked ✅; every sprint status ticked with commit refs
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated — the **02 · Commercial** section
+- [x] **Landing backfill check — stated rather than skipped:** this epic changes **no public offer**.
+      `/install` and `/llms.txt` are untouched and still linked from the public chrome (A16 is
+      precisely the amendment that kept them); the console is entirely behind a session. **No landing
+      section moves.**
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
+- [x] **Kill-switch:** `CONSOLE_SHELL_ENABLED` exists in all three Vercel scopes, was created
+      DISABLED (enablement polarity), and is **`true` in production** — flipped at Sprint 2 under
+      A19 and proved by both Setup routes going **404 → 307** across that deploy. *Verify-only.*
+      ⚠️ Sprint 3 found its sibling: **`FLAG_CONSOLE_ENABLED` was set nowhere in CI**, so the
+      blocking gate had been asserting a dark console against a lit production. Fixed in `f825f46`.
+- [x] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — run `node scripts/build-order.mjs`)
+
+### What is OWED, by name
+
+1. **The signed-in production walkthrough** (`sprint-3.md`), whose two writing steps — turning a
+   live flag off and creating a real definition version — are Daniel's by construction.
+2. **Mint a connector URL** (`Setup › Connect`, Sprint 2). A real production credential mint is never
+   covered by a merge authorization.
+3. **Command Center's own layout**, which no story in this epic covers (A25).
