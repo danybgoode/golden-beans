@@ -31,6 +31,12 @@ export type ProjectSurfaceGate =
   // `ProjectSurfaceGates` record, where the compiler demands it.
   | 'console-shell'
   | 'legacy-keys'
+  // The flags console's credential route needs BOTH: its own console must be on (the route 404s
+  // otherwise) AND the merged Setup › Keys must be off (or it would be listed beside its
+  // replacement). A single-valued `gate` field cannot express a conjunction, so the CALLER derives
+  // it — see `readGates()`. Keying it on `legacy-keys` alone shipped a dead link for one live
+  // combination; see the comment on the surface itself.
+  | 'legacy-flag-credentials'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D2) — the four destinations.
@@ -212,11 +218,18 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     // and simply see no key tables. A standalone credentials route 404s for them — the
     // `/app/keys/[projectSlug]` precedent. The boundary moves only tighter, never looser.
     audience: 'owner',
-    // A7: was `flag-console`. Both must hold — the flags console must be on for this route to exist
-    // at all, and the merged Setup page must be OFF for it to still be the place you go. Expressed
-    // as one gate value rather than two because `ProjectSurfaceGate` is a single-valued field; the
-    // route itself still checks `isFlagConsoleEnabled()` and 404s without it.
-    gate: 'legacy-keys',
+    // ⚠️ A7, CORRECTED. This was `flag-console`, then briefly `legacy-keys` — and `legacy-keys`
+    // alone was WRONG in a way that shipped the exact defect this epic exists to remove.
+    //
+    // `legacy-keys` is `!consoleShell`, so with the flags console OFF and the shell OFF this route
+    // was LISTED while `page.tsx` 404s it (`if (!isFlagConsoleEnabled()) notFound()`) — a nav entry
+    // leading nowhere. The other three combinations were fine, which is why it was not obvious.
+    //
+    // The condition is a CONJUNCTION: the flags console must be on for the route to exist, and the
+    // merged Setup › Keys must be off for it to still be where you go. `ProjectSurfaceGate` is a
+    // single-valued field, so the conjunction is derived once in `readGates()` rather than smuggled
+    // in here.
+    gate: 'legacy-flag-credentials',
     status: 'gated',
     topLevelProjectRoute: true,
     section: 'setup',

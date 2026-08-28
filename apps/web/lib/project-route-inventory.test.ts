@@ -21,6 +21,7 @@ const allGatesOpen: ProjectSurfaceGates = {
   // true would be asserting against a state `readGates()` cannot produce.
   'console-shell': true,
   'legacy-keys': false,
+  'legacy-flag-credentials': false,
 }
 
 test('the inventory classifies every direct project route exactly once', () => {
@@ -223,6 +224,9 @@ const legacyCredentialRoutes = ['keys', 'flag-credentials', 'agent-keys']
 const mergedCredentialRoute = 'setup/keys'
 
 test('Setup › Keys and the three routes it replaces are NEVER listed together, or both absent', () => {
+  // Derived exactly as `readGates()` and `/app` derive them, rather than set by hand. A test that
+  // toggles the three values independently can express a combination production cannot produce —
+  // and would then assert against a state that never occurs.
   const segmentsFor = (consoleShell: boolean) =>
     getProjectSurfaceLinks({
       projectSlug: 'project-one',
@@ -231,6 +235,7 @@ test('Setup › Keys and the three routes it replaces are NEVER listed together,
         ...allGatesOpen,
         'console-shell': consoleShell,
         'legacy-keys': !consoleShell,
+        'legacy-flag-credentials': !consoleShell && allGatesOpen['flag-console'],
       },
     }).map((link) => link.routeSegment)
 
@@ -259,6 +264,7 @@ test('every credential surface is reachable in BOTH gate states — never zero',
           ...allGatesOpen,
           'console-shell': consoleShell,
           'legacy-keys': !consoleShell,
+          'legacy-flag-credentials': !consoleShell && allGatesOpen['flag-console'],
         },
       }),
       'setup'
@@ -274,5 +280,38 @@ test('every credential surface is reachable in BOTH gate states — never zero',
         : legacyCredentialRoutes.includes(link.routeSegment)
     )
     assert.ok(answersAccess, `no credential surface in Setup with console-shell=${consoleShell}`)
+  }
+})
+
+test('flag-credentials is never listed while its own route would 404', () => {
+  // ⚠️ The defect this pins SHIPPED for one commit, and it is the one this epic exists to remove:
+  // a nav entry leading nowhere.
+  //
+  // `flag-credentials` was briefly gated on `legacy-keys` alone (`!consoleShell`). Its route checks
+  // `isFlagConsoleEnabled()` and 404s without it — so with the flags console OFF and the shell OFF
+  // it was LISTED and dead. The other three combinations were fine, which is exactly why it was not
+  // obvious. The condition is a conjunction, derived once by the caller.
+  for (const flagConsole of [true, false]) {
+    for (const consoleShell of [true, false]) {
+      const listed = getProjectSurfaceLinks({
+        projectSlug: 'project-one',
+        role: 'owner',
+        gates: {
+          ...allGatesOpen,
+          'flag-console': flagConsole,
+          'console-shell': consoleShell,
+          'legacy-keys': !consoleShell,
+          'legacy-flag-credentials': !consoleShell && flagConsole,
+        },
+      }).some((link) => link.routeSegment === 'flag-credentials')
+
+      // The route is reachable only when its own console is on; it is the RIGHT destination only
+      // while the merged page is off. Listed must imply both.
+      const reachable = flagConsole
+      assert.ok(
+        !listed || reachable,
+        `flag-credentials listed but 404s (flag-console=${flagConsole}, console-shell=${consoleShell})`
+      )
+    }
   }
 })

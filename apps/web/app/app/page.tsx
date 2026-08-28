@@ -69,6 +69,9 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
     // `Setup › Keys` is not. Command Center reads the same inventory as the shell, so both surfaces
     // stop offering the old routes at the same instant.
     'legacy-keys': !consoleShell,
+    // The conjunction — see lib/shell-nav.ts. Both callers must derive it the same way, which is
+    // what the assertion in project-route-inventory.test.ts pins.
+    'legacy-flag-credentials': !consoleShell && isFlagConsoleEnabled(),
   }
 
   return (

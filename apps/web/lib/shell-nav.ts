@@ -101,6 +101,7 @@ function emptyHeader(activeSection: ShellSection) {
       signals: false,
       'console-shell': false,
       'legacy-keys': false,
+      'legacy-flag-credentials': false,
     },
   })
 }
@@ -115,9 +116,14 @@ function readGates(): ProjectSurfaceGates {
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),
     'console-shell': consoleShell,
-    // A7: the INVERSE, derived here rather than read from a second env var. The three legacy
-    // credential routes are nav entries exactly while their merged replacement is not.
+    // A7: the INVERSE, derived here rather than read from a second env var. The legacy credential
+    // routes are nav entries exactly while their merged replacement is not.
     'legacy-keys': !consoleShell,
+    // ...and the flags console's credential route additionally needs its own console ON, because
+    // the route 404s without it. Listing it on `!consoleShell` alone put a dead link in the nav for
+    // the (flags console off, shell off) combination — a conjunction the single-valued `gate` field
+    // cannot express, so it is derived here where both values are in hand.
+    'legacy-flag-credentials': !consoleShell && isFlagConsoleEnabled(),
   }
 }
 

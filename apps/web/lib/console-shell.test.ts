@@ -58,6 +58,7 @@ const allGatesOpen: ProjectSurfaceGates = {
   // merged Setup route and the three it replaces are never in the nav at the same time.
   'console-shell': true,
   'legacy-keys': false,
+  'legacy-flag-credentials': false,
 }
 
 // What a Vercel PREVIEW actually serves (epic README, A2): four gates are Production-scoped, so a
@@ -73,6 +74,7 @@ const previewGates: ProjectSurfaceGates = {
   // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
   'console-shell': false,
   'legacy-keys': true,
+  'legacy-flag-credentials': true,
 }
 
 const owner = [{ slug: 'miyagisanchez', role: 'owner' }]
@@ -207,6 +209,7 @@ test('Today always renders, even when every gate is closed and the viewer owns n
     signals: false,
     'console-shell': false,
     'legacy-keys': true,
+    'legacy-flag-credentials': false,
   }
   const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
@@ -467,6 +470,7 @@ test('with no projects the gates cannot affect the header — EVERY combination 
     signals: false,
     'console-shell': false,
     'legacy-keys': false,
+    'legacy-flag-credentials': false,
   })
   // ANCHORED absolutely, not just relatively. Every comparison below is `header(x)` against
   // `header(allFalse)` — both sides from the same function — so deleting the unconditional Today
