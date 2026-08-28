@@ -310,8 +310,25 @@ test('the legacy header links Connect to /install, never to a console-gated rout
     'utf8'
   )
   const legacyStart = shell.indexOf('header === null ? (')
-  const legacyEnd = shell.indexOf('      ) : (', legacyStart)
+  // ⚠️ Anchored on NEWLINE + eight spaces, not on a bare six-space `) : (`. The first version used
+  // `indexOf('      ) : (')`, which is a substring match — and the nested project-signal ternary
+  // closes with sixteen spaces then `) : (`, which CONTAINS that needle at column 11. So the slice
+  // stopped ten lines early and silently covered two-thirds of the branch, while both assertions
+  // still passed because the `/install` href happens to sit inside the covered part.
+  //
+  // Undetected mutation it allowed: put a gated href in the uncovered tail (the "Engine ready"
+  // span) and this guard slices it away and stays green — the one thing it exists to prevent.
+  // (Fresh reviewer, PR #123.)
+  const legacyEnd = shell.indexOf('\n        ) : (', legacyStart)
   assert.ok(legacyStart >= 0 && legacyEnd > legacyStart, 'the legacy branch is not where this expects')
+  // The slice must reach the END of the branch, not stop at a nested ternary. `Agent notes` is the
+  // last link in it, so its presence proves coverage rather than assuming it — a coverage guard
+  // that cannot report its own truncation is how the first version passed while seeing two-thirds.
+  assert.match(
+    shell.slice(legacyStart, legacyEnd),
+    /Agent notes/,
+    'the legacy-branch slice is truncated — it no longer covers the whole branch'
+  )
   const legacy = shell.slice(legacyStart, legacyEnd)
 
   // ⚠️ Keyed on the CODE, not on the prose. The first version scanned the whole branch for

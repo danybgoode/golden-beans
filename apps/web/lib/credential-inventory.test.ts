@@ -235,17 +235,31 @@ test('the exclusion list covers every scope the database allows but this page om
   const defining = readdirSync(migrationsDir)
     .filter((name) => name.endsWith('.sql'))
     .sort()
-    .filter((name) => /scope IN \(/.test(readFileSync(`${migrationsDir}${name}`, 'utf8')))
+    // ⚠️ `\s+` and `/i`, not a literal `scope IN (`. Detection keyed on exact casing and exactly one
+    // space would not recognise `scope IN(`, `scope in (`, or a line break — and the failure mode is
+    // a SILENT STALE PASS: the new migration is not seen as defining, `newest` stays the old file,
+    // the widest set is unchanged, the `>= 5` floor still passes, and the new scope is never
+    // checked. That is the "a guard keyed on syntax is an allow-list of shapes" trap this file's own
+    // header warns about, one level down (fresh reviewer, PR #123).
+    .filter((name) => /scope\s+IN\s*\(/i.test(readFileSync(`${migrationsDir}${name}`, 'utf8')))
   assert.ok(defining.length > 0, 'no migration defines the api_keys scope set')
 
   const newest = readFileSync(`${migrationsDir}${defining[defining.length - 1]}`, 'utf8')
   // The widest `scope IN (...)` in that file is the column's own CHECK; the narrower ones are arms
   // of the composite share_lens constraint.
-  const sets = [...newest.matchAll(/scope IN \(([^)]*)\)/g)].map((match) =>
+  const sets = [...newest.matchAll(/scope\s+IN\s*\(([^)]*)\)/gi)].map((match) =>
     match[1].split(',').map((raw) => raw.trim().replace(/'/g, ''))
   )
   const scopesInDatabase = sets.reduce((widest, next) => (next.length > widest.length ? next : widest), [])
   assert.ok(scopesInDatabase.length >= 5, `parsed only ${scopesInDatabase.length} scopes — the parse broke`)
+  // The file we picked must be the one that actually (re)defines the column's constraint. The
+  // constraint NAME is what identifies it and is stable across formatting, unlike the IN-list, so
+  // this catches "we parsed a file that merely mentions scopes" — the other way a stale pass hides.
+  assert.match(
+    newest,
+    /api_keys_scope_check/,
+    'the newest file matching `scope IN (…)` does not define api_keys_scope_check — wrong file'
+  )
 
   const listed = ['ingest', 'flag_read', 'flag_sync', 'agent_write']
   const excluded = CREDENTIAL_KINDS_NOT_LISTED.map((entry) => entry.kind)

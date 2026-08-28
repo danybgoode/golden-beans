@@ -259,9 +259,26 @@ export async function getShellNav(
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)
-    // `EMPTY` — we do not know whether there is a session, so we cannot claim the signed-in chrome.
-    // The legacy header degrades honestly ("we could not list your sections"), and `/app` renders its
-    // own sign-out because the predicate is false. Sign-out survives a nav outage.
-    return EMPTY
+    // ⚠️ With the gate OPEN this now returns a console header, not `EMPTY` — and the reason is a
+    // claim that was false (fresh reviewer, PR #123, S7).
+    //
+    // `ProductShell`'s comment said Story 2.2 is "satisfied by construction: with the gate on, the
+    // legacy branch does not render at all". `header !== null ⟹ gate-on-and-session` is true, but
+    // the CONVERSE is not — and this catch was the sole exception. `getSessionUser()` and
+    // `getUserProjects()` are both inside the `try`, so an auth blip or a `project_members` outage
+    // with the console lit sent a signed-in operator to the LEGACY branch, whose `Connect` link goes
+    // to `/install` — the demo project's connector URL. Exactly the "working URL for somebody else's
+    // data" Story 2.2 exists to prevent, reachable only during an outage.
+    //
+    // Returning the same honest header the zero-project and foreign-slug paths use makes the claim
+    // true rather than lucky: with the gate on, the console chrome renders and its `Connect` is the
+    // Setup rail's own entry, never `/install`.
+    //
+    // `userEmail` stays null — `getSessionUser()` may be the very thing that threw, so we do not
+    // know it — which means `shellRendersAccountMenu` is false and `/app` renders its own sign-out
+    // line. That is exactly the same guarantee as before this change, not a new one: sign-out
+    // appears once on `/app` and the degraded chrome elsewhere carries none. Said plainly rather
+    // than claimed as an improvement it is not.
+    return { ...EMPTY, header: gateOpen ? emptyHeader(activeSection) : null }
   }
 }

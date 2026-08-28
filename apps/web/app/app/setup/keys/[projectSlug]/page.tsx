@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isConsoleShellEnabled } from '@/lib/flags'
+import { isConsoleShellEnabled, isFlagConsoleEnabled } from '@/lib/flags'
 import { listProjectKeys } from '@/lib/api-keys'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
@@ -39,17 +39,28 @@ import { ProductShell } from '@/components/product/ProductShell'
 export const dynamic = 'force-dynamic'
 
 /**
- * Where each kind is minted and revoked, until the forms are merged.
+ * Where each kind is minted and revoked, or `null` when that surface is currently unreachable.
  *
- * `CredentialKind`, not `string` (cross-review, vibe). `CredentialKind` is a CLOSED union precisely
- * so a fifth kind is a compile error at every consumer — typing this parameter as `string` opted
- * this function out of that, and its `return` would have silently sent the new kind to
- * `/app/flag-credentials`. A closed union only pays for itself where it is actually spelled.
+ * ── Why this returns null, and why that is not over-engineering ───────────────────────────────
+ * `/app/flag-credentials` is `if (!isFlagConsoleEnabled()) notFound()`. Until the S1 fix, the flag
+ * rows were suppressed whenever that gate was closed, so their link was never rendered in the state
+ * where it 404s. Removing the suppression was correct — those credentials SERVE on different gates
+ * (`FLAG_SERVING_ENABLED`, `FLAG_DEFINITION_SYNC_ENABLED`) and belong on a page listing what has
+ * access — but it traded an omission for a dead link (fresh reviewer, PR #123, Blocking).
+ *
+ * The ROW must stay: the credential is live, and a page answering "what has access" that hides live
+ * access is the defect S1 fixed. So the LINK is what goes. `project-route-inventory.test.ts` calls
+ * this exact shape "the exact defect this epic exists to remove" and carries a regression test for
+ * it in the nav; this is the same rule one level down, where nothing was checking.
+ *
+ * `CredentialKind`, not `string` (cross-review, vibe): the union is closed so a fifth kind is a
+ * compile error at every consumer, and `string` opted this function out of that.
  */
-function manageHref(kind: CredentialKind, slug: string): string {
+function manageHref(kind: CredentialKind, slug: string, flagConsoleOpen: boolean): string | null {
   if (kind === 'ingest') return `/app/keys/${slug}`
   if (kind === 'agent_write') return `/app/agent-keys/${slug}`
-  return `/app/flag-credentials/${slug}`
+  // flag_read and flag_sync are both managed on the flags console's credentials route.
+  return flagConsoleOpen ? `/app/flag-credentials/${slug}` : null
 }
 
 export default async function SetupKeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
@@ -76,6 +87,8 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   ])
 
   const rows = buildCredentialInventory({ apiKeys, flagReadKeys, flagSyncKeys, agentWriteKeys })
+  // Read once for the whole table: whether the surface that manages flag credentials is reachable.
+  const flagConsoleOpen = isFlagConsoleEnabled()
 
   return (
     <ProductShell projectSlug={projectSlug} section="setup">
@@ -124,14 +137,28 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
                     {rows.map((row) => (
                       <tr key={`${row.kind}:${row.id}`}>
                         <td className="credential-cell">
-                          <a href={manageHref(row.kind, projectSlug)}>
-                            {row.label === '' ? 'untitled' : row.label}
-                          </a>
+                          {/* A link only where it leads somewhere. When the managing surface is
+                              gated off, the name is plain text and the note below says why — the
+                              credential is still listed, because it is still live. */}
+                          {(() => {
+                            const href = manageHref(row.kind, projectSlug, flagConsoleOpen)
+                            const name = row.label === '' ? 'untitled' : row.label
+                            return href === null ? <span>{name}</span> : <a href={href}>{name}</a>
+                          })()}
                           {/* The kind and what it may do, together, because they answer one
                               question. The link above goes to the surface that mints and revokes
                               this kind — which is why "Manage" no longer needs a column of its own. */}
                           <small>
                             {credentialTitle(row.kind)} — {row.capability}
+                            {manageHref(row.kind, projectSlug, flagConsoleOpen) === null && (
+                              <>
+                                {' '}
+                                <strong>
+                                  Managed on the flags console, which is switched off for this deployment —
+                                  this credential is still live.
+                                </strong>
+                              </>
+                            )}
                           </small>
                         </td>
                         {/* An em dash, not a blank: this kind has no scope, which is a fact rather

@@ -35,9 +35,14 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
   // not even look for a token — there is nothing to offer, and a disabled-looking control would
   // imply the surface exists and is merely unavailable to you.
   const connectorEnabled = isConnectorEnabled()
-  const status = connectorEnabled
-    ? await getConnectorStatus(membership.projectId)
-    : { state: 'absent' as const }
+  // ⚠️ Read the status EVEN WHEN the connector is switched off, so an existing token stays visible
+  // and revocable. `actions.ts` says in words that revoke is deliberately ungated — "if
+  // CONNECTOR_ENABLED were flipped off mid-incident, an owner must still be able to permanently kill
+  // the credential rather than wait for the flag to come back". The action honoured that; the only
+  // UI reaching it did not, because this line skipped the read entirely. A comment claiming a
+  // capability the product does not offer is CODE-QUALITY rule 3, and it was one flag-flip from
+  // mattering (fresh reviewer, PR #123).
+  const status = await getConnectorStatus(membership.projectId)
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
 
   return (
@@ -56,14 +61,18 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
         <Panel className="stack">
           <h2>Your connector URL</h2>
 
-          {!connectorEnabled ? (
+          {!connectorEnabled && (
             // Honest, and specific about WHICH switch is off. "Unavailable" would leave a reader
-            // unable to tell a disabled feature from a broken one.
+            // unable to tell a disabled feature from a broken one. It no longer REPLACES the panel:
+            // an existing token stays listed and revocable, because killing a credential must not
+            // depend on the feature it belongs to being switched on.
             <p role="status">
               The MCP connector is switched off for this deployment (<code>CONNECTOR_ENABLED</code>). Nothing
-              can be connected until it is enabled in a new deployment.
+              can connect through a URL until it is enabled in a new deployment
+              {status.state === 'active' ? ', but an existing URL can still be revoked below.' : '.'}
             </p>
-          ) : (
+          )}
+          {
             <>
               {/* ── The status line, and what it deliberately does NOT claim (A10) ───────────────
                   Two states, because two is what the data supports. `connector_tokens` has five
@@ -125,10 +134,12 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
                 canManage={canManage}
                 /* Withheld while unreadable: the mint action refuses anyway, but offering a button
                    that is guaranteed to fail is worse than not offering one. */
-                canMint={status.state === 'absent'}
+                /* Also withheld while the connector is off: the mint action refuses either way, and
+                   a button guaranteed to fail is worse than no button. Revoke is NOT withheld. */
+                canMint={status.state === 'absent' && connectorEnabled}
               />
             </>
-          )}
+          }
         </Panel>
 
         {/* The SDK snippet is deliberately NOT here — two audiences, two places. This page is for

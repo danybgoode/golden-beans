@@ -45,7 +45,15 @@ export function ConnectorManager({
   function onMint() {
     setError(null)
     startTransition(async () => {
-      const result = await mintConnectorAction(slug)
+      let result: Awaited<ReturnType<typeof mintConnectorAction>>
+      try {
+        result = await mintConnectorAction(slug)
+      } catch {
+        // Same reasoning as revoke below: a rejected action left the button spinning back to idle
+        // with no message, which reads as "nothing happened" when the truth is "we do not know".
+        setError('Could not reach the server. Check your connection and retry.')
+        return
+      }
       if (!result.ok) {
         setError(result.error)
         return
@@ -65,7 +73,19 @@ export function ConnectorManager({
     // page (which unmounts everything), failure closes it and renders the error. The close is a
     // consequence of the OUTCOME now, not of the click.
     startTransition(async () => {
-      const result = await revokeConnectorAction(slug, tokenId)
+      // The `try` matters, and its absence was a nit worth taking. With the synchronous close gone
+      // (so `pending` can render), the only paths that closed the dialog were "the action returned
+      // `ok: false`" and "the page reloaded". A REJECTED action — the POST failing mid-flight, wifi
+      // dropping — ran neither: `pending` fell back to false and the dialog sat open showing an
+      // armed Revoke button with no explanation.
+      let result: { ok: boolean }
+      try {
+        result = await revokeConnectorAction(slug, tokenId)
+      } catch {
+        setConfirming(null)
+        setError('Could not reach the server to revoke that URL. Check your connection and retry.')
+        return
+      }
       if (!result.ok) {
         setConfirming(null)
         setError('Could not revoke that connector URL. Reload and try again.')
@@ -149,7 +169,12 @@ export function ConnectorManager({
           </div>
         ))}
 
-      {hasAny && (
+      {/* `canManage &&` is the S9 fix. `hasAny` is true for a MEMBER whose project has a token — and
+          this block's copy says "paste the URL above into it", with nothing above, because S2
+          deliberately withholds the URL from members. The page was telling them to do something it
+          had just made impossible (fresh reviewer, PR #123). A member with no URL has nothing to add
+          to Claude. */}
+      {canManage && hasAny && (
         <>
           <p className="row-wrap">
             <a className="btn btn-gold" href={ADD_TO_CLAUDE_URL} target="_blank" rel="noopener noreferrer">
