@@ -415,6 +415,43 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A21 — ⚠️ **A3 is WRONG on a fact: there are TWO surfaces that can create a new feature, not one.** *(2026-08-28, verified in code)*
+
+A3 says the `<form onSubmit={onCreate}>` in `flag-manager.tsx` is *"**the only surface in the product**
+that can create a new feature."* It is not. **`RuleBuilder` can too**, and it is the surface Story 3.3
+also deletes:
+
+- `rule-builder.tsx:349` renders a **free-text "Flag key" `<input>`** (`value={flagKey}`,
+  `onChange={setFlagKey}`) — not a key fixed from the route.
+- `flag-manager.tsx:380` posts it through the **same** `createFlagDefinitionVersionAction(slug,
+  builtKey, …)`.
+
+So the product has **two** free-key creation paths, both on the features list, both behind
+`flag-manager.tsx`, and Story 3.3 deletes **both**.
+
+**A3's CONCLUSION is unchanged and now better supported.** "Land the replacement in the same commit as
+the deletion" was right; it was under-argued. The deletion removes two creation paths, not one.
+
+**But the wrong fact is dangerous in a specific way, which is why this is recorded rather than quietly
+fixed.** A reader who believes "only the textarea can create" could reasonably conclude that deleting
+*only* the `RuleBuilder` is safe, or that after deleting the textarea the `RuleBuilder` still covers
+creation. Both conclusions are false, and both leave the product unable to create a feature — the
+exact outcome A3 exists to prevent, reached *by trusting A3*.
+
+**They ride DIFFERENT gates, and this constrains the deletion.** The textarea is inside the
+`FLAG_CONSOLE_ENABLED` branch; `RuleBuilder` additionally rides **`FLAG_RULE_BUILDER_ENABLED`**
+(`page.tsx:114`). Story 3.3's promise that *"the gate-off branch is untouched, byte-for-byte"* is
+therefore a promise about **two** gates, and the `git diff` proof must be run in both off-states, not
+one. Note `flag-manager.tsx`'s own comment already warns that gating the wrong block once hid the
+authoring form entirely — *"there would have been NO way to create a new flag at all"*.
+
+⚠️ **One thing I could NOT measure: `FLAG_RULE_BUILDER_ENABLED`'s live production value.** It is
+stored **Sensitive** in Vercel, so the value cannot be read back. `flags-visual-rule-builder` (#15)
+records it as ON in production and verified on the real flags page, and that is the best evidence
+available — but it is a *record*, not a measurement, and it is the difference between production
+having two creation paths today or one. **Confirm it during the Story 3.3 walkthrough** rather than
+assuming; the replacement control is required either way, so nothing is blocked on the answer.
+
 #### A20 — ⚠️ **Story 3.1's "two rows" is wrong, and one of its three states has ZERO live instances.** *(2026-08-28, measured against production)*
 
 Story 3.1 says *"Production therefore renders **two rows** and one summary line"*. Measured on live
