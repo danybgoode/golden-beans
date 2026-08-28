@@ -134,40 +134,42 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => (
-                      <tr key={`${row.kind}:${row.id}`}>
-                        <td className="credential-cell">
-                          {/* A link only where it leads somewhere. When the managing surface is
+                    {rows.map((row) => {
+                      // Derived once per row: the IIFE version called `manageHref` twice, and the
+                      // second call is the kind of thing that later drifts from the first.
+                      const href = manageHref(row.kind, projectSlug, flagConsoleOpen)
+                      const name = row.label === '' ? 'untitled' : row.label
+                      return (
+                        <tr key={`${row.kind}:${row.id}`}>
+                          <td className="credential-cell">
+                            {/* A link only where it leads somewhere. When the managing surface is
                               gated off, the name is plain text and the note below says why — the
                               credential is still listed, because it is still live. */}
-                          {(() => {
-                            const href = manageHref(row.kind, projectSlug, flagConsoleOpen)
-                            const name = row.label === '' ? 'untitled' : row.label
-                            return href === null ? <span>{name}</span> : <a href={href}>{name}</a>
-                          })()}
-                          {/* The kind and what it may do, together, because they answer one
+                            {href === null ? <span>{name}</span> : <a href={href}>{name}</a>}
+                            {/* The kind and what it may do, together, because they answer one
                               question. The link above goes to the surface that mints and revokes
                               this kind — which is why "Manage" no longer needs a column of its own. */}
-                          <small>
-                            {credentialTitle(row.kind)} — {row.capability}
-                            {manageHref(row.kind, projectSlug, flagConsoleOpen) === null && (
-                              <>
-                                {' '}
-                                <strong>
-                                  Managed on the flags console, which is switched off for this deployment —
-                                  this credential is still live.
-                                </strong>
-                              </>
-                            )}
-                          </small>
-                        </td>
-                        {/* An em dash, not a blank: this kind has no scope, which is a fact rather
+                            <small>
+                              {credentialTitle(row.kind)} — {row.capability}
+                              {href === null && (
+                                <>
+                                  {' '}
+                                  <strong>
+                                    Managed on the flags console, which is switched off for this deployment —
+                                    this credential is still live.
+                                  </strong>
+                                </>
+                              )}
+                            </small>
+                          </td>
+                          {/* An em dash, not a blank: this kind has no scope, which is a fact rather
                             than missing data — the same reasoning as the expiry column. */}
-                        <td>{row.scope ?? '—'}</td>
-                        <td>{formatUtc(row.createdAt)}</td>
-                        <td>{formatExpiry(row.expiresAt)}</td>
-                      </tr>
-                    ))}
+                          <td>{row.scope ?? '—'}</td>
+                          <td>{formatUtc(row.createdAt)}</td>
+                          <td>{formatExpiry(row.expiresAt)}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
