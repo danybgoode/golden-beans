@@ -54,11 +54,30 @@ export function CommandPalette({
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  // ── The cache is KEYED BY SLUG, and that is a correctness property, not tidiness ─────────────
   // `null` = not fetched yet. `[]` = fetched and this project has no features. The distinction is
   // the whole point of a nullable here: one of those states should say "loading" and the other
   // should say nothing at all, and a bare empty array cannot tell them apart.
-  const [features, setFeatures] = useState<FeatureIndexEntry[] | null>(null)
-  const [indexFailed, setIndexFailed] = useState(false)
+  //
+  // ⚠️ **It carries the slug it was fetched FOR.** Cross-review (agy) raised a bare
+  // `FeatureIndexEntry[] | null` as Blocking: switch project without remounting and the palette
+  // would list the OLD project's keys under the NEW project's URLs — `/app/flags/<new>/<old-key>`,
+  // a link to a feature that does not exist there.
+  //
+  // It is not reachable today, and the reachability is not the point. Every navigation in this
+  // console is a full document load: the header, the rail, the switcher and the palette's own `go()`
+  // are all plain `<a>`/`window.location`, never `next/link`, so the component remounts and the
+  // cache starts empty. What makes the finding worth acting on is that the hazard is one
+  // `next/link` away, and it fails by showing a reader the WRONG TENANT'S KEYS — the one class of
+  // bug this codebase treats as unrepresentable rather than prevented (AGENTS rule #1's own
+  // reasoning). Keying the cache means a stale entry cannot be READ for the wrong project, which is
+  // stronger than remembering to clear it.
+  const [index, setIndex] = useState<{ slug: string; features: FeatureIndexEntry[] } | null>(null)
+  const [indexFailed, setIndexFailed] = useState<string | null>(null)
+
+  // Only the index fetched for THIS project counts. A cache from another slug reads as "not fetched
+  // yet", which is exactly what it is from this page's point of view.
+  const features = index !== null && index.slug === projectSlug ? index.features : null
 
   const entries = useMemo(
     () => [
@@ -76,7 +95,7 @@ export function CommandPalette({
   // stops a second fetch when the palette is reopened; `indexFailed` stops it retrying forever on a
   // tenant whose index genuinely cannot be read.
   useEffect(() => {
-    if (!open || projectSlug === null || features !== null || indexFailed) return
+    if (!open || projectSlug === null || features !== null || indexFailed === projectSlug) return
     let cancelled = false
     void (async () => {
       try {
@@ -90,12 +109,20 @@ export function CommandPalette({
         const contentType = response.headers.get('content-type') ?? ''
         if (!response.ok || !contentType.includes('application/json')) throw new Error('not an index')
         const body = (await response.json()) as { features?: FeatureIndexEntry[] }
-        if (!cancelled) setFeatures(Array.isArray(body.features) ? body.features : [])
+        if (cancelled) return
+        setIndex({ slug: projectSlug, features: Array.isArray(body.features) ? body.features : [] })
+        // ⚠️ **The cursor goes back to the top when the list changes under it.** The rows arrive
+        // asynchronously and go in FRONT of the surfaces, so a reader who pressed ↓ twice while the
+        // fetch was in flight would have the highlight land on a different row than the one they
+        // were looking at — and ↵ would open something they did not choose. Typing already resets
+        // it; this is the other way the list can change without a keystroke (cross-review, agy).
+        setCursor(0)
       } catch {
         // Degrade to surfaces only, and SAY SO below rather than quietly listing fewer things — a
         // reader who types a feature name and sees nothing would otherwise conclude the feature does
-        // not exist.
-        if (!cancelled) setIndexFailed(true)
+        // not exist. Keyed by slug for the same reason the cache is: a failure for one project must
+        // not stop the palette ever trying for another.
+        if (!cancelled) setIndexFailed(projectSlug)
       }
     })()
     return () => {
@@ -245,7 +272,7 @@ export function CommandPalette({
         {/* ⚠️ Stated, never silent. If the feature index could not be read, this palette is missing
             most of what it normally holds — and a reader who types a feature key, sees nothing and
             concludes the feature was deleted is worse off than one who is told the list is short. */}
-        {indexFailed && (
+        {indexFailed === projectSlug && (
           <p className="command-palette__empty" role="status">
             Features could not be listed just now, so this only shows places to go.
           </p>

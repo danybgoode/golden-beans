@@ -19,6 +19,7 @@
 // (`app/app/funnel/[projectSlug]/[featureKey]/page.tsx:26`), and a tab that 404s the whole feature
 // page because the OTHER registry has no row would be a regression caused by a missing measurement.
 
+import { formatUtc } from '@/lib/format-utc'
 import type { FunnelResult } from '@/lib/tars-query'
 import type { FeatureImpactResult } from '@/lib/north-star-query'
 
@@ -104,9 +105,14 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
         {/* Preserved from the page this pane replaces, verbatim in substance: the counts are
             registry-declared, not gateway-observed. Dropping it while moving the numbers would
             quietly upgrade what they claim. */}
+        {/* ⚠️ `formatUtc`, not `new Date(…).toLocaleString()`. The raw form renders the literal
+            string "Invalid Date" for a malformed or missing timestamp — a bad historical row making
+            a dashboard unreadable is exactly what that helper exists to prevent, and it says
+            "Unknown time" instead (cross-review, agy). It is also timezone-stable, which
+            `toLocaleString` on a server-rendered page is not. */}
         <p className="hint">
           Targeted, adopted and retained are declared by the registry, not observed at a gateway — this engine
-          counts the events a signal names. Last synced {new Date(feature.syncedAt).toLocaleString('en-US')}.
+          counts the events a signal names. Last synced {formatUtc(feature.syncedAt)}.
         </p>
       </div>
     </>
