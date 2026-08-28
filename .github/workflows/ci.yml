@@ -145,6 +145,11 @@ jobs:
           # Explicitly OFF here, ON below, and `flag-console-dark.spec.ts` branches on it — so both
           # states are asserted rather than whichever one the environment happened to be in.
           FLAG_CONSOLE_ENABLED: 'false'
+          # ⚠️ Sprint 3 — `SIGNUP_ENABLED` moves to the MAIN server (production has it ON), so the
+          # signup DARK contract moves here, where it is the only place it can still be asserted.
+          # `signup.spec.ts`'s two dark tests skip themselves when the gate is on, so leaving them
+          # only on the lit server would have silently retired them.
+          SIGNUP_ENABLED: 'false'
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:3100
         run: |
           set -euo pipefail
@@ -185,6 +190,7 @@ jobs:
             apps/web/e2e/scenario-dark.spec.ts \
             apps/web/e2e/setup-routes-dark.spec.ts \
             apps/web/e2e/flag-console-dark.spec.ts \
+            apps/web/e2e/signup.spec.ts \
             --project=api; then
             cat /tmp/journey-dark-server.log
             exit 1
@@ -224,6 +230,14 @@ jobs:
           # The rule builder rides its own gate and is ON in production; the feature page's
           # Targeting tab is where it renders now.
           FLAG_RULE_BUILDER_ENABLED: 'true'
+          # ⚠️ **Required by the authed browser rail, and it matches production.**
+          # `SIGNUP_ENABLED` gates the PROVISIONING redirect, not just the `/signup` page:
+          # `auth.setup.ts` signs in through the real form and then waits for the app to create the
+          # tenant, which never happens with the gate off — it fails with "sign-in succeeded but no
+          # tenant was provisioned", which is exactly what the first CI run of the visual gate said.
+          # It has been ON in production since multi-tenant-activation, so this is CI catching up
+          # rather than CI being loosened. The dark contract moved to the OFF server above.
+          SIGNUP_ENABLED: 'true'
           # Journey projection HTTP specs exercise the live API seam. The preceding dedicated
           # built-server pass covers the canonical OFF integration; deployment remains born OFF.
           JOURNEY_PROJECTIONS_ENABLED: 'true'
@@ -296,6 +310,10 @@ jobs:
           # server, which is the single most confusing CI-only failure this repo records.
           FLAG_CONSOLE_ENABLED: 'true'
           FLAG_RULE_BUILDER_ENABLED: 'true'
+          # `signup.spec.ts` BRANCHES on this — its two dark tests skip when the gate is on — so the
+          # test process has to agree with the server or it asserts the dark contract against a lit
+          # one. That half now runs on the `:3100` server instead.
+          SIGNUP_ENABLED: 'true'
           SIGNALS_ENABLED: 'true'
           FLAG_SERVING_ENABLED: 'true'
           RESILIENCE_SCENARIOS_ENABLED: 'true'
@@ -345,6 +363,7 @@ jobs:
           RESILIENCE_SCENARIOS_ENABLED: 'true'
           SECURITY_SIMULATIONS_ENABLED: 'true'
           AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
+          SIGNUP_ENABLED: 'true'
         # ⚠️ ONE positional filter, and `auth-setup` / `auth-teardown` are NOT named.
         # An earlier version listed all three files, and cross-review (agy) read that as forcing the
         # teardown to run as an ordinary test that could invalidate the session mid-suite. It does
