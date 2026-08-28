@@ -55,11 +55,19 @@ export function ConnectorManager({
   }
 
   function onRevoke(tokenId: string) {
-    setConfirming(null)
     setError(null)
+    // ⚠️ The dialog is NOT closed here, and that is agy's finding (PR #123). Closing it
+    // synchronously before `startTransition` made its `pending` prop inert — the dialog was already
+    // gone by the time `pending` flipped, so a slow revoke showed no feedback at all and invited a
+    // second click on a control that had already fired.
+    //
+    // It stays open, showing its own pending state, until the action resolves: success reloads the
+    // page (which unmounts everything), failure closes it and renders the error. The close is a
+    // consequence of the OUTCOME now, not of the click.
     startTransition(async () => {
       const result = await revokeConnectorAction(slug, tokenId)
       if (!result.ok) {
+        setConfirming(null)
         setError('Could not revoke that connector URL. Reload and try again.')
         return
       }
@@ -108,37 +116,36 @@ export function ConnectorManager({
             {/* Skipped when this is the one just minted: the reveal above already shows it, and two
               identical copy fields would read as two different credentials. */}
             {token.url !== minted && <CopyUrlField url={token.url} />}
-            {canManage && (
-              <>
-                <p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setConfirming(token.tokenId)}
-                    disabled={pending}
-                  >
-                    Revoke this URL
-                  </Button>
-                </p>
-                <ConfirmDialog
-                  open={confirming === token.tokenId}
-                  /* `verb` matches the button that opened this, unchanged — the component requires it,
-                   because a control's name must not change mid-flow. */
-                  verb="Revoke"
-                  noun="connector URL"
-                  /* The SPECIFIC object. A connector URL has no label, so the project plus the token's
-                   own tail identifies it — with two active URLs on screen, the project alone would
-                   not say WHICH one is about to be killed. */
-                  subject={`${slug} · …${token.url.slice(-8)}`}
-                  /* What STOPS WORKING, in plain words, not a restatement of the verb. */
-                  consequence="Any agent using this URL stops being able to read this project immediately — no deploy needed."
-                  details="Rotating means creating a new URL afterwards and pasting it into Claude again."
-                  pending={pending}
-                  onConfirm={() => onRevoke(token.tokenId)}
-                  onCancel={() => setConfirming(null)}
-                />
-              </>
-            )}
+            {/* No inner `canManage` here: the map itself is owner-only (S2 made the URL
+                owner-only, not just the controls). A redundant guard reads as a second,
+                weaker condition that someone could later relax on its own. */}
+            <p>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setConfirming(token.tokenId)}
+                disabled={pending}
+              >
+                Revoke this URL
+              </Button>
+            </p>
+            <ConfirmDialog
+              open={confirming === token.tokenId}
+              /* `verb` matches the button that opened this, unchanged — the component requires it,
+               because a control's name must not change mid-flow. */
+              verb="Revoke"
+              noun="connector URL"
+              /* The SPECIFIC object. A connector URL has no label, so the project plus the token's
+               own tail identifies it — with two active URLs on screen, the project alone would
+               not say WHICH one is about to be killed. */
+              subject={`${slug} · …${token.url.slice(-8)}`}
+              /* What STOPS WORKING, in plain words, not a restatement of the verb. */
+              consequence="Any agent using this URL stops being able to read this project immediately — no deploy needed."
+              details="Rotating means creating a new URL afterwards and pasting it into Claude again."
+              pending={pending}
+              onConfirm={() => onRevoke(token.tokenId)}
+              onCancel={() => setConfirming(null)}
+            />
           </div>
         ))}
 
