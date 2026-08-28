@@ -1747,8 +1747,27 @@
   .is-console .product-shell__body > main {
     padding: 20px 16px 70px;
   }
+  /* ⚠️ **Visually hidden, NOT `display: none` — the reduction this file used to record is closed.**
+     The block above says: *"below 900px the cells have no column association, and this file will not
+     pretend otherwise… the honest fix is a visually-hidden header row instead of `display: none`,
+     which is a change to the markup this stylesheet cannot make."*
+     It turned out not to need one. The list is an ARIA table — `role="table"/"row"/"columnheader"/
+     "cell"` — so the association is POSITIONAL, and all that was required was keeping the
+     columnheaders in the accessibility tree while taking them out of the visual flow. `display:
+     none` removes an element from that tree entirely (measured: 3 columnheader nodes at 1440, 0 at
+     390); this keeps all three at every width.
+     Raised again by cross-review (agy) on the scoped stylesheet pass, which is what prompted trying
+     it rather than re-reading the note explaining why it had not been. */
   .is-console .listhead {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
   .is-console .row {
     flex-wrap: wrap;

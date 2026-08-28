@@ -277,6 +277,9 @@ test('the feature list survives a 390px phone', async ({ page }) => {
         return a.right > b.left + 1 && b.right > a.left + 1 && a.bottom > b.top + 1 && b.bottom > a.top + 1
       })(),
       headDisplay: head === null ? 'none' : getComputedStyle(head).display,
+      // The header row must be out of the VISUAL flow and still in the ACCESSIBILITY tree — those
+      // are two different questions, and `display: none` answers both with "gone".
+      headBox: head === null ? null : Math.round(head.getBoundingClientRect().height),
       bodyScrollWidth: document.body.scrollWidth,
       innerWidth: window.innerWidth,
     }
@@ -291,8 +294,35 @@ test('the feature list survives a 390px phone', async ({ page }) => {
     measured.overlap,
     'the feature cell and the state cell overlap — the fixed column widths are still applying'
   ).toBe(false)
-  // The column header row labels nothing once cells stack, so the design hides it.
-  expect(measured.headDisplay, 'the column headers still render over stacked cells').toBe('none')
+  // ⚠️ **Hidden from the EYE, kept for the SCREEN READER — and both halves are asserted.**
+  // The design hides the header row once the cells stack, because a header row over stacked cells
+  // labels nothing visually. It used to be `display: none`, which also deleted it from the
+  // accessibility tree (measured: 3 `columnheader` nodes at 1440, 0 at 390) — and the list is an
+  // ARIA table, so those nodes are what associate a cell with its column at ANY width.
+  //
+  // Asserting only "it is not visible" would pass on the version that threw the semantics away, and
+  // asserting only "the roles exist" would pass on a header row painted over the rows. Both.
+  expect(measured.headBox, 'the column header row still takes visual space on a phone').toBeLessThan(2)
+  // ⚠️ **`getByRole`, not `querySelectorAll('[role=…]')`.** The first version of this assertion
+  // counted DOM nodes, and `display: none` removes an element from the ACCESSIBILITY TREE while
+  // leaving it in the DOM — so it passed against the very build it was written to reject. Caught by
+  // mutation-checking it, which is the only reason it is not still in this file looking like
+  // coverage. Playwright's role engine excludes hidden elements, so this asks the question the
+  // assertion is actually about.
+  // ⚠️ Compared against the DESKTOP count, never against a literal. The number depends on the
+  // viewer — an owner gets a fourth column (`On / off`) — so hardcoding it made this fail on a
+  // correct page for an owner, which is how a guard gets "fixed" by being weakened. The property is
+  // that hiding the row visually does not change the SEMANTIC column set, and that is what a
+  // comparison says.
+  const headersOnAPhone = await page.locator('[data-feature-list]').getByRole('columnheader').count()
+  await page.setViewportSize(VIEWPORT)
+  await page.waitForTimeout(100)
+  const headersOnDesktop = await page.locator('[data-feature-list]').getByRole('columnheader').count()
+  expect(headersOnDesktop, 'the list rendered no column headers at all').toBeGreaterThan(0)
+  expect(
+    headersOnAPhone,
+    'the column headers left the accessibility tree on a phone — `display: none` deletes them from it'
+  ).toBe(headersOnDesktop)
   // And the page itself must not scroll sideways.
   expect(measured.bodyScrollWidth).toBeLessThanOrEqual(measured.innerWidth)
 })

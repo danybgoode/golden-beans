@@ -324,19 +324,39 @@ jobs:
 
       - name: Console visual gate (the approved design, asserted)
         # Every flag a spec BRANCHES on is read in two places — the server decides behaviour, the
-        # test decides expectation — and `gatesAreLit()` in this spec reads both of these. Set in
-        # both places or the suite skips silently and reports green having asserted nothing.
+        # test decides expectation — and `gatesAreLit()` in this spec reads two of these. Set in both
+        # places or the suite skips silently and reports green having asserted nothing.
+        #
+        # ⚠️ The FULL set is mirrored from the api step above, not just the two this spec reads.
+        # Cross-review (agy) flagged the partial list: the running server has twelve gates open, and
+        # a test process that disagrees with it about any of them is the single most confusing
+        # CI-only failure this repo records. Mirroring costs nothing and removes the class rather
+        # than the instance.
         env:
           CONSOLE_SHELL_ENABLED: 'true'
           FLAG_CONSOLE_ENABLED: 'true'
           FLAG_RULE_BUILDER_ENABLED: 'true'
           FLAG_SERVING_ENABLED: 'true'
+          CONNECTOR_ENABLED: 'true'
+          JOURNEY_PROJECTIONS_ENABLED: 'true'
+          EXPERIMENT_GOVERNANCE_ENABLED: 'true'
+          REPORT_SHARES_ENABLED: 'true'
+          SIGNALS_ENABLED: 'true'
+          RESILIENCE_SCENARIOS_ENABLED: 'true'
+          SECURITY_SIMULATIONS_ENABLED: 'true'
+          AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
+        # ⚠️ ONE positional filter, and `auth-setup` / `auth-teardown` are NOT named.
+        # An earlier version listed all three files, and cross-review (agy) read that as forcing the
+        # teardown to run as an ordinary test that could invalidate the session mid-suite. It does
+        # not — `dependencies` and `teardown` are a project GRAPH, not a filter — but the argument
+        # only has to be made because the extra arguments were there. Verified by running it both
+        # ways: with the spec file alone, `auth-setup` still runs first and `auth-teardown` still
+        # runs last (7 passed, teardown reported after every assertion). Fewer arguments, nothing to
+        # explain.
         run: |
           npx playwright test \
             --config=apps/web/playwright.config.ts \
             --project=authed \
-            apps/web/e2e/auth.setup.ts \
-            apps/web/e2e/auth.teardown.ts \
             apps/web/e2e/console-visual.authed.spec.ts
 
       - name: Upload the visual gate's screenshots
