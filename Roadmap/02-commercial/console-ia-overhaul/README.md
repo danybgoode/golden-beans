@@ -415,6 +415,41 @@ B must not be offered B's owner-only Setup landing on the strength of a role hel
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
 
+#### A19 — ⚠️ **D4 IS OVERRULED. The console ships ENABLED at Sprint 2, not dark until Sprint 3.** *(2026-08-27, Daniel)*
+
+> *"done means shipped to production always. and not dark, always enabled"*
+
+D4 said `CONSOLE_SHELL_ENABLED` stays OFF until Story 3.5, and called itself "the epic's single largest
+risk". Daniel has overruled it as a standing principle, and the principle has evidence behind it:
+`flags-console-parity` **SHIPPED DARK** and its flip, its walkthroughs and its outcome test were all
+still owed weeks later. Shipping dark has repeatedly meant shipping nothing.
+
+**Checked before flipping, because D4's stated risk deserved a real answer rather than a dismissal.**
+D4's reasoning was: *"the new nav names destinations (`Setup › Connect`, `Setup › Keys`, a feature's
+Funnel tab) that do not exist until Sprints 2 and 3."* Two of those three now exist — Sprint 2 built
+them — and **the third was never a nav destination**: a feature's Funnel tab is a tab on the flag
+detail page, not an entry in the inventory. So the premise is spent.
+
+Verified against the live production gates (`CONNECTOR_ENABLED`, `EXPERIMENT_GOVERNANCE_ENABLED`,
+`FLAG_CONSOLE_ENABLED`, `JOURNEY_PROJECTIONS_ENABLED`, `SIGNALS_ENABLED` all `true`;
+`FLAG_SERVING_ENABLED` proved on by `/api/v1/flags/snapshot` returning 401 rather than 404), the lit
+nav for `miyagisanchez` resolves to: **Today** → `/app` · **Measure** → journeys, scenarios ·
+**Ship** → experiments, flags, flag-audit · **Setup** → connect, keys, destinations, shares. Every one
+exists and serves.
+
+**None of Sprint 3's unbuilt stories is a nav destination.** 3.1 improves the flags list, 3.2 adds
+tabs to a page, 3.3 removes a duplicate, 3.4 extends `⌘K`. The console does not name any of them.
+
+**The real consequence, stated rather than discovered:** Sprint 3 now builds against a LIVE console.
+Story 3.3 — which deletes the JSON authoring stack — stops being a dark change and becomes a
+user-visible one on merge. A3 already re-scoped it to land its replacement in the same commit, and
+that requirement is now load-bearing rather than prudent: there is no dark period in which a missing
+control would go unnoticed.
+
+**Story 3.5 is consequently reduced.** Its flip is done here; what remains for it is deleting the dead
+legacy header, the `<details>` disclosure, and `isConsoleShellEnabled()` — under A16's correction
+(`Connect` and `Agent notes` survive as public chrome).
+
 #### A18 — ⚠️ **This epic ships ONE migration after all.** *(2026-08-27, authorized by Daniel)*
 
 The Platform-first note says "no new table, no new SQL". That held until cross-review: **both**
