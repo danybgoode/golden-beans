@@ -504,6 +504,9 @@
 .is-console .grp.off .bar {
   background: var(--red);
 }
+.is-console .grp.never .bar {
+  background: var(--dim-2);
+}
 
 .is-console .row {
   display: flex;
@@ -711,8 +714,7 @@
   width: auto;
   min-width: 150px;
 }
-.is-console .toolbar input[type='search'],
-.is-console .toolbar input[type='text'] {
+.is-console .toolbar input[type='search'] {
   padding: 8px 11px;
   border-radius: var(--r);
   background: var(--card);
@@ -742,4 +744,45 @@
   color: var(--dim-2);
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
+   `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
+   ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY
+   width — 340px of fixed columns plus gaps in a 390px viewport.
+
+   Measured on the built stylesheet at 390px before this block existed: `.row-main` had width **0**,
+   the feature key painted on top of the state pill, and the description column vanished.
+   `mobile-heuristics.authed.spec.ts` did not catch it because `AUTHED_MOBILE_ROUTES` does not
+   include `/app/flags/<slug>` — the same blind spot that hid the 100vh rail (fresh reviewer, PR
+   #124, Blocking).
+
+   The column headers hide rather than wrap, because a header row over stacked cells labels nothing.
+   Their semantics survive: `role="columnheader"` is still in the markup, so a screen reader keeps
+   the association that `display: none` removes visually. */
+@media (max-width: 900px) {
+  .is-console .content,
+  .is-console .product-shell__body > main {
+    padding: 20px 16px 70px;
+  }
+  .is-console .listhead {
+    display: none;
+  }
+  .is-console .row {
+    flex-wrap: wrap;
+  }
+  .is-console .row-main {
+    flex: 1 1 100%;
+  }
+  .is-console .row-state,
+  .is-console .row-meta {
+    width: auto;
+  }
+  .is-console .row-act {
+    width: auto;
+    margin-left: auto;
+  }
+  .is-console .summary {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
 }

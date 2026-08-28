@@ -142,7 +142,11 @@ export function summaryCardLabels(
   return [
     { key: 'all', state: 'all', label: 'All features' },
     { key: 'on', state: 'on', label: `${FLAG_STATE_PRESENTATION.on.label} in ${environment}` },
-    { key: 'off', state: 'off', label: FLAG_STATE_PRESENTATION.off.label },
+    // ⚠️ `state: 'never'`-style EXACTNESS, not `'off'`. The `'off'` filter means **"not on"** — its
+    // chip is labelled "Not on" for that reason — so a card reading "Turned off · 0" linked to a
+    // view listing all 39 never-touched flags. The number and the destination have to mean the same
+    // thing or the card is a lie you can click (fresh reviewer, PR #124).
+    { key: 'off', state: 'switched_off', label: FLAG_STATE_PRESENTATION.off.label },
     { key: 'never', state: 'never', label: FLAG_STATE_PRESENTATION.never.label },
   ]
 }

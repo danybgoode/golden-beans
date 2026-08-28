@@ -16,6 +16,7 @@ import {
   answerLineClauses,
   dormantGroupLabel,
   flagListAnswerLine,
+  namedServingKeys,
   type FlagListSummaryCounts,
 } from './flag-console-copy.ts'
 
@@ -323,4 +324,29 @@ test('every combination of the three counts produces a grammatical sentence', ()
       }
     }
   }
+})
+
+test("the answer line NAMES what is serving, which is the design's whole point", () => {
+  // "Right now Production is serving checkout.stripe_enabled and domain.paywall_enabled." A page
+  // that reports a number answers "how many"; one that names them answers "what".
+  assert.equal(
+    flagListAnswerLine(counts({ total: 42, serving: 2, neverSwitched: 40 }), 'Production', [
+      'checkout.stripe_enabled',
+      'domain.paywall_enabled',
+    ]),
+    'Production is serving checkout.stripe_enabled and domain.paywall_enabled and 40 never turned on here.'
+  )
+})
+
+test('naming is capped, because the line is prose and not a list', () => {
+  assert.equal(namedServingKeys(['a']), 'a')
+  assert.equal(namedServingKeys(['a', 'b']), 'a and b')
+  assert.equal(namedServingKeys(['a', 'b', 'c']), 'a, b and c')
+  // A tenant serving twenty would push the summary off the screen it exists to fit on.
+  assert.equal(namedServingKeys(['a', 'b', 'c', 'd']), 'a, b and c and 1 more')
+  assert.equal(namedServingKeys(['a', 'b', 'c', 'd', 'e']), 'a, b and c and 2 more')
+})
+
+test('with no keys supplied it still counts, so the function is usable without them', () => {
+  assert.match(flagListAnswerLine(counts({ total: 3, serving: 3 }), 'Production'), /serving 3 features/)
 })

@@ -96,6 +96,7 @@ test.describe('the console matches the approved design', () => {
       scrollWidth: document.body.scrollWidth,
       innerWidth: window.innerWidth,
       contentWidth: Math.round(document.querySelector('main')?.getBoundingClientRect().width ?? 0),
+      contentMaxWidth: getComputedStyle(document.querySelector('main') as Element).maxWidth,
     }))
 
     // 1. The approved design fits Ship › Features in one screen. A page that scrolls means the
@@ -181,11 +182,75 @@ test.describe('the console matches the approved design', () => {
     //     Do-not #4 calls this "a decision the epic never made" — whether the rail moves out of the
     //     console grid or is not rendered on console routes. This assertion states the requirement
     //     without prejudging which way that decision goes.
+    // Two assertions, because the contract's 1180 is a CSS `max-width` and the measured width is a
+    // different quantity — it excludes the scrollbar and is bounded by the grid column. Asserting
+    // the measurement against 1180 fails on a CORRECT page at 1440 (it renders 1120), which is a
+    // gate that cries wolf; asserting only the measurement would miss the cap being deleted.
+    expect
+      .soft(
+        geometry.contentMaxWidth,
+        `[3b] the content column's max-width is ${geometry.contentMaxWidth}, and the contract says 1180px`
+      )
+      .toBe('1180px')
+    // And it is not being squeezed. The AgentRail inside the console grid rendered 544px here.
     expect
       .soft(
         geometry.contentWidth,
-        `[3b] the content column is ${geometry.contentWidth}px against the approved 1180 — the AgentRail is inside the console grid`
+        `[3b] the content column measures ${geometry.contentWidth}px — squeezed, as it was at 544px with the AgentRail in the grid`
       )
       .toBeGreaterThanOrEqual(1000)
   })
+})
+
+test('the feature list survives a 390px phone', async ({ page }) => {
+  // ⚠️ **Nothing covered this route at phone width.** `mobile-heuristics.authed.spec.ts`'s
+  // `AUTHED_MOBILE_ROUTES` does not include `/app/flags/<slug>`, which is how the console shipped
+  // 340px of fixed row columns in a 390px viewport: `.row-main` measured **0** wide, the feature key
+  // painted on top of the state pill, and the description vanished. The prototype has a
+  // `@media (max-width: 900px)` block; the first port dropped it entirely (fresh reviewer, PR #124).
+  //
+  // The same blind spot hid the 100vh rail one commit earlier. Two bugs through one gap is a gap
+  // worth closing here rather than reporting again.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/app/flags/${tenant().slug}?env=production`)
+  await page.waitForLoadState('networkidle')
+
+  const measured = await page.evaluate(() => {
+    const row = document.querySelector('[data-feature-list] .row')
+    const main = row?.querySelector('.row-main')
+    const state = row?.querySelector('.row-state')
+    const head = document.querySelector('[data-feature-list] .listhead')
+    return {
+      hasRow: row !== null,
+      mainWidth: main === null || main === undefined ? -1 : Math.round(main.getBoundingClientRect().width),
+      // ⚠️ Boxes overlap only if they intersect on BOTH axes. The first version compared x alone
+      // and reported a false overlap on a CORRECT page: with `flex-wrap`, the state cell stacks
+      // BELOW the feature cell, so its left edge is legitimately far behind the feature's right
+      // edge. A guard that fails on correct markup gets "fixed" by weakening it, which is how the
+      // real check gets lost.
+      overlap: (() => {
+        if (!main || !state) return false
+        const a = main.getBoundingClientRect()
+        const b = state.getBoundingClientRect()
+        return a.right > b.left + 1 && b.right > a.left + 1 && a.bottom > b.top + 1 && b.bottom > a.top + 1
+      })(),
+      headDisplay: head === null ? 'none' : getComputedStyle(head).display,
+      bodyScrollWidth: document.body.scrollWidth,
+      innerWidth: window.innerWidth,
+    }
+  })
+
+  test.skip(!measured.hasRow, 'this tenant renders no feature rows')
+
+  // The description column must actually have room — zero width is what the fixed columns caused.
+  expect(measured.mainWidth, 'the feature column has no width on a phone').toBeGreaterThan(150)
+  // And the key must not be painted over the state pill.
+  expect(
+    measured.overlap,
+    'the feature cell and the state cell overlap — the fixed column widths are still applying'
+  ).toBe(false)
+  // The column header row labels nothing once cells stack, so the design hides it.
+  expect(measured.headDisplay, 'the column headers still render over stacked cells').toBe('none')
+  // And the page itself must not scroll sideways.
+  expect(measured.bodyScrollWidth).toBeLessThanOrEqual(measured.innerWidth)
 })

@@ -64,7 +64,7 @@ export type FlagListSort = 'key_asc' | 'key_desc' | 'state' | 'type' | 'recent'
  * `'never'` as the exact filter, additively, so the dormant disclosure has somewhere to link; `'off'`
  * keeps its meaning so no existing bookmark changes what it returns.
  */
-export type FlagStateFilter = 'all' | 'on' | 'off' | 'never'
+export type FlagStateFilter = 'all' | 'on' | 'off' | 'never' | 'switched_off'
 export type FlagTypeFilter = 'all' | 'killswitch' | 'enablement' | 'unclassified'
 
 /** Only the fields this projection reads. Structural, so `flag-registry`'s rows satisfy it as-is. */
@@ -284,6 +284,8 @@ export function filterFlagRowsByQuery(rows: readonly FlagListRow[], query: strin
 export function filterFlagRowsByState(rows: readonly FlagListRow[], state: FlagStateFilter): FlagListRow[] {
   if (state === 'all') return [...rows]
   if (state === 'never') return rows.filter((row) => row.state === 'never')
+  // The EXACT off state, as distinct from `'off'`, which means "not on" and includes `never`.
+  if (state === 'switched_off') return rows.filter((row) => row.state === 'off')
   return rows.filter((row) => (state === 'on' ? row.state === 'on' : row.state !== 'on'))
 }
 
@@ -337,7 +339,7 @@ export type FlagListParams = {
 }
 
 const SORTS = new Set<string>(['key_asc', 'key_desc', 'state', 'type', 'recent'])
-const STATE_FILTERS = new Set<string>(['all', 'on', 'off', 'never'])
+const STATE_FILTERS = new Set<string>(['all', 'on', 'off', 'never', 'switched_off'])
 const TYPE_FILTERS = new Set<string>(['all', 'killswitch', 'enablement', 'unclassified'])
 
 /**
@@ -507,5 +509,51 @@ export function groupDormantFlagRows(
   return { grouped: true, active, dormant }
 }
 
-/** Story 3.1: expanded, the dormant group pages at 15 — not at the list's own 25. */
-export const DORMANT_PAGE_SIZE = 15
+/**
+ * ⚠️ **The console's feature list no longer paginates, and that is a removal worth saying out loud.**
+ *
+ * Story 3.1's acceptance said "expanded, it paginates at 15". The approved design has no pager on
+ * this list at all: one summary row stands for every dormant feature, and paging inside it was what
+ * made that impossible — a `<details>` that navigates re-collapses on every click.
+ *
+ * So `DORMANT_PAGE_SIZE` is gone rather than left as an ornament. It had become a constant nothing
+ * consumed, asserted only by a test comparing it to another constant — a test that could not fail,
+ * about a number with no reader (fresh reviewer, PR #124).
+ *
+ * `FLAG_LIST_PAGE_SIZE` and `paginateFlagRows` stay: they are still the projection's contract and
+ * still unit-tested, and a future surface that needs paging should not have to rebuild them. What
+ * changed is that the console does not call them.
+ */
+
+/**
+ * The active rows, split into runs by state, in the order the design shows them.
+ *
+ * ⚠️ **The first version rendered ONE hardcoded header reading "On in <env>" with
+ * `active.length` as its count.** `active` is "not dormant", so it includes `off` rows — and when
+ * grouping is off it is the ENTIRE list. On the fixture tenant the page rendered
+ *
+ *     Nothing is on in production — 2 features have never been turned on here.
+ *     [On in production · 2]
+ *     gb.e2e.owner.fault      Never turned on here
+ *     gb.e2e.undisclosed      Never turned on here
+ *
+ * — a header confidently naming a state none of the rows beneath it were in, four elements after
+ * the page said nothing was on. That is the exact class of confidently-false line this whole epic
+ * exists to remove, on its flagship page (fresh reviewer, PR #124, Blocking).
+ *
+ * The approved prototype emits a `.grp` per state TRANSITION with a per-state label and a per-state
+ * count, and only when grouped. This is that, moved somewhere it can be unit-tested.
+ *
+ * Returns `[]` when not grouped — the design shows no headers over an ungrouped list, because a
+ * filtered view is already one thing and a heading over it would be restating the filter.
+ */
+export type FlagStateRun = { state: FlagActivationState; rows: FlagListRow[] }
+
+export function runsByState(rows: readonly FlagListRow[], options: { grouped: boolean }): FlagStateRun[] {
+  if (!options.grouped) return []
+  // `on` before `off` before `never`: serving first, because it is what a reader came to check.
+  const order: FlagActivationState[] = ['on', 'off', 'never']
+  return order
+    .map((state) => ({ state, rows: rows.filter((row) => row.state === state) }))
+    .filter((run) => run.rows.length > 0)
+}

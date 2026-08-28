@@ -209,7 +209,33 @@ export function answerLineClauses(summary: FlagListSummaryCounts): string[] {
  * it. A project with no features at all is a real state — every new tenant starts there — and a
  * dangling "Production is" reads as a bug.
  */
-export function flagListAnswerLine(summary: FlagListSummaryCounts, environment: string): string {
+/**
+ * The keys the answer line will name, and how it says "and the rest".
+ *
+ * The approved design does not merely count what is serving — it NAMES it:
+ * *"Right now Production is serving `checkout.stripe_enabled` and `domain.paywall_enabled`."*
+ * That is the difference between a page that reports a number and one that answers a question, and
+ * a comment in `flag-console.tsx` claimed this behaviour for a function that only counted (fresh
+ * reviewer, PR #124).
+ *
+ * Capped at three because the line is prose, not a list: a tenant serving twenty flags would push
+ * the summary off the screen it is meant to fit on.
+ */
+const NAMED_KEYS_LIMIT = 3
+
+export function namedServingKeys(keys: readonly string[]): string {
+  const shown = keys.slice(0, NAMED_KEYS_LIMIT)
+  const rest = keys.length - shown.length
+  const list =
+    shown.length === 1 ? shown[0] : `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
+  return rest > 0 ? `${list} and ${rest} more` : list
+}
+
+export function flagListAnswerLine(
+  summary: FlagListSummaryCounts,
+  environment: string,
+  servingKeys: readonly string[] = []
+): string {
   if (summary.total === 0) return `No features in ${environment} yet.`
   const clauses = answerLineClauses(summary)
   // Unreachable while `total > 0` — the three states are exhaustive, so some clause is non-zero.
@@ -238,8 +264,16 @@ export function flagListAnswerLine(summary: FlagListSummaryCounts, environment: 
     return tail === '' ? `Nothing is on in ${environment}.` : `Nothing is on in ${environment} — ${tail}.`
   }
 
-  const last = clauses[clauses.length - 1]
-  const sentence = clauses.length === 1 ? last : `${clauses.slice(0, -1).join(', ')} and ${last}`
+  // Name them when we have them; fall back to the count when we do not, so the function stays
+  // usable (and unit-testable) without a key list.
+  const servingClause =
+    servingKeys.length > 0
+      ? `serving ${namedServingKeys(servingKeys)}`
+      : `serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}`
+  const rest = clauses.slice(1)
+  const all = [servingClause, ...rest]
+  const last = all[all.length - 1]
+  const sentence = all.length === 1 ? last : `${all.slice(0, -1).join(', ')} and ${last}`
   return `${environment} is ${sentence}.`
 }
 

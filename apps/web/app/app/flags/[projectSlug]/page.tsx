@@ -85,15 +85,15 @@ export default async function FlagsPage({
             </p>
           </div>
           <div className="spacer" />
-          {/* The design's two page actions. "New feature" is Story 3.3's replacement control — the
-              deletion of the JSON authoring stack lands with it, never before it (A3/A21), so this
-              is a placeholder position rather than a live control until that story. */}
-          <a
-            className="btn btn-ghost"
-            href={`/app/flags/${projectSlug}?env=${listParams.environment}&state=all`}
-          >
-            Compare environments
-          </a>
+          {/* ⚠️ **No page actions yet, and the empty space is the honest state.**
+              The design has two here — "Compare environments" and "+ New feature". Neither exists:
+              there is no comparison surface, and the creation control is Story 3.3's, which may only
+              land WITH the deletion of the JSON authoring stack it replaces (A3/A21).
+
+              A first version shipped "Compare environments" pointing at this same page with the
+              filters reset. It behaved as "Clear filters" while being labelled as a feature that
+              does not exist — a button that lies about where it goes is worse than a gap where a
+              button will be (fresh reviewer, PR #124). */}
         </div>
         {/* D6 / Amendment 1: with the gate OFF this renders exactly what it rendered before the
             epic. `flag-manager.tsx` takes ONE new optional prop, `showDefinitions`, defaulting to

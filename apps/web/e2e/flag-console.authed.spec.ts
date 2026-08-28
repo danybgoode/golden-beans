@@ -216,9 +216,15 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     const disclosure = page.locator('[data-dormant-summary]')
     const count = await disclosure.count()
     if (count === 0) {
-      // Fewer than two dormant flags in this fixture — the collapse is deliberately not rendered
-      // (it would hide as many rows as the summary it adds). Assert THAT, rather than passing
-      // silently on an absence that could equally mean the feature was never built.
+      // ⚠️ No dormant summary. On THIS fixture the reason is the ALL-DORMANT rule, not the
+      // fewer-than-two rule — every flag it provisions is untouched, and collapsing all of them
+      // would leave a table with no rows and no empty state. An earlier comment named the wrong
+      // rule (fresh reviewer, PR #124), which mattered because it made the branch read as a
+      // small-data quirk rather than a deliberate behaviour with its own regression test.
+      //
+      // Stated plainly: the meaningful half of this test — "Show them" → `state=never` → rows —
+      // does NOT execute on this fixture. It is covered exhaustively in `flag-list-view.test.ts`,
+      // where the dataset is controlled.
       const rows = await page.locator('[data-feature-list] .row').count()
       expect(rows, 'no disclosure AND no rows — the list did not render at all').toBeGreaterThan(0)
       return
@@ -244,6 +250,10 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     // Story 3.1's own rule. A filtered view has no uniform majority to summarise, and hiding a row
     // the reader just searched for hides the answer they asked for.
     await page.goto(`/app/flags/${tenantSlug()}?q=gb`)
-    await expect(page.locator('details', { hasText: 'never been turned on' })).toHaveCount(0)
+    // ⚠️ Was `locator('details', …)`, which is green on EVERY input — the redesign renders the
+    // dormant summary as a div and there is no `<details>` on this page at all, filtered or not. A
+    // guard that cannot fail is the failure mode `sprint-3.md` warns about in its own build
+    // contract, eight lines from the end.
+    await expect(page.locator('[data-dormant-summary]')).toHaveCount(0)
   })
 })

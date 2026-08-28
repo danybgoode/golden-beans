@@ -26,15 +26,20 @@
 // Sprint 1 is additive; Sprint 2 retires the stack in the same story that lands its replacement.
 //
 // An earlier revision of this file claimed the opposite (a `showDefinitions` prop that hid the
-// stack). That prop is gone — hiding those controls a sprint early would have left no way to kill a
-// live flag. See the epic README's Amendment 1.
+// stack), and a later one claimed the prop was GONE. ⚠️ It is not: `flag-manager.tsx:56,89,533`
+// still declare and use it, and `page.tsx` still passes `showDefinitions={!consoleEnabled}` (fresh
+// reviewer, PR #124). What is true is the BEHAVIOUR the claim was reaching for — the stack is not
+// hidden a sprint early, because hiding it would have left no way to kill a live flag. The prop
+// exists and is what keeps the gate-off render byte-identical. See the epic README's Amendment 1.
 
+import { Fragment } from 'react'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagRegistryRow } from '@/lib/flag-registry'
 import {
   buildFlagListQuery,
   buildFlagListView,
   groupDormantFlagRows,
+  runsByState,
   projectFlagRows,
   summariseFlagList,
   type FlagListParams,
@@ -77,10 +82,17 @@ export function FlagConsole({
   // "23 features have never been turned on" on a tenant with 40 — 23 was simply how many landed on
   // page one. The design has no pager on this list precisely because ONE summary row stands for all
   // of them, and pagination is what made that impossible.
-  const narrowedRows = narrowed
-    ? buildFlagListView(flags, params, Number.MAX_SAFE_INTEGER).pageRows
-    : projected
-  const grouping = groupDormantFlagRows(narrowedRows, { narrowed })
+  // ⚠️ **`params.sort` was silently ignored on the default view.** The first version used the raw
+  // `projected` rows whenever nothing was narrowed, so `sort=key_desc`, `state` and `recent` did
+  // nothing at all — and `key_asc` only looked right because `flag-registry.ts` already orders by
+  // key. Reachable by any reader picking a sort without also searching (fresh reviewer, PR #124).
+  //
+  // `buildFlagListView` applies the filters AND the sort, so it is the right call in both branches;
+  // only the page size differs, and the design has no pager.
+  const visible = buildFlagListView(flags, params, Number.MAX_SAFE_INTEGER).pageRows
+  const grouping = groupDormantFlagRows(visible, { narrowed })
+  // Runs are empty when not grouped: the design shows no headers over a filtered list.
+  const runs = runsByState(grouping.active, { grouped: grouping.grouped })
 
   // Every link on the page is built from the PARSED params, never from the raw query string, so an
   // unrecognised parameter cannot survive a round trip through a control on this page.
@@ -90,12 +102,20 @@ export function FlagConsole({
   return (
     <>
       {/* ── The answer line ────────────────────────────────────────────────────────────────
-          The design's lede, and the reason this page exists: it names WHICH features are serving
-          rather than only counting them. Its words come from `lib/flag-console-copy.ts` and its
+          The design's lede, and the reason this page exists: it NAMES which features are serving
+          rather than only counting them — "Production is serving checkout.stripe_enabled and
+          domain.paywall_enabled". A comment here claimed that for a function that only counted
+          (fresh reviewer, PR #124); the function does it now rather than the comment being softened. Its words come from `lib/flag-console-copy.ts` and its
           arithmetic from `lib/flag-list-view.ts`, so both halves sit where the merge gate can read
           them — this component is only reachable through a signed-in browser. A zero-count clause is
           DROPPED, never rendered as "0" (A20). */}
-      <p className="answer">{flagListAnswerLine(summary, params.environment)}</p>
+      <p className="answer">
+        {flagListAnswerLine(
+          summary,
+          params.environment,
+          projected.filter((row) => row.state === 'on').map((row) => row.key)
+        )}
+      </p>
 
       {/* ── The summary strip ──────────────────────────────────────────────────────────────
           Four counts, each a link that filters the list to itself. `aria-current` marks the one in
@@ -160,59 +180,84 @@ export function FlagConsole({
 
       {/* `data-feature-list` is the visual gate's hook. A class would work until someone renamed it
           for styling; a data attribute says "something asserts on this". */}
-      <div className="listcard" data-feature-list>
-        <div className="listhead">
-          <span className="row-main">Feature</span>
-          <span className="h-state">State in {params.environment}</span>
-          <span className="h-meta">Type &amp; risk</span>
-          <span className="h-act">On / off</span>
+      {/* ⚠️ **Explicit ARIA roles, because `display: flex` strips the native table semantics.**
+          This list was a real `<table>` before the redesign and the approved design is flex rows —
+          which cost screen-reader users the whole structure: every element read as `generic`, so the
+          four column labels were free-floating text with no association to any cell and a reader
+          heard "Unclassified Unclassified" with no way to tell type from risk (fresh reviewer, PR
+          #124). Roles restore what the layout removed; they are the standard fix here, not a
+          workaround. The `columnheader` assertion deleted from the spec is restored with them. */}
+      <div className="listcard" data-feature-list role="table" aria-label="Features">
+        <div className="listhead" role="row">
+          <span className="row-main" role="columnheader">
+            Feature
+          </span>
+          <span className="h-state" role="columnheader">
+            State in {params.environment}
+          </span>
+          <span className="h-meta" role="columnheader">
+            Type &amp; risk
+          </span>
+          {/* ⚠️ No "On / off" header. The prototype puts a toggle and a kebab in `.row-act`; those
+              controls do not land until Story 3.3, and a column header advertising controls that do
+              not exist is a promise the page cannot keep. The header returns with its cells. */}
         </div>
 
-        {grouping.active.length > 0 && (
-          <div className="grp on">
-            <span className="bar" />
-            <span>On in {params.environment}</span>
-            <span className="cnt">{grouping.active.length}</span>
-          </div>
-        )}
-
         {grouping.active.length === 0 && grouping.dormant.length === 0 ? (
-          <div className="row">
-            <span className="row-main">
+          <div className="row" role="row">
+            <span className="row-main" role="cell">
               {flags.length === 0
                 ? 'No features are defined for this project yet.'
                 : 'No features match this search. Clear the filters to see all of them again.'}
             </span>
           </div>
         ) : (
-          grouping.active.map((row) => {
-            const presentation = FLAG_STATE_PRESENTATION[row.state]
-            return (
-              <div className="row" key={row.id}>
-                <span className="row-main">
-                  <a className="row-key" href={`${basePath}/${encodeURIComponent(row.key)}`}>
-                    <code>{row.key}</code>
-                  </a>
-                  {row.description !== '' && <span className="row-desc">{row.description}</span>}
-                </span>
-                <span className="row-state">
-                  {/* A dot AND a word — never colour alone. The three states are the distinction
-                      `flags-console-parity` Amendment 2 paid to separate, and a colour-only pill
-                      re-collapses it for anyone who cannot see the difference. */}
-                  <span className={`pill ${row.state}`}>
-                    <span className="dot" />
-                    {presentation.label}
+          (runs.length > 0 ? runs : [{ state: null, rows: grouping.active }]).map((run) => (
+            <Fragment key={run.state ?? 'ungrouped'}>
+              {/* One header PER STATE, naming that state and counting only its own rows. A single
+                  hardcoded "On in <env>" over every non-dormant row is what shipped first, and on a
+                  list with nothing on it read "On in production · 2" four elements after the page
+                  said "Nothing is on in production". */}
+              {run.state !== null && (
+                <div className={`grp ${run.state}`} role="row">
+                  <span className="bar" />
+                  <span role="columnheader">
+                    {run.state === 'on'
+                      ? `${FLAG_STATE_PRESENTATION.on.label} in ${params.environment}`
+                      : FLAG_STATE_PRESENTATION[run.state].label}
                   </span>
-                  <span className="state-detail">{presentation.detail(row)}</span>
-                </span>
-                <span className="row-meta">
-                  <span className="tag">{TYPE_LABEL[row.polarity]}</span>
-                  <span className="tag">{CRITICALITY_LABEL[row.criticality]}</span>
-                </span>
-                <span className="row-act" />
-              </div>
-            )
-          })
+                  <span className="cnt">{run.rows.length}</span>
+                </div>
+              )}
+              {run.rows.map((row) => {
+                const presentation = FLAG_STATE_PRESENTATION[row.state]
+                return (
+                  <div className="row" key={row.id} role="row">
+                    <span className="row-main" role="cell">
+                      <a className="row-key" href={`${basePath}/${encodeURIComponent(row.key)}`}>
+                        <code>{row.key}</code>
+                      </a>
+                      {row.description !== '' && <span className="row-desc">{row.description}</span>}
+                    </span>
+                    <span className="row-state" role="cell">
+                      {/* A dot AND a word — never colour alone. The three states are the distinction
+                          `flags-console-parity` Amendment 2 paid to separate, and a colour-only pill
+                          re-collapses it for anyone who cannot see the difference. */}
+                      <span className={`pill ${row.state}`}>
+                        <span className="dot" />
+                        {presentation.label}
+                      </span>
+                      <span className="state-detail">{presentation.detail(row)}</span>
+                    </span>
+                    <span className="row-meta" role="cell">
+                      <span className="tag">{TYPE_LABEL[row.polarity]}</span>
+                      <span className="tag">{CRITICALITY_LABEL[row.criticality]}</span>
+                    </span>
+                  </div>
+                )
+              })}
+            </Fragment>
+          ))
         )}
 
         {/* ── One row replacing forty ────────────────────────────────────────────────────────
@@ -221,7 +266,7 @@ export function FlagConsole({
             turned on" on a tenant with 40 — a number plausible enough that only putting the built
             page beside the design caught it. */}
         {grouping.grouped && (
-          <div className="dormant" data-dormant-summary>
+          <div className="dormant" data-dormant-summary role="row">
             <span className="tw">
               <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
               <span className="d">

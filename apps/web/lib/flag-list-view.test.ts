@@ -8,11 +8,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  DORMANT_PAGE_SIZE,
-  FLAG_LIST_PAGE_SIZE,
   buildFlagListQuery,
   buildFlagListView,
   groupDormantFlagRows,
+  runsByState,
   summariseFlagList,
   filterFlagRowsByQuery,
   filterFlagRowsByState,
@@ -665,9 +664,19 @@ test('a single dormant row is NOT collapsed — the disclosure would hide one ro
   )
 })
 
-test('the dormant group pages at 15, not at the list page size', () => {
-  assert.equal(DORMANT_PAGE_SIZE, 15)
-  assert.notEqual(DORMANT_PAGE_SIZE, FLAG_LIST_PAGE_SIZE)
+test('the console list does not paginate — one summary row stands for every dormant feature', () => {
+  // Replaces a test asserting `DORMANT_PAGE_SIZE === 15` and `!== FLAG_LIST_PAGE_SIZE`: two
+  // constants compared to each other, which cannot fail and describes nothing a reader sees.
+  //
+  // The property that DOES matter is that the grouping returns every dormant row, so the summary
+  // line can honestly claim all of them. Paging here is what made the collapse impossible.
+  const rows = [
+    stateRow('on', 'on'),
+    ...Array.from({ length: 40 }, (_, index) => stateRow(`never-${index}`, 'never')),
+  ]
+  const grouped = groupDormantFlagRows(rows, { narrowed: false })
+  assert.equal(grouped.dormant.length, 40, 'the summary would under-report what it collapses')
+  assert.equal(grouped.active.length, 1)
 })
 
 test('the `never` filter is EXACT, while `off` stays the union its chip is labelled with', () => {
@@ -735,4 +744,44 @@ test('grouping never loses a row, in any combination of the three states', () =>
       }
     }
   }
+})
+
+test('a group header never names a state its rows are not in', () => {
+  // The Blocking bug: one hardcoded "On in <env>" header counting every non-dormant row. On a list
+  // with nothing on, the page said "Nothing is on in production" and then "On in production · 2".
+  const rows = [stateRow('a', 'on'), stateRow('b', 'on'), stateRow('c', 'off')]
+  const runs = runsByState(rows, { grouped: true })
+  assert.deepEqual(
+    runs.map((run) => [run.state, run.rows.length]),
+    [
+      ['on', 2],
+      ['off', 1],
+    ]
+  )
+  // The property, stated directly: every row under a header IS in that header's state.
+  for (const run of runs) {
+    for (const row of run.rows) {
+      assert.equal(row.state, run.state, `a ${row.state} row sits under the ${run.state} header`)
+    }
+  }
+})
+
+test('an ungrouped list gets NO headers — a heading over a filtered view restates the filter', () => {
+  const rows = [stateRow('a', 'on'), stateRow('b', 'never')]
+  assert.deepEqual(runsByState(rows, { grouped: false }), [])
+})
+
+test('runs never lose a row, and serving comes first', () => {
+  const rows = [stateRow('a', 'never'), stateRow('b', 'off'), stateRow('c', 'on')]
+  const runs = runsByState(rows, { grouped: true })
+  assert.deepEqual(
+    runs.map((run) => run.state),
+    ['on', 'off', 'never'],
+    'serving is not first'
+  )
+  assert.equal(
+    runs.reduce((total, run) => total + run.rows.length, 0),
+    rows.length,
+    'a row was dropped between the runs'
+  )
 })

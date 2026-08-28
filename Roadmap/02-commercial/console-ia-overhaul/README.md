@@ -93,8 +93,15 @@ signed-in user to it. All new routes sit behind the same `requireProjectMembersh
 
 **Design — the reference IA** (product owner approved 2026-08-27): `design/ia-audit.html` places all
 19 surfaces with the code evidence for each claim; `design/flags-console-prototype.html` is clickable.
-Per WAYS-OF-WORKING, **a reference end-state is inspiration, never signed-off scope** — the acceptance
-criteria below are the contract, not the pixels.
+~~Per WAYS-OF-WORKING, **a reference end-state is inspiration, never signed-off scope** — the
+acceptance criteria below are the contract, not the pixels.~~
+
+⚠️ **WITHDRAWN by A22 (2026-08-28).** That sentence is why Sprints 1 and 2 shipped a correct
+information architecture and a rejected visual result: every criterion below is structural, the
+build satisfies all of them, and it looked like a different product. **Where the product owner has
+approved a design, the design IS the contract** — `design/CONSOLE-CONTRACT.md` and
+`design/flags-console-prototype.html` are binding for every signed-in route, and
+`e2e/console-visual.authed.spec.ts` is the assertion that can go red on the way a page looks.
 
 ## Decisions — ✅ LOCKED BY THE ARCHITECT 2026-08-27, BEFORE ANY BUILDER STARTED
 
@@ -414,6 +421,64 @@ project's role**, never the active one's. A viewer who owns project A and is onl
 B must not be offered B's owner-only Setup landing on the strength of a role held in A. Gates are
 process-wide; roles are per project. Where the target entitles nothing in the section, the switch
 degrades to `/app` rather than linking someone at a route that will 404 them.
+
+#### A22 — ⚠️ **The approved design is BINDING, the AgentRail leaves the console, and the flags page is rebuilt against the prototype.** *(2026-08-28, Daniel)*
+
+> *"The signed-in console must look like that file. Every page under /app. … The current UI/UX is
+> completely wrong, including all the text. It should match the mockup perfectly. Nothing else is
+> approved."*
+
+**The sentence this amendment withdraws is this document's own:**
+
+> *"a reference end-state is inspiration, never signed-off scope — the acceptance criteria below are
+> the contract, not the pixels."*
+
+That sentence is why Sprints 1 and 2 shipped a correct information architecture and a **rejected
+visual result.** Every acceptance criterion in this epic is structural — *"the header renders one
+project switcher and four sections"* — and the shipped build **satisfies all of them** while looking
+like a different product: a 48px `h1` wrapping to four lines, three-line rail cards with `GATED`
+badges, uppercase mono body copy, and a list that scrolls forever. **Nothing in the plan could go red
+on the way a page looked.**
+
+WAYS-OF-WORKING's rule about reference end-states exists to stop a *spec doc* being treated as
+signed-off scope. It does not mean an explicitly approved design has no force. **Where the product
+owner has approved a design, the design is the contract.**
+
+`design/CONSOLE-CONTRACT.md` and `design/flags-console-prototype.html` are now committed to the repo
+and binding for every signed-in route. ⚠️ **They were cited twelve times across nine source files
+before either was committed** — every numbered "Do-not" was unresolvable, including the one
+authorising the AgentRail removal (fresh reviewer, PR #124, Blocking). A contract that cannot be read
+is not a contract.
+
+**A22a — the AgentRail does not render on console routes.** This closes Do-not #4, which the contract
+correctly identifies as *"a decision the epic never made, and it must be made explicitly rather than
+inherited."* The rail appears in none of the ten approved reference states, and inside the console
+grid it squeezed the content column to **544px** against the approved **1180** — which is why every
+table clipped.
+
+⚠️ **The honest description is "the rail is gone", not "the rail is conditional."** `header !== null`
+IS the console, and after A19 that is every signed-in `/app` route; the remaining branch needs
+`activeProject`, which needs a session. Nothing renders it in practice.
+
+So it is a **control removed**, and this epic's own ordering rule applies: name what it carried and
+where each thing goes. It carried the agent's recent activity and its waiting-on-you queue. The
+approved design gives both a home — **"What changed & why"** in the top bar — **which is not built.**
+Until it is, this trades a squeezed console for a missing surface. `e2e/agent-rail.authed.spec.ts` is
+skipped with a forwarding address rather than deleted, so the removed capability leaves a trace.
+
+**A22b — Do-not #6 does not reproduce, and the contract is wrong about it.** `CONSOLE-CONTRACT.md`
+predicts `body.scrollWidth > innerWidth` on the shipped build. It is **false** at 1440×960: the tables
+already scroll inside their own `overflow-x: auto` containers, which is what that same Do-not asks
+for. That assertion would have passed on day one and caught nothing. The gate asserts the **content
+column width** instead, which fails honestly. Recorded because the contract is binding and this is
+the one number in it that is not true.
+
+**A22c — the visual gate does not seed, and no assertion says "42 → 2 + 1" end to end.** Asserting the
+design's row count literally needs the design's dataset; installing it into the shared `authed`
+fixture broke `flag-rule-builder`, and giving the gate its own project broke `command-center` and
+`design-system`. The literal "2" is also the prototype's data — production is 3 serving / 39 never
+(A20). So the arithmetic is unit-tested exhaustively where the dataset IS controlled, and the
+rendering is asserted on whatever the tenant holds. Stated as a loss, not filed as a pass.
 
 #### A21 — ⚠️ **A3 is WRONG on a fact: there are TWO surfaces that can create a new feature, not one.** *(2026-08-28, verified in code)*
 
