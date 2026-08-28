@@ -254,6 +254,23 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     // dormant summary as a div and there is no `<details>` on this page at all, filtered or not. A
     // guard that cannot fail is the failure mode `sprint-3.md` warns about in its own build
     // contract, eight lines from the end.
+    // ⚠️ This asserted `toHaveCount(0)` on `?q=gb` — and the fixture tenant renders NO dormant
+    // summary on any input (it is all-dormant, so `groupDormantFlagRows` declines to group). The
+    // assertion was 0 before the filter and 0 after: green on every input, which is the same
+    // "guard that cannot fail" its own comment claimed to be replacing (fresh reviewer, round 2).
+    //
+    // The honest version compares the two states rather than asserting an absolute. If the unfiltered
+    // page has no summary either, the comparison proves nothing and says so instead of passing.
+    const unfiltered = await page.goto(`/app/flags/${tenantSlug()}`).then(async () => {
+      await page.waitForLoadState('networkidle')
+      return page.locator('[data-dormant-summary]').count()
+    })
+    test.skip(
+      unfiltered === 0,
+      'this tenant renders no dormant summary unfiltered, so "searching turns grouping off" has nothing to compare against — the rule is covered exhaustively in lib/flag-list-view.test.ts'
+    )
+    await page.goto(`/app/flags/${tenantSlug()}?q=gb`)
+    await page.waitForLoadState('networkidle')
     await expect(page.locator('[data-dormant-summary]')).toHaveCount(0)
   })
 })

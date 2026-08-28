@@ -785,3 +785,27 @@ test('runs never lose a row, and serving comes first', () => {
     'a row was dropped between the runs'
   )
 })
+
+test("the dormant collapse holds at production's real shape, which no fixture reproduces", () => {
+  // ⚠️ Story 3.1's headline behaviour is asserted by NOTHING in the browser layer: the authed
+  // fixture is all-dormant, so `groupDormantFlagRows` declines to group and `[data-dormant-summary]`
+  // never renders on any input (fresh reviewer, round 2). Three browser assertions were dead
+  // because of it.
+  //
+  // Rather than bend the shared fixture — which broke three other suites when tried — the behaviour
+  // is pinned here at production's measured shape: 3 serving, 0 switched off, 39 never (A20).
+  const rows = [
+    ...Array.from({ length: 3 }, (_, index) => stateRow(`on-${index}`, 'on')),
+    ...Array.from({ length: 39 }, (_, index) => stateRow(`never-${index}`, 'never')),
+  ]
+  const grouped = groupDormantFlagRows(rows, { narrowed: false })
+  assert.equal(grouped.grouped, true, 'production would render no dormant summary')
+  assert.equal(grouped.active.length, 3, 'the page would show the wrong number of rows')
+  assert.equal(grouped.dormant.length, 39, 'the summary would under-report what it collapses')
+
+  // And searching turns it off, so the rows a reader asked for are never hidden behind a summary.
+  const searched = groupDormantFlagRows(rows, { narrowed: true })
+  assert.equal(searched.grouped, false)
+  assert.equal(searched.dormant.length, 0)
+  assert.equal(searched.active.length, 42, 'a filtered view lost rows')
+})

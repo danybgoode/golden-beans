@@ -105,14 +105,21 @@
   z-index: 40;
 }
 
+/* `.topbar-right{margin-left:auto}` in the reference — the port dropped it, so the project chip and
+   the account menu sat mid-bar instead of at the right edge (fresh reviewer, round 2). */
+.is-console .product-shell__identity {
+  margin-left: auto;
+}
+
 /* ── chrome, tier 2: the four sections ────────────────────────────────────────────────────── */
+/* ⚠️ No `border-bottom` and no `background`. These belong to a SEPARATE 44px tier; nested inside
+   the 54px header they paint a stray second horizontal rule a few pixels above the header's own —
+   visible as a doubled line in the gate's screenshot. The tab underline is the only rule this
+   element should draw. */
 .is-console .product-shell__tabs {
   display: flex;
   gap: 2px;
   padding: 0 20px;
-  height: 44px;
-  background: var(--roast-2);
-  border-bottom: 1px solid var(--line);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -188,17 +195,31 @@
    Specificity is deliberate. `.product-shell:has(.console-rail) .console-rail` scores (0,3,0)
    because `:has()` carries its argument's specificity, so `.is-console .console-rail` (0,2,0) lost
    silently. Matching their shape and adding `.is-console` scores (0,4,0) and wins. */
+/* ⚠️ **`98px` was 54 + 44 — the height of two chrome tiers, one of which is not built.**
+   The contract specifies a 54px top bar and a separate 44px section-nav bar. `ProductShell` renders
+   the tabs INSIDE the header, so the real chrome is a single 55px bar — measured, the header's
+   bottom edge is at 55 while the rail stuck at 98, leaving a 43px dead gap and under-computing the
+   rail's height by the same amount (fresh reviewer, round 2).
+
+   Building the second tier is a `ProductShell` change that touches every console route, and it is
+   not this PR's scope. So the offset is derived from ONE custom property instead of two magic
+   numbers, and the property names the height that actually exists. When the tiers are split, this
+   changes in one place. That is the "one derived pair of numbers" rule the file already invokes for
+   the rail's own width. */
 @media (min-width: 1100px) {
+  .product-shell.is-console {
+    --console-chrome-height: 55px;
+  }
   .product-shell.is-console:has(.console-rail) .product-shell__body {
     padding-left: 0;
   }
   .product-shell.is-console:has(.console-rail) .console-rail {
     position: sticky;
-    top: 98px;
+    top: var(--console-chrome-height);
     left: auto;
     width: auto;
     max-height: none;
-    height: calc(100vh - 98px);
+    height: calc(100vh - var(--console-chrome-height));
   }
 }
 
@@ -213,8 +234,8 @@
 @media (min-width: 1100px) {
   .is-console .console-rail {
     position: sticky;
-    top: 98px;
-    height: calc(100vh - 98px);
+    top: var(--console-chrome-height, 55px);
+    height: calc(100vh - var(--console-chrome-height, 55px));
     overflow-y: auto;
   }
 }
@@ -464,11 +485,6 @@
   width: 150px;
   flex: none;
 }
-.is-console .listhead .h-act {
-  width: 96px;
-  flex: none;
-  text-align: right;
-}
 
 .is-console .grp {
   display: flex;
@@ -503,9 +519,6 @@
 }
 .is-console .grp.off .bar {
   background: var(--red);
-}
-.is-console .grp.never .bar {
-  background: var(--dim-2);
 }
 
 .is-console .row {
@@ -758,8 +771,15 @@
    #124, Blocking).
 
    The column headers hide rather than wrap, because a header row over stacked cells labels nothing.
-   Their semantics survive: `role="columnheader"` is still in the markup, so a screen reader keeps
-   the association that `display: none` removes visually. */
+
+   ⚠️ **An earlier version of this comment claimed their semantics survive** — that `role=
+   "columnheader"` keeps the association `display: none` removes visually. **That is false.**
+   `display: none` removes an element from the accessibility tree entirely: measured, 3 columnheader
+   nodes at 1440 and **0** at 900 and 390 (fresh reviewer, round 2).
+
+   So the cells carry their own labels instead. `aria-label` on each cell is what makes a phone
+   render self-describing, and it is set in `flag-console.tsx` rather than here, because a stylesheet
+   cannot fix a semantics problem. */
 @media (max-width: 900px) {
   .is-console .content,
   .is-console .product-shell__body > main {

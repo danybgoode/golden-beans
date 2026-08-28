@@ -223,62 +223,85 @@ export function answerLineClauses(summary: FlagListSummaryCounts): string[] {
  */
 const NAMED_KEYS_LIMIT = 3
 
-export function namedServingKeys(keys: readonly string[]): string {
-  const shown = keys.slice(0, NAMED_KEYS_LIMIT)
-  const rest = keys.length - shown.length
-  // ⚠️ The conjunction belongs to whatever ENDS the list, and only one thing can end it. Joining
-  // "a, b and c" and then appending "and 1 more" produced "a, b and c and 1 more" — two
-  // conjunctions in one phrase (cross-review, agy, round 2). With a remainder, the remainder is the
-  // final item, so the earlier names are a plain comma list.
-  if (rest > 0) return `${shown.join(', ')} and ${rest} more`
-  if (shown.length === 1) return shown[0]
-  return `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
+/**
+ * The answer line, as SEGMENTS rather than a string.
+ *
+ * ⚠️ **The string version was ungrammatical, and in the design's own shape.** Gluing every clause
+ * into one sentence produced
+ *
+ *     Production is serving checkout.stripe_enabled and domain.paywall_enabled and 40 never turned
+ *     on here.
+ *
+ * — where the 40 dormant flags are grammatically inside the list of things being served. Live
+ * production (3 on / 39 never, A20) gets exactly that. With more than three serving it got worse:
+ * `…and 2 more and 37 never turned on here.` (fresh reviewer, PR #124, round 2.)
+ *
+ * The prototype does not glue: it uses **separate sentences** — *"Right now Production is serving X
+ * and Y. The other 40 have never been switched on in Production…"* — and that is the fix. One
+ * sentence per fact.
+ *
+ * Segments rather than a string because the design renders the keys in gold mono (`.mono`) and the
+ * environment and counts in bold. A plain string cannot carry that, and the ported `.answer code`
+ * rule matched nothing because there was no element to match (N1).
+ */
+export type AnswerSegment = { text: string; emphasis?: 'strong' | 'mono' }
+
+export function flagListAnswerSegments(
+  summary: FlagListSummaryCounts,
+  environment: string,
+  servingKeys: readonly string[] = []
+): AnswerSegment[] {
+  if (summary.total === 0) return [{ text: `No features in ${environment} yet.` }]
+
+  const segments: AnswerSegment[] = [{ text: 'Right now ' }, { text: environment, emphasis: 'strong' }]
+
+  // Sentence 1 — what is serving, named. "nothing" when none are, which is the common case on this
+  // product's own tenant in two environments out of three.
+  if (summary.serving === 0 || servingKeys.length === 0) {
+    segments.push({
+      text: summary.serving === 0 ? ' is serving nothing.' : ` is serving ${summary.serving}.`,
+    })
+  } else {
+    segments.push({ text: ' is serving ' })
+    const shown = servingKeys.slice(0, NAMED_KEYS_LIMIT)
+    const rest = servingKeys.length - shown.length
+    shown.forEach((key, index) => {
+      if (index > 0) segments.push({ text: index === shown.length - 1 && rest === 0 ? ' and ' : ', ' })
+      segments.push({ text: key, emphasis: 'mono' })
+    })
+    if (rest > 0) segments.push({ text: ` and ${rest} more` })
+    segments.push({ text: '.' })
+  }
+
+  // Sentence 2 — only when something was deliberately switched off. On live production this is
+  // never rendered: `off` is 0 in every environment (A20).
+  if (summary.switchedOff > 0) {
+    segments.push({ text: ' ' }, { text: String(summary.switchedOff), emphasis: 'strong' })
+    segments.push({
+      text: `${summary.switchedOff === 1 ? ' feature was' : ' features were'} deliberately switched off here.`,
+    })
+  }
+
+  // Sentence 3 — the dormant majority, said as its own fact rather than appended to the first.
+  if (summary.neverSwitched > 0) {
+    segments.push({ text: ' The other ' }, { text: String(summary.neverSwitched), emphasis: 'strong' })
+    segments.push({
+      text: ` have never been switched on in ${environment} — nobody turned them off, nobody ever turned them on.`,
+    })
+  }
+
+  return segments
 }
 
+/** The same line as plain text. Used by tests and by anything that cannot render markup. */
 export function flagListAnswerLine(
   summary: FlagListSummaryCounts,
   environment: string,
   servingKeys: readonly string[] = []
 ): string {
-  if (summary.total === 0) return `No features in ${environment} yet.`
-  const clauses = answerLineClauses(summary)
-  // Unreachable while `total > 0` — the three states are exhaustive, so some clause is non-zero.
-  // Kept as a real sentence rather than an assertion because a fourth state added later would land
-  // here, and a page reading "42 features." is a degraded answer, not a crash.
-  if (clauses.length === 0) return `${summary.total} features in ${environment}.`
-
-  // ⚠️ **"<env> is …" only reads as English when something IS serving.** The first version glued
-  // that stem onto whatever clauses survived, so a project with nothing switched on rendered
-  // "production is 2 never turned on here." Caught by the authed suite once the fixture stopped
-  // being polluted with seeded flags — NOT by the unit tests, which asserted the CLAUSES and never
-  // the assembled sentence for this case.
-  //
-  // Nothing serving is not an edge: it is every new project, and on this product's own tenant it is
-  // every environment but one. So it gets its own sentence rather than a stem that assumes a verb.
-  if (summary.serving === 0) {
-    const off =
-      summary.switchedOff > 0
-        ? `${summary.switchedOff} ${summary.switchedOff === 1 ? 'is' : 'are'} deliberately switched off`
-        : ''
-    const dormant =
-      summary.neverSwitched > 0
-        ? `${summary.neverSwitched} ${summary.neverSwitched === 1 ? 'feature has' : 'features have'} never been turned on here`
-        : ''
-    const tail = [off, dormant].filter((part) => part !== '').join(', and ')
-    return tail === '' ? `Nothing is on in ${environment}.` : `Nothing is on in ${environment} — ${tail}.`
-  }
-
-  // Name them when we have them; fall back to the count when we do not, so the function stays
-  // usable (and unit-testable) without a key list.
-  const servingClause =
-    servingKeys.length > 0
-      ? `serving ${namedServingKeys(servingKeys)}`
-      : `serving ${summary.serving} ${summary.serving === 1 ? 'feature' : 'features'}`
-  const rest = clauses.slice(1)
-  const all = [servingClause, ...rest]
-  const last = all[all.length - 1]
-  const sentence = all.length === 1 ? last : `${all.slice(0, -1).join(', ')} and ${last}`
-  return `${environment} is ${sentence}.`
+  return flagListAnswerSegments(summary, environment, servingKeys)
+    .map((segment) => segment.text)
+    .join('')
 }
 
 /** The one row a collapsed dormant group renders. Plural-safe: "1 feature has", "39 features have". */

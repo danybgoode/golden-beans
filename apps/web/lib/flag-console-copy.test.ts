@@ -13,10 +13,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  answerLineClauses,
   dormantGroupLabel,
   flagListAnswerLine,
-  namedServingKeys,
+  flagListAnswerSegments,
   type FlagListSummaryCounts,
 } from './flag-console-copy.ts'
 
@@ -241,123 +240,94 @@ const counts = (over: Partial<FlagListSummaryCounts> = {}): FlagListSummaryCount
   ...over,
 })
 
-test('a zero count is DROPPED from the answer line, never rendered as "0"', () => {
-  // A20. This is production's ACTUAL shape: `switchedOff` is 0 in EVERY environment, so a rendered
-  // "0 deliberately switched off" would be the sentence every reader gets, forever.
-  const clauses = answerLineClauses(counts({ total: 42, serving: 3, neverSwitched: 39 }))
-  assert.deepEqual(clauses, ['serving 3 features', '39 never turned on here'])
-  assert.ok(!clauses.some((clause) => /\b0\b/.test(clause)), 'a zero-count clause reached the answer line')
-})
+// ── The answer line: one sentence per fact, as the prototype writes it ────────────────────────
 
-test('the clauses present are exactly the states with a non-zero count', () => {
-  // Asserted on the PARTS, not the rendered sentence. `flags-visual-rule-builder`'s single most
-  // important check asserted nothing because Playwright normalises whitespace inside
-  // `toContainText`; a list of clauses cannot fail that way.
-  assert.deepEqual(answerLineClauses(counts({ total: 1, serving: 1 })), ['serving 1 feature'])
-  assert.deepEqual(answerLineClauses(counts({ total: 1, switchedOff: 1 })), ['1 deliberately switched off'])
-  assert.deepEqual(answerLineClauses(counts({ total: 1, neverSwitched: 1 })), ['1 never turned on here'])
-  assert.equal(
-    answerLineClauses(counts({ total: 3, serving: 1, switchedOff: 1, neverSwitched: 1 })).length,
-    3
-  )
-})
-
-test('one feature is a feature, not "1 features"', () => {
-  assert.match(flagListAnswerLine(counts({ total: 1, serving: 1 }), 'Production'), /1 feature\b/)
-  assert.match(flagListAnswerLine(counts({ total: 2, serving: 2 }), 'Production'), /2 features\b/)
-  assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
-  assert.equal(dormantGroupLabel(39, 'Production'), '39 features have never been turned on in Production')
-})
-
-test("production's real answer line reads as a sentence, with no empty category in it", () => {
-  const line = flagListAnswerLine(counts({ total: 42, serving: 3, neverSwitched: 39 }), 'Production')
-  assert.equal(line, 'Production is serving 3 features and 39 never turned on here.')
-  assert.ok(!line.includes('0 '), 'the live sentence announces an empty category')
-})
-
-test('three clauses join with commas and a final "and", not three "and"s', () => {
-  assert.equal(
-    flagListAnswerLine(counts({ total: 6, serving: 1, switchedOff: 2, neverSwitched: 3 }), 'Preview'),
-    'Preview is serving 1 feature, 2 deliberately switched off and 3 never turned on here.'
-  )
-})
-
-test('a project with no features says so, rather than trailing off', () => {
-  // Every new tenant starts here. A dangling "Production is ." reads as a bug.
-  assert.equal(flagListAnswerLine(counts(), 'Production'), 'No features in Production yet.')
-})
-
-test('with NOTHING serving, the line is a sentence rather than a stem plus a fragment', () => {
-  // The bug this pins: "production is 2 never turned on here." The stem "<env> is …" assumes a verb
-  // that only the serving clause supplies. Nothing serving is not an edge — it is every new
-  // project, and on this product's own tenant it is every environment but one.
-  assert.equal(
-    flagListAnswerLine(counts({ total: 2, neverSwitched: 2 }), 'production'),
-    'Nothing is on in production — 2 features have never been turned on here.'
-  )
-  assert.equal(
-    flagListAnswerLine(counts({ total: 1, neverSwitched: 1 }), 'production'),
-    'Nothing is on in production — 1 feature has never been turned on here.'
-  )
-  assert.equal(
-    flagListAnswerLine(counts({ total: 2, switchedOff: 2 }), 'preview'),
-    'Nothing is on in preview — 2 are deliberately switched off.'
-  )
-})
-
-test('every combination of the three counts produces a grammatical sentence', () => {
-  // The property behind the bug, asserted exhaustively rather than at one shape: whatever the mix,
-  // the line ends in a full stop, has no doubled space, and never reads "is <number>" — which is
-  // exactly what the broken stem produced.
-  for (let serving = 0; serving <= 2; serving += 1) {
-    for (let off = 0; off <= 2; off += 1) {
-      for (let never = 0; never <= 2; never += 1) {
-        const total = serving + off + never
-        const line = flagListAnswerLine(
-          counts({ total, serving, switchedOff: off, neverSwitched: never }),
-          'production'
-        )
-        const at = `${serving}/${off}/${never}`
-        assert.match(line, /\.$/, `no full stop at ${at}: ${line}`)
-        assert.ok(!line.includes('  '), `doubled space at ${at}: ${line}`)
-        assert.ok(!/\bis \d/.test(line), `reads as a stem plus a number at ${at}: ${line}`)
-      }
-    }
-  }
-})
-
-test("the answer line NAMES what is serving, which is the design's whole point", () => {
-  // "Right now Production is serving checkout.stripe_enabled and domain.paywall_enabled." A page
-  // that reports a number answers "how many"; one that names them answers "what".
+test("production's real shape reads as separate sentences, not one glued list", () => {
+  // ⚠️ The bug this replaces: gluing every clause into one sentence put the dormant count inside
+  // the list of things being SERVED — "serving checkout.stripe_enabled and domain.paywall_enabled
+  // and 40 never turned on here." Live production gets exactly that shape (3 on / 39 never, A20).
   assert.equal(
     flagListAnswerLine(counts({ total: 42, serving: 2, neverSwitched: 40 }), 'Production', [
       'checkout.stripe_enabled',
       'domain.paywall_enabled',
     ]),
-    'Production is serving checkout.stripe_enabled and domain.paywall_enabled and 40 never turned on here.'
+    'Right now Production is serving checkout.stripe_enabled and domain.paywall_enabled.' +
+      ' The other 40 have never been switched on in Production — nobody turned them off, nobody ever turned them on.'
   )
 })
 
-test('naming is capped, because the line is prose and not a list', () => {
-  assert.equal(namedServingKeys(['a']), 'a')
-  assert.equal(namedServingKeys(['a', 'b']), 'a and b')
-  assert.equal(namedServingKeys(['a', 'b', 'c']), 'a, b and c')
-  // A tenant serving twenty would push the summary off the screen it exists to fit on.
-  // One conjunction per phrase: with a remainder, the remainder is the final item.
-  assert.equal(namedServingKeys(['a', 'b', 'c', 'd']), 'a, b, c and 1 more')
-  assert.equal(namedServingKeys(['a', 'b', 'c', 'd', 'e']), 'a, b, c and 2 more')
-  for (const keys of [
-    ['a', 'b', 'c', 'd'],
-    ['a', 'b', 'c', 'd', 'e', 'f'],
-  ]) {
-    assert.equal(
-      (namedServingKeys(keys).match(/ and /g) ?? []).length,
-      1,
-      `two conjunctions in one phrase: ${namedServingKeys(keys)}`
-    )
+test('nothing serving says "nothing", which is this product\'s own common case', () => {
+  // `off` is 0 in every environment and two of three serve nothing (A20). Not an edge.
+  assert.equal(
+    flagListAnswerLine(counts({ total: 40, neverSwitched: 40 }), 'preview'),
+    'Right now preview is serving nothing.' +
+      ' The other 40 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+  )
+})
+
+test('a deliberate switch-off gets its own sentence', () => {
+  const line = flagListAnswerLine(
+    counts({ total: 3, serving: 1, switchedOff: 1, neverSwitched: 1 }),
+    'preview',
+    ['a']
+  )
+  assert.equal(
+    line,
+    'Right now preview is serving a. 1 feature was deliberately switched off here.' +
+      ' The other 1 have never been switched on in preview — nobody turned them off, nobody ever turned them on.'
+  )
+})
+
+test('a project with no features says so, rather than trailing off', () => {
+  assert.equal(flagListAnswerLine(counts(), 'Production'), 'No features in Production yet.')
+})
+
+test('the keys are MONO segments, which is how the design paints them gold', () => {
+  // A plain string could not carry this, and the ported `.answer code` rule matched nothing because
+  // there was no element to match.
+  const segments = flagListAnswerSegments(counts({ total: 2, serving: 2 }), 'Production', ['a.b', 'c.d'])
+  assert.deepEqual(
+    segments.filter((segment) => segment.emphasis === 'mono').map((segment) => segment.text),
+    ['a.b', 'c.d']
+  )
+  assert.ok(segments.some((segment) => segment.emphasis === 'strong' && segment.text === 'Production'))
+})
+
+test('EVERY combination is grammatical — including the NAMED path the old test never reached', () => {
+  // ⚠️ The previous "exhaustive" test called the function with no `servingKeys`, so the branch the
+  // whole naming fix added was outside the property test (fresh reviewer, round 2). A property test
+  // that misses the new code path is a property test in name only.
+  const keyPool = ['a.one', 'b.two', 'c.three', 'd.four', 'e.five']
+  for (let serving = 0; serving <= 5; serving += 1) {
+    for (let off = 0; off <= 2; off += 1) {
+      for (let never = 0; never <= 2; never += 1) {
+        for (const named of [true, false]) {
+          const total = serving + off + never
+          const line = flagListAnswerLine(
+            counts({ total, serving, switchedOff: off, neverSwitched: never }),
+            'production',
+            named ? keyPool.slice(0, serving) : []
+          )
+          const at = `${serving}/${off}/${never}${named ? ' named' : ''}`
+          assert.match(line, /\.$/, `no full stop at ${at}: ${line}`)
+          assert.ok(!line.includes('  '), `doubled space at ${at}: ${line}`)
+          assert.ok(!line.includes(' and and '), `doubled conjunction at ${at}: ${line}`)
+          assert.ok(!line.includes('undefined'), `undefined leaked at ${at}: ${line}`)
+          // The dormant count must never sit inside the "serving" clause — the bug this replaces.
+          const servingClause = line.slice(0, line.indexOf('.') + 1)
+          assert.ok(
+            !/never (been )?switched on/.test(servingClause),
+            `the dormant count is inside the serving sentence at ${at}: ${line}`
+          )
+        }
+      }
+    }
   }
 })
 
-test('with no keys supplied it still counts, so the function is usable without them', () => {
-  assert.match(flagListAnswerLine(counts({ total: 3, serving: 3 }), 'Production'), /serving 3 features/)
+test('the dormant summary line is plural-safe', () => {
+  // Rendered on the one row that stands for every never-touched feature, so "1 features have" would
+  // be on screen for any tenant with exactly one dormant flag.
+  assert.equal(dormantGroupLabel(1, 'Production'), '1 feature has never been turned on in Production')
+  assert.equal(dormantGroupLabel(39, 'Production'), '39 features have never been turned on in Production')
 })

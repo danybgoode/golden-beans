@@ -20,6 +20,16 @@ import { readTenantRecord } from './helpers/authed-fixture'
 
 const VIEWPORT = { width: 1440, height: 960 }
 
+/**
+ * ⚠️ **Exactly `'true'`, matching `lib/flags.ts`.** The first version skipped on truthiness, so
+ * `FLAG_CONSOLE_ENABLED=false` did NOT skip — the string "false" is truthy — while the app read it
+ * as off and served the legacy render. The suite then failed hard against markup it never claims to
+ * describe (fresh reviewer, round 2).
+ */
+function gatesAreLit(): boolean {
+  return process.env.CONSOLE_SHELL_ENABLED === 'true' && process.env.FLAG_CONSOLE_ENABLED === 'true'
+}
+
 function tenant() {
   const record = readTenantRecord()
   if (!record?.slug || !record?.projectId) {
@@ -78,8 +88,8 @@ async function openFeatures(page: Page): Promise<void> {
 // scroll" is not an actionable failure and "3695px in a 960px viewport" is.
 test.describe('the console matches the approved design', () => {
   test.skip(
-    !process.env.FLAG_CONSOLE_ENABLED || !process.env.CONSOLE_SHELL_ENABLED,
-    'the visual gate asserts the LIT console; run with both gates on'
+    !gatesAreLit(),
+    'the visual gate asserts the LIT console; run with CONSOLE_SHELL_ENABLED=true and FLAG_CONSOLE_ENABLED=true'
   )
 
   test('Ship › Features at 1440x960 matches the approved prototype', async ({ page }) => {
@@ -203,6 +213,12 @@ test.describe('the console matches the approved design', () => {
 })
 
 test('the feature list survives a 390px phone', async ({ page }) => {
+  // ⚠️ **This test sat outside the describe's skip and went red on the configuration live in
+  // production today.** `CONSOLE_SHELL_ENABLED` is off in prod until Story 3.5, and without
+  // `.is-console` the console stylesheet does not apply — so the legacy render, which D4 guarantees
+  // is untouched, tripped the overlap check. A false red whose obvious repair is to weaken the
+  // assertion (fresh reviewer, round 2).
+  test.skip(!gatesAreLit(), 'the phone contract is about the LIT console; run with both gates on')
   // ⚠️ **Nothing covered this route at phone width.** `mobile-heuristics.authed.spec.ts`'s
   // `AUTHED_MOBILE_ROUTES` does not include `/app/flags/<slug>`, which is how the console shipped
   // 340px of fixed row columns in a 390px viewport: `.row-main` measured **0** wide, the feature key

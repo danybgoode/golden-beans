@@ -44,7 +44,7 @@ import {
   summariseFlagList,
   type FlagListParams,
 } from '@/lib/flag-list-view'
-import { dormantGroupLabel, flagListAnswerLine } from '@/lib/flag-console-copy'
+import { dormantGroupLabel, flagListAnswerSegments } from '@/lib/flag-console-copy'
 // Story 2.1 — the words live in one module now that a second surface renders them (D7).
 import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL, summaryCardLabels } from './flag-vocabulary'
 
@@ -55,6 +55,22 @@ import { CRITICALITY_LABEL, FLAG_STATE_PRESENTATION, TYPE_LABEL, summaryCardLabe
  * and defaulting to development would answer a question nobody asked while looking authoritative.
  */
 export const DEFAULT_FLAG_ENVIRONMENT: FlagEnvironment = 'production'
+
+/**
+ * Which summary cards the current filter covers.
+ *
+ * ⚠️ `state=off` (the historic "not on" union) is reachable by URL but has NO card of its own, so a
+ * plain equality check left nothing marked current and no card painted — a reader arriving on that
+ * link saw a filtered list with no indication of what filtered it (fresh reviewer, round 2).
+ *
+ * Exact for every filter that has a card. `'off'` spans two of them — off and never — so both are
+ * marked rather than neither, and the reader can see which view they are in. Its chip reads "Not on"
+ * and old bookmarks carry it, so its meaning is not changed here.
+ */
+function isCurrent(active: FlagListParams['state'], card: FlagListParams['state']): boolean {
+  if (active === 'off') return card === 'switched_off' || card === 'never'
+  return active === card
+}
 
 export function FlagConsole({
   slug,
@@ -110,10 +126,20 @@ export function FlagConsole({
           them — this component is only reachable through a signed-in browser. A zero-count clause is
           DROPPED, never rendered as "0" (A20). */}
       <p className="answer">
-        {flagListAnswerLine(
+        {flagListAnswerSegments(
           summary,
           params.environment,
           projected.filter((row) => row.state === 'on').map((row) => row.key)
+        ).map((segment, index) =>
+          segment.emphasis === 'mono' ? (
+            <span className="mono" key={index}>
+              {segment.text}
+            </span>
+          ) : segment.emphasis === 'strong' ? (
+            <b key={index}>{segment.text}</b>
+          ) : (
+            <Fragment key={index}>{segment.text}</Fragment>
+          )
         )}
       </p>
 
@@ -127,7 +153,7 @@ export function FlagConsole({
             key={card.key}
             className={`stat ${card.key}`}
             href={linkTo({ state: card.state })}
-            aria-current={params.state === card.state ? 'true' : undefined}
+            aria-current={isCurrent(params.state, card.state) ? 'true' : undefined}
           >
             <span className="n">
               {card.key === 'all'
@@ -218,28 +244,37 @@ export function FlagConsole({
                   hardcoded "On in <env>" over every non-dormant row is what shipped first, and on a
                   list with nothing on it read "On in production · 2" four elements after the page
                   said "Nothing is on in production". */}
+              {/* `role="cell"`, NOT `columnheader`: this heading labels a RUN OF ROWS, and telling
+                  assistive tech it heads a COLUMN is a different and false claim. The decorative bar
+                  is hidden rather than left as an unlabelled cell. */}
               {run.state !== null && (
                 <div className={`grp ${run.state}`} role="row">
-                  <span className="bar" />
-                  <span role="columnheader">
+                  <span className="bar" aria-hidden="true" />
+                  <span role="cell">
                     {run.state === 'on'
                       ? `${FLAG_STATE_PRESENTATION.on.label} in ${params.environment}`
                       : FLAG_STATE_PRESENTATION[run.state].label}
                   </span>
-                  <span className="cnt">{run.rows.length}</span>
+                  <span className="cnt" role="cell">
+                    {run.rows.length}
+                  </span>
                 </div>
               )}
               {run.rows.map((row) => {
                 const presentation = FLAG_STATE_PRESENTATION[row.state]
                 return (
                   <div className="row" key={row.id} role="row">
-                    <span className="row-main" role="cell">
+                    <span className="row-main" role="cell" aria-label="Feature">
                       <a className="row-key" href={`${basePath}/${encodeURIComponent(row.key)}`}>
                         <code>{row.key}</code>
                       </a>
                       {row.description !== '' && <span className="row-desc">{row.description}</span>}
                     </span>
-                    <span className="row-state" role="cell">
+                    {/* ⚠️ `aria-label` on the CELL, because the column headers are `display: none`
+                        below 900px and that removes them from the accessibility tree entirely — a
+                        phone user otherwise hears "Unclassified Unclassified" with no way to tell
+                        type from risk. A stylesheet cannot fix this; only the markup can. */}
+                    <span className="row-state" role="cell" aria-label={`State in ${params.environment}`}>
                       {/* A dot AND a word — never colour alone. The three states are the distinction
                           `flags-console-parity` Amendment 2 paid to separate, and a colour-only pill
                           re-collapses it for anyone who cannot see the difference. */}
@@ -250,8 +285,12 @@ export function FlagConsole({
                       <span className="state-detail">{presentation.detail(row)}</span>
                     </span>
                     <span className="row-meta" role="cell">
-                      <span className="tag">{TYPE_LABEL[row.polarity]}</span>
-                      <span className="tag">{CRITICALITY_LABEL[row.criticality]}</span>
+                      <span className="tag" aria-label={`Type: ${TYPE_LABEL[row.polarity]}`}>
+                        {TYPE_LABEL[row.polarity]}
+                      </span>
+                      <span className="tag" aria-label={`Risk: ${CRITICALITY_LABEL[row.criticality]}`}>
+                        {CRITICALITY_LABEL[row.criticality]}
+                      </span>
                     </span>
                   </div>
                 )
@@ -265,18 +304,22 @@ export function FlagConsole({
             The first version grouped the paginated slice and read "23 features have never been
             turned on" on a tenant with 40 — a number plausible enough that only putting the built
             page beside the design caught it. */}
+        {/* ⚠️ `role="row"` may own only cells. The first retrofit left `.tw` and the "Show them"
+            link with no role, so an accessibility tree showed the link as a SIBLING of the row and
+            the text in no cell at all (fresh reviewer, round 2). Half a semantics fix reads as a
+            whole one until someone dumps the tree. */}
         {grouping.grouped && (
           <div className="dormant" data-dormant-summary role="row">
-            <span className="tw">
+            <span className="tw" role="cell">
               <span className="t">{dormantGroupLabel(grouping.dormant.length, params.environment)}</span>
               <span className="d">
                 No one has ever switched them on or off here. Nothing is wrong with them — nothing has
                 happened to them.
               </span>
             </span>
-            <a className="go" href={linkTo({ state: 'never' })}>
-              Show them
-            </a>
+            <span className="go" role="cell">
+              <a href={linkTo({ state: 'never' })}>Show them</a>
+            </span>
           </div>
         )}
       </div>
