@@ -1,6 +1,6 @@
 # One design system, every surface — Sprint 1: The rails — make a bad-looking page fail the build
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress — architecture locked 2026-08-29
 
 > **This sprint writes almost no product CSS.** It builds the machinery that makes every later
 > sprint checkable, and it closes four of the six mechanisms in the epic README on its own.
@@ -15,6 +15,45 @@
 > approved design IS signed-off scope*) is a `Roadmap/` doc change and belongs to the planning lane.
 > It shipped in the scaffold commit. It is recorded here because it closes Mechanism B and the
 > sprint would otherwise look like it has a gap.
+
+## Build contract (locked by the architect before the builder started)
+
+> Sprint 1 is **not delegated** — it is entirely shared surface (README → *Routing*). This contract
+> is written anyway, because the next sprint's builder inherits every line of it and because a
+> contract nobody wrote down drifts permissive the first time it is paraphrased.
+>
+> **Cite a decision. Never re-derive one.** If a line here is wrong, that is an escalation, not a
+> judgement call.
+
+**Paths this sprint owns.** `apps/web/design-system/**` (new) · `scripts/check-design-drift.mjs` ·
+`apps/web/e2e/design-drift.spec.ts` (new) · `apps/web/e2e/coverage-manifest.spec.ts` (new) ·
+`.github/workflows/ci.yml` · `apps/web/lib/project-route-inventory.ts` (import only, no edit yet —
+`iconKey` lands in Story 2.4) · `Roadmap/02-commercial/console-ia-overhaul/{README,design/*}.md`
+(forward pointers only). **It writes no product CSS and touches no route.**
+
+| # | The contract | Cites |
+|---|---|---|
+| 1 | `apps/web/design-system/` is a **child of `apps/web`**. `@/design-system/…` resolves under today's `tsconfig` with **no config change**. Do not add a path alias, a `next.config` rewrite or a workspace entry. | **D1** |
+| 2 | The prototype and the app share **CSS, not TypeScript**. `_harness.mjs` inlines `design-system/*.css`; it must never import a `.ts`/`.tsx`, which Node 22 cannot load. | **D1** |
+| 3 | `references/design/assets/tokens.css` is **not edited**. `globals.css` must still `@import` it **first** — the drift guard asserts that literal string, and the landing renders from it. | **D2** |
+| 4 | The product token set is defined **once**, in `design-system/tokens.css`, on the `.ds` scope root. `console.css`'s `.is-console` token block and the prototype's inlined `:root` are both **deleted** in the same commit that adds it. | **D2** |
+| 5 | `--roast-2` is a **recorded fork** (`#221b13` landing / `#1c1710` console). It goes in `FORKED_TOKENS` with its reason, and both live values are named in the Story 1.2 findings block. It is **not** renamed and **not** silently unified. | **D2-b** |
+| 6 | The two false "no new colours" comments — in `console.css` and in `CONSOLE-CONTRACT.md` — are corrected in this sprint, naming the ten tokens. | **D2-c** |
+| 7 | Namespace is `ds-`, scope root `.ds`. Verified free of collisions in all four stylesheets. | **D3** |
+| 8 | The manifest **imports** `PROJECT_ROUTE_INVENTORY`; it never re-lists a surface. Its test asserts a row for every inventory surface **and exactly 29 rows**. | **D5-b** |
+| 9 | Every new visual assertion lands in the **`authed`** Playwright project. `browser` runs nowhere. | **D5-a** |
+| 10 | `measure-contract.mjs` gains `--check` and **emits** the spec file under a do-not-hand-edit header. The two corrected numbers arrive **from a regenerated table** — `122 × 30` and `71`. A hand-edit here repeats the defect it is fixing. | **D8** |
+| 11 | Both scripts and `_harness.mjs` run **in CI**. They died on a fresh clone for four days because nothing ran them; a missing import must fail in minutes. | Mechanism **D** |
+| 12 | Every new assertion is **observed failing** before the work it guards. Where the thing it guards is already correct, the red is produced by a **mutation check recorded in the PR body**. | **D5**, **D12** |
+
+**The 29 routes, enumerated once so no builder counts them again.** 32 `page.tsx` files exist;
+three are out of scope.
+
+| Group | Count | Routes |
+|---|---|---|
+| Console (`ProductShell`, seam A) | **20** | `/app` · `agent-keys` · `destinations` · `experiments` · `experiments/[experimentKey]` · `flag-audit` · `flag-credentials` · `flags` · `flags/[flagKey]` · `funnel/[featureKey]` · `impact/[featureKey]` · `journeys` · `journeys/[journeyKey]` · `keys` · `onboarding` · `scenarios` · `setup/connect` · `setup/keys` · `shares` · `tasks` |
+| Doors + hub (seam B) | **9** | `/login` · `/signup` · `/install` · `/s/[token]` · `/talk` · `/hub/[projectSlug]` · `…/epic/[epicSlug]` · `…/horizon` · `…/report` |
+| **Out of scope** | 3 | `/` · `/methodology` · `/methodology/[chapter]` — shipped on the brand system by two earlier epics. Gating them would put those epics behind this epic's kill-switch (**D6**). |
 
 ## Stories
 
@@ -51,15 +90,34 @@ changes the product rather than one of three copies.
   restating `font-size` under it leaves the rest in place.
 **Risk:** high
 
-### Story 1.3 — The drift guard covers the directories primitives land in
-**As a** reviewer, **I want** `check-design-drift.mjs` to walk `components/ui` and
-`components/product`, **so that** the guard is not blind to exactly where this epic adds code.
+### Story 1.3 — The drift guard learns the rules this epic needs
+> ⚠️ **REWRITTEN AT THE LOCK (D11-1).** As scaffolded this story read *"the guard walks
+> `components/ui` and `components/product` … the audit named this gap by hand (§10.5)"*.
+> **`SWEPT_ROOTS` already contains both**, plus `components/brand` and `components/methodology` —
+> `app-shell-and-agent-rail` S1.4 closed the audit's gap before this epic was scaffolded. Building
+> the scaffolded story would have produced a no-op diff and a green tick on work nobody did.
+> The gap that IS open is a different one, and it is what this story now builds.
+
+**As a** reviewer, **I want** `check-design-drift.mjs` to hold the rules this epic's new surface
+needs, **so that** the guard is not blind to the ways *this* design system can drift.
 **Acceptance:**
-- The guard walks both directories. The audit named this gap by hand (§10.5): it already covers all
-  of `apps/web/app` and neither of these.
-- Observed failing first — introduce a raw hex in a `components/ui` file, see red, remove it.
+- **`apps/web/design-system` joins `SWEPT_ROOTS`.** It is the one directory this epic creates and
+  the only swept-root gap that is real. A missing root must be LOUD — the guard already throws on a
+  non-existent root, so the root is added in the same commit as the directory.
+- **The stylesheet sweep stops being `globals.css`-only.** Today exactly one CSS file is read, for
+  raw hex alone. Every `apps/web/design-system/*.css` file is swept for raw hex too — the whole
+  point of the directory is that it consumes tokens.
+- **A `font:`-shorthand rule (D3).** The shorthand resets family, weight, style, size, line-height
+  and variant, so an override that restates only `font-size` silently leaves the rest at the
+  shorthand's values. Flagged inside `design-system/*.css`.
+- **A namespace rule (D3).** A class selector in `design-system/*.css` that is neither `.ds` nor
+  `ds-`-prefixed is a violation — that is what keeps landing rules and console rules from reaching
+  each other through a shared word, which happened three times in one epic.
+- **Each new rule is observed failing first** — plant a raw hex, a `font:` shorthand and an
+  unprefixed class, see three reds, remove them. A rule that has never been seen red is not a rule.
 - The **pictograph ban is not relaxed.** It is the reason no rail icon was ever added, and Story 2.4
-  answers it with SVG `Icon` components (**D4**), not with an exemption.
+  answers it with SVG `Icon` components (**D4**), not with an exemption. **F1's `Add to Claude ↗`
+  becomes `<Icon name="external" />`** — the map already has it.
 **Risk:** high
 
 ### Story 1.4 — The contract becomes generated output ✳ *closes Mechanisms C and D*
@@ -112,24 +170,40 @@ system, **so that** an XXL project has a finish line and an off-system page is v
 - **browser smoke owed:** yes, to Daniel — **the before-baseline contact sheet of all 29 routes**
   (authed; a real session is required and no automated smoke can sign it off). One page, 29 shots.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
-  The visual gate itself lives in the `browser` project because it asserts rendered geometry.
+  ⚠️ **CORRECTED (D5-a):** the visual gate lives in the **`authed`** project, not `browser`, and
+  `ci.yml` already runs it as its own blocking step with all thirteen gate env vars mirrored. The
+  `browser` project runs **nowhere** — `landing.browser.spec.ts` is red on `main` for that reason.
+  Every new visual row lands in `authed` or it is not in the gate.
 
 ## Sprint 1 — Smoke walkthrough (do these in order)
-Env: **the branch preview** for steps 1–3 (nothing user-visible changes in this sprint) ·
-production · https://goldenfrijoles.com for step 4.
 
-1. On a **fresh clone** of the branch, run
+> ⚠️ **REWRITTEN AT THE LOCK (D9).** As scaffolded, steps 1–3 said *"the branch preview"*.
+> **A preview deployment of this app cannot serve a signed-in or database-backed page**: Preview
+> holds six env vars and **none of the four Supabase ones** (they are Production-only, and
+> `vercel integration list` reports no resource injecting them), so `lib/supabase.ts` throws; every
+> preview probed also answers **302** at `/` and `/login` behind deployment protection. A step
+> written against a preview URL is a step nobody can run — and it reads exactly like a step that
+> passed. Steps 1–3 are **local**; step 4 is **production**.
+
+Env: steps 1–3 **local, on a fresh clone of the branch** · step 4
+**production · https://goldenfrijoles.com**.
+
+1. On a **fresh clone** of the branch (`git clone`, `npm ci`, nothing else), run
    `node apps/web/design-system/render-reference.mjs`
-   → Ten PNGs are written. No `ERR_MODULE_NOT_FOUND`.
+   → **32** PNGs are written into `apps/web/design-system/reference/`, and the last line reads
+   `zero page errors`. No `ERR_MODULE_NOT_FOUND`.
 2. Run `node apps/web/design-system/measure-contract.mjs --check`
-   → It exits green, and the spec file it emits shows the project switcher as `122 × 30` and the
-   feature row as `71` — not `140 × 30` and `78`.
+   → It exits **0**, and the spec file it emits shows the project switcher as **`122 × 30`** and the
+   feature row as **`1118 × 71`** — not `140 × 30` and `78`. Now hand-edit one number in the emitted
+   file and re-run `--check` → it exits **non-zero** and names the row. A regenerator that cannot
+   fail is not a regenerator.
 3. Open the PR's CI run.
-   → A `coverage` line reports **1/29** (only Ship › Features has a reference state today), and the
-   visual gate is **red** on the routes that have one and do not match. A green gate at this point
-   is the bug.
-4. Go to https://goldenfrijoles.com/app/flags/miyagisanchez
-   → The page looks **exactly as it does today**. This sprint changes no product pixel; if anything
-   moved, that is the bug report.
+   → A `coverage` line reports **1/29** — only Ship › Features has a reference state today — and
+   the design-drift job is **green** while `e2e/design-drift.spec.ts` shows three planted violations
+   having gone red and been removed. **A coverage line reading 29/29 at this point is the bug.**
+4. Go to https://goldenfrijoles.com/app/flags/miyagisanchez (signed in).
+   → The page looks **exactly as it does today**: 3 feature rows, one line standing for the 39 that
+   have never been turned on in Production, the same chrome. **This sprint changes no product
+   pixel** — if anything moved, that is the bug report.
 
 If any step fails, note the step number + what you saw — that's the bug report.
