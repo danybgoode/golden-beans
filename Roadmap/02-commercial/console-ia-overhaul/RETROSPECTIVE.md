@@ -13,7 +13,7 @@ design the product owner approved.
 | 1 | Four sections generated from the route inventory; the per-section rail; `⌘K` over surfaces; `funnel`/`impact` leave the nav and `DEFAULT_FEATURE_HINT` dies with them | `834eb73` (#122) |
 | 2 | `Setup › Connect` and `Setup › Keys`; a credential swap that cannot half-happen; **the console flipped ON in production** (A19) | `e6bb22b` (#123) |
 | 3A | The approved design made **binding and measurable** — `CONSOLE-CONTRACT.md`, `app/console.css`, `e2e/console-visual.authed.spec.ts`; Ship › Features rebuilt; the AgentRail out of the console grid | `4ba9665` (#124) |
-| 3B | Both free-key authoring paths deleted and the **"New feature" wizard** landed in the same commit; **Funnel and Impact as tabs**; `⌘K` indexes feature keys; the dead nav removed; A22 swept across every signed-in route; the visual gate wired into CI | `270faa0` · `88dccd0` · `54fa594` · `68a593f` · `05e857c` · `f825f46` |
+| 3B | Both free-key authoring paths deleted and the **"New feature" wizard** landed in the same commit; **Funnel and Impact as tabs**; `⌘K` indexes feature keys; the dead nav removed; A22 swept across every signed-in route; the visual gate wired into CI | `8f556ce` (#125) |
 
 The outcome test the epic was written against: **every surface is reachable in three clicks or one
 `⌘K`, and no navigation entry anywhere tells anyone to edit a URL.**
@@ -94,3 +94,27 @@ The outcome test the epic was written against: **every surface is reachable in t
 - **The `authed` project is still not the blocking gate.** One file of it now is. The other 84 specs
   are run on purpose, and this epic is the second consecutive one to record what happens when nobody
   does.
+
+## The review layer, and the part of it that did not run
+
+Seven cross-family rounds, ending **clean from both families with full attachment**. Codex was capped
+(`try again at Sep 16th, 2026`), so the router's substitution was **agy + vibe** — the same one A14
+recorded for this epic's build pool. A refund ask, not a licence to substitute.
+
+⚠️ **The fresh-reviewer subagent that HIGH tier mandates did NOT run**, and it is recorded here
+rather than left to be inferred: this session was instructed not to spawn agents. A cold re-read by
+the builder stood in, which is not context-independent and does not carry the same weight — the layer
+is short, and a short layer that reads like a complete one is worse than an absent one. (It did
+produce the `aria-modal` finding, which neither external family raised.)
+
+The rounds are worth reading for one pattern in particular: **twice, a finding's conclusion was wrong
+and its observation was right**, and both produced a real fix — the palette cursor ("not reset on
+query change": it is, but the async merge changes the list without a keystroke) and `aria-colspan`
+("not a recognized ARIA attribute": it is, but the count was wrong for owners). A third finding's
+suggested FIX would have reintroduced a double-write against an append-only registry, so it got a
+third answer rather than its own.
+
+And the epic's own lesson arrived one more time at the very end: **an assertion written to close a
+review finding could not fail.** Counting `querySelectorAll('[role="columnheader"]')` passes under
+`display: none`, which removes an element from the accessibility tree but not from the DOM. Only
+mutation-checking it caught that.
