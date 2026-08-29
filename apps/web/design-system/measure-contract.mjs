@@ -189,8 +189,29 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
       console.log(`✓ measure-contract: ${OUT} matches a fresh measurement of the approved prototype`);
       process.exit(0);
     }
+    console.error(`✗ ${relative(process.cwd(), path)} is ${onDisk === null ? 'missing' : 'out of date'}.`);
+    // ⚠️ PRINT THE DIFF. The first CI run of this step failed with nothing but "out of date", and
+    // the numbers only exist inside a headless browser on a runner — so there was no way to tell a
+    // font that had not loaded from a genuine design change without another cycle. A check that
+    // says a file is wrong and not HOW is a check somebody re-runs rather than reads.
+    if (onDisk !== null) {
+      const was = onDisk.split('\n');
+      const now = content.split('\n');
+      const changed = [];
+      for (let i = 0; i < Math.max(was.length, now.length); i += 1) {
+        if (was[i] !== now[i])
+          changed.push({ line: i + 1, was: was[i] ?? '(absent)', now: now[i] ?? '(absent)' });
+      }
+      console.error(`\n  ${changed.length} line(s) differ. Committed → measured just now:\n`);
+      for (const row of changed.slice(0, 30)) {
+        console.error(`   ${String(row.line).padStart(3)} - ${row.was}`);
+        console.error(`       + ${row.now}`);
+      }
+      if (changed.length > 30) console.error(`   … and ${changed.length - 30} more`);
+    }
     console.error(
-      `✗ ${relative(process.cwd(), path)} is ${onDisk === null ? 'missing' : 'out of date'}.\n` +
+      '\n  If the SIZES moved and the weights did not, the approved fonts rendered as a fallback — ' +
+        'the harness now refuses that case outright, so this should not be reachable.\n' +
         '  Run: node apps/web/design-system/measure-contract.mjs\n' +
         '  Never hand-edit it — a number nobody can reproduce is what this file exists to prevent.'
     );

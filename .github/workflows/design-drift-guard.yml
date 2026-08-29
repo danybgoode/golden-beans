@@ -6,6 +6,13 @@ on:
     paths:
       - 'apps/web/app/**'
       - 'apps/web/components/**'
+      # ⚠️ design-system-rails S1.3 — WITHOUT THIS LINE THE THREE NEW RULES NEVER RUN.
+      # `apps/web/design-system/` is in SWEPT_ROOTS, but a path filter decides whether this workflow
+      # is triggered AT ALL — so a PR touching only that directory matched nothing here, matched
+      # nothing in `.githooks/pre-commit`, and `ci.yml` does not invoke the script. Three rules,
+      # zero executions, on the one directory they were written for. It only ran on the PR that
+      # ADDED them because that PR also edited the script. Found by the fresh reviewer, Blocking.
+      - 'apps/web/design-system/**'
       - 'references/design/assets/tokens.css'
       - 'scripts/check-design-drift.mjs'
       - '.github/workflows/design-drift-guard.yml'
@@ -13,6 +20,13 @@ on:
     paths:
       - 'apps/web/app/**'
       - 'apps/web/components/**'
+      # ⚠️ design-system-rails S1.3 — WITHOUT THIS LINE THE THREE NEW RULES NEVER RUN.
+      # `apps/web/design-system/` is in SWEPT_ROOTS, but a path filter decides whether this workflow
+      # is triggered AT ALL — so a PR touching only that directory matched nothing here, matched
+      # nothing in `.githooks/pre-commit`, and `ci.yml` does not invoke the script. Three rules,
+      # zero executions, on the one directory they were written for. It only ran on the PR that
+      # ADDED them because that PR also edited the script. Found by the fresh reviewer, Blocking.
+      - 'apps/web/design-system/**'
       - 'references/design/assets/tokens.css'
       - 'scripts/check-design-drift.mjs'
       - '.github/workflows/design-drift-guard.yml'

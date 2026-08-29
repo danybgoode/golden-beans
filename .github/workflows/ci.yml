@@ -74,6 +74,18 @@ jobs:
       - name: The generated design contract is in sync with the approved prototype
         run: node apps/web/design-system/extract-css.mjs --check
 
+      # ── The drift guard, unconditionally ────────────────────────────────────────────────────
+      #
+      # `design-drift-guard.yml` runs it too, but that workflow is PATH-FILTERED and therefore does
+      # not run on every PR — which is fine as an optimisation and fatal as the only execution. A
+      # path filter is a claim about which changes can break a rule, and it was wrong once already:
+      # the design-system rules never fired on a PR touching only `apps/web/design-system/` until
+      # that path was added (fresh reviewer, Blocking).
+      #
+      # ~75ms. The blocking gate should not depend on a filter list being complete.
+      - name: Design-drift guard
+        run: node scripts/check-design-drift.mjs
+
       # ── design-system-rails · Story 1.5 — coverage, and the ratchet ──────────────────────────
       #
       # Prints the finish line on every run, and fails when it moves backwards. The ratchet compares

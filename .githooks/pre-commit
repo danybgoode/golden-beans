@@ -43,7 +43,9 @@ fail=0
 # Design-drift: ~75ms, and path-gated to the surfaces it actually governs. Cheap enough to belong
 # here, and it catches exactly the class of mistake that is expensive to unpick after the fact
 # (hardcoded values instead of shared tokens/primitives spreading across components).
-if echo "$changed" | grep -qE '^(apps/web/(app|components)/|references/(design/|ux-guidelines\.md|golden-beans-design-system-proposal/|golden-beans-mark-exploration-round2\.html)|scripts/check-design-drift\.mjs)'; then
+# `design-system` added by design-system-rails S1.3 — see the note in design-drift-guard.yml: the
+# path filter, not SWEPT_ROOTS, is what decides whether the guard runs at all.
+if echo "$changed" | grep -qE '^(apps/web/(app|components|design-system)/|references/(design/|ux-guidelines\.md|golden-beans-design-system-proposal/|golden-beans-mark-exploration-round2\.html)|scripts/check-design-drift\.mjs)'; then
   if ! node scripts/check-design-drift.mjs; then
     echo "pre-commit: design-drift failed — use shared tokens/primitives and SVG icons." >&2
     fail=1
