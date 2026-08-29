@@ -39,7 +39,18 @@ Plan → Branch + scaffold docs → Build story → Verify → QA/smoke-test (pr
 
 1. **Plan.** For non-trivial work, Claude enters plan mode, writes a plan as user stories, and the
    product owner approves before code. **Every plan names a QA / smoke-test stage** with the specific
-   checks and tools. Reference end-states (spec docs) are inspiration, never signed-off scope. Every
+   checks and tools. **A reference end-state is inspiration — an APPROVED design is scope.** ⚠️ *Amended 2026-08-29
+   (`design-system-rails`, from `console-ia-overhaul`'s A20/A22).* This sentence used to read
+   "reference end-states are inspiration, never signed-off scope", full stop, and **that is why the
+   console shipped looking nothing like the design the product owner approved.** Every acceptance
+   criterion in that epic's first two sprints was *structural* — "the header renders one project
+   switcher and four sections" — the build satisfied **all** of them, and it looked like a different
+   product. Nothing in the plan could go red on a page that looked wrong.
+   The rule exists to stop a *speculative spec doc* being treated as committed scope, and it still
+   does. It does **not** apply to a design the product owner has explicitly approved: **where the
+   product owner has approved a design, the design IS the contract**, it is binding on every route it
+   covers, and there must be an assertion that can fail on the way a page looks. A builder cannot hit
+   a visual target described in prose. Every
    scope seed also names which UX rails (CI guards, an audits lens, design-language debt) cover its
    surface — the `groom` skill's Stage 4 reuse list (`groom/templates/scope-seed.md` in the
    `ways-of-work` plugin).

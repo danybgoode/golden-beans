@@ -14,9 +14,10 @@
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
 
-## 📋 Ready to build (scaffolded, not started) (1)
+## 📋 Ready to build (scaffolded, not started) (2)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
+- [One design system, every surface — the rails that make a design outlive an epic](../../02-commercial/design-system-rails/README.md) — 02 Commercial · 0/34 stories · risk: High
 
 ## ✅ Shipped (24)
 
@@ -63,4 +64,4 @@ forgot to set `status:` (or the README is stale). Reconcile the README, then thi
 | Signals loop — error/friction signals → structured tasks → the customer's own agent | Shipped | In progress |
 
 ---
-_Epics: 26 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
+_Epics: 27 · seeds in funnel: 3 · status drift: 2. Regenerate with `node scripts/build-order.mjs`._
