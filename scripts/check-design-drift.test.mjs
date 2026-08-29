@@ -502,7 +502,57 @@ test('selectorLists ignores braces that are not rule openers', () => {
     selectorLists('.ds-a,\n.ds-b {\n  color: red;\n}\n').map((list) => list.text.trim()),
     ['.ds-a,\n.ds-b']
   );
-  assert.deepEqual(selectorLists('@import "x.css";\n@media screen {\n  .ds-a {\n    color: red;\n  }\n}\n').map((l) => l.text.trim()), [
-    '.ds-a',
-  ]);
+  assert.deepEqual(
+    selectorLists('@import "x.css";\n@media screen {\n  .ds-a {\n    color: red;\n  }\n}\n').map((l) =>
+      l.text.trim()
+    ),
+    ['.ds-a']
+  );
+});
+
+test('an SVG url(#…) reference is not a colour, and a real hex beside it still is', () => {
+  // ⚠️ Sprint 5's charting primitives are hand-rolled SVG on the token set (epic D7), so
+  // `fill: url(#ds-bar-gradient)` is about to appear all over this directory. The rule flagged it as
+  // a raw hex — a false positive on the exact markup the epic is going to write, which is how a
+  // guard gets switched off rather than fixed. Found by stress-testing the rule against inputs the
+  // tests did not cover, before a builder hit it.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a {\n  fill: url(#abcdef);\n}\n'), []);
+  assert.deepEqual(inspectDesignSystemStylesheet(".ds-a {\n  fill: url('#abcdef');\n}\n"), []);
+
+  // Only the FRAGMENT is removed, so a genuine colour on the same line still reports. A fix that
+  // blanked the whole declaration would have traded a false positive for a false negative, which is
+  // the strictly worse direction for a drift guard.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-a {\n  fill: url(#abcdef);\n  color: #ff0000;\n}\n').map(
+      (v) => v.rule
+    ),
+    ['raw-hex']
+  );
+});
+
+test('a dot inside an attribute selector is not a class name', () => {
+  // `[data-x="a.b"]`, `[href=".."]`. The class pattern read the dot as a class and reported a
+  // correctly-namespaced selector as a namespace violation — and attribute selectors are how this
+  // design system expresses STATE (`[aria-current="page"]`), which is what the namespace rule's own
+  // message recommends. The rule would have fired most often on exactly the markup it asks for.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a[data-x="a.b"] {\n  color: red;\n}\n'), []);
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail[aria-current="page"] {\n  color: var(--gold);\n}\n'),
+    []
+  );
+
+  // ...and an unprefixed class carrying such an attribute is still caught, so the fix removed a
+  // false positive without opening a false negative.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.tag[data-x="a.b"] {\n  color: red;\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+});
+
+test('the namespace rule reaches inside :is() and :where()', () => {
+  assert.deepEqual(inspectDesignSystemStylesheet(':where(.ds-a, .ds-b) {\n  color: red;\n}\n'), []);
+  assert.deepEqual(
+    inspectDesignSystemStylesheet(':where(.ds-a, .tag) {\n  color: red;\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
 });

@@ -43,6 +43,11 @@ const FONT_SHORTHAND = /(?:^|[;{}\s])font\s*:\s*(?!\s*(?:inherit|initial|unset|r
 // State goes on an attribute (`[data-state]`, `aria-current`) or on a `ds-`-prefixed class. A bare
 // `.is-active` is exactly the kind of word two stylesheets both want.
 const CLASS_IN_SELECTOR = /\.(-?[A-Za-z_][\w-]*)/g;
+
+// `url(#…)` in a stylesheet is an SVG reference — a gradient, a filter, a clip path — and never a
+// colour. The `.tsx` sweep has stripped href/src hex fragments since the landing epic; this is the
+// stylesheet's equivalent.
+const URL_FRAGMENT_IN_CSS = /url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi;
 const NAMESPACE = 'ds';
 
 // landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
@@ -268,7 +273,16 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
 
   const live = withoutComments(source);
   live.split('\n').forEach((line, index) => {
-    if (RAW_HEX.test(line)) {
+    // ⚠️ `url(#…)` is an SVG REFERENCE, not a colour — `fill: url(#ds-bar-gradient)`. The `.tsx`
+    // sweep has stripped href/src hex fragments since the landing epic; the stylesheet sweep was
+    // written without that and flagged `url(#abcdef)` as a raw hex. This is not hypothetical
+    // housekeeping: Sprint 5's charts are hand-rolled SVG on the token set (epic D7) and will
+    // reference gradients and clip paths exactly this way. Found by stress-testing this rule
+    // against inputs the unit tests did not cover, before a builder hit it.
+    //
+    // Only the FRAGMENT is removed, so `background: url(#ds-grad) #ff0000` still reports the hex.
+    const withoutSvgRefs = line.replace(URL_FRAGMENT_IN_CSS, 'url()');
+    if (RAW_HEX.test(withoutSvgRefs)) {
       violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
     }
     if (FONT_SHORTHAND.test(line)) {
@@ -277,7 +291,16 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
   });
 
   for (const list of selectorLists(source)) {
-    for (const match of list.text.matchAll(CLASS_IN_SELECTOR)) {
+    // ⚠️ An ATTRIBUTE VALUE can contain a dot — `[data-x="a.b"]`, `[href=".."]` — and the class
+    // pattern read it as a class name, so a correctly-namespaced selector was reported as a
+    // namespace violation. Attribute selectors are how this design system expresses STATE
+    // (`[aria-current="page"]`, `[data-state]`), which is the rule's own recommendation, so the
+    // rule would have fired most often on exactly the markup it asks for.
+    //
+    // Blanked rather than deleted so the offsets — and therefore the reported line numbers — are
+    // unchanged. Nothing inside `[…]` is ever a class selector, so nothing is hidden.
+    const selectors = list.text.replace(/\[[^\]]*\]/g, (attribute) => ' '.repeat(attribute.length));
+    for (const match of selectors.matchAll(CLASS_IN_SELECTOR)) {
       const name = match[1];
       if (name === NAMESPACE || name.startsWith(`${NAMESPACE}-`)) continue;
       violations.push({
