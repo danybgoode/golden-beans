@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { ROUTE_MANIFEST, coverage } from '@/design-system/route-manifest'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -423,18 +424,35 @@ const MEASURED_SPEC: SpecRow[] = [
  * interactive element for WCAG 2.5.5 target size, and used height is `max(min-height, height)`. The
  * accessibility floor wins over a measured pixel, and that is a decision rather than an oversight.
  */
+// ⚠️ **Every deferred row now carries an OWNER and a DECAY DATE** — `design-system-rails` Story 1.4.
+//
+// This list shipped with five rows, each with a reason and none with either. A reason explains why
+// a row is short today; it does not say who decides when it stops being short, or when. So nothing
+// expired, nobody was asked, and "deferred" quietly became "exempt" — five routes' worth, on the
+// gate that is this project's only defence against a page that looks wrong.
+//
+// The dates are the sprint that closes each row, plus a fortnight. `every deferred row carries an
+// owner and a date that has not passed` fails once one goes by, which turns a silent exemption into
+// a conversation with a name attached.
 const DEFERRED_SPEC_ROWS = [
   {
     what: 'feature row',
     contract: 78,
     built: 'up to 90',
     why: 'the never-state detail wraps to two lines in a 190px column',
+    // ⚠️ The contract number itself was WRONG: a fresh measurement says 71, not 78 (epic D8). It is
+    // corrected by regeneration in `MEASURED-SPEC.md`, and this row stays deferred only for the
+    // wrap, which Story 4.1 fixes when it rebuilds the list against reference state `ship-features`.
+    owner: 'Daniel',
+    until: '2026-10-15',
   },
   {
     what: 'dormant summary row',
     contract: 89,
     built: '91',
     why: 'two-line body copy; within 3px of the contract',
+    owner: 'Daniel',
+    until: '2026-10-15',
   },
   {
     what: 'primary/secondary button',
@@ -444,18 +462,30 @@ const DEFERRED_SPEC_ROWS = [
     // textarea/input and explicitly NOT links, so an `<a class="btn">` is saved by the design
     // system's own `.btn` rule instead. The conclusion holds; the reason did not (round 4, N5).
     why: 'a 44px WCAG 2.5.5 target floor applies (globals.css for controls, the .btn rule for links) and the floor wins over a measured pixel',
+    // This one is NOT a defect and will never close: an accessibility floor outranks a measured
+    // pixel. The date is when Story 2.3 makes that explicit in the design system's own button, so
+    // the contract and the floor stop disagreeing rather than being reconciled in a comment.
+    owner: 'Daniel',
+    until: '2026-09-30',
   },
   {
     what: 'project switcher',
     contract: 30,
     built: '34',
     why: "height follows the shell chrome; the contract's 140px width is waived too because a real tenant slug is longer than the prototype's and truncating it would hide the one thing the control shows",
+    // Story 3.2 rebuilds the switcher against the REGENERATED number (122 x 30, not 140 x 30).
+    owner: 'Daniel',
+    until: '2026-09-30',
   },
   {
     what: 'section nav (tier 2)',
     contract: 44,
     built: 'not built',
     why: 'ProductShell renders the tabs INSIDE the 54px header, so the second tier does not exist — splitting it touches every console route and is out of this PR',
+    // Story 3.2 is that PR. This is the one deferred row that describes something genuinely absent
+    // rather than slightly off, which is why it gets the tightest date.
+    owner: 'Daniel',
+    until: '2026-09-30',
   },
 ] as const
 
@@ -529,8 +559,152 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
   // deliberately a hard-coded literal rather than derived: a count that updates itself would let a
   // row be dropped silently, and the point of this test is that dropping one is a decision.
   expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(5)
+  const today = new Date().toISOString().slice(0, 10)
   for (const row of DEFERRED_SPEC_ROWS) {
     expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)
+    // ── The half that was missing, and the reason five rows shipped and never left ────────────
+    // A reason explains why a row is short TODAY. An owner and a date are what make it stop being
+    // short. Without them "deferred" is "exempt" with better manners.
+    expect(row.owner.length, `${row.what} is deferred with no owner`).toBeGreaterThan(0)
+    expect(row.until, `${row.what}'s decay date is not a date`).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(
+      row.until >= today,
+      `${row.what}'s deferral expired on ${row.until} — close it, or re-decide it with ${row.owner}`
+    ).toBe(true)
+  }
+})
+
+// ── design-system-rails · Story 1.6 (epic D5) — the gate is DRIVEN BY THE MANIFEST ────────────
+//
+// Until now this file asserted ONE hand-written route. The manifest knows all 27, which routes have
+// an approved reference state, and which claim to render from `apps/web/design-system/` — so the
+// gate reads that instead of a list somebody remembers to extend.
+//
+// ⚠️ **An empty loop is the failure mode this whole epic is about**, so it cannot happen quietly:
+// the test asserts the number of rows it visited equals `coverage().rendersFromDesignSystem`. In
+// Sprint 1 that number is ZERO and this test asserts zero — deliberately, and visibly. It goes up
+// with each sprint, and a row that claims coverage it has not earned fails here rather than
+// inflating a percentage.
+
+/**
+ * How to reach each manifest row in a browser.
+ *
+ * A row whose route has a second dynamic segment cannot be built from a slug alone — a feature key,
+ * a journey key, a share token. Those return `null` and name the dedicated test that covers them,
+ * because a generic loop that silently skipped them would report coverage for routes it never
+ * opened. `every manifest row has a way to be reached` asserts this map covers every row, so a new
+ * route cannot enter the manifest without someone deciding how the gate opens it.
+ */
+const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
+  '/app': () => '/app',
+  '/app/tasks/[projectSlug]': (slug) => `/app/tasks/${slug}`,
+  '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
+  '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
+  '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,
+  '/app/experiments/[projectSlug]': (slug) => `/app/experiments/${slug}`,
+  '/app/scheduled/[projectSlug]': (slug) => `/app/scheduled/${slug}`,
+  '/app/flag-audit/[projectSlug]': (slug) => `/app/flag-audit/${slug}`,
+  '/app/setup/connect/[projectSlug]': (slug) => `/app/setup/connect/${slug}`,
+  '/app/setup/keys/[projectSlug]': (slug) => `/app/setup/keys/${slug}`,
+  '/app/destinations/[projectSlug]': (slug) => `/app/destinations/${slug}`,
+  '/app/shares/[projectSlug]': (slug) => `/app/shares/${slug}`,
+  '/app/onboarding/[projectSlug]': (slug) => `/app/onboarding/${slug}`,
+  '/app/keys/[projectSlug]': (slug) => `/app/keys/${slug}`,
+  '/app/flag-credentials/[projectSlug]': (slug) => `/app/flag-credentials/${slug}`,
+  '/app/agent-keys/[projectSlug]': (slug) => `/app/agent-keys/${slug}`,
+  '/login': () => '/login',
+  '/signup': () => '/signup',
+  '/install': () => '/install',
+  '/talk': () => '/talk',
+  '/hub/[projectSlug]': (slug) => `/hub/${slug}`,
+  '/hub/[projectSlug]/horizon': (slug) => `/hub/${slug}/horizon`,
+  '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
+  // Reached by clicking, or by a key/token this suite must not invent.
+  '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'the feature page matches the contract too' },
+  '/app/experiments/[projectSlug]/[experimentKey]': { coveredBy: 'e2e/experiment-governance.spec.ts' },
+  '/app/journeys/[projectSlug]/[journeyKey]': { coveredBy: 'e2e/journey-management.spec.ts' },
+  '/app/funnel/[projectSlug]/[featureKey]': { coveredBy: 'e2e/funnel.spec.ts' },
+  '/app/impact/[projectSlug]/[featureKey]': { coveredBy: 'e2e/impact.spec.ts' },
+  '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
+  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts' },
+}
+
+/**
+ * The tenant slug, narrowed.
+ *
+ * `tenant()` already throws when the fixture is missing, but its record's `slug` is typed
+ * `string | null`, so the compiler cannot see that. A helper that throws is how the guarantee
+ * reaches the type system — `slug!` would assert it instead, and an assertion is a claim rather
+ * than a check.
+ */
+function tenantSlug(): string {
+  const { slug } = tenant()
+  if (!slug) throw new Error('the visual gate needs the auth-setup project')
+  return slug
+}
+
+test('every manifest row has a way to be reached', () => {
+  // No browser, no gates — a pure consistency check, so it runs even when the suite skips. A route
+  // that enters the manifest without an entry here would be counted and never opened.
+  for (const row of ROUTE_MANIFEST) {
+    expect(REACHABLE[row.route], `${row.route} is in the manifest with no way for the gate to open it`).toBeDefined()
+  }
+  for (const route of Object.keys(REACHABLE)) {
+    expect(
+      ROUTE_MANIFEST.some((row) => row.route === route),
+      `${route} has a reachability entry but is not in the manifest — a stale entry reads as coverage`
+    ).toBeDefined()
+  }
+})
+
+test('every route claiming the design system renders from it', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  const claimed = ROUTE_MANIFEST.filter((row) => row.rendersFromDesignSystem)
+  // ⚠️ The empty-loop guard. `coverage()` is computed from the same rows, so this cannot drift; what
+  // it pins is that a ZERO here is a deliberate zero rather than a loop that quietly found nothing.
+  expect(
+    claimed.length,
+    'the manifest and the coverage report disagree about how many routes are on the system'
+  ).toBe(coverage(6).rendersFromDesignSystem)
+
+  await page.setViewportSize(VIEWPORT)
+  for (const row of claimed) {
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') continue
+    await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+
+    const geometry = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      scrollWidth: document.body.scrollWidth,
+      innerWidth: window.innerWidth,
+      // ⚠️ Inside `<main>`, NOT on the shell. Sprint 3 wraps all 21 console routes in the design
+      // system's frame in one commit; if this looked at the wrapper, coverage would leap to 21 while
+      // twenty-one page BODIES were still the old design. Only a page's own markup can put a
+      // `ds-`-prefixed class inside its main element.
+      designSystemClasses: document.querySelectorAll('main [class*="ds-"]').length,
+    }))
+
+    expect
+      .soft(
+        geometry.designSystemClasses,
+        `[${row.route}] claims to render from design-system/ and its <main> contains no ds- class`
+      )
+      .toBeGreaterThan(0)
+    expect
+      .soft(
+        geometry.scrollHeight,
+        `[${row.route}] is ${geometry.scrollHeight}px tall in a ${geometry.innerHeight}px viewport`
+      )
+      .toBeLessThanOrEqual(geometry.innerHeight)
+    expect
+      .soft(
+        geometry.scrollWidth,
+        `[${row.route}] body is ${geometry.scrollWidth}px wide in a ${geometry.innerWidth}px viewport — content is clipped`
+      )
+      .toBeLessThanOrEqual(geometry.innerWidth)
   }
 })
 

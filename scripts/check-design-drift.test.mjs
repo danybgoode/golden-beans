@@ -5,10 +5,14 @@ import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
+  DESIGN_SYSTEM_ROOT,
+  GENERATED_STYLESHEETS,
   SWEPT_ROOTS,
   VOICE_AND_STYLE_ROOTS,
   inspectDesignSource,
+  inspectDesignSystemStylesheet,
   inspectRepository,
+  selectorLists,
   withoutComments,
 } from './check-design-drift.mjs';
 
@@ -374,4 +378,131 @@ test('a trailing comment is stripped, and a URL is not', () => {
     inspectDesignSource(`<a href="https://github.com/x">#ff0000</a>`).map((f) => f.rule),
     ['raw-hex']
   );
+});
+
+// ── design-system-rails · Sprint 1, Story 1.3 — the three rules the design system needed ───────
+//
+// Written through `inspectRepository` wherever the property is about WHICH FILES are looked at,
+// and through `inspectDesignSystemStylesheet` where it is about the rule itself. The distinction
+// matters: the defect this story exists to prevent is a directory nobody sweeps, and that is
+// invisible from the rule layer (CODE-QUALITY rule 5 — test through the caller).
+
+test('the design system directory is swept, and its two generated files are exempt', (t) => {
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.deepEqual(inspectRepository(root).violations, [], 'the fixture must start clean');
+
+  const dir = join(root, DESIGN_SYSTEM_ROOT);
+
+  // A hand-written stylesheet must consume tokens.
+  writeFileSync(join(dir, 'panel.css'), '.ds-panel {\n  background: #241d14;\n}\n');
+  assert.deepEqual(
+    inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
+    [`${DESIGN_SYSTEM_ROOT}/panel.css raw-hex`]
+  );
+  writeFileSync(join(dir, 'panel.css'), '.ds-panel {\n  background: var(--card);\n}\n');
+  assert.deepEqual(inspectRepository(root).violations, []);
+
+  // ...and the GENERATED files, whose entire job is to carry the prototype's literal values, are
+  // not. An exemption that did not exist would make the token file itself unlandable.
+  for (const name of GENERATED_STYLESHEETS) {
+    writeFileSync(join(dir, name), '.ds {\n  --gold: #e8b93c;\n}\n');
+  }
+  assert.deepEqual(
+    inspectRepository(root).violations,
+    [],
+    'the generated token and reference stylesheets carry literal colours by design'
+  );
+});
+
+test('a `font:` shorthand is refused, and the global keywords are not', () => {
+  // The shorthand resets family, weight, style, line-height and variant as well as size, so an
+  // override that restates only `font-size` leaves the other five at the shorthand's values. This
+  // repo has already paid for that once (LEARNINGS).
+  const shorthand = inspectDesignSystemStylesheet('.ds-x {\n  font: 600 13px/1.4 var(--sans);\n}\n');
+  assert.deepEqual(
+    shorthand.map((violation) => violation.rule),
+    ['font-shorthand']
+  );
+
+  // `font: inherit` on a form control is the idiomatic reset and resets nothing to a surprise.
+  for (const keyword of ['inherit', 'initial', 'unset', 'revert']) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-x {\n  font: ${keyword};\n}\n`),
+      [],
+      `font: ${keyword} is a reset, not a shorthand that silently sets five other properties`
+    );
+  }
+
+  // The longhand it is supposed to be replaced by must obviously still pass.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-x {\n  font-size: 13px;\n  font-weight: 600;\n}\n'),
+    []
+  );
+});
+
+test('a design-system class must be namespaced, and an at-rule prelude is not a selector', () => {
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail {\n  color: var(--dim);\n}\n'),
+    [],
+    'a prefixed class is the whole point'
+  );
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds {\n  color: var(--dim);\n}\n'), []);
+
+  // The exact accident this rule exists to stop: `.tag`, `.note` and `.row` are each declared by
+  // more than one stylesheet in this repo's history, and landing rules reached the console through
+  // them three times in one epic.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.tag {\n  color: var(--dim);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+
+  // A bare state class is exactly the kind of word two stylesheets both want.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail.is-active {\n  color: var(--gold);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+
+  // ...but an attribute is how state is expressed here, and carries no class to collide.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail[aria-current="page"] {\n  color: var(--gold);\n}\n'),
+    []
+  );
+
+  // `@media (min-width: 900px)` and `@keyframes ds-blink` contain no class selectors. Treating a
+  // keyframe NAME as a class would reject `@keyframes ds-blink` for not being prefixed — which it
+  // is, which would be a confusing thing to be told.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet(
+      '@media (min-width: 900px) {\n  .ds-rail {\n    width: 236px;\n  }\n}\n@keyframes ds-blink {\n  to {\n    opacity: 0;\n  }\n}\n'
+    ),
+    []
+  );
+});
+
+test('a design-system stylesheet violation is reported at the line it occupies', () => {
+  // Same property the globals.css rule already pins, for the same reason: a guard that names the
+  // wrong line sends the next person to the wrong code. This repo's convention is a long block
+  // comment above almost everything, so the drift is not one or two lines.
+  const source = [
+    '/* A block comment',
+    '   spanning',
+    '   several lines. */',
+    '.ds-panel {',
+    '  background: #241d14;',
+    '}',
+  ].join('\n');
+  const [violation] = inspectDesignSystemStylesheet(source);
+  assert.equal(violation.rule, 'raw-hex');
+  assert.equal(violation.line, 5);
+});
+
+test('selectorLists ignores braces that are not rule openers', () => {
+  assert.deepEqual(
+    selectorLists('.ds-a,\n.ds-b {\n  color: red;\n}\n').map((list) => list.text.trim()),
+    ['.ds-a,\n.ds-b']
+  );
+  assert.deepEqual(selectorLists('@import "x.css";\n@media screen {\n  .ds-a {\n    color: red;\n  }\n}\n').map((l) => l.text.trim()), [
+    '.ds-a',
+  ]);
 });

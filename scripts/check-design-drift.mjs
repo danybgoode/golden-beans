@@ -13,6 +13,38 @@ const RAW_HEX = /#[\da-f]{3,8}\b/i;
 const INLINE_STYLE = /\bstyle\s*=\s*\{/;
 const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 
+// ── design-system-rails · Sprint 1, Story 1.3 (epic D3) — the `font:` SHORTHAND ───────────────
+//
+// ⚠️ This story was REWRITTEN at the architecture lock, and the reason belongs here because the
+// next person will read the audit before they read this file. As scaffolded it said "extend the
+// guard to `components/ui` and `components/product`, the two directories the audit named (§10.5)
+// as its blind spot". `SWEPT_ROOTS` has contained both since `app-shell-and-agent-rail` S1.4 —
+// the audit's gap was closed before this epic was written. Building the story as scaffolded would
+// have produced a no-op diff and a green tick on work nobody did (epic README, D11-1).
+//
+// What the guard genuinely did not have is these three rules, all of them about the ONE directory
+// this epic creates.
+//
+// The `font:` shorthand resets family, weight, style, size, line-height AND variant. So an override
+// that restates only `font-size` silently leaves the other five at the shorthand's values — which
+// is a real defect this repo has already paid for (LEARNINGS: "A `font:` SHORTHAND resets family,
+// weight and style"). Scoped to `design-system/*.css`, where a longhand is always available and the
+// whole point of the directory is that a value is a choice from a scale.
+//
+// The global keywords are allowed: `font: inherit` on a form control is the idiomatic reset and
+// resets nothing to a surprise.
+const FONT_SHORTHAND = /(?:^|[;{}\s])font\s*:\s*(?!\s*(?:inherit|initial|unset|revert)\b)/;
+
+// A class selector inside `design-system/*.css` that is neither `.ds` nor `ds-`-prefixed (epic D3).
+// Landing rules reached the console through shared class names — `.tag`, `.note` — three times in
+// ONE epic, and `.row` is declared by two stylesheets in this repo right now. Namespacing is what
+// makes that unrepresentable rather than merely unlikely.
+//
+// State goes on an attribute (`[data-state]`, `aria-current`) or on a `ds-`-prefixed class. A bare
+// `.is-active` is exactly the kind of word two stylesheets both want.
+const CLASS_IN_SELECTOR = /\.(-?[A-Za-z_][\w-]*)/g;
+const NAMESPACE = 'ds';
+
 // landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
 // section dividers used to be built from. They are NOT Extended_Pictographic, so the rule above
 // never saw them; they rendered at 12px inside a kraft band and were illegible at the only size a
@@ -195,6 +227,70 @@ export function inspectHeadings(source) {
   return violations;
 }
 
+/**
+ * The selector lists of a stylesheet — the text before each `{` that is not an at-rule prelude.
+ *
+ * Not a CSS parser and does not need to be: it needs to know which words in this file are class
+ * names. At-rule preludes are skipped because `@media (min-width: 900px)` and `@keyframes ds-blink`
+ * contain no class selectors, and treating a keyframe NAME as a class would reject
+ * `@keyframes ds-blink` for not being prefixed — which it is, and which would be a confusing thing
+ * to be told.
+ */
+export function selectorLists(source) {
+  const lists = [];
+  const live = withoutComments(source);
+  let start = 0;
+  for (let index = 0; index < live.length; index += 1) {
+    const char = live[index];
+    if (char === '{' || char === '}' || char === ';') {
+      const chunk = live.slice(start, index);
+      if (char === '{' && !chunk.trim().startsWith('@')) {
+        lists.push({ text: chunk, index: start });
+      }
+      start = index + 1;
+    }
+  }
+  return lists;
+}
+
+/**
+ * The three rules that apply to a HAND-WRITTEN design-system stylesheet.
+ *
+ * `generated` exempts `tokens.css` and `reference.css`, and the exemption is narrow on purpose:
+ * those two files exist to carry the approved prototype's LITERAL values — a token file whose job
+ * is to define `--gold: #e8b93c` cannot be told to use a token for it, and `reference.css` is the
+ * prototype's stylesheet verbatim so that a port can be diffed against its source. Every other
+ * stylesheet in that directory consumes them.
+ */
+export function inspectDesignSystemStylesheet(source, { generated = false } = {}) {
+  const violations = [];
+  if (generated) return violations;
+
+  const live = withoutComments(source);
+  live.split('\n').forEach((line, index) => {
+    if (RAW_HEX.test(line)) {
+      violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
+    }
+    if (FONT_SHORTHAND.test(line)) {
+      violations.push({ line: index + 1, rule: 'font-shorthand', content: line.trim() });
+    }
+  });
+
+  for (const list of selectorLists(source)) {
+    for (const match of list.text.matchAll(CLASS_IN_SELECTOR)) {
+      const name = match[1];
+      if (name === NAMESPACE || name.startsWith(`${NAMESPACE}-`)) continue;
+      violations.push({
+        line: lineOf(live, list.index + match.index),
+        rule: 'namespace',
+        content: `.${name} — design-system classes are \`.${NAMESPACE}\` or \`${NAMESPACE}-\`-prefixed (epic D3)`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function sourceFiles(root) {
   // A swept root that does not exist must be LOUD, not empty. Returning `[]` would make a typo in
   // `SWEPT_ROOTS` — or a directory someone renamed — read as "nothing to report", which is this
@@ -210,6 +306,15 @@ function sourceFiles(root) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) return sourceFiles(path);
     return extname(path) === '.tsx' ? [path] : [];
+  });
+}
+
+/** Every `.css` file under a root, recursively. The `.tsx` sweep's twin. */
+function stylesheetFiles(root) {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return stylesheetFiles(path);
+    return extname(path) === '.css' ? [path] : [];
   });
 }
 
@@ -302,6 +407,9 @@ export function inspectDesignSource(
 // The INLINE-STYLE rule stays landing-only (see the `disallowInlineStyle` argument below). /app
 // needs dynamic bar widths for the funnel, which is a computed geometry, not a colour drifting away
 // from the tokens.
+/** Where the design system lives. One string, because four places name it. */
+export const DESIGN_SYSTEM_ROOT = 'apps/web/design-system';
+
 export const SWEPT_ROOTS = [
   'apps/web/components/landing',
   'apps/web/components/ui',
@@ -317,7 +425,24 @@ export const SWEPT_ROOTS = [
   // "guard that cannot fail" class (CODE-QUALITY #5b).
   'apps/web/components/methodology',
   'apps/web/app',
+  // design-system-rails · Sprint 1, Story 1.3 — the one directory this epic creates, and the only
+  // swept-root gap that was actually open (epic README, D11-1). Its `.tsx` primitives are held to
+  // the same pictograph/raw-hex rules as everything else; its `.css` files get the three rules
+  // above, swept separately because this list walks `.tsx` only.
+  DESIGN_SYSTEM_ROOT,
 ];
+
+/**
+ * The two files in `design-system/` that are GENERATED from the approved prototype and therefore
+ * exempt from the raw-hex rule.
+ *
+ * Exempt by NAME, not by a "looks generated" heuristic: a header comment is something anyone can
+ * write, and an exemption anyone can claim is not an exemption. `tokens.css` is the file whose
+ * whole job is to define `--gold: #e8b93c` — it cannot be told to use a token for it — and
+ * `reference.css` is the prototype's stylesheet verbatim, so that a port can be diffed against its
+ * source forever. Every other stylesheet in that directory consumes them.
+ */
+export const GENERATED_STYLESHEETS = ['tokens.css', 'reference.css'];
 
 /**
  * Roots held to the LANDING's stricter two rules — headings are titles rather than sentences, and
@@ -347,6 +472,24 @@ export function inspectRepository(root = repoRoot) {
       path: relative(root, path),
     }))
   );
+
+  // design-system-rails · Story 1.3. The stylesheet sweep used to be `globals.css` alone, for raw
+  // hex alone. `apps/web/design-system/` is where every product style now lives, so it is swept for
+  // all three of the rules above — and, unlike the `.tsx` sweep, it walks `.css`.
+  //
+  // The two GENERATED files are exempt by name rather than by pattern: an exemption keyed on
+  // "looks generated" is an exemption anyone can claim by writing the right header comment.
+  const designSystemRoot = join(root, DESIGN_SYSTEM_ROOT);
+  if (existsSync(designSystemRoot)) {
+    for (const path of stylesheetFiles(designSystemRoot)) {
+      const name = relative(designSystemRoot, path);
+      violations.push(
+        ...inspectDesignSystemStylesheet(readFileSync(path, 'utf8'), {
+          generated: GENERATED_STYLESHEETS.includes(name),
+        }).map((violation) => ({ ...violation, path: relative(root, path) }))
+      );
+    }
+  }
 
   const globalsPath = join(root, 'apps/web/app/globals.css');
   const globals = readFileSync(globalsPath, 'utf8');

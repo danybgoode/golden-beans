@@ -59,6 +59,38 @@ jobs:
       - name: Unit tests (pure logic)
         run: npm run test:unit
 
+      # ── design-system-rails · Story 1.4, closing Mechanism D ─────────────────────────────────
+      #
+      # The design system's three scripts died with ERR_MODULE_NOT_FOUND on a fresh clone for four
+      # DAYS — through an entire build, unnoticed — because `_harness.mjs` was never committed and
+      # nothing in CI ran them. A regenerator nobody runs is a regenerator that does not exist, and
+      # a contract that says "regenerate this table" while shipping without the thing that
+      # regenerates it is worse than one that says nothing.
+      #
+      # `--check` on both generators means a hand-edit to a generated file, or a prototype that has
+      # moved without its outputs, fails here in minutes. Neither needs a browser: `extract-css`
+      # reads the file. `measure-contract` DOES need Chromium and runs in the e2e job below, beside
+      # the browser it already installs.
+      - name: The generated design contract is in sync with the approved prototype
+        run: node apps/web/design-system/extract-css.mjs --check
+
+      # ── design-system-rails · Story 1.5 — coverage, and the ratchet ──────────────────────────
+      #
+      # Prints the finish line on every run, and fails when it moves backwards. The ratchet compares
+      # against the PR's base branch, which is why this job checks out with `fetch-depth: 0` — the
+      # script fails loudly rather than passing quietly when the base ref cannot be resolved
+      # (Roadmap/LEARNINGS.md: `format-changed.mjs` reported "no added files" and exited 0).
+      - name: Design coverage + ratchet
+        env:
+          COVERAGE_BASE_REF: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # ⚠️ `set -o pipefail` is load-bearing, not boilerplate. GitHub's DEFAULT shell is
+          # `bash -e`, WITHOUT pipefail — so `node … | tee` would exit with tee's status and a failed
+          # ratchet would report a green step. That is this epic's own subject: a gate that cannot
+          # fail is worse than no gate.
+          set -o pipefail
+          node scripts/design-coverage.mjs --check | tee -a "$GITHUB_STEP_SUMMARY"
+
       # Dependency CVEs. `|| true` is deliberate and NOT laziness: a transitive advisory published
       # overnight would otherwise block every unrelated PR until someone triages it, which trains
       # people to merge red. The finding still appears in the log and in the job summary, and
@@ -339,6 +371,22 @@ jobs:
       # chances of flake in front of every merge. This adds the ONE file the epic argued for.
       - name: Install Chromium for the visual gate
         run: npx playwright install --with-deps chromium
+
+      # ── design-system-rails · Story 1.4 — the MEASURED half of the contract ──────────────────
+      #
+      # Here rather than in the static job because it opens the approved prototype in a real browser
+      # and reads computed geometry out of it — that is the entire point, and it is why the two
+      # numbers in the old hand-written table (project switcher 140x30, feature row 78) survived for
+      # an epic: nothing measured them. `--check` regenerates `MEASURED-SPEC.md` and fails on any
+      # diff, so a number nobody can reproduce can no longer be committed and then reasoned about as
+      # design intent.
+      #
+      # It also renders all 32 approved states, which is what proves `_harness.mjs` and the
+      # prototype still load at all — the fresh-clone failure this closes.
+      - name: The measured spec reproduces, and all 32 approved states render
+        run: |
+          node apps/web/design-system/measure-contract.mjs --check
+          node apps/web/design-system/render-reference.mjs
 
       - name: Console visual gate (the approved design, asserted)
         # Every flag a spec BRANCHES on is read in two places — the server decides behaviour, the
