@@ -35,7 +35,7 @@
 | 9 | Setup › Connect: **keep the shipped credential half** — status, the multi-token warning, and **server-side filtering of `tokens` before they cross the client boundary**. A member must not be able to read a bearer URL out of View Source. | Story 4.4 |
 | 10 | The connector status line says **only what the data supports**: `connector_tokens` records no use, so the page says a URL exists and says out loud that existing is not the same as being used. Verified: `miyagisanchez` has exactly **1** connector token. | **D10** |
 | 11 | **Land the replacement and retire the original in the SAME commit.** With the shell live from Sprint 3 there is no dark period in which a missing control goes unnoticed. Never a cleanup story. | `console-ia-overhaul` A3 |
-| 12 | Coverage reaches **13/29** by the end of this sprint, and the manifest is what says so. | **D5** |
+| 12 | Coverage reaches **8 / 27** by the end of this sprint, and the manifest is what says so. ⚠️ Not 13/29: the denominator drops to 27 here (Story 4.5 retires three, Story 4.3 adds one) and the numerator counts page bodies, not chrome. | **D5**, **D13** |
 
 ## Stories
 
@@ -74,10 +74,27 @@ environments, funnel and impact are tabs rather than routes I type a key into.
 **Risk:** high
 
 ### Story 4.3 — Ship › Activity and Scheduled changes
+> ⚠️ **CORRECTED AT THE LOCK, then DECIDED BY DANIEL (D13).** As scaffolded this said Scheduled
+> changes *"renders the same row language with its honest empty state (the rail shows `0` today)"*.
+> **The rail shows nothing today.** There is no scheduled-changes route, no table and no scheduling
+> capability anywhere in the product — verified by grep across the whole repo. That sentence
+> described the *prototype's* rail as though it were the product's, and a builder would have gone
+> looking for a page that does not exist.
+>
+> **Daniel decided 2026-08-29: build the designed empty-state route.** So this story creates
+> `/app/scheduled/[projectSlug]`, keeps the rail's fourth item, and registers a `scheduled` surface
+> in `lib/project-route-inventory.ts`. It does **not** build scheduling.
+
 **As a** person, **I want** to see who changed what, where and why, **so that** the section's other
 two surfaces are on the system too.
-**Acceptance:** Activity matches reference state **09**. Scheduled changes renders the same row
-language with its honest empty state (the rail shows `0` today).
+**Acceptance:**
+- Activity (`/app/flag-audit/[projectSlug]`) matches reference state `ship-activity`.
+- **`/app/scheduled/[projectSlug]` is a NEW route** rendering the same row language in its empty
+  state, registered as a `scheduled` surface in the inventory and as a manifest row.
+- ⚠️ **The empty state says plainly that scheduling is not available yet.** It must **not** read as
+  *"you have no scheduled changes"*, which implies you could have some — that is the mitigation for
+  the risk the architect flagged and Daniel accepted: Story 4.1's own rule is *"a control that goes
+  nowhere is worse than no control"*. An empty state is one of the nine and is a deliverable.
 **Approved states:** `ship-activity` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
@@ -114,7 +131,10 @@ and expiry chips, a row menu, and **`+ New key`**.
 **As a** person, **I want** Setup's remaining two surfaces on the system, **so that** the section is
 finished rather than mostly finished.
 **Acceptance:** both render from `design-system/` with the shared data table, its row menu and its
-empty state; both have reference states in the manifest. Coverage reaches **13/29**.
+empty state; both have reference states in the manifest. Coverage reaches **8 / 27**.
+⚠️ *Corrected at the lock (**D13**): the scaffold said 13/29. The denominator is 27 — this sprint
+retires three credential routes (Story 4.5) and adds one (Story 4.3) — and the numerator counts only
+routes whose **page body** renders from the system, which is the eight this sprint lands.*
 **Approved states:** `setup-destinations`, `setup-shares` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 

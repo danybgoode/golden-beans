@@ -121,7 +121,8 @@ finished.
   tool, and §7 P1 says prioritise it over polish elsewhere. Design it as the tool.
 - `onboarding` stays `flow-only` in the inventory and is still gated out of the nav; it gets a
   reference state because a person can reach it, not because the nav lists it.
-- Coverage reaches **20/29** — all of `/app`.
+- Coverage reaches **18 / 27** — all of `/app`. ⚠️ *Corrected at the lock (**D13**): the
+  denominator is 27, and the three legacy credential routes left it in Sprint 4.*
 **Approved states:** `measure-scenarios`, `tasks-standalone`, `ship-activity`, `setup-connect` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
@@ -163,7 +164,7 @@ none of these steps is meaningful anywhere else (**D9**: preview has no database
 6. Go to https://goldenfrijoles.com/app/journeys/miyagisanchez.
    → The **empty** state, naming what a journey is and how to define one. The one live journey is
    `merchant_activation` on https://goldenfrijoles.com/app/journeys/golden-beans.
-7. Open the PR's CI run.
-   → Coverage reports **20/29** and the visual gate is green for all twenty.
+7. Open the PR's CI run, step **Design coverage + ratchet**.
+   → Coverage reports **18 / 27** and the visual gate is green for all eighteen.
 
 If any step fails, note the step number + what you saw — that's the bug report.

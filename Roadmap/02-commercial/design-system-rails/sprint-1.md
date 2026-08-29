@@ -1,6 +1,18 @@
 # One design system, every surface — Sprint 1: The rails — make a bad-looking page fail the build
 
-**Status:** 🟨 in progress — architecture locked 2026-08-29
+**Status:** 🟦 In review — all six stories built, gate green.
+
+| Story | | Commit |
+|---|---|---|
+| 1.0 — the WAYS-OF-WORKING amendment | ✅ | `8e77746` (landed at grooming, planning lane) |
+| 1.1 — the design source moves out of a closed epic | ✅ | `582c6f4` |
+| 1.2 — one token file | ✅ | `582c6f4` |
+| 1.3 — the drift guard learns the rules this epic needs | ✅ | `d6c85bc` |
+| 1.4 — the contract becomes generated output | ✅ | `582c6f4` (the emitter + spec file) · `d6c85bc` (CI + deferred-row owners/dates) |
+| 1.5 — the coverage manifest | ✅ | `d6c85bc` |
+| 1.6 — the gate is driven by the manifest | ✅ | `d6c85bc` |
+
+Architecture locked `20d030f` — D1–D13, five scaffolded decisions changed, five new ones added.
 
 > **This sprint writes almost no product CSS.** It builds the machinery that makes every later
 > sprint checkable, and it closes four of the six mechanisms in the epic README on its own.
@@ -163,10 +175,21 @@ system, **so that** an XXL project has a finish line and an off-system page is v
 **Risk:** high
 
 ## Sprint QA
-- **api spec(s):** `e2e/design-drift.spec.ts` (guard covers the two new directories, fails on a
-  planted hex) · `e2e/coverage-manifest.spec.ts` (a route with no reference state fails; the ratchet
-  refuses a decrease) · the regenerate-produces-no-diff check runs in the deterministic gate, not as
-  a browser spec.
+- **unit spec(s)** — ⚠️ *corrected at the lock: these are `node --test` unit specs, not Playwright
+  `api` specs. Everything they assert is pure — a stylesheet's bytes, a manifest's rows, a
+  generator's output — and none of it needs a server, so putting them in the `api` project would
+  have spent a Supabase boot and a `next start` to read files.*
+  `scripts/check-design-drift.test.mjs` (+5: the design-system root is swept, its two generated
+  files are exempt, the `font:` shorthand, the namespace rule, and the reported line number) ·
+  `apps/web/design-system/tokens.test.ts` (+6: the generated files are in sync, the TS union and the
+  CSS agree, the override table is exhaustive, no undeclared token fork, the console's values are
+  unchanged, and the ten "verbatim" tokens are genuinely absent from the brand file) ·
+  `apps/web/design-system/route-manifest.test.ts` (+9: the manifest and the filesystem agree, every
+  state id is approved, `APPROVED.md` agrees, every inventory surface has a row, the D13 denominator,
+  both-booleans coverage, deferral owner+date, seam↔frame, and sprint sanity).
+- **the regenerate-produces-no-diff checks** run in the deterministic gate:
+  `extract-css.mjs --check` in the static job, `measure-contract.mjs --check` + a 32-state render in
+  the e2e job (they need Chromium), and `design-coverage.mjs --check` with the ratchet.
 - **browser smoke owed:** yes, to Daniel — **the before-baseline contact sheet of all 29 routes**
   (authed; a real session is required and no automated smoke can sign it off). One page, 29 shots.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
@@ -197,10 +220,19 @@ Env: steps 1–3 **local, on a fresh clone of the branch** · step 4
    feature row as **`1118 × 71`** — not `140 × 30` and `78`. Now hand-edit one number in the emitted
    file and re-run `--check` → it exits **non-zero** and names the row. A regenerator that cannot
    fail is not a regenerator.
-3. Open the PR's CI run.
-   → A `coverage` line reports **1/29** — only Ship › Features has a reference state today — and
-   the design-drift job is **green** while `e2e/design-drift.spec.ts` shows three planted violations
-   having gone red and been removed. **A coverage line reading 29/29 at this point is the bug.**
+3. Open the PR's CI run, step **Design coverage + ratchet**.
+   → It reports:
+   ```
+     has an approved state          27 / 27  (100%)
+     renders from design-system/     0 / 27  (0%)
+     COVERED (both)                  0 / 27  (0%)
+   ```
+   ⚠️ *Corrected at the lock. The scaffold expected `1/29`. Two things changed: the denominator is
+   **27**, not 29 (**D13** — Story 4.5 retires three routes, Story 4.3 adds one), and the covered
+   count is **0**, not 1 — every route has an approved state because all 32 states are committed,
+   and **nothing renders from the design system yet**, which is exactly true of a sprint that
+   changes no product pixel.*
+   **A covered count above 0 at this point is the bug.**
 4. Go to https://goldenfrijoles.com/app/flags/miyagisanchez (signed in).
    → The page looks **exactly as it does today**: 3 feature rows, one line standing for the 39 that
    have never been turned on in Production, the same chrome. **This sprint changes no product

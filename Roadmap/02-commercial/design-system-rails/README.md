@@ -103,7 +103,7 @@ signed-in route**, per `console-ia-overhaul` A22. That epic's withdrawal of *"a 
 is inspiration, never signed-off scope"* is generalised here into a WAYS-OF-WORKING amendment
 (Story 1.0), so the next epic inherits the correction instead of rediscovering it.
 
-## The design is approved, and committed — read this before D1–D12
+## The design is approved, and committed — read this before D1–D13
 
 ⚠️ **AMENDED 2026-08-29, after the epic was scaffolded.** As scaffolded, this epic pushed the
 *production* of the remaining mockups into Sprints 4–6, as builder work. The product owner named the
@@ -134,7 +134,7 @@ by design, which corrected `sprint-6.md`. F3: one epic has no `build_order`, so 
 > **Every row below was verified by running something**, not by reading the plan. Where the scaffold
 > described a guard, a table, a constant or a flag state the live system does not have, the scaffold
 > is corrected here **out loud** and the correction carries its evidence. Five of the eight scaffolded
-> decisions came back changed, and four new ones (**D9–D12**) exist because the verification found
+> decisions came back changed, and five new ones (**D9–D13**) exist because the verification found
 > them. That is the outcome this pass is for.
 >
 > A builder that finds a locked decision inconvenient **escalates**; it does not widen one because a
@@ -384,7 +384,7 @@ defect it is fixing.
 
 ---
 
-### The four decisions the verification pass ADDED
+### The five decisions the verification pass ADDED
 
 ### D9 — ⚠️ Preview cannot serve any signed-in or database-backed page. 🔒 **Every preview-based walkthrough step in this epic is unrunnable and is rewritten.**
 
@@ -469,6 +469,69 @@ stylesheet edit away from silently regressing.
 **cannot be observed failing on `main`**, so the "observed failing at least once" requirement is met
 by a **mutation check recorded in the PR body**: delete `margin: auto`, watch the assertion go red at
 `x: 0, y: 0`, restore, watch it go green. A guard that has never been seen red is not a guard.
+
+### D13 — 🔒 The "29 routes" is a MOVING number, and here is the ledger. **Daniel decided the one part that was his.**
+
+The scaffold's *29 in-scope routes* was computed as 32 `page.tsx` files minus 3 out of scope. That
+is correct **today** and wrong **at epic close**, because this epic's own stories change the set —
+and neither change was costed:
+
+| | Δ | What | Where |
+|---|---|---|---|
+| Story 4.5 | **− 3** | `/app/keys`, `/app/flag-credentials`, `/app/agent-keys` are **retired** — minting moves onto Setup › Keys in the same commit. A redirect has no design and owes no reference state. | `sprint-4.md` |
+| Story 4.3 | **+ 1** | `Ship › Scheduled changes` — **the approved Ship rail has four items and the product has no such route, table or capability.** Verified by grep across the whole repo. | `sprint-4.md` |
+
+**So: 30 rows live through Sprint 3, 27 at epic close.** `coverage()` computes the denominator from
+the manifest's own `landsIn` / `retiresIn` fields rather than from a number typed into a document,
+because a typed number is exactly what this epic exists to stop trusting. The DoD's *"29/29"* is
+amended to **27/27** below.
+
+#### The part that was NOT mine: Scheduled changes
+
+`sprint-4.md` Story 4.3 said Scheduled changes *"renders the same row language with its honest empty
+state (the rail shows `0` today)"*. **The rail shows nothing today** — `project-route-inventory.ts`
+has no such surface, there is no route, there is no table, and there is no scheduling capability
+anywhere in the product. The sentence describes the *prototype's* rail as though it were the
+product's.
+
+Dropping a rail item is an amendment to an approved design, and WAYS-OF-WORKING now says an approved
+design **is** the contract — so it went to Daniel rather than into my judgement (LEARNINGS:
+*amending a locked acceptance criterion is a product-owner decision, not a documentation task*).
+
+> **DECIDED 2026-08-29 — Daniel: ship the designed empty-state route.** `/app/scheduled/[projectSlug]`
+> is built in Story 4.3 as a real route whose only state is the approved empty one, and
+> `Ship › Scheduled changes` stays in the rail with its fourth item. It enters
+> `project-route-inventory.ts` as a `scheduled` surface and the coverage manifest as a row.
+
+The alternative I recommended — drop the item and record the gap — was not taken, so the
+counter-argument is recorded here instead of lost: Story 4.1's own rule is *"a control that goes
+nowhere is worse than no control"*, and this ships a fourth rail item in front of every user that
+leads to a page which cannot do anything. **The mitigation is that the empty state must say
+plainly that scheduling is not available yet** — an empty state is one of the nine and is a
+deliverable, not a fallback (D10). It must not read as *"you have no scheduled changes"*, which
+would imply you could have some.
+
+#### The specimen route is deliberately NOT in the denominator
+
+`/app/design-system` (Story 2.1) is in `OUT_OF_SCOPE_PAGES`, not in the manifest. Counting it would
+be circular: the specimen **is** the reference every other route is measured against, so a route
+that renders the system by definition renders the system. It is still **gated** — Story 2.1 asserts
+it against `MEASURED-SPEC.md`, and Sprint 2's walkthrough is the screen where Daniel approves or
+rejects the language. It is simply not a route the product owes a design to.
+
+#### The coverage trajectory, computed rather than typed
+
+| After | Live rows | Covered | What lands |
+|---|---|---|---|
+| Sprint 1 | 30 | **0** | the rails. No product pixel moves, so nothing is on the system yet. |
+| Sprint 2 | 30 | **0** | the language + the specimen — which is out of scope by the paragraph above. |
+| Sprint 3 | 30 | **0** | the shell. ⚠️ Coverage stays 0 **on purpose**: the boolean is about a route's own **page body**, not its chrome. Wrapping 21 routes in the frame does not make 21 pages look right. |
+| Sprint 4 | 27 | **8** | Ship + Setup; the three legacy credential routes leave the denominator. |
+| Sprint 5 | 27 | **18** | Measure + Today. |
+| Sprint 6 | 27 | **27** | the doors and the hub. |
+
+Run `node scripts/design-coverage.mjs` for the live number; CI prints it on every PR and the ratchet
+fails a decrease.
 
 ---
 
@@ -557,9 +620,9 @@ page that reads exactly like a broken one.
 ## Definition of Done (epic)
 - [ ] All sprints merged to `main` + smoke-tested (gaps stated)
 - [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] **All 29 in-scope routes have an approved reference state, derived from `apps/web/design-system/`**
-- [ ] **The visual gate is blocking for all 29 in the `authed` project (D5-a), with zero deferred rows carrying no owner and no date**
-- [ ] **Coverage manifest reports 29/29 and the ratchet is wired** (coverage may not decrease)
+- [ ] **All 27 in-scope routes have an approved reference state, derived from `apps/web/design-system/`** *(amended from 29 — see **D13**: Story 4.5 retires three routes and Story 4.3 adds one)*
+- [ ] **The visual gate is blocking for all 27 in the `authed` project (D5-a), with zero deferred rows carrying no owner and no date**
+- [ ] **Coverage manifest reports 27/27 and the ratchet is wired** (coverage may not decrease) — `node scripts/design-coverage.mjs`
 - [ ] **`globals.css`'s `.product-shell` rules and `console.css`'s compensations for them are deleted** — until this happens the redesign is a layer on top of the thing it replaced
 - [ ] This README marked ✅; every sprint status ticked with commit refs
 - [ ] `RETROSPECTIVE.md` written

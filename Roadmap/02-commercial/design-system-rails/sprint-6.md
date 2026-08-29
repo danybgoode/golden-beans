@@ -89,11 +89,14 @@ into the system or explicitly kept with a written reason.
   covers all 29 routes.
 **Risk:** high
 
-### Story 6.5 — 29 of 29, and the ratchet on
+### Story 6.5 — 27 of 27, and the ratchet on
 **As a** product owner, **I want** coverage to be complete and unable to slip,
 **so that** the next epic inherits the rails instead of rebuilding them.
 **Acceptance:**
-- The manifest reports **29/29** on all three booleans.
+- The manifest reports **27 / 27**. ⚠️ *Corrected at the lock (**D13**): 29 was 32 pages minus
+  3 out of scope, before this epic's own Story 4.5 retired three routes and Story 4.3 added one.
+  Two booleans are manifest fields; the third — "passes the visual gate" — is the gate's RESULT and
+  deliberately not a field, because a field for it would be `true` on `main` by construction.*
 - **The visual gate is blocking**, and **no deferred row exists without an owner and a date.** The
   last epic shipped five deferred rows at birth; this one ships with a decay date on each.
 - The ratchet is on: a PR that lowers coverage **fails**.
@@ -130,9 +133,9 @@ Env: **production · https://goldenfrijoles.com**.
    → The hub is the same product as `/app`.
 5. Go to https://goldenfrijoles.com/app/flags/miyagisanchez.
    → Unchanged from Sprint 4. Story 6.4 deleted the old stylesheet and must have moved nothing.
-6. Open the PR's CI run.
-   → Coverage reports **29/29**, the visual gate is blocking, and no deferred row is listed without
-   an owner and a date.
+6. Open the PR's CI run, step **Design coverage + ratchet**.
+   → Coverage reports **27 / 27**, the visual gate is blocking, and no deferred row is listed
+   without an owner and a date.
 7. Confirm `DESIGN_V2_ENABLED` / `isDesignV2Enabled` no longer appears in `lib/flags.ts` or in any
    of the three Vercel environments.
    → The flag is retired. There is one design now, and one stylesheet.

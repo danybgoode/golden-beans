@@ -22,7 +22,7 @@ re-author) · `apps/web/lib/project-route-inventory.ts` (`iconKey`) · a new spe
 | # | The contract | Cites |
 |---|---|---|
 | 1 | Scales are **measured out of the approved prototype**, from the regenerated spec table — never chosen. `23/700` h1, `13.5/600` rail item, `11/600 uppercase` list header, `26/600 IBM Plex Mono` stat number, `38 × 21` switch. | **D8** |
-| 2 | The specimen is a **real route in the manifest with a reference state**, not a Storybook. It is how Daniel approves the language on one screen before any page is rebuilt on it. Coverage after this sprint: **2/29**. | **D5** |
+| 2 | The specimen is a **real route**, not a Storybook — `/app/design-system`, gated, asserted against `MEASURED-SPEC.md`. It is how Daniel approves the language on one screen before any page is rebuilt on it. ⚠️ It is deliberately **out of** the coverage denominator (`OUT_OF_SCOPE_PAGES`): counting the thing every other route is measured against would be circular. Coverage after this sprint is still **0 / 27**, and a rise means a page changed that should not have. | **D5**, **D13** |
 | 3 | Every primitive class is `ds-`-prefixed under `.ds`. The drift guard's namespace rule (Story 1.3) is what enforces it. | **D3** |
 | 4 | Icons are `<Icon name="…">` from the closed `ICON_NAMES` union. **`↗` is never typed** — `name="external"` is the approved arrow. The pictograph ban is not touched. | **D4**, **F1** |
 | 5 | `iconKey` is added to `ProjectSurface`, to the `Pick<>` that builds `ProjectSurfaceLink`, and to the mapper. The closed union makes an unknown key a **compile error**, not a blank square. | **D4** |
@@ -150,8 +150,14 @@ looks like a regression and is not.
    → Each carries an **SVG** icon — no glyph, no emoji — and the active one is a raised card:
    lighter fill, a 1px border, a gold icon, full-strength text. Legible at a glance rather than a
    fill you have to look for.
-5. Open the PR's CI run.
-   → Coverage reports **2/29** (Ship › Features + the specimen). Product routes are unchanged, and
+5. Open the PR's CI run, step **Design coverage + ratchet**.
+   → Coverage still reports **0 / 27 covered**, and that is correct.
+   ⚠️ *Corrected at the lock (**D13**). The scaffold expected `2/29`, counting the specimen. The
+   specimen is deliberately **out of** the denominator: it IS the reference every other route is
+   measured against, so counting it as covered by itself is circular. It is still gated — Story 2.1
+   asserts it against `MEASURED-SPEC.md`, and step 1 above is where you approve or reject the
+   language. Sprint 2 builds the language, not pages, so a rise here would mean a page changed that
+   should not have.*
    `https://goldenfrijoles.com/app/flags/miyagisanchez` still looks exactly as it did after Sprint 1.
 
 If any step fails, note the step number + what you saw — that's the bug report.
