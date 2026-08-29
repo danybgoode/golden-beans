@@ -204,18 +204,28 @@ independently shippable slice of value.
   and the var does not exist in Vercel yet, which is the one item owed.
 - ✅ [The flag console a human can operate](01-growth-engine/flags-console-parity/README.md)
   (one feature list · a per-feature destination · a control that says what it stops · credentials and
-  the audit on their own routes · one vocabulary) — **all three sprints merged and deployed, DARK**
-  behind `FLAG_CONSOLE_ENABLED` (PRs #118/#120/#121). The page used to render the engine's shape
+  the audit on their own routes · one vocabulary) — **all three sprints merged and LIVE**
+  (PRs #118/#120/#121). The page used to render the engine's shape
   rather than the operator's job: a JSON textarea, three key-minting forms, an `<article>` per flag,
   then three more tables. At 42 definitions nobody reached the bottom. Now: one scannable,
   URL-driven list; each feature with its own address; and three activation states said in words —
-  **on**, **turned off**, and **never turned on here**, which 40 of 42 live flags actually are and
-  which the old page drew identically to a deliberate kill. Owed before it is worth anything: the
-  **flip** (its own commit to `main`), the signed-in walkthrough, and the epic's outcome test.
-- 🟡 [Flags — a visual rule builder](01-growth-engine/flags-visual-rule-builder/README.md) (rule
+  **on**, **turned off**, and **never turned on here**, which 39 of 42 live flags actually are and
+  which the old page drew identically to a deliberate kill. ⚠️ **This entry said "deployed, DARK"
+  and listed the flip as owed until 2026-08-29.** `FLAG_CONSOLE_ENABLED` is ON in production and
+  can be proved without a session: `/app/flags/<slug>/<key>` calls `notFound()` BEFORE auth, so it
+  answers **404 while dark and 307 → /login once lit**, and it answers 307 (checked 2026-08-29,
+  along with `/app/flag-credentials/…` and `/app/flag-audit/…`). `console-ia-overhaul` then rebuilt
+  these surfaces on top of it — see below.
+- ✅ [Flags — a visual rule builder](01-growth-engine/flags-visual-rule-builder/README.md) (rule
   builder · rollout bars · plain-language version diff · preview-as-a-user) — **all three sprints
-  built, Sprint 1 merged and dark in production; Sprints 2 and 3 await the owner's merge**
-  (PRs #87/#88/#89). A PM is the person who knows *"roll this out to pro-plan users in Mexico at
+  merged** (PRs #87/#88, and **#90**, which replaced #89 — that PR was auto-closed irreversibly when
+  its base branch was deleted on merge, the trap LEARNINGS records). ⚠️ This entry said "Sprints 2
+  and 3 await the owner's merge" until 2026-08-29; every one of them is on `main`, verified by
+  `flag-preview.tsx` being there. **`FLAG_RULE_BUILDER_ENABLED`'s live value is RECORDED as on and
+  has never been measured** — it is stored Sensitive in Vercel and its surfaces need a session, so
+  unlike the console's gate above there is no anonymous proof to point at (console-ia-overhaul A21).
+  Since `console-ia-overhaul` Story 3.2 the builder lives on a feature's **Targeting** tab rather
+  than on the features list. A PM is the person who knows *"roll this out to pro-plan users in Mexico at
   10%"* and the person least able to type it as JSON into a `<textarea>` — so the strongest
   primitive the product has was invisible to the buyer it was built for. **No migration, no new
   route, no new dependency, no change to the wire contract:** the builder posts through the server
