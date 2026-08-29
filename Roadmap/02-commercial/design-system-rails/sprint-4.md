@@ -24,6 +24,7 @@ border, four stat tiles, the search/filter/group row, the header row at 11/600 u
 - **Wide content scrolls inside its own `overflow-x: auto` container** (Do-not #6).
 - The **compare-environments** view (reference state **10**) ships with the list, since the button is
   already in state 01 and a control that goes nowhere is worse than no control.
+**Approved states:** `ship-features`, `ship-features-dormant`, `ship-compare` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 4.2 — The feature destination and its tabs
@@ -37,6 +38,7 @@ environments, funnel and impact are tabs rather than routes I type a key into.
   deliverable, not a fallback.
 - The funnel-renders-numbers spec belongs on a feature that **has** a funnel (`setup_guide`);
   asserting numbers on a flag's tab is a test that cannot pass.
+**Approved states:** `feature-value`, `feature-environments`, `feature-funnel` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 4.3 — Ship › Activity and Scheduled changes
@@ -44,6 +46,7 @@ environments, funnel and impact are tabs rather than routes I type a key into.
 two surfaces are on the system too.
 **Acceptance:** Activity matches reference state **09**. Scheduled changes renders the same row
 language with its honest empty state (the rail shows `0` today).
+**Approved states:** `ship-activity` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 4.4 — Setup › Connect gets its teaching half ✳ *Daniel's complaint*
@@ -56,6 +59,7 @@ status pill, and the **numbered three-step card ending in `Add to Claude ↗`**.
   A member must not be able to read a bearer URL out of View Source.
 - The status line keeps saying **only what the data supports**: `connector_tokens` records no use, so
   the page says a URL exists and says out loud that existing is not the same as being used.
+**Approved states:** `setup-connect` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 4.5 — Setup › Keys mints, and the three legacy routes retire ✳ *Daniel's complaint*
@@ -71,6 +75,7 @@ and expiry chips, a row menu, and **`+ New key`**.
   off a table.
 - `requireProjectOwnership` is called **at the route**, and every mint and revoke action re-asserts
   ownership independently — identical to today, never looser.
+**Approved states:** `setup-keys` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 4.6 — Destinations and Share links
@@ -78,6 +83,7 @@ and expiry chips, a row menu, and **`+ New key`**.
 finished rather than mostly finished.
 **Acceptance:** both render from `design-system/` with the shared data table, its row menu and its
 empty state; both have reference states in the manifest. Coverage reaches **13/29**.
+**Approved states:** `setup-destinations`, `setup-shares` — in `design/console-prototype.html`.
 **Risk:** high
 
 ## Sprint QA

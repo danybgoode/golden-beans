@@ -51,6 +51,7 @@ numbered step card · wizard**.
   1440×960. Assert where the dialog *is*, not only that it opened.
 - Existing `components/ui` primitives are **adopted and extended, never re-authored** — audit §2.2:
   *"the work is mostly adoption and a handful of new primitives."*
+**Approved states:** every state — the primitive set is what all 32 are assembled from — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 2.4 — Icons ✳ *D4* — and the reason there were none

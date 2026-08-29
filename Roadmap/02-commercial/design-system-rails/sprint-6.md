@@ -28,8 +28,13 @@ language, **so that** signing in is not a change of visual worlds.
 `design-system/`, each with an approved reference state.
 - **`/install` keeps serving the demo project's token.** It is a public route and that is correct
   (AGENTS rule #2); the defect was ever linking a signed-in user to it, and Story 4.4 fixed that.
-- `/s/[token]` is a **share link** — an unauthenticated reader sees it. Its empty and expired states
-  are part of the design, not an afterthought.
+- ⚠️ **CORRECTED 2026-08-29 — there is no expired state, and that is a decision.**
+  `app/s/[token]/page.tsx` calls `notFound()` for unknown, malformed, expired **and** revoked alike,
+  so the page cannot tell an attacker which one a token is. This story previously asked for "the
+  expired state" as a designed page, which would have been a builder implementing a security
+  regression to satisfy a doc. All four cases land on **`public-gone`**, one designed 404 whose copy
+  deliberately does not say which. Found by reading the route while designing it (finding F2).
+**Approved states:** `door-login`, `door-signup-closed`, `door-signup-open`, `public-install`, `public-share`, `public-gone`, `public-talk` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.3 — The hub
@@ -38,6 +43,7 @@ routes stop being a separate product.
 **Acceptance:** `/hub/[project]`, `/hub/[…]/epic/[epicSlug]`, `/hub/[…]/horizon` and
 `/hub/[…]/report` render from `design-system/` with reference states. `hub.module.css` is retired
 into the system or explicitly kept with a written reason.
+**Approved states:** `hub-roadmap`, `hub-epic`, `hub-horizon`, `hub-report` — in `design/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.4 — Delete the old world ✳ *Sweeper*
@@ -88,8 +94,10 @@ Env: **production · https://goldenfrijoles.com**.
    → Every screen on the way in is on the system, including the error state if you mistype the
    password. Delete the account afterwards.
 3. Open a real share link `https://goldenfrijoles.com/s/<token>` while signed out.
-   → It renders on the system. Try an expired or bad token.
-   → The expired state is a designed page, not a stack trace or a bare 404.
+   → It renders on the system, read-only, with no way into the product.
+   Now mangle a character in the token and reload.
+   → You get the designed **`public-gone`** page. It does **not** say whether the link expired, was
+   revoked, or never existed — that distinction is exactly what it must not leak.
 4. Go to https://goldenfrijoles.com/hub/miyagisanchez.
    → The hub is the same product as `/app`.
 5. Go to https://goldenfrijoles.com/app/flags/miyagisanchez.

@@ -11,7 +11,7 @@ build_order: 26      # integer position in the ONE global build sequence — the
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/design-system-rails.md`](../../00-ideas/seeds/design-system-rails.md)
 > **Appetite:** L (multi-wave — re-bet at each wave boundary) · **Underwritten by:** _null — not yet bet_
 > **Audit:** [`00-ideas/audits/app-ux-audit-2026-08-01.md`](../../00-ideas/audits/app-ux-audit-2026-08-01.md) — §2.2, §2.3, §6.7, §7 (P0), §10.5.
-> **Design (approved 2026-08-27, re-rendered and re-approved 2026-08-29):** [`../console-ia-overhaul/design/flags-console-prototype.html`](../console-ia-overhaul/design/flags-console-prototype.html) · [`../console-ia-overhaul/design/CONSOLE-CONTRACT.md`](../console-ia-overhaul/design/CONSOLE-CONTRACT.md) — **moved to `apps/web/design-system/` by Story 1.1.**
+> **Design — APPROVED, 32 states:** [`design/console-prototype.html`](design/console-prototype.html) · [`design/APPROVED.md`](design/APPROVED.md) · [`design/render-reference.mjs`](design/render-reference.mjs) — **moved to `apps/web/design-system/` by Story 1.1.** Nine states inherited from [`../console-ia-overhaul/design/CONSOLE-CONTRACT.md`](../console-ia-overhaul/design/CONSOLE-CONTRACT.md), twenty-three added and approved 2026-08-29.
 > **Finishes:** `console-ia-overhaul` (#25) — whose retrospective names the visual result as the thing it got wrong.
 > **Builds on:** `design-system-lift` (#9), `app-shell-and-agent-rail` (#12), `app-component-kit-adoption` (#13) — their tokens, shell and component kit are extended, never rewritten.
 
@@ -94,6 +94,28 @@ the demo project's token — it is a public route and that is correct.
 signed-in route**, per `console-ia-overhaul` A22. That epic's withdrawal of *"a reference end-state
 is inspiration, never signed-off scope"* is generalised here into a WAYS-OF-WORKING amendment
 (Story 1.0), so the next epic inherits the correction instead of rediscovering it.
+
+## The design is approved, and committed — read this before D1–D8
+
+⚠️ **AMENDED 2026-08-29, after the epic was scaffolded.** As scaffolded, this epic pushed the
+*production* of the remaining mockups into Sprints 4–6, as builder work. The product owner named the
+consequence exactly: a builder shows twenty-three unreviewed screens deep into an expensive run, and
+the answer is no. **Designing is the planning lane's job, and it is done.**
+
+**All 32 states are designed, approved and committed** — `design/console-prototype.html`, with
+`design/APPROVED.md` recording the approval, its content hash, and five design decisions
+(**DD1–DD5**) that the architecture lock **does not reopen**: where Tasks lives, where the hub sits,
+the three-frame rule, the computed chart-colour rules, and one-design-two-mounts. Every story in
+Sprints 2–6 now cites a state id instead of a sentence.
+
+```bash
+node Roadmap/02-commercial/design-system-rails/design/render-reference.mjs   # 32 states, verified
+```
+
+`design/APPROVED.md` also carries **three findings for the lock to settle** — F1: the approved design
+uses `↗`, a glyph `check-design-drift.mjs` bans inside `/app`. F2: `/s/[token]` has no expired state
+by design, which corrected `sprint-6.md`. F3: one epic has no `build_order`, so the sequence runs to
+26 across 27 epics.
 
 ## Decisions — ⚠️ NOT YET LOCKED. The architect locks D1–D8 against live code and live data before any builder starts.
 

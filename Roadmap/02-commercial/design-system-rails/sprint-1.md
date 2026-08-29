@@ -22,9 +22,11 @@
 **As a** builder on any future epic, **I want** the design system to live at a product-level path,
 **so that** it does not expire with the epic that produced it.
 **Acceptance:**
-- `apps/web/design-system/` exists and holds the approved prototype, its stylesheet, the contract,
-  `measure-contract.mjs`, `render-reference.mjs` and `_harness.mjs`, moved from
-  `Roadmap/02-commercial/console-ia-overhaul/design/`.
+- `apps/web/design-system/` exists and holds **this epic's own `design/` folder** — the approved
+  32-state `console-prototype.html`, `APPROVED.md`, `render-reference.mjs` and `_harness.mjs` — plus
+  `console-reference.css`, `CONSOLE-CONTRACT.md` and `measure-contract.mjs` from
+  `Roadmap/02-commercial/console-ia-overhaul/design/`. Both source folders are left as
+  forward-pointers, not deleted.
 - On a **fresh clone**, both commands run green and `render-reference.mjs` writes all ten states.
   (They died with `ERR_MODULE_NOT_FOUND` for four days because `_harness.mjs` was uncommitted —
   prove the move did not reintroduce that.)
