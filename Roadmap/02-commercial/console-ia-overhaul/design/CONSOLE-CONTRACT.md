@@ -35,6 +35,34 @@ node Roadmap/02-commercial/console-ia-overhaul/design/measure-contract.mjs   # t
 node Roadmap/02-commercial/console-ia-overhaul/design/render-reference.mjs   # 10 reference PNGs
 ```
 
+> ### ⚠️ Two corrections to this section, both found at epic close (2026-08-29)
+>
+> **1. Neither command ran.** Both scripts import `./_harness.mjs`, and that file was never
+> committed — so on a fresh clone of `main` they both died with `ERR_MODULE_NOT_FOUND`. The document
+> that says "regenerate this table" shipped without the thing that regenerates it, for four days.
+> Fixed by committing the harness; both commands are verified to run, and
+> `render-reference.mjs` writes all ten states.
+>
+> **2. The rule above is true of the SIZE/WEIGHT column and not of the BOX column.** Every
+> font-size and font-weight in the table below matches a fresh run exactly. The Box column is a
+> hand-written narrative of what the script printed — `h **54**`, `one line`, `≤ 62ch` — and two of
+> its numbers do not survive re-measurement:
+>
+> | Row | Written here | A fresh run says |
+> |---|---|---|
+> | Project switcher | `140 × 30` | `122 × 30` |
+> | Feature row | `h 78` | `71` |
+>
+> **Neither changes what the gate asserts**, which is why this is recorded rather than rewritten:
+> `console-visual.authed.spec.ts` asserts the sizes and weights (all matching), and both of these
+> rows are already in its `DEFERRED_SPEC_ROWS` with the switcher's width explicitly waived.
+>
+> It is worth saying plainly anyway, because the deferred-row note reasons about `78` as though it
+> were declared design intent — *"emergent measurements of the prototype's shorter copy"* — and it is
+> not even that: it is a number nobody can reproduce. **A document whose whole claim is "measured,
+> not described" earns the same suspicion as code.** Rewriting the table is a change to a binding
+> contract and belongs with the product owner, not with a close-out commit.
+
 ## The one assertion that would have caught this on day one
 
 At **1440 × 960**, signed in, on **Ship › Features** in Production with the dormant group collapsed:
