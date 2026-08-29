@@ -17,6 +17,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -216,4 +217,43 @@ test('the ten tokens the deleted comment claimed were "verbatim" are genuinely N
       `${name} is now in the brand token file — the product/landing fork has changed and D2 needs re-deciding`
     )
   }
+})
+
+test('the approved prototype has not changed a byte', () => {
+  // ⚠️ **The guard `APPROVED.md` asks for, in its own words:** *"If `console-prototype.html` changes
+  // and this hash is not updated with a new approval line, the design is unapproved and the gate
+  // should say so. Editing the prototype and quietly leaving the hash alone is the one move this
+  // file exists to prevent."* It said that and nothing enforced it — a rule with no check is a
+  // preference.
+  //
+  // This is not hypothetical, and it very nearly happened in the sprint that wrote this test: CI's
+  // `format:changed` step went red because Prettier wanted to reformat files in this directory. Had
+  // the prototype been in Prettier's scope with `--write`, **a formatter would have un-approved the
+  // design** — no person, no decision, no diff anyone would read as significant. It is now in
+  // `.prettierignore` AND asserted here, because the two failure modes are different: the ignore
+  // stops one specific tool, and this stops every other one.
+  //
+  // The hash is read out of APPROVED.md rather than pasted here, so there is one place to update
+  // when a genuinely new design is approved — and updating it means editing the file that also
+  // demands an approval line beside it.
+  const approved = readFileSync(join(HERE, 'APPROVED.md'), 'utf8')
+  const declared = /SHA-256 \(first 16\)\*{0,2} \| `([0-9a-f]{16})`/.exec(approved)?.[1]
+  assert.ok(
+    declared,
+    'APPROVED.md no longer states a SHA-256 for the prototype — that row is the approval record'
+  )
+
+  const actual = createHash('sha256')
+    .update(readFileSync(join(HERE, 'console-prototype.html')))
+    .digest('hex')
+    .slice(0, 16)
+
+  assert.equal(
+    actual,
+    declared,
+    `console-prototype.html hashes to ${actual}, and APPROVED.md says ${declared}.\n` +
+      'The design this epic is measured against has changed. If that was deliberate, it needs a ' +
+      'NEW approval line in APPROVED.md with the new hash — not an updated number. If it was not, ' +
+      'something reformatted or rewrote an approved artefact.'
+  )
 })

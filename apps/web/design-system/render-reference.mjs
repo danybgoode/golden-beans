@@ -12,12 +12,11 @@
 // route against the state of the same id.
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { openPrototype, HERE } from './_harness.mjs'
+import { openPrototype, HERE } from './_harness.mjs';
 import { APPROVED_STATES } from './approved-states.mjs';
 
 const DIR = join(HERE, 'reference');
 mkdirSync(DIR, { recursive: true });
-
 
 const { browser, page } = await openPrototype();
 const errors = [];
