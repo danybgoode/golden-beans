@@ -23,5 +23,10 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "lib/**/*.test.ts", "e2e/helpers/*.test.ts"]
+  "exclude": [
+    "node_modules",
+    "lib/**/*.test.ts",
+    "e2e/helpers/*.test.ts",
+    "design-system/**/*.test.ts"
+  ]
 }

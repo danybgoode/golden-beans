@@ -11,7 +11,7 @@ build_order: 26      # integer position in the ONE global build sequence — the
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/design-system-rails.md`](../../00-ideas/seeds/design-system-rails.md)
 > **Appetite:** L (multi-wave — re-bet at each wave boundary) · **Underwritten by:** _null — not yet bet_
 > **Audit:** [`00-ideas/audits/app-ux-audit-2026-08-01.md`](../../00-ideas/audits/app-ux-audit-2026-08-01.md) — §2.2, §2.3, §6.7, §7 (P0), §10.5.
-> **Design — APPROVED, 32 states:** [`design/console-prototype.html`](design/console-prototype.html) · [`design/APPROVED.md`](design/APPROVED.md) · [`design/render-reference.mjs`](design/render-reference.mjs) — **moved to `apps/web/design-system/` by Story 1.1.** Nine states inherited from [`../console-ia-overhaul/design/CONSOLE-CONTRACT.md`](../console-ia-overhaul/design/CONSOLE-CONTRACT.md), twenty-three added and approved 2026-08-29.
+> **Design — APPROVED, 32 states:** [`apps/web/design-system/console-prototype.html`](design/console-prototype.html) · [`apps/web/design-system/APPROVED.md`](design/APPROVED.md) · [`apps/web/design-system/render-reference.mjs`](design/render-reference.mjs) — **moved to `apps/web/design-system/` by Story 1.1.** Nine states inherited from [`../console-ia-overhaul/design/CONSOLE-CONTRACT.md`](../console-ia-overhaul/design/CONSOLE-CONTRACT.md), twenty-three added and approved 2026-08-29.
 > **Finishes:** `console-ia-overhaul` (#25) — whose retrospective names the visual result as the thing it got wrong.
 > **Builds on:** `design-system-lift` (#9), `app-shell-and-agent-rail` (#12), `app-component-kit-adoption` (#13) — their tokens, shell and component kit are extended, never rewritten.
 
@@ -110,17 +110,17 @@ is inspiration, never signed-off scope"* is generalised here into a WAYS-OF-WORK
 consequence exactly: a builder shows twenty-three unreviewed screens deep into an expensive run, and
 the answer is no. **Designing is the planning lane's job, and it is done.**
 
-**All 32 states are designed, approved and committed** — `design/console-prototype.html`, with
-`design/APPROVED.md` recording the approval, its content hash, and five design decisions
+**All 32 states are designed, approved and committed** — `apps/web/design-system/console-prototype.html`, with
+`apps/web/design-system/APPROVED.md` recording the approval, its content hash, and five design decisions
 (**DD1–DD5**) that the architecture lock **does not reopen**: where Tasks lives, where the hub sits,
 the three-frame rule, the computed chart-colour rules, and one-design-two-mounts. Every story in
 Sprints 2–6 now cites a state id instead of a sentence.
 
 ```bash
-node Roadmap/02-commercial/design-system-rails/design/render-reference.mjs   # 32 states, verified
+node apps/web/design-system/render-reference.mjs   # 32 states, verified
 ```
 
-`design/APPROVED.md` also carries **three findings for the lock to settle** — F1: the approved design
+`apps/web/design-system/APPROVED.md` also carries **three findings for the lock to settle** — F1: the approved design
 uses `↗`, a glyph `check-design-drift.mjs` bans inside `/app`. F2: `/s/[token]` has no expired state
 by design, which corrected `sprint-6.md`. F3: one epic has no `build_order`, so the sequence runs to
 26 across 27 epics.
@@ -157,14 +157,38 @@ app's TypeScript.
 
 | Layer | Home | Consumed by |
 |---|---|---|
-| Tokens + primitive styles | `apps/web/design-system/*.css` | `app/layout.tsx` **and** `_harness.mjs`, which inlines the same files into the prototype wrapper |
+| Tokens + primitive styles | `apps/web/design-system/*.css` — **generated from the prototype** | `app/layout.tsx` (and `console.css`) |
 | Components | `apps/web/design-system/*.tsx` | the app only |
-| The approved states | `design/console-prototype.html` | `render-reference.mjs`, `measure-contract.mjs` |
+| The approved states | `apps/web/design-system/console-prototype.html` | `render-reference.mjs`, `measure-contract.mjs` |
 
-So one stylesheet paints both the product and the prototype, and **markup parity is enforced by the
-measured contract (D8) and the visual gate (D5), never by shared code.** Porting stops existing for
-*style*, which is where every previous port drifted. Claiming it stops existing for *markup* would be
-a promise the toolchain cannot keep.
+**Markup parity is enforced by the measured contract (D8) and the visual gate (D5), never by shared
+code.** Porting stops existing for *style*, which is where every previous port drifted. Claiming it
+stops existing for *markup* would be a promise the toolchain cannot keep.
+
+> #### ⚠️ D1/D2 amendment, 2026-08-29 — **generation runs prototype → product, not the reverse**
+>
+> The lock as first written said `_harness.mjs` would inline `design-system/*.css` into the
+> prototype wrapper, so one stylesheet literally painted both. **That is rejected, and the reason is
+> `APPROVED.md`.**
+>
+> Making the prototype consume a shared stylesheet means editing `console-prototype.html`, which
+> changes its **content hash** — and `APPROVED.md` states that a changed hash with no new approval
+> line means *the design is unapproved*. That file exists specifically to stop *"edit the prototype
+> and quietly leave the hash alone"*. Building the epic's first story by doing the one thing its own
+> approval record forbids would have been a poor start.
+>
+> **So the prototype stays byte-for-byte as Daniel approved it** (`5bc7e24ed5e3d0aa`, re-verified
+> 2026-08-29), and `extract-css.mjs` **generates** `tokens.css`, `reference.css` and `tokens.ts`
+> from it under a do-not-hand-edit header, with `--check` in CI failing on any diff. *"One
+> definition"* then holds **by construction** rather than by discipline — strictly stronger than
+> what the original wording bought.
+>
+> One transformation is applied on the way out, and it is a **table** rather than a `replace()`
+> buried in a pipeline: `FONT_STACK_OVERRIDES` puts `var(--font-sans)` / `var(--font-mono)` ahead of
+> the prototype's literal families, because `next/font` generates a hashed family name at build time
+> that a `file://` prototype cannot have. `tokens.test.ts` asserts that the keys of that table are
+> the **only** permitted differences between the prototype's `:root` and the generated `tokens.css`.
+> A transformation nothing can enumerate is indistinguishable from a bug.
 
 ### D2 — One token file. 🔒 **Locked, and the scaffolded "collapse to one" is DISPROVED. Three findings.**
 
@@ -201,8 +225,10 @@ into it would put console tokens on the landing and change `--roast-2`.
 
 1. `references/design/assets/tokens.css` — **untouched.** Brand + landing. Still imported first.
 2. `apps/web/design-system/tokens.css` — the **one** definition of the product token set, declared
-   on the `.ds` scope root (D3). It replaces `console.css`'s `.is-console` block *and* the
-   prototype's inlined `:root`; the harness `@import`s it so the prototype cannot drift from it.
+   on the `.ds` scope root (D3) and **generated from the approved prototype's `:root`** (see the
+   D1/D2 amendment above). It replaces `console.css`'s `.is-console` token block. The prototype
+   itself is not edited — CI's `extract-css.mjs --check` is what makes drift between them
+   impossible.
 3. `--roast-2` is a **recorded fork**, documented at its declaration, not renamed — every consumer
    already writes `var(--roast-2)` and renaming would touch more code than the fork is worth.
 
@@ -344,7 +370,7 @@ a claim about behaviour the code has never had, which is why the two wrong numbe
 Story 1.4's actual work.
 
 Run fresh 2026-08-29 against **both** prototypes — `console-ia-overhaul/design/flags-console-prototype.html`
-and this epic's `design/console-prototype.html`:
+and this epic's `apps/web/design-system/console-prototype.html`:
 
 - the two tables are **byte-identical**, so moving the script onto the new harness introduces **zero
   drift** and Story 1.1's move is safe;

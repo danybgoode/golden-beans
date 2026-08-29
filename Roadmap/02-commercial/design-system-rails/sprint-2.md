@@ -85,7 +85,7 @@ numbered step card · wizard**.
   cannot go red on `main`, produce its red with a **mutation check recorded in the PR body**.
 - Existing `components/ui` primitives are **adopted and extended, never re-authored** — audit §2.2:
   *"the work is mostly adoption and a handful of new primitives."*
-**Approved states:** every state — the primitive set is what all 32 are assembled from — in `design/console-prototype.html`.
+**Approved states:** every state — the primitive set is what all 32 are assembled from — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 2.4 — Icons ✳ *D4* — and the reason there were none

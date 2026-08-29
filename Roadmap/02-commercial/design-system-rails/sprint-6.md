@@ -60,7 +60,7 @@ language, **so that** signing in is not a change of visual worlds.
   expired state" as a designed page, which would have been a builder implementing a security
   regression to satisfy a doc. All four cases land on **`public-gone`**, one designed 404 whose copy
   deliberately does not say which. Found by reading the route while designing it (finding F2).
-**Approved states:** `door-login`, `door-signup-closed`, `door-signup-open`, `public-install`, `public-share`, `public-gone`, `public-talk` — in `design/console-prototype.html`.
+**Approved states:** `door-login`, `door-signup-closed`, `door-signup-open`, `public-install`, `public-share`, `public-gone`, `public-talk` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.3 — The hub
@@ -69,7 +69,7 @@ routes stop being a separate product.
 **Acceptance:** `/hub/[project]`, `/hub/[…]/epic/[epicSlug]`, `/hub/[…]/horizon` and
 `/hub/[…]/report` render from `design-system/` with reference states. `hub.module.css` is retired
 into the system or explicitly kept with a written reason.
-**Approved states:** `hub-roadmap`, `hub-epic`, `hub-horizon`, `hub-report` — in `design/console-prototype.html`.
+**Approved states:** `hub-roadmap`, `hub-epic`, `hub-horizon`, `hub-report` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.4 — Delete the old world ✳ *Sweeper*

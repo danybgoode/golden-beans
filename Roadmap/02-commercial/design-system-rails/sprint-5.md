@@ -7,11 +7,11 @@
 > designing to the builder. That is the expensive-surprise shape the product owner named: a builder
 > shows twenty-three screens deep into a paid run and the answer is no. **Designing is the planning
 > lane's job.** The states were produced and approved in four batches on 2026-08-29 and are
-> committed at `design/console-prototype.html`, with `design/APPROVED.md` recording the approval and
+> committed at `apps/web/design-system/console-prototype.html`, with `apps/web/design-system/APPROVED.md` recording the approval and
 > its content hash.
 >
 > **No story in this sprint designs anything.** Each cites a state id and is built against it. Run
-> `node design/render-reference.mjs` to see them.
+> `node apps/web/design-system/render-reference.mjs` to see them.
 >
 > ⚠️ **This is still where the appetite is most likely to be exhausted.** If it is, stop and return
 > to shaping — do not extend. Story 5.1 is the named trap.
@@ -74,7 +74,7 @@ whose whole pitch is *"see the funnel, see the North Star, see the lift"* shows 
 - **Dynamic bar widths are legal in `/app`**: the drift guard's inline-style ban is
   `components/landing`-only (audit §10.5). Confirm before building around it.
 - Every chart reads in both the semantic states it must distinguish, and **never by colour alone**.
-**Approved states:** `measure-north-star`, `measure-journey`, `experiment-ready`, `measure-scenarios` — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `measure-north-star`, `measure-journey`, `experiment-ready`, `measure-scenarios` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ### Story 5.2 — Today
@@ -86,7 +86,7 @@ whose whole pitch is *"see the funnel, see the North Star, see the lift"* shows 
   caveats, a wide gap between the stat row and the funnel figures). **That page redesign is this
   story** — it was covered by no story in the last epic, and half-doing it left a route that is
   neither.
-**Approved states:** `today`, `tasks-standalone` — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `today`, `tasks-standalone` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ### Story 5.3 — Funnel and Impact
@@ -95,7 +95,7 @@ funnel rather than a `<dl>`.
 **Acceptance:** matches the approved states above. Both routes keep working
 standalone and as the feature-page tabs from Story 4.2 — one design, two mounts, not two designs.
 Audit §6.5.
-**Approved states:** `funnel-standalone` (and `feature-funnel` for the tab mount) — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `funnel-standalone` (and `feature-funnel` for the tab mount) — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ### Story 5.4 — Experiments, list and detail
@@ -103,14 +103,14 @@ Audit §6.5.
 **so that** the comparison bar has somewhere to live.
 **Acceptance:** matches the approved states above, including the blocked variant, whose blockers are named in plain words (`the split cannot be checked yet`, never `srm_not_evaluable`). `EXPERIMENT_GOVERNANCE_ENABLED` is
 **Production-only** — the walkthrough step says so, or a correct preview render reads as broken.
-**Approved states:** `ship-experiments`, `experiment-ready`, `experiment-blocked` — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `ship-experiments`, `experiment-ready`, `experiment-blocked` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ### Story 5.5 — Journeys, list and detail
 **As a** person, **I want** journeys on the system, **so that** the section is whole.
 **Acceptance:** matches the approved states above. `JOURNEY_PROJECTIONS_ENABLED` is
 Production-only — same walkthrough caveat.
-**Approved states:** `measure-journeys`, `measure-journey` — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `measure-journeys`, `measure-journey` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ### Story 5.6 — Tasks, Scenarios, Activity audit and Onboarding
@@ -122,7 +122,7 @@ finished.
 - `onboarding` stays `flow-only` in the inventory and is still gated out of the nav; it gets a
   reference state because a person can reach it, not because the nav lists it.
 - Coverage reaches **20/29** — all of `/app`.
-**Approved states:** `measure-scenarios`, `tasks-standalone`, `ship-activity`, `setup-connect` — in `design/console-prototype.html`, rendered by `design/render-reference.mjs`.
+**Approved states:** `measure-scenarios`, `tasks-standalone`, `ship-activity`, `setup-connect` — in `apps/web/design-system/console-prototype.html`, rendered by `apps/web/design-system/render-reference.mjs`.
 **Risk:** high
 
 ## Sprint QA
@@ -130,7 +130,7 @@ finished.
   colour alone; `tabular-nums` on every stat) · manifest-driven visual rows for the nine routes this
   sprint lands · `e2e/command-center.authed.spec.ts` extended to the new layout.
 - **browser smoke owed:** yes, to Daniel — the money/auth-free walkthrough below. **The state
-  approval that used to be owed here already happened** (2026-08-29, `design/APPROVED.md`), which is
+  approval that used to be owed here already happened** (2026-08-29, `apps/web/design-system/APPROVED.md`), which is
   what turns this sprint from design work into execution.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 

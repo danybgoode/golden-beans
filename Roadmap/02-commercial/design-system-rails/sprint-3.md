@@ -65,7 +65,7 @@ approved design, **so that** the product reads as one product.
   the schema and this epic does not add one (`console-ia-overhaul` D1).
 - **The switcher is a menu**, not a list, and its measured box comes from the regenerated spec
   (`122 × 30`), never from the contract's hand-typed `140 × 30`.
-**Approved states:** `ship-features`, `today`, `hub-roadmap` (the same two tiers in all three) — in `design/console-prototype.html`.
+**Approved states:** `ship-features`, `today`, `hub-roadmap` (the same two tiers in all three) — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 3.3 — The rail ✳ *two of Daniel's five complaints*
@@ -80,7 +80,7 @@ location instead of only offering destinations.
   on the `--roast` `#16120d` ground, no border, no icon, no accent.
 - The gate asserts the active item **differs from an inactive one by more than background colour**.
   A cue you have to look for is what shipped last time, and a fill-only assertion would pass on it.
-**Approved states:** `ship-features`, `setup-connect`, `measure-journeys` — in `design/console-prototype.html`.
+**Approved states:** `ship-features`, `setup-connect`, `measure-journeys` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 3.4 — The environment control ✳ *Daniel's first complaint* — Do-not #5
@@ -98,7 +98,7 @@ location instead of only offering destinations.
 - ⚠️ Keep the `> ul` **child** combinator. `.console-rail a` and `.console-rail ul a` both leaked
   onto the picker, and the added specificity overrode its padding, radius **and** weight — killing
   the `aria-current` cue. Two previous attempts missed why.
-**Approved states:** `ship-features`, `funnel-standalone` — in `design/console-prototype.html`.
+**Approved states:** `ship-features`, `funnel-standalone` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 3.5 — Palette, dialogs and toasts on the system
