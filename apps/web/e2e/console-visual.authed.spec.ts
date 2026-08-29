@@ -647,13 +647,21 @@ test('every manifest row has a way to be reached', () => {
   // No browser, no gates — a pure consistency check, so it runs even when the suite skips. A route
   // that enters the manifest without an entry here would be counted and never opened.
   for (const row of ROUTE_MANIFEST) {
-    expect(REACHABLE[row.route], `${row.route} is in the manifest with no way for the gate to open it`).toBeDefined()
+    expect(
+      REACHABLE[row.route],
+      `${row.route} is in the manifest with no way for the gate to open it`
+    ).toBeDefined()
   }
   for (const route of Object.keys(REACHABLE)) {
+    // ⚠️ `.toBe(true)`, NOT `.toBeDefined()`. The first version of this line asserted
+    // `expect(someBooleanExpression).toBeDefined()` — and `false` IS defined, so a stale entry
+    // passed. **A guard that cannot fail, in the file whose entire subject is guards that cannot
+    // fail.** Found by re-reading my own diff for the class this epic exists to kill; it is the
+    // same shape as `querySelectorAll('[role="columnheader"]')` passing under `display: none`.
     expect(
       ROUTE_MANIFEST.some((row) => row.route === route),
       `${route} has a reachability entry but is not in the manifest — a stale entry reads as coverage`
-    ).toBeDefined()
+    ).toBe(true)
   }
 })
 

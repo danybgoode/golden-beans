@@ -4,6 +4,7 @@
   "hasReferenceState": 27,
   "rendersFromDesignSystem": 0,
   "complete": 0,
+  "covered": [],
   "outstanding": [
     "/app",
     "/app/destinations/[projectSlug]",

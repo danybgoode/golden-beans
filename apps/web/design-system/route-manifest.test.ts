@@ -54,17 +54,34 @@ test('the manifest and the repository agree about which routes exist', () => {
       'coverage obligation is a route nobody has to make look right'
   )
 
-  // ...and the other direction: a manifest row for a route that does not exist is a row that can
-  // never go green, quietly lowering the percentage for a reason nobody can find.
+  // ...and the other direction, in BOTH directions, which is the part that took a review round.
   //
-  // The ONE exception is a row whose `landsIn` sprint has not happened yet — `/app/scheduled` is
-  // added by Story 4.3 and its file does not exist while Sprint 1 is being built. That is stated as
-  // a property (`landsIn > 1`), not as a name, so the exception expires on its own.
-  const phantom = ROUTE_MANIFEST.filter((row) => !onDisk.has(row.page) && row.landsIn <= 1)
+  // A manifest row for a route that does not exist is a row that can never go green, quietly
+  // lowering the percentage for a reason nobody can find. One row legitimately has no page yet —
+  // `/app/scheduled`, added by Story 4.3 — and the first version of this test permitted it with
+  // `landsIn <= 1`.
+  //
+  // ⚠️ **That comparison rots** (cross-family review, vibe). It is true today and stops being true
+  // the day Sprint 2 opens: after Sprint 4 merges, a row with `landsIn: 4` and no page would still
+  // have been permitted, so the assertion would silently stop asserting — the exact defect class
+  // this epic exists to kill, in the test written to kill it.
+  //
+  // `notYetBuilt` replaces it, and is checked BOTH ways so it cannot be left behind: a row that
+  // declares it must have no file, and a row that does not must have one. Neither needs to know
+  // what day it is.
+  const phantom = ROUTE_MANIFEST.filter((row) => !onDisk.has(row.page) && row.notYetBuilt !== true)
   assert.deepEqual(
     phantom.map((row) => row.route),
     [],
-    'a manifest row points at a page.tsx that does not exist'
+    'a manifest row points at a page.tsx that does not exist, and is not marked notYetBuilt'
+  )
+
+  const stale = ROUTE_MANIFEST.filter((row) => onDisk.has(row.page) && row.notYetBuilt === true)
+  assert.deepEqual(
+    stale.map((row) => row.route),
+    [],
+    'this route now exists — clear `notYetBuilt` on its manifest row, or the exemption outlives ' +
+      'the reason for it and the next missing page goes unnoticed'
   )
 })
 

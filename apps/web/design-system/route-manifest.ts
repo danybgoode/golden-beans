@@ -97,6 +97,21 @@ export type CoverageRow = {
   rendersFromDesignSystem: boolean
   /** The sprint that puts this route on the system. */
   landsIn: Sprint
+  /**
+   * `true` while this route's `page.tsx` does not exist yet.
+   *
+   * ⚠️ **This replaced a sprint-number comparison, and the reason is this epic's own subject**
+   * (cross-family review, vibe). The test used to permit a missing file when `landsIn > 1` — which
+   * is true today and rots on the day Sprint 2 opens: after Sprint 4 merges, a row with
+   * `landsIn: 4` and no page would still have been permitted, so the assertion would quietly stop
+   * asserting. An env var was suggested; that just moves the clock somewhere a test cannot check.
+   *
+   * A flag is self-correcting instead: the test asserts BOTH directions — a row with this set must
+   * have no file, and a row without it must have one. So a builder who creates the page and forgets
+   * to clear the flag fails, and a row that quietly loses its page fails. Neither needs to know what
+   * day it is.
+   */
+  notYetBuilt?: true
   /** The sprint that removes this route, for the three credential routes Story 4.5 retires. */
   retiresIn: Sprint | null
   /** Set only when a row is knowingly short. Never `null` *and* off-system after `landsIn`. */
@@ -288,6 +303,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
   },
   {
     route: '/app/scheduled/[projectSlug]',
+    notYetBuilt: true,
     // ⚠️ DOES NOT EXIST YET — added by Story 4.3. See the D13 ledger above: the approved Ship rail
     // has four items and the product has no scheduling route, table or capability. Daniel decided
     // (2026-08-29) to ship the designed EMPTY state rather than drop the rail item.
@@ -600,6 +616,8 @@ export type Coverage = {
   rendersFromDesignSystem: number
   /** All booleans true. **This is the headline number**, and the one the DoD means. */
   complete: number
+  /** The covered routes, so the ratchet can name what REGRESSED instead of inferring it. */
+  covered: string[]
   /** Rows that are short of complete, so a report can name them rather than just count them. */
   outstanding: string[]
 }
@@ -620,6 +638,7 @@ export function coverage(sprint: Sprint = 6): Coverage {
     hasReferenceState: rows.filter((row) => row.referenceState !== null).length,
     rendersFromDesignSystem: rows.filter((row) => row.rendersFromDesignSystem).length,
     complete: complete.length,
+    covered: complete.map((row) => row.route),
     outstanding: rows.filter((row) => !complete.includes(row)).map((row) => row.route),
   }
 }

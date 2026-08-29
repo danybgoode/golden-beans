@@ -18,6 +18,7 @@
 //   node apps/web/design-system/measure-contract.mjs --check   # CI: fail on any diff
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { openPrototype, HERE } from './_harness.mjs';
 
 const OUT = 'MEASURED-SPEC.md';
@@ -55,6 +56,17 @@ const TARGETS = [
 
 export async function measure() {
   const { browser, page } = await openPrototype();
+  try {
+    return await measureIn(page);
+  } finally {
+    // ⚠️ `finally`, not a trailing `await browser.close()` — cross-family review (agy). A throw from
+    // `page.evaluate` left Chromium running until Node exited, and CI runs this beside a render of
+    // 32 states: one leaked browser per failure, on the runner that is already the slow job.
+    await browser.close();
+  }
+}
+
+async function measureIn(page) {
   const errors = [];
   page.on('pageerror', (event) => errors.push(String(event)));
   await page.evaluate(() => {
@@ -97,7 +109,6 @@ export async function measure() {
     };
   }, TARGETS);
 
-  await browser.close();
   // A page error means the numbers were read off a half-rendered prototype. Emitting them anyway
   // would write a plausible file that is wrong — the failure mode this whole story exists to close.
   if (errors.length) {
@@ -158,7 +169,11 @@ ${out.rows.map(cell).join('\n')}
 `;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// `fileURLToPath(...)`, matching every other script in this repo. The `file://${argv[1]}` form
+// breaks on any path needing URL escaping — a space, an accent — and this file then silently
+// becomes import-only: the CLI does nothing and exits 0 (cross-family review, agy). A tool that
+// reports success while doing nothing is the failure mode this whole story is about.
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
   const check = process.argv.includes('--check');
   const path = join(HERE, OUT);
   const content = render(await measure());

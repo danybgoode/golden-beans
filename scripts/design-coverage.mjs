@@ -29,7 +29,33 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, '..');
 const MANIFEST = 'apps/web/design-system/route-manifest.ts';
 const REPORT = 'apps/web/design-system/coverage.json';
-const BASE_REF = process.env.COVERAGE_BASE_REF ?? 'origin/main';
+// ⚠️ `||`, NOT `??`, plus an explicit emptiness refusal — cross-family review (agy), **Blocking**.
+//
+// `??` only falls through on `null`/`undefined`, and an EMPTY STRING is neither. A GitHub
+// expression that does not resolve — `github.event.pull_request.base.sha` on any event that is not
+// a pull_request — expands to `""`, so this arrived empty and `"" ?? 'origin/main'` stayed `""`.
+//
+// The consequence is the worst kind. `git show :<path>` with an empty ref is not an error: the
+// colon-prefixed form reads **the git INDEX**. The ratchet would have compared the working tree's
+// coverage against the working tree's own staged coverage, found them equal, and printed a green
+// tick — a gate silently comparing a thing to itself, inside the tool built to prevent exactly
+// that. Verified before fixing: `git show :apps/web/design-system/coverage.json` returns the
+// staged file.
+//
+// An empty value is REFUSED rather than defaulted. Defaulting is the smaller fix and the wrong one:
+// a workflow that sets `COVERAGE_BASE_REF=` deliberately-but-wrongly would then quietly compare
+// against `origin/main` instead of failing and being noticed.
+const BASE_REF_RAW = process.env.COVERAGE_BASE_REF;
+if (BASE_REF_RAW !== undefined && BASE_REF_RAW.trim() === '') {
+  console.error(
+    '✗ COVERAGE_BASE_REF is set but empty. That usually means a workflow expression did not ' +
+      'resolve — `github.event.pull_request.base.sha` is empty on any event that is not a ' +
+      'pull_request. Refusing rather than defaulting: an empty ref makes `git show :<path>` read ' +
+      'the INDEX, so the ratchet would compare coverage against itself and report green.'
+  );
+  process.exit(1);
+}
+const BASE_REF = BASE_REF_RAW || 'origin/main';
 
 const { coverage, liveRows } = await import(join(REPO, MANIFEST));
 
@@ -43,6 +69,9 @@ function buildReport() {
       hasReferenceState: now.hasReferenceState,
       rendersFromDesignSystem: now.rendersFromDesignSystem,
       complete: now.complete,
+      // BOTH lists. The ratchet has to name what REGRESSED, and `outstanding` alone cannot do it:
+      // diffing it reports a brand-new uncovered route as one that "lost coverage" (agy).
+      covered: [...now.covered].sort(),
       outstanding: [...now.outstanding].sort(),
     },
     null,
@@ -119,12 +148,21 @@ if (parsed.complete < base.complete) {
   // Name the routes when they can be named. An empty list here is not a reason to print an empty
   // line and let the reader assume the tool is broken: it happens when the count fell without any
   // individual route moving out of `outstanding`, which means a covered route LEFT the manifest.
-  const lost = parsed.outstanding.filter((route) => !base.outstanding.includes(route));
+  // What was covered on the base and is not covered now. Diffing `outstanding` instead reports a
+  // brand-new uncovered route as one that "lost coverage" — it never had any (cross-family review,
+  // agy). `base.covered` may be absent on a report written before that field existed, and an older
+  // baseline must not crash the gate: it falls back to saying it cannot name them, rather than to a
+  // wrong list.
+  const lost = Array.isArray(base.covered)
+    ? base.covered.filter((route) => !parsed.covered.includes(route))
+    : null;
   console.error(
     `\n✗ RATCHET: coverage fell from ${base.complete} to ${parsed.complete}.\n` +
-      (lost.length > 0
-        ? `  Routes that lost coverage: ${lost.join(', ')}\n`
-        : '  No route moved out of `outstanding`, so a COVERED route left the manifest entirely.\n') +
+      (lost === null
+        ? '  (this baseline predates the `covered` field, so the routes cannot be named)\n'
+        : lost.length > 0
+          ? `  Routes that lost coverage: ${lost.join(', ')}\n`
+          : '  No route left `covered`, so a covered route left the MANIFEST entirely.\n') +
       '  Coverage may not decrease. If a route was deliberately retired, retire its manifest row ' +
       'with `retiresIn` so it leaves the denominator too.'
   );
