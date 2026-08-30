@@ -31,7 +31,16 @@ Source: `apps/web/design-system/console-prototype.html`, the 32 states approved 
 (queried 2026-08-29 — epic README, D10). The gate asserts the *shape* — rows plus at most one
 summary line, the summary standing for rows that are not also listed — never the literal number.
 
-## Uppercase (Do-not #3: exactly two places, and never in mono)
+## Uppercase
+
+Do-not #3 says uppercase appears in **exactly two places, and never in mono**: the list header row
+and the group heading.
+
+⚠️ The count below is of ELEMENTS, not of places, and the two numbers are different on purpose — a
+previous version of this heading said *"exactly two places"* directly above a count of six, which
+reads as the generated file contradicting itself (cross-family review, agy). The list header row is
+one place rendered as four elements (the row plus its three column labels), and the group heading is
+the second. Two places, six elements.
 
 **6** uppercase elements in the content column:
 `listhead` · `SPAN` · `h-state` · `h-meta` · `h-act` · `grp on`

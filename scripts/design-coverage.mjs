@@ -89,6 +89,13 @@ function buildReport() {
     {
       _: 'GENERATED — do not hand-edit. Run: node scripts/design-coverage.mjs',
       routes: now.total,
+      // ⚠️ BOTH numbers, because agy raised the same point in two rounds and a reviewer repeating a
+      // finding you reasoned your way out of is a signal to find a third option
+      // (Roadmap/LEARNINGS.md). `routes` is the epic-close denominator, which is what the ratchet
+      // must compare against — a baseline computed on a moving denominator ratchets against itself.
+      // But reporting only that hid the fact that 30 routes are live TODAY while the three Story 4.5
+      // retires are already out of the count. Now the file says both, and neither is inferred.
+      liveRoutesToday: liveRows(1).length,
       hasReferenceState: now.hasReferenceState,
       rendersFromDesignSystem: now.rendersFromDesignSystem,
       complete: now.complete,

@@ -8,7 +8,7 @@
 // under CI (`--check` on `extract-css` and `measure-contract`, a full render on this harness), so a
 // missing import now fails in minutes rather than in four days.
 import { chromium } from 'playwright';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -18,7 +18,13 @@ export const VIEWPORT = { width: 1440, height: 960 };
 
 export async function openPrototype() {
   const body = readFileSync(join(HERE, 'console-prototype.html'), 'utf8');
-  const file = join(tmpdir(), 'gb-console-prototype.html');
+  // ⚠️ A UNIQUE directory per call, not a fixed path (cross-family review, agy). It was
+  // `join(tmpdir(), 'gb-console-prototype.html')` — one name shared by every caller on the machine.
+  // Three scripts import this harness, and two developers, or one `&`-parallel invocation, would
+  // have had a second writer truncating the file while the first browser was navigating to it.
+  // The failure mode is a half-written prototype measured as if it were the design, which is the
+  // one thing this file must never produce.
+  const file = join(mkdtempSync(join(tmpdir(), 'gb-prototype-')), 'console-prototype.html');
   writeFileSync(file, `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`);
   // PLAYWRIGHT_BROWSERS_PATH may point at a prebuilt chromium; fall back to the bundled one.
   const executablePath = process.env.GB_CHROMIUM || undefined;
