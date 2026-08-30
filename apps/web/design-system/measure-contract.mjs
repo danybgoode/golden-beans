@@ -95,14 +95,14 @@ const TARGETS = [
 ];
 
 export async function measure() {
-  const { browser, page } = await openPrototype();
+  const { page, close } = await openPrototype();
   try {
     return await measureIn(page);
   } finally {
     // ⚠️ `finally`, not a trailing `await browser.close()` — cross-family review (agy). A throw from
     // `page.evaluate` left Chromium running until Node exited, and CI runs this beside a render of
     // 32 states: one leaked browser per failure, on the runner that is already the slow job.
-    await browser.close();
+    await close();
   }
 }
 

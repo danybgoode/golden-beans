@@ -18,7 +18,7 @@ import { APPROVED_STATES } from './approved-states.mjs';
 const DIR = join(HERE, 'reference');
 mkdirSync(DIR, { recursive: true });
 
-const { browser, page } = await openPrototype();
+const { page, close } = await openPrototype();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 try {
@@ -34,7 +34,7 @@ try {
   // this immediately after that script on the same runner. "When a review finds a bug, fix the
   // CLASS or you will be told about it once per instance" (Roadmap/LEARNINGS.md) — this is the
   // instance I did not sweep for.
-  await browser.close();
+  await close();
 }
 if (errors.length) {
   console.error(`\n${errors.length} page error(s) while rendering:`);

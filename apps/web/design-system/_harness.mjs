@@ -8,7 +8,7 @@
 // under CI (`--check` on `extract-css` and `measure-contract`, a full render on this harness), so a
 // missing import now fails in minutes rather than in four days.
 import { chromium } from 'playwright';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -24,7 +24,8 @@ export async function openPrototype() {
   // have had a second writer truncating the file while the first browser was navigating to it.
   // The failure mode is a half-written prototype measured as if it were the design, which is the
   // one thing this file must never produce.
-  const file = join(mkdtempSync(join(tmpdir(), 'gb-prototype-')), 'console-prototype.html');
+  const dir = mkdtempSync(join(tmpdir(), 'gb-prototype-'));
+  const file = join(dir, 'console-prototype.html');
   writeFileSync(file, `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`);
   // PLAYWRIGHT_BROWSERS_PATH may point at a prebuilt chromium; fall back to the bundled one.
   const executablePath = process.env.GB_CHROMIUM || undefined;
@@ -32,7 +33,17 @@ export async function openPrototype() {
   const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 2 });
   await page.goto(`file://${file}`);
   await waitForApprovedFonts(page);
-  return { browser, page };
+  // `close()` rather than a bare `browser`: the per-call temp directory has to go with the browser,
+  // and leaving that to each caller is three places to forget it (cross-family review, agy).
+  // `browser` is still returned so existing callers keep working.
+  return {
+    browser,
+    page,
+    async close() {
+      await browser.close();
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
 }
 
 /** The families the approved design is measured in. Both come from the prototype's own `<link>`. */
@@ -70,7 +81,18 @@ export const REQUIRED_FONTS = ['Archivo', 'IBM Plex Mono'];
 export async function waitForApprovedFonts(page) {
   await page.evaluate(() => document.fonts.ready);
   const loaded = await page.evaluate(() => [
-    ...new Set([...document.fonts].filter((face) => face.status === 'loaded').map((f) => f.family)),
+    ...new Set(
+      [...document.fonts]
+        .filter((face) => face.status === 'loaded')
+        // Quote-normalised on BOTH sides. `measure-contract.mjs` already does this to
+        // `getComputedStyle().fontFamily`, and a check that compares a normalised value on one path
+        // and a raw one on the other is two implementations of the same job that currently agree
+        // (CODE-QUALITY #2). Raised by cross-family review (agy) as a live false positive; probed
+        // in Chromium and it is NOT — `FontFace.family` comes back unquoted even when the CSS
+        // declared `font-family: "IBM Plex Mono"`. Hardened anyway, because the cost is one
+        // `replace()` and the failure it would cause is this harness refusing a correct render.
+        .map((face) => face.family.replace(/["']/g, ''))
+    ),
   ]);
   const missing = REQUIRED_FONTS.filter((family) => !loaded.includes(family));
   if (missing.length > 0) {

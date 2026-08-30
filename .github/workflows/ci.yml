@@ -92,6 +92,12 @@ jobs:
       # against the PR's base branch, which is why this job checks out with `fetch-depth: 0` — the
       # script fails loudly rather than passing quietly when the base ref cannot be resolved
       # (Roadmap/LEARNINGS.md: `format-changed.mjs` reported "no added files" and exited 0).
+      # ⚠️ `COVERAGE_BASE_REF` resolves because **this workflow is `pull_request`-only** (see `on:` at
+      # the top). Two cross-family rounds have flagged "this expands to an empty string on push
+      # events" — correct in general, unreachable here, and the script refuses an empty value rather
+      # than defaulting precisely so that it would be LOUD if someone added a `push:` trigger. Said
+      # here rather than argued a third time: a file that does not explain why a hazard cannot occur
+      # gets the hazard reported once per reviewer.
       - name: Design coverage + ratchet
         env:
           COVERAGE_BASE_REF: ${{ github.event.pull_request.base.sha }}
