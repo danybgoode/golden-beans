@@ -3,6 +3,11 @@
 // This module deliberately has no framework or environment imports: the caller supplies the
 // already-read gate values, which leaves the inventory directly testable in the fast unit layer.
 
+// TYPE-only, deliberately. This module's header promises "no framework or environment imports", and
+// a type import is erased at compile time — so the closed icon union reaches the inventory without
+// pulling React or lucide into the fast unit layer.
+import type { IconName } from '@/components/ui/icon-names'
+
 export type ProjectSurfaceAudience = 'member' | 'owner'
 export type ProjectSurfaceGate =
   | 'always'
@@ -68,6 +73,21 @@ export const CONSOLE_SECTIONS: readonly { id: ConsoleSection; label: string }[] 
 
 type ProjectSurface = {
   routeSegment: string
+  /**
+   * The rail's leading icon — `design-system-rails` Sprint 2, Story 2.4 (epic D4).
+   *
+   * ⚠️ **There was nowhere for an icon to come from before this field**, which is half of why the
+   * rail never had one. The other half is that `check-design-drift.mjs` bans pictographs inside
+   * `/app`, so the prototype's `◧ ◑ ◔ ≡` could not be typed into a component even if there had
+   * been a slot. Both halves are closed together: the slot is here, and the values are names from
+   * `components/ui/Icon`'s CLOSED union — so an unknown key is a compile error rather than a blank
+   * square, and the guard has nothing to catch.
+   *
+   * A rail item is one line, 36px, with an icon and NO description and NO status badge (contract
+   * Do-not #2). The description below still exists because `/app`'s own surface list renders it;
+   * the rail does not.
+   */
+  iconKey: IconName
   audience: ProjectSurfaceAudience
   gate: ProjectSurfaceGate
   status: ProjectSurfaceStatus
@@ -86,7 +106,10 @@ type ProjectSurface = {
 
 export type ProjectSurfaceGates = Record<Exclude<ProjectSurfaceGate, 'always'>, boolean>
 
-export type ProjectSurfaceLink = Pick<ProjectSurface, 'routeSegment' | 'label' | 'status' | 'section'> & {
+export type ProjectSurfaceLink = Pick<
+  ProjectSurface,
+  'routeSegment' | 'label' | 'status' | 'section' | 'iconKey'
+> & {
   href: string
   description: string
 }
@@ -109,6 +132,7 @@ export type ProjectSurfaceLink = Pick<ProjectSurface, 'routeSegment' | 'label' |
 export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   {
     routeSegment: 'journeys',
+    iconKey: 'route',
     audience: 'member',
     gate: 'journey-projections',
     status: 'gated',
@@ -120,6 +144,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'experiments',
+    iconKey: 'flask',
     audience: 'member',
     gate: 'experiment-governance',
     status: 'gated',
@@ -131,6 +156,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'flags',
+    iconKey: 'flag',
     audience: 'member',
     gate: 'flag-serving',
     status: 'gated',
@@ -142,6 +168,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'tasks',
+    iconKey: 'list-checks',
     audience: 'member',
     gate: 'signals',
     status: 'gated',
@@ -153,6 +180,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'scenarios',
+    iconKey: 'shield',
     audience: 'member',
     gate: 'always',
     status: 'linked',
@@ -167,6 +195,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   // Setup opens onto, and with it off they are absent and the legacy three take their place.
   {
     routeSegment: 'setup/connect',
+    iconKey: 'cable',
     // MEMBER-readable. The connector URL is how this project's own operators point an agent at their
     // data; minting one is owner-only (the action re-checks), but reading the page is not.
     audience: 'member',
@@ -180,6 +209,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'setup/keys',
+    iconKey: 'key',
     // OWNER-only, matching all three routes it merges — the boundary moves tighter or identical,
     // never looser (D5/A5). A member gets a flat 404, exactly as on `/app/keys` today.
     audience: 'owner',
@@ -193,6 +223,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'keys',
+    iconKey: 'key',
     audience: 'owner',
     // A7: 'legacy-keys' is `!isConsoleShellEnabled()`, so this leaves the nav at the same instant
     // `Setup › Keys` enters it. The ROUTE keeps working and is NOT redirected (A17) — it still holds
@@ -215,6 +246,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   // nav then would be an invitation to a dead end.
   {
     routeSegment: 'flag-credentials',
+    iconKey: 'lock',
     // Owner-only, and TIGHTER than the flags page it moves from: there a member could load the page
     // and simply see no key tables. A standalone credentials route 404s for them — the
     // `/app/keys/[projectSlug]` precedent. The boundary moves only tighter, never looser.
@@ -240,6 +272,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'flag-audit',
+    iconKey: 'activity',
     // MEMBER-readable, exactly as the audit is on the flags page today. Moving a table must not
     // quietly make it owner-only, and `audience: 'owner'` here would do precisely that.
     audience: 'member',
@@ -253,6 +286,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'destinations',
+    iconKey: 'webhook',
     audience: 'owner',
     gate: 'always',
     status: 'linked',
@@ -266,6 +300,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   // prepare a link before launch, otherwise there is no safe verify-before-send rollout order.
   {
     routeSegment: 'shares',
+    iconKey: 'link',
     audience: 'owner',
     gate: 'always',
     status: 'linked',
@@ -279,6 +314,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   // ready before the live task-write surface can be verified.
   {
     routeSegment: 'agent-keys',
+    iconKey: 'key',
     audience: 'owner',
     // A7, same as `keys` above: listed only while `Setup › Keys` is not.
     gate: 'legacy-keys',
@@ -291,6 +327,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
   },
   {
     routeSegment: 'onboarding',
+    iconKey: 'sparkles',
     audience: 'member',
     gate: 'always',
     status: 'flow-only',
@@ -319,6 +356,7 @@ export function getProjectSurfaceLinks(input: {
     return isGateOpen(surface.gate, input.gates)
   }).map((surface) => ({
     routeSegment: surface.routeSegment,
+    iconKey: surface.iconKey,
     label: surface.label,
     status: surface.status,
     section: surface.section,
