@@ -12,3 +12,22 @@ apps/web/supabase/migrations
 Roadmap
 tasks
 *.md
+
+# ── design-system-rails · Sprint 1 ────────────────────────────────────────────────────────────
+#
+# The APPROVED prototype, byte-for-byte. `APPROVED.md` records the approval as this file's SHA-256,
+# and states that a changed hash with no new approval line means the design is UNAPPROVED. Prettier
+# reformatting it would silently do exactly that — the design would become unapproved because a
+# formatter ran. `tokens.test.ts` asserts the hash, so this is belt and braces on purpose.
+apps/web/design-system/console-prototype.html
+
+# GENERATED from that prototype by `extract-css.mjs`, under a do-not-hand-edit header, and checked
+# by `--check` in CI. Prettier and the generator disagree about CSS value spacing
+# (`cubic-bezier(.2,0,.2,1)` vs `cubic-bezier(0.2, 0, 0.2, 1)`), so leaving these in prettier's
+# scope means one of the two rewrites the file and the other fails the build — a deadlock where the
+# only way out is to stop running one of them. The generator wins because its output is derived from
+# an approved artefact; prettier's job is source a human types.
+apps/web/design-system/tokens.css
+apps/web/design-system/tokens.ts
+apps/web/design-system/reference.css
+apps/web/design-system/coverage.json

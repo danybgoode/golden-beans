@@ -87,3 +87,27 @@ cases land on. The copy deliberately does not say which.
 **F3 — One epic has no build-order number.** There are 27 epic directories and the sequence runs to
 26. `hub-roadmap` shows 26 positions and says so rather than padding the track to make the
 arithmetic work. Worth fixing in the frontmatter; the board is generated from those numbers.
+
+## Decided after approval — `design-system-rails`, 2026-08-29
+
+**DA1 — Ship › Scheduled changes is BUILT, as a designed empty state.** The architecture lock found
+that the approved Ship rail has four items and the product has no scheduled-changes route, table or
+capability — verified by grep across the whole repo. `sprint-4.md` described the absence as *"the
+rail shows 0 today"*, which is the prototype's rail, not the product's.
+
+Dropping a rail item is an amendment to an approved design, so it went to the product owner rather
+than into the architect's judgement.
+
+> **Daniel, 2026-08-29: ship the designed empty-state route.** `/app/scheduled/[projectSlug]` is
+> built in Story 4.3, the rail keeps its fourth item, and the surface enters
+> `lib/project-route-inventory.ts` and the coverage manifest.
+
+The recommendation that was not taken is recorded because it names the risk to mitigate: Story 4.1's
+own rule is *"a control that goes nowhere is worse than no control"*. **So the empty state must say
+plainly that scheduling is not available yet.** It must not read as *"you have no scheduled
+changes"*, which implies you could have some. An empty state is one of the nine and is a
+deliverable, not a fallback.
+
+**No prototype bytes changed.** `console-prototype.html` is untouched and its hash still reads
+`5bc7e24ed5e3d0aa` — this is a decision about how the product implements an approved state, not a
+change to the state.

@@ -9,6 +9,35 @@
 > `references/ux-guidelines.md` was drafted 2026-07-23 and has **never been applied to a primitive.**
 > Most of Story 2.2 is that document, executed.
 
+## Build contract (locked by the architect before the builder started)
+
+> Sprint 2 is **not delegated** (README → *Routing*): it defines the primitives Sprints 3–6 assemble
+> from, so a permissive reading here is re-paid 29 times. **Cite a decision; never re-derive one.**
+
+**Paths this sprint owns.** `apps/web/design-system/**` · `apps/web/components/ui/**` (extend, never
+re-author) · `apps/web/lib/project-route-inventory.ts` (`iconKey`) · a new specimen route
+`apps/web/app/app/design-system/page.tsx` · `apps/web/e2e/design-system-primitives.authed.spec.ts` ·
+`apps/web/e2e/vocabulary.spec.ts`. **It changes no existing product route.**
+
+| # | The contract | Cites |
+|---|---|---|
+| 1 | Scales are **measured out of the approved prototype**, from the regenerated spec table — never chosen. `23/700` h1, `13.5/600` rail item, `11/600 uppercase` list header, `26/600 IBM Plex Mono` stat number, `38 × 21` switch. | **D8** |
+| 2 | The specimen is a **real route**, not a Storybook — `/app/design-system`, gated, asserted against `MEASURED-SPEC.md`. It is how Daniel approves the language on one screen before any page is rebuilt on it. ⚠️ It is deliberately **out of** the coverage denominator (`OUT_OF_SCOPE_PAGES`): counting the thing every other route is measured against would be circular. Coverage after this sprint is still **0 / 27**, and a rise means a page changed that should not have. | **D5**, **D13** |
+| 3 | Every primitive class is `ds-`-prefixed under `.ds`. The drift guard's namespace rule (Story 1.3) is what enforces it. | **D3** |
+| 4 | Icons are `<Icon name="…">` from the closed `ICON_NAMES` union. **`↗` is never typed** — `name="external"` is the approved arrow. The pictograph ban is not touched. | **D4**, **F1** |
+| 5 | `iconKey` is added to `ProjectSurface`, to the `Pick<>` that builds `ProjectSurfaceLink`, and to the mapper. The closed union makes an unknown key a **compile error**, not a blank square. | **D4** |
+| 6 | Existing `components/ui` primitives are **adopted and extended**. `Panel`, `Button`, `Badge`, `Icon`, `DataTable`, `StatCard`, `FunnelBars`, `RolloutBar`, `ConfirmDialog`, `ActivityFeedItem`, `FormSection`, `SectionDivider` already exist — audit §2.2: *"the work is mostly adoption and a handful of new primitives."* | audit §2.2 |
+| 7 | ⚠️ **The dialog-centring bug is ALREADY FIXED.** `globals.css` restates `margin: auto` on `.confirm-dialog`. This sprint owes the **assertion**, and its red comes from a **mutation check recorded in the PR body** — delete `margin: auto`, watch the position assertion fail at `x: 0, y: 0`, restore. | **D12** |
+| 8 | Where the prototype and the control plane disagree about a word, **the control plane wins** and the disagreement is written down as a finding. `flag-vocabulary.ts` **generalises**; it is not replaced. | Story 2.5 |
+| 9 | Live copy this sprint must remove, verified on production 2026-08-29: uppercase mono body copy (*"WHAT THIS LIST REPORTS…"*), and storage-model page copy (*"Definitions, immutable versions and their audit…"*). Do-not #3 and #7. | contract Do-nots |
+| 10 | `prefers-reduced-motion` is honoured, and **focus is visible on every interactive element** — the keyboard pass is an assertion, not a review comment. | `ux-guidelines.md` |
+
+**The nine states, from `references/ux-guidelines.md` — the document drafted 2026-07-23 and never
+applied to a primitive:** idle · hover · focus · pressed · loading · success · error · empty ·
+disabled. **Every primitive gets all nine designed and rendered.** *"The pressed state was not
+implemented"* becomes a gate failure rather than a review comment — that exact defect shipped last
+epic.
+
 ## Stories
 
 ### Story 2.1 — The type and space scale, on a specimen that renders from the system
@@ -45,13 +74,18 @@ its nine states and a reference render: **rail item · project switcher · envir
 tab · state pill · three-state switch (on / off / dashed "never") · stat tile · data table with
 header row, row menu and empty state · answer line · primary and secondary button · dialog · toast ·
 numbered step card · wizard**.
-- **The dialog fixes a live bug:** a universal `* { margin: 0 }` reset defeats the UA's
-  `margin: auto` on `dialog:modal`, and **every confirmation dialog in this product has been pinned
-  to the viewport's top-left corner since the component shipped**, measured at `x: 0, y: 0` in
-  1440×960. Assert where the dialog *is*, not only that it opened.
+- ⚠️ **CORRECTED AT THE LOCK (D12) — the dialog bug is already fixed; the ASSERTION is missing.**
+  As scaffolded this read *"the dialog fixes a live bug … every confirmation dialog has been pinned
+  to the viewport's top-left corner since the component shipped"*. `apps/web/app/globals.css`
+  already restates `margin: auto` on `.confirm-dialog`, with a comment explaining the
+  `* { margin: 0 }` interaction — it landed in `console-ia-overhaul` S3.3. What is genuinely missing
+  is that **no spec asserts where the dialog is**: `design-system.authed.spec.ts` asserts modality,
+  the focus trap and focus restoration, and never geometry — so the fix is one stylesheet edit from
+  silently regressing. **Assert where the dialog *is*, not only that it opened**, and because it
+  cannot go red on `main`, produce its red with a **mutation check recorded in the PR body**.
 - Existing `components/ui` primitives are **adopted and extended, never re-authored** — audit §2.2:
   *"the work is mostly adoption and a handful of new primitives."*
-**Approved states:** every state — the primitive set is what all 32 are assembled from — in `design/console-prototype.html`.
+**Approved states:** every state — the primitive set is what all 32 are assembled from — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 2.4 — Icons ✳ *D4* — and the reason there were none
@@ -94,20 +128,36 @@ stops describing the storage model.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 2 — Smoke walkthrough (do these in order)
-Env: **the branch preview** — the design system is not yet on any product route.
 
-1. Go to `<preview-url>/app/design-system` (signed in).
-   → The specimen renders every type step, every space step, and every primitive in all nine
+> ⚠️ **REWRITTEN AT THE LOCK (D9).** As scaffolded this ran on *"the branch preview"*. **Preview has
+> no Supabase credentials and no session** — see D9 — so `/app/design-system` cannot render there at
+> all. Steps 1–4 run **locally**; step 5 is the PR's CI run.
+
+Env: steps 1–4 **local** — `supabase start`, then a production build (`npm run build` +
+`npm run start`) with `CONSOLE_SHELL_ENABLED=true`, signed in as the local fixture user. Kill any
+`next dev` first: a dev server colliding with the runner's own `.next` build is the failure that
+looks like a regression and is not.
+
+1. Go to `http://localhost:3000/app/design-system` (signed in).
+   → The specimen renders every type step, every space step, and every primitive in all **nine**
    states, on one screen. **This is the language. Approve or reject it here.**
 2. Tab through the specimen with the keyboard only, without touching the mouse.
    → Every interactive element shows a visible focus ring. Nothing is reachable-but-invisible.
 3. On the specimen, open the confirmation dialog.
-   → It is **centred in the viewport**. It has been pinned to the top-left corner since the
-   component shipped; if it is still in the corner, this story is not done.
+   → It is **centred in the viewport**. (It already is — Story 2.3 is adding the assertion that
+   keeps it centred. The PR body must show the mutation check that proved the assertion can fail.)
 4. Look at the rail items on the specimen.
-   → Each carries an SVG icon, and the active one is a raised card — lighter fill, a border, a gold
-   icon — legible at a glance rather than a fill you have to look for.
-5. Open the PR's CI run.
-   → Coverage reports **2/29** (Ship › Features + the specimen). Product routes are unchanged.
+   → Each carries an **SVG** icon — no glyph, no emoji — and the active one is a raised card:
+   lighter fill, a 1px border, a gold icon, full-strength text. Legible at a glance rather than a
+   fill you have to look for.
+5. Open the PR's CI run, step **Design coverage + ratchet**.
+   → Coverage still reports **0 / 27 covered**, and that is correct.
+   ⚠️ *Corrected at the lock (**D13**). The scaffold expected `2/29`, counting the specimen. The
+   specimen is deliberately **out of** the denominator: it IS the reference every other route is
+   measured against, so counting it as covered by itself is circular. It is still gated — Story 2.1
+   asserts it against `MEASURED-SPEC.md`, and step 1 above is where you approve or reject the
+   language. Sprint 2 builds the language, not pages, so a rise here would mean a page changed that
+   should not have.*
+   `https://goldenfrijoles.com/app/flags/miyagisanchez` still looks exactly as it did after Sprint 1.
 
 If any step fails, note the step number + what you saw — that's the bug report.

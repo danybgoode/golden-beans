@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readTenantRecord } from './helpers/authed-fixture'
+import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
+// ⚠️ IMPORTED, not declared here. These two arrays used to live in this file, and
+// `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
+// so the weld checked itself, and the gate kept a deferred row pointing at `78`, the number D8
+// disproved. One implementation, two consumers (CODE-QUALITY #2).
+import { MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -20,17 +26,21 @@ import { readTenantRecord } from './helpers/authed-fixture'
 
 const VIEWPORT = { width: 1440, height: 960 }
 
-// ⚠️ **NOTHING IN CI RUNS THIS FILE.** `ci.yml` runs the `api` project only, and
-// `FLAG_CONSOLE_ENABLED` appears nowhere in the workflow — so the epic's flagship visual gate
-// executes only when a human exports both vars, and skips silently otherwise (fresh reviewer,
-// round 3, N9). "The gate is red until Story 3.3" is therefore a property of a suite no automation
-// runs.
+// ── ✅ CI RUNS THIS FILE, and has since `console-ia-overhaul` Story 3.3 ──────────────────────
 //
-// It is NOT wired into CI in this PR, and the reason is specific rather than an oversight:
-// assertion [1] is deliberately red until Story 3.3 deletes the JSON authoring stack, so adding
-// this project to the workflow now would make CI permanently red and block every merge behind it.
-// Wiring it is Story 3.3's closing step, when the gate can go green — and that ordering is the same
-// rule this epic applies to every control it removes: the replacement lands with the deletion.
+// ⚠️ **This block used to open "NOTHING IN CI RUNS THIS FILE", and it was false for an entire
+// epic.** `ci.yml`'s `e2e` job runs precisely this one spec — `--project=authed
+// apps/web/e2e/console-visual.authed.spec.ts` — with all thirteen gate env vars mirrored, under a
+// step whose own comment reads *"Story 3.3 landed; the gate is green; this is the step that was
+// promised."* Story 1.6 rewrote this file and left the paragraph above it describing the world
+// before that step existed.
+//
+// That is `CODE-QUALITY.md` #3 — a comment asserting a property the code does not have — sitting at
+// the top of the epic's flagship guard, telling every reader that the guard does not run. Found by
+// the fresh reviewer on PR #128. Corrected rather than deleted, because the reason it was written
+// is still worth knowing: the file was deliberately NOT wired in at first, since assertion [1] was
+// red until Story 3.3 deleted the JSON authoring stack, and wiring it earlier would have made CI
+// permanently red. The replacement landed with the deletion, and so did the gate.
 
 /**
  * ⚠️ **Exactly `'true'`, matching `lib/flags.ts`.** The first version skipped on truthiness, so
@@ -343,122 +353,6 @@ test('the feature list survives a 390px phone', async ({ page }) => {
 // design is worse than none. The style table catches what it was for — sizes, weights and box
 // heights — and the pair of screenshots in the PR is the human check meanwhile.
 
-type SpecRow = {
-  what: string
-  selector: string
-  fontSize?: string
-  fontWeight?: string
-  fontFamily?: RegExp
-  height?: number
-  width?: number
-  /** Heights tolerate ±1px per the contract; font size and weight are exact. */
-  tolerance?: number
-}
-
-const MEASURED_SPEC: SpecRow[] = [
-  // ⚠️ The chrome had NO row at all, so nothing in the epic's own gate looked at the part of the
-  // page the epic rebuilt — and Do-not #3 was open there (uppercase mono in the project switcher)
-  // for three review rounds (fresh reviewer, round 3).
-  {
-    what: 'project switcher',
-    selector: '.product-shell__identity .product-shell__signal',
-    fontSize: '13px',
-    fontWeight: '400',
-  },
-  { what: 'section tab', selector: '.product-shell__tab', fontSize: '13px' },
-  { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
-  { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
-  { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },
-  { what: 'stat number', selector: '.stat .n', fontSize: '26px', fontWeight: '600', fontFamily: /Plex Mono/ },
-  { what: 'stat label', selector: '.stat .k', fontSize: '12.5px', fontWeight: '400' },
-  { what: 'list header row', selector: '.listhead', fontSize: '11px', fontWeight: '600', height: 36 },
-  { what: 'feature key', selector: '.row-key code', fontSize: '13.5px', fontFamily: /Plex Mono/ },
-  { what: 'feature description', selector: '.row-desc', fontSize: '12.5px', fontWeight: '400' },
-  { what: 'state pill', selector: '.pill', fontSize: '12px', fontWeight: '600', height: 26 },
-  // ⚠️ `.console-rail ul a`, not `.console-rail a`. `ConsoleRail` renders the environment picker
-  // BEFORE the list, so the bare selector matched an `.envpick` link — and it passed only because
-  // the rail-item rule was leaking onto a control the reference styles separately (fresh reviewer,
-  // round 3). Two defects in one line: the wrong element, and a rule reaching past its subject.
-  // ⚠️ `> ul a`. `.console-rail ul a` still matched the environment picker, which renders its own
-  // `<ul>` inside the rail — so this row measured the wrong element for a SECOND round, and passed
-  // (fresh reviewer, round 4).
-  { what: 'rail item', selector: '.console-rail > ul a', fontSize: '13.5px', fontWeight: '600', height: 36 },
-  // ⚠️ **Was a DEFERRED row until Story 3.3.** It read: *"switch · contract 21 · not built · the
-  // row-act cell has no controls until Story 3.3 lands the toggle alongside its replacement
-  // authoring path."* It is built, so it moves from the list of things this gate does not check to
-  // the list it does — which is the only honest way for a deferred row to be closed.
-  //
-  // The 21px height needs `min-height` on the element: `globals.css` applies a 44px WCAG 2.5.5
-  // target floor to every `button`, and used height is `max(min-height, height)`. The floor is met
-  // by a transparent 44px pseudo-element instead, so the TARGET is 44 and the INK is the design's
-  // 38 × 21 — which is the resolution the `primary/secondary button` row below could not have,
-  // because a button's ink IS its target.
-  { what: 'the row switch', selector: '.row-act .sw', height: 21, width: 38 },
-]
-
-/**
- * ⚠️ **Rows the contract specifies that the build does NOT meet.**
- *
- * The previous version of this file carried ten rows, was named "every row of the measured spec",
- * and its own header cited "feature row h78" as something it asserted. It did not — and the three
- * rows it left out are exactly the three that fail (fresh reviewer, round 3):
- *
- *   feature row          contract 78   built 90 when the row's state is `never`
- *   dormant summary row  contract 89   built 91
- *   primary/secondary    contract 38   built 44
- *
- * A gate that asserts what passes and describes what fails is the failure mode this whole layer was
- * added to end, one level up. So they are listed, with the reason each is deferred rather than
- * silently dropped.
- *
- * **The 90px row is not an edge case.** It is the state 39 of 42 production flags are in, and every
- * row of the authed fixture — so the suite ran against 90px rows and stayed green. The cause is
- * real copy: `FLAG_STATE_PRESENTATION.never.detail` wraps to two lines in the 190px state column.
- *
- * And the contract's own numbers deserve scrutiny here: `console-reference.css` sets **no** height
- * on `.row` or `.btn` at all. 78 and 38 are emergent measurements of the prototype's shorter copy,
- * not declared design intent — which makes "the build is wrong" the wrong conclusion to jump to.
- *
- * `38px` is additionally **unreachable by decision**: `globals.css` sets `min-height: 44px` on every
- * interactive element for WCAG 2.5.5 target size, and used height is `max(min-height, height)`. The
- * accessibility floor wins over a measured pixel, and that is a decision rather than an oversight.
- */
-const DEFERRED_SPEC_ROWS = [
-  {
-    what: 'feature row',
-    contract: 78,
-    built: 'up to 90',
-    why: 'the never-state detail wraps to two lines in a 190px column',
-  },
-  {
-    what: 'dormant summary row',
-    contract: 89,
-    built: '91',
-    why: 'two-line body copy; within 3px of the contract',
-  },
-  {
-    what: 'primary/secondary button',
-    contract: 38,
-    built: '44',
-    // ⚠️ Round 3's stated mechanism was imprecise: globals.css's floor covers button/summary/select/
-    // textarea/input and explicitly NOT links, so an `<a class="btn">` is saved by the design
-    // system's own `.btn` rule instead. The conclusion holds; the reason did not (round 4, N5).
-    why: 'a 44px WCAG 2.5.5 target floor applies (globals.css for controls, the .btn rule for links) and the floor wins over a measured pixel',
-  },
-  {
-    what: 'project switcher',
-    contract: 30,
-    built: '34',
-    why: "height follows the shell chrome; the contract's 140px width is waived too because a real tenant slug is longer than the prototype's and truncating it would hide the one thing the control shows",
-  },
-  {
-    what: 'section nav (tier 2)',
-    contract: 44,
-    built: 'not built',
-    why: 'ProductShell renders the tabs INSIDE the 54px header, so the second tier does not exist — splitting it touches every console route and is out of this PR',
-  },
-] as const
-
 // ── The FEATURE page, which the gate did not look at until Story 3.2 ─────────────────────────
 //
 // ⚠️ A22 makes the design binding for **every signed-in route**, and this gate covered exactly one:
@@ -529,8 +423,233 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
   // deliberately a hard-coded literal rather than derived: a count that updates itself would let a
   // row be dropped silently, and the point of this test is that dropping one is a decision.
   expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(5)
+  const today = new Date().toISOString().slice(0, 10)
   for (const row of DEFERRED_SPEC_ROWS) {
     expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)
+    // ── The half that was missing, and the reason five rows shipped and never left ────────────
+    // A reason explains why a row is short TODAY. An owner and a date are what make it stop being
+    // short. Without them "deferred" is "exempt" with better manners.
+    expect(row.owner.length, `${row.what} is deferred with no owner`).toBeGreaterThan(0)
+    expect(row.until, `${row.what}'s decay date is not a date`).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(
+      row.until >= today,
+      `${row.what}'s deferral expired on ${row.until} — close it, or re-decide it with ${row.owner}`
+    ).toBe(true)
+  }
+})
+
+// ── design-system-rails · Story 1.6 (epic D5) — the gate is DRIVEN BY THE MANIFEST ────────────
+//
+// Until now this file asserted ONE hand-written route. The manifest knows all 27, which routes have
+// an approved reference state, and which claim to render from `apps/web/design-system/` — so the
+// gate reads that instead of a list somebody remembers to extend.
+//
+// ⚠️ **An empty loop is the failure mode this whole epic is about**, so it cannot happen quietly:
+// the routes this suite hands to a sibling spec are PINNED by name in `EXPECTED_SKIPS`, and every
+// other claimed route is opened. In Sprint 1 nothing claims the design system, so the loop is empty
+// — deliberately and visibly, and a row that claims coverage it has not earned fails here rather
+// than inflating a percentage.
+//
+// An earlier version asserted a count against `coverage()`, which was the same predicate over the
+// same rows and could not fail; the comment that described it survived two rounds after the code it
+// described had gone (fresh reviewer, rounds 1 and 2).
+
+/**
+ * How to reach each manifest row in a browser.
+ *
+ * A row whose route has a second dynamic segment cannot be built from a slug alone — a feature key,
+ * a journey key, a share token. Those return `null` and name the dedicated test that covers them,
+ * because a generic loop that silently skipped them would report coverage for routes it never
+ * opened. `every manifest row has a way to be reached` asserts this map covers every row, so a new
+ * route cannot enter the manifest without someone deciding how the gate opens it.
+ */
+/**
+ * Routes this suite deliberately does NOT open, because their URL needs a key or a token it must not
+ * invent. Pinned rather than counted — see the assertion at the end of the loop.
+ */
+const EXPECTED_SKIPS = [
+  '/app/flags/[projectSlug]/[flagKey]',
+  '/app/experiments/[projectSlug]/[experimentKey]',
+  '/app/journeys/[projectSlug]/[journeyKey]',
+  '/app/funnel/[projectSlug]/[featureKey]',
+  '/app/impact/[projectSlug]/[featureKey]',
+  '/hub/[projectSlug]/epic/[epicSlug]',
+  '/s/[token]',
+]
+
+const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
+  '/app': () => '/app',
+  '/app/tasks/[projectSlug]': (slug) => `/app/tasks/${slug}`,
+  '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
+  '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
+  '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,
+  '/app/experiments/[projectSlug]': (slug) => `/app/experiments/${slug}`,
+  '/app/scheduled/[projectSlug]': (slug) => `/app/scheduled/${slug}`,
+  '/app/flag-audit/[projectSlug]': (slug) => `/app/flag-audit/${slug}`,
+  '/app/setup/connect/[projectSlug]': (slug) => `/app/setup/connect/${slug}`,
+  '/app/setup/keys/[projectSlug]': (slug) => `/app/setup/keys/${slug}`,
+  '/app/destinations/[projectSlug]': (slug) => `/app/destinations/${slug}`,
+  '/app/shares/[projectSlug]': (slug) => `/app/shares/${slug}`,
+  '/app/onboarding/[projectSlug]': (slug) => `/app/onboarding/${slug}`,
+  '/app/keys/[projectSlug]': (slug) => `/app/keys/${slug}`,
+  '/app/flag-credentials/[projectSlug]': (slug) => `/app/flag-credentials/${slug}`,
+  '/app/agent-keys/[projectSlug]': (slug) => `/app/agent-keys/${slug}`,
+  '/login': () => '/login',
+  '/signup': () => '/signup',
+  '/install': () => '/install',
+  '/talk': () => '/talk',
+  '/hub/[projectSlug]': (slug) => `/hub/${slug}`,
+  '/hub/[projectSlug]/horizon': (slug) => `/hub/${slug}/horizon`,
+  '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
+  // Reached by clicking, or by a key/token this suite must not invent.
+  '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'the feature page matches the contract too' },
+  '/app/experiments/[projectSlug]/[experimentKey]': { coveredBy: 'e2e/experiment-governance.spec.ts' },
+  '/app/journeys/[projectSlug]/[journeyKey]': { coveredBy: 'e2e/journey-management.spec.ts' },
+  '/app/funnel/[projectSlug]/[featureKey]': { coveredBy: 'e2e/funnel.spec.ts' },
+  '/app/impact/[projectSlug]/[featureKey]': { coveredBy: 'e2e/impact.spec.ts' },
+  '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
+  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts' },
+}
+
+/**
+ * The tenant slug, narrowed.
+ *
+ * `tenant()` already throws when the fixture is missing, but its record's `slug` is typed
+ * `string | null`, so the compiler cannot see that. A helper that throws is how the guarantee
+ * reaches the type system — `slug!` would assert it instead, and an assertion is a claim rather
+ * than a check.
+ */
+function tenantSlug(): string {
+  const { slug } = tenant()
+  if (!slug) throw new Error('the visual gate needs the auth-setup project')
+  return slug
+}
+
+test('every manifest row has a way to be reached', () => {
+  // No browser, no gates — a pure consistency check, so it runs even when the suite skips. A route
+  // that enters the manifest without an entry here would be counted and never opened.
+  for (const row of ROUTE_MANIFEST) {
+    expect(
+      REACHABLE[row.route],
+      `${row.route} is in the manifest with no way for the gate to open it`
+    ).toBeDefined()
+  }
+  for (const route of Object.keys(REACHABLE)) {
+    // ⚠️ `.toBe(true)`, NOT `.toBeDefined()`. The first version of this line asserted
+    // `expect(someBooleanExpression).toBeDefined()` — and `false` IS defined, so a stale entry
+    // passed. **A guard that cannot fail, in the file whose entire subject is guards that cannot
+    // fail.** Found by re-reading my own diff for the class this epic exists to kill; it is the
+    // same shape as `querySelectorAll('[role="columnheader"]')` passing under `display: none`.
+    expect(
+      ROUTE_MANIFEST.some((row) => row.route === route),
+      `${route} has a reachability entry but is not in the manifest — a stale entry reads as coverage`
+    ).toBe(true)
+  }
+})
+
+test('every route claiming the design system renders from it', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  // `liveRows()`, not the whole manifest: a RETIRED route that still carried the flag would
+  // otherwise be opened by a gate that no longer covers it (fresh reviewer, round 2). Not reachable
+  // today; a property is cheaper than remembering it stays unreachable.
+  const claimed = liveRows(6).filter((row) => row.rendersFromDesignSystem)
+  const claimedRoutes = new Set(claimed.map((row) => row.route))
+
+  // ⚠️ **The previous "empty-loop guard" was near-tautological** (fresh reviewer, Major). It
+  // compared `claimed.length` against `coverage(6).rendersFromDesignSystem` — the same predicate
+  // applied to almost the same rows — so it could differ only in one exotic case, and its comment
+  // claimed it "pins that a ZERO here is a deliberate zero rather than a loop that quietly found
+  // nothing". It could not distinguish those two at all.
+  //
+  // What actually distinguishes them is counting what the loop REALLY DID, against an expectation
+  // derived independently of the loop. So: `visited` is incremented inside the body, `skipped`
+  // counts the rows this suite structurally cannot open, and the two are asserted to account for
+  // every claimed row afterwards. A zero is then a zero somebody can read.
+  let visited = 0
+  const skipped: string[] = []
+
+  await page.setViewportSize(VIEWPORT)
+  for (const row of claimed) {
+    const reach = REACHABLE[row.route]
+    // ⚠️ A `{ coveredBy }` row is NOT silently continued past (fresh reviewer, Major). It is a route
+    // whose URL needs a key or a token this suite must not invent — a feature key, a journey key, a
+    // share token — so a sibling spec covers it. The `REACHABLE` docblock promised exactly this and
+    // the code just skipped, which meant a row could claim coverage and never be opened by anything.
+    // Now the skips are counted, named in the failure message, and reconciled below.
+    if (typeof reach !== 'function') {
+      skipped.push(`${row.route} → ${reach.coveredBy}`)
+      continue
+    }
+    visited += 1
+    const response = await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+
+    // ⚠️ `page.goto` does not throw on 4xx/5xx. Today the ds-class assertion happens to catch a 404,
+    // but from Sprint 6 the design system's Frame wraps the error pages too — so a 404 would render
+    // a short `<main class="ds-…">`, fit the viewport, and pass all three soft assertions while
+    // counting toward coverage (fresh reviewer, round 2). The status is the only thing that
+    // distinguishes "this route renders correctly" from "this route does not exist".
+    expect.soft(response?.status() ?? 0, `[${row.route}] answered ${response?.status()}`).toBeLessThan(400)
+
+    const geometry = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      scrollWidth: document.body.scrollWidth,
+      innerWidth: window.innerWidth,
+      // ⚠️ Inside `<main>`, NOT on the shell. Sprint 3 wraps all 21 console routes in the design
+      // system's frame in one commit; if this looked at the wrapper, coverage would leap to 21 while
+      // twenty-one page BODIES were still the old design. Only a page's own markup can put a
+      // `ds-`-prefixed class inside its main element.
+      //
+      // ⚠️ TOKEN match, not `[class*="ds-"]`. The substring form is satisfied by `cards-grid`,
+      // `needs-review`, `fields-row` and even `not-ds-x`, while its comment claimed to be testing a
+      // PREFIX (fresh reviewer, Major). No collision exists in `apps/web` today, so it was latent —
+      // but this single boolean is what stands between the coverage number and a claim, and a
+      // latent false positive on the number a whole epic is measured by is not a nit.
+      designSystemClasses: [...document.querySelectorAll('main [class]')].filter((element) =>
+        [...element.classList].some((name) => name === 'ds' || name.startsWith('ds-'))
+      ).length,
+    }))
+
+    expect
+      .soft(
+        geometry.designSystemClasses,
+        `[${row.route}] claims to render from design-system/ and its <main> contains no ds- class`
+      )
+      .toBeGreaterThan(0)
+    expect
+      .soft(
+        geometry.scrollHeight,
+        `[${row.route}] is ${geometry.scrollHeight}px tall in a ${geometry.innerHeight}px viewport`
+      )
+      .toBeLessThanOrEqual(geometry.innerHeight)
+    expect
+      .soft(
+        geometry.scrollWidth,
+        `[${row.route}] body is ${geometry.scrollWidth}px wide in a ${geometry.innerWidth}px viewport — content is clipped`
+      )
+      .toBeLessThanOrEqual(geometry.innerWidth)
+  }
+
+  // ⚠️ **The skip list is PINNED, because counting it cannot fail.** The previous version asserted
+  // `visited + skipped.length === claimed.length` — which holds by construction at every exit of a
+  // loop whose only two branches increment one or push to the other, and whose bound IS
+  // `claimed.length`. That was a tautology replacing a tautology (fresh reviewer, rounds 1 and 2),
+  // under a comment claiming it counted "against an expectation derived independently of the loop".
+  //
+  // This can fail: it names which routes are expected to be covered elsewhere. A row that quietly
+  // becomes unreachable, or a `coveredBy` entry that quietly disappears, changes this list.
+  expect(
+    skipped.map((line) => line.split(' → ')[0]).sort(),
+    'the set of routes this suite hands to a sibling spec changed'
+  ).toEqual(EXPECTED_SKIPS.filter((route) => claimedRoutes.has(route)).sort())
+
+  // ...and the skips are REPORTED, not swallowed. A route counted in coverage and opened by nothing
+  // is the shape of the last epic's five deferred rows.
+  if (skipped.length > 0) {
+    console.log(`[visual gate] ${visited} route(s) opened here; ${skipped.length} covered elsewhere:`)
+    for (const line of skipped) console.log(`  · ${line}`)
   }
 })
 

@@ -11,13 +11,39 @@
 > times, in one epic. Sprint 6 is a **Sweeper**: less code, same behaviour, no regressions, and the
 > old path proved unreachable.
 
+## Build contract (locked by the architect before the builder started)
+
+> Sprint 6 is **not delegated** (README → *Routing*): seam B, the flag retirement, and proving an old
+> path unreachable. **Cite a decision; never re-derive one.**
+
+**Paths this sprint owns.** `apps/web/design-system/Frame.tsx` (new) · `apps/web/app/{login,signup,install,talk}/**` ·
+`apps/web/app/s/[token]/**` · `apps/web/app/hub/**` · `apps/web/app/globals.css` ·
+`apps/web/app/console.css` · `apps/web/lib/flags.ts` · `references/ux-guidelines.md` ·
+`Roadmap/README.md`.
+
+| # | The contract | Cites |
+|---|---|---|
+| 1 | **Seam B is `design-system/Frame.tsx`, with DD3's `door` and `public` variants.** Decided at the lock; **this story implements it, it does not re-decide it.** Root `layout.tsx` is **rejected**: it also wraps `/` and `/methodology`, which two shipped epics own, and gating them would put those epics behind this epic's kill-switch. | **D6** |
+| 2 | The nine routes share **no** wrapper today — `.auth-shell` (login, signup), the landing `Nav`/`Footer` (install, talk), `hub.module.css` (4 hub routes), and `/s/[token]` reusing `../../hub/report-components`. Frame replaces all four, one route at a time. | verified |
+| 3 | Seam B's gate-off branch is proved by **rendering both off-states and diffing**, exactly as Story 3.1 did. Not by reading the diff. | **D6** |
+| 4 | The flag is **`DESIGN_V2_ENABLED`** and `isDesignV2Enabled()`. It is retired from `lib/flags.ts` **and from all three Vercel environments** in Story 6.4. A flag whose off-state no longer exists is a lie in the code. | **D6** |
+| 5 | ⚠️ **`/s/[token]` has no expired state, and that is a security decision.** `app/s/[token]/page.tsx` calls `notFound()` for unknown, malformed, expired **and** revoked alike, so the page cannot tell an attacker which one a token is. All four land on **`public-gone`**, one designed 404 whose copy deliberately does not say which. **Do not add an expired state to satisfy a doc.** | **F2** |
+| 6 | **`/install` keeps serving the demo project's token.** It is a public route and that is correct; the defect was ever linking a signed-in user to it, which Story 4.4 fixed. | AGENTS rule #2 |
+| 7 | Story 6.4 is a **Sweeper**: less code, same behaviour, no regressions, **and the old path proved unreachable** — no route renders it, no selector matches it, and a guard fails if it returns. `globals.css` holds **48** `.product-shell` references today; a scripted CSS prune needs a **parsed-rule** diff and will still be wrong the first time. | LEARNINGS |
+| 8 | Story 6.4 **changes no pixel.** Prove it with the visual gate, which by then covers all 29 routes. | Story 6.4 |
+| 9 | **No deferred row exists without an owner and a date**, and the gate fails when the date passes. The last epic shipped five deferred rows at birth. | Story 6.5 |
+| 10 | The ratchet is on: a PR that lowers coverage **fails**. | Story 6.5 |
+| 11 | ⚠️ **`/talk` is in scope and was missing from the scaffolded README's D6 list**, which named only `/hub/*`, `/login`, `/signup`, `/install` and `/s/[token]` — eight routes, not nine. Story 6.2 already lists it. The count that is right is **9**. | **D5-b** |
+
 ## Stories
 
 ### Story 6.1 — The second seam ✳ *executes D6's open question*
 **As a** product owner, **I want** the nine non-`ProductShell` routes behind a switch too,
 **so that** the rollback covers the whole product rather than 20 of 29 routes.
-**Acceptance:** the seam the architecture lock chose — root `layout.tsx`, a new `PublicShell`, or a
-stated carve-out — is implemented as decided, **not re-decided here**. Its gate-off branch is proved
+**Acceptance:** the seam the architecture lock chose — **`design-system/Frame.tsx`, carrying DD3's
+`door` and `public` variants, reading the same `isDesignV2Enabled()`** — is implemented as decided,
+**not re-decided here**. Root `layout.tsx` was considered and **rejected** at the lock: it also wraps
+`/` and `/methodology`, and gating them would put two shipped epics behind this epic's kill-switch. Its gate-off branch is proved
 by rendering both off-states and diffing, exactly as Story 3.1 did.
 **Risk:** high
 
@@ -34,7 +60,7 @@ language, **so that** signing in is not a change of visual worlds.
   expired state" as a designed page, which would have been a builder implementing a security
   regression to satisfy a doc. All four cases land on **`public-gone`**, one designed 404 whose copy
   deliberately does not say which. Found by reading the route while designing it (finding F2).
-**Approved states:** `door-login`, `door-signup-closed`, `door-signup-open`, `public-install`, `public-share`, `public-gone`, `public-talk` — in `design/console-prototype.html`.
+**Approved states:** `door-login`, `door-signup-closed`, `door-signup-open`, `public-install`, `public-share`, `public-gone`, `public-talk` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.3 — The hub
@@ -43,7 +69,7 @@ routes stop being a separate product.
 **Acceptance:** `/hub/[project]`, `/hub/[…]/epic/[epicSlug]`, `/hub/[…]/horizon` and
 `/hub/[…]/report` render from `design-system/` with reference states. `hub.module.css` is retired
 into the system or explicitly kept with a written reason.
-**Approved states:** `hub-roadmap`, `hub-epic`, `hub-horizon`, `hub-report` — in `design/console-prototype.html`.
+**Approved states:** `hub-roadmap`, `hub-epic`, `hub-horizon`, `hub-report` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
 ### Story 6.4 — Delete the old world ✳ *Sweeper*
@@ -52,20 +78,25 @@ into the system or explicitly kept with a written reason.
 **Acceptance:**
 - `globals.css`'s `.product-shell` rules and `console.css`'s compensations for them are **deleted**,
   including `.product-shell main > h1`'s `clamp(30px, 7vw, 48px)` (contract Do-not #1).
-- **`console.design_v2_enabled` is retired** — with the old design gone there is no second branch for
-  it to select, and a flag whose off-state no longer exists is a lie in the code. Remove it from
-  `DEFAULT_FLAGS` and from every Vercel env, in this story.
+- **`DESIGN_V2_ENABLED` is retired** — with the old design gone there is no second branch for it to
+  select, and a flag whose off-state no longer exists is a lie in the code. Remove `isDesignV2Enabled()`
+  from `lib/flags.ts` and the variable from all three Vercel environments, in this story.
+  ⚠️ *Corrected at the lock (D6): the scaffold said `console.design_v2_enabled` and `DEFAULT_FLAGS`.
+  Neither exists — see the build contract above.*
 - **The old path is proved unreachable**, not merely unused: no route renders it, no selector matches
   it, and a guard fails if it returns.
 - Behaviour is unchanged — this story changes no pixel. Prove it with the visual gate, which by now
   covers all 29 routes.
 **Risk:** high
 
-### Story 6.5 — 29 of 29, and the ratchet on
+### Story 6.5 — 27 of 27, and the ratchet on
 **As a** product owner, **I want** coverage to be complete and unable to slip,
 **so that** the next epic inherits the rails instead of rebuilding them.
 **Acceptance:**
-- The manifest reports **29/29** on all three booleans.
+- The manifest reports **27 / 27**. ⚠️ *Corrected at the lock (**D13**): 29 was 32 pages minus
+  3 out of scope, before this epic's own Story 4.5 retired three routes and Story 4.3 added one.
+  Two booleans are manifest fields; the third — "passes the visual gate" — is the gate's RESULT and
+  deliberately not a field, because a field for it would be `true` on `main` by construction.*
 - **The visual gate is blocking**, and **no deferred row exists without an owner and a date.** The
   last epic shipped five deferred rows at birth; this one ships with a decay date on each.
 - The ratchet is on: a PR that lowers coverage **fails**.
@@ -102,10 +133,11 @@ Env: **production · https://goldenfrijoles.com**.
    → The hub is the same product as `/app`.
 5. Go to https://goldenfrijoles.com/app/flags/miyagisanchez.
    → Unchanged from Sprint 4. Story 6.4 deleted the old stylesheet and must have moved nothing.
-6. Open the PR's CI run.
-   → Coverage reports **29/29**, the visual gate is blocking, and no deferred row is listed without
-   an owner and a date.
-7. Confirm `console.design_v2_enabled` no longer appears in `lib/flags.ts` or in any Vercel env.
+6. Open the PR's CI run, step **Design coverage + ratchet**.
+   → Coverage reports **27 / 27**, the visual gate is blocking, and no deferred row is listed
+   without an owner and a date.
+7. Confirm `DESIGN_V2_ENABLED` / `isDesignV2Enabled` no longer appears in `lib/flags.ts` or in any
+   of the three Vercel environments.
    → The flag is retired. There is one design now, and one stylesheet.
 
 If any step fails, note the step number + what you saw — that's the bug report.

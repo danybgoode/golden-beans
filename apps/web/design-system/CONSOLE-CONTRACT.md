@@ -31,37 +31,40 @@ Reference states are **derived, not stored**: `render-reference.mjs` renders the
 prototype, so a baseline can never drift from the design it claims to represent.
 
 ```bash
-node Roadmap/02-commercial/console-ia-overhaul/design/measure-contract.mjs   # the numbers below
-node Roadmap/02-commercial/console-ia-overhaul/design/render-reference.mjs   # 10 reference PNGs
+node apps/web/design-system/measure-contract.mjs           # regenerate MEASURED-SPEC.md
+node apps/web/design-system/measure-contract.mjs --check    # CI: fail on any diff
+node apps/web/design-system/render-reference.mjs            # the 32 reference PNGs
+node apps/web/design-system/extract-css.mjs                 # regenerate tokens.css / reference.css / tokens.ts
 ```
 
-> ### ⚠️ Two corrections to this section, both found at epic close (2026-08-29)
+> **MOVED 2026-08-29 — `design-system-rails` Story 1.1, closing Mechanism F.** This file, the
+> prototype, the harness and all three scripts now live in **`apps/web/design-system/`**. They used
+> to live in `Roadmap/02-commercial/console-ia-overhaul/design/` — a folder named after an epic that
+> is `shipped`, which is the mechanism this whole epic exists to kill: *the design has no home that
+> outlives the work that produced it.*
+
+> ### ✅ Both corrections from epic close are now closed by construction (2026-08-29)
 >
-> **1. Neither command ran.** Both scripts import `./_harness.mjs`, and that file was never
-> committed — so on a fresh clone of `main` they both died with `ERR_MODULE_NOT_FOUND`. The document
-> that says "regenerate this table" shipped without the thing that regenerates it, for four days.
-> Fixed by committing the harness; both commands are verified to run, and
-> `render-reference.mjs` writes all ten states.
+> **1. Neither command ran.** Both scripts imported `./_harness.mjs`, which was never committed — so
+> on a fresh clone of `main` they died with `ERR_MODULE_NOT_FOUND`, for four days, through an entire
+> build, because nothing in CI ran them. The harness is committed, both scripts moved to
+> `apps/web/design-system/`, and **CI now runs `--check` on both** — a missing import fails in
+> minutes rather than in four days. (Mechanism D.)
 >
-> **2. The rule above is true of the SIZE/WEIGHT column and not of the BOX column.** Every
-> font-size and font-weight in the table below matches a fresh run exactly. The Box column is a
-> hand-written narrative of what the script printed — `h **54**`, `one line`, `≤ 62ch` — and two of
-> its numbers do not survive re-measurement:
+> **2. The claim above was true of the size/weight column and not of the Box column.** The table was
+> a hand-written narrative of what the script printed, and two of its numbers did not survive
+> re-measurement:
 >
 > | Row | Written here | A fresh run says |
 > |---|---|---|
-> | Project switcher | `140 × 30` | `122 × 30` |
-> | Feature row | `h 78` | `71` |
+> | Project switcher | `140 × 30` | **`122 × 30`** |
+> | Feature row | `h 78` | **`1118 × 71`** |
 >
-> **Neither changes what the gate asserts**, which is why this is recorded rather than rewritten:
-> `console-visual.authed.spec.ts` asserts the sizes and weights (all matching), and both of these
-> rows are already in its `DEFERRED_SPEC_ROWS` with the switcher's width explicitly waived.
->
-> It is worth saying plainly anyway, because the deferred-row note reasons about `78` as though it
-> were declared design intent — *"emergent measurements of the prototype's shorter copy"* — and it is
-> not even that: it is a number nobody can reproduce. **A document whose whole claim is "measured,
-> not described" earns the same suspicion as code.** Rewriting the table is a change to a binding
-> contract and belongs with the product owner, not with a close-out commit.
+> **Correcting those two numbers by hand would have been the same defect a second time.** So the
+> table is gone from this file and the numbers are **generated**: see
+> [`MEASURED-SPEC.md`](./MEASURED-SPEC.md), which `measure-contract.mjs` emits under a
+> do-not-hand-edit header and CI regenerates and diffs. A number nobody can reproduce can no longer
+> be committed here and then reasoned about as intent. (Mechanism C.)
 
 ## The one assertion that would have caught this on day one
 
@@ -78,35 +81,21 @@ so the gate is red while the work is being done, and going green is what "done" 
 
 ## The measured spec
 
-Read from the prototype at 1440 × 960. Font is Archivo unless stated.
+**It is not in this file any more, and that is the fix.** Every number lives in
+[`MEASURED-SPEC.md`](./MEASURED-SPEC.md), which is **generated** by
+`node apps/web/design-system/measure-contract.mjs` and regenerated-and-diffed in CI.
 
-| Element | Size / weight | Box | Notes |
-|---|---|---|---|
-| Top bar (tier 1) | — | h **54** | project switcher · ⌘K · account. Nothing else. |
-| Project switcher | 13 / 400 | 140 × 30 | **one** level. No organisation crumb (D1). |
-| Section nav (tier 2) | — | h **44** | four tabs, 2px gold underline on the active one |
-| Section tab · active | **13 / 500** | h 43 | |
-| Section tab · inactive | 13 / 400 | h 43 | `--dim` |
-| Rail (tier 3) | — | w **236** | |
-| Rail item | **13.5 / 600** | h **36**, single line | **no description, no status badge** — see Do-not #2 |
-| Content column | — | max-width **1180** | |
-| Page `h1` | **23 / 700** | one line | **not** the `display` class — see Do-not #1 |
-| Page subtitle | 13.5 / 400 | ≤ 62ch | |
-| The answer line | 13.5 / 400 | full width | gold left border, 2px |
-| Stat number | **26 / 600 IBM Plex Mono** | | tabular-nums |
-| Stat label | 12.5 / 400 | | sentence case |
-| List header row | **11 / 600, uppercase** | h 36 | Archivo, **never mono** |
-| Feature row | — | h **78** | |
-| Feature key | 13.5 / 500 **IBM Plex Mono** | | |
-| Feature description | 12.5 / 400 | one line, ellipsis | |
-| State pill | 12 / 600 | h 26 | dot + word; never colour alone |
-| Switch | — | **38 × 21** | three states — on / off / **dashed empty for "never"** |
-| Dormant summary row | — | h 89 | one line replacing 40 |
-| Primary button | 13.5 / 600 | h 38 | |
-| Secondary button | 13.5 / 600 | h 38 | |
+Ground: `--roast` `#16120d`.
 
-Ground: `--roast` `#16120d`. Every colour comes from `references/design/assets/tokens.css`; the
-prototype introduced no new ones.
+> ⚠️ **CORRECTED 2026-08-29 (`design-system-rails` D2-c).** This section used to end with *"Every
+> colour comes from `references/design/assets/tokens.css`; the prototype introduced no new ones."*
+> **That is false.** `tokens.css` does not define `--card-2`, `--card-3`, `--line-soft`,
+> `--green-deep` or `--red-deep` — five colours — nor `--r`, `--r-lg`, `--shadow`, `--shadow-hi` or
+> `--t`. It also disagrees on one value it does define: `--roast-2` is `#221b13` there and
+> `#1c1710` here, and **both are on screen today** (the landing's alternating band and the
+> console's). `console.css` carried the identical false claim in a comment. The product token set is
+> now generated onto `.ds` in [`tokens.css`](./tokens.css) from the approved prototype, so the two
+> sets can no longer silently disagree about anything.
 
 ## Do-not list — each of these is visible in the shipped build
 
@@ -141,8 +130,13 @@ prototype introduced no new ones.
 
 ## How the gate works
 
-`e2e/console-visual.authed.spec.ts`, in the **`browser`** project (it asserts rendered geometry, so
-it cannot live in the `api` gate):
+`e2e/console-visual.authed.spec.ts`, in the **`authed`** project.
+
+> ⚠️ **CORRECTED 2026-08-29 (`design-system-rails` D5-a).** This line used to say the **`browser`**
+> project. `playwright.config.ts` matches `*.authed.spec.ts` to `authed`, and `ci.yml` runs this one
+> file as its own blocking step with every gate env var mirrored — so the gate is already blocking
+> on every PR. The `browser` project runs **nowhere**, which is why `landing.browser.spec.ts` is red
+> on `main`. Every new visual row lands in `authed` or it is not in the gate.
 
 1. **The three assertions above** — no vertical scroll, 2 rows + 1 summary, no horizontal scroll.
    Cheap, stable, and each maps to a sentence the product owner said.
@@ -158,6 +152,6 @@ point — the plan had no assertion that could go red on a bad-looking page, and
 
 ## Porting
 
-`console-reference.css` is the prototype's stylesheet, extracted verbatim. **Port from it, not from
-this document's prose.** Its class names are the prototype's; mapping them onto `.product-shell__*`,
-`.console-rail` and `.data-table` is the work. Where the two disagree, the measured table above wins.
+[`reference.css`](./reference.css) is the prototype's stylesheet, extracted verbatim (regenerate:
+`node apps/web/design-system/extract-css.mjs`). **Port from it, not from this document's prose.** Its class names are the prototype's; mapping them onto the `ds-`-prefixed
+names under `.ds` (epic D3) is the work. Where the two disagree, [`MEASURED-SPEC.md`](./MEASURED-SPEC.md) wins.

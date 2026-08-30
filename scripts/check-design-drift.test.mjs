@@ -5,10 +5,15 @@ import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
+  DESIGN_SYSTEM_ROOT,
+  stylesheetFiles,
+  GENERATED_STYLESHEETS,
   SWEPT_ROOTS,
   VOICE_AND_STYLE_ROOTS,
   inspectDesignSource,
+  inspectDesignSystemStylesheet,
   inspectRepository,
+  selectorLists,
   withoutComments,
 } from './check-design-drift.mjs';
 
@@ -373,5 +378,261 @@ test('a trailing comment is stripped, and a URL is not', () => {
   assert.deepEqual(
     inspectDesignSource(`<a href="https://github.com/x">#ff0000</a>`).map((f) => f.rule),
     ['raw-hex']
+  );
+});
+
+// ── design-system-rails · Sprint 1, Story 1.3 — the three rules the design system needed ───────
+//
+// Written through `inspectRepository` wherever the property is about WHICH FILES are looked at,
+// and through `inspectDesignSystemStylesheet` where it is about the rule itself. The distinction
+// matters: the defect this story exists to prevent is a directory nobody sweeps, and that is
+// invisible from the rule layer (CODE-QUALITY rule 5 — test through the caller).
+
+test('the design system directory is swept, and its two generated files are exempt', (t) => {
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.deepEqual(inspectRepository(root).violations, [], 'the fixture must start clean');
+
+  const dir = join(root, DESIGN_SYSTEM_ROOT);
+
+  // A hand-written stylesheet must consume tokens.
+  writeFileSync(join(dir, 'panel.css'), '.ds-panel {\n  background: #241d14;\n}\n');
+  assert.deepEqual(
+    inspectRepository(root).violations.map((violation) => `${violation.path} ${violation.rule}`),
+    [`${DESIGN_SYSTEM_ROOT}/panel.css raw-hex`]
+  );
+  writeFileSync(join(dir, 'panel.css'), '.ds-panel {\n  background: var(--card);\n}\n');
+  assert.deepEqual(inspectRepository(root).violations, []);
+
+  // ...and the GENERATED files, whose entire job is to carry the prototype's literal values, are
+  // not. An exemption that did not exist would make the token file itself unlandable.
+  for (const name of GENERATED_STYLESHEETS) {
+    writeFileSync(join(dir, name), '.ds {\n  --gold: #e8b93c;\n}\n');
+  }
+  assert.deepEqual(
+    inspectRepository(root).violations,
+    [],
+    'the generated token and reference stylesheets carry literal colours by design'
+  );
+});
+
+test('a `font:` shorthand is refused, and the global keywords are not', () => {
+  // The shorthand resets family, weight, style, line-height and variant as well as size, so an
+  // override that restates only `font-size` leaves the other five at the shorthand's values. This
+  // repo has already paid for that once (LEARNINGS).
+  const shorthand = inspectDesignSystemStylesheet('.ds-x {\n  font: 600 13px/1.4 var(--sans);\n}\n');
+  assert.deepEqual(
+    shorthand.map((violation) => violation.rule),
+    ['font-shorthand']
+  );
+
+  // `font: inherit` on a form control is the idiomatic reset and resets nothing to a surprise.
+  for (const keyword of ['inherit', 'initial', 'unset', 'revert']) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-x {\n  font: ${keyword};\n}\n`),
+      [],
+      `font: ${keyword} is a reset, not a shorthand that silently sets five other properties`
+    );
+  }
+
+  // The longhand it is supposed to be replaced by must obviously still pass.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-x {\n  font-size: 13px;\n  font-weight: 600;\n}\n'),
+    []
+  );
+});
+
+test('a design-system class must be namespaced, and an at-rule prelude is not a selector', () => {
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail {\n  color: var(--dim);\n}\n'),
+    [],
+    'a prefixed class is the whole point'
+  );
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds {\n  color: var(--dim);\n}\n'), []);
+
+  // The exact accident this rule exists to stop: `.tag`, `.note` and `.row` are each declared by
+  // more than one stylesheet in this repo's history, and landing rules reached the console through
+  // them three times in one epic.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.tag {\n  color: var(--dim);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+
+  // A bare state class is exactly the kind of word two stylesheets both want.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail.is-active {\n  color: var(--gold);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+
+  // ...but an attribute is how state is expressed here, and carries no class to collide.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail[aria-current="page"] {\n  color: var(--gold);\n}\n'),
+    []
+  );
+
+  // `@media (min-width: 900px)` and `@keyframes ds-blink` contain no class selectors. Treating a
+  // keyframe NAME as a class would reject `@keyframes ds-blink` for not being prefixed — which it
+  // is, which would be a confusing thing to be told.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet(
+      '@media (min-width: 900px) {\n  .ds-rail {\n    width: 236px;\n  }\n}\n@keyframes ds-blink {\n  to {\n    opacity: 0;\n  }\n}\n'
+    ),
+    []
+  );
+});
+
+test('a design-system stylesheet violation is reported at the line it occupies', () => {
+  // Same property the globals.css rule already pins, for the same reason: a guard that names the
+  // wrong line sends the next person to the wrong code. This repo's convention is a long block
+  // comment above almost everything, so the drift is not one or two lines.
+  const source = [
+    '/* A block comment',
+    '   spanning',
+    '   several lines. */',
+    '.ds-panel {',
+    '  background: #241d14;',
+    '}',
+  ].join('\n');
+  const [violation] = inspectDesignSystemStylesheet(source);
+  assert.equal(violation.rule, 'raw-hex');
+  assert.equal(violation.line, 5);
+});
+
+test('selectorLists ignores braces that are not rule openers', () => {
+  assert.deepEqual(
+    selectorLists('.ds-a,\n.ds-b {\n  color: red;\n}\n').map((list) => list.text.trim()),
+    ['.ds-a,\n.ds-b']
+  );
+  assert.deepEqual(
+    selectorLists('@import "x.css";\n@media screen {\n  .ds-a {\n    color: red;\n  }\n}\n').map((l) =>
+      l.text.trim()
+    ),
+    ['.ds-a']
+  );
+});
+
+test('an SVG url(#…) reference is not a colour, and a real hex beside it still is', () => {
+  // ⚠️ Sprint 5's charting primitives are hand-rolled SVG on the token set (epic D7), so
+  // `fill: url(#ds-bar-gradient)` is about to appear all over this directory. The rule flagged it as
+  // a raw hex — a false positive on the exact markup the epic is going to write, which is how a
+  // guard gets switched off rather than fixed. Found by stress-testing the rule against inputs the
+  // tests did not cover, before a builder hit it.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a {\n  fill: url(#abcdef);\n}\n'), []);
+  assert.deepEqual(inspectDesignSystemStylesheet(".ds-a {\n  fill: url('#abcdef');\n}\n"), []);
+
+  // Only the FRAGMENT is removed, so a genuine colour on the same line still reports. A fix that
+  // blanked the whole declaration would have traded a false positive for a false negative, which is
+  // the strictly worse direction for a drift guard.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-a {\n  fill: url(#abcdef);\n  color: #ff0000;\n}\n').map(
+      (v) => v.rule
+    ),
+    ['raw-hex']
+  );
+});
+
+test('a dot inside an attribute selector is not a class name', () => {
+  // ⚠️ The fixtures below use `var(--gold)`, not `red`. They used `red` as innocuous filler until
+  // the `literal-color` rule landed and correctly flagged it — a test fixture that quietly becomes
+  // a violation of a NEW rule is how a selector test starts failing for a value reason.
+  // `[data-x="a.b"]`, `[href=".."]`. The class pattern read the dot as a class and reported a
+  // correctly-namespaced selector as a namespace violation — and attribute selectors are how this
+  // design system expresses STATE (`[aria-current="page"]`), which is what the namespace rule's own
+  // message recommends. The rule would have fired most often on exactly the markup it asks for.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a[data-x="a.b"] {\n  color: var(--gold);\n}\n'), []);
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-rail[aria-current="page"] {\n  color: var(--gold);\n}\n'),
+    []
+  );
+
+  // ...and an unprefixed class carrying such an attribute is still caught, so the fix removed a
+  // false positive without opening a false negative.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.tag[data-x="a.b"] {\n  color: var(--gold);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+});
+
+test('the namespace rule reaches inside :is() and :where()', () => {
+  assert.deepEqual(inspectDesignSystemStylesheet(':where(.ds-a, .ds-b) {\n  color: var(--gold);\n}\n'), []);
+  assert.deepEqual(
+    inspectDesignSystemStylesheet(':where(.ds-a, .tag) {\n  color: var(--gold);\n}\n').map((v) => v.rule),
+    ['namespace']
+  );
+});
+
+test('a `font:` shorthand is caught even when a formatter has wrapped it', () => {
+  // The rule was line-scoped, and this repo's prettier config wraps long declarations — so
+  // `font\n  : 14px/1.2 Archivo;` slipped it entirely (fresh reviewer). Matched over the whole
+  // source now, for the same reason `HEADING_BLOCK` is.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-a {\n  font\n    : 600 12px var(--sans);\n}\n').map((v) => v.rule),
+    ['font-shorthand']
+  );
+});
+
+test('a colour has to come from the scale, whatever notation it is written in', () => {
+  // `raw-hex` was the ONLY colour rule, so every non-hex notation walked past it in a directory
+  // whose premise is that a value is a choice from a scale (fresh reviewer).
+  for (const value of ['rgb(232 185 60)', 'hsl(43 80% 57%)', 'oklch(0.7 0.1 80)', 'red']) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-a {\n  color: ${value};\n}\n`).map((v) => v.rule),
+      ['literal-color'],
+      `${value} is a hand-picked colour`
+    );
+  }
+
+  // ...and a DERIVATION of a token is not a hand-picked colour. `globals.css` builds its two kraft
+  // surfaces with exactly this idiom, so a rule that refused it would have been refusing the one
+  // pattern the repo already uses to stay on the scale.
+  for (const value of [
+    'var(--gold)',
+    'color-mix(in srgb, var(--gold) 55%, white)',
+    'rgb(from var(--gold) r g b / 50%)',
+    'linear-gradient(var(--gold), var(--gold-hot))',
+    'transparent',
+    'currentColor',
+  ]) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-a {\n  color: ${value};\n}\n`),
+      [],
+      `${value} resolves to the scale`
+    );
+  }
+
+  // A SELECTOR is not a value: `.ds-gold` must not be read as the named colour.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-gold {\n  color: var(--gold);\n}\n'), []);
+});
+
+test('a missing stylesheet root is LOUD, exactly like a missing swept root', (t) => {
+  // ⚠️ **The previous version of this test could not fail, and a reviewer proved it by mutation**
+  // (fresh reviewer, round 2): reverting `stylesheetFiles` to `if (!existsSync(root)) return []`
+  // left all 32 tests green. It handed `inspectRepository` a bare tmpdir, so `sourceFiles` — which
+  // walks SWEPT_ROOTS first — threw on `components/landing`, and a loose `/does not exist/` matched
+  // for the OLD reason. It asserted the very statement-order masking its own comment claimed to
+  // have removed.
+  //
+  // ⚠️ And the reviewer's suggested fix does not work either, which is the more useful finding:
+  // removing only `apps/web/design-system` STILL throws from `sourceFiles`, because that directory
+  // is in `SWEPT_ROOTS` as well. Through the repository walker this function's throw is
+  // unreachable — so it is pinned DIRECTLY, and the caller is pinned for what it actually
+  // guarantees: that a missing design-system directory is loud rather than empty, whoever says so.
+  assert.throws(() => stylesheetFiles(join(tmpdir(), 'gb-does-not-exist-ever')), /stylesheet root/);
+
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.deepEqual(inspectRepository(root).violations, [], 'the fixture must start clean');
+
+  rmSync(join(root, DESIGN_SYSTEM_ROOT), { recursive: true, force: true });
+  assert.throws(() => inspectRepository(root), /does not exist/);
+
+  // ...and a `.css` file in a root that DOES exist is still found, so the throw did not become the
+  // only thing this function does.
+  const dir = join(root, DESIGN_SYSTEM_ROOT);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'x.css'), '.ds-a {\n  color: var(--gold);\n}\n');
+  assert.deepEqual(
+    stylesheetFiles(dir).map((path) => path.slice(dir.length + 1)),
+    ['x.css']
   );
 });

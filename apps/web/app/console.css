@@ -21,6 +21,10 @@
    dashboards or the legacy branch, and the anonymous surfaces keep the styling they shipped with.
    ───────────────────────────────────────────────────────────────────────────────────────── */
 
+/* The ONE definition of the product token set — generated from the approved prototype.
+   `design-system-rails` D2. Regenerate: node apps/web/design-system/extract-css.mjs */
+@import '../design-system/tokens.css';
+
 /* ⚠️ Declared at the root of the console, not inside the desktop media query. It was defined only
    there, so it resolved to nothing at 390/768/900 and the `var(…, 55px)` fallbacks written beside
    its consumers were unreachable — a dead guard added by the fix for a dead guard (fresh reviewer,
@@ -33,34 +37,25 @@
 .is-console {
   --console-chrome-height: 54px;
 
-  /* Tokens are the prototype's, which are `references/design/assets/tokens.css` verbatim — the
-     design introduced no new colours. Declared locally so this file is self-contained and can be
-     diffed against the prototype's `:root` without chasing an import. */
-  --roast: #16120d;
-  --roast-2: #1c1710;
-  --card: #241d14;
-  --card-2: #2b2318;
-  --card-3: #332a1d;
-  --line: #3a3023;
-  --line-soft: #2e2619;
-  --crema: #f5ead6;
-  --dim: #b8a888;
-  --dim-2: #8d8069;
-  --gold: #e8b93c;
-  --gold-hot: #ffd45e;
-  --gold-deep: #8a6a1e;
-  --green: #7fd069;
-  --green-deep: #2c5e22;
-  --red: #e86a5e;
-  --red-deep: #6e2a22;
-  --blue: #6db3e8;
-  --r: 8px;
-  --r-lg: 12px;
-  --shadow: 0 18px 44px rgb(0 0 0 / 44%);
-  /* The dialog layer sits above the page and needs a deeper one — `console-reference.css`'s
-     own second shadow token, ported with the modal it belongs to. */
-  --shadow-hi: 0 24px 64px rgb(0 0 0 / 62%);
-  --t: 140ms cubic-bezier(0.2, 0, 0.2, 1);
+  /* ⚠️ **The token block that was here is DELETED** — `design-system-rails` Sprint 1, Story 1.2
+     (epic D2). It declared 23 custom properties under a comment reading:
+
+       "Tokens are the prototype's, which are `references/design/assets/tokens.css` verbatim — the
+        design introduced no new colours. Declared locally so this file is self-contained and can be
+        diffed against the prototype's `:root` without chasing an import."
+
+     **Both halves of that were false.** `tokens.css` does not define `--card-2`, `--card-3`,
+     `--line-soft`, `--green-deep` or `--red-deep` — five colours — nor `--r`, `--r-lg`, `--shadow`,
+     `--shadow-hi` or `--t`. And it disagrees on one it does define: `--roast-2` is `#221b13` there
+     and `#1c1710` here. So this file was not a copy of anything; it was a second, divergent
+     definition wearing a comment that said it wasn't. "Self-contained so it can be diffed" is the
+     shape of every duplicate source of truth in this repo's history — two things that must agree,
+     kept as two things that currently do.
+
+     The set now has ONE definition, generated from the approved prototype into
+     `apps/web/design-system/tokens.css` and imported at the top of this file. It is declared on
+     `.ds, .is-console`, so **the console resolves exactly the values it resolved before** — this
+     change moves no pixel, which is the whole contract of Sprint 1. */
 
   background: var(--roast);
   color: var(--crema);

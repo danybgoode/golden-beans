@@ -1,0 +1,57 @@
+/* tokens.css — the product design system’s token set
+ *
+ * ⚠️ GENERATED — DO NOT HAND-EDIT. Regenerate with:
+ *     node apps/web/design-system/extract-css.mjs
+ * CI runs `--check` and fails on any diff, so a hand-edit is reverted rather than argued about.
+ *
+ * Source: apps/web/design-system/console-prototype.html — the 32 states approved 2026-08-29 (APPROVED.md).
+ */
+
+/* Scoped to a CLASS, not `:root`, and that is the whole point of D3.
+ *
+ * `references/design/assets/tokens.css` owns `:root` for the landing and is imported first by
+ * globals.css. Several of these names collide with it, and ONE collides with a different VALUE:
+ * `--roast-2` is #221b13 on the landing and #1c1710 here, and both are on screen today. Declaring
+ * the product set on a class means the console gets its value without the landing losing its own —
+ * landing rules reached the console through shared names three times in one epic, and this is the
+ * mechanism that stops it.
+ *
+ * ── Why TWO selectors ───────────────────────────────────────────────────────────────
+ * `.ds` is the design system's scope root. `.is-console` is a TRANSITIONAL ALIAS: it is what
+ * `ProductShell` already sets, and `console.css` declared this same token block against it.
+ * Listing both here is what lets Sprint 1 delete that duplicate block while changing **no product
+ * pixel** — the console keeps resolving exactly the values it resolves today, from one declaration
+ * instead of two. The alias is retired in Sprint 6 with the rest of the old world. Until then, one
+ * definition under two names beats two definitions that currently happen to agree. */
+.ds,
+.is-console {
+  --roast: #16120d;
+  --roast-2: #1c1710;
+  --card: #241d14;
+  --card-2: #2b2318;
+  --card-3: #332a1d;
+  --line: #3a3023;
+  --line-soft: #2e2619;
+  --crema: #f5ead6;
+  --dim: #b8a888;
+  --dim-2: #8d8069;
+  --gold: #e8b93c;
+  --gold-hot: #ffd45e;
+  --gold-deep: #8a6a1e;
+  --green: #7fd069;
+  --green-deep: #2c5e22;
+  --red: #e86a5e;
+  --red-deep: #6e2a22;
+  --blue: #6db3e8;
+  /* Not the prototype's literal stack — next/font's build-time family, and the value the
+     console already resolves. See FONT_STACK_OVERRIDES. */
+  --sans: var(--font-sans),Archivo,system-ui,sans-serif;
+  /* Not the prototype's literal stack — next/font's build-time family, and the value the
+     console already resolves. See FONT_STACK_OVERRIDES. */
+  --mono: var(--font-mono),'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --r: 8px;
+  --r-lg: 12px;
+  --shadow: 0 18px 44px rgb(0 0 0 / 44%);
+  --shadow-hi: 0 24px 64px rgb(0 0 0 / 62%);
+  --t: 140ms cubic-bezier(.2,0,.2,1);
+}

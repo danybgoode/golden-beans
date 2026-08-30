@@ -13,6 +13,244 @@ const RAW_HEX = /#[\da-f]{3,8}\b/i;
 const INLINE_STYLE = /\bstyle\s*=\s*\{/;
 const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 
+// ── design-system-rails · Sprint 1, Story 1.3 (epic D3) — the `font:` SHORTHAND ───────────────
+//
+// ⚠️ This story was REWRITTEN at the architecture lock, and the reason belongs here because the
+// next person will read the audit before they read this file. As scaffolded it said "extend the
+// guard to `components/ui` and `components/product`, the two directories the audit named (§10.5)
+// as its blind spot". `SWEPT_ROOTS` has contained both since `app-shell-and-agent-rail` S1.4 —
+// the audit's gap was closed before this epic was written. Building the story as scaffolded would
+// have produced a no-op diff and a green tick on work nobody did (epic README, D11-1).
+//
+// What the guard genuinely did not have is these three rules, all of them about the ONE directory
+// this epic creates.
+//
+// The `font:` shorthand resets family, weight, style, size, line-height AND variant. So an override
+// that restates only `font-size` silently leaves the other five at the shorthand's values — which
+// is a real defect this repo has already paid for (LEARNINGS: "A `font:` SHORTHAND resets family,
+// weight and style"). Scoped to `design-system/*.css`, where a longhand is always available and the
+// whole point of the directory is that a value is a choice from a scale.
+//
+// The global keywords are allowed: `font: inherit` on a form control is the idiomatic reset and
+// resets nothing to a surprise.
+const FONT_SHORTHAND_GLOBAL = /(?:^|[;{}])\s*font\s*:\s*(?!\s*(?:inherit|initial|unset|revert)\b)/gm;
+
+// A class selector inside `design-system/*.css` that is neither `.ds` nor `ds-`-prefixed (epic D3).
+// Landing rules reached the console through shared class names — `.tag`, `.note` — three times in
+// ONE epic, and `.row` is declared by two stylesheets in this repo right now. Namespacing is what
+// makes that unrepresentable rather than merely unlikely.
+//
+// State goes on an attribute (`[data-state]`, `aria-current`) or on a `ds-`-prefixed class. A bare
+// `.is-active` is exactly the kind of word two stylesheets both want.
+const CLASS_IN_SELECTOR = /\.(-?[A-Za-z_][\w-]*)/g;
+
+// `url(#…)` in a stylesheet is an SVG reference — a gradient, a filter, a clip path — and never a
+// colour. The `.tsx` sweep has stripped href/src hex fragments since the landing epic; this is the
+// stylesheet's equivalent.
+// A whole CSS declaration — `property: value;` — however many lines it spans.
+const DECLARATION = /(?:^|[;{}])\s*([-\w]+)\s*:\s*([^;{}]*)/gm;
+const QUOTED_STRING = /(['"])(?:\\.|(?!\1)[^\\])*\1/g;
+
+const URL_FRAGMENT_IN_CSS = /url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi;
+
+// A literal colour that is not a hex. `raw-hex` was the only colour rule, so `rgb(232 185 60)`,
+// `hsl(43 80% 57%)` and a bare `red` all passed in a hand-written design-system stylesheet — in a
+// directory whose stated premise is that "a value is a choice from a scale" (fresh reviewer).
+//
+// `color-mix()` and `rgb(from var(--gold) …)` are DERIVATIONS of a token, not hand-picked values,
+// and `globals.css` already uses the first to build its kraft surfaces — so a function whose
+// arguments reach a `var()` is allowed. What is refused is a number nobody can trace to the scale.
+// `color()` was missing, which let `color(display-p3 0.9 0.2 0.1)` through a rule whose test is
+// titled "whatever notation it is written in" (fresh reviewer, round 2).
+const LITERAL_COLOR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(([^)]*)\)/gi;
+
+// A colour function whose arguments reach a token is a DERIVATION of the scale — that is what
+// `color-mix()` and relative colour syntax are for, and `globals.css` builds its two kraft surfaces
+// with `color-mix(in srgb, var(--kraft) 55%, white)` for exactly that reason. The `white` in there
+// is an ingredient of a derivation, not a hand-picked value, so the whole call is removed before
+// the literal checks run. Without this the rule fired on the one idiom the repo already uses to
+// stay on the scale — which is how a guard gets switched off instead of fixed.
+const DERIVED_COLOR_CALL =
+  /\b(?:color-mix|rgba?|hsla?|hwb|lab|lch|oklab|oklch|light-dark)\([^)]*var\([^)]*\)[^)]*\)/gi;
+// ⚠️ The FULL CSS named-colour set, plus the system colours.
+//
+// This listed 22 names, under a test titled "whatever notation it is written in" — so `crimson`,
+// `tomato`, `indigo`, `firebrick` and about 125 others walked straight through, as did
+// `ButtonText` and `Canvas` (fresh reviewer, round 2). A rule that catches `red` and not `crimson`
+// is a rule that teaches people which hand-picked colours are allowed.
+const CSS_NAMED_COLORS = [
+  'aliceblue',
+  'antiquewhite',
+  'aqua',
+  'aquamarine',
+  'azure',
+  'beige',
+  'bisque',
+  'black',
+  'blanchedalmond',
+  'blue',
+  'blueviolet',
+  'brown',
+  'burlywood',
+  'cadetblue',
+  'chartreuse',
+  'chocolate',
+  'coral',
+  'cornflowerblue',
+  'cornsilk',
+  'crimson',
+  'cyan',
+  'darkblue',
+  'darkcyan',
+  'darkgoldenrod',
+  'darkgray',
+  'darkgreen',
+  'darkgrey',
+  'darkkhaki',
+  'darkmagenta',
+  'darkolivegreen',
+  'darkorange',
+  'darkorchid',
+  'darkred',
+  'darksalmon',
+  'darkseagreen',
+  'darkslateblue',
+  'darkslategray',
+  'darkslategrey',
+  'darkturquoise',
+  'darkviolet',
+  'deeppink',
+  'deepskyblue',
+  'dimgray',
+  'dimgrey',
+  'dodgerblue',
+  'firebrick',
+  'floralwhite',
+  'forestgreen',
+  'fuchsia',
+  'gainsboro',
+  'ghostwhite',
+  'gold',
+  'goldenrod',
+  'gray',
+  'green',
+  'greenyellow',
+  'grey',
+  'honeydew',
+  'hotpink',
+  'indianred',
+  'indigo',
+  'ivory',
+  'khaki',
+  'lavender',
+  'lavenderblush',
+  'lawngreen',
+  'lemonchiffon',
+  'lightblue',
+  'lightcoral',
+  'lightcyan',
+  'lightgoldenrodyellow',
+  'lightgray',
+  'lightgreen',
+  'lightgrey',
+  'lightpink',
+  'lightsalmon',
+  'lightseagreen',
+  'lightskyblue',
+  'lightslategray',
+  'lightslategrey',
+  'lightsteelblue',
+  'lightyellow',
+  'lime',
+  'limegreen',
+  'linen',
+  'magenta',
+  'maroon',
+  'mediumaquamarine',
+  'mediumblue',
+  'mediumorchid',
+  'mediumpurple',
+  'mediumseagreen',
+  'mediumslateblue',
+  'mediumspringgreen',
+  'mediumturquoise',
+  'mediumvioletred',
+  'midnightblue',
+  'mintcream',
+  'mistyrose',
+  'moccasin',
+  'navajowhite',
+  'navy',
+  'oldlace',
+  'olive',
+  'olivedrab',
+  'orange',
+  'orangered',
+  'orchid',
+  'palegoldenrod',
+  'palegreen',
+  'paleturquoise',
+  'palevioletred',
+  'papayawhip',
+  'peachpuff',
+  'peru',
+  'pink',
+  'plum',
+  'powderblue',
+  'purple',
+  'rebeccapurple',
+  'red',
+  'rosybrown',
+  'royalblue',
+  'saddlebrown',
+  'salmon',
+  'sandybrown',
+  'seagreen',
+  'seashell',
+  'sienna',
+  'silver',
+  'skyblue',
+  'slateblue',
+  'slategray',
+  'slategrey',
+  'snow',
+  'springgreen',
+  'steelblue',
+  'tan',
+  'teal',
+  'thistle',
+  'tomato',
+  'turquoise',
+  'violet',
+  'wheat',
+  'white',
+  'whitesmoke',
+  'yellow',
+  'yellowgreen',
+  // System colours resolve to a UA palette, which is no more part of the scale than a hex is.
+  'ButtonText',
+  'ButtonFace',
+  'ButtonBorder',
+  'Canvas',
+  'CanvasText',
+  'Field',
+  'FieldText',
+  'Highlight',
+  'HighlightText',
+  'LinkText',
+  'VisitedText',
+  'ActiveText',
+  'GrayText',
+  'Mark',
+  'MarkText',
+  'AccentColor',
+  'AccentColorText',
+  'SelectedItem',
+  'SelectedItemText',
+];
+const NAMED_COLORS = new RegExp(`(?:^|[\\s:,(])(?:${CSS_NAMED_COLORS.join('|')})(?=[\\s;,)]|$)`, 'i');
+const NAMESPACE = 'ds';
+
 // landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
 // section dividers used to be built from. They are NOT Extended_Pictographic, so the rule above
 // never saw them; they rendered at 12px inside a kraft band and were illegible at the only size a
@@ -195,6 +433,133 @@ export function inspectHeadings(source) {
   return violations;
 }
 
+/**
+ * The selector lists of a stylesheet — the text before each `{` that is not an at-rule prelude.
+ *
+ * Not a CSS parser and does not need to be: it needs to know which words in this file are class
+ * names. At-rule preludes are skipped because `@media (min-width: 900px)` and `@keyframes ds-blink`
+ * contain no class selectors, and treating a keyframe NAME as a class would reject
+ * `@keyframes ds-blink` for not being prefixed — which it is, and which would be a confusing thing
+ * to be told.
+ */
+export function selectorLists(source) {
+  const lists = [];
+  const live = withoutComments(source);
+  let start = 0;
+  for (let index = 0; index < live.length; index += 1) {
+    const char = live[index];
+    if (char === '{' || char === '}' || char === ';') {
+      const chunk = live.slice(start, index);
+      if (char === '{' && !chunk.trim().startsWith('@')) {
+        lists.push({ text: chunk, index: start });
+      }
+      start = index + 1;
+    }
+  }
+  return lists;
+}
+
+/**
+ * The three rules that apply to a HAND-WRITTEN design-system stylesheet.
+ *
+ * `generated` exempts `tokens.css` and `reference.css`, and the exemption is narrow on purpose:
+ * those two files exist to carry the approved prototype's LITERAL values — a token file whose job
+ * is to define `--gold: #e8b93c` cannot be told to use a token for it, and `reference.css` is the
+ * prototype's stylesheet verbatim so that a port can be diffed against its source. Every other
+ * stylesheet in that directory consumes them.
+ */
+export function inspectDesignSystemStylesheet(source, { generated = false } = {}) {
+  const violations = [];
+  if (generated) return violations;
+
+  const live = withoutComments(source);
+
+  // ⚠️ The `font:` rule is matched over the WHOLE source, not line by line (fresh reviewer). A
+  // declaration wrapped by a formatter — `font\n  : 14px/1.2 Archivo;` — slipped a line-scoped
+  // regex entirely, and this repo's own prettier config wraps long declarations. Same reasoning as
+  // `HEADING_BLOCK` above, which is matched over the whole file for exactly this class of miss.
+  // ⚠️ Declarations are scanned over the WHOLE source, for the same reason the `font:` rule is —
+  // and this rule was written line-scoped in the SAME round that fixed `font:` for exactly this
+  // (fresh reviewer, round 2: "fixed the instance, not the class"). Prettier wraps long
+  // declarations, and `box-shadow:\n  0 1px 2px rgb(0 0 0 / .2),\n  0 2px 4px red;` walked through
+  // a line-scoped check — in a directory where every hand-written stylesheet is prettier-formatted.
+  //
+  // Quoted strings are blanked first: `content: "in the red "` is prose, not a colour, the same way
+  // an attribute selector's contents are not class names.
+  for (const declaration of live.replace(QUOTED_STRING, '""').matchAll(DECLARATION)) {
+    const value = declaration[2]
+      .replace(URL_FRAGMENT_IN_CSS, 'url()')
+      // Derivations are removed BEFORE the literal checks, so their ingredients are not read as
+      // hand-picked values — `color-mix(in srgb, var(--kraft) 55%, white)` is how globals.css
+      // already stays on the scale.
+      .replace(DERIVED_COLOR_CALL, 'derived()');
+    let literalColor = NAMED_COLORS.test(value);
+    for (const call of value.matchAll(LITERAL_COLOR_FUNCTION)) {
+      if (!call[1].includes('var(')) literalColor = true;
+    }
+    if (literalColor) {
+      violations.push({
+        line: lineOf(live, declaration.index),
+        rule: 'literal-color',
+        content: declaration[0].split('\n').join(' ').trim().slice(0, 100),
+      });
+    }
+  }
+
+  for (const match of live.matchAll(FONT_SHORTHAND_GLOBAL)) {
+    violations.push({
+      line: lineOf(live, match.index),
+      rule: 'font-shorthand',
+      content: live
+        .slice(match.index, match.index + 60)
+        .split('\n')
+        .join(' ')
+        .trim(),
+    });
+  }
+
+  live.split('\n').forEach((line, index) => {
+    // ⚠️ `url(#…)` is an SVG REFERENCE, not a colour — `fill: url(#ds-bar-gradient)`. The `.tsx`
+    // sweep has stripped href/src hex fragments since the landing epic; the stylesheet sweep was
+    // written without that and flagged `url(#abcdef)` as a raw hex. This is not hypothetical
+    // housekeeping: Sprint 5's charts are hand-rolled SVG on the token set (epic D7) and will
+    // reference gradients and clip paths exactly this way. Found by stress-testing this rule
+    // against inputs the unit tests did not cover, before a builder hit it.
+    //
+    // Only the FRAGMENT is removed, so `background: url(#ds-grad) #ff0000` still reports the hex.
+    const withoutSvgRefs = line.replace(URL_FRAGMENT_IN_CSS, 'url()');
+    if (RAW_HEX.test(withoutSvgRefs)) {
+      violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
+    }
+
+    // Only a declaration VALUE can hold a colour; a selector cannot, and `.ds-gold` should not be
+    // read as the named colour `gold`.
+  });
+
+  for (const list of selectorLists(source)) {
+    // ⚠️ An ATTRIBUTE VALUE can contain a dot — `[data-x="a.b"]`, `[href=".."]` — and the class
+    // pattern read it as a class name, so a correctly-namespaced selector was reported as a
+    // namespace violation. Attribute selectors are how this design system expresses STATE
+    // (`[aria-current="page"]`, `[data-state]`), which is the rule's own recommendation, so the
+    // rule would have fired most often on exactly the markup it asks for.
+    //
+    // Blanked rather than deleted so the offsets — and therefore the reported line numbers — are
+    // unchanged. Nothing inside `[…]` is ever a class selector, so nothing is hidden.
+    const selectors = list.text.replace(/\[[^\]]*\]/g, (attribute) => ' '.repeat(attribute.length));
+    for (const match of selectors.matchAll(CLASS_IN_SELECTOR)) {
+      const name = match[1];
+      if (name === NAMESPACE || name.startsWith(`${NAMESPACE}-`)) continue;
+      violations.push({
+        line: lineOf(live, list.index + match.index),
+        rule: 'namespace',
+        content: `.${name} — design-system classes are \`.${NAMESPACE}\` or \`${NAMESPACE}-\`-prefixed (epic D3)`,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function sourceFiles(root) {
   // A swept root that does not exist must be LOUD, not empty. Returning `[]` would make a typo in
   // `SWEPT_ROOTS` — or a directory someone renamed — read as "nothing to report", which is this
@@ -210,6 +575,38 @@ function sourceFiles(root) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) return sourceFiles(path);
     return extname(path) === '.tsx' ? [path] : [];
+  });
+}
+
+/**
+ * Every `.css` file under a root, recursively. The `.tsx` sweep's twin — including its loudness.
+ *
+ * A missing root throws for the same reason `sourceFiles` does: returning `[]` makes a renamed or
+ * mistyped directory read as "nothing to report", which is this guard reporting success about a
+ * surface it never opened (CODE-QUALITY #5b).
+ *
+ * ⚠️ **Through `inspectRepository` this throw is currently UNREACHABLE, and that is worth saying
+ * rather than leaving for the next reader to discover.** `DESIGN_SYSTEM_ROOT` is in `SWEPT_ROOTS`
+ * too, and the `.tsx` walk runs first — so a missing directory throws from `sourceFiles`, with
+ * `sourceFiles`' message. A reviewer proposed asserting this function's message through the
+ * repository walker and it cannot be observed there (fresh reviewer, round 2, and the round before
+ * it proved the version WITHOUT this throw was equally green for the same reason).
+ *
+ * It is kept, and exported so its behaviour can be pinned directly, because the two root lists are
+ * separate by design: the moment a stylesheet root exists that is not also a `.tsx` root, this is
+ * the only thing standing between a typo and a silently-unswept directory.
+ */
+export function stylesheetFiles(root) {
+  if (!existsSync(root)) {
+    throw new Error(
+      `check-design-drift: stylesheet root ${root} does not exist. ` +
+        'A missing root silently sweeps nothing — add the directory or remove it from the sweep.'
+    );
+  }
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return stylesheetFiles(path);
+    return extname(path) === '.css' ? [path] : [];
   });
 }
 
@@ -302,6 +699,9 @@ export function inspectDesignSource(
 // The INLINE-STYLE rule stays landing-only (see the `disallowInlineStyle` argument below). /app
 // needs dynamic bar widths for the funnel, which is a computed geometry, not a colour drifting away
 // from the tokens.
+/** Where the design system lives. One string, because four places name it. */
+export const DESIGN_SYSTEM_ROOT = 'apps/web/design-system';
+
 export const SWEPT_ROOTS = [
   'apps/web/components/landing',
   'apps/web/components/ui',
@@ -317,7 +717,24 @@ export const SWEPT_ROOTS = [
   // "guard that cannot fail" class (CODE-QUALITY #5b).
   'apps/web/components/methodology',
   'apps/web/app',
+  // design-system-rails · Sprint 1, Story 1.3 — the one directory this epic creates, and the only
+  // swept-root gap that was actually open (epic README, D11-1). Its `.tsx` primitives are held to
+  // the same pictograph/raw-hex rules as everything else; its `.css` files get the three rules
+  // above, swept separately because this list walks `.tsx` only.
+  DESIGN_SYSTEM_ROOT,
 ];
+
+/**
+ * The two files in `design-system/` that are GENERATED from the approved prototype and therefore
+ * exempt from the raw-hex rule.
+ *
+ * Exempt by NAME, not by a "looks generated" heuristic: a header comment is something anyone can
+ * write, and an exemption anyone can claim is not an exemption. `tokens.css` is the file whose
+ * whole job is to define `--gold: #e8b93c` — it cannot be told to use a token for it — and
+ * `reference.css` is the prototype's stylesheet verbatim, so that a port can be diffed against its
+ * source forever. Every other stylesheet in that directory consumes them.
+ */
+export const GENERATED_STYLESHEETS = ['tokens.css', 'reference.css'];
 
 /**
  * Roots held to the LANDING's stricter two rules — headings are titles rather than sentences, and
@@ -347,6 +764,28 @@ export function inspectRepository(root = repoRoot) {
       path: relative(root, path),
     }))
   );
+
+  // design-system-rails · Story 1.3. The stylesheet sweep used to be `globals.css` alone, for raw
+  // hex alone. `apps/web/design-system/` is where every product style now lives, so it is swept for
+  // all three of the rules above — and, unlike the `.tsx` sweep, it walks `.css`.
+  //
+  // The two GENERATED files are exempt by name rather than by pattern: an exemption keyed on
+  // "looks generated" is an exemption anyone can claim by writing the right header comment.
+  // ⚠️ NO `existsSync` guard, and that is deliberate — it had one, and it was the exact inverse of
+  // `sourceFiles()` 190 lines above, which THROWS with a written rationale ("A swept root that does
+  // not exist must be LOUD, not empty"). The guard made a missing directory sweep nothing quietly.
+  // It was masked only because `DESIGN_SYSTEM_ROOT` is also in `SWEPT_ROOTS` and the `.tsx` sweep
+  // throws first — so the loudness depended on statement order inside this function (fresh
+  // reviewer). `stylesheetFiles` now throws for itself, with the same message shape.
+  const designSystemRoot = join(root, DESIGN_SYSTEM_ROOT);
+  for (const path of stylesheetFiles(designSystemRoot)) {
+    const name = relative(designSystemRoot, path);
+    violations.push(
+      ...inspectDesignSystemStylesheet(readFileSync(path, 'utf8'), {
+        generated: GENERATED_STYLESHEETS.includes(name),
+      }).map((violation) => ({ ...violation, path: relative(root, path) }))
+    );
+  }
 
   const globalsPath = join(root, 'apps/web/app/globals.css');
   const globals = readFileSync(globalsPath, 'utf8');

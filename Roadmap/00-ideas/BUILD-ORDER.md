@@ -10,14 +10,14 @@
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
 
-## 🏗️ Building now (1)
+## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
+- [One design system, every surface — the rails that make a design outlive an epic](../../02-commercial/design-system-rails/README.md) — 02 Commercial · 0/34 stories · risk: High
 
-## 📋 Ready to build (scaffolded, not started) (2)
+## 📋 Ready to build (scaffolded, not started) (1)
 
 - [CMS-neutral experiment integration + Payload go/no-go](../../01-growth-engine/cms-integration-spike/README.md) — 01 Growth Engine · 0/6 stories · risk: Low
-- [One design system, every surface — the rails that make a design outlive an epic](../../02-commercial/design-system-rails/README.md) — 02 Commercial · 0/34 stories · risk: High
 
 ## ✅ Shipped (24)
 
