@@ -34,17 +34,6 @@ import type { IconName } from '@/components/ui/icon-names'
  */
 export type ControlState = 'idle' | 'loading' | 'success' | 'error' | 'disabled' | 'unbuilt'
 
-/**
- * States a CONTAINER of things can be in, as opposed to a control.
- *
- * ⚠️ Used by `TableEmpty` only, via the shape of its props rather than by name — a reviewer flagged
- * it as exported-and-unreferenced (grep: one hit, its own declaration). Kept and marked, because
- * Sprint 4's data tables need `loading` and `error` container states that no primitive expresses
- * yet, and deleting a union that is three weeks from having callers only to re-add it is churn. If
- * Sprint 4 lands without using it, delete it there rather than carrying it further.
- */
-export type CollectionState = 'idle' | 'loading' | 'empty' | 'error'
-
 function classes(...values: (string | false | undefined)[]): string {
   return values.filter(Boolean).join(' ')
 }
@@ -183,7 +172,7 @@ export function Answer({ children }: { children: ReactNode }) {
 
 // ── Data table ────────────────────────────────────────────────────────────────────────────────
 
-export function Table({ children }: { children: ReactNode }) {
+export function Table({ children, empty }: { children: ReactNode; empty?: boolean }) {
   return (
     <div className="ds-table">
       {/* Wide content scrolls inside ITS OWN container; the page never scrolls sideways
@@ -192,8 +181,14 @@ export function Table({ children }: { children: ReactNode }) {
           and `TableRow` carry `role="row"`, and a `row` whose ancestor is a plain `<div>` is an
           orphaned role a screen reader reports as broken structure (cross-family review, agy).
           The scroller is the element that directly contains the rows, so it is the one that has to
-          be the table. */}
-      <div className="ds-table-scroll" role="table">
+          be the table.
+
+          ⚠️ …and `empty` exists because that fix was still one case short. `<Table><TableEmpty /></Table>`
+          announced `role="table"` around a grid with no rows and no columns, which a screen reader
+          reports as broken structure rather than as "nothing here yet" — the SAME orphaned-role
+          defect a third time, one case along (fresh reviewer, round 2). An empty state is prose, so
+          it is left as prose: the role is dropped rather than the container. */}
+      <div className="ds-table-scroll" role={empty ? undefined : 'table'}>
         {children}
       </div>
     </div>

@@ -38,7 +38,7 @@ re-author) · `apps/web/lib/project-route-inventory.ts` (`iconKey`) · a new spe
 | 5 | `iconKey` is added to `ProjectSurface`, to the `Pick<>` that builds `ProjectSurfaceLink`, and to the mapper. The closed union makes an unknown key a **compile error**, not a blank square. | **D4** |
 | 6 | Existing `components/ui` primitives are **adopted and extended**. `Panel`, `Button`, `Badge`, `Icon`, `DataTable`, `StatCard`, `FunnelBars`, `RolloutBar`, `ConfirmDialog`, `ActivityFeedItem`, `FormSection`, `SectionDivider` already exist — audit §2.2: *"the work is mostly adoption and a handful of new primitives."* | audit §2.2 |
 | 7 | ⚠️ **The dialog-centring bug is ALREADY FIXED.** `globals.css` restates `margin: auto` on `.confirm-dialog`. This sprint owes the **assertion**, and its red comes from a **mutation check recorded in the PR body** — delete `margin: auto`, watch the position assertion fail at `x: 0, y: 0`, restore. | **D12** |
-| 8 | Where the prototype and the control plane disagree about a word, **the control plane wins** and the disagreement is written down as a finding. `flag-vocabulary.ts` **generalises**; it is not replaced. | Story 2.5 |
+| 8 | Where the prototype and the control plane disagree about a word, **the control plane wins** and the disagreement is written down as a finding. `flag-vocabulary.ts` **generalises**; it is not replaced. ⚠️ The generalisation is **Sprint 3** — see D14. | Story 2.5 |
 | 9 | Live copy this sprint must remove, verified on production 2026-08-29: uppercase mono body copy (*"WHAT THIS LIST REPORTS…"*), and storage-model page copy (*"Definitions, immutable versions and their audit…"*). Do-not #3 and #7. | contract Do-nots |
 | 10 | `prefers-reduced-motion` is honoured, and **focus is visible on every interactive element** — the keyboard pass is an assertion, not a review comment. | `ux-guidelines.md` |
 
@@ -85,15 +85,30 @@ unchanged. This is `LEARNINGS`' rule — a unit-tested pure value cannot share a
 imports a framework — and it is why `project-route-inventory.test.ts` can assert every `iconKey`
 against the component's real list instead of a second copy.
 
-**F2.4 — ⚠️ Do-not #3 is HALF satisfied, and the other half is violated eight ways.** The contract
-says uppercase appears in *"exactly two places, and never in mono"*. Counted against the live
-stylesheet 2026-08-30: **eight** rules apply `text-transform: uppercase` inside `.is-console`, and
-**none of them is mono**. The mono defect was fixed in `console-ia-overhaul`; the count was not.
+**F2.4 — ⚠️ Do-not #3 is violated on BOTH halves, and this paragraph asserted otherwise.** The
+contract says uppercase appears in *"exactly two places, and never in mono"*.
 
-Rather than delete six rules blind in a sprint that owns none of those surfaces, all eight are
-listed in `design-system/vocabulary.ts` with what each is and which sprint removes it — and
-`vocabulary.test.ts` fails if the set **grows**. A list that cannot grow is the difference between a
-Do-not and a decision.
+⚠️ The numbers below replace *"**eight** rules… and **none of them is mono**"*. That count came from
+scanning `console.css` and `system.css` — two of the four stylesheets that paint the console — and
+it was disproved inside this same sprint: `vocabulary.ts` records the correction, and this file was
+left asserting the disproved figure (fresh reviewer, round 2, Major; the same class as the finding
+it describes, one file over).
+
+Re-derived 2026-08-30 with the guard's own `isConsoleSurface()` over all four stylesheets
+(`globals.css`, `console.css`, `hub/hub.module.css`, `design-system/system.css`), counting each
+SELECTOR rather than each comma-separated rule — which is the unit `vocabulary.test.ts` now enforces:
+
+- **24** selectors apply `text-transform: uppercase` on a console surface.
+- **12 of them are also mono** — the pair Do-not #3 forbids outright, not the zero claimed here.
+- **21** entries in `UPPERCASE_ALLOWED` cover them (one entry matches several spellings of the same
+  class), **12** marked `mono: true`, **4** marked `keep: true` — two approved places under four
+  selectors while the old and new table headers are both live.
+
+Rather than delete seventeen rules blind in a sprint that owns none of those surfaces, every one is
+listed in `design-system/vocabulary.ts` with what it is and which sprint removes it — and
+`vocabulary.test.ts` fails if the set **grows**, if an entry stops describing a real rule, if two
+entries claim the same selector, or if an entry claims `mono` that no stylesheet applies mono to.
+A list that cannot grow is the difference between a Do-not and a decision.
 
 **F2.5 — ⚠️ One of the vocabulary's own rules was wrong, and its test proved it.** The banned-word
 list included `row`; the test then failed on `role="row"` and on a data table describing its own
@@ -176,8 +191,12 @@ single-line entry is recognisable rather than read.
 **As a** person using the product, **I want** the words to be about my job, **so that** the page
 stops describing the storage model.
 **Acceptance:**
-- `flag-vocabulary.ts` **generalises** into a product vocabulary module; it is not replaced, and
-  every user-facing word in `design-system/` goes through it.
+- ⚠️ **SPLIT IN TWO — see D14.** *"every user-facing word in `design-system/` goes through it"*
+  lands here: the specimen renders `SPECIMEN_WORDS` / `controlPlaneWord()`, which throws rather than
+  falling back, and `vocabulary.test.ts` fails if the page hard-codes a settled word. *"`flag-vocabulary.ts`
+  **generalises**"* moves to **Sprint 3**, because folding it in edits the live flags page and this
+  sprint's build contract says it changes no existing product route. `flag-vocabulary.ts` is
+  untouched here. Daniel decided the split; it is a deviation from the line above, not a discovery.
 - **Uppercase appears in exactly two places and never in mono** (contract Do-not #3), and **no page
   copy is about storage** (Do-not #7). Both are live defects: *"WHAT THIS LIST REPORTS IS WHAT
   PRODUCTION IS SERVING"* and *"Definitions, immutable versions and their audit remain visible while

@@ -56,11 +56,17 @@
 .ds :focus-visible {
   outline: 2px solid var(--gold-hot);
   outline-offset: 2px;
-  /* ⚠️ NO `border-radius` here. It was `var(--r)`, and at (0,1,1) it outranked every (0,1,0)
-     primitive that declares `999px` — so the 38x21 three-state switch, this sprint's flagship
-     primitive, became a rounded RECTANGLE with a round knob inside it the instant a keyboard user
-     reached it. Rendered and confirmed: a focused `.ds-switch` computed `border-radius: 8px`
-     against its declared `999px` (fresh reviewer, Major).
+  /* ⚠️ NO `border-radius` here. It was `var(--r)`, and it beat every primitive that declares
+     `999px` — so the 38x21 three-state switch, this sprint's flagship primitive, became a rounded
+     RECTANGLE with a round knob inside it the instant a keyboard user reached it. Rendered and
+     confirmed: a focused `.ds-switch` computed `border-radius: 8px` against its declared `999px`
+     (fresh reviewer, Major).
+
+     ⚠️ This said the focus rule wins "at (0,1,1)". It does not: `.ds :focus-visible` is a class
+     plus a PSEUDO-CLASS, so it is (0,2,0) — the same as `.ds .ds-pill`, which it beats on SOURCE
+     ORDER, not on specificity. Wrong arithmetic, right conclusion, in the file whose subject is
+     specificity (fresh reviewer, round 2, Minor). `system-cascade.test.ts` now computes these
+     rather than asserting them in a comment, and pins these exact three cases.
      Modern outlines follow the element's own radius, so there was nothing to gain and a pill to
      lose. */
 }

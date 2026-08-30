@@ -242,3 +242,41 @@ export const CONTROL_PLANE_WINS: readonly { design: string; product: string; why
 export function bannedWords(): string[] {
   return STORAGE_WORDS.map((entry) => entry.word.toLowerCase())
 }
+
+/**
+ * The words the specimen says, so it says them once.
+ *
+ * ⚠️ **Story 2.5 asks that "every user-facing word in `design-system/` goes through" this module,
+ * and none of them did.** `vocabulary.ts` shipped as a lint registry imported by exactly one file —
+ * its own test — while `page.tsx` hard-coded the same strings the registry describes. "Never turned
+ * on here" existed as a literal in `CONTROL_PLANE_WINS` and, separately, as a literal on the
+ * specimen, with nothing welding them: correcting the registry would have left the rendered page
+ * saying the old thing (fresh reviewer, round 2, Major).
+ *
+ * Folding `flag-vocabulary.ts` into this module is Sprint 3's half of the story (D14) — it edits a
+ * live, gated product route, which Sprint 2's build contract says it does not do. This half is the
+ * half that can land without touching one.
+ */
+export const SPECIMEN_WORDS = {
+  /** Per-ENVIRONMENT activation. The "here" is load-bearing — see `CONTROL_PLANE_WINS`. */
+  neverActivated: controlPlaneWord('Never turned on'),
+  on: 'On',
+  off: 'Off',
+} as const
+
+/**
+ * The product's wording for a design phrase the control plane overrules.
+ *
+ * Throws rather than falling back: a missing entry means the specimen is about to render a word the
+ * registry does not know about, and silently rendering the design's version is how the two drift.
+ */
+export function controlPlaneWord(design: string): string {
+  const entry = CONTROL_PLANE_WINS.find((candidate) => candidate.design === design)
+  if (!entry) {
+    throw new Error(
+      `no CONTROL_PLANE_WINS entry for "${design}" — the specimen may not invent a word the ` +
+        'vocabulary has not settled'
+    )
+  }
+  return entry.product
+}

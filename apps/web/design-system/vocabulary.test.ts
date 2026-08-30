@@ -11,9 +11,11 @@ import { dirname, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   CONTROL_PLANE_WINS,
+  SPECIMEN_WORDS,
   STORAGE_WORDS,
   UPPERCASE_ALLOWED,
   bannedWords,
+  controlPlaneWord,
   isConsoleSurface,
 } from './vocabulary.ts'
 
@@ -72,35 +74,58 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
     }
   }
 
-  for (const path of stylesheets) {
-    for (const rule of rules(path)) {
-      if (!/text-transform:\s*uppercase/.test(rule.body)) continue
-      // ⚠️ Do-not #3 is a CONSOLE contract. The landing, the methodology chapters and the hub carry
-      // 20 uppercase-mono rules that are a deliberate, shipped brand pattern (`.kicker`,
-      // `.gapStamp`, `.methodology-phase-label`…), and holding them to a rule written about the
-      // signed-in console would fire on correct work — which is how a rule gets switched off rather
-      // than obeyed. The scan is wide; the JUDGEMENT is scoped, and the scope is stated.
-      if (!isConsoleSurface(rule.selector)) continue
-      found.push(rule.selector)
+  // ⚠️ **EACH SELECTOR, not each RULE.** `rule.selector` is the whole comma-separated list, so one
+  // approved name anywhere in it authorised every other selector beside it. Adding
+  // `.data-table__brand-new` — uppercase AND mono, on a console surface, the pair Do-not #3 forbids
+  // outright — as its OWN rule went red correctly, and adding it to the existing
+  // `.data-table__filter-label, .data-table__count` rule instead was admitted with no entry and a
+  // green suite (fresh reviewer, round 2, Major, verified both directions).
+  //
+  // "The set may not grow" has to mean the set of SELECTORS. Splitting here is also what makes the
+  // mono lookup below unambiguous, which was the same defect one level along.
+  const eachSelector = (list: string) =>
+    list
+      .split(',')
+      .map((selector) => selector.trim().replace(/\s+/g, ' '))
+      .filter(Boolean)
 
-      // ⚠️ Mono is DEBT, not an absolute — because it turned out not to be one. `vocabulary.ts`
-      // claimed "none of them is mono"; widening the scan to `globals.css` found twelve console
-      // rules that are uppercase AND mono, the pair Do-not #3 forbids outright (fresh reviewer).
-      // `.product-shell__signal` is the clearest: the LIT console resets it, and the legacy branch —
-      // what a rollback serves — renders it.
-      //
-      // So a mono rule is permitted only where an entry DECLARES it, with the sprint that removes
-      // it. A new one fails, which is the property that matters between now and Sprint 6.
-      if (/var\(--mono|Plex Mono/.test(rule.body)) {
-        monoFound.push(rule.selector)
-        const entry = UPPERCASE_ALLOWED.find((candidate) =>
-          mentionsWholeClass(rule.selector, candidate.selector)
-        )
-        assert.ok(
-          entry?.mono,
-          `${rule.selector} is uppercase AND mono — Do-not #3 forbids the pair, and this is not ` +
-            'recorded debt. Fix it, or record it with the sprint that will.'
-        )
+  for (const path of stylesheets) {
+    for (const wholeRule of rules(path)) {
+      if (!/text-transform:\s*uppercase/.test(wholeRule.body)) continue
+      for (const selector of eachSelector(wholeRule.selector)) {
+        const rule = { selector, body: wholeRule.body }
+        // ⚠️ Do-not #3 is a CONSOLE contract. The landing, the methodology chapters and the hub carry
+        // 20 uppercase-mono rules that are a deliberate, shipped brand pattern (`.kicker`,
+        // `.gapStamp`, `.methodology-phase-label`…), and holding them to a rule written about the
+        // signed-in console would fire on correct work — which is how a rule gets switched off rather
+        // than obeyed. The scan is wide; the JUDGEMENT is scoped, and the scope is stated.
+        if (!isConsoleSurface(rule.selector)) continue
+        found.push(rule.selector)
+
+        // ⚠️ Mono is DEBT, not an absolute — because it turned out not to be one. `vocabulary.ts`
+        // claimed "none of them is mono"; widening the scan to `globals.css` found twelve console
+        // rules that are uppercase AND mono, the pair Do-not #3 forbids outright (fresh reviewer).
+        // `.product-shell__signal` is the clearest: the LIT console resets it, and the legacy branch —
+        // what a rollback serves — renders it.
+        //
+        // So a mono rule is permitted only where an entry DECLARES it, with the sprint that removes
+        // it. A new one fails, which is the property that matters between now and Sprint 6.
+        if (/var\(--mono|Plex Mono/.test(rule.body)) {
+          monoFound.push(rule.selector)
+          // ⚠️ `.filter`, not `.find`. The lookup took the FIRST matching entry, so a rule matching
+          // two entries was answered by whichever came first in the array — round 2 banned duplicate
+          // KEYS and left the ambiguous LOOKUP, which is the instance and not the class. Two real
+          // rules already match more than one entry; both currently agree on `mono`, so it passed by
+          // luck (fresh reviewer, round 2, Major). Now every matching entry must agree.
+          const entries = UPPERCASE_ALLOWED.filter((candidate) =>
+            mentionsWholeClass(rule.selector, candidate.selector)
+          )
+          assert.ok(
+            entries.length > 0 && entries.every((candidate) => candidate.mono),
+            `${rule.selector} is uppercase AND mono — Do-not #3 forbids the pair, and this is not ` +
+              'recorded debt. Fix it, or record it with the sprint that will.'
+          )
+        }
       }
     }
   }
@@ -254,4 +279,34 @@ test('the sentence Do-not #7 cites is caught by the rule written to catch it', (
   )
   assert.ok(caught.includes('immutable version'), 'the plural "immutable versions" is not caught')
   assert.ok(caught.includes('snapshot'), '"snapshot" is not caught')
+})
+
+test('the specimen says the control plane’s word, not the design’s', () => {
+  // ⚠️ Story 2.5's criterion is that "every user-facing word in `design-system/` goes through" this
+  // module. Before this, `vocabulary.ts` was imported by exactly ONE file — this test — while
+  // `page.tsx` hard-coded the same strings. "Never turned on here" existed as a literal in
+  // `CONTROL_PLANE_WINS` and, separately, as a literal on the specimen, welded by nothing: fixing
+  // the registry would have left the rendered page saying the old thing (fresh reviewer, round 2).
+  assert.equal(SPECIMEN_WORDS.neverActivated, 'Never turned on here')
+
+  // ...and the specimen may not hard-code a word the registry settles. This is the weld: the page
+  // renders `SPECIMEN_WORDS`, so a literal here means someone typed around the module.
+  const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8')
+  for (const entry of CONTROL_PLANE_WINS) {
+    assert.ok(
+      !specimen.includes(`>${entry.product}<`),
+      `the specimen hard-codes "${entry.product}" instead of reading it from CONTROL_PLANE_WINS`
+    )
+  }
+})
+
+test('a word the vocabulary has not settled cannot be rendered', () => {
+  // `controlPlaneWord` throws rather than falling back to the design's phrasing. A fallback would
+  // mean a typo in the key silently renders the word the control plane overrules — the exact
+  // disagreement `CONTROL_PLANE_WINS` exists to record.
+  assert.throws(
+    () => controlPlaneWord('a phrase nobody settled'),
+    /no CONTROL_PLANE_WINS entry/,
+    'an unknown design phrase must not resolve to anything'
+  )
 })

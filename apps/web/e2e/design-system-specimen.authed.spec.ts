@@ -4,9 +4,23 @@
 // checked. Every assertion here is one a human would otherwise have to make by eye on every PR.
 
 import { test, expect } from '@playwright/test'
+import * as primitives from '@/design-system/primitives'
 import { TYPE, WEIGHT } from '@/design-system/scales'
 
 const VIEWPORT = { width: 1440, height: 960 }
+
+/**
+ * How many enabled, focusable controls the specimen renders.
+ *
+ * A number kept OUTSIDE the focus loop on purpose. The previous pin was computed from the same
+ * `count` the loop walked, so it restated the loop instead of checking it, and ten controls could
+ * vanish from the render with the suite green. This is the one place the expected shape of the page
+ * is written down; the specimen and this constant are two things that must agree.
+ *
+ * Excludes `disabled` and `loading` controls, which set the DOM attribute deliberately and cannot
+ * take focus — the selector below excludes them, so they are not counted here either.
+ */
+const EXPECTED_FOCUSABLE = 30
 const SPECIMEN = '/app/design-system'
 
 /** Exactly `'true'`, matching `lib/flags.ts`. `CONSOLE_SHELL_ENABLED=false` must SKIP, not fail. */
@@ -78,6 +92,38 @@ test.describe('the design system specimen', () => {
     await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
   })
 
+  test("the PRODUCT's confirmation dialog opens centred — the element D12 actually names", async ({
+    page,
+  }) => {
+    // ⚠️ **The assertion above was pointed at the wrong dialog.** D12 locks the position check
+    // against `.confirm-dialog` in `globals.css` — what every destructive action in the console
+    // uses — and says "the fix is one stylesheet edit away from silently regressing". The test
+    // above asserts `.ds-dialog`, an element this sprint created, centred by a DIFFERENT
+    // `margin: auto` in a different file. Deleting `margin: auto` from `.confirm-dialog` left
+    // typecheck, lint, 1503 unit tests, drift and all 14 specimen specs green while putting every
+    // confirmation dialog in the product back at x:0, y:0 (fresh reviewer, round 2, Blocking).
+    //
+    // Same assertion, real element. `console-ia-overhaul` S3.3 fixed this bug once; this is what
+    // keeps it fixed.
+    await page.getByRole('button', { name: /product.s confirmation dialog/i }).click()
+    const dialog = page.locator('[data-specimen-product-dialog] dialog.confirm-dialog')
+    await expect(dialog).toBeVisible()
+
+    const box = await dialog.boundingBox()
+    expect(box, 'the product dialog rendered no box').not.toBeNull()
+    if (!box) return
+    const centreX = box.x + box.width / 2
+    const centreY = box.y + box.height / 2
+    expect(
+      Math.abs(centreX - VIEWPORT.width / 2),
+      `the product dialog's centre x is ${centreX}, not ${VIEWPORT.width / 2}`
+    ).toBeLessThan(2)
+    expect(
+      Math.abs(centreY - VIEWPORT.height / 2),
+      `the product dialog's centre y is ${centreY}, not ${VIEWPORT.height / 2}`
+    ).toBeLessThan(2)
+  })
+
   test('every interactive element shows a visible focus ring, keyboard only', async ({ page }) => {
     // `outline: none` without a replacement is the single most common way a design system locks out
     // keyboard users, and the guidelines name it. Asserted as PAINT — an outline width — not as the
@@ -103,8 +149,13 @@ test.describe('the design system specimen', () => {
     // Now every element is asserted, and the element is confirmed FOCUSED before its outline is
     // read — nothing previously checked that `Shift+Tab`/`Tab` had actually returned focus, so a
     // ring could have been read off an element the keyboard never reached.
+    // ⚠️ **The cap was 25 and the specimen renders 29.** The four never examined were the two
+    // switches in the data table, the `unbuilt` button in the empty state, and the dialog trigger —
+    // so `.ds .ds-table-empty .ds-btn:focus-visible { outline: none }` passed the whole gate, in the
+    // test called "every interactive element shows a visible focus ring" (fresh reviewer, round 2,
+    // Blocking, verified by mutation). A cap chosen for speed silently redefined "every".
     let checked = 0
-    for (let index = 0; index < Math.min(count, 25); index += 1) {
+    for (let index = 0; index < count; index += 1) {
       const element = focusable.nth(index)
       await element.evaluate((node) => (node as HTMLElement).focus({ preventScroll: true }))
       await page.keyboard.press('Shift+Tab')
@@ -140,10 +191,21 @@ test.describe('the design system specimen', () => {
       )
       checked += 1
     }
-    // Every element in range is now asserted, so this is a pin on the LOOP rather than a floor on a
-    // filtered subset: if the specimen ever renders fewer controls than the assertions assume, the
-    // pass shrinks silently and this is what notices.
-    expect(checked, 'the pass asserted nothing').toBe(Math.min(count, 25))
+    // ⚠️ This was `expect(checked).toBe(Math.min(count, 25))`, which CANNOT FAIL: the loop body has
+    // no `continue`, so `checked === count` by construction, and the expectation was computed from
+    // the same `count`. Its comment claimed it would notice "if the specimen ever renders fewer
+    // controls than the assertions assume" — it could not. Hiding one section removed ten controls
+    // and the suite stayed green, the pass silently shrinking from 25 assertions to 19 (fresh
+    // reviewer, round 2, Blocking, verified by mutation).
+    //
+    // A pin has to come from OUTSIDE the loop to mean anything. This is the count the specimen is
+    // known to render; a section that stops rendering fails here, and adding controls fails here
+    // too — deliberately, because "the specimen grew and nobody looked" is the same blindness.
+    expect(
+      checked,
+      `the specimen rendered ${checked} enabled focusable controls, not ${EXPECTED_FOCUSABLE}. If ` +
+        'that is intended, change the constant in the same commit as the render.'
+    ).toBe(EXPECTED_FOCUSABLE)
   })
 
   test('the data table is a complete ARIA structure, not just a row with a role on it', async ({ page }) => {
@@ -155,6 +217,29 @@ test.describe('the design system specimen', () => {
     const rows = page.locator('.ds-specimen [role="row"]')
     const rowCount = await rows.count()
     expect(rowCount, 'the specimen rendered no table rows').toBeGreaterThan(4)
+
+    // ⚠️ Iterating rows cannot see a table that HAS no rows — and the specimen renders one:
+    // `<Table><TableEmpty /></Table>` is `role="table"` containing nothing, which is the same
+    // orphaned-role defect a third time, one case along from the two already fixed (fresh reviewer,
+    // round 2, Minor). A table is checked from the TABLE down, not only from the rows up.
+    const tables = page.locator('.ds-specimen [role="table"]')
+    const tableCount = await tables.count()
+    expect(tableCount, 'the specimen rendered no tables').toBeGreaterThan(1)
+    for (let index = 0; index < tableCount; index += 1) {
+      const inside = await tables.nth(index).evaluate((table) => ({
+        rows: table.querySelectorAll('[role="row"]').length,
+        // An empty state is a legitimate table with no rows — but then it must not claim to be a
+        // table, because a grid with neither rows nor columns is what a screen reader reads as
+        // broken rather than as "nothing here yet".
+        empty: Boolean(table.querySelector('.ds-table-empty')),
+      }))
+      expect(
+        inside.empty,
+        `table ${index} claims role="table" around an empty state — a grid with no rows reads as ` +
+          'broken structure, not as "nothing here yet". Pass `empty` to <Table>.'
+      ).toBe(false)
+      expect(inside.rows, `table ${index} carries role="table" and contains no rows`).toBeGreaterThan(0)
+    }
 
     for (let index = 0; index < rowCount; index += 1) {
       const shape = await rows.nth(index).evaluate((row) => ({
@@ -171,6 +256,61 @@ test.describe('the design system specimen', () => {
         ).toMatch(/^(cell|columnheader)$/)
       }
     }
+  })
+
+  test('every primitive the module exports actually reaches the specimen', async ({ page }) => {
+    // ⚠️ **Ten of the fourteen primitives Story 2.3 lists were asserted by NOTHING.** Grepping the
+    // whole spec for `ds-` names yielded only `ds-answer`, `ds-btn`, `ds-dialog`, `ds-switch` and
+    // the specimen's own layout classes — so the rail item, project switcher, environment menu,
+    // section tab, state pill, stat tile, toast, numbered step card and wizard could all be deleted
+    // from the render with the suite green (fresh reviewer, round 2, Major; demonstrated by hiding
+    // a section and watching nothing notice).
+    //
+    // The pairs are declared rather than derived because a component's export name and its root
+    // class are genuinely two different things. What is DERIVED is the coverage check below: a new
+    // export with no entry here fails, so this list cannot fall behind the module the way the
+    // sprint's own primitive list fell behind the spec.
+    const PRIMITIVES: [string, string][] = [
+      ['Button', '.ds-btn'],
+      ['Pill', '.ds-pill'],
+      ['Switch', '.ds-switch'],
+      ['RailItem', '.ds-rail-item'],
+      ['Tab', '.ds-tab'],
+      ['Stat', '.ds-stat'],
+      ['Answer', '.ds-answer'],
+      ['Table', '.ds-table'],
+      ['TableHead', '.ds-table-head'],
+      ['TableRow', '.ds-table-row'],
+      ['TableCell', '.ds-specimen-col'],
+      ['TableEmpty', '.ds-table-empty'],
+      ['Toast', '.ds-toast'],
+      ['Steps', '.ds-steps'],
+      ['Step', '.ds-step'],
+      ['Wizard', '.ds-wizard'],
+      ['EnvironmentControl', '.ds-env'],
+      ['Switcher', '.ds-switcher'],
+      ['Menu', '.ds-menu'],
+      ['MenuItem', '.ds-menu-item'],
+    ]
+
+    for (const [name, selector] of PRIMITIVES) {
+      const count = await page.locator(`.ds-specimen ${selector}`).count()
+      expect(count, `<${name}> renders nothing matching ${selector} on the specimen`).toBeGreaterThan(0)
+    }
+
+    // ...and the list may not fall behind the module. The MODULE is the source of truth for what
+    // exists; anything it exports and this list omits is a primitive with no specimen entry, which
+    // is exactly how ten of them went unasserted in the first place.
+    //
+    // Read from the module's own exports rather than by grepping its source: a regex over
+    // `export function` would miss a primitive exported any other way, and this check exists
+    // precisely because a hand-maintained second list drifted from the first one.
+    const exported = Object.keys(primitives).filter((name) => /^[A-Z]/.test(name))
+    const listed = new Set(PRIMITIVES.map(([name]) => name))
+    expect(
+      exported.filter((name) => !listed.has(name)),
+      'primitives.tsx exports a component with no entry above — add it to the specimen and to this list'
+    ).toEqual([])
   })
 
   test('the specimen fits its viewport and never scrolls sideways', async ({ page }) => {
@@ -327,7 +467,11 @@ test.describe('the design system specimen', () => {
         const style = getComputedStyle(element)
         return { fontSize: style.fontSize, color: style.color }
       })
-    expect(answer.fontSize, 'the answer line lost its declared size to console.css').toBe('13.5px')
+    // ⚠️ `TYPE.body.px`, not `'13.5px'`. Hard-coding them here re-typed two constants in the file
+    // whose FIRST test makes a point of importing `TYPE` "rather than hard-coding sizes here"
+    // (fresh reviewer, round 2, Minor) — the weld-welded-a-copy defect from round 1, three tests
+    // down from the comment that names it.
+    expect(answer.fontSize, 'the answer line lost its declared size to console.css').toBe(`${TYPE.body.px}px`)
     expect(answer.color, 'the answer line lost --crema to console.css`s body-copy rule').toBe(crema)
 
     await page.getByRole('button', { name: 'Open the confirmation dialog' }).click()
@@ -335,7 +479,9 @@ test.describe('the design system specimen', () => {
       const style = getComputedStyle(element)
       return { fontSize: style.fontSize, color: style.color }
     })
-    expect(title.fontSize, 'the dialog title renders no larger than its own body').toBe('15px')
+    expect(title.fontSize, 'the dialog title renders no larger than its own body').toBe(
+      `${TYPE.section.px}px`
+    )
     expect(title.color, 'the dialog title lost --crema').toBe(crema)
   })
 })

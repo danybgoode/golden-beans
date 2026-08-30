@@ -459,7 +459,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: console-visual
-          path: test-results/console-visual/
+          # ⚠️ `design-system/` was missing, so the specimen screenshot was produced and DISCARDED on
+          # every run. The spec that writes it calls it "evidence for the human half of the review",
+          # and Sprint 2's walkthrough step 1 asks Daniel to look at that screen — the one artefact
+          # this sprint exists to put in front of a person never left the runner (fresh reviewer,
+          # round 2, Major).
+          path: |
+            test-results/console-visual/
+            test-results/design-system/
           if-no-files-found: ignore
 
       - name: Dump Next.js server log (diagnostics)

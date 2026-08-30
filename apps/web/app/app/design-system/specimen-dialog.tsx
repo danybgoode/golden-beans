@@ -14,7 +14,44 @@
 // The fix has landed; this is the specimen that lets the gate keep it landed.
 
 import { useEffect, useRef, useState } from 'react'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Button } from '@/design-system/primitives'
+
+/**
+ * The PRODUCT's confirmation dialog, rendered beside the design system's own.
+ *
+ * ⚠️ **The centring assertion was pointed at the wrong element.** D12 locks it against
+ * `.confirm-dialog` in `globals.css` — the component every destructive action in the console
+ * actually uses — and says "the fix is one stylesheet edit away from silently regressing". What
+ * shipped asserted `.ds-dialog`, an element THIS SPRINT created, whose `margin: auto` is a
+ * different declaration in a different file. Deleting `margin: auto` from `.confirm-dialog` left
+ * the entire gate green and put every confirmation dialog in the product back at x:0, y:0 — the
+ * exact bug D12 exists to prevent (fresh reviewer, round 2, Blocking; verified by mutation).
+ *
+ * Rendering the real component here is what makes the assertion true of the thing it names. It
+ * changes no product route: the specimen is the one page whose job is to show these side by side.
+ */
+export function SpecimenProductDialog() {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button variant="secondary" icon="warning" onClick={() => setOpen(true)}>
+        Open the product&rsquo;s confirmation dialog
+      </Button>
+      <div data-specimen-product-dialog="">
+        <ConfirmDialog
+          open={open}
+          verb="Revoke"
+          noun="key"
+          subject="Miyagi Cloud Run"
+          consequence="Anything using it starts getting 401 immediately."
+          onConfirm={() => setOpen(false)}
+          onCancel={() => setOpen(false)}
+        />
+      </div>
+    </>
+  )
+}
 
 export function SpecimenDialog() {
   const [open, setOpen] = useState(false)

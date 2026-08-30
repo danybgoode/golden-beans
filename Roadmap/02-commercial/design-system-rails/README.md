@@ -542,6 +542,38 @@ fails a decrease.
 
 ---
 
+### D14 — 🔒 Story 2.5 splits in two, and Sprint 3 owes the second half. **Daniel decided this one.**
+
+Story 2.5 asks that *"`flag-vocabulary.ts` generalises into a product vocabulary module; it is not
+replaced, and every user-facing word in `design-system/` goes through it."* Those are two changes,
+and only one of them can happen in Sprint 2.
+
+⚠️ **The build contract for Sprint 2 says it changes no existing product route.** Folding
+`flag-vocabulary.ts` into the new module edits the live, flag-gated flags page — the surface that
+took seven review rounds in `flags-visual-rule-builder`. Delivering the story as written would make
+the one sprint whose safety argument is "it touches nothing live" touch something live.
+
+⚠️ **And the half that WAS delivered had not actually been delivered.** `design-system/vocabulary.ts`
+shipped as a lint registry imported by exactly one file — its own test — while `page.tsx` hard-coded
+the strings the registry describes. `"Never turned on here"` existed as a literal in
+`CONTROL_PLANE_WINS` and, separately, as a literal on the specimen, welded by nothing: correcting the
+registry would have left the rendered page saying the old word (fresh reviewer, round 2, Major).
+
+Decided, not discovered:
+
+- **Sprint 2** wires the specimen's user-facing words through `SPECIMEN_WORDS` /
+  `controlPlaneWord()`, so the module has real callers and "goes through it" is true of
+  `design-system/`. `controlPlaneWord()` THROWS on an unsettled phrase rather than falling back to
+  the design's wording — a fallback is how the two drift apart silently. `vocabulary.test.ts` fails
+  if the specimen hard-codes a word the registry settles (mutation-verified).
+- **Sprint 3** folds `flag-vocabulary.ts` into it. Sprint 3 already rebuilds those console surfaces,
+  so the edit lands in the sprint that owns the route rather than in the one that does not.
+
+`flag-vocabulary.ts` is untouched by Sprint 2. That is a deviation from the story text, decided here
+rather than discovered at close.
+
+---
+
 ## Routing — who builds what, and why
 
 Stated here so the choice is auditable (WAYS-OF-WORKING → *Routing a build by model tier*).

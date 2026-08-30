@@ -37,8 +37,9 @@ import { ProductShell } from '@/components/product/ProductShell'
 import { redirect } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { getSessionUser } from '@/lib/supabase-auth'
+import { SPECIMEN_WORDS } from '@/design-system/vocabulary'
 import { SPACE, TYPE, WEIGHT } from '@/design-system/scales'
-import { SpecimenDialog } from './specimen-dialog'
+import { SpecimenDialog, SpecimenProductDialog } from './specimen-dialog'
 import {
   Answer,
   Button,
@@ -210,9 +211,9 @@ export default async function DesignSystemSpecimen({
 
           <Section id="pills" title="State pill" note="Dot plus word — never colour alone.">
             <div className="ds-specimen-row">
-              <Pill state="on">On</Pill>
+              <Pill state="on">{SPECIMEN_WORDS.on}</Pill>
               <Pill state="off">Turned off</Pill>
-              <Pill state="never">Never turned on here</Pill>
+              <Pill state="never">{SPECIMEN_WORDS.neverActivated}</Pill>
             </div>
           </Section>
 
@@ -298,7 +299,7 @@ export default async function DesignSystemSpecimen({
                   <code>checkout.stripe_enabled</code>
                 </TableCell>
                 <TableCell>
-                  <Pill state="on">On</Pill>
+                  <Pill state="on">{SPECIMEN_WORDS.on}</Pill>
                 </TableCell>
                 <TableCell>
                   <Switch state="on" label="checkout.stripe_enabled" />
@@ -309,14 +310,14 @@ export default async function DesignSystemSpecimen({
                   <code>listing.photo_hints</code>
                 </TableCell>
                 <TableCell>
-                  <Pill state="never">Never turned on here</Pill>
+                  <Pill state="never">{SPECIMEN_WORDS.neverActivated}</Pill>
                 </TableCell>
                 <TableCell>
                   <Switch state="never" label="listing.photo_hints" />
                 </TableCell>
               </TableRow>
             </Table>
-            <Table>
+            <Table empty>
               <TableEmpty
                 title="No scheduled changes"
                 body="Scheduling a flag change is not available yet. Nothing is waiting to happen here."
@@ -335,6 +336,7 @@ export default async function DesignSystemSpecimen({
             note="What is under test here is WHERE it is. A universal margin reset defeats the UA's centring on a modal dialog, and every confirmation in this product sat in the top-left corner from the day the component shipped until it was found by opening the page."
           >
             <SpecimenDialog />
+            <SpecimenProductDialog />
           </Section>
 
           <Section id="feedback" title="Toasts">
