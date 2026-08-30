@@ -1,6 +1,6 @@
 # One design system, every surface — Sprint 2: The language, systematised
 
-**Status:** ⬜ not started
+**Status:** 🟨 in progress — branched `feat/design-system-rails-s2` off `main` at `8bd9167`
 
 > **This is the sprint Daniel is actually buying.** Everything after it is application. The approved
 > prototype is the language (locked at the scoping review); this sprint turns it from one HTML file

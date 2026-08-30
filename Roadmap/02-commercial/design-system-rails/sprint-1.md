@@ -1,6 +1,9 @@
 # One design system, every surface — Sprint 1: The rails — make a bad-looking page fail the build
 
-**Status:** 🟦 In review — all six stories built, gate green.
+**Status:** ✅ **SHIPPED & LIVE 2026-08-30** — merged as `8bd9167` (PR #128), deployed to
+production and verified: the generated token block serves on `goldenfrijoles.com` with all 23 values
+identical to the ones `console.css` declared before. That is the "no product pixel moves" contract
+proved against the deployed CSS rather than promised.
 
 | Story | | Commit |
 |---|---|---|
@@ -13,6 +16,24 @@
 | 1.6 — the gate is driven by the manifest | ✅ | `d6c85bc` |
 
 Architecture locked `20d030f` — D1–D13, five scaffolded decisions changed, five new ones added.
+
+**Review: four rounds.** agy 0 Blocking (one invalid run discounted and re-run), vibe 0 Blocking,
+the fresh reviewer's Majors all fixed. ⚠️ Codex quota-capped until 2026-09-16 — rotated to the third
+family in the router's order rather than substituting subagents, so two cross-family passes held.
+
+**Every round found a guard that could not fail** — the class this epic exists to eliminate,
+arriving inside the machinery built to eliminate it:
+
+| Guard | Why it could not fail |
+|---|---|
+| `expect(<boolean>).toBeDefined()` | `false` is defined. *(Found by re-reading my own diff.)* |
+| the coverage ratchet | an empty `COVERAGE_BASE_REF` made `git show :<path>` read the INDEX, so it compared coverage against itself *(agy, Blocking)* |
+| the three new drift rules | a path filter meant they ran on **no PR** that only touched `design-system/` *(fresh reviewer, Blocking)* |
+| the contract weld | it tested a hand-retyped COPY, so the disproved `78` was still in the gate *(fresh reviewer, proven by mutation)* |
+| the empty-loop guard | twice — a tautology replaced by another tautology *(fresh reviewer, rounds 1 and 2)* |
+| the `stylesheetFiles` throw test | passed with the throw reverted; and the suggested fix did not work either, because `sourceFiles` throws first |
+
+**30+ assertions observed failing** under deliberate mutation, each reverted.
 
 > **This sprint writes almost no product CSS.** It builds the machinery that makes every later
 > sprint checkable, and it closes four of the six mechanisms in the epic README on its own.
