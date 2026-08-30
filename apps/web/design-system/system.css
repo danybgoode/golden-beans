@@ -617,6 +617,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .ds-wizard-step {
   display: inline-flex;
@@ -633,11 +634,204 @@
   color: var(--green);
 }
 .ds-wizard-bar {
-  flex: 1;
+  /* Bounded. `flex: 1` let each connector grow to fill the row, so three short labels sat marooned
+     at either end of two enormous rules — the connector dominated the thing it connects. */
+  flex: 0 1 48px;
+  min-width: 16px;
   height: 2px;
   border-radius: 999px;
   background: var(--line);
 }
 .ds-wizard-step[data-state='done'] + .ds-wizard-bar {
   background: var(--green-deep);
+}
+
+/* ── The specimen's own layout ────────────────────────────────────────────────────────────────
+ * Only the page that shows the primitives; no product route imports these. Kept in this file
+ * rather than a second stylesheet so the namespace rule reaches it too — a specimen that drifted
+ * off the system would be the least trustworthy page in the product. */
+.ds-specimen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+  max-width: 1180px;
+}
+.ds-specimen-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds-specimen-h1 {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--crema);
+}
+.ds-specimen-lede {
+  font-size: 13.5px;
+  color: var(--dim);
+  max-width: 62ch;
+}
+.ds-specimen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+}
+.ds-specimen-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--crema);
+}
+.ds-specimen-note {
+  font-size: 12.5px;
+  color: var(--dim);
+  max-width: 78ch;
+}
+.ds-specimen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.ds-specimen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ds-specimen-col-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ds-specimen-col {
+  width: 120px;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.ds-specimen-col-wide {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--crema);
+}
+.ds-specimen-rail {
+  max-width: 236px;
+}
+.ds-specimen-tabs {
+  border-bottom: 1px solid var(--line);
+}
+
+/* Each type step, rendered at its own size — the point of a specimen. */
+.ds-specimen-type {
+  color: var(--crema);
+}
+.ds-specimen-type--label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ds-specimen-type--micro {
+  font-size: 11.5px;
+}
+.ds-specimen-type--small {
+  font-size: 12px;
+}
+.ds-specimen-type--caption {
+  font-size: 12.5px;
+}
+.ds-specimen-type--control {
+  font-size: 13px;
+}
+.ds-specimen-type--body {
+  font-size: 13.5px;
+}
+.ds-specimen-type--ground {
+  font-size: 14px;
+}
+.ds-specimen-type--section {
+  font-size: 15px;
+}
+.ds-specimen-type--page {
+  font-size: 23px;
+  font-weight: 700;
+}
+.ds-specimen-type--stat {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-specimen-weight {
+  /* Read as one run of text when they were bare spans — three samples separated only by an 8px gap
+     look like one sentence. A specimen that is hard to read fails at its only job, so each sample
+     gets the same chip treatment the rest of the system uses. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13.5px;
+  color: var(--crema);
+}
+.ds-specimen-weight--medium {
+  font-weight: 500;
+}
+.ds-specimen-weight--semibold {
+  font-weight: 600;
+}
+.ds-specimen-weight--bold {
+  font-weight: 700;
+}
+
+.ds-specimen-spaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ds-specimen-space {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.ds-specimen-space-label {
+  font-size: 11.5px;
+  color: var(--dim);
+}
+.ds-specimen-swatch {
+  height: 12px;
+  border-radius: 2px;
+  background: var(--gold-deep);
+}
+.ds-specimen-swatch--hair {
+  width: 2px;
+}
+.ds-specimen-swatch--tight {
+  width: 4px;
+}
+.ds-specimen-swatch--snug {
+  width: 6px;
+}
+.ds-specimen-swatch--base {
+  width: 8px;
+}
+.ds-specimen-swatch--cosy {
+  width: 12px;
+}
+.ds-specimen-swatch--roomy {
+  width: 16px;
+}
+.ds-specimen-swatch--loose {
+  width: 20px;
 }
