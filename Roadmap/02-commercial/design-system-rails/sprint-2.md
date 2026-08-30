@@ -1,6 +1,16 @@
 # One design system, every surface — Sprint 2: The language, systematised
 
-**Status:** 🟨 in progress — branched `feat/design-system-rails-s2` off `main` at `8bd9167`
+**Status:** 🟦 In review — all five stories built, gate green.
+
+| Story | | Commit |
+|---|---|---|
+| 2.1 — the type and space scale, on a specimen | ✅ | `79485f5` (scales) · `8de861c` (specimen) |
+| 2.2 — every primitive has all **ten** states | ✅ | `12c731c` — see finding **F2.1** |
+| 2.3 — the primitive set | ✅ | `12c731c` (stylesheet) · `8de861c` (components) |
+| 2.4 — icons, and the reason there were none | ✅ | `5cad270` |
+| 2.5 — one product vocabulary | ✅ | `8de861c` — see findings **F2.4** and **F2.5** |
+
+Branched `feat/design-system-rails-s2` off `main` at `8bd9167`.
 
 > **This is the sprint Daniel is actually buying.** Everything after it is application. The approved
 > prototype is the language (locked at the scoping review); this sprint turns it from one HTML file
@@ -74,6 +84,29 @@ lives in `components/ui/icon-names.ts` and `Icon.tsx` re-exports it, so every ex
 unchanged. This is `LEARNINGS`' rule — a unit-tested pure value cannot share a file with code that
 imports a framework — and it is why `project-route-inventory.test.ts` can assert every `iconKey`
 against the component's real list instead of a second copy.
+
+**F2.4 — ⚠️ Do-not #3 is HALF satisfied, and the other half is violated eight ways.** The contract
+says uppercase appears in *"exactly two places, and never in mono"*. Counted against the live
+stylesheet 2026-08-30: **eight** rules apply `text-transform: uppercase` inside `.is-console`, and
+**none of them is mono**. The mono defect was fixed in `console-ia-overhaul`; the count was not.
+
+Rather than delete six rules blind in a sprint that owns none of those surfaces, all eight are
+listed in `design-system/vocabulary.ts` with what each is and which sprint removes it — and
+`vocabulary.test.ts` fails if the set **grows**. A list that cannot grow is the difference between a
+Do-not and a decision.
+
+**F2.5 — ⚠️ One of the vocabulary's own rules was wrong, and its test proved it.** The banned-word
+list included `row`; the test then failed on `role="row"` and on a data table describing its own
+rows. **A table genuinely has rows** — the defect is calling a *feature* a row, and no scanner can
+tell those two apart from the word alone. Banning it anyway produces a rule people route around,
+which is worse than no rule. Removed with the reasoning; the domain-noun problem is left to review,
+where judgement lives.
+
+**F2.6 — ⚠️ The storage copy Story 2.5 calls live is in the gate-OFF branch.**
+*"Definitions, immutable versions and their audit remain visible while flag serving is dark…"* is in
+`app/app/flags/[projectSlug]/page.tsx`'s **legacy** branch, which renders only while
+`FLAG_CONSOLE_ENABLED` is off — and it is ON in production. So it is not on screen today. It is
+still real debt (a preview, or a rollback, renders it), and Sprint 4 owns that page.
 
 ## Stories
 
@@ -175,14 +208,19 @@ Env: steps 1–4 **local** — `supabase start`, then a production build (`npm r
 `next dev` first: a dev server colliding with the runner's own `.next` build is the failure that
 looks like a regression and is not.
 
-1. Go to `http://localhost:3000/app/design-system` (signed in).
-   → The specimen renders every type step, every space step, and every primitive in all **nine**
-   states, on one screen. **This is the language. Approve or reject it here.**
+1. Go to `http://localhost:3000/app/design-system?project=<your-slug>` (signed in).
+   *(The slug is a QUERY parameter — this route is the design system's own page, not a project's,
+   so it has no `[projectSlug]` segment. Membership is still checked server-side.)*
+   → The specimen renders every type step, every weight step, every space step, and every primitive
+   in all **ten** states, on one screen. **This is the language. Approve or reject it here.**
+   *(Ten, not nine — see finding **F2.1**: `disabled` and `unbuilt` are different states and the
+   guidelines say they must look different.)*
 2. Tab through the specimen with the keyboard only, without touching the mouse.
    → Every interactive element shows a visible focus ring. Nothing is reachable-but-invisible.
 3. On the specimen, open the confirmation dialog.
-   → It is **centred in the viewport**. (It already is — Story 2.3 is adding the assertion that
-   keeps it centred. The PR body must show the mutation check that proved the assertion can fail.)
+   → It is **centred in the viewport**, and Cancel is focused rather than Revoke.
+   *(It already was centred — what Story 2.3 adds is the assertion that keeps it so. Verified by
+   mutation: removing `margin: auto` moves the centre to x=215 instead of 720.)*
 4. Look at the rail items on the specimen.
    → Each carries an **SVG** icon — no glyph, no emoji — and the active one is a raised card:
    lighter fill, a 1px border, a gold icon, full-strength text. Legible at a glance rather than a
