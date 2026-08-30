@@ -55,6 +55,7 @@ import {
   Tab,
   Table,
   TableEmpty,
+  TableCell,
   TableHead,
   TableRow,
   Toast,
@@ -133,21 +134,23 @@ export default async function DesignSystemSpecimen({
           >
             <Table>
               <TableHead>
-                <span className="ds-specimen-col">Step</span>
-                <span className="ds-specimen-col">Size</span>
-                <span className="ds-specimen-col">Uses</span>
-                <span className="ds-specimen-col-wide">Specimen</span>
+                <TableCell header>Step</TableCell>
+                <TableCell header>Size</TableCell>
+                <TableCell header>Uses</TableCell>
+                <TableCell header wide>
+                  Specimen
+                </TableCell>
               </TableHead>
               {Object.entries(TYPE).map(([name, step]) => (
                 <TableRow key={name}>
-                  <span className="ds-specimen-col">
+                  <TableCell>
                     <code>{name}</code>
-                  </span>
-                  <span className="ds-specimen-col">{step.px}px</span>
-                  <span className="ds-specimen-col">{step.uses}</span>
-                  <span className={`ds-specimen-col-wide ds-specimen-type ds-specimen-type--${name}`}>
+                  </TableCell>
+                  <TableCell>{step.px}px</TableCell>
+                  <TableCell>{step.uses}</TableCell>
+                  <TableCell wide className={`ds-specimen-type ds-specimen-type--${name}`}>
                     {step.role}
-                  </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </Table>
@@ -284,31 +287,33 @@ export default async function DesignSystemSpecimen({
           >
             <Table>
               <TableHead>
-                <span className="ds-specimen-col-wide">Feature</span>
-                <span className="ds-specimen-col">State</span>
-                <span className="ds-specimen-col">Switch</span>
+                <TableCell header wide>
+                  Feature
+                </TableCell>
+                <TableCell header>State</TableCell>
+                <TableCell header>Switch</TableCell>
               </TableHead>
               <TableRow>
-                <span className="ds-specimen-col-wide">
+                <TableCell wide>
                   <code>checkout.stripe_enabled</code>
-                </span>
-                <span className="ds-specimen-col">
+                </TableCell>
+                <TableCell>
                   <Pill state="on">On</Pill>
-                </span>
-                <span className="ds-specimen-col">
+                </TableCell>
+                <TableCell>
                   <Switch state="on" label="checkout.stripe_enabled" />
-                </span>
+                </TableCell>
               </TableRow>
               <TableRow>
-                <span className="ds-specimen-col-wide">
+                <TableCell wide>
                   <code>listing.photo_hints</code>
-                </span>
-                <span className="ds-specimen-col">
+                </TableCell>
+                <TableCell>
                   <Pill state="never">Never turned on here</Pill>
-                </span>
-                <span className="ds-specimen-col">
+                </TableCell>
+                <TableCell>
                   <Switch state="never" label="listing.photo_hints" />
-                </span>
+                </TableCell>
               </TableRow>
             </Table>
             <Table>

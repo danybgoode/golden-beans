@@ -82,7 +82,14 @@ test.describe('the design system specimen', () => {
     // `outline: none` without a replacement is the single most common way a design system locks out
     // keyboard users, and the guidelines name it. Asserted as PAINT — an outline width — not as the
     // presence of a `:focus-visible` rule somewhere in a stylesheet.
-    const focusable = page.locator('.ds-specimen button:visible, .ds-specimen a:visible')
+    // ⚠️ `:not([disabled])` is part of the SELECTOR, not a skip inside the loop. The `disabled` and
+    // `loading` states set the DOM attribute on purpose, and a disabled control cannot take focus —
+    // so including them forced a "focus did not land here" branch, and that branch is independent
+    // of whether the element paints a ring. Excluding them up front is what lets every remaining
+    // element be ASSERTED rather than skipped (cross-family review, agy).
+    const focusable = page.locator(
+      '.ds-specimen button:visible:not([disabled]), .ds-specimen a:visible:not([disabled])'
+    )
     const count = await focusable.count()
     expect(count, 'the specimen rendered nothing focusable').toBeGreaterThan(10)
 
@@ -113,9 +120,16 @@ test.describe('the design system specimen', () => {
         }
       })
 
-      // If the keyboard did not land here, this element tells us nothing — but a run where NOTHING
-      // is reachable must still fail, which `checked` below enforces.
-      if (!state.focused) continue
+      // ⚠️ This was `if (!state.focused) continue` — the SAME silent-skip shape as the
+      // `outline: none` one above it, in the same test, added while fixing that one. An element the
+      // keyboard could not reach is a keyboard-accessibility failure in its own right, and skipping
+      // it meant the count floor was the only thing standing between a locked-out control and a
+      // green run (cross-family review, agy). Now the round trip is asserted.
+      expect(
+        state.focused,
+        `${state.describe} is enabled and focusable, but Shift+Tab/Tab did not return focus to it — ` +
+          'the keyboard cannot reach it'
+      ).toBe(true)
 
       expect(
         state.outlineStyle,
@@ -126,7 +140,37 @@ test.describe('the design system specimen', () => {
       )
       checked += 1
     }
-    expect(checked, 'the keyboard reached no element at all — the pass asserted nothing').toBeGreaterThan(5)
+    // Every element in range is now asserted, so this is a pin on the LOOP rather than a floor on a
+    // filtered subset: if the specimen ever renders fewer controls than the assertions assume, the
+    // pass shrinks silently and this is what notices.
+    expect(checked, 'the pass asserted nothing').toBe(Math.min(count, 25))
+  })
+
+  test('the data table is a complete ARIA structure, not just a row with a role on it', async ({ page }) => {
+    // ⚠️ Neither half of this was asserted by anything. Round 1 put `role="table"` on the scroller
+    // because `role="row"` under a plain `<div>` is an orphan; round 2 found the columns were
+    // still bare `<span>`s, so the rows contained no cells — the same broken structure one level
+    // down, in the fix for the level above (cross-family review, agy, twice). A structure fixed
+    // twice and checked zero times is why this test exists.
+    const rows = page.locator('.ds-specimen [role="row"]')
+    const rowCount = await rows.count()
+    expect(rowCount, 'the specimen rendered no table rows').toBeGreaterThan(4)
+
+    for (let index = 0; index < rowCount; index += 1) {
+      const shape = await rows.nth(index).evaluate((row) => ({
+        // The row's own role means nothing if nothing above it is a table.
+        underTable: Boolean(row.closest('[role="table"]')),
+        children: [...row.children].map((child) => child.getAttribute('role')),
+      }))
+      expect(shape.underTable, `row ${index} carries role="row" with no role="table" ancestor`).toBe(true)
+      expect(shape.children.length, `row ${index} has no columns`).toBeGreaterThan(2)
+      for (const role of shape.children) {
+        expect(
+          role,
+          `row ${index} has a column with role=${role ?? 'null'} — a row may only contain cells`
+        ).toMatch(/^(cell|columnheader)$/)
+      }
+    }
   })
 
   test('the specimen fits its viewport and never scrolls sideways', async ({ page }) => {

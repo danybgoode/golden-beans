@@ -217,6 +217,37 @@ export function TableRow({ children }: { children: ReactNode }) {
 }
 
 /**
+ * One cell of a `TableRow`, and one column header of a `TableHead`.
+ *
+ * ⚠️ These exist because fixing the row's ancestor did not fix the row's CHILDREN. The previous
+ * round put `role="table"` on the scroller so `role="row"` was no longer orphaned, and left every
+ * column as a bare `<span>` — so a screen reader read rows containing no cells, which is the same
+ * broken structure one level down (cross-family review, agy, twice).
+ *
+ * They are primitives rather than a `role` the specimen remembers to type, because "remember to add
+ * the role" is what produced the defect the first time. `header` picks `columnheader` over `cell`,
+ * and `wide` is the specimen's two-column span.
+ */
+export function TableCell({
+  children,
+  header,
+  wide,
+  className,
+}: {
+  children: ReactNode
+  header?: boolean
+  wide?: boolean
+  className?: string
+}) {
+  const column = wide ? 'ds-specimen-col-wide' : 'ds-specimen-col'
+  return (
+    <span className={className ? `${column} ${className}` : column} role={header ? 'columnheader' : 'cell'}>
+      {children}
+    </span>
+  )
+}
+
+/**
  * The empty state — *"an invitation, not a dead end"* (ux-guidelines).
  *
  * `action` is optional but `title` and `body` are not: an empty state that says only "No results"

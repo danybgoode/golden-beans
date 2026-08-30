@@ -49,6 +49,7 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
     join(HERE, 'system.css'),
   ]
   const found: string[] = []
+  const monoFound: string[] = []
 
   /**
    * Does `selector` mention `allowedSelector` as a WHOLE name?
@@ -91,6 +92,7 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       // So a mono rule is permitted only where an entry DECLARES it, with the sprint that removes
       // it. A new one fails, which is the property that matters between now and Sprint 6.
       if (/var\(--mono|Plex Mono/.test(rule.body)) {
+        monoFound.push(rule.selector)
         const entry = UPPERCASE_ALLOWED.find((candidate) =>
           mentionsWholeClass(rule.selector, candidate.selector)
         )
@@ -120,6 +122,29 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
     assert.ok(
       found.some((selector) => mentionsWholeClass(selector, entry.selector)),
       `UPPERCASE_ALLOWED lists ${entry.selector}, which no stylesheet applies uppercase to any more`
+    )
+  }
+
+  // ⚠️ TWO ENTRIES NAMED `.data-table thead th`, and the lookup below is a `.find` — so the FIRST
+  // one authorised the mono rule the SECOND one described, and either could have been wrong without
+  // the suite noticing (cross-family review, agy). A registry whose keys repeat is a registry that
+  // answers a different question depending on which copy you read.
+  const selectors = UPPERCASE_ALLOWED.map((entry) => entry.selector)
+  assert.deepEqual(
+    selectors.filter((selector, index) => selectors.indexOf(selector) !== index),
+    [],
+    'UPPERCASE_ALLOWED lists the same selector twice — the mono lookup below resolves to whichever copy comes first'
+  )
+
+  // ...and `mono: true` was decoration until now: nothing checked that a mono entry described a rule
+  // that IS mono. It did not hold — the entry above claimed mono for a selector `console.css` sets
+  // in `var(--sans)`, and the claim survived because only the other direction was ever asserted.
+  for (const entry of UPPERCASE_ALLOWED.filter((candidate) => candidate.mono)) {
+    assert.ok(
+      monoFound.some((selector) => mentionsWholeClass(selector, entry.selector)),
+      `UPPERCASE_ALLOWED records ${entry.selector} as uppercase-AND-mono debt, but no stylesheet ` +
+        'applies both to it. Either the rule was fixed and the entry should lose `mono`, or the ' +
+        'entry never described the code.'
     )
   }
 

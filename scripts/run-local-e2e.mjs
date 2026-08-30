@@ -43,6 +43,23 @@ const requestedProject = selectedProjects[0]?.[1] ?? 'api';
 // and free to exclude (Antigravity, round 1 of PR #104).
 const requestedFiles = process.argv.slice(2).filter((argument) => !Object.hasOwn(PROJECT_FLAGS, argument));
 
+// ⚠️ An unrecognised flag was treated as a FILENAME and forwarded to Playwright, which quietly
+// accepted it. `--project authed` — the shape someone reaches for when they know Playwright but not
+// this wrapper — therefore ran the `api` project with `SIGNUP_ENABLED=false`, and the run died in
+// `auth.setup.ts` with "the provisioning path itself is broken". That is a green-looking runner
+// producing a red that blames the application for the caller's typo, in the script whose stated
+// principle is "fail loud rather than substitute" (CODE-QUALITY #7).
+const unknownFlags = requestedFiles.filter((argument) => argument.startsWith('-'));
+if (unknownFlags.length > 0) {
+  const known = Object.keys(PROJECT_FLAGS).join(', ');
+  process.stderr.write(
+    `local-e2e: unrecognised option(s) ${unknownFlags.join(' ')}. This runner takes ${known} and ` +
+      'spec file paths — it is not a Playwright passthrough, and forwarding an unknown flag as a ' +
+      'filename produces a failure that blames the app for a typo.\n'
+  );
+  process.exit(1);
+}
+
 function die(message) {
   process.stderr.write(`local-e2e: ${message}\n`);
   process.exitCode = 1;

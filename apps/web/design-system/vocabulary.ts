@@ -149,7 +149,10 @@ export const UPPERCASE_ALLOWED: readonly {
   { selector: '.envtable th', what: "the environments table's header — Sprint 4", keep: false },
   {
     selector: '.data-table thead th',
-    what: 'the shared data table header — Sprint 4',
+    what:
+      'the shared data table header — Sprint 4. TWO rules, and they disagree: `globals.css` sets ' +
+      '`font: 600 11px var(--mono)`, and `console.css` resets the LIT console to `var(--sans)`. ' +
+      'The mono one is what a rollback serves, which is why this is recorded as mono debt.',
     keep: false,
     mono: true,
   },
@@ -202,12 +205,6 @@ export const UPPERCASE_ALLOWED: readonly {
   },
   { selector: '.data-table__count', what: "the data table's count — Sprint 4", keep: false, mono: true },
   { selector: '.data-table caption', what: "the data table's caption — Sprint 4", keep: false, mono: true },
-  {
-    selector: '.data-table thead th',
-    what: "the data table's header — replaced by .ds-table-head, Sprint 4",
-    keep: false,
-    mono: true,
-  },
   {
     selector: '.flag-insight__diff',
     what: "the flag insight diff's label — Sprint 4",
