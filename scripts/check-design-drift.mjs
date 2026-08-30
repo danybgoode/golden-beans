@@ -47,6 +47,10 @@ const CLASS_IN_SELECTOR = /\.(-?[A-Za-z_][\w-]*)/g;
 // `url(#…)` in a stylesheet is an SVG reference — a gradient, a filter, a clip path — and never a
 // colour. The `.tsx` sweep has stripped href/src hex fragments since the landing epic; this is the
 // stylesheet's equivalent.
+// A whole CSS declaration — `property: value;` — however many lines it spans.
+const DECLARATION = /(?:^|[;{}])\s*([-\w]+)\s*:\s*([^;{}]*)/gm;
+const QUOTED_STRING = /(['"])(?:\\.|(?!\1)[^\\])*\1/g;
+
 const URL_FRAGMENT_IN_CSS = /url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi;
 
 // A literal colour that is not a hex. `raw-hex` was the only colour rule, so `rgb(232 185 60)`,
@@ -56,7 +60,9 @@ const URL_FRAGMENT_IN_CSS = /url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi;
 // `color-mix()` and `rgb(from var(--gold) …)` are DERIVATIONS of a token, not hand-picked values,
 // and `globals.css` already uses the first to build its kraft surfaces — so a function whose
 // arguments reach a `var()` is allowed. What is refused is a number nobody can trace to the scale.
-const LITERAL_COLOR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(([^)]*)\)/gi;
+// `color()` was missing, which let `color(display-p3 0.9 0.2 0.1)` through a rule whose test is
+// titled "whatever notation it is written in" (fresh reviewer, round 2).
+const LITERAL_COLOR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(([^)]*)\)/gi;
 
 // A colour function whose arguments reach a token is a DERIVATION of the scale — that is what
 // `color-mix()` and relative colour syntax are for, and `globals.css` builds its two kraft surfaces
@@ -66,8 +72,183 @@ const LITERAL_COLOR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(([^)]
 // stay on the scale — which is how a guard gets switched off instead of fixed.
 const DERIVED_COLOR_CALL =
   /\b(?:color-mix|rgba?|hsla?|hwb|lab|lch|oklab|oklch|light-dark)\([^)]*var\([^)]*\)[^)]*\)/gi;
-const NAMED_COLORS =
-  /(?:^|[\s:,(])(?:red|blue|green|yellow|orange|purple|pink|brown|grey|gray|black|white|cyan|magenta|teal|navy|olive|maroon|lime|aqua|silver|gold)(?=[\s;,)]|$)/i;
+// ⚠️ The FULL CSS named-colour set, plus the system colours.
+//
+// This listed 22 names, under a test titled "whatever notation it is written in" — so `crimson`,
+// `tomato`, `indigo`, `firebrick` and about 125 others walked straight through, as did
+// `ButtonText` and `Canvas` (fresh reviewer, round 2). A rule that catches `red` and not `crimson`
+// is a rule that teaches people which hand-picked colours are allowed.
+const CSS_NAMED_COLORS = [
+  'aliceblue',
+  'antiquewhite',
+  'aqua',
+  'aquamarine',
+  'azure',
+  'beige',
+  'bisque',
+  'black',
+  'blanchedalmond',
+  'blue',
+  'blueviolet',
+  'brown',
+  'burlywood',
+  'cadetblue',
+  'chartreuse',
+  'chocolate',
+  'coral',
+  'cornflowerblue',
+  'cornsilk',
+  'crimson',
+  'cyan',
+  'darkblue',
+  'darkcyan',
+  'darkgoldenrod',
+  'darkgray',
+  'darkgreen',
+  'darkgrey',
+  'darkkhaki',
+  'darkmagenta',
+  'darkolivegreen',
+  'darkorange',
+  'darkorchid',
+  'darkred',
+  'darksalmon',
+  'darkseagreen',
+  'darkslateblue',
+  'darkslategray',
+  'darkslategrey',
+  'darkturquoise',
+  'darkviolet',
+  'deeppink',
+  'deepskyblue',
+  'dimgray',
+  'dimgrey',
+  'dodgerblue',
+  'firebrick',
+  'floralwhite',
+  'forestgreen',
+  'fuchsia',
+  'gainsboro',
+  'ghostwhite',
+  'gold',
+  'goldenrod',
+  'gray',
+  'green',
+  'greenyellow',
+  'grey',
+  'honeydew',
+  'hotpink',
+  'indianred',
+  'indigo',
+  'ivory',
+  'khaki',
+  'lavender',
+  'lavenderblush',
+  'lawngreen',
+  'lemonchiffon',
+  'lightblue',
+  'lightcoral',
+  'lightcyan',
+  'lightgoldenrodyellow',
+  'lightgray',
+  'lightgreen',
+  'lightgrey',
+  'lightpink',
+  'lightsalmon',
+  'lightseagreen',
+  'lightskyblue',
+  'lightslategray',
+  'lightslategrey',
+  'lightsteelblue',
+  'lightyellow',
+  'lime',
+  'limegreen',
+  'linen',
+  'magenta',
+  'maroon',
+  'mediumaquamarine',
+  'mediumblue',
+  'mediumorchid',
+  'mediumpurple',
+  'mediumseagreen',
+  'mediumslateblue',
+  'mediumspringgreen',
+  'mediumturquoise',
+  'mediumvioletred',
+  'midnightblue',
+  'mintcream',
+  'mistyrose',
+  'moccasin',
+  'navajowhite',
+  'navy',
+  'oldlace',
+  'olive',
+  'olivedrab',
+  'orange',
+  'orangered',
+  'orchid',
+  'palegoldenrod',
+  'palegreen',
+  'paleturquoise',
+  'palevioletred',
+  'papayawhip',
+  'peachpuff',
+  'peru',
+  'pink',
+  'plum',
+  'powderblue',
+  'purple',
+  'rebeccapurple',
+  'red',
+  'rosybrown',
+  'royalblue',
+  'saddlebrown',
+  'salmon',
+  'sandybrown',
+  'seagreen',
+  'seashell',
+  'sienna',
+  'silver',
+  'skyblue',
+  'slateblue',
+  'slategray',
+  'slategrey',
+  'snow',
+  'springgreen',
+  'steelblue',
+  'tan',
+  'teal',
+  'thistle',
+  'tomato',
+  'turquoise',
+  'violet',
+  'wheat',
+  'white',
+  'whitesmoke',
+  'yellow',
+  'yellowgreen',
+  // System colours resolve to a UA palette, which is no more part of the scale than a hex is.
+  'ButtonText',
+  'ButtonFace',
+  'ButtonBorder',
+  'Canvas',
+  'CanvasText',
+  'Field',
+  'FieldText',
+  'Highlight',
+  'HighlightText',
+  'LinkText',
+  'VisitedText',
+  'ActiveText',
+  'GrayText',
+  'Mark',
+  'MarkText',
+  'AccentColor',
+  'AccentColorText',
+  'SelectedItem',
+  'SelectedItemText',
+];
+const NAMED_COLORS = new RegExp(`(?:^|[\\s:,(])(?:${CSS_NAMED_COLORS.join('|')})(?=[\\s;,)]|$)`, 'i');
 const NAMESPACE = 'ds';
 
 // landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
@@ -297,6 +478,34 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
   // declaration wrapped by a formatter — `font\n  : 14px/1.2 Archivo;` — slipped a line-scoped
   // regex entirely, and this repo's own prettier config wraps long declarations. Same reasoning as
   // `HEADING_BLOCK` above, which is matched over the whole file for exactly this class of miss.
+  // ⚠️ Declarations are scanned over the WHOLE source, for the same reason the `font:` rule is —
+  // and this rule was written line-scoped in the SAME round that fixed `font:` for exactly this
+  // (fresh reviewer, round 2: "fixed the instance, not the class"). Prettier wraps long
+  // declarations, and `box-shadow:\n  0 1px 2px rgb(0 0 0 / .2),\n  0 2px 4px red;` walked through
+  // a line-scoped check — in a directory where every hand-written stylesheet is prettier-formatted.
+  //
+  // Quoted strings are blanked first: `content: "in the red "` is prose, not a colour, the same way
+  // an attribute selector's contents are not class names.
+  for (const declaration of live.replace(QUOTED_STRING, '""').matchAll(DECLARATION)) {
+    const value = declaration[2]
+      .replace(URL_FRAGMENT_IN_CSS, 'url()')
+      // Derivations are removed BEFORE the literal checks, so their ingredients are not read as
+      // hand-picked values — `color-mix(in srgb, var(--kraft) 55%, white)` is how globals.css
+      // already stays on the scale.
+      .replace(DERIVED_COLOR_CALL, 'derived()');
+    let literalColor = NAMED_COLORS.test(value);
+    for (const call of value.matchAll(LITERAL_COLOR_FUNCTION)) {
+      if (!call[1].includes('var(')) literalColor = true;
+    }
+    if (literalColor) {
+      violations.push({
+        line: lineOf(live, declaration.index),
+        rule: 'literal-color',
+        content: declaration[0].split('\n').join(' ').trim().slice(0, 100),
+      });
+    }
+  }
+
   for (const match of live.matchAll(FONT_SHORTHAND_GLOBAL)) {
     violations.push({
       line: lineOf(live, match.index),
@@ -325,16 +534,6 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
 
     // Only a declaration VALUE can hold a colour; a selector cannot, and `.ds-gold` should not be
     // read as the named colour `gold`.
-    const declaredValue = /:\s*(.+)$/.exec(withoutSvgRefs)?.[1] ?? '';
-    // Derivations are removed FIRST, so neither literal check sees their ingredients.
-    const value = declaredValue.replace(DERIVED_COLOR_CALL, 'derived()');
-    let literalColor = NAMED_COLORS.test(value);
-    for (const call of value.matchAll(LITERAL_COLOR_FUNCTION)) {
-      if (!call[1].includes('var(')) literalColor = true;
-    }
-    if (literalColor) {
-      violations.push({ line: index + 1, rule: 'literal-color', content: line.trim() });
-    }
   });
 
   for (const list of selectorLists(source)) {
@@ -385,8 +584,19 @@ function sourceFiles(root) {
  * A missing root throws for the same reason `sourceFiles` does: returning `[]` makes a renamed or
  * mistyped directory read as "nothing to report", which is this guard reporting success about a
  * surface it never opened (CODE-QUALITY #5b).
+ *
+ * ⚠️ **Through `inspectRepository` this throw is currently UNREACHABLE, and that is worth saying
+ * rather than leaving for the next reader to discover.** `DESIGN_SYSTEM_ROOT` is in `SWEPT_ROOTS`
+ * too, and the `.tsx` walk runs first — so a missing directory throws from `sourceFiles`, with
+ * `sourceFiles`' message. A reviewer proposed asserting this function's message through the
+ * repository walker and it cannot be observed there (fresh reviewer, round 2, and the round before
+ * it proved the version WITHOUT this throw was equally green for the same reason).
+ *
+ * It is kept, and exported so its behaviour can be pinned directly, because the two root lists are
+ * separate by design: the moment a stylesheet root exists that is not also a `.tsx` root, this is
+ * the only thing standing between a typo and a silently-unswept directory.
  */
-function stylesheetFiles(root) {
+export function stylesheetFiles(root) {
   if (!existsSync(root)) {
     throw new Error(
       `check-design-drift: stylesheet root ${root} does not exist. ` +

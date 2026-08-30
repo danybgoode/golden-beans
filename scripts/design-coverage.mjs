@@ -95,7 +95,11 @@ function buildReport() {
       // must compare against — a baseline computed on a moving denominator ratchets against itself.
       // But reporting only that hid the fact that 30 routes are live TODAY while the three Story 4.5
       // retires are already out of the count. Now the file says both, and neither is inferred.
-      liveRoutesToday: liveRows(1).length,
+      // ⚠️ Named for the sprint it is computed at, not "today" (fresh reviewer, round 2). It was
+      // `liveRoutesToday: liveRows(1).length` — a hard-coded 1 wearing a name that claims to track
+      // the present, which would still have read 30 during Sprint 4 when 27 are live. A number that
+      // says one thing and means another is the shape D13 exists to kill.
+      liveRoutesAtSprint1: liveRows(1).length,
       hasReferenceState: now.hasReferenceState,
       rendersFromDesignSystem: now.rendersFromDesignSystem,
       complete: now.complete,

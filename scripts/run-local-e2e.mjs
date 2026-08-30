@@ -153,13 +153,16 @@ async function main() {
     SECURITY_SIMULATIONS_ENABLED: 'true',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
     SCENARIO_AUTHORING_ENABLED: 'true',
-    // ⚠️ **These two were missing, and they gate the epic's flagship guard.**
+    // ⚠️ **These were missing, and two of them gate the epic's flagship guard.**
     // `console-visual.authed.spec.ts` skips itself unless BOTH are exactly 'true'
     // (`gatesAreLit()`), and `ci.yml` sets both on its main server — so this runner, which exists to
     // be "the local counterpart to CI's Playwright gate", silently skipped the one spec that can go
     // red on the way a page looks. A local gate that is a SUBSET of CI's is worse than no local
     // gate, because it produces a green nobody should trust (Roadmap/LEARNINGS.md).
-    // Both are ON in production, so this matches rather than loosens.
+    // All three are ON in production, so this matches CI rather than loosening anything.
+    // `FLAG_RULE_BUILDER_ENABLED` rides along because `ci.yml`'s main server sets it too and the
+    // feature page's Targeting tab renders behind it — a lit server missing it is not the server
+    // CI runs.
     CONSOLE_SHELL_ENABLED: 'true',
     FLAG_CONSOLE_ENABLED: 'true',
     FLAG_RULE_BUILDER_ENABLED: 'true',
@@ -197,6 +200,18 @@ async function main() {
       'apps/web/e2e/flag-serving-dark.spec.ts',
       'apps/web/e2e/flag-catalog-sync-dark.spec.ts',
       'apps/web/e2e/scenario-dark.spec.ts',
+      // ⚠️ **These three were added because the change above SILENTLY RETIRED them locally**
+      // (fresh reviewer, round 2). Setting `CONSOLE_SHELL_ENABLED`/`FLAG_CONSOLE_ENABLED`/
+      // `SIGNUP_ENABLED` true on the lit server — which is what makes the visual gate runnable —
+      // means `setup-routes-dark` skips itself there, and `flag-console-dark` and `signup` take
+      // their lit branches. Before that change they ran against an unset (therefore dark) lit
+      // server; after it they ran NOWHERE locally, while a comment claimed this list "mirrors CI's
+      // :3100".
+      //
+      // These are exactly the three files `ci.yml`'s :3100 server adds, so the comment is now true.
+      'apps/web/e2e/setup-routes-dark.spec.ts',
+      'apps/web/e2e/flag-console-dark.spec.ts',
+      'apps/web/e2e/signup.spec.ts',
     ]);
   });
 

@@ -26,6 +26,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { MEASURED_SPEC, DEFERRED_SPEC_ROWS } from './console-gate-spec.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -74,75 +75,43 @@ function readMeasuredSpec(): Map<string, MeasuredRow> {
  * prototype, the row carries a `deviation` explaining why — and a deviation must be a decision, not
  * a number that drifted.
  */
-const GATE_ROWS: {
-  gateRow: string
-  prototypeRow: string
-  expect: { fontSize?: number; fontWeight?: string; height?: number; width?: number }
-  deviation?: string
-}[] = [
-  {
-    gateRow: 'project switcher',
-    prototypeRow: 'Project switcher',
-    expect: { fontSize: 13, fontWeight: '400' },
-  },
-  { gateRow: 'section tab', prototypeRow: 'Section tab · inactive', expect: { fontSize: 13 } },
-  { gateRow: 'page h1', prototypeRow: 'Page h1', expect: { fontSize: 23, fontWeight: '700' } },
-  {
-    gateRow: 'page subtitle',
-    prototypeRow: 'Page subtitle',
-    expect: { fontSize: 13.5, fontWeight: '400' },
-  },
-  {
-    gateRow: 'the answer line',
-    prototypeRow: 'The answer line',
-    expect: { fontSize: 13.5, fontWeight: '400' },
-  },
-  { gateRow: 'stat number', prototypeRow: 'Stat number', expect: { fontSize: 26, fontWeight: '600' } },
-  { gateRow: 'stat label', prototypeRow: 'Stat label', expect: { fontSize: 12.5, fontWeight: '400' } },
-  {
-    gateRow: 'list header row',
-    prototypeRow: 'List header row',
-    expect: { fontSize: 11, fontWeight: '600', height: 36 },
-  },
-  { gateRow: 'feature key', prototypeRow: 'Feature key', expect: { fontSize: 13.5 } },
-  {
-    gateRow: 'feature description',
-    prototypeRow: 'Feature description',
-    expect: { fontSize: 12.5, fontWeight: '400' },
-  },
-  {
-    gateRow: 'state pill',
-    prototypeRow: 'State pill',
-    expect: { fontSize: 12, fontWeight: '600', height: 26 },
-  },
-  {
-    gateRow: 'rail item',
-    prototypeRow: 'Rail item',
-    expect: { fontSize: 13.5, fontWeight: '600', height: 36 },
-  },
-  {
-    gateRow: 'the row switch',
-    prototypeRow: 'Switch',
-    expect: { height: 21, width: 38 },
-  },
-]
-
 /**
- * The gate's deferred rows, with the number each defers FROM.
+ * Which PROTOTYPE row governs which row of the gate's spec.
  *
- * ⚠️ `feature row` deferred from **78**, which D8 disproved — a fresh measurement says **71**. The
- * deferral was carried forward with the wrong contract number, and Story 1.4 attached an owner and
- * a date to it without noticing (fresh reviewer, Major). The `contract` values here are asserted
- * against the regenerated table below, so a deferral can no longer point at a number that does not
- * exist.
+ * ⚠️ This is the ONLY hand-written half, and deliberately so. The two tables describe the same
+ * design through different markup — `MEASURED-SPEC.md` measures the prototype (`.crumb-btn`,
+ * `.railnav button`), the gate measures the built app (`.product-shell__signal`,
+ * `.console-rail > ul a`) — and nothing can derive that correspondence. A row here is a claim that
+ * an app element and a prototype element are the same thing in the design.
+ *
+ * The NUMBERS are not here. They are read from the real `MEASURED_SPEC`, imported above. An earlier
+ * version retyped them, which meant this file checked its own copy and passed while the gate
+ * carried a disproved value (fresh reviewer, round 2, proven by mutation).
  */
-const DEFERRED = [
-  { what: 'feature row', prototypeRow: 'Feature row', contract: 71 },
-  { what: 'dormant summary row', prototypeRow: 'Dormant summary row', contract: 89 },
-  { what: 'primary/secondary button', prototypeRow: 'Primary button', contract: 38 },
-  { what: 'project switcher', prototypeRow: 'Project switcher', contract: 30 },
-  { what: 'section nav (tier 2)', prototypeRow: 'Section nav (tier 2)', contract: 44 },
-]
+const GOVERNED_BY: Record<string, string> = {
+  'project switcher': 'Project switcher',
+  'section tab': 'Section tab · inactive',
+  'page h1': 'Page h1',
+  'page subtitle': 'Page subtitle',
+  'the answer line': 'The answer line',
+  'stat number': 'Stat number',
+  'stat label': 'Stat label',
+  'list header row': 'List header row',
+  'feature key': 'Feature key',
+  'feature description': 'Feature description',
+  'state pill': 'State pill',
+  'rail item': 'Rail item',
+  'the row switch': 'Switch',
+}
+
+/** Which prototype row each DEFERRED row defers from. Same rule: mapping here, numbers imported. */
+const DEFERRAL_GOVERNED_BY: Record<string, string> = {
+  'feature row': 'Feature row',
+  'dormant summary row': 'Dormant summary row',
+  'primary/secondary button': 'Primary button',
+  'project switcher': 'Project switcher',
+  'section nav (tier 2)': 'Section nav (tier 2)',
+}
 
 test('the generated spec table parses, and is not silently empty', () => {
   // A parser that returns nothing turns every assertion below into a vacuous pass — the guard that
@@ -160,56 +129,80 @@ test('the generated spec table parses, and is not silently empty', () => {
 
 test('every number the visual gate asserts comes from the regenerated table', () => {
   const measured = readMeasuredSpec()
-  for (const row of GATE_ROWS) {
-    const prototype = measured.get(row.prototypeRow)
-    assert.ok(prototype, `${row.gateRow} maps to "${row.prototypeRow}", which is not in the table`)
-    if (row.deviation) continue
 
-    if (row.expect.fontSize !== undefined) {
+  // Every gate row must be mapped. An unmapped row is a number nothing checks — which is the state
+  // this whole file exists to end.
+  for (const row of MEASURED_SPEC) {
+    assert.ok(GOVERNED_BY[row.what], `the gate asserts "${row.what}" and no prototype row governs it`)
+  }
+  for (const what of Object.keys(GOVERNED_BY)) {
+    assert.ok(
+      MEASURED_SPEC.some((row) => row.what === what),
+      `"${what}" is mapped but the gate no longer asserts it — a stale mapping reads as coverage`
+    )
+  }
+
+  for (const row of MEASURED_SPEC) {
+    const prototype = measured.get(GOVERNED_BY[row.what])
+    assert.ok(prototype, `"${row.what}" maps to a row that is not in the generated table`)
+
+    if (row.fontSize !== undefined) {
       assert.equal(
-        row.expect.fontSize,
+        Number(row.fontSize.replace('px', '')),
         prototype.fontSize,
-        `the gate asserts ${row.gateRow} at ${row.expect.fontSize}px; the prototype measures ${prototype.fontSize}px`
+        `the gate asserts ${row.what} at ${row.fontSize}; the prototype measures ${prototype.fontSize}px`
       )
     }
-    if (row.expect.fontWeight !== undefined) {
-      assert.equal(row.expect.fontWeight, prototype.fontWeight, `${row.gateRow} font-weight`)
+    if (row.fontWeight !== undefined) {
+      assert.equal(row.fontWeight, prototype.fontWeight, `${row.what} font-weight`)
     }
-    if (row.expect.height !== undefined) {
-      // A `null` here means the prototype's height is text-sized, so there is no reproducible number
-      // for the gate to agree with — and a gate row asserting one would be asserting a fact about
-      // one machine. That is a finding, not something to skip past.
+    if (row.height !== undefined) {
       assert.notEqual(
         prototype.height,
         null,
-        `the gate asserts a height for ${row.gateRow}, but the prototype's is text-sized and does not reproduce`
+        `the gate asserts a height for ${row.what}, but the prototype's is text-sized and does not reproduce`
       )
-      assert.equal(row.expect.height, prototype.height, `${row.gateRow} height`)
+      assert.equal(row.height, prototype.height, `${row.what} height`)
     }
-    if (row.expect.width !== undefined) {
+    if (row.width !== undefined) {
       assert.notEqual(
         prototype.width,
         null,
-        `the gate asserts a width for ${row.gateRow}, but the prototype's is text-sized and does not reproduce`
+        `the gate asserts a width for ${row.what}, but the prototype's is text-sized and does not reproduce`
       )
-      assert.equal(row.expect.width, prototype.width, `${row.gateRow} width`)
+      assert.equal(row.width, prototype.width, `${row.what} width`)
     }
   }
 })
 
 test('a deferred row defers from a number that actually exists', () => {
-  // The failure this closes, exactly: `feature row` deferred from `78`, a number no run reproduces.
-  // A deferral pointing at a fictional contract value is worse than no deferral, because it looks
-  // like a considered trade-off.
+  // The failure this closes, exactly: the gate deferred `feature row` from `78`, a number no run
+  // reproduces. A deferral pointing at a fictional contract value is worse than no deferral,
+  // because it looks like a considered trade-off.
   const measured = readMeasuredSpec()
-  for (const row of DEFERRED) {
-    const prototype = measured.get(row.prototypeRow)
-    assert.ok(prototype, `${row.what} defers from "${row.prototypeRow}", which is not in the table`)
+  for (const row of DEFERRED_SPEC_ROWS) {
+    const prototypeRow = DEFERRAL_GOVERNED_BY[row.what]
+    assert.ok(prototypeRow, `"${row.what}" is deferred and no prototype row governs it`)
+    const prototype = measured.get(prototypeRow)
+    assert.ok(prototype, `"${row.what}" defers from "${prototypeRow}", which is not in the table`)
     assert.equal(
       row.contract,
       prototype.height,
       `${row.what} says it defers from ${row.contract}px, and the prototype measures ${prototype.height}px — ` +
         'a deferral from a number nobody can reproduce is the defect D8 exists to close'
+    )
+  }
+
+  // ...and every deferred row still carries an owner and a date that has not passed. Asserted HERE
+  // as well as in the Playwright spec, because this layer runs on every PR and that one runs behind
+  // two env gates and a browser.
+  const today = new Date().toISOString().slice(0, 10)
+  for (const row of DEFERRED_SPEC_ROWS) {
+    assert.ok(row.owner.length > 0, `${row.what} is deferred with no owner`)
+    assert.match(row.until, /^\d{4}-\d{2}-\d{2}$/, `${row.what}'s decay date is not a date`)
+    assert.ok(
+      row.until >= today,
+      `${row.what}'s deferral expired on ${row.until} — close it, or re-decide it with ${row.owner}`
     )
   }
 })

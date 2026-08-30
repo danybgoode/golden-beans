@@ -47,7 +47,22 @@ export async function openPrototype() {
 }
 
 /** The families the approved design is measured in. Both come from the prototype's own `<link>`. */
-export const REQUIRED_FONTS = ['Archivo', 'IBM Plex Mono'];
+/**
+ * The exact faces the approved design is measured in — family AND weight.
+ *
+ * These are the weights `console-prototype.html`'s own stylesheet link requests
+ * (`Archivo:wght@400;500;600;700` and `IBM+Plex+Mono:wght@400;500;600`). A family-only check passes
+ * while a single weight is missing, and a missing weight is invisible: Chromium synthesises it.
+ */
+export const REQUIRED_FACES = [
+  ['Archivo', '400'],
+  ['Archivo', '500'],
+  ['Archivo', '600'],
+  ['Archivo', '700'],
+  ['IBM Plex Mono', '400'],
+  ['IBM Plex Mono', '500'],
+  ['IBM Plex Mono', '600'],
+];
 
 /**
  * Block until the approved webfonts are actually loaded, and REFUSE to continue if they are not.
@@ -80,28 +95,40 @@ export const REQUIRED_FONTS = ['Archivo', 'IBM Plex Mono'];
  */
 export async function waitForApprovedFonts(page) {
   await page.evaluate(() => document.fonts.ready);
-  const loaded = await page.evaluate(() => [
-    ...new Set(
-      [...document.fonts]
-        .filter((face) => face.status === 'loaded')
-        // Quote-normalised on BOTH sides. `measure-contract.mjs` already does this to
-        // `getComputedStyle().fontFamily`, and a check that compares a normalised value on one path
-        // and a raw one on the other is two implementations of the same job that currently agree
-        // (CODE-QUALITY #2). Raised by cross-family review (agy) as a live false positive; probed
-        // in Chromium and it is NOT — `FontFace.family` comes back unquoted even when the CSS
-        // declared `font-family: "IBM Plex Mono"`. Hardened anyway, because the cost is one
-        // `replace()` and the failure it would cause is this harness refusing a correct render.
-        .map((face) => face.family.replace(/["']/g, ''))
-    ),
-  ]);
-  const missing = REQUIRED_FONTS.filter((family) => !loaded.includes(family));
-  if (missing.length > 0) {
+  const faces = await page.evaluate(() =>
+    [...document.fonts].map((face) => ({
+      // Quote-normalised on BOTH sides. `measure-contract.mjs` already does this to
+      // `getComputedStyle().fontFamily`, and a check that normalises on one path and not the other
+      // is two implementations of one job that currently agree (CODE-QUALITY #2).
+      family: face.family.replace(/["']/g, ''),
+      weight: face.weight,
+      status: face.status,
+    }))
+  );
+
+  // ⚠️ A face that FAILED is not the same as one that never loaded, and it is the more dangerous
+  // state: Chromium falls back silently and the page still renders.
+  const errored = faces.filter((face) => face.status === 'error');
+
+  // ⚠️ Per (family, WEIGHT), not per family (fresh reviewer, round 2). Google Fonts serves static
+  // per-weight faces — 27 declared here, 7 used — each an independent download. Checking family
+  // names alone meant that if Archivo 700 404'd while 400 landed, this passed, Chromium synthesised
+  // the bold, `Page h1` measured wrong, and `--check` went red under an error message saying that
+  // case "should not be reachable". The weights are the ones the prototype's own `<link>` requests.
+  const loaded = new Set(
+    faces.filter((face) => face.status === 'loaded').map((face) => `${face.family}@${face.weight}`)
+  );
+  const missing = REQUIRED_FACES.filter(([family, weight]) => !loaded.has(`${family}@${weight}`));
+
+  if (missing.length > 0 || errored.length > 0) {
     throw new Error(
-      `the approved prototype's fonts did not load: ${missing.join(', ')}.\n` +
-        `  Loaded: ${loaded.join(', ') || '(none)'}\n` +
-        '  Every measurement and every reference render is in these families, so continuing would ' +
-        'produce numbers and PNGs that cannot be reproduced anywhere else. The prototype fetches ' +
-        'them from fonts.googleapis.com — check network access from this environment.'
+      `the approved prototype's fonts did not load.\n` +
+        (missing.length ? `  Missing: ${missing.map(([f, w]) => `${f} ${w}`).join(', ')}\n` : '') +
+        (errored.length ? `  Failed:  ${errored.map((f) => `${f.family} ${f.weight}`).join(', ')}\n` : '') +
+        `  Loaded:  ${[...loaded].join(', ') || '(none)'}\n` +
+        '  Every measurement and every reference render is in these families and weights, so ' +
+        'continuing would produce numbers and PNGs that cannot be reproduced anywhere else. The ' +
+        'prototype fetches them from fonts.googleapis.com — check network access from here.'
     );
   }
 }

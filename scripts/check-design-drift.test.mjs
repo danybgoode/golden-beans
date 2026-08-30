@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import {
   DESIGN_SYSTEM_ROOT,
+  stylesheetFiles,
   GENERATED_STYLESHEETS,
   SWEPT_ROOTS,
   VOICE_AND_STYLE_ROOTS,
@@ -603,15 +604,35 @@ test('a colour has to come from the scale, whatever notation it is written in', 
   assert.deepEqual(inspectDesignSystemStylesheet('.ds-gold {\n  color: var(--gold);\n}\n'), []);
 });
 
-test('a missing stylesheet root is LOUD, exactly like a missing swept root', () => {
-  // It used to be wrapped in `if (existsSync(...))`, the exact inverse of `sourceFiles()`, whose own
-  // comment says a missing root must be loud rather than empty. It was masked only because the
-  // directory is in SWEPT_ROOTS too and the .tsx sweep throws first — so the guard's loudness
-  // depended on statement order (fresh reviewer).
-  const root = mkdtempSync(join(tmpdir(), 'design-drift-missing-'));
-  try {
-    assert.throws(() => inspectRepository(root), /does not exist/);
-  } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
+test('a missing stylesheet root is LOUD, exactly like a missing swept root', (t) => {
+  // ⚠️ **The previous version of this test could not fail, and a reviewer proved it by mutation**
+  // (fresh reviewer, round 2): reverting `stylesheetFiles` to `if (!existsSync(root)) return []`
+  // left all 32 tests green. It handed `inspectRepository` a bare tmpdir, so `sourceFiles` — which
+  // walks SWEPT_ROOTS first — threw on `components/landing`, and a loose `/does not exist/` matched
+  // for the OLD reason. It asserted the very statement-order masking its own comment claimed to
+  // have removed.
+  //
+  // ⚠️ And the reviewer's suggested fix does not work either, which is the more useful finding:
+  // removing only `apps/web/design-system` STILL throws from `sourceFiles`, because that directory
+  // is in `SWEPT_ROOTS` as well. Through the repository walker this function's throw is
+  // unreachable — so it is pinned DIRECTLY, and the caller is pinned for what it actually
+  // guarantees: that a missing design-system directory is loud rather than empty, whoever says so.
+  assert.throws(() => stylesheetFiles(join(tmpdir(), 'gb-does-not-exist-ever')), /stylesheet root/);
+
+  const root = scaffoldFixtureRepo();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.deepEqual(inspectRepository(root).violations, [], 'the fixture must start clean');
+
+  rmSync(join(root, DESIGN_SYSTEM_ROOT), { recursive: true, force: true });
+  assert.throws(() => inspectRepository(root), /does not exist/);
+
+  // ...and a `.css` file in a root that DOES exist is still found, so the throw did not become the
+  // only thing this function does.
+  const dir = join(root, DESIGN_SYSTEM_ROOT);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'x.css'), '.ds-a {\n  color: var(--gold);\n}\n');
+  assert.deepEqual(
+    stylesheetFiles(dir).map((path) => path.slice(dir.length + 1)),
+    ['x.css']
+  );
 });

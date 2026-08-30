@@ -61,10 +61,29 @@ const OUT = 'MEASURED-SPEC.md';
 //   'height' height only — the width is shrink-to-fit around a glyph run
 //   'none'   neither is portable
 //
-// It is not a guess. Every value below is what two independent platforms actually agreed on, and
-// **no contract-cited number was lost to this**: the switcher's `122 x 30`, the feature row's `71`,
-// the rail item's `36`, the list header's `36`, the pill's `26` and the switch's `38 x 21` all
-// reproduce exactly. The rows that lost numbers are cited by size and weight, never by box.
+// ⚠️ **What is actually known, stated precisely — because the first version of this paragraph said
+// "It is not a guess. Every value below is what two independent platforms actually agreed on", and
+// two samples agreeing is not the property this file demands of the seven rows it demoted** (fresh
+// reviewer, round 2).
+//
+// What IS known: every `'exact'` value below reproduced byte-for-byte on macOS and on
+// `ubuntu-latest`, with both approved families verified `loaded`. What is NOT known is that they are
+// insensitive to font metrics in general — the reviewer showed that with the CDN blocked, the
+// switcher moves 122 → 126, the inactive tab 59 → 60, the answer line's height 68 → 67 and the pill
+// 48 → 49.
+//
+// They are kept `'exact'` anyway, and the reason is a decision rather than an oversight: with the
+// approved fonts loaded — which `_harness.mjs` now REFUSES to proceed without, per family AND
+// weight — those dimensions are determined by the font files the design was approved in. If a font
+// file changes, the design changes, and this gate SHOULD go red. That is the contract working, not
+// flaking. The residual risk is a Chromium rasterisation change moving a value with no design
+// change; if that happens, the `--check` diff names the row and the honest response is to demote
+// that dimension here, not to re-measure and commit whatever the new runner says.
+//
+// **No contract-cited number was lost to the demotion**: the switcher's `122 x 30`, the feature
+// row's `71`, the rail item's `36`, the list header's `36`, the pill's `26` and the switch's
+// `38 x 21` all survive. The seven rows that lost numbers are cited by size and weight, never by
+// box.
 const TARGETS = [
   ['.topbar', 'Top bar (tier 1)', 'exact'],
   ['.crumb-btn', 'Project switcher', 'exact'],
@@ -170,7 +189,12 @@ export function render(out) {
     if (row.box === 'exact') return `${row.width} × ${row.height}`;
     if (row.box === 'width') return `${row.width} × _text-sized_`;
     if (row.box === 'height') return `_text-sized_ × ${row.height}`;
-    return '_text-sized_';
+    if (row.box === 'none') return '_text-sized_';
+    // ⚠️ THROW, do not fall through. An unrecognised mode — a TARGETS row missing its third element
+    // — used to land on `_text-sized_`, which drops the comparison instead of making it: the check
+    // would quietly stop asserting a box and stay green (CODE-QUALITY #7, fresh reviewer round 2).
+    // Failing open is the one direction a contract generator must never fail.
+    throw new Error(`measure-contract: ${row.label} has an unknown box mode ${JSON.stringify(row.box)}`);
   };
 
   const cell = (row) =>
@@ -283,8 +307,10 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
       if (changed.length > 30) console.error(`   … and ${changed.length - 30} more`);
     }
     console.error(
-      '\n  If the SIZES moved and the weights did not, the approved fonts rendered as a fallback — ' +
-        'the harness now refuses that case outright, so this should not be reachable.\n' +
+      '\n  The harness refuses to measure unless every approved family AND weight is loaded, so a ' +
+        'missing font is not the cause. A moved box with unchanged sizes and weights is most likely ' +
+        'a renderer difference: demote that dimension in TARGETS rather than committing the new ' +
+        'number, which would record a fact about one machine.\n' +
         '  Run: node apps/web/design-system/measure-contract.mjs\n' +
         '  Never hand-edit it — a number nobody can reproduce is what this file exists to prevent.'
     );
