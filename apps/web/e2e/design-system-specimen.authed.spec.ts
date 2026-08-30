@@ -156,3 +156,35 @@ test.describe('the design system specimen', () => {
     expect(notBuilt.borderStyle, 'unbuilt is not visually distinct by its border').toBe('dashed')
   })
 })
+
+// ── The auth boundary, asserted ───────────────────────────────────────────────────────────────
+//
+// ⚠️ **This spec exists because the route shipped its first draft with no auth check at all.** The
+// guard was `if (projectSlug) await requireProjectMembership(projectSlug)`, so `/app/design-system`
+// with no `?project=` ran nothing — while the comment above it claimed the route was protected
+// "exactly like every other `/app` route". A cross-family reviewer (agy) found it as a Blocking
+// finding; nothing in the suite could have.
+//
+// Deliberately OUTSIDE the `authed` describe above: this asserts what an ANONYMOUS caller gets, so
+// it must not run with the fixture's storage state.
+test.describe('the specimen is closed to anonymous callers', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('with no project named, an anonymous request is sent to /login', async ({ page }) => {
+    const response = await page.goto(SPECIMEN)
+    // Either a redirect chain ending at /login, or the login page itself — what matters is that the
+    // specimen never renders. Asserted on the RENDERED page, not on a status code, because a
+    // redirect that lands somewhere else would still be a 200.
+    expect(page.url(), `an anonymous caller reached ${page.url()}`).toContain('/login')
+    await expect(page.locator('.ds-specimen')).toHaveCount(0)
+    expect(response?.status() ?? 0).toBeLessThan(500)
+  })
+
+  test('naming a project does not open it either', async ({ page }) => {
+    // The `if (projectSlug)` shape meant the WITHOUT-slug path was the hole. Both are asserted, so a
+    // future refactor cannot close one and reopen the other.
+    await page.goto(`${SPECIMEN}?project=miyagisanchez`)
+    expect(page.url(), `an anonymous caller reached ${page.url()}`).toContain('/login')
+    await expect(page.locator('.ds-specimen')).toHaveCount(0)
+  })
+})

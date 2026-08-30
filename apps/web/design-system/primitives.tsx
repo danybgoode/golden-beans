@@ -179,8 +179,15 @@ export function Table({ children }: { children: ReactNode }) {
   return (
     <div className="ds-table">
       {/* Wide content scrolls inside ITS OWN container; the page never scrolls sideways
-          (contract Do-not #6). */}
-      <div className="ds-table-scroll">{children}</div>
+          (contract Do-not #6).
+          ⚠️ `role="table"` is on the SCROLLER, not the outer box, and both are needed: `TableHead`
+          and `TableRow` carry `role="row"`, and a `row` whose ancestor is a plain `<div>` is an
+          orphaned role a screen reader reports as broken structure (cross-family review, agy).
+          The scroller is the element that directly contains the rows, so it is the one that has to
+          be the table. */}
+      <div className="ds-table-scroll" role="table">
+        {children}
+      </div>
     </div>
   )
 }
@@ -261,7 +268,10 @@ export function Wizard({ steps }: { steps: { label: string; state: 'done' | 'cur
         // A Fragment, not a wrapper with `display: contents`. The wrapper would have been an
         // inline style in a directory whose whole premise is that values come from the system —
         // legal here (the guard's inline-style ban is landing-only) and still the wrong shape.
-        <Fragment key={step.label}>
+        // ⚠️ Keyed on the INDEX as well as the label: two steps may legitimately share a label
+        // ("Review" twice in a longer flow), and a duplicate key is a React reconciliation bug that
+        // shows up as the wrong step being marked done (cross-family review, agy).
+        <Fragment key={`${step.label}-${index}`}>
           <span className="ds-wizard-step" data-state={step.state}>
             {step.state === 'done' ? <Icon name="check" size={13} /> : null}
             {step.label}

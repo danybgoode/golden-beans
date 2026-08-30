@@ -16,12 +16,27 @@
 // It is still gated — the visual gate asserts it against `MEASURED-SPEC.md`.
 //
 // ── Access ────────────────────────────────────────────────────────────────────────────────────
-// `requireProjectMembership`, exactly like every other `/app` route. It renders no tenant data —
-// every value below is a literal chosen to exercise a state — but an internal design surface is not
-// a reason to open a route that every sibling closes.
+// ⚠️ **This was WRONG on its first write, and a cross-family review caught it (agy, Blocking).**
+// The check was `if (projectSlug) await requireProjectMembership(projectSlug)` — so
+// `/app/design-system` with no `?project=` ran NO auth check at all, while the comment above it
+// claimed the route was protected "exactly like every other `/app` route". A comment asserting a
+// property the code does not have, on an auth boundary.
+//
+// And nothing else was covering it: `middleware.ts` is scoped to `/app/:path*` but its own header
+// says it is **session PLUMBING ONLY — it does NOT gate routes**, because per-route authorization
+// belongs at the data boundary. So the guard genuinely was the whole guard, and it was optional.
+//
+// What is at stake is smaller than the shape of the bug — the specimen renders no tenant data, every
+// value below is a literal chosen to exercise a state — but "it leaks nothing" is not why a route is
+// closed. Every sibling under `/app` requires a session, and an internal design surface is not a
+// reason to be the one that does not.
+//
+// So: a session is required unconditionally, and membership additionally when a project is named.
 
 import { ProductShell } from '@/components/product/ProductShell'
+import { redirect } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
+import { getSessionUser } from '@/lib/supabase-auth'
 import { SPACE, TYPE, WEIGHT } from '@/design-system/scales'
 import { SpecimenDialog } from './specimen-dialog'
 import {
@@ -87,6 +102,15 @@ export default async function DesignSystemSpecimen({
   // (AGENTS.md; the request never selects the tenant).
   const { project } = await searchParams
   const projectSlug = project ?? ''
+
+  // Unconditional. `redirect('/login')` matches what `requireProjectMembership` does for an
+  // anonymous caller, so the specimen behaves like its siblings whether or not a project is named.
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+
+  // ...and when a project IS named, membership of THAT project is required — resolved server-side
+  // from the session, never from this parameter, so a hand-typed `?project=` cannot reach a foreign
+  // project (AGENTS.md: the request never selects the tenant).
   if (projectSlug) await requireProjectMembership(projectSlug)
 
   return (
