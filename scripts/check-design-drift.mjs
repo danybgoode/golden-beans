@@ -33,7 +33,7 @@ const URL_WITH_HEX_FRAGMENT = /\b(?:href|src)=["'][^"']*#[\da-f]{3,8}["']/gi;
 //
 // The global keywords are allowed: `font: inherit` on a form control is the idiomatic reset and
 // resets nothing to a surprise.
-const FONT_SHORTHAND = /(?:^|[;{}\s])font\s*:\s*(?!\s*(?:inherit|initial|unset|revert)\b)/;
+const FONT_SHORTHAND_GLOBAL = /(?:^|[;{}])\s*font\s*:\s*(?!\s*(?:inherit|initial|unset|revert)\b)/gm;
 
 // A class selector inside `design-system/*.css` that is neither `.ds` nor `ds-`-prefixed (epic D3).
 // Landing rules reached the console through shared class names — `.tag`, `.note` — three times in
@@ -48,6 +48,26 @@ const CLASS_IN_SELECTOR = /\.(-?[A-Za-z_][\w-]*)/g;
 // colour. The `.tsx` sweep has stripped href/src hex fragments since the landing epic; this is the
 // stylesheet's equivalent.
 const URL_FRAGMENT_IN_CSS = /url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi;
+
+// A literal colour that is not a hex. `raw-hex` was the only colour rule, so `rgb(232 185 60)`,
+// `hsl(43 80% 57%)` and a bare `red` all passed in a hand-written design-system stylesheet — in a
+// directory whose stated premise is that "a value is a choice from a scale" (fresh reviewer).
+//
+// `color-mix()` and `rgb(from var(--gold) …)` are DERIVATIONS of a token, not hand-picked values,
+// and `globals.css` already uses the first to build its kraft surfaces — so a function whose
+// arguments reach a `var()` is allowed. What is refused is a number nobody can trace to the scale.
+const LITERAL_COLOR_FUNCTION = /\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(([^)]*)\)/gi;
+
+// A colour function whose arguments reach a token is a DERIVATION of the scale — that is what
+// `color-mix()` and relative colour syntax are for, and `globals.css` builds its two kraft surfaces
+// with `color-mix(in srgb, var(--kraft) 55%, white)` for exactly that reason. The `white` in there
+// is an ingredient of a derivation, not a hand-picked value, so the whole call is removed before
+// the literal checks run. Without this the rule fired on the one idiom the repo already uses to
+// stay on the scale — which is how a guard gets switched off instead of fixed.
+const DERIVED_COLOR_CALL =
+  /\b(?:color-mix|rgba?|hsla?|hwb|lab|lch|oklab|oklch|light-dark)\([^)]*var\([^)]*\)[^)]*\)/gi;
+const NAMED_COLORS =
+  /(?:^|[\s:,(])(?:red|blue|green|yellow|orange|purple|pink|brown|grey|gray|black|white|cyan|magenta|teal|navy|olive|maroon|lime|aqua|silver|gold)(?=[\s;,)]|$)/i;
 const NAMESPACE = 'ds';
 
 // landing-frijoles-rebrand · Sprint 1, Story 1.5 (epic D4) — the enclosed-numeral glyphs the
@@ -272,6 +292,23 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
   if (generated) return violations;
 
   const live = withoutComments(source);
+
+  // ⚠️ The `font:` rule is matched over the WHOLE source, not line by line (fresh reviewer). A
+  // declaration wrapped by a formatter — `font\n  : 14px/1.2 Archivo;` — slipped a line-scoped
+  // regex entirely, and this repo's own prettier config wraps long declarations. Same reasoning as
+  // `HEADING_BLOCK` above, which is matched over the whole file for exactly this class of miss.
+  for (const match of live.matchAll(FONT_SHORTHAND_GLOBAL)) {
+    violations.push({
+      line: lineOf(live, match.index),
+      rule: 'font-shorthand',
+      content: live
+        .slice(match.index, match.index + 60)
+        .split('\n')
+        .join(' ')
+        .trim(),
+    });
+  }
+
   live.split('\n').forEach((line, index) => {
     // ⚠️ `url(#…)` is an SVG REFERENCE, not a colour — `fill: url(#ds-bar-gradient)`. The `.tsx`
     // sweep has stripped href/src hex fragments since the landing epic; the stylesheet sweep was
@@ -285,8 +322,18 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
     if (RAW_HEX.test(withoutSvgRefs)) {
       violations.push({ line: index + 1, rule: 'raw-hex', content: line.trim() });
     }
-    if (FONT_SHORTHAND.test(line)) {
-      violations.push({ line: index + 1, rule: 'font-shorthand', content: line.trim() });
+
+    // Only a declaration VALUE can hold a colour; a selector cannot, and `.ds-gold` should not be
+    // read as the named colour `gold`.
+    const declaredValue = /:\s*(.+)$/.exec(withoutSvgRefs)?.[1] ?? '';
+    // Derivations are removed FIRST, so neither literal check sees their ingredients.
+    const value = declaredValue.replace(DERIVED_COLOR_CALL, 'derived()');
+    let literalColor = NAMED_COLORS.test(value);
+    for (const call of value.matchAll(LITERAL_COLOR_FUNCTION)) {
+      if (!call[1].includes('var(')) literalColor = true;
+    }
+    if (literalColor) {
+      violations.push({ line: index + 1, rule: 'literal-color', content: line.trim() });
     }
   });
 
@@ -332,8 +379,20 @@ function sourceFiles(root) {
   });
 }
 
-/** Every `.css` file under a root, recursively. The `.tsx` sweep's twin. */
+/**
+ * Every `.css` file under a root, recursively. The `.tsx` sweep's twin — including its loudness.
+ *
+ * A missing root throws for the same reason `sourceFiles` does: returning `[]` makes a renamed or
+ * mistyped directory read as "nothing to report", which is this guard reporting success about a
+ * surface it never opened (CODE-QUALITY #5b).
+ */
 function stylesheetFiles(root) {
+  if (!existsSync(root)) {
+    throw new Error(
+      `check-design-drift: stylesheet root ${root} does not exist. ` +
+        'A missing root silently sweeps nothing — add the directory or remove it from the sweep.'
+    );
+  }
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const path = join(root, entry.name);
     if (entry.isDirectory()) return stylesheetFiles(path);
@@ -502,16 +561,20 @@ export function inspectRepository(root = repoRoot) {
   //
   // The two GENERATED files are exempt by name rather than by pattern: an exemption keyed on
   // "looks generated" is an exemption anyone can claim by writing the right header comment.
+  // ⚠️ NO `existsSync` guard, and that is deliberate — it had one, and it was the exact inverse of
+  // `sourceFiles()` 190 lines above, which THROWS with a written rationale ("A swept root that does
+  // not exist must be LOUD, not empty"). The guard made a missing directory sweep nothing quietly.
+  // It was masked only because `DESIGN_SYSTEM_ROOT` is also in `SWEPT_ROOTS` and the `.tsx` sweep
+  // throws first — so the loudness depended on statement order inside this function (fresh
+  // reviewer). `stylesheetFiles` now throws for itself, with the same message shape.
   const designSystemRoot = join(root, DESIGN_SYSTEM_ROOT);
-  if (existsSync(designSystemRoot)) {
-    for (const path of stylesheetFiles(designSystemRoot)) {
-      const name = relative(designSystemRoot, path);
-      violations.push(
-        ...inspectDesignSystemStylesheet(readFileSync(path, 'utf8'), {
-          generated: GENERATED_STYLESHEETS.includes(name),
-        }).map((violation) => ({ ...violation, path: relative(root, path) }))
-      );
-    }
+  for (const path of stylesheetFiles(designSystemRoot)) {
+    const name = relative(designSystemRoot, path);
+    violations.push(
+      ...inspectDesignSystemStylesheet(readFileSync(path, 'utf8'), {
+        generated: GENERATED_STYLESHEETS.includes(name),
+      }).map((violation) => ({ ...violation, path: relative(root, path) }))
+    );
   }
 
   const globalsPath = join(root, 'apps/web/app/globals.css');

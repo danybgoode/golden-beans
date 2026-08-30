@@ -153,6 +153,16 @@ async function main() {
     SECURITY_SIMULATIONS_ENABLED: 'true',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true',
     SCENARIO_AUTHORING_ENABLED: 'true',
+    // ⚠️ **These two were missing, and they gate the epic's flagship guard.**
+    // `console-visual.authed.spec.ts` skips itself unless BOTH are exactly 'true'
+    // (`gatesAreLit()`), and `ci.yml` sets both on its main server — so this runner, which exists to
+    // be "the local counterpart to CI's Playwright gate", silently skipped the one spec that can go
+    // red on the way a page looks. A local gate that is a SUBSET of CI's is worse than no local
+    // gate, because it produces a green nobody should trust (Roadmap/LEARNINGS.md).
+    // Both are ON in production, so this matches rather than loosens.
+    CONSOLE_SHELL_ENABLED: 'true',
+    FLAG_CONSOLE_ENABLED: 'true',
+    FLAG_RULE_BUILDER_ENABLED: 'true',
     SIGNUP_ENABLED: requestedProject === 'authed' ? 'true' : 'false',
     SELF_PROJECT_API_KEY: randomBytes(24).toString('hex'),
   };
@@ -172,6 +182,13 @@ async function main() {
     SECURITY_SIMULATIONS_ENABLED: 'false',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
     SCENARIO_AUTHORING_ENABLED: 'false',
+    // The dark server mirrors CI's `:3100`, which turns these two OFF so `setup-routes-dark` and
+    // `flag-console-dark` assert the dark contract. They are ON above for the same reason CI has
+    // them ON there: production does. Both states get asserted, rather than whichever one the
+    // environment happened to be in.
+    CONSOLE_SHELL_ENABLED: 'false',
+    FLAG_CONSOLE_ENABLED: 'false',
+    SIGNUP_ENABLED: 'false',
   };
   await withServer({ port: darkPort, env: dark, label: 'dark-gate' }, async () => {
     runPlaywright(dark, darkPort, [

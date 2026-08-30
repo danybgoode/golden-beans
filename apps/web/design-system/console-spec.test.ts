@@ -33,8 +33,9 @@ type MeasuredRow = {
   fontSize: number
   fontWeight: string
   family: string
-  width: number
-  height: number
+  /** `null` when the dimension is text-sized and therefore not reproducible across platforms. */
+  width: number | null
+  height: number | null
   transform: string
 }
 
@@ -48,16 +49,19 @@ function readMeasuredSpec(): Map<string, MeasuredRow> {
     if (cells.length !== 7 || cells[0] !== '') continue
     const [, label, sizeWeight, family, box, transform] = cells
     const sw = /^([\d.]+) \/ (\d+)$/.exec(sizeWeight)
-    const wh = /^(\d+) × (\d+)$/.exec(box)
-    if (!sw || !wh) continue
-    rows.set(label, {
-      fontSize: Number(sw[1]),
-      fontWeight: sw[2],
-      family,
-      width: Number(wh[1]),
-      height: Number(wh[2]),
-      transform,
-    })
+    if (!sw) continue
+    // `_text-sized_` marks a dimension that does not reproduce across platforms — see the note in
+    // MEASURED-SPEC.md. It parses to `null` rather than being skipped, because a row that vanished
+    // from this map would make every assertion about it pass vacuously.
+    const dimension = (cell: string): number | null =>
+      cell === '_text-sized_' ? null : /^\d+$/.test(cell) ? Number(cell) : NaN
+    const parts =
+      box === '_text-sized_' ? ['_text-sized_', '_text-sized_'] : box.split('×').map((c) => c.trim())
+    if (parts.length !== 2) continue
+    const width = dimension(parts[0])
+    const height = dimension(parts[1])
+    if (Number.isNaN(width) || Number.isNaN(height)) continue
+    rows.set(label, { fontSize: Number(sw[1]), fontWeight: sw[2], family, width, height, transform })
   }
   return rows
 }
@@ -146,6 +150,10 @@ test('the generated spec table parses, and is not silently empty', () => {
   // rather than by quietly asserting nothing.
   const rows = readMeasuredSpec()
   assert.equal(rows.size, 23, 'MEASURED-SPEC.md should describe 23 elements')
+  // Seven rows carry a text-sized dimension. Pinned so that a change to which dimensions reproduce
+  // is a decision somebody makes, not a silent widening of what the contract stops checking.
+  const textSized = [...rows.entries()].filter(([, r]) => r.width === null || r.height === null)
+  assert.equal(textSized.length, 7, 'the set of non-reproducible dimensions changed')
   assert.equal(rows.get('Project switcher')?.width, 122, 'the corrected switcher width (D8)')
   assert.equal(rows.get('Feature row')?.height, 71, 'the corrected feature-row height (D8)')
 })
@@ -168,9 +176,22 @@ test('every number the visual gate asserts comes from the regenerated table', ()
       assert.equal(row.expect.fontWeight, prototype.fontWeight, `${row.gateRow} font-weight`)
     }
     if (row.expect.height !== undefined) {
+      // A `null` here means the prototype's height is text-sized, so there is no reproducible number
+      // for the gate to agree with — and a gate row asserting one would be asserting a fact about
+      // one machine. That is a finding, not something to skip past.
+      assert.notEqual(
+        prototype.height,
+        null,
+        `the gate asserts a height for ${row.gateRow}, but the prototype's is text-sized and does not reproduce`
+      )
       assert.equal(row.expect.height, prototype.height, `${row.gateRow} height`)
     }
     if (row.expect.width !== undefined) {
+      assert.notEqual(
+        prototype.width,
+        null,
+        `the gate asserts a width for ${row.gateRow}, but the prototype's is text-sized and does not reproduce`
+      )
       assert.equal(row.expect.width, prototype.width, `${row.gateRow} width`)
     }
   }

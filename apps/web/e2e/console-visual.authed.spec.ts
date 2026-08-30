@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readTenantRecord } from './helpers/authed-fixture'
-import { ROUTE_MANIFEST, coverage } from '@/design-system/route-manifest'
+import { ROUTE_MANIFEST } from '@/design-system/route-manifest'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -21,17 +21,21 @@ import { ROUTE_MANIFEST, coverage } from '@/design-system/route-manifest'
 
 const VIEWPORT = { width: 1440, height: 960 }
 
-// ⚠️ **NOTHING IN CI RUNS THIS FILE.** `ci.yml` runs the `api` project only, and
-// `FLAG_CONSOLE_ENABLED` appears nowhere in the workflow — so the epic's flagship visual gate
-// executes only when a human exports both vars, and skips silently otherwise (fresh reviewer,
-// round 3, N9). "The gate is red until Story 3.3" is therefore a property of a suite no automation
-// runs.
+// ── ✅ CI RUNS THIS FILE, and has since `console-ia-overhaul` Story 3.3 ──────────────────────
 //
-// It is NOT wired into CI in this PR, and the reason is specific rather than an oversight:
-// assertion [1] is deliberately red until Story 3.3 deletes the JSON authoring stack, so adding
-// this project to the workflow now would make CI permanently red and block every merge behind it.
-// Wiring it is Story 3.3's closing step, when the gate can go green — and that ordering is the same
-// rule this epic applies to every control it removes: the replacement lands with the deletion.
+// ⚠️ **This block used to open "NOTHING IN CI RUNS THIS FILE", and it was false for an entire
+// epic.** `ci.yml`'s `e2e` job runs precisely this one spec — `--project=authed
+// apps/web/e2e/console-visual.authed.spec.ts` — with all thirteen gate env vars mirrored, under a
+// step whose own comment reads *"Story 3.3 landed; the gate is green; this is the step that was
+// promised."* Story 1.6 rewrote this file and left the paragraph above it describing the world
+// before that step existed.
+//
+// That is `CODE-QUALITY.md` #3 — a comment asserting a property the code does not have — sitting at
+// the top of the epic's flagship guard, telling every reader that the guard does not run. Found by
+// the fresh reviewer on PR #128. Corrected rather than deleted, because the reason it was written
+// is still worth knowing: the file was deliberately NOT wired in at first, since assertion [1] was
+// red until Story 3.3 deleted the JSON authoring stack, and wiring it earlier would have made CI
+// permanently red. The replacement landed with the deletion, and so did the gate.
 
 /**
  * ⚠️ **Exactly `'true'`, matching `lib/flags.ts`.** The first version skipped on truthiness, so
@@ -669,17 +673,33 @@ test('every route claiming the design system renders from it', async ({ page }) 
   test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
 
   const claimed = ROUTE_MANIFEST.filter((row) => row.rendersFromDesignSystem)
-  // ⚠️ The empty-loop guard. `coverage()` is computed from the same rows, so this cannot drift; what
-  // it pins is that a ZERO here is a deliberate zero rather than a loop that quietly found nothing.
-  expect(
-    claimed.length,
-    'the manifest and the coverage report disagree about how many routes are on the system'
-  ).toBe(coverage(6).rendersFromDesignSystem)
+
+  // ⚠️ **The previous "empty-loop guard" was near-tautological** (fresh reviewer, Major). It
+  // compared `claimed.length` against `coverage(6).rendersFromDesignSystem` — the same predicate
+  // applied to almost the same rows — so it could differ only in one exotic case, and its comment
+  // claimed it "pins that a ZERO here is a deliberate zero rather than a loop that quietly found
+  // nothing". It could not distinguish those two at all.
+  //
+  // What actually distinguishes them is counting what the loop REALLY DID, against an expectation
+  // derived independently of the loop. So: `visited` is incremented inside the body, `skipped`
+  // counts the rows this suite structurally cannot open, and the two are asserted to account for
+  // every claimed row afterwards. A zero is then a zero somebody can read.
+  let visited = 0
+  const skipped: string[] = []
 
   await page.setViewportSize(VIEWPORT)
   for (const row of claimed) {
     const reach = REACHABLE[row.route]
-    if (typeof reach !== 'function') continue
+    // ⚠️ A `{ coveredBy }` row is NOT silently continued past (fresh reviewer, Major). It is a route
+    // whose URL needs a key or a token this suite must not invent — a feature key, a journey key, a
+    // share token — so a sibling spec covers it. The `REACHABLE` docblock promised exactly this and
+    // the code just skipped, which meant a row could claim coverage and never be opened by anything.
+    // Now the skips are counted, named in the failure message, and reconciled below.
+    if (typeof reach !== 'function') {
+      skipped.push(`${row.route} → ${reach.coveredBy}`)
+      continue
+    }
+    visited += 1
     await page.goto(reach(tenantSlug()))
     await page.waitForLoadState('networkidle')
 
@@ -692,7 +712,15 @@ test('every route claiming the design system renders from it', async ({ page }) 
       // system's frame in one commit; if this looked at the wrapper, coverage would leap to 21 while
       // twenty-one page BODIES were still the old design. Only a page's own markup can put a
       // `ds-`-prefixed class inside its main element.
-      designSystemClasses: document.querySelectorAll('main [class*="ds-"]').length,
+      //
+      // ⚠️ TOKEN match, not `[class*="ds-"]`. The substring form is satisfied by `cards-grid`,
+      // `needs-review`, `fields-row` and even `not-ds-x`, while its comment claimed to be testing a
+      // PREFIX (fresh reviewer, Major). No collision exists in `apps/web` today, so it was latent —
+      // but this single boolean is what stands between the coverage number and a claim, and a
+      // latent false positive on the number a whole epic is measured by is not a nit.
+      designSystemClasses: [...document.querySelectorAll('main [class]')].filter((element) =>
+        [...element.classList].some((name) => name === 'ds' || name.startsWith('ds-'))
+      ).length,
     }))
 
     expect
@@ -713,6 +741,20 @@ test('every route claiming the design system renders from it', async ({ page }) 
         `[${row.route}] body is ${geometry.scrollWidth}px wide in a ${geometry.innerWidth}px viewport — content is clipped`
       )
       .toBeLessThanOrEqual(geometry.innerWidth)
+  }
+
+  // Every claimed row was either opened here or handed to a named sibling spec. Nothing fell
+  // through, and the numbers say so rather than a comment saying so.
+  expect(
+    visited + skipped.length,
+    `the loop accounted for ${visited + skipped.length} of ${claimed.length} routes claiming the design system`
+  ).toBe(claimed.length)
+
+  // ...and the skips are REPORTED, not swallowed. A route counted in coverage and opened by nothing
+  // is the shape of the last epic's five deferred rows.
+  if (skipped.length > 0) {
+    console.log(`[visual gate] ${visited} route(s) opened here; ${skipped.length} covered elsewhere:`)
+    for (const line of skipped) console.log(`  · ${line}`)
   }
 })
 

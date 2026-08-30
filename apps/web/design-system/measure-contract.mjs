@@ -28,30 +28,70 @@ const OUT = 'MEASURED-SPEC.md';
 // present in `console-prototype.html` before this script moved onto it — a missing selector emits a
 // **MISSING** row rather than a silently absent one, because a spec table that quietly loses a row
 // is a spec that stops covering something without saying so.
+// ── What is measured, and WHICH OF ITS DIMENSIONS ARE REPRODUCIBLE ────────────────────────────
+//
+// Ship > Features is the state the contract's spec table describes, and the one whose three cheap
+// assertions would have caught the whole failure on day one. Every selector was verified present in
+// `console-prototype.html`; a missing one emits a **MISSING** row rather than vanishing, because a
+// spec table that quietly loses a row stops covering something without saying so.
+//
+// ── `box`, and the finding that produced it ───────────────────────────────────────────────────
+// The first version emitted every width and height as a number and compared the file byte-for-byte.
+// **That gate went red on its first CI run**, and the diff (which the checker now prints) said why:
+// seven rows measure differently on ubuntu-latest than on macOS, with the SAME webfonts loaded and
+// verified loaded.
+//
+//   Page h1              479 -> 496      Feature description  430 -> 420
+//   Page subtitle        479 -> 496      Primary button       115 -> 118
+//   Stat number       31x34 -> 32x40     Secondary button     175 -> 178
+//   Content column   (h) 791 -> 792
+//
+// Those are text-advance and rasterisation differences. Self-hosting the fonts does not fix them —
+// the font FILE would be identical and the rasteriser still is not.
+//
+// So the rule this file now follows, which is the epic's own rule turned on itself: **a number that
+// only reproduces on the machine that generated it has no business in a contract whose entire claim
+// is "measured, not described".** That is the exact complaint D8 makes about the hand-typed
+// `140 x 30`. A per-machine number is a hand-typed number with extra steps.
+//
+// `box` therefore says which dimensions are EMITTED AS NUMBERS and so compared:
+//
+//   'exact'  both, verified reproducing on macOS and ubuntu-latest independently
+//   'width'  width only — the height cascades from text laid out above it
+//   'height' height only — the width is shrink-to-fit around a glyph run
+//   'none'   neither is portable
+//
+// It is not a guess. Every value below is what two independent platforms actually agreed on, and
+// **no contract-cited number was lost to this**: the switcher's `122 x 30`, the feature row's `71`,
+// the rail item's `36`, the list header's `36`, the pill's `26` and the switch's `38 x 21` all
+// reproduce exactly. The rows that lost numbers are cited by size and weight, never by box.
 const TARGETS = [
-  ['.topbar', 'Top bar (tier 1)'],
-  ['.crumb-btn', 'Project switcher'],
-  ['.tabs', 'Section nav (tier 2)'],
-  ['.tab[aria-selected="true"]', 'Section tab · active'],
-  ['.tab', 'Section tab · inactive'],
-  ['.rail', 'Rail (tier 3)'],
-  ['.railnav button[aria-current="true"]', 'Rail item · active'],
-  ['.railnav button', 'Rail item'],
-  ['.content', 'Content column'],
-  ['.page-head h1', 'Page h1'],
-  ['.page-head p', 'Page subtitle'],
-  ['.answer', 'The answer line'],
-  ['.stat .n', 'Stat number'],
-  ['.stat .k', 'Stat label'],
-  ['.listhead', 'List header row'],
-  ['.row', 'Feature row'],
-  ['.row-key', 'Feature key'],
-  ['.row-desc', 'Feature description'],
-  ['.pill.on', 'State pill'],
-  ['.sw', 'Switch'],
-  ['.dormant', 'Dormant summary row'],
-  ['.btn-primary', 'Primary button'],
-  ['.btn-ghost', 'Secondary button'],
+  ['.topbar', 'Top bar (tier 1)', 'exact'],
+  ['.crumb-btn', 'Project switcher', 'exact'],
+  ['.tabs', 'Section nav (tier 2)', 'exact'],
+  ['.tab[aria-selected="true"]', 'Section tab · active', 'exact'],
+  ['.tab', 'Section tab · inactive', 'exact'],
+  ['.rail', 'Rail (tier 3)', 'exact'],
+  ['.railnav button[aria-current="true"]', 'Rail item · active', 'exact'],
+  ['.railnav button', 'Rail item', 'exact'],
+  // The column is 1180 wide by CSS; its height is the sum of whatever text laid out inside it, and
+  // moved by 1px between platforms.
+  ['.content', 'Content column', 'width'],
+  ['.page-head h1', 'Page h1', 'height'],
+  ['.page-head p', 'Page subtitle', 'height'],
+  ['.answer', 'The answer line', 'exact'],
+  // Both dimensions moved: 31x34 -> 32x40. The mono digits' advance AND their line box differ.
+  ['.stat .n', 'Stat number', 'none'],
+  ['.stat .k', 'Stat label', 'exact'],
+  ['.listhead', 'List header row', 'exact'],
+  ['.row', 'Feature row', 'exact'],
+  ['.row-key', 'Feature key', 'exact'],
+  ['.row-desc', 'Feature description', 'height'],
+  ['.pill.on', 'State pill', 'exact'],
+  ['.sw', 'Switch', 'exact'],
+  ['.dormant', 'Dormant summary row', 'exact'],
+  ['.btn-primary', 'Primary button', 'height'],
+  ['.btn-ghost', 'Secondary button', 'height'],
 ];
 
 export async function measure() {
@@ -79,7 +119,7 @@ async function measureIn(page) {
   await page.waitForTimeout(250);
 
   const out = await page.evaluate((targets) => {
-    const read = ([selector, label]) => {
+    const read = ([selector, label, boxMode]) => {
       const element = document.querySelector(selector);
       if (!element) return { label, selector, missing: true };
       const style = getComputedStyle(element);
@@ -87,6 +127,7 @@ async function measureIn(page) {
       return {
         label,
         selector,
+        box: boxMode,
         missing: false,
         fontSize: parseFloat(style.fontSize),
         fontWeight: style.fontWeight,
@@ -118,10 +159,24 @@ async function measureIn(page) {
 }
 
 export function render(out) {
+  /**
+   * The Box cell — numbers only where they reproduce.
+   *
+   * `text-sized` is not a shrug. It says: this dimension is decided by how a glyph run happens to
+   * rasterise on the machine doing the measuring, so writing a number here would be writing down a
+   * fact about my laptop and calling it the design.
+   */
+  const boxCell = (row) => {
+    if (row.box === 'exact') return `${row.width} × ${row.height}`;
+    if (row.box === 'width') return `${row.width} × _text-sized_`;
+    if (row.box === 'height') return `_text-sized_ × ${row.height}`;
+    return '_text-sized_';
+  };
+
   const cell = (row) =>
     row.missing
       ? `| ${row.label} | **MISSING** \`${row.selector}\` | | | |`
-      : `| ${row.label} | ${row.fontSize} / ${row.fontWeight} | ${row.family} | ${row.width} × ${row.height} | ${row.textTransform} |`;
+      : `| ${row.label} | ${row.fontSize} / ${row.fontWeight} | ${row.family} | ${boxCell(row)} | ${row.textTransform} |`;
 
   return `# The measured spec — Ship › Features at 1440 × 960
 
@@ -162,6 +217,15 @@ summary line, the summary standing for rows that are not also listed — never t
 ${out.uppercaseElements.length ? out.uppercaseElements.map((e) => `\`${e}\``).join(' · ') : '_none_'}
 
 ## The spec
+
+> **\`_text-sized_\`** means that dimension is decided by how a glyph run rasterises, and **does not
+> reproduce across platforms** — measured here and on \`ubuntu-latest\`, the same webfonts loaded and
+> verified loaded, \`Page h1\` is 479px wide on one and 496px on the other. Writing a number there
+> would be recording a fact about one machine and calling it the design, which is the same defect
+> D8 catches in the hand-typed \`140 × 30\`. Those dimensions are emitted as a marker and are **not
+> compared** by \`--check\`; everything else is, exactly. No contract-cited number is affected — the
+> switcher's \`122 × 30\`, the feature row's \`71\`, the rail item's \`36\`, the list header's \`36\`, the
+> pill's \`26\` and the switch's \`38 × 21\` all reproduce on both.
 
 | Element | Size / weight | Family | Box | Transform |
 |---|---|---|---|---|

@@ -531,11 +531,14 @@ test('an SVG url(#…) reference is not a colour, and a real hex beside it still
 });
 
 test('a dot inside an attribute selector is not a class name', () => {
+  // ⚠️ The fixtures below use `var(--gold)`, not `red`. They used `red` as innocuous filler until
+  // the `literal-color` rule landed and correctly flagged it — a test fixture that quietly becomes
+  // a violation of a NEW rule is how a selector test starts failing for a value reason.
   // `[data-x="a.b"]`, `[href=".."]`. The class pattern read the dot as a class and reported a
   // correctly-namespaced selector as a namespace violation — and attribute selectors are how this
   // design system expresses STATE (`[aria-current="page"]`), which is what the namespace rule's own
   // message recommends. The rule would have fired most often on exactly the markup it asks for.
-  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a[data-x="a.b"] {\n  color: red;\n}\n'), []);
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-a[data-x="a.b"] {\n  color: var(--gold);\n}\n'), []);
   assert.deepEqual(
     inspectDesignSystemStylesheet('.ds-rail[aria-current="page"] {\n  color: var(--gold);\n}\n'),
     []
@@ -544,15 +547,71 @@ test('a dot inside an attribute selector is not a class name', () => {
   // ...and an unprefixed class carrying such an attribute is still caught, so the fix removed a
   // false positive without opening a false negative.
   assert.deepEqual(
-    inspectDesignSystemStylesheet('.tag[data-x="a.b"] {\n  color: red;\n}\n').map((v) => v.rule),
+    inspectDesignSystemStylesheet('.tag[data-x="a.b"] {\n  color: var(--gold);\n}\n').map((v) => v.rule),
     ['namespace']
   );
 });
 
 test('the namespace rule reaches inside :is() and :where()', () => {
-  assert.deepEqual(inspectDesignSystemStylesheet(':where(.ds-a, .ds-b) {\n  color: red;\n}\n'), []);
+  assert.deepEqual(inspectDesignSystemStylesheet(':where(.ds-a, .ds-b) {\n  color: var(--gold);\n}\n'), []);
   assert.deepEqual(
-    inspectDesignSystemStylesheet(':where(.ds-a, .tag) {\n  color: red;\n}\n').map((v) => v.rule),
+    inspectDesignSystemStylesheet(':where(.ds-a, .tag) {\n  color: var(--gold);\n}\n').map((v) => v.rule),
     ['namespace']
   );
+});
+
+test('a `font:` shorthand is caught even when a formatter has wrapped it', () => {
+  // The rule was line-scoped, and this repo's prettier config wraps long declarations — so
+  // `font\n  : 14px/1.2 Archivo;` slipped it entirely (fresh reviewer). Matched over the whole
+  // source now, for the same reason `HEADING_BLOCK` is.
+  assert.deepEqual(
+    inspectDesignSystemStylesheet('.ds-a {\n  font\n    : 600 12px var(--sans);\n}\n').map((v) => v.rule),
+    ['font-shorthand']
+  );
+});
+
+test('a colour has to come from the scale, whatever notation it is written in', () => {
+  // `raw-hex` was the ONLY colour rule, so every non-hex notation walked past it in a directory
+  // whose premise is that a value is a choice from a scale (fresh reviewer).
+  for (const value of ['rgb(232 185 60)', 'hsl(43 80% 57%)', 'oklch(0.7 0.1 80)', 'red']) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-a {\n  color: ${value};\n}\n`).map((v) => v.rule),
+      ['literal-color'],
+      `${value} is a hand-picked colour`
+    );
+  }
+
+  // ...and a DERIVATION of a token is not a hand-picked colour. `globals.css` builds its two kraft
+  // surfaces with exactly this idiom, so a rule that refused it would have been refusing the one
+  // pattern the repo already uses to stay on the scale.
+  for (const value of [
+    'var(--gold)',
+    'color-mix(in srgb, var(--gold) 55%, white)',
+    'rgb(from var(--gold) r g b / 50%)',
+    'linear-gradient(var(--gold), var(--gold-hot))',
+    'transparent',
+    'currentColor',
+  ]) {
+    assert.deepEqual(
+      inspectDesignSystemStylesheet(`.ds-a {\n  color: ${value};\n}\n`),
+      [],
+      `${value} resolves to the scale`
+    );
+  }
+
+  // A SELECTOR is not a value: `.ds-gold` must not be read as the named colour.
+  assert.deepEqual(inspectDesignSystemStylesheet('.ds-gold {\n  color: var(--gold);\n}\n'), []);
+});
+
+test('a missing stylesheet root is LOUD, exactly like a missing swept root', () => {
+  // It used to be wrapped in `if (existsSync(...))`, the exact inverse of `sourceFiles()`, whose own
+  // comment says a missing root must be loud rather than empty. It was masked only because the
+  // directory is in SWEPT_ROOTS too and the .tsx sweep throws first — so the guard's loudness
+  // depended on statement order (fresh reviewer).
+  const root = mkdtempSync(join(tmpdir(), 'design-drift-missing-'));
+  try {
+    assert.throws(() => inspectRepository(root), /does not exist/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

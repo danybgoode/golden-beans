@@ -57,10 +57,33 @@ if (BASE_REF_RAW !== undefined && BASE_REF_RAW.trim() === '') {
 }
 const BASE_REF = BASE_REF_RAW || 'origin/main';
 
+// ⚠️ This imports a `.ts` file from a `.mjs` script, which works because Node strips types by
+// default from **22.18** onward. `ci.yml` pins `node-version: 22`, which FLOATS within the major, so
+// an older 22.x would fail here. It fails LOUDLY — a syntax error, not a wrong number — and the repo
+// already depends on the same behaviour for `npm run test:unit`, so this is a stated dependency
+// rather than a hidden one (fresh reviewer).
 const { coverage, liveRows } = await import(join(REPO, MANIFEST));
+
+// ⚠️ `--sprint N` (fresh reviewer). Everything was reported at `coverage(6)`, so the three routes
+// Story 4.5 retires were already out of the denominator while they are still live and off-system —
+// the epic's own trajectory table says 30 through Sprint 3, and this printed 27. `route-manifest.ts`
+// documents "the sprint being asked about" and nothing ever asked it anything but 6.
+//
+// The committed report stays at 6 — it is the epic's finish line and the ratchet's baseline, and a
+// per-sprint baseline would ratchet against a moving denominator. The flag is for reading the
+// number as of a sprint, which is what the sprint walkthroughs quote.
+const sprintFlag = process.argv.indexOf('--sprint');
+const SPRINT = sprintFlag === -1 ? 6 : Number(process.argv[sprintFlag + 1]);
+if (!Number.isInteger(SPRINT) || SPRINT < 1 || SPRINT > 6) {
+  console.error(`✗ --sprint must be 1-6, got ${JSON.stringify(process.argv[sprintFlag + 1])}`);
+  process.exit(1);
+}
 
 /** The report, as it should appear on disk. Sorted and pretty so a diff is readable. */
 function buildReport() {
+  // Always 6 — the report is the ratchet's baseline and the epic's finish line. `--sprint` changes
+  // what is PRINTED, never what is committed, because a baseline computed against a moving
+  // denominator would ratchet against itself.
   const now = coverage(6);
   return `${JSON.stringify(
     {
@@ -94,7 +117,12 @@ console.log(line('renders from design-system/', parsed.rendersFromDesignSystem, 
 console.log(line('COVERED (both)', parsed.complete, parsed.routes));
 // The denominator is computed from the manifest's own lifecycle fields, not typed here: Story 4.5
 // retires three routes and Story 4.3 adds one, so "29" is true today and false at epic close.
-console.log(`\n  denominator: ${liveRows(6).length} routes live at epic close (see the D13 ledger)`);
+console.log(
+  `\n  denominator: ${liveRows(6).length} routes live at epic close (see the D13 ledger)` +
+    (SPRINT === 6
+      ? ''
+      : `\n  as of sprint ${SPRINT}: ${liveRows(SPRINT).length} live, ${coverage(SPRINT).complete} covered`)
+);
 
 if (!process.argv.includes('--check')) {
   writeFileSync(reportPath, report);
@@ -130,7 +158,34 @@ try {
   // Anything else (a ref that cannot be resolved, no git, a shallow clone) is a broken gate and
   // must be loud.
   const message = String(error.stderr ?? error.message);
-  const missingFile = /does not exist|exists on disk, but not in/.test(message);
+  let missingFile = /does not exist|exists on disk, but not in/.test(message);
+
+  // ⚠️ **The hatch must be keyed on the DESIGN SYSTEM being absent, not on this one file** (fresh
+  // reviewer). Keyed on the report alone, renaming or moving `coverage.json` would make every
+  // subsequent PR take this branch, print a green tick, and disable the ratchet — a gate switched
+  // off by a refactor nobody would connect to it. So a missing report is only forgiven when the
+  // manifest is missing from the base ref too, i.e. this really is the first PR to introduce any of
+  // it. Anything else is a broken gate and must be loud.
+  if (missingFile) {
+    try {
+      execFileSync('git', ['show', `${BASE_REF}:${MANIFEST}`], {
+        cwd: REPO,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      // The manifest EXISTS on the base and the report does not — so the report moved, or was
+      // deleted. Not a first PR.
+      missingFile = false;
+      console.error(
+        `\n✗ ${MANIFEST} exists on ${BASE_REF} but ${REPORT} does not. The coverage report has been ` +
+          'moved, renamed or deleted — which would silently disable the ratchet for every PR after ' +
+          'this one. Restore it, or update REPORT and regenerate on the base branch first.'
+      );
+    } catch {
+      // Neither exists on the base ref: genuinely the first PR to add the design system.
+    }
+  }
+
   if (!missingFile) {
     console.error(
       `\n✗ could not read ${REPORT} from ${BASE_REF}. The ratchet cannot run, so this fails rather ` +

@@ -300,8 +300,15 @@ system"*. Different questions, and folding one into the other would put `/login`
 
 🔒 **Locked:** `apps/web/design-system/route-manifest.ts` **imports** `PROJECT_ROUTE_INVENTORY` and
 is unit-tested to hold (a) a row for **every** inventory surface — so a new nav surface with no
-reference state turns the manifest red — and (b) **exactly 29** rows. That is "no second list" kept
-honestly: one list of surfaces, one list of coverage, welded by a test.
+reference state turns the manifest red — and (b) the row count the **D13 ledger** says is right at
+each sprint: **30 live through Sprint 3, 27 at epic close.**
+
+⚠️ *This line said "exactly **29** rows" until the fresh reviewer pointed out that it contradicted
+D13 four hundred lines further down the same document — the number D13 exists to correct, restated
+as a fact in the decision D13 amends. The test asserts the ledger, not a literal.*
+
+That is "no second list" kept honestly: one list of surfaces, one list of coverage, welded by a
+test.
 
 🔒 **Every assertion is observed failing on a deliberately mutated page.** The epic's own lesson —
 `querySelectorAll('[role="columnheader"]')` passes under `display: none`, which removes an element

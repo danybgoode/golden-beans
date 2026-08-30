@@ -38,6 +38,15 @@ summary line, the summary standing for rows that are not also listed — never t
 
 ## The spec
 
+> **`_text-sized_`** means that dimension is decided by how a glyph run rasterises, and **does not
+> reproduce across platforms** — measured here and on `ubuntu-latest`, the same webfonts loaded and
+> verified loaded, `Page h1` is 479px wide on one and 496px on the other. Writing a number there
+> would be recording a fact about one machine and calling it the design, which is the same defect
+> D8 catches in the hand-typed `140 × 30`. Those dimensions are emitted as a marker and are **not
+> compared** by `--check`; everything else is, exactly. No contract-cited number is affected — the
+> switcher's `122 × 30`, the feature row's `71`, the rail item's `36`, the list header's `36`, the
+> pill's `26` and the switch's `38 × 21` all reproduce on both.
+
 | Element | Size / weight | Family | Box | Transform |
 |---|---|---|---|---|
 | Top bar (tier 1) | 14 / 400 | Archivo | 1440 × 54 | none |
@@ -48,18 +57,18 @@ summary line, the summary standing for rows that are not also listed — never t
 | Rail (tier 3) | 14 / 400 | Archivo | 236 × 862 | none |
 | Rail item · active | 13.5 / 600 | Archivo | 207 × 36 | none |
 | Rail item | 13.5 / 600 | Archivo | 207 × 36 | none |
-| Content column | 14 / 400 | Archivo | 1180 × 791 | none |
-| Page h1 | 23 / 700 | Archivo | 479 × 35 | none |
-| Page subtitle | 13.5 / 400 | Archivo | 479 × 41 | none |
+| Content column | 14 / 400 | Archivo | 1180 × _text-sized_ | none |
+| Page h1 | 23 / 700 | Archivo | _text-sized_ × 35 | none |
+| Page subtitle | 13.5 / 400 | Archivo | _text-sized_ × 41 | none |
 | The answer line | 13.5 / 400 | Archivo | 1120 × 68 | none |
-| Stat number | 26 / 600 | IBM Plex Mono | 31 × 34 | none |
+| Stat number | 26 / 600 | IBM Plex Mono | _text-sized_ | none |
 | Stat label | 12.5 / 400 | Archivo | 241 × 19 | none |
 | List header row | 11 / 600 | Archivo | 1118 × 36 | uppercase |
 | Feature row | 14 / 400 | Archivo | 1118 × 71 | none |
 | Feature key | 13.5 / 500 | IBM Plex Mono | 614 × 20 | none |
-| Feature description | 12.5 / 400 | Archivo | 430 × 19 | none |
+| Feature description | 12.5 / 400 | Archivo | _text-sized_ × 19 | none |
 | State pill | 12 / 600 | Archivo | 48 × 26 | none |
 | Switch | 14 / 400 | Archivo | 38 × 21 | none |
 | Dormant summary row | 14 / 400 | Archivo | 1118 × 89 | none |
-| Primary button | 13.5 / 600 | Archivo | 115 × 38 | none |
-| Secondary button | 13.5 / 600 | Archivo | 175 × 38 | none |
+| Primary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |
+| Secondary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |

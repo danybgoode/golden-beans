@@ -150,10 +150,23 @@ needs, **so that** the guard is not blind to the ways *this* design system can d
 **As a** product owner, **I want** one generated number for how much of the product is on the
 system, **so that** an XXL project has a finish line and an off-system page is visibly a debt.
 **Acceptance:**
-- A generated manifest lists all **29** in-scope routes with three booleans each: has an approved
-  reference state · renders from `design-system/` · passes the visual gate.
-- It **extends `lib/project-route-inventory.ts`** — no second list (the last epic's D2, and the
-  reason the nav needed no second list either).
+> ⚠️ **AMENDED AT THE LOCK AND AFTER REVIEW.** Story 1.3 got a *"rewritten"* banner and this one did
+> not, so three of its criteria stayed ✅ against wording that had already been superseded (fresh
+> reviewer). Corrected here rather than in a retro: a ✅ against a criterion nobody meets any more is
+> the shape of a green tick on work nobody did.
+
+- A generated manifest lists every in-scope route — **30 live through Sprint 3, 27 at epic close**,
+  per the **D13** ledger. *(Was "all 29". 29 was 32 pages minus 3 out of scope, before this epic's
+  own Story 4.5 retired three routes and Story 4.3 added one.)*
+- **Two booleans are manifest fields** — has an approved reference state · renders from
+  `design-system/`. *(Was "three booleans each".)* The third — *passes the visual gate* — is
+  deliberately **not** a field: it is the gate's RESULT, and the gate is blocking, so a field for it
+  would be `true` on `main` by construction and would store a fact that cannot be false. That is
+  this epic's own definition of a guard that cannot fail.
+- It **imports** `lib/project-route-inventory.ts` and is welded to it by a test — no second list of
+  surfaces. *(Was "extends". It cannot extend it: that list holds **14** nav surfaces and this epic
+  covers 27 routes, and folding them together would put `/login` in a member's navigation — **D5-b**.
+  The module itself imports nothing at runtime, so the weld lives in the test.)*
 - A new route with no reference state makes the manifest **red**, not silently green.
 - **The ratchet is wired: coverage may not decrease.**
 - Sprint 1 also captures all 29 routes **as they are today** as the before-baseline. Six defects in
@@ -164,8 +177,16 @@ system, **so that** an XXL project has a finish line and an off-system page is v
 **As a** product owner, **I want** a page that looks wrong to fail CI on any route,
 **so that** "done" and "right" stop being different conditions.
 **Acceptance:**
-- `console-visual.authed.spec.ts` becomes manifest-driven: it asserts computed geometry for every
-  route the manifest says has a reference state, instead of one hand-written route.
+- `console-visual.authed.spec.ts` becomes manifest-driven: it iterates every route the manifest says
+  **renders from `design-system/`**, instead of one hand-written route.
+  ⚠️ *Corrected after review: this said "every route the manifest says has a reference state", which
+  is 27 — and the loop runs on `rendersFromDesignSystem`, which is **0** in Sprint 1 and rises with
+  each sprint. Those are different sets, and the difference matters: a route has an approved picture
+  of itself long before it renders from the system, and opening it against that picture before the
+  work lands would assert a failure the sprint has not been asked to fix yet.*
+- **Because that loop is empty in Sprint 1**, its "observed failing" is owed as a **mutation check
+  recorded in the PR body**, per the D12 pattern — not as a red run. What IS observed failing here is
+  the loop's accounting (a route claiming coverage it has not earned) and every guard around it.
 - **Every assertion is observed failing on a deliberately mutated page.** The epic's own closing
   lesson: counting `querySelectorAll('[role="columnheader"]')` passes under `display: none`, which
   removes an element from the accessibility tree and not from the DOM. A gate that cannot fail is

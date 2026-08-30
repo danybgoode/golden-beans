@@ -29,7 +29,10 @@ function walkPages(root: string): string[] {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const path = join(root, entry.name)
     if (entry.isDirectory()) return walkPages(path)
-    return entry.name === 'page.tsx' ? [path] : []
+    // Every extension Next's App Router accepts for a page, not just the one this repo uses today
+    // (fresh reviewer). A `page.jsx` would otherwise be a route the manifest weld cannot see — and
+    // "the manifest and the repository agree" is the assertion this whole file exists for.
+    return /^page\.(tsx|ts|jsx|js|mdx)$/.test(entry.name) ? [path] : []
   })
 }
 
@@ -103,8 +106,18 @@ test('the approved state list and APPROVED.md still describe the same 32 states'
   // The weld between the code and the approval record. `APPROVED.md` lists the states in its batch
   // table; `approved-states.mjs` is what actually renders. Two lists that must agree get a test,
   // not a shared belief that they do.
+  // ⚠️ Scoped to the BATCH TABLE, not the whole document (fresh reviewer). Matching any backticked
+  // token anywhere meant an incidental mention — `today` in a sentence, a filename, a hash — counted
+  // as an approval line, so the weld would have accepted a state nobody approved as long as the word
+  // appeared somewhere in the file. The batch table IS the approval record; the rest is prose about
+  // it.
   const approvedDoc = readFileSync(join(HERE, 'APPROVED.md'), 'utf8')
-  const documented = new Set([...approvedDoc.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]))
+  const batchTable = approvedDoc.slice(
+    approvedDoc.indexOf('| Batch | States | Approved |'),
+    approvedDoc.indexOf('## Design decisions settled at approval')
+  )
+  assert.ok(batchTable.length > 200, 'APPROVED.md no longer contains the batch table')
+  const documented = new Set([...batchTable.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]))
   for (const id of STATE_IDS) {
     assert.ok(documented.has(id), `state "${id}" renders but has no approval line in APPROVED.md`)
   }

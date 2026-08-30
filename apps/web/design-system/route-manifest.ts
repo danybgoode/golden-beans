@@ -80,7 +80,16 @@ export type CoverageRow = {
    * supposed to be measuring through.
    *
    * So the gate asserts a `ds-`-prefixed class **inside `<main>`**, which only the page's own markup
-   * can put there, and it asserts the route against its reference state's measured geometry.
+   * can put there, plus the two geometry promises that hold for any dataset — no vertical page
+   * scroll at 1440×960, and no horizontal page scroll ever.
+   *
+   * ⚠️ **It does NOT yet assert the route against its reference state's rendered geometry**, and an
+   * earlier version of this comment said it did (fresh reviewer). `referenceState` is read by
+   * nothing in `console-visual.authed.spec.ts` today. The per-state assertion arrives with the
+   * sprint that builds each page, because there is nothing to compare a reference state against
+   * until the page renders from the system — Sprint 4 for Ship and Setup, 5 for Measure and Today,
+   * 6 for the doors and the hub. Written down here rather than implied, because a comment claiming
+   * an assertion that does not exist is the defect class this epic is named after.
    *
    * This is a DECLARATION the gate VERIFIES, never a claim it takes on trust: a row that says `true`
    * and renders without it fails. That is the only thing standing between this number and whatever
