@@ -38,6 +38,43 @@ disabled. **Every primitive gets all nine designed and rendered.** *"The pressed
 implemented"* becomes a gate failure rather than a review comment — that exact defect shipped last
 epic.
 
+## Findings raised while building (not discovered by a reviewer)
+
+**F2.1 — ⚠️ The taxonomy has TEN states, not nine, and the tenth is the one the document was written
+about.** This sprint's Story 2.2 lists nine: *idle · hover · focus · pressed · loading · success ·
+error · empty · disabled*. `references/ux-guidelines.md` lists **ten**, because it splits `disabled`
+in two and gives the split its own heading — *"The one we most need to fix: 'not yet shipped' vs
+'temporarily unavailable'"*:
+
+| | Means | Looks |
+|---|---|---|
+| `disabled` | you cannot do this **right now** — a form mid-submit | dimmed, inert, **it comes back** |
+| `unbuilt` | this is **not built yet** | *not* dimmed — amber, dashed, and legible, because it is honest marketing |
+
+The guidelines say in as many words that these *"must look different"*. Collapsing them is the exact
+defect that document was written about: one dimmed inert control meaning two different things to the
+person looking at it. **`system.css` implements ten**, and this doc is corrected rather than the
+taxonomy being trimmed to match a nine-item list.
+
+**F2.2 — The approved design's modal scrim is a colour no token expresses.**
+`reference.css` dims behind a modal with `.scrim { background: rgb(8 6 4 / 66%) }` — a literal that
+does not appear in the prototype's own `:root`, and therefore not in the generated `tokens.css`.
+This is the same class as **D2**'s ten tokens the console uses and `tokens.css` never defined.
+
+A scrim token cannot be added to `tokens.css`, because that file is generated from the approved
+prototype and editing the prototype un-approves the design (the **D1/D2 amendment**). So
+`.ds-dialog::backdrop` derives it from the page's own ground —
+`color-mix(in srgb, var(--roast) 82%, transparent)` — which is darker than the surface it covers and
+moves with the palette, where a pasted `rgb(8 6 4)` would not. **Recorded here rather than left for
+a reviewer to find that this one value is not byte-identical to the prototype.**
+
+**F2.3 — `ICON_NAMES` had to leave `Icon.tsx`.** Node's type-stripping cannot load JSX, so a unit
+test importing the name list from a `.tsx` file dies with `ERR_UNKNOWN_FILE_EXTENSION`. The list now
+lives in `components/ui/icon-names.ts` and `Icon.tsx` re-exports it, so every existing import is
+unchanged. This is `LEARNINGS`' rule — a unit-tested pure value cannot share a file with code that
+imports a framework — and it is why `project-route-inventory.test.ts` can assert every `iconKey`
+against the component's real list instead of a second copy.
+
 ## Stories
 
 ### Story 2.1 — The type and space scale, on a specimen that renders from the system
