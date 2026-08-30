@@ -602,14 +602,15 @@ export const OUT_OF_SCOPE_PAGES: readonly { page: string; why: string }[] = [
     why: 'shipped on the brand system by methodology-experience',
   },
   {
-    // Added by Story 2.1; the file does not exist yet.
     page: 'app/design-system/page.tsx',
     why:
       'the design system\u2019s own specimen. It is not product surface and counting it would be ' +
       'circular \u2014 the specimen IS the reference every other route is measured against, so a route ' +
-      'that renders the system by definition renders the system. It is still GATED: Story 2.1 ' +
-      'asserts it against MEASURED-SPEC.md, and Sprint 2\u2019s walkthrough is the screen where Daniel ' +
-      'approves or rejects the language. It is simply not a route the product owes a design to.',
+      'that renders the system by definition renders the system. It is still GATED: ' +
+      'e2e/design-system-specimen.authed.spec.ts asserts every scale step against scales.ts, the ' +
+      'dialog\u2019s position, the keyboard focus pass and both anonymous auth paths \u2014 and Sprint 2\u2019s ' +
+      'walkthrough is the screen where Daniel approves or rejects the language. It is simply not a ' +
+      'route the product owes a design to.',
   },
 ]
 

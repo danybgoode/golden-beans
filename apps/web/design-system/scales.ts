@@ -8,12 +8,19 @@
 // measurement, not by taste", and a count is the difference between the two.
 //
 // ── ⚠️ THE FINDING: the approved design's SPACING IS NOT ON A SCALE ───────────────────────────
-// Its type is: 184 font-size declarations across 20 values, and **131 of them (71%) fall in the
-// five steps 11 → 13.5**. That is a scale someone designed.
+// Its type is: 184 font-size declarations across 20 values, and **144 of them (78%) fall in the six
+// steps 11 → 13.5**. That is a scale someone designed.
 //
-// Its spacing is not. The padding/gap/margin values run 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
-// 15, 16, 18, 20, 22 — eighteen values with no gaps, which is the definition of "a number someone
-// typed" that Story 2.1 exists to replace. `SPACE` below is therefore the smallest scale the design
+// ⚠️ That sentence read "131 of them (71%) … five steps" — the top five BY COUNT, silently skipping
+// `11.5` (13 uses), which sits inside the range. Wrong number and wrong count, in the file whose
+// whole premise is that written-down numbers do not survive re-measurement (fresh reviewer, Minor).
+//
+// Its spacing is not. The padding/gap/margin values run 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+// 14, 15, 16, 17, 18, 20, 21, 22 — twenty-one values with almost no gaps, which is the definition of
+// "a number someone typed" that Story 2.1 exists to replace.
+//
+// ⚠️ This said "eighteen values" over a list that omitted 1, 17 and 21, while the specimen page said
+// twenty-one — two numbers for one fact, neither tested (fresh reviewer, Minor). `SPACE` below is therefore the smallest scale the design
 // SNAPS TO, and `OFF_SCALE_SPACE` records every value in the approved stylesheet that does not land
 // on a step, with how often. That list is a debt, not a decoration: it is what a builder consults
 // when a port wants 11px and the scale offers 10 or 12.
@@ -79,8 +86,15 @@ export const WEIGHT = {
  * The space scale — a 2px-based ramp the approved design snaps to.
  *
  * Chosen as the smallest ramp that covers the design's actual usage without inventing steps: the
- * six values below account for 152 of the 288 spacing declarations, and every other value in the
- * stylesheet is within 1px of one of them (see `OFF_SCALE_SPACE`).
+ * seven values below account for 168 of the 410 spacing values the stylesheet writes, and every
+ * other value that carries weight is recorded in `OFF_SCALE_SPACE` with its nearest step — some 2px
+ * away, some 4 or 6, which is itself the finding.
+ *
+ * ⚠️ This said "the six values below account for 152 of the 288 spacing declarations, and every
+ * other value in the stylesheet is within 1px of one of them". Every clause was wrong: there are
+ * SEVEN steps, they total 168 of 410 VALUES (not declarations — `padding: 11px 14px` is two), and
+ * 24, 26 and 22 are 4, 6 and 2 away. All four numbers in this file's prose are now asserted by
+ * `scales.test.ts` rather than asserted about (fresh reviewer, Minor, independently re-extracted).
  */
 export const SPACE = {
   hair: { px: 2, uses: 15, role: 'the gold underline, hairline offsets' },
@@ -124,11 +138,44 @@ export const OFF_SCALE_SPACE: readonly { px: number; uses: number; nearest: keyo
  *
  * `999px` is the pill and `50%` the circle — neither is a step on a ramp, and treating them as one
  * is how a pill becomes slightly-rounded-rectangle after a token change.
+ *
+ * ⚠️ **`uses` here counts TOKEN REFERENCES, not px literals — unlike every other scale in this
+ * file, and that difference was undocumented and untested.** `reference.css` contains **zero**
+ * `border-radius: 8px` declarations; the 25 is how many times it writes `var(--r)`. A reviewer
+ * mutated `uses` to 999 and `px` to 77 and the suite stayed 7/7 green, because no test touched this
+ * export — in the file whose own header says *"a count nothing checks is decoration"* (fresh
+ * reviewer, Major, mutation-verified).
+ *
+ * `scales.test.ts` now resolves `--r` / `--r-lg` from the stylesheet's `:root` and counts their
+ * references, so both halves are checked against the thing they describe.
  */
 export const RADIUS = {
   control: { px: 8, uses: 25, role: 'buttons, inputs, rows — `var(--r)`' },
   panel: { px: 12, uses: 12, role: 'panels and dialogs — `var(--r-lg)`' },
 } as const satisfies Record<string, Step>
+
+/**
+ * ⚠️ Every radius the approved design writes as a LITERAL — the same finding as `OFF_SCALE_SPACE`,
+ * one property over, and it says the radius set is no more of a scale than the spacing is.
+ *
+ * The design reaches for `var(--r)` (8) and `var(--r-lg)` (12) 37 times between them, and then
+ * writes nine other radii by hand 46 times. `999px` (11 uses) and `50%` are SHAPES — a pill and a
+ * circle — and belong outside a ramp; the rest are values somebody typed.
+ *
+ * Found while closing a review finding about `RADIUS` being asserted rather than derived: deriving
+ * it properly is what surfaced the rest.
+ */
+export const OFF_SCALE_RADIUS: readonly { px: number; uses: number; note: string }[] = [
+  { px: 2, uses: 6, note: 'hairline chips' },
+  { px: 3, uses: 2, note: 'the switch knob' },
+  { px: 4, uses: 4, note: 'small stamps' },
+  { px: 5, uses: 7, note: 'between the hairline and the control radius' },
+  { px: 6, uses: 7, note: 'dense controls — the loudest off-scale radius' },
+  { px: 7, uses: 6, note: '1px under the control token, for no stated reason' },
+  { px: 9, uses: 2, note: '1px over it, likewise' },
+  { px: 16, uses: 1, note: 'one large panel' },
+  { px: 999, uses: 11, note: 'the pill — a SHAPE, not a step, and correctly not on the ramp' },
+]
 
 /** Every step of every scale, flattened — what `scales.test.ts` checks against the stylesheet. */
 export const ALL_STEPS = [

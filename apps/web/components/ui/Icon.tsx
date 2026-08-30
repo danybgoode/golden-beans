@@ -45,10 +45,15 @@ import {
 
 // The names live in `icon-names.ts` so the fast unit layer can read them without JSX.
 // Re-exported here so every existing `from '@/components/ui/Icon'` import is unchanged.
-export { ICON_NAMES, type IconName } from './icon-names'
-import { type IconName as Name } from './icon-names'
+// Imported for use here, and re-exported so every existing `from '@/components/ui/Icon'` keeps
+// working. One import and one export beat the earlier re-export-then-re-import-under-an-alias,
+// which needed a second name for the same type purely to use it in its own file (cross-family
+// review).
+import type { IconName } from './icon-names'
+export { ICON_NAMES } from './icon-names'
+export type { IconName }
 
-const icons: Record<Name, LucideIcon> = {
+const icons: Record<IconName, LucideIcon> = {
   'arrow-down': ArrowDown,
   'arrow-right': ArrowRight,
   'arrow-up': ArrowUp,
@@ -93,7 +98,7 @@ const icons: Record<Name, LucideIcon> = {
 }
 
 type IconProps = {
-  name: Name
+  name: IconName
   className?: string
   size?: number
   label?: string

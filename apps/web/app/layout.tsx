@@ -5,9 +5,13 @@ import { CATEGORY } from '@/lib/positioning'
 import { NavigationLoader } from '@/components/brand/NavigationLoader'
 import './globals.css'
 import './console.css'
-// ⚠️ The design system's own stylesheet. Everything in it is scoped to `.ds`, so importing it
-// changes nothing until a route opts in by rendering that class — which is what makes Sprint 2
-// shippable ahead of the sprint that puts it on product routes.
+// ⚠️ The design system's own stylesheet. Every selector is scoped `.ds .ds-…`, so importing it
+// changes nothing until a route opts in by rendering `.ds` — which is what makes Sprint 2 shippable
+// ahead of the sprint that puts it on product routes.
+//
+// That sentence was FALSE when first written: 123 rules began `.ds-` and two were under `.ds`, so
+// the isolation was the prefix alone and the claim overstated it (fresh reviewer). Both are true
+// now, and `system-cascade.test.ts` asserts the scoping rather than describing it.
 //
 // It was written and NOT imported for a whole story, and the specimen's specs are what found it:
 // four assertions failed at once with the browser's defaults — 14px labels, weight 400, an `outset`

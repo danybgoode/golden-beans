@@ -77,9 +77,18 @@ test('members see every live member surface but never owner-only or flow-only ro
 
 test('every surface carries an icon, and it is one the Icon component knows', () => {
   // ⚠️ The rail is one line per item with an icon and no description (contract Do-not #2), so a
-  // surface with no icon renders a hole. `iconKey` is a required field, which makes that a compile
-  // error for a surface added in this file — but NOT for one whose key is a plausible-looking
-  // string, and not for a mapper that forgets to carry it. Both are checked here.
+  // surface with no icon renders a hole.
+  //
+  // ⚠️ **This comment used to justify the test with two claims that are both FALSE for this code**
+  // (fresh reviewer, Minor, verified with `tsc`): it said the compiler would not catch "a
+  // plausible-looking string" — it does, `iconKey: 'webhooks'` is TS2820 with a did-you-mean — and
+  // that TypeScript misses a dropped key in an inferred literal — `getProjectSurfaceLinks` is
+  // ANNOTATED `: ProjectSurfaceLink[]`, so that is TS2322.
+  //
+  // The test still earns its place, for a reason the compiler cannot cover: `ICON_NAMES` is read
+  // from the COMPONENT, so this fails when the icon set and the inventory disagree about a name
+  // that is valid in the union but absent from the render map — and it fails in the fast unit layer,
+  // where a `tsc` error in a route nobody compiles in isolation would not be noticed.
   //
   // The union is closed, so this test cannot import a list of "valid names" that differs from the
   // component's: it reads the component's own `ICON_NAMES`.

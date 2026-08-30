@@ -70,17 +70,67 @@ export const STORAGE_WORDS: readonly { word: string; insteadSay: string; why: st
 /**
  * Where uppercase is allowed, and why.
  *
- * ⚠️ **Contract Do-not #3 says uppercase appears in "exactly two places, and never in mono".**
- * Verified against the live stylesheet on 2026-08-30: **eight** rules apply
- * `text-transform: uppercase` inside `.is-console`, and **none of them is mono**.
+ * ⚠️ **Contract Do-not #3 says uppercase appears in "exactly two places, and never in mono".
+ * BOTH halves are violated, and my first count of this was wrong.**
  *
- * So half of that Do-not is already satisfied — the mono defect was fixed in `console-ia-overhaul`
- * — and the other half is not, four times over. Rather than delete six rules blind in Sprint 2,
- * every one is listed here with what it is and which sprint owns it, and `vocabulary.test.ts`
- * fails if the set ever grows. **A list that cannot grow is the difference between a Do-not and a
- * decision**: the six extras are recorded debt with an owner, not an oversight nobody costed.
+ * It read: *"eight rules apply uppercase inside `.is-console`, and none of them is mono — so half
+ * of that Do-not is already satisfied."* That was true of `console.css` and **false of the
+ * console**: the scan read two of the four stylesheets that paint it. Widened, `globals.css` adds
+ * twelve more console rules and **every one of them is uppercase AND mono** — the pair the contract
+ * forbids outright (fresh reviewer, Major, mutation-verified).
+ *
+ * `.product-shell__signal` is the clearest: `console.css` resets it inside
+ * `.is-console .product-shell__identity`, so the LIT console is fine — and the legacy branch, which
+ * is what a `CONSOLE_SHELL_ENABLED` rollback serves, renders uppercase mono.
+ *
+ * Rather than delete eighteen rules blind in the sprint that builds the language — Sprint 2 owns
+ * none of those surfaces, and a blind sweep is how a redesign breaks a page nobody was looking at —
+ * every one is listed with what it is, whether it is mono, and which sprint removes it.
+ * `vocabulary.test.ts` fails if the set ever **grows**. **A list that cannot grow is the difference
+ * between a Do-not and a decision**: these are recorded debt with an owner, not an oversight
+ * nobody costed.
  */
-export const UPPERCASE_ALLOWED: readonly { selector: string; what: string; keep: boolean }[] = [
+/**
+ * Which selectors Do-not #3 actually governs.
+ *
+ * ⚠️ **The contract is a CONSOLE contract.** `CONSOLE-CONTRACT.md` measures the signed-in console
+ * and says uppercase appears there in *"exactly two places, and never in mono"*. It says nothing
+ * about the landing, the methodology chapters or the hub — all of which have their own approved
+ * brand voice in which an uppercase mono kicker is a deliberate, shipped pattern
+ * (`.kicker`, `.methodology-phase-label`, `.gapStamp` and 20 more).
+ *
+ * A cross-family reviewer was right that the scan was too narrow to support the claim
+ * `vocabulary.ts` made — it read two of the four stylesheets that paint the console and concluded
+ * "none of them is mono" about the product. Widening it to every stylesheet, though, would apply a
+ * console rule to brand surfaces it was never written for, and a rule that fires on correct work is
+ * a rule people switch off. So the scan is widened and the SCOPE is stated.
+ */
+export const CONSOLE_SURFACE_PREFIXES: readonly string[] = [
+  '.is-console',
+  '.ds-',
+  '.ds ',
+  '.product-shell',
+  '.console-rail',
+  '.command-palette',
+  '.command-center',
+  '.agent-rail',
+  '.data-table',
+  '.stat-card',
+  '.flag-insight',
+]
+
+/** True when a selector paints the signed-in console, which is what Do-not #3 governs. */
+export function isConsoleSurface(selector: string): boolean {
+  return CONSOLE_SURFACE_PREFIXES.some((prefix) => selector.includes(prefix))
+}
+
+export const UPPERCASE_ALLOWED: readonly {
+  selector: string
+  what: string
+  keep: boolean
+  /** `true` where the rule is ALSO mono — the pair Do-not #3 forbids outright. Debt, never new. */
+  mono?: true
+}[] = [
   // The two the contract approves.
   { selector: '.listhead', what: "the feature list's column header row", keep: true },
   { selector: '.grp', what: 'the dormant group heading', keep: true },
@@ -97,8 +147,73 @@ export const UPPERCASE_ALLOWED: readonly { selector: string; what: string; keep:
   { selector: '.field > .lab', what: 'form field labels — Sprint 4', keep: false },
   { selector: '.note-box .lab2', what: 'the note box label — Sprint 4', keep: false },
   { selector: '.envtable th', what: "the environments table's header — Sprint 4", keep: false },
-  { selector: '.data-table thead th', what: 'the shared data table header — Sprint 4', keep: false },
+  {
+    selector: '.data-table thead th',
+    what: 'the shared data table header — Sprint 4',
+    keep: false,
+    mono: true,
+  },
   { selector: '.command-palette__kind', what: "the palette's result kind — Sprint 3", keep: false },
+  // ⚠️ THE ONES IN `globals.css`, found only once the scan was widened past `console.css`
+  // (fresh reviewer, Major). `vocabulary.ts` claimed "none of them is mono"; that was true of
+  // `console.css` and false of the console. Every entry below is uppercase AND mono — the pair
+  // Do-not #3 forbids outright — on a console surface.
+  //
+  // They are recorded rather than deleted here for the same reason the six above are: Sprint 2 owns
+  // none of these surfaces, and a blind sweep of twelve selectors in the sprint that builds the
+  // language is how a redesign breaks a page nobody was looking at.
+  {
+    selector: '.product-shell__signal',
+    what: 'the legacy header identity — Sprint 3',
+    keep: false,
+    mono: true,
+  },
+  {
+    selector: "[data-surface-status='gated']",
+    what: 'the rail GATED badge — Do-not #2 deletes it entirely, Sprint 3',
+    keep: false,
+    mono: true,
+  },
+  {
+    selector: '.command-palette__panel',
+    what: "the palette result's kind label — Sprint 3",
+    keep: false,
+    mono: true,
+  },
+  { selector: '.agent-rail__panel', what: 'the agent rail disclosure — Sprint 3', keep: false, mono: true },
+  {
+    selector: '.agent-rail__section',
+    what: 'the agent rail section heading — Sprint 3',
+    keep: false,
+    mono: true,
+  },
+  {
+    selector: '.stat-card__label',
+    what: 'the stat tile label — replaced by .ds-stat-label, Sprint 5',
+    keep: false,
+    mono: true,
+  },
+  { selector: '.command-center__gaps', what: "Today's gap disclosure — Sprint 5", keep: false, mono: true },
+  {
+    selector: '.data-table__filter-label',
+    what: "the data table's filter label — Sprint 4",
+    keep: false,
+    mono: true,
+  },
+  { selector: '.data-table__count', what: "the data table's count — Sprint 4", keep: false, mono: true },
+  { selector: '.data-table caption', what: "the data table's caption — Sprint 4", keep: false, mono: true },
+  {
+    selector: '.data-table thead th',
+    what: "the data table's header — replaced by .ds-table-head, Sprint 4",
+    keep: false,
+    mono: true,
+  },
+  {
+    selector: '.flag-insight__diff',
+    what: "the flag insight diff's label — Sprint 4",
+    keep: false,
+    mono: true,
+  },
 ]
 
 /**

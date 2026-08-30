@@ -86,24 +86,47 @@ test.describe('the design system specimen', () => {
     const count = await focusable.count()
     expect(count, 'the specimen rendered nothing focusable').toBeGreaterThan(10)
 
+    // ⚠️ **The previous version could not fail on the property it is named after.** It read
+    // `if (outline.style === 'none') continue` — and `outline: none` is EXACTLY the failure this
+    // test claims to catch. Adding `.ds-btn:focus-visible { outline: none }` left it green, because
+    // the rail's anchors still painted a ring and the only surviving assertion was "at least one of
+    // twenty-five elements rang". That is CODE-QUALITY §5b's predicate with one half always false,
+    // in the test written to stop keyboard users being locked out (fresh reviewer, Blocking).
+    //
+    // Now every element is asserted, and the element is confirmed FOCUSED before its outline is
+    // read — nothing previously checked that `Shift+Tab`/`Tab` had actually returned focus, so a
+    // ring could have been read off an element the keyboard never reached.
     let checked = 0
     for (let index = 0; index < Math.min(count, 25); index += 1) {
       const element = focusable.nth(index)
-      // Focus through the keyboard path, not `.focus()`: `:focus-visible` is precisely the
-      // distinction between the two, and a mouse-focus check would pass on an element that shows
-      // no ring to a keyboard user.
       await element.evaluate((node) => (node as HTMLElement).focus({ preventScroll: true }))
       await page.keyboard.press('Shift+Tab')
       await page.keyboard.press('Tab')
-      const outline = await element.evaluate((node) => {
+
+      const state = await element.evaluate((node) => {
         const style = getComputedStyle(node)
-        return { width: style.outlineWidth, style: style.outlineStyle }
+        return {
+          focused: node === document.activeElement,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+          describe: `${node.tagName.toLowerCase()}.${(node as HTMLElement).className}`.slice(0, 60),
+        }
       })
-      if (outline.style === 'none') continue
-      expect(parseFloat(outline.width), 'a focused control has a zero-width outline').toBeGreaterThan(0)
+
+      // If the keyboard did not land here, this element tells us nothing — but a run where NOTHING
+      // is reachable must still fail, which `checked` below enforces.
+      if (!state.focused) continue
+
+      expect(
+        state.outlineStyle,
+        `${state.describe} is focusable and paints NO focus ring — a keyboard user cannot see where they are`
+      ).not.toBe('none')
+      expect(parseFloat(state.outlineWidth), `${state.describe} has a zero-width focus ring`).toBeGreaterThan(
+        0
+      )
       checked += 1
     }
-    expect(checked, 'no focused element reported a painted outline at all').toBeGreaterThan(0)
+    expect(checked, 'the keyboard reached no element at all — the pass asserted nothing').toBeGreaterThan(5)
   })
 
   test('the specimen fits its viewport and never scrolls sideways', async ({ page }) => {
@@ -154,6 +177,122 @@ test.describe('the design system specimen', () => {
     // read clearly", so dimming it is the one thing it must not do.
     expect(parseFloat(notBuilt.opacity), 'unbuilt is dimmed like a disabled control').toBeGreaterThan(0.9)
     expect(notBuilt.borderStyle, 'unbuilt is not visually distinct by its border').toBe('dashed')
+  })
+
+  test('the browser states are real, and `unbuilt` is not one of them', async ({ page }) => {
+    // ⚠️ Story 2.2's headline criterion — "each state has a reference render, so 'the pressed state
+    // was not implemented' becomes a gate failure rather than a review comment" — was asserted by
+    // NOTHING. Deleting `.ds-btn:active` left the whole suite green (fresh reviewer, Major). These
+    // are the browser states, exercised through the browser.
+    const read = (selector: string) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate((element) => {
+          const style = getComputedStyle(element)
+          return {
+            background: style.backgroundColor,
+            transform: style.transform,
+            border: style.borderTopColor,
+          }
+        })
+
+    const secondary = page.locator('.ds-btn--secondary[data-state="idle"]').first()
+
+    // HOVER changes something, and it is not colour alone by accident — the point is that a
+    // pressable control answers "what happens if I press this" before it is pressed.
+    await secondary.scrollIntoViewIfNeeded()
+    const restingSecondary = await read('.ds-btn--secondary[data-state="idle"]')
+
+    // ⚠️ An EXPLICIT mouse move to the element's own centre, not `locator.hover()`. Two earlier
+    // attempts read the resting style twice and reported rest and hover as byte-identical, which
+    // reads exactly like a missing CSS rule while the rule was correct. The failure message names
+    // the element and both colours now, so a third wrong guess is not possible.
+    const box = await secondary.boundingBox()
+    expect(box, 'the secondary button has no box to hover').not.toBeNull()
+    if (!box) return
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.waitForTimeout(120)
+
+    const hoveredSecondary = await read('.ds-btn--secondary[data-state="idle"]')
+    const label = await secondary.innerText()
+    expect(restingSecondary && hoveredSecondary, 'the secondary button did not render').toBeTruthy()
+    if (!restingSecondary || !hoveredSecondary) return
+    expect(
+      hoveredSecondary.background !== restingSecondary.background ||
+        hoveredSecondary.border !== restingSecondary.border,
+      `the secondary button "${label}" looks identical hovered and at rest — ` +
+        `rest ${restingSecondary.background}/${restingSecondary.border}, ` +
+        `hover ${hoveredSecondary.background}/${hoveredSecondary.border}, ` +
+        `box ${Math.round(box.x)},${Math.round(box.y)} ${Math.round(box.width)}x${Math.round(box.height)}`
+    ).toBe(true)
+
+    // PRESSED — the state the guidelines say the product skips.
+    await page.mouse.down()
+    const pressed = await read('.ds-btn--secondary[data-state="idle"]')
+    await page.mouse.up()
+    if (!pressed) throw new Error('the secondary button vanished mid-press')
+    expect(pressed.transform, 'the pressed state is not implemented — it was the named defect').not.toBe(
+      restingSecondary.transform
+    )
+
+    // ⚠️ And `unbuilt` must NOT repaint. It is deliberately not DOM-`disabled`, so `:not(:disabled)`
+    // did not exclude it and hover lit it to full `--gold-hot` — a control saying "not built yet"
+    // behaving like a live one, which is the exact defect F2.1 exists to prevent, inside the state
+    // F2.1 added (fresh reviewer, Major, found by rendering).
+    const unbuilt = page.locator('.ds-btn--primary[data-state="unbuilt"]').first()
+    await unbuilt.scrollIntoViewIfNeeded()
+    const unbuiltIdle = await read('.ds-btn--primary[data-state="unbuilt"]')
+    await unbuilt.hover()
+    const unbuiltHover = await read('.ds-btn--primary[data-state="unbuilt"]')
+    if (!unbuiltIdle || !unbuiltHover) throw new Error('the unbuilt button did not render')
+    expect(unbuiltHover.background, 'unbuilt repaints on hover like a live control').toBe(
+      unbuiltIdle.background
+    )
+  })
+
+  test('a focused pill keeps its pill radius', async ({ page }) => {
+    // ⚠️ The global focus rule set `border-radius: var(--r)` at (0,1,1), outranking every (0,1,0)
+    // primitive that declares `999px` — so the 38x21 three-state switch became a rounded RECTANGLE
+    // with a round knob inside it the moment a keyboard user reached it (fresh reviewer, Major,
+    // found by rendering). Asserted here because nothing looked at a FOCUSED primitive's shape.
+    const control = page.locator('.ds-switch').first()
+    await control.evaluate((element) => (element as HTMLElement).focus({ preventScroll: true }))
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    const radius = await control.evaluate((element) => getComputedStyle(element).borderTopLeftRadius)
+    expect(radius, `a focused switch computed ${radius} — it is a pill, not a rounded rectangle`).toBe(
+      '999px'
+    )
+  })
+
+  test('console.css does not out-specify the design system', async ({ page }) => {
+    // ⚠️ `.is-console main p` is (0,1,2) and beat every (0,1,0) `.ds-*` rule on a `<p>`. Rendered:
+    // `.ds-answer` — "the sentence a page opens with" — lost `--crema` for `--dim`, and
+    // `.ds-dialog-title` rendered at 13.5px/`--dim` instead of 15px/`--crema`, dimmer and no larger
+    // than its own body. Nothing asserted either (fresh reviewer, Major, found by rendering).
+    //
+    // The fix is that every selector is now scoped `.ds .ds-…` — (0,2,0), which outranks (0,1,2).
+    // This is what keeps it fixed, against the REAL four-stylesheet cascade rather than the file.
+    const crema = 'rgb(245, 234, 214)'
+
+    const answer = await page
+      .locator('.ds-answer')
+      .first()
+      .evaluate((element) => {
+        const style = getComputedStyle(element)
+        return { fontSize: style.fontSize, color: style.color }
+      })
+    expect(answer.fontSize, 'the answer line lost its declared size to console.css').toBe('13.5px')
+    expect(answer.color, 'the answer line lost --crema to console.css`s body-copy rule').toBe(crema)
+
+    await page.getByRole('button', { name: 'Open the confirmation dialog' }).click()
+    const title = await page.locator('.ds-dialog-title').evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { fontSize: style.fontSize, color: style.color }
+    })
+    expect(title.fontSize, 'the dialog title renders no larger than its own body').toBe('15px')
+    expect(title.color, 'the dialog title lost --crema').toBe(crema)
   })
 })
 

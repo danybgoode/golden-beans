@@ -16,7 +16,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { ALL_STEPS, OFF_SCALE_SPACE, SPACE, TYPE, WEIGHT } from './scales.ts'
+import { ALL_STEPS, OFF_SCALE_SPACE, RADIUS, SPACE, TYPE, WEIGHT } from './scales.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REFERENCE = readFileSync(join(HERE, 'reference.css'), 'utf8')
@@ -165,4 +165,93 @@ test('no two steps of a scale share a value', () => {
       seen.set(step.px, step.name)
     }
   }
+})
+
+test('every radius step resolves to the token the approved design uses, at the stated count', () => {
+  // ⚠️ **`RADIUS` was asserted and never checked** — a reviewer set `uses` to 999 and `px` to 77 and
+  // the whole suite stayed green (fresh reviewer, Major). It is also counted by a DIFFERENT
+  // definition than the rest of the file: `reference.css` writes no `border-radius: 8px` at all, and
+  // the 25 is the number of `var(--r)` references. Both halves are now checked.
+  const tokenValue = (name: string): number | null => {
+    const root = /:root\s*\{([\s\S]*?)\}/.exec(REFERENCE)?.[1] ?? ''
+    const raw = new RegExp(`${name}\\s*:\\s*([\\d.]+)px`).exec(root)?.[1]
+    return raw === undefined ? null : Number(raw)
+  }
+  const references = (name: string) => (REFERENCE.match(new RegExp(`var\\(${name}\\)`, 'g')) ?? []).length
+
+  const byToken: Record<keyof typeof RADIUS, string> = { control: '--r', panel: '--r-lg' }
+
+  for (const [name, step] of Object.entries(RADIUS)) {
+    const token = byToken[name as keyof typeof RADIUS]
+
+    // The px value must be what the TOKEN resolves to in the approved stylesheet — not a number
+    // somebody remembered.
+    assert.equal(
+      step.px,
+      tokenValue(token),
+      `RADIUS.${name} says ${step.px}px; the approved design defines ${token} as ${tokenValue(token)}px`
+    )
+
+    // ...and the count must be the number of times the design actually reaches for it.
+    assert.equal(
+      step.uses,
+      references(token),
+      `RADIUS.${name} claims ${step.uses} uses of ${token}; the stylesheet has ${references(token)}`
+    )
+  }
+
+  // ⚠️ The definition difference, pinned precisely. The design writes 46 `border-radius: <n>px`
+  // literals — 2, 3, 4, 5, 6, 7, 9, 16 and 999 — so "no literals" would be false. What IS true, and
+  // is the property that makes counting REFERENCES the right definition, is that the two TOKEN
+  // VALUES are never written as literals: the design always reaches for `var(--r)` / `var(--r-lg)`
+  // when it wants 8 or 12. If that ever stops being true, these counts stop describing the design.
+  for (const [name, step] of Object.entries(RADIUS)) {
+    const asLiteral = (REFERENCE.match(new RegExp(`border-radius:\\s*${step.px}px`, 'g')) ?? []).length
+    assert.equal(
+      asLiteral,
+      0,
+      `the approved stylesheet writes border-radius: ${step.px}px ${asLiteral}× as a literal — ` +
+        `RADIUS.${name} counts only \`var()\` references, so its number no longer describes the design`
+    )
+  }
+})
+
+test('the numbers in the prose reproduce, in the file whose premise is that they must', () => {
+  // ⚠️ Four numbers in `scales.ts`'s own header did not reproduce — "131 (71%) in five steps",
+  // "eighteen values", "188 of ~460", "within 1px" — in the file whose entire argument is that a
+  // written-down number nobody re-derives is worthless (fresh reviewer, Minor, independently
+  // re-extracted). Nothing tested them, so they were exactly the thing they warn about. These are
+  // the four, pinned.
+  const header = readFileSync(join(HERE, 'scales.ts'), 'utf8')
+
+  const typeTotal = [...FONT_SIZES.values()].reduce((sum, n) => sum + n, 0)
+  assert.equal(typeTotal, 184, 'the type declaration total moved')
+  assert.ok(header.includes(`${typeTotal} font-size declarations`), 'the header quotes a stale type total')
+  assert.ok(
+    header.includes(`across ${FONT_SIZES.size} values`),
+    'the header quotes a stale distinct-size count'
+  )
+
+  // The body range, 11 to 13.5 inclusive — SIX steps, not five.
+  const bodyRange = [...FONT_SIZES.entries()].filter(([px]) => px >= 11 && px <= 13.5)
+  const bodyTotal = bodyRange.reduce((sum, [, n]) => sum + n, 0)
+  assert.equal(bodyRange.length, 6, 'the 11 to 13.5 range no longer holds six steps')
+  assert.ok(header.includes(`${bodyTotal} of them`), `the header should quote ${bodyTotal} in the body range`)
+  assert.ok(
+    header.includes(`(${Math.round((bodyTotal / typeTotal) * 100)}%)`),
+    'the header quotes a stale percentage'
+  )
+
+  // The spacing totals.
+  const spaceTotal = [...SPACES.values()].reduce((sum, n) => sum + n, 0)
+  const onScale = Object.values(SPACE).reduce((sum, step) => sum + step.uses, 0)
+  assert.ok(
+    header.includes(`${onScale} of the ${spaceTotal}`),
+    `the header should quote ${onScale} of the ${spaceTotal} spacing values`
+  )
+
+  // The count of distinct spacing values in the crowded range, which the header spells out.
+  const crowded = [...SPACES.keys()].filter((px) => px >= 1 && px <= 22).length
+  assert.equal(crowded, 21, 'the crowded spacing range changed size')
+  assert.ok(header.includes('twenty-one'), 'the header no longer says twenty-one')
 })

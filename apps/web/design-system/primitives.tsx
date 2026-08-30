@@ -34,7 +34,15 @@ import type { IconName } from '@/components/ui/icon-names'
  */
 export type ControlState = 'idle' | 'loading' | 'success' | 'error' | 'disabled' | 'unbuilt'
 
-/** States a CONTAINER of things can be in, as opposed to a control. */
+/**
+ * States a CONTAINER of things can be in, as opposed to a control.
+ *
+ * ⚠️ Used by `TableEmpty` only, via the shape of its props rather than by name — a reviewer flagged
+ * it as exported-and-unreferenced (grep: one hit, its own declaration). Kept and marked, because
+ * Sprint 4's data tables need `loading` and `error` container states that no primitive expresses
+ * yet, and deleting a union that is three weeks from having callers only to re-add it is churn. If
+ * Sprint 4 lands without using it, delete it there rather than carrying it further.
+ */
 export type CollectionState = 'idle' | 'loading' | 'empty' | 'error'
 
 function classes(...values: (string | false | undefined)[]): string {
