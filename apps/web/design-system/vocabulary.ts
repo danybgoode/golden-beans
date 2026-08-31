@@ -260,8 +260,17 @@ export function bannedWords(): string[] {
 export const SPECIMEN_WORDS = {
   /** Per-ENVIRONMENT activation. The "here" is load-bearing — see `CONTROL_PLANE_WINS`. */
   neverActivated: controlPlaneWord('Never turned on'),
+  /** The pill's word for a deliberate kill. The SWITCH's label is `switchOff` — they differ. */
   on: 'On',
   off: 'Turned off',
+  /**
+   * ⚠️ Separate from `off` on purpose. `off` was `'Off'` and became `'Turned off'` to satisfy the
+   * pill, which left the key meaning something different from the `<Switch label="Off">` four lines
+   * below it — a registry key quietly changing meaning to pass its own test (fresh reviewer,
+   * round 5, Minor). Two words, two keys.
+   */
+  switchOn: 'On',
+  switchOff: 'Off',
 } as const
 
 /**

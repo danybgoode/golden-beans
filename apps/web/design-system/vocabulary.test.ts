@@ -300,9 +300,20 @@ test('the specimen says the control plane’s word, not the design’s', () => {
   //
   // Both SIDES are checked: the product's word must come from the module, and the design's word must
   // not appear at all — a specimen that shows the overruled phrasing is teaching the wrong word.
+  // ⚠️ Whitespace-normalised, because all three grips were DELIMITER-ADJACENT: they needed the word
+  // flush against `>`/`<`/a quote. JSX children wrapped across lines — `>⏎  Never turned on here⏎<`
+  // — walked straight past, and `page.tsx` already contains many hand-wrapped children. Prettier
+  // happens to collapse short ones back onto one line, but prettier is NOT in CI (`lint` uses
+  // eslint-config-prettier, which DISABLES formatting rules), so the weld cannot lean on it
+  // (fresh reviewer, round 5, Minor). Template-literal children are covered too.
   const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8')
+    .replace(/\s+/g, ' ')
   const rendered = (word: string) =>
-    specimen.includes(`>${word}<`) || specimen.includes(`"${word}"`) || specimen.includes(`'${word}'`)
+    specimen.includes(`> ${word} <`) ||
+    specimen.includes(`>${word}<`) ||
+    specimen.includes(`"${word}"`) ||
+    specimen.includes(`'${word}'`) ||
+    specimen.includes(`\`${word}\``)
 
   for (const entry of CONTROL_PLANE_WINS) {
     assert.ok(

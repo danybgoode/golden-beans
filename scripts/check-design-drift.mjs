@@ -560,7 +560,7 @@ export function inspectDesignSystemStylesheet(source, { generated = false } = {}
   return violations;
 }
 
-function sourceFiles(root) {
+export function sourceFiles(root) {
   // A swept root that does not exist must be LOUD, not empty. Returning `[]` would make a typo in
   // `SWEPT_ROOTS` — or a directory someone renamed — read as "nothing to report", which is this
   // guard reporting success about a surface it never opened (CODE-QUALITY #5b). The raw ENOENT

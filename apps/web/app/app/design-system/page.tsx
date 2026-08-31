@@ -223,8 +223,8 @@ export default async function DesignSystemSpecimen({
             note="38 × 21. The dashed “never” is the state the console has never had: a flag nobody ever activated has no actor and no audit row, and rendering it the same as a deliberate kill is what made the old page unanswerable."
           >
             <div className="ds-specimen-row">
-              <Switch state="on" label="On" />
-              <Switch state="off" label="Off" />
+              <Switch state="on" label={SPECIMEN_WORDS.switchOn} />
+              <Switch state="off" label={SPECIMEN_WORDS.switchOff} />
               <Switch state="never" label={SPECIMEN_WORDS.neverActivated} />
               <Switch state="off" label="Disabled" disabled />
             </div>

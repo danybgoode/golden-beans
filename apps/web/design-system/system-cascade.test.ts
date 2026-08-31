@@ -77,6 +77,44 @@ function withoutKeyframes(css: string): string {
 
 const SYSTEM_CSS = withoutKeyframes(withoutComments(RAW_SYSTEM_CSS))
 
+/**
+ * Split a selector list on its TOP-LEVEL commas.
+ *
+ * ⚠️ `String.split(',')` cut inside `:not(:is(.a, .b))` and inside `[data-x="a,b"]`, producing
+ * fragments that are not selectors — and the loudest consequence was a FALSE accusation: a legal,
+ * correctly-`.ds`-scoped rule failed three tests, one of them reporting "system.css carries
+ * selectors that are not under `.ds`" about a selector that is (fresh reviewer, round 5, Major).
+ * A guard that blocks correct work with a wrong diagnosis is how a guard gets switched off.
+ */
+function splitSelectorList(list: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let quote: string | null = null
+  let current = ''
+  for (let index = 0; index < list.length; index += 1) {
+    const char = list[index]
+    if (quote) {
+      current += char
+      if (char === quote && list[index - 1] !== '\\') quote = null
+      continue
+    }
+    if (char === '"' || char === "'") quote = char
+    else if (char === '(' || char === '[') depth += 1
+    else if (char === ')' || char === ']') depth -= 1
+    else if (char === ',' && depth === 0) {
+      parts.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  parts.push(current)
+  return parts.map((part) => part.trim().replace(/\s+/g, ' ')).filter(Boolean)
+}
+
+/** The four pseudo-ELEMENTS that are still legal with a single colon. */
+const LEGACY_PSEUDO_ELEMENTS = new Set(['before', 'after', 'first-line', 'first-letter'])
+
 /** The functional pseudo-classes whose specificity is their ARGUMENT's, not their own. */
 const ARGUMENT_SPECIFICITY = new Set(['is', 'not', 'has'])
 
@@ -130,7 +168,10 @@ export function specificity(selector: string): [number, number, number] {
     if (char === ':') {
       const doubled = selector[index + 1] === ':'
       const start = index + (doubled ? 2 : 1)
-      const name = /^[\w-]+/.exec(selector.slice(start))?.[0] ?? ''
+      // Lower-cased: pseudo-class names are ASCII case-insensitive in CSS, so `:WHERE(*)` is the
+      // same zero-specificity selector as `:where(*)`. Matching case-sensitively scored it (0,1,0)
+      // — upward again (fresh reviewer, round 5).
+      const name = (/^[\w-]+/.exec(selector.slice(start))?.[0] ?? '').toLowerCase()
       let after = start + name.length
       let argument: string | null = null
       if (selector[after] === '(') {
@@ -139,17 +180,22 @@ export function specificity(selector: string): [number, number, number] {
         after = next
       }
 
-      if (doubled) {
-        // A pseudo-ELEMENT.
+      if (doubled || LEGACY_PSEUDO_ELEMENTS.has(name)) {
+        // A pseudo-ELEMENT. ⚠️ `:before` / `:after` / `:first-line` / `:first-letter` are the four
+        // that predate the `::` notation and are still valid with one colon — they belong in the
+        // ELEMENT column, and counting them as classes over-counted in the PERMISSIVE direction:
+        // `.ds :before` is truly (0,1,1), below the floor, and scored (0,2,0). The floor's verdict
+        // depended on a purely cosmetic notation choice, and the wrong choice was the one that
+        // passed — which is the exact Blocking this parser was written to fix (fresh reviewer,
+        // round 5, Major, mutation-verified in both notations).
         total[2] += 1
       } else if (name === 'where') {
         // Zero, by definition. That is the entire reason `:where()` exists, and `system.css:77`
         // uses it deliberately so the reduced-motion override adds no specificity.
       } else if (ARGUMENT_SPECIFICITY.has(name) && argument !== null) {
         // The most specific argument wins; the pseudo-class itself contributes nothing.
-        const best = argument
-          .split(',')
-          .map((part) => specificity(part.trim()))
+        const best = splitSelectorList(argument)
+          .map((part) => specificity(part))
           .reduce((a, b) => (compare(b, a) > 0 ? b : a), [0, 0, 0] as [number, number, number])
         total[0] += best[0]
         total[1] += best[1]
@@ -189,10 +235,7 @@ function ruleList(): { selector: string; body: string }[] {
 }
 
 function selectors(): string[] {
-  return ruleList()
-    .flatMap(({ selector }) => selector.split(','))
-    .map((selector: string) => selector.trim().replace(/\s+/g, ' '))
-    .filter(Boolean)
+  return ruleList().flatMap(({ selector }) => splitSelectorList(selector))
 }
 
 test('every selector in system.css is scoped to .ds — the claim layout.tsx makes about it', () => {
@@ -221,10 +264,8 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
 
   const weak = ruleList()
     .flatMap(({ selector, body }) =>
-      selector
-        .split(',')
-        .map((part) => part.trim().replace(/\s+/g, ' '))
-        .filter((part) => part && part !== '.ds')
+      splitSelectorList(selector)
+        .filter((part) => part !== '.ds')
         .map((part) => ({ selector: part, body, spec: specificity(part) }))
     )
     .filter(({ spec }) => spec[0] === 0 && spec[1] < 2)
@@ -236,8 +277,12 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
     'a rule in system.css sits below (0,2,0) and can be out-specified by a plain console selector'
   )
 
-  // ...and the exemption may not quietly become the rule. Exactly one block uses it today.
-  const exempted = ruleList().filter(({ selector, body }) => exempt(selector, body))
+  // ...and the exemption may not quietly become the rule. ⚠️ Counted per SELECTOR, not per block:
+  // counting blocks let a second weak `:where()` selector be added as a comma-part of the block that
+  // already holds the exemption, and the count stayed at 1 (fresh reviewer, round 5, Minor).
+  const exempted = ruleList().flatMap(({ selector, body }) =>
+    splitSelectorList(selector).filter((part) => exempt(part, body))
+  )
   assert.equal(
     exempted.length,
     1,
@@ -269,6 +314,19 @@ test('the specificity arithmetic reproduces — including every case the old ver
     [0, 5, 0]
   )
 
+  // ⚠️ `(0,4,0)` is here because `system.css:123` CLAIMS it is pinned — and the commit that wrote
+  // that claim is the same one that deleted the only line covering it. A comment asserting a guard
+  // that the same hunk removed is the "prose asserting a property the code lacks" class, third
+  // round running, inside the comment rewritten to fix a wrong-number claim (fresh reviewer,
+  // round 5, Major).
+  assert.deepEqual(specificity('.ds .ds-btn--primary:hover:not(:disabled)'), [0, 4, 0])
+
+  // Both notations for the same pseudo-element must agree, or the floor can be passed by choosing
+  // one colon over two.
+  assert.deepEqual(specificity('.ds :before'), [0, 1, 1])
+  assert.deepEqual(specificity('.ds ::before'), [0, 1, 1])
+  assert.deepEqual(specificity('.ds :WHERE(*)'), [0, 1, 0], 'pseudo-class names are case-insensitive')
+
   // ...and the cases the round-3 comments cite, so the prose and the arithmetic cannot part company.
   assert.deepEqual(specificity('.ds :focus-visible'), [0, 2, 0])
   assert.deepEqual(specificity('.ds .ds-pill'), [0, 2, 0])
@@ -283,4 +341,15 @@ test('every selector in system.css computes a specificity without throwing', () 
   // The parser throws on malformed input rather than guessing. Running it over the whole file is how
   // a selector shape it cannot handle shows up here instead of as a silently wrong number.
   for (const selector of selectors()) specificity(selector)
+})
+
+test('a selector list is split on its top-level commas only', () => {
+  // The shapes that were being cut mid-selector, each of which produced a false accusation.
+  assert.deepEqual(splitSelectorList('.ds .ds-btn:not(:is(.a, .b))'), ['.ds .ds-btn:not(:is(.a, .b))'])
+  assert.deepEqual(splitSelectorList('.ds [data-x="a,b"]'), ['.ds [data-x="a,b"]'])
+  assert.deepEqual(splitSelectorList('.ds .a, .ds .b'), ['.ds .a', '.ds .b'])
+  assert.deepEqual(splitSelectorList('.ds :is(.a, .b), .ds .c'), ['.ds :is(.a, .b)', '.ds .c'])
+
+  // ...and the parser handles the nesting it used to throw `unbalanced parentheses` on.
+  assert.deepEqual(specificity('.ds .ds-btn:not(:is(.a, .b))'), [0, 3, 0])
 })
