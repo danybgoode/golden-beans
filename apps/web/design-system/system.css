@@ -120,8 +120,12 @@
 /* pressed — the state the guidelines say we currently skip.
    ⚠️ `:not([data-state='unbuilt'])` on every interactive state, and it is load-bearing. `unbuilt`
    is deliberately NOT `disabled` in the DOM — "this isn't built yet" is information a screen reader
-   should hear — so `:not(:disabled)` does not exclude it, and the hover rule (0,3,0) outranked the
-   unbuilt rule (0,2,0). Rendered: an unbuilt primary went from transparent to FULL `--gold-hot`
+   should hear — so `:not(:disabled)` does not exclude it, and the hover rule (0,4,0) outranked the
+   unbuilt rule `.ds .ds-btn[data-state='unbuilt']` (0,3,0). ⚠️ Those numbers read (0,3,0) and
+   (0,2,0) here — wrong twice, conclusion intact, 55 lines below the comment where round 3 fixed the
+   identical mistake (fresh reviewer, round 3, Major). `system-cascade.test.ts` pins both values now,
+   so the next one fails a test instead of surviving three reviews.
+   Rendered: an unbuilt primary went from transparent to FULL `--gold-hot`
    under the cursor, and the secondary lost its dashed-amber identity for a live-control fill.
    A control that says "not built yet" lighting up like a pressable button is the exact defect F2.1
    was raised to prevent, inside the state F2.1 added (fresh reviewer, Major). */

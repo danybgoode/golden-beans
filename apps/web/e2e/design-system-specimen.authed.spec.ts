@@ -109,6 +109,15 @@ test.describe('the design system specimen', () => {
     const dialog = page.locator('[data-specimen-product-dialog] dialog.confirm-dialog')
     await expect(dialog).toBeVisible()
 
+    // ⚠️ `:modal`, like its `.ds-dialog` sibling. A non-modal `<dialog>` is not centred by the UA at
+    // all, gets no backdrop and does not make the page inert — so one that stopped being modal but
+    // happened to land near the middle would pass a bare geometry check (fresh reviewer, round 3).
+    await expect(dialog).toHaveJSProperty('open', true)
+    expect(
+      await dialog.evaluate((node) => node.matches(':modal')),
+      'the product dialog opened non-modally — the UA does not centre those, and nothing behind it is inert'
+    ).toBe(true)
+
     const box = await dialog.boundingBox()
     expect(box, 'the product dialog rendered no box').not.toBeNull()
     if (!box) return
@@ -310,6 +319,16 @@ test.describe('the design system specimen', () => {
     expect(
       exported.filter((name) => !listed.has(name)),
       'primitives.tsx exports a component with no entry above — add it to the specimen and to this list'
+    ).toEqual([])
+
+    // ⚠️ …and the other direction. Checking only `exported \ listed` let a RENAMED primitive leave a
+    // stale entry that kept passing for as long as any element still carried the class — the list
+    // drifting from the module, which is the failure this check exists to prevent (fresh reviewer,
+    // round 3, Minor).
+    const exportedNames = new Set(exported)
+    expect(
+      PRIMITIVES.map(([name]) => name).filter((name) => !exportedNames.has(name)),
+      'the list above names a primitive `primitives.tsx` does not export — it was renamed or removed'
     ).toEqual([])
   })
 

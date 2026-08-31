@@ -212,7 +212,7 @@ export default async function DesignSystemSpecimen({
           <Section id="pills" title="State pill" note="Dot plus word — never colour alone.">
             <div className="ds-specimen-row">
               <Pill state="on">{SPECIMEN_WORDS.on}</Pill>
-              <Pill state="off">Turned off</Pill>
+              <Pill state="off">{SPECIMEN_WORDS.off}</Pill>
               <Pill state="never">{SPECIMEN_WORDS.neverActivated}</Pill>
             </div>
           </Section>
@@ -225,7 +225,7 @@ export default async function DesignSystemSpecimen({
             <div className="ds-specimen-row">
               <Switch state="on" label="On" />
               <Switch state="off" label="Off" />
-              <Switch state="never" label="Never turned on here" />
+              <Switch state="never" label={SPECIMEN_WORDS.neverActivated} />
               <Switch state="off" label="Disabled" disabled />
             </div>
           </Section>
@@ -276,7 +276,7 @@ export default async function DesignSystemSpecimen({
             <Answer>Production is serving 3 of 42 features. 39 have never been turned on here.</Answer>
             <div className="ds-specimen-row">
               <Stat value="3" label="Serving in Production" />
-              <Stat value="39" label="Never turned on" />
+              <Stat value="39" label={SPECIMEN_WORDS.neverActivated} />
               <Stat value="0" label="Deliberately off" />
             </div>
           </Section>

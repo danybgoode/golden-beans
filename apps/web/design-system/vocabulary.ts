@@ -261,7 +261,7 @@ export const SPECIMEN_WORDS = {
   /** Per-ENVIRONMENT activation. The "here" is load-bearing — see `CONTROL_PLANE_WINS`. */
   neverActivated: controlPlaneWord('Never turned on'),
   on: 'On',
-  off: 'Off',
+  off: 'Turned off',
 } as const
 
 /**

@@ -291,11 +291,28 @@ test('the specimen says the control plane’s word, not the design’s', () => {
 
   // ...and the specimen may not hard-code a word the registry settles. This is the weld: the page
   // renders `SPECIMEN_WORDS`, so a literal here means someone typed around the module.
+  //
+  // ⚠️ **The grip was `>word<` and TWO real violations walked past it.** `label="Never turned on
+  // here"` sat in an ATTRIBUTE, and `<Stat label="Never turned on" />` used the DESIGN's phrase —
+  // the one `CONTROL_PLANE_WINS` exists to say the control plane overrules — rendered four rows from
+  // a pill saying the corrected version. A weld that checks one of the three places a string can
+  // appear is a weld that holds one of them (fresh reviewer, round 3, Major).
+  //
+  // Both SIDES are checked: the product's word must come from the module, and the design's word must
+  // not appear at all — a specimen that shows the overruled phrasing is teaching the wrong word.
   const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8')
+  const rendered = (word: string) =>
+    specimen.includes(`>${word}<`) || specimen.includes(`"${word}"`) || specimen.includes(`'${word}'`)
+
   for (const entry of CONTROL_PLANE_WINS) {
     assert.ok(
-      !specimen.includes(`>${entry.product}<`),
+      !rendered(entry.product),
       `the specimen hard-codes "${entry.product}" instead of reading it from CONTROL_PLANE_WINS`
+    )
+    assert.ok(
+      !rendered(entry.design),
+      `the specimen renders "${entry.design}" — the phrasing the control plane OVERRULES. ` +
+        `It should say "${entry.product}", via SPECIMEN_WORDS.`
     )
   }
 })
@@ -309,4 +326,18 @@ test('a word the vocabulary has not settled cannot be rendered', () => {
     /no CONTROL_PLANE_WINS entry/,
     'an unknown design phrase must not resolve to anything'
   )
+})
+
+test('every word the vocabulary exports for the specimen is one the specimen uses', () => {
+  // ⚠️ `SPECIMEN_WORDS.off` was exported and never referenced while `page.tsx` hard-coded the same
+  // string beside it — an unused export in the module whose entire purpose is that the page stops
+  // hard-coding (fresh reviewer, round 3, Minor). A registry with entries nobody reads is the shape
+  // of module this project has already lost a constant to.
+  const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8')
+  for (const key of Object.keys(SPECIMEN_WORDS)) {
+    assert.ok(
+      specimen.includes(`SPECIMEN_WORDS.${key}`),
+      `SPECIMEN_WORDS.${key} is exported and the specimen never reads it`
+    )
+  }
 })
