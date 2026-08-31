@@ -324,10 +324,32 @@ product has ever had a dotted lower-case key. `console.design_v2_enabled` would 
 and the builder would have had to invent the thing it "extends".
 
 🔒 **Locked:** env var **`DESIGN_V2_ENABLED`**, predicate **`isDesignV2Enabled()`** in
-`lib/flags.ts`, enablement polarity, exactly `=== 'true'`, read fresh per request, created
-**DISABLED in Production, Preview and Development** before Sprint 3 merges. Sprint 6 retires the
-predicate and the three env entries. Every occurrence of `console.design_v2_enabled` in
+`lib/flags.ts`, enablement polarity, exactly `=== 'true'`, read fresh per request. Sprint 6 retires
+the predicate and the three env entries. Every occurrence of `console.design_v2_enabled` in
 `sprint-3.md`, `sprint-6.md` and the seed is corrected.
+
+⚠️ **CREATED ENABLED — Daniel's decision, 2026-08-31, overriding this lock's original polarity.**
+This decision said "created **DISABLED** in Production, Preview and Development before Sprint 3
+merges", with a staged flip at Story 3.6. It is now: **`DESIGN_V2_ENABLED=true` in all three Vercel
+environments, set BEFORE Sprint 3 merges**, so the merge that deploys Sprint 3 serves the new design
+on all 20 console routes immediately. *"All of this work is to be shipped to production enabled
+fully, not dark, not waiting for anything."*
+
+What that changes, so Sprint 3 builds for it rather than discovering it:
+
+- **There is no dark period.** The default-`false` habit this epic inherited exists so a merge is
+  never itself a release. Here the merge IS the release, deliberately. The deterministic gate is
+  what stands between a bad render and every signed-in user, so Story 3.6's smoke walkthrough runs
+  on **production**, immediately after the deploy, not on a preview.
+- **The rollback test inverts.** It was "flip it on, confirm the new world". It is now **"flip it
+  OFF, confirm the OLD world returns, flip it back on"** — the same one env change plus a deploy,
+  exercised in the direction it would actually be used. Still owed to Daniel by name: it is a
+  production environment change.
+- **`=== 'true'` is unchanged and still exactly that.** Enabled-by-default is a decision about the
+  VALUE set in Vercel, not about the predicate. A predicate that treats "unset" as on would make the
+  flag unable to fail closed on a misconfigured environment, and would make Sprint 6's retirement
+  unobservable.
+- **Preview still has no database** (D3), so a preview deploy proves the render, never the data.
 
 **The second seam — answered here, in writing, so Sprint 6 executes rather than discovers.**
 Verified: the nine non-`ProductShell` routes share **no** wrapper. `/login` and `/signup` render
@@ -668,5 +690,5 @@ page that reads exactly like a broken one.
 - [ ] Product poster (`Roadmap/README.md`) updated
 - [ ] Team memory + `MEMORY.md` index updated
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** the D6 flag slice shipped + `DESIGN_V2_ENABLED` exists **in all three Vercel envs** with the stated polarity (enablement ⇒ default `false`, created disabled), and the second seam for the nine non-`ProductShell` routes is resolved as the lock decided. *Verify-only — not a new gate.*
+- [ ] **Kill-switch (planned at grooming — Stage 6b):** the D6 flag slice shipped + `DESIGN_V2_ENABLED` exists **in all three Vercel envs**, ⚠️ **set to `true`** — created ENABLED per Daniel's 2026-08-31 decision, not disabled — with the predicate still exactly `=== 'true'`, and the second seam for the nine non-`ProductShell` routes resolved as the lock decided. *Verify-only — not a new gate.*
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
