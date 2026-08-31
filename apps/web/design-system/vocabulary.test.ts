@@ -306,8 +306,7 @@ test('the specimen says the control plane’s word, not the design’s', () => {
   // happens to collapse short ones back onto one line, but prettier is NOT in CI (`lint` uses
   // eslint-config-prettier, which DISABLES formatting rules), so the weld cannot lean on it
   // (fresh reviewer, round 5, Minor). Template-literal children are covered too.
-  const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8')
-    .replace(/\s+/g, ' ')
+  const specimen = readFileSync(join(WEB, 'app/app/design-system/page.tsx'), 'utf8').replace(/\s+/g, ' ')
   const rendered = (word: string) =>
     specimen.includes(`> ${word} <`) ||
     specimen.includes(`>${word}<`) ||
