@@ -23,7 +23,7 @@ export default async function KeysPage({ params }: { params: Promise<{ projectSl
   const keys = await listProjectKeys(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'keys'}>
       <main>
         <h1>API keys</h1>
         <p>

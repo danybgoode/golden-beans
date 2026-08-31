@@ -46,7 +46,7 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
   const canManage = isOwner({ projectId: membership.projectId, role: membership.role })
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'setup/connect'}>
       <main>
         <h1>Connect your agent</h1>
         <p>

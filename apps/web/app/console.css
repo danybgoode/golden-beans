@@ -296,7 +296,6 @@
   gap: 10px;
   height: 36px;
   padding: 8px 10px;
-  border: none;
   border-radius: 7px;
   background: none;
   font-size: 13.5px;
@@ -311,9 +310,42 @@
   background: var(--card);
   color: var(--crema);
 }
+/* ⚠️ **THE ACTIVE ITEM IS A RAISED CARD, not a fill you have to look for.**
+
+   This rule used to be exactly two declarations — `background: var(--card-2)` and
+   `color: var(--crema)` — which is `#2b2318` on the `--roast` `#16120d` ground. That is a ~5%
+   luminance step: real, findable if you already know where to look, and invisible if you are
+   scanning. It is two of Daniel's five named complaints ("I can't tell where I am"), and it is why
+   Story 3.3 exists.
+
+   FOUR cues now, so the answer does not depend on any one of them landing:
+     · a lighter fill                    · a 1px border, which is what makes it read as RAISED
+     · a GOLD icon against --dim ones    · full-strength text at 600
+
+   ⚠️ Carried on `aria-current="page"` — the attribute, not a class — so the cue a sighted reader
+   sees and the one a screen reader hears are the same fact. A class would let them drift.
+
+   ⚠️ The `> ul` CHILD combinator is load-bearing and must stay (contract row 7). `.console-rail a`
+   and `.console-rail ul a` both leak onto the environment control below, and the added specificity
+   overrides its padding, radius AND weight — which kills this cue on the one control that most
+   needs it. Two previous attempts missed why. */
 .is-console .console-rail > ul a[aria-current='page'] {
   background: var(--card-2);
+  border-color: var(--line);
   color: var(--crema);
+}
+.is-console .console-rail > ul a[aria-current='page'] svg {
+  color: var(--gold);
+}
+/* The inactive items carry a TRANSPARENT border of the same width, so the active one does not shift
+   its neighbours by 2px when it moves. A cue that reflows the list is a cue that reads as a bug. */
+.is-console .console-rail > ul a {
+  border: 1px solid transparent;
+}
+.is-console .console-rail > ul a svg {
+  flex: none;
+  color: var(--dim-2);
+  transition: color var(--t);
 }
 /* Belt and braces: the markup drops these, and the stylesheet refuses to paint them if they come
    back. A regression that reintroduces the badge should look broken, not merely wrong. */
@@ -334,6 +366,36 @@
    the design puts at the top of the rail came out as three bare links (cross-review, agy). */
 .is-console .envpick {
   margin-bottom: 22px;
+}
+/* ⚠️ **Story 3.4 — ONE control, not three stacked links.** Daniel's first named complaint. The
+   `<ul>` below is now inside a `<details>`, so it is a MENU that opens rather than a list that is
+   always open. Everything about the options is unchanged — they are still links, still carrying the
+   environment in the URL (contract row 8).
+
+   ⚠️ The `> ul` CHILD combinator on the rail's own rules is what keeps this control safe, and it is
+   load-bearing (contract row 7): `.console-rail a` and `.console-rail ul a` both leak onto these
+   anchors, and the added specificity overrides their padding, radius AND weight. Two previous
+   attempts missed why. This block is BELOW those rules and scoped to `.envpick`, so it wins on
+   source order for the properties it sets and never fights them for the rest. */
+.is-console .envpick__control > summary {
+  /* `.ds-env` from the design system paints it; this only removes the UA's disclosure triangle,
+     which `list-style: none` alone does not do in WebKit. */
+  cursor: pointer;
+  list-style: none;
+}
+.is-console .envpick__control > summary::-webkit-details-marker {
+  display: none;
+}
+.is-console .envpick__chevron {
+  margin-left: auto;
+  color: var(--dim-2);
+  transition: transform var(--t);
+}
+.is-console .envpick__control[open] > summary .envpick__chevron {
+  transform: rotate(180deg);
+}
+.is-console .envpick__menu {
+  margin-top: 4px;
 }
 .is-console .envpick ul {
   display: flex;

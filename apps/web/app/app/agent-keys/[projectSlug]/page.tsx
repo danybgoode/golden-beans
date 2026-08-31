@@ -31,7 +31,7 @@ export default async function AgentKeysPage({ params }: { params: Promise<{ proj
   const keys = await listAgentWriteKeys(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'agent-keys'}>
       <main>
         <h1>Agent write keys</h1>
         <p>

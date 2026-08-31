@@ -93,7 +93,7 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   const usableCount = rows.filter((row) => isCurrentlyUsable(row)).length
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'setup/keys'}>
       <main>
         <h1>Keys</h1>
         <p>

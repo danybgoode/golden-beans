@@ -116,7 +116,7 @@ export default async function DesignSystemSpecimen({
   if (projectSlug) await requireProjectMembership(projectSlug)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
       <main className="ds">
         <div className="ds-specimen">
           <header className="ds-specimen-head">

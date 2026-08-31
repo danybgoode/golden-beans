@@ -169,6 +169,118 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(rail.locator(`a[href="/app/flag-credentials/${slug}"]`)).toHaveCount(0)
   })
 
+  test('the active rail item differs from an inactive one by MORE than background colour', async ({
+    page,
+  }) => {
+    // ⚠️ **Two of Daniel's five named complaints are "I can't tell where I am".** What shipped
+    // painted `background: var(--card-2)` and nothing else — `#2b2318` on the `--roast` `#16120d`
+    // ground, a ~5% luminance step. Findable if you know where to look, invisible if you are
+    // scanning.
+    //
+    // ⚠️ **A fill-only assertion would have PASSED on that**, which is why this one counts the cues
+    // rather than checking that something changed. Story 3.3 says the active item is a raised card:
+    // fill, border, gold icon, full-strength text. At least three of the four must differ, so
+    // losing any single cue still fails here rather than in a review three sprints later.
+    const slug = tenantSlug()
+    await page.goto(`/app/setup/keys/${slug}`)
+    const rail = page.locator('.console-rail')
+
+    const active = rail.locator(`a[href="/app/setup/keys/${slug}"]`)
+    const inactive = rail.locator(`a[href="/app/setup/connect/${slug}"]`)
+    await expect(active).toHaveAttribute('aria-current', 'page')
+    await expect(inactive).not.toHaveAttribute('aria-current', 'page')
+
+    const read = (locator: typeof active) =>
+      locator.evaluate((node) => {
+        const style = getComputedStyle(node)
+        const icon = node.querySelector('svg')
+        return {
+          background: style.backgroundColor,
+          borderColor: style.borderTopColor,
+          borderWidth: style.borderTopWidth,
+          color: style.color,
+          iconColor: icon ? getComputedStyle(icon).color : null,
+        }
+      })
+
+    const on = await read(active)
+    const off = await read(inactive)
+
+    // The icon is Story 2.4's deliverable finally reaching a product screen: `iconKey` has been a
+    // required field on every surface since Sprint 2, and nothing rendered it.
+    expect(on.iconColor, 'the active rail item renders no icon').not.toBeNull()
+    expect(off.iconColor, 'an inactive rail item renders no icon').not.toBeNull()
+
+    const differences = [
+      on.background !== off.background && 'background',
+      on.borderColor !== off.borderColor && 'border',
+      on.color !== off.color && 'text colour',
+      on.iconColor !== off.iconColor && 'icon colour',
+    ].filter(Boolean)
+
+    expect(
+      differences,
+      `the active rail item differs from an inactive one only by ${differences.join(', ') || 'nothing'} ` +
+        `— active ${JSON.stringify(on)} vs inactive ${JSON.stringify(off)}. A cue you have to look ` +
+        'for is what shipped last time.'
+    ).toHaveLength(4)
+
+    // ...and the border is REAL, not a colour change on a zero-width one.
+    expect(parseFloat(on.borderWidth), 'the active item has no border to raise it').toBeGreaterThan(0)
+
+    // ⚠️ The inactive items must carry a transparent border of the SAME width, or the active one
+    // shifts its neighbours by 2px as it moves. A cue that reflows the list reads as a bug.
+    expect(
+      off.borderWidth,
+      'the inactive rail items have a different border width — the list will shift when the active item moves'
+    ).toBe(on.borderWidth)
+  })
+
+  test('the environment is ONE control that opens, not three stacked links', async ({ page }) => {
+    // ⚠️ **Daniel's first named complaint.** `EnvironmentPicker` mapped all three environments into
+    // a permanently-expanded `<ul>` of lowercase links, so the rail asked you to pick from a list
+    // instead of telling you where you are. A control showing all its options at rest is a filter;
+    // one that names the current state and opens on demand is a location.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+
+    const control = page.locator('.envpick__control')
+    await expect(control).toHaveCount(1)
+
+    // CLOSED at rest, and that is the whole finding — asserted as the options being HIDDEN, not as
+    // the `open` attribute being absent, because a `<details>` styled open would satisfy the second
+    // and fail the first.
+    const options = control.locator('.envpick__menu a')
+    await expect(options.first()).toBeHidden()
+
+    const summary = control.locator('summary')
+    await expect(summary).toBeVisible()
+    // Title case: the rail says where you ARE. `production` in lower case reads like a config value.
+    await expect(summary).toHaveText(/Production|Preview|Development/)
+
+    await summary.click()
+    await expect(options.first()).toBeVisible()
+    await expect(options).toHaveCount(3)
+
+    // ⚠️ **Every option is still a real link carrying the environment in the URL** (contract row 8,
+    // `console-ia-overhaul` 1.3): a copy-pasted address opens the same environment. This is why the
+    // control is a `<details>` and not Sprint 2's `EnvironmentControl` primitive, whose `onOpen`
+    // callback would have needed a client island and turned these into state.
+    const preview = control.locator('.envpick__menu a', { hasText: 'Preview' })
+    // `env`, not `environment` — `buildFlagListQuery` writes the short key, and the DEFAULT
+    // environment is omitted from the URL entirely rather than written out. Read from the builder
+    // rather than assumed: my first version of this assertion invented `environment=` and failed
+    // against correct code, which is a test accusing the product of the test's own mistake.
+    const href = await preview.getAttribute('href')
+    expect(href, 'the environment options are not links — the environment has left the URL').toContain(
+      'env=preview'
+    )
+
+    await preview.click()
+    await expect(page).toHaveURL(/env=preview/)
+    await expect(page.locator('.envpick__control summary')).toHaveText(/Preview/)
+  })
+
   test('⌘K opens, filters, and ↵ navigates — no URL typed anywhere', async ({ page }) => {
     const slug = tenantSlug()
     await page.goto('/app')

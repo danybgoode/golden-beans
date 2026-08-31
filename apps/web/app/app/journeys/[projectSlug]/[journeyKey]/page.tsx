@@ -47,7 +47,7 @@ export default async function JourneyCohortPage({
   })
   if (!parsed.ok) {
     return (
-      <ProductShell projectSlug={projectSlug} section="measure">
+      <ProductShell projectSlug={projectSlug} section="measure" railActive={'journeys'}>
         <main>
           <h1>Journey cohort — {journeyKey}</h1>
           <p role="alert">{parsed.error}</p>
@@ -71,7 +71,7 @@ export default async function JourneyCohortPage({
     if (result.reason === 'query_failed') throw new Error('Journey cohort lookup failed')
     if (result.reason === 'invalid_request') {
       return (
-        <ProductShell projectSlug={projectSlug} section="measure">
+        <ProductShell projectSlug={projectSlug} section="measure" railActive={'journeys'}>
           <main>
             <h1>Journey cohort — {journeyKey}</h1>
             <p role="alert">That drilldown is not valid for this journey definition.</p>
@@ -81,7 +81,7 @@ export default async function JourneyCohortPage({
     }
     if (result.reason === 'resource_limit') {
       return (
-        <ProductShell projectSlug={projectSlug} section="measure">
+        <ProductShell projectSlug={projectSlug} section="measure" railActive={'journeys'}>
           <main>
             <h1>Journey cohort — {journeyKey}</h1>
             <p role="alert">
@@ -113,7 +113,7 @@ export default async function JourneyCohortPage({
   }
 
   return (
-    <ProductShell projectSlug={projectSlug} section="measure">
+    <ProductShell projectSlug={projectSlug} section="measure" railActive={'journeys'}>
       <main>
         <h1>
           Journey cohort — {journey.key} <small>({projectSlug})</small>

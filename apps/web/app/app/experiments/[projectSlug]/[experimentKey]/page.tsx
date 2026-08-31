@@ -82,7 +82,7 @@ function MetricTable({ title, metric }: { title: string; metric: GovernedMetric 
 function GovernedAnalysis({ result, canManage }: { result: GovernedSuccess; canManage: boolean }) {
   const { experiment, analysis, decisions } = result
   return (
-    <ProductShell projectSlug={result.project.slug} section="ship">
+    <ProductShell projectSlug={result.project.slug} section="ship" railActive={'experiments'}>
       <main>
         <h1>
           Governed experiment — {experiment.key}{' '}
@@ -290,7 +290,7 @@ export default async function ExperimentComparisonPage({
     })
     if (!parsed.ok) {
       return (
-        <ProductShell projectSlug={projectSlug} section="ship">
+        <ProductShell projectSlug={projectSlug} section="ship" railActive={'experiments'}>
           <main>
             <h1>Invalid experiment analysis request</h1>
             <p>{parsed.error}</p>
@@ -308,7 +308,7 @@ export default async function ExperimentComparisonPage({
       if (result.reason === 'query_failed') throw new Error('Experiment analysis lookup failed')
       if (result.reason === 'resource_limit') {
         return (
-          <ProductShell projectSlug={projectSlug} section="ship">
+          <ProductShell projectSlug={projectSlug} section="ship" railActive={'experiments'}>
             <main>
               <h1>Experiment analysis is too large</h1>
               <p>The bounded query limit was exceeded.</p>
@@ -318,7 +318,7 @@ export default async function ExperimentComparisonPage({
       }
       if (result.reason === 'invalid_request' || result.reason === 'lifecycle_unavailable') {
         return (
-          <ProductShell projectSlug={projectSlug} section="ship">
+          <ProductShell projectSlug={projectSlug} section="ship" railActive={'experiments'}>
             <main>
               <h1>Experiment analysis unavailable</h1>
               <p>This version has no valid observation window at the requested snapshot.</p>
@@ -341,7 +341,7 @@ export default async function ExperimentComparisonPage({
 
   if (!metricEvent) {
     return (
-      <ProductShell projectSlug={projectSlug} section="ship">
+      <ProductShell projectSlug={projectSlug} section="ship" railActive={'experiments'}>
         <main>
           <h1>
             Experiment — {experimentKey} <small>({projectSlug})</small>
@@ -364,7 +364,7 @@ export default async function ExperimentComparisonPage({
   const { comparison } = result
 
   return (
-    <ProductShell projectSlug={projectSlug} section="ship">
+    <ProductShell projectSlug={projectSlug} section="ship" railActive={'experiments'}>
       <main>
         <h1>
           Experiment — {experimentKey} <small>({projectSlug})</small>

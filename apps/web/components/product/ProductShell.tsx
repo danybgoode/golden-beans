@@ -55,8 +55,20 @@ export async function ProductShell({
    * environment is, so the section that HAS one supplies it.
    */
   railTop?: React.ReactNode
-  /** Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`. */
-  railActive?: string
+  /**
+   * Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`.
+   *
+   * ⚠️ **REQUIRED, and `null` must be written out.** It was optional, and exactly ONE route of the
+   * twenty-one passed it: `/app/flags/[projectSlug]`. Every other console page rendered a rail with
+   * no active entry at all — so "you can't tell where you are" (two of Daniel's five complaints) was
+   * not that the cue was too subtle, it was that on twenty pages THERE WAS NO CUE. The CSS rule
+   * existed, `aria-current` was wired, and almost nothing ever set it.
+   *
+   * An optional prop that twenty callers forget is indistinguishable from a prop nobody needed.
+   * Required with an explicit `null` for "this page is not in the rail" makes the omission a
+   * compile error instead of a blank rail — the same reasoning as `iconKey` in Story 2.4.
+   */
+  railActive: string | null
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
@@ -65,7 +77,23 @@ export async function ProductShell({
     // so the approved design's stylesheet cannot reach the public demo dashboards or the legacy
     // branch. One condition, one answer — the alternative is two flags kept in lockstep by hand,
     // which is the bug this shell already paid for once (see the `header`/`consoleEnabled` note).
-    <div className={`product-shell${header === null ? '' : ' is-console'}`}>
+    // ⚠️ **`ds` is what makes the design system PAINT here, and Sprint 3 is where it arrives.**
+    //
+    // Sprint 2 scoped every rule in `system.css` to `.ds .ds-…` — deliberately, because
+    // `console.css`'s `.is-console main p` at (0,1,2) was out-specifying bare `.ds-*` rules at
+    // (0,1,0) and stripping the primitives' own colours. `.ds .ds-x` is (0,2,0) and wins.
+    //
+    // The consequence nobody had hit yet: `is-console` alone gets the TOKEN VALUES
+    // (`tokens.css` is scoped `.ds, .is-console`) and NONE of the primitive paint. A `ds-env`
+    // button on the console would have rendered as an unstyled `<button>` with correct colours
+    // available and none of them applied — valid markup, no design.
+    //
+    // So the two classes mean two different things, and both are needed:
+    //   `is-console` — this is the console: tokens, and `console.css` applies.
+    //   `ds`         — this subtree renders FROM the design system: `system.css` applies.
+    // Sprints 4–6 assemble pages from `design-system/primitives`, and this is the line that lets
+    // them. See D15.
+    <div className={`product-shell${header === null ? '' : ' is-console ds'}`}>
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
