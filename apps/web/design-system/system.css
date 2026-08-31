@@ -1,0 +1,886 @@
+/* system.css — the product's primitives, in every state.
+ *
+ * ── What this file is ─────────────────────────────────────────────────────────────────────────
+ * The approved prototype's stylesheet, ported onto namespaced classes and COMPLETED. The port is
+ * mechanical; the completion is the work. `reference.css` (generated verbatim from the approved
+ * prototype) styles idle, hover and pressed. `references/ux-guidelines.md` — drafted 2026-07-23 and
+ * never applied to a single primitive — asks for the full taxonomy on every interactive thing.
+ * Story 2.2 is that document, executed.
+ *
+ * ── ⚠️ THE TAXONOMY HAS TEN STATES, NOT NINE ─────────────────────────────────────────────────
+ * `sprint-2.md` lists nine: idle · hover · focus · pressed · loading · success · error · empty ·
+ * disabled. The document it cites lists TEN, because it splits `disabled` in two and says so in a
+ * heading: *"The one we most need to fix: 'not yet shipped' vs 'temporarily unavailable'"*.
+ *
+ *   disabled  — you cannot do this RIGHT NOW, and here is why. A form mid-submit. It returns.
+ *   unbuilt   — this is not built yet. It is not coming back in a second; it is not coming back
+ *               today. The guidelines are explicit: these "must look different".
+ *
+ * Collapsing them is the exact defect the document was written about — a dimmed inert control that
+ * means two different things to the person looking at it. So this file implements ten, and the
+ * sprint doc is corrected rather than the taxonomy being quietly trimmed to match it.
+ *
+ * ── ⚠️ EVERY SELECTOR IS SCOPED `.ds .ds-…`, AND THE SECOND `.ds` IS NOT DECORATION ──────────
+ * Two findings, one fix (fresh reviewer, Major x2).
+ *
+ * **It was not scoped at all.** 123 rules began `.ds-` and exactly two were under `.ds`, while
+ * `layout.tsx` claimed "everything in it is scoped to `.ds`, so importing it changes nothing until
+ * a route opts in" and this header claimed "every class is `ds-`-prefixed, under `.ds`". The guard
+ * enforces the PREFIX; nothing enforced the scope. The practical cost is Sprint 6's: a `.ds-btn`
+ * rendered on one of the nine non-`ProductShell` routes matched all its rules and resolved NONE of
+ * its `var()`s — `tokens.css` puts the token set on `.ds, .is-console` — giving a transparent
+ * control rather than an unstyled one.
+ *
+ * **And `console.css` was winning.** `.is-console main p` is (0,1,2) and beat every (0,1,0)
+ * primitive on a `<p>`. Rendered: `.ds-answer` — "the sentence a page opens with" — lost `--crema`
+ * for `--dim`, and `.ds-dialog-title` rendered at 13.5px/`--dim` instead of 15px/`--crema`, dimmer
+ * and no larger than its own body. Nothing asserted either.
+ *
+ * `.ds .ds-answer` is (0,2,0), which outranks (0,1,2). So the scope the comments promised is the
+ * same thing that makes the primitives win, and `system-cascade.test.ts` now pins both.
+ *
+ * ── Rules this file is held to (enforced, not promised) ───────────────────────────────────────
+ *   · every class is `ds-`-prefixed, under `.ds`      — check-design-drift `namespace`
+ *   · no raw hex, no rgb()/hsl()/named colours        — `raw-hex`, `literal-color`
+ *   · no `font:` shorthand                            — `font-shorthand`
+ *   · no pictographs                                  — `ui-pictograph`
+ * Values come from `tokens.css` (generated from the prototype) and the steps in `scales.ts`.
+ */
+
+/* ── Focus, once ──────────────────────────────────────────────────────────────────────────────
+ * Every interactive primitive inherits this rather than restating it. `:focus-visible`, not
+ * `:focus`, so a mouse click does not leave a ring behind — and a real ring, because
+ * `outline: none` without a replacement is the single most common way a design system locks out
+ * keyboard users (ux-guidelines: "a real visible ring, never `outline: none` without a
+ * replacement"). */
+.ds :focus-visible {
+  outline: 2px solid var(--gold-hot);
+  outline-offset: 2px;
+  /* ⚠️ NO `border-radius` here. It was `var(--r)`, and it beat every primitive that declares
+     `999px` — so the 38x21 three-state switch, this sprint's flagship primitive, became a rounded
+     RECTANGLE with a round knob inside it the instant a keyboard user reached it. Rendered and
+     confirmed: a focused `.ds-switch` computed `border-radius: 8px` against its declared `999px`
+     (fresh reviewer, Major).
+
+     ⚠️ This said the focus rule wins "at (0,1,1)". It does not: `.ds :focus-visible` is a class
+     plus a PSEUDO-CLASS, so it is (0,2,0) — the same as `.ds .ds-pill`, which it beats on SOURCE
+     ORDER, not on specificity. Wrong arithmetic, right conclusion, in the file whose subject is
+     specificity (fresh reviewer, round 2, Minor). `system-cascade.test.ts` now computes these
+     rather than asserting them in a comment, and pins these exact three cases.
+     Modern outlines follow the element's own radius, so there was nothing to gain and a pill to
+     lose. */
+}
+
+/* Honour a reduced-motion preference everywhere, in one place. Declared with `:where()` so it adds
+   no specificity and any primitive can still opt into a transition it genuinely needs. */
+@media (prefers-reduced-motion: reduce) {
+  .ds :where(*) {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ── Button ───────────────────────────────────────────────────────────────────────────────── */
+.ds .ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--r);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background var(--t),
+    border-color var(--t),
+    color var(--t),
+    transform 90ms;
+}
+.ds .ds-btn--primary {
+  background: var(--gold);
+  color: var(--roast);
+  box-shadow: 0 2px 0 var(--gold-deep);
+}
+.ds .ds-btn--primary:not([data-state='unbuilt']):hover:not(:disabled) {
+  background: var(--gold-hot);
+}
+.ds .ds-btn--secondary {
+  border-color: var(--line);
+  color: var(--crema);
+  background: var(--card);
+}
+.ds .ds-btn--secondary:not([data-state='unbuilt']):hover:not(:disabled) {
+  background: var(--card-2);
+  border-color: var(--dim-2);
+}
+/* pressed — the state the guidelines say we currently skip.
+   ⚠️ `:not([data-state='unbuilt'])` on every interactive state, and it is load-bearing. `unbuilt`
+   is deliberately NOT `disabled` in the DOM — "this isn't built yet" is information a screen reader
+   should hear — so `:not(:disabled)` does not exclude it, and the hover rule (0,4,0) outranked the
+   unbuilt rule `.ds .ds-btn[data-state='unbuilt']` (0,3,0). ⚠️ Those numbers read (0,3,0) and
+   (0,2,0) here — wrong twice, conclusion intact, 55 lines below the comment where round 3 fixed the
+   identical mistake (fresh reviewer, round 3, Major). `system-cascade.test.ts` pins both values now,
+   so the next one fails a test instead of surviving three reviews.
+   Rendered: an unbuilt primary went from transparent to FULL `--gold-hot`
+   under the cursor, and the secondary lost its dashed-amber identity for a live-control fill.
+   A control that says "not built yet" lighting up like a pressable button is the exact defect F2.1
+   was raised to prevent, inside the state F2.1 added (fresh reviewer, Major). */
+.ds .ds-btn:not([data-state='unbuilt']):active:not(:disabled) {
+  transform: translateY(1px);
+}
+.ds .ds-btn--primary:not([data-state='unbuilt']):active:not(:disabled) {
+  box-shadow: 0 1px 0 var(--gold-deep);
+}
+/* loading — never a silent no-op between click and result */
+.ds .ds-btn[data-state='loading'] {
+  cursor: progress;
+  color: transparent;
+}
+.ds .ds-btn[data-state='loading']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  color: var(--crema);
+  animation: ds-spin 620ms linear infinite;
+}
+.ds .ds-btn--primary[data-state='loading']::after {
+  color: var(--roast);
+}
+/* success — confirms with the same verb as the trigger, so it carries a word, not just a colour */
+.ds .ds-btn[data-state='success'] {
+  background: var(--green-deep);
+  border-color: var(--green);
+  color: var(--crema);
+}
+.ds .ds-btn[data-state='error'] {
+  background: var(--red-deep);
+  border-color: var(--red);
+  color: var(--crema);
+}
+/* disabled (blocked) — dimmed and inert, and it comes back */
+.ds .ds-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+/* ⚠️ unbuilt — NOT the same as disabled, and deliberately not dimmed. The guidelines are explicit:
+   "not-yet-shipped gets the amber 'next' tag treatment and stays legible (it's honest marketing, it
+   should read clearly)". A dimmed control says "wait a second"; this says "this doesn't exist yet". */
+.ds .ds-btn[data-state='unbuilt'] {
+  cursor: default;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--gold-deep);
+  color: var(--gold);
+  box-shadow: none;
+}
+
+@keyframes ds-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ── State pill ───────────────────────────────────────────────────────────────────────────────
+ * Dot plus word, never colour alone — the same rule the chart primitives inherit in Sprint 5. */
+.ds .ds-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+}
+.ds .ds-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+.ds .ds-pill--on {
+  color: var(--green);
+  border-color: var(--green-deep);
+}
+.ds .ds-pill--off {
+  color: var(--red);
+  border-color: var(--red-deep);
+}
+.ds .ds-pill--never {
+  color: var(--dim);
+  border-color: var(--line);
+}
+.ds .ds-pill--never::before {
+  background: transparent;
+  border: 1px dashed currentcolor;
+}
+
+/* ── Three-state switch — on / off / dashed "never" ──────────────────────────────────────────
+ * 38 x 21 (contract). The dashed empty state is the one the console has never had: a flag nobody
+ * ever activated is not the same as one somebody deliberately switched off, and rendering them the
+ * same is what made the old page unanswerable. */
+.ds .ds-switch {
+  width: 38px;
+  height: 21px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background var(--t),
+    border-color var(--t);
+}
+.ds .ds-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--dim-2);
+  transition:
+    transform var(--t),
+    background var(--t);
+}
+.ds .ds-switch[data-state='on'] {
+  background: var(--green-deep);
+  border-color: var(--green);
+}
+.ds .ds-switch[data-state='on']::after {
+  transform: translateX(17px);
+  background: var(--green);
+}
+.ds .ds-switch[data-state='never'] {
+  border-style: dashed;
+  background: transparent;
+}
+.ds .ds-switch[data-state='never']::after {
+  background: transparent;
+  border: 1px dashed var(--dim-2);
+}
+.ds .ds-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── Rail item — one line, 36px, icon, no description, no badge (Do-not #2) ──────────────────── */
+.ds .ds-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ds .ds-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--dim);
+  border: 1px solid transparent;
+  background: transparent;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background var(--t),
+    color var(--t),
+    border-color var(--t);
+}
+.ds .ds-rail-item:hover {
+  background: var(--card);
+  color: var(--crema);
+}
+.ds .ds-rail-icon {
+  width: 15px;
+  flex: none;
+  color: var(--dim-2);
+  display: grid;
+  place-items: center;
+}
+/* ⚠️ The ACTIVE item is a RAISED CARD, not a fill. Today's rule paints background only, which is a
+   cue you have to look for — and a fill-only assertion would pass on it. Lighter fill, a 1px
+   border, a gold icon and full-strength text, all carried on `aria-current="page"` so the cue a
+   sighted reader sees and the one a screen reader hears are the same attribute. */
+.ds .ds-rail-item[aria-current='page'] {
+  background: var(--card-2);
+  border-color: var(--line);
+  color: var(--crema);
+}
+.ds .ds-rail-item[aria-current='page'] .ds-rail-icon {
+  color: var(--gold);
+}
+
+/* ── Section tab — 13/500 active with a 2px gold underline, 13/400 dim inactive ─────────────── */
+.ds .ds-tabs {
+  display: flex;
+  gap: 2px;
+  height: 44px;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ds .ds-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ds .ds-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--t),
+    border-color var(--t);
+}
+.ds .ds-tab:hover {
+  color: var(--crema);
+}
+.ds .ds-tab[aria-selected='true'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+}
+
+/* ── Project switcher — ONE level, a menu, 122 x 30 (regenerated, not the contract's 140) ────── */
+.ds .ds-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--crema);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background var(--t),
+    border-color var(--t);
+}
+.ds .ds-switcher:hover {
+  background: var(--card);
+  border-color: var(--line);
+}
+.ds .ds-switcher-chevron {
+  color: var(--dim-2);
+}
+
+/* ── Environment control — ONE button opening a menu, never three stacked links ──────────────── */
+.ds .ds-env {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--crema);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.ds .ds-env-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.ds .ds-env-dot[data-env='development'] {
+  background: var(--blue);
+}
+.ds .ds-env-dot[data-env='preview'] {
+  background: var(--gold);
+}
+
+/* ── Menu — the surface a switcher or environment button opens ───────────────────────────────── */
+.ds .ds-menu {
+  min-width: 200px;
+  padding: 4px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.ds .ds-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--r);
+  border: none;
+  background: transparent;
+  color: var(--crema);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+.ds .ds-menu-item:hover {
+  background: var(--card-2);
+}
+.ds .ds-menu-item[aria-current='true'] {
+  color: var(--gold);
+}
+
+/* ── Stat tile — tabular figures, so a column of numbers lines up ───────────────────────────── */
+.ds .ds-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+}
+.ds .ds-stat-value {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--crema);
+}
+.ds .ds-stat-label {
+  font-size: 12.5px;
+  color: var(--dim);
+}
+
+/* ── The answer line — the sentence a page opens with, gold left border ─────────────────────── */
+.ds .ds-answer {
+  padding: 12px 16px;
+  border-left: 2px solid var(--gold);
+  border-radius: 0 var(--r) var(--r) 0;
+  background: var(--card);
+  color: var(--crema);
+  font-size: 13.5px;
+}
+
+/* ── Data table ─────────────────────────────────────────────────────────────────────────────── */
+.ds .ds-table {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+/* ⚠️ Wide content scrolls inside ITS OWN container; the page never scrolls sideways (Do-not #6). */
+.ds .ds-table-scroll {
+  overflow-x: auto;
+}
+/* The one uppercase place, and never mono (Do-not #3). */
+.ds .ds-table-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim-2);
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line);
+}
+.ds .ds-table-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--card);
+}
+.ds .ds-table-row:last-child {
+  border-bottom: none;
+}
+.ds .ds-table-row:hover {
+  background: var(--card-2);
+}
+/* empty — an invitation, not a dead end */
+.ds .ds-table-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 20px;
+  background: var(--card);
+  color: var(--dim);
+  font-size: 13.5px;
+}
+.ds .ds-table-empty-title {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+/* ── Dialog ─────────────────────────────────────────────────────────────────────────────────
+ * ⚠️ `margin: auto` is LOAD-BEARING and must not be removed. A universal `* { margin: 0 }` reset —
+ * which `tokens.css` carries for the landing — defeats the UA's `margin: auto` on `dialog:modal`,
+ * turning `inset: 0` into the top-left CORNER. Every confirmation dialog in this product sat at
+ * `x: 0, y: 0` from the day the component shipped until `console-ia-overhaul` S3.3, and nothing
+ * noticed because no spec asserted where a dialog IS. Story 2.3's spec now does. */
+.ds .ds-dialog {
+  margin: auto;
+  width: min(430px, calc(100vw - 32px));
+  padding: 20px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--crema);
+  box-shadow: var(--shadow-hi);
+}
+.ds .ds-dialog::backdrop {
+  /* ⚠️ A DERIVATION, and a recorded substitution. The approved prototype dims behind a modal with
+     `.scrim { background: rgb(8 6 4 / 66%) }` — a literal that no token in the design's own `:root`
+     expresses, which is the same class of finding as D2's ten tokens the console uses and
+     `tokens.css` never defined.
+
+     `tokens.css` is GENERATED from the approved prototype's `:root`, so a scrim token cannot be
+     added there without editing the prototype and un-approving the design (D1/D2 amendment). So it
+     is derived from the page's own ground instead: a scrim made of `--roast` is darker than the
+     surface it covers and moves with the palette, where a pasted `rgb(8 6 4)` would not.
+
+     The substitution is recorded in `sprint-2.md` as a finding rather than left for a reviewer to
+     notice that this is not byte-identical to the prototype. */
+  background: color-mix(in srgb, var(--roast) 82%, transparent);
+}
+.ds .ds-dialog-title {
+  font-size: 15px;
+  font-weight: 600;
+  /* ⚠️ An EXPLICIT colour, because the absence of one was the actual defect. Scoping the sheet to
+     `.ds` gave this rule the weight to beat `.is-console main p` (0,2,0 over 0,1,2) — but a rule
+     that declares no `color` cannot win a colour, whatever its specificity. The title inherited
+     `--dim` from the console's body-copy rule and rendered dimmer than, and no larger than, its own
+     body. Fixing the specificity without fixing the omission would have left the bug and removed
+     the explanation for it. */
+  color: var(--crema);
+}
+.ds .ds-dialog-body {
+  margin-top: 8px;
+  color: var(--dim);
+  font-size: 13.5px;
+}
+.ds .ds-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────────────────────────────── */
+.ds .ds-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 13.5px;
+  color: var(--crema);
+  max-width: 380px;
+}
+.ds .ds-toast[data-state='success'] {
+  border-color: var(--green-deep);
+}
+.ds .ds-toast[data-state='error'] {
+  border-color: var(--red-deep);
+}
+.ds .ds-toast-icon {
+  flex: none;
+  margin-top: 2px;
+}
+.ds .ds-toast[data-state='success'] .ds-toast-icon {
+  color: var(--green);
+}
+.ds .ds-toast[data-state='error'] .ds-toast-icon {
+  color: var(--red);
+}
+
+/* ── Numbered step card — the teaching half of Setup › Connect ──────────────────────────────── */
+.ds .ds-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  counter-reset: ds-step;
+}
+.ds .ds-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+/* The number is drawn from a counter, NOT typed as a glyph — `check-design-drift.mjs` bans enclosed
+   numerals precisely because a pasted ① is illegible at the only size a text run tolerates. */
+.ds .ds-step::before {
+  counter-increment: ds-step;
+  content: counter(ds-step);
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.ds .ds-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13.5px;
+  color: var(--crema);
+}
+.ds .ds-step-note {
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+/* ── Wizard — the step rail above a multi-stage task ────────────────────────────────────────── */
+.ds .ds-wizard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ds .ds-wizard-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+}
+.ds .ds-wizard-step[data-state='current'] {
+  color: var(--crema);
+  font-weight: 600;
+}
+.ds .ds-wizard-step[data-state='done'] {
+  color: var(--green);
+}
+.ds .ds-wizard-bar {
+  /* Bounded. `flex: 1` let each connector grow to fill the row, so three short labels sat marooned
+     at either end of two enormous rules — the connector dominated the thing it connects. */
+  flex: 0 1 48px;
+  min-width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.ds .ds-wizard-step[data-state='done'] + .ds-wizard-bar {
+  background: var(--green-deep);
+}
+
+/* ── The specimen's own layout ────────────────────────────────────────────────────────────────
+ * Only the page that shows the primitives; no product route imports these. Kept in this file
+ * rather than a second stylesheet so the namespace rule reaches it too — a specimen that drifted
+ * off the system would be the least trustworthy page in the product. */
+.ds .ds-specimen {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+  max-width: 1180px;
+}
+.ds .ds-specimen-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ds .ds-specimen-h1 {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--crema);
+}
+.ds .ds-specimen-lede {
+  font-size: 13.5px;
+  color: var(--dim);
+  max-width: 62ch;
+}
+.ds .ds-specimen-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+}
+.ds .ds-specimen-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--crema);
+}
+.ds .ds-specimen-note {
+  font-size: 12.5px;
+  color: var(--dim);
+  max-width: 78ch;
+}
+.ds .ds-specimen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.ds .ds-specimen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ds .ds-specimen-col-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ds .ds-specimen-col {
+  width: 120px;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.ds .ds-specimen-col-wide {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--crema);
+}
+.ds .ds-specimen-rail {
+  max-width: 236px;
+}
+.ds .ds-specimen-tabs {
+  border-bottom: 1px solid var(--line);
+}
+
+/* Each type step, rendered at its own size — the point of a specimen. */
+.ds .ds-specimen-type {
+  color: var(--crema);
+}
+.ds .ds-specimen-type--label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ds .ds-specimen-type--micro {
+  font-size: 11.5px;
+}
+.ds .ds-specimen-type--small {
+  font-size: 12px;
+}
+.ds .ds-specimen-type--caption {
+  font-size: 12.5px;
+}
+.ds .ds-specimen-type--control {
+  font-size: 13px;
+}
+.ds .ds-specimen-type--body {
+  font-size: 13.5px;
+}
+.ds .ds-specimen-type--ground {
+  font-size: 14px;
+}
+.ds .ds-specimen-type--section {
+  font-size: 15px;
+}
+.ds .ds-specimen-type--page {
+  font-size: 23px;
+  font-weight: 700;
+}
+.ds .ds-specimen-type--stat {
+  font-family: var(--mono);
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds .ds-specimen-weight {
+  /* Read as one run of text when they were bare spans — three samples separated only by an 8px gap
+     look like one sentence. A specimen that is hard to read fails at its only job, so each sample
+     gets the same chip treatment the rest of the system uses. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 13.5px;
+  color: var(--crema);
+}
+.ds .ds-specimen-weight--medium {
+  font-weight: 500;
+}
+.ds .ds-specimen-weight--semibold {
+  font-weight: 600;
+}
+.ds .ds-specimen-weight--bold {
+  font-weight: 700;
+}
+
+.ds .ds-specimen-spaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ds .ds-specimen-space {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.ds .ds-specimen-space-label {
+  font-size: 11.5px;
+  color: var(--dim);
+}
+.ds .ds-specimen-swatch {
+  height: 12px;
+  border-radius: 2px;
+  background: var(--gold-deep);
+}
+.ds .ds-specimen-swatch--hair {
+  width: 2px;
+}
+.ds .ds-specimen-swatch--tight {
+  width: 4px;
+}
+.ds .ds-specimen-swatch--snug {
+  width: 6px;
+}
+.ds .ds-specimen-swatch--base {
+  width: 8px;
+}
+.ds .ds-specimen-swatch--cosy {
+  width: 12px;
+}
+.ds .ds-specimen-swatch--roomy {
+  width: 16px;
+}
+.ds .ds-specimen-swatch--loose {
+  width: 20px;
+}

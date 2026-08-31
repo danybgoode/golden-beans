@@ -1,6 +1,16 @@
 # One design system, every surface — Sprint 2: The language, systematised
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all five stories built, gate green.
+
+| Story | | Commit |
+|---|---|---|
+| 2.1 — the type and space scale, on a specimen | ✅ | `79485f5` (scales) · `8de861c` (specimen) |
+| 2.2 — every primitive has all **ten** states | ✅ | `12c731c` — see finding **F2.1** |
+| 2.3 — the primitive set | ✅ | `12c731c` (stylesheet) · `8de861c` (components) |
+| 2.4 — icons, and the reason there were none | ✅ | `5cad270` |
+| 2.5 — one product vocabulary | ✅ | `8de861c` — see findings **F2.4** and **F2.5** |
+
+Branched `feat/design-system-rails-s2` off `main` at `8bd9167`.
 
 > **This is the sprint Daniel is actually buying.** Everything after it is application. The approved
 > prototype is the language (locked at the scoping review); this sprint turns it from one HTML file
@@ -28,7 +38,7 @@ re-author) · `apps/web/lib/project-route-inventory.ts` (`iconKey`) · a new spe
 | 5 | `iconKey` is added to `ProjectSurface`, to the `Pick<>` that builds `ProjectSurfaceLink`, and to the mapper. The closed union makes an unknown key a **compile error**, not a blank square. | **D4** |
 | 6 | Existing `components/ui` primitives are **adopted and extended**. `Panel`, `Button`, `Badge`, `Icon`, `DataTable`, `StatCard`, `FunnelBars`, `RolloutBar`, `ConfirmDialog`, `ActivityFeedItem`, `FormSection`, `SectionDivider` already exist — audit §2.2: *"the work is mostly adoption and a handful of new primitives."* | audit §2.2 |
 | 7 | ⚠️ **The dialog-centring bug is ALREADY FIXED.** `globals.css` restates `margin: auto` on `.confirm-dialog`. This sprint owes the **assertion**, and its red comes from a **mutation check recorded in the PR body** — delete `margin: auto`, watch the position assertion fail at `x: 0, y: 0`, restore. | **D12** |
-| 8 | Where the prototype and the control plane disagree about a word, **the control plane wins** and the disagreement is written down as a finding. `flag-vocabulary.ts` **generalises**; it is not replaced. | Story 2.5 |
+| 8 | Where the prototype and the control plane disagree about a word, **the control plane wins** and the disagreement is written down as a finding. `flag-vocabulary.ts` **generalises**; it is not replaced. ⚠️ The generalisation is **Sprint 3** — see D14. | Story 2.5 |
 | 9 | Live copy this sprint must remove, verified on production 2026-08-29: uppercase mono body copy (*"WHAT THIS LIST REPORTS…"*), and storage-model page copy (*"Definitions, immutable versions and their audit…"*). Do-not #3 and #7. | contract Do-nots |
 | 10 | `prefers-reduced-motion` is honoured, and **focus is visible on every interactive element** — the keyboard pass is an assertion, not a review comment. | `ux-guidelines.md` |
 
@@ -37,6 +47,81 @@ applied to a primitive:** idle · hover · focus · pressed · loading · succes
 disabled. **Every primitive gets all nine designed and rendered.** *"The pressed state was not
 implemented"* becomes a gate failure rather than a review comment — that exact defect shipped last
 epic.
+
+## Findings raised while building (not discovered by a reviewer)
+
+**F2.1 — ⚠️ The taxonomy has TEN states, not nine, and the tenth is the one the document was written
+about.** This sprint's Story 2.2 lists nine: *idle · hover · focus · pressed · loading · success ·
+error · empty · disabled*. `references/ux-guidelines.md` lists **ten**, because it splits `disabled`
+in two and gives the split its own heading — *"The one we most need to fix: 'not yet shipped' vs
+'temporarily unavailable'"*:
+
+| | Means | Looks |
+|---|---|---|
+| `disabled` | you cannot do this **right now** — a form mid-submit | dimmed, inert, **it comes back** |
+| `unbuilt` | this is **not built yet** | *not* dimmed — amber, dashed, and legible, because it is honest marketing |
+
+The guidelines say in as many words that these *"must look different"*. Collapsing them is the exact
+defect that document was written about: one dimmed inert control meaning two different things to the
+person looking at it. **`system.css` implements ten**, and this doc is corrected rather than the
+taxonomy being trimmed to match a nine-item list.
+
+**F2.2 — The approved design's modal scrim is a colour no token expresses.**
+`reference.css` dims behind a modal with `.scrim { background: rgb(8 6 4 / 66%) }` — a literal that
+does not appear in the prototype's own `:root`, and therefore not in the generated `tokens.css`.
+This is the same class as **D2**'s ten tokens the console uses and `tokens.css` never defined.
+
+A scrim token cannot be added to `tokens.css`, because that file is generated from the approved
+prototype and editing the prototype un-approves the design (the **D1/D2 amendment**). So
+`.ds-dialog::backdrop` derives it from the page's own ground —
+`color-mix(in srgb, var(--roast) 82%, transparent)` — which is darker than the surface it covers and
+moves with the palette, where a pasted `rgb(8 6 4)` would not. **Recorded here rather than left for
+a reviewer to find that this one value is not byte-identical to the prototype.**
+
+**F2.3 — `ICON_NAMES` had to leave `Icon.tsx`.** Node's type-stripping cannot load JSX, so a unit
+test importing the name list from a `.tsx` file dies with `ERR_UNKNOWN_FILE_EXTENSION`. The list now
+lives in `components/ui/icon-names.ts` and `Icon.tsx` re-exports it, so every existing import is
+unchanged. This is `LEARNINGS`' rule — a unit-tested pure value cannot share a file with code that
+imports a framework — and it is why `project-route-inventory.test.ts` can assert every `iconKey`
+against the component's real list instead of a second copy.
+
+**F2.4 — ⚠️ Do-not #3 is violated on BOTH halves, and this paragraph asserted otherwise.** The
+contract says uppercase appears in *"exactly two places, and never in mono"*.
+
+⚠️ The numbers below replace *"**eight** rules… and **none of them is mono**"*. That count came from
+scanning `console.css` and `system.css` — two of the four stylesheets that paint the console — and
+it was disproved inside this same sprint: `vocabulary.ts` records the correction, and this file was
+left asserting the disproved figure (fresh reviewer, round 2, Major; the same class as the finding
+it describes, one file over).
+
+Re-derived 2026-08-30 with the guard's own `isConsoleSurface()` over all four stylesheets
+(`globals.css`, `console.css`, `hub/hub.module.css`, `design-system/system.css`), counting each
+SELECTOR rather than each comma-separated rule — which is the unit `vocabulary.test.ts` now enforces:
+
+- **24** selectors apply `text-transform: uppercase` on a console surface.
+- **12 of them are also mono** — the pair Do-not #3 forbids outright, not the zero claimed here.
+- **21** entries in `UPPERCASE_ALLOWED` cover them (one entry matches several spellings of the same
+  class), **12** marked `mono: true`, **4** marked `keep: true` — two approved places under four
+  selectors while the old and new table headers are both live.
+
+Rather than delete seventeen rules blind in a sprint that owns none of those surfaces, every one is
+listed in `design-system/vocabulary.ts` with what it is and which sprint removes it — and
+`vocabulary.test.ts` fails if the set **grows**, if an entry stops describing a real rule, if two
+entries claim the same selector, or if an entry claims `mono` that no stylesheet applies mono to.
+A list that cannot grow is the difference between a Do-not and a decision.
+
+**F2.5 — ⚠️ One of the vocabulary's own rules was wrong, and its test proved it.** The banned-word
+list included `row`; the test then failed on `role="row"` and on a data table describing its own
+rows. **A table genuinely has rows** — the defect is calling a *feature* a row, and no scanner can
+tell those two apart from the word alone. Banning it anyway produces a rule people route around,
+which is worse than no rule. Removed with the reasoning; the domain-noun problem is left to review,
+where judgement lives.
+
+**F2.6 — ⚠️ The storage copy Story 2.5 calls live is in the gate-OFF branch.**
+*"Definitions, immutable versions and their audit remain visible while flag serving is dark…"* is in
+`app/app/flags/[projectSlug]/page.tsx`'s **legacy** branch, which renders only while
+`FLAG_CONSOLE_ENABLED` is off — and it is ON in production. So it is not on screen today. It is
+still real debt (a preview, or a rollback, renders it), and Sprint 4 owns that page.
 
 ## Stories
 
@@ -106,8 +191,12 @@ single-line entry is recognisable rather than read.
 **As a** person using the product, **I want** the words to be about my job, **so that** the page
 stops describing the storage model.
 **Acceptance:**
-- `flag-vocabulary.ts` **generalises** into a product vocabulary module; it is not replaced, and
-  every user-facing word in `design-system/` goes through it.
+- ⚠️ **SPLIT IN TWO — see D14.** *"every user-facing word in `design-system/` goes through it"*
+  lands here: the specimen renders `SPECIMEN_WORDS` / `controlPlaneWord()`, which throws rather than
+  falling back, and `vocabulary.test.ts` fails if the page hard-codes a settled word. *"`flag-vocabulary.ts`
+  **generalises**"* moves to **Sprint 3**, because folding it in edits the live flags page and this
+  sprint's build contract says it changes no existing product route. `flag-vocabulary.ts` is
+  untouched here. Daniel decided the split; it is a deviation from the line above, not a discovery.
 - **Uppercase appears in exactly two places and never in mono** (contract Do-not #3), and **no page
   copy is about storage** (Do-not #7). Both are live defects: *"WHAT THIS LIST REPORTS IS WHAT
   PRODUCTION IS SERVING"* and *"Definitions, immutable versions and their audit remain visible while
@@ -138,14 +227,19 @@ Env: steps 1–4 **local** — `supabase start`, then a production build (`npm r
 `next dev` first: a dev server colliding with the runner's own `.next` build is the failure that
 looks like a regression and is not.
 
-1. Go to `http://localhost:3000/app/design-system` (signed in).
-   → The specimen renders every type step, every space step, and every primitive in all **nine**
-   states, on one screen. **This is the language. Approve or reject it here.**
+1. Go to `http://localhost:3000/app/design-system?project=<your-slug>` (signed in).
+   *(The slug is a QUERY parameter — this route is the design system's own page, not a project's,
+   so it has no `[projectSlug]` segment. Membership is still checked server-side.)*
+   → The specimen renders every type step, every weight step, every space step, and every primitive
+   in all **ten** states, on one screen. **This is the language. Approve or reject it here.**
+   *(Ten, not nine — see finding **F2.1**: `disabled` and `unbuilt` are different states and the
+   guidelines say they must look different.)*
 2. Tab through the specimen with the keyboard only, without touching the mouse.
    → Every interactive element shows a visible focus ring. Nothing is reachable-but-invisible.
 3. On the specimen, open the confirmation dialog.
-   → It is **centred in the viewport**. (It already is — Story 2.3 is adding the assertion that
-   keeps it centred. The PR body must show the mutation check that proved the assertion can fail.)
+   → It is **centred in the viewport**, and Cancel is focused rather than Revoke.
+   *(It already was centred — what Story 2.3 adds is the assertion that keeps it so. Verified by
+   mutation: removing `margin: auto` moves the centre to x=215 instead of 720.)*
 4. Look at the rail items on the specimen.
    → Each carries an **SVG** icon — no glyph, no emoji — and the active one is a raised card:
    lighter fill, a 1px border, a gold icon, full-strength text. Legible at a glance rather than a

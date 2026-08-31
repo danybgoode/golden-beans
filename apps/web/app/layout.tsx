@@ -5,6 +5,19 @@ import { CATEGORY } from '@/lib/positioning'
 import { NavigationLoader } from '@/components/brand/NavigationLoader'
 import './globals.css'
 import './console.css'
+// ⚠️ The design system's own stylesheet. Every selector is scoped `.ds .ds-…`, so importing it
+// changes nothing until a route opts in by rendering `.ds` — which is what makes Sprint 2 shippable
+// ahead of the sprint that puts it on product routes.
+//
+// That sentence was FALSE when first written: 123 rules began `.ds-` and two were under `.ds`, so
+// the isolation was the prefix alone and the claim overstated it (fresh reviewer). Both are true
+// now, and `system-cascade.test.ts` asserts the scoping rather than describing it.
+//
+// It was written and NOT imported for a whole story, and the specimen's specs are what found it:
+// four assertions failed at once with the browser's defaults — 14px labels, weight 400, an `outset`
+// button border, a dialog 404px off centre. A stylesheet nothing loads is a stylesheet that does
+// not exist, and nothing about the file itself says so.
+import '../design-system/system.css'
 
 const sans = Archivo({ subsets: ['latin'], variable: '--font-sans' })
 const mono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-mono' })

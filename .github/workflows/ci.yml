@@ -406,6 +406,15 @@ jobs:
           node apps/web/design-system/measure-contract.mjs --check
           node apps/web/design-system/render-reference.mjs
 
+      # ⚠️ TWO files, and the second one is here because it was not — which is Mechanism E
+      # reproduced inside the epic that names it. `design-system-specimen.authed.spec.ts` shipped
+      # with eight assertions and a positional filter naming only its sibling, so ALL of them
+      # executed nowhere: the dialog-position assertion D12 exists to buy, the TYPE/WEIGHT welds
+      # against `scales.ts`, the keyboard focus pass, and the two anonymous auth-boundary specs that
+      # exist BECAUSE that route shipped with no auth check.
+      #
+      # `run-local-e2e.mjs`'s own comment says the sentence: "a suite no pipeline runs decays
+      # silently." Found by the fresh reviewer, Blocking.
       - name: Console visual gate (the approved design, asserted)
         # Every flag a spec BRANCHES on is read in two places — the server decides behaviour, the
         # test decides expectation — and `gatesAreLit()` in this spec reads two of these. Set in both
@@ -442,14 +451,22 @@ jobs:
           npx playwright test \
             --config=apps/web/playwright.config.ts \
             --project=authed \
-            apps/web/e2e/console-visual.authed.spec.ts
+            apps/web/e2e/console-visual.authed.spec.ts \
+            apps/web/e2e/design-system-specimen.authed.spec.ts
 
       - name: Upload the visual gate's screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: console-visual
-          path: test-results/console-visual/
+          # ⚠️ `design-system/` was missing, so the specimen screenshot was produced and DISCARDED on
+          # every run. The spec that writes it calls it "evidence for the human half of the review",
+          # and Sprint 2's walkthrough step 1 asks Daniel to look at that screen — the one artefact
+          # this sprint exists to put in front of a person never left the runner (fresh reviewer,
+          # round 2, Major).
+          path: |
+            test-results/console-visual/
+            test-results/design-system/
           if-no-files-found: ignore
 
       - name: Dump Next.js server log (diagnostics)

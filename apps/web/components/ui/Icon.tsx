@@ -1,10 +1,12 @@
 import {
+  Activity,
   ArrowDown,
   ArrowRight,
   ArrowUp,
   Binary,
   BookOpenText,
   Cable,
+  CalendarClock,
   Check,
   CircleAlert,
   CircleCheck,
@@ -16,13 +18,20 @@ import {
   ExternalLink,
   FlaskConical,
   Gauge,
+  House,
+  KeyRound,
   Flag,
+  Link2,
+  ListChecks,
   Lock,
   MapPin,
   PanelsTopLeft,
   RefreshCw,
+  Rocket,
+  Route,
   Server,
   Settings2,
+  SlidersHorizontal,
   Shield,
   Sparkles,
   Star,
@@ -30,53 +39,19 @@ import {
   TrendingUp,
   TriangleAlert,
   Users,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react'
 
-export const ICON_NAMES = [
-  // app-component-kit-adoption S1.1 — DataTable's sort indicator. Added here rather than drawn as a
-  // ▲/▼ glyph so the direction stays an SVG like every other mark in the system, and so the drift
-  // guard's no-pictograph rule has nothing to catch.
-  'arrow-down',
-  'arrow-right',
-  'arrow-up',
-  'binary',
-  'book',
-  'cable',
-  'check',
-  // landing-frijoles-rebrand S1.6 (epic D3) — the glyphs the Frijoles sections need: the journey
-  // nodes, the chaos/security drill rows, and the release room. The mockup's implementation notes
-  // ask for Iconoir; the product-owner call was to keep ONE icon seam rather than run a second
-  // library for the same job (CODE-QUALITY.md #1), so the mockup's intent — real icons, never an
-  // emoji, never an "I" placeholder — ships from the map that already exists. Nothing outside this
-  // file imports lucide-react, which is what makes swapping the underlying set later a one-file job.
-  'check-circle',
-  'clock',
-  'code',
-  'copy',
-  'database',
-  'external',
-  'flask',
-  'gauge',
-  'flag',
-  'group',
-  'help',
-  'lock',
-  'map-pin',
-  'panels',
-  'refresh',
-  'server',
-  'settings',
-  'shield',
-  'sparkles',
-  'star',
-  'trend-down',
-  'trend-up',
-  'warning',
-  'warning-triangle',
-] as const
-
-export type IconName = (typeof ICON_NAMES)[number]
+// The names live in `icon-names.ts` so the fast unit layer can read them without JSX.
+// Re-exported here so every existing `from '@/components/ui/Icon'` import is unchanged.
+// Imported for use here, and re-exported so every existing `from '@/components/ui/Icon'` keeps
+// working. One import and one export beat the earlier re-export-then-re-import-under-an-alias,
+// which needed a second name for the same type purely to use it in its own file (cross-family
+// review).
+import type { IconName } from './icon-names'
+export { ICON_NAMES } from './icon-names'
+export type { IconName }
 
 const icons: Record<IconName, LucideIcon> = {
   'arrow-down': ArrowDown,
@@ -102,7 +77,17 @@ const icons: Record<IconName, LucideIcon> = {
   panels: PanelsTopLeft,
   refresh: RefreshCw,
   server: Server,
+  activity: Activity,
+  'calendar-clock': CalendarClock,
+  home: House,
+  key: KeyRound,
+  link: Link2,
+  'list-checks': ListChecks,
+  rocket: Rocket,
+  route: Route,
   settings: Settings2,
+  sliders: SlidersHorizontal,
+  webhook: Webhook,
   shield: Shield,
   sparkles: Sparkles,
   star: Star,

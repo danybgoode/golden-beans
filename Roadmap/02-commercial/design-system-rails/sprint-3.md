@@ -40,11 +40,19 @@
 **As a** product owner, **I want** one switch that returns the product to the current design,
 **so that** a shell rebuild across 20 routes is reversible without a deploy.
 **Acceptance:**
-- ⚠️ **CORRECTED AT THE LOCK (D6): `DESIGN_V2_ENABLED`, not `console.design_v2_enabled`, and there is no `DEFAULT_FLAGS` to extend** — it exists in no file in this repo. `isDesignV2Enabled()` joins `lib/flags.ts`'s 22 sibling predicates, **enablement polarity —
-  default `false`, created DISABLED in every Vercel env**, read `=== 'true'` per that file's own 17
+- ⚠️ **CORRECTED AT THE LOCK (D6): `DESIGN_V2_ENABLED`, not `console.design_v2_enabled`, and there is no `DEFAULT_FLAGS` to extend** — it exists in no file in this repo. `isDesignV2Enabled()` joins `lib/flags.ts`'s 22 sibling predicates, **enablement polarity**, read `=== 'true'` per that file's own 17
   comments (*set ≠ live*).
+- ⚠️ **CREATED ENABLED — Daniel's decision, 2026-08-31.** This said "default `false`, created
+  DISABLED in every Vercel env". It is now **`true` in all three environments before this sprint
+  merges**: the merge that deploys Sprint 3 serves the new shell to every signed-in user
+  immediately. *"Not dark, not waiting for anything."* The PREDICATE is unchanged and still exactly
+  `=== 'true'` — enabled-by-default is a decision about the value set in Vercel, not about the code,
+  and a predicate treating "unset" as on could not fail closed on a misconfigured environment.
 - One resolver, `isDesignV2Enabled()`, gated at **`ProductShell`** — every `/app` route inherits it.
-- Created **DISABLED in all three Vercel environments before this sprint merges** (D6).
+- Set **`true` in all three Vercel environments before this sprint merges** (D6, as amended
+  2026-08-31). ⚠️ There is no dark period, so the deterministic gate is the only thing between a bad
+  render and every signed-in user: Story 3.6's walkthrough runs on **production, immediately after
+  the deploy**.
 - **The gate-off branch is byte-identical to today.** Prove it by *rendering* both off-states — this
   branch and the merge base — normalising per-run ids and diffing, not by reading the diff.
 - ⚠️ **The second seam was answered AT THE LOCK, not here (D6).** `/hub/*` (×4), `/login`,
@@ -114,12 +122,20 @@ location instead of only offering destinations.
 - Dialogs are centred (Story 2.3) and toasts render from the system.
 **Risk:** high
 
-### Story 3.6 — Flip it on
+### Story 3.6 — Prove the rollback, on a design that is already live
 **As a** product owner, **I want** the new shell live in Production, **so that** the remaining
 sprints are built against what people actually see.
-**Acceptance:** `DESIGN_V2_ENABLED` set to `true` in every Vercel env; the visual gate green
-for every route with a reference state; **`/app` load cost does not regress** (counted in a browser,
-not reasoned about). Rollback is one env change.
+
+⚠️ **This story was "Flip it on". It is not, any more (D6, 2026-08-31).** The flag is `true` in all
+three environments before Sprint 3 merges, so the shell is live the moment the deploy finishes —
+there is nothing left to flip on. What is left is the half that actually protects the product, and
+the half nobody ever runs: **flipping it OFF and confirming the old world returns.**
+
+**Acceptance:** `DESIGN_V2_ENABLED` is `true` in every Vercel env and the deploy is confirmed
+serving the new shell; the visual gate green for every route with a reference state; **`/app` load
+cost does not regress** (counted in a browser, not reasoned about); and the rollback is **exercised
+in the direction it would be used** — off, verified, back on — rather than asserted to be one env
+change.
 **Risk:** high
 
 ## Sprint QA
@@ -155,12 +171,15 @@ the local fixture user) · steps 5–7 **production · https://goldenfrijoles.co
 4. Click **Activity**.
    → The raised card moves to Activity. Nothing else in the rail shifts position.
 5. **(Owed to Daniel by name — live environment change.)** Set `DESIGN_V2_ENABLED=true` in all three
-   Vercel environments, then merge a commit to `main`. A set var reaches running functions only via
-   a new build (AGENTS rule #4) — `vercel env ls` is never the confirmation.
-   → https://goldenfrijoles.com/app/flags/miyagisanchez serves the new shell.
-6. **(Owed to Daniel by name.)** Set it back to `false`, redeploy.
-   → The page returns to exactly today's design. **This is the rollback; test it once,
-   deliberately.** Set it back to `true` and redeploy again.
+   Vercel environments **before merging this sprint**, then merge. A set var reaches running
+   functions only via a new build (AGENTS rule #4) — `vercel env ls` is never the confirmation.
+   → https://goldenfrijoles.com/app/flags/miyagisanchez serves the new shell **as soon as the deploy
+   finishes**. There is no separate flip: the merge is the release (D6, 2026-08-31).
+6. **(Owed to Daniel by name. This is the step that matters now.)** Set it to `false`, redeploy.
+   → The page returns to exactly today's design. **This is the rollback, and it is the only
+   direction worth testing once the new design is already live** — a switch that has never been
+   thrown in anger is a switch nobody knows works. Set it back to `true` and redeploy again, and
+   confirm the new shell comes back.
 7. Press `⌘K` anywhere under https://goldenfrijoles.com/app.
    → The palette opens; ↑/↓ moves a **visible** highlight, not just a screen-reader announcement.
    Open DevTools' Network tab and reload: **0** palette requests on load, **1** on first open,

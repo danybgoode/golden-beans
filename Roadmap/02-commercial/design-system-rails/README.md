@@ -324,10 +324,32 @@ product has ever had a dotted lower-case key. `console.design_v2_enabled` would 
 and the builder would have had to invent the thing it "extends".
 
 🔒 **Locked:** env var **`DESIGN_V2_ENABLED`**, predicate **`isDesignV2Enabled()`** in
-`lib/flags.ts`, enablement polarity, exactly `=== 'true'`, read fresh per request, created
-**DISABLED in Production, Preview and Development** before Sprint 3 merges. Sprint 6 retires the
-predicate and the three env entries. Every occurrence of `console.design_v2_enabled` in
+`lib/flags.ts`, enablement polarity, exactly `=== 'true'`, read fresh per request. Sprint 6 retires
+the predicate and the three env entries. Every occurrence of `console.design_v2_enabled` in
 `sprint-3.md`, `sprint-6.md` and the seed is corrected.
+
+⚠️ **CREATED ENABLED — Daniel's decision, 2026-08-31, overriding this lock's original polarity.**
+This decision said "created **DISABLED** in Production, Preview and Development before Sprint 3
+merges", with a staged flip at Story 3.6. It is now: **`DESIGN_V2_ENABLED=true` in all three Vercel
+environments, set BEFORE Sprint 3 merges**, so the merge that deploys Sprint 3 serves the new design
+on all 20 console routes immediately. *"All of this work is to be shipped to production enabled
+fully, not dark, not waiting for anything."*
+
+What that changes, so Sprint 3 builds for it rather than discovering it:
+
+- **There is no dark period.** The default-`false` habit this epic inherited exists so a merge is
+  never itself a release. Here the merge IS the release, deliberately. The deterministic gate is
+  what stands between a bad render and every signed-in user, so Story 3.6's smoke walkthrough runs
+  on **production**, immediately after the deploy, not on a preview.
+- **The rollback test inverts.** It was "flip it on, confirm the new world". It is now **"flip it
+  OFF, confirm the OLD world returns, flip it back on"** — the same one env change plus a deploy,
+  exercised in the direction it would actually be used. Still owed to Daniel by name: it is a
+  production environment change.
+- **`=== 'true'` is unchanged and still exactly that.** Enabled-by-default is a decision about the
+  VALUE set in Vercel, not about the predicate. A predicate that treats "unset" as on would make the
+  flag unable to fail closed on a misconfigured environment, and would make Sprint 6's retirement
+  unobservable.
+- **Preview still has no database** (D3), so a preview deploy proves the render, never the data.
 
 **The second seam — answered here, in writing, so Sprint 6 executes rather than discovers.**
 Verified: the nine non-`ProductShell` routes share **no** wrapper. `/login` and `/signup` render
@@ -542,6 +564,38 @@ fails a decrease.
 
 ---
 
+### D14 — 🔒 Story 2.5 splits in two, and Sprint 3 owes the second half. **Daniel decided this one.**
+
+Story 2.5 asks that *"`flag-vocabulary.ts` generalises into a product vocabulary module; it is not
+replaced, and every user-facing word in `design-system/` goes through it."* Those are two changes,
+and only one of them can happen in Sprint 2.
+
+⚠️ **The build contract for Sprint 2 says it changes no existing product route.** Folding
+`flag-vocabulary.ts` into the new module edits the live, flag-gated flags page — the surface that
+took seven review rounds in `flags-visual-rule-builder`. Delivering the story as written would make
+the one sprint whose safety argument is "it touches nothing live" touch something live.
+
+⚠️ **And the half that WAS delivered had not actually been delivered.** `design-system/vocabulary.ts`
+shipped as a lint registry imported by exactly one file — its own test — while `page.tsx` hard-coded
+the strings the registry describes. `"Never turned on here"` existed as a literal in
+`CONTROL_PLANE_WINS` and, separately, as a literal on the specimen, welded by nothing: correcting the
+registry would have left the rendered page saying the old word (fresh reviewer, round 2, Major).
+
+Decided, not discovered:
+
+- **Sprint 2** wires the specimen's user-facing words through `SPECIMEN_WORDS` /
+  `controlPlaneWord()`, so the module has real callers and "goes through it" is true of
+  `design-system/`. `controlPlaneWord()` THROWS on an unsettled phrase rather than falling back to
+  the design's wording — a fallback is how the two drift apart silently. `vocabulary.test.ts` fails
+  if the specimen hard-codes a word the registry settles (mutation-verified).
+- **Sprint 3** folds `flag-vocabulary.ts` into it. Sprint 3 already rebuilds those console surfaces,
+  so the edit lands in the sprint that owns the route rather than in the one that does not.
+
+`flag-vocabulary.ts` is untouched by Sprint 2. That is a deviation from the story text, decided here
+rather than discovered at close.
+
+---
+
 ## Routing — who builds what, and why
 
 Stated here so the choice is auditable (WAYS-OF-WORKING → *Routing a build by model tier*).
@@ -636,5 +690,5 @@ page that reads exactly like a broken one.
 - [ ] Product poster (`Roadmap/README.md`) updated
 - [ ] Team memory + `MEMORY.md` index updated
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** the D6 flag slice shipped + `DESIGN_V2_ENABLED` exists **in all three Vercel envs** with the stated polarity (enablement ⇒ default `false`, created disabled), and the second seam for the nine non-`ProductShell` routes is resolved as the lock decided. *Verify-only — not a new gate.*
+- [ ] **Kill-switch (planned at grooming — Stage 6b):** the D6 flag slice shipped + `DESIGN_V2_ENABLED` exists **in all three Vercel envs**, ⚠️ **set to `true`** — created ENABLED per Daniel's 2026-08-31 decision, not disabled — with the predicate still exactly `=== 'true'`, and the second seam for the nine non-`ProductShell` routes resolved as the lock decided. *Verify-only — not a new gate.*
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)

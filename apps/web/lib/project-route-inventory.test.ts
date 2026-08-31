@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
+// The component's OWN name list, so this test cannot check against a second copy that drifts.
+import { ICON_NAMES } from '../components/ui/icon-names.ts'
 import {
   CONSOLE_SECTIONS,
   getProjectSurfaceLinks,
@@ -60,6 +62,10 @@ test('members see every live member surface but never owner-only or flow-only ro
     links.find((link) => link.routeSegment === 'flags'),
     {
       routeSegment: 'flags',
+      // design-system-rails S2.4 (epic D4) — the rail's leading icon. This assertion pins the whole
+      // link SHAPE, so a field added to `ProjectSurfaceLink` and not carried through
+      // `getProjectSurfaceLinks`' mapper fails here rather than rendering as undefined.
+      iconKey: 'flag',
       label: 'Flags',
       status: 'gated',
       section: 'ship',
@@ -67,6 +73,45 @@ test('members see every live member surface but never owner-only or flow-only ro
       description: 'read-only',
     }
   )
+})
+
+test('every surface carries an icon, and it is one the Icon component knows', () => {
+  // ⚠️ The rail is one line per item with an icon and no description (contract Do-not #2), so a
+  // surface with no icon renders a hole.
+  //
+  // ⚠️ **This comment used to justify the test with two claims that are both FALSE for this code**
+  // (fresh reviewer, Minor, verified with `tsc`): it said the compiler would not catch "a
+  // plausible-looking string" — it does, `iconKey: 'webhooks'` is TS2820 with a did-you-mean — and
+  // that TypeScript misses a dropped key in an inferred literal — `getProjectSurfaceLinks` is
+  // ANNOTATED `: ProjectSurfaceLink[]`, so that is TS2322.
+  //
+  // The test still earns its place, for a reason the compiler cannot cover: `ICON_NAMES` is read
+  // from the COMPONENT, so this fails when the icon set and the inventory disagree about a name
+  // that is valid in the union but absent from the render map — and it fails in the fast unit layer,
+  // where a `tsc` error in a route nobody compiles in isolation would not be noticed.
+  //
+  // The union is closed, so this test cannot import a list of "valid names" that differs from the
+  // component's: it reads the component's own `ICON_NAMES`.
+  const known = new Set<string>(ICON_NAMES)
+  for (const surface of PROJECT_ROUTE_INVENTORY) {
+    assert.ok(surface.iconKey, `${surface.routeSegment} has no iconKey`)
+    assert.ok(
+      known.has(surface.iconKey),
+      `${surface.routeSegment} uses icon "${surface.iconKey}", which Icon does not define`
+    )
+  }
+
+  // ...and the mapper carries it. A `Pick<>` that gains a field still needs the mapper to copy it,
+  // and TypeScript will not catch a missing key in an object literal that is inferred rather than
+  // annotated.
+  const links = getProjectSurfaceLinks({
+    projectSlug: 'project-one',
+    role: 'owner',
+    gates: allGatesOpen,
+  })
+  for (const link of links) {
+    assert.ok(link.iconKey, `${link.routeSegment} lost its iconKey on the way through the mapper`)
+  }
 })
 
 test('owner-only links stay owner-only while Flags and Tasks follow their independent gates', () => {
