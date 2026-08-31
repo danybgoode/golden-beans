@@ -339,12 +339,20 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // Story 3.5's other acceptance: `0 / 1 / 1` requests (load / first open / reopen), measured last
     // epic. A palette that loads its index with every page would put its cost on every route in the
     // console — the one thing a shared shell must not do.
+    // ⚠️ **The first version of this filter matched NOTHING and the test passed vacuously.** It
+    // looked for `command-palette` and `/api/palette`; the palette actually fetches
+    // `/api/internal/feature-index/<slug>` (`CommandPalette.tsx:102`). So `requests` stayed empty at
+    // every stage, `0 === 0` held at each step, and the test reported "0 / 1 / 1 verified" while
+    // observing nothing at all — a guard that cannot fail, in the sprint whose review notes keep
+    // naming that class (cross-family review, agy).
+    //
+    // The path is READ from the component rather than guessed a second time, and the floor below is
+    // what makes a future rename fail loudly instead of quietly returning to zero.
+    const FEATURE_INDEX = '/api/internal/feature-index/'
     const requests: string[] = []
     page.on('request', (request) => {
       const url = new URL(request.url())
-      if (url.pathname.includes('command-palette') || url.pathname.includes('/api/palette')) {
-        requests.push(url.pathname)
-      }
+      if (url.pathname.startsWith(FEATURE_INDEX)) requests.push(url.pathname)
     })
 
     await page.goto('/app')
@@ -353,7 +361,18 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
 
     await openPalette(page)
     await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    // The feature index arrives after the options render, so wait for the fetch rather than racing it.
+    await page.waitForResponse((response) => response.url().includes(FEATURE_INDEX))
     const afterFirstOpen = requests.length
+
+    // ⚠️ THE FLOOR. Without it, "the palette fetched zero times because the filter is wrong" and
+    // "the palette correctly fetched once" are the same result, and the reopen check below compares
+    // 0 to 0 forever (agy).
+    expect(
+      afterFirstOpen,
+      `opening the palette fetched ${FEATURE_INDEX} ${afterFirstOpen} times — expected exactly 1. ` +
+        'Zero means this test is watching a path the palette no longer uses.'
+    ).toBe(1)
 
     await page.keyboard.press('Escape')
     await openPalette(page)
