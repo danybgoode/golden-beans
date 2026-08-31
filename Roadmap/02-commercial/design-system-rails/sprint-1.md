@@ -86,7 +86,7 @@ three are out of scope.
 |---|---|---|
 | Console (`ProductShell`, seam A) | **20** | `/app` · `agent-keys` · `destinations` · `experiments` · `experiments/[experimentKey]` · `flag-audit` · `flag-credentials` · `flags` · `flags/[flagKey]` · `funnel/[featureKey]` · `impact/[featureKey]` · `journeys` · `journeys/[journeyKey]` · `keys` · `onboarding` · `scenarios` · `setup/connect` · `setup/keys` · `shares` · `tasks` |
 | Doors + hub (seam B) | **9** | `/login` · `/signup` · `/install` · `/s/[token]` · `/talk` · `/hub/[projectSlug]` · `…/epic/[epicSlug]` · `…/horizon` · `…/report` |
-| **Out of scope** | 3 | `/` · `/methodology` · `/methodology/[chapter]` — shipped on the brand system by two earlier epics. Gating them would put those epics behind this epic's kill-switch (**D6**). |
+| **Out of scope** | 3 | `/` · `/methodology` · `/methodology/[chapter]` — shipped on the brand system by two earlier epics. ⚠️ This said "gating them would put those epics behind this epic's kill-switch"; there is no kill-switch (**D6**, 2026-08-31). They stay out of scope for the simpler reason: two shipped epics own them, and this epic's frame has no business wrapping them. |
 
 ## Stories
 

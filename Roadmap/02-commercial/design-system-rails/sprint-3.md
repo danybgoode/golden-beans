@@ -6,14 +6,16 @@
 > this sprint changes all 20 of them at once — and **four of Daniel's five named complaints live
 > here.**
 >
-> **The flag flips ON at the end of this sprint, not at epic close.** Sprints 4–6 are then built in
-> the light with a live rollback, and a missing control is noticed the day it goes missing. That is
-> the last epic's own recorded lesson.
+> ⚠️ **There is no flag** (D6, Daniel, 2026-08-31). This sprint's shell goes to `main` and to
+> production on merge. Sprints 4–6 are then built in the light against what people actually see, and
+> a missing control is noticed the day it goes missing — which was always the point of flipping the
+> flag early; removing the flag just gets there sooner and leaves one design in the codebase instead
+> of two.
 
 ## Build contract (locked by the architect before the builder started)
 
-> Sprint 3 is **not delegated** (README → *Routing*): a kill-switch, a shared seam, and a production
-> flip. **Cite a decision; never re-derive one.**
+> Sprint 3 is **not delegated** (README → *Routing*): a shared seam that 21 routes inherit, landing
+> straight in production with **no flag behind it** (D6). **Cite a decision; never re-derive one.**
 
 **Paths this sprint owns.** `apps/web/lib/flags.ts` · `apps/web/components/product/ProductShell.tsx` ·
 `apps/web/components/product/{ConsoleRail,CommandPalette}.tsx` ·
@@ -22,10 +24,10 @@
 
 | # | The contract | Cites |
 |---|---|---|
-| 1 | ⚠️ **The flag is `DESIGN_V2_ENABLED`, read by `isDesignV2Enabled()`.** `DEFAULT_FLAGS` **does not exist** anywhere in this repo — `lib/flags.ts` is 22 `process.env.<NAME>_ENABLED === 'true'` predicates, and no flag here has ever had a dotted lower-case key. Every `console.design_v2_enabled` in this file and in `sprint-6.md` is that name. | **D6** |
-| 2 | Enablement polarity. Exactly `=== 'true'`. Read **fresh per request**, no module-level capture. Created **DISABLED in Production, Preview and Development before this sprint merges** — a var that does not exist is not "created disabled", it is unverifiable. | **D6** |
-| 3 | Seam **A** is `ProductShell`, covering **20** routes. Seam **B** (the other 9) is `design-system/Frame.tsx` and lands in Story 6.1 — **already decided, not discovered.** Root `layout.tsx` is **rejected** as seam B because it also wraps `/` and `/methodology`, which two shipped epics own. | **D6** |
-| 4 | **The gate-off branch is byte-identical to today.** Proved by *rendering* both off-states — this branch and the merge base — normalising per-run ids and diffing. **Not by reading the diff.** | LEARNINGS |
+| 1 | ⚠️ **There is NO flag, no env var and no gated branch** — Daniel, 2026-08-31. This row used to name `DESIGN_V2_ENABLED` / `isDesignV2Enabled()` (itself a correction of the plan's fictional `console.design_v2_enabled` extending a `DEFAULT_FLAGS` registry that exists nowhere in this repo). The predicate was written and removed in the same sitting; it never shipped. Nothing is owed on Vercel. | **D6** |
+| 2 | **The shell lands directly in `main` and in production on merge.** Rollback is `git revert` plus a deploy — minutes, not a switch. What protects the 21 routes is the deterministic gate, the rendered assertions and the review rounds, which is what has actually been catching defects all epic. | **D6** |
+| 3 | `ProductShell` is the shared seam for **21** routes — 20 at the lock, plus `/app/design-system`, which Sprint 2 built on the same shell. The other 9 get `design-system/Frame.tsx` in Story 6.1: shared chrome, **not** a gate. | **D6** |
+| 4 | ⚠️ **The "gate-off branch is byte-identical to today" proof is DELETED** along with the flag. There is no off-state to render, normalise or diff. What replaces it is narrower and real: the 21 routes must still render, and the `authed` suite is what says so. | **D6** |
 | 5 | Chrome geometry comes from the **regenerated** spec: top bar **54**, section nav **44**, active tab **13/500** with a 2px gold underline, inactive **13/400 `--dim`**, rail **236**, rail item **36px / 13.5/600**, switcher **`122 × 30`** — never the contract's hand-typed `140 × 30`. | **D8** |
 | 6 | The active rail item **differs from an inactive one by more than background colour**, and the cue is carried on `aria-current="page"` so the sighted and screen-reader cues are the same attribute. **A fill-only assertion would pass on what shipped last time** — assert border, icon colour and text weight too. | Story 3.3 |
 | 7 | ⚠️ Keep the `> ul` **child** combinator on the environment control. `.console-rail a` and `.console-rail ul a` both leaked onto the picker and overrode its padding, radius **and** weight, killing the `aria-current` cue. Two previous attempts missed why. | Story 3.4 |
@@ -36,33 +38,21 @@
 
 ## Stories
 
-### Story 3.1 — The kill-switch and its seam ✳ *D6*
-**As a** product owner, **I want** one switch that returns the product to the current design,
-**so that** a shell rebuild across 20 routes is reversible without a deploy.
-**Acceptance:**
-- ⚠️ **CORRECTED AT THE LOCK (D6): `DESIGN_V2_ENABLED`, not `console.design_v2_enabled`, and there is no `DEFAULT_FLAGS` to extend** — it exists in no file in this repo. `isDesignV2Enabled()` joins `lib/flags.ts`'s 22 sibling predicates, **enablement polarity**, read `=== 'true'` per that file's own 17
-  comments (*set ≠ live*).
-- ⚠️ **CREATED ENABLED — Daniel's decision, 2026-08-31.** This said "default `false`, created
-  DISABLED in every Vercel env". It is now **`true` in all three environments before this sprint
-  merges**: the merge that deploys Sprint 3 serves the new shell to every signed-in user
-  immediately. *"Not dark, not waiting for anything."* The PREDICATE is unchanged and still exactly
-  `=== 'true'` — enabled-by-default is a decision about the value set in Vercel, not about the code,
-  and a predicate treating "unset" as on could not fail closed on a misconfigured environment.
-- One resolver, `isDesignV2Enabled()`, gated at **`ProductShell`** — every `/app` route inherits it.
-- Set **`true` in all three Vercel environments before this sprint merges** (D6, as amended
-  2026-08-31). ⚠️ There is no dark period, so the deterministic gate is the only thing between a bad
-  render and every signed-in user: Story 3.6's walkthrough runs on **production, immediately after
-  the deploy**.
-- **The gate-off branch is byte-identical to today.** Prove it by *rendering* both off-states — this
-  branch and the merge base — normalising per-run ids and diffing, not by reading the diff.
-- ⚠️ **The second seam was answered AT THE LOCK, not here (D6).** `/hub/*` (×4), `/login`,
-  `/signup`, `/install`, `/s/[token]` and `/talk` do **not** render through `ProductShell` — verified:
-  they share no wrapper at all (`.auth-shell`, the landing `Nav`/`Footer`, `hub.module.css`, and
-  `/s/[token]` reusing the hub's report components). So this flag covers **20 of 29**. Seam B is a
-  new `design-system/Frame.tsx` with DD3's `door` and `public` variants, landing in Story 6.1 and
-  reading this same `isDesignV2Enabled()`. Root `layout.tsx` is **rejected** — it also wraps `/` and
-  `/methodology`, and gating them would put two shipped epics behind this epic's kill-switch.
-**Risk:** high
+### Story 3.1 — ~~The kill-switch and its seam~~ · **DELETED (D6)**
+
+⚠️ **This story built a flag, and there is no flag.** Daniel, 2026-08-31: *"not flagged, not dark or
+anything… All goes to production, to main."*
+
+Deleted rather than struck through in place, because a story left in a plan gets built. What it
+carried and where that went:
+
+- *"One resolver gated at `ProductShell`"* — gone. `ProductShell` is still the seam every `/app`
+  route inherits; it just has nothing to ask before rendering.
+- *"The gate-off branch is byte-identical to today"* — gone with the branch it described.
+- *"The second seam is answered in this story"* — still answered, in **D6**, and still implemented in
+  Story 6.1 as shared chrome rather than a gate.
+
+The 21 routes this story would have gated are now simply rebuilt by Stories 3.2–3.5.
 
 ### Story 3.2 — The two chrome tiers
 **As a** person using the console, **I want** the top bar and the section nav to look like the
@@ -116,47 +106,47 @@ location instead of only offering destinations.
 - `⌘K` renders from `design-system/`, opens on every `/app` route, and **fetches lazily** — first
   press, not page load. Measured last epic as `0 / 1 / 1` requests (load / first open / reopen);
   that must not regress.
-- **The palette's keyboard cursor is visible.** Its rule was written against `li[aria-selected]`
-  after `role="option"` moved onto the anchor, so ↑/↓ moved an announcement a screen reader could
-  hear and a sighted reader could not see. Assert the *painted* cursor, not the attribute.
+- ⚠️ **DISPROVED AT THE SPRINT 3 PASS — this defect is already fixed, and the story asked for it to
+  be fixed again.** `console-ia-overhaul` Story 3.4 moved the rule onto the anchor;
+  `globals.css:1354` is `.command-palette__panel a[aria-selected='true']` and paints a `--card`
+  background plus a 2px gold inset — a visible cursor, today, with a comment above it recording the
+  fix. What is missing is not the paint, it is the ASSERTION: nothing in the suite would notice it
+  breaking again. So this story **asserts the painted cursor** rather than repairing it, and the
+  assertion reads the computed style, never the attribute.
 - Dialogs are centred (Story 2.3) and toasts render from the system.
 **Risk:** high
 
-### Story 3.6 — Prove the rollback, on a design that is already live
-**As a** product owner, **I want** the new shell live in Production, **so that** the remaining
-sprints are built against what people actually see.
+### Story 3.6 — ~~Flip it on~~ / ~~Prove the rollback~~ · **DELETED (D6)**
 
-⚠️ **This story was "Flip it on". It is not, any more (D6, 2026-08-31).** The flag is `true` in all
-three environments before Sprint 3 merges, so the shell is live the moment the deploy finishes —
-there is nothing left to flip on. What is left is the half that actually protects the product, and
-the half nobody ever runs: **flipping it OFF and confirming the old world returns.**
+⚠️ This story has now been three things and is none of them. It was *"Flip it on"*; when Daniel said
+ship enabled it became *"Prove the rollback, on a design that is already live"*; and with no flag at
+all there is neither a flip nor a switch to exercise.
 
-**Acceptance:** `DESIGN_V2_ENABLED` is `true` in every Vercel env and the deploy is confirmed
-serving the new shell; the visual gate green for every route with a reference state; **`/app` load
-cost does not regress** (counted in a browser, not reasoned about); and the rollback is **exercised
-in the direction it would be used** — off, verified, back on — rather than asserted to be one env
-change.
-**Risk:** high
+What genuinely remains from it is **not a story**, it is the last two steps of the walkthrough below:
+look at the deployed page, and confirm `/app` did not get slower. Both are things a person does after
+the merge, not work a sprint carries.
+
+⚠️ **`/app` load cost must not regress** was buried in this story's acceptance and is the one part
+worth keeping as a gate rather than a glance — it moves to Story 3.2, which is where the chrome that
+could cost it is built.
 
 ## Sprint QA
-- **api spec(s):** `e2e/design-v2-dark.spec.ts` (gate-off renders identically to the merge base —
-  four renders, normalised, diffed) · `e2e/console-shell.authed.spec.ts` extended (rail active state
+- **api spec(s):** ⚠️ `e2e/design-v2-dark.spec.ts` is **not written** — it asserted the gate-off
+  branch, and there is no gate (D6). · `e2e/console-shell.authed.spec.ts` extended (rail active state
   differs by more than background; environment is one control; switcher is one level) ·
   `e2e/command-palette.authed.spec.ts` (painted cursor; request count `0 / 1 / 1`).
-- **browser smoke owed:** yes, to Daniel — **the flag flip in Production (Story 3.6)** is a live
-  environment change and is never covered by a merge authorization.
+- **browser smoke owed:** ⚠️ **nothing is owed to Daniel on Vercel** (D6). There is no env change to
+  make and no flip to witness. The walkthrough's production steps remain — looking at the deployed
+  page is how a design gets judged — but they are a person looking at a page, not a gated action.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
 
 ## Sprint 3 — Smoke walkthrough (do these in order)
 
-> ⚠️ **REWRITTEN AT THE LOCK (D9).** As scaffolded, steps 1–4 ran on *"the branch preview with the
-> flag ON for that scope"*. **Preview has no Supabase credentials and no session** — it cannot serve
-> `/app/flags/…` at all, with any flag in any position. The scaffold's own warning about preview's
-> gates was true but far too mild: the problem is not that a preview shows 9 surfaces instead of 13,
-> it is that a preview shows a 500. Steps 1–4 are **local**; steps 5–7 are **production**.
+Env: steps 1–4 **local** (`supabase start`, production build, signed in as the local fixture user) ·
+steps 5–6 **production · https://goldenfrijoles.com**, after the merge deploys.
 
-Env: steps 1–4 **local** (`supabase start`, production build, `DESIGN_V2_ENABLED=true`, signed in as
-the local fixture user) · steps 5–7 **production · https://goldenfrijoles.com** after Story 3.6.
+> ⚠️ Preview has **no database** (D3), so every step that needs a signed-in project runs locally or
+> in production, never on a preview. This is the same correction Sprints 1–3 all needed.
 
 1. Locally, go to `http://localhost:3000/app/flags/<fixture-slug>`.
    → The rail shows **one** environment control reading `● Production ▾`, not three stacked
@@ -170,19 +160,12 @@ the local fixture user) · steps 5–7 **production · https://goldenfrijoles.co
    you can tell where you are without reading. Not a fill you have to look for.
 4. Click **Activity**.
    → The raised card moves to Activity. Nothing else in the rail shifts position.
-5. **(Owed to Daniel by name — live environment change.)** Set `DESIGN_V2_ENABLED=true` in all three
-   Vercel environments **before merging this sprint**, then merge. A set var reaches running
-   functions only via a new build (AGENTS rule #4) — `vercel env ls` is never the confirmation.
-   → https://goldenfrijoles.com/app/flags/miyagisanchez serves the new shell **as soon as the deploy
-   finishes**. There is no separate flip: the merge is the release (D6, 2026-08-31).
-6. **(Owed to Daniel by name. This is the step that matters now.)** Set it to `false`, redeploy.
-   → The page returns to exactly today's design. **This is the rollback, and it is the only
-   direction worth testing once the new design is already live** — a switch that has never been
-   thrown in anger is a switch nobody knows works. Set it back to `true` and redeploy again, and
-   confirm the new shell comes back.
-7. Press `⌘K` anywhere under https://goldenfrijoles.com/app.
+5. After the merge deploys, open https://goldenfrijoles.com/app/flags/miyagisanchez.
+   → The new shell is serving. No flag was flipped and nothing was set in Vercel — the merge is the
+   release (D6).
+6. Press `⌘K`.
    → The palette opens; ↑/↓ moves a **visible** highlight, not just a screen-reader announcement.
-   Open DevTools' Network tab and reload: **0** palette requests on load, **1** on first open,
-   **1** on reopen.
 
-If any step fails, note the step number + what you saw — that's the bug report.
+If any step fails, note the step number + what you saw — that's the bug report. ⚠️ If step 5 shows
+something badly wrong, the recovery is `git revert` of the sprint's merge commit plus a deploy;
+there is no switch (D6).
