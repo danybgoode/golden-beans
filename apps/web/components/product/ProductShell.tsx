@@ -1,4 +1,5 @@
 import 'server-only'
+import type { ProjectRouteSegment } from '@/lib/project-route-inventory'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
@@ -68,7 +69,7 @@ export async function ProductShell({
    * Required with an explicit `null` for "this page is not in the rail" makes the omission a
    * compile error instead of a blank rail — the same reasoning as `iconKey` in Story 2.4.
    */
-  railActive: string | null
+  railActive: ProjectRouteSegment | null
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
@@ -92,7 +93,10 @@ export async function ProductShell({
     //   `is-console` — this is the console: tokens, and `console.css` applies.
     //   `ds`         — this subtree renders FROM the design system: `system.css` applies.
     // Sprints 4–6 assemble pages from `design-system/primitives`, and this is the line that lets
-    // them. See D15.
+    // them. See **D3** (the design system's classes are namespaced: prefix `ds-`, scope root `.ds`).
+    //
+    // ⚠️ This cited "D15", which does not exist — the epic's decisions run D1–D14. Invented in a
+    // comment whose own contract line is "Cite a decision; never re-derive one" (fresh reviewer).
     <div className={`product-shell${header === null ? '' : ' is-console ds'}`}>
       <header className="product-shell__header">
         {/*
@@ -234,6 +238,14 @@ export async function ProductShell({
                 tab that is not there. */}
 
             <div className="product-shell__identity">
+              {/* ⚠️ The palette moved INTO the top bar, because Story 3.2 asks for a visible `⌘K`
+                  affordance there and the component now renders its own trigger. It used to mount in
+                  the body, which is why the shortcut had no button: a component that returns `null`
+                  when closed cannot show you that it exists. The panel still portals over the page —
+                  only the trigger is in the bar. */}
+              <ShellErrorBoundary>
+                <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
+              </ShellErrorBoundary>
               {/* The project switcher (D1). ONE tier — Golden Beans has no organisation layer, and
                   the production schema has no table that could support one. A `<details>` again, for
                   the same reason as the legacy disclosure: no client island in the shell.
@@ -357,11 +369,6 @@ export async function ProductShell({
           second read, which is also what makes it safe for a client component to hold: it inherits
           the server's entitlement filtering rather than re-implementing it.
         */}
-        {header !== null && (
-          <ShellErrorBoundary>
-            <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
-          </ShellErrorBoundary>
-        )}
         {children}
         {/*
           Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app

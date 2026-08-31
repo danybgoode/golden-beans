@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 // console-ia-overhaul · Sprint 1. The signed-in shell, in a real browser.
@@ -236,6 +237,78 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     ).toBe(on.borderWidth)
   })
 
+  test('EVERY rail route marks its OWN item, not merely some item', async ({ page }) => {
+    // ⚠️ **The type only catches typos.** `railActive` is now the derived `ProjectRouteSegment`
+    // union, so `'taskz'` is a compile error — but `'setup/keys'` on the tasks page is a perfectly
+    // valid segment pointing at the WRONG item, and a wrong mark is worse than no mark. Typecheck
+    // and both browser suites stayed green through exactly that mutation (fresh reviewer, Major).
+    //
+    // The previous rail test visited ONE route. One of twenty-one is the ratio this sprint's own
+    // commit message calls out as the defect, reproduced in the test written to fix it. This walks
+    // every rail destination the fixture tenant can reach.
+    const slug = tenantSlug()
+    const checked: string[] = []
+    const offRail: string[] = []
+    const unreachable: string[] = []
+
+    for (const surface of PROJECT_ROUTE_INVENTORY) {
+      if (surface.status === 'flow-only') continue
+      const href = `/app/${surface.routeSegment}/${slug}`
+      const response = await page.goto(href)
+      // A gate-closed or owner-only surface is not a failure of this test — but it must be RECORDED,
+      // not silently skipped, or a suite that reaches nothing reads exactly like a suite that passes.
+      if (!response || response.status() >= 400 || page.url().includes('/login')) {
+        unreachable.push(`${surface.routeSegment} (${response?.status() ?? 'no response'})`)
+        continue
+      }
+      const rail = page.locator('.console-rail')
+      if ((await rail.count()) === 0) {
+        unreachable.push(`${surface.routeSegment} (no rail)`)
+        continue
+      }
+      const marked = rail.locator('a[aria-current="page"]')
+      const count = await marked.count()
+      // ⚠️ Whether this route IS a rail destination is decided by the RAIL, not by the inventory.
+      // The `legacy-keys` gate (A7) removes `/app/keys`, `/app/agent-keys` and
+      // `/app/flag-credentials` from the rail when the console is lit, so those pages correctly mark
+      // nothing — my first version of this test demanded a mark from every inventory row and failed
+      // on a page that was right. Both branches are asserted, and the second is not a loophole: a
+      // page outside the rail marking SOMEBODY ELSE's item is the wrong-mark defect wearing a
+      // different hat.
+      const listed = (await rail.locator(`a[href="${href}"]`).count()) > 0
+      if (listed) {
+        expect(count, `${href} is in the rail and marks ${count} items — exactly one must be current`).toBe(1)
+        expect(
+          await marked.getAttribute('href'),
+          `${href} marks the WRONG rail item — a wrong mark sends you somewhere else with confidence, ` +
+            'which is worse than marking nothing'
+        ).toBe(href)
+        checked.push(surface.routeSegment)
+      } else {
+        expect(
+          count,
+          `${href} is not a rail destination, yet it marks ${count} rail item(s) — it is claiming to ` +
+            'be somewhere it is not'
+        ).toBe(0)
+        offRail.push(surface.routeSegment)
+      }
+    }
+
+    // The floor, outside the loop: a run that reached nothing must fail rather than report success.
+    expect(
+      checked.length,
+      `only ${checked.length} rail routes were reachable; off-rail: ${offRail.join(', ') || 'none'}; ` +
+        `unreachable: ${unreachable.join(', ') || 'none'}`
+    ).toBeGreaterThan(5)
+
+    // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
+    // out of the rail would satisfy the loop by never entering the branch that checks anything.
+    expect(
+      offRail.length,
+      'no off-rail route was exercised — the second branch asserted nothing'
+    ).toBeGreaterThan(0)
+  })
+
   test('the environment is ONE control that opens, not three stacked links', async ({ page }) => {
     // ⚠️ **Daniel's first named complaint.** `EnvironmentPicker` mapped all three environments into
     // a permanently-expanded `<ul>` of lowercase links, so the rail asked you to pick from a list
@@ -281,6 +354,26 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(page.locator('.envpick__control summary')).toHaveText(/Preview/)
   })
 
+  test('⌘K has a VISIBLE affordance in the top bar, and it opens the palette', async ({ page }) => {
+    // ⚠️ Story 3.2 asks for "project switcher, `⌘K`, account" in the top bar. There was no `⌘K`
+    // anything: the shortcut was keyboard-only on all 21 console routes and `grep '⌘K'` matched a
+    // comment. A shortcut with no affordance is undiscoverable — it might as well not ship for
+    // anyone who has not read the source (fresh reviewer, Major).
+    //
+    // Asserted as VISIBLE and as FUNCTIONAL, in the top bar specifically. The previous state
+    // satisfied "the palette opens on ⌘K" perfectly well, which is why that assertion did not
+    // notice the missing button.
+    await page.goto('/app')
+    const trigger = page.locator('.product-shell__header .cmdk')
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toContainText('⌘K')
+
+    // It opens by POINTER, which is the whole point — the keyboard path was never broken.
+    await trigger.click()
+    await expect(page.locator('.command-palette')).toBeVisible()
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+  })
+
   test("the palette's keyboard cursor is PAINTED, not only announced", async ({ page }) => {
     // ⚠️ **This is an ASSERTION, not a repair — the plan asked for the wrong thing.** Story 3.5 says
     // the cursor rule "was written against `li[aria-selected]` after `role='option'` moved onto the
@@ -292,6 +385,15 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // the landing's tabs — so the fix was one selector edit away from silently reverting to the
     // state its own comment describes, with every suite green. A defect that has already happened
     // once, on a rule whose comment explains why it must not happen again, is worth a gate.
+    //
+    // ⚠️ **The rule that actually paints here is `console.css:1785`, not `globals.css:1354`.** In the
+    // console — the only place the palette renders — `.is-console .command-palette__panel
+    // a[aria-selected='true']` wins at (0,2,1) and paints `--card-3` with `box-shadow: none`. So the
+    // `shadow` half of the predicate below is permanently false in this context, and reverting the
+    // `globals.css` rule alone would leave this test green. Both selectors are what matter, and the
+    // assertion is written as an OR across background and shadow precisely so it survives either
+    // file winning — but the comment pointed at one file and implied it was the one under test
+    // (fresh reviewer, Minor). Mutating BOTH selectors back to `li` is what turns this red.
     await page.goto('/app')
     await openPalette(page)
     const options = page.locator('.command-palette [role="option"]')

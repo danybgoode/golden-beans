@@ -1,6 +1,6 @@
 import 'server-only'
 import { Icon } from '@/components/ui/Icon'
-import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
+import type { ProjectSurfaceLink, ProjectRouteSegment } from '@/lib/project-route-inventory'
 
 /**
  * console-ia-overhaul · Sprint 1, Story 1.4 — what is inside the section you picked.
@@ -57,7 +57,7 @@ export function ConsoleRail({
    * was passed by ONE route of twenty-one, so twenty pages rendered a rail with nothing marked and
    * the "where am I" cue had nothing to paint (Story 3.3).
    */
-  activeSegment: string | null
+  activeSegment: ProjectRouteSegment | null
 }) {
   if (links.length === 0 && top === undefined) return null
 

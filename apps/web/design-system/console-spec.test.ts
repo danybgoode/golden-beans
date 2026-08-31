@@ -114,8 +114,27 @@ const DEFERRAL_GOVERNED_BY: Record<string, string> = {
   'dormant summary row': 'Dormant summary row',
   'primary/secondary button': 'Primary button',
   'project switcher': 'Project switcher',
-  'section nav (tier 2)': 'Section nav (tier 2)',
 }
+
+test('the deferral mapping does not outlive the deferrals it maps', () => {
+  // ⚠️ `GOVERNED_BY` has had a both-directions check since Sprint 2 ("a stale mapping reads as
+  // coverage"); `DEFERRAL_GOVERNED_BY` never got the same one. So when Story 3.2 built the second
+  // tier, its mapping stayed behind pointing at a deferral that no longer exists, and every suite
+  // stayed green — the same class the sibling check was written to prevent, in the sibling that
+  // did not get it (fresh reviewer, Major).
+  for (const what of Object.keys(DEFERRAL_GOVERNED_BY)) {
+    assert.ok(
+      DEFERRED_SPEC_ROWS.some((row) => row.what === what),
+      `"${what}" is mapped as a deferral but nothing defers it any more — a stale mapping reads as coverage`
+    )
+  }
+  for (const row of DEFERRED_SPEC_ROWS) {
+    assert.ok(
+      DEFERRAL_GOVERNED_BY[row.what],
+      `"${row.what}" is deferred and no prototype row governs the number it defers from`
+    )
+  }
+})
 
 test('the generated spec table parses, and is not silently empty', () => {
   // A parser that returns nothing turns every assertion below into a vacuous pass — the guard that

@@ -1,3 +1,19 @@
+import { SPECIMEN_WORDS } from '@/design-system/vocabulary'
+
+/**
+ * ⚠️ **D14's Sprint 3 half: the shared words have ONE definition now.**
+ *
+ * The lock says `flag-vocabulary.ts` "generalises into a product vocabulary module; it is not
+ * replaced" and assigns that to Sprint 3. The sprint plan never mentioned vocabulary anywhere, so a
+ * locked decision was silently dropping out of the sprint it was assigned to (fresh reviewer,
+ * Major) — while `'Never turned on here'` sat as a literal in BOTH this file and
+ * `design-system/vocabulary.ts`, welded by nothing. Correcting the registry would have left this
+ * page saying the old word.
+ *
+ * NOT replaced, exactly as the lock says: this module keeps its badges, its `detail` sentences and
+ * its stored-spelling notes, which are flags-specific and belong here. What moved is the three words
+ * the design system also renders. One definition, two readers.
+ */
 // flags-console-parity · the words this console uses for a flag, defined once.
 //
 // ── Why this module exists before Story 3.3 asked for it ─────────────────────────────────────
@@ -51,19 +67,19 @@ export const FLAG_STATE_PRESENTATION: Record<
 > = {
   on: {
     badge: 'live',
-    label: 'On',
+    label: SPECIMEN_WORDS.on,
     detail: (row) =>
       row.version === null ? 'serving a version that could not be read' : `serving v${row.version}`,
   },
   off: {
     badge: 'blocked',
-    label: 'Turned off',
+    label: SPECIMEN_WORDS.off,
     detail: (row) =>
       row.updatedAt === null ? 'switched off here' : `switched off ${formatUtc(row.updatedAt)}`,
   },
   never: {
     badge: 'next',
-    label: 'Never turned on here',
+    label: SPECIMEN_WORDS.neverActivated,
     detail: () => 'no one has switched this on or off in this environment',
   },
 }
