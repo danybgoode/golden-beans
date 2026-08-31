@@ -232,21 +232,6 @@ export async function ProductShell({
                 A section with no entitled surface is ABSENT rather than disabled: on a Vercel
                 preview three of Ship's gates are closed (A2), and a tab that 404s is worse than a
                 tab that is not there. */}
-            <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
-              {header.tabs.map((tab) => (
-                <a
-                  key={tab.id}
-                  href={tab.href}
-                  className="product-shell__tab"
-                  // `aria-current="page"` rather than a class alone: the mark has to reach a screen
-                  // reader, not just the pixels. Absent (not "false") when it is not the current
-                  // one — `aria-current="false"` is a value some readers announce.
-                  aria-current={tab.current ? 'page' : undefined}
-                >
-                  {tab.label}
-                </a>
-              ))}
-            </nav>
 
             <div className="product-shell__identity">
               {/* The project switcher (D1). ONE tier — Golden Beans has no organisation layer, and
@@ -312,6 +297,38 @@ export async function ProductShell({
           </>
         )}
       </header>
+
+      {/* ── TIER 2: the section nav, a FULL-WIDTH row of its own ──────────────────────────────────
+          ⚠️ **This was inside the 54px top bar, and the approved design has TWO tiers.** Measured on
+          the running console before touching anything: `.product-shell__header` was 1440x54 with the
+          tabs nested inside it at 289x43 — one bar carrying everything. The prototype's `#sectionnav`
+          is a SIBLING of `.topbar`, a 1440x44 row with its own background and bottom border.
+
+          Nothing caught it, and this is why: `MEASURED-SPEC.md` carries "Section nav (tier 2)
+          1440 x 44" — generated from the prototype — but `console-gate-spec.ts`, the array actually
+          asserted against the PRODUCT, has no row for either tier. The number was measured, written
+          down, published in a contract, and never compared to the thing it described. Both tiers are
+          in the gate now.
+
+          Rendering it only when there are tabs keeps the gate-off and anonymous branches unchanged:
+          `header === null` never reaches here. */}
+      {header !== null && header.tabs.length > 0 ? (
+        <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
+          {header.tabs.map((tab) => (
+            <a
+              key={tab.id}
+              href={tab.href}
+              className="product-shell__tab"
+              // `aria-current="page"` rather than a class alone: the mark has to reach a screen
+              // reader, not just the pixels. Absent (not "false") when it is not the current
+              // one — `aria-current="false"` is a value some readers announce.
+              aria-current={tab.current ? 'page' : undefined}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </nav>
+      ) : null}
       <div className="product-shell__body">
         {/*
           Story 1.4 — the per-section rail. FIRST in the DOM, unlike the agent rail below: this is

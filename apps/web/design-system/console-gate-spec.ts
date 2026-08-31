@@ -40,6 +40,28 @@ export const MEASURED_SPEC: SpecRow[] = [
     fontWeight: '400',
   },
   { what: 'section tab', selector: '.product-shell__tab', fontSize: '13px' },
+  // ⚠️ **THE TWO TIERS, which the contract measured and the gate never checked.**
+  // `MEASURED-SPEC.md` has carried "Top bar (tier 1) 1440 x 54" and "Section nav (tier 2) 1440 x 44"
+  // since Sprint 1 — generated from the approved prototype. Neither had a row HERE, the array
+  // actually asserted against the product, so the console shipped with ONE 54px bar carrying the
+  // tabs inside it at 289px wide and nothing noticed: measured, written down, published in a
+  // contract, never compared to the thing it described (Story 3.2).
+  //
+  // Width is deliberately omitted. Both tiers are full-bleed, so at the gate's 1440 viewport they
+  // measure 1440 — a number that says the viewport is 1440, not that the design is right. The
+  // HEIGHTS are the design decision.
+  //
+  // ⚠️ `tolerance: 0`, and it is load-bearing. The runner's default is ±1px, and the FIRST mutation
+  // I ran against these rows passed because of it: stripping tier 2's `height: 44px` leaves the row
+  // sized by its tabs' padding at 43px, and |43 − 44| = 1. So "a real 44px band" and "a bare strip
+  // that happens to be 43px tall" were the same answer — the exact defect the rows were added to
+  // catch, inside the rows added to catch it.
+  //
+  // ±1 is right for text-sized things that shift by a pixel between platforms (that is why it is the
+  // default). These two are STATED heights on full-bleed bands: they are 54 and 44 exactly, or the
+  // chrome is not the approved chrome.
+  { what: 'top bar (tier 1)', selector: '.product-shell__header', height: 54, tolerance: 0 },
+  { what: 'section nav (tier 2)', selector: '.product-shell__tabs', height: 44, tolerance: 0 },
   { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
   { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
   { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },

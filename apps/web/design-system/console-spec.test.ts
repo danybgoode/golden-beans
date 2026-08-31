@@ -91,6 +91,10 @@ function readMeasuredSpec(): Map<string, MeasuredRow> {
 const GOVERNED_BY: Record<string, string> = {
   'project switcher': 'Project switcher',
   'section tab': 'Section tab · inactive',
+  // The two chrome tiers, added by Story 3.2 — and the names on the right are what makes the gate
+  // rows traceable: the numbers 54 and 44 come from the regenerated table, never from this file.
+  'top bar (tier 1)': 'Top bar (tier 1)',
+  'section nav (tier 2)': 'Section nav (tier 2)',
   'page h1': 'Page h1',
   'page subtitle': 'Page subtitle',
   'the answer line': 'The answer line',

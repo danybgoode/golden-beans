@@ -281,6 +281,89 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(page.locator('.envpick__control summary')).toHaveText(/Preview/)
   })
 
+  test("the palette's keyboard cursor is PAINTED, not only announced", async ({ page }) => {
+    // ⚠️ **This is an ASSERTION, not a repair — the plan asked for the wrong thing.** Story 3.5 says
+    // the cursor rule "was written against `li[aria-selected]` after `role='option'` moved onto the
+    // anchor, so ↑/↓ moved an announcement a screen reader could hear and a sighted reader could
+    // not see". True when it was written; `console-ia-overhaul` Story 3.4 already moved the rule
+    // onto the anchor, and `globals.css` paints a `--card` ground plus a 2px gold inset today.
+    //
+    // What was still missing is this test. `grep aria-selected apps/web/e2e/*.spec.ts` matched only
+    // the landing's tabs — so the fix was one selector edit away from silently reverting to the
+    // state its own comment describes, with every suite green. A defect that has already happened
+    // once, on a rule whose comment explains why it must not happen again, is worth a gate.
+    await page.goto('/app')
+    await openPalette(page)
+    const options = page.locator('.command-palette [role="option"]')
+    await expect(options.first()).toBeVisible()
+    expect(await options.count(), 'the palette listed fewer than two options').toBeGreaterThan(1)
+
+    const paint = (index: number) =>
+      options.nth(index).evaluate((node) => {
+        const style = getComputedStyle(node)
+        return {
+          background: style.backgroundColor,
+          shadow: style.boxShadow,
+          selected: node.getAttribute('aria-selected'),
+        }
+      })
+
+    const firstAtRest = await paint(0)
+    const secondAtRest = await paint(1)
+    expect(firstAtRest.selected, 'the palette opens with no option selected').toBe('true')
+
+    // The SELECTED row must look different from an unselected one. Asserted as paint — a background
+    // or a shadow — never as the attribute, which is the half that never stopped working.
+    expect(
+      firstAtRest.background !== secondAtRest.background || firstAtRest.shadow !== secondAtRest.shadow,
+      `the selected option paints exactly like an unselected one: ${JSON.stringify(firstAtRest)} vs ` +
+        `${JSON.stringify(secondAtRest)}. ↑/↓ is moving an announcement a sighted reader cannot see.`
+    ).toBe(true)
+
+    // ...and the paint MOVES with the keyboard, rather than being stuck on the first row.
+    await page.keyboard.press('ArrowDown')
+    const firstAfter = await paint(0)
+    const secondAfter = await paint(1)
+    expect(secondAfter.selected, 'ArrowDown did not move the selection').toBe('true')
+    expect(
+      secondAfter.background !== secondAtRest.background || secondAfter.shadow !== secondAtRest.shadow,
+      'the second option looks identical before and after the cursor reached it'
+    ).toBe(true)
+    expect(
+      firstAfter.background !== firstAtRest.background || firstAfter.shadow !== firstAtRest.shadow,
+      'the first option kept the cursor paint after the cursor left it'
+    ).toBe(true)
+  })
+
+  test('the palette fetches on FIRST PRESS, not on page load, and not again on reopen', async ({ page }) => {
+    // Story 3.5's other acceptance: `0 / 1 / 1` requests (load / first open / reopen), measured last
+    // epic. A palette that loads its index with every page would put its cost on every route in the
+    // console — the one thing a shared shell must not do.
+    const requests: string[] = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.pathname.includes('command-palette') || url.pathname.includes('/api/palette')) {
+        requests.push(url.pathname)
+      }
+    })
+
+    await page.goto('/app')
+    await page.waitForLoadState('networkidle')
+    expect(requests.length, `the palette fetched ${requests.length} time(s) on page load`).toBe(0)
+
+    await openPalette(page)
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    const afterFirstOpen = requests.length
+
+    await page.keyboard.press('Escape')
+    await openPalette(page)
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    expect(
+      requests.length,
+      `reopening fetched again — ${requests.length} total against ${afterFirstOpen} after the first open`
+    ).toBe(afterFirstOpen)
+  })
+
   test('⌘K opens, filters, and ↵ navigates — no URL typed anywhere', async ({ page }) => {
     const slug = tenantSlug()
     await page.goto('/app')
