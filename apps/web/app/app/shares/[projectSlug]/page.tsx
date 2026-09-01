@@ -16,7 +16,7 @@ export default async function SharesPage({ params }: { params: Promise<{ project
   const shares = await listShareLinks(projectId)
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'shares'}>
       <main>
         <h1>Share links</h1>
         <p>

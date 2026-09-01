@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory'
 import { readTenantRecord } from './helpers/authed-fixture'
 
 // console-ia-overhaul · Sprint 1. The signed-in shell, in a real browser.
@@ -47,6 +48,21 @@ function tenantSlug(): string {
 //
 // This is the half that protects D4, and it is the one a spec CAN make honestly: the legacy header
 // is byte-identical markup, so its four links either render or they do not.
+// ⚠️ **THIS HALF RUNS NOWHERE, AND SAYING SO IS THE POINT.**
+//
+// CI sets `CONSOLE_SHELL_ENABLED: 'true'` on the only server that runs this file (A19 — the console
+// ships enabled, so the gate MUST be on or the blocking gate asserts the opposite of production),
+// and the dark server's spec list does not include it. `run-local-e2e.mjs --authed` is the lit
+// server too. So every test below skips in every runner that exists today.
+//
+// That is not a reason to delete them — the gate-off branch is real code that a rollback serves —
+// but it IS a reason to stop counting them as coverage. Found in Sprint 3 while adding the `.cmdk`
+// absence assertion below and checking, for once, whether the thing I had just written would ever
+// execute. It would not.
+//
+// Owed: either boot a gate-off server for this file the way `setup-routes-dark` gets one, or move
+// these four assertions to a spec the dark server already runs. Recorded here rather than in a plan
+// nobody re-reads, because this is the file whose green will otherwise keep implying they passed.
 test.describe('with CONSOLE_SHELL_ENABLED off', () => {
   test.skip(GATE_ON, 'the gate is on for this run')
 
@@ -77,10 +93,16 @@ test.describe('with CONSOLE_SHELL_ENABLED off', () => {
 
   test('none of the new console chrome exists while the gate is off', async ({ page }) => {
     await page.goto('/app')
-    // The three things Sprint 1 adds. All absent, or the dark launch is not dark.
+    // The things the console adds. All absent, or the gate is not a gate.
     await expect(page.locator('.product-shell__tabs')).toHaveCount(0)
     await expect(page.locator('.console-rail')).toHaveCount(0)
     await expect(page.locator('.product-shell__account')).toHaveCount(0)
+    // ⚠️ `.cmdk` is FOURTH, added in Sprint 3. Until now `CommandPalette` returned `null` when
+    // closed, so "⌘K does nothing" was the whole of its gate-off contract and there was nothing to
+    // see. It renders a visible trigger unconditionally now, mounted inside the console branch — so
+    // the absence has to be asserted rather than inferred from the mount point. A search button on
+    // the anonymous demo dashboards would be a control with nothing behind it.
+    await expect(page.locator('.cmdk')).toHaveCount(0)
   })
 
   test('⌘K does nothing at all while the gate is off', async ({ page }) => {
@@ -167,6 +189,406 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(rail.locator(`a[href="/app/keys/${slug}"]`)).toHaveCount(0)
     await expect(rail.locator(`a[href="/app/agent-keys/${slug}"]`)).toHaveCount(0)
     await expect(rail.locator(`a[href="/app/flag-credentials/${slug}"]`)).toHaveCount(0)
+  })
+
+  test('the active rail item differs from an inactive one by MORE than background colour', async ({
+    page,
+  }) => {
+    // ⚠️ **Two of Daniel's five named complaints are "I can't tell where I am".** What shipped
+    // painted `background: var(--card-2)` and nothing else — `#2b2318` on the `--roast` `#16120d`
+    // ground, a ~5% luminance step. Findable if you know where to look, invisible if you are
+    // scanning.
+    //
+    // ⚠️ **A fill-only assertion would have PASSED on that**, which is why this one counts the cues
+    // rather than checking that something changed. Story 3.3 says the active item is a raised card:
+    // fill, border, gold icon, full-strength text. At least three of the four must differ, so
+    // losing any single cue still fails here rather than in a review three sprints later.
+    const slug = tenantSlug()
+    await page.goto(`/app/setup/keys/${slug}`)
+    const rail = page.locator('.console-rail')
+
+    const active = rail.locator(`a[href="/app/setup/keys/${slug}"]`)
+    const inactive = rail.locator(`a[href="/app/setup/connect/${slug}"]`)
+    await expect(active).toHaveAttribute('aria-current', 'page')
+    await expect(inactive).not.toHaveAttribute('aria-current', 'page')
+
+    const read = (locator: typeof active) =>
+      locator.evaluate((node) => {
+        const style = getComputedStyle(node)
+        const icon = node.querySelector('svg')
+        return {
+          background: style.backgroundColor,
+          borderColor: style.borderTopColor,
+          borderWidth: style.borderTopWidth,
+          color: style.color,
+          iconColor: icon ? getComputedStyle(icon).color : null,
+        }
+      })
+
+    const on = await read(active)
+    const off = await read(inactive)
+
+    // The icon is Story 2.4's deliverable finally reaching a product screen: `iconKey` has been a
+    // required field on every surface since Sprint 2, and nothing rendered it.
+    expect(on.iconColor, 'the active rail item renders no icon').not.toBeNull()
+    expect(off.iconColor, 'an inactive rail item renders no icon').not.toBeNull()
+
+    const differences = [
+      on.background !== off.background && 'background',
+      on.borderColor !== off.borderColor && 'border',
+      on.color !== off.color && 'text colour',
+      on.iconColor !== off.iconColor && 'icon colour',
+    ].filter(Boolean)
+
+    expect(
+      differences,
+      `the active rail item differs from an inactive one only by ${differences.join(', ') || 'nothing'} ` +
+        `— active ${JSON.stringify(on)} vs inactive ${JSON.stringify(off)}. A cue you have to look ` +
+        'for is what shipped last time.'
+    ).toHaveLength(4)
+
+    // ...and the border is REAL, not a colour change on a zero-width one.
+    expect(parseFloat(on.borderWidth), 'the active item has no border to raise it').toBeGreaterThan(0)
+
+    // ⚠️ The inactive items must carry a transparent border of the SAME width, or the active one
+    // shifts its neighbours by 2px as it moves. A cue that reflows the list reads as a bug.
+    expect(
+      off.borderWidth,
+      'the inactive rail items have a different border width — the list will shift when the active item moves'
+    ).toBe(on.borderWidth)
+  })
+
+  /**
+   * The rail destinations that leave the rail while the console is LIT.
+   *
+   * `readGates` derives `legacy-keys` as `!isConsoleShellEnabled()` and `legacy-flag-credentials` as
+   * `!consoleShell && isFlagConsoleEnabled()`, so all three of these are nav entries exactly while
+   * their merged Setup replacements are not. Named here so the expected count below is derived from
+   * the same fact the shell uses, rather than from a number somebody counted once.
+   */
+  const OFF_RAIL_WHILE_CONSOLE_IS_LIT = ['keys', 'agent-keys', 'flag-credentials']
+
+  test('EVERY rail route marks its OWN item, not merely some item', async ({ page }) => {
+    // ⚠️ **The type only catches typos.** `railActive` is now the derived `ProjectRouteSegment`
+    // union, so `'taskz'` is a compile error — but `'setup/keys'` on the tasks page is a perfectly
+    // valid segment pointing at the WRONG item, and a wrong mark is worse than no mark. Typecheck
+    // and both browser suites stayed green through exactly that mutation (fresh reviewer, Major).
+    //
+    // The previous rail test visited ONE route. One of twenty-one is the ratio this sprint's own
+    // commit message calls out as the defect, reproduced in the test written to fix it. This walks
+    // every rail destination the fixture tenant can reach.
+    const slug = tenantSlug()
+    const checked: string[] = []
+    const offRail: string[] = []
+    const unreachable: string[] = []
+    /** Inventory routes that answered 4xx/5xx — a defect only if the rail offers them. */
+    const notServing: string[] = []
+    /** Routes the rail actually listed while we were on them. */
+    const railOffers: string[] = []
+
+    for (const surface of PROJECT_ROUTE_INVENTORY) {
+      if (surface.status === 'flow-only') continue
+      const href = `/app/${surface.routeSegment}/${slug}`
+      const response = await page.goto(href)
+      // A gate-closed or owner-only surface is not a failure of this test — but it must be RECORDED,
+      // not silently skipped, or a suite that reaches nothing reads exactly like a suite that passes.
+      // ⚠️ **THE RAIL decides whether a 404 is a defect, not the inventory.** A destination the rail
+      // OFFERS must serve — that is the real invariant, and it is the one that was being swallowed:
+      // `notFound()` on `/app/shares` left this test green while Setup still listed "Share links"
+      // pointing at a 404 (round 2). But asserting it on every inventory row was too strong and
+      // contradicted the comment three lines above: `requireProjectOwnership` legitimately 404s an
+      // owner-only route for a member, and every gated route 404s when its gate is closed — so on a
+      // member fixture, or on a preview where those gates are shut, the assertion killed the run on
+      // a correct build (fresh reviewer, round 3).
+      //
+      // So the status check moved BELOW, into the `listed` branch: if the rail offers it, it must
+      // serve. If the rail does not, a 404 is the surface being correctly absent.
+      if (page.url().includes('/login')) {
+        unreachable.push(`${surface.routeSegment} (redirected to /login)`)
+        continue
+      }
+      if ((response?.status() ?? 599) >= 400) {
+        // ⚠️ `?? 599`, not `?? 0`: a null response used to satisfy `toBeLessThan(400)` and pass.
+        // A fallback that makes the check succeed is the check not running.
+        notServing.push(`${surface.routeSegment} (${response?.status() ?? 'no response'})`)
+        continue
+      }
+      const rail = page.locator('.console-rail')
+      if ((await rail.count()) === 0) {
+        unreachable.push(`${surface.routeSegment} (no rail)`)
+        continue
+      }
+      const marked = rail.locator('a[aria-current="page"]')
+      const count = await marked.count()
+      // ⚠️ Whether this route IS a rail destination is decided by the RAIL, not by the inventory.
+      // The `legacy-keys` gate (A7) removes `/app/keys`, `/app/agent-keys` and
+      // `/app/flag-credentials` from the rail when the console is lit, so those pages correctly mark
+      // nothing — my first version of this test demanded a mark from every inventory row and failed
+      // on a page that was right. Both branches are asserted, and the second is not a loophole: a
+      // page outside the rail marking SOMEBODY ELSE's item is the wrong-mark defect wearing a
+      // different hat.
+      const listed = (await rail.locator(`a[href="${href}"]`).count()) > 0
+      if (listed) {
+        railOffers.push(surface.routeSegment)
+        expect(count, `${href} is in the rail and marks ${count} items — exactly one must be current`).toBe(1)
+        expect(
+          await marked.getAttribute('href'),
+          `${href} marks the WRONG rail item — a wrong mark sends you somewhere else with confidence, ` +
+            'which is worse than marking nothing'
+        ).toBe(href)
+        checked.push(surface.routeSegment)
+      } else {
+        expect(
+          count,
+          `${href} is not a rail destination, yet it marks ${count} rail item(s) — it is claiming to ` +
+            'be somewhere it is not'
+        ).toBe(0)
+        offRail.push(surface.routeSegment)
+      }
+    }
+
+    // ⚠️ **The floor is the EXACT count, not a lower bound.** It was `> 5` against a real maximum of
+    // nine, so three of nine rail destinations could drop out silently and the test would still
+    // report success (fresh reviewer, round 2). A floor with that much slack is a floor that admits
+    // the defect it is placed against. If a gate closes and the number legitimately changes, this
+    // fails and the new number gets written down deliberately.
+    //
+    // ⚠️ My first version of this compared `notServing` against `railOffers` — the set of routes whose
+    // rail we SAW. A route that 404s never gets its rail read, so it could never be in that set and
+    // the check could never fail: the "guard that cannot fail" shape, in the assertion written to
+    // close a guard that could not fail. The count below caught the mutation instead, which is how
+    // I noticed.
+    //
+    // The rail for a section lists that section's surfaces, so a 404ing route's own absence is
+    // asked of a SIBLING that serves — a page whose rail would list it if the rail still offered it.
+    for (const entry of notServing) {
+      const segment = entry.split(' ')[0]
+      const surface = PROJECT_ROUTE_INVENTORY.find((row) => row.routeSegment === segment)
+      const sibling = checked.find((other) => {
+        const row = PROJECT_ROUTE_INVENTORY.find((candidate) => candidate.routeSegment === other)
+        return row && surface && row.section === surface.section
+      })
+      // No serving sibling means the whole section is gone; the count assertion below owns that case.
+      if (!sibling) continue
+      await page.goto(`/app/${sibling}/${slug}`)
+      const offered = await page.locator(`.console-rail a[href="/app/${segment}/${slug}"]`).count()
+      expect(
+        offered,
+        `/app/${segment}/${slug} answers ${entry.replace(`${segment} `, '')} and the rail on ` +
+          `/app/${sibling}/${slug} still offers it as a place to go`
+      ).toBe(0)
+    }
+
+    // ⚠️ **9 is DERIVED, not chosen.** An exact pin is only safe if the number has a reason, so this
+    // recomputes it from the inventory rather than trusting a literal: every surface that is not
+    // `flow-only`, minus the three the `legacy-keys`/`legacy-flag-credentials` gates remove while
+    // the console is lit, minus `tasks` (section `today`, where `railLinksFor` returns `[]`).
+    //
+    // The gates that decide this are set identically by `run-local-e2e.mjs` and by `ci.yml`'s authed
+    // step — verified by diffing both env blocks — so the count cannot differ between the runner
+    // that produced it and the pipeline that enforces it. The two gates that DO differ
+    // (`SCENARIO_AUTHORING_ENABLED`, `FLAG_DEFINITION_SYNC_ENABLED` local; `SIGNUP_ENABLED` CI)
+    // appear in no inventory row's `gate` field.
+    const expected = PROJECT_ROUTE_INVENTORY.filter(
+      (surface) =>
+        surface.status !== 'flow-only' &&
+        !OFF_RAIL_WHILE_CONSOLE_IS_LIT.includes(surface.routeSegment) &&
+        surface.routeSegment !== 'tasks'
+    ).length
+
+    expect(
+      checked.length,
+      `${checked.length} rail routes marked their own item, expected ${expected}. off-rail: ` +
+        `${offRail.join(', ') || 'none'}; unreachable: ${unreachable.join(', ') || 'none'}`
+    ).toBe(expected)
+
+    // ⚠️ **Every destination the rail OFFERS must serve.** This is the invariant the round-2 fix was
+    // reaching for, stated where it is actually true: a route that 404s is only a defect if the rail
+    // is sending people to it. Checked against the rails we saw, so a gate-closed surface that
+    // legitimately vanished from both the rail and the routing table passes, and a surface still
+    // listed while 404ing does not.
+    // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
+    // out of the rail would satisfy the loop by never entering the branch that checks anything.
+    expect(
+      offRail.length,
+      'no off-rail route was exercised — the second branch asserted nothing'
+    ).toBeGreaterThan(0)
+  })
+
+  test('the environment is ONE control that opens, not three stacked links', async ({ page }) => {
+    // ⚠️ **Daniel's first named complaint.** `EnvironmentPicker` mapped all three environments into
+    // a permanently-expanded `<ul>` of lowercase links, so the rail asked you to pick from a list
+    // instead of telling you where you are. A control showing all its options at rest is a filter;
+    // one that names the current state and opens on demand is a location.
+    const slug = tenantSlug()
+    await page.goto(`/app/flags/${slug}`)
+
+    const control = page.locator('.envpick__control')
+    await expect(control).toHaveCount(1)
+
+    // CLOSED at rest, and that is the whole finding — asserted as the options being HIDDEN, not as
+    // the `open` attribute being absent, because a `<details>` styled open would satisfy the second
+    // and fail the first.
+    const options = control.locator('.envpick__menu a')
+    await expect(options.first()).toBeHidden()
+
+    const summary = control.locator('summary')
+    await expect(summary).toBeVisible()
+    // Title case: the rail says where you ARE. `production` in lower case reads like a config value.
+    await expect(summary).toHaveText(/Production|Preview|Development/)
+
+    await summary.click()
+    await expect(options.first()).toBeVisible()
+    await expect(options).toHaveCount(3)
+
+    // ⚠️ **Every option is still a real link carrying the environment in the URL** (contract row 8,
+    // `console-ia-overhaul` 1.3): a copy-pasted address opens the same environment. This is why the
+    // control is a `<details>` and not Sprint 2's `EnvironmentControl` primitive, whose `onOpen`
+    // callback would have needed a client island and turned these into state.
+    const preview = control.locator('.envpick__menu a', { hasText: 'Preview' })
+    // `env`, not `environment` — `buildFlagListQuery` writes the short key, and the DEFAULT
+    // environment is omitted from the URL entirely rather than written out. Read from the builder
+    // rather than assumed: my first version of this assertion invented `environment=` and failed
+    // against correct code, which is a test accusing the product of the test's own mistake.
+    const href = await preview.getAttribute('href')
+    expect(href, 'the environment options are not links — the environment has left the URL').toContain(
+      'env=preview'
+    )
+
+    await preview.click()
+    await expect(page).toHaveURL(/env=preview/)
+    await expect(page.locator('.envpick__control summary')).toHaveText(/Preview/)
+  })
+
+  test('⌘K has a VISIBLE affordance in the top bar, and it opens the palette', async ({ page }) => {
+    // ⚠️ Story 3.2 asks for "project switcher, `⌘K`, account" in the top bar. There was no `⌘K`
+    // anything: the shortcut was keyboard-only on all 21 console routes and `grep '⌘K'` matched a
+    // comment. A shortcut with no affordance is undiscoverable — it might as well not ship for
+    // anyone who has not read the source (fresh reviewer, Major).
+    //
+    // Asserted as VISIBLE and as FUNCTIONAL, in the top bar specifically. The previous state
+    // satisfied "the palette opens on ⌘K" perfectly well, which is why that assertion did not
+    // notice the missing button.
+    await page.goto('/app')
+    const trigger = page.locator('.product-shell__header .cmdk')
+    await expect(trigger).toBeVisible()
+    await expect(trigger).toContainText('⌘K')
+
+    // It opens by POINTER, which is the whole point — the keyboard path was never broken.
+    await trigger.click()
+    await expect(page.locator('.command-palette')).toBeVisible()
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+  })
+
+  test("the palette's keyboard cursor is PAINTED, not only announced", async ({ page }) => {
+    // ⚠️ **This is an ASSERTION, not a repair — the plan asked for the wrong thing.** Story 3.5 says
+    // the cursor rule "was written against `li[aria-selected]` after `role='option'` moved onto the
+    // anchor, so ↑/↓ moved an announcement a screen reader could hear and a sighted reader could
+    // not see". True when it was written; `console-ia-overhaul` Story 3.4 already moved the rule
+    // onto the anchor, and `globals.css` paints a `--card` ground plus a 2px gold inset today.
+    //
+    // What was still missing is this test. `grep aria-selected apps/web/e2e/*.spec.ts` matched only
+    // the landing's tabs — so the fix was one selector edit away from silently reverting to the
+    // state its own comment describes, with every suite green. A defect that has already happened
+    // once, on a rule whose comment explains why it must not happen again, is worth a gate.
+    //
+    // ⚠️ **The rule that actually paints here is `console.css:1785`, not `globals.css:1354`.** In the
+    // console — the only place the palette renders — `.is-console .command-palette__panel
+    // a[aria-selected='true']` wins at (0,2,1) and paints `--card-3` with `box-shadow: none`. So the
+    // `shadow` half of the predicate below is permanently false in this context, and reverting the
+    // `globals.css` rule alone would leave this test green. Both selectors are what matter, and the
+    // assertion is written as an OR across background and shadow precisely so it survives either
+    // file winning — but the comment pointed at one file and implied it was the one under test
+    // (fresh reviewer, Minor). Mutating BOTH selectors back to `li` is what turns this red.
+    await page.goto('/app')
+    await openPalette(page)
+    const options = page.locator('.command-palette [role="option"]')
+    await expect(options.first()).toBeVisible()
+    expect(await options.count(), 'the palette listed fewer than two options').toBeGreaterThan(1)
+
+    const paint = (index: number) =>
+      options.nth(index).evaluate((node) => {
+        const style = getComputedStyle(node)
+        return {
+          background: style.backgroundColor,
+          shadow: style.boxShadow,
+          selected: node.getAttribute('aria-selected'),
+        }
+      })
+
+    const firstAtRest = await paint(0)
+    const secondAtRest = await paint(1)
+    expect(firstAtRest.selected, 'the palette opens with no option selected').toBe('true')
+
+    // The SELECTED row must look different from an unselected one. Asserted as paint — a background
+    // or a shadow — never as the attribute, which is the half that never stopped working.
+    expect(
+      firstAtRest.background !== secondAtRest.background || firstAtRest.shadow !== secondAtRest.shadow,
+      `the selected option paints exactly like an unselected one: ${JSON.stringify(firstAtRest)} vs ` +
+        `${JSON.stringify(secondAtRest)}. ↑/↓ is moving an announcement a sighted reader cannot see.`
+    ).toBe(true)
+
+    // ...and the paint MOVES with the keyboard, rather than being stuck on the first row.
+    await page.keyboard.press('ArrowDown')
+    const firstAfter = await paint(0)
+    const secondAfter = await paint(1)
+    expect(secondAfter.selected, 'ArrowDown did not move the selection').toBe('true')
+    expect(
+      secondAfter.background !== secondAtRest.background || secondAfter.shadow !== secondAtRest.shadow,
+      'the second option looks identical before and after the cursor reached it'
+    ).toBe(true)
+    expect(
+      firstAfter.background !== firstAtRest.background || firstAfter.shadow !== firstAtRest.shadow,
+      'the first option kept the cursor paint after the cursor left it'
+    ).toBe(true)
+  })
+
+  test('the palette fetches on FIRST PRESS, not on page load, and not again on reopen', async ({ page }) => {
+    // Story 3.5's other acceptance: `0 / 1 / 1` requests (load / first open / reopen), measured last
+    // epic. A palette that loads its index with every page would put its cost on every route in the
+    // console — the one thing a shared shell must not do.
+    // ⚠️ **The first version of this filter matched NOTHING and the test passed vacuously.** It
+    // looked for `command-palette` and `/api/palette`; the palette actually fetches
+    // `/api/internal/feature-index/<slug>` (`CommandPalette.tsx:102`). So `requests` stayed empty at
+    // every stage, `0 === 0` held at each step, and the test reported "0 / 1 / 1 verified" while
+    // observing nothing at all — a guard that cannot fail, in the sprint whose review notes keep
+    // naming that class (cross-family review, agy).
+    //
+    // The path is READ from the component rather than guessed a second time, and the floor below is
+    // what makes a future rename fail loudly instead of quietly returning to zero.
+    const FEATURE_INDEX = '/api/internal/feature-index/'
+    const requests: string[] = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (url.pathname.startsWith(FEATURE_INDEX)) requests.push(url.pathname)
+    })
+
+    await page.goto('/app')
+    await page.waitForLoadState('networkidle')
+    expect(requests.length, `the palette fetched ${requests.length} time(s) on page load`).toBe(0)
+
+    await openPalette(page)
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    // The feature index arrives after the options render, so wait for the fetch rather than racing it.
+    await page.waitForResponse((response) => response.url().includes(FEATURE_INDEX))
+    const afterFirstOpen = requests.length
+
+    // ⚠️ THE FLOOR. Without it, "the palette fetched zero times because the filter is wrong" and
+    // "the palette correctly fetched once" are the same result, and the reopen check below compares
+    // 0 to 0 forever (agy).
+    expect(
+      afterFirstOpen,
+      `opening the palette fetched ${FEATURE_INDEX} ${afterFirstOpen} times — expected exactly 1. ` +
+        'Zero means this test is watching a path the palette no longer uses.'
+    ).toBe(1)
+
+    await page.keyboard.press('Escape')
+    await openPalette(page)
+    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    expect(
+      requests.length,
+      `reopening fetched again — ${requests.length} total against ${afterFirstOpen} after the first open`
+    ).toBe(afterFirstOpen)
   })
 
   test('⌘K opens, filters, and ↵ navigates — no URL typed anywhere', async ({ page }) => {

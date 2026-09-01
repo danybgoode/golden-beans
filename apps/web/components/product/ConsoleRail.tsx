@@ -1,5 +1,6 @@
 import 'server-only'
-import type { ProjectSurfaceLink } from '@/lib/project-route-inventory'
+import { Icon } from '@/components/ui/Icon'
+import type { ProjectSurfaceLink, ProjectRouteSegment } from '@/lib/project-route-inventory'
 
 /**
  * console-ia-overhaul · Sprint 1, Story 1.4 — what is inside the section you picked.
@@ -49,7 +50,14 @@ export function ConsoleRail({
    * `aria-current="page"` rather than a class, so the state a sighted reader sees and the one a
    * screen reader hears are the same attribute.
    */
-  activeSegment?: string
+  /**
+   * Which entry is the page you are on, or `null` when this page is not a rail destination.
+   *
+   * ⚠️ `null` rather than optional, all the way down from `ProductShell`: an optional active-segment
+   * was passed by ONE route of twenty-one, so twenty pages rendered a rail with nothing marked and
+   * the "where am I" cue had nothing to paint (Story 3.3).
+   */
+  activeSegment: ProjectRouteSegment | null
 }) {
   if (links.length === 0 && top === undefined) return null
 
@@ -73,7 +81,19 @@ export function ConsoleRail({
               The badge went with it. A surface only ever appears here when its gate is OPEN, so
               `GATED` was labelling the one state it could never be in.
             */}
+            {/*
+              ⚠️ **THE ICON, at last — and the reason it took two sprints to appear here.**
+              Story 2.4 made `iconKey` a REQUIRED field on `ProjectSurfaceLink` and gave every
+              surface one, and `getProjectSurfaceLinks` has been carrying it through to this
+              component ever since. Nothing rendered it: the field existed, the data was correct,
+              and the rail still shipped as a column of text (found in Sprint 2's round-2 review,
+              which noted "Story 2.4's outcome is delivered only on the specimen").
+
+              A required field with no consumer is the same class of dead weight as a guard that
+              cannot fail — it looks like the work was done.
+            */}
             <a href={link.href} aria-current={link.routeSegment === activeSegment ? 'page' : undefined}>
+              <Icon name={link.iconKey} size={15} />
               {link.label}
             </a>
           </li>

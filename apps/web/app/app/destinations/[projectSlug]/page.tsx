@@ -21,7 +21,7 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
   ])
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={'destinations'}>
       <main>
         <h1>Destinations</h1>
         <p>

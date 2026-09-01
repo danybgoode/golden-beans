@@ -40,6 +40,34 @@ export const MEASURED_SPEC: SpecRow[] = [
     fontWeight: '400',
   },
   { what: 'section tab', selector: '.product-shell__tab', fontSize: '13px' },
+  // ⚠️ **THE TWO TIERS, which the contract measured and the gate never checked.**
+  // `MEASURED-SPEC.md` has carried "Top bar (tier 1) 1440 x 54" and "Section nav (tier 2) 1440 x 44"
+  // since Sprint 1 — generated from the approved prototype. Neither had a row HERE, the array
+  // actually asserted against the product, so the console shipped with ONE 54px bar carrying the
+  // tabs inside it at 289px wide and nothing noticed: measured, written down, published in a
+  // contract, never compared to the thing it described (Story 3.2).
+  //
+  // Width is deliberately omitted. Both tiers are full-bleed, so at the gate's 1440 viewport they
+  // measure 1440 — a number that says the viewport is 1440, not that the design is right. The
+  // HEIGHTS are the design decision.
+  //
+  // `tolerance: 0`. ±1 is the runner's default and is right for text-sized things that shift a pixel
+  // between platforms; these two are STATED heights on full-bleed bands — 54 and 44 exactly, or the
+  // chrome is not the approved chrome. Verified load-bearing: setting the CSS to 55/45 fails both
+  // rows at 0 and passes at the ±1 default.
+  //
+  // ⚠️ **The justification that used to sit here was a reproduction that did not reproduce.** It
+  // said stripping tier 2's `height` leaves the row "at 43px, and |43 − 44| = 1", so the row passed
+  // at ±1. The reviewer measured it at **43.5px**, which `Math.round` turns into 44 — so that
+  // mutation passes at ±1 AND at 0, and proves nothing about either. I wrote a plausible number
+  // instead of reading the one the failure printed (fresh reviewer, Major; 43.5 is THEIR
+  // measurement, cited rather than re-derived here, which is the honest way to carry it).
+  //
+  // Keeping `tolerance: 0` and correcting the reason, rather than the reverse: the field is right,
+  // the evidence for it was invented. Prose asserting a property the code lacks is this epic's third
+  // most common defect and this is an instance of it in a comment about avoiding it.
+  { what: 'top bar (tier 1)', selector: '.product-shell__header', height: 54, tolerance: 0 },
+  { what: 'section nav (tier 2)', selector: '.product-shell__tabs', height: 44, tolerance: 0 },
   { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
   { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
   { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },
@@ -150,16 +178,6 @@ export const DEFERRED_SPEC_ROWS = [
     built: '34',
     why: "height follows the shell chrome; the contract's 140px width is waived too because a real tenant slug is longer than the prototype's and truncating it would hide the one thing the control shows",
     // Story 3.2 rebuilds the switcher against the REGENERATED number (122 x 30, not 140 x 30).
-    owner: 'Daniel',
-    until: '2026-09-30',
-  },
-  {
-    what: 'section nav (tier 2)',
-    contract: 44,
-    built: 'not built',
-    why: 'ProductShell renders the tabs INSIDE the 54px header, so the second tier does not exist — splitting it touches every console route and is out of this PR',
-    // Story 3.2 is that PR. This is the one deferred row that describes something genuinely absent
-    // rather than slightly off, which is why it gets the tightest date.
     owner: 'Daniel',
     until: '2026-09-30',
   },

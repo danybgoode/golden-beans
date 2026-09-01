@@ -35,7 +35,9 @@
    and the header's bottom edge sits at 54. A round-2 comment said 55 from a mis-measurement, which
    left a 1px gap where it claimed to have closed a 43px one. */
 .is-console {
-  --console-chrome-height: 54px;
+  /* ⚠️ BOTH TIERS: 54px top bar + 44px section nav. It was 54 while the tabs lived inside the top
+     bar; with tier 2 a real row, a rail stuck at 54px would slide under it. */
+  --console-chrome-height: 98px;
 
   /* ⚠️ **The token block that was here is DELETED** — `design-system-rails` Sprint 1, Story 1.2
      (epic D2). It declared 23 custom properties under a comment reading:
@@ -143,13 +145,94 @@
 /* ⚠️ No `border-bottom` and no `background`. These belong to a SEPARATE 44px tier; nested inside
    the 54px header they paint a stray second horizontal rule a few pixels above the header's own —
    visible as a doubled line in the gate's screenshot. The tab underline is the only rule this
-   element should draw. */
+   element should draw.
+
+   ⚠️ **SUPERSEDED by Story 3.2, immediately below.** That reasoning held while the tabs lived INSIDE
+   the header. They are their own tier now and legitimately draw both — which is why the very next
+   comment says the opposite. Kept, marked, and adjacent rather than deleted: two comments
+   disagreeing silently is how the next reader picks the wrong one (fresh reviewer, Minor). */
+/* The `⌘K` affordance in the top bar — Story 3.2. Ported from the approved prototype's `.cmdk`
+   (`reference.css:73-82`), which had no counterpart in the product because the shortcut was
+   keyboard-only. */
+.is-console .cmdk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 9px 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--dim-2);
+  font-size: 13px;
+  transition:
+    border-color var(--t),
+    color var(--t);
+}
+.is-console .cmdk:hover {
+  border-color: var(--dim-2);
+  color: var(--crema);
+}
+.is-console .cmdk kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  color: var(--dim-2);
+}
+
+/* ⚠️ **THE BUTTON DID NOT FIT, AND IT TOOK THE SIGN-OUT WITH IT.**
+   At 98.8px + an 8px gap and no permission to shrink, `.cmdk` pushed the identity row past a 360px
+   viewport: the document scrolled to 377px, the project chip collapsed to a 22px sliver, and the
+   account `<details>` — the ONLY sign-out control on a console route, since `/app` drops its own —
+   sat partly off-screen until you scrolled sideways. Twelve of fourteen routes in
+   `mobile-heuristics.authed.spec.ts` went red (fresh reviewer, round 2, Blocking; causation proved
+   by rendering the same suite with only this button removed: 14/14).
+
+   `globals.css` records this exact failure being caught once before, on this exact row.
+
+   The approved prototype has no mobile answer — `reference.css` declares no `@media` for `.topbar`
+   at all, because a 1440px prototype never met a phone. So this is a decision, not a port.
+
+   ⚠️ **My first attempt at that decision was wrong and the suite caught it.** Letting the button
+   shrink (`flex: 0 1 auto; min-width: 0`) cured the overflow and collapsed it to **26px wide** with
+   its label squeezed to nothing — trading an overflow for a 26px tap target on a row where
+   `globals.css` requires 44, and leaving a control no thumb can hit and no eye can read. The suite
+   went from "12 overflow failures" to "12 tap-target failures", which is not progress.
+
+   It is HIDDEN below 640px instead, and that costs nothing real: this button advertises a KEYBOARD
+   SHORTCUT, and a phone has no ⌘ key to press. The palette was keyboard-only on every viewport
+   before this sprint, so mobile is exactly where it was and desktop gains the affordance Story 3.2
+   asked for. */
+@media (max-width: 640px) {
+  .is-console .cmdk {
+    display: none;
+  }
+}
+
+/* ⚠️ **TIER 2 — a full-width row, not a strip inside the top bar.** The approved design's
+   `#sectionnav` is a sibling of `.topbar`: its own 44px band with its own ground and bottom border.
+   This selector styled it as a bare flex strip because it WAS nested in the header, which supplied
+   both. Now it supplies its own, and the height is stated rather than inherited from the tabs'
+   padding — a row whose height depends on its children's padding is a row that changes height when
+   somebody restyles a tab. */
 .is-console .product-shell__tabs {
   display: flex;
   gap: 2px;
+  height: 44px;
+  min-height: 44px;
   padding: 0 20px;
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line);
   overflow-x: auto;
   scrollbar-width: none;
+  position: sticky;
+  top: 54px;
+  z-index: 39;
+}
+.is-console .product-shell__tabs::-webkit-scrollbar {
+  display: none;
 }
 .is-console .product-shell__tabs::-webkit-scrollbar {
   display: none;
@@ -223,18 +306,17 @@
    Specificity is deliberate. `.product-shell:has(.console-rail) .console-rail` scores (0,3,0)
    because `:has()` carries its argument's specificity, so `.is-console .console-rail` (0,2,0) lost
    silently. Matching their shape and adding `.is-console` scores (0,4,0) and wins. */
-/* ⚠️ **`98px` was 54 + 44 — the height of two chrome tiers, one of which is not built.**
-   The contract specifies a 54px top bar and a separate 44px section-nav bar. `ProductShell` renders
-   the tabs INSIDE the header, so the real chrome is a single 54px bar — measured, the header's
-   bottom edge is at 54 while the rail stuck at 98, leaving a 44px dead gap and under-computing the
-   rail's height by the same amount (fresh reviewer, round 2; the figure corrected in round 4, where
-   the round-2 comment had survived the very fix that named it wrong).
+/* The rail's offset is derived from ONE custom property rather than two magic numbers, so a change
+   to the chrome's height lands in one place.
 
-   Building the second tier is a `ProductShell` change that touches every console route, and it is
-   not this PR's scope. So the offset is derived from ONE custom property instead of two magic
-   numbers, and the property names the height that actually exists. When the tiers are split, this
-   changes in one place. That is the "one derived pair of numbers" rule the file already invokes for
-   the rail's own width. */
+   ⚠️ **This comment used to say `98px` was wrong** — that the second tier "is not built", that the
+   real chrome is "a single 54px bar", and that splitting it was "not this PR's scope". Sprint 3
+   Story 3.2 built it: the tiers measure 1440×54 at y=0 and 1440×44 at y=54, and
+   `--console-chrome-height` is 98 because that is now the truth rather than a bug. Every clause
+   above was false and sat directly on top of the rules that consume the property, contradicting a
+   second comment 200 lines up (fresh reviewer, Major). Left as a correction rather than deleted:
+   this file has now carried a confidently-wrong paragraph about this number through three rounds,
+   and the record of that is worth more than a clean file. */
 @media (min-width: 1100px) {
   .product-shell.is-console:has(.console-rail) .product-shell__body {
     padding-left: 0;
@@ -296,7 +378,6 @@
   gap: 10px;
   height: 36px;
   padding: 8px 10px;
-  border: none;
   border-radius: 7px;
   background: none;
   font-size: 13.5px;
@@ -311,9 +392,46 @@
   background: var(--card);
   color: var(--crema);
 }
+/* ⚠️ **THE ACTIVE ITEM IS A RAISED CARD, not a fill you have to look for.**
+
+   This rule used to be exactly two declarations — `background: var(--card-2)` and
+   `color: var(--crema)` — which is `#2b2318` on the `--roast` `#16120d` ground. That is a ~5%
+   luminance step: real, findable if you already know where to look, and invisible if you are
+   scanning. It is two of Daniel's five named complaints ("I can't tell where I am"), and it is why
+   Story 3.3 exists.
+
+   FOUR cues now, so the answer does not depend on any one of them landing:
+     · a lighter fill                    · a 1px border, which is what makes it read as RAISED
+     · a GOLD icon against --dim ones    · full-strength text COLOUR (--crema vs --dim)
+
+   ⚠️ The fourth cue used to read "full-strength text at 600". Both states are 600 — measured — so
+   weight differentiates nothing and the real fourth cue is COLOUR, which is what the test has been
+   measuring all along. Contract row 6 and Story 3.3 carry the same wrong wording (fresh reviewer).
+
+   ⚠️ Carried on `aria-current="page"` — the attribute, not a class — so the cue a sighted reader
+   sees and the one a screen reader hears are the same fact. A class would let them drift.
+
+   ⚠️ The `> ul` CHILD combinator is load-bearing and must stay (contract row 7). `.console-rail a`
+   and `.console-rail ul a` both leak onto the environment control below, and the added specificity
+   overrides its padding, radius AND weight — which kills this cue on the one control that most
+   needs it. Two previous attempts missed why. */
 .is-console .console-rail > ul a[aria-current='page'] {
   background: var(--card-2);
+  border-color: var(--line);
   color: var(--crema);
+}
+.is-console .console-rail > ul a[aria-current='page'] svg {
+  color: var(--gold);
+}
+/* The inactive items carry a TRANSPARENT border of the same width, so the active one does not shift
+   its neighbours by 2px when it moves. A cue that reflows the list is a cue that reads as a bug. */
+.is-console .console-rail > ul a {
+  border: 1px solid transparent;
+}
+.is-console .console-rail > ul a svg {
+  flex: none;
+  color: var(--dim-2);
+  transition: color var(--t);
 }
 /* Belt and braces: the markup drops these, and the stylesheet refuses to paint them if they come
    back. A regression that reintroduces the badge should look broken, not merely wrong. */
@@ -334,6 +452,36 @@
    the design puts at the top of the rail came out as three bare links (cross-review, agy). */
 .is-console .envpick {
   margin-bottom: 22px;
+}
+/* ⚠️ **Story 3.4 — ONE control, not three stacked links.** Daniel's first named complaint. The
+   `<ul>` below is now inside a `<details>`, so it is a MENU that opens rather than a list that is
+   always open. Everything about the options is unchanged — they are still links, still carrying the
+   environment in the URL (contract row 8).
+
+   ⚠️ The `> ul` CHILD combinator on the rail's own rules is what keeps this control safe, and it is
+   load-bearing (contract row 7): `.console-rail a` and `.console-rail ul a` both leak onto these
+   anchors, and the added specificity overrides their padding, radius AND weight. Two previous
+   attempts missed why. This block is BELOW those rules and scoped to `.envpick`, so it wins on
+   source order for the properties it sets and never fights them for the rest. */
+.is-console .envpick__control > summary {
+  /* `.ds-env` from the design system paints it; this only removes the UA's disclosure triangle,
+     which `list-style: none` alone does not do in WebKit. */
+  cursor: pointer;
+  list-style: none;
+}
+.is-console .envpick__control > summary::-webkit-details-marker {
+  display: none;
+}
+.is-console .envpick__chevron {
+  margin-left: auto;
+  color: var(--dim-2);
+  transition: transform var(--t);
+}
+.is-console .envpick__control[open] > summary .envpick__chevron {
+  transform: rotate(180deg);
+}
+.is-console .envpick__menu {
+  margin-top: 4px;
 }
 .is-console .envpick ul {
   display: flex;

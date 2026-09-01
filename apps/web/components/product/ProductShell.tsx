@@ -1,4 +1,5 @@
 import 'server-only'
+import type { ProjectRouteSegment } from '@/lib/project-route-inventory'
 import { BrandLockup } from '@/components/brand/BrandLockup'
 import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
@@ -55,8 +56,20 @@ export async function ProductShell({
    * environment is, so the section that HAS one supplies it.
    */
   railTop?: React.ReactNode
-  /** Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`. */
-  railActive?: string
+  /**
+   * Which rail entry is the page being viewed — see `ConsoleRail`'s `activeSegment`.
+   *
+   * ⚠️ **REQUIRED, and `null` must be written out.** It was optional, and exactly ONE route of the
+   * twenty-one passed it: `/app/flags/[projectSlug]`. Every other console page rendered a rail with
+   * no active entry at all — so "you can't tell where you are" (two of Daniel's five complaints) was
+   * not that the cue was too subtle, it was that on twenty pages THERE WAS NO CUE. The CSS rule
+   * existed, `aria-current` was wired, and almost nothing ever set it.
+   *
+   * An optional prop that twenty callers forget is indistinguishable from a prop nobody needed.
+   * Required with an explicit `null` for "this page is not in the rail" makes the omission a
+   * compile error instead of a blank rail — the same reasoning as `iconKey` in Story 2.4.
+   */
+  railActive: ProjectRouteSegment | null
 }) {
   const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
 
@@ -65,7 +78,26 @@ export async function ProductShell({
     // so the approved design's stylesheet cannot reach the public demo dashboards or the legacy
     // branch. One condition, one answer — the alternative is two flags kept in lockstep by hand,
     // which is the bug this shell already paid for once (see the `header`/`consoleEnabled` note).
-    <div className={`product-shell${header === null ? '' : ' is-console'}`}>
+    // ⚠️ **`ds` is what makes the design system PAINT here, and Sprint 3 is where it arrives.**
+    //
+    // Sprint 2 scoped every rule in `system.css` to `.ds .ds-…` — deliberately, because
+    // `console.css`'s `.is-console main p` at (0,1,2) was out-specifying bare `.ds-*` rules at
+    // (0,1,0) and stripping the primitives' own colours. `.ds .ds-x` is (0,2,0) and wins.
+    //
+    // The consequence nobody had hit yet: `is-console` alone gets the TOKEN VALUES
+    // (`tokens.css` is scoped `.ds, .is-console`) and NONE of the primitive paint. A `ds-env`
+    // button on the console would have rendered as an unstyled `<button>` with correct colours
+    // available and none of them applied — valid markup, no design.
+    //
+    // So the two classes mean two different things, and both are needed:
+    //   `is-console` — this is the console: tokens, and `console.css` applies.
+    //   `ds`         — this subtree renders FROM the design system: `system.css` applies.
+    // Sprints 4–6 assemble pages from `design-system/primitives`, and this is the line that lets
+    // them. See **D3** (the design system's classes are namespaced: prefix `ds-`, scope root `.ds`).
+    //
+    // ⚠️ This cited "D15", which does not exist — the epic's decisions run D1–D14. Invented in a
+    // comment whose own contract line is "Cite a decision; never re-derive one" (fresh reviewer).
+    <div className={`product-shell${header === null ? '' : ' is-console ds'}`}>
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
@@ -204,23 +236,16 @@ export async function ProductShell({
                 A section with no entitled surface is ABSENT rather than disabled: on a Vercel
                 preview three of Ship's gates are closed (A2), and a tab that 404s is worse than a
                 tab that is not there. */}
-            <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
-              {header.tabs.map((tab) => (
-                <a
-                  key={tab.id}
-                  href={tab.href}
-                  className="product-shell__tab"
-                  // `aria-current="page"` rather than a class alone: the mark has to reach a screen
-                  // reader, not just the pixels. Absent (not "false") when it is not the current
-                  // one — `aria-current="false"` is a value some readers announce.
-                  aria-current={tab.current ? 'page' : undefined}
-                >
-                  {tab.label}
-                </a>
-              ))}
-            </nav>
 
             <div className="product-shell__identity">
+              {/* ⚠️ The palette moved INTO the top bar, because Story 3.2 asks for a visible `⌘K`
+                  affordance there and the component now renders its own trigger. It used to mount in
+                  the body, which is why the shortcut had no button: a component that returns `null`
+                  when closed cannot show you that it exists. The panel still portals over the page —
+                  only the trigger is in the bar. */}
+              <ShellErrorBoundary>
+                <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
+              </ShellErrorBoundary>
               {/* The project switcher (D1). ONE tier — Golden Beans has no organisation layer, and
                   the production schema has no table that could support one. A `<details>` again, for
                   the same reason as the legacy disclosure: no client island in the shell.
@@ -284,6 +309,38 @@ export async function ProductShell({
           </>
         )}
       </header>
+
+      {/* ── TIER 2: the section nav, a FULL-WIDTH row of its own ──────────────────────────────────
+          ⚠️ **This was inside the 54px top bar, and the approved design has TWO tiers.** Measured on
+          the running console before touching anything: `.product-shell__header` was 1440x54 with the
+          tabs nested inside it at 289x43 — one bar carrying everything. The prototype's `#sectionnav`
+          is a SIBLING of `.topbar`, a 1440x44 row with its own background and bottom border.
+
+          Nothing caught it, and this is why: `MEASURED-SPEC.md` carries "Section nav (tier 2)
+          1440 x 44" — generated from the prototype — but `console-gate-spec.ts`, the array actually
+          asserted against the PRODUCT, has no row for either tier. The number was measured, written
+          down, published in a contract, and never compared to the thing it described. Both tiers are
+          in the gate now.
+
+          Rendering it only when there are tabs keeps the gate-off and anonymous branches unchanged:
+          `header === null` never reaches here. */}
+      {header !== null && header.tabs.length > 0 ? (
+        <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
+          {header.tabs.map((tab) => (
+            <a
+              key={tab.id}
+              href={tab.href}
+              className="product-shell__tab"
+              // `aria-current="page"` rather than a class alone: the mark has to reach a screen
+              // reader, not just the pixels. Absent (not "false") when it is not the current
+              // one — `aria-current="false"` is a value some readers announce.
+              aria-current={tab.current ? 'page' : undefined}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </nav>
+      ) : null}
       <div className="product-shell__body">
         {/*
           Story 1.4 — the per-section rail. FIRST in the DOM, unlike the agent rail below: this is
@@ -312,11 +369,6 @@ export async function ProductShell({
           second read, which is also what makes it safe for a client component to hold: it inherits
           the server's entitlement filtering rather than re-implementing it.
         */}
-        {header !== null && (
-          <ShellErrorBoundary>
-            <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
-          </ShellErrorBoundary>
-        )}
         {children}
         {/*
           Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app

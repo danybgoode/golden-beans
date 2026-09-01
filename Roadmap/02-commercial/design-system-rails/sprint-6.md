@@ -23,10 +23,10 @@
 
 | # | The contract | Cites |
 |---|---|---|
-| 1 | **Seam B is `design-system/Frame.tsx`, with DD3's `door` and `public` variants.** Decided at the lock; **this story implements it, it does not re-decide it.** Root `layout.tsx` is **rejected**: it also wraps `/` and `/methodology`, which two shipped epics own, and gating them would put those epics behind this epic's kill-switch. | **D6** |
+| 1 | **Seam B is `design-system/Frame.tsx`, with DD3's `door` and `public` variants.** Decided at the lock; **this story implements it, it does not re-decide it.** ⚠️ It is shared CHROME, not a gate — there is no flag for it to ask (D6). Root `layout.tsx` is still **rejected**: it also wraps `/` and `/methodology`, which two shipped epics own, and this epic's frame has no business wrapping them. | **D6** |
 | 2 | The nine routes share **no** wrapper today — `.auth-shell` (login, signup), the landing `Nav`/`Footer` (install, talk), `hub.module.css` (4 hub routes), and `/s/[token]` reusing `../../hub/report-components`. Frame replaces all four, one route at a time. | verified |
-| 3 | Seam B's gate-off branch is proved by **rendering both off-states and diffing**, exactly as Story 3.1 did. Not by reading the diff. | **D6** |
-| 4 | The flag is **`DESIGN_V2_ENABLED`** and `isDesignV2Enabled()`. It is retired from `lib/flags.ts` **and from all three Vercel environments** in Story 6.4. A flag whose off-state no longer exists is a lie in the code. | **D6** |
+| 3 | ⚠️ **No gate-off branch to prove** (D6) — this row cited a Story 3.1 that no longer exists. What Seam B still owes is that the 9 routes it wraps **render**, asserted by the `authed` suite, not by reading the diff. | **D6** |
+| 4 | ⚠️ **There is no flag to retire** (D6, Daniel, 2026-08-31). This row named `DESIGN_V2_ENABLED` / `isDesignV2Enabled()` and Story 6.4's removal of them; neither ever shipped. Story 6.4 verifies the ABSENCE — a grep over the source and the Vercel envs — rather than performing a removal. | **D6** |
 | 5 | ⚠️ **`/s/[token]` has no expired state, and that is a security decision.** `app/s/[token]/page.tsx` calls `notFound()` for unknown, malformed, expired **and** revoked alike, so the page cannot tell an attacker which one a token is. All four land on **`public-gone`**, one designed 404 whose copy deliberately does not say which. **Do not add an expired state to satisfy a doc.** | **F2** |
 | 6 | **`/install` keeps serving the demo project's token.** It is a public route and that is correct; the defect was ever linking a signed-in user to it, which Story 4.4 fixed. | AGENTS rule #2 |
 | 7 | Story 6.4 is a **Sweeper**: less code, same behaviour, no regressions, **and the old path proved unreachable** — no route renders it, no selector matches it, and a guard fails if it returns. `globals.css` holds **48** `.product-shell` references today; a scripted CSS prune needs a **parsed-rule** diff and will still be wrong the first time. | LEARNINGS |
@@ -39,12 +39,13 @@
 
 ### Story 6.1 — The second seam ✳ *executes D6's open question*
 **As a** product owner, **I want** the nine non-`ProductShell` routes behind a switch too,
-**so that** the rollback covers the whole product rather than 20 of 29 routes.
+**so that** the redesign covers the whole product rather than 21 of 30 routes.
 **Acceptance:** the seam the architecture lock chose — **`design-system/Frame.tsx`, carrying DD3's
-`door` and `public` variants, reading the same `isDesignV2Enabled()`** — is implemented as decided,
-**not re-decided here**. Root `layout.tsx` was considered and **rejected** at the lock: it also wraps
-`/` and `/methodology`, and gating them would put two shipped epics behind this epic's kill-switch. Its gate-off branch is proved
-by rendering both off-states and diffing, exactly as Story 3.1 did.
+`door` and `public` variants** — is implemented as decided, **not re-decided here**. ⚠️ It reads no
+flag: this said "reading the same `isDesignV2Enabled()`", and there is none (D6, 2026-08-31). It is
+shared chrome. Root `layout.tsx` was considered and **rejected** at the lock: it also wraps `/` and
+`/methodology`, which two shipped epics own. That the 9 routes render is proved by the `authed`
+suite, not by reading the diff.
 **Risk:** high
 
 ### Story 6.2 — The doors
@@ -78,11 +79,12 @@ into the system or explicitly kept with a written reason.
 **Acceptance:**
 - `globals.css`'s `.product-shell` rules and `console.css`'s compensations for them are **deleted**,
   including `.product-shell main > h1`'s `clamp(30px, 7vw, 48px)` (contract Do-not #1).
-- **`DESIGN_V2_ENABLED` is retired** — with the old design gone there is no second branch for it to
-  select, and a flag whose off-state no longer exists is a lie in the code. Remove `isDesignV2Enabled()`
-  from `lib/flags.ts` and the variable from all three Vercel environments, in this story.
-  ⚠️ *Corrected at the lock (D6): the scaffold said `console.design_v2_enabled` and `DEFAULT_FLAGS`.
-  Neither exists — see the build contract above.*
+- ⚠️ **NOTHING TO RETIRE — there was never a flag** (D6, Daniel, 2026-08-31). This bullet asked for
+  `DESIGN_V2_ENABLED` and `isDesignV2Enabled()` to be removed from `lib/flags.ts` and from all three
+  Vercel environments. Neither ever shipped: the predicate was written at the start of Sprint 3 and
+  deleted in the same sitting. **Verify the absence instead** — `DESIGN_V2_ENABLED` and
+  `isDesignV2Enabled` appear in no source file and in no Vercel environment — which is a grep, not a
+  story's worth of work.
 - **The old path is proved unreachable**, not merely unused: no route renders it, no selector matches
   it, and a guard fails if it returns.
 - Behaviour is unchanged — this story changes no pixel. Prove it with the visual gate, which by now
@@ -136,7 +138,7 @@ Env: **production · https://goldenfrijoles.com**.
 6. Open the PR's CI run, step **Design coverage + ratchet**.
    → Coverage reports **27 / 27**, the visual gate is blocking, and no deferred row is listed
    without an owner and a date.
-7. Confirm `DESIGN_V2_ENABLED` / `isDesignV2Enabled` no longer appears in `lib/flags.ts` or in any
+7. Confirm `DESIGN_V2_ENABLED` / `isDesignV2Enabled` appears nowhere — it never shipped (D6) — in `lib/flags.ts` or in any
    of the three Vercel environments.
    → The flag is retired. There is one design now, and one stylesheet.
 

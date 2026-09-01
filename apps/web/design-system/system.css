@@ -402,17 +402,31 @@
   font-size: 12.5px;
   cursor: pointer;
 }
+/* ⚠️ **THIS PRIMITIVE CONTRADICTED THE APPROVED DESIGN ON ALL THREE ENVIRONMENTS AND ON ITS SIZE.**
+   It was 6px with production green, preview gold, development blue. The approved prototype
+   (`reference.css:194-197`, generated from `console-prototype.html`) is 8px with production GOLD,
+   preview BLUE, development GREY — and `console.css`'s `.env-dot`, which the feature page renders,
+   already matched the prototype.
+
+   Sprint 3 put this primitive into the rail's environment control, so gold meant PRODUCTION on the
+   feature page and PREVIEW in the rail — one click apart, in the control whose entire job is to say
+   which environment you are operating in (fresh reviewer, Blocking, found by RENDERING both pages).
+
+   Corrected against `reference.css`, not against the prototype by eye: the generated file is the one
+   `extract-css --check` keeps honest. `env-dot-parity.test.ts` now fails if these two ever disagree
+   again — `system.css` is hand-written and had nothing comparing it to the approved design. */
 .ds .ds-env-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--green);
-}
-.ds .ds-env-dot[data-env='development'] {
-  background: var(--blue);
+  flex: none;
+  background: var(--gold);
 }
 .ds .ds-env-dot[data-env='preview'] {
-  background: var(--gold);
+  background: var(--blue);
+}
+.ds .ds-env-dot[data-env='development'] {
+  background: var(--dim-2);
 }
 
 /* ── Menu — the surface a switcher or environment button opens ───────────────────────────────── */

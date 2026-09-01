@@ -75,7 +75,7 @@ export default async function AppHome({ searchParams }: { searchParams: Promise<
   }
 
   return (
-    <ProductShell section="home">
+    <ProductShell section="home" railActive={null}>
       <main>
         <header>
           {/* Names what the page IS. The slug lives on each project's own card, where it belongs —

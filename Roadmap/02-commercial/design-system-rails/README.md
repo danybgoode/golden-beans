@@ -315,61 +315,41 @@ test.
 from the accessibility tree and not from the DOM. **A guard that cannot go red is a finding**, and
 that includes a guard for a bug that has already been fixed (see D12).
 
-### D6 — The kill-switch. 🔒 **Locked. The flag name is DISPROVED, and the second seam is ANSWERED.**
+### D6 — 🔒 **NO FLAG. The redesign ships straight to production.** Daniel decided this, 2026-08-31.
 
-**Disproved: `DEFAULT_FLAGS` does not exist.** `grep -rn 'DEFAULT_FLAGS'` across the whole repo
-returns **three hits, all of them in this epic's own planning docs**. `lib/flags.ts` is 22
-`process.env.<NAME>_ENABLED === 'true'` predicates with no registry object, and no flag in this
-product has ever had a dotted lower-case key. `console.design_v2_enabled` would have been the first,
-and the builder would have had to invent the thing it "extends".
+**This decision used to specify a kill-switch** — env var `DESIGN_V2_ENABLED`, predicate
+`isDesignV2Enabled()`, two seams, created disabled, flipped at Story 3.6, retired at Story 6.4. It
+was then amended to "created ENABLED". Both were wrong about the thing that mattered:
 
-🔒 **Locked:** env var **`DESIGN_V2_ENABLED`**, predicate **`isDesignV2Enabled()`** in
-`lib/flags.ts`, enablement polarity, exactly `=== 'true'`, read fresh per request. Sprint 6 retires
-the predicate and the three env entries. Every occurrence of `console.design_v2_enabled` in
-`sprint-3.md`, `sprint-6.md` and the seed is corrected.
+> *"I thought for some reason we were putting all this work behind flags and shipping dark. It
+> shouldn't, not flagged, not dark or anything… All goes to production, to main, not dark, not
+> disabled."*
 
-⚠️ **CREATED ENABLED — Daniel's decision, 2026-08-31, overriding this lock's original polarity.**
-This decision said "created **DISABLED** in Production, Preview and Development before Sprint 3
-merges", with a staged flip at Story 3.6. It is now: **`DESIGN_V2_ENABLED=true` in all three Vercel
-environments, set BEFORE Sprint 3 merges**, so the merge that deploys Sprint 3 serves the new design
-on all 20 console routes immediately. *"All of this work is to be shipped to production enabled
-fully, not dark, not waiting for anything."*
+🔒 **Locked: there is no flag.** No env var, no predicate, no gated branch, and nothing owed on
+Vercel for this epic. `isDesignV2Enabled()` was written into `lib/flags.ts` at the start of Sprint 3
+and removed in the same sitting; it never shipped.
 
-What that changes, so Sprint 3 builds for it rather than discovering it:
+**What this deletes, which is the point:**
 
-- **There is no dark period.** The default-`false` habit this epic inherited exists so a merge is
-  never itself a release. Here the merge IS the release, deliberately. The deterministic gate is
-  what stands between a bad render and every signed-in user, so Story 3.6's smoke walkthrough runs
-  on **production**, immediately after the deploy, not on a preview.
-- **The rollback test inverts.** It was "flip it on, confirm the new world". It is now **"flip it
-  OFF, confirm the OLD world returns, flip it back on"** — the same one env change plus a deploy,
-  exercised in the direction it would actually be used. Still owed to Daniel by name: it is a
-  production environment change.
-- **`=== 'true'` is unchanged and still exactly that.** Enabled-by-default is a decision about the
-  VALUE set in Vercel, not about the predicate. A predicate that treats "unset" as on would make the
-  flag unable to fail closed on a misconfigured environment, and would make Sprint 6's retirement
-  unobservable.
-- **Preview still has no database** (D3), so a preview deploy proves the render, never the data.
+| Was | Now |
+|---|---|
+| Story 3.1 — the kill-switch and its seam | **Deleted.** The shell rebuild lands directly. |
+| Story 3.1's "gate-off branch is byte-identical to today", proved by rendering both off-states and diffing | **Deleted.** There is no off-state to render. |
+| Story 3.6 — flip it on / prove the rollback | **Deleted.** See below. |
+| Story 6.1's seam B (`design-system/Frame.tsx` calling the predicate) | **A frame, not a gate.** It still exists as shared chrome for the 9 non-`ProductShell` routes; it just has nothing to ask. |
+| Story 6.4 — retire the flag from code and all three envs | **Deleted.** Nothing to retire. |
+| Every route in Sprints 3–6 keeping BOTH branches working | **Deleted**, and this is the largest saving: a gated rebuild means every surface has two designs that must both render for three more sprints. |
 
-**The second seam — answered here, in writing, so Sprint 6 executes rather than discovers.**
-Verified: the nine non-`ProductShell` routes share **no** wrapper. `/login` and `/signup` render
-`main.auth-shell`; `/install` and `/talk` render the landing's `Nav`/`Footer`; `/hub/*` renders
-`hub.module.css`; `/s/[token]` reuses `../../hub/report-components`. `app/layout.tsx` is a plain
-server component wrapping *everything*.
+**Rollback is `git revert` plus a deploy.** Stated plainly rather than left implicit: without a flag
+there is no instant switch, so recovering from a bad shell render is a revert and a redeploy — minutes,
+not seconds. That is the trade Daniel chose, and it buys a codebase with one design in it instead of
+two. The protection that remains is the one that has actually been finding defects all epic: the
+deterministic gate, the rendered assertions, and the review rounds.
 
-🔒 **Locked: ONE flag, TWO seams — matching DD3's three frames.**
-
-| Seam | Where | Frame | Routes | Story |
-|---|---|---|---|---|
-| **A** | `ProductShell` | `console` | 20 | 3.1 |
-| **B** | `design-system/Frame.tsx` | `door` · `public` | 9 | 6.1 |
-
-Both call the same `isDesignV2Enabled()`; rollback stays one env change plus a deploy.
-
-🔒 **Root `layout.tsx` is REJECTED as seam B**, and the reason is the decision: it also wraps `/`
-and `/methodology`, which are out of scope and shipped on the brand system in two earlier epics.
-Gating them here would put two shipped epics behind this epic's kill-switch — a rollback that
-un-ships work this epic never touched.
+⚠️ **Consequence for the plans: stop writing "owed to Daniel" items about Vercel.** *"I don't want to
+keep fighting the vercel vars or owed items over there at all."* Sprint 3's and Sprint 6's walkthroughs
+are rewritten accordingly — production steps stay (looking at the deployed page is how a design gets
+judged), env-var steps go.
 
 ### D7 — The charting primitive. 🔒 **Locked: hand-rolled SVG. No dependency.**
 
@@ -604,7 +584,7 @@ Stated here so the choice is auditable (WAYS-OF-WORKING → *Routing a build by 
 |---|---|---|
 | **1 — the rails** | **Architect, not delegated** | It is entirely shared surface: `design-system/`, the token collapse, the drift-guard rules, the manifest and the gate. Every one of the five later branches inherits it, so a mistake here breaks all of them. This is the row the routing table marks *Strongest, done FIRST*. |
 | **2 — the language** | **Architect, not delegated** | It defines the primitives and states that Sprints 3–6 assemble from. A permissive reading here is re-paid 29 times. |
-| **3 — the shell** | **Architect, not delegated** | The `ProductShell` seam, the kill-switch, and the production flip. Kill-switches and shared seams are the never-delegated row. |
+| **3 — the shell** | **Architect, not delegated** | The `ProductShell` seam — 21 routes at once, straight to production with no flag behind it (D6). A shared seam every other sprint builds on is the never-delegated row, and removing the kill-switch raises that, not lowers it. |
 | **4 — Ship and Setup** | **Delegated**, per story, over the locked contract | Execution against approved pixels on routes whose auth boundary is unchanged. **Exception: Story 4.5 stays with the architect** — it moves credential minting and retires three live credential routes. Credentials are the never-delegated row. |
 | **5 — Measure and Today** | **5.1 architect** (charting primitives are shared surface, D7). **5.2–5.6 delegated**, per story | Once the primitives exist, each page is bounded and has an approved state to check against. |
 | **6 — doors, hub, deletion** | **Architect, not delegated** | Seam B, the flag retirement, and deleting `.product-shell`. A Sweeper that proves an old path unreachable is judgment, not execution. |
@@ -622,8 +602,10 @@ Every PR is routed, never hand-picked:
 node scripts/review-route.mjs --builder <who-wrote-it> --tier high <PR#>
 ```
 
-**Every sprint in this epic is HIGH tier** (shared infra in 1, 2, 3 and 6; credentials in 4;
-the whole thing behind a kill-switch). So every PR gets **two cross-family passes from families that
+**Every sprint in this epic is HIGH tier** (shared infra in 1, 2, 3 and 6; credentials in 4; and
+⚠️ **no kill-switch behind any of it** — D6, which RAISES the tier rather than lowering it: with no
+flag to flip, review and the gate are the only things between a bad render and every signed-in
+user). So every PR gets **two cross-family passes from families that
 did not build the diff, PLUS the fresh reviewer subagent**. A capped family is a **refund ask to
 Daniel**, not a licence to substitute subagents; after the router's stated window, proceed and
 **record the downgrade in the PR body** — a missing layer must never read like a clean one.
@@ -690,5 +672,5 @@ page that reads exactly like a broken one.
 - [ ] Product poster (`Roadmap/README.md`) updated
 - [ ] Team memory + `MEMORY.md` index updated
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** the D6 flag slice shipped + `DESIGN_V2_ENABLED` exists **in all three Vercel envs**, ⚠️ **set to `true`** — created ENABLED per Daniel's 2026-08-31 decision, not disabled — with the predicate still exactly `=== 'true'`, and the second seam for the nine non-`ProductShell` routes resolved as the lock decided. *Verify-only — not a new gate.*
+- [ ] ⚠️ **NO kill-switch — this line is now the opposite of what it said** (D6, Daniel, 2026-08-31). Confirm `DESIGN_V2_ENABLED` and `isDesignV2Enabled` appear in **no** source file, **no** Vercel environment and **no** plan; that the 21 `ProductShell` routes and the 9 `Frame` routes render one design with no gated branch behind them; and that the epic owes **nothing** on Vercel. Rollback is `git revert` plus a deploy. *Verify-only — not a new gate.*
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)

@@ -46,7 +46,7 @@ export default async function FlagCredentialsPage({ params }: { params: Promise<
   const [keys, syncKeys] = await Promise.all([listFlagReadKeys(projectId), listFlagSyncKeys(projectId)])
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup">
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
       <main>
         <h1>Flag credentials</h1>
         <p>

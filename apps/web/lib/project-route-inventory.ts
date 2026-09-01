@@ -104,6 +104,22 @@ type ProjectSurface = {
   description: (role: string) => string
 }
 
+/**
+ * Every `routeSegment` the inventory defines, as a literal union.
+ *
+ * ⚠️ **This exists because `railActive` was `string` and nothing checked that any of its 29 values
+ * was the RIGHT one.** Story 3.3 made the prop required, which caught the twenty routes passing
+ * nothing — but a wrong segment marks the wrong rail item, which is worse than marking none, and
+ * typecheck plus both browser suites stayed green through a mutation that pointed
+ * `/app/setup/connect` at `setup/keys` (fresh reviewer, Major, mutation-verified).
+ *
+ * The prop's own comment claimed "the same reasoning as `iconKey` in Story 2.4" — but `iconKey` is a
+ * closed `IconName` union where an unknown key is a compile error, and `railActive` accepted any
+ * string. Now it is the same reasoning, in fact rather than by assertion: `PROJECT_ROUTE_INVENTORY`
+ * is `as const satisfies`, so this union is DERIVED from the rows and a typo cannot compile.
+ */
+export type ProjectRouteSegment = (typeof PROJECT_ROUTE_INVENTORY)[number]['routeSegment']
+
 export type ProjectSurfaceGates = Record<Exclude<ProjectSurfaceGate, 'always'>, boolean>
 
 export type ProjectSurfaceLink = Pick<
@@ -129,7 +145,7 @@ export type ProjectSurfaceLink = Pick<
 // still exist, still render and still keep their URLs — Sprint 3 makes them a feature's tabs, so
 // they become reachable by clicking the feature instead of by knowing its key. What is deleted is
 // their status as top-level destinations, and with it the last caller of DEFAULT_FEATURE_HINT.
-export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
+export const PROJECT_ROUTE_INVENTORY = [
   {
     routeSegment: 'journeys',
     iconKey: 'route',
@@ -337,7 +353,7 @@ export const PROJECT_ROUTE_INVENTORY: readonly ProjectSurface[] = [
     href: (slug: string) => `/app/onboarding/${slug}`,
     description: () => 'first-key and starter-feature handoff',
   },
-]
+] as const satisfies readonly ProjectSurface[]
 
 function isGateOpen(gate: ProjectSurfaceGate, gates: ProjectSurfaceGates): boolean {
   if (gate === 'always') return true

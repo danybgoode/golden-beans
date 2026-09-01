@@ -176,7 +176,7 @@ export default async function FlagDetailPage({
     tab === 'impact' ? await getFeatureImpactByProjectId(membership.projectId, projectSlug, flag.key) : null
 
   return (
-    <ProductShell projectSlug={projectSlug} section="ship">
+    <ProductShell projectSlug={projectSlug} section="ship" railActive={'flags'}>
       <main>
         {/* ── The page header, to the contract's shape (A22) ──────────────────────────────────
             A short title then one sentence of subtitle, `h1` at 23/700 — not the `display` clamp,

@@ -163,8 +163,6 @@ export function CommandPalette({
     if (open) inputRef.current?.focus()
   }, [open])
 
-  if (!open) return null
-
   function go(entry: PaletteEntry | undefined) {
     if (entry === undefined) return
     // A full navigation rather than a router push: every entry is a server-rendered route whose
@@ -174,110 +172,131 @@ export function CommandPalette({
   }
 
   return (
-    // Not a <dialog>: `showModal()` cannot be driven from render, and a native modal would trap
-    // focus in a component whose entire failure mode is supposed to be "disappears quietly".
-    <div className="command-palette" role="dialog" aria-modal="true" aria-label="Go to">
-      {/* Clicking away closes. `aria-hidden` because it duplicates Esc for pointer users and has
+    <>
+      {/* ⚠️ **THE VISIBLE AFFORDANCE — Story 3.2 asked for it and it did not exist.**
+          `⌘K` was keyboard-only on all 21 console routes: `grep '⌘K'` matched a comment and nothing
+          a person could see. The approved prototype has this button in the top bar
+          (`console-prototype.html:1186`), and a shortcut with no affordance is undiscoverable — the
+          feature might as well not ship for anyone who has not read the code (fresh reviewer, Major).
+
+          It lives INSIDE this component, and that is the point: the component already owns `open`,
+          so the button needs no new plumbing, no lifted state and no synthetic keyboard event. The
+          panel below stays conditional; only the trigger is unconditional. */}
+      <button type="button" className="cmdk" onClick={() => setOpen(true)} aria-haspopup="dialog">
+        <span>Search</span>
+        <kbd>⌘K</kbd>
+      </button>
+      {open ? <>{palette()}</> : null}
+    </>
+  )
+
+  function palette() {
+    return (
+      // Not a <dialog>: `showModal()` cannot be driven from render, and a native modal would trap
+      // focus in a component whose entire failure mode is supposed to be "disappears quietly".
+      <div className="command-palette" role="dialog" aria-modal="true" aria-label="Go to">
+        {/* Clicking away closes. `aria-hidden` because it duplicates Esc for pointer users and has
           nothing of its own to announce. */}
-      <button
-        type="button"
-        className="command-palette__scrim"
-        aria-hidden="true"
-        tabIndex={-1}
-        onClick={() => setOpen(false)}
-      />
-      <div className="command-palette__panel">
-        <input
-          ref={inputRef}
-          className="command-palette__input"
-          type="text"
-          value={query}
-          placeholder="Go to…"
-          aria-label="Go to"
-          // The listbox pattern: the input keeps focus and OWNS the active option, so a screen
-          // reader announces the highlighted row without focus ever leaving the text field.
-          role="combobox"
-          aria-expanded="true"
-          aria-controls="command-palette-list"
-          aria-activedescendant={matches[cursor] ? `palette-${matches[cursor].id}` : undefined}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            // Reset rather than clamp: after retyping, the cursor belongs at the top of the NEW
-            // list, not at whatever ordinal it happened to hold in the old one.
-            setCursor(0)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setOpen(false)
-              return
-            }
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault()
-              setCursor((index) =>
-                movePaletteCursor(index, event.key === 'ArrowDown' ? 1 : -1, matches.length)
-              )
-              return
-            }
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              go(matches[cursor])
-            }
-          }}
+        <button
+          type="button"
+          className="command-palette__scrim"
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => setOpen(false)}
         />
-        {/* `role="option"` sits on the ANCHOR below, not on the <li>: a listbox option must not
+        <div className="command-palette__panel">
+          <input
+            ref={inputRef}
+            className="command-palette__input"
+            type="text"
+            value={query}
+            placeholder="Go to…"
+            aria-label="Go to"
+            // The listbox pattern: the input keeps focus and OWNS the active option, so a screen
+            // reader announces the highlighted row without focus ever leaving the text field.
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="command-palette-list"
+            aria-activedescendant={matches[cursor] ? `palette-${matches[cursor].id}` : undefined}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              // Reset rather than clamp: after retyping, the cursor belongs at the top of the NEW
+              // list, not at whatever ordinal it happened to hold in the old one.
+              setCursor(0)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setOpen(false)
+                return
+              }
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                setCursor((index) =>
+                  movePaletteCursor(index, event.key === 'ArrowDown' ? 1 : -1, matches.length)
+                )
+                return
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                go(matches[cursor])
+              }
+            }}
+          />
+          {/* `role="option"` sits on the ANCHOR below, not on the <li>: a listbox option must not
             contain a separately focusable control, and the anchor is what carries the href, the
             click target and the keyboard target. The <li> is presentational (fresh reviewer, #122). */}
-        <ul id="command-palette-list" role="listbox" aria-label="Surfaces">
-          {matches.map((entry, index) => (
-            <li key={entry.id} role="presentation">
-              <a
-                id={`palette-${entry.id}`}
-                role="option"
-                aria-selected={index === cursor}
-                href={entry.href}
-                // OUT of the tab order on purpose. The input owns the keyboard here and points at
-                // the active row with `aria-activedescendant`; leaving the anchors tabbable meant
-                // Tab moved REAL focus onto a row, where the highlight (driven by `cursor`) and the
-                // focus ring pointed at different things and ↑/↓ stopped working — that handler is
-                // on the input. Escape still closes from anywhere, via the document listener.
-                tabIndex={-1}
-                onMouseEnter={() => setCursor(index)}
-              >
-                {/* The kind is on the row, which is Story 3.4's acceptance in one word: a reader
+          <ul id="command-palette-list" role="listbox" aria-label="Surfaces">
+            {matches.map((entry, index) => (
+              <li key={entry.id} role="presentation">
+                <a
+                  id={`palette-${entry.id}`}
+                  role="option"
+                  aria-selected={index === cursor}
+                  href={entry.href}
+                  // OUT of the tab order on purpose. The input owns the keyboard here and points at
+                  // the active row with `aria-activedescendant`; leaving the anchors tabbable meant
+                  // Tab moved REAL focus onto a row, where the highlight (driven by `cursor`) and the
+                  // focus ring pointed at different things and ↑/↓ stopped working — that handler is
+                  // on the input. Escape still closes from anywhere, via the document listener.
+                  tabIndex={-1}
+                  onMouseEnter={() => setCursor(index)}
+                >
+                  {/* The kind is on the row, which is Story 3.4's acceptance in one word: a reader
                     scanning results has to be able to tell "the Flags page" from "a feature called
                     flags". Derived from the closed union rather than from where the row came from,
                     so a third kind cannot be added without deciding what it says. */}
-                <span className="command-palette__kind">
-                  {entry.kind === 'feature' ? 'Feature' : 'Go to'}
-                </span>
-                {entry.label}
-                {entry.hint !== '' && <small>{entry.hint}</small>}
-              </a>
-            </li>
-          ))}
-        </ul>
-        {/* An honest empty state rather than a silently empty list — the reader needs to know the
+                  <span className="command-palette__kind">
+                    {entry.kind === 'feature' ? 'Feature' : 'Go to'}
+                  </span>
+                  {entry.label}
+                  {entry.hint !== '' && <small>{entry.hint}</small>}
+                </a>
+              </li>
+            ))}
+          </ul>
+          {/* An honest empty state rather than a silently empty list — the reader needs to know the
             query ran and matched nothing, not wonder whether the palette is broken. */}
-        {/* Two different empty states, because they are two different facts. A query that matched
+          {/* Two different empty states, because they are two different facts. A query that matched
             nothing is the reader's search failing; an empty list with an EMPTY query means this
             viewer is entitled to no surface at all (a zero-project session, gate on) — and
             “Nothing here matches ””” would have been quoted emptiness rather than an answer. */}
-        {matches.length === 0 && (
-          <p className="command-palette__empty" role="status">
-            {query.trim() === ''
-              ? 'There is nothing here to go to yet.'
-              : `Nothing here matches “${query.trim()}”.`}
-          </p>
-        )}
-        {/* ⚠️ Stated, never silent. If the feature index could not be read, this palette is missing
+          {matches.length === 0 && (
+            <p className="command-palette__empty" role="status">
+              {query.trim() === ''
+                ? 'There is nothing here to go to yet.'
+                : `Nothing here matches “${query.trim()}”.`}
+            </p>
+          )}
+          {/* ⚠️ Stated, never silent. If the feature index could not be read, this palette is missing
             most of what it normally holds — and a reader who types a feature key, sees nothing and
             concludes the feature was deleted is worse off than one who is told the list is short. */}
-        {indexFailed === projectSlug && (
-          <p className="command-palette__empty" role="status">
-            Features could not be listed just now, so this only shows places to go.
-          </p>
-        )}
+          {indexFailed === projectSlug && (
+            <p className="command-palette__empty" role="status">
+              Features could not be listed just now, so this only shows places to go.
+            </p>
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }
