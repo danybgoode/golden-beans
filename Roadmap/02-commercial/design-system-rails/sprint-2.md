@@ -1,6 +1,7 @@
 # One design system, every surface — Sprint 2: The language, systematised
 
-**Status:** 🟦 In review — all five stories built, gate green.
+**Status:** ✅ **SHIPPED & LIVE 2026-08-31** — merged as `97254b3` (PR #129), deployed to
+production.
 
 | Story | | Commit |
 |---|---|---|

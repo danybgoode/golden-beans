@@ -1,6 +1,7 @@
 # One design system, every surface — Sprint 3: The shell
 
-**Status:** ⬜ not started
+**Status:** ✅ **SHIPPED & LIVE 2026-08-31** — merged as `8f86cf7` (PR #131), deployed to
+production.
 
 > **The highest-leverage sprint in the epic.** Every `/app` route renders through `ProductShell`, so
 > this sprint changes all 20 of them at once — and **four of Daniel's five named complaints live

@@ -1,7 +1,20 @@
 # One design system, every surface — Sprint 4: Ship and Setup, finished
 
-**Status:** 🟦 In review — all six stories built, both gates green locally
-(**492 api passed / 35 skipped**, **112 authed passed / 8 skipped**), coverage **8 / 27**.
+**Status:** ✅ **SHIPPED & LIVE 2026-09-01** — merged as `3229652` (PR #132), deployed to
+production and verified by probing the deploy rather than by reading a deployment record:
+`/app/scheduled/miyagisanchez`, a route this sprint CREATED, answers **307** on
+`goldenfrijoles.com` while `/app/definitely-not-a-route/miyagisanchez` answers **404**. A route that
+did not exist an hour ago is being served, which is the narrowest thing that can only be true if
+this code is live. Coverage **8 / 27**; both gates green (**492 api passed / 35 skipped**,
+**112 authed passed / 8 skipped**), CI green on `feb1604`.
+
+> ⚠️ **The last red was the SPEC, not the sprint.** `console-shell.authed.spec.ts:511` failed on CI
+> and only on CI — four consecutive attempts across two runs of one commit, green locally about
+> twelve times. `CommandPalette` renders rows in two waves and the feature index goes in FRONT of
+> the surfaces, so React flips `aria-selected` on the very node the test is holding, in place, from
+> `true` to `false`. Demonstrated with a probe (`heldSelected: "false"` on
+> `palette-surface:journeys` while `nth(0)` had become `palette-feature:…`), then fixed in the
+> shared `openPalette` rather than at the assertion that happened to go red (`feb1604`).
 
 > **Ship and Setup are the two sections that already have approved states**, so this sprint is
 > execution against pixels rather than design. Six of the ten approved renders are here, and

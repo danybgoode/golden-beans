@@ -101,6 +101,16 @@ one-liner + why + date shape.
   commits** — `git add <your files>` + `git commit -- <those paths>`, never `git add -A`; (2) for
   parallel planning, give each session its own worktree, or appoint a single **scribe** for shared
   files (like `BUILD-ORDER.md`).
+  **Sharpened 2026-09-01 — the worst thing `git add -A` sweeps up is not a sibling's file, it is
+  YOUR OWN deliberate breakage.** A mutation check (CODE-QUALITY §5) means the tree is *supposed* to
+  hold a reverted fix for a minute at a time; a review pass means several of those in a row. `git
+  add -A` during that minute commits the revert, under a commit message that says the defect was
+  fixed — so the branch carries the defect and the claim that it does not, and every later reader
+  believes the message. It happened **twice in one epic** (`design-system-rails` `d677868` and
+  `bddfdfc`, identical titles), and both times CI was what noticed, not the agent. The recovery is
+  *copy the file back*, never `git checkout <file>`, which discards the uncommitted work you were
+  mid-way through. Stage by path, always — the rule is not about tidiness, it is about not
+  publishing a lie about your own diff.
 - **A subagent/fork that dies mid-task from a shared session rate-limit still returns a `result` — that
   text is its last tool-call narration, not a trustworthy completion claim.** After any subagent/fork
   batch — especially one large enough to plausibly share a rate-limit, or any showing a failed status —
