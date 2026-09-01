@@ -37,7 +37,10 @@ async function openCharts(page: Page): Promise<void> {
 }
 
 test.describe('the charting primitives', () => {
-  test.skip(!gatesAreLit(), 'the specimen renders inside the console shell; run with CONSOLE_SHELL_ENABLED=true')
+  test.skip(
+    !gatesAreLit(),
+    'the specimen renders inside the console shell; run with CONSOLE_SHELL_ENABLED=true'
+  )
 
   test.beforeEach(async ({ page }) => {
     await openCharts(page)
@@ -132,15 +135,18 @@ test.describe('the charting primitives', () => {
     // ── The other half of the same rule, and the one a floor alone would break ────────────────
     // A stage whose value is a real zero renders NO fill element. If it rendered one, the floor
     // would give it four pixels and invent exactly the reading the floor exists to prevent.
-    const zeroStage = await page.locator('#charts .ds-chart-bars').nth(1).evaluate((bars) => {
-      const rows = [...bars.children]
-      const last = rows[rows.length - 1]
-      return {
-        label: (last.querySelector('.ds-chart-bar-name')?.textContent ?? '').trim(),
-        number: (last.querySelector('.ds-chart-num')?.textContent ?? '').trim(),
-        fills: last.querySelectorAll('.ds-chart-fill').length,
-      }
-    })
+    const zeroStage = await page
+      .locator('#charts .ds-chart-bars')
+      .nth(1)
+      .evaluate((bars) => {
+        const rows = [...bars.children]
+        const last = rows[rows.length - 1]
+        return {
+          label: (last.querySelector('.ds-chart-bar-name')?.textContent ?? '').trim(),
+          number: (last.querySelector('.ds-chart-num')?.textContent ?? '').trim(),
+          fills: last.querySelectorAll('.ds-chart-fill').length,
+        }
+      })
     expect(zeroStage.label, 'the second bar set does not end on the zero stage this asserts').toContain(
       'Retained'
     )
@@ -200,9 +206,10 @@ test.describe('the charting primitives', () => {
 
     expect(clear.crosses, 'the first specimen interval should NOT cross zero').toBe('false')
     expect(crossing.crosses, 'the second specimen interval should cross zero').toBe('true')
-    expect(clear.zeroInsideRange, 'the clear interval contains zero — the geometry disagrees with the flag').toBe(
-      false
-    )
+    expect(
+      clear.zeroInsideRange,
+      'the clear interval contains zero — the geometry disagrees with the flag'
+    ).toBe(false)
     expect(crossing.zeroInsideRange, 'the crossing interval does not contain zero').toBe(true)
 
     // ⚠️ The second channel. Colour alone would leave a reader with no way to tell the two apart,
@@ -246,7 +253,10 @@ test.describe('the charting primitives', () => {
 
     for (const [index, row] of measured.entries()) {
       const gap = Math.abs(row.labelCentre - row.tickCentre)
-      expect(gap, `interval ${index}: the origin label is ${Math.round(gap)}px from the tick it names`).toBeLessThanOrEqual(2)
+      expect(
+        gap,
+        `interval ${index}: the origin label is ${Math.round(gap)}px from the tick it names`
+      ).toBeLessThanOrEqual(2)
     }
   })
 

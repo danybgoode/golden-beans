@@ -106,15 +106,37 @@ const CONTROL_STATES: ControlState[] = ['idle', 'loading', 'success', 'error', '
  * zero-value day distinguishable from a one-event day.
  */
 const SPECIMEN_SERIES = [
-  ['23 May', 946], ['30 May', 1002], ['6 Jun', 988], ['13 Jun', 1071], ['20 Jun', 1104],
-  ['27 Jun', 1098], ['4 Jul', 1140], ['11 Jul', 1163], ['18 Jul', 1189], ['25 Jul', 1201],
-  ['1 Aug', 1224], ['8 Aug', 1230], ['15 Aug', 1258], ['27 Aug', 1284],
+  ['23 May', 946],
+  ['30 May', 1002],
+  ['6 Jun', 988],
+  ['13 Jun', 1071],
+  ['20 Jun', 1104],
+  ['27 Jun', 1098],
+  ['4 Jul', 1140],
+  ['11 Jul', 1163],
+  ['18 Jul', 1189],
+  ['25 Jul', 1201],
+  ['1 Aug', 1224],
+  ['8 Aug', 1230],
+  ['15 Aug', 1258],
+  ['27 Aug', 1284],
 ].map(([date, value]) => ({ date: date as string, value: value as number }))
 
 const SPECIMEN_DAYS = [
-  ['14 Aug', 820], ['15 Aug', 910], ['16 Aug', 760], ['17 Aug', 1180], ['18 Aug', 1340],
-  ['19 Aug', 0], ['20 Aug', 1420], ['21 Aug', 1610], ['22 Aug', 1550], ['23 Aug', 1290],
-  ['24 Aug', 1730], ['25 Aug', 1880], ['26 Aug', 4], ['27 Aug', 2040],
+  ['14 Aug', 820],
+  ['15 Aug', 910],
+  ['16 Aug', 760],
+  ['17 Aug', 1180],
+  ['18 Aug', 1340],
+  ['19 Aug', 0],
+  ['20 Aug', 1420],
+  ['21 Aug', 1610],
+  ['22 Aug', 1550],
+  ['23 Aug', 1290],
+  ['24 Aug', 1730],
+  ['25 Aug', 1880],
+  ['26 Aug', 4],
+  ['27 Aug', 2040],
 ].map(([date, value]) => ({ date: date as string, value: value as number }))
 
 function Section({
@@ -617,9 +639,19 @@ export default async function DesignSystemSpecimen({
               <StageBars
                 stages={[
                   { label: 'Signed up', value: 1284, sharePercent: 100 },
-                  { label: 'Listed a product', value: 742, sharePercent: 58, dropped: { count: 542, percent: 42 } },
+                  {
+                    label: 'Listed a product',
+                    value: 742,
+                    sharePercent: 58,
+                    dropped: { count: 542, percent: 42 },
+                  },
                   { label: 'First sale', value: 318, sharePercent: 25, dropped: { count: 424, percent: 57 } },
-                  { label: 'Repeat sale', value: 147, sharePercent: 11, dropped: { count: 171, percent: 54 } },
+                  {
+                    label: 'Repeat sale',
+                    value: 147,
+                    sharePercent: 11,
+                    dropped: { count: 171, percent: 54 },
+                  },
                 ]}
                 note="Four stages, four steps of one ramp. A fifth stage repeats the darkest step rather than reaching for a fifth colour — the brand's four accents fail as a categorical set (DD4)."
               />
@@ -648,11 +680,15 @@ export default async function DesignSystemSpecimen({
               <p className="ds-label">Status — never colour alone</p>
               <SplitBar held={1840} failed={3} unreadable="This drill has never run." />
               <p className="ds-chart-note">
-                Three failures in 1,843 draws is 0.16% — under a pixel on any track this console
-                renders. The red segment has a 4px floor and the exact count sits beside it, because
-                the sliver is not what carries the fact.
+                Three failures in 1,843 draws is 0.16% — under a pixel on any track this console renders. The
+                red segment has a 4px floor and the exact count sits beside it, because the sliver is not what
+                carries the fact.
               </p>
-              <SplitBar held={0} failed={0} unreadable="This drill has never run — nothing here is evidence yet." />
+              <SplitBar
+                held={0}
+                failed={0}
+                unreadable="This drill has never run — nothing here is evidence yet."
+              />
             </div>
 
             <div className="ds-specimen-col-stack">
@@ -690,8 +726,8 @@ export default async function DesignSystemSpecimen({
                 unreadable="Not computable."
               />
               <p className="ds-chart-note">
-                The whole range sits above zero, so the treatment is better — the only question left
-                is by how much.
+                The whole range sits above zero, so the treatment is better — the only question left is by how
+                much.
               </p>
               <IntervalBar
                 low={-0.091}
@@ -701,9 +737,9 @@ export default async function DesignSystemSpecimen({
                 unreadable="Not computable."
               />
               <p className="ds-chart-note">
-                This one includes no-difference, so it is drawn dashed and in the neutral token. The
-                range still includes zero, which means &ldquo;no difference&rdquo; is one of the
-                answers the data allows.
+                This one includes no-difference, so it is drawn dashed and in the neutral token. The range
+                still includes zero, which means &ldquo;no difference&rdquo; is one of the answers the data
+                allows.
               </p>
               <DayColumns
                 series={SPECIMEN_DAYS}
