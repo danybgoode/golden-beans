@@ -420,8 +420,22 @@ Each line names the commit and the deviations, so the doc describes the build ra
   `apps/web/design-system/APPROVED.md`), which is what turns this sprint from design work into
   execution.
 - **deterministic gate:** `npm run lint` + `npm run typecheck` + `npm run test:unit` +
-  `npm run build` + design-drift + `extract-css --check` + the coverage ratchet, all green before
-  merge.
+  `npm run build` + design-drift + `extract-css --check` + `measure-contract --check` +
+  `format:changed` + the coverage ratchet — all green before merge.
+- **results, as run rather than as intended:** `test:unit` **1625 pass** · Playwright `api`
+  **492 passed / 35 skipped** · Playwright `authed` **122 passed / 8 skipped** · coverage
+  **18 / 27**. The visual gate opens **15** routes itself and hands 3 to named authed siblings.
+- **mutation checks, recorded because a guard nobody has seen red is not a guard:** 5 on the chart
+  geometry · 7 on the significance layer · 2 on the blocker vocabulary (one of them a compile error)
+  · 1 on the scenario outcome · 1 on the chrome-budget label · 3 on the served series · 2 on the
+  version-ordering fix. Every one observed red and restored by **copying the file back**, never
+  `git checkout` (LEARNINGS).
+- **⚠️ the review layer is SHORT, and is named rather than left to look clean:** Codex was capped
+  until Sep 16 (a **refund ask**, not a substitution); the fresh-reviewer subagent was not spawned;
+  and the 564 KB diff against a 256 KB argv cap meant four SCOPED cross-family passes rather than
+  one whole-diff pass. **The Playwright specs, `ci.yml` and the sprint docs were seen by no external
+  reviewer.** What covers them instead is the deterministic gate, the mutation checks above, and a
+  rendered screenshot of every route this sprint touches.
 
 ## Sprint 5 — Smoke walkthrough (do these in order)
 
