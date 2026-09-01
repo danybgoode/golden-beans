@@ -13,7 +13,7 @@
 ## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [One design system, every surface — the rails that make a design outlive an epic](../../02-commercial/design-system-rails/README.md) — 02 Commercial · 29/34 stories · risk: High
+- [One design system, every surface — the rails that make a design outlive an epic](../../02-commercial/design-system-rails/README.md) — 02 Commercial · 34/34 stories · risk: High
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
