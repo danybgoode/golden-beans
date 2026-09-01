@@ -579,7 +579,15 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
     coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
   },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
-  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts' },
+  // ⚠️ **SPRINT 6: this claim does not hold, and it is inert only because the row is still
+  // `rendersFromDesignSystem: false`.** `report-share.spec.ts` has ZERO `page.goto` calls — it is an
+  // API spec — so the moment Sprint 6 flips this row to `true`, `/s/[token]` starts counting toward
+  // the coverage number with nothing verifying it renders. That is the same defect S5 found on the
+  // journey and experiment detail routes, waiting one sprint out.
+  //
+  // The fix when it lands: mint a real share token in the authed fixture and open the route from the
+  // loop above, exactly as the journey and experiment details now are. Do not reword this string.
+  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts — ⚠️ API-only; see the note above before Sprint 6 flips this row' },
 }
 
 /**
