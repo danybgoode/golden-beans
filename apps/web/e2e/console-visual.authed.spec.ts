@@ -156,10 +156,14 @@ test.describe('the console matches the approved design', () => {
     // dormant group is built as the prototype has it: ONE summary row inside the list, not a
     // <details> holding fifteen more rows.
     const featureList = page.locator('[data-feature-list]')
-    // `.row` inside the list, not `tbody tr`: the approved design's list is flex rows, not a table.
-    // The locator originally assumed a table and read 0 against a correct page — a green-looking
-    // hook pointing at markup that no longer exists.
-    const featureRows = featureList.locator('.row').filter({ has: page.locator('code') })
+    // `.ds-row` inside the list, not `tbody tr`: the approved design's list is flex rows, not a
+    // table. The locator originally assumed a table and read 0 against a correct page — a
+    // green-looking hook pointing at markup that no longer exists.
+    // ⚠️ `.row` → `.ds-row` with Story 4.1: the page body renders from `apps/web/design-system/` now,
+    // and `.row` no longer exists on it. A locator left behind would read 0 and — because assertion
+    // [2] only checks the SUM of rows and summaries is above zero — would have gone red loudly here
+    // rather than quietly, which is the one thing that made this safe to move.
+    const featureRows = featureList.locator('.ds-row').filter({ has: page.locator('code') })
     const dormantSummary = page.locator('[data-dormant-summary]')
     const rowCount = await featureRows.count()
     const summaryCount = await dormantSummary.count()
@@ -192,7 +196,7 @@ test.describe('the console matches the approved design', () => {
       const total = Number(
         (
           await page
-            .locator('.stat.all .n')
+            .locator('.ds-stat--all .ds-stat-value')
             .innerText()
             .catch(() => '0')
         ).replace(/\D/g, '')
@@ -268,10 +272,13 @@ test('the feature list survives a 390px phone', async ({ page }) => {
   await page.waitForLoadState('networkidle')
 
   const measured = await page.evaluate(() => {
-    const row = document.querySelector('[data-feature-list] .row')
-    const main = row?.querySelector('.row-main')
-    const state = row?.querySelector('.row-state')
-    const head = document.querySelector('[data-feature-list] .listhead')
+    // ⚠️ `ds-` since Story 4.1 — this page body renders from `apps/web/design-system/` now. Every
+    // one of these four returning null would make the measurements below `-1`/`none`, which the
+    // assertions read as failures rather than as skips; that is what made the rename safe.
+    const row = document.querySelector('[data-feature-list] .ds-row')
+    const main = row?.querySelector('.ds-row-main')
+    const state = row?.querySelector('.ds-row-state')
+    const head = document.querySelector('[data-feature-list] .ds-listhead')
     return {
       hasRow: row !== null,
       mainWidth: main === null || main === undefined ? -1 : Math.round(main.getBoundingClientRect().width),
@@ -373,7 +380,7 @@ test('the feature page matches the contract too', async ({ page }) => {
 
   // Reached by CLICKING, not by constructing a URL — which is the epic's outcome test in miniature
   // and also means this cannot pass against a key that no longer exists.
-  const firstFeature = page.locator('[data-feature-list] .row-key').first()
+  const firstFeature = page.locator('[data-feature-list] .ds-row-key').first()
   test.skip((await firstFeature.count()) === 0, 'this tenant renders no feature rows')
   await firstFeature.click()
   await page.waitForLoadState('networkidle')
@@ -427,7 +434,10 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
   // count of "three entries" taken from a `head`-truncated grep. There are five. A correct finding
   // shut down with a fabricated number is worse than the contradiction it was reporting (fresh
   // reviewer, Major).
-  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(4)
+  // 4 → 3: Story 4.1 closed `feature row` by clamping the never-state detail to one line, so that
+  // row moved into MEASURED_SPEC. `dormant summary row` deliberately did NOT move with it — its 2px
+  // is body copy wrapping, and sweeping it up would have been a claim nothing measured.
+  expect(DEFERRED_SPEC_ROWS.length, 'update this count when a deferred row is closed or found').toBe(3)
   const today = new Date().toISOString().slice(0, 10)
   for (const row of DEFERRED_SPEC_ROWS) {
     expect(row.why.length, `${row.what} is deferred without a reason`).toBeGreaterThan(20)

@@ -175,12 +175,11 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
 
   // The places the contract approves are the ones that stay.
   //
-  // ⚠️ SELECTORS, not PLACES, and the two counts differ ON PURPOSE. `.ds-table-head` is the design
-  // system's column header row and `.listhead` is the one it replaces; `.ds-grp` replaces `.grp`;
-  // `.ds-label` replaces `.field > .lab`; `.ds-envtable` replaces `.envtable th`. Both halves of
-  // each pair are live until Sprint 6 deletes the old world, so a count of selectors would either
-  // force a premature deletion or be a number nobody can justify. This NAMES them, and Sprint 6's
-  // deletion is what shrinks the list.
+  // ⚠️ SELECTORS, not PLACES. `.ds-label` replaces `.field > .lab` and `.ds-envtable` replaces
+  // `.envtable th`; both halves of those pairs are live until the sprint that rebuilds their page,
+  // so a count of selectors would either force a premature deletion or be a number nobody can
+  // justify. This NAMES them, and each replacement's own commit is what shrinks the list —
+  // `.listhead` and `.grp` left it with Story 4.1, in the commit that deleted their rules.
   //
   // ⚠️ The replaced selectors are the `keep: false` rows, and they are listed there rather than
   // deleted here: `.field > .lab` and `.envtable th` are uppercase in the APPROVED design too, so
@@ -198,8 +197,6 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       '.ds-matrix',
       '.ds-specimen-type--label',
       '.ds-table-head',
-      '.grp',
-      '.listhead',
     ],
     'the approved uppercase places changed'
   )

@@ -30,6 +30,8 @@ const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, 
  */
 const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/flag-console.tsx',
+  // design-system-rails S4.1 — the compare-environments view, the list's second view.
+  '../app/app/flags/[projectSlug]/flag-compare.tsx',
   '../app/app/flags/[projectSlug]/environment-picker.tsx',
   '../app/app/flags/[projectSlug]/page.tsx',
   '../app/app/flags/[projectSlug]/flag-vocabulary.ts',

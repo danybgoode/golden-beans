@@ -62,6 +62,8 @@ export const ICON_NAMES = [
   'map-pin',
   'panels',
   'refresh',
+  // design-system-rails S4 — the feature list's search field.
+  'search',
   'server',
   'settings',
   'shield',

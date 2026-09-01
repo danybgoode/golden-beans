@@ -263,7 +263,13 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // sprint's specs drive the other two. One row, one default — a row per state would make the
     // denominator a count of screenshots rather than of routes.
     referenceState: 'ship-features',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.1. The page BODY renders from `apps/web/design-system/` — the
+    // answer line, the summary strip, the toolbar, the list card and every row are `ds-` primitives,
+    // and the `.is-console` rules they replaced were deleted in the same commit. The compare view
+    // (`ship-compare`) is a second view of this same route, not a second row: it takes no input the
+    // list does not already have, and a row per state would make the denominator a count of
+    // screenshots rather than of routes.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,

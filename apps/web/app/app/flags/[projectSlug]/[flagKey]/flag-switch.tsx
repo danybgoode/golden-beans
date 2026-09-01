@@ -258,7 +258,12 @@ export function FlagSwitch({
           // through the switch's colour or its border style alone.
           role="switch"
           aria-checked={isOn}
-          className={`sw ${row.state}`}
+          // design-system-rails S4.1 — the design system's own switch. `data-state` rather than a
+          // second class name: the CSS keys off `[data-state]` so the three visual states are one
+          // field, and a `loading` prop beside an `isError` prop beside a class is three ways to say
+          // one thing that can disagree.
+          className="ds-switch"
+          data-state={row.state}
           disabled={inFlight || !servingEnabled || noVersion}
           aria-label={
             noVersion
@@ -281,7 +286,7 @@ export function FlagSwitch({
             squeezing into a 96px cell. It is rendered rather than swallowed for the reason this
             file's `run()` gives: a snapshot conflict must reach the operator as itself. */}
         {error !== null && (
-          <span className="row-alert" role="alert">
+          <span className="ds-row-alert" role="alert">
             {error}
           </span>
         )}

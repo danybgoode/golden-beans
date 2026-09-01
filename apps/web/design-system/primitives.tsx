@@ -506,13 +506,7 @@ export function Tag({
  * `role="status"` for a note, `role="alert"` for a warning — the two are read differently by a
  * screen reader, and which one this is depends on whether the reader needs to know NOW.
  */
-export function Callout({
-  children,
-  tone = 'info',
-}: {
-  children: ReactNode
-  tone?: 'info' | 'warn'
-}) {
+export function Callout({ children, tone = 'info' }: { children: ReactNode; tone?: 'info' | 'warn' }) {
   return (
     <p className={`ds-callout ds-callout--${tone}`} role={tone === 'warn' ? 'alert' : 'status'}>
       <span className="ds-callout-icon">
@@ -583,12 +577,7 @@ export function Col({
             : 'ds-row-meta'
           : 'ds-col-act'
   return (
-    <span
-      className={className}
-      role={header ? 'columnheader' : 'cell'}
-      aria-colspan={colSpan}
-      title={title}
-    >
+    <span className={className} role={header ? 'columnheader' : 'cell'} aria-colspan={colSpan} title={title}>
       {children}
     </span>
   )
@@ -622,13 +611,19 @@ export function RowMain({
   mono?: boolean
 }) {
   const titleClass = classes('ds-row-key', !mono && 'ds-row-name')
+  // ⚠️ A real `<code>` when the title is an identifier, not just a mono font-family. A feature key
+  // IS code, and `<code>` is what a screen reader announces it as — the same reason the feature
+  // page's `h1` wraps its key. The stylesheet makes the element inherit the row's size so the
+  // browser's own `monospace` default cannot shrink it, which is the usual way a `<code>` inside
+  // styled text ends up a step smaller than everything around it.
+  const label = mono ? <code>{title}</code> : title
   return (
     <Col width="main">
       {href === undefined ? (
-        <span className={titleClass}>{title}</span>
+        <span className={titleClass}>{label}</span>
       ) : (
         <a className={titleClass} href={href}>
-          {title}
+          {label}
         </a>
       )}
       {description === undefined ? null : <span className="ds-row-desc">{description}</span>}
@@ -644,7 +639,15 @@ export function RowMain({
  * on purpose, and in a 190px column it wrapped and made the row 90px — the state 39 of 42
  * production flags are in, so the gate ran against 90px rows and stayed green.
  */
-export function RowState({ state, label, detail }: { state: 'on' | 'off' | 'never'; label: string; detail?: string }) {
+export function RowState({
+  state,
+  label,
+  detail,
+}: {
+  state: 'on' | 'off' | 'never'
+  label: string
+  detail?: string
+}) {
   return (
     <Col width="state">
       <Pill state={state}>{label}</Pill>

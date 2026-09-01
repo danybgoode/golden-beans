@@ -196,11 +196,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px;
+  /* ⚠️ An EXPLICIT 26px, which is the contract's measurement of the approved pill (`State pill` in
+     `MEASURED-SPEC.md`, and the row the visual gate asserts). Padding alone gets there only while
+     the line-height of the surrounding page happens to cooperate — and the pill renders inside a
+     row, inside a table cell and inside a page head, three contexts with three different ones. */
+  height: 26px;
+  padding: 0 9px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   border: 1px solid;
+  white-space: nowrap;
 }
 .ds .ds-pill::before {
   content: '';
@@ -233,15 +239,34 @@
 .ds .ds-switch {
   width: 38px;
   height: 21px;
+  /* ⚠️ `globals.css` sets a 44px WCAG 2.5.5 target floor on every `button`, and used height is
+     `max(min-height, height)` — so without this the design's 21px control renders 44px tall. The
+     floor is met by the transparent `::before` below instead: the TARGET is a real 44 x 44, the INK
+     is the design's 38 x 21. This is the resolution `DEFERRED_SPEC_ROWS`' primary/secondary button
+     row cannot have, because a button's ink IS its target. */
+  min-height: 21px;
+  flex: none;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: var(--card);
+  background: var(--roast-2);
   position: relative;
   cursor: pointer;
   padding: 0;
   transition:
     background var(--t),
     border-color var(--t);
+}
+.ds .ds-switch::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+.ds .ds-switch:hover:not(:disabled) {
+  border-color: var(--dim-2);
 }
 .ds .ds-switch::after {
   content: '';
@@ -263,6 +288,17 @@
 .ds .ds-switch[data-state='on']::after {
   transform: translateX(17px);
   background: var(--green);
+}
+/* ⚠️ `off` had NO rule, so a deliberately-switched-off feature rendered identically to one nobody
+   has ever touched — the exact collapse this console exists to undo, in the control that shows it.
+   It never rendered in production (0 flags are `off` in any environment, measured 2026-08-29),
+   which is why nothing caught it. */
+.ds .ds-switch[data-state='off'] {
+  background: color-mix(in srgb, var(--red) 14%, transparent);
+  border-color: var(--red-deep);
+}
+.ds .ds-switch[data-state='off']::after {
+  background: var(--red);
 }
 .ds .ds-switch[data-state='never'] {
   border-style: dashed;
@@ -483,10 +519,17 @@
 
 /* ── The answer line — the sentence a page opens with, gold left border ─────────────────────── */
 .ds .ds-answer {
-  padding: 12px 16px;
+  margin-bottom: 18px;
+  padding: 12px 15px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  /* ⚠️ The GOLD LEFT BORDER is the acceptance criterion for Story 4.1's reference state, and it is
+     what makes the answer line read as an answer rather than as a paragraph. */
   border-left: 2px solid var(--gold);
-  border-radius: 0 var(--r) var(--r) 0;
-  background: var(--card);
+  /* The prototype's `linear-gradient(90deg, rgb(232 185 60 / 8%), transparent 70%)`, derived from
+     the token rather than pasted as a literal — `--gold` IS `#e8b93c`, so this is the same ink and
+     it moves when the palette does. */
+  background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 8%, transparent), transparent 70%);
   color: var(--crema);
   font-size: 13.5px;
 }
@@ -972,6 +1015,17 @@
   margin-left: auto;
 }
 
+/* The one place a run of mono text appears inside body copy: the answer line NAMES the features
+   that are serving, and a key is an identifier. Gold, so the names are what the eye lands on. */
+.ds .ds-answer .ds-mono {
+  font-family: var(--mono);
+  color: var(--gold-hot);
+}
+.ds .ds-answer b {
+  color: var(--crema);
+  font-weight: 600;
+}
+
 /* ── The summary strip — four counts, each a link that filters the list to itself ─────────────
  * `aria-current` is what paints the selected card AND what a screen reader announces, so the two
  * cues are one attribute and cannot drift apart. */
@@ -1024,17 +1078,18 @@
 }
 .ds .ds-search {
   position: relative;
-  flex: 1 1 220px;
-  min-width: 0;
+  flex: 1 1 250px;
+  min-width: 190px;
 }
 .ds .ds-search input {
   width: 100%;
-  padding: 8px 12px 8px 30px;
+  padding: 8px 11px 8px 32px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  background: var(--roast-2);
+  background: var(--card);
   color: var(--crema);
-  font-size: 13px;
+  font-size: 13.5px;
+  transition: border-color var(--t);
 }
 .ds .ds-search input::placeholder {
   color: var(--dim-2);
@@ -1054,13 +1109,14 @@
 }
 .ds .ds-select select {
   appearance: none;
-  padding: 8px 26px 8px 10px;
+  padding: 8px 28px 8px 11px;
   border-radius: var(--r);
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--crema);
-  font-size: 13px;
+  font-size: 13.5px;
   cursor: pointer;
+  transition: border-color var(--t);
 }
 .ds .ds-select {
   position: relative;
@@ -1071,20 +1127,19 @@
 .ds .ds-select select option {
   background: var(--card-2);
 }
-/* The chevron the native control does not give us. A CSS triangle rather than a glyph — the drift
-   guard bans pictographs, and D4's answer to a glyph is a shape or an `Icon`, never an exemption. */
+/* The chevron the native control does not give us — the prototype's rotated corner, not a glyph.
+   The drift guard bans pictographs, and D4's answer to a glyph is a shape or an `Icon`. */
 .ds .ds-select::after {
   content: '';
   position: absolute;
-  right: 10px;
+  right: 11px;
   top: 50%;
-  width: 0;
-  height: 0;
-  margin-top: -1px;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--dim-2);
+  width: 5px;
+  height: 5px;
   pointer-events: none;
+  border-right: 1.5px solid var(--dim-2);
+  border-bottom: 1.5px solid var(--dim-2);
+  transform: translateY(-70%) rotate(45deg);
 }
 
 /* ── The list card — one bordered surface holding a header row and every row under it ────────── */
@@ -1105,11 +1160,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  /* ⚠️ An EXPLICIT 36, which is the contract's `List header row` and a row the visual gate asserts.
+     The prototype gets there with `padding: 9px 16px` and no height — which lands on 36 only while
+     the surrounding line-height cooperates, and this sheet is loaded on twenty-one routes. */
   height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim-2);
   background: var(--roast-2);
@@ -1144,7 +1202,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line-soft);
   transition: background var(--t);
 }
@@ -1161,6 +1219,7 @@
 .ds .ds-row-key {
   font-family: var(--mono);
   font-size: 13.5px;
+  font-weight: 500;
   color: var(--crema);
   text-decoration: none;
   display: block;
@@ -1168,6 +1227,14 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The browser's own `monospace` default renders a step smaller than the surrounding text, which is
+   why a `<code>` inside styled copy usually looks shrunken. Inherited rather than restated, so the
+   size lives in one declaration. */
+.ds .ds-row-key code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 /* A row whose subject is a NAME rather than a key — a destination, a credential, a share link.
    Same slot, same width, different typeface, because a human-typed label is not an identifier. */
 .ds .ds-row-name {
@@ -1182,7 +1249,8 @@
   font-size: 12.5px;
   font-weight: 400;
   color: var(--dim);
-  margin-top: 3px;
+  margin-top: 2px;
+  max-width: 60ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1211,6 +1279,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A row is a flex line that wraps, so a server rejection takes the whole next line rather than
+   squeezing into a 96px cell. Rendered rather than swallowed: a snapshot conflict must reach the
+   operator as itself. */
+.ds .ds-row-alert {
+  flex: 1 1 100%;
+  margin-top: 8px;
+  color: var(--red);
+  font-size: 12.5px;
 }
 
 /* ── Tag — type, risk, environment, expiry. A chip that captions a value. ───────────────────── */
@@ -1269,12 +1347,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px;
+  padding: 8px 16px;
   background: var(--roast-2);
-  border-bottom: 1px solid var(--line);
-  font-size: 11.5px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dim);
 }
@@ -1306,7 +1385,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 14px;
+  padding: 13px 16px;
   background: var(--roast-2);
   border-top: 1px solid var(--line);
 }
@@ -1559,7 +1638,16 @@
   white-space: nowrap;
 }
 
-/* ── The environment matrix — every feature against all three environments ───────────────────── */
+/* ── The environment matrix — every feature against all three environments ─────────────────────
+ * ⚠️ BOUNDED HEIGHT. 42 rows exceed any viewport, and the gate's promise is that the PAGE does not
+ * scroll — so the grid scrolls inside its own box on both axes, with the header row stuck to the
+ * top of it. `70vh` rather than a pixel height: the console's chrome is two tiers and the page head
+ * is above this, so a fixed number would either clip on a short screen or leave the card short of
+ * the fold on a tall one. */
+.ds .ds-matrix-scroll {
+  max-height: 70vh;
+  overflow: auto;
+}
 .ds .ds-matrix {
   width: 100%;
   border-collapse: collapse;
@@ -1758,13 +1846,22 @@
  * associates a cell with its column at every width — and the list is an ARIA table. Clipped to a
  * 1px box instead, which `console-visual.authed.spec.ts` asserts in both directions. */
 @media (max-width: 900px) {
+  /* ⚠️ **Hidden from the EYE, kept for the SCREEN READER — and both halves matter.** The header row
+     hides once the cells stack, because a header row over stacked cells labels nothing visually.
+     `display: none` would ALSO delete it from the accessibility tree (measured: 3 `columnheader`
+     nodes at 1440, 0 at 390) — and the list is an ARIA table, so those nodes are what associate a
+     cell with its column at ANY width. The visually-hidden pattern is what keeps both true, and
+     `console-visual.authed.spec.ts` asserts both directions. */
   .ds .ds-listhead {
+    position: absolute;
+    width: 1px;
     height: 1px;
     padding: 0;
     margin: -1px;
     overflow: hidden;
     clip-path: inset(50%);
-    border: none;
+    white-space: nowrap;
+    border: 0;
   }
   .ds .ds-row {
     flex-wrap: wrap;

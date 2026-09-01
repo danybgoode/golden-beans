@@ -167,14 +167,37 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // named after.
   const now = coverage(1)
   assert.equal(now.total, 30)
-  assert.equal(
-    now.complete,
-    0,
-    'nothing renders from design-system/ in Sprint 1 — a non-zero number here means a row is ' +
-      'claiming coverage the gate has not verified'
-  )
   assert.ok(now.hasReferenceState > now.complete, 'reference states exist ahead of the work')
   assert.equal(now.outstanding.length, now.total - now.complete)
+
+  // ⚠️ **This used to assert `complete === 0`, "nothing renders from design-system/ in Sprint 1".**
+  // It was never testing what its message said. `coverage(sprint)` filters by `retiresIn` — which
+  // rows are LIVE at that sprint — and not by `landsIn`, so the number it returns is a fact about
+  // the CODE at every argument: the moment Story 4.1 shipped, `coverage(1)` read 1 and this went
+  // red on a correct build. The zero was a coincidence of nothing having landed yet, dressed as an
+  // invariant.
+  //
+  // Two invariants replace it, and both survive every sprint. Deliberately NOT "no row past sprint
+  // N claims coverage": N would be a number somebody types once per sprint and forgets, which is
+  // the shape this epic exists to stop trusting.
+  for (const row of ROUTE_MANIFEST) {
+    if (!row.rendersFromDesignSystem) continue
+    // 1. A page that does not exist cannot render from anything. This is the one that could
+    //    actually be got wrong — `notYetBuilt` and this boolean are set by different hands.
+    assert.equal(
+      row.notYetBuilt,
+      undefined,
+      `${row.route} claims to render from design-system/ and its page.tsx does not exist yet`
+    )
+    // 2. ...and a route claiming the system with no approved state to be measured against is
+    //    coverage of nothing. `coverage()` already refuses to COUNT it; this says it out loud, so
+    //    the manifest cannot carry a claim nobody could ever check.
+    assert.notEqual(
+      row.referenceState,
+      null,
+      `${row.route} claims to render from design-system/ with no approved reference state`
+    )
+  }
 })
 
 test('a deferred row carries an owner and a date that has not passed', () => {

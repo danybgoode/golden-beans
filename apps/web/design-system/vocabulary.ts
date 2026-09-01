@@ -131,13 +131,14 @@ export const UPPERCASE_ALLOWED: readonly {
   /** `true` where the rule is ALSO mono — the pair Do-not #3 forbids outright. Debt, never new. */
   mono?: true
 }[] = [
-  // The two the contract approves.
-  { selector: '.listhead', what: "the feature list's column header row", keep: true },
-  { selector: '.grp', what: 'the dormant group heading', keep: true },
-  // The design system's own name for the first of those two. `console.css`'s `.listhead` is what it
-  // replaces, and both are live until Sprint 6 deletes the old world — so both are listed, and the
-  // count of APPROVED places is still two things, under three selectors during the overlap.
-  { selector: '.ds-table-head', what: "the data table's column header row (replaces .listhead)", keep: true },
+  // ⚠️ **`.listhead` and `.grp` are GONE from `console.css` — design-system-rails Story 4.1.** They
+  // were the two the contract approves, and they are still approved: what changed is that the
+  // feature list now renders `.ds-listhead` and `.ds-grp` from the design system, and the rules that
+  // painted the old names were deleted in the same commit as the page that used them (sprint
+  // contract #11). Their entries go with them, because the test below fails on an entry no
+  // stylesheet applies uppercase to any more — a registry that outlives the code it describes is
+  // the same defect as a stale mapping reading as coverage.
+  { selector: '.ds-table-head', what: "the data table's column header row", keep: true },
   // The SPECIMEN's sample of the `label` type step. It is uppercase because that step is — a
   // specimen that rendered the uppercase step in sentence case would be lying about the scale it
   // exists to show. Not product copy, and not a third place uppercase appears in the product.
