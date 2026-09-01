@@ -106,6 +106,25 @@ into the system or explicitly kept with a written reason.
   one home, and `Roadmap/README.md`'s poster records that the design now lives in code.
 **Risk:** high
 
+
+## ⚠️ Inherited from Sprint 5 — read before flipping any manifest row
+
+**A `coveredBy` string in `console-visual.authed.spec.ts` is a CLAIM, and four of them were false.**
+Sprint 5 found that `funnel.spec.ts`, `impact.spec.ts`, `journey-management.spec.ts` and
+`experiment-governance.spec.ts` were named as covering four routes counted toward the coverage
+number — and all four are `api`-project specs with no session. `journey-management.spec.ts` does not
+open a page at all. Two of those routes were verified by nothing.
+
+**One is still live and it is yours:** `/s/[token]` names `e2e/report-share.spec.ts`, which has zero
+`page.goto` calls. It is inert only because that row is still `rendersFromDesignSystem: false`. The
+moment this sprint flips it, the route counts toward coverage with nothing verifying it renders.
+
+The fix is the one Sprint 5 used: mint a real share token in the authed fixture and let the gate's
+own loop open the route, rather than naming a sibling spec. **Do not reword the string.**
+
+Same question for every row this sprint flips: does something actually OPEN it? `EXPECTED_SKIPS` is
+where a route goes to stop being checked.
+
 ## Sprint QA
 - **api spec(s):** manifest-driven visual rows for the final nine routes · `e2e/design-v2-dark.spec.ts`
   **deleted** with the flag in Story 6.4 (a spec for a branch that no longer exists is dead weight) ·

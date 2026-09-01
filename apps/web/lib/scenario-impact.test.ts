@@ -33,6 +33,8 @@ function analysis(overrides: Partial<ExperimentAnalysisResult> = {}): Experiment
           conversionRate: 0.9,
           absoluteDeltaFromControl: null,
           liftFromControl: null,
+          // The control arm has no interval against itself — design-system-rails Sprint 5, DA2.
+          liftInterval: null,
           directionalStatus: 'indeterminate',
         },
         {
@@ -42,6 +44,11 @@ function analysis(overrides: Partial<ExperimentAnalysisResult> = {}): Experiment
           conversionRate: 0.7,
           absoluteDeltaFromControl: -0.2,
           liftFromControl: -0.222,
+          // ⚠️ `null`, and this fixture is deliberately NOT given a computed interval. `scenario-impact`
+          // reads the DIRECTIONAL status and the guardrail deltas; it has no opinion about confidence,
+          // and pinning a number here would couple a resilience fixture to a statistic it never
+          // consults. The field is required by the type, so a future reader can see it was a choice.
+          liftInterval: null,
           directionalStatus: 'unfavorable',
         },
       ],

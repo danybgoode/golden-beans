@@ -101,6 +101,8 @@ function evidence(delta = 0.15): ScenarioImpactEvidence {
               conversionRate: 0,
               absoluteDeltaFromControl: null,
               liftFromControl: null,
+              // The control arm has no interval against itself — design-system-rails Sprint 5, DA2.
+              liftInterval: null,
               directionalStatus: 'indeterminate',
             },
             {
@@ -110,6 +112,11 @@ function evidence(delta = 0.15): ScenarioImpactEvidence {
               conversionRate: 0.2,
               absoluteDeltaFromControl: delta,
               liftFromControl: null,
+              // ⚠️ `null` on purpose. A breaker trips on the guardrail DELTA, and this fixture's
+              // control converted nobody — which is exactly the case `relativeLiftInterval` returns
+              // `control_never_converted` for, because any lift against a zero baseline is infinite.
+              // Pinning a number here would be inventing one for a statistic the breaker never reads.
+              liftInterval: null,
               directionalStatus: 'unfavorable',
             },
           ],

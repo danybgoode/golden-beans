@@ -43,7 +43,7 @@ export function percentToBasisPoints(percent: number): number | null {
  * The `null` case is not defensive padding. This function is fed from definition rows written by
  * the parser, so a value outside 0–10000 (or a non-integer) means the row disagrees with the code
  * that wrote it. Rendering "150%" would present corruption as data; callers render "unreadable"
- * instead — the same rule `funnel-geometry.ts` applies to a stage it could not read.
+ * instead — the same rule `design-system/charts/geometry.ts` applies to a stage it could not read.
  */
 export function basisPointsToPercent(basisPoints: number): number | null {
   if (!Number.isInteger(basisPoints) || basisPoints < 0 || basisPoints > MAX_BASIS_POINTS) return null
@@ -79,7 +79,7 @@ export function formatRolloutPercent(basisPoints: number | null | undefined): st
  * simultaneously calling "unreadable". An empty bar reads as "0% — reaching nobody", so corrupt data
  * would have been presented as a real, deliberate targeting decision, with the two halves of the
  * same component contradicting each other. `null` forces the caller to render the unreadable state
- * the label already uses — the same rule `funnel-geometry.ts` applies to a stage it could not read,
+ * the label already uses — the same rule `design-system/charts/geometry.ts` applies to a stage it could not read,
  * and the CODE-QUALITY rule 8 case where a broken read must not look like a legitimate zero.
  */
 export function rolloutBarPercent(basisPoints: number | null | undefined): number | null {

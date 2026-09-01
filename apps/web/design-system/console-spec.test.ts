@@ -26,7 +26,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MEASURED_SPEC, DEFERRED_SPEC_ROWS } from './console-gate-spec.ts'
+import { CHROME_BUDGET_PX, MEASURED_SPEC, DEFERRED_SPEC_ROWS } from './console-gate-spec.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 
@@ -151,6 +151,79 @@ test('the generated spec table parses, and is not silently empty', () => {
   assert.equal(textSized.length, 7, 'the set of non-reproducible dimensions changed')
   assert.equal(rows.get('Project switcher')?.width, 122, 'the corrected switcher width (D8)')
   assert.equal(rows.get('Feature row')?.height, 71, 'the corrected feature-row height (D8)')
+})
+
+/**
+ * The chrome table's rows — `| \`state\` | chrome | height | fits |`.
+ *
+ * Parsed rather than trusted, for the same reason the element table is: a constant the gate asserts
+ * must be derived from a regenerated measurement, or it is a number somebody typed.
+ */
+function readChromeBudget(): { state: string; chrome: number | null; height: number }[] {
+  const source = readFileSync(join(HERE, 'MEASURED-SPEC.md'), 'utf8')
+  const rows: { state: string; chrome: number | null; height: number }[] = []
+  for (const line of source.split('\n')) {
+    const cells = line.split('|').map((cell) => cell.trim())
+    if (cells.length !== 6 || cells[0] !== '') continue
+    const state = /^`([a-z-]+)`$/.exec(cells[1])?.[1]
+    if (!state) continue
+    if (!/^\d+$/.test(cells[3])) continue
+    rows.push({
+      state,
+      chrome: /^\d+$/.test(cells[2]) ? Number(cells[2]) : null,
+      height: Number(cells[3]),
+    })
+  }
+  return rows
+}
+
+test("the chrome budget is the approved design's own maximum, not a number in a spec file", () => {
+  const rows = readChromeBudget()
+  // A parser that returns nothing makes every assertion below vacuous — the guard that cannot fail,
+  // one layer down. Pinned to the state count so an emitter change fails HERE.
+  assert.equal(rows.length, 32, 'the chrome table should describe all 32 approved states')
+
+  const measured = rows.filter((row) => row.chrome !== null).map((row) => row.chrome as number)
+  assert.ok(measured.length > 20, 'almost every console state should have a chrome measurement')
+  const worst = Math.max(...measured)
+
+  // ⚠️ **A BOUND, not an equality — and the equality is what went red on CI.** These are text-layout
+  // positions: `ship-features` measures 458 on macOS and 459 on `ubuntu-latest`, and `today` 223 and
+  // 202, because a lede wraps differently under different font metrics. Welding the constant to the
+  // maximum byte for byte made a correct page fail on one platform.
+  //
+  // Both directions are still asserted, which is what keeps this derived rather than chosen:
+  assert.ok(
+    worst <= CHROME_BUDGET_PX,
+    `the approved design's worst chrome is ${worst}px and CHROME_BUDGET_PX is ${CHROME_BUDGET_PX}px — ` +
+      'the budget must be at least what the design itself spends, or the gate fails on a correct page'
+  )
+  assert.ok(
+    CHROME_BUDGET_PX - worst <= 40,
+    `CHROME_BUDGET_PX is ${CHROME_BUDGET_PX - worst}px above the design's worst case (${worst}px). ` +
+      'A budget that drifts far above what the design spends stops being a budget — regenerate ' +
+      'MEASURED-SPEC.md and bring the constant back down, never the other way round.'
+  )
+})
+
+test('the no-scroll assertion this replaced was asserting a property the design does not have', () => {
+  // ⚠️ **The evidence, kept in the suite rather than only in a commit message.** The gate required
+  // every covered route to fit 1440x960 without scrolling. If the approved design met that, the
+  // right fix would have been to make the pages fit — so this asserts the finding itself, and it
+  // goes red the day the design changes enough to make the old rule reasonable again.
+  const rows = readChromeBudget()
+  const scrolling = rows.filter((row) => row.chrome !== null && row.height > 960)
+  assert.ok(
+    scrolling.length > 5,
+    `only ${scrolling.length} approved console states scroll at 960px — if the design now mostly ` +
+      'fits, revisit whether the chrome budget should go back to being a page-height assertion'
+  )
+  // Named, so the finding is legible rather than a count: `today` is the route this sprint builds
+  // and the tallest approved state in the product.
+  assert.ok(
+    scrolling.some((row) => row.state === 'today'),
+    'the approved `today` state no longer scrolls — the premise of CHROME_BUDGET_PX has changed'
+  )
 })
 
 test('every number the visual gate asserts comes from the regenerated table', () => {

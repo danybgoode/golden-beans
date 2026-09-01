@@ -81,3 +81,71 @@ the second. Two places, six elements.
 | Dormant summary row | 14 / 400 | Archivo | 1118 × 89 | none |
 | Primary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |
 | Secondary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |
+
+<!-- NOT-COMPARED-BELOW -->
+
+## The chrome budget — how far down each approved state's first DATA begins
+
+⚠️ **EVIDENCE, NOT CONTRACT. Every number below this line is emitted as a MARKER and is NOT compared
+by `--check`.**
+
+The numbers are text-layout positions, and they do not reproduce across platforms — the same reason
+`Page h1`'s width is `_text-sized_` in the table above. Measured on macOS and on `ubuntu-latest`:
+`ship-features` is 458 here and **459** there, and `today` is 223 here and **202** there, because the
+lede wraps differently under different font metrics. Committing them as a compared contract is
+recording a fact about one machine and calling it the design, which is the defect this whole file
+exists to prevent — and CI said so on the first run of the version that did it.
+
+So `--check` stops at the marker above, and the BUDGET the gate asserts is a stated bound rather than
+a byte-exact weld: see `CHROME_BUDGET_PX`, which `console-spec.test.ts` holds to being at least this
+table's maximum and within a stated allowance of it. That keeps the constant derived from the design
+without letting a one-pixel renderer difference turn the gate red.
+
+⚠️ **This table replaced an assertion that was green for the wrong reason.** The visual gate used to
+require every covered route to fit 1440 × 960 without scrolling, citing *"a page that scrolls means
+the chrome is eating the viewport"*. Measured against the design itself, **11 of the 23 approved console
+states scroll** — so the gate asserted a property the approved design does not have, and passed only
+because the fixture tenant is thin.
+
+What that assertion was FOR is a budget on **chrome**: a 48px `h1` wrapping to four lines, a
+three-line rail card, a summary strip that eats the screen. None of those is about how many rows a
+tenant has. The **Chrome** column is the top of the first element carrying data, and its maximum is
+the budget `console-gate-spec.ts` asserts — welded by `console-spec.test.ts`, so the constant
+cannot drift from the design.
+
+**Chrome budget: 458px**, set by `ship-features`.
+
+| State | Chrome | Page height | Fits 960? |
+|---|---|---|---|
+| `ship-features` | 458 | 960 | yes |
+| `ship-features-dormant` | 458 | 2273 | **no** |
+| `feature-value` | 458 | 960 | yes |
+| `feature-environments` | 458 | 960 | yes |
+| `feature-funnel` | 458 | 960 | yes |
+| `setup-connect` | 223 | 960 | yes |
+| `setup-keys` | 243 | 960 | yes |
+| `ship-activity` | 223 | 1274 | **no** |
+| `ship-compare` | 259 | 1021 | **no** |
+| `measure-north-star` | 267 | 1033 | **no** |
+| `measure-journeys` | 287 | 960 | yes |
+| `measure-journey` | 301 | 1055 | **no** |
+| `measure-scenarios` | 287 | 1103 | **no** |
+| `funnel-standalone` | 301 | 960 | yes |
+| `today` | 223 | 1711 | **no** |
+| `tasks-standalone` | 384 | 1238 | **no** |
+| `ship-experiments` | 287 | 960 | yes |
+| `experiment-ready` | 301 | 1488 | **no** |
+| `experiment-blocked` | 301 | 1625 | **no** |
+| `setup-destinations` | 267 | 960 | yes |
+| `setup-shares` | 267 | 960 | yes |
+| `hub-roadmap` | 267 | 1364 | **no** |
+| `hub-epic` | 301 | 960 | yes |
+| `hub-horizon` | _no console chrome_ | 1108 | no |
+| `hub-report` | _no console chrome_ | 960 | yes |
+| `door-login` | _no console chrome_ | 960 | yes |
+| `door-signup-closed` | _no console chrome_ | 960 | yes |
+| `door-signup-open` | _no console chrome_ | 960 | yes |
+| `public-install` | _no console chrome_ | 960 | yes |
+| `public-share` | _no console chrome_ | 960 | yes |
+| `public-gone` | _no console chrome_ | 960 | yes |
+| `public-talk` | _no console chrome_ | 960 | yes |

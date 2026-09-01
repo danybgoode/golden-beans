@@ -113,3 +113,29 @@ export const SCENARIO_TARGET_KEY = 'gb.e2e.owner.probe'
 export const SCENARIO_FLAG_KEY = 'gb.e2e.owner.fault'
 export const SCENARIO_UNDISCLOSED_KEY = 'gb_e2e_undisclosed_scenario'
 export const SCENARIO_UNDISCLOSED_FLAG_KEY = 'gb.e2e.owner.noop'
+
+// ── design-system-rails · Sprint 5, Story 5.4 — the experiment fixture ────────────────────────
+//
+// Production `miyagisanchez` has two experiments and both are `decided` (epic D10), so neither the
+// `experiment-ready` nor the `experiment-blocked` state is reachable on a live tenant. The counts
+// below are chosen so the 95% interval on the relative lift sits WELL clear of zero: an interval
+// that crossed it would make the spec's assertion turn on rounding, which is a fixture that goes red
+// for the wrong reason one release later.
+export const EXPERIMENT_FIXTURE_KEY = 'gb-e2e-checkout-one-page'
+export const EXPERIMENT_METRIC_EVENT = 'gb_e2e_checkout_completed'
+export const EXPERIMENT_EXPOSURES_PER_ARM = 200
+export const EXPERIMENT_CONTROL_CONVERSIONS = 40
+export const EXPERIMENT_TREATMENT_CONVERSIONS = 70
+
+// ── design-system-rails · Sprint 5, Story 5.5 — the journey fixture ───────────────────────────
+//
+// Production `miyagisanchez` has ZERO journeys (epic D10) — the one live journey is
+// `merchant_activation` on `golden-beans` — so `measure-journey`'s stage bars are drawn by nothing
+// on the fixture tenant. The counts DESCEND and are all different on purpose: equal counts would let
+// a page rendering one number three times pass, and one drawing three equal bars pass with it.
+export const JOURNEY_FIXTURE_KEY = 'gb_e2e_founding_merchant'
+export const JOURNEY_STAGES = [
+  { key: 'signed_up', event: 'gb_e2e_journey_signed_up', subjects: 12 },
+  { key: 'listed_a_product', event: 'gb_e2e_journey_listed', subjects: 7 },
+  { key: 'first_sale', event: 'gb_e2e_journey_sold', subjects: 3 },
+] as const

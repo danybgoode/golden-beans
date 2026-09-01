@@ -1,15 +1,13 @@
 import type { ExactSegmentScalar, ExactSegmentTagField } from './entity-contract'
 import type { ExperimentDefinition, ExperimentMetric } from './experiment-definition'
-import {
-  compareJourneyTimestamps,
-  parseJourneyTimestamp,
-  type JourneyTimestamp,
-} from './journey-timestamp'
+import { compareJourneyTimestamps, parseJourneyTimestamp, type JourneyTimestamp } from './journey-timestamp'
 
 // Experiment governance v2 · Sprint 2 — the import-safe, read-only analysis core.  This module
 // deliberately accepts normalized facts instead of importing a database/client seam: every caller
 // must resolve a single project before it reaches here, and tests can pin the analytical contract
 // without a runtime-only dependency.
+
+import { relativeLiftInterval, type LiftInterval } from './experiment-interval'
 
 export const EXPERIMENT_SRM_ALPHA = 0.01
 export const EXPERIMENT_SEGMENT_CARDINALITY_CAP = 20
@@ -67,6 +65,22 @@ type MetricResult = {
     conversionRate: number | null
     absoluteDeltaFromControl: number | null
     liftFromControl: number | null
+    /**
+     * A 95% confidence interval on `liftFromControl` — design-system-rails Sprint 5, epic **DA2**.
+     *
+     * ⚠️ **This is new capability, and Daniel decided to add it** (2026-09-01). The approved
+     * `experiment-ready` state draws an interval bar and this engine computed none, so the choice was
+     * between inventing numbers, dropping the card, and building the statistic. He chose the third.
+     *
+     * ⚠️ **It is REPORTED, and it gates nothing.** `decisionReady`, `sampleStatus` and `blockers`
+     * below are unchanged — they are a shipped governance boundary with an append-only immutable
+     * ledger behind them, and re-gating them on a new statistic is a governance change this sprint
+     * did not bet on. A page may say "the range excludes no difference"; readiness still means what
+     * it meant yesterday.
+     *
+     * `null` on the control row itself — an arm has no interval against itself.
+     */
+    liftInterval: LiftInterval | null
     directionalStatus: 'favorable' | 'unfavorable' | 'no_difference' | 'indeterminate'
   }>
   addressability: {
@@ -115,7 +129,8 @@ type AnalysisCore = {
 export type ExperimentAnalysisResult = AnalysisCore & {
   // The request value is deliberately never echoed.  The consumer knows what it asked for, while
   // this response cannot become a raw tag-value enumeration surface.
-  segment: { status: 'not_requested' }
+  segment:
+    | { status: 'not_requested' }
     | { status: 'undeclared' }
     | { status: 'suppressed_cardinality' }
     | { status: 'suppressed_small_cell' }
@@ -137,7 +152,10 @@ function sameScalar(a: unknown, b: ExactSegmentScalar): boolean {
   return typeof a === typeof b && a === b
 }
 
-function tagsMatch(tags: Record<string, unknown> | null, predicates: ExperimentDefinition['eligibility']['tags']): boolean {
+function tagsMatch(
+  tags: Record<string, unknown> | null,
+  predicates: ExperimentDefinition['eligibility']['tags']
+): boolean {
   if (!predicates) return true
   for (const [field, expected] of Object.entries(predicates)) {
     if (!sameScalar(tags?.[field], expected)) return false
@@ -155,26 +173,33 @@ function beforeOrAt(at: JourneyTimestamp, asOf: JourneyTimestamp): boolean {
 
 function sortFacts(facts: readonly ExperimentAnalysisFact[]): TimedFact[] {
   return facts
-    .map((fact) => ({ ...fact, effectiveAt: effectiveAt(fact), created: parseJourneyTimestamp(fact.createdAt) }))
-    .sort((a, b) =>
-      compareJourneyTimestamps(a.effectiveAt, b.effectiveAt) ||
-      a.id.localeCompare(b.id))
+    .map((fact) => ({
+      ...fact,
+      effectiveAt: effectiveAt(fact),
+      created: parseJourneyTimestamp(fact.createdAt),
+    }))
+    .sort((a, b) => compareJourneyTimestamps(a.effectiveAt, b.effectiveAt) || a.id.localeCompare(b.id))
 }
 
 function timestampDifferenceHours(later: JourneyTimestamp, earlier: JourneyTimestamp): number {
-  return ((later.epochSecond - earlier.epochSecond) * 1_000_000 + later.microsecond - earlier.microsecond) / 3_600_000_000
+  return (
+    ((later.epochSecond - earlier.epochSecond) * 1_000_000 + later.microsecond - earlier.microsecond) /
+    3_600_000_000
+  )
 }
 
 function expectedCounts(definition: ExperimentDefinition, total: number): Map<string, number> {
   const denominator = definition.variants.reduce((sum, variant) => sum + variant.weight, 0)
-  return new Map(definition.variants.map((variant) => [variant.key, total * variant.weight / denominator]))
+  return new Map(definition.variants.map((variant) => [variant.key, (total * variant.weight) / denominator]))
 }
 
 // Regularized upper incomplete gamma Q(a, x), adapted from the stable Numerical Recipes series /
 // continued-fraction split.  Chi-square's survival function is Q(df / 2, statistic / 2).
 function logGamma(xx: number): number {
-  const coefficients = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155,
-    0.1208650973866179e-2, -0.5395239384953e-5]
+  const coefficients = [
+    76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2,
+    -0.5395239384953e-5,
+  ]
   let x = xx - 1
   let tmp = x + 5.5
   tmp -= (x + 0.5) * Math.log(tmp)
@@ -224,18 +249,25 @@ function gammaQ(a: number, x: number): number {
 function srm(definition: ExperimentDefinition, assignments: Map<string, Assignment>) {
   const expected = expectedCounts(definition, assignments.size)
   if ([...expected.values()].some((count) => count < 5)) {
-    return { status: 'not_evaluable' as const, alpha: EXPERIMENT_SRM_ALPHA, chiSquare: null, pValue: null, expected }
+    return {
+      status: 'not_evaluable' as const,
+      alpha: EXPERIMENT_SRM_ALPHA,
+      chiSquare: null,
+      pValue: null,
+      expected,
+    }
   }
   const observed = new Map(definition.variants.map((variant) => [variant.key, 0]))
-  for (const assignment of assignments.values()) observed.set(assignment.variant, (observed.get(assignment.variant) ?? 0) + 1)
+  for (const assignment of assignments.values())
+    observed.set(assignment.variant, (observed.get(assignment.variant) ?? 0) + 1)
   const chiSquare = definition.variants.reduce((sum, variant) => {
     const expectation = expected.get(variant.key)!
     const delta = (observed.get(variant.key) ?? 0) - expectation
-    return sum + delta * delta / expectation
+    return sum + (delta * delta) / expectation
   }, 0)
   const pValue = gammaQ((definition.variants.length - 1) / 2, chiSquare / 2)
   return {
-    status: pValue < EXPERIMENT_SRM_ALPHA ? 'detected' as const : 'clear' as const,
+    status: pValue < EXPERIMENT_SRM_ALPHA ? ('detected' as const) : ('clear' as const),
     alpha: EXPERIMENT_SRM_ALPHA,
     chiSquare,
     pValue,
@@ -250,11 +282,15 @@ function metricResult(
   assignments: Map<string, Assignment>,
   start: JourneyTimestamp,
   end: JourneyTimestamp,
-  asOf: JourneyTimestamp,
+  asOf: JourneyTimestamp
 ): MetricResult {
-  const candidates = facts.filter((fact) => fact.event === metric.event &&
-    inWindow(fact.effectiveAt, start, end) && beforeOrAt(fact.created, asOf))
-  const addressable = candidates.filter((fact) => fact.subjectType === definition.assignmentEntityType && fact.subjectId !== null)
+  const candidates = facts.filter(
+    (fact) =>
+      fact.event === metric.event && inWindow(fact.effectiveAt, start, end) && beforeOrAt(fact.created, asOf)
+  )
+  const addressable = candidates.filter(
+    (fact) => fact.subjectType === definition.assignmentEntityType && fact.subjectId !== null
+  )
   const convertedByVariant = new Map(definition.variants.map((variant) => [variant.key, new Set<string>()]))
   let joinedEvents = 0
   for (const fact of addressable) {
@@ -264,7 +300,9 @@ function metricResult(
     convertedByVariant.get(assignment.variant)!.add(fact.subjectId!)
   }
   const rows = definition.variants.map((variant) => {
-    const exposed = [...assignments.values()].filter((assignment) => assignment.variant === variant.key).length
+    const exposed = [...assignments.values()].filter(
+      (assignment) => assignment.variant === variant.key
+    ).length
     const converted = convertedByVariant.get(variant.key)!.size
     return {
       key: variant.key,
@@ -285,28 +323,48 @@ function metricResult(
         row.key === definition.controlVariantKey || controlRate === null || row.conversionRate === null
           ? null
           : row.conversionRate - controlRate,
-      liftFromControl: row.key === definition.controlVariantKey ||
+      liftFromControl:
+        row.key === definition.controlVariantKey ||
         controlRate === null ||
         controlRate === 0 ||
         row.conversionRate === null
-        ? null
-        : (row.conversionRate - controlRate) / controlRate,
-      directionalStatus: row.key === definition.controlVariantKey ||
-        controlRate === null ||
-        row.conversionRate === null
-        ? 'indeterminate' as const
-        : row.conversionRate === controlRate
-          ? 'no_difference' as const
-          : metric.direction === 'increase'
-            ? row.conversionRate > controlRate ? 'favorable' as const : 'unfavorable' as const
-            : row.conversionRate < controlRate ? 'favorable' as const : 'unfavorable' as const,
+          ? null
+          : (row.conversionRate - controlRate) / controlRate,
+      // ⚠️ Computed from the SAME two arms the lift above is computed from, so the interval and the
+      // number it brackets can never describe different data (CODE-QUALITY #2). The module returns a
+      // named reason rather than a number for every degenerate case, which is why there is no guard
+      // here beyond "not the control row".
+      liftInterval:
+        row.key === definition.controlVariantKey
+          ? null
+          : relativeLiftInterval(
+              {
+                exposedSubjects: controlRow.exposedSubjects,
+                convertedSubjects: controlRow.convertedSubjects,
+              },
+              { exposedSubjects: row.exposedSubjects, convertedSubjects: row.convertedSubjects }
+            ),
+      directionalStatus:
+        row.key === definition.controlVariantKey || controlRate === null || row.conversionRate === null
+          ? ('indeterminate' as const)
+          : row.conversionRate === controlRate
+            ? ('no_difference' as const)
+            : metric.direction === 'increase'
+              ? row.conversionRate > controlRate
+                ? ('favorable' as const)
+                : ('unfavorable' as const)
+              : row.conversionRate < controlRate
+                ? ('favorable' as const)
+                : ('unfavorable' as const),
     })),
     addressability: {
       candidateEvents: candidates.length,
       addressableEvents: addressable.length,
       joinedEvents,
-      attributedSubjects: [...convertedByVariant.values()]
-        .reduce((total, subjects) => total + subjects.size, 0),
+      attributedSubjects: [...convertedByVariant.values()].reduce(
+        (total, subjects) => total + subjects.size,
+        0
+      ),
       coverage: candidates.length === 0 ? null : addressable.length / candidates.length,
     },
   }
@@ -319,10 +377,17 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
   const lifecycleEnd = parseJourneyTimestamp(input.lifecycle.endedAt ?? input.asOf)
   const stoppedEnd = compareJourneyTimestamps(plannedEnd, lifecycleEnd) < 0 ? plannedEnd : lifecycleEnd
   const end = compareJourneyTimestamps(stoppedEnd, asOf) < 0 ? stoppedEnd : asOf
-  const facts = sortFacts(input.facts).filter((fact) => beforeOrAt(fact.created, asOf) && beforeOrAt(fact.effectiveAt, asOf))
+  const facts = sortFacts(input.facts).filter(
+    (fact) => beforeOrAt(fact.created, asOf) && beforeOrAt(fact.effectiveAt, asOf)
+  )
   const counts = new Map<ExperimentIntegrityDiagnostic, number>([
-    ['version_mismatch', 0], ['unknown_variant', 0], ['missing_or_wrong_subject', 0],
-    ['eligibility_mismatch', 0], ['duplicate_exposure', 0], ['cross_variant_exposure', 0], ['out_of_window_exposure', 0],
+    ['version_mismatch', 0],
+    ['unknown_variant', 0],
+    ['missing_or_wrong_subject', 0],
+    ['eligibility_mismatch', 0],
+    ['duplicate_exposure', 0],
+    ['cross_variant_exposure', 0],
+    ['out_of_window_exposure', 0],
   ])
   const assignments = new Map<string, Assignment>()
   const declaredVariants = new Set(input.definition.variants.map((variant) => variant.key))
@@ -367,9 +432,10 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
     .map(([code, count]) => ({
       code,
       count,
-      severity: code === 'duplicate_exposure' || code === 'out_of_window_exposure'
-        ? 'warning' as const
-        : 'blocker' as const,
+      severity:
+        code === 'duplicate_exposure' || code === 'out_of_window_exposure'
+          ? ('warning' as const)
+          : ('blocker' as const),
     }))
   const primaryMetric = metricResult(
     input.definition.primaryMetric,
@@ -378,35 +444,48 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
     assignments,
     start,
     end,
-    asOf,
+    asOf
   )
   const guardrailMetrics = input.definition.guardrailMetrics.map((metric) =>
-    metricResult(metric, input.definition, facts, assignments, start, end, asOf))
-  const hasUnaddressableMetricStream = [primaryMetric, ...guardrailMetrics]
-    .some((metric) => metric.addressability.candidateEvents > 0 && metric.addressability.addressableEvents === 0)
+    metricResult(metric, input.definition, facts, assignments, start, end, asOf)
+  )
+  const hasUnaddressableMetricStream = [primaryMetric, ...guardrailMetrics].some(
+    (metric) => metric.addressability.candidateEvents > 0 && metric.addressability.addressableEvents === 0
+  )
   const blockers: AnalysisCore['blockers'] = [
     ...(allocation.status === 'detected' ? ['srm_detected' as const] : []),
     ...(allocation.status === 'not_evaluable' ? ['srm_not_evaluable' as const] : []),
     ...(hasUnaddressableMetricStream ? ['metric_subject_unaddressable' as const] : []),
-    ...integrity.filter((diagnostic) => diagnostic.severity === 'blocker').map((diagnostic) => diagnostic.code),
+    ...integrity
+      .filter((diagnostic) => diagnostic.severity === 'blocker')
+      .map((diagnostic) => diagnostic.code),
   ]
   const variants = input.definition.variants.map((variant) => {
-    const observedSubjects = [...assignments.values()].filter((assignment) => assignment.variant === variant.key).length
+    const observedSubjects = [...assignments.values()].filter(
+      (assignment) => assignment.variant === variant.key
+    ).length
     return {
       key: variant.key,
       observedSubjects,
       expectedSubjects: allocation.expected.get(variant.key)!,
-      minimumSampleStatus: observedSubjects >= input.definition.minimumSamplePerVariant ? 'met' as const : 'below' as const,
+      minimumSampleStatus:
+        observedSubjects >= input.definition.minimumSamplePerVariant ? ('met' as const) : ('below' as const),
     }
   })
   const sampleStatus = variants.every((variant) => variant.minimumSampleStatus === 'met')
-    ? 'met' as const
-    : 'below' as const
+    ? ('met' as const)
+    : ('below' as const)
   const integrityReady = blockers.length === 0
-  const latestEffective = facts.reduce<JourneyTimestamp | null>((latest, fact) =>
-    latest === null || compareJourneyTimestamps(fact.effectiveAt, latest) > 0 ? fact.effectiveAt : latest, null)
-  const latestReceipt = facts.reduce<JourneyTimestamp | null>((latest, fact) =>
-    latest === null || compareJourneyTimestamps(fact.created, latest) > 0 ? fact.created : latest, null)
+  const latestEffective = facts.reduce<JourneyTimestamp | null>(
+    (latest, fact) =>
+      latest === null || compareJourneyTimestamps(fact.effectiveAt, latest) > 0 ? fact.effectiveAt : latest,
+    null
+  )
+  const latestReceipt = facts.reduce<JourneyTimestamp | null>(
+    (latest, fact) =>
+      latest === null || compareJourneyTimestamps(fact.created, latest) > 0 ? fact.created : latest,
+    null
+  )
   return {
     window: { startAt: start.canonical, endAt: end.canonical, asOf: asOf.canonical },
     decisionReady: integrityReady && sampleStatus === 'met',
@@ -417,7 +496,12 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
     primaryMetric,
     guardrailMetrics,
     diagnostics: {
-      srm: { status: allocation.status, alpha: allocation.alpha, chiSquare: allocation.chiSquare, pValue: allocation.pValue },
+      srm: {
+        status: allocation.status,
+        alpha: allocation.alpha,
+        chiSquare: allocation.chiSquare,
+        pValue: allocation.pValue,
+      },
       integrity,
       validExposureSubjects: assignments.size,
     },
@@ -425,7 +509,10 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
       latestEffectiveFactAt: latestEffective?.canonical ?? null,
       latestReceiptAt: latestReceipt?.canonical ?? null,
       staleAfterHours: EXPERIMENT_FRESHNESS_HOURS,
-      isStale: latestReceipt === null ? null : timestampDifferenceHours(asOf, latestReceipt) > EXPERIMENT_FRESHNESS_HOURS,
+      isStale:
+        latestReceipt === null
+          ? null
+          : timestampDifferenceHours(asOf, latestReceipt) > EXPERIMENT_FRESHNESS_HOURS,
     },
   }
 }
@@ -438,7 +525,8 @@ function computeCore(input: ExperimentAnalysisInput, segment?: ExperimentAnalysi
 export function computeExperimentAnalysis(input: ExperimentAnalysisInput): ExperimentAnalysisResult {
   const base = computeCore(input)
   if (!input.segment) return { ...base, segment: { status: 'not_requested' } }
-  if (!input.definition.segmentFields.includes(input.segment.field)) return { ...base, segment: { status: 'undeclared' } }
+  if (!input.definition.segmentFields.includes(input.segment.field))
+    return { ...base, segment: { status: 'undeclared' } }
 
   const asOf = parseJourneyTimestamp(input.asOf)
   const start = parseJourneyTimestamp(input.definition.plannedWindow.startAt)
@@ -462,12 +550,14 @@ export function computeExperimentAnalysis(input: ExperimentAnalysisInput): Exper
       fact.subjectId === null ||
       assignedSubjects.has(fact.subjectId) ||
       !tagsMatch(fact.tags, input.definition.eligibility.tags)
-    ) continue
+    )
+      continue
     assignedSubjects.add(fact.subjectId)
     const value = fact.tags?.[input.segment.field]
     if (isExactScalar(value)) values.add(`${typeof value}:${String(value)}`)
   }
-  if (values.size > EXPERIMENT_SEGMENT_CARDINALITY_CAP) return { ...base, segment: { status: 'suppressed_cardinality' } }
+  if (values.size > EXPERIMENT_SEGMENT_CARDINALITY_CAP)
+    return { ...base, segment: { status: 'suppressed_cardinality' } }
   const cut = computeCore(input, input.segment)
   if (cut.variants.some((variant) => variant.observedSubjects < EXPERIMENT_SEGMENT_MIN_CELL_SIZE)) {
     return { ...base, segment: { status: 'suppressed_small_cell' } }

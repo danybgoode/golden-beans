@@ -13,15 +13,23 @@ test('a project member can discover the live Flags and Tasks operating surfaces 
   const slug = tenantSlug()
   await page.goto('/app')
 
-  // `exact` because /app now carries more than one link per surface: the shell's section nav plus,
-  // when the rail is on, its "Open tasks" shortcut. Both point at the same href — the ambiguity is
-  // in the locator, not in the page — so the fix is to name the inventory link precisely rather
-  // than to rename a legitimate second entry point (app-shell-and-agent-rail S2.3).
-  await expect(page.getByRole('link', { name: 'Flags', exact: true })).toHaveAttribute(
+  // ⚠️ **The affordances MOVED with design-system-rails Story 5.2, and the property did not.**
+  //
+  // `/app` used to end in a bare `<ul>` of every surface — a link literally captioned "Flags" and
+  // another captioned "Tasks". The approved `today` state has no such list, because the shell's
+  // section nav IS the navigation and a page that lists its own routes is answering "which URLs
+  // exist" rather than "did anything need me today".
+  //
+  // So this asserts the same thing through what a person actually clicks now: the **Ship** tab,
+  // which lands on Features, and the **band's own link** to the queue. Rewritten rather than
+  // deleted — "a member can reach the live operating surfaces from /app" is still exactly the
+  // property worth defending, and a spec that quietly stopped checking it would be the more
+  // expensive outcome.
+  await expect(page.getByRole('link', { name: 'Ship', exact: true })).toHaveAttribute(
     'href',
     `/app/flags/${slug}`
   )
-  await expect(page.getByRole('link', { name: 'Tasks', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: /See every task/ })).toHaveAttribute(
     'href',
     `/app/tasks/${slug}`
   )

@@ -3,11 +3,16 @@ import { getExperimentComparison } from '@/lib/ab-query'
 import { requireDashboardAccess, requireProjectMembership } from '@/lib/dashboard-auth'
 import { getExperimentAnalysisByProjectId } from '@/lib/experiment-analysis-query'
 import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-request'
+import { blockerWords } from '@/lib/experiment-blocker-words'
+import { INTERVAL_UNAVAILABLE_WORDS } from '@/lib/experiment-interval'
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import type { GovernedExperimentAnalysisResult } from '@/lib/experiment-analysis-query'
-import { DecisionRecorder } from './decision-recorder'
+import { GovernanceDetail } from './governance-detail'
 import { ProductShell } from '@/components/product/ProductShell'
+import { Icon } from '@/components/ui/Icon'
+import { Answer, Card, Crumb, Crumbs, PageHead, Pill } from '@/design-system/primitives'
+import { ChartUnreadable, ComparisonBars, IntervalBar } from '@/design-system/charts'
 
 type GovernedSuccess = Extract<GovernedExperimentAnalysisResult, { ok: true }>
 type GovernedMetric = GovernedSuccess['analysis']['primaryMetric']
@@ -32,232 +37,234 @@ function signedPercentage(value: number | null): string {
   return value === null ? '—' : `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`
 }
 
-function MetricTable({ title, metric }: { title: string; metric: GovernedMetric }) {
+/**
+ * The variant comparison — reference state `experiment-ready` / `experiment-blocked`.
+ *
+ * ⚠️ **The interval bar is DA2**, and it draws a real statistic. Daniel decided on 2026-09-01 to
+ * build the significance layer rather than ship the card in an honest "no interval" state; the
+ * method and its limits are in `lib/experiment-interval.ts`, and it is computed on the same two arms
+ * as the lift it brackets so the picture and the number cannot describe different data.
+ */
+function VariantComparison({
+  metric,
+  controlKey,
+  minimumSample,
+}: {
+  metric: GovernedMetric
+  controlKey: string
+  minimumSample: Map<string, number | null>
+}) {
+  const control = metric.variants.find((variant) => variant.key === controlKey)
+  const treatments = metric.variants.filter((variant) => variant.key !== controlKey)
+  if (!control) return null
+
   return (
-    <section>
-      <h2>
-        {title}: <code>{metric.event}</code>
-      </h2>
-      <p>
-        Declared direction: <strong>{metric.direction}</strong>
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Variant</th>
-            <th>Assigned</th>
-            <th>Converted</th>
-            <th>Rate</th>
-            <th>Absolute delta</th>
-            <th>Relative lift</th>
-            <th>Direction</th>
-          </tr>
-        </thead>
-        <tbody>
-          {metric.variants.map((variant) => (
-            <tr key={variant.key}>
-              <td>
-                <code>{variant.key}</code>
-              </td>
-              <td>{variant.exposedSubjects}</td>
-              <td>{variant.convertedSubjects}</td>
-              <td>{percentage(variant.conversionRate)}</td>
-              <td>{signedPercentage(variant.absoluteDeltaFromControl)}</td>
-              <td>{signedPercentage(variant.liftFromControl)}</td>
-              <td>{variant.directionalStatus}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p>
-        Metric source events: {metric.addressability.candidateEvents}
-        {' · '}subject-addressable: {metric.addressability.addressableEvents}
-        {' · '}attributed subjects: {metric.addressability.attributedSubjects}
-        {' · '}addressability: {percentage(metric.addressability.coverage)}
-      </p>
-    </section>
+    <Card>
+      <p className="ds-label">Who saw what</p>
+      <ComparisonBars
+        rows={[
+          {
+            series: 'control',
+            // ⚠️ Only annotate when the key does not already say it. A variant literally called
+            // `control` rendered as "control (control)".
+            label: control.key === 'control' ? control.key : `${control.key} (control)`,
+            observed: control.exposedSubjects,
+            needed: minimumSample.get(control.key) ?? null,
+          },
+          ...treatments.map((variant) => ({
+            series: 'treatment' as const,
+            label: variant.key,
+            observed: variant.exposedSubjects,
+            needed: minimumSample.get(variant.key) ?? null,
+          })),
+        ]}
+        note="Two groups, two colours — grey and blue, the only pair that survives a colour-blindness check on this palette. A third variant is a third row, never a third hue."
+      />
+
+      {treatments.map((variant) => {
+        const interval = variant.liftInterval
+        return (
+          <div key={variant.key} className="ds-field">
+            {/* ⚠️ NOT `.ds-label`, which uppercases. An event name is an IDENTIFIER — the same
+                reason `RowMain` renders a feature key in `<code>` — and `GB_E2E_CHECKOUT_COMPLETED`
+                is not what anybody typed. The approved state's label is a human metric name
+                ("Completed checkouts"); this engine stores only the event, so it is shown as the
+                event, in mono, in the case it was written in. */}
+            <p className="ds-metric-label">
+              <code>{metric.event}</code> <span>· {variant.key}</span>
+            </p>
+            <p className="ds-chart-hero">
+              <span
+                className="ds-chart-hero-value"
+                data-tone={
+                  variant.liftFromControl === null ? undefined : variant.liftFromControl >= 0 ? 'up' : 'down'
+                }
+              >
+                {signedPercentage(variant.liftFromControl)}
+              </span>
+              <span className="ds-chart-hero-delta">
+                {percentage(control.conversionRate)} → {percentage(variant.conversionRate)}
+              </span>
+            </p>
+
+            {/* ⚠️ **The sentence is computed from the fact it names.** A line copied from the
+                prototype would say "so the difference is real" whatever the range does; this one
+                reads `crossesZero`, which is the whole reason the interval was built. */}
+            {interval === null ? null : interval.ok ? (
+              <>
+                <p className="ds-chart-hero-sub">
+                  {interval.crossesZero
+                    ? 'How sure we are — and the range still includes “no difference”.'
+                    : 'How sure we are, and it does not cross zero.'}
+                </p>
+                <IntervalBar
+                  low={interval.low}
+                  high={interval.high}
+                  point={interval.lift}
+                  format={(value) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`}
+                  unreadable="This range could not be drawn."
+                />
+                <p className="ds-chart-note">
+                  {interval.crossesZero
+                    ? 'The range includes zero, which means “no difference” is one of the answers this data allows. The point estimate above is the best guess, not a finding.'
+                    : 'The whole range sits on one side of zero, so the direction is real — the only question left is by how much.'}{' '}
+                  95% interval on the relative lift.
+                </p>
+              </>
+            ) : (
+              <ChartUnreadable>{INTERVAL_UNAVAILABLE_WORDS[interval.reason]}</ChartUnreadable>
+            )}
+          </div>
+        )
+      })}
+    </Card>
+  )
+}
+
+/** What is in the way, in plain words — sprint contract #9. */
+function Blockers({ blockers }: { blockers: GovernedSuccess['analysis']['blockers'] }) {
+  if (blockers.length === 0) return null
+  return (
+    <Card>
+      <p className="ds-label">What is in the way</p>
+      <ul className="ds-blockers">
+        {blockers.map((blocker) => {
+          const words = blockerWords(blocker)
+          return (
+            <li key={blocker} className="ds-blocker">
+              <span className="ds-blocker-mark" aria-hidden="true">
+                <Icon name="warning" size={13} />
+              </span>
+              <span>
+                <strong>{words.what}</strong> {words.why}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
   )
 }
 
 function GovernedAnalysis({ result, canManage }: { result: GovernedSuccess; canManage: boolean }) {
-  const { experiment, analysis, decisions } = result
+  // `decisions` is read by `GovernanceDetail`, which owns the ledger; this page owns the comparison.
+  const { experiment, analysis } = result
+  const slug = result.project.slug
+  const minimumSample = new Map(
+    analysis.variants.map((variant) => [
+      variant.key,
+      // The declared minimum per variant, which is what the bar is scaled against — "is there
+      // enough yet" is the question this picture answers, and scaling two arms against each other
+      // answers a different one.
+      experiment.definition.minimumSamplePerVariant ?? null,
+    ])
+  )
+
+  // ⚠️ Computed from the three facts it NAMES, and it must never claim a difference is real while
+  // the interval crosses zero (epic DA2, constraint 5). `decisionReady` is unchanged and still gates
+  // exactly what it gated yesterday — the interval is reported, not a new gate.
+  const primaryInterval = analysis.primaryMetric.variants.find(
+    (variant) => variant.key !== experiment.definition.controlVariantKey
+  )?.liftInterval
+  const rangeExcludesZero = primaryInterval?.ok === true && !primaryInterval.crossesZero
+
   return (
-    <ProductShell projectSlug={result.project.slug} section="ship" railActive={'experiments'}>
+    <ProductShell projectSlug={slug} section="ship" railActive={'experiments'}>
       <main>
-        <h1>
-          Governed experiment — {experiment.key}{' '}
-          <small>
-            v{experiment.definitionVersion} ({result.project.slug})
-          </small>
-        </h1>
-        <p>
-          Lifecycle: <strong>{experiment.lifecycle}</strong>
-          {' · '}snapshot: <time>{analysis.window.asOf}</time>
-        </p>
-        <p>
-          Observation window: <time>{analysis.window.startAt}</time>
-          {' → '}
-          <time>{analysis.window.endAt}</time> (end exclusive)
-        </p>
-        <p>
-          Human-review readiness: <strong>{analysis.decisionReady ? 'ready' : 'not ready'}</strong>
-          {' · '}integrity: {analysis.integrityReady ? 'clear' : 'blocked'}
-          {' · '}minimum sample: {analysis.sampleStatus}
-        </p>
-        {analysis.blockers.length > 0 && <p role="alert">Open blockers: {analysis.blockers.join(', ')}</p>}
+        <Crumbs back={{ href: `/app/experiments/${slug}`, label: 'Experiments' }}>
+          <Crumb mono>{experiment.key}</Crumb>
+        </Crumbs>
+        <PageHead
+          title={<span className="ds-mono">{experiment.key}</span>}
+          lede={experiment.definition.hypothesis}
+          actions={
+            <Pill state={analysis.decisionReady ? 'on' : 'never'}>
+              {analysis.decisionReady ? 'Ready to decide' : 'Still gathering'}
+            </Pill>
+          }
+        />
 
-        <details>
-          <summary>Immutable plan</summary>
-          <p>{experiment.definition.hypothesis}</p>
-          <pre>{JSON.stringify(experiment.definition, null, 2)}</pre>
+        <Answer>
+          {analysis.decisionReady ? (
+            <>
+              <strong>You can decide this one.</strong>{' '}
+              {analysis.diagnostics.srm.status === 'clear'
+                ? 'The split checks out, '
+                : 'The split could not be checked, '}
+              {analysis.sampleStatus === 'met'
+                ? 'both groups have enough people, '
+                : 'the declared sample has not been reached, '}
+              {rangeExcludesZero
+                ? 'and the interval does not cross zero — so the difference is real.'
+                : 'and the interval still includes “no difference”, so the size of the effect is not settled.'}
+            </>
+          ) : (
+            <>
+              <strong>You cannot decide this yet, and here is exactly why.</strong>{' '}
+              {analysis.blockers.length === 1
+                ? '1 thing is in the way.'
+                : `${analysis.blockers.length} things are in the way.`}
+            </>
+          )}
+        </Answer>
+
+        <Blockers blockers={analysis.blockers} />
+
+        <VariantComparison
+          metric={analysis.primaryMetric}
+          controlKey={experiment.definition.controlVariantKey}
+          minimumSample={minimumSample}
+        />
+
+        {analysis.guardrailMetrics.length > 0 ? (
+          <>
+            <p className="ds-label">Guardrails</p>
+            {analysis.guardrailMetrics.map((metric) => (
+              <VariantComparison
+                key={metric.event}
+                metric={metric}
+                controlKey={experiment.definition.controlVariantKey}
+                minimumSample={minimumSample}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {/* ⚠️ **The whole governance layer is KEPT, behind a disclosure.** The immutable plan, the
+            allocation table, the trust diagnostics, the freshness read and the append-only decision
+            ledger are what `experiment-governance-v2` shipped, and the approved state draws none of
+            them. Deleting a governance surface to satisfy a geometry assertion is the least
+            defensible version of that trade — so it moves one keystroke away and loses nothing. */}
+        <details className="ds-gaps">
+          <summary>The plan, the diagnostics and the decision ledger</summary>
+          <div className="ds-disclosure-body">
+            <GovernanceDetail result={result} canManage={canManage} />
+          </div>
         </details>
-
-        <h2>Allocation and sample guidance</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Variant</th>
-              <th>Observed subjects</th>
-              <th>Expected subjects</th>
-              <th>Minimum sample</th>
-            </tr>
-          </thead>
-          <tbody>
-            {analysis.variants.map((variant) => (
-              <tr key={variant.key}>
-                <td>
-                  <code>{variant.key}</code>
-                  {variant.key === experiment.definition.controlVariantKey ? ' (control)' : ''}
-                </td>
-                <td>{variant.observedSubjects}</td>
-                <td>{variant.expectedSubjects.toFixed(2)}</td>
-                <td>{variant.minimumSampleStatus}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <h2>Trust diagnostics</h2>
-        <p>
-          SRM: <strong>{analysis.diagnostics.srm.status}</strong>
-          {' · '}alpha {analysis.diagnostics.srm.alpha}
-          {' · '}χ² {analysis.diagnostics.srm.chiSquare?.toFixed(4) ?? '—'}
-          {' · '}p {analysis.diagnostics.srm.pValue?.toPrecision(4) ?? '—'}
-        </p>
-        {analysis.diagnostics.integrity.length === 0 ? (
-          <p>No exposure-integrity defects observed.</p>
-        ) : (
-          <ul>
-            {analysis.diagnostics.integrity.map((diagnostic) => (
-              <li key={diagnostic.code}>
-                {diagnostic.code}: {diagnostic.count} ({diagnostic.severity})
-              </li>
-            ))}
-          </ul>
-        )}
-        <p>
-          Latest effective fact: {analysis.freshness.latestEffectiveFactAt ?? 'none'}
-          {' · '}latest receipt: {analysis.freshness.latestReceiptAt ?? 'none'}
-          {' · '}source:{' '}
-          {analysis.freshness.isStale === null ? 'unknown' : analysis.freshness.isStale ? 'stale' : 'fresh'}
-        </p>
-        <p>Segment cut: {analysis.segment.status}</p>
-
-        <MetricTable title="Primary metric" metric={analysis.primaryMetric} />
-        {analysis.guardrailMetrics.map((metric) => (
-          <MetricTable key={metric.event} title="Guardrail" metric={metric} />
-        ))}
-
-        <section>
-          <h2>Human decision ledger</h2>
-          <p>
-            State: <strong>{decisions.state}</strong>
-            {decisions.current && (
-              <>
-                {' · '}current outcome: <strong>{decisions.current.outcome}</strong>
-                {decisions.current.chosenVariantKey && (
-                  <>
-                    {' '}
-                    (<code>{decisions.current.chosenVariantKey}</code>)
-                  </>
-                )}
-              </>
-            )}
-          </p>
-          {decisions.history.length === 0 ? (
-            <p>No human decision has been recorded for this immutable version.</p>
-          ) : (
-            <ol>
-              {decisions.history.map((decision) => (
-                <li key={decision.id}>
-                  <strong>
-                    #{decision.ordinal} {decision.recordKind}: {decision.outcome}
-                  </strong>
-                  {decision.chosenVariantKey && (
-                    <>
-                      {' '}
-                      — <code>{decision.chosenVariantKey}</code>
-                    </>
-                  )}
-                  <p>{decision.rationale}</p>
-                  <p>
-                    Recorded by <code>{decision.actorUserId}</code>
-                    {' at '}
-                    <time>{decision.createdAt}</time>
-                    {' · '}definition v{decision.definitionVersion}
-                    {decision.supersedesRecordId && (
-                      <>
-                        {' '}
-                        · supersedes <code>{decision.supersedesRecordId}</code>
-                      </>
-                    )}
-                  </p>
-                  <details>
-                    <summary>Captured analysis and integrity evidence</summary>
-                    <pre>
-                      {JSON.stringify(
-                        {
-                          analysis: decision.analysisSnapshot,
-                          integrity: decision.integritySnapshot,
-                        },
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </details>
-                </li>
-              ))}
-            </ol>
-          )}
-          {canManage ? (
-            <DecisionRecorder
-              slug={result.project.slug}
-              experimentKey={experiment.key}
-              definitionVersion={experiment.definitionVersion}
-              lifecycle={experiment.lifecycle}
-              controlVariantKey={experiment.definition.controlVariantKey}
-              treatmentVariantKeys={experiment.definition.variants
-                .map((variant) => variant.key)
-                .filter((key) => key !== experiment.definition.controlVariantKey)}
-              currentDecisionId={decisions.current?.id ?? null}
-            />
-          ) : (
-            <p>
-              <strong>Read-only access.</strong> A project owner records decisions and corrections.
-            </p>
-          )}
-        </section>
-        <p>
-          <em>
-            Descriptive counts and basic lift only. Golden Frijoles does not declare a winner, stop this
-            experiment, or change a product flag.
-          </em>
-        </p>
       </main>
     </ProductShell>
   )
 }
-
 // Growth Engine v1 · Sprint 4, Story 4.3 — the side-by-side variant comparison page (v1's
 // headline case: /experiments/miyagisanchez/checkout-cta-copy?metricEvent=checkout_completed).
 // Behind per-tenant authorization (multi-tenant-activation Story 1.2) — same gate as /funnel and

@@ -1,6 +1,6 @@
 import 'server-only'
 import { getSupabaseServiceClient } from './supabase'
-import { computeTars, type TarsEvent } from './tars'
+import { computeServedDaily, computeTars, type ServedDay, type TarsEvent } from './tars'
 
 // Growth Engine v1 · Sprint 2, Story 2.3 — the DB-touching half of the funnel. Shared by
 // both the authed JSON endpoint (app/api/v1/features/[key]/funnel/route.ts) and the
@@ -21,6 +21,15 @@ export type FunnelResult =
         syncedAt: string
       }
       tars: ReturnType<typeof computeTars>
+      /**
+       * *Times served, last 14 days* — design-system-rails Story 5.3.
+       *
+       * ⚠️ **No new query.** It is a second pure pass over the `events` array this function already
+       * fetches for `computeTars`, so the fourteen bars cost one more `map` and zero round trips
+       * (sprint L7). Returned from here rather than computed in a route because AGENTS rule #1 puts
+       * every `events` read on the canonical path.
+       */
+      servedDaily: ServedDay[]
     }
   | { ok: false; reason: 'project_not_found' | 'feature_not_found' | 'query_failed' }
 
@@ -44,7 +53,7 @@ export async function getFeatureFunnel(projectSlug: string, featureKey: string):
 export async function getFeatureFunnelByProjectId(
   projectId: string,
   projectSlug: string,
-  featureKey: string,
+  featureKey: string
 ): Promise<FunnelResult> {
   const supabase = getSupabaseServiceClient()
   const project = { id: projectId, slug: projectSlug }
@@ -98,5 +107,9 @@ export async function getFeatureFunnelByProjectId(
       syncedAt: feature.synced_at,
     },
     tars,
+    // Fourteen days, ending today. The window is a constant here rather than a parameter: it is the
+    // number the approved design labels ("TIMES SERVED, LAST 14 DAYS"), and a caller-chosen window
+    // would make the label and the data two things that must agree.
+    servedDaily: computeServedDaily(tarsEvents, 14),
   }
 }

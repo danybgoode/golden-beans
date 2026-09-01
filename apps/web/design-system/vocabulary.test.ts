@@ -189,7 +189,14 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       .map((entry) => entry.selector)
       .sort(),
     [
+      // ── design-system-rails · Sprint 5 — Today's two new uppercase places ──────────────────
+      // ⚠️ The prototype writes `.ds-band-who`'s ancestor MONO, which Do-not #3 forbids paired with
+      // uppercase; it ships as 10.5 / 600 Archivo instead, the shape Story 4.1 settled for
+      // `.ds-listhead`. The uppercase itself is approved — only the family changed — which is why
+      // both are `keep: true` and neither is recorded as mono debt.
+      '.ds-band-who',
       '.ds-envtable',
+      '.ds-gaps',
       '.ds-grp',
       '.ds-here',
       '.ds-label',
@@ -197,6 +204,7 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       '.ds-matrix',
       '.ds-specimen-type--label',
       '.ds-table-head',
+      '.ds-tile-label',
     ],
     'the approved uppercase places changed'
   )

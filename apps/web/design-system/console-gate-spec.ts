@@ -17,6 +17,44 @@
 // is a genuine claim — "this app element and that prototype element are the same thing in the
 // design" — and there is nothing to derive it from.
 
+/**
+ * How far down a page its first element carrying DATA may begin, at 1440 × 960.
+ *
+ * ⚠️ **This replaced an assertion that was green for the wrong reason, and that is the whole story
+ * of this constant.**
+ *
+ * The visual gate required every covered route to fit 1440 × 960 without scrolling, citing *"a page
+ * that scrolls means the chrome is eating the viewport — 48px headings, three-line rail cards, a
+ * list that pages at 25 instead of collapsing."* Measured against the approved design itself
+ * (`MEASURED-SPEC.md`, the chrome table), **eleven of the thirty approved states scroll**: `today`
+ * is 1711px, `experiment-blocked` 1625px, `hub-roadmap` 1364px — and `ship-activity` is 1274px while
+ * the route built from it passes the gate today. The gate was asserting a property the approved
+ * design does not have, and it was passing because the fixture tenant is thin.
+ *
+ * Every failure that assertion actually names is about CHROME, not about row count. So this is the
+ * chrome, measured: the top of the first element carrying data. A 48px `h1` wrapping to four lines
+ * pushes it down. A three-line rail card pushes it down. Two hundred extra rows do not.
+ *
+ * ⚠️ **480 is a BOUND derived from the design, not a measurement of it — and the difference cost a
+ * red CI run to learn.** The first version welded this to the generated table's maximum byte for
+ * byte, and `--check` went red on `ubuntu-latest`: `ship-features` measures **458** on macOS and
+ * **459** there, and `today` measures **223** and **202**, because a lede wraps differently under
+ * different font metrics. These are text-layout positions — the same class as `Page h1`'s width,
+ * which `MEASURED-SPEC.md` has recorded as `_text-sized_` since Sprint 1 for exactly this reason. I
+ * committed a fact about my laptop and called it the design, which is the defect that file exists to
+ * prevent.
+ *
+ * So the chrome table is EVIDENCE (emitted below `--check`'s marker, never compared), and this is a
+ * ceiling above it: the design's worst case, plus **21px** — the largest cross-platform delta the
+ * table itself shows, `today`'s 223 vs 202. `console-spec.test.ts` holds it to being at least the
+ * table's maximum and within 40px of it, so it stays derived from the design and cannot be argued
+ * upward in a spec file, while a one-pixel renderer difference cannot turn the gate red.
+ *
+ * Every console state other than the `ship-features` family measures 202–384, so the budget is not
+ * slack: it is one page's head plus the variance that page's own text carries.
+ */
+export const CHROME_BUDGET_PX = 480
+
 export type SpecRow = {
   what: string
   selector: string

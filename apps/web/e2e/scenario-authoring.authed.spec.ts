@@ -10,6 +10,9 @@ test('an owner gets closed authoring choices and live blast-radius validation', 
   if (!slug) throw new Error('scenario authoring smoke requires the auth-setup project')
   await page.goto(`/app/scenarios/${slug}`)
 
+  // design-system-rails Story 5.6: the authoring surface is one keystroke below the page's
+  // answer rather than above it. Nothing about it changed but where it sits.
+  await page.locator('main .ds-gaps > summary').click()
   await expect(page.getByRole('heading', { name: 'Define a scenario' })).toBeVisible()
   const cohort = page.getByLabel('Cohort')
   await expect(cohort.locator('option')).toHaveText(['synthetic', 'internal'])
@@ -37,7 +40,17 @@ test('an owner can stop a running legacy scenario even when its fault cannot be 
   if (!slug) throw new Error('scenario authoring smoke requires the auth-setup project')
   await page.goto(`/app/scenarios/${slug}`)
 
-  const runRow = page.getByRole('row').filter({ hasText: SCENARIO_UNDISCLOSED_KEY })
+  // design-system-rails Story 5.6: the operating surface is one keystroke below the page's answer
+  // rather than above it. Nothing about it changed but where it sits.
+  //
+  // ⚠️ **Scoped to the workspace, and it has to be.** The page's own list is an ARIA table too, so
+  // `getByRole('row')` matches its row for this drill AND the workspace's — two elements, and
+  // Playwright's strict mode rejects the ambiguity. Scoping is the right fix rather than loosening
+  // the locator: this test is about the workspace's run controls, and the list row deliberately has
+  // none.
+  await page.locator('main .ds-gaps > summary').click()
+  const workspace = page.locator('main .ds-disclosure-body')
+  const runRow = workspace.getByRole('row').filter({ hasText: SCENARIO_UNDISCLOSED_KEY })
   await expect(runRow).toContainText('running')
   await runRow.getByRole('button', { name: 'Stop run' }).click()
   await page.getByLabel('Operation reason').fill('stop a running legacy undisclosed scenario safely')
@@ -57,7 +70,12 @@ test('an owner launches and stops a disclosed synthetic run through the signed-i
   if (!slug) throw new Error('scenario authoring smoke requires the auth-setup project')
   await page.goto(`/app/scenarios/${slug}`)
 
-  const definition = page.locator('article').filter({ hasText: `${SCENARIO_FIXTURE_KEY} v1` })
+  // design-system-rails Story 5.6: the operating surface is one keystroke below the page's answer
+  // rather than above it. Nothing about it changed but where it sits.
+  await page.locator('main .ds-gaps > summary').click()
+  const definition = page
+    .locator('main .ds-disclosure-body article')
+    .filter({ hasText: `${SCENARIO_FIXTURE_KEY} v1` })
   await expect(definition.getByText('Payloads:')).toBeVisible()
   await expect(definition.getByText(/delay: 25ms delay/)).toBeVisible()
   await expect(definition.getByText(/source = "internal" → delay/)).toBeVisible()
@@ -67,7 +85,12 @@ test('an owner launches and stops a disclosed synthetic run through the signed-i
   await page.getByRole('dialog').getByRole('button', { name: 'Launch' }).click()
   await expect(page.getByText('Scenario run launched.')).toBeVisible()
 
-  const runRow = page.getByRole('row').filter({ hasText: SCENARIO_FIXTURE_KEY })
+  // Scoped to the workspace for the same reason as above: the page's own list is an ARIA table and
+  // carries a row for this drill too.
+  const runRow = page
+    .locator('main .ds-disclosure-body')
+    .getByRole('row')
+    .filter({ hasText: SCENARIO_FIXTURE_KEY })
   await expect(runRow).toContainText('running')
   await runRow.getByRole('button', { name: 'Stop run' }).click()
   await page.getByLabel('Operation reason').fill('finish the owner browser exercise')

@@ -2149,3 +2149,1049 @@
     font-size: 20px;
   }
 }
+
+/* ── Charts ────────────────────────────────────────────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.1 (epic D7).
+ *
+ * Audit §2.3: there is **zero data visualization anywhere in `/app`** and no chart library
+ * installed. Every number in a product whose whole pitch is *"see the funnel, see the North Star,
+ * see the lift"* is a table row. These are the primitives that close that, hand-rolled on the token
+ * set — no dependency, no bundle cost, and no second theming system to keep in step with this one.
+ *
+ * ── DD4 is implemented here, not merely cited ────────────────────────────────────────────────
+ *   · magnitude is ONE hue, light to dark          — `--ds-ramp-*` below, and `magnitudeShade()`
+ *   · two-way identity is `--gold` + `--blue`      — `[data-series]`, never a third hue
+ *   · status is `--green`/`--red` WITH a word      — `.ds-chart-legend` is not optional decoration
+ *   · a nonzero value never rounds to zero pixels  — the `min-width`/`min-height` floors below
+ *
+ * ⚠️ **The floors are load-bearing and are welded to `charts/geometry.ts`.** `MIN_VISIBLE_PX` is
+ * `4`, and `charts/geometry.test.ts` reads these two declarations out of this file and fails when
+ * they disagree with it. A percentage cannot express the rule on its own — the pixel it becomes
+ * depends on the track — so the floor has to live in CSS, and the weld is what stops the two
+ * definitions drifting (CODE-QUALITY #2).
+ *
+ * ⚠️ **And a zero-value fill is never RENDERED**, which is the other half of the same rule. If it
+ * were, the floor would give it four pixels and invent exactly the reading the floor exists to
+ * prevent. The components emit no fill element at zero.
+ */
+
+/* The magnitude ramp's third step.
+ *
+ * The approved prototype writes it as the literal `#c79a2c` — the one colour in the design that is
+ * not a token — inside `journeyDetailScreen`'s shade array. A raw hex in this file is banned by a
+ * guard this epic added, and rightly, so the step is DERIVED from the two tokens it sits between
+ * rather than copied. That is stronger than the literal: a mid-step defined as a mix cannot drift
+ * away from its own neighbours when either end moves.
+ *
+ * The mix resolves to ~#c79d32 against the prototype's #c79a2c — three and six steps apart in green
+ * and blue on a mid gold, which is under a just-noticeable difference. Stated rather than rounded
+ * away, because "close enough" is a claim somebody should be able to check. */
+.ds {
+  --gold-mid: color-mix(in srgb, var(--gold) 65%, var(--gold-deep));
+}
+
+.ds .ds-chart {
+  margin: 0;
+}
+
+/* ⚠️ There is no `.ds-chart-label`. The section labels above these charts — WHAT FED IT, WHO SAW
+ * WHAT, TARGETED -> ADOPTED -> RETAINED — are `.ds-label`, which already declares exactly this
+ * step (11 / 600 / .09em uppercase, `--dim-2`). A second class with the same body would be a second
+ * definition of one decision (CODE-QUALITY #1), and `vocabulary.test.ts` caught the duplicate on
+ * its first run: every uppercase selector has to be registered, and the registry is short on
+ * purpose. */
+
+.ds .ds-chart-note {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 10px;
+  max-width: 78ch;
+}
+
+/* The word a chart renders when it cannot be drawn.
+ *
+ * Deliberately styled as text and not as an empty box: the reader has to be able to tell "nothing
+ * was measured" from "the measurement is zero", and an empty plot frame says the second. */
+.ds .ds-chart-unreadable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  padding: 14px 0;
+}
+
+.ds .ds-chart-unreadable::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px dashed var(--dim-2);
+  flex: none;
+}
+
+/* ── Horizontal bars: stages, funnels, cohorts ────────────────────────────────────────────── */
+
+.ds .ds-chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.ds .ds-chart-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+
+.ds .ds-chart-bar-name {
+  font-size: 13.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ds .ds-chart-stagenum {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds .ds-chart-num {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+}
+
+.ds .ds-chart-track {
+  height: 26px;
+  border-radius: 5px;
+  background: var(--roast-2);
+  overflow: hidden;
+  position: relative;
+}
+
+.ds .ds-chart-track[data-size='slim'] {
+  height: 9px;
+  border-radius: 5px;
+}
+
+/* ⚠️ THE 4px FLOOR (DD4). `charts/geometry.test.ts` asserts this exact declaration against
+   `MIN_VISIBLE_PX`. Three failures of 1,843 draws is 0.16% — under a pixel on any track this
+   console renders, and therefore indistinguishable from "nothing failed". */
+.ds .ds-chart-fill {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 5px 3px 3px 5px;
+  transition: width var(--t);
+}
+
+.ds .ds-chart-drop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 6px;
+}
+
+.ds .ds-chart-drop-mark {
+  font-family: var(--mono);
+  color: var(--red);
+}
+
+/* ── Two-way identity: control vs treatment (DD4) ─────────────────────────────────────────── */
+
+/* Grey and blue, never gold and green: the pair that survives a colour-blindness check on this
+   palette (DD4, ΔE 23.4 protan / 23.2 tritan / 25.3 normal). A third variant is a third ROW, never
+   a third hue — which is why this is an attribute on the fill and not a growing list of modifiers. */
+/* ⚠️ Both gradients' dark ends are DERIVED, because the approved prototype writes them as raw
+   hex — `#6b6151`→`#4a4335` and `var(--blue)`→`#3d6f96` — and a hand-picked hex in this file is
+   what `check-design-drift`'s `raw-hex` rule exists to stop. Each mix was solved against the
+   prototype's literal and the residual is recorded, so "close enough" is a claim a reader can
+   check rather than a reassurance:
+     control start  #6b6151 -> (105, 95, 77) vs (107, 97, 81)
+     control end    #4a4335 -> ( 73, 65, 53) vs ( 74, 67, 53)
+     treatment end  #3d6f96 -> ( 68,111,144) vs ( 61,111,150)
+   The largest residual is seven steps of red at the dark end of a gradient, under a
+   just-noticeable difference. `color-mix` with a var() ingredient is the repo's existing way of
+   staying on the scale — `globals.css` derives the landing's kraft the same way. */
+.ds .ds-chart-fill[data-series='control'] {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--dim-2) 70%, var(--roast)),
+    color-mix(in srgb, var(--dim-2) 43%, var(--roast))
+  );
+}
+
+.ds .ds-chart-fill[data-series='treatment'] {
+  background: linear-gradient(90deg, var(--blue), color-mix(in srgb, var(--blue) 62%, black));
+}
+
+.ds .ds-chart-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+  display: inline-block;
+}
+
+.ds .ds-chart-swatch[data-series='control'] {
+  background: var(--dim-2);
+}
+
+.ds .ds-chart-swatch[data-series='treatment'] {
+  background: var(--blue);
+}
+
+.ds .ds-chart-swatch[data-series='held'] {
+  background: var(--green);
+}
+
+.ds .ds-chart-swatch[data-series='failed'] {
+  background: var(--red);
+}
+
+.ds .ds-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+.ds .ds-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ds .ds-chart-legend .ds-chart-num {
+  font-size: 12px;
+}
+
+/* ── Status split: held vs failed ─────────────────────────────────────────────────────────── */
+
+/* Green and red, ALWAYS with a word and a count beside them (DD4). The legend below this bar is
+   part of the primitive, not an optional caption — red/green is the classic colour-vision pair and
+   deutan ΔE here is 9.9, above the floor but only just. */
+.ds .ds-chart-split {
+  display: flex;
+  height: 22px;
+  border-radius: 5px;
+  overflow: hidden;
+  gap: 2px;
+  background: var(--roast-2);
+}
+
+.ds .ds-chart-split-part {
+  display: block;
+  height: 100%;
+}
+
+.ds .ds-chart-split-part[data-series='held'] {
+  background: var(--green-deep);
+  border-bottom: 2px solid var(--green);
+}
+
+/* The same 4px floor as the horizontal fill, for the same reason and with the same weld. */
+.ds .ds-chart-split-part[data-series='failed'] {
+  background: var(--red-deep);
+  border-bottom: 2px solid var(--red);
+  min-width: 4px;
+}
+
+/* ── Day columns ──────────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-chart-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 88px;
+  margin-top: 6px;
+}
+
+/* The vertical twin of the fill's floor, welded to `MIN_VISIBLE_PX` by the same test. A day with
+   one event must not render as a day with none. */
+.ds .ds-chart-col {
+  flex: 1;
+  background: linear-gradient(180deg, var(--gold), var(--gold-deep));
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+}
+
+.ds .ds-chart-col[data-zero='true'] {
+  background: var(--card-3);
+  min-height: 2px;
+}
+
+.ds .ds-chart-scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim-2);
+  margin-top: 6px;
+}
+
+/* ── The line plot, and its sparkline ─────────────────────────────────────────────────────── */
+
+.ds .ds-chart-plot {
+  position: relative;
+  margin-top: 4px;
+}
+
+.ds .ds-chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.ds .ds-chart-grid {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+
+.ds .ds-chart-line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* The area is a flat token at low opacity rather than an SVG `<linearGradient>`.
+ *
+ * A gradient needs an `id`, and an `id` on a component that can render more than once per page is a
+ * duplicate waiting to happen — the second plot would silently reference the first one's fill. The
+ * colour also belongs in the stylesheet, where the drift guard can see it. */
+.ds .ds-chart-area {
+  fill: var(--gold);
+  opacity: 0.14;
+}
+
+.ds .ds-chart-endpoint {
+  fill: var(--gold-hot);
+  stroke: var(--roast);
+  stroke-width: 2;
+}
+
+.ds .ds-chart-spark {
+  height: 30px;
+  margin-top: 8px;
+}
+
+.ds .ds-chart-spark svg {
+  display: block;
+  width: 100%;
+  height: 30px;
+}
+
+.ds .ds-chart-spark .ds-chart-line {
+  stroke-width: 1.5;
+}
+
+/* ── Small multiples (DD4: never a dual axis) ─────────────────────────────────────────────── */
+
+/* Three inputs on three different scales are three plots. Putting them on one axis would make the
+   biggest one look like the important one — which is a claim about priority that nobody made. */
+/* ⚠️ A MAXIMUM as well as a minimum, which `minmax(230px, 1fr)` does not give.
+ *
+ * The approved `.smalls` is `repeat(3, 1fr)` — three inputs, three plots. Real projects have one or
+ * two: production `miyagisanchez` has two. With `1fr` a single input stretched its card to the full
+ * 1180px content column, so one reading was drawn as a metre-wide sparkline — a picture whose size
+ * says "this is the important one" about a set of one. `380px` is about the approved card's width
+ * at three-up, so a lone card is the size it would be beside two others and the row fills from the
+ * left. Found by looking at the rendered page; nothing structural could see it. */
+.ds .ds-chart-smalls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 380px));
+  gap: 12px;
+}
+
+.ds .ds-chart-small {
+  padding: 13px 15px 11px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+}
+
+.ds .ds-chart-small-label {
+  font-size: 11.5px;
+  color: var(--dim-2);
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+
+.ds .ds-chart-small-value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ds .ds-chart-small-value b {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ds .ds-chart-delta {
+  font-size: 12px;
+}
+
+.ds .ds-chart-delta[data-direction='up'] {
+  color: var(--green);
+}
+
+.ds .ds-chart-delta[data-direction='down'] {
+  color: var(--red);
+}
+
+.ds .ds-chart-delta[data-direction='flat'] {
+  color: var(--dim-2);
+}
+
+.ds .ds-chart-stale {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--dim-2);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── The hero figure ──────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-chart-hero {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.ds .ds-chart-hero-value {
+  font-family: var(--mono);
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* The never-recorded hero. Sized like the number it stands in for so the layout does not jump, but
+   set in prose at body size, because a sentence rendered at 44px reads as a headline figure and
+   this one is the opposite of a figure (L1). */
+.ds .ds-chart-hero-absent {
+  font-size: 13.5px;
+  color: var(--dim);
+  max-width: 60ch;
+  line-height: 1.5;
+}
+
+.ds .ds-chart-hero-delta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  padding-bottom: 5px;
+}
+
+.ds .ds-chart-hero-sub {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-bottom: 18px;
+}
+
+/* ── The interval around zero ─────────────────────────────────────────────────────────────── */
+
+.ds .ds-chart-interval {
+  margin-top: 4px;
+  height: 26px;
+  position: relative;
+}
+
+.ds .ds-chart-interval-zero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--dim-2);
+}
+
+.ds .ds-chart-interval-range {
+  position: absolute;
+  top: 9px;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--blue) 35%, transparent);
+  border: 1px solid var(--blue);
+}
+
+/* An interval that includes no-difference is a DIFFERENT statement from one that does not, and the
+   page says so in words above this bar. The dashed edge is the second channel, never the only one. */
+.ds .ds-chart-interval-range[data-crosses-zero='true'] {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--dim-2) 30%, transparent);
+  border-color: var(--dim-2);
+}
+
+.ds .ds-chart-interval-point {
+  position: absolute;
+  top: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid var(--roast-2);
+  margin-left: -5px;
+}
+
+.ds .ds-chart-interval-point[data-crosses-zero='true'] {
+  background: var(--dim-2);
+}
+
+/* Every label sits under the thing it names, which is why this is a positioned box rather than the
+   prototype's `space-between` row. See the note in `charts/index.tsx`: the row is only correct for a
+   dataset whose zero and bounds happen to land at 0 / 50 / 100%, which is the prototype's and
+   nobody else's. The explicit height is what stops the box collapsing once its three children are
+   taken out of flow. */
+.ds .ds-chart-interval-key {
+  position: relative;
+  height: 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--dim-2);
+  margin-top: 3px;
+}
+
+.ds .ds-chart-interval-tag {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* The origin is the one label a reader acts on — "does the range include no difference?" — so it
+   keeps the ink while the two bounds recede. */
+.ds .ds-chart-interval-origin {
+  color: var(--dim);
+}
+
+@media (max-width: 900px) {
+  .ds .ds-chart-smalls {
+    grid-template-columns: 1fr;
+  }
+
+  .ds .ds-chart-hero-value {
+    font-size: 34px;
+  }
+}
+
+/* ── Tiles, bands and tasks — Today, and `/app/tasks` as its second mount ──────────────────────
+ * design-system-rails · Sprint 5, Story 5.2 (DD1, DD5).
+ *
+ * `.ds-tile` is the four-across summary the Measure and Today screens open with — a sibling of
+ * `.ds-stat`, not a replacement for it. The two answer different questions and the difference is
+ * load-bearing: `.ds-stat` is a LINK that filters a list to itself and always carries a number,
+ * while a tile is a plain figure with a caption and can legitimately have no value at all. Giving
+ * `.ds-stat` a null state would have put "no value has been recorded" inside a control that
+ * navigates somewhere.
+ */
+
+.ds .ds-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.ds .ds-tile {
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.ds .ds-tile-label {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+}
+
+.ds .ds-tile-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⚠️ `tone` colours the number and the DETAIL line says the same thing in words. A green figure is
+   reinforcement, never the only carrier — the same rule `.ds-stat` follows. */
+.ds .ds-tile-value[data-tone='up'] {
+  color: var(--green);
+}
+
+.ds .ds-tile-value[data-tone='warn'] {
+  color: var(--gold-hot);
+}
+
+/* The tile with no reading. Set in prose at body size rather than at 28px mono, because a sentence
+   rendered as a headline figure reads as a figure — and this one is the opposite of a figure. The
+   sentence itself comes from `lib/stat-figures.ts`, which already owns the four North Star states. */
+.ds .ds-tile-absent {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.ds .ds-tile-detail {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+/* ── Bands ────────────────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-band {
+  margin-bottom: 26px;
+}
+
+.ds .ds-band-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* Whose job this band is. A fact about the BAND — `open` means nothing has picked it up — never a
+   claim about who a given row's holder is; see `lib/today-bands.ts` on why that one is not
+   derivable from a task row. */
+/* ⚠️ **Uppercase Archivo, NOT mono — the approved prototype writes this one in mono and the design
+   system does not permit the pair.** `reference.css`'s `.band > h3 .who` is
+   `font: 500 10.5px/1 var(--mono)` with `text-transform: uppercase`, and CONSOLE-CONTRACT's
+   Do-not #3 forbids uppercase-and-mono outright. Two of this epic's own guards say so out loud: the
+   drift guard's `font-shorthand` rule refuses that declaration's shape, and `vocabulary.test.ts`
+   refused this rule on its first run.
+
+   Answered the way F1 was — use the permitted route rather than disable the rule. Story 4.1 already
+   settled the identical shape for `.ds-listhead`: an uppercase micro-label in this system is
+   11 / 600 Archivo. So the badge is that, and it is registered in `UPPERCASE_ALLOWED` with
+   `keep: true` beside its siblings. */
+.ds .ds-band-who {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--dim-2);
+  background: var(--card);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds .ds-band-who[data-who='you'] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
+.ds .ds-band-who[data-who='agent'] {
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 40%, var(--roast));
+  background: color-mix(in srgb, var(--blue) 9%, transparent);
+}
+
+.ds .ds-band-sub {
+  font-size: 13px;
+  color: var(--dim-2);
+  margin-bottom: 12px;
+  max-width: 70ch;
+}
+
+.ds .ds-tasklist {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  overflow: hidden;
+}
+
+/* ── A task row ───────────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-task {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ds .ds-task:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+}
+
+.ds .ds-task-sig {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 6px;
+  background: var(--dim-2);
+}
+
+.ds .ds-task-sig[data-kind='error'] {
+  background: var(--red);
+}
+
+.ds .ds-task-sig[data-kind='friction'] {
+  background: var(--gold);
+}
+
+/* An unclassified row gets a hollow mark rather than a coloured one — the row's own words say
+   "Unclassified", and a filled dot in the neutral token would still read as a category. */
+.ds .ds-task-sig[data-kind='unknown'] {
+  background: transparent;
+  border: 1px solid var(--dim-2);
+}
+
+.ds .ds-task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-task-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ds .ds-task-meta {
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 3px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ds .ds-task-by {
+  flex: none;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim-2);
+}
+
+.ds .ds-task-by b {
+  display: block;
+  font-weight: 500;
+  color: var(--dim-2);
+}
+
+/* Held versus not held is the one distinction a task row can honestly draw, so it is the only one
+   drawn. `--crema` for a name somebody supplied, `--dim-2` for the absence of one. */
+.ds .ds-task-by[data-held='true'] b {
+  color: var(--crema);
+}
+
+.ds .ds-task-act {
+  flex: none;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.ds .ds-agentline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  margin-bottom: 12px;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--blue) 32%, var(--roast));
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+  font-size: 13px;
+}
+
+.ds .ds-agentline-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex: none;
+}
+
+.ds .ds-agentline-when {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim-2);
+  flex: none;
+}
+
+/* ── An empty band ────────────────────────────────────────────────────────────────────────── */
+
+/* An empty band is a DELIVERABLE, not a fallback (epic D10) — on the walkthrough tenant every band
+   on Today is empty, so this is the state a real person actually meets. It is a prompt to act, not
+   a blank: an empty queue and a broken queue look identical unless the page says which it is. */
+/* ⚠️ **One quiet LINE, not a 190px card — and the reason is Today's empty state specifically.**
+ *
+ * On a tenant with no tasks all three bands are empty at once, and three centred cards saying
+ * "nothing", "nothing", "nothing" spent 644px of a 960px viewport. That is precisely the "wide dead
+ * vertical gap" `console-ia-overhaul` A25 names as what was wrong with this route, reintroduced by
+ * the fix for it. Measured before and after: the page was 1121px tall and is 703px, so an empty
+ * Today now fits one screen — which is what the visual gate asserts and what makes that assertion
+ * mean something.
+ *
+ * It is still a sentence, not a blank: an empty queue and a broken queue look identical unless the
+ * page says which it is, and the `action` slot is what keeps it a prompt rather than a shrug. Only
+ * the geometry changed. */
+.ds .ds-band-empty {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 14px 16px;
+}
+
+.ds .ds-band-empty-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--crema);
+  flex: none;
+}
+
+.ds .ds-band-empty-body {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  line-height: 1.5;
+  flex: 1 1 24ch;
+  min-width: 0;
+}
+
+.ds .ds-band-empty-action {
+  flex: none;
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .ds .ds-task-row {
+    flex-wrap: wrap;
+  }
+
+  .ds .ds-task-body {
+    flex: 1 1 100%;
+  }
+
+  .ds .ds-task-by {
+    text-align: left;
+  }
+}
+
+/* The breadcrumb row above a page that is a view OF something else — `funnel-standalone`,
+ * `measure-journey`, `experiment-ready`, `tasks-standalone`. Ported from `reference.css`'s
+ * `.crumbrow`, whose `button` becomes an `<a>` here: the prototype can call a JS router, a shared
+ * URL has no history to go back to, and a control that does nothing on a shareable page is worse
+ * than no control. */
+.ds .ds-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ds .ds-crumbs a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.ds .ds-crumbs a:hover {
+  text-decoration: underline;
+}
+
+.ds .ds-crumbs-sep {
+  color: var(--line);
+}
+
+/* ── The Medusa-truth boundary ─────────────────────────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.2.
+ *
+ * What this engine deliberately does NOT measure, each with its reason and its guardrail. ⚠️ The
+ * approved `today` state has no such block; it is kept because it has no other surface in the
+ * product, and "where is my revenue number?" is a question a plausible figure would answer badly
+ * and this answers honestly. Deleting a capability to satisfy a geometry assertion is not what
+ * "render from the design system" asks for — Sprint 4 recorded the same call for Destinations'
+ * two operational logs.
+ *
+ * It replaces `globals.css`'s `.command-center__gaps`, deleted in the same commit. That rule set
+ * its summary with a `font:` shorthand in uppercase mono — the pair Do-not #3 forbids and the
+ * shorthand this epic's own drift rule refuses — so the port is also the fix.
+ */
+.ds .ds-gaps {
+  margin-top: 4px;
+}
+
+.ds .ds-gaps > summary {
+  cursor: pointer;
+  color: var(--dim-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.ds .ds-gaps > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ds .ds-gaps > summary:hover {
+  color: var(--crema);
+}
+
+.ds .ds-gaps dt {
+  color: var(--crema);
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+.ds .ds-gaps dd {
+  color: var(--dim-2);
+  font-size: 12.5px;
+  margin: 3px 0 0;
+  line-height: 1.5;
+  max-width: 78ch;
+}
+
+.ds .ds-gaps dd em {
+  display: block;
+  color: var(--dim);
+  margin-top: 3px;
+}
+
+/* ── What is in the way ────────────────────────────────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.4 — the `experiment-blocked` state's own list.
+ *
+ * Sprint contract #9: blockers are named in plain words, never as `srm_not_evaluable`. The words
+ * live in `lib/experiment-blocker-words.ts` behind a TOTAL map, so a new blocker code is a compile
+ * error rather than a raw enum leaking onto a page — this is only the shape it sits in.
+ */
+.ds .ds-blockers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.ds .ds-blocker {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.5;
+  max-width: 92ch;
+}
+
+/* The mark is an `<Icon>`, never a glyph — `check-design-drift.mjs` bans pictographs inside `/app`
+   and D4's answer is an SVG rather than an exemption. Red, and beside a sentence that says the same
+   thing in words: status is never colour alone (DD4). */
+.ds .ds-blocker-mark {
+  color: var(--red);
+  flex: none;
+  margin-top: 2px;
+  display: inline-flex;
+}
+
+.ds .ds-blocker strong {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+/* An identifier that must not push its column wider — a metric event, a long feature key. The same
+ * rule `.ds-state-detail` follows: ONE line, clipped, with the whole value on `title`. Unclipped, a
+ * long event name ran underneath the row's action button, which is the kind of thing that only
+ * shows up when somebody opens the page. */
+.ds .ds-row-clip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* A metric's identity above its figure. Deliberately NOT `.ds-label`, which uppercases: an event
+ * name is an identifier, and `GB_E2E_CHECKOUT_COMPLETED` is not what anybody typed. */
+.ds .ds-metric-label {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-bottom: 6px;
+}
+
+.ds .ds-metric-label code {
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+/* 3. The lift figure carries the direction in colour AND states it with a sign. `--green`/`--red`
+ * with the signed number beside it — never colour alone (DD4). */
+.ds .ds-chart-hero-value[data-tone='up'] {
+  color: var(--green);
+}
+
+.ds .ds-chart-hero-value[data-tone='down'] {
+  color: var(--red);
+}
+
+/* ── A row with something that will not fit on it ──────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.6. The approved `measure-scenarios` row carries a
+ * held/failed bar and its legend under the drill's name, which `.ds-row-desc` cannot hold: that
+ * rule is one clipped line on purpose, and the clipping is what keeps the feature list's rows at
+ * the contract's 71px. The group takes the border so the row inside it does not draw a second one.
+ */
+.ds .ds-rowgroup {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ds .ds-rowgroup:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-rowgroup .ds-row {
+  border-bottom: none;
+}
+
+.ds .ds-rowgroup-extra {
+  padding: 0 16px 14px;
+  /* Aligned under the drill's NAME rather than under the whole row: the bar is evidence about the
+     thing in the first column, and starting it at the card's edge would read as belonging to the
+     row as a whole. */
+  max-width: 62ch;
+}

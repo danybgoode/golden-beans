@@ -185,7 +185,11 @@ export const PROJECT_ROUTE_INVENTORY = [
     status: 'gated',
     topLevelProjectRoute: true,
     section: 'ship',
-    label: 'Flags',
+    // ⚠️ **`Features`, not `Flags` — design-system-rails Sprint 5.** The approved Ship rail reads
+    // Features · Experiments · Scheduled changes · Activity, and the page's own `h1` has said
+    // "Features" since Story 4.1. The rail was the last place still saying "Flags", so the nav and
+    // the destination it leads to disagreed about what they were called.
+    label: 'Features',
     href: (slug: string) => `/app/flags/${slug}`,
     description: (role) => (role === 'owner' ? 'define and operate' : 'read-only'),
   },
@@ -197,7 +201,10 @@ export const PROJECT_ROUTE_INVENTORY = [
     status: 'gated',
     topLevelProjectRoute: true,
     section: 'ship',
-    label: 'Experiment governance',
+    // `Experiments`, per the approved rail. "Experiment governance" named the SUBSYSTEM — the
+    // registry, the lifecycle, the ledger — which is `design-system/vocabulary.ts`' STORAGE_WORDS
+    // rule applied to a nav label: it tells the reader about the machinery, not about the thing.
+    label: 'Experiments',
     href: (slug: string) => `/app/experiments/${slug}`,
     description: (role) => (role === 'owner' ? 'plan and operate' : 'read-only'),
   },
@@ -221,7 +228,10 @@ export const PROJECT_ROUTE_INVENTORY = [
     status: 'linked',
     topLevelProjectRoute: true,
     section: 'measure',
-    label: 'Scenarios & breakers',
+    // `Scenarios & drills`, per the approved rail. A "breaker" is the mechanism; a "drill" is the
+    // thing you run, and the page's whole point (audit §6.4) is that this is a tool rather than a
+    // log. The breakers are still there and still named on the page itself.
+    label: 'Scenarios & drills',
     href: (slug: string) => `/app/scenarios/${slug}`,
     description: () => 'read-only drills, impact evidence and protective trips',
   },
@@ -300,7 +310,12 @@ export const PROJECT_ROUTE_INVENTORY = [
     status: 'gated',
     topLevelProjectRoute: true,
     section: 'ship',
-    label: 'Flag audit',
+    // ⚠️ **`Activity`, and Sprint 4 already claimed this.** Story 4.3's own text says the page's
+    // title is "Activity, which is the word the rail says" — and the rail said "Flag audit". A
+    // shipped doc asserting a property the code did not have, which is CODE-QUALITY #3 one layer
+    // out. "Flag audit" named the TABLE the rows come from; a person opening this is asking what
+    // happened.
+    label: 'Activity',
     href: (slug: string) => `/app/flag-audit/${slug}`,
     description: () => 'who changed which flag, and why',
   },

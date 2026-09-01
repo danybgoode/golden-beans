@@ -97,7 +97,26 @@ export async function ProductShell({
     //
     // ⚠️ This cited "D15", which does not exist — the epic's decisions run D1–D14. Invented in a
     // comment whose own contract line is "Cite a decision; never re-derive one" (fresh reviewer).
-    <div className={`product-shell${header === null ? '' : ' is-console ds'}`}>
+    //
+    // ⚠️ **AND THE TWO ARE NO LONGER ONE CONDITION — design-system-rails Story 5.3.** The paragraph
+    // above already argued that `is-console` and `ds` answer different questions, and then set both
+    // from `header !== null`, which answers only the first. That coupling was invisible until a page
+    // body rendered from the design system on a route that has no console header:
+    // `/app/funnel/<demo>/<key>` and its impact twin are ANONYMOUSLY readable (`lib/public-demo.ts`'
+    // allow-list, AGENTS rule #2), so `getShellNav` returns `EMPTY`, `header` is null — and Story
+    // 5.3's rebuilt panes would have rendered every `ds-` class with no `.ds` ancestor: valid
+    // markup, correct colours available, none of them applied. Exactly the failure the paragraph
+    // above describes, arriving from the other direction.
+    //
+    // So each class is set by the question it actually answers:
+    //   `ds`         — this subtree renders FROM the design system. True wherever this shell renders,
+    //                  because the page body inside it does, session or no session.
+    //   `is-console` — this is the console: `console.css` applies, and the console chrome is there.
+    //
+    // Those two anonymous demo dashboards are the ONLY renders this changes, and they are precisely
+    // the two routes Story 5.3 rebuilds — verified by enumerating the allow-list. Nothing else
+    // reaches this component without a session.
+    <div className={`product-shell ds${header === null ? '' : ' is-console'}`}>
       <header className="product-shell__header">
         {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────

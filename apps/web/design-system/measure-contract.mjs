@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openPrototype, HERE } from './_harness.mjs';
+import { APPROVED_STATES } from './approved-states.mjs';
 
 const OUT = 'MEASURED-SPEC.md';
 
@@ -113,6 +114,17 @@ const TARGETS = [
   ['.btn-ghost', 'Secondary button', 'height'],
 ];
 
+/**
+ * Everything after this line in `MEASURED-SPEC.md` is EVIDENCE, not contract.
+ *
+ * `--check` compares only what precedes it. The chrome table below it holds text-layout positions,
+ * which do not reproduce across renderers — CI proved it on the first run of the version that
+ * compared them: `ship-features` 458 on macOS and 459 on `ubuntu-latest`, `today` 223 and 202.
+ * Committing those as a compared contract is recording a fact about one machine and calling it the
+ * design, which is precisely what this file exists to prevent.
+ */
+const NOT_COMPARED_MARKER = '<!-- NOT-COMPARED-BELOW -->';
+
 export async function measure() {
   const { page, close } = await openPrototype();
   try {
@@ -168,6 +180,58 @@ async function measureIn(page) {
       ground: getComputedStyle(document.body).backgroundColor,
     };
   }, TARGETS);
+
+  // ── The CHROME BUDGET, across every approved console state ──────────────────────────────────
+  //
+  // ⚠️ **This exists because the gate was asserting a property the approved design does not have.**
+  // `console-visual.authed.spec.ts` required every covered route to fit 1440x960 without scrolling,
+  // citing "a page that scrolls means the chrome is eating the viewport". Measured against the
+  // design itself, **eight of thirteen approved console states scroll** — `today` is 1711px,
+  // `experiment-blocked` 1625px, and `ship-activity` 1274px while the route built from it passes the
+  // gate. It was green because the fixture tenant is thin, not because the pages were right: a
+  // guard that passes for the wrong reason, in the epic named after that defect.
+  //
+  // What the assertion was actually FOR is a budget on CHROME — a 48px h1 wrapping to four lines, a
+  // three-line rail card, a summary strip that eats the screen. None of those is about how many rows
+  // a tenant has. So the property is measured here instead: **how far down the page the first
+  // element carrying DATA begins.** That is independent of row count, true of every approved state,
+  // and fails on exactly the defects the original named.
+  //
+  // The selector list is the prototype's own content vocabulary. It is deliberately broad: missing a
+  // state's first content element would report a LOWER budget than the design's, which is the
+  // direction that silently tightens a gate.
+  const CONTENT =
+    '.listcard, .tile, .kpi, .hbar, .vbar, .plot, .task, .tl, .empty, .field, .card, .matrix, .small, .bars';
+  const chrome = [];
+  for (const [name, fn] of APPROVED_STATES) {
+    await page.evaluate(fn);
+    await page.waitForTimeout(120);
+    const row = await page.evaluate(
+      ([selector, state]) => {
+        // ⚠️ The doors and the public frame are reported as `null`, never as a number.
+        //
+        // They render into their own layer while `#content` keeps the last console render behind
+        // them, so a naive read returns `0` for a hidden node — a value that is not a measurement of
+        // anything and would sit in a generated table looking like one. `APP.door` is the
+        // prototype's own answer to "is a door on screen", so it is what decides.
+        //
+        // Reporting null rather than 0 also happens to be the safe direction: an absent measurement
+        // must never LOWER the maximum, because that silently tightens the gate.
+        if (APP.door) return { state, top: null, height: document.documentElement.scrollHeight };
+        const host = document.querySelector('#content');
+        if (!host) return { state, top: null, height: document.documentElement.scrollHeight };
+        const first = host.querySelector(selector);
+        return {
+          state,
+          top: first ? Math.round(first.getBoundingClientRect().top) : null,
+          height: document.documentElement.scrollHeight,
+        };
+      },
+      [CONTENT, name]
+    );
+    chrome.push(row);
+  }
+  out.chrome = chrome;
 
   // A page error means the numbers were read off a half-rendered prototype. Emitting them anyway
   // would write a plausible file that is wrong — the failure mode this whole story exists to close.
@@ -263,6 +327,49 @@ ${out.uppercaseElements.length ? out.uppercaseElements.map((e) => '`' + e + '`')
 | Element | Size / weight | Family | Box | Transform |
 |---|---|---|---|---|
 ${out.rows.map(cell).join('\n')}
+
+${NOT_COMPARED_MARKER}
+
+## The chrome budget — how far down each approved state's first DATA begins
+
+⚠️ **EVIDENCE, NOT CONTRACT. Every number below this line is emitted as a MARKER and is NOT compared
+by \`--check\`.**
+
+The numbers are text-layout positions, and they do not reproduce across platforms — the same reason
+\`Page h1\`'s width is \`_text-sized_\` in the table above. Measured on macOS and on \`ubuntu-latest\`:
+\`ship-features\` is 458 here and **459** there, and \`today\` is 223 here and **202** there, because the
+lede wraps differently under different font metrics. Committing them as a compared contract is
+recording a fact about one machine and calling it the design, which is the defect this whole file
+exists to prevent — and CI said so on the first run of the version that did it.
+
+So \`--check\` stops at the marker above, and the BUDGET the gate asserts is a stated bound rather than
+a byte-exact weld: see \`CHROME_BUDGET_PX\`, which \`console-spec.test.ts\` holds to being at least this
+table's maximum and within a stated allowance of it. That keeps the constant derived from the design
+without letting a one-pixel renderer difference turn the gate red.
+
+⚠️ **This table replaced an assertion that was green for the wrong reason.** The visual gate used to
+require every covered route to fit 1440 × 960 without scrolling, citing *"a page that scrolls means
+the chrome is eating the viewport"*. Measured against the design itself, **${out.chrome.filter((row) => row.top !== null && row.height > 960).length} of the ${out.chrome.filter((row) => row.top !== null).length} approved console
+states scroll** — so the gate asserted a property the approved design does not have, and passed only
+because the fixture tenant is thin.
+
+What that assertion was FOR is a budget on **chrome**: a 48px \`h1\` wrapping to four lines, a
+three-line rail card, a summary strip that eats the screen. None of those is about how many rows a
+tenant has. The **Chrome** column is the top of the first element carrying data, and its maximum is
+the budget \`console-gate-spec.ts\` asserts — welded by \`console-spec.test.ts\`, so the constant
+cannot drift from the design.
+
+**Chrome budget: ${Math.max(...out.chrome.filter((row) => row.top !== null).map((row) => row.top))}px**, set by \`${out.chrome.filter((row) => row.top !== null).sort((a, b) => b.top - a.top)[0].state}\`.
+
+| State | Chrome | Page height | Fits 960? |
+|---|---|---|---|
+${out.chrome
+  .map((row) =>
+    row.top === null
+      ? `| \`${row.state}\` | _no console chrome_ | ${row.height} | ${row.height <= 960 ? 'yes' : 'no'} |`
+      : `| \`${row.state}\` | ${row.top} | ${row.height} | ${row.height <= 960 ? 'yes' : '**no**'} |`
+  )
+  .join('\n')}
 `;
 }
 
@@ -274,6 +381,10 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
   const check = process.argv.includes('--check');
   const path = join(HERE, OUT);
   const content = render(await measure());
+  // ⚠️ `--check` compares only the CONTRACT half. Everything after the marker is evidence whose
+  // numbers are text-layout positions and do not reproduce across renderers — see the note under
+  // that heading, and the CI run that proved it (458 here, 459 on ubuntu-latest; `today` 223 vs 202).
+  const contractHalf = (text) => text.split(NOT_COMPARED_MARKER)[0];
   let onDisk = null;
   try {
     onDisk = readFileSync(path, 'utf8');
@@ -282,7 +393,7 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
   }
 
   if (check) {
-    if (onDisk === content) {
+    if (onDisk !== null && contractHalf(onDisk) === contractHalf(content)) {
       console.log(`✓ measure-contract: ${OUT} matches a fresh measurement of the approved prototype`);
       process.exit(0);
     }
@@ -292,8 +403,8 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
     // font that had not loaded from a genuine design change without another cycle. A check that
     // says a file is wrong and not HOW is a check somebody re-runs rather than reads.
     if (onDisk !== null) {
-      const was = onDisk.split('\n');
-      const now = content.split('\n');
+      const was = contractHalf(onDisk).split('\n');
+      const now = contractHalf(content).split('\n');
       const changed = [];
       for (let i = 0; i < Math.max(was.length, now.length); i += 1) {
         if (was[i] !== now[i])

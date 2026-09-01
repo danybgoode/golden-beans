@@ -24,7 +24,11 @@ const VIEWPORT = { width: 1440, height: 960 }
 // four-tile summary strip, a list card with a row link and a switch, a page tab strip, two fields, a
 // pick list, and the "I've saved it" control on a one-time reveal. Changed in the SAME commit as the
 // render, which is what this constant asks for.
-const EXPECTED_FOCUSABLE = 44
+//
+// ⚠️ 44 → 45 with Sprint 5: the breadcrumb section adds its one back LINK. The charts section adds
+// nothing focusable, deliberately — every chart there is a picture with its numbers written beside
+// it, so there is no control to reach.
+const EXPECTED_FOCUSABLE = 45
 const SPECIMEN = '/app/design-system'
 
 /** Exactly `'true'`, matching `lib/flags.ts`. `CONSOLE_SHELL_ENABLED=false` must SKIP, not fail. */
@@ -354,6 +358,10 @@ test.describe('the design system specimen', () => {
       ['Empty', '.ds-empty'],
       ['EmptyCard', '.ds-empty[data-state="unbuilt"]'],
       ['ShownOnce', '.ds-once'],
+      // design-system-rails · Sprint 5 — four approved states open with a breadcrumb.
+      ['RowGroup', '.ds-rowgroup'],
+      ['Crumbs', '.ds-crumbs'],
+      ['Crumb', '.ds-crumbs-sep'],
     ]
 
     for (const [name, selector] of PRIMITIVES) {

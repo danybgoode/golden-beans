@@ -39,6 +39,15 @@ import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { getSessionUser } from '@/lib/supabase-auth'
 import { SPECIMEN_WORDS } from '@/design-system/vocabulary'
 import { SPACE, TYPE, WEIGHT } from '@/design-system/scales'
+import {
+  ComparisonBars,
+  DayColumns,
+  IntervalBar,
+  Plot,
+  SmallMultiple,
+  SplitBar,
+  StageBars,
+} from '@/design-system/charts'
 import { SpecimenDialog, SpecimenProductDialog } from './specimen-dialog'
 import {
   Answer,
@@ -55,6 +64,8 @@ import {
   ListHead,
   Menu,
   MenuItem,
+  Crumb,
+  Crumbs,
   PageHead,
   PageTab,
   PageTabs,
@@ -62,6 +73,7 @@ import {
   Pill,
   RailItem,
   Row,
+  RowGroup,
   RowMain,
   RowState,
   ShownOnce,
@@ -88,6 +100,47 @@ export const dynamic = 'force-dynamic'
 
 /** Every state a control can be put into by a caller. The browser states are exercised by hand. */
 const CONTROL_STATES: ControlState[] = ['idle', 'loading', 'success', 'error', 'disabled', 'unbuilt']
+
+/**
+ * The specimen's own series. Literals, like every other value on this page.
+ *
+ * Deliberately NOT smooth: a monotonic ramp makes every line primitive look correct, and the two
+ * things worth seeing here are that the plot scales to its own domain and that the columns keep a
+ * zero-value day distinguishable from a one-event day.
+ */
+const SPECIMEN_SERIES = [
+  ['23 May', 946],
+  ['30 May', 1002],
+  ['6 Jun', 988],
+  ['13 Jun', 1071],
+  ['20 Jun', 1104],
+  ['27 Jun', 1098],
+  ['4 Jul', 1140],
+  ['11 Jul', 1163],
+  ['18 Jul', 1189],
+  ['25 Jul', 1201],
+  ['1 Aug', 1224],
+  ['8 Aug', 1230],
+  ['15 Aug', 1258],
+  ['27 Aug', 1284],
+].map(([date, value]) => ({ date: date as string, value: value as number }))
+
+const SPECIMEN_DAYS = [
+  ['14 Aug', 820],
+  ['15 Aug', 910],
+  ['16 Aug', 760],
+  ['17 Aug', 1180],
+  ['18 Aug', 1340],
+  ['19 Aug', 0],
+  ['20 Aug', 1420],
+  ['21 Aug', 1610],
+  ['22 Aug', 1550],
+  ['23 Aug', 1290],
+  ['24 Aug', 1730],
+  ['25 Aug', 1880],
+  ['26 Aug', 4],
+  ['27 Aug', 2040],
+].map(([date, value]) => ({ date: date as string, value: value as number }))
 
 function Section({
   id,
@@ -396,6 +449,22 @@ export default async function DesignSystemSpecimen({
               The examples are the real ones. `PageHead` renders the flags page's own head, the list
               card renders a feature row — so the specimen is where a reviewer sees the language
               rather than a diagram of it. */}
+          {/* design-system-rails · Sprint 5 — four approved states open with one of these
+              (`funnel-standalone`, `measure-journey`, `experiment-ready`, `tasks-standalone`), and
+              every one of them is a page you arrive at from a list. `console-ia-overhaul` deleted
+              the per-page "← Your projects" line and left nothing in its place on the routes that
+              genuinely needed one. */}
+          <Section
+            id="crumbs"
+            title="Breadcrumbs — where you came from"
+            note="A real link, never a history.back() button: a page reached from a shared URL has no history to go back to, and a control that does nothing on a shareable page is worse than no control. The trail after it is plain text — a key, a tab name — because a breadcrumb that is all links invites the reader to guess which one is the way out."
+          >
+            <Crumbs back={{ href: '#crumbs', label: 'Features' }}>
+              <Crumb mono>checkout.stripe_enabled</Crumb>
+              <Crumb>Funnel</Crumb>
+            </Crumbs>
+          </Section>
+
           <Section
             id="page-head"
             title="Page head — title, one sentence, actions"
@@ -495,6 +564,33 @@ export default async function DesignSystemSpecimen({
                 columns={4}
               />
             </ListCard>
+
+            {/* design-system-rails · Sprint 5, Story 5.6 — a row plus something that will not fit on
+                it. The approved `measure-scenarios` row carries a held/failed bar under the drill's
+                name, and `.ds-row-desc` is deliberately one clipped line because that clipping is
+                what holds the feature list's rows at the contract's 71px. The group takes the border
+                so the row inside it does not draw a second one. */}
+            <p className="ds-label">…and a row with evidence under it</p>
+            <ListCard>
+              <RowGroup>
+                <Row>
+                  <RowMain
+                    title="stripe_outage"
+                    description="targets checkout.stripe_enabled · synthetic cohort · production · v1"
+                  />
+                  <RowState state="on" label="Held" detail="Resilience" />
+                  <Col width="meta">
+                    <span className="ds-mono">2026-08-24</span>
+                  </Col>
+                  <Col width="act">
+                    <Tag tone="unclassified">Resilience</Tag>
+                  </Col>
+                </Row>
+                <div className="ds-rowgroup-extra">
+                  <SplitBar held={397} failed={3} unreadable="This drill has never run." />
+                </div>
+              </RowGroup>
+            </ListCard>
           </Section>
 
           <Section
@@ -567,6 +663,136 @@ export default async function DesignSystemSpecimen({
               title="Scheduling is not built yet"
               body="Nothing here can schedule a feature change today — so this is not an empty list."
             />
+          </Section>
+
+          {/* ── design-system-rails · Sprint 5, Story 5.1 — the charts, in every state ──────────
+              The specimen is where a populated chart can be asserted at all. Production
+              `miyagisanchez` has one TARS feature, zero journeys, zero scenarios and zero tasks
+              (epic D10), so most product routes can only ever render an EMPTY state — and a
+              primitive whose populated form nothing exercises is a primitive nobody has seen.
+
+              Every value below is a literal chosen to exercise a state. The unreadable states sit
+              beside their populated twins on purpose: a bar that could not be drawn and a bar of
+              length zero are the pair a reader has to be able to tell apart, and putting them
+              anywhere but side by side makes that impossible to judge. */}
+          <Section
+            id="charts"
+            title="Charts"
+            note="Hand-rolled SVG on the token set — no chart library, and none reachable (epic D7). DD4's four colour rules are implemented rather than cited: magnitude is one hue light to dark, two-way identity is grey and blue, status carries a word and a count beside every colour, and a nonzero value never rounds to zero pixels."
+          >
+            <div className="ds-specimen-col-stack">
+              <p className="ds-label">Magnitude — one hue, light to dark</p>
+              <StageBars
+                stages={[
+                  { label: 'Signed up', value: 1284, sharePercent: 100 },
+                  {
+                    label: 'Listed a product',
+                    value: 742,
+                    sharePercent: 58,
+                    dropped: { count: 542, percent: 42 },
+                  },
+                  { label: 'First sale', value: 318, sharePercent: 25, dropped: { count: 424, percent: 57 } },
+                  {
+                    label: 'Repeat sale',
+                    value: 147,
+                    sharePercent: 11,
+                    dropped: { count: 171, percent: 54 },
+                  },
+                ]}
+                note="Four stages, four steps of one ramp. A fifth stage repeats the darkest step rather than reaching for a fifth colour — the brand's four accents fail as a categorical set (DD4)."
+              />
+
+              <p className="ds-label">…and the same bars with a stage nobody could read</p>
+              <StageBars
+                stages={[
+                  { label: 'Targeted', value: 24330, sharePercent: 100 },
+                  { label: 'Adopted', value: null },
+                  { label: 'Retained', value: 0, sharePercent: 0 },
+                ]}
+                note="The middle stage could not be read and says so; the last is a real zero and renders no bar at all. If a zero-value fill existed it would be given the 4px floor and would invent the reading the floor exists to prevent."
+              />
+            </div>
+
+            <div className="ds-specimen-col-stack">
+              <p className="ds-label">Two-way identity — grey and blue</p>
+              <ComparisonBars
+                rows={[
+                  { series: 'control', label: 'Control', observed: 6120, needed: 6250 },
+                  { series: 'treatment', label: 'Treatment', observed: 6088, needed: 6250 },
+                ]}
+                note="The only pair on this palette that survives a colour-vision check (ΔE 23.4 protan, 23.2 tritan). A third variant is a third row, never a third hue."
+              />
+
+              <p className="ds-label">Status — never colour alone</p>
+              <SplitBar held={1840} failed={3} unreadable="This drill has never run." />
+              <p className="ds-chart-note">
+                Three failures in 1,843 draws is 0.16% — under a pixel on any track this console renders. The
+                red segment has a 4px floor and the exact count sits beside it, because the sliver is not what
+                carries the fact.
+              </p>
+              <SplitBar
+                held={0}
+                failed={0}
+                unreadable="This drill has never run — nothing here is evidence yet."
+              />
+            </div>
+
+            <div className="ds-specimen-col-stack">
+              <p className="ds-label">A series, and the two ways it cannot be one</p>
+              <Plot series={SPECIMEN_SERIES} label="Specimen series" />
+              {/* The three states side by side, which is the only way a reader can judge that they
+                  are actually distinguishable. A populated card, a card with one reading, and a card
+                  with none — the second and third are what production `miyagisanchez` renders today
+                  (L2), and the first is what nothing in the product can currently show. */}
+              <div className="ds-chart-smalls">
+                <SmallMultiple
+                  label="A series with a trend"
+                  value={1284}
+                  delta={{ percent: 7.4, direction: 'up' }}
+                  series={SPECIMEN_SERIES}
+                  freshness="updated 2h ago"
+                />
+                <SmallMultiple
+                  label="A series with one reading"
+                  value={4200}
+                  series={[{ date: '2026-07-06', value: 4200 }]}
+                  freshness="last update 8w ago"
+                />
+                <SmallMultiple label="A series with none" value={null} series={[]} />
+              </div>
+            </div>
+
+            <div className="ds-specimen-col-stack">
+              <p className="ds-label">An interval, drawn</p>
+              <IntervalBar
+                low={0.062}
+                high={0.304}
+                point={0.181}
+                format={(value) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`}
+                unreadable="Not computable."
+              />
+              <p className="ds-chart-note">
+                The whole range sits above zero, so the treatment is better — the only question left is by how
+                much.
+              </p>
+              <IntervalBar
+                low={-0.091}
+                high={0.278}
+                point={0.084}
+                format={(value) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`}
+                unreadable="Not computable."
+              />
+              <p className="ds-chart-note">
+                This one includes no-difference, so it is drawn dashed and in the neutral token. The range
+                still includes zero, which means &ldquo;no difference&rdquo; is one of the answers the data
+                allows.
+              </p>
+              <DayColumns
+                series={SPECIMEN_DAYS}
+                unreadable="Nothing has been served yet."
+                note="A day with one event and a day with none must not look the same: the floor keeps the first visible and the second is drawn in the inert token."
+              />
+            </div>
           </Section>
 
           <Section

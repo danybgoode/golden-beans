@@ -1,11 +1,15 @@
 import { test, expect, type Page } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import {
+  EXPERIMENT_FIXTURE_KEY,
+  JOURNEY_FIXTURE_KEY,
+  readTenantRecord,
+} from './helpers/authed-fixture'
 import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // ⚠️ IMPORTED, not declared here. These two arrays used to live in this file, and
 // `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
 // so the weld checked itself, and the gate kept a deferred row pointing at `78`, the number D8
 // disproved. One implementation, two consumers (CODE-QUALITY #2).
-import { MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
+import { CHROME_BUDGET_PX, MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -134,6 +138,13 @@ test.describe('the console matches the approved design', () => {
     // 1. The approved design fits Ship › Features in one screen. A page that scrolls means the
     //    chrome is eating the viewport — 48px headings, three-line rail cards, a list that pages at
     //    25 instead of collapsing.
+    //
+    // ⚠️ **This one SURVIVES the L12 correction, and the distinction is the point.** Sprint 5
+    // replaced the GENERIC per-route no-scroll assertion with a chrome budget, because eleven of the
+    // thirty approved states scroll and the rule was asserting a property the design does not have.
+    // `ship-features` is not one of them: it measures exactly 960 in `MEASURED-SPEC.md`'s chrome
+    // table, and it fits *because of the dormant collapse* — forty features become one summary line.
+    // Fitting one screen is that page's actual design promise, so it keeps its own assertion.
     expect
       .soft(
         geometry.scrollHeight,
@@ -488,10 +499,21 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
  * Routes this suite deliberately does NOT open, because their URL needs a key or a token it must not
  * invent. Pinned rather than counted — see the assertion at the end of the loop.
  */
+// ⚠️ **The journey and experiment DETAIL routes left this list — design-system-rails S5.**
+//
+// They were here because "their URL needs a key this suite must not invent", and their `coveredBy`
+// strings named `journey-management.spec.ts` and `experiment-governance.spec.ts`. Both are
+// `api`-project specs; `journey-management.spec.ts` does not open a page **at all** (zero `page.`
+// references). So two routes counted toward the coverage number with nothing verifying they render
+// from the design system — a `coveredBy` label that reads as coverage and provides none, which is
+// the exact shape of the last epic's five deferred rows.
+//
+// The premise also stopped being true: Sprint 5's fixture seeds a real journey and a real
+// experiment, so the keys are EXPORTED CONSTANTS rather than something to invent. Both are opened by
+// the loop below like every other route, and the two hand-written claims are deleted rather than
+// replaced by two better-worded ones.
 const EXPECTED_SKIPS = [
   '/app/flags/[projectSlug]/[flagKey]',
-  '/app/experiments/[projectSlug]/[experimentKey]',
-  '/app/journeys/[projectSlug]/[journeyKey]',
   '/app/funnel/[projectSlug]/[featureKey]',
   '/app/impact/[projectSlug]/[featureKey]',
   '/hub/[projectSlug]/epic/[epicSlug]',
@@ -533,12 +555,39 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
   // Reached by clicking, or by a key/token this suite must not invent.
   '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'e2e/feature-tabs.authed.spec.ts (all seven tabs)' },
-  '/app/experiments/[projectSlug]/[experimentKey]': { coveredBy: 'e2e/experiment-governance.spec.ts' },
-  '/app/journeys/[projectSlug]/[journeyKey]': { coveredBy: 'e2e/journey-management.spec.ts' },
-  '/app/funnel/[projectSlug]/[featureKey]': { coveredBy: 'e2e/funnel.spec.ts' },
-  '/app/impact/[projectSlug]/[featureKey]': { coveredBy: 'e2e/impact.spec.ts' },
+  // Reached with the fixture's own seeded keys — not invented, and not a sibling spec's promise.
+  // ⚠️ `?version=1` is required by the experiment detail: without it the route serves the LEGACY
+  // comparison page, which is a different surface with a different design.
+  '/app/experiments/[projectSlug]/[experimentKey]': (slug) =>
+    `/app/experiments/${slug}/${encodeURIComponent(EXPERIMENT_FIXTURE_KEY)}?version=1`,
+  '/app/journeys/[projectSlug]/[journeyKey]': (slug) =>
+    `/app/journeys/${slug}/${encodeURIComponent(JOURNEY_FIXTURE_KEY)}`,
+  // ⚠️ **These named `funnel.spec.ts` and `impact.spec.ts`, which CANNOT see either page.** Both are
+  // `api`-project specs with no session: for a non-demo slug they assert the `/login` bounce and
+  // nothing more (`funnel.spec.ts:63` expects 302/307 and a `location` of `/login`). So two routes
+  // counted toward coverage while the sibling named as covering them could not observe a single
+  // rendered pixel — a `coveredBy` string that reads as coverage and provides none, which is the
+  // exact shape of the last epic's five deferred rows.
+  //
+  // Re-pointed at the authed specs that DO open them and assert design-system markup inside `<main>`.
+  // Found by reading the gate's own console output — "5 covered elsewhere" — and then checking what
+  // each named spec actually asserts, rather than trusting the label (design-system-rails S5).
+  '/app/funnel/[projectSlug]/[featureKey]': {
+    coveredBy: 'e2e/command-center.authed.spec.ts — opens it and measures `.ds-chart-bars .ds-chart-fill`',
+  },
+  '/app/impact/[projectSlug]/[featureKey]': {
+    coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
+  },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
-  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts' },
+  // ⚠️ **SPRINT 6: this claim does not hold, and it is inert only because the row is still
+  // `rendersFromDesignSystem: false`.** `report-share.spec.ts` has ZERO `page.goto` calls — it is an
+  // API spec — so the moment Sprint 6 flips this row to `true`, `/s/[token]` starts counting toward
+  // the coverage number with nothing verifying it renders. That is the same defect S5 found on the
+  // journey and experiment detail routes, waiting one sprint out.
+  //
+  // The fix when it lands: mint a real share token in the authed fixture and open the route from the
+  // loop above, exactly as the journey and experiment details now are. Do not reword this string.
+  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts — ⚠️ API-only; see the note above before Sprint 6 flips this row' },
 }
 
 /**
@@ -640,6 +689,25 @@ test('every route claiming the design system renders from it', async ({ page }) 
       designSystemClasses: [...document.querySelectorAll('main [class]')].filter((element) =>
         [...element.classList].some((name) => name === 'ds' || name.startsWith('ds-'))
       ).length,
+      // How far down the page the first element carrying DATA begins — the CHROME, measured. The
+      // list is the product's content vocabulary, the counterpart of the prototype's in
+      // `measure-contract.mjs`. `null` when a page renders none, which is reported rather than
+      // scored: a route with no content element is a finding, not a zero.
+      chrome: (() => {
+        const first = document.querySelector(
+          'main .ds-tile, main .ds-listcard, main .ds-tasklist, main .ds-chart, main .ds-card, ' +
+            'main .ds-empty, main .ds-band-empty, main .ds-table, main .ds-timeline, main .ds-field, ' +
+            'main .ds-summary, main .ds-kpis, main .ds-envtable, main .ds-picklist, main .ds-matrix, ' +
+            // ⚠️ `.ds-once` has NO prototype counterpart, and leaving it out understated the chrome
+            // on the one page that opens with it. It is the one-time credential reveal — the most
+            // important thing on `/app/onboarding`, and content by any reading — but Sprint 2 built
+            // it from `references/ux-guidelines.md` rather than from a prototype class, so
+            // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
+            // this list is maintained beside that one rather than derived from it.
+            'main .ds-once'
+        )
+        return first ? Math.round(first.getBoundingClientRect().top) : null
+      })(),
     }))
 
     expect
@@ -648,12 +716,36 @@ test('every route claiming the design system renders from it', async ({ page }) 
         `[${row.route}] claims to render from design-system/ and its <main> contains no ds- class`
       )
       .toBeGreaterThan(0)
+
+    // ⚠️ **THE CHROME BUDGET REPLACED A NO-SCROLL ASSERTION THAT WAS GREEN FOR THE WRONG REASON.**
+    //
+    // This used to require every covered route to fit 1440x960, citing "a page that scrolls means
+    // the chrome is eating the viewport". Measured against the approved design (`MEASURED-SPEC.md`,
+    // the chrome table), ELEVEN of the thirty approved states scroll — `today` is 1711px,
+    // `experiment-blocked` 1625px, and `ship-activity` 1274px while the route built from it passed
+    // this line. It was asserting a property the design does not have, and passing because the
+    // fixture tenant is thin. In the epic named after guards that cannot go red, that is the finding
+    // rather than the inconvenience.
+    //
+    // Every defect the old assertion NAMES is about chrome — a 48px h1 wrapping to four lines, a
+    // three-line rail card, a summary strip that eats the screen — and none is about row count. So
+    // the budget is the chrome, and `CHROME_BUDGET_PX` is the approved design's own maximum,
+    // welded to the regenerated table by `console-spec.test.ts`.
     expect
-      .soft(
-        geometry.scrollHeight,
-        `[${row.route}] is ${geometry.scrollHeight}px tall in a ${geometry.innerHeight}px viewport`
-      )
-      .toBeLessThanOrEqual(geometry.innerHeight)
+      .soft(geometry.chrome, `[${row.route}] renders no content element at all inside <main>`)
+      .not.toBeNull()
+    if (geometry.chrome !== null) {
+      expect
+        .soft(
+          geometry.chrome,
+          `[${row.route}] spends ${geometry.chrome}px on chrome before its first content — the ` +
+            `approved design's worst case is ${CHROME_BUDGET_PX}px`
+        )
+        .toBeLessThanOrEqual(CHROME_BUDGET_PX)
+    }
+
+    // Horizontal scroll stays an absolute: wide content scrolls inside its OWN container, and the
+    // page never does. That one IS a property of the approved design, at every state.
     expect
       .soft(
         geometry.scrollWidth,

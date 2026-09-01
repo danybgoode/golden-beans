@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { hashCredential } from '@/lib/credential-hash'
+import { CURRENT_CONTEXT_VERSION } from '@/lib/event-context'
 import {
   AUTHED_STATE_PATH,
   IMPACT_FEATURE_KEY,
@@ -19,6 +20,13 @@ import {
   SCENARIO_TARGET_KEY,
   SCENARIO_UNDISCLOSED_FLAG_KEY,
   SCENARIO_UNDISCLOSED_KEY,
+  EXPERIMENT_FIXTURE_KEY,
+  EXPERIMENT_METRIC_EVENT,
+  EXPERIMENT_EXPOSURES_PER_ARM,
+  EXPERIMENT_CONTROL_CONVERSIONS,
+  EXPERIMENT_TREATMENT_CONVERSIONS,
+  JOURNEY_FIXTURE_KEY,
+  JOURNEY_STAGES,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -149,9 +157,350 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedImpactFixture(db, membership.project_id as string)
   await seedFunnelFixture(db, membership.project_id as string)
   await seedScenarioFixture(db, membership.project_id as string, userId)
+  await seedTaskFixture(db, membership.project_id as string)
+  await seedExperimentFixture(db, membership.project_id as string, userId)
+  await seedJourneyFixture(db, membership.project_id as string, userId)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed an ACTIVE journey with subjects spread across its stages.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.5 builds `measure-journey`, whose whole content is stage bars with a
+ * visible drop-off. Production `miyagisanchez` has **zero** journeys (epic D10) — the one live
+ * journey is `merchant_activation` on `golden-beans` — so on the fixture tenant, and on the
+ * walkthrough tenant, the bars are drawn by nothing.
+ *
+ * ⚠️ **The stage counts DESCEND and are all different**, deliberately: 12 → 7 → 3. Equal counts
+ * would let a page rendering one number three times pass, and a page drawing three equal-length bars
+ * pass with it — the same argument `seedFunnelFixture` above makes, and the reason its own counts
+ * are 3 / 2 / 1.
+ *
+ * Subjects are nested: everyone who reaches a stage has satisfied the ones before it. A journey
+ * counts people where they ACTUALLY are, so a subject appearing at stage 3 without stage 2 is a
+ * legitimate state — it is just not the one this fixture is for.
+ */
+async function seedJourneyFixture(db: SupabaseClient, projectId: string, actorUserId: string) {
+  const definition = {
+    entityType: 'merchant',
+    description: 'A seller from sign-up to their second sale.',
+    stages: JOURNEY_STAGES.map((stage) => ({ key: stage.key, event: stage.event })),
+    cohortEntry: { stageKey: JOURNEY_STAGES[0].key },
+  }
+
+  const { data: created, error: createError } = await db.rpc('create_journey_version', {
+    p_project_id: projectId,
+    p_journey_key: JOURNEY_FIXTURE_KEY,
+    p_definition: definition,
+    p_actor_user_id: actorUserId,
+  })
+  if (createError || !created?.[0]) {
+    throw new Error(`could not seed the journey version: ${createError?.message}`)
+  }
+  const { journey_id: journeyId, version_id: versionId } = created[0]
+
+  const { data: activated, error: activateError } = await db.rpc('activate_journey_version', {
+    p_project_id: projectId,
+    p_journey_id: journeyId,
+    p_version_id: versionId,
+    p_actor_user_id: actorUserId,
+  })
+  if (activateError || activated !== true) {
+    throw new Error(`could not activate the fixture journey: ${activateError?.message ?? 'refused'}`)
+  }
+
+  // Inside the page's default 30-day entry window, and ordered so a subject's later stages fall
+  // strictly after its earlier ones — a journey is an ORDERED lifecycle, and simultaneous timestamps
+  // make "where somebody actually is" ambiguous.
+  const start = Date.now() - 20 * 86_400_000
+  const rows: Record<string, unknown>[] = []
+  JOURNEY_STAGES.forEach((stage, index) => {
+    for (let subject = 0; subject < stage.subjects; subject += 1) {
+      rows.push({
+        project_id: projectId,
+        user_id: `journey-${subject}`,
+        event: stage.event,
+        subject_type: 'merchant',
+        subject_id: `journey-${subject}`,
+        context_version: CURRENT_CONTEXT_VERSION,
+        tags: {},
+        occurred_at: new Date(start + (index * 24 + subject) * 3_600_000).toISOString(),
+        created_at: new Date(start + (index * 24 + subject) * 3_600_000).toISOString(),
+      })
+    }
+  })
+  const { error } = await db.from('events').insert(rows)
+  if (error) throw new Error(`could not seed the journey events: ${error.message}`)
+}
+
+/**
+ * Seed a RUNNING experiment with enough real exposures and conversions to produce an interval.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.4 builds the `experiment-ready` / `experiment-blocked` states, and
+ * epic **DA2** put a real confidence interval behind the bar they draw. Production `miyagisanchez`
+ * has two experiments and BOTH are `decided` (D10), so neither state is reachable on any live
+ * tenant — the page that computes a statistic people make ship / no-ship decisions on would be
+ * rendered by nothing, with data, ever.
+ *
+ * `lib/experiment-interval.test.ts` pins the arithmetic against independently computed values. What
+ * only this can cover is the WIRING: that the page reads the interval the analysis computed, for the
+ * right arms, and renders the sentence that matches whether it crosses zero.
+ *
+ * ── Why the real RPC and the real ingest shape ────────────────────────────────────────────────
+ * The version is created and started through `create_experiment_version` /
+ * `transition_experiment_version` — the same path the console uses — because a hand-inserted row
+ * could carry a lifecycle the governance layer would never produce. The events are written directly,
+ * matching `get_experiment_analysis_events`' own predicates (`experiment_exposed` with
+ * `feature_id = <key>` and a `variant` tag, then the metric event); driving 400 of them through
+ * `/api/v1/track` would spend a minute of every authed run for no additional coverage.
+ *
+ * ⚠️ **The numbers are chosen to CLEAR zero, deliberately.** 200 exposures per arm against a
+ * declared minimum of 150, converting 40 and 70 — a lift near +75% whose 95% interval sits well
+ * above zero. An interval that crossed zero would make the spec's "does not cross zero" assertion
+ * pass or fail on rounding, and a fixture whose meaning depends on rounding is a fixture that goes
+ * red for the wrong reason one release later.
+ */
+async function seedExperimentFixture(db: SupabaseClient, projectId: string, actorUserId: string) {
+  const startedAt = new Date(Date.now() - 13 * 86_400_000)
+  const definition = {
+    hypothesis: 'A one-page checkout converts better than three steps.',
+    assignmentEntityType: 'merchant',
+    eligibility: { description: 'Everyone in the fixture tenant.', tags: {} },
+    variants: [
+      { key: 'control', weight: 1 },
+      { key: 'treatment', weight: 1 },
+    ],
+    controlVariantKey: 'control',
+    primaryMetric: { event: EXPERIMENT_METRIC_EVENT, direction: 'increase' },
+    guardrailMetrics: [],
+    segmentFields: [],
+    plannedWindow: {
+      startAt: startedAt.toISOString(),
+      endAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
+    },
+    minimumSamplePerVariant: 150,
+  }
+
+  const { data: created, error: createError } = await db.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: EXPERIMENT_FIXTURE_KEY,
+    p_definition: definition,
+    p_actor_user_id: actorUserId,
+  })
+  if (createError || !created?.[0]) {
+    throw new Error(`could not seed the experiment version: ${createError?.message}`)
+  }
+  const { experiment_id: experimentId, version_id: versionId, version } = created[0]
+
+  const { error: startError } = await db.rpc('transition_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_id: experimentId,
+    p_version_id: versionId,
+    p_target_status: 'running',
+    p_actor_user_id: actorUserId,
+  })
+  if (startError) throw new Error(`could not start the fixture experiment: ${startError.message}`)
+
+  // ⚠️ **A SECOND VERSION, whose only job is to make the version ORDERING observable.**
+  //
+  // `mapExperimentRegistryRows` returns versions newest-FIRST, and the list page originally took
+  // `versions.at(-1)` — the oldest — under a comment claiming the array was ascending. On production
+  // `miyagisanchez` that is a live wrong answer: `fundadoras_promise_cta` is v1 `stopped`, v2
+  // `draft`, v3 `decided`, and the row read "Stopped · v1".
+  //
+  // A single-version fixture cannot see that: with one version, first and last are the same element.
+  // So the fixture has two, and `experiment-governance.authed.spec.ts` asserts the row describes v1
+  // — the RUNNING one, which is the higher number here — rather than the draft.
+  const { error: draftError } = await db.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: EXPERIMENT_FIXTURE_KEY,
+    p_definition: { ...definition, hypothesis: 'A superseding draft that must NOT describe the row.' },
+    p_actor_user_id: actorUserId,
+  })
+  if (draftError) throw new Error(`could not seed the second experiment version: ${draftError.message}`)
+
+  // Exposures land one minute apart from the start, and every conversion strictly AFTER its own
+  // exposure — the analysis only attributes a metric event to a subject exposed before it, so a
+  // shared `now()` default would attribute nothing and the funnel would read as an integrity defect
+  // rather than as a result. Same failure `seedFunnelFixture` records above.
+  const rows: Record<string, unknown>[] = []
+  const at = (minutes: number) => new Date(startedAt.getTime() + minutes * 60_000).toISOString()
+  const arms: [string, number][] = [
+    ['control', EXPERIMENT_CONTROL_CONVERSIONS],
+    ['treatment', EXPERIMENT_TREATMENT_CONVERSIONS],
+  ]
+  let minute = 1
+  for (const [variant, converted] of arms) {
+    for (let index = 0; index < EXPERIMENT_EXPOSURES_PER_ARM; index += 1) {
+      const subjectId = `${variant}-${index}`
+      rows.push({
+        project_id: projectId,
+        user_id: subjectId,
+        event: 'experiment_exposed',
+        feature_id: EXPERIMENT_FIXTURE_KEY,
+        subject_type: 'merchant',
+        subject_id: subjectId,
+        // ⚠️ `events_context_version_present` requires this whenever ANY entity-context column is
+        // set, which `subject_type`/`subject_id` are — the constraint exists so a row cannot carry a
+        // subject without saying which contract version wrote it. Found by running the seed.
+        context_version: CURRENT_CONTEXT_VERSION,
+        tags: { variant, experiment_definition_version: Number(version) },
+        occurred_at: at(minute),
+        created_at: at(minute),
+      })
+      if (index < converted) {
+        rows.push({
+          project_id: projectId,
+          user_id: subjectId,
+          event: EXPERIMENT_METRIC_EVENT,
+          subject_type: 'merchant',
+          subject_id: subjectId,
+          context_version: CURRENT_CONTEXT_VERSION,
+          // `events.tags` is NOT NULL with no default. A metric event carries no tags of its own —
+          // the analysis joins it to an exposure by subject — so it is an empty object rather than
+          // an omission.
+          tags: {},
+          occurred_at: at(minute + 1),
+          created_at: at(minute + 1),
+        })
+      }
+      minute += 2
+    }
+  }
+  // Inserted in batches: a single statement with 600 rows is close enough to PostgREST's payload
+  // ceiling to be a flake nobody would diagnose from the error it produces.
+  for (let start = 0; start < rows.length; start += 200) {
+    const { error } = await db.from('events').insert(rows.slice(start, start + 200))
+    if (error) throw new Error(`could not seed the experiment events: ${error.message}`)
+  }
+}
+
+/**
+ * Seed a queue with one task in each of the three states Today's bands show.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.2 mounts Today's three bands on `/app` and `/app/tasks`, and epic D10
+ * records that **no production tenant can render them populated**: `miyagisanchez` has zero tasks,
+ * and the one production task is a resolved one on `golden-beans-demo`. So without this the ROW —
+ * its dot, its evidence phrase, its holder, its actions — is a component nothing ever draws with
+ * data, which is the same "a guard nobody has seen red" problem one level up.
+ *
+ * Exactly the argument Story 4.2's `seedFunnelFixture` makes for the funnel, applied to the queue.
+ *
+ * ── Why the service client and not the promotion path ─────────────────────────────────────────
+ * `promoteEligibleSignals` only promotes signals that cross an impact threshold, so producing a
+ * CLAIMED and a RESOLVED task through it would mean driving the whole lifecycle — several writes
+ * whose failure modes have nothing to do with what the bands render. Same reasoning as
+ * `seedImpactFixture` and `seedFunnelFixture` above.
+ *
+ * ⚠️ **The three differ in every field a band reads**, deliberately: a spec asserting "the rows
+ * render" against three identical tasks could pass on a page rendering one row three times.
+ *   · one `open`, unheld, an error, with both evidence counts
+ *   · one `claimed`, held by a named actor, a friction, with an event count and no user count
+ *   · one `resolved`, with a resolution and an evidence pointer
+ */
+async function seedTaskFixture(db: SupabaseClient, projectId: string) {
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  // ⚠️ `signals.fingerprint` carries `CHECK (fingerprint ~ '^[0-9a-f]{32}$')` — it is a hash, not a
+  // label. A readable stand-in ('gb-e2e-signal-open') is rejected by the database, which is the
+  // right behaviour and was found by running the seed rather than by reading the schema. These are
+  // fixed hex strings rather than real hashes: `lib/signal-fingerprint.ts` owns the real derivation,
+  // and nothing in this fixture depends on the value beyond its uniqueness.
+  const FINGERPRINT = {
+    open: 'e2e0000000000000000000000000000a',
+    claimed: 'e2e0000000000000000000000000000b',
+    resolved: 'e2e0000000000000000000000000000c',
+  } as const
+  const signals = [
+    {
+      kind: 'error',
+      fingerprint: FINGERPRINT.open,
+      title: 'Checkout fails for sellers with no payout account',
+      event_count: 41,
+      users_affected: 12,
+      first_seen_at: minutesAgo(600),
+      last_seen_at: minutesAgo(28),
+      sample: { message: 'TypeError: payout account is undefined' },
+    },
+    {
+      kind: 'friction',
+      fingerprint: FINGERPRINT.claimed,
+      title: 'Listing form abandoned at the photo step',
+      event_count: 212,
+      users_affected: 0,
+      first_seen_at: minutesAgo(1440),
+      last_seen_at: minutesAgo(60),
+      sample: { stage: 'photo_upload' },
+    },
+    {
+      kind: 'error',
+      fingerprint: FINGERPRINT.resolved,
+      title: 'Duplicate order emails on retry',
+      event_count: 14,
+      users_affected: 9,
+      first_seen_at: minutesAgo(4320),
+      last_seen_at: minutesAgo(2880),
+      sample: { message: 'send() called twice for one order id' },
+    },
+  ].map((signal) => ({ ...signal, project_id: projectId }))
+
+  const { data: inserted, error: signalError } = await db
+    .from('signals')
+    .insert(signals)
+    .select('id, fingerprint')
+  if (signalError || !inserted) throw new Error(`could not seed the task signals: ${signalError?.message}`)
+  const idOf = (fingerprint: string) => {
+    const row = inserted.find((signal) => signal.fingerprint === fingerprint)
+    // Fail LOUD rather than insert a task with an undefined signal id — a `not null` violation two
+    // statements later is a much worse error message than this one (CODE-QUALITY #7).
+    if (!row) throw new Error(`seeded signal ${fingerprint} did not come back with an id`)
+    return row.id as string
+  }
+
+  const { error: taskError } = await db.from('tasks').insert([
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.open),
+      status: 'open',
+      title: 'Checkout fails for sellers with no payout account',
+      impact_rank: 41,
+      evidence: {
+        signal: { kind: 'error', eventCount: 41, usersAffected: 12, firstSeenAt: minutesAgo(600) },
+        capturedAt: minutesAgo(28),
+      },
+    },
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.claimed),
+      status: 'claimed',
+      title: 'Listing form abandoned at the photo step',
+      impact_rank: 27,
+      claimed_by: 'gb-e2e-agent',
+      claimed_at: minutesAgo(45),
+      evidence: { signal: { kind: 'friction', eventCount: 212 }, capturedAt: minutesAgo(60) },
+    },
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.resolved),
+      status: 'resolved',
+      title: 'Duplicate order emails on retry',
+      impact_rank: 9,
+      claimed_by: 'gb-e2e-agent',
+      claimed_at: minutesAgo(2880),
+      resolved_at: minutesAgo(1440),
+      resolution: 'fixed',
+      evidence_pointer: 'abc1234',
+      evidence: {
+        signal: { kind: 'error', eventCount: 14, usersAffected: 9 },
+        capturedAt: minutesAgo(2880),
+      },
+    },
+  ])
+  if (taskError) throw new Error(`could not seed the tasks: ${taskError.message}`)
+}
 
 /**
  * Seed the ONE fixture feature that has a funnel — design-system-rails Story 4.2.
