@@ -304,6 +304,24 @@ async function seedExperimentFixture(db: SupabaseClient, projectId: string, acto
   })
   if (startError) throw new Error(`could not start the fixture experiment: ${startError.message}`)
 
+  // ⚠️ **A SECOND VERSION, whose only job is to make the version ORDERING observable.**
+  //
+  // `mapExperimentRegistryRows` returns versions newest-FIRST, and the list page originally took
+  // `versions.at(-1)` — the oldest — under a comment claiming the array was ascending. On production
+  // `miyagisanchez` that is a live wrong answer: `fundadoras_promise_cta` is v1 `stopped`, v2
+  // `draft`, v3 `decided`, and the row read "Stopped · v1".
+  //
+  // A single-version fixture cannot see that: with one version, first and last are the same element.
+  // So the fixture has two, and `experiment-governance.authed.spec.ts` asserts the row describes v1
+  // — the RUNNING one, which is the higher number here — rather than the draft.
+  const { error: draftError } = await db.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: EXPERIMENT_FIXTURE_KEY,
+    p_definition: { ...definition, hypothesis: 'A superseding draft that must NOT describe the row.' },
+    p_actor_user_id: actorUserId,
+  })
+  if (draftError) throw new Error(`could not seed the second experiment version: ${draftError.message}`)
+
   // Exposures land one minute apart from the start, and every conversion strictly AFTER its own
   // exposure — the analysis only attributes a metric event to a subject exposed before it, so a
   // shared `now()` default would attribute nothing and the funnel would read as an integrity defect

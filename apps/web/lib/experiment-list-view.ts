@@ -46,16 +46,72 @@ export type ExperimentRowState =
  */
 export const READINESS_ANALYSIS_CAP = 12
 
+export type ExperimentVersionInput = {
+  version: number
+  status: ExperimentStatus
+  startedAt: string | null
+  hypothesis: string
+  primaryMetricEvent: string
+}
+
 export type ExperimentListInput = {
   key: string
-  /** The newest version, which is the one the list describes. `null` when a registry has none. */
-  version: {
-    version: number
-    status: ExperimentStatus
-    startedAt: string | null
-    hypothesis: string
-    primaryMetricEvent: string
-  } | null
+  /**
+   * EVERY version, in any order. The module picks which one the row describes — see
+   * `describingVersion`, and the reason that is not simply "the newest".
+   */
+  versions: readonly ExperimentVersionInput[]
+}
+
+/**
+ * Which version a row describes, and which draft is waiting above it.
+ *
+ * ⚠️ **NOT simply the newest, and finding that out cost a rendered page.** The first fix for the
+ * ordering bug took the highest version number — and on a fixture with v1 `running` and v2 `draft`
+ * the row then read **Draft · v2** and the answer line said *"Nothing is waiting on a decision"*,
+ * hiding a live experiment behind an unstarted plan. Correct arithmetic, wrong question.
+ *
+ * The question this list answers is *"which experiments need me?"*, so the row describes the newest
+ * version that has actually **started** — the one with operational state — and a newer draft above
+ * it is flagged separately. That is exactly the model `lib/journey-list-view.ts` already uses
+ * ("Active · v4" plus "Draft v5 waiting"), which is what the approved design means by *"same row,
+ * same state pill, same version words"*.
+ *
+ * A draft BELOW the described version is not waiting for anything, for the same reason it is not in
+ * journeys: it has been superseded. Production `miyagisanchez` has exactly that shape —
+ * `fundadoras_promise_cta` is v1 `stopped`, v2 `draft`, v3 `decided`.
+ */
+export function describingVersion(versions: readonly ExperimentVersionInput[]): {
+  describes: ExperimentVersionInput | null
+  waitingDraftVersion: number | null
+} {
+  const started = versions.filter((version) => version.status !== 'draft')
+  const describes = newestVersion(started.length > 0 ? started : versions)
+  const waitingDraft = newestVersion(
+    versions.filter(
+      (version) => version.status === 'draft' && (describes === null || version.version > describes.version)
+    )
+  )
+  return { describes, waitingDraftVersion: waitingDraft?.version ?? null }
+}
+
+/**
+ * The version a list row describes: the HIGHEST-numbered one.
+ *
+ * ⚠️ **This exists because `.at(-1)` was wrong, and the comment beside it asserted the opposite of
+ * what the code does.** `mapExperimentRegistryRows` sorts versions **descending**
+ * (`b.version - a.version`), so `versions.at(-1)` is the OLDEST — and on production `miyagisanchez`
+ * right now, `fundadoras_promise_cta` has v1 `stopped`, v2 `draft`, v3 `decided`. The list would
+ * have shown **Stopped · v1** for an experiment whose current plan is v3 and decided. A live defect,
+ * on live data, found by verifying a claim I had written in a comment (CODE-QUALITY #3).
+ *
+ * Computing the maximum makes the ordering irrelevant: whatever a mapper decides to do with `sort`
+ * later cannot reach this. That is the difference between fixing the instance and making the class
+ * unrepresentable (CODE-QUALITY #2).
+ */
+export function newestVersion<T extends { version: number }>(versions: readonly T[]): T | null {
+  if (versions.length === 0) return null
+  return versions.reduce((newest, candidate) => (candidate.version > newest.version ? candidate : newest))
 }
 
 export type ExperimentListRow = {
@@ -64,6 +120,8 @@ export type ExperimentListRow = {
   primaryMetricEvent: string
   version: number | null
   state: ExperimentRowState
+  /** A newer draft than the version this row describes, or `null`. Same shape as a journey row. */
+  waitingDraftVersion: number | null
   /** Whole days since it started, or `null` when it never did. */
   dayCount: number | null
   /** True when this row's state needs the analysis and the cap stopped it being run. */
@@ -86,7 +144,10 @@ export function readinessCandidates(
   cap: number = READINESS_ANALYSIS_CAP
 ): string[] {
   return inputs
-    .filter((input) => input.version !== null && needsReadinessAnalysis(input.version.status))
+    .filter((input) => {
+      const { describes } = describingVersion(input.versions)
+      return describes !== null && needsReadinessAnalysis(describes.status)
+    })
     .slice(0, Math.max(0, cap))
     .map((input) => input.key)
 }
@@ -117,18 +178,20 @@ export function projectExperimentRows(
   now: Date = new Date()
 ): ExperimentListRow[] {
   return inputs.map((input) => {
-    if (input.version === null) {
+    const { describes, waitingDraftVersion } = describingVersion(input.versions)
+    if (describes === null) {
       return {
         key: input.key,
         hypothesis: '',
         primaryMetricEvent: '',
         version: null,
         state: 'draft' as const,
+        waitingDraftVersion: null,
         dayCount: null,
         needsAnalysis: false,
       }
     }
-    const { status, startedAt, hypothesis, primaryMetricEvent, version } = input.version
+    const { status, startedAt, hypothesis, primaryMetricEvent, version } = describes
     const resolved = readiness.get(input.key)
     // ⚠️ The non-running statuses are mapped EXPLICITLY rather than passed through. `running` is not
     // a row state — it is the state whose row state the analysis decides — and letting the status
@@ -153,6 +216,7 @@ export function projectExperimentRows(
       primaryMetricEvent,
       version,
       state,
+      waitingDraftVersion,
       dayCount: dayCountSince(startedAt, now),
       needsAnalysis: needsReadinessAnalysis(status),
     }
@@ -186,6 +250,14 @@ export function experimentAnswer(rows: readonly ExperimentListRow[]): string {
   }
   if (decided > 0) {
     parts.push(`${decided} already ${decided === 1 ? 'has a decision' : 'have decisions'} on record.`)
+  }
+  // A draft above the running plan is the other thing worth knowing from this list — same clause the
+  // journeys answer carries, and for the same reason: a draft changes nothing until it is started.
+  const waiting = rows.filter((row) => row.waitingDraftVersion !== null).length
+  if (waiting > 0) {
+    parts.push(
+      `${waiting} ${waiting === 1 ? 'has a newer draft' : 'have newer drafts'} waiting — a draft changes nothing until you start it.`
+    )
   }
   return parts.join(' ')
 }

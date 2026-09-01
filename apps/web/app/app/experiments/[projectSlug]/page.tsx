@@ -8,6 +8,7 @@ import { parseExperimentAnalysisRequest } from '@/lib/experiment-analysis-reques
 import { isExperimentGovernanceEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import {
+  describingVersion,
   experimentAnswer,
   projectExperimentRows,
   readinessCandidates,
@@ -48,24 +49,26 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
     listExperimentFlagBindings(membership.projectId),
   ])
 
-  // The NEWEST version is the one the list describes — an experiment's identity is its key, and its
-  // current state is its latest plan. `listExperimentRegistries` orders versions ascending.
-  const inputs: ExperimentListInput[] = experiments.map((experiment) => {
-    const version = experiment.versions.at(-1) ?? null
-    return {
-      key: experiment.key,
-      version:
-        version === null
-          ? null
-          : {
-              version: version.version,
-              status: version.status,
-              startedAt: version.startedAt,
-              hypothesis: version.definition.hypothesis,
-              primaryMetricEvent: version.definition.primaryMetric.event,
-            },
-    }
-  })
+  // ⚠️ **Every version is handed to the module, which decides which one the row describes.**
+  //
+  // Two bugs live in this one line's history, and the second was only visible on a rendered page.
+  // First, `.at(-1)` under a comment claiming the array was ascending — `mapExperimentRegistryRows`
+  // sorts DESCENDING, so it picked the OLDEST. Then, taking the highest number — which put
+  // **Draft · v2** on a row whose v1 was RUNNING, hiding a live experiment behind an unstarted plan.
+  //
+  // `describingVersion` answers the question the page is for: the newest version that has actually
+  // started, with a newer draft flagged beside it — the same model the journeys list uses, which is
+  // what the approved design means by "same row, same state pill, same version words".
+  const inputs: ExperimentListInput[] = experiments.map((experiment) => ({
+    key: experiment.key,
+    versions: experiment.versions.map((version) => ({
+      version: version.version,
+      status: version.status,
+      startedAt: version.startedAt,
+      hypothesis: version.definition.hypothesis,
+      primaryMetricEvent: version.definition.primaryMetric.event,
+    })),
+  }))
 
   const readiness = await resolveReadiness(membership.projectId, projectSlug, inputs)
   const rows = projectExperimentRows(inputs, readiness)
@@ -122,7 +125,12 @@ async function resolveReadiness(
   inputs: ExperimentListInput[]
 ): Promise<Map<string, boolean>> {
   const candidates = readinessCandidates(inputs)
-  const versionOf = new Map(inputs.map((input) => [input.key, input.version?.version ?? null]))
+  // The version the ROW describes is the one to analyse — the module decides which that is, and this
+  // must not re-derive it: a readiness answer computed for a different version than the row shows is
+  // a pill about one plan and a number about another.
+  const versionOf = new Map(
+    inputs.map((input) => [input.key, describingVersion(input.versions).describes?.version ?? null])
+  )
   const resolved = await Promise.all(
     candidates.map(async (key): Promise<[string, boolean] | null> => {
       const version = versionOf.get(key)

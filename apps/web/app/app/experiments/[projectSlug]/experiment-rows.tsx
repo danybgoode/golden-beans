@@ -1,5 +1,5 @@
 import type { ExperimentListRow, ExperimentRowState } from '@/lib/experiment-list-view'
-import { Col, ListCard, ListHead, Row, RowMain, RowState, TableEmpty } from '@/design-system/primitives'
+import { Col, ListCard, ListHead, Row, RowMain, RowState, Tag, TableEmpty } from '@/design-system/primitives'
 
 // design-system-rails · Sprint 5, Story 5.4 — the Experiments list, reference state
 // `ship-experiments`.
@@ -90,6 +90,16 @@ export function ExperimentRows({ slug, rows }: { slug: string; rows: ExperimentL
                 under the Open button, which is the kind of thing only opening the page shows. */}
             <Col width="meta" title={row.primaryMetricEvent || undefined}>
               <span className="ds-mono ds-row-clip">{row.primaryMetricEvent || '—'}</span>
+              {/* ⚠️ A newer draft is flagged BESIDE the described version, never instead of it — the
+                  same treatment `journey-rows.tsx` gives "Draft v3 waiting", which is what the
+                  approved design means by "same row, same state pill, same version words". Showing
+                  the draft as the row's state would hide a running experiment behind an unstarted
+                  plan, which is exactly what it did before this. */}
+              {row.waitingDraftVersion === null ? null : (
+                <span className="ds-state-detail">
+                  <Tag tone="unclassified">Draft v{row.waitingDraftVersion} waiting</Tag>
+                </span>
+              )}
             </Col>
             <Col width="act">
               <a

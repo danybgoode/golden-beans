@@ -3,6 +3,7 @@ import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { isJourneyProjectionsEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { listJourneyRegistries } from '@/lib/journeys'
+import { newestVersion } from '@/lib/experiment-list-view'
 import {
   journeyAnswer,
   projectJourneyRows,
@@ -40,9 +41,15 @@ export default async function JourneysPage({ params }: { params: Promise<{ proje
     key: journey.key,
     // The DESCRIPTION lives on the definition, and the active version's is the current one. Falling
     // back to the newest version's means a journey with only drafts still says what it is for.
+    //
+    // ⚠️ **`newestVersion`, NOT `.at(-1)`** — `mapJourneyRegistryRows` sorts DESCENDING too, so the
+    // fallback was picking the OLDEST draft. Same defect as the experiments list, same fix: compute
+    // the maximum, so a mapper's ordering cannot reach it.
     description:
-      (journey.versions.find((version) => version.id === journey.activeVersionId) ?? journey.versions.at(-1))
-        ?.definition.description ?? '',
+      (
+        journey.versions.find((version) => version.id === journey.activeVersionId) ??
+        newestVersion(journey.versions)
+      )?.definition.description ?? '',
     activeVersionId: journey.activeVersionId,
     versions: journey.versions.map((version) => ({
       id: version.id,

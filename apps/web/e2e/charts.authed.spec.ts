@@ -18,6 +18,7 @@
 // `/login`. Every new visual row lands in `authed` or it is not in the gate.
 
 import { test, expect, type Page } from '@playwright/test'
+import { readTenantRecord, EXPERIMENT_FIXTURE_KEY } from './helpers/authed-fixture'
 import * as charts from '@/design-system/charts'
 import { MIN_VISIBLE_PX } from '@/design-system/charts/geometry'
 
@@ -279,4 +280,41 @@ test.describe('the charting primitives', () => {
       geometry.innerWidth
     )
   })
+})
+
+// ── The experiments list describes the right VERSION ──────────────────────────────────────────
+//
+// ⚠️ **Two bugs lived in one line, and only a rendered page could see the second.** First
+// `versions.at(-1)` under a comment claiming the array was ascending — `mapExperimentRegistryRows`
+// sorts DESCENDING, so it took the OLDEST, and production `miyagisanchez`'s `fundadoras_promise_cta`
+// (v1 stopped, v2 draft, v3 decided) would have read "Stopped · v1". Then taking the highest number,
+// which put **Draft · v2** on a row whose v1 was RUNNING — hiding a live experiment behind an
+// unstarted plan.
+//
+// `lib/experiment-list-view.test.ts` pins the arithmetic. This pins that the PAGE reads it, against
+// a fixture that has two versions — because with one version, first and last are the same element
+// and neither bug is observable.
+test('the experiments row describes the running version, with a newer draft flagged beside it', async ({
+  page,
+}) => {
+  test.skip(!gatesAreLit(), 'the console renders behind CONSOLE_SHELL_ENABLED')
+  const slug = readTenantRecord()?.slug
+  test.skip(!slug, 'needs the auth-setup project')
+
+  await page.setViewportSize(VIEWPORT)
+  const response = await page.goto(`/app/experiments/${slug}`)
+  expect(response?.status(), 'experiments needs EXPERIMENT_GOVERNANCE_ENABLED, which is ON in prod').toBe(200)
+
+  const row = page.locator('main .ds-row').filter({ hasText: EXPERIMENT_FIXTURE_KEY })
+  await expect(row).toHaveCount(1)
+  const text = (await row.innerText()).replace(/\s+/g, ' ')
+
+  // The fixture is v1 RUNNING + v2 DRAFT. The row must describe v1 — the one with operational state.
+  expect(text, `the row reads "${text}" — it must describe the RUNNING v1, not the draft`).toContain('v1')
+  expect(text, 'the row must not be described BY the draft').not.toContain('· v2')
+  // ...and the draft is flagged beside it, never instead of it — the same treatment a journey row
+  // gives "Draft v3 waiting".
+  expect(text, 'the newer draft must be flagged on the row').toContain('Draft v2 waiting')
+  // The state pill is the RUNNING version's readiness, not the draft's status.
+  expect(text).toMatch(/Ready to decide|Still gathering/)
 })
