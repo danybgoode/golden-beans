@@ -1,8 +1,9 @@
 # One design system, every surface — Sprint 5: Measure and Today — the pages nobody designed
 
-**Status:** 🟨 **IN PROGRESS** — architecture locked 2026-09-01 against the live code on `main`
-(`fa06612`), the live production database (`slweidgffcfndnskcskc`) and the live Vercel Production
-environment. Branch `feat/design-system-rails-s5`.
+**Status:** 🟦 **In review** — all six stories built, coverage **18 / 27** (all of `/app`), both
+gates green locally. Architecture locked 2026-09-01 against the live code on `main` (`fa06612`), the
+live production database (`slweidgffcfndnskcskc`) and the live Vercel Production environment. Branch
+`feat/design-system-rails-s5`.
 
 > ⚠️ **AMENDED 2026-08-29 — every state in this sprint is already designed and approved.**
 > As scaffolded, this sprint said *"design a state → Daniel approves it → build it"* and left the
@@ -296,6 +297,76 @@ finished.
   denominator is 27, and the three legacy credential routes left it in Sprint 4.*
 **Approved states:** `measure-scenarios`, `tasks-standalone`, `setup-connect`.
 **Risk:** high
+
+## What actually shipped, per story
+
+Each line names the commit and the deviations, so the doc describes the build rather than the plan.
+
+| Story | Commit | Landed |
+|---|---|---|
+| — | `e81fca9` | **The lock.** Five scaffolded claims corrected against live code and live data, and one capability gap put to Daniel as **DA2**. |
+| 5.1 | `0979174` | The six chart primitives, DD4's four rules as tested arithmetic, and the specimen section that draws every state. **Five mutation checks observed red.** |
+| 5.2 | `5264eae` | Today, its three bands, the chrome-budget correction, and `/app/tasks` as the second mount. |
+| 5.3 | `d44b2fe` | Funnel and Impact as mounts of the feature page's own panes; the honest North Star hero; `FunnelBars` and `funnel-geometry` retired. |
+| 5.4 | `6a5dc5c` | Experiments list and detail, **the significance layer (DA2)**, plain-word blockers behind a total map, and the rail-label sweep. |
+| 5.5 | `49e5cda` | Journeys list and detail; the stage bars from `cohort.stages`; the `entity-journeys` diagnostic layer kept behind a disclosure. |
+| 5.6 | `0ebfc14` | Scenarios as a tool, Onboarding off inline styles, `RowGroup`, and the pill/bar contradiction. **Coverage 18 / 27.** |
+| — | `2ab58e1` | **The authed gate runs the PROJECT, not a list of files.** Seven suites were outside it. |
+
+### Findings — the things that were not true before this sprint looked
+
+1. **The visual gate asserted a property the approved design does not have.** It required every
+   covered route to fit 1440×960. Measured against the design: **eleven of the thirty approved
+   states scroll** — `today` is 1711px, `experiment-blocked` 1625px, and `ship-activity` 1274px
+   while the route built from it had been passing that line since Sprint 4. It was green because the
+   fixture tenant is thin. Replaced by a **chrome budget** — how far down the page the first element
+   carrying data begins — which is measured per state into `MEASURED-SPEC.md`, `--check`ed in CI, and
+   welded to `CHROME_BUDGET_PX = 458` by `console-spec.test.ts`. Ship › Features keeps its own
+   no-scroll assertion: it measures exactly 960 and fits *because of* the dormant collapse.
+2. **The North Star has no recorded value and no code path can produce one** (L1). `readNorthStar`
+   returns `latestValue: null` unconditionally and the schema has no table to read a level from.
+3. **The engine computed no confidence interval** (L3 → **DA2**). Daniel chose to build it.
+4. **The project switcher did not switch.** Every project's Today entry resolved to the bare `/app`.
+5. **Four rail labels did not match the approved rails**, and one was a false claim in a shipped
+   doc: Story 4.3's text says Activity *"is the word the rail says"*, and the rail said `Flag audit`.
+6. **The scenarios pill and its evidence bar contradicted each other** — a green **Held** beside
+   *"Never run — nothing here is evidence yet"* — because each was derived separately.
+7. **Seven authed suites were outside CI**, and this sprint broke assertions in four of them.
+8. **One of my own new tests could not fail.** "A malformed timestamp is never bucketed under an
+   invalid day" stayed green when a bad row *was* bucketed. Found by mutation-checking it.
+9. **`crossesZero` had an unreachable boundary case.** Flipping it from inclusive to exclusive left
+   all eleven interval tests green; the case *is* reachable, and the exclusive form would have said
+   "the difference is real" about two arms that performed identically.
+
+### Deviations, stated rather than left to be found
+
+1. **Nothing was delegated.** The session ran under an explicit instruction not to spawn subagents,
+   so the architect built all six stories. Recorded in the build contract.
+2. **Six surfaces are kept behind disclosures, complete**, where the approved state draws none of
+   them and they have no other home: the Medusa-truth boundary on Today, the impact series table,
+   the experiment authoring form, the experiment governance layer and its decision ledger, the
+   journey diagnostic layer, and the scenario operating workspace. This is Sprint 4's Destinations
+   call, applied five more times. **Deleting a capability to satisfy a geometry assertion is not what
+   "render from the design system" asks for.**
+3. **`charts.authed.spec.ts`, not `.browser.`** — L6 / D5-a.
+4. **The interval key's three labels are positioned at what they name**, where the prototype puts
+   them in a `space-between` row. That is only correct for the prototype's own numbers; with a real
+   interval above zero the tick lands at 8.3% and its label captioned ninety pixels of empty track.
+5. **`RowGroup` is a new primitive.** The approved scenario row is genuinely taller than every other
+   list row, and widening `.ds-row-desc` to accept block content would have relaxed the constraint
+   that holds the feature list at 71px, to serve one list.
+6. **The Experiments list does not resolve readiness for every row**, and the answer line says so.
+   Readiness is a full fact scan per experiment, capped at twelve. Journeys does not read subject
+   counts at all, for the same reason, and renders a dash rather than a zero.
+7. **The scenario description is built from the definition, never prose.** `ScenarioDefinition` has
+   no description field, so the approved state's human sentences would have been invented.
+8. **Four fixtures were added to `auth.setup.ts`** — tasks, an experiment, a journey, and the
+   signals behind them — because no production tenant can render these states populated (D10) and a
+   row nothing draws with data is a row nobody has seen. Three schema constraints were found by
+   running them: `signals_fingerprint_check`, `events_context_version_present`, and `tags NOT NULL`.
+9. **`is-console` and `ds` are no longer one condition on `ProductShell`.** The two anonymously
+   readable demo dashboards are the only renders this changes, and they are exactly the two routes
+   Story 5.3 rebuilt.
 
 ## Sprint QA
 - **specs:** `e2e/charts.authed.spec.ts` (each primitive renders its states; no reliance on colour
