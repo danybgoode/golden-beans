@@ -37,10 +37,14 @@ registerHooks({
 
 const {
   buildCredentialInventory,
+  isCredentialKind,
   isCurrentlyUsable,
   credentialCapability,
   credentialTitle,
   formatExpiry,
+  AGENT_KEY_EXPIRY_DAYS,
+  CREDENTIAL_MINT_FIELD,
+  CREDENTIAL_MINT_ORDER,
   CREDENTIAL_KINDS_NOT_LISTED,
 } = await import('./credential-inventory.ts')
 
@@ -344,4 +348,88 @@ test('the count and the rendered list can legitimately differ, and only in one d
   assert.equal(rows.length, 2, 'the expired row stopped rendering — it should still be visible')
   assert.equal(usable.length, 1, 'the expired row is still counted as access')
   assert.ok(usable.length <= rows.length)
+})
+
+// ── design-system-rails · Sprint 4, Story 4.5 ─────────────────────────────────────────────────
+
+test('a credential kind cannot be forged through the prototype chain', () => {
+  // ⚠️ **This is the Blocking finding cross-family review (agy) found, pinned so it cannot return.**
+  //
+  // `revokeCredentialAction` guarded with `kind in REVOKE_AUDIT`, and `in` walks the prototype chain:
+  // `'toString'`, `'valueOf'` and `'constructor'` all passed. The request then fell past every
+  // explicit branch into the last one — `revokeAgentWriteKey` — and the audit lookup resolved to
+  // `Object.prototype.toString`, a FUNCTION, which is not `null`, so the trail was handed a function
+  // where an action name belongs.
+  //
+  // Not a privilege escalation (`requireProjectOwnership` runs first and every revoke is scope- and
+  // project-constrained), but the record of a real revocation was corrupt or lost — and LEARNINGS is
+  // explicit that an audit label chosen by picking an endpoint is worse than no audit log.
+  for (const forged of ['toString', 'valueOf', 'constructor', 'hasOwnProperty', '__proto__']) {
+    assert.equal(
+      isCredentialKind(forged),
+      false,
+      `"${forged}" was accepted as a credential kind — the guard walks the prototype chain again`
+    )
+  }
+  // ...and the four real ones still pass, so the fix is not simply "refuse everything".
+  for (const kind of CREDENTIAL_MINT_ORDER) {
+    assert.equal(isCredentialKind(kind), true, `${kind} is a real kind and was refused`)
+  }
+  // Non-strings are refused before any lookup happens: a Server Action receives `unknown`, and an
+  // object reaching `Object.hasOwn` would be a `TypeError` inside the lib rather than a refusal.
+  for (const wrong of [null, undefined, 42, {}, [], true]) {
+    assert.equal(isCredentialKind(wrong), false, `${JSON.stringify(wrong)} was accepted as a kind`)
+  }
+})
+
+test('the mint metadata covers every kind, exactly once, with nothing invented', () => {
+  // The four forms are DATA now — `CREDENTIAL_MINT_FIELD` decides which extra input a kind asks for,
+  // and the action validates against the same table. Two things that must agree get a test rather
+  // than a shared belief that they do.
+  const kinds = [...CREDENTIAL_MINT_ORDER]
+  assert.deepEqual(
+    [...kinds].sort(),
+    Object.keys(CREDENTIAL_MINT_FIELD).sort(),
+    'the mint picker and the mint-field table disagree about which kinds exist'
+  )
+  assert.equal(new Set(kinds).size, kinds.length, 'a kind is offered twice in the picker')
+  // Each kind's extra question is DIFFERENT, which is the fact that made merging four forms the work
+  // rather than a formatting exercise. If two kinds ever shared one, the picker's second step would
+  // be asking the same question twice under different names.
+  const fields = kinds.map((kind) => CREDENTIAL_MINT_FIELD[kind])
+  assert.equal(new Set(fields).size, fields.length, 'two kinds ask for the same extra input')
+  // Every kind the picker offers has words a person can read. A kind with no capability sentence
+  // would render as a blank card in the "what is this for" list.
+  for (const kind of kinds) {
+    assert.ok(credentialTitle(kind).length > 0, `${kind} has no title`)
+    assert.ok(credentialCapability(kind).length > 10, `${kind} has no capability sentence`)
+  }
+})
+
+test('the agent-key expiries are a closed allow-list of positive day counts', () => {
+  // The action refuses anything not on this list, and `null` ("until revoked") only when the value is
+  // explicitly ABSENT — the fix for "not a number must not mean never expires", which silently
+  // handed out a longer-lived write credential than anyone asked for.
+  assert.ok(AGENT_KEY_EXPIRY_DAYS.length > 0, 'no expiry is offered at all')
+  for (const days of AGENT_KEY_EXPIRY_DAYS) {
+    assert.equal(typeof days, 'number')
+    assert.ok(Number.isInteger(days) && days > 0, `${days} is not a positive whole number of days`)
+  }
+})
+
+test('the flag_admin entry no longer claims there are no live rows (D11-3)', () => {
+  // ⚠️ Production holds ONE unrevoked, non-expiring `flag_admin` key on the `miyagi` project —
+  // re-queried 2026-08-31 while building this story. The entry said the kind had "no minting surface
+  // and no live rows"; the first half is true and the second was false, on the one page whose entire
+  // job is an accurate access inventory.
+  const entry = CREDENTIAL_KINDS_NOT_LISTED.find((row) => row.kind === 'flag_admin')
+  assert.ok(entry, 'flag_admin is no longer named as a kind this page does not list')
+  assert.equal(
+    /no live rows/.test(entry.why),
+    false,
+    'the corrected flag_admin claim regressed to "no live rows" — production has one'
+  )
+  // It stays UNLINKED, because there is genuinely no surface: a link to a page that does not exist is
+  // the "control that goes nowhere" defect this epic exists to remove.
+  assert.equal(entry.where, null, 'flag_admin gained a link to a minting surface that does not exist')
 })

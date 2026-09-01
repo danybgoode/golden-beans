@@ -43,7 +43,9 @@ test.describe('agent rail', () => {
   test('the rail renders on every /app route and never claims completeness', async ({ page }) => {
     const slug = tenantSlug()
 
-    for (const path of ['/app', `/app/keys/${slug}`, `/app/scenarios/${slug}`]) {
+    // ⚠️ `/app/setup/keys`, not `/app/keys` — design-system-rails S4.5 retired the latter into a
+    // permanent redirect, and a redirect renders no rail because it renders nothing at all.
+    for (const path of ['/app', `/app/setup/keys/${slug}`, `/app/scenarios/${slug}`]) {
       const response = await page.goto(path)
       expect(response?.status(), `${path} should render`).toBe(200)
 

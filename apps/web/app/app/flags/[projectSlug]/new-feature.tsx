@@ -184,7 +184,14 @@ export function NewFeature({
 
   return (
     <>
-      <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
+      {/* ⚠️ The TRIGGER is on the design system; the MODAL below is not, and that is a stated
+          deviation rather than an oversight (design-system-rails S4.1). This button sits in the
+          page head beside "Compare environments", so a `console.css` `.btn` next to a `.ds-btn`
+          would be two buttons of different heights in one row — visible on the screen Story 4.1 is
+          measured against. The wizard itself is a seven-field overlay with its own approved state
+          that no story in this sprint cites, and porting it here would be an unreviewed screen
+          smuggled into a story about a list. */}
+      <button type="button" className="ds-btn ds-btn--primary" onClick={() => setOpen(true)}>
         + New feature
       </button>
 

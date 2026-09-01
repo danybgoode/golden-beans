@@ -131,17 +131,33 @@ export const UPPERCASE_ALLOWED: readonly {
   /** `true` where the rule is ALSO mono — the pair Do-not #3 forbids outright. Debt, never new. */
   mono?: true
 }[] = [
-  // The two the contract approves.
-  { selector: '.listhead', what: "the feature list's column header row", keep: true },
-  { selector: '.grp', what: 'the dormant group heading', keep: true },
-  // The design system's own name for the first of those two. `console.css`'s `.listhead` is what it
-  // replaces, and both are live until Sprint 6 deletes the old world — so both are listed, and the
-  // count of APPROVED places is still two things, under three selectors during the overlap.
-  { selector: '.ds-table-head', what: "the data table's column header row (replaces .listhead)", keep: true },
+  // ⚠️ **`.listhead` and `.grp` are GONE from `console.css` — design-system-rails Story 4.1.** They
+  // were the two the contract approves, and they are still approved: what changed is that the
+  // feature list now renders `.ds-listhead` and `.ds-grp` from the design system, and the rules that
+  // painted the old names were deleted in the same commit as the page that used them (sprint
+  // contract #11). Their entries go with them, because the test below fails on an entry no
+  // stylesheet applies uppercase to any more — a registry that outlives the code it describes is
+  // the same defect as a stale mapping reading as coverage.
+  { selector: '.ds-table-head', what: "the data table's column header row", keep: true },
   // The SPECIMEN's sample of the `label` type step. It is uppercase because that step is — a
   // specimen that rendered the uppercase step in sentence case would be lying about the scale it
   // exists to show. Not product copy, and not a third place uppercase appears in the product.
   { selector: '.ds-specimen-type--label', what: 'the specimen showing the `label` step', keep: true },
+  // ── design-system-rails · Sprint 4 — the PAGE layer's own uppercase, all of it approved ──────
+  // Every entry below replaces one of the `keep: false` rows further down, in the same commit that
+  // lands its page (sprint contract #11). They are `keep: true` because the contract approves each:
+  // the column header row and the group heading are the two the design has, and Story 4.1's
+  // acceptance names the header row's 11/600 uppercase Archivo explicitly. **None is mono** — the
+  // pair Do-not #3 forbids outright — and the test above is what says so rather than this comment.
+  { selector: '.ds-listhead', what: "the list card's column header row (replaces .listhead)", keep: true },
+  { selector: '.ds-grp', what: 'the state-run heading (replaces .grp)', keep: true },
+  // A form field's label. The prototype's `.field > .lab` is the rule this replaces, and that row
+  // is recorded below as `keep: false` — it is uppercase in the approved design too, so the
+  // replacement inherits `keep: true` and the OLD selector is what leaves in Sprint 6.
+  { selector: '.ds-label', what: 'a form field label (replaces .field > .lab)', keep: true },
+  { selector: '.ds-matrix', what: "the environment matrix's column headers", keep: true },
+  { selector: '.ds-envtable', what: "the environments table's header (replaces .envtable th)", keep: true },
+  { selector: '.ds-here', what: 'the "you are here" marker on the environments table', keep: true },
   // The six the contract does not, each on a surface a later sprint rebuilds.
   { selector: '.rail-label', what: "the rail's “Environment” label — Sprint 3", keep: false },
   { selector: '.field > .lab', what: 'form field labels — Sprint 4', keep: false },

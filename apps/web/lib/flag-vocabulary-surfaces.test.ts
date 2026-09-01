@@ -30,6 +30,8 @@ const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, 
  */
 const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/flag-console.tsx',
+  // design-system-rails S4.1 — the compare-environments view, the list's second view.
+  '../app/app/flags/[projectSlug]/flag-compare.tsx',
   '../app/app/flags/[projectSlug]/environment-picker.tsx',
   '../app/app/flags/[projectSlug]/page.tsx',
   '../app/app/flags/[projectSlug]/flag-vocabulary.ts',
@@ -43,10 +45,26 @@ const CONSOLE_SURFACES = [
   '../app/app/flags/[projectSlug]/[flagKey]/flag-version-serve.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/flag-authoring.tsx',
   '../app/app/flags/[projectSlug]/[flagKey]/feature-panes.tsx',
+  // ⚠️ `flag-credentials/page.tsx` and its manager are GONE — design-system-rails S4.5 retired the
+  // route into a permanent redirect and deleted the manager. What replaced them is listed below: the
+  // merged Setup › Keys page, its mint flow and its revoke control, which now carry every
+  // credential word this sweep exists to police.
+  '../app/app/setup/keys/[projectSlug]/page.tsx',
+  '../app/app/setup/keys/[projectSlug]/new-key.tsx',
+  '../app/app/setup/keys/[projectSlug]/keys-list.tsx',
+  '../app/app/setup/keys/[projectSlug]/keys-surface.tsx',
+  '../app/app/setup/keys/[projectSlug]/actions.ts',
+  // The retired route. It renders one `permanentRedirect` and nothing else — swept anyway, because
+  // "this file has no copy today" is exactly the state a future edit changes without anyone noticing.
   '../app/app/flag-credentials/[projectSlug]/page.tsx',
-  '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
   '../app/app/flag-audit/[projectSlug]/page.tsx',
-  '../app/app/flag-audit/[projectSlug]/flag-audit-table.tsx',
+  // design-system-rails S4.3 — the audit is a TIMELINE now, not a `DataTable`. The approved
+  // `ship-activity` state says why in its own copy: "written as sentences, not as rows of a table
+  // nobody reads". Same words, same registries, one fewer client island.
+  '../app/app/flag-audit/[projectSlug]/flag-audit-timeline.tsx',
+  // The route this sprint creates. It renders no flag words today, and that is exactly why it is
+  // swept: the day somebody writes "activate" onto it, this list is what catches it.
+  '../app/app/scheduled/[projectSlug]/page.tsx',
   './flag-console-copy.ts',
 ] as const
 
@@ -94,10 +112,16 @@ const RETIRED = [
  * Written down as an exemption with its reason rather than resolved by omitting `mint` from the
  * list — which is what hid it before.
  */
-const MINT_EXEMPT = [
-  '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
-  './flag-console-copy.ts',
-]
+// ⚠️ **ONE entry now, not two — design-system-rails S4.5.** The exemption was granted to
+// `flag-credential-manager.tsx` because it rendered `REVOKE_SNAPSHOT_KEY_CONSEQUENCE` verbatim. That
+// file is deleted: Story 4.5 moved minting and revoking onto Setup › Keys and retired the route into
+// a redirect. The exemption went with it rather than being widened to the replacement — the new
+// surface's copy says "create", which is the word Story 3.3 asked for, and it was this sweep that
+// caught the first draft saying "mint" in four places.
+//
+// `flag-console-copy.ts` keeps its exemption: it OWNS the sentence, and the sentence is still
+// rendered verbatim by the flags page's gate-off branch.
+const MINT_EXEMPT = ['./flag-console-copy.ts']
 
 /**
  * Rendered text only: line comments out, block comments out, whitespace normalised.

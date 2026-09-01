@@ -57,8 +57,6 @@ const allGatesOpen: ProjectSurfaceGates = {
   // Console ON, so `legacy-keys` is its inverse (A7). These two are never independently true: the
   // merged Setup route and the three it replaces are never in the nav at the same time.
   'console-shell': true,
-  'legacy-keys': false,
-  'legacy-flag-credentials': false,
 }
 
 // What a Vercel PREVIEW actually serves (epic README, A2): four gates are Production-scoped, so a
@@ -73,8 +71,6 @@ const previewGates: ProjectSurfaceGates = {
   // `CONSOLE_SHELL_ENABLED` is created disabled in every scope, preview included — so a preview
   // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
   'console-shell': false,
-  'legacy-keys': true,
-  'legacy-flag-credentials': true,
 }
 
 const owner = [{ slug: 'miyagisanchez', role: 'owner' }]
@@ -100,7 +96,12 @@ test('each tab points at the first entitled surface of its section', () => {
   const href = (id: string) => tabs.find((tab) => tab.id === id)?.href
   assert.equal(href('today'), '/app')
   assert.equal(href('measure'), '/app/journeys/miyagisanchez')
-  assert.equal(href('ship'), '/app/experiments/miyagisanchez')
+  // ⚠️ `flags`, not `experiments` — design-system-rails Story 4.3. The approved Ship rail is
+  // Features · Experiments · Scheduled changes · Activity, and the inventory had the first two the
+  // other way round; the tab points at the section's FIRST entitled surface, so correcting the rail
+  // order corrected where the tab lands. Features is also the right destination on its own terms:
+  // it is the surface an operator opens Ship to reach.
+  assert.equal(href('ship'), '/app/flags/miyagisanchez')
   // Sprint 2 (A7): Setup now opens onto `Connect your agent`, not API keys — the two new routes are
   // listed ahead of the legacy ones, and with the console gate open the legacy three are absent.
   assert.equal(href('setup'), '/app/setup/connect/miyagisanchez')
@@ -131,15 +132,22 @@ test('exactly one tab is current for every section a page can declare', () => {
 
 // ── A tab that leads nowhere is worse than a missing tab ──────────────────────────────────────
 
-test('on PREVIEW gates all four tabs still render, and Ship lands on Activity — not on Features', () => {
+test('on PREVIEW gates all four tabs still render, and Ship lands on a surface a preview can serve', () => {
   // ⚠️ This is the assertion that stops a correct preview being reported as a bug (A2). The first
   // version of this test expected Ship to disappear on a preview; it does not, because `flag-audit`
   // rides `flag-console`, which IS set in the Preview scope while `flag-serving` and
   // `experiment-governance` are not. So Ship renders with exactly one surface behind it.
   //
   // Sprint 1's walkthrough used to promise "Environment picker, Features, Experiments and Activity"
-  // on a preview. What a preview actually shows is Activity, alone — which is why the walkthrough's
-  // gate-on steps moved to production.
+  // on a preview. What a preview actually shows is the `flag-console` surfaces alone — which is why
+  // the walkthrough's gate-on steps moved to production.
+  //
+  // ⚠️ **TWO surfaces now, not one, and the tab lands on the first — design-system-rails S4.3.**
+  // `scheduled` also rides `flag-console`, so a preview shows Scheduled changes and Activity. The
+  // test's own name says "Ship lands on Activity"; it lands on Scheduled changes, which is the
+  // inventory order the approved rail asks for. Renaming the test rather than pinning the old
+  // destination: the PROPERTY it exists for — a tab never points somewhere a preview cannot serve —
+  // is unchanged and is what the assertion below still says.
   const { tabs } = header('home', previewGates)
   assert.deepEqual(
     tabs.map((tab) => tab.id),
@@ -147,7 +155,7 @@ test('on PREVIEW gates all four tabs still render, and Ship lands on Activity �
   )
   assert.equal(
     tabs.find((tab) => tab.id === 'ship')?.href,
-    '/app/flag-audit/miyagisanchez',
+    '/app/scheduled/miyagisanchez',
     'Ship pointed somewhere a preview cannot serve'
   )
   assert.equal(
@@ -160,7 +168,8 @@ test('on PREVIEW gates all four tabs still render, and Ship lands on Activity �
 })
 
 test('a section with ZERO entitled surfaces renders no tab at all', () => {
-  // Ship's three surfaces ride three independent gates. Close all three and the tab must vanish
+  // Ship's four surfaces ride three independent gates (`scheduled` shares `flag-console` with
+  // `flag-audit`). Close all three and the tab must vanish
   // rather than render pointing at nothing — the property the preview case above cannot show,
   // because a preview happens to leave one of the three open.
   const { tabs } = header('home', { ...previewGates, 'flag-console': false })
@@ -208,8 +217,6 @@ test('Today always renders, even when every gate is closed and the viewer owns n
     'journey-projections': false,
     signals: false,
     'console-shell': false,
-    'legacy-keys': true,
-    'legacy-flag-credentials': false,
   }
   const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
@@ -314,7 +321,10 @@ test('the rail lists the active section’s surfaces, in inventory order', () =>
   )
   assert.deepEqual(
     railLinksFor('ship', ownerLinks).map((link) => link.routeSegment),
-    ['experiments', 'flags', 'flag-audit']
+    // ⚠️ FOUR, in the approved rail's order: Features · Experiments · Scheduled changes · Activity
+    // (design-system-rails S4.3). Two things changed together — `scheduled` is the item the product
+    // had no route for, and `flags`/`experiments` were the wrong way round.
+    ['flags', 'experiments', 'scheduled', 'flag-audit']
   )
 })
 
@@ -469,8 +479,6 @@ test('with no projects the gates cannot affect the header — EVERY combination 
     'journey-projections': false,
     signals: false,
     'console-shell': false,
-    'legacy-keys': false,
-    'legacy-flag-credentials': false,
   })
   // ANCHORED absolutely, not just relatively. Every comparison below is `header(x)` against
   // `header(allFalse)` — both sides from the same function — so deleting the unconditional Today

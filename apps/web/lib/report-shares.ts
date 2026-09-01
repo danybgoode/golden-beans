@@ -136,8 +136,12 @@ export async function mintShareLink(input: {
  * Revoke a SHARE row, and only a share row.
  *
  * ── Why this is not just `revokeApiKey` (cross-review, Codex, PR #33) ─────────────────────────
- * `revokeApiKey` revokes any row in `api_keys` scoped to the project, which is correct for the key
- * screen and wrong here. The share action accepted any row id, so an owner submitting a forged
+ * `revokeApiKey` USED TO revoke any row in `api_keys` scoped to the project — which this comment
+ * called "correct for the key screen", and which `design-system-rails` S4.5 found was never correct
+ * anywhere: the merged Keys page takes the credential kind from the request, so the generic revoke
+ * became reachable with a forged `kind: 'ingest'` and a share row's id. It carries `.eq('scope',
+ * 'ingest')` now, so all four kinds are scoped and this function is one of four rather than the
+ * exception. The reasoning below is unchanged and is why. The share action accepted any row id, so an owner submitting a forged
  * request with an INGEST key's id would have revoked that key — and the audit trail would record
  * `report_share_revoked`. The key is one an owner may revoke anyway, so the privilege boundary held;
  * what broke is the trail. An incident responder searching `api_key_revoked` for "why did ingest

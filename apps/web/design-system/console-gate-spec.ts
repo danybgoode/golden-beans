@@ -29,6 +29,13 @@ export type SpecRow = {
   tolerance?: number
 }
 
+// ⚠️ **THE SELECTORS MOVED TO `ds-` IN SPRINT 4, AND THE NUMBERS DID NOT.** Story 4.1 rebuilds Ship
+// › Features from `apps/web/design-system/`, so `.answer` became `.ds-answer`, `.stat .n` became
+// `.ds-stat-value`, `.row-act .sw` became `.ds-col-act .ds-switch`, and so on. `console-spec.test.ts`
+// welds this table to the regenerated `MEASURED-SPEC.md` by ROW NAME and by VALUE, never by
+// selector — which is why a port can move every selector here and the weld still checks the design
+// rather than the markup. The `page h1`, `rail item` and two chrome rows are unchanged: the shell is
+// Sprint 3's and this sprint does not touch it.
 export const MEASURED_SPEC: SpecRow[] = [
   // ⚠️ The chrome had NO row at all, so nothing in the epic's own gate looked at the part of the
   // page the epic rebuilt — and Do-not #3 was open there (uppercase mono in the project switcher)
@@ -69,14 +76,20 @@ export const MEASURED_SPEC: SpecRow[] = [
   { what: 'top bar (tier 1)', selector: '.product-shell__header', height: 54, tolerance: 0 },
   { what: 'section nav (tier 2)', selector: '.product-shell__tabs', height: 44, tolerance: 0 },
   { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
-  { what: 'page subtitle', selector: '.page-head p', fontSize: '13.5px', fontWeight: '400' },
-  { what: 'the answer line', selector: '.answer', fontSize: '13.5px', fontWeight: '400' },
-  { what: 'stat number', selector: '.stat .n', fontSize: '26px', fontWeight: '600', fontFamily: /Plex Mono/ },
-  { what: 'stat label', selector: '.stat .k', fontSize: '12.5px', fontWeight: '400' },
-  { what: 'list header row', selector: '.listhead', fontSize: '11px', fontWeight: '600', height: 36 },
-  { what: 'feature key', selector: '.row-key code', fontSize: '13.5px', fontFamily: /Plex Mono/ },
-  { what: 'feature description', selector: '.row-desc', fontSize: '12.5px', fontWeight: '400' },
-  { what: 'state pill', selector: '.pill', fontSize: '12px', fontWeight: '600', height: 26 },
+  { what: 'page subtitle', selector: '.ds-page-head p', fontSize: '13.5px', fontWeight: '400' },
+  { what: 'the answer line', selector: '.ds-answer', fontSize: '13.5px', fontWeight: '400' },
+  {
+    what: 'stat number',
+    selector: '.ds-stat-value',
+    fontSize: '26px',
+    fontWeight: '600',
+    fontFamily: /Plex Mono/,
+  },
+  { what: 'stat label', selector: '.ds-stat-label', fontSize: '12.5px', fontWeight: '400' },
+  { what: 'list header row', selector: '.ds-listhead', fontSize: '11px', fontWeight: '600', height: 36 },
+  { what: 'feature key', selector: '.ds-row-key code', fontSize: '13.5px', fontFamily: /Plex Mono/ },
+  { what: 'feature description', selector: '.ds-row-desc', fontSize: '12.5px', fontWeight: '400' },
+  { what: 'state pill', selector: '.ds-pill', fontSize: '12px', fontWeight: '600', height: 26 },
   // ⚠️ `.console-rail ul a`, not `.console-rail a`. `ConsoleRail` renders the environment picker
   // BEFORE the list, so the bare selector matched an `.envpick` link — and it passed only because
   // the rail-item rule was leaking onto a control the reference styles separately (fresh reviewer,
@@ -95,7 +108,12 @@ export const MEASURED_SPEC: SpecRow[] = [
   // by a transparent 44px pseudo-element instead, so the TARGET is 44 and the INK is the design's
   // 38 × 21 — which is the resolution the `primary/secondary button` row below could not have,
   // because a button's ink IS its target.
-  { what: 'the row switch', selector: '.row-act .sw', height: 21, width: 38 },
+  { what: 'the row switch', selector: '.ds-col-act .ds-switch', height: 21, width: 38 },
+  // ⚠️ **Was a DEFERRED row until Story 4.1** — see the note at the top of `DEFERRED_SPEC_ROWS`.
+  // The height is driven by the STATE column, not by the feature column: a 26px pill plus a 3px gap
+  // plus one line of detail. Clamping the detail to one line is what makes it the same 71 on every
+  // state, and asserting it is what stops the wrap coming back.
+  { what: 'feature row', selector: '[data-feature-list] .ds-row', height: 71 },
 ]
 
 /**
@@ -136,25 +154,28 @@ export const MEASURED_SPEC: SpecRow[] = [
 // owner and a date that has not passed` fails once one goes by, which turns a silent exemption into
 // a conversation with a name attached.
 export const DEFERRED_SPEC_ROWS = [
-  {
-    what: 'feature row',
-    // ⚠️ 71, not 78. This row deferred from a number D8 disproved and no run reproduces, and it
-    // survived the commit that added an owner and a date to it. `console-spec.test.ts` now asserts
-    // every `contract` here against the regenerated table, so it cannot happen again.
-    contract: 71,
-    built: 'up to 90',
-    why: 'the never-state detail wraps to two lines in a 190px column',
-    // ⚠️ The contract number itself was WRONG: a fresh measurement says 71, not 78 (epic D8). It is
-    // corrected by regeneration in `MEASURED-SPEC.md`, and this row stays deferred only for the
-    // wrap, which Story 4.1 fixes when it rebuilds the list against reference state `ship-features`.
-    owner: 'Daniel',
-    until: '2026-10-15',
-  },
+  // ⚠️ **`feature row` is CLOSED — design-system-rails Story 4.1.** It deferred at *contract 71 ·
+  // built up to 90 · the never-state detail wraps to two lines in a 190px column*, owned by Daniel
+  // until 2026-10-15, with a note saying Story 4.1 would fix it when it rebuilt the list. It did:
+  // `.ds-state-detail` clamps the detail to one line and carries the full sentence on `title`, so
+  // the row is the contract's 71px in every state rather than 90px in the state 39 of 42 production
+  // flags are in — which is why the gate ran against 90px rows and stayed green. The sentence was
+  // NOT shortened: it is what separates "never turned on here" from "switched off", the distinction
+  // this console exists to make.
+  //
+  // It has a row in `MEASURED_SPEC` above now rather than an entry here, which is the only honest
+  // way for a deferral to close (the same move Story 3.3 made with the switch).
   {
     what: 'dormant summary row',
     contract: 89,
     built: '91',
-    why: 'two-line body copy; within 3px of the contract',
+    // ⚠️ STILL DEFERRED, and deliberately not swept up with its neighbour. The 2px is the body copy
+    // wrapping to a second line at `max-width: 78ch` — the same wrap the prototype has, which is why
+    // its own measurement is 89 and not 70. Closing it would mean pinning a height on an element
+    // whose height is its text, and Story 4.1's acceptance does not ask for it. What DID change is
+    // that `.ds-dormant` now carries the prototype's own `13px 16px` padding rather than a rounder
+    // number, so the remaining difference is the copy alone.
+    why: 'two-line body copy at 78ch; within 3px of the contract, and the difference is the sentence',
     owner: 'Daniel',
     until: '2026-10-15',
   },

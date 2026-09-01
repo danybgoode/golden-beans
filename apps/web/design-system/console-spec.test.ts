@@ -106,11 +106,12 @@ const GOVERNED_BY: Record<string, string> = {
   'state pill': 'State pill',
   'rail item': 'Rail item',
   'the row switch': 'Switch',
+  // Closed as a deferral by Story 4.1 and asserted here instead.
+  'feature row': 'Feature row',
 }
 
 /** Which prototype row each DEFERRED row defers from. Same rule: mapping here, numbers imported. */
 const DEFERRAL_GOVERNED_BY: Record<string, string> = {
-  'feature row': 'Feature row',
   'dormant summary row': 'Dormant summary row',
   'primary/secondary button': 'Primary button',
   'project switcher': 'Project switcher',

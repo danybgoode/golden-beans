@@ -19,6 +19,7 @@
 // (`app/app/funnel/[projectSlug]/[featureKey]/page.tsx:26`), and a tab that 404s the whole feature
 // page because the OTHER registry has no row would be a regression caused by a missing measurement.
 
+import { Empty as DsEmpty, Field, Stat } from '@/design-system/primitives'
 import { formatUtc } from '@/lib/format-utc'
 import type { FunnelResult } from '@/lib/tars-query'
 import type { FeatureImpactResult } from '@/lib/north-star-query'
@@ -72,13 +73,13 @@ function absence(reason: string, flagKey: string, what: 'funnel' | 'impact'): { 
   }
 }
 
+/**
+ * ⚠️ **The empty state IS the deliverable here, for 42 of 42 features.** It is the design system's
+ * own empty state (`ds-empty`), not a paragraph — it has to read as "this is what you are looking
+ * at", because on every flag a reader can click today, it is the whole pane.
+ */
 function Empty({ head, body }: { head: string; body: string }) {
-  return (
-    <div className="empty">
-      <b>{head}</b>
-      <span>{body}</span>
-    </div>
-  )
+  return <DsEmpty title={head} body={body} />
 }
 
 export function FunnelPane({ flagKey, result }: { flagKey: string; result: FunnelResult }) {
@@ -104,27 +105,28 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
   ]
   return (
     <>
-      <div className="kpis">
+      <div className="ds-kpis">
         {rows.map(([label, value]) => (
-          <div className="kpi" key={label}>
-            <div className="n">{value.toLocaleString('en-US')}</div>
-            <div className="k">
-              {label}
-              {share(value) === null ? '' : ` · ${share(value)}%`}
-            </div>
-          </div>
+          <Stat
+            key={label}
+            value={value.toLocaleString('en-US')}
+            label={`${label}${share(value) === null ? '' : ` · ${share(value)}%`}`}
+          />
         ))}
       </div>
-      <div className="field">
-        <span className="lab">Targeted → adopted → retained</span>
+      <Field label="Targeted → adopted → retained">
         {rows.map(([label, value]) => (
-          <div className="funnel-bar" key={label}>
-            <div className="funnel-bar__head">
+          <div className="ds-bar" key={label}>
+            <div className="ds-bar-head">
               <span>{label}</span>
-              <span className="mono">{value.toLocaleString('en-US')}</span>
+              <span className="ds-mono">{value.toLocaleString('en-US')}</span>
             </div>
-            <div className="funnel-bar__track">
-              <div className="funnel-bar__fill" style={{ width: `${barWidth(value)}%` }} />
+            {/* ⚠️ Magnitude is `--gold` ALONE (DD4) — never four categorical hues, never a second
+                axis — and a nonzero value never rounds to zero pixels: `.ds-bar-fill` carries a
+                min-width floor, and the exact count sits beside the bar rather than only inside
+                it. */}
+            <div className="ds-bar-track">
+              <div className="ds-bar-fill" style={{ width: `${barWidth(value)}%` }} />
             </div>
           </div>
         ))}
@@ -136,11 +138,11 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
             a dashboard unreadable is exactly what that helper exists to prevent, and it says
             "Unknown time" instead (cross-review, agy). It is also timezone-stable, which
             `toLocaleString` on a server-rendered page is not. */}
-        <p className="hint">
+        <p className="ds-hint">
           Targeted, adopted and retained are declared by the registry, not observed at a gateway — this engine
           counts the events a signal names. Last synced {formatUtc(feature.syncedAt)}.
         </p>
-      </div>
+      </Field>
     </>
   )
 }
@@ -165,8 +167,7 @@ export function ImpactPane({ flagKey, result }: { flagKey: string; result: Featu
         const latest = input.series.at(-1) ?? null
         const total = input.series.reduce((sum, point) => sum + point.value, 0)
         return (
-          <div className="field" key={input.key}>
-            <span className="lab">{input.name}</span>
+          <Field label={input.name} key={input.key}>
             {/* An empty series is NOT a zero. A card reading "0" for a metric nobody has recorded is
                 the honest-looking zero this repo has shipped to production before; the sentence is
                 the whole message when there are no readings. */}
@@ -177,34 +178,26 @@ export function ImpactPane({ flagKey, result }: { flagKey: string; result: Featu
               />
             ) : (
               <>
-                <div className="kpis">
-                  <div className="kpi">
-                    <div className="n">{latest.value.toLocaleString('en-US')}</div>
-                    <div className="k">Latest · {latest.date}</div>
-                  </div>
-                  <div className="kpi">
-                    <div className="n">{total.toLocaleString('en-US')}</div>
-                    <div className="k">
-                      Total · {input.series[0].date} → {latest.date}
-                    </div>
-                  </div>
-                  <div className="kpi">
-                    <div className="n">{input.series.length.toLocaleString('en-US')}</div>
-                    <div className="k">Days recorded</div>
-                  </div>
+                <div className="ds-kpis">
+                  <Stat value={latest.value.toLocaleString('en-US')} label={`Latest · ${latest.date}`} />
+                  <Stat
+                    value={total.toLocaleString('en-US')}
+                    label={`Total · ${input.series[0].date} → ${latest.date}`}
+                  />
+                  <Stat value={input.series.length.toLocaleString('en-US')} label="Days recorded" />
                 </div>
                 {/* ⚠️ Correlation, said out loud. The prototype's own copy makes this point and it is
                     the one claim this pane could overstate: a number moving after a feature went on
                     is not the feature having moved it. The causal answer is an experiment, and the
                     sentence names where that lives. */}
-                <p className="hint">
+                <p className="ds-hint">
                   This is what the input did, beside a feature that is on — a correlation this page can see,
                   not a causal claim. To make it causal, run it as an experiment from Ship › Experiments.
                   Source: {input.valueSource}.
                 </p>
               </>
             )}
-          </div>
+          </Field>
         )
       })}
     </>

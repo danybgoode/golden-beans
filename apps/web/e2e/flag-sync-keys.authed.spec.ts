@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test'
 import { readTenantRecord } from './helpers/authed-fixture'
-import { isFlagConsoleEnabled } from '../lib/flags'
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
@@ -9,51 +8,70 @@ function tenantSlug(): string {
 }
 
 /**
- * Where the catalog sync controls live, which depends on the gate.
+ * A catalog sync key, minted and revoked through the surface that owns it.
  *
- * ── Why this FOLLOWS the move instead of skipping ─────────────────────────────────────────────
- * flags-console-parity Sprint 3 moved the mint/revoke controls to `/app/flag-credentials/[slug]`
- * when `FLAG_CONSOLE_ENABLED` is on. This spec drove them on the flags page, and Sprint 3 did not
- * repoint it — so with the gate on `getByLabel('Publisher source')` would have timed out, reading
- * as a flake rather than as "this surface moved", and the credential mint/revoke flow would have
- * had ZERO automated coverage at exactly the moment it became reachable at a new URL. Found by the
- * fresh HIGH-tier reviewer on PR #121; it is the FOURTH time in this epic that something was nearly
- * lost because its replacement landed elsewhere.
+ * ── The address changed for the third time, and following it is the point ─────────────────────
+ * This spec drove the flags page. `flags-console-parity` Sprint 3 moved the controls to
+ * `/app/flag-credentials/[slug]` and did not repoint it — `getByLabel('Publisher source')` would
+ * have timed out, reading as a flake rather than as "this surface moved", and the credential
+ * mint/revoke flow would have had ZERO automated coverage at the moment it became reachable at a new
+ * URL. The spec was then made to branch on `FLAG_CONSOLE_ENABLED`, so it followed the move.
  *
- * Skipping it (as Sprint 2 did for the three rule-builder suites) would have been the cheap answer
- * and the wrong one here: those suites drive a surface that is being RETIRED, whereas these controls
- * still exist — they only changed address. Every selector below is unchanged on the new route, so
- * following the URL keeps the assertions honest in both states rather than trading one for the other.
+ * **`design-system-rails` Story 4.5 moves it again, and removes the branch.** `/app/flag-credentials`
+ * is a permanent redirect; every kind of credential is minted and revoked on Setup › Keys, which is
+ * not gated on anything. There is one address now, so there is nothing to branch on — and a branch
+ * with one live arm is a conditional that reads like a decision while making none.
+ *
+ * Skipping this instead would be the cheap answer and the wrong one: these controls still exist, they
+ * only changed address again. Every property below is unchanged — a real mint, a value shown once, a
+ * confirmation that NAMES the key and says what stops working, and a real revoke.
  */
-function credentialsPath(slug: string): string {
-  return isFlagConsoleEnabled() ? `/app/flag-credentials/${slug}` : `/app/flags/${slug}`
-}
-
 test('an owner can mint and revoke a separately sourced catalog sync key', async ({ page }) => {
   const slug = tenantSlug()
-  await page.goto(credentialsPath(slug))
+  const label = `backend catalog publisher ${Date.now()}`
+  await page.goto(`/app/setup/keys/${slug}`)
 
-  await page.getByLabel('Publisher source').fill('backend')
-  await page.locator('#flag-sync-label').fill('backend catalog publisher')
-  await page.getByRole('button', { name: 'Mint 30-day catalog sync key' }).click()
+  // ── Mint ────────────────────────────────────────────────────────────────────────────────────
+  // The picker is a list of JOBS, not of scopes: nobody thinks "I need a flag_sync credential".
+  await page.getByRole('button', { name: '+ New key' }).click()
+  await page.getByRole('button', { name: 'Catalog sync key' }).click()
+  // The one extra input this kind asks for — the whole reason the four forms could not simply be
+  // merged, and the reason `CREDENTIAL_MINT_FIELD` exists.
+  await page.getByLabel('Which publisher').fill('backend')
+  await page.getByLabel('What to call it').fill(label)
+  await page.getByRole('button', { name: /Create the catalog sync key/i }).click()
 
-  const plaintextNotice = page.getByRole('alert').filter({ hasText: 'Copy this catalog sync key now' })
-  await expect(plaintextNotice).toBeVisible()
-  await expect(plaintextNotice.locator('pre')).not.toBeEmpty()
-  await plaintextNotice.getByRole('button', { name: "I've saved it" }).click()
+  // ── The value is shown ONCE, on a screen of its own, with a copy button ─────────────────────
+  const reveal = page.getByRole('alert').filter({ hasText: 'Copy this key now' })
+  await expect(reveal).toBeVisible()
+  // A real value, not an empty field beside a Copy button — which would read as "your key is blank".
+  await expect(reveal.locator('code')).not.toBeEmpty()
+  await expect(reveal.getByRole('button', { name: 'Copy your new key' })).toBeVisible()
+  // ⚠️ And the form is GONE while the value is on screen. A form still visible beside a credential
+  // invites a second mint, and a second live credential is the most expensive mistake this page can
+  // make.
+  await expect(page.getByRole('button', { name: /Create the catalog sync key/i })).toHaveCount(0)
+  await reveal.getByRole('button', { name: "I've saved it" }).click()
+  await page.waitForLoadState('networkidle')
 
-  const syncTable = page.locator('table').filter({ has: page.getByRole('columnheader', { name: 'Source' }) })
-  const keyRow = syncTable.getByRole('row', { name: /backend catalog publisher backend/ })
-  await expect(keyRow).toBeVisible()
-  // app-component-kit-adoption Sprint 3 — revoking now asks first. This is the one place in that
-  // epic where "same behaviour" is deliberately suspended, and only in the direction of adding a
-  // confirmation step: the operation itself, and its payload, are unchanged. So this spec gains a
-  // click rather than losing an assertion, and it gains one that is worth having — the dialog must
-  // name THIS key and say what stops, which is the whole point of the confirmation.
-  await keyRow.getByRole('button', { name: 'Revoke' }).click()
+  // ── The row, in the one list ────────────────────────────────────────────────────────────────
+  const row = page.getByRole('row').filter({ hasText: label })
+  await expect(row).toBeVisible()
+  // Its SOURCE is on the row, because "which publisher" is what tells two sync keys apart.
+  await expect(row).toContainText('backend')
+
+  // ── Revoke, which asks first ────────────────────────────────────────────────────────────────
+  // The dialog must name THIS key and say what stops working — that is the whole point of the
+  // confirmation, and a generic "Are you sure?" would satisfy the click and none of the purpose.
+  await row.getByRole('button', { name: `Revoke ${label}` }).click()
   const confirm = page.locator('dialog.confirm-dialog')
-  await expect(confirm).toContainText('Revoke catalog sync key backend catalog publisher?')
-  await expect(confirm).toContainText('Catalog publishes from backend start failing')
+  await expect(confirm).toContainText(`Revoke catalog sync key ${label}?`)
+  await expect(confirm).toContainText('can no longer register feature definitions')
   await confirm.getByRole('button', { name: 'Revoke' }).click()
-  await expect(keyRow).toContainText('revoked')
+  await page.waitForLoadState('networkidle')
+
+  // ⚠️ GONE, not "revoked". The merged page lists what has access NOW and drops revoked rows
+  // entirely — which is a stronger assertion than a status cell, because a row that stayed with the
+  // wrong word in it would still pass a text check.
+  await expect(page.getByRole('row').filter({ hasText: label })).toHaveCount(0)
 })

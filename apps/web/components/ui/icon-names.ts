@@ -56,10 +56,14 @@ export const ICON_NAMES = [
   'flag',
   'group',
   'help',
+  // design-system-rails S4 — the standing note's marker (`Callout`).
+  'info',
   'lock',
   'map-pin',
   'panels',
   'refresh',
+  // design-system-rails S4 — the feature list's search field.
+  'search',
   'server',
   'settings',
   'shield',

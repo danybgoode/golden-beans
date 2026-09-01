@@ -11,6 +11,7 @@ import {
   CircleAlert,
   CircleCheck,
   CircleHelp,
+  Info,
   Clock3,
   Code,
   Copy,
@@ -28,6 +29,7 @@ import {
   PanelsTopLeft,
   RefreshCw,
   Rocket,
+  Search,
   Route,
   Server,
   Settings2,
@@ -72,10 +74,15 @@ const icons: Record<IconName, LucideIcon> = {
   flag: Flag,
   group: Users,
   help: CircleHelp,
+  // design-system-rails S4 — the callout's marker. The approved prototype draws it as `◆`, a
+  // geometric shape the drift guard happens not to ban; an SVG is what D4 asks for anyway, and it
+  // keeps every mark in the console coming from the one seam.
+  info: Info,
   lock: Lock,
   'map-pin': MapPin,
   panels: PanelsTopLeft,
   refresh: RefreshCw,
+  search: Search,
   server: Server,
   activity: Activity,
   'calendar-clock': CalendarClock,

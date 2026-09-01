@@ -82,6 +82,32 @@ export const IMPACT_SERIES: ReadonlyArray<{ occurredOn: string; value: number }>
   { occurredOn: '2026-03-03', value: 240.25 },
 ]
 
+/**
+ * design-system-rails · Story 4.2 — the ONE fixture feature that has a funnel.
+ *
+ * ⚠️ **A flag key and a TARS signal key are different registries, and a feature only has a funnel
+ * when the SAME key exists in both.** Production `miyagisanchez` holds 42 flag registries and
+ * exactly one TARS feature (`setup_guide`), and the two sets do not overlap — so 42 of 42 flags
+ * render the Funnel tab's empty state, and that empty state is the deliverable (epic D10).
+ *
+ * The sprint contract's fourth row says the *funnel-renders-numbers* spec belongs on a feature that
+ * HAS a funnel, because "asserting numbers on a flag's tab is a test that cannot pass". `setup_guide`
+ * is production data that CI cannot reach, so this is its local counterpart: one key registered in
+ * BOTH registries, with enough events for a real Targeted/Adopted/Retained. D10 assigns exactly this
+ * job to the local fixture — "populated states are asserted by the visual gate against the local
+ * fixture tenant, which the `authed` rail seeds".
+ *
+ * The key deliberately looks nothing like the two scenario flags, so a spec asserting the EMPTY
+ * state can pick one of those and a spec asserting NUMBERS can pick this one, without either
+ * depending on row order.
+ */
+export const FUNNEL_FEATURE_KEY = 'gb.e2e.funnel.measured'
+export const FUNNEL_TARGET_EVENT = 'gb_e2e_funnel_targeted'
+export const FUNNEL_ADOPTED_EVENT = 'gb_e2e_funnel_adopted'
+export const FUNNEL_RETAINED_EVENT = 'gb_e2e_funnel_retained'
+/** Three targeted, two adopted, one retained — so every row of the funnel is a DIFFERENT number. */
+export const FUNNEL_SUBJECTS = ['gb-e2e-funnel-a', 'gb-e2e-funnel-b', 'gb-e2e-funnel-c'] as const
+
 export const SCENARIO_FIXTURE_KEY = 'gb_e2e_owner_scenario'
 export const SCENARIO_TARGET_KEY = 'gb.e2e.owner.probe'
 export const SCENARIO_FLAG_KEY = 'gb.e2e.owner.fault'

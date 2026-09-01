@@ -52,8 +52,6 @@ const allGatesOpen: ProjectSurfaceGates = {
   // The console is ON here, so `legacy-keys` is its inverse — the palette indexes `Setup › Keys`
   // and NOT the three routes it replaces. A7: they are never both listed.
   'console-shell': true,
-  'legacy-keys': false,
-  'legacy-flag-credentials': false,
 }
 
 const links = getProjectSurfaceLinks({

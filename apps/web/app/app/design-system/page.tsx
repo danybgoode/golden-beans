@@ -43,14 +43,33 @@ import { SpecimenDialog, SpecimenProductDialog } from './specimen-dialog'
 import {
   Answer,
   Button,
+  Callout,
+  Card,
+  Col,
+  DormantSummary,
+  EmptyCard,
   EnvironmentControl,
+  Field,
+  GroupBanner,
+  ListCard,
+  ListHead,
   Menu,
   MenuItem,
+  PageHead,
+  PageTab,
+  PageTabs,
+  Pane,
   Pill,
   RailItem,
+  Row,
+  RowMain,
+  RowState,
+  ShownOnce,
   Stat,
+  StatLink,
   Step,
   Steps,
+  Summary,
   Switch,
   Switcher,
   Tab,
@@ -59,6 +78,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tag,
   Toast,
   Wizard,
   type ControlState,
@@ -365,6 +385,204 @@ export default async function DesignSystemSpecimen({
                 { label: 'Copy the value', state: 'todo' },
               ]}
             />
+          </Section>
+
+          {/* ═══ THE PAGE LAYER — design-system-rails · Sprint 4 ═══════════════════════════════
+              Everything above is a CONTROL. Everything below is how a whole page is assembled, and
+              it is on the specimen for the same reason the controls are: `every primitive the module
+              exports actually reaches the specimen` fails on an export with no entry here, and ten
+              of the fourteen original primitives went unasserted before that check existed.
+
+              The examples are the real ones. `PageHead` renders the flags page's own head, the list
+              card renders a feature row — so the specimen is where a reviewer sees the language
+              rather than a diagram of it. */}
+          <Section
+            id="page-head"
+            title="Page head — title, one sentence, actions"
+            note="23/700 title, 13.5/400 lede, and the actions pushed to the right edge by a spacer rather than by a justify rule — the head's children are a title block plus any number of controls, and only one gap in that row is the flexible one."
+          >
+            <PageHead
+              title="Features"
+              lede="Everything this project can switch, and what production is doing with it."
+              actions={
+                <>
+                  <Button variant="secondary">Compare environments</Button>
+                  <Button variant="primary">+ New feature</Button>
+                </>
+              }
+            />
+          </Section>
+
+          <Section
+            id="summary"
+            title="The summary strip"
+            note="Four counts, each a link that filters the list to itself. `aria-current` paints the selected tile AND announces it — one attribute, so the two cannot disagree. A ZERO is dimmed in every tone: a green 0 beside “On in production” reads at a glance as a healthy number."
+          >
+            <Summary>
+              <StatLink value={42} label="All features" href="#summary" tone="all" current />
+              <StatLink value={3} label="On in production" href="#summary" tone="on" />
+              <StatLink value={0} label="Turned off here" href="#summary" tone="off" />
+              <StatLink value={39} label={SPECIMEN_WORDS.neverActivated} href="#summary" tone="never" />
+            </Summary>
+          </Section>
+
+          <Section
+            id="list"
+            title="The list card — header row, rows, a group banner, and one line replacing forty"
+            note="Every row is 71px, which is the contract's measurement. The state detail is clamped to one line and carries its full sentence on `title`: the copy that separates “never turned on here” from “switched off” is long on purpose, and left to wrap it made the row 90px in the state 39 of 42 production flags are in."
+          >
+            <ListCard label="Features specimen">
+              <ListHead>
+                <Col header>Feature</Col>
+                <Col header width="state">
+                  State in production
+                </Col>
+                <Col header width="meta">
+                  Type &amp; risk
+                </Col>
+                <Col header width="act">
+                  On / off
+                </Col>
+              </ListHead>
+              <GroupBanner state="on" count={1} columns={4}>
+                {SPECIMEN_WORDS.on} in production
+              </GroupBanner>
+              <Row>
+                <RowMain
+                  title="checkout.stripe_enabled"
+                  description="Card payments at checkout."
+                  href="#list"
+                />
+                <RowState state="on" label={SPECIMEN_WORDS.on} detail="serving v5" />
+                <Col width="meta">
+                  <Tag tone="kill" label="Type">
+                    Kill switch
+                  </Tag>
+                  <Tag tone="risk-high" label="Risk">
+                    High risk
+                  </Tag>
+                </Col>
+                <Col width="act">
+                  <Switch state="on" label="checkout.stripe_enabled in production" />
+                </Col>
+              </Row>
+              <Row>
+                <RowMain
+                  mono={false}
+                  title="Storefront read key"
+                  description="API key — used by the storefront."
+                />
+                <Col width="state">
+                  {/* The word a real credential row carries — `credentialPermits('ingest')`. It said "Read the
+                      numbers", which is the PROTOTYPE's phrase for a read key and is used by no kind
+                      in this product: the specimen and the product were captioning the same row
+                      differently (fresh reviewer, Minor). */}
+                  <Pill label>Send events</Pill>
+                </Col>
+                <Col width="meta">
+                  <Tag>production</Tag>
+                  <Tag>No expiry</Tag>
+                </Col>
+                <Col width="act">
+                  <span className="ds-kebab" />
+                </Col>
+              </Row>
+              <DormantSummary
+                title={`39 features have never been turned on in production`}
+                detail="No one has ever switched them on or off here. Nothing is wrong with them — nothing has happened to them."
+                action="Show them"
+                href="#list"
+                columns={4}
+              />
+            </ListCard>
+          </Section>
+
+          <Section
+            id="page-tabs"
+            title="A page's own tab strip, and the pane it opens"
+            note="A <nav> with aria-current, NOT a role=tablist: activating one of these is a full navigation, and promising a JS widget with arrow keys behind it is an ARIA claim a server-rendered page cannot keep. It is drawn the same as the section tabs above, so a reader learns the pattern once."
+          >
+            <PageTabs label="Specimen sections">
+              <PageTab href="#page-tabs" current>
+                Value
+              </PageTab>
+              <PageTab href="#page-tabs">Environments</PageTab>
+              <PageTab href="#page-tabs">Funnel</PageTab>
+            </PageTabs>
+            <Pane>
+              <Field
+                label="Is it on in production"
+                hint="Turning it off is one click and is recorded with a reason."
+              >
+                <Switch state="on" label="checkout.stripe_enabled in production" />
+              </Field>
+            </Pane>
+          </Section>
+
+          <Section
+            id="fields"
+            title="A field, its hint, and its error"
+            note="The error slot's height is reserved whether or not it has text, so showing a message never moves the submit button a cursor is already travelling towards. A field with a control passes controlId and gets a real <label for>; one without gets a <span>, because a <label> with no association is a promise of one that does not exist."
+          >
+            <Field
+              label="What to call it"
+              controlId="specimen-field"
+              hint="For you, not for the machine."
+              error={null}
+            >
+              {(control) => <input {...control} className="ds-input" defaultValue="ci" />}
+            </Field>
+            <Field
+              label="What to call it"
+              controlId="specimen-field-error"
+              hint="For you, not for the machine."
+              error="Give the key a label, so you can tell it apart from the others later."
+            >
+              {(control) => <input {...control} className="ds-input" defaultValue="" />}
+            </Field>
+          </Section>
+
+          <Section
+            id="callouts"
+            title="Callouts, cards, and the two kinds of empty"
+            note="`empty` means nothing here YET and a control exists that would fill it; `unbuilt` means this does not exist and no control does. references/ux-guidelines.md says the two must look different, and rendering them the same sends a reader hunting for a button nobody has written."
+          >
+            <Callout>A note that is true every time you open the page.</Callout>
+            <Callout tone="warn">
+              <b>Flag serving is currently switched off.</b> Features can be prepared, but turning them on and
+              off is unavailable.
+            </Callout>
+            <Card>
+              <span className="ds-label">A padded card</span>
+              <p className="ds-hint">
+                The list card&rsquo;s surface, holding prose and fields instead of rows.
+              </p>
+            </Card>
+            <EmptyCard
+              title="No destinations yet"
+              body="Until you add one, events are recorded here but not forwarded anywhere."
+            />
+            <EmptyCard
+              state="unbuilt"
+              title="Scheduling is not built yet"
+              body="Nothing here can schedule a feature change today — so this is not an empty list."
+            />
+          </Section>
+
+          <Section
+            id="once"
+            title="A value shown once"
+            note="Sprint contract #7: the key value is shown once, on a screen of its own, with a copy button — never a value read off a table. Gold-bordered because it is the one thing on the page a reader cannot get back by reloading."
+          >
+            <ShownOnce
+              title="Copy this key now — it is not shown again"
+              body="Only its hash is stored, so nothing here can show it to you a second time."
+            >
+              <div className="ds-copyrow">
+                <code>gb_key_0000000000000000000000000000000000000000</code>
+                <Button variant="secondary">Copy</Button>
+              </div>
+            </ShownOnce>
           </Section>
         </div>
       </main>

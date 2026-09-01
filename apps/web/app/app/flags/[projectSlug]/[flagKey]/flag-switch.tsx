@@ -29,6 +29,8 @@ import { useRouter } from 'next/navigation'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { FlagEnvironment } from '@/lib/flag-definition'
 import type { FlagActivationState } from '@/lib/flag-list-view'
+import { Callout, Pill } from '@/design-system/primitives'
+import { FLAG_STATE_PRESENTATION } from '../flag-vocabulary'
 import { activateFlagAction, deactivateFlagAction } from '../actions'
 import { describeActivationSurprise, describeTurnOffConsequence } from '@/lib/flag-console-copy'
 
@@ -258,7 +260,12 @@ export function FlagSwitch({
           // through the switch's colour or its border style alone.
           role="switch"
           aria-checked={isOn}
-          className={`sw ${row.state}`}
+          // design-system-rails S4.1 — the design system's own switch. `data-state` rather than a
+          // second class name: the CSS keys off `[data-state]` so the three visual states are one
+          // field, and a `loading` prop beside an `isError` prop beside a class is three ways to say
+          // one thing that can disagree.
+          className="ds-switch"
+          data-state={row.state}
           disabled={inFlight || !servingEnabled || noVersion}
           aria-label={
             noVersion
@@ -281,7 +288,7 @@ export function FlagSwitch({
             squeezing into a 96px cell. It is rendered rather than swallowed for the reason this
             file's `run()` gives: a snapshot conflict must reach the operator as itself. */}
         {error !== null && (
-          <span className="row-alert" role="alert">
+          <span className="ds-row-alert" role="alert">
             {error}
           </span>
         )}
@@ -291,29 +298,71 @@ export function FlagSwitch({
   }
 
   return (
-    <div className="stack-sm">
+    <div className="ds-envlist">
       {/* Preserved verbatim from the legacy surface, and deliberately NOT reworded: with serving
           dark, the controls below are disabled and this sentence is the only thing that explains
-          why. Story 2.2 must not become a second serving gate — it reads the same flag the actions
-          themselves check. */}
+          why. This is not a second serving gate — it reads the same flag the actions themselves
+          check. */}
       {!servingEnabled && (
-        <p role="status">
-          <strong>Flag serving is currently switched off.</strong> Definitions can be prepared, but turning
-          features on and off is unavailable until <code>FLAG_SERVING_ENABLED</code> is enabled in a new
-          deployment.
+        <Callout tone="warn">
+          <b>Flag serving is currently switched off.</b> Features can be prepared, but turning them on and off
+          is unavailable until <code>FLAG_SERVING_ENABLED</code> is enabled in a new deployment.
+        </Callout>
+      )}
+      {error && (
+        <p className="ds-row-alert" role="alert">
+          {error}
         </p>
       )}
-      {error && <p role="alert">{error}</p>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && (
+        <p className="ds-hint" role="status">
+          {notice}
+        </p>
+      )}
 
+      {/* ── design-system-rails · Story 4.2 — the design's control, not three ghost buttons ─────
+          This rendered three full-width `Turn on in <environment>` buttons stacked down the page.
+          The approved `feature-value` state puts the decision on ONE line per environment: the
+          environment named with its dot, the state said in words, and the 38 × 21 three-state
+          switch — the same control the list's rows carry, so a reader learns it once.
+
+          ⚠️ The `never` state is DASHED and empty, and that is the acceptance criterion this story
+          names. A flag nobody ever activated is not one somebody deliberately switched off; the
+          switch says so before any sentence does. */}
       {environments.map((row) => {
         const isOn = row.state === 'on'
+        const noVersion = !isOn && latestVersionId === null
         return (
-          <p key={row.environment} className="row-wrap">
+          <div className="ds-envrow" key={row.environment}>
+            <span className="ds-envname">
+              <span className="ds-env-dot" data-env={row.environment} />
+              {row.environment}
+            </span>
+            <Pill state={row.state}>{FLAG_STATE_PRESENTATION[row.state].label}</Pill>
+            {/* The reason a version can be missing is information, not an excuse for an inert
+                control with no explanation beside it. */}
+            {noVersion && <span className="ds-envwho">no version to serve yet</span>}
             <button
               type="button"
-              className="btn btn-ghost"
-              disabled={inFlight || !servingEnabled || (!isOn && latestVersionId === null)}
+              // `role="switch"` + `aria-checked` rather than a pressed button: this control has two
+              // states and a screen reader should say which one it is in.
+              //
+              // ⚠️ THREE visual states, TWO checked states. `never` and `off` are both
+              // `aria-checked="false"` because that is all the role can say — so the distinction
+              // reaches assistive tech through the LABEL and the pill beside it, never through the
+              // switch's colour or its border style alone.
+              role="switch"
+              aria-checked={isOn}
+              className="ds-switch"
+              data-state={row.state}
+              disabled={inFlight || !servingEnabled || noVersion}
+              aria-label={
+                noVersion
+                  ? `${flagKey} has no version to serve in ${row.environment}`
+                  : isOn
+                    ? `Turn ${flagKey} off in ${row.environment}`
+                    : `Turn ${flagKey} on in ${row.environment}`
+              }
               onClick={() =>
                 isOn
                   ? setConfirming({
@@ -323,16 +372,8 @@ export function FlagSwitch({
                     })
                   : turnOn(row)
               }
-            >
-              {/* The control names the environment, so a reader who has scrolled past the heading
-                  still knows which one they are about to change. "Turn off"/"Turn on" rather than
-                  "Deactivate"/"Activate": D7 retires the storage vocabulary. */}
-              {isOn ? `Turn off in ${row.environment}` : `Turn on in ${row.environment}`}
-            </button>
-            {!isOn && latestVersionId === null && (
-              <span className="data-table__count">no version to serve yet</span>
-            )}
-          </p>
+            />
+          </div>
         )
       })}
 

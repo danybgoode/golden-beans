@@ -1,15 +1,27 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { Button } from '@/components/ui/Button'
-import { CopyUrlField } from '@/components/landing/CopyUrlField'
+import { useRouter } from 'next/navigation'
+import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { CopyField } from '@/design-system/copy-field'
+import { Callout, Field, ShownOnce, Step, Steps } from '@/design-system/primitives'
 import type { ActiveConnector } from '@/lib/connector-tokens'
 import { mintConnectorAction, revokeConnectorAction } from './actions'
 
-// console-ia-overhaul · Sprint 2, Story 2.1 — the only interactive part of Setup › Connect.
+// Setup › Connect — the interactive half.
 //
-// The URL, the status sentence and the docs link are all server-rendered; this island exists for the
-// two mutations and the one-time reveal. Same shape as the credential managers next door.
+// The status sentence and the teaching card are server-rendered; this island exists for the two
+// mutations, the one-time reveal and the copy button.
+//
+// ── design-system-rails · Sprint 4, Story 4.4 — the page TEACHES, then hands over the control ──
+// The credential half shipped and shipped well: the status, the multi-token warning, and the
+// server-side filtering of `tokens` before they cross the client boundary. **All of it is kept**
+// (sprint contract #9) — a member must not be able to read a bearer URL out of View Source, and that
+// is a property of where the filter happens, not of what this component renders.
+//
+// What was missing is the other half of reference state `setup-connect`: the URL in a mono field
+// with a Copy button, and a NUMBERED three-step card ending in `Add to Claude ↗`. The page was a
+// credential screen with the steps written as a sentence underneath; the design makes setup a task.
 
 const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector'
 
@@ -27,8 +39,7 @@ export function ConnectorManager({
    * A LIST rather than one, and that is the fix for a race rather than generality for its own sake.
    * `mintConnectorToken` is a check-then-act with no unique index behind it, so two concurrent mints
    * can both succeed. Rendering only the newest would leave the other one live, invisible and
-   * therefore unrevocable — a credential you cannot see is a credential you cannot revoke. Each gets
-   * its own revoke control instead. (Cross-review, agy, PR #123, Blocking.)
+   * therefore unrevocable — a credential you cannot see is a credential you cannot revoke.
    */
   tokens: readonly ActiveConnector[]
   /**
@@ -43,6 +54,7 @@ export function ConnectorManager({
   /** False when a token already exists AND when the state could not be read — see the page. */
   canMint: boolean
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   // The plaintext, held for exactly this render. Never read back from the server afterwards.
@@ -73,20 +85,15 @@ export function ConnectorManager({
 
   function onRevoke(tokenId: string) {
     setError(null)
-    // ⚠️ The dialog is NOT closed here, and that is agy's finding (PR #123). Closing it
-    // synchronously before `startTransition` made its `pending` prop inert — the dialog was already
-    // gone by the time `pending` flipped, so a slow revoke showed no feedback at all and invited a
-    // second click on a control that had already fired.
-    //
-    // It stays open, showing its own pending state, until the action resolves: success reloads the
-    // page (which unmounts everything), failure closes it and renders the error. The close is a
-    // consequence of the OUTCOME now, not of the click.
+    // ⚠️ The dialog is NOT closed here. Closing it synchronously before `startTransition` made its
+    // `pending` prop inert — the dialog was already gone by the time `pending` flipped, so a slow
+    // revoke showed no feedback at all and invited a second click on a control that had already
+    // fired. It stays open, showing its own pending state, until the action resolves.
     startTransition(async () => {
-      // The `try` matters, and its absence was a nit worth taking. With the synchronous close gone
-      // (so `pending` can render), the only paths that closed the dialog were "the action returned
-      // `ok: false`" and "the page reloaded". A REJECTED action — the POST failing mid-flight, wifi
-      // dropping — ran neither: `pending` fell back to false and the dialog sat open showing an
-      // armed Revoke button with no explanation.
+      // The `try` matters. With the synchronous close gone, the only paths that closed the dialog
+      // were "the action returned `ok: false`" and "the page reloaded". A REJECTED action — the POST
+      // failing mid-flight, wifi dropping — ran neither: `pending` fell back to false and the dialog
+      // sat open showing an armed Revoke button with no explanation.
       let result: { ok: boolean }
       try {
         result = await revokeConnectorAction(slug, tokenId)
@@ -100,73 +107,81 @@ export function ConnectorManager({
         setError('Could not revoke that connector URL. Reload and try again.')
         return
       }
-      // A full reload rather than local state: revoking changes what the page's server-rendered
-      // status sentence says, and two sources of truth for "is there a connector" is how a screen
-      // ends up claiming one exists after it was killed.
-      window.location.reload()
+      // ⚠️ `router.refresh()`, not `window.location.reload()`. This file's previous comment argued
+      // for a full reload because "revoking changes what the page's server-rendered status sentence
+      // says" — true, and `refresh()` re-runs that same server render. What the reload bought beyond
+      // that was a page flash and a third refresh idiom in one section. Swept with the two on Setup ›
+      // Keys rather than left as the instance nobody mentioned (cross-family review, agy).
+      setConfirming(null)
+      router.refresh()
     })
   }
 
   const hasAny = minted !== null || tokens.length > 0
 
   return (
-    <div className="stack">
+    <>
+      {/* ⚠️ **The value is shown ONCE, on its own, and this is that screen** (sprint contract #7).
+          It is gold-bordered because it is the only thing here a reader cannot get back by
+          reloading — the token is stored plaintext for serving, but nothing re-reveals it to a
+          browser after this render. */}
       {minted && (
-        <>
-          <p role="status" className="reveal-note">
-            <strong>Copy this now.</strong> This is the only time it is shown. It is a bearer credential:
-            anyone holding the URL can read this project&apos;s data through it, so treat it like a password
-            and revoke it if it leaks.
-          </p>
-          <CopyUrlField url={minted} />
-        </>
+        <ShownOnce
+          title="Copy this now — it is not shown again"
+          body="It is a bearer credential: anyone holding the URL can read this project's data through it, so treat it like a password and revoke it if it leaks."
+        >
+          <CopyField value={minted} label="Copy your new connector URL" />
+        </ShownOnce>
       )}
 
-      {/* ⚠️ THE URL IS OWNER-ONLY. A member sees that a connector exists, not what it is.
-          (Fresh reviewer, PR #123, Should-fix — and the failure scenario is the convincing part.)
-          A previous revision rendered the URL to every member, reasoning that a member can read the
-          dashboards anyway so the capability is no wider. That holds only for SESSION-scoped access.
-          This token is durable and is not revoked by a membership change: a member could copy it, be
-          removed from `project_members`, and keep full read access to the project's funnels, North
-          Star and experiments over MCP indefinitely — with nothing in `audit_log` recording that
-          they ever saw it, and no way for them to revoke it themselves.
-          Every other credential in this product is hashed and shown exactly once, to an owner. This
-          one is re-displayed on every page load, so its audience is the thing to bound. */}
+      {/* ⚠️ THE URL IS OWNER-ONLY. A member sees that a connector exists, not what it is, and the
+          filtering happens on the SERVER — see the page. The failure scenario is the convincing
+          part: this token is durable and is NOT revoked by a membership change, so a member could
+          copy it, be removed from `project_members`, and keep full read access to the project's
+          funnels, North Star and experiments over MCP indefinitely — with nothing in `audit_log`
+          recording that they ever saw it, and no way for them to revoke it themselves. */}
       {!canManage && hasConnector && (
-        <p role="status" className="data-table__count">
+        <Callout>
           A connector URL exists for this project. Ask an owner for it — the URL itself is a bearer credential
           that keeps working after someone leaves the project, so only owners see it here.
-        </p>
+        </Callout>
       )}
 
       {canManage &&
         tokens.map((token) => (
-          <div key={token.tokenId} className="stack-sm">
+          <Field
+            key={token.tokenId}
+            label={`Your connector URL · ${slug}`}
+            hint="Read-only and revocable. Revoke the token and access stops — no deploy. Switching project in the top bar switches this URL."
+          >
             {/* Skipped when this is the one just minted: the reveal above already shows it, and two
-              identical copy fields would read as two different credentials. */}
-            {token.url !== minted && <CopyUrlField url={token.url} />}
-            {/* No inner `canManage` here: the map itself is owner-only (S2 made the URL
-                owner-only, not just the controls). A redundant guard reads as a second,
-                weaker condition that someone could later relax on its own. */}
-            <p>
-              <Button
+                identical copy fields would read as two different credentials. */}
+            {/* ⚠️ The revoke control is on the SAME LINE as the value, not under it. A `<p>` holding a
+                button is a 44px block — `globals.css` gives every button a WCAG target floor — and
+                three of those stacked is what put this page 81px past the fold. It also reads
+                better: the thing and the way to kill it belong together. */}
+            <span className="ds-copyrow">
+              {token.url !== minted && <CopyField value={token.url} label="Copy this connector URL" />}
+              {/* No inner `canManage` here: the map itself is owner-only. A redundant guard reads as
+                  a second, weaker condition that someone could later relax on its own. */}
+              <button
                 type="button"
-                variant="ghost"
+                className="ds-btn ds-btn--secondary"
                 onClick={() => setConfirming(token.tokenId)}
                 disabled={pending}
               >
-                Revoke this URL
-              </Button>
-            </p>
+                Revoke
+              </button>
+            </span>
             <ConfirmDialog
               open={confirming === token.tokenId}
-              /* `verb` matches the button that opened this, unchanged — the component requires it,
-               because a control's name must not change mid-flow. */
+              /* `verb` matches the button that opened this, unchanged — a control's name must not
+                 change mid-flow. */
               verb="Revoke"
               noun="connector URL"
               /* The SPECIFIC object. A connector URL has no label, so the project plus the token's
-               own tail identifies it — with two active URLs on screen, the project alone would
-               not say WHICH one is about to be killed. */
+                 own tail identifies it — with two active URLs on screen, the project alone would not
+                 say WHICH one is about to be killed. */
               subject={`${slug} · …${token.url.slice(-8)}`}
               /* What STOPS WORKING, in plain words, not a restatement of the verb. */
               consequence="Any agent using this URL stops being able to read this project immediately — no deploy needed."
@@ -175,44 +190,62 @@ export function ConnectorManager({
               onConfirm={() => onRevoke(token.tokenId)}
               onCancel={() => setConfirming(null)}
             />
-          </div>
+          </Field>
         ))}
 
-      {/* `canManage &&` is the S9 fix. `hasAny` is true for a MEMBER whose project has a token — and
-          this block's copy says "paste the URL above into it", with nothing above, because S2
-          deliberately withholds the URL from members. The page was telling them to do something it
-          had just made impossible (fresh reviewer, PR #123). A member with no URL has nothing to add
-          to Claude. */}
-      {canManage && hasAny && (
-        <>
-          <p className="row-wrap">
-            <a className="btn btn-gold" href={ADD_TO_CLAUDE_URL} target="_blank" rel="noopener noreferrer">
-              Add to Claude
-            </a>
-          </p>
-          {/* The modal takes no URL parameter — verified against the shipped install panel — so the
-              flow is copy-then-paste and this link cannot pre-fill it. Saying so is better than a
-              reader assuming the button did something it did not. */}
-          <p className="data-table__count">
-            The button opens Claude&apos;s connector dialog; paste the URL above into it. It cannot be
-            pre-filled from a link.
-          </p>
-        </>
-      )}
-
-      {error && (
-        <p role="alert" className="auth-form__message auth-form__message--error">
-          {error}
-        </p>
-      )}
+      {error && <Callout tone="warn">{error}</Callout>}
 
       {canManage && canMint && !minted && (
         <p>
-          <Button type="button" onClick={onMint} disabled={pending}>
+          <button type="button" className="ds-btn ds-btn--primary" onClick={onMint} disabled={pending}>
             {pending ? 'Creating…' : 'Create a connector URL'}
-          </Button>
+          </button>
         </p>
       )}
-    </div>
+
+      {/* ── The teaching half — reference state `setup-connect`, the numbered three-step card ────
+          ⚠️ Gated on `canManage && hasAny`, and both halves matter. This copy says "paste the URL
+          above into it", and a MEMBER has no URL above — the page would be telling them to do
+          something it had just made impossible. Without a token there is nothing to paste at all. */}
+      {canManage && hasAny && (
+        <div className="ds-card">
+          <span className="ds-label">Three steps</span>
+          <Steps>
+            <Step>
+              <b>Copy the URL above.</b>
+            </Step>
+            <Step
+              note={
+                // The modal takes no URL parameter — verified against the shipped install panel — so
+                // the flow is copy-then-paste and this link cannot pre-fill it. Saying so is better
+                // than a reader assuming the button did something it did not.
+                'The button opens Claude’s connector dialog. It cannot be pre-filled from a link, so paste the URL yourself.'
+              }
+            >
+              <b>Open Claude&apos;s connector settings.</b>
+              <span className="ds-step-action">
+                {/* ⚠️ The design's `Add to Claude ↗`, and the arrow is an `<Icon>`, not the glyph.
+                    `check-design-drift.mjs` bans `↗` inside `/app`, and epic F1's answer is
+                    explicitly "render it as `<Icon name="external" />`" — never widen the rule, never
+                    add an exemption, never disable the guard. */}
+                <a
+                  className="ds-btn ds-btn--primary"
+                  href={ADD_TO_CLAUDE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Add to Claude
+                  <Icon name="external" size={13} />
+                </a>
+              </span>
+            </Step>
+            <Step>
+              <b>Paste it into the dialog and save.</b> Claude can then read this project&apos;s funnels,
+              features and North Star.
+            </Step>
+          </Steps>
+        </div>
+      )}
+    </>
   )
 }

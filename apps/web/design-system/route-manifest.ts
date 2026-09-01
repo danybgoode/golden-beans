@@ -263,7 +263,13 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // sprint's specs drive the other two. One row, one default — a row per state would make the
     // denominator a count of screenshots rather than of routes.
     referenceState: 'ship-features',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.1. The page BODY renders from `apps/web/design-system/` — the
+    // answer line, the summary strip, the toolbar, the list card and every row are `ds-` primitives,
+    // and the `.is-console` rules they replaced were deleted in the same commit. The compare view
+    // (`ship-compare`) is a second view of this same route, not a second row: it takes no input the
+    // list does not already have, and a row per state would make the denominator a count of
+    // screenshots rather than of routes.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -277,7 +283,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     surface: null,
     // Plus `feature-environments` and `feature-funnel` as its tabs.
     referenceState: 'feature-value',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.2. All seven tabs render from `apps/web/design-system/` — the
+    // head, the tab strip, the pane, the environment rows with their 38 x 21 three-state switch, the
+    // funnel's tiles and bars, and the empty state that IS the deliverable for 42 of 42 production
+    // flags. `e2e/feature-tabs.authed.spec.ts` walks every tab and asserts the ds- class inside
+    // `<main>`, so this boolean is verified per tab rather than on whichever one loads first.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -312,17 +323,23 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
   },
   {
     route: '/app/scheduled/[projectSlug]',
-    notYetBuilt: true,
-    // ⚠️ DOES NOT EXIST YET — added by Story 4.3. See the D13 ledger above: the approved Ship rail
-    // has four items and the product has no scheduling route, table or capability. Daniel decided
-    // (2026-08-29) to ship the designed EMPTY state rather than drop the rail item.
+    // ⚠️ **BUILT by Story 4.3, and `notYetBuilt` is cleared in the same commit** — the flag and the
+    // file are set by different hands, which is why the test asserts BOTH directions: a row with the
+    // flag must have no page, and a row without it must have one.
+    //
+    // The approved Ship rail has four items and the product had no scheduling route, table or
+    // capability anywhere. Daniel decided (2026-08-29) to ship the designed EMPTY state rather than
+    // drop the rail item; the accepted mitigation is that the page says plainly that scheduling is
+    // not available yet, rather than "you have no scheduled changes" — which would imply you could
+    // have some. It renders the design system's `unbuilt` empty state, which
+    // `references/ux-guidelines.md` requires to look different from an ordinary empty one.
     page: 'app/scheduled/[projectSlug]/page.tsx',
     label: 'Scheduled changes',
     frame: 'console',
     seam: 'product-shell',
     surface: 'scheduled',
     referenceState: 'ship-activity',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -335,7 +352,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'flag-audit',
     referenceState: 'ship-activity',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.3. The audit is a TIMELINE now, not a `DataTable` — the approved
+    // state's own copy says why: "written as sentences, not as rows of a table nobody reads". It is
+    // also a server component again, so a read-only list stops shipping JavaScript.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -350,7 +370,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'setup/connect',
     referenceState: 'setup-connect',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.4. The head, the status field with its pill, the connector URL in
+    // a mono copy field, and the numbered three-step card ending in `Add to Claude ↗` — whose arrow
+    // is `<Icon name="external" />`, because the guard bans the glyph and F1's answer is an icon, not
+    // an exemption. The credential half (server-side token filtering, the multi-token warning, the
+    // honest status) is kept exactly as it shipped.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -363,7 +388,11 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'setup/keys',
     referenceState: 'setup-keys',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.5. Four rows, a "what it may do" column, environment and expiry
+    // chips, a row menu and `+ New key` — and the four mint forms behind it, which is the half the
+    // previous sprint deferred with a stated reason. The three routes it replaces retired into
+    // permanent redirects in the same commit.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -376,7 +405,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'destinations',
     referenceState: 'setup-destinations',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.6. Delivery health moved ONTO the rows — the approved state
+    // puts the split bar beside the destination it describes rather than in a second nine-column
+    // table a reader had to join by name. The delivery and attempt logs are kept behind disclosures:
+    // the design has neither, and replaying a dead delivery has no other surface, so deleting them
+    // to satisfy a geometry assertion would delete a capability.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -389,7 +423,11 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'shares',
     referenceState: 'setup-shares',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.6. This was the last surface in Setup rendering nothing from any
+    // system at all — a `<fieldset>` of radios and a raw `<table>` — on a page whose rows are bearer
+    // tokens. It now shares Setup › Keys' rows, pills, one-time reveal and copy field, so an operator
+    // who has revoked a key already knows how to kill a link.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -422,7 +460,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'API keys (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'keys',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,
@@ -435,7 +476,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'Flag credentials (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'flag-credentials',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,
@@ -448,7 +492,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'Agent write keys (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'agent-keys',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,
@@ -641,7 +688,19 @@ export type Coverage = {
  * which is precisely the failure the epic is named after.
  */
 export function coverage(sprint: Sprint = 6): Coverage {
-  const rows = liveRows(sprint)
+  return coverageOf(liveRows(sprint))
+}
+
+/**
+ * The same arithmetic, over ROWS the caller supplies.
+ *
+ * ⚠️ Extracted so the conjunction above can be TESTED (fresh reviewer, Minor). Every real manifest
+ * row with `rendersFromDesignSystem` also has a `referenceState` — `route-manifest.test.ts` makes
+ * the other combination unrepresentable, correctly — which meant the `&&` was never exercised by
+ * real data, and removing half of it left every assertion in that file green while the test's own
+ * name claimed to check it. A guard whose subject cannot occur is a guard that cannot fail.
+ */
+export function coverageOf(rows: readonly CoverageRow[]): Coverage {
   const complete = rows.filter((row) => row.referenceState !== null && row.rendersFromDesignSystem)
   return {
     total: rows.length,

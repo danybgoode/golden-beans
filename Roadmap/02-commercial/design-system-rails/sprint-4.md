@@ -1,6 +1,7 @@
 # One design system, every surface — Sprint 4: Ship and Setup, finished
 
-**Status:** ⬜ not started
+**Status:** 🟦 In review — all six stories built, both gates green locally
+(**492 api passed / 35 skipped**, **112 authed passed / 8 skipped**), coverage **8 / 27**.
 
 > **Ship and Setup are the two sections that already have approved states**, so this sprint is
 > execution against pixels rather than design. Six of the ten approved renders are here, and
@@ -138,44 +139,146 @@ routes whose **page body** renders from the system, which is the eight this spri
 **Approved states:** `setup-destinations`, `setup-shares` — in `apps/web/design-system/console-prototype.html`.
 **Risk:** high
 
+## What actually shipped, per story
+
+Each line names the commit and the deviations, so the doc describes the build rather than the plan.
+
+| Story | Commit | Landed |
+|---|---|---|
+| — | `3a245e9` | **The page layer**, first and alone: `design-system/system.css`'s page section, `primitives.tsx`'s head/summary/list/row/field/callout components, and `copy-field.tsx`. Shared surface, by the architect, before any page (WAYS-OF-WORKING). |
+| 4.1 | `99a04de` | Ship › Features from `design-system/`, and **66 `.is-console` rules deleted in the same commit**. Compare-environments ships as a VIEW (`?view=compare`), not a route. Closed the `feature row` deferral. |
+| 4.2 | `ffba6d4` | Seven tabs, `Environments` restored as one. The Value tab's three stacked buttons became one line per environment with the 38 × 21 switch. `auth.setup.ts` seeds the one feature that has a funnel, so the renders-numbers spec can pass. |
+| 4.3 | `b9d78f6` | Activity as a **timeline**, not a `DataTable`. `/app/scheduled/[projectSlug]` created. **The Ship rail was in the wrong order** and is corrected. |
+| 4.4 | `1f2e2f0` | Setup › Connect's teaching half: copy field, status pill, numbered steps ending in `Add to Claude ↗` (the arrow an `<Icon>`, per F1). `setup-surfaces.authed.spec.ts` joins CI. |
+| 4.5 | `67dc175` | Four mint forms on Setup › Keys; `/app/keys`, `/app/flag-credentials`, `/app/agent-keys` retired into permanent redirects; both `legacy-*` gates deleted; **D11-3 corrected against a live production query**. |
+| 4.6 | `4dcaeca` | Destinations and Share links. Delivery health moved onto the rows; the two operational logs kept behind disclosures. |
+| — | `5f6890c` | **The browser pass.** Nineteen failures: eight real defects, ten guards whose subject had moved, and one already red on `main`. |
+
+### Deviations, stated rather than left to be found
+
+1. **The three specs are `.authed.spec.ts`, not `.spec.ts`.** A plain `*.spec.ts` lands in the `api`
+   project, which has no session — it would only ever assert the redirect to `/login`. All three are
+   wired into CI's visual-gate step in the commits that wrote them.
+2. **`Environments` returned as a TAB**, withdrawing a deviation `console-ia-overhaul` recorded (it
+   rendered as a table above the strip). WAYS-OF-WORKING now says an approved design IS the contract,
+   and this story's acceptance cites `feature-environments` by name.
+3. **The Ship rail order was wrong** — Experiments above Features, against an approved rail of
+   Features · Experiments · Scheduled changes · Activity. Corrected here because this is the sprint
+   that adds the fourth item; the tests name all four so it is a decision a reader can see.
+4. **`isConsoleShellEnabled()` left Setup › Keys.** Forced, not chosen: it is the only surface that
+   mints, so a closed gate would leave a project unable to issue any credential and would land the
+   three redirects on a 404. The auth boundary is unchanged.
+5. **The no-scroll promise covers three of the seven feature tabs.** `Targeting` (the rule builder),
+   `History` and `Settings` are authoring and log surfaces the design does not draw; `Targeting`
+   measures 2925px because its height is the number of clauses somebody wrote. Named in the spec.
+6. **Destinations keeps its delivery and attempt logs, behind disclosures.** The approved state has
+   neither, and the page must fit — but replaying a dead delivery has no other surface, and deleting
+   a capability to satisfy a geometry assertion is not what the story asks for.
+7. **`dormant summary row` stays deferred** (contract 89, built 91). Its 2px is body copy wrapping at
+   78ch, which is what the prototype does too. Sweeping it up with its neighbour would have been a
+   claim nothing measured.
+8. **The 9.2 MB of rendered reference states at the epic's old `design/` path were deleted.** Story
+   1.1 moved the design to `apps/web/design-system/`; those PNGs were the pre-move copy, regenerable
+   by one command, and had been sitting untracked in every `git status`. Both locations are now
+   gitignored, which the docs had claimed since Story 1.1 with no rule behind it.
+
 ## Sprint QA
-- **api spec(s):** `e2e/console-visual.authed.spec.ts` extended to the eight routes this sprint lands
-  (manifest-driven, so this is data not code) · `e2e/setup-keys.spec.ts` (a member gets 404; each
-  kind mints and revokes; the value renders once) · `e2e/feature-tabs.spec.ts` (the Funnel tab
-  renders the named empty state and **does not 404** for a registry-only feature).
+
+- **api spec(s) — RUN, with results:**
+  - `e2e/console-visual.authed.spec.ts` is manifest-driven and now opens the eight routes this sprint
+    landed. It reads `liveRows(6)`, so the three retired credential routes are excluded from the
+    walk rather than exempted by hand.
+  - `e2e/setup-keys.authed.spec.ts` — all four kinds mint and revoke through the real forms, and the
+    value's ABSENCE after the reveal is asserted, including across a reload. *A member gets 404* is
+    in `lib/setup-route-guards.test.ts` rather than here, deliberately: it needs a second identity,
+    and a source guard proves the shape for every route at once where a browser test proves it for
+    one member on one run.
+  - `e2e/feature-tabs.authed.spec.ts` — every tab renders from `design-system/` and does not 404, the
+    38 × 21 switch is measured as a PAIR, the dashed `never` state is asserted on its computed border
+    style, and the Funnel tab renders real numbers for the one fixture feature that has a funnel.
+  - Both gates green locally on `5f6890c`: **492 api passed / 35 skipped**, **112 authed passed /
+    8 skipped**.
+- **Four suites joined CI** in the commits that needed them: `feature-tabs`, `setup-surfaces`,
+  `setup-keys` and (from Sprint 4's review pass) the corrected `mobile-heuristics` target rule.
+  `setup-surfaces.authed.spec.ts` had said in its own header for a whole epic that it was outside the
+  gate and that "a suite outside the gate decays silently" — and it was, while being the only
+  automated check on Setup's connector status and member boundary.
 - **browser smoke owed:** yes, to Daniel — **minting a real connector URL** and **minting and
   revoking one real key of each kind** in Production. A real credential mint is never covered by a
   merge authorization. Also outstanding from `console-ia-overhaul` Sprint 2.
-- **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.
+- **deterministic gate:** lint + format:changed + `npm run typecheck` + `npm run test:unit` +
+  `npm run build` + design-drift + coverage ratchet, all green before merge.
 
 ## Sprint 4 — Smoke walkthrough (do these in order)
-Env: **production · https://goldenfrijoles.com** — the flag is live from Sprint 3.
+Env: **production · https://goldenfrijoles.com** — there is no flag (D6); the merge is the release.
+
+⚠️ **Steps 5 and 6 are OWED TO DANIEL BY NAME.** They mint real credentials on a real tenant, and a
+real credential mint is never covered by a merge authorization. Everything else an agent can run.
 
 1. Go to https://goldenfrijoles.com/app/flags/miyagisanchez in a 1440×960 window.
    → The page **fits without scrolling**. You see **3** feature rows and one line standing for the
-   **39** that have never been turned on in Production. No sideways scrollbar.
+   **39** that have never been turned on in Production. No sideways scrollbar. Every row is the same
+   height, including the "never turned on here" ones — that sentence is clipped to one line and the
+   whole of it is in the row's tooltip.
    ⚠️ *Corrected at the lock (D10): the scaffold said "2 rows … 40 features", which is the
    prototype's data. Production was re-counted 2026-08-29 — 42 flags, 3 on, 39 never, 0 off.*
 2. Click **Show them**.
    → The 39 expand in place. Row height and chrome are unchanged.
-3. Click `checkout.stripe_enabled`, then the **Funnel** tab.
-   → You get a sentence naming *why* there is no funnel — not a zero, and **not a 404 on the whole
-   feature page**.
-4. Go to https://goldenfrijoles.com/app/setup/connect/miyagisanchez.
-   → Connector URL with a **Copy** button, a status pill, and three numbered steps ending in
-   **Add to Claude**.
-5. (Owed to Daniel by name — money/credential path) Click **Add to Claude**, paste the URL into
-   Claude's connector settings, then ask Claude for this project's funnel.
-   → Claude returns **miyagisanchez** data, not the demo project's.
+3. Click **Compare environments** in the page head.
+   → A grid of all 42 features against all three environments, scrolling **inside its own box** while
+   the page does not. Each mark is a shape as well as a colour: a filled disc for on, a filled disc
+   for off, a dashed ring for never. Click **Back to the list**.
+4. Click `checkout.stripe_enabled`. You get **seven** tabs: Value, Targeting, Environments, Funnel,
+   Impact, History, Settings.
+   → **Value** shows one line per environment — the environment with its dot, the state in words,
+   and a small switch on the right. All three switches are **dashed and empty**, because nobody has
+   ever turned this feature on anywhere. That is different from "switched off", and it should look
+   different.
+   → **Environments** is a three-row table saying the same thing with more detail.
+   → **Funnel** gives you a sentence naming *why* there is no funnel — not a zero, and **not a 404 on
+   the whole feature page**. Same on **Impact**, with a different sentence, because it is a different
+   absence.
+5. Go to https://goldenfrijoles.com/app/setup/connect/miyagisanchez.
+   → The connector URL in a mono field with a **Copy** button and a **Revoke** button beside it, a
+   status pill, and a card of **three numbered steps** ending in **Add to Claude ↗**. The page fits
+   without scrolling.
+   → **(Owed to Daniel)** Click **Add to Claude**, paste the URL into Claude's connector settings,
+   then ask Claude for this project's funnel. Claude returns **miyagisanchez** data, not the demo
+   project's.
 6. Go to https://goldenfrijoles.com/app/setup/keys/miyagisanchez.
-   → The page lists what has access **now** and names what it deliberately does not list —
-   connector URLs, share links, and flag admin keys. ⚠️ The "flag admin keys" line must **no longer
-   claim there are no live rows**: production has one unrevoked `flag_admin` key on the `miyagi`
-   project (D11-3). Then click **+ New key**.
-   → You can mint each of the four kinds **here**. The value appears **once**, on its own screen,
-   with a copy button. Revoke the one you just made.
+   → The page lists what has access **now**, and the footnote names what it deliberately does not
+   list — connector URLs, share links, and flag admin keys. ⚠️ The flag-admin line must **no longer
+   claim there are no live rows**: production has one unrevoked, non-expiring `flag_admin` key on the
+   `miyagi` project (D11-3, re-verified 2026-08-31). It is plain text, not a link, because there is
+   no surface here that can create or revoke one.
+   → **(Owed to Daniel)** Click **+ New key**. Pick a job — the four are described by what they let
+   something do, not by a scope name — answer the one question that kind asks, name it, and create
+   it. The value appears **once**, on its own screen, with a copy button, and the form is gone while
+   it is on screen. Press **I've saved it**: the row appears and the value is not on the page any
+   more, including after a reload. Then revoke it from the row menu; the confirmation names the key
+   and says what stops working. The row disappears — revoked keys are not listed at all.
+   → Do that for **each of the four kinds**. The three extra questions are: an environment
+   (flag snapshot), a publisher (catalog sync), an expiry (agent write). An API key asks none.
 7. Go to https://goldenfrijoles.com/app/keys/miyagisanchez.
-   → It is gone (404 or a redirect to Setup › Keys). Same for `/app/flag-credentials` and
-   `/app/agent-keys`. If any still mints, the replacement and the retirement did not ship together.
+   → You land on **Setup › Keys** — a permanent redirect, and the address bar says so. Same for
+   `/app/flag-credentials/miyagisanchez` and `/app/agent-keys/miyagisanchez`. None of them offers a
+   mint form of its own. If any still mints, the replacement and the retirement did not ship
+   together.
+8. Go to https://goldenfrijoles.com/app/flag-audit/miyagisanchez.
+   → **Activity** — sentences, newest first, each naming who did what to which feature in which
+   environment and why. Not a table of columns.
+9. Go to https://goldenfrijoles.com/app/scheduled/miyagisanchez.
+   → **Scheduled changes**, with an amber dashed panel saying scheduling is **not built yet**. It
+   must NOT read as "you have no scheduled changes" — that would imply you could have some, and send
+   you looking for a control nobody has written. There is a line pointing at Features and Activity
+   for what you can do today.
+10. Go to https://goldenfrijoles.com/app/destinations/miyagisanchez.
+    → The answer line says how many are live and how many deliveries have failed. Each destination's
+    delivery health is a small bar **on its row**, not a separate table. The delivery log and the
+    append-only attempt log are below, collapsed. The page fits without scrolling.
+11. Go to https://goldenfrijoles.com/app/shares/miyagisanchez.
+    → Two share links, each with a **Live** pill and its lens. Click **Revoke** on one you do not
+    need: the confirmation is the same dialog Setup › Keys uses — not an inline "click again".
+    ⚠️ *Do not revoke a link somebody is using; production carries two.*
 
 If any step fails, note the step number + what you saw — that's the bug report.

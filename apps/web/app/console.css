@@ -9,11 +9,22 @@
    epic README had demoted the approved prototype to "inspiration", so every acceptance criterion
    was structural and the build satisfied all of them while looking like a different product.
 
-   The prototype's own selectors are kept — `.topbar`, `.tabs`, `.rail`, `.content`, `.answer`,
-   `.stat`, `.listcard`, `.row` — rather than translated into `.product-shell__*`. Translation is
-   where a port drifts from its source: a renamed selector cannot be diffed against the design it
-   claims to implement, and CONSOLE-CONTRACT.md's rule is "port from the stylesheet, not from the
-   prose". Keeping the names means the two can be compared line by line forever.
+   The prototype's own selectors were kept — `.topbar`, `.tabs`, `.rail`, `.content` — rather than
+   translated into `.product-shell__*`. Translation is where a port drifts from its source: a
+   renamed selector cannot be diffed against the design it claims to implement, and
+   CONSOLE-CONTRACT.md's rule is "port from the stylesheet, not from the prose".
+
+   ⚠️ **THIS FILE IS BEING EMPTIED, and `design-system-rails` Sprint 4 is where that starts.**
+   `.answer`, `.stat`, `.listcard`, `.row`, `.listhead`, `.grp`, `.dormant`, `.sw`, `.toolbar` and
+   `.foot` are GONE from here: Story 4.1 rebuilt Ship › Features from `apps/web/design-system/`, and
+   the rules it replaced were deleted in the same commit rather than left as a cleanup story (sprint
+   contract #11). The design system keeps the same argument — its `.ds-row` and the prototype's
+   `.row` are line-comparable — with the namespace D3 requires, and the diff runs against
+   `design-system/reference.css`, which is GENERATED from the approved prototype rather than copied
+   from it by hand.
+
+   What is left here is the shell's chrome and the surfaces later sprints own. The epic's Definition
+   of Done deletes the rest.
 
    ── Everything here is scoped to `.is-console` ────────────────────────────────────────────
    `.is-console` is set by ProductShell exactly when `header !== null` — the same single field that
@@ -561,335 +572,10 @@
   margin-left: auto;
 }
 
-/* ── the answer line ──────────────────────────────────────────────────────────────────────── */
-.is-console .answer {
-  margin-bottom: 18px;
-  padding: 12px 15px;
-  border-radius: var(--r-lg);
-  background: linear-gradient(90deg, rgb(232 185 60 / 8%), transparent 70%);
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--gold);
-  font-size: 13.5px;
-  color: var(--crema);
-}
-.is-console .answer b {
-  font-weight: 600;
-}
-
-/* ── the summary strip ────────────────────────────────────────────────────────────────────── */
-.is-console .summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 10px;
-  margin-bottom: 18px;
-}
-.is-console .stat {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 13px 15px;
-  border-radius: var(--r-lg);
-  background: var(--card);
-  border: 1px solid var(--line);
-  color: inherit;
-  text-decoration: none;
-  transition:
-    border-color var(--t),
-    background var(--t);
-}
-.is-console .stat:hover {
-  border-color: var(--dim-2);
-}
-.is-console .stat[aria-current='true'] {
-  border-color: var(--gold);
-  background: var(--card-2);
-}
-.is-console .stat .n {
-  display: block;
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.is-console .stat .k {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  color: var(--dim);
-  margin-top: 3px;
-  text-transform: none;
-  letter-spacing: normal;
-}
-.is-console .stat.all .n {
-  color: var(--crema);
-}
-.is-console .stat.on .n {
-  color: var(--green);
-}
-/* ⚠️ Red only when there IS something switched off. A20 measured `off` as 0 in every environment,
-   so a red 0 was permanent on every tenant — an alarm colour on a structural zero (fresh reviewer,
-   round 3, N6). The answer line drops the clause entirely for the same reason; the strip cannot
-   drop the card, so it stops shouting instead. */
-.is-console .stat.off .n {
-  color: var(--dim-2);
-}
-.is-console .stat.off[data-nonzero='true'] .n {
-  color: var(--red);
-}
-.is-console .stat.never .n {
-  color: var(--dim-2);
-}
-
-/* ── the feature list ─────────────────────────────────────────────────────────────────────── */
-.is-console .listcard {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.is-console .listhead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 36px;
-  padding: 9px 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--roast-2);
-  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim-2);
-  font-weight: 600;
-}
-.is-console .listhead .h-state {
-  width: 190px;
-  flex: none;
-}
-.is-console .listhead .h-meta {
-  width: 150px;
-  flex: none;
-}
-
-.is-console .grp {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--roast-2);
-  border-bottom: 1px solid var(--line-soft);
-  border-top: 1px solid var(--line);
-  font-family: var(--sans, 'Archivo', system-ui, sans-serif);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-  font-weight: 600;
-}
-.is-console .grp .cnt {
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-  color: var(--dim-2);
-  letter-spacing: 0;
-  text-transform: none;
-  font-size: 11.5px;
-}
-.is-console .grp .bar {
-  width: 3px;
-  height: 12px;
-  border-radius: 2px;
-  background: var(--dim-2);
-}
-.is-console .grp.on .bar {
-  background: var(--green);
-}
-.is-console .grp.off .bar {
-  background: var(--red);
-}
-
-.is-console .row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 78px;
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--line-soft);
-  transition: background var(--t);
-  position: relative;
-}
-.is-console .row:last-child {
-  border-bottom: none;
-}
-.is-console .row:hover {
-  background: var(--card-2);
-}
-.is-console .row-main {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-/* ⚠️ The font must be set on the `<code>` too. `.row-key` is the `<a>`; the browser's default
-   `code { font-family: monospace }` wins inside it, so the feature key rendered in bare `monospace`
-   while every rule here said IBM Plex Mono. The measured-spec check caught it the first time it
-   ran — which is the entire argument for having that layer rather than describing the table in
-   prose (fresh reviewer, round 2, S8). */
-.is-console .row-key,
-.is-console .row-key code,
-.is-console .answer .mono {
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-}
-.is-console .answer .mono {
-  color: var(--gold-hot);
-}
-.is-console .row-key {
-  display: block;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--crema);
-  text-decoration: none;
-}
-.is-console .row-key:hover {
-  color: var(--gold-hot);
-}
-.is-console .row-desc {
-  display: block;
-  font-size: 12.5px;
-  color: var(--dim-2);
-  margin-top: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.is-console .row-state {
-  width: 190px;
-  flex: none;
-}
-.is-console .row-meta {
-  width: 150px;
-  flex: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.is-console .row-act {
-  width: 96px;
-  flex: none;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-}
-
 /* ── The switch — three states, because Golden has three (Story 3.3) ────────────────────────
    Ported verbatim from `console-reference.css`, and it is the contract's `Switch · 38 × 21` row —
    which the visual gate carried as a DEFERRED spec row ("not built · the row-act cell has no
    controls until Story 3.3 lands the toggle alongside its replacement authoring path") until this.
-
-   ⚠️ The `never` track is DASHED and EMPTY, and that is the whole reason this control has three
-   looks instead of two. `flags-console-parity` Amendment 2 paid to separate "somebody switched this
-   off" from "nothing has ever happened to this here"; a plain off-switch for the second re-collapses
-   the distinction, and 39 of 42 production flags are in it. The colour is never the only carrier —
-   the pill beside it says the state in words. */
-.is-console .sw {
-  width: 38px;
-  height: 21px;
-  /* `globals.css` sets a 44px WCAG 2.5.5 target floor on every `button`. The design's switch is
-     21px tall, so the floor is met by a transparent pseudo-element that extends the HIT area
-     without moving a pixel — the target is real, the ink is the design's. */
-  min-height: 21px;
-  border-radius: 999px;
-  position: relative;
-  flex: none;
-  padding: 0;
-  border: 1px solid var(--line);
-  background: var(--roast-2);
-  transition:
-    background var(--t),
-    border-color var(--t);
-}
-.is-console .sw::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
-.is-console .sw::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--dim-2);
-  transition:
-    transform var(--t),
-    background var(--t);
-}
-.is-console .sw:hover:not([disabled]) {
-  border-color: var(--dim-2);
-}
-.is-console .sw.on {
-  background: var(--green-deep);
-  border-color: var(--green);
-}
-.is-console .sw.on::after {
-  transform: translateX(17px);
-  background: var(--green);
-}
-.is-console .sw.off {
-  background: rgb(232 106 94 / 14%);
-  border-color: var(--red-deep);
-}
-.is-console .sw.off::after {
-  background: var(--red);
-}
-.is-console .sw.never {
-  border-style: dashed;
-  background: transparent;
-}
-.is-console .sw.never::after {
-  background: transparent;
-  border: 1.5px dashed var(--dim-2);
-  width: 15px;
-  height: 15px;
-}
-.is-console .sw[disabled] {
-  opacity: 0.42;
-  cursor: not-allowed;
-}
-
-/* The header cell over the switches. Same fixed width as `.row-act`, so the label sits over the
-   column it names rather than near it. */
-.is-console .listhead .h-act {
-  width: 96px;
-  flex: none;
-  text-align: right;
-}
-
-/* A rejection from the server, in a row. `.row` is `flex-wrap`, so a full-width child takes the
-   next line instead of being squeezed into a 96px cell — which is what makes rendering it here
-   possible at all. Red and unmissable: a snapshot conflict's correct response is "reload and look
-   again", and an operator who cannot see it will pull the lever twice. */
-.is-console .row-alert {
-  flex: 1 1 100%;
-  margin-top: 8px;
-  color: var(--red);
-  font-size: 12.5px;
-}
-
-/* The two honest sentences above the list use `.callout`, whose ported rule carries a top margin
-   for its use inside a modal body. Standing on the page it needs the pair, or the summary strip
-   below it sits flush against it. Scoped to a direct child of `main` so the modal's own callout —
-   which sits inside `.field` and gets its spacing from there — is untouched. */
-.is-console main > .callout {
-  margin-bottom: 14px;
-}
 
 /* The state pill: a dot AND a word, never colour alone. */
 .is-console .pill {
@@ -923,15 +609,6 @@
 .is-console .pill.never {
   color: var(--dim-2);
 }
-.is-console .state-detail {
-  display: block;
-  font-family: var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace);
-  font-size: 11.5px;
-  color: var(--dim-2);
-  margin-top: 4px;
-  text-transform: none;
-  letter-spacing: normal;
-}
 .is-console .tag {
   display: inline-flex;
   align-items: center;
@@ -947,65 +624,6 @@
   border: 1px solid var(--line);
   background: var(--card-2);
   color: var(--dim);
-}
-
-/* ── the dormant summary: ONE row replacing forty ─────────────────────────────────────────── */
-.is-console .dormant {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 89px;
-  padding: 14px 16px;
-  text-align: left;
-  border-top: 1px solid var(--line);
-  transition: background var(--t);
-}
-.is-console .dormant:hover {
-  background: var(--card-2);
-}
-/* ⚠️ `.tw` means something ELSE in the reference: a 26×26 dashed box holding the ▸/▾ disclosure
-   glyph (`console-reference.css:125-128`). Reusing the name for a text wrapper defeats this file's
-   founding premise — that keeping the prototype's selectors lets the two be diffed line by line.
-   Renamed to `.dormant-text`; the reference's `.tw` affordance is not ported because this design
-   LINKS rather than expands (fresh reviewer, round 3, N5). */
-/* ⚠️ **The CELL is the flex row now, not `.dormant`.**
-   The link has to be inside the cell (a `role="row"` may own only cells) AND pushed to the right
-   edge by `margin-left: auto` — which needs a flex PARENT. Moving it into a plain span satisfied the
-   first and silently broke the second: `margin-left: auto` in a non-flex container does nothing
-   (fresh reviewer, round 4, S1).
-
-   So the cell spans the row and lays out its own children. `.dormant-copy` holds the stacked text;
-   the link is its sibling inside the same cell. Both constraints hold instead of trading. */
-.is-console .dormant .dormant-text {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-width: 0;
-}
-.is-console .dormant .dormant-copy {
-  min-width: 0;
-}
-.is-console .dormant .t {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--crema);
-}
-.is-console .dormant .d {
-  display: block;
-  font-size: 12.5px;
-  color: var(--dim-2);
-  margin-top: 3px;
-  max-width: 78ch;
-}
-.is-console .dormant .go {
-  margin-left: auto;
-  font-size: 12.5px;
-  color: var(--gold);
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 /* ── buttons ──────────────────────────────────────────────────────────────────────────────── */
@@ -1043,35 +661,6 @@
   background: var(--card-2);
 }
 
-/* ── the toolbar ──────────────────────────────────────────────────────────────────────────── */
-.is-console .toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 14px;
-}
-/* `globals.css` gives form controls `width: 100%` inside a form, which makes every child of the
-   toolbar its own row. The design is one row: a search box that grows, then fixed-width selects. */
-.is-console .toolbar > * {
-  width: auto;
-}
-.is-console .toolbar select {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 150px;
-}
-.is-console .toolbar input[type='search'] {
-  padding: 8px 11px;
-  border-radius: var(--r);
-  background: var(--card);
-  border: 1px solid var(--line);
-  color: var(--crema);
-  font: inherit;
-  font-size: 13.5px;
-  min-width: 190px;
-  flex: 1 1 250px;
-}
 /* ⚠️ `appearance: none` strips the native dropdown arrow, and the first port supplied no
    replacement — so the two selects were visually indistinguishable from the search box beside them
    (cross-review, agy, round 3). The reference solves this with a `.sel` wrapper drawing a CSS
@@ -1092,15 +681,6 @@
   border-right: 1.5px solid var(--dim-2);
   border-bottom: 1.5px solid var(--dim-2);
   transform: translateY(-70%) rotate(45deg);
-}
-
-/* ── the foot line ────────────────────────────────────────────────────────────────────────── */
-.is-console .foot {
-  margin-top: 12px;
-  font-size: 12.5px;
-  color: var(--dim-2);
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 /* ── Story 3.3 — the dialog layer, ported from the approved stylesheet ────────────────────────
@@ -1854,79 +1434,27 @@
   margin: 0;
 }
 
-/* ── The prototype's own responsive block, which the first port dropped entirely ───────────────
-   `flags-console-prototype.html` carries a `@media (max-width: 900px)` section. None of it was
-   ported, while `.row-state` (190px), `.row-meta` (150px) and `.listhead` were declared at EVERY
-   width — 340px of fixed columns plus gaps in a 390px viewport.
+/* ── What is left of the prototype's responsive block ─────────────────────────────────────────
+   ⚠️ **MOSTLY MOVED — design-system-rails Story 4.1.** This block used to carry the feature list's
+   whole phone behaviour: the fixed `.row-state` (190px) / `.row-meta` (150px) columns unwinding, the
+   rows wrapping, and the column header row hiding. All of it now lives in
+   `apps/web/design-system/system.css`, because the list itself does.
 
-   Measured on the built stylesheet at 390px before this block existed: `.row-main` had width **0**,
-   the feature key painted on top of the state pill, and the description column vanished.
-   `mobile-heuristics.authed.spec.ts` did not catch it because `AUTHED_MOBILE_ROUTES` does not
-   include `/app/flags/<slug>` — the same blind spot that hid the 100vh rail (fresh reviewer, PR
-   #124, Blocking).
+   Two things went WITH it rather than being re-ported, and both were open findings here:
 
-   The column headers hide rather than wrap, because a header row over stacked cells labels nothing.
+   1. The header row is `position: absolute; clip-path: inset(50%)` in the design system, not
+      `display: none`. This file's own comment recorded the defect and could not fix it — *"the
+      honest fix is a visually-hidden header row instead of `display: none`, which is a change to the
+      markup this stylesheet cannot make"*. It was not a markup change in the end; it was this
+      declaration. Measured before: 3 `columnheader` nodes at 1440 and **0** at 390, so below 900px
+      the cells had no column association at all.
+   2. The `aria-label`-on-every-cell workaround stays gone. Name-from-author beats
+      name-from-content, so a cell holding a feature key announced itself as "Feature" — the label
+      replaced the value it was meant to caption.
 
-   ⚠️ **An earlier version of this comment claimed their semantics survive** — that `role=
-   "columnheader"` keeps the association `display: none` removes visually. **That is false.**
-   `display: none` removes an element from the accessibility tree entirely: measured, 3 columnheader
-   nodes at 1440 and **0** at 900 and 390 (fresh reviewer, round 2).
-
-   ⚠️ **An `aria-label` on each cell was the first answer, and it was WORSE**: name-from-author beats
-   name-from-content, so the cell holding a feature key announced itself as "Feature" — the label
-   replaced the value. Those labels are gone.
-
-   ⚠️ **So below 900px the cells have no column association, and this file will not pretend
-   otherwise.** What survives is the labelling that CAPTIONS rather than replaces: the type and risk
-   tags carry their own `aria-label`s, which is the pair a reader could not otherwise tell apart.
-   The state cell reads its own contents ("Never turned on here"), which is self-describing without
-   a header. The feature cell reads the key.
-
-   That is a real reduction from the desktop experience, recorded rather than closed: the honest fix
-   is a visually-hidden header row instead of `display: none`, which is a change to the markup this
-   stylesheet cannot make. Named in the PR rather than left in a comment claiming it is handled
-   (fresh reviewer, round 4, S2). */
+   What remains here is the page padding, which belongs to the shell rather than to any page. */
 @media (max-width: 900px) {
   .is-console .product-shell__body > main {
     padding: 20px 16px 70px;
-  }
-  /* ⚠️ **Visually hidden, NOT `display: none` — the reduction this file used to record is closed.**
-     The block above says: *"below 900px the cells have no column association, and this file will not
-     pretend otherwise… the honest fix is a visually-hidden header row instead of `display: none`,
-     which is a change to the markup this stylesheet cannot make."*
-     It turned out not to need one. The list is an ARIA table — `role="table"/"row"/"columnheader"/
-     "cell"` — so the association is POSITIONAL, and all that was required was keeping the
-     columnheaders in the accessibility tree while taking them out of the visual flow. `display:
-     none` removes an element from that tree entirely (measured: 3 columnheader nodes at 1440, 0 at
-     390); this keeps all three at every width.
-     Raised again by cross-review (agy) on the scoped stylesheet pass, which is what prompted trying
-     it rather than re-reading the note explaining why it had not been. */
-  .is-console .listhead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    border: 0;
-  }
-  .is-console .row {
-    flex-wrap: wrap;
-  }
-  .is-console .row-main {
-    flex: 1 1 100%;
-  }
-  .is-console .row-state,
-  .is-console .row-meta {
-    width: auto;
-  }
-  .is-console .row-act {
-    width: auto;
-    margin-left: auto;
-  }
-  .is-console .summary {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }

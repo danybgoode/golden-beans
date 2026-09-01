@@ -90,6 +90,21 @@ export async function revokeApiKey(projectId: string, keyId: string): Promise<bo
     .update({ revoked_at: new Date().toISOString() })
     .eq('id', keyId)
     .eq('project_id', projectId)
+    // ⚠️ **`scope = 'ingest'` — added by design-system-rails S4.5 (fresh reviewer, Blocking).**
+    //
+    // `api_keys` holds SIX scopes: ingest, share, agent_write, flag_read, flag_sync and flag_admin.
+    // Without this predicate the function revoked ANY row scoped to the project, so a request
+    // carrying a share link's id — or production's one unrevoked `flag_admin` key — killed it while
+    // the audit trail recorded `api_key_revoked`. `listProjectKeys` above is already `.eq('scope',
+    // 'ingest')`, so the two halves of this module now agree about what an "API key" is.
+    //
+    // Every sibling was already scoped: `revokeAgentWriteKey` has `.eq('scope','agent_write')`, and
+    // the two flag revokes constrain inside their RPCs. `lib/report-shares.ts` and
+    // `lib/agent-write-keys.ts` both document that this is the exact defect their scoped revokes
+    // were forced into existence to prevent, and `lib/audit.ts` calls it out by name: an audit label
+    // that can be chosen by picking an endpoint is worse than no audit log. This one was the
+    // straggler, and the merged Keys page is what made it reachable with a caller-supplied `kind`.
+    .eq('scope', 'ingest')
     .is('revoked_at', null)
     .select('id')
   if (error) {

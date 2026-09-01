@@ -1,37 +1,36 @@
-import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { listProjectKeys } from '@/lib/api-keys'
-import { KeyManager } from './key-manager'
-import { ProductShell } from '@/components/product/ProductShell'
+// RETIRED — design-system-rails · Sprint 4, Story 4.5.
+//
+// This route minted and revoked credentials. Setup › Keys now does both, for all four kinds, and
+// the replacement landed in the SAME commit that emptied this file — the ordering rule this epic
+// keeps (`console-ia-overhaul` A3): never a cleanup story, because with the console live a missing
+// control is noticed the day it goes missing.
+//
+// ── A redirect, not a 404, and not a deletion ─────────────────────────────────────────────────
+// The sprint walkthrough allows either. A redirect is the kinder half of it: this URL is in
+// bookmarks, in the two epics of commit messages that reference it, and in whatever an operator
+// pasted into a runbook. `permanentRedirect` tells a browser and a crawler that the move is
+// permanent, which is what it is.
+//
+// The FILE stays because the coverage manifest carries a row for this route with `retiresIn: 4`, and
+// `route-manifest.test.ts` asserts every manifest row points at a real `page.tsx`. `liveRows()` is
+// what removes it from the denominator; deleting the file would instead make the manifest and the
+// repository disagree. It owes no reference state — a redirect has no design.
+//
+// ── No auth check here, deliberately ──────────────────────────────────────────────────────────
+// The destination is owner-gated (`requireProjectOwnership` at the route), so a member following
+// this link gets the same flat 404 they got from this page before. Re-checking here would be a
+// second, weaker copy of a boundary that is already enforced where it matters — and this file must
+// not become somewhere a future edit could relax it.
 
-// multi-tenant-activation · Sprint 1, Story 1.3 — the per-project API-key dashboard. OWNER-only (no
-// demo carve-out): credential administration is least-privilege, so an ordinary member gets a 404
-// here even for a project they can otherwise read (cross-review round 2, 2026-07-20).
+import { permanentRedirect } from 'next/navigation'
+
 export const dynamic = 'force-dynamic'
 
-// ── console-ia-overhaul · Sprint 2, Story 2.3: this route STAYS, and keeps its forms ──────────
-// With `CONSOLE_SHELL_ENABLED` on, `/app/setup/keys/[projectSlug]` is the one place that answers
-// "what has access to this project", and this route leaves the nav at that same instant (A7's
-// derived `legacy-keys` gate). It is NOT redirected: minting and revoking still live here, because
-// the four kinds take materially different inputs and merging the forms was explicitly out of
-// scope. A redirect would send an owner away from the only surface that can issue this kind.
-//
-// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states, and neither is
-// ever the only route to a control — the ordering rule this epic exists to respect.
-export default async function KeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
+export default async function RetiredCredentialRoute({
+  params,
+}: {
+  params: Promise<{ projectSlug: string }>
+}) {
   const { projectSlug } = await params
-  const { projectId } = await requireProjectOwnership(projectSlug)
-  const keys = await listProjectKeys(projectId)
-
-  return (
-    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
-      <main>
-        <h1>API keys</h1>
-        <p>
-          Keys authorize <code>POST /api/v1/track</code> and the SDK. Issue one per integration; revoke a
-          leaked key instantly (revocation takes effect on the next request, no deploy).
-        </p>
-        <KeyManager slug={projectSlug} keys={keys} />
-      </main>
-    </ProductShell>
-  )
+  permanentRedirect(`/app/setup/keys/${projectSlug}`)
 }

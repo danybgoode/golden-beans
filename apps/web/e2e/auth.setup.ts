@@ -9,6 +9,11 @@ import {
   IMPACT_FEATURE_KEY,
   IMPACT_INPUT_KEY,
   IMPACT_SERIES,
+  FUNNEL_ADOPTED_EVENT,
+  FUNNEL_FEATURE_KEY,
+  FUNNEL_RETAINED_EVENT,
+  FUNNEL_SUBJECTS,
+  FUNNEL_TARGET_EVENT,
   SCENARIO_FIXTURE_KEY,
   SCENARIO_FLAG_KEY,
   SCENARIO_TARGET_KEY,
@@ -142,10 +147,71 @@ setup('provision a disposable tenant and sign in through the real form', async (
   writeRecord({ userId, projectId: membership.project_id as string, slug, email: TEST_USER.email })
 
   await seedImpactFixture(db, membership.project_id as string)
+  await seedFunnelFixture(db, membership.project_id as string)
   await seedScenarioFixture(db, membership.project_id as string, userId)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed the ONE fixture feature that has a funnel — design-system-rails Story 4.2.
+ *
+ * ⚠️ **A funnel needs a row in a DIFFERENT registry from the one a flag lives in.**
+ * `getFeatureFunnelByProjectId` reads `features` (the TARS signal registry); a flag lives in
+ * `flag_registries`. The two have separate lifecycles and separate naming conventions, and on
+ * production `miyagisanchez` they have ZERO overlap — 42 flag registries, one TARS feature
+ * (`setup_guide`), so every flag a reader can click renders the Funnel tab's empty state.
+ *
+ * That empty state is a deliverable and is asserted on a scenario flag. What could NOT be asserted
+ * without this is the other half: that when a feature does have a funnel, the tab renders NUMBERS.
+ * The sprint contract puts that spec on `setup_guide`, which is production data CI cannot reach —
+ * so this is its local counterpart, registered in BOTH registries with a real event history.
+ *
+ * Written through the service client rather than `/api/v1/features/sync` + `/api/v1/track` because
+ * both need a project API key, and the fixture never captures one: provisioning shows the plaintext
+ * once, in the onboarding UI, and never again. Same reasoning as `seedImpactFixture` above, and the
+ * same teardown story — every table here is `REFERENCES projects(id) ON DELETE CASCADE`.
+ *
+ * The counts are 3 targeted / 2 adopted / 1 retained, deliberately all different: a spec asserting
+ * "the funnel renders numbers" against three equal values could pass on a page rendering one number
+ * three times.
+ */
+async function seedFunnelFixture(db: SupabaseClient, projectId: string) {
+  const { error: featureError } = await db.from('features').insert({
+    project_id: projectId,
+    key: FUNNEL_FEATURE_KEY,
+    enabled: true,
+    target_event: FUNNEL_TARGET_EVENT,
+    adopted_event: FUNNEL_ADOPTED_EVENT,
+    retained_event: FUNNEL_RETAINED_EVENT,
+    retention_days: 7,
+    description: 'Disposable measured feature, so the Funnel tab has numbers to render.',
+  })
+  if (featureError) throw new Error(`could not seed the funnel feature: ${featureError.message}`)
+
+  // `feature_id` is the FEATURE KEY on `events`, not a foreign key — the ingest path writes the
+  // string the SDK sent. Matching `tars-query`'s own `.eq('feature_id', featureKey)`.
+  //
+  // ⚠️ **The TIMESTAMPS are explicit, and without them `retained` is always 0.** `computeTars`
+  // anchors the retention window to each user's earliest ADOPTING event and requires a later
+  // qualifying event strictly after it (`t > baseline`). Inserting six rows in one statement gives
+  // them all the same `now()` default, so the retained event lands exactly ON the baseline and the
+  // funnel reads 3 / 2 / 0 — a number that looks like a measurement and is an artefact of the seed.
+  // Found by running the spec rather than by reading the query.
+  const [first, second, third] = FUNNEL_SUBJECTS
+  const hourAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
+  const rows = [
+    { user_id: first, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: second, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: third, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: first, event: FUNNEL_ADOPTED_EVENT, created_at: hourAgo(48) },
+    { user_id: second, event: FUNNEL_ADOPTED_EVENT, created_at: hourAgo(48) },
+    // Inside the feature's 7-day retention window, and strictly after the adoption above.
+    { user_id: first, event: FUNNEL_RETAINED_EVENT, created_at: hourAgo(24) },
+  ].map((row) => ({ ...row, project_id: projectId, feature_id: FUNNEL_FEATURE_KEY }))
+  const { error: eventsError } = await db.from('events').insert(rows)
+  if (eventsError) throw new Error(`could not seed the funnel events: ${eventsError.message}`)
+}
 
 async function seedScenarioFixture(db: SupabaseClient, projectId: string, ownerId: string) {
   const flagDefinition = {

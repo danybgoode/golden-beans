@@ -20,7 +20,11 @@ const VIEWPORT = { width: 1440, height: 960 }
  * Excludes `disabled` and `loading` controls, which set the DOM attribute deliberately and cannot
  * take focus — the selector below excludes them, so they are not counted here either.
  */
-const EXPECTED_FOCUSABLE = 30
+// ⚠️ 30 → 44 with design-system-rails Sprint 4. The page layer added a head with two actions, a
+// four-tile summary strip, a list card with a row link and a switch, a page tab strip, two fields, a
+// pick list, and the "I've saved it" control on a one-time reveal. Changed in the SAME commit as the
+// render, which is what this constant asks for.
+const EXPECTED_FOCUSABLE = 44
 const SPECIMEN = '/app/design-system'
 
 /** Exactly `'true'`, matching `lib/flags.ts`. `CONSOLE_SHELL_ENABLED=false` must SKIP, not fail. */
@@ -251,13 +255,38 @@ test.describe('the design system specimen', () => {
     }
 
     for (let index = 0; index < rowCount; index += 1) {
-      const shape = await rows.nth(index).evaluate((row) => ({
-        // The row's own role means nothing if nothing above it is a table.
-        underTable: Boolean(row.closest('[role="table"]')),
-        children: [...row.children].map((child) => child.getAttribute('role')),
-      }))
+      const shape = await rows.nth(index).evaluate((row) => {
+        // Decorative children are not columns. The group banner's coloured bar is `aria-hidden`, so
+        // it is invisible to assistive tech and must be invisible to this count too — otherwise the
+        // banner reads as a two-cell row and the spanning branch below never applies.
+        const children = [...row.children].filter((child) => child.getAttribute('aria-hidden') !== 'true')
+        return {
+          // The row's own role means nothing if nothing above it is a table.
+          underTable: Boolean(row.closest('[role="table"]')),
+          children: children.map((child) => child.getAttribute('role')),
+          spanning: children.length === 1 && children[0].hasAttribute('aria-colspan'),
+        }
+      })
       expect(shape.underTable, `row ${index} carries role="row" with no role="table" ancestor`).toBe(true)
-      expect(shape.children.length, `row ${index} has no columns`).toBeGreaterThan(2)
+      // ⚠️ **A SPANNING row is a legitimate exception, and it has to be recognised rather than
+      // waived** (design-system-rails S4.1). A group banner ("On in production · 3") and the line
+      // standing for thirty-nine dormant features are each ONE cell across the whole table, which is
+      // exactly what `aria-colspan` is for — demanding three cells there would force the banner to
+      // render two empty ones, and an empty cell in a row is what a screen reader reports as a
+      // column with nothing in it.
+      //
+      // So the rule is: a row has a full set of columns, OR exactly one cell that says how many
+      // columns it spans. A cell with no `aria-colspan` still fails, which is the case that matters —
+      // a two-cell row in a three-column table is announced positionally, and the count landing under
+      // the wrong header is the defect two rounds were spent on.
+      if (shape.spanning) {
+        expect(
+          shape.children.length,
+          `row ${index} spans the table and still renders ${shape.children.length} cells`
+        ).toBe(1)
+      } else {
+        expect(shape.children.length, `row ${index} has no columns`).toBeGreaterThan(2)
+      }
       for (const role of shape.children) {
         expect(
           role,
@@ -300,6 +329,31 @@ test.describe('the design system specimen', () => {
       ['Switcher', '.ds-switcher'],
       ['Menu', '.ds-menu'],
       ['MenuItem', '.ds-menu-item'],
+      // ── The page layer — design-system-rails · Sprint 4 ─────────────────────────────────────
+      // Everything above is a control; these are how a whole page is assembled. They are here for
+      // the same reason the controls are, and the check below is what forced it: twenty-one new
+      // exports landed with no specimen entry, and this test named every one of them.
+      ['PageHead', '.ds-page-head'],
+      ['Summary', '.ds-summary'],
+      ['StatLink', '.ds-stat[href]'],
+      ['ListCard', '.ds-listcard'],
+      ['ListHead', '.ds-listhead'],
+      ['Col', '.ds-col-state'],
+      ['Row', '.ds-row'],
+      ['RowMain', '.ds-row-main'],
+      ['RowState', '.ds-state-detail'],
+      ['Tag', '.ds-tag'],
+      ['GroupBanner', '.ds-grp'],
+      ['DormantSummary', '.ds-dormant'],
+      ['PageTabs', '.ds-tabs--panel'],
+      ['PageTab', '.ds-tabs--panel .ds-tab'],
+      ['Pane', '.ds-pane'],
+      ['Field', '.ds-field'],
+      ['Callout', '.ds-callout'],
+      ['Card', '.ds-card'],
+      ['Empty', '.ds-empty'],
+      ['EmptyCard', '.ds-empty[data-state="unbuilt"]'],
+      ['ShownOnce', '.ds-once'],
     ]
 
     for (const [name, selector] of PRIMITIVES) {

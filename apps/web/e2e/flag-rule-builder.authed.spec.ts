@@ -172,7 +172,13 @@ async function turnOnInDevelopment(page: Page, slug: string, key: string) {
     return
   }
   await gotoFlag(page, slug, key, 'value')
-  await page.getByRole('button', { name: 'Turn on in development' }).click()
+  // ⚠️ **A SWITCH, not a button labelled "Turn on in development" — design-system-rails S4.2.** The
+  // Value tab rendered three full-width buttons stacked down the page, which is what `globals.css`
+  // makes of a `<p>` holding a button; the approved `feature-value` state is one line per
+  // environment carrying the 38 × 21 three-state control. The accessible name is unchanged in
+  // substance — it still says which feature and which environment — so this follows the move rather
+  // than weakening the locator.
+  await page.getByRole('switch', { name: `Turn ${key} on in development` }).click()
 
   // ── These fixtures default to `off`, so turning them on CONFIRMS first ────────────────────────
   // Sprint 2's "activated is not on" guard: a version whose defaultVariantKey names a falsey variant

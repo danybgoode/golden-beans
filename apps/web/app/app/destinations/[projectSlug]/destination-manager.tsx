@@ -4,9 +4,25 @@ import { useRouter } from 'next/navigation'
 import type { DestinationRow } from '@/lib/destinations'
 import type { DeliveryHistoryRow } from '@/lib/deliveries'
 import { formatUtc } from '@/lib/format-utc'
+import type { DeliveryHealthRow } from '@/lib/deliveries'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
-import { Field, FormSection } from '@/components/ui/FormSection'
+import { CopyField } from '@/design-system/copy-field'
+import {
+  Answer,
+  Callout,
+  Card,
+  Col,
+  Empty,
+  Field,
+  ListCard,
+  ListHead,
+  PageHead,
+  Row,
+  RowMain,
+  ShownOnce,
+  Tag,
+} from '@/design-system/primitives'
 import {
   createDestinationAction,
   rotateSecretAction,
@@ -41,12 +57,25 @@ export function DestinationManager({
   slug,
   destinations,
   deliveries,
+  health,
 }: {
   slug: string
   destinations: DestinationRow[]
   deliveries: DeliveryHistoryRow[]
+  /**
+   * Per-destination delivery counts, aggregated in the DATABASE.
+   *
+   * ⚠️ **Moved INTO the rows — design-system-rails S4.6.** This rendered as a separate nine-column
+   * table above the list, so "is delivery working?" and "what is configured?" were two tables a
+   * reader had to join by name. The approved `setup-destinations` state puts the health on the row
+   * it belongs to: a split bar and the two counts, beside the destination they describe.
+   */
+  health: DeliveryHealthRow[]
 }) {
   const router = useRouter()
+  // The form is behind `+ New destination`, so the page opens on the answer and the list rather
+  // than on an empty form — which is what the approved state shows and what makes the page fit.
+  const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [targetUrl, setTargetUrl] = useState('')
   const [eventFilter, setEventFilter] = useState('')
@@ -69,6 +98,7 @@ export function DestinationManager({
       const result = await createDestinationAction(slug, name, targetUrl, eventFilter || null)
       if (result.ok) {
         setSecret({ id: result.id, value: result.signingSecret, rotated: false })
+        setCreating(false)
         setName('')
         setTargetUrl('')
         setEventFilter('')
@@ -175,61 +205,15 @@ export function DestinationManager({
     [slug, router]
   )
 
-  const destinationColumns = useMemo<DataTableColumn<DestinationRow>[]>(
-    () => [
-      { key: 'name', header: 'Name', value: (d) => d.name },
-      {
-        key: 'url',
-        header: 'URL',
-        value: (d) => d.targetUrl,
-        cell: (d) => <code>{d.targetUrl ?? '—'}</code>,
-      },
-      {
-        // "all events" is a real setting, not a missing one, so it is a searchable VALUE rather
-        // than a null: a reader filtering for "all events" is asking a legitimate question.
-        key: 'filter',
-        header: 'Filter',
-        value: (d) => d.eventFilter ?? 'all events',
-      },
-      {
-        key: 'secret',
-        header: 'Secret',
-        value: (d) => (d.secretSetAt ? `set ${formatUtc(d.secretSetAt)}` : null),
-        cell: (d) => (d.secretSetAt ? `set ${formatUtc(d.secretSetAt)}` : '—'),
-      },
-      { key: 'status', header: 'Status', value: (d) => (d.enabled ? 'enabled' : 'disabled') },
-      {
-        key: 'actions',
-        header: 'Actions',
-        cell: (d) => (
-          <>
-            <button type="button" onClick={() => onSendTest(d.id)} disabled={pending}>
-              Send test
-            </button>{' '}
-            <button type="button" onClick={() => onToggle(d.id, !d.enabled)} disabled={pending}>
-              {d.enabled ? 'Disable' : 'Enable'}
-            </button>{' '}
-            <button
-              type="button"
-              onClick={() => setConfirming({ row: d, intent: 'rotate' })}
-              disabled={pending}
-            >
-              Rotate secret
-            </button>{' '}
-            <button
-              type="button"
-              onClick={() => setConfirming({ row: d, intent: 'remove' })}
-              disabled={pending}
-            >
-              Remove
-            </button>
-            {testResult && testResult.destinationId === d.id && <p role="status">{testResult.message}</p>}
-          </>
-        ),
-      },
-    ],
-    [pending, testResult, onSendTest, onToggle]
-  )
+  /**
+   * The health row for a destination, or a zeroed stand-in.
+   *
+   * ⚠️ A MISSING row is not the same as zeros, and the fallback says so by carrying `known: false`.
+   * `delivery_health` LEFT-JOINs, so a configured destination with no deliveries DOES get a row of
+   * zeros — the only way to miss is a read that did not answer, and painting an empty bar for that
+   * would claim "nothing has failed" about a question nobody asked.
+   */
+  const healthById = useMemo(() => new Map(health.map((row) => [row.destinationId, row])), [health])
 
   const deliveryColumns = useMemo<DataTableColumn<DeliveryHistoryRow>[]>(
     () => [
@@ -278,112 +262,325 @@ export function DestinationManager({
     [pending, onReplay]
   )
 
+  const live = destinations.filter((row) => row.enabled).length
+  const failed = health.reduce((total, row) => total + row.failedAttempts, 0)
+
   return (
-    <section>
+    <>
+      <PageHead
+        title="Destinations"
+        lede="Where this project sends what happens, so another tool can act on it. Every matching event is POSTed to your URL and signed, so your receiver can verify it came from Golden Frijoles."
+        actions={
+          !creating && (
+            <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
+              + New destination
+            </button>
+          )
+        }
+      />
+
+      {/* ── The answer line ────────────────────────────────────────────────────────────────────
+          What is true right now, in one sentence, before any table. `failedAttempts` is CUMULATIVE
+          — it survives a replay — so the sentence says "have failed", not "are failing": a count of
+          historical failures rendered in the present tense would read as an ongoing outage. */}
+      <Answer>
+        <b>
+          {live} destination{live === 1 ? '' : 's'} {live === 1 ? 'is' : 'are'} live
+        </b>
+        {failed > 0 ? (
+          <>
+            {' and '}
+            <b>{failed}</b> {failed === 1 ? 'delivery has' : 'deliveries have'} failed. A failed delivery is
+            retried, and you can replay one by hand from the log below.
+          </>
+        ) : (
+          <>. Nothing has failed to deliver.</>
+        )}
+      </Answer>
+
+      {/* ⚠️ The signing secret is shown ONCE, on a screen of its own — the same rule Setup › Keys
+          follows. On a ROTATE it also says what just stopped working, because that is the half a
+          reader can miss: the previous secret stops verifying the moment the rotation completes, so
+          every receiver still using it starts rejecting deliveries. */}
       {secret && (
-        <div className="panel" role="alert">
-          <strong>
-            Copy this signing secret now — it won&apos;t be shown again
-            {secret.rotated ? ' (the previous secret is now invalid)' : ''}:
-          </strong>
-          <pre className="panel-code">{secret.value}</pre>
-          <button type="button" className="btn btn-ghost" onClick={() => setSecret(null)}>
-            I&apos;ve saved it
-          </button>
-        </div>
+        <ShownOnce
+          title={
+            secret.rotated
+              ? 'Copy this signing secret now — the previous one is already invalid'
+              : 'Copy this signing secret now — it is not shown again'
+          }
+          body={
+            secret.rotated
+              ? 'Every receiver still verifying with the old secret is rejecting deliveries until you deploy this one.'
+              : 'Only its hash is stored, so nothing here can show it to you a second time. Your receiver uses it to verify that a delivery came from us.'
+          }
+        >
+          <CopyField value={secret.value} label="Copy the signing secret" />
+          <p className="ds-once-actions">
+            <button type="button" className="ds-btn ds-btn--secondary" onClick={() => setSecret(null)}>
+              I&apos;ve saved it
+            </button>
+          </p>
+        </ShownOnce>
       )}
 
-      <form onSubmit={onCreate}>
-        <FormSection
-          title="Add a destination"
-          description="Every matching event is POSTed to your URL and signed with a secret shown once, here, at creation time."
-        >
-          <Field label="Name" hint="How this destination appears in the table below.">
-            {(control) => (
-              <input
-                {...control}
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. crm-webhook"
-                required
-              />
-            )}
-          </Field>
-          <Field
-            label="Webhook URL"
-            hint="Must be HTTPS. Delivery is at least once — deduplicate on the event id."
-          >
-            {(control) => (
-              <input
-                {...control}
-                type="url"
-                value={targetUrl}
-                onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="https://example.com/webhooks/golden-frijoles"
-                required
-              />
-            )}
-          </Field>
-          <Field label="Event filter" hint="Leave blank to deliver every event.">
-            {(control) => (
-              <input
-                {...control}
-                type="text"
-                value={eventFilter}
-                onChange={(e) => setEventFilter(e.target.value)}
-                placeholder="e.g. order_placed"
-              />
-            )}
-          </Field>
-          <div>
-            <button type="submit" className="btn btn-gold" disabled={pending}>
-              {pending ? 'Working…' : 'Add destination'}
-            </button>
-          </div>
-        </FormSection>
-      </form>
+      {creating && (
+        <Card>
+          <form onSubmit={onCreate}>
+            <Field
+              label="Name"
+              controlId="new-destination-name"
+              hint="How this destination appears in the list below."
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  className="ds-input"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. crm-webhook"
+                  required
+                />
+              )}
+            </Field>
+            <Field
+              label="Webhook URL"
+              controlId="new-destination-url"
+              hint="Must be HTTPS. Delivery is at least once — deduplicate on the event id."
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  className="ds-input"
+                  type="url"
+                  value={targetUrl}
+                  onChange={(e) => setTargetUrl(e.target.value)}
+                  placeholder="https://example.com/webhooks/golden-frijoles"
+                  required
+                />
+              )}
+            </Field>
+            <Field
+              label="Which events"
+              controlId="new-destination-filter"
+              hint="Leave blank to deliver every event."
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  className="ds-input"
+                  type="text"
+                  value={eventFilter}
+                  onChange={(e) => setEventFilter(e.target.value)}
+                  placeholder="e.g. order_placed"
+                />
+              )}
+            </Field>
+            {/* New destinations start DISABLED — configure it, send a test, then enable it. Said
+                here, at the moment somebody creates one, rather than in a paragraph at the top of
+                the page they read before they had a reason to care. */}
+            <Callout>
+              A new destination starts <b>switched off</b>. Send it a test first, then turn it on — turning it
+              on starts delivery from now, not from the backlog.
+            </Callout>
+            {error && <Callout tone="warn">{error}</Callout>}
+            <p className="ds-mint-actions">
+              <button type="submit" className="ds-btn ds-btn--primary" disabled={pending}>
+                {pending ? 'Working…' : 'Create the destination'}
+              </button>
+              <button
+                type="button"
+                className="ds-btn ds-btn--secondary"
+                onClick={() => setCreating(false)}
+                disabled={pending}
+              >
+                Cancel
+              </button>
+            </p>
+          </form>
+        </Card>
+      )}
 
-      {error && <p role="status">{error}</p>}
+      {error && !creating && <Callout tone="warn">{error}</Callout>}
 
-      <DataTable
-        caption="Destinations"
-        columns={destinationColumns}
-        rows={destinations}
-        rowKey={(d) => d.id}
-        filterLabel="Filter destinations"
-        empty="No destinations yet — add one above. Until you do, events are recorded but not forwarded anywhere."
-      />
+      {destinations.length === 0 ? (
+        <div className="ds-listcard">
+          <Empty
+            title="No destinations yet"
+            body="Until you add one, events are recorded here but not forwarded anywhere. A destination is a URL of yours that every matching event is POSTed to, signed so you can verify it came from us."
+          />
+        </div>
+      ) : (
+        <ListCard label="Destinations" wideActions>
+          <ListHead>
+            <Col header>Destination</Col>
+            <Col header width="state">
+              Sends
+            </Col>
+            <Col header width="meta">
+              Delivery
+            </Col>
+            <Col header width="act">
+              On / off
+            </Col>
+          </ListHead>
+          {destinations.map((row) => {
+            const rowHealth = healthById.get(row.id)
+            const total = (rowHealth?.delivered ?? 0) + (rowHealth?.failedAttempts ?? 0)
+            const okPercent = total === 0 ? 0 : ((rowHealth?.delivered ?? 0) / total) * 100
+            return (
+              <Row key={row.id}>
+                <RowMain
+                  mono={false}
+                  title={row.name}
+                  description={
+                    <>
+                      <span className="ds-mono">{row.targetUrl ?? 'no URL'}</span>
+                      {row.secretSetAt === null
+                        ? ' · no secret yet'
+                        : ` · secret set ${formatUtc(row.secretSetAt)}`}
+                    </>
+                  }
+                />
+                <Col width="state">
+                  {/* "all events" is a real setting, not a missing one — a dashed tag would read as
+                      "unclassified", which is a different fact. */}
+                  {row.eventFilter === null ? (
+                    <Tag>Everything</Tag>
+                  ) : (
+                    <Tag label="the only event it sends">
+                      <span className="ds-mono">{row.eventFilter}</span>
+                    </Tag>
+                  )}
+                </Col>
+                <Col width="meta">
+                  {rowHealth === undefined ? (
+                    // ⚠️ NOT zeros. The health read did not answer for this row, and painting an
+                    // empty bar would claim "nothing has failed" about a question nobody asked.
+                    <span className="ds-note">Delivery could not be read</span>
+                  ) : total === 0 ? (
+                    <span className="ds-note">Nothing sent yet</span>
+                  ) : (
+                    <>
+                      {/* The same split bar the drills use, because "how much of what I sent
+                          arrived" is the same question in both places. */}
+                      <div
+                        className="ds-splitbar"
+                        role="img"
+                        aria-label={`${rowHealth.delivered} delivered, ${rowHealth.failedAttempts} failed`}
+                      >
+                        <i className="ds-splitbar-ok" style={{ width: `${okPercent.toFixed(1)}%` }} />
+                        {rowHealth.failedAttempts > 0 && (
+                          <i
+                            className="ds-splitbar-bad"
+                            style={{ width: `${(100 - okPercent).toFixed(1)}%` }}
+                          />
+                        )}
+                      </div>
+                      <span className="ds-note">
+                        <span className="ds-mono">{rowHealth.delivered.toLocaleString('en-US')}</span> sent
+                        {rowHealth.failedAttempts > 0 && (
+                          <>
+                            {' · '}
+                            <span className="ds-mono ds-note--bad">{rowHealth.failedAttempts} failed</span>
+                          </>
+                        )}
+                      </span>
+                    </>
+                  )}
+                </Col>
+                <Col width="act">
+                  {/* ⚠️ TWO states here, not three. A destination is on or off — nobody "never
+                      touched" one, because creating it is the act. So the switch is the two-state
+                      form of the same control the feature list uses, and `never` is not reachable. */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={row.enabled}
+                    className="ds-switch"
+                    data-state={row.enabled ? 'on' : 'off'}
+                    disabled={pending}
+                    aria-label={
+                      row.enabled ? `Stop delivering to ${row.name}` : `Start delivering to ${row.name}`
+                    }
+                    onClick={() => onToggle(row.id, !row.enabled)}
+                  />
+                  <span className="ds-row-actions">
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
+                      onClick={() => onSendTest(row.id)}
+                      disabled={pending}
+                    >
+                      Send test
+                    </button>
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
+                      onClick={() => setConfirming({ row, intent: 'rotate' })}
+                      disabled={pending}
+                    >
+                      Rotate secret
+                    </button>
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
+                      onClick={() => setConfirming({ row, intent: 'remove' })}
+                      disabled={pending}
+                    >
+                      Remove
+                    </button>
+                  </span>
+                  {testResult && testResult.destinationId === row.id && (
+                    <span className="ds-row-alert" role="status">
+                      {testResult.message}
+                    </span>
+                  )}
+                </Col>
+              </Row>
+            )
+          })}
+        </ListCard>
+      )}
 
-      {/* Story 2.2 — delivery history. Shows what actually happened per attempt (status, attempt
-          count, last error) and offers REPLAY on a settled row. Deliberately no secrets and no
-          payload body: this is an operational view, not an event browser. */}
-      <h2>Recent deliveries</h2>
-      <p>
-        <small>
-          Delivery is <strong>at least once</strong> — your receiver should deduplicate on the event id. A
-          replay re-sends the same logical event id.
-        </small>
-      </p>
-      <DataTable
-        caption="Recent deliveries"
-        columns={deliveryColumns}
-        rows={deliveries}
-        rowKey={(d) => d.id}
-        filterLabel="Filter deliveries"
-        empty="No deliveries yet — they appear once an enabled destination matches an incoming event."
-      />
+      {/* ── The delivery log, behind a disclosure ───────────────────────────────────────────────
+          ⚠️ **Kept, and moved below the fold rather than deleted.** The approved
+          `setup-destinations` state has no delivery table at all — the health it shows lives on the
+          rows above. But replaying a dead delivery is a real capability with no other surface, so
+          removing the table would remove the capability, which is not what "render from the design
+          system" asks for. A disclosure is the honest resolution: the page answers its question
+          without scrolling, and the depth is one click away rather than gone. */}
+      <details className="ds-disclosure">
+        <summary>Recent deliveries — replay one that never arrived</summary>
+        <div className="ds-disclosure-body">
+          <DataTable
+            caption="Recent deliveries"
+            columns={deliveryColumns}
+            rows={deliveries}
+            rowKey={(d) => d.id}
+            filterLabel="Filter deliveries"
+            empty="No deliveries yet — they appear once an enabled destination matches an incoming event."
+          />
+        </div>
+      </details>
 
-      {/*
-        ONE dialog for both irreversible operations on this table, driven by `confirming.intent`.
-        Two dialog components would be two places for the copy to drift apart, which is the same
-        failure mode at a smaller scale as the two confirmation patterns D5 was written about.
-      */}
+      <Callout>
+        Correctly built, wrongly prominent — this used to be a top-level destination in the nav. It is{' '}
+        <b>plumbing</b>, and plumbing belongs in Setup.
+      </Callout>
+
       <ConfirmDialog
         open={confirming !== null}
         verb={confirming?.intent === 'rotate' ? 'Rotate' : 'Remove'}
         noun={confirming?.intent === 'rotate' ? 'the signing secret for' : 'destination'}
         subject={confirming?.row.name ?? ''}
+        // ⚠️ **Both sentences are carried VERBATIM through the redesign.** They are
+        // cross-review-hardened copy that tells an operator what actually stops — the remove one
+        // says the secret is gone for good and points at Disable as the reversible alternative,
+        // which is the sentence that stops somebody destroying a live integration they only wanted
+        // to pause. Rewording them to match a new visual language would trade a real safety property
+        // for a stylistic one, which is the trade `flag-console-copy.ts` exists to refuse.
         consequence={
           confirming?.intent === 'rotate'
             ? 'The current signing secret stops verifying the moment this completes. Any receiver still checking signatures with it will reject every delivery until you redeploy it with the new secret — which is shown once, here, and never again.'
@@ -397,6 +594,6 @@ export function DestinationManager({
           else onDelete(confirming.row.id)
         }}
       />
-    </section>
+    </>
   )
 }

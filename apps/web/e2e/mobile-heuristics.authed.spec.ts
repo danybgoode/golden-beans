@@ -18,10 +18,12 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
   { label: 'command center', path: () => '/app' },
   { label: 'impact', path: (slug) => `/app/impact/${slug}/${IMPACT_FEATURE_KEY}` },
   { label: 'scenarios', path: (slug) => `/app/scenarios/${slug}` },
-  { label: 'API keys', path: (slug) => `/app/keys/${slug}` },
+  // ⚠️ `API keys` and `agent write keys` are GONE — design-system-rails S4.5 retired both routes
+  // into permanent redirects. They are not simply dropped: `setup keys` below is where all four
+  // kinds live now, it is in this sweep unconditionally, and it is the route whose FIRST render was
+  // broken at both widths with no assertion watching.
   { label: 'destinations', path: (slug) => `/app/destinations/${slug}` },
   { label: 'share links', path: (slug) => `/app/shares/${slug}` },
-  { label: 'agent write keys', path: (slug) => `/app/agent-keys/${slug}` },
   { label: 'onboarding', path: (slug) => `/app/onboarding/${slug}` },
   // flags-console-parity · Sprint 3, Story 3.4 — covering a new route is one array entry, which is
   // the point of this rail.
@@ -35,19 +37,21 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
   // (Fresh HIGH-tier reviewer, PR #121.)
   ...(isFlagConsoleEnabled()
     ? ([
-        { label: 'flag credentials', path: (slug: string) => `/app/flag-credentials/${slug}` },
+        // `flag credentials` left with its route (S4.5). `scheduled` joined with S4.3 — a new route
+        // covered by one array entry, which is the point of this rail.
         { label: 'flag audit', path: (slug: string) => `/app/flag-audit/${slug}` },
+        { label: 'scheduled changes', path: (slug: string) => `/app/scheduled/${slug}` },
       ] as const)
     : []),
   // console-ia-overhaul · Sprint 2. Same gated-entry shape as the two above, and added because the
   // FIRST render of `Setup › Keys` was broken at both widths and no assertion saw it: a seven-column
   // table between the section rail and the agent rail put "Manage" off the right edge at 1440 and was
   // unreadable at 390. A screenshot caught it; this is what stops it coming back.
+  // ⚠️ `setup keys` moved OUT of this conditional — S4.5 dropped its console gate, because it is now
+  // the only surface that mints and a closed gate would leave a project unable to issue a credential.
+  { label: 'setup keys', path: (slug) => `/app/setup/keys/${slug}` },
   ...(isConsoleShellEnabled()
-    ? ([
-        { label: 'setup connect', path: (slug: string) => `/app/setup/connect/${slug}` },
-        { label: 'setup keys', path: (slug: string) => `/app/setup/keys/${slug}` },
-      ] as const)
+    ? ([{ label: 'setup connect', path: (slug: string) => `/app/setup/connect/${slug}` }] as const)
     : []),
 ] as const
 

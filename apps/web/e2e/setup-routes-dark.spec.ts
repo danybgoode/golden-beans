@@ -21,15 +21,59 @@ import { test, expect } from '@playwright/test'
 
 const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 
+// ⚠️ **Setup › KEYS left this list — design-system-rails S4.5, and it is a behaviour change.**
+//
+// It was `CONSOLE_SHELL_ENABLED`-gated while it was an additional surface duplicating a list. Story
+// 4.5 made it the ONLY place a credential can be minted and retired the three routes it replaced
+// into permanent redirects — so a closed gate would leave a project unable to issue any credential
+// at all, including the ingest key without which nothing can send an event, and the redirects would
+// land on a 404. Dropping the gate was forced by the retirement rather than chosen; the AUTH
+// boundary is untouched (`requireProjectOwnership` at the route).
+//
+// It is not simply deleted from coverage: `the credential surface is gated on NOTHING` below asserts
+// the new contract in both gate states, which is the property that replaced the dark one.
 const SETUP_ROUTES = [
   '/app/setup/connect/miyagisanchez',
-  '/app/setup/keys/miyagisanchez',
   // A slug that does not exist anywhere. While dark it must 404 for the SAME reason as a real one —
   // the gate is checked before any project lookup, so the response cannot distinguish them. If a
   // real slug 404'd and a fake one behaved differently, the gate would be leaking tenant existence.
   '/app/setup/connect/no-such-project-here',
-  '/app/setup/keys/no-such-project-here',
 ]
+
+const CREDENTIAL_ROUTE = '/app/setup/keys/miyagisanchez'
+const RETIRED_ROUTES = [
+  '/app/keys/miyagisanchez',
+  '/app/agent-keys/miyagisanchez',
+  '/app/flag-credentials/miyagisanchez',
+]
+
+test('the credential surface is gated on NOTHING, in whichever state this run is in', async ({ request }) => {
+  // ⚠️ Deliberately OUTSIDE both describes, so it runs in every configuration rather than in the one
+  // that happens to match. That is the whole claim: Setup › Keys answers regardless of
+  // `CONSOLE_SHELL_ENABLED`, because it is the only surface that mints.
+  //
+  // "Answers" means a login redirect for an anonymous caller — the route exists and is owner-gated.
+  // A 404 would mean a gate closed over it, which is the regression this exists to catch.
+  const response = await request.get(CREDENTIAL_ROUTE, { maxRedirects: 0 })
+  expect(
+    response.status(),
+    `${CREDENTIAL_ROUTE} 404'd — a gate closed over the only surface that can mint a credential`
+  ).not.toBe(404)
+  expect([302, 307]).toContain(response.status())
+  expect(response.headers()['location']).toContain('/login')
+})
+
+test('the three retired routes redirect to it, in whichever state this run is in', async ({ request }) => {
+  // The other half, and it also runs unconditionally: a redirect that only worked while a gate was
+  // open would strand every bookmark the moment it closed.
+  for (const route of RETIRED_ROUTES) {
+    const response = await request.get(route, { maxRedirects: 0 })
+    expect([307, 308], `${route} returned ${response.status()} rather than a redirect`).toContain(
+      response.status()
+    )
+    expect(response.headers()['location']).toContain('/app/setup/keys/miyagisanchez')
+  }
+})
 
 test.describe('the Setup routes while the console is dark', () => {
   test.skip(GATE_ON, 'CONSOLE_SHELL_ENABLED is on for this run; the dark contract does not apply')
@@ -44,32 +88,17 @@ test.describe('the Setup routes while the console is dark', () => {
     })
   }
 
-  test('the routes they replace are untouched while dark', async ({ request }) => {
-    // The other half of the dark contract, and the one that matters more: turning the console off
-    // must leave the existing credential surfaces exactly as they were. These are owner-gated, so an
-    // anonymous request gets a redirect to /login — which is the pre-epic behaviour and proves the
-    // route still exists. A 404 here would mean this epic had removed them.
-    for (const route of [
-      '/app/keys/miyagisanchez',
-      '/app/agent-keys/miyagisanchez',
-      '/app/flag-credentials/miyagisanchez',
-    ]) {
-      const response = await request.get(route, { maxRedirects: 0 })
-      expect([307, 302, 404].includes(response.status()), `${route} returned ${response.status()}`).toBe(true)
-      // `/app/flag-credentials` rides its own gate (`FLAG_CONSOLE_ENABLED`), so 404 is legitimate
-      // there. The two that ride no gate must be redirects — a 404 from them is this epic breaking
-      // a surface it promised not to touch.
-      if (!route.includes('flag-credentials')) {
-        expect(response.status(), `${route} should still exist while dark`).not.toBe(404)
-      }
-    }
-  })
+  // ⚠️ **`the routes they replace are untouched while dark` is RETIRED — S4.5.** It asserted that
+  // turning the console off left the three legacy credential surfaces exactly as they were, which was
+  // the right contract while they were the fallback. They are permanent redirects now and there is
+  // no fallback to preserve: the two unconditional tests above assert what replaced that promise —
+  // the redirects work in every gate state, and their destination is gated on nothing.
 })
 
 test.describe('the Setup routes while the console is lit', () => {
   test.skip(!GATE_ON, 'run with CONSOLE_SHELL_ENABLED=true to exercise the lit contract')
 
-  for (const route of SETUP_ROUTES.slice(0, 2)) {
+  for (const route of ['/app/setup/connect/miyagisanchez']) {
     test(`${route} exists and requires a session`, async ({ request }) => {
       // Lit, these become ordinary credential-gated routes: an anonymous request is redirected to
       // login rather than 404'd. Asserting the FLIP of the dark contract is what makes the dark

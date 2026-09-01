@@ -52,24 +52,118 @@ export type CredentialRow = {
  * These are the story's deliverable. Each says what the key AUTHORIZES, not which table it lives in
  * or which subsystem minted it — "sends events into this project" rather than "ingest scope".
  */
-const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: string }> = {
+const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: string; permits: string }> = {
   ingest: {
     title: 'API key',
     capability: 'Send events into this project, and read its funnels through the SDK.',
+    permits: 'Send events',
   },
   flag_read: {
     title: 'Flag snapshot key',
     capability: 'Read the flag snapshot for one environment. Cannot change what any flag serves.',
+    permits: 'Read the flags',
   },
   flag_sync: {
     title: 'Catalog sync key',
     capability:
       'Create flag definitions from an outside catalog. Cannot turn a flag on or off in any environment.',
+    permits: 'Register features',
   },
   agent_write: {
     title: 'Agent write key',
     capability: 'Let your own agent claim, resolve and dismiss tasks in this project over MCP.',
+    permits: 'Claim & resolve tasks',
   },
+}
+
+/**
+ * The expiries an agent write key may be minted with, in days.
+ *
+ * `null` ("until revoked") is offered but is NOT the default: an agent credential is typically
+ * minted for one agent's working session or one automation, and a write credential that outlives its
+ * purpose is the one most worth bounding at mint time — a decision an operator makes once, instead
+ * of a revocation they have to remember.
+ *
+ * Lives HERE rather than in the action because two things read it: the action validates against it,
+ * and the form offers it. One definition, or the form offers a value the action refuses.
+ */
+export const AGENT_KEY_EXPIRY_DAYS = [1, 7, 30, 90] as const
+
+/**
+ * How long a flag credential lives when it is minted, in days.
+ *
+ * ⚠️ **This constant exists because Story 4.5 nearly dropped it silently** (fresh reviewer,
+ * Blocking). The surface this page replaces minted BOTH flag kinds with a hard-coded 30 days — its
+ * buttons literally read *"Mint 30-day snapshot key"* and *"Mint 30-day catalog sync key"* — and the
+ * first draft of the merged mint action simply did not pass `expiresAt`, so the RPC inserted NULL
+ * and both kinds became **credentials that never expire**. The row then rendered "No expiry" under a
+ * comment claiming that is a state an owner deliberately chose. Nobody chose it.
+ *
+ * The FORM does not ask, and that is the design: the sprint contract says `flag_read` asks for an
+ * environment and `flag_sync` for a source, one question each. So the expiry is applied here, by the
+ * action, exactly as the old surface applied it — the behaviour is preserved and the question count
+ * is unchanged. `agent_write` is the kind that asks, because it is the only one where the operator's
+ * answer differs per credential.
+ *
+ * Named rather than inlined so `setup-keys` and the flags page's own legacy actions cannot drift to
+ * two different defaults for one credential kind.
+ */
+export const FLAG_KEY_EXPIRY_DAYS = 30
+
+/**
+ * What minting each kind actually ASKS FOR — the reason the four forms could not simply be merged.
+ *
+ * ⚠️ This is the fact the previous sprint used to defer the work, quoted from its own comment:
+ * *"they do differ materially: `flag_read` needs an environment, `flag_sync` needs a source string,
+ * `agent_write` needs an expiry from an allow-list, and ingest keys need none of those. Merging four
+ * forms is a bigger job than merging four lists."* That was true and it was the right call then;
+ * Story 4.5 does the bigger job, and this table is what makes the difference DATA rather than four
+ * hand-written branches that can disagree with the actions that receive them.
+ *
+ * A `Record` over the closed union: a fifth kind is a compile error here, which is what stops one
+ * reaching the page with no idea what to ask the operator for.
+ */
+export const CREDENTIAL_MINT_FIELD: Record<CredentialKind, 'none' | 'environment' | 'source' | 'expiry'> = {
+  ingest: 'none',
+  flag_read: 'environment',
+  flag_sync: 'source',
+  agent_write: 'expiry',
+}
+
+/**
+ * The order the mint picker offers the four kinds, and the sentence under each.
+ *
+ * Ordered by how often somebody needs one — an ingest key is the first credential every project
+ * gets, an agent write key is the rarest and the strongest. The picker is a list of JOBS, not of
+ * scopes: nobody thinks *"I need a flag_sync credential"*, they think *"I need to let my code
+ * register features"*.
+ */
+export const CREDENTIAL_MINT_ORDER: readonly CredentialKind[] = [
+  'ingest',
+  'flag_read',
+  'flag_sync',
+  'agent_write',
+]
+
+/**
+ * Is this raw value one of the four kinds?
+ *
+ * ⚠️ **`Object.hasOwn`, not `in` — cross-family review (agy), Blocking.** A Server Action is a public
+ * HTTP surface and TypeScript types are erased at runtime, so `kind` arrives as `unknown`. The first
+ * version of the revoke action guarded with `kind in REVOKE_AUDIT`, and `in` walks the prototype
+ * chain: `'toString'`, `'valueOf'` and `'constructor'` all pass. The request then fell past every
+ * explicit branch into the last one and wrote `Object.prototype.toString` — a function — into the
+ * audit trail's `action` column.
+ *
+ * It lives HERE rather than beside the action so the fast unit layer can prove it, which is the half
+ * that was missing: the action itself needs a session, a project and a database, so nothing cheap
+ * could ever have caught the guard being dodgeable.
+ *
+ * Derived from `CREDENTIAL_COPY`, whose keys ARE the closed union — so a fifth kind is admitted here
+ * the moment the union grows, and cannot be forgotten.
+ */
+export function isCredentialKind(value: unknown): value is CredentialKind {
+  return typeof value === 'string' && Object.hasOwn(CREDENTIAL_COPY, value)
 }
 
 export function credentialTitle(kind: CredentialKind): string {
@@ -78,6 +172,38 @@ export function credentialTitle(kind: CredentialKind): string {
 
 export function credentialCapability(kind: CredentialKind): string {
   return CREDENTIAL_COPY[kind].capability
+}
+
+/**
+ * The two-or-three words that fit in a chip — the *what it may do* column.
+ *
+ * ⚠️ **The chip used to render `capability.split('.')[0]`, and that was a real layout defect**
+ * (fresh reviewer, Major). Two of the four sentences contain no interior period, so the chip
+ * rendered 66 and 75 characters of `white-space: nowrap` inside a 190px column: it painted over the
+ * next two cells and pushed the list card into horizontal scroll. Nothing in the gate could see it —
+ * `nowrap` kept the row at its measured 71px, and the card's own `overflow-x: auto` absorbed the
+ * width, so both cheap assertions passed on a broken page. That is the failure mode this whole epic
+ * is named after, produced by a `split()`.
+ *
+ * A phrase per kind, written down, rather than the first clause of a sentence written for somewhere
+ * else. The full sentence still renders under the credential's name, where it has room.
+ *
+ * ⚠️ **Two of the four are NOT the approved design's words, and that is stated rather than implied**
+ * (fresh reviewer, Minor — an earlier version of this docstring claimed all of them were). The
+ * prototype's `keysScreen` has four rows carrying three chips: "Read the numbers" (twice — a
+ * storefront read key and a preview read key), "Register features", "Claim & resolve tasks". So:
+ *
+ *   · `flag_sync` and `agent_write` are the design's own words, unchanged.
+ *   · `ingest` has none to borrow — the prototype has no ingest row at all, and "Read the numbers"
+ *     is what its two READ keys say. "Send events" is what this kind actually authorises, and
+ *     captioning it "Read the numbers" would be wrong rather than merely different.
+ *   · `flag_read` is "Read the flags", not the design's "Read the numbers", because in THIS product
+ *     "the numbers" is the funnel and the North Star — which is what an ingest key reads. Two kinds
+ *     captioned "Read the numbers" would say that a snapshot key can read a project's metrics. It
+ *     cannot; it reads one environment's flag snapshot and nothing else.
+ */
+export function credentialPermits(kind: CredentialKind): string {
+  return CREDENTIAL_COPY[kind].permits
 }
 
 /**
@@ -92,8 +218,9 @@ export function credentialCapability(kind: CredentialKind): string {
  * one that scopes its claim honestly — and production carries two active share links on the tenant
  * this was designed against, so this is a real omission and not a hypothetical one.
  *
- * `flag_admin` exists in the schema's scope CHECK constraint but has no minting surface and no rows
- * in production; it is listed here so the next reader knows it was considered rather than missed.
+ * `flag_admin` exists in the schema's scope CHECK constraint and has no minting surface in this
+ * product — but it DOES have a live row in production, and this docstring used to say it did not.
+ * See the entry itself for the evidence and the correction (epic D11-3).
  */
 export const CREDENTIAL_KINDS_NOT_LISTED = [
   {
@@ -119,10 +246,33 @@ export const CREDENTIAL_KINDS_NOT_LISTED = [
     why: 'A public report link with its own audience lens — managed on its own Setup surface.',
   },
   {
+    // ⚠️ **THIS ENTRY WAS FALSE, and it was false on the one page whose entire job is an accurate
+    // access inventory** (epic README, D11-3). It read: *"Exists in the schema but has no minting
+    // surface and no live rows."* The first half is true — nothing in `apps/web` calls
+    // `create_flag_admin_key`; the RPC is granted to `service_role` and reachable only from a
+    // migration or a direct database session. **The second half is not.**
+    //
+    // Production, re-queried 2026-08-31 against `slweidgffcfndnskcskc` while building this story:
+    //
+    //   slug   | scope      | label                                | created_at            | revoked_at
+    //   miyagi | flag_admin | Miyagi Cloud Run flag administration | 2026-07-28 23:48:14+00| null
+    //
+    // One row. Unrevoked. **No expiry.** It authorises `get_flag_admin_snapshot` and
+    // `set_flag_admin_boolean` — reading and CHANGING what a project's flags serve — from outside
+    // this product entirely. A reader who took "no live rows" at face value would have concluded
+    // that nothing outside the four listed kinds could reach their project, which is the exact
+    // wrong answer to give someone investigating a leak.
+    //
+    // Corrected to say what is true of the KIND, not what happened to be true of one tenant when
+    // somebody last looked. `where: null` stands: there is still no surface, so there is nowhere to
+    // link to, and inventing one would be worse than saying so.
     kind: 'flag_admin',
     label: 'Flag admin keys',
     where: null,
-    why: 'Exists in the schema but has no minting surface and no live rows.',
+    why:
+      'Read and change what flags serve, from outside this product. Minted only by an operator ' +
+      'with database access — there is no surface here that can create or revoke one, so this page ' +
+      'cannot show you which exist.',
   },
 ] as const
 

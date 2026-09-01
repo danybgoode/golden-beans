@@ -1,58 +1,36 @@
-import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { listAgentWriteKeys } from '@/lib/agent-write-keys'
-import { isConnectorWritesEnabled } from '@/lib/flags'
-import { AgentKeyManager } from './agent-key-manager'
-import { ProductShell } from '@/components/product/ProductShell'
-
-// signals-loop · Sprint 3, Story 3.1 — the agent-write credential dashboard.
+// RETIRED — design-system-rails · Sprint 4, Story 4.5.
 //
-// OWNER-only, no demo carve-out, matching the API-key and share-link screens. This is the strongest
-// credential of the three: it authorizes mutation of the task queue through a public MCP surface,
-// so an ordinary member gets a 404 here even for a project they can otherwise read.
+// This route minted and revoked credentials. Setup › Keys now does both, for all four kinds, and
+// the replacement landed in the SAME commit that emptied this file — the ordering rule this epic
+// keeps (`console-ia-overhaul` A3): never a cleanup story, because with the console live a missing
+// control is noticed the day it goes missing.
+//
+// ── A redirect, not a 404, and not a deletion ─────────────────────────────────────────────────
+// The sprint walkthrough allows either. A redirect is the kinder half of it: this URL is in
+// bookmarks, in the two epics of commit messages that reference it, and in whatever an operator
+// pasted into a runbook. `permanentRedirect` tells a browser and a crawler that the move is
+// permanent, which is what it is.
+//
+// The FILE stays because the coverage manifest carries a row for this route with `retiresIn: 4`, and
+// `route-manifest.test.ts` asserts every manifest row points at a real `page.tsx`. `liveRows()` is
+// what removes it from the denominator; deleting the file would instead make the manifest and the
+// repository disagree. It owes no reference state — a redirect has no design.
+//
+// ── No auth check here, deliberately ──────────────────────────────────────────────────────────
+// The destination is owner-gated (`requireProjectOwnership` at the route), so a member following
+// this link gets the same flat 404 they got from this page before. Re-checking here would be a
+// second, weaker copy of a boundary that is already enforced where it matters — and this file must
+// not become somewhere a future edit could relax it.
+
+import { permanentRedirect } from 'next/navigation'
+
 export const dynamic = 'force-dynamic'
 
-// ── console-ia-overhaul · Sprint 2, Story 2.3: this route STAYS, and keeps its forms ──────────
-// With `CONSOLE_SHELL_ENABLED` on, `/app/setup/keys/[projectSlug]` is the one place that answers
-// "what has access to this project", and this route leaves the nav at that same instant (A7's
-// derived `legacy-keys` gate). It is NOT redirected: minting and revoking still live here, because
-// the four kinds take materially different inputs and merging the forms was explicitly out of
-// scope. A redirect would send an owner away from the only surface that can issue this kind.
-//
-// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states.
-//
-// ⚠️ "Neither is ever the only route to a control" was briefly FALSE for this route, and the fix is
-// on the other side: with the console lit this leaves the nav, Command Center and ⌘K, and the only
-// inbound links were the per-row `Manage` links on the merged page — which exist only once you
-// already hold an agent-write key. Minting the FIRST one meant typing the URL. `Setup › Keys` now
-// links every minting surface unconditionally (fresh reviewer, PR #123).
-export default async function AgentKeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
+export default async function RetiredCredentialRoute({
+  params,
+}: {
+  params: Promise<{ projectSlug: string }>
+}) {
   const { projectSlug } = await params
-  const { projectId } = await requireProjectOwnership(projectSlug)
-  const keys = await listAgentWriteKeys(projectId)
-
-  return (
-    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
-      <main>
-        <h1>Agent write keys</h1>
-        <p>
-          An agent write key lets your own agent <em>claim</em>, <em>resolve</em> and <em>dismiss</em> tasks
-          in this project over MCP. It is the second half of a write: your agent also needs this
-          project&apos;s connector URL, and both must belong to <strong>this same project</strong> or the
-          write tools are not offered at all.
-        </p>
-        <p>
-          This is deliberately <em>not</em> the connector token. That token is displayed openly on the install
-          page — it travels through browser history, proxy logs and screenshots — so it identifies your
-          project and authorizes reads, and nothing more. A key minted here is stored only as a hash, is never
-          shown again, and can be revoked or expired independently.
-        </p>
-        <p>
-          Nothing here can read or write anything outside this project, and nothing can change a task without
-          a second confirmation step: your agent proposes a change, sees exactly what would happen, and
-          applies it with a single-use token.
-        </p>
-        <AgentKeyManager slug={projectSlug} keys={keys} enabled={isConnectorWritesEnabled()} />
-      </main>
-    </ProductShell>
-  )
+  permanentRedirect(`/app/setup/keys/${projectSlug}`)
 }
