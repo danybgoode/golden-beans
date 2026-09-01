@@ -237,10 +237,18 @@ export function ImpactPane({ flagKey, result }: { flagKey: string; result: Featu
 /**
  * One leading input, as a small multiple.
  *
- * ⚠️ **The three states are all reachable on live data, and two of them are what production
- * actually shows** (sprint L2). `miyagisanchez` has two inputs: `attributed_revenue` with a single
- * reading, and `setup_guide_shares` with none. A line through one point would show a direction
- * nobody measured, so `seriesAbsence` gives each its own sentence instead.
+ * ⚠️ **`too_short` is what production actually shows — TWICE** (sprint L2). `miyagisanchez` has two
+ * inputs linked to `setup_guide`, and **both produce a one-point series**: `attributed_revenue`
+ * (`external_push`) has one row in `input_values`, and `setup_guide_shares` (`telemetry_event`) has
+ * one matching event. A line through one point would show a direction nobody measured, so
+ * `seriesAbsence` gives it a sentence instead.
+ *
+ * ⚠️ This said `setup_guide_shares` had NONE, which was read off `input_values` — where a
+ * `telemetry_event` input has no rows and is not supposed to. `getFeatureImpactByProjectId` branches
+ * on `value_source`: pushed values come from `input_values`, telemetry ones from `events` filtered by
+ * `source_event`. The `empty` state is real — it is what a newly linked input shows — but no live
+ * tenant is in it, so it is exercised on the specimen. **Verify a data claim by re-deriving it
+ * through the function the page calls, never by querying the table you assume it reads.**
  */
 function InputMultiple({ input }: { input: FeatureImpactInput }) {
   const latest = input.series.at(-1) ?? null
