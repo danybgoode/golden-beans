@@ -79,8 +79,9 @@ const RATE_CAVEATS = {
  * project where a thousand people were targeted and none adopted reads as a real, alarming 0%.
  */
 export function rateFigure(rate: number | null, kind: keyof typeof RATE_CAVEATS): StatFigure {
-  // `!Number.isFinite` alongside the null check, matching lib/funnel-geometry.ts, which guards its
-  // arithmetic the same way (cross-review round 3, Agy on PR #73 — I guarded one and not the other).
+  // `!Number.isFinite` alongside the null check, matching design-system/charts/geometry.ts, which
+  // guards its arithmetic the same way (cross-review round 3, Agy on PR #73 — I guarded one and not
+  // the other; the rule outlived `funnel-geometry.ts`, which Story 5.3 retired).
   // `lib/pod-outcome.ts`'s `rate()` already returns null for a non-finite input, so this is not
   // reachable through today's caller; the point is that a NaN arriving here must not render as
   // "NaN%", which is a number-shaped nothing and therefore the one output this module exists to

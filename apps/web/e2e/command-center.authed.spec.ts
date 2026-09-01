@@ -285,6 +285,34 @@ test.describe('command center', () => {
     ])
     expect(scrollWidth, 'Today must not produce horizontal scroll').toBeLessThanOrEqual(clientWidth)
 
+    // ── Keyboard focus stays visible while tabbing (sprint-3.md smoke step 5) ───────────────
+    //
+    // ⚠️ **Sampled over the first three focusable elements, BEFORE any click.** The previous version
+    // pressed Tab once after clicking the disclosure open, and passed only because the old page
+    // happened to end in a list of links: with the disclosure last on the page, that Tab left the
+    // document entirely and `document.activeElement` was `<body>`, which has no outline. So it went
+    // red on a page whose focus rings are all present — a guard failing on correct work, which is
+    // how a guard gets weakened until it means nothing.
+    //
+    // A mouse click also does not match `:focus-visible`, by design, so tabbing from the top is the
+    // only way to ask the question the assertion is about.
+    for (let step = 0; step < 3; step += 1) {
+      await page.keyboard.press('Tab')
+      const focused = await page.evaluate(() => {
+        const element = document.activeElement as HTMLElement | null
+        if (!element || element === document.body) return null
+        const style = getComputedStyle(element)
+        return {
+          what: `${element.tagName.toLowerCase()}.${element.className || '(no class)'}`,
+          outlineStyle: style.outlineStyle,
+          outlineWidth: style.outlineWidth,
+        }
+      })
+      expect(focused, `Tab ${step + 1} left the document instead of moving to a control`).not.toBeNull()
+      expect(focused!.outlineStyle, `${focused!.what} takes focus with no visible ring`).not.toBe('none')
+      expect(parseFloat(focused!.outlineWidth), `${focused!.what}'s focus ring is 0px wide`).toBeGreaterThan(0)
+    }
+
     // The Medusa-truth boundary, on the front door. "Where is my revenue number?" is answered with
     // the reason it is not measured and the guardrail to fix that — never with a plausible figure.
     //
@@ -296,13 +324,5 @@ test.describe('command center', () => {
     await gaps.locator('summary').click()
     await expect(gaps).toContainText('Revenue per feature')
     await expect(gaps).toContainText('Medusa-truth boundary')
-
-    // Keyboard focus stays visible while tabbing (sprint-3.md smoke step 5).
-    await page.keyboard.press('Tab')
-    const outline = await page.evaluate(() => {
-      const el = document.activeElement
-      return el ? getComputedStyle(el).outlineStyle : 'none'
-    })
-    expect(outline).not.toBe('none')
   })
 })

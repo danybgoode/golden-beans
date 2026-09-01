@@ -66,7 +66,7 @@ test('linePath puts the first point at the left pad and the last at the right pa
   assert.ok(path.area.endsWith('L2.0,18.0Z'), path.area)
 })
 
-// ── sharePercent — the guard `lib/funnel-geometry.ts` taught us to write ─────────────────────
+// ── sharePercent — carrying forward the guards `lib/funnel-geometry.ts` taught us ────────────
 
 test('sharePercent never returns a number it cannot justify', () => {
   assert.equal(sharePercent(50, 100), 50)

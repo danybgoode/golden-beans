@@ -6,9 +6,10 @@
 // magnitude, a series too short to be a line — so every one of them is a function here with a test
 // beside it, rather than a `style={{ width: … }}` expression nobody can assert.
 //
-// `lib/funnel-geometry.ts` is the direct precedent (`app-shell-and-agent-rail`), and this is its
-// generalisation. It is not replaced: `FunnelBars` still imports it, and `barHeightPercent` still
-// scales the Command Center funnel. What is here is the shape the approved states need that it has
+// `lib/funnel-geometry.ts` was the direct precedent (`app-shell-and-agent-rail`), and this is its
+// generalisation — `sharePercent` carries forward its guards verbatim, including the `!isFinite`
+// check that stops a `NaN%` width rendering as a full bar. Story 5.3 deleted it, and `FunnelBars`
+// with it, in the commit that landed these on the funnel routes. What is here is the shape the approved states need that it has
 // no equivalent for — a line path, an interval around zero, a two-way split, a day column.
 //
 // ── The one rule that has to survive every reading of this file ───────────────────────────────

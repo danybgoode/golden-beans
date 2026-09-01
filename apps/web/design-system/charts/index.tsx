@@ -65,8 +65,12 @@ export type Stage = {
  * four token names; a fifth stage repeats the darkest rather than reaching for a fifth colour.
  *
  * Bars scale against the LARGEST stage rather than a fixed ceiling, so the shape of the drop-off is
- * what a reader sees — the same choice `components/ui/FunnelBars.tsx` makes, and this does not
- * replace it: that one still renders the Command Center's vertical funnel.
+ * what a reader sees.
+ *
+ * ⚠️ It REPLACES `components/ui/FunnelBars.tsx`, which Story 5.3 deleted in the commit that landed
+ * this on the funnel routes (`console-ia-overhaul` A3 — never a cleanup story). That component's
+ * only caller was Command Center's funnel, and the approved `today` state has no funnel: the funnel
+ * has a page of its own now, and this is what draws it.
  */
 export function StageBars({
   stages,

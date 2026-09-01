@@ -220,13 +220,35 @@ test.describe('the feature destination answers the whole loop', () => {
 
     // Rendered GEOMETRY, which is the whole reason this is a browser spec: the bars must actually
     // get shorter. A funnel drawn with three equal bars is a decoration.
+    //
+    // ⚠️ `.ds-chart-fill`, not `.ds-bar-fill` — Story 5.3 replaced this pane's hand-rolled bar
+    // markup with `StageBars`, and the old locator would have read ZERO bars. It went red loudly
+    // here rather than quietly, which is what `toHaveLength(3)` is for: an `evaluateAll` over a
+    // locator that matches nothing returns `[]`, and a length assertion is the only thing between
+    // that and three vacuous comparisons over `undefined`.
     const widths = await page
-      .locator('.ds-bar-fill')
+      .locator('.ds-chart-fill')
       .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width))
     expect(widths, 'the funnel drew no bars').toHaveLength(3)
     expect(widths[0]).toBeGreaterThan(widths[1])
     expect(widths[1]).toBeGreaterThan(widths[2])
     // DD4: a nonzero value never rounds to zero pixels — the fill carries a floor.
     expect(widths[2]).toBeGreaterThan(0)
+
+    // ── The fourteen-day series, which is new with Story 5.3 ────────────────────────────────
+    // ⚠️ Fourteen columns, including the empty days. A series that omitted them would draw a row of
+    // roughly equal bars over a feature that stopped being served a week ago — the gap is the
+    // signal, and `lib/tars.test.ts` pins the arithmetic that produces it.
+    const columns = page.locator('.ds-chart-cols .ds-chart-col')
+    await expect(columns, 'the served series must cover every day in its window').toHaveCount(14)
+    // ...and the days with nothing in them are marked as such, so a zero is a shape rather than an
+    // absence. The fixture seeds three days of events inside the window.
+    const zeroDays = await columns.evaluateAll(
+      (nodes) => nodes.filter((node) => (node as HTMLElement).dataset.zero === 'true').length
+    )
+    expect(zeroDays, 'every day in the window rendered as non-zero, which the fixture cannot produce').toBeGreaterThan(
+      0
+    )
+    expect(zeroDays, 'every day rendered as zero — the seeded events reached no bar').toBeLessThan(14)
   })
 })

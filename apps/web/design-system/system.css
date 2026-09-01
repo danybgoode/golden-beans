@@ -2502,9 +2502,17 @@
 
 /* Three inputs on three different scales are three plots. Putting them on one axis would make the
    biggest one look like the important one — which is a claim about priority that nobody made. */
+/* ⚠️ A MAXIMUM as well as a minimum, which `minmax(230px, 1fr)` does not give.
+ *
+ * The approved `.smalls` is `repeat(3, 1fr)` — three inputs, three plots. Real projects have one or
+ * two: production `miyagisanchez` has two. With `1fr` a single input stretched its card to the full
+ * 1180px content column, so one reading was drawn as a metre-wide sparkline — a picture whose size
+ * says "this is the important one" about a set of one. `380px` is about the approved card's width
+ * at three-up, so a lone card is the size it would be beside two others and the row fills from the
+ * left. Found by looking at the rendered page; nothing structural could see it. */
 .ds .ds-chart-smalls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 380px));
   gap: 12px;
 }
 

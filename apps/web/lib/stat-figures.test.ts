@@ -80,7 +80,7 @@ test('the rate is ROUNDED, not truncated', () => {
 
 test('a non-finite rate is a nothing, never "NaN%"', () => {
   // A number-shaped nothing is the worst output this module can produce: it looks like a
-  // measurement and is not one. Guarded here for the same reason funnel-geometry.ts guards its
+  // measurement and is not one. Guarded here for the same reason charts/geometry.ts guards its
   // arithmetic, even though pod-outcome.ts' rate() already returns null for these.
   for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
     const figure = rateFigure(bad, 'adoption')

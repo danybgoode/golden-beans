@@ -2,9 +2,11 @@
 //
 // ── No charting dependency, and this is the circuit breaker ────────────────────────────────────
 // `apps/web/package.json` gains nothing. Three proportion bars are not a charting problem, and
-// `FunnelBars` already proved the approach in app-shell-and-agent-rail: token colours, a computed
-// width, and the number written next to the bar so the picture is never the only evidence. If a
-// visual here ever seems to need a library, that is the signal to stop — `#14` owns that decision.
+// `design-system/charts` proved the approach in design-system-rails Sprint 5: token colours, a
+// computed width, and the number written next to the bar so the picture is never the only evidence.
+// (It cited `FunnelBars`, which Story 5.3 retired into `StageBars` — a reference to a deleted module
+// is how a comment stops being checkable.) If a visual here ever seems to need a library, that is
+// the signal to stop and hand it back to shaping.
 //
 // ── D5: the environments come from the constant ───────────────────────────────────────────────
 // This component iterates `FLAG_ENVIRONMENTS` and looks each one up in a record the type system

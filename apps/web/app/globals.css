@@ -1507,12 +1507,6 @@ body {
 }
 
 /* app-shell-and-agent-rail S3 — Command Center. One block per project the member belongs to. */
-.command-center__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-}
-
 .stat-card {
   display: grid;
   align-content: start;
@@ -1566,30 +1560,6 @@ a.stat-card:hover {
 .stat-card__provenance {
   font-family: var(--mono);
   font-size: 10px;
-}
-
-.funnel-bars {
-  margin: 0;
-}
-
-.funnel-bars__label {
-  display: grid;
-  gap: 2px;
-}
-
-.funnel-bars__label small {
-  color: var(--dim-2);
-  font-size: 10px;
-}
-
-.funnel-bars__unreadable {
-  margin-top: auto;
-  color: var(--dim-2);
-  font: italic 400 11px var(--mono);
-}
-
-.funnel-bars figcaption {
-  margin-top: 12px;
 }
 
 .auth-shell__card {

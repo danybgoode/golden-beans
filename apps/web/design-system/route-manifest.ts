@@ -192,7 +192,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // renders the North Star and a lift against it. So this route IS that state, feature-scoped,
     // rather than a route left without one.
     referenceState: 'measure-north-star',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
@@ -206,7 +206,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     surface: null,
     // DD5 again: the same design as the feature page's Funnel tab (`feature-funnel`).
     referenceState: 'funnel-standalone',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
