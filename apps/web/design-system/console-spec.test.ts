@@ -114,7 +114,6 @@ const DEFERRAL_GOVERNED_BY: Record<string, string> = {
   'dormant summary row': 'Dormant summary row',
   'primary/secondary button': 'Primary button',
   'project switcher': 'Project switcher',
-  'section nav (tier 2)': 'Section nav (tier 2)',
 }
 
 test('the deferral mapping does not outlive the deferrals it maps', () => {
