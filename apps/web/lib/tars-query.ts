@@ -53,7 +53,7 @@ export async function getFeatureFunnel(projectSlug: string, featureKey: string):
 export async function getFeatureFunnelByProjectId(
   projectId: string,
   projectSlug: string,
-  featureKey: string,
+  featureKey: string
 ): Promise<FunnelResult> {
   const supabase = getSupabaseServiceClient()
   const project = { id: projectId, slug: projectSlug }

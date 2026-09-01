@@ -83,13 +83,12 @@ export default async function ImpactPage({
                   'No North Star metric is registered for this project yet.'
                 ) : (
                   <>
-                    <span className="ds-mono">{metricKey}</span> is registered, and no value has ever
-                    been recorded for it — a defined metric with no reading, which is not a reading of
-                    zero.
+                    <span className="ds-mono">{metricKey}</span> is registered, and no value has ever been
+                    recorded for it — a defined metric with no reading, which is not a reading of zero.
                   </>
                 )}{' '}
-                The engine records readings for the <em>inputs</em> below; the metric itself is synced
-                in from outside the product, and nothing has synced one.
+                The engine records readings for the <em>inputs</em> below; the metric itself is synced in from
+                outside the product, and nothing has synced one.
               </>
             }
           />

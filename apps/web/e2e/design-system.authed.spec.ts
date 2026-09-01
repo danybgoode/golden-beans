@@ -21,7 +21,12 @@ test('signed-in pages inherit the responsive Golden Frijoles product shell', asy
   // is the whole point of the change: the shell says WHICH tenant you are looking at. "Engine
   // ready" survives for the anonymous demo-project case, where there is no project to name.
   await expect(page.locator('.product-shell__signal')).toContainText(tenantSlug())
-  await expect(page.locator('main')).toContainText(tenantSlug())
+  // ⚠️ **The slug is in the CHROME and no longer in `<main>` — design-system-rails Story 5.2.** The
+  // shell's switcher names the tenant two inches above the page, and Today's own body repeating it
+  // was the same fact twice (the reason `console-ia-overhaul` swept it out of twelve `h1`s). What
+  // this line was defending — the page names which tenant you are looking at — is asserted one
+  // element up, and the body now has to render its own content instead.
+  await expect(page.locator('main .ds-tiles')).toBeVisible()
 
   const [scrollWidth, clientWidth] = await page.evaluate(() => [
     document.documentElement.scrollWidth,
@@ -246,6 +251,12 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
   await expect(page.locator('.ds-empty').first()).toContainText('No destinations yet')
 
   await page.goto(`/app/impact/${slug}/${IMPACT_FEATURE_KEY}`)
+  // ⚠️ **Behind a disclosure since design-system-rails Story 5.3.** The approved `measure-north-star`
+  // state leads with the small multiples, and the day-by-day table — with its sort and its filter,
+  // which `app-component-kit-adoption` Story 2.3 built — is one keystroke below them rather than
+  // deleted. Opening it here is the only change: everything this test asserts about the table is
+  // unchanged, which is the point.
+  await page.locator('.ds-gaps > summary').first().click()
   const table = page.locator('.data-table')
   const dateCells = () => table.locator('tbody tr td:first-child')
   const header = table.getByRole('button', { name: 'Date' })
@@ -341,7 +352,12 @@ const CONVERTED_ROUTES: Array<{
   // Experiments converts its FORM only — its version tables are per-experiment and 1-5 rows each, so
   // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
   // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
-  { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.form-section'] },
+  //
+  // ⚠️ **`.ds-listcard` now, not `.form-section` — design-system-rails Story 5.4.** The page LEADS
+  // with the approved list; the authoring form (with its `.form-section`) is complete and one
+  // keystroke below it, behind a disclosure. Asserting the form was asserting what the page opened
+  // with, and what it opens with changed.
+  { name: 'experiments', path: (s) => `/app/experiments/${s}`, expect: ['.ds-listcard', '.ds-page-head'] },
   // flags-console-parity · the flags page now depends on the console gate, and BOTH states are
   // covered rather than one being dropped:
   //   DARK — the legacy tables are `DataTable` islands, filter box and all.
@@ -389,10 +405,15 @@ const CONVERTED_ROUTES: Array<{
   // now seeds one (cross-review, Agy, PR #83 — the fixture provisioned a bare tenant and the page
   // 500s without data). Worth closing rather than deferring: `impact.spec.ts` does NOT cover this,
   // because for a signed-in member it only asserts the /login redirect, never the rendered page.
+  // ⚠️ **`.ds-chart-small`, not `.stat-card` — design-system-rails Story 5.3.** The headline figures
+  // are a small multiple per input now (DD4: one plot each, never one chart with several lines), and
+  // the `.data-table` moved behind a disclosure rather than being deleted — so it is not visible on
+  // load and is covered by its own test above, which opens it.
   {
     name: 'impact',
     path: (s) => `/app/impact/${s}/${IMPACT_FEATURE_KEY}`,
-    expect: ['.stat-card', '.data-table'],
+    expect: ['.ds-chart-small', '.ds-page-head'],
+    skipFilter: true,
   },
 ]
 
@@ -419,37 +440,47 @@ for (const route of CONVERTED_ROUTES) {
   })
 }
 
-test('impact renders its headline figures as StatCards, and never as an invented zero', async ({ page }) => {
+test('impact renders its headline figures as a small multiple, and never as an invented zero', async ({
+  page,
+}) => {
+  // ⚠️ **This asserted `.stat-card` until design-system-rails Story 5.3**, and the property it
+  // defends is unchanged: the figures on this page are the seeded ones, computed, and an absent
+  // reading never renders as a zero. What changed is the shape — one small multiple per input, which
+  // is what DD4 asks for and what the approved `measure-north-star` state draws.
   const response = await page.goto(`/app/impact/${tenantSlug()}/${IMPACT_FEATURE_KEY}`)
   expect(response?.status()).toBe(200)
 
-  const cards = page.locator('.stat-card')
-  await expect(cards).toHaveCount(3)
+  const multiples = page.locator('.ds-chart-small')
+  await expect(multiples).toHaveCount(1)
 
-  // The figures are the seeded ones, computed — not placeholders. "Latest" is the LAST point
-  // because both paths that build the series sort ascending; if that ever stops being true this
-  // assertion is what notices.
+  // "Latest" is the LAST point because both paths that build the series sort ascending; if that ever
+  // stops being true this assertion is what notices.
   const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
   const total = IMPACT_SERIES.reduce((sum, point) => sum + point.value, 0)
+  await expect(multiples.first().locator('.ds-chart-small-value b')).toHaveText(String(latest.value))
 
-  // Matched on the LABEL element with an exact string, not on the card's whole text. A substring
-  // match over the card body also matches another card's provenance line — which is how this spec
-  // found that two tiles were both saying "3 days recorded", one fact rendered twice. The copy was
-  // fixed; the locator stays precise so the next duplicate is a failure rather than a coincidence.
-  const card = (label: string) =>
-    page.locator('.stat-card').filter({ has: page.getByText(label, { exact: true }) })
+  // ⚠️ The figure is a LEVEL, not a sum — and the two must not be confused, which is exactly what a
+  // substring match over the card would allow. The total is a different quantity and lives with the
+  // readings it is a total OF.
+  expect(total, 'the fixture total and its latest reading are equal, so this cannot distinguish them').not.toBe(
+    latest.value
+  )
+  await expect(multiples.first()).not.toContainText(String(total))
 
-  await expect(card('Latest').locator('.stat-card__value')).toHaveText(String(latest.value))
-  await expect(card('Total in window').locator('.stat-card__value')).toHaveText(String(total))
-  await expect(card('Days recorded').locator('.stat-card__value')).toHaveText(String(IMPACT_SERIES.length))
+  // Not in an unreadable state — these are real readings, and the primitive marks the difference in
+  // the DOM rather than only in the copy.
+  await expect(multiples.first().locator('.ds-chart-unreadable')).toHaveCount(0)
+  // ...and three readings IS a line, so it is drawn.
+  await expect(multiples.first().locator('.ds-chart-spark path')).toHaveCount(1)
 
-  // No card is in the unreadable state — these are real readings, and StatCard marks the
-  // difference in the DOM rather than only in the copy.
-  await expect(page.locator('.stat-card[data-unreadable="true"]')).toHaveCount(0)
-
-  // The series is still a TABLE. Story 2.3 is explicit that turning it into a chart is #14's
-  // decision and #16's work, so a future chart must consciously delete this line.
+  // The series is still a TABLE, one keystroke below. Story 2.3 built it deliberately and Story 5.3
+  // kept it: a sparkline is a shape, and somebody reconciling a figure against their own system
+  // needs the numbers. A future change that deletes it must delete this line to do so.
+  await page.locator('.ds-gaps > summary').first().click()
   await expect(page.locator('.data-table tbody tr')).toHaveCount(IMPACT_SERIES.length)
+  // The two figures the small multiple does not carry are stated above the table, so nothing was
+  // lost in the move.
+  await expect(page.locator('.ds-gaps .ds-hint').first()).toContainText(String(total))
 })
 
 // ── app-component-kit-adoption · Sprint 3 — confirm every destructive action ─────────────────────

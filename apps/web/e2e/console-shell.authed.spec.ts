@@ -92,12 +92,10 @@ async function openPalette(
  */
 async function paletteState(page: import('@playwright/test').Page) {
   return JSON.stringify({
-    activedescendant: await page
-      .locator('.command-palette__input')
-      .getAttribute('aria-activedescendant'),
-    options: await page.locator(OPTION).evaluateAll((nodes) =>
-      nodes.map((node) => `${node.id}=${node.getAttribute('aria-selected')}`)
-    ),
+    activedescendant: await page.locator('.command-palette__input').getAttribute('aria-activedescendant'),
+    options: await page
+      .locator(OPTION)
+      .evaluateAll((nodes) => nodes.map((node) => `${node.id}=${node.getAttribute('aria-selected')}`)),
   })
 }
 
@@ -744,7 +742,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // the component, which no unit test can reach.
     await page.goto('/app')
     await openPalette(page)
-    await page.keyboard.type('Flag audit')
+    await page.keyboard.type('Activity')
     const options = page.locator('.command-palette [role="option"]')
     await expect(options).toHaveCount(1)
     await expect(options.first()).toContainText('Go to')
@@ -804,7 +802,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await openPalette(page)
     await page.keyboard.press('Escape')
     await expect(page.locator('.command-palette')).toHaveCount(0)
-    await expect(page.getByRole('heading', { name: 'Command center' })).toBeVisible()
+    // ⚠️ `Today`, not `Command center` — design-system-rails Story 5.2 renamed this route's `h1` to
+    // the word the section tab says and the approved state uses. What this assertion is FOR is
+    // unchanged: Escape must leave the page behind the palette intact rather than navigating.
+    await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible()
   })
 
   test('the account menu holds the sign-out, and /app no longer renders a second one', async ({ page }) => {

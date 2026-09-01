@@ -64,6 +64,8 @@ import {
   ListHead,
   Menu,
   MenuItem,
+  Crumb,
+  Crumbs,
   PageHead,
   PageTab,
   PageTabs,
@@ -446,6 +448,22 @@ export default async function DesignSystemSpecimen({
               The examples are the real ones. `PageHead` renders the flags page's own head, the list
               card renders a feature row — so the specimen is where a reviewer sees the language
               rather than a diagram of it. */}
+          {/* design-system-rails · Sprint 5 — four approved states open with one of these
+              (`funnel-standalone`, `measure-journey`, `experiment-ready`, `tasks-standalone`), and
+              every one of them is a page you arrive at from a list. `console-ia-overhaul` deleted
+              the per-page "← Your projects" line and left nothing in its place on the routes that
+              genuinely needed one. */}
+          <Section
+            id="crumbs"
+            title="Breadcrumbs — where you came from"
+            note="A real link, never a history.back() button: a page reached from a shared URL has no history to go back to, and a control that does nothing on a shareable page is worse than no control. The trail after it is plain text — a key, a tab name — because a breadcrumb that is all links invites the reader to guess which one is the way out."
+          >
+            <Crumbs back={{ href: '#crumbs', label: 'Features' }}>
+              <Crumb mono>checkout.stripe_enabled</Crumb>
+              <Crumb>Funnel</Crumb>
+            </Crumbs>
+          </Section>
+
           <Section
             id="page-head"
             title="Page head — title, one sentence, actions"

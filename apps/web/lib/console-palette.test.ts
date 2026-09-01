@@ -74,7 +74,7 @@ test('every entry carries its section in the words the header uses', () => {
   // header, the rail and the palette, from CONSOLE_SECTIONS — never a second copy of the labels.
   const destinations = entries.find((entry) => entry.label === 'Destinations')
   assert.equal(destinations?.hint, 'Setup')
-  assert.equal(entries.find((entry) => entry.label === 'Flags')?.hint, 'Ship')
+  assert.equal(entries.find((entry) => entry.label === 'Features')?.hint, 'Ship')
   for (const entry of entries) {
     assert.ok(
       ['Today', 'Measure', 'Ship', 'Setup'].includes(entry.hint),
@@ -267,7 +267,7 @@ test('surfaces are still reachable once features are in the list', () => {
   // The regression this guards is a merge that pushed 42 features in front of 13 surfaces and left
   // no way to reach a surface by name.
   const all = [...buildFeatureEntries(projectFeatureIndex(registryFlags), 'miyagisanchez'), ...entries]
-  const flagsSurface = filterPaletteEntries(all, 'Flag audit')
+  const flagsSurface = filterPaletteEntries(all, 'Activity')
   assert.equal(flagsSurface.length, 1)
   assert.equal(flagsSurface[0].kind, 'surface')
 })

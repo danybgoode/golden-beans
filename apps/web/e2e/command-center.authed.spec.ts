@@ -310,7 +310,9 @@ test.describe('command center', () => {
       })
       expect(focused, `Tab ${step + 1} left the document instead of moving to a control`).not.toBeNull()
       expect(focused!.outlineStyle, `${focused!.what} takes focus with no visible ring`).not.toBe('none')
-      expect(parseFloat(focused!.outlineWidth), `${focused!.what}'s focus ring is 0px wide`).toBeGreaterThan(0)
+      expect(parseFloat(focused!.outlineWidth), `${focused!.what}'s focus ring is 0px wide`).toBeGreaterThan(
+        0
+      )
     }
 
     // The Medusa-truth boundary, on the front door. "Where is my revenue number?" is answered with

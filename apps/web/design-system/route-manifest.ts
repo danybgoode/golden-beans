@@ -301,7 +301,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'experiments',
     referenceState: 'ship-experiments',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
@@ -316,7 +316,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // Plus `experiment-blocked`. ⚠️ Neither is reachable on `miyagisanchez` — both its experiments
     // are `decided` (D10). The populated states are asserted on the specimen and the local fixture.
     referenceState: 'experiment-ready',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,

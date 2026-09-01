@@ -75,7 +75,7 @@ export function computeTars(events: TarsEvent[], feature: TarsFeature): TarsResu
     if (baseline === undefined) continue
 
     const qualifyingEvents = events.filter(
-      (e) => e.userId === userId && (feature.retainedEvent === null || e.event === feature.retainedEvent),
+      (e) => e.userId === userId && (feature.retainedEvent === null || e.event === feature.retainedEvent)
     )
     const hasRepeat = qualifyingEvents.some((e) => {
       const t = new Date(e.createdAt).getTime()

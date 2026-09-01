@@ -246,9 +246,10 @@ test.describe('the feature destination answers the whole loop', () => {
     const zeroDays = await columns.evaluateAll(
       (nodes) => nodes.filter((node) => (node as HTMLElement).dataset.zero === 'true').length
     )
-    expect(zeroDays, 'every day in the window rendered as non-zero, which the fixture cannot produce').toBeGreaterThan(
-      0
-    )
+    expect(
+      zeroDays,
+      'every day in the window rendered as non-zero, which the fixture cannot produce'
+    ).toBeGreaterThan(0)
     expect(zeroDays, 'every day rendered as zero — the seeded events reached no bar').toBeLessThan(14)
   })
 })

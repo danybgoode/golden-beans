@@ -92,7 +92,10 @@ export async function CommandCenter({ project }: { project: CommandCenterProject
           // project is actually in: a metric registered with no reading recorded, which is NOT a
           // reading of zero (sprint L1). Re-deriving the sentence here would be a second answer to
           // a question that already has one.
-          absent={northStar?.caveat ?? 'The North Star could not be read just now — a failed query, not an absent metric.'}
+          absent={
+            northStar?.caveat ??
+            'The North Star could not be read just now — a failed query, not an absent metric.'
+          }
           detail={outcome?.northStar?.metric ?? undefined}
           detailMono
         />
@@ -119,11 +122,7 @@ export async function CommandCenter({ project }: { project: CommandCenterProject
         />
       </div>
 
-      <Band
-        title="Waiting on you"
-        who="you"
-        sub="Decisions nothing else is allowed to make."
-      >
+      <Band title="Waiting on you" who="you" sub="Decisions nothing else is allowed to make.">
         <TaskList>
           {bands.open.length === 0 ? (
             <BandEmpty
@@ -277,9 +276,7 @@ function AgentSummary({ claimed, facts }: { claimed: number; facts: { agentResol
     <p className="ds-agentline">
       <span className="ds-agentline-pulse" aria-hidden="true" />
       <span>
-        <strong>
-          {claimed} in hand
-        </strong>
+        <strong>{claimed} in hand</strong>
         {facts === null
           ? ' — the agent-resolution history could not be read just now, so this is not a count of zero.'
           : `, ${facts.agentResolvedTotal} resolved through the connector so far.`}

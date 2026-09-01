@@ -56,9 +56,8 @@ export default async function FunnelPage({
           lede="How far people get once this is switched on."
         />
         <Answer>
-          <strong>This page is a view of a feature, so it also lives on the feature.</strong> The link
-          is shareable and the tab is where you will actually find it — same design, two mounts, not
-          two designs.
+          <strong>This page is a view of a feature, so it also lives on the feature.</strong> The link is
+          shareable and the tab is where you will actually find it — same design, two mounts, not two designs.
         </Answer>
         <FunnelPane flagKey={featureKey} result={result} />
       </main>

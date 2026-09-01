@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { hashCredential } from '@/lib/credential-hash'
+import { CURRENT_CONTEXT_VERSION } from '@/lib/event-context'
 import {
   AUTHED_STATE_PATH,
   IMPACT_FEATURE_KEY,
@@ -19,6 +20,11 @@ import {
   SCENARIO_TARGET_KEY,
   SCENARIO_UNDISCLOSED_FLAG_KEY,
   SCENARIO_UNDISCLOSED_KEY,
+  EXPERIMENT_FIXTURE_KEY,
+  EXPERIMENT_METRIC_EVENT,
+  EXPERIMENT_EXPOSURES_PER_ARM,
+  EXPERIMENT_CONTROL_CONVERSIONS,
+  EXPERIMENT_TREATMENT_CONVERSIONS,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -150,9 +156,135 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedFunnelFixture(db, membership.project_id as string)
   await seedScenarioFixture(db, membership.project_id as string, userId)
   await seedTaskFixture(db, membership.project_id as string)
+  await seedExperimentFixture(db, membership.project_id as string, userId)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed a RUNNING experiment with enough real exposures and conversions to produce an interval.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.4 builds the `experiment-ready` / `experiment-blocked` states, and
+ * epic **DA2** put a real confidence interval behind the bar they draw. Production `miyagisanchez`
+ * has two experiments and BOTH are `decided` (D10), so neither state is reachable on any live
+ * tenant — the page that computes a statistic people make ship / no-ship decisions on would be
+ * rendered by nothing, with data, ever.
+ *
+ * `lib/experiment-interval.test.ts` pins the arithmetic against independently computed values. What
+ * only this can cover is the WIRING: that the page reads the interval the analysis computed, for the
+ * right arms, and renders the sentence that matches whether it crosses zero.
+ *
+ * ── Why the real RPC and the real ingest shape ────────────────────────────────────────────────
+ * The version is created and started through `create_experiment_version` /
+ * `transition_experiment_version` — the same path the console uses — because a hand-inserted row
+ * could carry a lifecycle the governance layer would never produce. The events are written directly,
+ * matching `get_experiment_analysis_events`' own predicates (`experiment_exposed` with
+ * `feature_id = <key>` and a `variant` tag, then the metric event); driving 400 of them through
+ * `/api/v1/track` would spend a minute of every authed run for no additional coverage.
+ *
+ * ⚠️ **The numbers are chosen to CLEAR zero, deliberately.** 200 exposures per arm against a
+ * declared minimum of 150, converting 40 and 70 — a lift near +75% whose 95% interval sits well
+ * above zero. An interval that crossed zero would make the spec's "does not cross zero" assertion
+ * pass or fail on rounding, and a fixture whose meaning depends on rounding is a fixture that goes
+ * red for the wrong reason one release later.
+ */
+async function seedExperimentFixture(db: SupabaseClient, projectId: string, actorUserId: string) {
+  const startedAt = new Date(Date.now() - 13 * 86_400_000)
+  const definition = {
+    hypothesis: 'A one-page checkout converts better than three steps.',
+    assignmentEntityType: 'merchant',
+    eligibility: { description: 'Everyone in the fixture tenant.', tags: {} },
+    variants: [
+      { key: 'control', weight: 1 },
+      { key: 'treatment', weight: 1 },
+    ],
+    controlVariantKey: 'control',
+    primaryMetric: { event: EXPERIMENT_METRIC_EVENT, direction: 'increase' },
+    guardrailMetrics: [],
+    segmentFields: [],
+    plannedWindow: {
+      startAt: startedAt.toISOString(),
+      endAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
+    },
+    minimumSamplePerVariant: 150,
+  }
+
+  const { data: created, error: createError } = await db.rpc('create_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_key: EXPERIMENT_FIXTURE_KEY,
+    p_definition: definition,
+    p_actor_user_id: actorUserId,
+  })
+  if (createError || !created?.[0]) {
+    throw new Error(`could not seed the experiment version: ${createError?.message}`)
+  }
+  const { experiment_id: experimentId, version_id: versionId, version } = created[0]
+
+  const { error: startError } = await db.rpc('transition_experiment_version', {
+    p_project_id: projectId,
+    p_experiment_id: experimentId,
+    p_version_id: versionId,
+    p_target_status: 'running',
+    p_actor_user_id: actorUserId,
+  })
+  if (startError) throw new Error(`could not start the fixture experiment: ${startError.message}`)
+
+  // Exposures land one minute apart from the start, and every conversion strictly AFTER its own
+  // exposure — the analysis only attributes a metric event to a subject exposed before it, so a
+  // shared `now()` default would attribute nothing and the funnel would read as an integrity defect
+  // rather than as a result. Same failure `seedFunnelFixture` records above.
+  const rows: Record<string, unknown>[] = []
+  const at = (minutes: number) => new Date(startedAt.getTime() + minutes * 60_000).toISOString()
+  const arms: [string, number][] = [
+    ['control', EXPERIMENT_CONTROL_CONVERSIONS],
+    ['treatment', EXPERIMENT_TREATMENT_CONVERSIONS],
+  ]
+  let minute = 1
+  for (const [variant, converted] of arms) {
+    for (let index = 0; index < EXPERIMENT_EXPOSURES_PER_ARM; index += 1) {
+      const subjectId = `${variant}-${index}`
+      rows.push({
+        project_id: projectId,
+        user_id: subjectId,
+        event: 'experiment_exposed',
+        feature_id: EXPERIMENT_FIXTURE_KEY,
+        subject_type: 'merchant',
+        subject_id: subjectId,
+        // ⚠️ `events_context_version_present` requires this whenever ANY entity-context column is
+        // set, which `subject_type`/`subject_id` are — the constraint exists so a row cannot carry a
+        // subject without saying which contract version wrote it. Found by running the seed.
+        context_version: CURRENT_CONTEXT_VERSION,
+        tags: { variant, experiment_definition_version: Number(version) },
+        occurred_at: at(minute),
+        created_at: at(minute),
+      })
+      if (index < converted) {
+        rows.push({
+          project_id: projectId,
+          user_id: subjectId,
+          event: EXPERIMENT_METRIC_EVENT,
+          subject_type: 'merchant',
+          subject_id: subjectId,
+          context_version: CURRENT_CONTEXT_VERSION,
+          // `events.tags` is NOT NULL with no default. A metric event carries no tags of its own —
+          // the analysis joins it to an exposure by subject — so it is an empty object rather than
+          // an omission.
+          tags: {},
+          occurred_at: at(minute + 1),
+          created_at: at(minute + 1),
+        })
+      }
+      minute += 2
+    }
+  }
+  // Inserted in batches: a single statement with 600 rows is close enough to PostgREST's payload
+  // ceiling to be a flake nobody would diagnose from the error it produces.
+  for (let start = 0; start < rows.length; start += 200) {
+    const { error } = await db.from('events').insert(rows.slice(start, start + 200))
+    if (error) throw new Error(`could not seed the experiment events: ${error.message}`)
+  }
+}
 
 /**
  * Seed a queue with one task in each of the three states Today's bands show.
@@ -223,7 +355,10 @@ async function seedTaskFixture(db: SupabaseClient, projectId: string) {
     },
   ].map((signal) => ({ ...signal, project_id: projectId }))
 
-  const { data: inserted, error: signalError } = await db.from('signals').insert(signals).select('id, fingerprint')
+  const { data: inserted, error: signalError } = await db
+    .from('signals')
+    .insert(signals)
+    .select('id, fingerprint')
   if (signalError || !inserted) throw new Error(`could not seed the task signals: ${signalError?.message}`)
   const idOf = (fingerprint: string) => {
     const row = inserted.find((signal) => signal.fingerprint === fingerprint)

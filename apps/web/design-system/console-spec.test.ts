@@ -177,7 +177,7 @@ function readChromeBudget(): { state: string; chrome: number | null; height: num
   return rows
 }
 
-test('the chrome budget is the approved design\'s own maximum, not a number in a spec file', () => {
+test("the chrome budget is the approved design's own maximum, not a number in a spec file", () => {
   const rows = readChromeBudget()
   // A parser that returns nothing makes every assertion below vacuous — the guard that cannot fail,
   // one layer down. Pinned to the state count so an emitter change fails HERE.

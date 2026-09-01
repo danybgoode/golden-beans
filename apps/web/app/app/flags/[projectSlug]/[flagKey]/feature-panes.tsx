@@ -21,6 +21,7 @@
 
 import { Empty as DsEmpty, Field, Stat } from '@/design-system/primitives'
 import { DayColumns, SmallMultiple, StageBars } from '@/design-system/charts'
+import { ImpactSeriesTable } from '@/app/app/impact/[projectSlug]/[featureKey]/series-table'
 import { formatUtc } from '@/lib/format-utc'
 import type { FunnelResult } from '@/lib/tars-query'
 import type { FeatureImpactInput, FeatureImpactResult } from '@/lib/north-star-query'
@@ -142,8 +143,8 @@ export function FunnelPane({ flagKey, result }: { flagKey: string; result: Funne
           }))}
           note={
             <>
-              Targeted, adopted and retained are declared by the registry, not observed at a gateway —
-              this engine counts the events a signal names. Last synced {formatUtc(feature.syncedAt)}.
+              Targeted, adopted and retained are declared by the registry, not observed at a gateway — this
+              engine counts the events a signal names. Last synced {formatUtc(feature.syncedAt)}.
             </>
           }
         />
@@ -197,9 +198,36 @@ export function ImpactPane({ flagKey, result }: { flagKey: string; result: Featu
           having moved it. The causal answer is an experiment, and the sentence names where that
           lives. */}
       <p className="ds-hint">
-        This is what each input did, beside a feature that is on — a correlation this page can see,
-        not a causal claim. To make it causal, run it as an experiment from Ship › Experiments.
+        This is what each input did, beside a feature that is on — a correlation this page can see, not a
+        causal claim. To make it causal, run it as an experiment from Ship › Experiments.
       </p>
+
+      {/* ⚠️ **THE DAY-BY-DAY TABLE IS KEPT, behind a disclosure, and it very nearly was not.**
+          `app-component-kit-adoption` Story 2.3 built it deliberately — a sortable, filterable
+          `DataTable` of every reading — and the first draft of this pane replaced it with a
+          sparkline and dropped it. A sparkline is a shape; the table is the numbers, and somebody
+          reconciling a figure against their own system needs the second. Two existing specs went red
+          on it, which is the guard doing its job.
+
+          The approved state has no table because the prototype's inputs are illustrative. Deleting a
+          capability to satisfy a geometry assertion is not what "render from the design system" asks
+          for — the same call Sprint 4 recorded for Destinations' operational logs, and Story 5.4 for
+          the experiment governance layer. */}
+      {inputs.map((input) => (
+        <details className="ds-gaps" key={`${input.key}-readings`}>
+          <summary>Every reading · {input.name}</summary>
+          <div className="ds-disclosure-body">
+            <p className="ds-hint">
+              {input.series.length === 0
+                ? 'Nothing recorded yet.'
+                : `${input.series.length} reading${input.series.length === 1 ? '' : 's'}, totalling ${input.series
+                    .reduce((sum, point) => sum + point.value, 0)
+                    .toLocaleString('en-US')} across ${input.series[0].date} → ${input.series[input.series.length - 1].date}.`}
+            </p>
+            <ImpactSeriesTable inputName={input.name} series={input.series} />
+          </div>
+        </details>
+      ))}
     </>
   )
 }

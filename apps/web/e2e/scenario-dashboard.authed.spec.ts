@@ -14,8 +14,17 @@ function tenantSlug(): string {
 
 test('a project member can inspect the tenant-scoped scenario operating lens', async ({ page }) => {
   const slug = tenantSlug()
+  // ⚠️ **Discovered through the SECTION, not through a list on `/app`.** Today used to end in a
+  // `<ul>` of every surface; the approved `today` state has none, because the shell's section nav is
+  // the navigation (Story 5.2). The property this line defends — a member can find this page without
+  // being told the URL — is unchanged, so it is asserted through what a person actually clicks: the
+  // Measure tab, and then the rail.
   await page.goto('/app')
-  await expect(page.getByRole('link', { name: 'Scenarios & breakers' })).toBeVisible()
+  const measure = page.getByRole('link', { name: 'Measure', exact: true })
+  await expect(measure).toBeVisible()
+  await measure.click()
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByRole('link', { name: 'Scenarios & drills' })).toBeVisible()
 
   const response = await page.goto(`/app/scenarios/${slug}`)
   expect(response?.status()).toBe(200)

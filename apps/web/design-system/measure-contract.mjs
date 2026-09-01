@@ -189,7 +189,8 @@ async function measureIn(page) {
   // The selector list is the prototype's own content vocabulary. It is deliberately broad: missing a
   // state's first content element would report a LOWER budget than the design's, which is the
   // direction that silently tightens a gate.
-  const CONTENT = '.listcard, .tile, .kpi, .hbar, .vbar, .plot, .task, .tl, .empty, .field, .card, .matrix, .small, .bars';
+  const CONTENT =
+    '.listcard, .tile, .kpi, .hbar, .vbar, .plot, .task, .tl, .empty, .field, .card, .matrix, .small, .bars';
   const chrome = [];
   for (const [name, fn] of APPROVED_STATES) {
     await page.evaluate(fn);

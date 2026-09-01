@@ -458,11 +458,21 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
     const response = await page.goto(`${base}?tab=impact`)
     expect(response?.status()).toBe(200)
 
-    // Three readings, from the series the fixture seeded — asserted as a COUNT of tiles plus the
-    // latest value, so a pane that rendered the right shape with the wrong numbers still fails.
-    await expect(page.locator('.ds-kpis .ds-stat')).toHaveCount(3)
+    // ⚠️ **The markup MOVED with design-system-rails Story 5.3, and the property did not.** The pane
+    // rendered three `.ds-kpis` tiles per input — latest, total, days recorded; it now renders one
+    // small multiple per input, which is what DD4 asks for (one plot per input, never one chart with
+    // several lines). The two extra figures did not vanish: they are in the disclosure below, above
+    // the day-by-day table.
+    //
+    // Still asserted as the LATEST VALUE and not merely as a shape, so a pane that renders the right
+    // markup with the wrong numbers still fails.
     const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
-    await expect(page.locator('.ds-kpis .ds-stat-value').first()).toHaveText(String(latest.value))
+    const multiples = page.locator('.ds-chart-small')
+    await expect(multiples).toHaveCount(1)
+    await expect(multiples.first().locator('.ds-chart-small-value b')).toHaveText(String(latest.value))
+    // ...and it is drawn, because three readings IS a line. The `too_short` and `empty` states are
+    // the ones production actually shows (sprint L2), and they are asserted on the specimen.
+    await expect(multiples.first().locator('.ds-chart-spark path')).toHaveCount(1)
     // The correlation caveat rides with the numbers. It is the one claim this pane could overstate.
     await expect(page.getByText(/not a causal claim/)).toBeVisible()
 
@@ -480,6 +490,11 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
     const slug = tenantSlug()
     const impact = await page.goto(`/app/impact/${slug}/${encodeURIComponent(IMPACT_FEATURE_KEY)}`)
     expect(impact?.status()).toBe(200)
-    await expect(page.getByRole('heading', { name: new RegExp(IMPACT_FEATURE_KEY) })).toBeVisible()
+    // ⚠️ The `h1` is **North Star** since Story 5.3 — the manifest maps this route to the
+    // `measure-north-star` state, because the approved Measure rail opens on North Star and the
+    // product has no `/app/north-star` route. The feature it is scoped to is named in the crumb and
+    // in the answer line, which is where the old heading's information went.
+    await expect(page.getByRole('heading', { name: 'North Star', level: 1 })).toBeVisible()
+    await expect(page.locator('main')).toContainText(IMPACT_FEATURE_KEY)
   })
 })
