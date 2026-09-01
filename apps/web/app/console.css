@@ -77,7 +77,9 @@
 }
 
 /* ── Do-not #1: the page h1 is 23/700 on ONE line, not the display class ───────────────────
-   `globals.css` sets `.product-shell main > h1 { font-size: clamp(30px, 7vw, 48px) }`. At 1440
+   `globals.css` USED TO SET `.product-shell main > h1 { font-size: clamp(30px, 7vw, 48px) }` —
+   deleted by design-system-rails Story 6.4, and `design-system/old-world.test.ts` now fails if that
+   clamp returns under any selector. Kept as history because the measurement below is why. At 1440
    that is 48px, and "Feature flags — <a long slug>" wrapped to four lines and spent ~200px of
    vertical space before any content. That single rule is most of why the page scrolled. */
 .is-console main > h1,

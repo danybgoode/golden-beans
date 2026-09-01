@@ -238,8 +238,20 @@ function selectors(): string[] {
   return ruleList().flatMap(({ selector }) => splitSelectorList(selector))
 }
 
+/**
+ * Is this selector inside the `.ds` scope, whichever form it is written in?
+ *
+ * `.ds`, `.ds …` — and `:where(.ds …) …`, which is the same containment written at ZERO
+ * specificity. The third form arrived in Sprint 6 for the shell's form-control reset (see the
+ * exemption in the next test for why that rule must be out-specifiable), and a scope test that
+ * reads only the literal prefix would have called a correctly-scoped rule unscoped.
+ */
+function isDsScoped(selector: string): boolean {
+  return selector === '.ds' || selector.startsWith('.ds ') || selector.startsWith(':where(.ds ')
+}
+
 test('every selector in system.css is scoped to .ds — the claim layout.tsx makes about it', () => {
-  const unscoped = selectors().filter((selector) => selector !== '.ds' && !selector.startsWith('.ds '))
+  const unscoped = selectors().filter((selector) => !isDsScoped(selector))
   assert.deepEqual(
     unscoped,
     [],
@@ -262,6 +274,26 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
   // reviewer, round 3, Blocking). The exemption therefore checks BOTH halves of the reason.
   const exempt = (selector: string, body: string) => /:where\(/.test(selector) && /!important/.test(body)
 
+  /**
+   * ⚠️ **A SECOND deliberate exception, and it is narrower still: the shell's form-control reset.**
+   *
+   * `:where(.ds .ds-shell) :where(input, textarea, select)` is (0,0,0) ON PURPOSE. It is a BASE — it
+   * supplies a width, a min-height and a ground to any control that has no rule of its own — and its
+   * entire job is to be beaten by every primitive and every console rule. The version that shipped
+   * before this epic, `:where(.product-shell, .auth-shell) :where(input, …)`, was (0,0,0) for the
+   * same reason.
+   *
+   * Writing it `.ds .ds-shell :where(input, …)` instead scores (0,2,0) — `:where()` zeroes only its
+   * OWN argument — and in the last-loaded stylesheet that silently beat `.ds .ds-input`,
+   * `.is-console .text-input` and `.is-console .command-palette__input` on ties. That is what the
+   * floor below is for, pointing the other way: a base reset that CANNOT be out-specified is the
+   * defect, not the fix.
+   *
+   * Pinned by exact selector rather than by a pattern, so a second zero-specificity rule cannot join
+   * it without somebody deciding to add it here.
+   */
+  const ZERO_SPECIFICITY_BASE = ':where(.ds .ds-shell) :where(input, textarea, select)'
+
   const weak = ruleList()
     .flatMap(({ selector, body }) =>
       splitSelectorList(selector)
@@ -270,6 +302,7 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
     )
     .filter(({ spec }) => spec[0] === 0 && spec[1] < 2)
     .filter(({ selector, body }) => !exempt(selector, body))
+    .filter(({ selector }) => selector !== ZERO_SPECIFICITY_BASE)
 
   assert.deepEqual(
     weak.map(({ selector, spec }) => `${selector} is (${spec.join(',')})`),

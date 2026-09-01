@@ -135,6 +135,21 @@ export function Frame({
           </nav>
         )}
         <main className={`ds-pubwrap${wide ? ' ds-pubwrap--wide' : ''}`}>{children}</main>
+        {/* ⚠️ **The agent-readable paths, kept** — fresh reviewer, Minor. `/install` and `/talk`
+            rendered the landing's `<Footer />`, which is the ONLY place either page linked
+            `/llms.txt`, `/northstar-self-serve.md` and `/methodology`. Two shipped epics
+            (`agentic-pm-public-surface`, `methodology-experience`) care about those discovery paths,
+            and dropping the footer would have removed two of them silently.
+            It is NOT the landing footer, which would put six destinations under DD3's "at most one
+            action" bar. It is one quiet line of the links an agent needs — additive to the approved
+            state, and recorded here rather than left for whoever notices the links are gone.
+            The `door` frame deliberately has none: a sign-in screen owes a stranger nothing. */}
+        <footer className="ds-pubfoot">
+          <span>agent-readable:</span>
+          <a href="/llms.txt">/llms.txt</a>
+          <a href="/northstar-self-serve.md">/northstar-self-serve.md</a>
+          <a href="/methodology">Methodology</a>
+        </footer>
       </div>
     </div>
   )

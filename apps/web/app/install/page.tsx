@@ -73,7 +73,11 @@ export default async function InstallPage() {
       </div>
 
       <Card>
-        <span className="ds-label">Demo connector URL</span>
+        {/* ⚠️ An `h2`, not a `ds-label` span — fresh reviewer, Minor. The page this replaced had two
+            `<h2>`s and the port turned both into styled spans, leaving the outline h1-only: heading
+            navigation got a screen-reader user nowhere on a page whose whole job is three steps.
+            `ds-label` is the visual treatment; the element is what carries the structure. */}
+        <h2 className="ds-label">Demo connector URL</h2>
         {connectorUrl ? (
           <>
             <CopyField value={connectorUrl} label="Copy the demo connector URL" />
@@ -131,7 +135,7 @@ export default async function InstallPage() {
           rather than a collision. */}
       {connectorUrl && (
         <Card>
-          <span className="ds-label">Three steps</span>
+          <h2 className="ds-label">Three steps</h2>
           <Steps>
             <Step>
               <b>Copy the URL above.</b>
@@ -168,7 +172,7 @@ export default async function InstallPage() {
       </Callout>
 
       <Card>
-        <span className="ds-label">For your engineers</span>
+        <h2 className="ds-label">For your engineers</h2>
         <p className="ds-hint">
           An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input. It is the
           data-in layer under the connector above, not an alternative to it.

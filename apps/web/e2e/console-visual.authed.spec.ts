@@ -805,7 +805,7 @@ test('every route claiming the design system renders from it', async ({ page }) 
   }
 })
 
-test('every ds- element sits inside a .ds ANCESTOR, on every covered route', async ({ page }) => {
+test('every ds- element sits inside a .ds ANCESTOR, on every route this suite opens', async ({ page }) => {
   test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
 
   // ── The guard for the defect that got past every other assertion in this file ────────────────
@@ -824,12 +824,21 @@ test('every ds- element sits inside a .ds ANCESTOR, on every covered route', asy
   // So this asserts the RELATIONSHIP the stylesheet depends on, not the presence of a class:
   // `parentElement.closest('.ds')`, deliberately not `closest()` on the element itself — `closest`
   // matches the node it starts from, which would call the broken markup correct.
+  // ⚠️ **"this suite opens", not "every covered route"** (fresh reviewer, Minor). The loop skips the
+  // four `{ coveredBy }` rows whose URL needs a key or a token, so it checks 23 of 27 — and a test
+  // whose NAME claims more than its body does is the shape this epic exists to remove. The four it
+  // cannot reach are all `ProductShell` routes, which share one seam that the other 23 exercise; the
+  // gap is real and bounded rather than hidden.
   await page.setViewportSize(VIEWPORT)
   const orphansByRoute: string[] = []
+  const skippedHere: string[] = []
 
   for (const row of liveRows(6).filter((entry) => entry.rendersFromDesignSystem)) {
     const reach = REACHABLE[row.route]
-    if (typeof reach !== 'function') continue
+    if (typeof reach !== 'function') {
+      skippedHere.push(row.route)
+      continue
+    }
     const response = await page.goto(reach(tenantSlug()))
     await page.waitForLoadState('networkidle')
     expect.soft(response?.status() ?? 0, `[${row.route}] answered ${response?.status()}`).toBeLessThan(400)
@@ -853,6 +862,12 @@ test('every ds- element sits inside a .ds ANCESTOR, on every covered route', asy
       'the markup and the stylesheet look right separately and are not connected. Usually `.ds` ' +
       'compounded onto the same element (`class="ds ds-door"`) instead of wrapping it.'
   ).toEqual([])
+
+  // Reported, not swallowed — the same rule the coverage loop follows. A reader of the output can
+  // see which routes this assertion did NOT cover rather than inferring it from the test's name.
+  if (skippedHere.length > 0) {
+    console.log(`[ds-scope] ${skippedHere.length} route(s) not opened here: ${skippedHere.join(', ')}`)
+  }
 })
 
 test('every row of the measured spec matches the built stylesheet', async ({ page }) => {

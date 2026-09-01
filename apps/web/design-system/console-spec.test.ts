@@ -16,7 +16,7 @@
 // ── Why a MAPPING and not a direct import ─────────────────────────────────────────────────────
 // The two tables describe the same design through different markup. `MEASURED-SPEC.md` measures the
 // PROTOTYPE (`.crumb-btn`, `.railnav button`, `.row`); the gate measures the BUILT APP
-// (`.product-shell__signal`, `.console-rail > ul a`, `.row`). They cannot be the same list — the
+// (`.ds-shell-signal`, `.console-rail > ul a`, `.row`). They cannot be the same list — the
 // port is the work — so what is welded is the NUMBERS, row by row, through a mapping that says
 // which prototype row governs which gate row. A row here is a claim that the app element and the
 // prototype element are the same thing in the design.
@@ -80,7 +80,7 @@ function readMeasuredSpec(): Map<string, MeasuredRow> {
  *
  * ⚠️ This is the ONLY hand-written half, and deliberately so. The two tables describe the same
  * design through different markup — `MEASURED-SPEC.md` measures the prototype (`.crumb-btn`,
- * `.railnav button`), the gate measures the built app (`.product-shell__signal`,
+ * `.railnav button`), the gate measures the built app (`.ds-shell-signal`,
  * `.console-rail > ul a`) — and nothing can derive that correspondence. A row here is a claim that
  * an app element and a prototype element are the same thing in the design.
  *

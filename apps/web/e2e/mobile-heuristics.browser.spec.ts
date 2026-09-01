@@ -34,10 +34,26 @@ export { assertMobileClean } from './helpers/mobile-heuristics'
 // overflow, and a long article whose lists and work cards can. `design-it` is the chapter chosen
 // deliberately: it carries the longest list in the guide (nine definition lines, several of which
 // wrap) plus a `CopyPromptCard`, so it is the one most likely to blow the budget.
+// ── design-system-rails · Sprint 6 (fresh reviewer, Minor) ───────────────────────────────────
+// `/signup` and the share 404 join the sweep because Sprint 6 put all five public routes on ONE new
+// frame, and only two of them were swept. The bar it introduces — brand, a scope label, a spacer and
+// up to two actions in a 54px row — has no `flex-wrap` and its nav is `flex: none`, which is the
+// exact shape of the overflow defect this epic has already paid for twice (the `⌘K` button pushing
+// the account menu off a 360px screen, and an unbounded project slug doing the same).
+//
+// ⚠️ **`/s/<a token that cannot exist>` is the 404, and that is deliberate**: `not-found.tsx` renders
+// the same public frame plus the widest button row on any door (two side-by-side actions), it needs
+// no fixture, and it is the one public page a stranger is most likely to open on a phone — a link
+// forwarded to them that has stopped working.
+//
+// The four `/hub` routes are NOT here: they need a session, so they belong in the authed sweep, and
+// `mobile-heuristics.authed.spec.ts` is where that lives. Named rather than omitted.
 export const PUBLIC_MOBILE_ROUTES = [
   '/',
   '/install',
   '/login',
+  '/signup',
+  '/s/gbs_thistokencannotexistanywhereatall00',
   '/talk',
   '/methodology',
   '/methodology/design-it',
@@ -46,7 +62,10 @@ export const PUBLIC_MOBILE_ROUTES = [
 for (const route of PUBLIC_MOBILE_ROUTES) {
   test(`${route} is mobile-clean`, async ({ page }) => {
     const response = await page.goto(route)
-    expect(response?.status(), `${route} did not render`).toBe(200)
+    // ⚠️ 200 OR 404. The share-link 404 is a DESIGNED page (`public-gone`) and must be mobile-clean
+    // like any other; asserting 200 would have forced it out of the sweep, and asserting nothing
+    // would let a route that 500s pass as "mobile-clean" because a blank page never overflows.
+    expect([200, 404], `${route} did not render`).toContain(response?.status())
     await assertMobileClean(page, route)
   })
 }

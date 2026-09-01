@@ -4368,9 +4368,14 @@
  *      named rather than smuggled.
  *   2. The same substitution in the shell's form-control reset — `--espresso` → `--roast-2`, which
  *      is what `.ds-input` already paints.
- *   3. The public branch's project signal loses `600 10px var(--mono)` in UPPERCASE. See the note
- *      in `ProductShell.tsx`: that pairing is what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids
- *      outright, and it was carried as recorded debt owed to "Sprint 3" that Sprint 3 never paid.
+ *   3. The project signal loses `600 10px var(--mono)` in UPPERCASE — and ONLY that. That pairing is
+ *      what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, and it was carried as recorded debt
+ *      owed to "Sprint 3" that Sprint 3 never paid.
+ *      ⚠️ Its GREEN RING is kept. A first draft of the port merged the chip and the switcher's
+ *      `<summary>` into one rule and dropped `color: var(--green)` + `border: 1px solid
+ *      var(--green-line)` with it — a fourth exception nobody had decided, under a header that
+ *      claims there are three (fresh reviewer, Major). The two elements are two rules again,
+ *      because they never had the same ones.
  *
  * ⚠️ **`.is-console` SURVIVES this story, and `tokens.css`'s header used to promise otherwise.**
  * `console.css` still carries ~150 rules that are not shell chrome — the command palette, the
@@ -4414,20 +4419,49 @@
   min-width: 0;
 }
 
-/* The project signal and the switcher's summary: sentence-case Archivo, and bounded.
-   ⚠️ Do-not #3 was open here for an epic — `globals.css` set `600 10px var(--mono)` with
-   `text-transform: uppercase`, so the project switcher rendered UPPERCASE MONO: exactly the
-   combination the contract says appears nowhere. The width is deliberately NOT forced: 140px is the
-   prototype's slug and a real tenant's is longer, so constraining it would truncate the one thing
-   the control exists to show. */
-.ds .ds-shell-signal,
-.ds .ds-shell-switcher summary {
+/* ── The project chip and the switcher's summary ───────────────────────────────────────────
+ * ⚠️ **TWO rules, because the two elements never had the same ones** (fresh reviewer, Major). The
+ * first version merged them into one block, which silently did two things a Sweeper may not: it
+ * **dropped the chip's green ring**, and it **gave the switcher's `<summary>` padding, a radius and
+ * a gap it never carried**.
+ *
+ * What actually shipped, read off the deleted rules rather than remembered: `globals.css` gave
+ * `.product-shell__signal` `color: var(--green)` and `border: 1px solid var(--green-line)`, and
+ * `console.css`'s lit-console reset touched ONLY font properties — so in both branches the chip was
+ * green text inside a green ring. The `<summary>` appeared in the ellipsis rule and the font reset,
+ * and in nothing else.
+ *
+ * Do-not #3's fix is the part that stays: the chip was `600 10px var(--mono)` in UPPERCASE — the
+ * pair the contract says appears nowhere — and it is sentence-case Archivo now. That is exception #3
+ * in the header above, and it is the ONLY thing about these two elements this story changes. */
+.ds .ds-shell-signal {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
   border-radius: 8px;
-  color: var(--dim);
+  color: var(--green);
+  /* ⚠️ **DERIVED, because `--green-line` is a LANDING token** (`tokens-defined.test.ts`, which
+     caught it the moment this rule moved here — the same cross-contamination as the `--espresso`
+     the menus above stopped reading). The product set has `--green` and `--green-deep` and no
+     mid-tone, so this is a mix of the ink with the ground, the repo's existing idiom for exactly
+     this (see the interval bar's control/treatment stops).
+     The delta is recorded rather than claimed identical: `color-mix(… --green 40% …)` resolves to
+     ~#405e32 against the landing's #3a5c33 — (+6, +2, −1) per channel, under a just-noticeable
+     difference on a 1px hairline, and it now moves with the product's own green instead of the
+     landing's. */
+  border: 1px solid color-mix(in srgb, var(--green) 40%, var(--roast));
+}
+
+.ds .ds-shell-signal a {
+  color: inherit;
+}
+
+/* The typography both share — and the width is deliberately NOT forced: 140px is the prototype's
+   slug, a real tenant's is longer, and constraining it would truncate the one thing the control
+   exists to show. */
+.ds .ds-shell-signal,
+.ds .ds-shell-switcher summary {
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 400;
@@ -4438,10 +4472,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.ds .ds-shell-signal a {
-  color: inherit;
 }
 
 .ds .ds-shell-switcher,
@@ -4653,9 +4683,19 @@
   }
 }
 
-/* Form controls inside the shell. `:where()` keeps this at zero specificity so any primitive's own
-   rule wins without a fight — `.ds-input` is (0,2,0) and this is (0,0,0). */
-.ds .ds-shell :where(input, textarea, select) {
+/* Form controls inside the shell, at ZERO specificity so any primitive's own rule wins without a
+   fight.
+   ⚠️ **The ANCESTORS have to be inside `:where()` too, and the first version got this wrong**
+   (fresh reviewer, Major). `:where()` zeroes only its OWN argument, so
+   `.ds .ds-shell :where(input, …)` scores **(0,2,0)** while its comment claimed (0,0,0) — and the
+   rule it replaced, `:where(.product-shell, .auth-shell) :where(input, …)`, genuinely was (0,0,0)
+   because both compounds sat inside `:where()`.
+   The consequence was not theoretical. At (0,2,0) in the LAST-loaded stylesheet it beat three live
+   rules on ties: `.ds .ds-input` (declared earlier in this very file), `.is-console .text-input`,
+   and — most visibly — `.is-console .command-palette__input`, which would have turned ⌘K's
+   borderless 16px search line into a bordered, filled, 14px box on every console route. A Sweeper
+   that "changes no pixel" would have shipped a redesigned command palette. */
+:where(.ds .ds-shell) :where(input, textarea, select) {
   width: 100%;
   min-height: 44px;
   padding: 11px 13px;
@@ -4664,4 +4704,32 @@
   background: var(--roast-2);
   color: var(--crema);
   font: inherit;
+}
+
+/* One quiet line of agent-readable paths under the public frame. Not the landing's footer — that
+   would put six destinations under a bar DD3 limits to "at most one action" — but the links an
+   agent needs, which `/install` and `/talk` were the only public pages to carry. */
+.ds .ds-pubfoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+}
+
+.ds .ds-public--hub .ds-pubfoot,
+.ds .ds-pubwrap--wide + .ds-pubfoot {
+  max-width: 1080px;
+}
+
+.ds .ds-pubfoot a {
+  color: var(--dim);
+}
+
+.ds .ds-pubfoot a:hover {
+  color: var(--gold);
 }

@@ -875,17 +875,6 @@ body {
   color: var(--red);
 }
 
-.copy-url {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.copy-url input {
-  flex: 1 1 280px;
-  min-width: 0;
-}
-
 .code-block {
   max-width: 100%;
   overflow-x: auto;
@@ -1131,7 +1120,13 @@ body {
 .agent-rail {
   position: fixed;
   right: 12px;
-  bottom: 78px;
+  /* ⚠️ **12px, not 78px** — design-system-rails Sprint 6 (fresh reviewer, Minor). The 78px was the
+     clearance for a FIXED BOTTOM TAB BAR that the public branch of the shell rendered below 640px.
+     Story 6.4 deleted that bar — the links sit in the public frame's top bar at every width now — so
+     the sheet was floating 78px above nothing on the one render that can still show it (an
+     anonymous visitor to a demo dashboard, on a phone). A number left behind by a deleted component
+     is the same trail in the stylesheet the Sweeper exists to remove. */
+  bottom: 12px;
   left: 12px;
   z-index: 55;
 }

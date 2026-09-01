@@ -92,6 +92,60 @@ Two more came from the harness rather than the design, and both were fixed as cl
   moved every line two columns and turned a correct guard red for a reason unrelated to what it
   guards. It balances parentheses now.
 
+## Review round 1 — what the reviewers found that I did not
+
+Recorded because a close-out listing only what the author caught is not an audit.
+
+**Codex was quota-capped** for this PR (until 2026-09-16, far past the router's 30-minute fallback
+window), so the second cross-family pass is a **downgrade, stated rather than hidden**.
+
+**agy, in four scoped passes** (the diff is 346 KB against a 256 KB argv cap). Two real defects in a
+guard I had already mutation-verified:
+- **Blocking — the markup guard was blind to three of the four JSX shapes.** It matched
+  `className="…"` and ``className={`…`}`` only, so `className={'auth-shell'}` reintroduced a retired
+  class with the test GREEN. Prettier happens to rewrite that form here, which is a convention: a
+  guard that holds only while a formatter runs reports success for the wrong reason.
+- **Should-fix — the name boundary reported a false positive my own docblock forbade.**
+  `.product-shelling` failed as `.product-shell`. The boundary is BEM now.
+- ⚠️ **And three "Blocking" findings that are false** — duplicate imports, a duplicate
+  `seedShareFixture`, a duplicate `shareToken()`. There is one of each and `tsc` exits 0. agy had
+  silently fallen back to `gpt-oss-120b-medium` on those passes, which is the documented condition
+  for this failure mode. **Verified, not actioned.**
+
+**The fresh reviewer — two Majors, both real, both mine:**
+
+1. **`:where()` zeroes only its OWN argument, and my comment claimed otherwise.**
+   `.ds .ds-shell :where(input, textarea, select)` is **(0,2,0)**, not the (0,0,0) the comment
+   asserted — while the rule it replaced genuinely was (0,0,0), because both compounds sat inside
+   `:where()`. At (0,2,0) in the last-loaded stylesheet it beat three live rules on ties, including
+   **`.is-console .command-palette__input`** — so ⌘K's borderless 16px search line would have become
+   a bordered, filled 14px box **on every console route**. A Sweeper claiming "changes no pixel"
+   would have shipped a redesigned command palette, and `MEASURED_SPEC` has no row for any input, so
+   nothing could have caught it. Written `:where(.ds .ds-shell) :where(…)` now, and both guards it
+   then trips — the `.ds`-scope test and the (0,2,0) floor — are taught about it by name rather than
+   loosened.
+2. **The "three exceptions" header was missing a fourth.** Merging the project chip and the
+   switcher's `<summary>` into one rule **dropped the chip's green ring** — `globals.css` gave it
+   `color: var(--green)` and `border: 1px solid var(--green-line)`, and `console.css`'s reset touched
+   only font properties, so both branches shipped green-on-green. Two rules again, because the two
+   elements never had the same ones. ⚠️ Restoring it exposed a second bug: `--green-line` is a
+   **landing** token, so reading it from inside `.ds` is the same contamination the `--espresso` fix
+   removed. Derived from the product's own `--green` instead, with the per-channel delta recorded.
+
+**Minors actioned:** `/install`'s three `<h2>`s restored (the port left the outline h1-only);
+`/install` and `/talk` keep the agent-readable paths a `<Footer/>` was the only carrier of;
+`.agent-rail`'s `bottom: 78px` clearance for a deleted tab bar; the dead `CopyUrlField.tsx` and its
+`.copy-url` rules; `/signup` and the share 404 added to the mobile sweep (the new bar has no
+`flex-wrap` and its nav is `flex: none` — the exact shape of two overflow defects this epic already
+paid for); the ds-ancestor guard renamed to what it actually covers, and what it skips is now
+printed; three stale comments naming deleted selectors; and a comment claiming a dependency
+`design-coverage.mjs` does not have.
+
+⚠️ **And one over-claim of my own, on the poster.** `Roadmap/README.md` said **"Live in production"**
+for an epic whose last sprint was still an open PR. Corrected to *merged-pending* — the poster rule's
+one hard line is that it never claims ✅ for unshipped work, and I broke it in the commit that
+updated it.
+
 ## What is deliberately NOT on the design system, with its decay date
 
 **The pod report's evidence tables.** `/hub/[projectSlug]/report` and `/s/[token]` render their

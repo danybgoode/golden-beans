@@ -60,10 +60,12 @@ function git(cwd, ...args) {
 }
 
 /**
- * A throwaway repository holding just the four files the script touches, with a committed baseline.
+ * A throwaway repository holding just the THREE files the script touches, with a committed baseline.
  *
- * Only the manifest, the report, the script and the drift guard it imports are copied — a full
- * clone would be slow and would couple this test to files it does not exercise.
+ * Only the script, the manifest and the report are copied — `design-coverage.mjs` imports nothing
+ * but node builtins. (An earlier version of this sentence said "and the drift guard it imports",
+ * which is a dependency that does not exist; fresh reviewer, Minor.) A full clone would be slow and
+ * would couple this test to files it does not exercise.
  */
 function fixtureRepo() {
   const dir = mkdtempSync(join(tmpdir(), 'gb-ratchet-'));
