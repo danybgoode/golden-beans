@@ -72,8 +72,8 @@ export default function TalkPage() {
     >
       <h1>Let&apos;s work out whether a Pod is worth it</h1>
       <p className="ds-lede">
-        Twenty minutes, no deck. Bring a number you want to move and we will say plainly whether this
-        is the thing that moves it.
+        Twenty minutes, no deck. Bring a number you want to move and we will say plainly whether this is the
+        thing that moves it.
       </p>
 
       <div className="ds-talkgrid">
@@ -99,16 +99,16 @@ export default function TalkPage() {
           <div className="ds-talkitem">
             <b>What we will actually do</b>
             <span>
-              Look at your funnel, pick the one number worth moving first, and name what would have to
-              be true for it to move. Not a demo, and not a sales call.
+              Look at your funnel, pick the one number worth moving first, and name what would have to be true
+              for it to move. Not a demo, and not a sales call.
             </span>
           </div>
           <div className="ds-talkitem">
             <b>What you leave with</b>
             <span>
-              A written answer either way — including &ldquo;not yet, and here is what to do
-              instead.&rdquo; If it is not a fit we will say so on the call; that is cheaper for both
-              of us than finding out in month two.
+              A written answer either way — including &ldquo;not yet, and here is what to do instead.&rdquo;
+              If it is not a fit we will say so on the call; that is cheaper for both of us than finding out
+              in month two.
             </span>
           </div>
           {/* Unconditional, and deliberately not styled as an error. See the header comment: this
@@ -117,8 +117,8 @@ export default function TalkPage() {
           <div className="ds-talkitem">
             <b>Or book it directly</b>
             <span>
-              The calendar is Cal.com. If it does not load — a blocker, a proxy, a bad connection —
-              this is the same booking page, opened on its own.
+              The calendar is Cal.com. If it does not load — a blocker, a proxy, a bad connection — this is
+              the same booking page, opened on its own.
               <FrameLink href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
                 Open the booking page
                 <Icon name="external" size={13} />
@@ -136,9 +136,9 @@ export default function TalkPage() {
       </div>
 
       <Callout>
-        A third-party embed cannot be made to match the design system, so it is not pretended into
-        one — it gets a dashed slot that says &ldquo;this is somebody else&apos;s frame&rdquo;.
-        Styling around an iframe until it almost matches is worse than admitting the seam.
+        A third-party embed cannot be made to match the design system, so it is not pretended into one — it
+        gets a dashed slot that says &ldquo;this is somebody else&apos;s frame&rdquo;. Styling around an
+        iframe until it almost matches is worse than admitting the seam.
       </Callout>
     </Frame>
   )

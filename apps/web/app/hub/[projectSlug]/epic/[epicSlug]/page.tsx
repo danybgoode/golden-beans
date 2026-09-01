@@ -63,13 +63,7 @@ export default async function HubEpicDrilldownPage({
       <PageHead
         title={epic.name}
         lede={epic.area}
-        actions={
-          epic.shipped ? (
-            <Pill state="on">Shipped</Pill>
-          ) : (
-            <Tag tone="unclassified">In progress</Tag>
-          )
-        }
+        actions={epic.shipped ? <Pill state="on">Shipped</Pill> : <Tag tone="unclassified">In progress</Tag>}
       />
       <HubProvenance
         freshness={freshness}
@@ -91,7 +85,11 @@ export default async function HubEpicDrilldownPage({
       <Tiles>
         <Tile
           label="Build order"
-          value={epic.build_order_num === null || epic.build_order_num === undefined ? null : String(epic.build_order_num)}
+          value={
+            epic.build_order_num === null || epic.build_order_num === undefined
+              ? null
+              : String(epic.build_order_num)
+          }
           // ⚠️ Not `—`. An epic with no build-order number is not at position zero and is not
           // "unknown": it has never been placed in the sequence, and the roadmap page says the same
           // thing about the same epics rather than padding the track to make the arithmetic look
@@ -107,11 +105,7 @@ export default async function HubEpicDrilldownPage({
           detail={risk?.toLowerCase() === 'high' ? 'the product owner merges' : 'builder may merge'}
           tone={risk?.toLowerCase() === 'high' ? 'warn' : undefined}
         />
-        <Tile
-          label="Sprints"
-          value={`${shippedSprints}/${epic.sprints.length}`}
-          detail="shipped / planned"
-        />
+        <Tile label="Sprints" value={`${shippedSprints}/${epic.sprints.length}`} detail="shipped / planned" />
       </Tiles>
 
       <span className="ds-label">Sprints</span>
@@ -144,8 +138,8 @@ export default async function HubEpicDrilldownPage({
 
       <Callout>
         Every number here comes from the epic&apos;s own <span className="ds-mono">README.md</span>{' '}
-        frontmatter and its sprint files. Nothing on this page is ticked by hand — which is the only
-        reason it can be trusted about work nobody is watching.
+        frontmatter and its sprint files. Nothing on this page is ticked by hand — which is the only reason it
+        can be trusted about work nobody is watching.
       </Callout>
     </HubFrame>
   )

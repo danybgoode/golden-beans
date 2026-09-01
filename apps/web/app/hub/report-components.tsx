@@ -109,11 +109,11 @@ export function EmptyPodReportState({ projectSlug }: { projectSlug: string }) {
         body={
           <>
             <code className="ds-mono">{projectSlug}</code> has never pushed a{' '}
-            <code className="ds-mono">pod_report</code> artifact, so there is nothing to render — an
-            unplanted plot, not a broken page and not a row of zeros. Compute and push one from a
-            checkout of the repo being measured with{' '}
-            <code className="ds-mono">node scripts/pod-report.mjs --repo &lt;checkout&gt; --push</code>,
-            and this page renders it automatically. No redeploy needed.
+            <code className="ds-mono">pod_report</code> artifact, so there is nothing to render — an unplanted
+            plot, not a broken page and not a row of zeros. Compute and push one from a checkout of the repo
+            being measured with{' '}
+            <code className="ds-mono">node scripts/pod-report.mjs --repo &lt;checkout&gt; --push</code>, and
+            this page renders it automatically. No redeploy needed.
           </>
         }
       />
@@ -152,8 +152,8 @@ export function RefusedPodReport({ view, projectSlug }: { view: PodReportView; p
         produce, so no number from this artifact is shown at all.
       </p>
       <Callout tone="warn">
-        This is a data-integrity fault, not an empty state. Re-run the computation and push again — the
-        stored artifact is immutable, so the fix is a new version, never an edit.
+        This is a data-integrity fault, not an empty state. Re-run the computation and push again — the stored
+        artifact is immutable, so the fix is a new version, never an edit.
       </Callout>
     </div>
   )
@@ -642,8 +642,8 @@ export function PodReportBody({
           {verdict ? (
             <>
               Operates at <b>step {verdict.step}</b> — {verdict.stepLabel} · <b>{verdict.metCriteria}</b>/
-              <b>{verdict.totalCriteria}</b> criteria met with evidence · <b>{verdict.notInstrumentedCount}</b>{' '}
-              not instrumented.
+              <b>{verdict.totalCriteria}</b> criteria met with evidence ·{' '}
+              <b>{verdict.notInstrumentedCount}</b> not instrumented.
             </>
           ) : (
             <>This artifact carries no ladder verdict — the delivery numbers below stand on their own.</>

@@ -97,7 +97,9 @@ function uncoverOneRoute(dir, route) {
   assert.ok(flag > at, `${route}'s row does not claim the design system`);
   writeFileSync(
     path,
-    source.slice(0, flag) + 'rendersFromDesignSystem: false,' + source.slice(flag + 'rendersFromDesignSystem: true,'.length)
+    source.slice(0, flag) +
+      'rendersFromDesignSystem: false,' +
+      source.slice(flag + 'rendersFromDesignSystem: true,'.length)
   );
 }
 

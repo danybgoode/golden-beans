@@ -58,11 +58,7 @@ export function HubFrame({
         </a>
       }
       nav={TABS.map((entry) => (
-        <a
-          key={entry.id}
-          href={entry.path(slug)}
-          aria-current={entry.id === tab ? 'page' : undefined}
-        >
+        <a key={entry.id} href={entry.path(slug)} aria-current={entry.id === tab ? 'page' : undefined}>
           {entry.label}
         </a>
       ))}

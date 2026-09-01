@@ -61,8 +61,8 @@ export function SignupForm() {
   if (status === 'success') {
     return (
       <div className="ds-doornote" role="status">
-        <b>Check your email for a confirmation link.</b> Click it and your project, your API key and
-        your connector URL are ready — there are no manual steps after this.
+        <b>Check your email for a confirmation link.</b> Click it and your project, your API key and your
+        connector URL are ready — there are no manual steps after this.
       </div>
     )
   }

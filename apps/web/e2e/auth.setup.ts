@@ -778,7 +778,6 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
   if (valuesError) throw new Error(`could not seed the impact series: ${valuesError.message}`)
 }
 
-
 /**
  * Mint a REAL share link for the fixture tenant, and hand its plaintext token back.
  *

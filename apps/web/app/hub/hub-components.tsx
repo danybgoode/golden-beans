@@ -87,11 +87,10 @@ export function EmptyHubState({ projectSlug }: { projectSlug: string }) {
         title="No roadmap pushed yet"
         body={
           <>
-            <code className="ds-mono">{projectSlug}</code> has never pushed a roadmap artifact, so
-            there is nothing to show — this is an unplanted plot, not a broken page and not a zero.
-            Push one from a checkout of that roadmap with{' '}
-            <code className="ds-mono">node scripts/roadmap-push.mjs</code>, and this page renders it
-            automatically. No redeploy needed.
+            <code className="ds-mono">{projectSlug}</code> has never pushed a roadmap artifact, so there is
+            nothing to show — this is an unplanted plot, not a broken page and not a zero. Push one from a
+            checkout of that roadmap with <code className="ds-mono">node scripts/roadmap-push.mjs</code>, and
+            this page renders it automatically. No redeploy needed.
           </>
         }
       />

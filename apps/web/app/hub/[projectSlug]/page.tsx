@@ -36,7 +36,10 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
 
     return (
       <HubFrame projectSlug={projectSlug} tab="roadmap">
-        <PageHead title="Roadmap" lede={`Every epic ${projectSlug} has built, in the one order it was built in.`} />
+        <PageHead
+          title="Roadmap"
+          lede={`Every epic ${projectSlug} has built, in the one order it was built in.`}
+        />
         <EmptyHubState projectSlug={projectSlug} />
       </HubFrame>
     )
@@ -120,8 +123,8 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
               </span>
             </div>
             <p className="ds-hint">
-              One sequence, not a priority score — shipped epics keep their place, so this reads left
-              to right as the order things actually happened.
+              One sequence, not a priority score — shipped epics keep their place, so this reads left to right
+              as the order things actually happened.
             </p>
           </div>
 
@@ -161,8 +164,8 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
           {/* The destination-reached case, said in words rather than by the absence of a marker. */}
           {markerIndex === epics.length && (
             <p className="ds-hint">
-              Every epic on the road has shipped — there is no &ldquo;you are here&rdquo; because there
-              is nothing ahead of it.
+              Every epic on the road has shipped — there is no &ldquo;you are here&rdquo; because there is
+              nothing ahead of it.
             </p>
           )}
         </>
@@ -170,15 +173,15 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
 
       {summary.seeds.length > 0 && (
         <p className="ds-hint">
-          +{summary.seeds.length} idea{summary.seeds.length === 1 ? '' : 's'} on the horizon, not yet
-          groomed onto the road. They are named on <a href={`/hub/${encodeURIComponent(projectSlug)}/horizon`}>Horizon</a>.
+          +{summary.seeds.length} idea{summary.seeds.length === 1 ? '' : 's'} on the horizon, not yet groomed
+          onto the road. They are named on{' '}
+          <a href={`/hub/${encodeURIComponent(projectSlug)}/horizon`}>Horizon</a>.
         </p>
       )}
 
       <Callout>
-        This board is generated from each epic&apos;s own frontmatter — it is a view, never a thing
-        anybody ticks by hand. That is the only reason it can be trusted about work nobody is
-        watching.
+        This board is generated from each epic&apos;s own frontmatter — it is a view, never a thing anybody
+        ticks by hand. That is the only reason it can be trusted about work nobody is watching.
       </Callout>
     </HubFrame>
   )

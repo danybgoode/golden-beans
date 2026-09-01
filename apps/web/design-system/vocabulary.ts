@@ -178,7 +178,7 @@ export const UPPERCASE_ALLOWED: readonly {
   // route rather than recording an exemption is what keeps Do-not #3 a rule instead of a list.
   {
     selector: '.ds-sharehead-ro',
-    what: "the READ ONLY stamp on a shared report (`public-share`)",
+    what: 'the READ ONLY stamp on a shared report (`public-share`)',
     keep: true,
   },
   {

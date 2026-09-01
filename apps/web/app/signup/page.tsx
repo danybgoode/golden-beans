@@ -44,9 +44,9 @@ export default function SignupPage() {
           the promise the design makes is right in substance and wrong in destination, and a note
           naming a route the flow does not visit is the class of claim this epic exists to remove. */}
       <div className="ds-doornote">
-        <b>Straight to your key and your connector URL.</b> Confirming the email lands you on the one
-        screen that can show your project&apos;s API key — it exists for that single request and is
-        never stored — not on an empty dashboard.
+        <b>Straight to your key and your connector URL.</b> Confirming the email lands you on the one screen
+        that can show your project&apos;s API key — it exists for that single request and is never stored —
+        not on an empty dashboard.
       </div>
     </Frame>
   )

@@ -40,7 +40,12 @@ const WEB = join(HERE, '..')
  * guard that has never been seen red is not a guard.
  */
 
-const STYLESHEETS = ['app/globals.css', 'app/console.css', 'app/hub/hub.module.css', 'design-system/system.css']
+const STYLESHEETS = [
+  'app/globals.css',
+  'app/console.css',
+  'app/hub/hub.module.css',
+  'design-system/system.css',
+]
 
 /**
  * The names that must no longer appear in a selector.
@@ -147,7 +152,9 @@ test('no component renders the markup that design is attached to', () => {
     // matching brace), then look for a retired name inside ANY quoted string within it. That also
     // covers the composed forms — `classes('ds-btn', 'auth-form')`, a ternary, a template with
     // interpolations — which the previous version could not see at all.
-    for (const match of source.matchAll(/className=(?:("[^"]*"|'[^']*')|\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\})/g)) {
+    for (const match of source.matchAll(
+      /className=(?:("[^"]*"|'[^']*')|\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\})/g
+    )) {
       const value = match[1] ?? match[2] ?? ''
       for (const literal of value.matchAll(/"([^"]*)"|'([^']*)'|`([^`]*)`/g)) {
         const text = literal[1] ?? literal[2] ?? literal[3] ?? ''

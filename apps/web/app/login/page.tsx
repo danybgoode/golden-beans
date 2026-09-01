@@ -39,8 +39,8 @@ export default async function LoginPage() {
           WITHOUT saying whether the email is registered — an error that distinguishes the two is a
           way to test which of your customers uses this product. */}
       <div className="ds-doornote">
-        <b>The error is on the field and says what to do.</b> It does not say whether the email is
-        registered — that would be a way to test which of your customers uses this product.
+        <b>The error is on the field and says what to do.</b> It does not say whether the email is registered
+        — that would be a way to test which of your customers uses this product.
       </div>
     </Frame>
   )

@@ -3934,8 +3934,8 @@
 
 .ds .ds-dest[data-status='lit'] {
   border-color: var(--gold);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 7%, transparent), transparent 55%),
-    var(--roast-2);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--gold) 7%, transparent), transparent 55%), var(--roast-2);
 }
 
 .ds .ds-dest[data-status='partial'] {

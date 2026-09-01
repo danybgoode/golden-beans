@@ -1,9 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import {
-  EXPERIMENT_FIXTURE_KEY,
-  JOURNEY_FIXTURE_KEY,
-  readTenantRecord,
-} from './helpers/authed-fixture'
+import { EXPERIMENT_FIXTURE_KEY, JOURNEY_FIXTURE_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // ⚠️ IMPORTED, not declared here. These two arrays used to live in this file, and
 // `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
@@ -587,7 +583,8 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
     coveredBy: 'e2e/command-center.authed.spec.ts — opens it and measures `.ds-chart-bars .ds-chart-fill`',
   },
   '/app/impact/[projectSlug]/[featureKey]': {
-    coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
+    coveredBy:
+      'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
   },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
   // ⚠️ **SPRINT 6 CLOSED THIS.** The `coveredBy` string that stood here named `report-share.spec.ts`,

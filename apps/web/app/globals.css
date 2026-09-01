@@ -886,7 +886,6 @@ body {
   min-width: 0;
 }
 
-
 .code-block {
   max-width: 100%;
   overflow-x: auto;
@@ -973,7 +972,6 @@ body {
     transform: scale(1.1);
   }
 }
-
 
 /* console-ia-overhaul S1.4 — the per-section rail.
    Mobile-first: below 1100px it is a plain block that scrolls with the page, ABOVE the content.
@@ -1126,7 +1124,6 @@ body {
   font-size: 13px;
 }
 
-
 /* app-shell-and-agent-rail S2.2 — the agent rail.
    Narrow width: a pull-up sheet, server-rendered CLOSED, sitting above the bottom tab bar. Wide:
    a fixed sidebar, opened once at mount by components/product/RailDisclosure.tsx. The 1100px
@@ -1247,7 +1244,6 @@ body {
   color: var(--dim-2);
 }
 
-
 /* app-shell-and-agent-rail S3 — Command Center. One block per project the member belongs to. */
 .stat-card {
   display: grid;
@@ -1303,7 +1299,6 @@ a.stat-card:hover {
   font-family: var(--mono);
   font-size: 10px;
 }
-
 
 /* ── app-component-kit-adoption S1 — the first table, form and dialog styling in the repo ──────
    Not an oversight being corrected: before this epic there was NO rule anywhere for `table`, `th`,
@@ -1779,7 +1774,6 @@ a.stat-card:hover {
   white-space: pre;
 }
 
-
 @media (min-width: 640px) {
   .divider .wrap {
     flex-wrap: nowrap;
@@ -1810,12 +1804,6 @@ a.stat-card:hover {
     grid-template-columns: 0.9fr 1.1fr;
     gap: 48px;
   }
-
-  
-
-  
-
-  
 }
 
 @media (min-width: 900px) {
@@ -1833,8 +1821,6 @@ a.stat-card:hover {
    cannot read a custom property, so the two are kept in step by hand. Below 1100px the rail stays
    the pull-up sheet defined above: a squeezed desktop rail on a phone is worse than a sheet. */
 @media (min-width: 1100px) {
-  
-
   .agent-rail {
     top: 84px;
     right: var(--rail-gutter);
@@ -1846,14 +1832,6 @@ a.stat-card:hover {
   .agent-rail__body {
     max-height: calc(100vh - 190px);
   }
-
-  
-
-  
-
-  
-
-  
 }
 
 /* ============================================================================
@@ -1983,7 +1961,6 @@ a.stat-card:hover {
 .section-lead {
   margin-top: 30px;
 }
-
 
 /* ── The copy-a-prompt card ─────────────────────────────────────────────── */
 
@@ -2227,7 +2204,6 @@ a.stat-card:hover {
     font-size: 42px;
   }
 }
-
 
 /* ── v2 pieces discovered while building the sections ───────────────────── */
 
@@ -2702,7 +2678,6 @@ a.stat-card:hover {
 .journey-node__icon {
   contain: layout paint;
 }
-
 
 /* An `<svg>` inside a control must not be able to change the control's height
    as it decodes. `.btn` already has `min-height: 44px` from the tap-target
@@ -3356,7 +3331,6 @@ a.stat-card:hover {
   font: 600 11.5px var(--mono);
   font-style: normal;
 }
-
 
 /* The unpriced tier's slot. It sits where `$0` and `$49` sit on the tiers
    beside it, so the three cards stay aligned on their price line — but it is a

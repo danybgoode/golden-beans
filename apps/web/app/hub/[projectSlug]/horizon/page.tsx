@@ -89,8 +89,8 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
         <b>
           {litCount} of {destinations.length} destinations are lit.
         </b>{' '}
-        A destination goes lit only when every epic under it has actually shipped — nothing here marks
-        one lit on the strength of work that has not.
+        A destination goes lit only when every epic under it has actually shipped — nothing here marks one lit
+        on the strength of work that has not.
       </Answer>
 
       <ul className="ds-dests" aria-label="End-state destinations">
@@ -98,9 +98,7 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
           <li key={d.id} className="ds-dest" data-status={d.status}>
             <div className="ds-dest-head">
               <span className="ds-dest-lamp" aria-hidden="true">
-                {STATUS_GLYPH[d.status] === null ? null : (
-                  <Icon name={STATUS_GLYPH[d.status]!} size={12} />
-                )}
+                {STATUS_GLYPH[d.status] === null ? null : <Icon name={STATUS_GLYPH[d.status]!} size={12} />}
               </span>
               <h3>{d.title}</h3>
             </div>
@@ -139,8 +137,8 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
         <section className="ds-haze" aria-label="Ideas on the horizon">
           <h2>Further out — on the horizon</h2>
           <p>
-            Un-groomed ideas, deliberately hazy. These are <strong>not promised</strong> and carry no
-            date — an idea rendered like a commitment is the one dishonesty this view exists to avoid.
+            Un-groomed ideas, deliberately hazy. These are <strong>not promised</strong> and carry no date —
+            an idea rendered like a commitment is the one dishonesty this view exists to avoid.
           </p>
           <ul className="ds-hazelist" data-testid="horizon-seeds">
             {summary.seeds.map((seed) => (
@@ -153,9 +151,9 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
       )}
 
       <Callout>
-        Three strengths of one colour, not three colours. Lit, partly lit and on the way is a sequence
-        — how far along — and a sequence is magnitude. Giving it three hues would say these are three
-        different kinds of thing.
+        Three strengths of one colour, not three colours. Lit, partly lit and on the way is a sequence — how
+        far along — and a sequence is magnitude. Giving it three hues would say these are three different
+        kinds of thing.
       </Callout>
     </HubFrame>
   )

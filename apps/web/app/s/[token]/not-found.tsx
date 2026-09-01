@@ -45,13 +45,12 @@ export default function ShareNotFound() {
         </div>
         <h1>This link is not working</h1>
         <p>
-          It may have expired, been switched off, or never have been a link at all. Whoever shared it
-          can make you a new one.
+          It may have expired, been switched off, or never have been a link at all. Whoever shared it can make
+          you a new one.
         </p>
         <p className="ds-gone-quiet">
           We deliberately do not say which of those it is — telling a stranger the difference between
-          &ldquo;expired&rdquo; and &ldquo;never existed&rdquo; is a way to find out which links are
-          real.
+          &ldquo;expired&rdquo; and &ldquo;never existed&rdquo; is a way to find out which links are real.
         </p>
         <div className="ds-gone-acts">
           <FrameLink href="/install">See what Golden Frijoles does</FrameLink>

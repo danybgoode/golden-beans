@@ -49,8 +49,8 @@ export function ShareFrame({
         <div className="ds-sharehead-body">
           <p className="ds-sharehead-title">Shared with you · {sharedBy}</p>
           <p className="ds-sharehead-note">
-            A read-only view of one report. It shows what is below and nothing else about the project,
-            and it can be switched off at any time by whoever made it.{' '}
+            A read-only view of one report. It shows what is below and nothing else about the project, and it
+            can be switched off at any time by whoever made it.{' '}
             {/* ⚠️ ONE template string, not `{lens} lens`. React SSR separates adjacent text nodes
                 with a `<!-- -->` marker so hydration can tell where one ended, so the two-expression
                 form renders `client<!-- --> lens` and `report-share.spec.ts`'s
@@ -148,9 +148,9 @@ export function ShareHorizonStrip({ counts, seeds }: { counts: Counts; seeds: nu
 export function ShareFooterNote() {
   return (
     <Callout>
-      No navigation into the product, because there is nothing here this reader may open. This link was
-      issued deliberately and can be revoked at any time; every number on this page is computed from
-      the repository&apos;s own history, and what could not be measured says so.
+      No navigation into the product, because there is nothing here this reader may open. This link was issued
+      deliberately and can be revoked at any time; every number on this page is computed from the
+      repository&apos;s own history, and what could not be measured says so.
     </Callout>
   )
 }

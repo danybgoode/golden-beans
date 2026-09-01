@@ -54,8 +54,8 @@ export default async function InstallPage() {
     <Frame variant="public" brandHref="/" actions={<FrameLink href="/login">Sign in</FrameLink>}>
       <h1>Point Claude at a real project</h1>
       <p className="ds-lede">
-        This is a working connector for our demo shop. Paste it into Claude and ask it about the
-        funnel, the North Star, or which features are on — it will answer from live data.
+        This is a working connector for our demo shop. Paste it into Claude and ask it about the funnel, the
+        North Star, or which features are on — it will answer from live data.
       </p>
 
       {/* The whole defect this page once caused was a signed-in operator following a link here and
@@ -64,9 +64,8 @@ export default async function InstallPage() {
         <span className="ds-demobar-pip" />
         <span>
           <b>This is the demo project, not yours.</b> The token below reads{' '}
-          <span className="ds-mono">{DEMO_PROJECT_SLUG}</span> and nothing else. Your own
-          project&apos;s URL lives inside the product, at{' '}
-          <span className="ds-mono">Setup › Connect</span>.
+          <span className="ds-mono">{DEMO_PROJECT_SLUG}</span> and nothing else. Your own project&apos;s URL
+          lives inside the product, at <span className="ds-mono">Setup › Connect</span>.
         </span>
         <span className="ds-demobar-go">
           <FrameLink href="/login">Sign in for yours</FrameLink>
@@ -93,17 +92,17 @@ export default async function InstallPage() {
             <p className="ds-hint">
               {isConnectorWritesEnabled() ? (
                 <>
-                  This URL is <b>read-only on its own</b> — it is displayed on this public page, so it
-                  can never authorize a change. To let your agent <em>claim</em> and <em>resolve</em>{' '}
-                  tasks, mint an <b>agent write key</b> in your dashboard and send it as a bearer
-                  token alongside this URL. Both must belong to the same project, and every change is
-                  previewed and confirmed before it applies.
+                  This URL is <b>read-only on its own</b> — it is displayed on this public page, so it can
+                  never authorize a change. To let your agent <em>claim</em> and <em>resolve</em> tasks, mint
+                  an <b>agent write key</b> in your dashboard and send it as a bearer token alongside this
+                  URL. Both must belong to the same project, and every change is previewed and confirmed
+                  before it applies.
                 </>
               ) : (
                 <>
                   This URL is <b>read-only</b> — it is displayed on this public page, so it can never
-                  authorize a change. Letting your own agent claim and resolve tasks is built and not
-                  yet switched on.
+                  authorize a change. Letting your own agent claim and resolve tasks is built and not yet
+                  switched on.
                 </>
               )}
             </p>
@@ -163,16 +162,16 @@ export default async function InstallPage() {
       )}
 
       <Callout>
-        The same three steps, the same words and the same button as <b>Setup › Connect</b> inside the
-        product. One flow, learned once — the only difference is whose numbers are on the other end,
-        and this page says which in the first line.
+        The same three steps, the same words and the same button as <b>Setup › Connect</b> inside the product.
+        One flow, learned once — the only difference is whose numbers are on the other end, and this page says
+        which in the first line.
       </Callout>
 
       <Card>
         <span className="ds-label">For your engineers</span>
         <p className="ds-hint">
-          An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input. It is
-          the data-in layer under the connector above, not an alternative to it.
+          An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input. It is the
+          data-in layer under the connector above, not an alternative to it.
         </p>
         <pre className="ds-mono ds-codeblock">
           {`npm install @golden-frijoles/sdk
