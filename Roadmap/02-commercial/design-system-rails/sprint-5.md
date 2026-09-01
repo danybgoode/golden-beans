@@ -1,9 +1,29 @@
 # One design system, every surface — Sprint 5: Measure and Today — the pages nobody designed
 
-**Status:** 🟦 **In review** — all six stories built, coverage **18 / 27** (all of `/app`), both
-gates green locally. Architecture locked 2026-09-01 against the live code on `main` (`fa06612`), the
-live production database (`slweidgffcfndnskcskc`) and the live Vercel Production environment. Branch
-`feat/design-system-rails-s5`.
+**Status:** ✅ **SHIPPED & LIVE 2026-09-01** — merged as `a896f9c` (PR #133), deployed to production
+and verified by **probing the deploy rather than reading a deployment record**. Coverage **18 / 27**,
+which is all of `/app`.
+
+The sprint adds **no new route**, so "does `/x/y` answer 200" proves nothing — every route already
+answered before it. What can only be true afterwards is that the two anonymously readable demo pages
+serve design-system markup. Measured before the merge and again after, on the same URLs:
+
+| Probe on `goldenfrijoles.com` | Before | After |
+|---|---|---|
+| `/app/funnel/golden-beans-demo/setup_guide` → `ds-chart-bars` | **0** | **1** |
+| …→ `ds-chart-cols` (the 14-day columns) | **0** | **1** |
+| …→ `class="product-shell ds` (the shell for a session-less render) | **absent** | **present** |
+| `/app/impact/golden-beans-demo/setup_guide` → `ds-chart-small` | **0** | **1** |
+| …→ *"not a reading of zero"* (the honest North Star) | **0** | **1** |
+| `/app/definitely-not-a-route/x` (the control) | **404** | **404** |
+
+And the pages read correctly, not merely differently. The live funnel draws **60 → 39 → 16** with
+its drop-off arithmetic intact (60−39 = 21 at 35%, 39−16 = 23 at 59%), and the live impact page
+opens: *"`payable_sellers` is registered, and no value has ever been recorded for it — a defined
+metric with no reading, which is not a reading of zero."*
+
+Architecture was locked 2026-09-01 against the live code on `main` (`fa06612`), the live production
+database (`slweidgffcfndnskcskc`) and the live Vercel Production environment.
 
 > ⚠️ **AMENDED 2026-08-29 — every state in this sprint is already designed and approved.**
 > As scaffolded, this sprint said *"design a state → Daniel approves it → build it"* and left the
