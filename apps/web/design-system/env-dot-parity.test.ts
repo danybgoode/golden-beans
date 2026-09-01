@@ -53,9 +53,36 @@ function background(body: string | undefined): string | null {
 
 const ENVIRONMENTS = ['production', 'preview', 'development'] as const
 
+/**
+ * The colour a selector ends up with, taking the LAST matching declaration in source order.
+ *
+ * ⚠️ Both halves of this were defects in the first version. It read only the BASE rule, so appending
+ * `.ds .ds-env-dot[data-env='production'] { background: var(--green) }` — a plausible edit, someone
+ * adding the missing variant for symmetry — reintroduced the exact shipped Blocking with the guard
+ * green. And `background()` used a non-global `exec`, so `background: var(--gold);
+ * background-color: var(--green)` in one body answered `var(--gold)` (fresh reviewer, round 2,
+ * both mutation-verified).
+ */
+function resolved(sheet: Map<string, string>, selectors: string[]): string | null {
+  let answer: string | null = null
+  for (const [selector, body] of sheet) {
+    if (!selectors.includes(selector)) continue
+    const colour = background(body)
+    if (colour !== null) answer = colour
+  }
+  return answer
+}
+
 test('the design system’s environment dot means the same thing as the approved design’s', () => {
   const approved = rules('design-system/reference.css')
   const system = rules('design-system/system.css')
+  // ⚠️ **THE THIRD COPY.** This test's own docstring named `console.css`'s `.env-dot` — the rule the
+  // FEATURE PAGE renders — and the commit message said the guard "fails if the three copies ever
+  // disagree". It opened two files. Setting `.is-console .env-dot.production` to green left it
+  // green: the shipped Blocking, mirrored, with the guard written to prevent it passing (fresh
+  // reviewer, round 2, mutation-verified). A completeness claim needs the file open, not the name
+  // written down.
+  const console_ = rules('app/console.css')
 
   // The generated file is the authority. If these selectors ever stop existing there, the prototype
   // changed shape and this test must be re-derived rather than quietly passing on an empty read.
@@ -63,24 +90,27 @@ test('the design system’s environment dot means the same thing as the approved
   assert.ok(base, 'reference.css has no `.env-dot` — the approved design changed shape')
 
   for (const environment of ENVIRONMENTS) {
-    const approvedRule =
-      environment === 'production'
-        ? approved.get('.env-dot.production')
-        : approved.get(`.env-dot.${environment}`)
-    assert.ok(approvedRule, `reference.css has no rule for .env-dot.${environment}`)
+    // Every place each copy could set this colour, base rule and variant together, last one winning.
+    const approvedColour = resolved(approved, ['.env-dot', `.env-dot.${environment}`])
+    const systemColour = resolved(system, ['.ds .ds-env-dot', `.ds .ds-env-dot[data-env='${environment}']`])
+    const consoleColour = resolved(console_, ['.is-console .env-dot', `.is-console .env-dot.${environment}`])
 
-    const systemRule =
-      environment === 'production'
-        ? system.get('.ds .ds-env-dot')
-        : system.get(`.ds .ds-env-dot[data-env='${environment}']`)
-    assert.ok(systemRule, `system.css has no rule for the ${environment} dot`)
+    assert.ok(approvedColour, `reference.css sets no colour for the ${environment} dot`)
+    assert.ok(systemColour, `system.css sets no colour for the ${environment} dot`)
+    assert.ok(consoleColour, `console.css sets no colour for the ${environment} dot`)
 
     assert.equal(
-      background(systemRule),
-      background(approvedRule),
-      `the ${environment} dot is ${background(systemRule)} in the design system and ` +
-        `${background(approvedRule)} in the approved design. A colour that encodes WHICH ENVIRONMENT ` +
-        'you are operating in cannot mean two things on two adjacent screens.'
+      systemColour,
+      approvedColour,
+      `the ${environment} dot is ${systemColour} in the design system and ${approvedColour} in the ` +
+        'approved design. A colour that encodes WHICH ENVIRONMENT you are operating in cannot mean ' +
+        'two things on two adjacent screens.'
+    )
+    assert.equal(
+      consoleColour,
+      approvedColour,
+      `the ${environment} dot is ${consoleColour} in console.css (the feature page) and ` +
+        `${approvedColour} in the approved design — the same disagreement, mirrored.`
     )
   }
 

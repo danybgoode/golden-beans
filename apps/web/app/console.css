@@ -182,6 +182,35 @@
   color: var(--dim-2);
 }
 
+/* ⚠️ **THE BUTTON DID NOT FIT, AND IT TOOK THE SIGN-OUT WITH IT.**
+   At 98.8px + an 8px gap and no permission to shrink, `.cmdk` pushed the identity row past a 360px
+   viewport: the document scrolled to 377px, the project chip collapsed to a 22px sliver, and the
+   account `<details>` — the ONLY sign-out control on a console route, since `/app` drops its own —
+   sat partly off-screen until you scrolled sideways. Twelve of fourteen routes in
+   `mobile-heuristics.authed.spec.ts` went red (fresh reviewer, round 2, Blocking; causation proved
+   by rendering the same suite with only this button removed: 14/14).
+
+   `globals.css` records this exact failure being caught once before, on this exact row.
+
+   The approved prototype has no mobile answer — `reference.css` declares no `@media` for `.topbar`
+   at all, because a 1440px prototype never met a phone. So this is a decision, not a port.
+
+   ⚠️ **My first attempt at that decision was wrong and the suite caught it.** Letting the button
+   shrink (`flex: 0 1 auto; min-width: 0`) cured the overflow and collapsed it to **26px wide** with
+   its label squeezed to nothing — trading an overflow for a 26px tap target on a row where
+   `globals.css` requires 44, and leaving a control no thumb can hit and no eye can read. The suite
+   went from "12 overflow failures" to "12 tap-target failures", which is not progress.
+
+   It is HIDDEN below 640px instead, and that costs nothing real: this button advertises a KEYBOARD
+   SHORTCUT, and a phone has no ⌘ key to press. The palette was keyboard-only on every viewport
+   before this sprint, so mobile is exactly where it was and desktop gains the affordance Story 3.2
+   asked for. */
+@media (max-width: 640px) {
+  .is-console .cmdk {
+    display: none;
+  }
+}
+
 /* ⚠️ **TIER 2 — a full-width row, not a strip inside the top bar.** The approved design's
    `#sectionnav` is a sibling of `.topbar`: its own 44px band with its own ground and bottom border.
    This selector styled it as a bare flex strip because it WAS nested in the header, which supplied

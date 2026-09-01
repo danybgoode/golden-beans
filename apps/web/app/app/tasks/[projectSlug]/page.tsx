@@ -44,7 +44,7 @@ export default async function TasksPage({
   const tasks = await listTasksByProjectId(membership.projectId, { limit: 100 })
 
   return (
-    <ProductShell projectSlug={projectSlug} section="today" railActive={'tasks'}>
+    <ProductShell projectSlug={projectSlug} section="today" railActive={null}>
       <main>
         <h1>Tasks</h1>
         <p>

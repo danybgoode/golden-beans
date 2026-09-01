@@ -278,8 +278,18 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
       const response = await page.goto(href)
       // A gate-closed or owner-only surface is not a failure of this test — but it must be RECORDED,
       // not silently skipped, or a suite that reaches nothing reads exactly like a suite that passes.
-      if (!response || response.status() >= 400 || page.url().includes('/login')) {
-        unreachable.push(`${surface.routeSegment} (${response?.status() ?? 'no response'})`)
+      // ⚠️ A 404 on an INVENTORY route is always a defect: the rail lists it, so the rail is
+      // offering a destination that does not serve. This used to be swallowed into `unreachable`,
+      // which was pushed to and never asserted on — adding `notFound()` to `/app/shares` left the
+      // test GREEN while Setup still listed "Share links" pointing at a 404 (fresh reviewer,
+      // round 2, mutation-verified). Recording into an array nothing reads IS silently skipping,
+      // which is the thing this test's own comment says it must not do.
+      expect(
+        response?.status() ?? 0,
+        `${href} is in the inventory and answers ${response?.status()} — the rail offers it as a place to go`
+      ).toBeLessThan(400)
+      if (page.url().includes('/login')) {
+        unreachable.push(`${surface.routeSegment} (redirected to /login)`)
         continue
       }
       const rail = page.locator('.console-rail')
@@ -315,12 +325,16 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
       }
     }
 
-    // The floor, outside the loop: a run that reached nothing must fail rather than report success.
+    // ⚠️ **The floor is the EXACT count, not a lower bound.** It was `> 5` against a real maximum of
+    // nine, so three of nine rail destinations could drop out silently and the test would still
+    // report success (fresh reviewer, round 2). A floor with that much slack is a floor that admits
+    // the defect it is placed against. If a gate closes and the number legitimately changes, this
+    // fails and the new number gets written down deliberately.
     expect(
       checked.length,
-      `only ${checked.length} rail routes were reachable; off-rail: ${offRail.join(', ') || 'none'}; ` +
-        `unreachable: ${unreachable.join(', ') || 'none'}`
-    ).toBeGreaterThan(5)
+      `${checked.length} rail routes marked their own item, expected 9. off-rail: ` +
+        `${offRail.join(', ') || 'none'}; unreachable: ${unreachable.join(', ') || 'none'}`
+    ).toBe(9)
 
     // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
     // out of the rail would satisfy the loop by never entering the branch that checks anything.

@@ -66,7 +66,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
   const apiKeyExpr = plaintextKey ? `'${plaintextKey}'` : 'process.env.GROWTH_ENGINE_API_KEY'
 
   return (
-    <ProductShell projectSlug={projectSlug} section="setup" railActive={'onboarding'}>
+    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
       <main className="wrap" style={{ padding: '56px 0 80px' }}>
         <p style={{ marginBottom: 24 }}>
           <a href="/app">&larr; Your projects</a>
