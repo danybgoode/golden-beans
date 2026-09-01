@@ -480,6 +480,61 @@ one-liner + why + date shape.
   markup and a green gate. The structural fix is adjacency — **a selector gets ONE base block, and
   it goes above every override of it** — and the assertion is on the COMPUTED value at both sides of
   the breakpoint, never on the rule's existence. *(2026-08-20, methodology-experience.)*
+- **`:where()` zeroes only its OWN argument — and the version of that rule people write is (0,2,0).**
+  `.ds .ds-shell :where(input, …)` is (0,2,0); `:where(.ds .ds-shell) :where(input, …)` is (0,0,0).
+  Written the first way, a BASE RESET in the last-loaded stylesheet silently beat three live rules on
+  ties — including the ⌘K palette's input on every console route, which would have shipped a
+  redesigned command palette inside a story whose acceptance is *"changes no pixel"*. **The comment
+  above it claimed (0,0,0), which is how it survived.** A base reset that cannot be out-specified is
+  the defect, not the fix, so a specificity FLOOR needs a named exemption for it rather than a
+  loosened rule. *(2026-09-01, design-system-rails S6; found by the fresh reviewer.)*
+- **The structural gate passes on a page whose stylesheet is entirely missing.** A frame rendered
+  `class="ds ds-door"` where every rule is `.ds .ds-…` — a descendant combinator cannot match the
+  element carrying the scope class — so the sign-in page rendered top-left on the browser's default
+  ground while the visual gate's four assertions all passed: `ds-` classes inside `<main>` ✓, chrome
+  budget ✓, no horizontal scroll ✓, status < 400 ✓. Correct markup, correct stylesheet, **no
+  relationship between them**. The guard that catches it asserts the RELATIONSHIP —
+  `parentElement.closest('.ds')`, never `closest()` on the element itself, which would call the
+  broken markup correct — and it was found by rendering the page and looking, after every gate was
+  green. *(2026-09-01, design-system-rails S6.)*
+- **Porting a page means porting its MEASUREMENTS.** A third-party iframe shipped at `min-height:
+  700px` with its working in the comment — 620 measured to scroll, 860 measured to leave a gap. The
+  port re-derived it as 640, below the value already measured as too short, and the booker clipped.
+  Re-deriving a number somebody measured, and getting it wrong, is the same defect as a contract
+  whose numbers do not reproduce. *(2026-09-01, design-system-rails S6.)*
+- **A rule dies only when EVERY selector in its comma list does.** A sweep that removes a rule when
+  ANY selector matches took `.eyebrow, .panel-label, .kicker` down with one dead sibling
+  (`.surface-note strong`) — silently un-uppercasing three classes live across the public site. The
+  check that caught it is cheap and general: **diff what the sweep removed against what it was asked
+  to remove.** *(2026-09-01, design-system-rails S6.)*
+- **Verify an ABSENCE by enumerating, never by grepping a command's output.** Confirming an env var
+  existed in none of three Vercel environments, `vercel env ls | grep` returned "0 matches" because
+  the **CLI had errored**. Listing each environment and counting its rows (32 / 11 / 10) is what
+  caught it. A grep over a failed command is a false green, and it is indistinguishable from a true
+  one. *(2026-09-01, design-system-rails S6.)*
+- **Relaxing an assertion to admit a new case can make it certify the wrong page.** Adding a
+  legitimately-404 route to a mobile sweep meant accepting `[200, 404]` everywhere — and a
+  gate-dependent route that 404s in that harness was then certified "mobile-clean" under a test named
+  after the page it never loaded. **Expected status is per-row data**, and a gated route is
+  skipped-with-its-reason rather than measured on the page its gate serves. *(2026-09-01,
+  design-system-rails S6; found by re-reading my own fix.)*
+- **A JSX pragma is per FILE.** Fourteen specs went red at once with one unrelated-looking error
+  ("Objects are not valid as a React child") the moment a page component composed a primitive from a
+  file lacking `@jsxImportSource react`. A caller carrying the line does nothing for the JSX inside
+  what it calls; put it on the shared seam (the icon module, the primitives module) rather than on
+  each consumer. *(2026-09-01, design-system-rails S6.)*
+- **A guard keyed on INDENTATION breaks when a wrapper element is added.** A spec sliced a component
+  by "newline plus exactly eight spaces" and went red because a `<div>` moved every line two columns
+  — the second wrong version of that line, after one that matched a substring and silently covered
+  two-thirds of the branch. Balance the delimiters instead; depth-counting cannot be fooled by
+  either. *(2026-09-01, design-system-rails S6.)*
+- **A silently fallen-back reviewer is a DIFFERENT reviewer, and its confidence does not drop.** On
+  the passes where agy fell back from `gemini-3.6-flash-high` to `gpt-oss-120b-medium` it filed three
+  **Blocking** findings — a duplicate import, a duplicate function, a duplicate helper — that
+  `grep -c` disproves in one line each and that a green `tsc` makes impossible. On the passes where
+  it did NOT fall back it found two real defects in a guard that had already been mutation-verified.
+  **Both halves are the lesson:** the fallback line in the output is the signal to verify every
+  finding before acting, and the layer still earns its place. *(2026-09-01, design-system-rails S6.)*
 - **`0 did not fit the budget` is not proof the reviewer read anything.** agy's documented 256 KB
   argv cap is not the binding limit — the MODEL gives out well before it, and fails as *garbage
   output* rather than as an error (171 KB returned `agy -p failed: "`; 19 KB reviewed cleanly; the
