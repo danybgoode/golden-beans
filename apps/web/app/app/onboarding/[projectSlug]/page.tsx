@@ -117,8 +117,14 @@ await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KE
         </Card>
 
         {/* The connector, only when BOTH gates are open (AGENTS rule #3). No flag-off or
-            not-yet-provisioned placeholder section — absence here IS the correct dark-default UI. */}
-        {connectorUrl ? (
+            not-yet-provisioned placeholder section — absence here IS the correct dark-default UI.
+            ⚠️ **`isConnectorEnabled()` is asserted HERE as well as at the read above**, and the
+            redundancy is deliberate. It is already unreachable — `connectorUrl` is `null` whenever
+            the flag is off — but a cross-family reviewer read this render site, could not see the
+            gate 60 lines up, and filed it as a rule #3 violation. On the ONE rule AGENTS says never
+            to bypass, a reader of the render site should not have to go and check. The finding was
+            wrong; that it was reachable at all is the thing worth fixing. */}
+        {isConnectorEnabled() && connectorUrl ? (
           <Card>
             <span className="ds-label">Optional — bring your agent</span>
             <p className="ds-hint">

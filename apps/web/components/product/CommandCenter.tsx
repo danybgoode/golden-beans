@@ -4,10 +4,11 @@ import { getFlagRegistryView } from '@/lib/flag-registry'
 import { getDeliveryHealth } from '@/lib/deliveries'
 import { getTaskLifecycleFacts } from '@/lib/task-lifecycle-facts'
 import { listTasksByProjectId, type TaskRow } from '@/lib/tasks'
+import { isSignalsEnabled } from '@/lib/flags'
 import { projectFlagRows, summariseFlagList } from '@/lib/flag-list-view'
 import { splitTaskBands } from '@/lib/today-bands'
 import { northStarFigure } from '@/lib/stat-figures'
-import { PageHead } from '@/design-system/primitives'
+import { Callout, PageHead } from '@/design-system/primitives'
 import { Band, BandEmpty, TaskList } from '@/design-system/bands'
 import { TaskLines } from './TaskLines'
 
@@ -52,13 +53,27 @@ function today(): string {
 }
 
 export async function CommandCenter({ project }: { project: CommandCenterProject }) {
+  // ⚠️ **DD1's bands ride the SAME gate `/app/tasks` does, and this line is why.** `/app/tasks`
+  // calls `notFound()` when signals is dark, and `project-route-inventory.ts` declares the `tasks`
+  // surface `gate: 'signals'` — so with the gate off there is no queue, and rendering three bands
+  // plus a "See every task →" link would put a control in front of every user that leads to a 404.
+  // Story 4.1's own rule: a control that goes nowhere is worse than no control.
+  //
+  // The page this replaced resolved the gate into a `gates` record and handed it down; the rewrite
+  // dropped that, and the bands rendered unconditionally. Caught by a cross-family reviewer noticing
+  // the `links` prop had gone (Mistral Vibe) — it reached the right defect from the wrong route.
+  const signals = isSignalsEnabled()
+
   // Read in parallel, and independently: one slow or failing layer must not take the others with it.
+  // The queue is not read at all when its gate is dark — a dark capability is not a slow one.
   const [outcome, flags, tasks, deliveries, agentFacts] = await Promise.all([
     getProjectOutcome(project.id, project.slug).catch(() => null),
     getFlagRegistryView(project.id).catch(() => null),
-    listTasksByProjectId(project.id, { limit: 100 }).catch((): TaskRow[] | null => null),
+    signals
+      ? listTasksByProjectId(project.id, { limit: 100 }).catch((): TaskRow[] | null => null)
+      : Promise.resolve<TaskRow[] | null>([]),
     getDeliveryHealth(project.id).catch(() => null),
-    getTaskLifecycleFacts(project.id).catch(() => null),
+    signals ? getTaskLifecycleFacts(project.id).catch(() => null) : Promise.resolve(null),
   ])
 
   const bands = splitTaskBands(tasks ?? [])
@@ -107,12 +122,17 @@ export async function CommandCenter({ project }: { project: CommandCenterProject
         />
         <Tile
           label="Needs a decision"
-          // Counted from the SAME array the band below renders, so a tile cannot contradict the
-          // rows under it (CODE-QUALITY #2).
-          value={tasks === null ? null : String(bands.open.length)}
+          // Counted from the SAME array the band below renders, so a tile cannot contradict the rows
+          // under it (CODE-QUALITY #2). ⚠️ With the queue dark there is nothing to count, and a `0`
+          // would read as "nothing needs you" — a measurement this project cannot make.
+          value={!signals || tasks === null ? null : String(bands.open.length)}
           tone={bands.open.length > 0 ? 'warn' : undefined}
-          absent="The queue could not be read, so nothing below should be taken as an empty queue."
-          detail="waiting on you"
+          absent={
+            signals
+              ? 'The queue could not be read, so nothing below should be taken as an empty queue.'
+              : 'The task queue is not switched on for this project, so nothing is being counted — this is not a count of zero.'
+          }
+          detail={signals ? 'waiting on you' : undefined}
         />
         <Tile
           label="Deliveries needing attention"
@@ -122,69 +142,84 @@ export async function CommandCenter({ project }: { project: CommandCenterProject
         />
       </div>
 
-      <Band title="Waiting on you" who="you" sub="Decisions nothing else is allowed to make.">
-        <TaskList>
-          {bands.open.length === 0 ? (
-            <BandEmpty
-              head="Nothing is waiting on you"
-              body={
-                tasks === null
-                  ? 'The queue could not be read — this is a failed lookup, not an empty queue.'
-                  : 'Errors and friction reach this list once they affect enough people to be worth your time. Nothing has crossed that line.'
-              }
-            />
-          ) : (
-            <TaskLines slug={project.slug} tasks={bands.open} />
-          )}
-        </TaskList>
-      </Band>
-
-      <Band
-        title="Your agent is working"
-        who="agent"
-        sub="Tasks something else has picked up and is resolving. You did not have to ask."
-      >
-        {bands.claimed.length === 0 ? (
-          <TaskList>
-            <BandEmpty
-              head="No agent has claimed anything"
-              body={
-                agentFacts && agentFacts.agentResolvedTotal > 0
-                  ? `Nothing is in hand right now. An agent has resolved ${agentFacts.agentResolvedTotal} task${agentFacts.agentResolvedTotal === 1 ? '' : 's'} through the connector so far.`
-                  : 'Nothing has claimed a task through the connector yet. Mint an agent write key in Setup › Keys and an agent can claim, resolve and dismiss these on its own.'
-              }
-              action={<a href={`/app/setup/keys/${project.slug}`}>Setup › Keys</a>}
-            />
-          </TaskList>
-        ) : (
-          <>
-            <AgentSummary claimed={bands.claimed.length} facts={agentFacts} />
+      {signals ? (
+        <>
+          <Band title="Waiting on you" who="you" sub="Decisions nothing else is allowed to make.">
             <TaskList>
-              <TaskLines slug={project.slug} tasks={bands.claimed} />
+              {bands.open.length === 0 ? (
+                <BandEmpty
+                  head="Nothing is waiting on you"
+                  body={
+                    tasks === null
+                      ? 'The queue could not be read — this is a failed lookup, not an empty queue.'
+                      : 'Errors and friction reach this list once they affect enough people to be worth your time. Nothing has crossed that line.'
+                  }
+                />
+              ) : (
+                <TaskLines slug={project.slug} tasks={bands.open} />
+              )}
             </TaskList>
-          </>
-        )}
-      </Band>
+          </Band>
 
-      <Band
-        title="What changed"
-        who="done"
-        sub="Everything a person or an agent actually did, in one list — in the same words as the buttons that did it."
-      >
-        <TaskList>
-          {bands.done.length === 0 ? (
-            <BandEmpty
-              head="Nothing has been closed yet"
-              body="Resolved and dismissed tasks land here with what was done and who did it."
-            />
-          ) : (
-            <TaskLines slug={project.slug} tasks={bands.done} />
-          )}
-        </TaskList>
-        <p className="ds-hint">
-          <a href={`/app/tasks/${project.slug}`}>See every task, including what is already done →</a>
-        </p>
-      </Band>
+          <Band
+            title="Your agent is working"
+            who="agent"
+            sub="Tasks something else has picked up and is resolving. You did not have to ask."
+          >
+            {bands.claimed.length === 0 ? (
+              <TaskList>
+                <BandEmpty
+                  head="No agent has claimed anything"
+                  body={
+                    agentFacts && agentFacts.agentResolvedTotal > 0
+                      ? `Nothing is in hand right now. An agent has resolved ${agentFacts.agentResolvedTotal} task${agentFacts.agentResolvedTotal === 1 ? '' : 's'} through the connector so far.`
+                      : 'Nothing has claimed a task through the connector yet. Mint an agent write key in Setup › Keys and an agent can claim, resolve and dismiss these on its own.'
+                  }
+                  action={<a href={`/app/setup/keys/${project.slug}`}>Setup › Keys</a>}
+                />
+              </TaskList>
+            ) : (
+              <>
+                <AgentSummary claimed={bands.claimed.length} facts={agentFacts} />
+                <TaskList>
+                  <TaskLines slug={project.slug} tasks={bands.claimed} />
+                </TaskList>
+              </>
+            )}
+          </Band>
+
+          <Band
+            title="What changed"
+            who="done"
+            sub="Everything a person or an agent actually did, in one list — in the same words as the buttons that did it."
+          >
+            <TaskList>
+              {bands.done.length === 0 ? (
+                <BandEmpty
+                  head="Nothing has been closed yet"
+                  body="Resolved and dismissed tasks land here with what was done and who did it."
+                />
+              ) : (
+                <TaskLines slug={project.slug} tasks={bands.done} />
+              )}
+            </TaskList>
+            <p className="ds-hint">
+              <a href={`/app/tasks/${project.slug}`}>See every task, including what is already done →</a>
+            </p>
+          </Band>
+        </>
+      ) : (
+        // ⚠️ A sentence, not an absence. Three bands vanishing with no explanation reads as a page
+        // that failed to render; this says which capability is off and what it would do. The link is
+        // deliberately NOT rendered — `/app/tasks` 404s while the gate is dark, and a control that
+        // goes nowhere is worse than no control (Story 4.1).
+        <Callout>
+          <strong>The task queue is not switched on for this project.</strong> With it on, errors and friction
+          the engine has grouped appear here as three bands — what is waiting on you, what an agent has picked
+          up, and what has already been closed — and an agent with a write key can work them without being
+          asked.
+        </Callout>
+      )}
 
       {/*
         The Medusa-truth boundary — the things this engine deliberately does NOT measure, each with
