@@ -536,9 +536,24 @@ export function Callout({ children, tone = 'info' }: { children: ReactNode; tone
 }
 
 /** The card a list lives in. Rows, a header row, or an empty state — never a page's prose. */
-export function ListCard({ children, label }: { children: ReactNode; label?: string }) {
+export function ListCard({
+  children,
+  label,
+  wideActions,
+}: {
+  children: ReactNode
+  label?: string
+  /**
+   * Widen the action column for a surface that genuinely needs more than a switch in it.
+   *
+   * Destinations carries Send test / Rotate secret / Remove beside its toggle. A flag rather than a
+   * free width: two options a caller picks between cannot drift into forty, and the widths stay in
+   * the stylesheet where the header and the cells read the same one.
+   */
+  wideActions?: boolean
+}) {
   return (
-    <div className="ds-listcard">
+    <div className="ds-listcard" data-actions={wideActions ? 'wide' : undefined}>
       {/* Wide content scrolls inside ITS OWN container; the page never scrolls sideways
           (Do-not #6). `role="table"` sits on the SCROLLER because that is the element that
           directly contains the rows — a `role="row"` whose ancestor is a plain `<div>` is an

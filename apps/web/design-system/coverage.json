@@ -3,19 +3,20 @@
   "routes": 27,
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
-  "rendersFromDesignSystem": 6,
-  "complete": 6,
+  "rendersFromDesignSystem": 8,
+  "complete": 8,
   "covered": [
+    "/app/destinations/[projectSlug]",
     "/app/flag-audit/[projectSlug]",
     "/app/flags/[projectSlug]",
     "/app/flags/[projectSlug]/[flagKey]",
     "/app/scheduled/[projectSlug]",
     "/app/setup/connect/[projectSlug]",
-    "/app/setup/keys/[projectSlug]"
+    "/app/setup/keys/[projectSlug]",
+    "/app/shares/[projectSlug]"
   ],
   "outstanding": [
     "/app",
-    "/app/destinations/[projectSlug]",
     "/app/experiments/[projectSlug]",
     "/app/experiments/[projectSlug]/[experimentKey]",
     "/app/funnel/[projectSlug]/[featureKey]",
@@ -24,7 +25,6 @@
     "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/onboarding/[projectSlug]",
     "/app/scenarios/[projectSlug]",
-    "/app/shares/[projectSlug]",
     "/app/tasks/[projectSlug]",
     "/hub/[projectSlug]",
     "/hub/[projectSlug]/epic/[epicSlug]",

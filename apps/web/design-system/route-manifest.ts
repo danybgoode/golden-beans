@@ -405,7 +405,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'destinations',
     referenceState: 'setup-destinations',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.6. Delivery health moved ONTO the rows — the approved state
+    // puts the split bar beside the destination it describes rather than in a second nine-column
+    // table a reader had to join by name. The delivery and attempt logs are kept behind disclosures:
+    // the design has neither, and replaying a dead delivery has no other surface, so deleting them
+    // to satisfy a geometry assertion would delete a capability.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -418,7 +423,11 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'shares',
     referenceState: 'setup-shares',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.6. This was the last surface in Setup rendering nothing from any
+    // system at all — a `<fieldset>` of radios and a raw `<table>` — on a page whose rows are bearer
+    // tokens. It now shares Setup › Keys' rows, pills, one-time reveal and copy field, so an operator
+    // who has revoked a key already knows how to kill a link.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,

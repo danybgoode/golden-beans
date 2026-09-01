@@ -175,6 +175,11 @@
 /* ⚠️ unbuilt — NOT the same as disabled, and deliberately not dimmed. The guidelines are explicit:
    "not-yet-shipped gets the amber 'next' tag treatment and stays legible (it's honest marketing, it
    should read clearly)". A dimmed control says "wait a second"; this says "this doesn't exist yet". */
+/* A control inside a row, where a full-height button would push the row past its measured height. */
+.ds .ds-btn--sm {
+  padding: 5px 9px;
+  font-size: 12.5px;
+}
 .ds .ds-btn[data-state='unbuilt'] {
   cursor: default;
   background: transparent;
@@ -1236,6 +1241,15 @@
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  /* A row's action cell may hold a switch AND a wrapping run of secondary controls, so it wraps
+     within its own column rather than pushing the row wider. */
+  flex-wrap: wrap;
+}
+/* Where a surface genuinely needs more than a switch in the action column — destinations carries
+   Send test / Rotate secret / Remove beside its toggle — the column opts into being wider rather
+   than every row in the product paying for it. */
+.ds .ds-listcard[data-actions='wide'] .ds-col-act {
+  width: 190px;
 }
 .ds .ds-listhead .ds-col-act {
   justify-content: flex-end;
@@ -1670,6 +1684,72 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── A disclosure — depth that must exist, below the fold rather than deleted ────────────────
+ * A `<details>` styled as a row of the system. Used where a surface has an operational log the
+ * approved design does not show: the page answers its own question without scrolling, and the record
+ * is one click away instead of gone. */
+.ds .ds-disclosure {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  overflow: hidden;
+}
+.ds .ds-disclosure > summary {
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--crema);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Safari draws its own triangle through `::-webkit-details-marker`; `list-style: none` alone does
+   not remove it, and two markers is worse than one. */
+.ds .ds-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+/* The marker, drawn — a rotated corner, never a glyph. */
+.ds .ds-disclosure > summary::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-right: 1.5px solid var(--dim-2);
+  border-bottom: 1.5px solid var(--dim-2);
+  transform: rotate(-45deg);
+  transition: transform var(--t);
+}
+.ds .ds-disclosure[open] > summary::before {
+  transform: rotate(45deg);
+}
+.ds .ds-disclosure > summary:hover {
+  background: var(--card-2);
+}
+.ds .ds-disclosure-body {
+  padding: 0 16px 16px;
+  /* ⚠️ The disclosure's CONTENTS scroll, never the page. A delivery log is bounded at 50 rows,
+     which is taller than any viewport once it is open. */
+  max-height: 60vh;
+  overflow: auto;
+}
+
+/* A row's secondary controls, wrapping under the switch rather than beside it. */
+.ds .ds-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 6px;
+  flex: 1 1 100%;
+}
+/* A failure count, where the number is the thing to notice. */
+.ds .ds-note--bad {
+  color: var(--red);
 }
 
 /* ── The mint flow — a list of JOBS, then the one question that kind asks ───────────────────── */

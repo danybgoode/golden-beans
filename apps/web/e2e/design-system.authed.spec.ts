@@ -239,7 +239,11 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
   // The FIRST empty state — no rows at all. It must be the CALLER's sentence: a blank <tbody> or a
   // generic "No results" is the thing that epic existed to remove.
   await page.goto(`/app/destinations/${slug}`)
-  await expect(page.locator('.data-table__empty').first()).toContainText('No destinations yet')
+  // ⚠️ The DESIGN SYSTEM's empty state, not the kit's — design-system-rails S4.6 rebuilt this page.
+  // The property is unchanged and is the reason this line exists: it must be the CALLER's sentence.
+  // A blank list or a generic "No results" is the thing the component kit was built to remove, and
+  // the design system inherits the rule rather than restarting it.
+  await expect(page.locator('.ds-empty').first()).toContainText('No destinations yet')
 
   await page.goto(`/app/impact/${slug}/${IMPACT_FEATURE_KEY}`)
   const table = page.locator('.data-table')
@@ -318,7 +322,22 @@ const CONVERTED_ROUTES: Array<{
     expect: ['.ds-listcard', '.ds-page-head'],
     skipFilter: true,
   },
-  { name: 'destinations', path: (s) => `/app/destinations/${s}`, expect: ['.data-table', '.form-section'] },
+  // ⚠️ Re-pointed with S4.6, same rule as `setup keys` above: the route must render through a NAMED
+  // visual system, and for a console route that system is the design contract. `.data-table` is
+  // still on this page — the delivery log behind its disclosure is a `DataTable` — but asserting it
+  // would let the PAGE revert to bare markup while the log alone kept this green.
+  {
+    name: 'destinations',
+    path: (s) => `/app/destinations/${s}`,
+    expect: ['.ds-listcard', '.ds-page-head', '.ds-answer'],
+    skipFilter: true,
+  },
+  {
+    name: 'share links',
+    path: (s) => `/app/shares/${s}`,
+    expect: ['.ds-page-head', '.ds-answer'],
+    skipFilter: true,
+  },
   // Experiments converts its FORM only — its version tables are per-experiment and 1-5 rows each, so
   // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
   // D3 finding in sprint-2.md rather than fixed by quietly unfreezing the API mid-sprint.
@@ -477,17 +496,23 @@ test('destinations Remove confirms through ONE dialog — the two-click pattern 
   const name = `dest-confirm-${Date.now()}`
 
   await page.goto(`/app/destinations/${slug}`)
+  // ⚠️ The create form is behind `+ New destination` — design-system-rails S4.6. The approved state
+  // opens on the answer line and the list, not on an empty form, which is also what lets the page
+  // fit at 1440×960.
+  await page.getByRole('button', { name: '+ New destination' }).click()
   await page.getByLabel('Name').fill(name)
   await page.getByLabel('Webhook URL').fill(`https://example.invalid/hooks/${name}`)
-  await page.getByRole('button', { name: 'Add destination' }).click()
+  await page.getByRole('button', { name: 'Create the destination' }).click()
   const secretNotice = page.getByRole('alert').filter({ hasText: 'Copy this signing secret now' })
   await expect(secretNotice).toBeVisible()
   await secretNotice.getByRole('button', { name: "I've saved it" }).click()
 
-  // Scoped to the DESTINATIONS table specifically. `page.getByRole('row')` spans both tables on
-  // this page (destinations and delivery history), and the delivery table has a Destination column,
-  // so an unscoped filter matches twice the moment a delivery exists.
-  const table = page.locator('.data-table').filter({ has: page.getByText('Destinations', { exact: true }) })
+  // Scoped to the DESTINATIONS list specifically. `page.getByRole('row')` spans the delivery and
+  // attempt logs too, and both name a destination — so an unscoped filter matches more than once the
+  // moment a delivery exists. The logs are inside `<details>` now and closed by default, which
+  // narrows it but does not make it safe: `getByRole` still sees a closed disclosure's contents in
+  // the DOM, and relying on that would be relying on a default.
+  const table = page.locator('.ds-listcard').filter({ hasText: name }).first()
   const row = table.getByRole('row').filter({ hasText: name })
   await expect(row).toBeVisible()
 
