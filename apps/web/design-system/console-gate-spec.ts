@@ -58,9 +58,10 @@ export const MEASURED_SPEC: SpecRow[] = [
   //
   // ⚠️ **The justification that used to sit here was a reproduction that did not reproduce.** It
   // said stripping tier 2's `height` leaves the row "at 43px, and |43 − 44| = 1", so the row passed
-  // at ±1. The row is actually **43.5px**, which `Math.round` turns into 44 — so that mutation
-  // passes at ±1 AND at 0, and proves nothing about either. I wrote a plausible number instead of
-  // reading the one the failure printed (fresh reviewer, Major, measured).
+  // at ±1. The reviewer measured it at **43.5px**, which `Math.round` turns into 44 — so that
+  // mutation passes at ±1 AND at 0, and proves nothing about either. I wrote a plausible number
+  // instead of reading the one the failure printed (fresh reviewer, Major; 43.5 is THEIR
+  // measurement, cited rather than re-derived here, which is the honest way to carry it).
   //
   // Keeping `tolerance: 0` and correcting the reason, rather than the reverse: the field is right,
   // the evidence for it was invented. Prose asserting a property the code lacks is this epic's third

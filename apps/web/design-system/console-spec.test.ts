@@ -114,11 +114,14 @@ const DEFERRAL_GOVERNED_BY: Record<string, string> = {
   'dormant summary row': 'Dormant summary row',
   'primary/secondary button': 'Primary button',
   'project switcher': 'Project switcher',
+  'section nav (tier 2)': 'Section nav (tier 2)',
 }
 
 test('the deferral mapping does not outlive the deferrals it maps', () => {
-  // ⚠️ `GOVERNED_BY` has had a both-directions check since Sprint 2 ("a stale mapping reads as
-  // coverage"); `DEFERRAL_GOVERNED_BY` never got the same one. So when Story 3.2 built the second
+  // ⚠️ `GOVERNED_BY` has had a both-directions check since **Sprint 1** (#128, "a stale mapping reads
+  // as coverage"); `DEFERRAL_GOVERNED_BY` never got the same one. (I first wrote "Sprint 2" here —
+  // `git log -S` says #128. Checking my own citation because the last round caught three claims I
+  // had asserted without re-deriving.) So when Story 3.2 built the second
   // tier, its mapping stayed behind pointing at a deferral that no longer exists, and every suite
   // stayed green — the same class the sibling check was written to prevent, in the sibling that
   // did not get it (fresh reviewer, Major).

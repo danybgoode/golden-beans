@@ -48,6 +48,21 @@ function tenantSlug(): string {
 //
 // This is the half that protects D4, and it is the one a spec CAN make honestly: the legacy header
 // is byte-identical markup, so its four links either render or they do not.
+// ⚠️ **THIS HALF RUNS NOWHERE, AND SAYING SO IS THE POINT.**
+//
+// CI sets `CONSOLE_SHELL_ENABLED: 'true'` on the only server that runs this file (A19 — the console
+// ships enabled, so the gate MUST be on or the blocking gate asserts the opposite of production),
+// and the dark server's spec list does not include it. `run-local-e2e.mjs --authed` is the lit
+// server too. So every test below skips in every runner that exists today.
+//
+// That is not a reason to delete them — the gate-off branch is real code that a rollback serves —
+// but it IS a reason to stop counting them as coverage. Found in Sprint 3 while adding the `.cmdk`
+// absence assertion below and checking, for once, whether the thing I had just written would ever
+// execute. It would not.
+//
+// Owed: either boot a gate-off server for this file the way `setup-routes-dark` gets one, or move
+// these four assertions to a spec the dark server already runs. Recorded here rather than in a plan
+// nobody re-reads, because this is the file whose green will otherwise keep implying they passed.
 test.describe('with CONSOLE_SHELL_ENABLED off', () => {
   test.skip(GATE_ON, 'the gate is on for this run')
 
@@ -78,10 +93,16 @@ test.describe('with CONSOLE_SHELL_ENABLED off', () => {
 
   test('none of the new console chrome exists while the gate is off', async ({ page }) => {
     await page.goto('/app')
-    // The three things Sprint 1 adds. All absent, or the dark launch is not dark.
+    // The things the console adds. All absent, or the gate is not a gate.
     await expect(page.locator('.product-shell__tabs')).toHaveCount(0)
     await expect(page.locator('.console-rail')).toHaveCount(0)
     await expect(page.locator('.product-shell__account')).toHaveCount(0)
+    // ⚠️ `.cmdk` is FOURTH, added in Sprint 3. Until now `CommandPalette` returned `null` when
+    // closed, so "⌘K does nothing" was the whole of its gate-off contract and there was nothing to
+    // see. It renders a visible trigger unconditionally now, mounted inside the console branch — so
+    // the absence has to be asserted rather than inferred from the mount point. A search button on
+    // the anonymous demo dashboards would be a control with nothing behind it.
+    await expect(page.locator('.cmdk')).toHaveCount(0)
   })
 
   test('⌘K does nothing at all while the gate is off', async ({ page }) => {
