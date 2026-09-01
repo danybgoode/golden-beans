@@ -4721,6 +4721,10 @@
   color: var(--dim-2);
 }
 
+/* ⚠️ The adjacent-sibling form is correct HERE and it is worth saying why, because it is the kind
+    of selector that quietly matches nothing: `Frame` renders `<main class="ds-pubwrap …">` and the
+    `<footer>` as SIBLINGS inside the same wrapper, so `+` really does reach it. `/talk` is the only
+    `wide` public page, and its footer would otherwise sit at 820px under a 1080px page. */
 .ds .ds-public--hub .ds-pubfoot,
 .ds .ds-pubwrap--wide + .ds-pubfoot {
   max-width: 1080px;

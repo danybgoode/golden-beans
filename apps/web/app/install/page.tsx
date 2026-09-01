@@ -51,7 +51,7 @@ export default async function InstallPage() {
     : await getActiveConnectorUrl(DEMO_PROJECT_SLUG)
 
   return (
-    <Frame variant="public" brandHref="/" actions={<FrameLink href="/login">Sign in</FrameLink>}>
+    <Frame variant="public" brandHref="/" agentFooter actions={<FrameLink href="/login">Sign in</FrameLink>}>
       <h1>Point Claude at a real project</h1>
       <p className="ds-lede">
         This is a working connector for our demo shop. Paste it into Claude and ask it about the funnel, the

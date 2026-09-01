@@ -48,24 +48,51 @@ export { assertMobileClean } from './helpers/mobile-heuristics'
 //
 // The four `/hub` routes are NOT here: they need a session, so they belong in the authed sweep, and
 // `mobile-heuristics.authed.spec.ts` is where that lives. Named rather than omitted.
+//
+// ⚠️⚠️ **EACH ROW DECLARES THE STATUS IT EXPECTS, and that is not bookkeeping.** The first version of
+// this list added `/signup` and relaxed the assertion to `[200, 404]` so the share 404 could join.
+// `run-local-e2e.mjs` sets `SIGNUP_ENABLED: 'false'` for the `browser` project — so `/signup` **404s
+// here**, and the relaxed assertion cheerfully certified the 404 page as "mobile-clean" under a test
+// named `/signup is mobile-clean`. A guard measuring a different page than the one it names, added
+// while closing a coverage gap, in the epic about guards that cannot fail.
+//
+// So the expected status is per-route data. A route that answers 404 where 200 was expected FAILS,
+// and `/signup` is skipped-with-a-reason when its gate is off rather than silently passing on the
+// wrong page — a skip somebody decided, which is not the same thing as a suite that ran.
+//
+// ⚠️ **HONEST SCOPE: nothing in CI runs this file.** `grep 'project=browser' .github/workflows/ci.yml`
+// returns nothing — the epic's own **D5-a** records it ("the `browser` project runs nowhere"), which
+// is why `landing.browser.spec.ts` can sit red on `main`. These rows are run by
+// `npm run test:e2e:local -- --browser` and by nothing else, so adding them buys a check somebody
+// has to choose to run, not a gate. Said here rather than left for a reader to assume the opposite;
+// wiring the project into CI is a decision this sprint did not make.
 export const PUBLIC_MOBILE_ROUTES = [
-  '/',
-  '/install',
-  '/login',
-  '/signup',
-  '/s/gbs_thistokencannotexistanywhereatall00',
-  '/talk',
-  '/methodology',
-  '/methodology/design-it',
+  { path: '/', status: 200 },
+  { path: '/install', status: 200 },
+  { path: '/login', status: 200 },
+  // Gate-dependent: 200 with `SIGNUP_ENABLED`, 404 without (`app/signup/page.tsx` calls
+  // `notFound()`), so the row says which it needs rather than accepting either.
+  { path: '/signup', status: 200, needs: 'SIGNUP_ENABLED' as const },
+  { path: '/s/gbs_thistokencannotexistanywhereatall00', status: 404 },
+  { path: '/talk', status: 200 },
+  { path: '/methodology', status: 200 },
+  { path: '/methodology/design-it', status: 200 },
 ] as const
 
 for (const route of PUBLIC_MOBILE_ROUTES) {
-  test(`${route} is mobile-clean`, async ({ page }) => {
-    const response = await page.goto(route)
-    // ⚠️ 200 OR 404. The share-link 404 is a DESIGNED page (`public-gone`) and must be mobile-clean
-    // like any other; asserting 200 would have forced it out of the sweep, and asserting nothing
-    // would let a route that 500s pass as "mobile-clean" because a blank page never overflows.
-    expect([200, 404], `${route} did not render`).toContain(response?.status())
-    await assertMobileClean(page, route)
+  test(`${route.path} is mobile-clean`, async ({ page }) => {
+    // A gated route is SKIPPED with its reason when the gate is off, never measured on the 404 the
+    // gate serves. `=== 'true'` exactly, matching `lib/flags.ts` — the string "false" is truthy.
+    test.skip(
+      'needs' in route && process.env[route.needs] !== 'true',
+      `${route.path} needs ${'needs' in route ? route.needs : ''}=true; with the gate off this route ` +
+        'is a 404, and asserting mobile-cleanliness on it would measure a page this test does not name'
+    )
+    const response = await page.goto(route.path)
+    // The EXACT status the row declares. The share-link 404 is a designed page (`public-gone`) and
+    // must be mobile-clean like any other, so 404 is legitimate — for the row that says so, and only
+    // for that row. Accepting either everywhere is what let `/signup` be measured as its own 404.
+    expect(response?.status(), `${route.path} did not render as expected`).toBe(route.status)
+    await assertMobileClean(page, route.path)
   })
 }

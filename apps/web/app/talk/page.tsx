@@ -63,6 +63,7 @@ export default function TalkPage() {
       variant="public"
       wide
       brandHref="/"
+      agentFooter
       actions={
         <>
           <FrameLink href="/install">Try the demo</FrameLink>
