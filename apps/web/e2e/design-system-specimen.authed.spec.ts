@@ -359,6 +359,7 @@ test.describe('the design system specimen', () => {
       ['EmptyCard', '.ds-empty[data-state="unbuilt"]'],
       ['ShownOnce', '.ds-once'],
       // design-system-rails · Sprint 5 — four approved states open with a breadcrumb.
+      ['RowGroup', '.ds-rowgroup'],
       ['Crumbs', '.ds-crumbs'],
       ['Crumb', '.ds-crumbs-sep'],
     ]

@@ -28,7 +28,14 @@ test('a project member can inspect the tenant-scoped scenario operating lens', a
 
   const response = await page.goto(`/app/scenarios/${slug}`)
   expect(response?.status()).toBe(200)
-  await expect(page.getByRole('heading', { name: 'Scenarios & breakers', exact: true })).toBeVisible()
+  // ⚠️ `Scenarios & drills` — design-system-rails Story 5.6 renamed the page to the word the
+  // approved rail and the approved state both use. A "breaker" is the mechanism; a "drill" is the
+  // thing you run, and audit §6.4's whole point is that this is a tool rather than a log. The
+  // breakers are still here, still named, one keystroke below.
+  await expect(page.getByRole('heading', { name: 'Scenarios & drills', exact: true })).toBeVisible()
+  // The operating surface moved behind a disclosure so the page opens on its answer. Everything
+  // below is unchanged — opening it is the only new step.
+  await page.locator('main .ds-gaps > summary').click()
   await expect(page.getByRole('cell', { name: SCENARIO_TARGET_KEY, exact: true })).toBeVisible()
   await expect(page.getByText(`${SCENARIO_FIXTURE_KEY} v1`, { exact: true }).first()).toBeVisible()
   await expect(page.getByText(`${SCENARIO_UNDISCLOSED_KEY} v1`, { exact: true }).first()).toBeVisible()

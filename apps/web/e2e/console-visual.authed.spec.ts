@@ -655,7 +655,14 @@ test('every route claiming the design system renders from it', async ({ page }) 
         const first = document.querySelector(
           'main .ds-tile, main .ds-listcard, main .ds-tasklist, main .ds-chart, main .ds-card, ' +
             'main .ds-empty, main .ds-band-empty, main .ds-table, main .ds-timeline, main .ds-field, ' +
-            'main .ds-summary, main .ds-kpis, main .ds-envtable, main .ds-picklist, main .ds-matrix'
+            'main .ds-summary, main .ds-kpis, main .ds-envtable, main .ds-picklist, main .ds-matrix, ' +
+            // ⚠️ `.ds-once` has NO prototype counterpart, and leaving it out understated the chrome
+            // on the one page that opens with it. It is the one-time credential reveal — the most
+            // important thing on `/app/onboarding`, and content by any reading — but Sprint 2 built
+            // it from `references/ux-guidelines.md` rather than from a prototype class, so
+            // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
+            // this list is maintained beside that one rather than derived from it.
+            'main .ds-once'
         )
         return first ? Math.round(first.getBoundingClientRect().top) : null
       })(),

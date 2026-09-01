@@ -4,26 +4,35 @@ import { DismissKeyButton } from './dismiss-key-button'
 import { getActiveConnectorUrl } from '@/lib/connector-tokens'
 import { isConnectorEnabled } from '@/lib/flags'
 import { getSiteUrl } from '@/lib/site-url'
-import { CopyUrlField } from '@/components/landing/CopyUrlField'
 import { STARTER_FEATURE_KEY, STARTER_TARGET_EVENT } from '@/lib/provisioning'
 import { ProductShell } from '@/components/product/ProductShell'
-import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
+import { Callout, Card, Crumb, Crumbs, PageHead, ShownOnce, Step, Steps } from '@/design-system/primitives'
+import { CopyField } from '@/design-system/copy-field'
 
 // multi-tenant-activation · Sprint 2, Story 2.3 — the first-run screen a freshly confirmed
 // signup lands on: the one-time key reveal, a ≤5-line SDK snippet pre-filled with it, and (gated)
 // the MCP connector URL. Everything on this page must be actionable from on-screen steps alone —
 // that's the story's acceptance bar, not just "renders something."
 //
-// `force-dynamic`: every section below reads live per-request state (the onboarding cookie, a
-// DB-backed connector token, the membership gate) — same rationale as app/install/page.tsx and
-// app/page.tsx, never build-time-frozen.
+// ── design-system-rails · Sprint 5, Story 5.6 — reference state `setup-connect` ────────────────
+// It was the last route in `/app` still drawn entirely in inline styles: `font: '700 12px
+// var(--mono)'` step labels, a hand-rolled `<pre>`, `.panel` and `.btn-gold` from the LANDING's
+// stylesheet, and a 34px `.display` heading. Every one of those is a decision made once, on this
+// page, that nothing else shares — which is the condition this epic exists to end.
+//
+// It is now assembled from the same primitives Setup › Connect uses: `PageHead`, `Card`, `Steps` /
+// `Step`, `CopyField`, and `ShownOnce` for the one-time key. **`ShownOnce` is exactly what this
+// page needed and did not have** — it was built in Sprint 4 for the key reveal on Setup › Keys, and
+// the two surfaces now say "this is the only time you will see this" in one voice.
+//
+// ⚠️ It stays `flow-only` in the inventory and is still gated out of the nav. It gets a reference
+// state because a person can REACH it, not because the nav lists it.
 export const dynamic = 'force-dynamic'
 
 // Same URL as app/install/page.tsx (Story 2.2) — verified live against mb's shipped
 // ConnectAgentPanel; the add-custom-connector modal takes no URL param, so the visitor pastes the
-// copied URL themselves. One canonical constant would belong in a shared lib, but install/page.tsx
-// isn't ours to touch this sprint (see this story's file-ownership note) — duplicating a literal
-// URL string is a smaller risk than reaching into a file another agent owns mid-sprint.
+// copied URL themselves.
 const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-custom-connector'
 
 // The snippet fires the SAME feature the provisioner registered for this tenant (Story 2.1 —
@@ -31,12 +40,6 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 // never drift apart. That drift is not cosmetic: lib/tars-query.ts filters events by
 // `feature_id = <featureKey>`, so an event whose featureId doesn't match a registered feature
 // key produces a funnel that renders an honest, permanent zero.
-//
-// This is the "realistic input" lesson from Roadmap/LEARNINGS.md applied ahead of time: the A/B
-// bug in growth-engine-v1 S4 was exactly this shape — a query that silently required a featureId
-// tag the realistic caller had no reason to set. Here the snippet the tenant actually pastes sets
-// it explicitly, so the acceptance ("the funnel page shows it") is true for the pasted snippet,
-// not merely for a hand-tuned one.
 
 export default async function OnboardingPage({ params }: { params: Promise<{ projectSlug: string }> }) {
   const { projectSlug } = await params
@@ -67,126 +70,100 @@ export default async function OnboardingPage({ params }: { params: Promise<{ pro
 
   return (
     <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
-      <main className="wrap" style={{ padding: '56px 0 80px' }}>
-        <p style={{ marginBottom: 24 }}>
-          <a href="/app">&larr; Your projects</a>
-        </p>
+      <main>
+        <Crumbs back={{ href: '/app', label: 'Today' }}>
+          <Crumb>Getting started</Crumb>
+        </Crumbs>
+        <PageHead
+          title={`You're live, ${projectSlug}.`}
+          lede="Three steps stand between here and your first ingested event — copy your key, paste the snippet, watch it land. No CLI, no config file."
+        />
 
-        <h1 className="display" style={{ fontSize: 34, maxWidth: 640 }}>
-          You&apos;re live, {projectSlug}.
-        </h1>
-        <p style={{ margin: '14px 0 36px', color: 'var(--dim)', maxWidth: 600 }}>
-          Three steps stand between here and your first ingested event — copy your key, paste the snippet,
-          watch it land. No CLI, no config file.
-        </p>
+        {/* Step 1 — the key. This is the ONLY render of the plaintext this tenant will ever get.
+            `ShownOnce` is the primitive Sprint 4 built for exactly this on Setup › Keys, so both
+            reveals now say "you will not see this again" in one voice rather than two. */}
+        {plaintextKey ? (
+          <ShownOnce
+            title="Copy this key now — it is not shown again"
+            body="It is on this page for a few more minutes and then never again: only its one-way hash is stored, so this is not a “we’ll email it to you” situation. If it is lost, the only recovery is issuing a new one."
+          >
+            <CopyField value={plaintextKey} label="Copy your API key" />
+            <DismissKeyButton slug={projectSlug} />
+          </ShownOnce>
+        ) : (
+          <Callout>
+            The one-time reveal window has passed, or this is a revisit — nothing was silently hidden, and
+            nothing below is a real key. Issue a new one from{' '}
+            <a href={`/app/setup/keys/${projectSlug}`}>Setup › Keys</a>; it will show once, exactly like this
+            would have.
+          </Callout>
+        )}
 
-        {/* Step 1 — the key. This is the ONLY render of the plaintext this tenant will ever get. */}
-        <div className="panel" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-              STEP 1 · YOUR API KEY
-            </span>
-            {plaintextKey && (
-              <span className="tag" style={{ color: 'var(--red)', borderColor: 'var(--red)' }}>
-                COPY IT NOW
-              </span>
-            )}
-          </div>
-          {plaintextKey ? (
-            <>
-              <p style={{ fontSize: 14, color: 'var(--red)', fontWeight: 700, margin: '0 0 16px' }}>
-                Copy this now. It is visible on this page for a few more minutes and then never again — we
-                store only its one-way hash, so this isn&apos;t a &quot;we&apos;ll email it to you&quot;
-                situation. If it&apos;s lost, the only recovery is issuing a new one. Hit the button below the
-                moment you&apos;ve saved it.
-              </p>
-              <CopyUrlField url={plaintextKey} />
-              <DismissKeyButton slug={projectSlug} />
-            </>
-          ) : (
-            <p style={{ fontSize: 14, color: 'var(--dim)' }}>
-              The one-time reveal window has passed (or this is a revisit) — nothing was silently hidden, and
-              nothing below is a real key. Head to <a href={`/app/keys/${projectSlug}`}>API keys</a> and issue
-              a new one; it will show once, exactly like this would have.
-            </p>
-          )}
-        </div>
-
-        {/* Step 2 — the SDK snippet. ≤5 lines of actual code per the story's acceptance bar: a
-          working import, client construction, and one track() call — nothing decorative. */}
-        <div className="panel" style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-              STEP 2 · PASTE THIS
-            </span>
-          </div>
-          <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Your first event</h2>
-          <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
+        <Card>
+          <span className="ds-label">Your first event</span>
+          <p className="ds-hint">
             Drop this into a scratch script or an existing route. It genuinely fires an event — nothing to
             fill in{plaintextKey ? '' : ' once GROWTH_ENGINE_API_KEY is set'}.
           </p>
-          <pre
-            style={{
-              background: 'var(--roast)',
-              border: '1px solid var(--line)',
-              borderRadius: 8,
-              padding: '14px 16px',
-              font: '500 12.5px var(--mono)',
-              color: 'var(--crema)',
-              overflowX: 'auto',
-            }}
-          >
+          {/* ≤5 lines of actual code, per the story's acceptance bar: a working import, client
+              construction, and one track() call — nothing decorative. */}
+          <pre className="ds-code">
             {`import { createGrowthEngineClient } from '@golden-frijoles/sdk'
 
 const engine = createGrowthEngineClient({ baseUrl: '${siteUrl}', apiKey: ${apiKeyExpr}, userId: 'me' })
 
 await engine.track('${STARTER_TARGET_EVENT}', { featureId: '${STARTER_FEATURE_KEY}' })`}
           </pre>
-        </div>
+        </Card>
 
-        {/* Step 3 — the connector, only when BOTH gates are open (AGENTS rule #3). No flag-off or
-          not-yet-provisioned placeholder section — absence here IS the correct dark-default UI. */}
-        {isConnectorEnabled() && connectorUrl && (
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ font: '700 12px var(--mono)', color: 'var(--gold)', letterSpacing: '.1em' }}>
-                STEP 3 · OPTIONAL — BRING YOUR AGENT
-              </span>
-              <Badge status="live">LIVE</Badge>
-            </div>
-            <h2 style={{ fontSize: 20, margin: '0 0 8px' }}>Paste it into Claude</h2>
-            <p style={{ fontSize: 14, color: 'var(--dim)', margin: '0 0 16px' }}>
-              Your tokenized MCP URL for <b style={{ color: 'var(--crema)' }}>{projectSlug}</b> — read-only,
-              revocable, no deploy required to rotate it.
+        {/* The connector, only when BOTH gates are open (AGENTS rule #3). No flag-off or
+            not-yet-provisioned placeholder section — absence here IS the correct dark-default UI. */}
+        {connectorUrl ? (
+          <Card>
+            <span className="ds-label">Optional — bring your agent</span>
+            <p className="ds-hint">
+              Your tokenized MCP URL for <strong>{projectSlug}</strong> — read-only, revocable, and no deploy
+              required to rotate it.
             </p>
-            <CopyUrlField url={connectorUrl} />
-            <a
-              href={ADD_TO_CLAUDE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-gold"
-              style={{ display: 'inline-block', marginTop: 16, textDecoration: 'none' }}
-            >
-              Add to Claude
-            </a>
-          </div>
-        )}
+            <CopyField value={connectorUrl} label="Copy your connector URL" />
+            <Steps>
+              <Step>
+                <b>Copy the URL above.</b>
+              </Step>
+              <Step note="The button opens Claude’s connector dialog. It cannot be pre-filled from a link, so paste the URL yourself.">
+                <b>Open Claude&apos;s connector settings.</b>
+                <span className="ds-step-action">
+                  {/* ⚠️ The design's `Add to Claude ↗`, and the arrow is an `<Icon>`, not the glyph.
+                      `check-design-drift.mjs` bans `↗` inside `/app`, and epic F1's answer is
+                      explicitly "render it as `<Icon name="external" />`". */}
+                  <a
+                    className="ds-btn ds-btn--primary"
+                    href={ADD_TO_CLAUDE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Add to Claude
+                    <Icon name="external" size={13} />
+                  </a>
+                </span>
+              </Step>
+              <Step>
+                <b>Paste it into the dialog and save.</b> Claude can then read this project&apos;s funnels,
+                features and North Star.
+              </Step>
+            </Steps>
+          </Card>
+        ) : null}
 
-        {/* Closing — where to actually watch the event land, and the way back. */}
-        <p style={{ marginTop: 8, color: 'var(--dim)' }}>
+        <Callout>
           Fired the snippet?{' '}
-          <a href={`/app/funnel/${projectSlug}/${STARTER_FEATURE_KEY}`}>Watch it land on your funnel</a>{' '}
-          <small className="note">
-            — the &quot;{STARTER_FEATURE_KEY}&quot; feature is registered for you at signup so the snippet
-            above lands somewhere with nothing else to set up. If the funnel reads zero after your event
-            lands, that registration didn&apos;t complete: re-send it via features/sync (or register your own
-            feature and swap the key in this URL). We&apos;d rather tell you that than have you stare at a
-            zero wondering which half broke.
-          </small>
-        </p>
-        <p style={{ marginTop: 10 }}>
-          <a href="/app">&larr; Back to your projects</a>
-        </p>
+          <a href={`/app/funnel/${projectSlug}/${STARTER_FEATURE_KEY}`}>Watch it land on your funnel</a> — the{' '}
+          <code>{STARTER_FEATURE_KEY}</code> feature is registered for you at signup, so the snippet above
+          lands somewhere with nothing else to set up. If the funnel reads zero after your event lands, that
+          registration did not complete: re-send it via <code>features/sync</code>, or register your own
+          feature and swap the key in that URL. We would rather tell you that than have you stare at a zero
+          wondering which half broke.
+        </Callout>
       </main>
     </ProductShell>
   )

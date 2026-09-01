@@ -73,6 +73,7 @@ import {
   Pill,
   RailItem,
   Row,
+  RowGroup,
   RowMain,
   RowState,
   ShownOnce,
@@ -562,6 +563,33 @@ export default async function DesignSystemSpecimen({
                 href="#list"
                 columns={4}
               />
+            </ListCard>
+
+            {/* design-system-rails · Sprint 5, Story 5.6 — a row plus something that will not fit on
+                it. The approved `measure-scenarios` row carries a held/failed bar under the drill's
+                name, and `.ds-row-desc` is deliberately one clipped line because that clipping is
+                what holds the feature list's rows at the contract's 71px. The group takes the border
+                so the row inside it does not draw a second one. */}
+            <p className="ds-label">…and a row with evidence under it</p>
+            <ListCard>
+              <RowGroup>
+                <Row>
+                  <RowMain
+                    title="stripe_outage"
+                    description="targets checkout.stripe_enabled · synthetic cohort · production · v1"
+                  />
+                  <RowState state="on" label="Held" detail="Resilience" />
+                  <Col width="meta">
+                    <span className="ds-mono">2026-08-24</span>
+                  </Col>
+                  <Col width="act">
+                    <Tag tone="unclassified">Resilience</Tag>
+                  </Col>
+                </Row>
+                <div className="ds-rowgroup-extra">
+                  <SplitBar held={397} failed={3} unreadable="This drill has never run." />
+                </div>
+              </RowGroup>
             </ListCard>
           </Section>
 

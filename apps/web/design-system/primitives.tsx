@@ -670,6 +670,22 @@ export function Col({
   )
 }
 
+/**
+ * A row plus something that will not fit on it.
+ *
+ * ⚠️ **The approved `measure-scenarios` row is genuinely taller than every other list row**, and
+ * this is what makes that a decision rather than a workaround. It carries a held/failed bar and its
+ * legend under the drill's name — two more lines — and `.ds-row-desc` is deliberately one clipped
+ * line, because that clipping is what holds the feature list at the contract's 71px.
+ *
+ * So the row keeps its four columns and its language, and the extra block sits beneath it inside one
+ * bordered group. The alternative — widening `.ds-row-desc` to accept block content — would have
+ * relaxed the constraint that keeps every other list's rows the same height, to serve one list.
+ */
+export function RowGroup({ children }: { children: ReactNode }) {
+  return <div className="ds-rowgroup">{children}</div>
+}
+
 /** One row of a list card. */
 export function Row({ children }: { children: ReactNode }) {
   return (

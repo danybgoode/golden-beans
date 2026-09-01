@@ -245,7 +245,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'scenarios',
     referenceState: 'measure-scenarios',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
@@ -443,7 +443,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // reach it, not because the nav lists it — and its job (first key, starter feature) is the
     // Connect teaching shape, which is why it renders that language.
     referenceState: 'setup-connect',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,

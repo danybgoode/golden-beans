@@ -3169,3 +3169,29 @@
 .ds .ds-chart-hero-value[data-tone='down'] {
   color: var(--red);
 }
+
+/* ── A row with something that will not fit on it ──────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.6. The approved `measure-scenarios` row carries a
+ * held/failed bar and its legend under the drill's name, which `.ds-row-desc` cannot hold: that
+ * rule is one clipped line on purpose, and the clipping is what keeps the feature list's rows at
+ * the contract's 71px. The group takes the border so the row inside it does not draw a second one.
+ */
+.ds .ds-rowgroup {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ds .ds-rowgroup:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-rowgroup .ds-row {
+  border-bottom: none;
+}
+
+.ds .ds-rowgroup-extra {
+  padding: 0 16px 14px;
+  /* Aligned under the drill's NAME rather than under the whole row: the bar is evidence about the
+     thing in the first column, and starting it at the card's edge would read as belonging to the
+     row as a whole. */
+  max-width: 62ch;
+}

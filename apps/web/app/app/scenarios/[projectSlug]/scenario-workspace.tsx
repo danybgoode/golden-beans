@@ -361,20 +361,18 @@ export function ScenarioWorkspace({
       : []),
   ]
 
+  // ⚠️ **No `<main>` and no `<h1>` here — design-system-rails Story 5.6.** This used to open with
+  // both, and the page it now sits inside owns both: nesting a second `<main>` is invalid, and two
+  // `<h1>`s leave a screen reader with two answers to "what is this page". The eyebrow
+  // ("OPERATE · LEARN · PROTECT") and the descriptive paragraph went with them — the page's own
+  // `PageHead` says what this is, in the approved design's words, once.
+  //
+  // Everything BELOW is untouched. This is the operating surface for a live drill — targets,
+  // definitions, runs, security results, impact snapshots, breaker policies and trips — and the
+  // approved `measure-scenarios` state draws none of it, which is a reason to move it one keystroke
+  // away and not a reason to delete it.
   return (
-    <main>
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">OPERATE · LEARN · PROTECT</p>
-          <h1>Scenarios &amp; breakers</h1>
-          <p>
-            Bounded resilience and defensive-security exercises for <strong>{projectSlug}</strong>. Runtime
-            gates may stay OFF while definitions, stopped runs, immutable impact snapshots and breaker
-            decisions remain inspectable.
-          </p>
-        </div>
-      </header>
-
+    <>
       <div className="stat-grid">
         <StatCard
           label="Verified targets"
@@ -1126,6 +1124,6 @@ export function ScenarioWorkspace({
             )
         }}
       />
-    </main>
+    </>
   )
 }
