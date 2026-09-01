@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
-import { readTenantRecord } from './helpers/authed-fixture'
+import {
+  EXPERIMENT_FIXTURE_KEY,
+  JOURNEY_FIXTURE_KEY,
+  readTenantRecord,
+} from './helpers/authed-fixture'
 import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // ⚠️ IMPORTED, not declared here. These two arrays used to live in this file, and
 // `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
@@ -495,10 +499,21 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
  * Routes this suite deliberately does NOT open, because their URL needs a key or a token it must not
  * invent. Pinned rather than counted — see the assertion at the end of the loop.
  */
+// ⚠️ **The journey and experiment DETAIL routes left this list — design-system-rails S5.**
+//
+// They were here because "their URL needs a key this suite must not invent", and their `coveredBy`
+// strings named `journey-management.spec.ts` and `experiment-governance.spec.ts`. Both are
+// `api`-project specs; `journey-management.spec.ts` does not open a page **at all** (zero `page.`
+// references). So two routes counted toward the coverage number with nothing verifying they render
+// from the design system — a `coveredBy` label that reads as coverage and provides none, which is
+// the exact shape of the last epic's five deferred rows.
+//
+// The premise also stopped being true: Sprint 5's fixture seeds a real journey and a real
+// experiment, so the keys are EXPORTED CONSTANTS rather than something to invent. Both are opened by
+// the loop below like every other route, and the two hand-written claims are deleted rather than
+// replaced by two better-worded ones.
 const EXPECTED_SKIPS = [
   '/app/flags/[projectSlug]/[flagKey]',
-  '/app/experiments/[projectSlug]/[experimentKey]',
-  '/app/journeys/[projectSlug]/[journeyKey]',
   '/app/funnel/[projectSlug]/[featureKey]',
   '/app/impact/[projectSlug]/[featureKey]',
   '/hub/[projectSlug]/epic/[epicSlug]',
@@ -540,10 +555,29 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
   // Reached by clicking, or by a key/token this suite must not invent.
   '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'e2e/feature-tabs.authed.spec.ts (all seven tabs)' },
-  '/app/experiments/[projectSlug]/[experimentKey]': { coveredBy: 'e2e/experiment-governance.spec.ts' },
-  '/app/journeys/[projectSlug]/[journeyKey]': { coveredBy: 'e2e/journey-management.spec.ts' },
-  '/app/funnel/[projectSlug]/[featureKey]': { coveredBy: 'e2e/funnel.spec.ts' },
-  '/app/impact/[projectSlug]/[featureKey]': { coveredBy: 'e2e/impact.spec.ts' },
+  // Reached with the fixture's own seeded keys — not invented, and not a sibling spec's promise.
+  // ⚠️ `?version=1` is required by the experiment detail: without it the route serves the LEGACY
+  // comparison page, which is a different surface with a different design.
+  '/app/experiments/[projectSlug]/[experimentKey]': (slug) =>
+    `/app/experiments/${slug}/${encodeURIComponent(EXPERIMENT_FIXTURE_KEY)}?version=1`,
+  '/app/journeys/[projectSlug]/[journeyKey]': (slug) =>
+    `/app/journeys/${slug}/${encodeURIComponent(JOURNEY_FIXTURE_KEY)}`,
+  // ⚠️ **These named `funnel.spec.ts` and `impact.spec.ts`, which CANNOT see either page.** Both are
+  // `api`-project specs with no session: for a non-demo slug they assert the `/login` bounce and
+  // nothing more (`funnel.spec.ts:63` expects 302/307 and a `location` of `/login`). So two routes
+  // counted toward coverage while the sibling named as covering them could not observe a single
+  // rendered pixel — a `coveredBy` string that reads as coverage and provides none, which is the
+  // exact shape of the last epic's five deferred rows.
+  //
+  // Re-pointed at the authed specs that DO open them and assert design-system markup inside `<main>`.
+  // Found by reading the gate's own console output — "5 covered elsewhere" — and then checking what
+  // each named spec actually asserts, rather than trusting the label (design-system-rails S5).
+  '/app/funnel/[projectSlug]/[featureKey]': {
+    coveredBy: 'e2e/command-center.authed.spec.ts — opens it and measures `.ds-chart-bars .ds-chart-fill`',
+  },
+  '/app/impact/[projectSlug]/[featureKey]': {
+    coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
+  },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
   '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts' },
 }
