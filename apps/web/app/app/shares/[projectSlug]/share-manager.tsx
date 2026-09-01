@@ -61,8 +61,20 @@ function stateOf(share: ShareRow): { state: 'on' | 'off' | 'never'; label: strin
   if (share.revokedAt !== null) {
     return { state: 'off', label: 'Revoked', detail: `revoked ${formatUtc(share.revokedAt)}` }
   }
-  if (share.expiresAt !== null && new Date(share.expiresAt) <= new Date()) {
-    return { state: 'never', label: 'Expired', detail: `expired ${formatUtc(share.expiresAt)}` }
+  if (share.expiresAt !== null) {
+    const at = new Date(share.expiresAt).getTime()
+    // ⚠️ **An UNPARSEABLE expiry is not "Live"** (cross-family review, agy). `new Date('nonsense')
+    // <= new Date()` is `false`, so a malformed timestamp fell through to the live branch and the
+    // page told an owner the link was serving — about a row it could not read. `isCurrentlyUsable`
+    // in `credential-inventory.ts` handles the same case explicitly and errs toward showing access,
+    // which is right here too: we cannot prove the link is dead. What must not happen is claiming
+    // certainty. So it still counts as live and SAYS the expiry could not be read.
+    if (Number.isNaN(at)) {
+      return { state: 'on', label: 'Live', detail: 'its expiry could not be read — check this one' }
+    }
+    if (at <= Date.now()) {
+      return { state: 'never', label: 'Expired', detail: `expired ${formatUtc(share.expiresAt)}` }
+    }
   }
   return { state: 'on', label: 'Live', detail: 'anyone with the URL can open it' }
 }

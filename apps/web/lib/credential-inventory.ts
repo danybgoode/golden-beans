@@ -120,6 +120,27 @@ export const CREDENTIAL_MINT_ORDER: readonly CredentialKind[] = [
   'agent_write',
 ]
 
+/**
+ * Is this raw value one of the four kinds?
+ *
+ * ⚠️ **`Object.hasOwn`, not `in` — cross-family review (agy), Blocking.** A Server Action is a public
+ * HTTP surface and TypeScript types are erased at runtime, so `kind` arrives as `unknown`. The first
+ * version of the revoke action guarded with `kind in REVOKE_AUDIT`, and `in` walks the prototype
+ * chain: `'toString'`, `'valueOf'` and `'constructor'` all pass. The request then fell past every
+ * explicit branch into the last one and wrote `Object.prototype.toString` — a function — into the
+ * audit trail's `action` column.
+ *
+ * It lives HERE rather than beside the action so the fast unit layer can prove it, which is the half
+ * that was missing: the action itself needs a session, a project and a database, so nothing cheap
+ * could ever have caught the guard being dodgeable.
+ *
+ * Derived from `CREDENTIAL_COPY`, whose keys ARE the closed union — so a fifth kind is admitted here
+ * the moment the union grows, and cannot be forgotten.
+ */
+export function isCredentialKind(value: unknown): value is CredentialKind {
+  return typeof value === 'string' && Object.hasOwn(CREDENTIAL_COPY, value)
+}
+
 export function credentialTitle(kind: CredentialKind): string {
   return CREDENTIAL_COPY[kind].title
 }

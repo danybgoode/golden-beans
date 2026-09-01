@@ -6,7 +6,7 @@ import { mintFlagReadKey, revokeFlagReadKey } from '@/lib/flag-read-keys'
 import { mintFlagSyncKey, revokeFlagSyncKey } from '@/lib/flag-sync-keys'
 import { mintAgentWriteKey, revokeAgentWriteKey } from '@/lib/agent-write-keys'
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
-import { AGENT_KEY_EXPIRY_DAYS, type CredentialKind } from '@/lib/credential-inventory'
+import { AGENT_KEY_EXPIRY_DAYS, isCredentialKind, type CredentialKind } from '@/lib/credential-inventory'
 import { recordAudit } from '@/lib/audit'
 
 // design-system-rails · Sprint 4, Story 4.5 — the credential lifecycle, on ONE page.
@@ -230,8 +230,29 @@ export async function revokeCredentialAction(
   const safeSlug = requireString(slug, 'project')
   const safeKeyId = requireString(keyId, 'key id')
   const safeKind = requireString(kind, 'kind')
-  if (!(safeKind in REVOKE_AUDIT)) return { ok: false, error: 'Unknown credential kind.' }
-  const credentialKind = safeKind as CredentialKind
+  // ⚠️ **`Object.hasOwn`, NOT `in` — cross-family review (agy), Blocking.** `in` walks the prototype
+  // chain, so `'toString'`, `'valueOf'` and `'constructor'` all pass a `kind in REVOKE_AUDIT` guard.
+  // A forged request carrying `kind: 'toString'` then fell past all three explicit branches below
+  // into `revokeAgentWriteKey`, and `REVOKE_AUDIT['toString']` resolved to `Object.prototype
+  // .toString` — a FUNCTION, which is not `null`, so the audit branch fired and tried to write a
+  // function into the trail's `action` column.
+  //
+  // Not a privilege escalation: `requireProjectOwnership` has already run, and every revoke below is
+  // scope- and project-constrained, so the worst outcome is an owner revoking one of their own
+  // agent-write keys by the wrong name. It is still a real defect — the record of that revocation is
+  // corrupt or lost, and LEARNINGS is explicit that an audit label chosen by picking an endpoint is
+  // worse than no audit log.
+  //
+  // This is the ONLY lookup in this module keyed on raw request input; every other index
+  // (`CREDENTIAL_MINT_FIELD`, `CONSEQUENCE`) is keyed on a value TypeScript has already narrowed
+  // from a trusted source, and the two allow-lists are arrays checked with `includes`. Swept before
+  // fixing the instance.
+  // The predicate lives in `lib/credential-inventory.ts` so the fast unit layer can prove it cannot
+  // be dodged — this action needs a session, a project and a database, so nothing cheap could reach
+  // the guard where it used to be. `isCredentialKind` also NARROWS, which removes the cast that used
+  // to sit on the next line and hid exactly this hole from the compiler.
+  if (!isCredentialKind(safeKind)) return { ok: false, error: 'Unknown credential kind.' }
+  const credentialKind: CredentialKind = safeKind
 
   const { projectId, userId } = await requireProjectOwnership(safeSlug)
   const revoked =

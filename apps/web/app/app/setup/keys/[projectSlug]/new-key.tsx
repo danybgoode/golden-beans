@@ -1,5 +1,6 @@
 'use client'
 import { useState, useTransition, type FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { CopyField } from '@/design-system/copy-field'
 import { Callout, Field, ShownOnce } from '@/design-system/primitives'
 import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
@@ -51,6 +52,7 @@ const FIELD_LABEL = {
 } as const
 
 export function NewKey({ slug }: { slug: string }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<CredentialKind | null>(null)
   const [label, setLabel] = useState('')
@@ -134,10 +136,11 @@ export function NewKey({ slug }: { slug: string }) {
             onClick={() => {
               setMinted(null)
               reset()
-              // The list is server-rendered and the action revalidated its path, so a reload is what
-              // puts the new row on screen. Local state would be a second source of truth for "what
-              // has access", which is the one thing this page must not have two of.
-              window.location.reload()
+              // ⚠️ `router.refresh()`, not `window.location.reload()` (cross-family review, agy). It
+              // re-runs the SERVER render, which is the property that matters — local state would be
+              // a second source of truth for "what has access", the one thing this page must not
+              // have two of — without flashing the page or diverging from Share links next door.
+              router.refresh()
             }}
           >
             I&apos;ve saved it

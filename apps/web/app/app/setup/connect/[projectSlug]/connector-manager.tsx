@@ -1,5 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CopyField } from '@/design-system/copy-field'
@@ -53,6 +54,7 @@ export function ConnectorManager({
   /** False when a token already exists AND when the state could not be read — see the page. */
   canMint: boolean
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   // The plaintext, held for exactly this render. Never read back from the server afterwards.
@@ -105,10 +107,13 @@ export function ConnectorManager({
         setError('Could not revoke that connector URL. Reload and try again.')
         return
       }
-      // A full reload rather than local state: revoking changes what the page's server-rendered
-      // status sentence says, and two sources of truth for "is there a connector" is how a screen
-      // ends up claiming one exists after it was killed.
-      window.location.reload()
+      // ⚠️ `router.refresh()`, not `window.location.reload()`. This file's previous comment argued
+      // for a full reload because "revoking changes what the page's server-rendered status sentence
+      // says" — true, and `refresh()` re-runs that same server render. What the reload bought beyond
+      // that was a page flash and a third refresh idiom in one section. Swept with the two on Setup ›
+      // Keys rather than left as the instance nobody mentioned (cross-family review, agy).
+      setConfirming(null)
+      router.refresh()
     })
   }
 

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { formatUtc } from '@/lib/format-utc'
@@ -47,6 +48,7 @@ const CONSEQUENCE: Record<CredentialKind, string> = {
 }
 
 export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }) {
+  const router = useRouter()
   const [confirming, setConfirming] = useState<CredentialRow | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -77,10 +79,17 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
         setBusy(false)
         return
       }
-      // A full reload rather than local state: revoking changes what this page's server-rendered
-      // count says, and two sources of truth for "what has access" is how a screen ends up listing a
-      // credential that was killed.
-      window.location.reload()
+      // ⚠️ `router.refresh()`, not `window.location.reload()` (cross-family review, agy). Both
+      // re-run the SERVER render, which is the property the reload was chosen for — this page must
+      // never hold a second source of truth for "what has access". What the reload additionally did
+      // was throw away the whole client tree and flash the page, and it made this surface behave
+      // differently from Share links next door, which already used `refresh()`. One pattern.
+      //
+      // The action calls `revalidatePath` first, so the refresh re-fetches rather than re-rendering
+      // a cached tree.
+      setConfirming(null)
+      setBusy(false)
+      router.refresh()
     })
   }
 
