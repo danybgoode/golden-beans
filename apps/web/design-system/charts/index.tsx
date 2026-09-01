@@ -158,7 +158,12 @@ export function ComparisonBars({ rows, note }: { rows: ComparisonRow[]; note?: R
           const share = ceiling === null ? null : sharePercent(row.observed, ceiling)
           const short = row.needed === null ? null : row.needed - row.observed
           return (
-            <div key={row.series}>
+            // ⚠️ **Keyed by LABEL, not by `series`** (cross-family review, agy). `series` is
+            // `'control' | 'treatment'`, and this component's own docstring says a third variant is
+            // a third ROW — so two treatment arms give React two children with `key="treatment"`,
+            // which is a rendering bug on exactly the case the docstring contemplates. The label is
+            // the variant key and is unique by definition.
+            <div key={row.label}>
               <div className="ds-chart-bar-head">
                 <span className="ds-chart-bar-name">
                   <span className="ds-chart-swatch" data-series={row.series} aria-hidden="true" />
@@ -287,9 +292,12 @@ export function DayColumns({
           />
         ))}
       </div>
+      {/* ⚠️ ONE label when the window is one day (cross-family review, agy). Rendering both ends of a
+          single-day series prints the same date twice at opposite edges of the axis, which reads as
+          a range that happens to start and end together. */}
       <div className="ds-chart-scale">
         <span>{series[0].date}</span>
-        <span>{series[series.length - 1].date}</span>
+        {series.length > 1 ? <span>{series[series.length - 1].date}</span> : null}
       </div>
       {note ? <figcaption className="ds-chart-note">{note}</figcaption> : null}
     </figure>
@@ -425,18 +433,23 @@ export function SmallMultiple({
  * a headline that is simply missing looks exactly like a layout bug (`lib/stat-figures.ts` makes the
  * same argument for stat cards, and this is its headline-sized twin).
  */
-export function HeroFigure({
-  value,
-  absent,
-  delta,
-  sub,
-}: {
-  /** `null` puts the component in its absent state, where `absent` is REQUIRED by the type. */
-  value: string | null
-  absent?: ReactNode
+/**
+ * ⚠️ **A UNION, so the meaningless combination cannot be typed** (cross-family review, agy).
+ *
+ * The docstring above said `absent` was "REQUIRED by the type" and the prop was `absent?: ReactNode`
+ * — a comment asserting a property the code did not have (CODE-QUALITY #3), in the component whose
+ * entire job is that an absence is never rendered as a blank. Omitting it with `value: null` printed
+ * an empty `<p className="ds-chart-hero-absent">`, which is the exact failure this component exists
+ * to prevent, reachable by forgetting one prop.
+ *
+ * `PillProps` in `primitives.tsx` is the same fix for the same class, found by the same reviewer.
+ */
+export type HeroFigureProps = {
   delta?: { label: string; direction: 'up' | 'down' | 'flat' } | null
   sub?: ReactNode
-}) {
+} & ({ value: string; absent?: never } | { value: null; absent: ReactNode })
+
+export function HeroFigure({ value, absent, delta, sub }: HeroFigureProps) {
   return (
     <>
       <div className="ds-chart-hero">
