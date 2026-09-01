@@ -4355,7 +4355,7 @@
  * deleted from both files, and the markup is renamed to match. One definition, in the directory the
  * design lives in.
  *
- * ⚠️ **THIS STORY CHANGES NO PIXEL — with THREE recorded exceptions, all forced and all stated.**
+ * ⚠️ **THIS STORY CHANGES NO PIXEL — with FOUR recorded exceptions, all forced and all stated.**
  * Every value below is carried verbatim from `console.css`'s block except:
  *
  *   1. The switcher and account menus painted `var(--espresso)` on `var(--elevation-overlay)`.
@@ -4368,6 +4368,7 @@
  *      named rather than smuggled.
  *   2. The same substitution in the shell's form-control reset — `--espresso` → `--roast-2`, which
  *      is what `.ds-input` already paints.
+ *   4. The LEGACY chip gains the ellipsis clamp it never had — see the note on the two rules below.
  *   3. The project signal loses `600 10px var(--mono)` in UPPERCASE — and ONLY that. That pairing is
  *      what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, and it was carried as recorded debt
  *      owed to "Sprint 3" that Sprint 3 never paid.
@@ -4433,7 +4434,19 @@
  *
  * Do-not #3's fix is the part that stays: the chip was `600 10px var(--mono)` in UPPERCASE — the
  * pair the contract says appears nowhere — and it is sentence-case Archivo now. That is exception #3
- * in the header above, and it is the ONLY thing about these two elements this story changes. */
+ * in the header above.
+ *
+ * ⚠️ **And a FOURTH change, which a previous version of this comment denied by claiming #3 was the
+ * only one** (fresh reviewer, round 2, Minor). `globals.css` scoped the ellipsis/clamp INSIDE
+ * `__identity` on purpose, so the legacy chip could not truncate; the rule below has no
+ * `.ds-shell-identity` ancestor, so that chip now clamps at `max-width: 42vw` too (537px at 1280,
+ * 151px at 360 — it was unbounded).
+ *
+ * Kept rather than re-scoped, and the reason is this sprint's own change: that branch IS the public
+ * bar now (`ProductShell.tsx`), a single 54px non-wrapping flex row. An unbounded project slug in a
+ * flex row is the exact defect this epic has already paid for twice — the fixture's
+ * `gb-e2e-authed-1787859297750-69508` pushed the identity row past a 360px viewport and took the
+ * account menu with it. A clamp there is correct; claiming it was not a change is not. */
 .ds .ds-shell-signal {
   display: inline-flex;
   align-items: center;

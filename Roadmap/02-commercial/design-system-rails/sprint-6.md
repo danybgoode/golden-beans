@@ -135,9 +135,12 @@ guard I had already mutation-verified:
 **Minors actioned:** `/install`'s three `<h2>`s restored (the port left the outline h1-only);
 `/install` and `/talk` keep the agent-readable paths a `<Footer/>` was the only carrier of;
 `.agent-rail`'s `bottom: 78px` clearance for a deleted tab bar; the dead `CopyUrlField.tsx` and its
-`.copy-url` rules; `/signup` and the share 404 added to the mobile sweep (the new bar has no
+`.copy-url` rules; the share 404 added to the mobile sweep, which really is swept (the new bar has no
 `flex-wrap` and its nav is `flex: none` — the exact shape of two overflow defects this epic already
-paid for); the ds-ancestor guard renamed to what it actually covers, and what it skips is now
+paid for). ⚠️ **`/signup`'s row buys a documented gap, not a swept page**: `run-local-e2e.mjs` sets
+`SIGNUP_ENABLED=false` for the `browser` project, so that row always takes the skip branch — and
+nothing in CI runs this file at all (D5-a). Said plainly, because "added to the sweep" reads as
+coverage gained; the ds-ancestor guard renamed to what it actually covers, and what it skips is now
 printed; three stale comments naming deleted selectors; and a comment claiming a dependency
 `design-coverage.mjs` does not have.
 
@@ -145,6 +148,40 @@ printed; three stale comments naming deleted selectors; and a comment claiming a
 for an epic whose last sprint was still an open PR. Corrected to *merged-pending* — the poster rule's
 one hard line is that it never claims ✅ for unshipped work, and I broke it in the commit that
 updated it.
+
+## Review round 2 — the fixes reviewed with the same suspicion as the code
+
+The repo's rule is that a fix earns no benefit of the doubt, so round 2 attacked round 1's fixes.
+It found **one Major, and it was a hole I opened while closing another.**
+
+- **Major — my scope guard became WEAKER than the one it replaced.** Teaching
+  `system-cascade.test.ts` the `:where(.ds …)` form by checking a PREFIX missed that
+  `splitSelectorList` only splits TOP-LEVEL commas: `:where(.ds .ds-shell, .totally-unscoped) .a .b`
+  arrived as one string starting `:where(.ds `, was declared scoped, and cleared the (0,2,0) floor
+  too — **an entirely unscoped rule passing both guards**. Written plainly it would have been split
+  and flagged; the `:where()` form hid the comma. The head is parsed and every part checked now,
+  recursively. Mutation-verified on three shapes.
+  ⚠️ And the claim that both guards were "taught about it BY NAME rather than loosened" was **true of
+  the floor exemption and false of the scope test** — a pattern *is* the loosening. Corrected.
+- **Minor — nothing pinned the base reset AT (0,0,0).** The floor has no ceiling, so appending the
+  exact broken form (`.ds .ds-shell :where(input)`) left all five tests green: the M1 defect could
+  walk back in through its own exemption's door, with CI green. There is now an assertion that the
+  literal selector is still in the file. Mutation-verified.
+- **Minor — the chip/summary rewrite widened the ellipsis clamp to the legacy chip**, under a comment
+  claiming exception #3 was "the ONLY thing about these two elements this story changes". It is kept
+  (that branch IS the public bar now, and an unbounded slug in a non-wrapping flex row is the defect
+  this epic paid for twice) and recorded as a **fourth** exception. The header said three.
+- **Minor — `.ds-public--hub .ds-pubfoot` matched nothing** once the footer became opt-in, sitting
+  inside the comment warning about selectors that match nothing. Deleted.
+- **Minor — `/signup`'s mobile row buys a documented gap, not a swept page.** Corrected above.
+
+**What round 2 settled** (checked rather than taken on trust, including a chromium probe of the real
+stylesheets in the real link order): the `:where()` specificity fix is genuinely (0,0,0) and all
+three previously-losing rules win again; the `ZERO_SPECIFICITY_BASE` exemption resists four smuggling
+attempts; the green ring's `color-mix` resolves to #405e32 against the landing's #3a5c33 exactly as
+claimed, on both branches, from the product's own tokens; the `/s/[token]` footer violation and the
+`/signup` false-pass were both real and both already closed; and the `<span>`→`<h2>` swap on
+`/install` is pixel-identical.
 
 ## What is deliberately NOT on the design system, with its decay date
 
