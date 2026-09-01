@@ -96,6 +96,32 @@ export async function assertMobileClean(page: Page, label: string) {
        * list is a promise that decays the moment somebody removes the pseudo-element, whereas this
        * reads the same computed style the browser hit-tests against.
        */
+      /**
+       * How big the tap target ACTUALLY is, counting a transparent pseudo-element.
+       *
+       * ⚠️ **This is the half the heuristic was missing, and it was reporting a correct control as a
+       * defect.** Some of this product's controls have ink SMALLER than 44px on purpose — the
+       * approved design's three-state switch is `38 × 21`, a number the visual gate asserts, and the
+       * row menu is a 26px kebab. Growing them to 44 would break the design; leaving them at 26
+       * would break the WCAG 2.5.5 target size. The resolution both use is a transparent `::before`
+       * sized 44 × 44, inset to the element's centre and pulled back by half its own size.
+       *
+       * `getBoundingClientRect()` cannot see that — a pseudo-element has no box in the DOM — so the
+       * scan measured the ink and called a correct control undersized.
+       *
+       * ⚠️ **It RECONSTRUCTS the pseudo's box rather than trusting its declared size**, and three
+       * weaker versions of this check are the reason. A pseudo can declare 44 × 44 and still not be
+       * the target: laid out in normal flow beside the control, or offset off it entirely. The first
+       * version read `width`/`height` alone; the second's two halves disagreed about which case they
+       * excluded and admitted an untransformed pseudo; the third compared `top` to the literal `50%`,
+       * which `getComputedStyle` resolves to used pixels, so it rejected the markup it was written to
+       * accept. **The fourth was mutation-checked**: deleting the `inset` from `.ds-kebab::before`
+       * must turn this red, and it does.
+       *
+       * The property asserted is the one a finger cares about: the pseudo's box covers the element's
+       * centre, and is at least `min` on both axes. Both axes come from the SAME pseudo-element — a
+       * wide `::after` and a tall `::before` are two half-targets, not one whole one.
+       */
       const effectiveSize = (element: Element): { width: number; height: number } => {
         const rect = element.getBoundingClientRect()
         let best = { width: rect.width, height: rect.height }
@@ -106,19 +132,37 @@ export async function assertMobileClean(page: Page, label: string) {
           // Only an element the browser actually hit-tests counts. A `pointer-events: none`
           // decoration is paint, not a target.
           if (style.pointerEvents === 'none') continue
-          // ⚠️ **It must be POSITIONED and CENTRED on its element to be a target at all** (fresh
-          // reviewer, Minor). Reading the declared `width`/`height` alone would let somebody delete
-          // `position: absolute; inset: 50% auto auto 50%; transform: translate(-50%,-50%)` from
-          // `.ds-kebab::before`, leaving a 44px box laid out in normal flow beside a 26px control —
-          // and the sweep would stay green while the real target stayed 26px.
           if (style.position !== 'absolute' && style.position !== 'fixed') continue
-          if (!style.transform.includes('matrix') && style.transform !== 'none') continue
           const width = Number.parseFloat(style.width)
           const height = Number.parseFloat(style.height)
-          if (!Number.isFinite(width) || !Number.isFinite(height)) continue
-          // ⚠️ **Both axes from the SAME pseudo-element.** Taking `Math.max` per axis across both
-          // would let a wide `::after` and a tall `::before` together certify a target that neither
-          // of them provides — two half-targets reported as one whole (fresh reviewer, Minor).
+          const top = Number.parseFloat(style.top)
+          const left = Number.parseFloat(style.left)
+          if (![width, height, top, left].every((value) => Number.isFinite(value))) continue
+
+          // The transform's translation, read off the computed matrix rather than assumed. A centring
+          // `translate(-50%, -50%)` resolves to `matrix(1, 0, 0, 1, -w/2, -h/2)`; `none` means the
+          // box sits at its inset origin, which for a 44px target on a 26px control is beside it.
+          const matrix = /^matrix\(([^)]+)\)$/.exec(style.transform)
+          const parts = matrix === null ? [] : matrix[1].split(',').map((part) => Number.parseFloat(part))
+          const translateX = parts.length === 6 && Number.isFinite(parts[4]) ? parts[4] : 0
+          const translateY = parts.length === 6 && Number.isFinite(parts[5]) ? parts[5] : 0
+
+          // `top`/`left` are resolved against the offset parent's padding box; for these controls the
+          // element IS the offset parent (`position: relative`), so the element's own rect is the
+          // origin. An `::before` on a non-relative parent would measure against something further
+          // up — which is exactly the case this reconstruction is meant to refuse, and it does,
+          // because the box then lands nowhere near the centre.
+          const boxLeft = rect.left + left + translateX
+          const boxTop = rect.top + top + translateY
+          const centreX = rect.left + rect.width / 2
+          const centreY = rect.top + rect.height / 2
+          const coversCentre =
+            boxLeft <= centreX &&
+            boxLeft + width >= centreX &&
+            boxTop <= centreY &&
+            boxTop + height >= centreY
+          if (!coversCentre) continue
+
           if (Math.min(width, height) > Math.min(best.width, best.height)) best = { width, height }
         }
         return best

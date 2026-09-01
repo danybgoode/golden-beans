@@ -49,17 +49,26 @@ import { revokeCredentialAction } from './actions'
  * `scope` is `null` for the two kinds that have none, and the sentence reads correctly either way
  * rather than rendering "for null".
  */
+/**
+ * ⚠️ A `Record` over the CLOSED union, not an `if` chain (fresh reviewer, Nit). The first version was
+ * a chain ending in a bare `return`, which silently hands a fifth kind the agent-write sentence —
+ * and `actions.ts` argues for exactly this shape twelve lines from where it does the same job: *"a
+ * fifth kind is a compile error here, which is what stops one being added with no decision about its
+ * trail."* A credential's destruction notice deserves the same treatment as its audit label.
+ */
+const CONSEQUENCE: Record<CredentialKind, (scope: string | null) => string> = {
+  ingest: () =>
+    'Anything still using this key — the SDK, POST /api/v1/track, a CI job — starts getting 401s on its next request. Events sent with it are refused, not queued.',
+  flag_read: (scope) =>
+    `Whatever reads ${scope === null ? 'that environment’s' : `${scope}’s`} flag snapshot stops being able to. It will serve whatever it last cached, or its own defaults, until you give it a new key.`,
+  flag_sync: (scope) =>
+    `${scope === null ? 'That publisher' : `Catalog publishes from ${scope}`} can no longer register feature definitions. Features already registered keep working and keep serving; only new definitions stop arriving.`,
+  agent_write: () =>
+    'Your agent stops being able to claim, resolve or dismiss tasks over MCP. Reading is unaffected — that is the connector URL, which is a different credential.',
+}
+
 function consequenceOf(kind: CredentialKind, scope: string | null): string {
-  if (kind === 'ingest') {
-    return 'Anything still using this key — the SDK, POST /api/v1/track, a CI job — starts getting 401s on its next request. Events sent with it are refused, not queued.'
-  }
-  if (kind === 'flag_read') {
-    return `Whatever reads ${scope === null ? 'that environment’s' : `${scope}’s`} flag snapshot stops being able to. It will serve whatever it last cached, or its own defaults, until you give it a new key.`
-  }
-  if (kind === 'flag_sync') {
-    return `${scope === null ? 'That publisher' : `Catalog publishes from ${scope}`} can no longer register feature definitions. Features already registered keep working and keep serving; only new definitions stop arriving.`
-  }
-  return 'Your agent stops being able to claim, resolve or dismiss tasks over MCP. Reading is unaffected — that is the connector URL, which is a different credential.'
+  return CONSEQUENCE[kind](scope)
 }
 
 export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }) {
@@ -167,11 +176,7 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
             <Col width="meta">
               {/* "Everywhere" for a kind with no scope, not a blank: "this kind has no environment"
                   is a fact, and a blank cell reads as missing data. */}
-              {row.scope === null ? (
-                <Tag>Everywhere</Tag>
-              ) : (
-                <Tag label={`Scope: ${row.scope}`}>{row.scope}</Tag>
-              )}
+              {row.scope === null ? <Tag>Everywhere</Tag> : <Tag label="where it applies">{row.scope}</Tag>}
               {/* Words in every case. `null` is "No expiry", which is a deliberate state an owner
                   chose (or the kind does not support one) — not missing information. */}
               <Tag>{formatExpiry(row.expiresAt)}</Tag>

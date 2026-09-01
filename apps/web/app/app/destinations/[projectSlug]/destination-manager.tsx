@@ -449,7 +449,7 @@ export function DestinationManager({
                   {row.eventFilter === null ? (
                     <Tag>Everything</Tag>
                   ) : (
-                    <Tag label={`Only ${row.eventFilter}`}>
+                    <Tag label="the only event it sends">
                       <span className="ds-mono">{row.eventFilter}</span>
                     </Tag>
                   )}

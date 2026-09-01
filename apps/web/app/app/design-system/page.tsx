@@ -455,10 +455,10 @@ export default async function DesignSystemSpecimen({
                 />
                 <RowState state="on" label={SPECIMEN_WORDS.on} detail="serving v5" />
                 <Col width="meta">
-                  <Tag tone="kill" label="Type: Kill switch">
+                  <Tag tone="kill" label="Type">
                     Kill switch
                   </Tag>
-                  <Tag tone="risk-high" label="Risk: High risk">
+                  <Tag tone="risk-high" label="Risk">
                     High risk
                   </Tag>
                 </Col>
@@ -473,7 +473,11 @@ export default async function DesignSystemSpecimen({
                   description="API key — used by the storefront."
                 />
                 <Col width="state">
-                  <Pill label>Read the numbers</Pill>
+                  {/* The word a real credential row carries — `credentialPermits('ingest')`. It said "Read the
+                      numbers", which is the PROTOTYPE's phrase for a read key and is used by no kind
+                      in this product: the specimen and the product were captioning the same row
+                      differently (fresh reviewer, Minor). */}
+                  <Pill label>Send events</Pill>
                 </Col>
                 <Col width="meta">
                   <Tag>production</Tag>

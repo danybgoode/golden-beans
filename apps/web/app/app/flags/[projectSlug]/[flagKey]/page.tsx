@@ -205,16 +205,10 @@ export default async function FlagDetailPage({
           }
           actions={
             <>
-              <Tag
-                tone={descriptive.polarity === 'killswitch' ? 'kill' : undefined}
-                label={`Type: ${TYPE_LABEL[descriptive.polarity]}`}
-              >
+              <Tag tone={descriptive.polarity === 'killswitch' ? 'kill' : undefined} label="Type">
                 {TYPE_LABEL[descriptive.polarity]}
               </Tag>
-              <Tag
-                tone={descriptive.criticality === 'high' ? 'risk-high' : undefined}
-                label={`Risk: ${CRITICALITY_LABEL[descriptive.criticality]}`}
-              >
+              <Tag tone={descriptive.criticality === 'high' ? 'risk-high' : undefined} label="Risk">
                 {CRITICALITY_LABEL[descriptive.criticality]}
               </Tag>
             </>

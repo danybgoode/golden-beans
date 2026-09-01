@@ -497,15 +497,20 @@ export function StatLink({
  * A chip that captions a value — a type, a risk, an environment, an expiry.
  *
  * `label` is how "Unclassified Unclassified" stopped being what a screen reader heard on a row
- * carrying both a type tag and a risk tag. It CAPTIONS the value ("Kill switch — Type") rather than
- * replacing it, which is the distinction that made the first attempt — an `aria-label` on the CELL —
+ * carrying both a type tag and a risk tag. It CAPTIONS the value — "Kill switch, Type" — rather than
+ * replacing it, which is the distinction that made the first attempt (an `aria-label` on the CELL)
  * announce a feature key as the word "Feature".
  *
  * ⚠️ **It is hidden TEXT, not an `aria-label`** (cross-family review, agy). This was an `aria-label`
  * on a bare `<span>`, and ARIA does not expose `aria-label` on an element with the `generic` role —
  * so the caption this component exists to add was being dropped by the assistive tech it was added
- * for, silently, while the markup looked correct. Hidden text is exposed everywhere, and it composes
- * with the visible value rather than replacing it.
+ * for, silently, while the markup looked correct. Hidden text is exposed everywhere.
+ *
+ * ⚠️ **`label` is the CAPTION WORD ALONE — "Type", not "Type: Kill switch"** (fresh reviewer,
+ * Minor). While it was an `aria-label` it REPLACED the value, so callers passed the whole phrase;
+ * appended as text it now composes with the value, and those same callers made a screen reader say
+ * "Kill switch — Type: Kill switch". A milder form of the exact defect this prop exists to fix. The
+ * component owns the punctuation so a caller cannot produce a half-formed one.
  */
 export function Tag({
   children,
@@ -519,7 +524,7 @@ export function Tag({
   return (
     <span className={classes('ds-tag', tone && `ds-tag--${tone}`)}>
       {children}
-      {label === undefined ? null : <span className="ds-visually-hidden"> — {label}</span>}
+      {label === undefined ? null : <span className="ds-visually-hidden">, {label}</span>}
     </span>
   )
 }

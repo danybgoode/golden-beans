@@ -385,16 +385,10 @@ export function FlagConsole({
                         detail={presentation.detail(row)}
                       />
                       <Col width="meta">
-                        <Tag
-                          tone={row.polarity === 'killswitch' ? 'kill' : undefined}
-                          label={`Type: ${TYPE_LABEL[row.polarity]}`}
-                        >
+                        <Tag tone={row.polarity === 'killswitch' ? 'kill' : undefined} label="Type">
                           {TYPE_LABEL[row.polarity]}
                         </Tag>
-                        <Tag
-                          tone={row.criticality === 'high' ? 'risk-high' : undefined}
-                          label={`Risk: ${CRITICALITY_LABEL[row.criticality]}`}
-                        >
+                        <Tag tone={row.criticality === 'high' ? 'risk-high' : undefined} label="Risk">
                           {CRITICALITY_LABEL[row.criticality]}
                         </Tag>
                       </Col>

@@ -185,10 +185,22 @@ export function credentialCapability(kind: CredentialKind): string {
  * width, so both cheap assertions passed on a broken page. That is the failure mode this whole epic
  * is named after, produced by a `split()`.
  *
- * These are the approved design's own words for that column (`keysScreen` in
- * `console-prototype.html`): "Read the numbers", "Register features", "Claim & resolve tasks". A
- * phrase per kind, written down, rather than the first clause of a sentence written for somewhere
+ * A phrase per kind, written down, rather than the first clause of a sentence written for somewhere
  * else. The full sentence still renders under the credential's name, where it has room.
+ *
+ * ⚠️ **Two of the four are NOT the approved design's words, and that is stated rather than implied**
+ * (fresh reviewer, Minor — an earlier version of this docstring claimed all of them were). The
+ * prototype's `keysScreen` has four rows carrying three chips: "Read the numbers" (twice — a
+ * storefront read key and a preview read key), "Register features", "Claim & resolve tasks". So:
+ *
+ *   · `flag_sync` and `agent_write` are the design's own words, unchanged.
+ *   · `ingest` has none to borrow — the prototype has no ingest row at all, and "Read the numbers"
+ *     is what its two READ keys say. "Send events" is what this kind actually authorises, and
+ *     captioning it "Read the numbers" would be wrong rather than merely different.
+ *   · `flag_read` is "Read the flags", not the design's "Read the numbers", because in THIS product
+ *     "the numbers" is the funnel and the North Star — which is what an ingest key reads. Two kinds
+ *     captioned "Read the numbers" would say that a snapshot key can read a project's metrics. It
+ *     cannot; it reads one environment's flag snapshot and nothing else.
  */
 export function credentialPermits(kind: CredentialKind): string {
   return CREDENTIAL_COPY[kind].permits
