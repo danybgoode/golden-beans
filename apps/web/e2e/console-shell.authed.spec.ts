@@ -281,6 +281,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     const checked: string[] = []
     const offRail: string[] = []
     const unreachable: string[] = []
+    /** Inventory routes that answered 4xx/5xx — a defect only if the rail offers them. */
+    const notServing: string[] = []
+    /** Routes the rail actually listed while we were on them. */
+    const railOffers: string[] = []
 
     for (const surface of PROJECT_ROUTE_INVENTORY) {
       if (surface.status === 'flow-only') continue
@@ -288,18 +292,25 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
       const response = await page.goto(href)
       // A gate-closed or owner-only surface is not a failure of this test — but it must be RECORDED,
       // not silently skipped, or a suite that reaches nothing reads exactly like a suite that passes.
-      // ⚠️ A 404 on an INVENTORY route is always a defect: the rail lists it, so the rail is
-      // offering a destination that does not serve. This used to be swallowed into `unreachable`,
-      // which was pushed to and never asserted on — adding `notFound()` to `/app/shares` left the
-      // test GREEN while Setup still listed "Share links" pointing at a 404 (fresh reviewer,
-      // round 2, mutation-verified). Recording into an array nothing reads IS silently skipping,
-      // which is the thing this test's own comment says it must not do.
-      expect(
-        response?.status() ?? 0,
-        `${href} is in the inventory and answers ${response?.status()} — the rail offers it as a place to go`
-      ).toBeLessThan(400)
+      // ⚠️ **THE RAIL decides whether a 404 is a defect, not the inventory.** A destination the rail
+      // OFFERS must serve — that is the real invariant, and it is the one that was being swallowed:
+      // `notFound()` on `/app/shares` left this test green while Setup still listed "Share links"
+      // pointing at a 404 (round 2). But asserting it on every inventory row was too strong and
+      // contradicted the comment three lines above: `requireProjectOwnership` legitimately 404s an
+      // owner-only route for a member, and every gated route 404s when its gate is closed — so on a
+      // member fixture, or on a preview where those gates are shut, the assertion killed the run on
+      // a correct build (fresh reviewer, round 3).
+      //
+      // So the status check moved BELOW, into the `listed` branch: if the rail offers it, it must
+      // serve. If the rail does not, a 404 is the surface being correctly absent.
       if (page.url().includes('/login')) {
         unreachable.push(`${surface.routeSegment} (redirected to /login)`)
+        continue
+      }
+      if ((response?.status() ?? 599) >= 400) {
+        // ⚠️ `?? 599`, not `?? 0`: a null response used to satisfy `toBeLessThan(400)` and pass.
+        // A fallback that makes the check succeed is the check not running.
+        notServing.push(`${surface.routeSegment} (${response?.status() ?? 'no response'})`)
         continue
       }
       const rail = page.locator('.console-rail')
@@ -318,6 +329,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
       // different hat.
       const listed = (await rail.locator(`a[href="${href}"]`).count()) > 0
       if (listed) {
+        railOffers.push(surface.routeSegment)
         expect(count, `${href} is in the rail and marks ${count} items — exactly one must be current`).toBe(1)
         expect(
           await marked.getAttribute('href'),
@@ -340,6 +352,33 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // report success (fresh reviewer, round 2). A floor with that much slack is a floor that admits
     // the defect it is placed against. If a gate closes and the number legitimately changes, this
     // fails and the new number gets written down deliberately.
+    //
+    // ⚠️ My first version of this compared `notServing` against `railOffers` — the set of routes whose
+    // rail we SAW. A route that 404s never gets its rail read, so it could never be in that set and
+    // the check could never fail: the "guard that cannot fail" shape, in the assertion written to
+    // close a guard that could not fail. The count below caught the mutation instead, which is how
+    // I noticed.
+    //
+    // The rail for a section lists that section's surfaces, so a 404ing route's own absence is
+    // asked of a SIBLING that serves — a page whose rail would list it if the rail still offered it.
+    for (const entry of notServing) {
+      const segment = entry.split(' ')[0]
+      const surface = PROJECT_ROUTE_INVENTORY.find((row) => row.routeSegment === segment)
+      const sibling = checked.find((other) => {
+        const row = PROJECT_ROUTE_INVENTORY.find((candidate) => candidate.routeSegment === other)
+        return row && surface && row.section === surface.section
+      })
+      // No serving sibling means the whole section is gone; the count assertion below owns that case.
+      if (!sibling) continue
+      await page.goto(`/app/${sibling}/${slug}`)
+      const offered = await page.locator(`.console-rail a[href="/app/${segment}/${slug}"]`).count()
+      expect(
+        offered,
+        `/app/${segment}/${slug} answers ${entry.replace(`${segment} `, '')} and the rail on ` +
+          `/app/${sibling}/${slug} still offers it as a place to go`
+      ).toBe(0)
+    }
+
     // ⚠️ **9 is DERIVED, not chosen.** An exact pin is only safe if the number has a reason, so this
     // recomputes it from the inventory rather than trusting a literal: every surface that is not
     // `flow-only`, minus the three the `legacy-keys`/`legacy-flag-credentials` gates remove while
@@ -363,6 +402,11 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
         `${offRail.join(', ') || 'none'}; unreachable: ${unreachable.join(', ') || 'none'}`
     ).toBe(expected)
 
+    // ⚠️ **Every destination the rail OFFERS must serve.** This is the invariant the round-2 fix was
+    // reaching for, stated where it is actually true: a route that 404s is only a defect if the rail
+    // is sending people to it. Checked against the rails we saw, so a gate-closed surface that
+    // legitimately vanished from both the rail and the routing table passes, and a surface still
+    // listed while 404ing does not.
     // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
     // out of the rail would satisfy the loop by never entering the branch that checks anything.
     expect(
