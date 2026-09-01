@@ -877,6 +877,50 @@ export function EmptyCard(props: {
   )
 }
 
+/**
+ * A summary tile. `value: null` ALWAYS carries the sentence explaining which nothing it is.
+ *
+ * ⚠️ **Promoted here in Sprint 6, from TWO divergent copies.** `/app/scenarios` and `/app/journeys`
+ * each declared a local `Tile` in Sprint 5, and they had already drifted: one took
+ * `value: string | null` with an `absent` sentence, the other `value: number` with a required
+ * `detail`. Making the hub a third copy is how a design system acquires three tiles that look
+ * alike and behave differently (CODE-QUALITY #1). The surviving shape is the superset — the one
+ * that can say *which* nothing it is, which is the property `stat-figures.ts` exists to protect.
+ */
+export function Tile({
+  label,
+  value,
+  absent,
+  detail,
+  tone,
+}: {
+  label: string
+  value: string | null
+  /** Required in practice whenever `value` can be null — the sentence instead of a misleading 0. */
+  absent?: string
+  detail?: ReactNode
+  tone?: 'up' | 'warn'
+}) {
+  return (
+    <div className="ds-tile">
+      <p className="ds-tile-label">{label}</p>
+      {value === null ? (
+        <p className="ds-tile-absent">{absent}</p>
+      ) : (
+        <p className="ds-tile-value" data-tone={tone}>
+          {value}
+        </p>
+      )}
+      {detail ? <p className="ds-tile-detail">{detail}</p> : null}
+    </div>
+  )
+}
+
+/** The tile row. Four across on a wide screen, wrapping below it. */
+export function Tiles({ children }: { children: ReactNode }) {
+  return <div className="ds-tiles">{children}</div>
+}
+
 /** A padded card: the list card's surface, holding prose and fields instead of rows. */
 export function Card({ children }: { children: ReactNode }) {
   return <div className="ds-card">{children}</div>

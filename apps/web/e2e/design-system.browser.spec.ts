@@ -65,8 +65,12 @@ test('the auth rail is branded, keyboard-visible, and mobile-clean', async ({ pa
   const response = await page.goto('/login')
   expect(response?.status()).toBe(200)
 
-  await expect(page.locator('.auth-shell__card')).toBeVisible()
-  await expect(page.locator('.brand-lockup')).toBeVisible()
+  // ⚠️ `.ds-doorcard` / `.ds-brand`, not `.auth-shell__card` / `.brand-lockup` —
+  // design-system-rails Story 6.2. `/login` renders the approved `door-login` state from
+  // `design-system/`, and `.auth-shell`'s rules were deleted in Story 6.4. The assertion is the
+  // same one, against the markup that now exists.
+  await expect(page.locator('.ds-doorcard')).toBeVisible()
+  await expect(page.locator('.ds-brand')).toBeVisible()
   const email = page.getByLabel('Email')
   await email.focus()
   expect(await email.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none')

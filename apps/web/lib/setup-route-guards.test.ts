@@ -470,16 +470,30 @@ test('the legacy header links Connect to /install, never to a console-gated rout
     'utf8'
   )
   const legacyStart = shell.indexOf('header === null ? (')
-  // ⚠️ Anchored on NEWLINE + eight spaces, not on a bare six-space `) : (`. The first version used
-  // `indexOf('      ) : (')`, which is a substring match — and the nested project-signal ternary
-  // closes with sixteen spaces then `) : (`, which CONTAINS that needle at column 11. So the slice
-  // stopped ten lines early and silently covered two-thirds of the branch, while both assertions
-  // still passed because the `/install` href happens to sit inside the covered part.
+  // ⚠️ **The end of the branch is found by BALANCING PARENTHESES, not by matching indentation.**
   //
-  // Undetected mutation it allowed: put a gated href in the uncovered tail (the "Engine ready"
-  // span) and this guard slices it away and stays green — the one thing it exists to prevent.
-  // (Fresh reviewer, PR #123.)
-  const legacyEnd = shell.indexOf('\n        ) : (', legacyStart)
+  // Two versions of this line have now been wrong, in opposite directions. The first used
+  // `indexOf('      ) : (')` — a substring match that the nested project-signal ternary's own
+  // sixteen-space `) : (` satisfied, so the slice stopped ten lines early and silently covered
+  // two-thirds of the branch while both assertions still passed. The fix anchored on a newline plus
+  // exactly eight spaces, which made the guard depend on how deeply this JSX happens to be
+  // indented — and design-system-rails Story 6.4 added one wrapper element to the shell, moved
+  // every line two columns right, and turned a correct guard red for a reason that has nothing to
+  // do with what it guards.
+  //
+  // Depth counting cannot be fooled by either: it finds the `)` that actually closes the `(` this
+  // branch opened, wherever it sits and whatever surrounds it.
+  const legacyEnd = (() => {
+    let depth = 0
+    for (let i = shell.indexOf('(', legacyStart); i < shell.length; i += 1) {
+      if (shell[i] === '(') depth += 1
+      else if (shell[i] === ')') {
+        depth -= 1
+        if (depth === 0) return i
+      }
+    }
+    return -1
+  })()
   assert.ok(legacyStart >= 0 && legacyEnd > legacyStart, 'the legacy branch is not where this expects')
   // The slice must reach the END of the branch, not stop at a nested ternary. `Agent notes` is the
   // last link in it, so its presence proves coverage rather than assuming it — a coverage guard

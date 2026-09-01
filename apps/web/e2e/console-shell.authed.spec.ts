@@ -146,7 +146,11 @@ test.describe('with CONSOLE_SHELL_ENABLED off', () => {
 
     // Gone, in the ONE state where they used to render: signed in, gate off.
     await expect(page.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0)
-    await expect(page.locator('.product-shell__sections')).toHaveCount(0)
+    // ⚠️ The `.product-shell__sections` assertion that stood here is DELETED, not renamed
+    // (design-system-rails Story 6.4). Story 3.5 removed the disclosure AND its markup, so nothing
+    // has rendered that class since — the assertion has been `toHaveCount(0)` by construction for
+    // three sprints, which is this epic's own definition of a guard that cannot fail. The `Home`
+    // line above is the one that can: it names a LINK, and a link can come back.
 
     // ...and the logo still goes to /app, which is why deleting `Home` lost a link and not a route.
     await expect(page.locator('.brand-lockup')).toHaveAttribute('href', '/app')
@@ -155,9 +159,9 @@ test.describe('with CONSOLE_SHELL_ENABLED off', () => {
   test('none of the new console chrome exists while the gate is off', async ({ page }) => {
     await page.goto('/app')
     // The things the console adds. All absent, or the gate is not a gate.
-    await expect(page.locator('.product-shell__tabs')).toHaveCount(0)
+    await expect(page.locator('.ds-shell-tabs')).toHaveCount(0)
     await expect(page.locator('.console-rail')).toHaveCount(0)
-    await expect(page.locator('.product-shell__account')).toHaveCount(0)
+    await expect(page.locator('.ds-shell-account')).toHaveCount(0)
     // ⚠️ `.cmdk` is FOURTH, added in Sprint 3. Until now `CommandPalette` returned `null` when
     // closed, so "⌘K does nothing" was the whole of its gate-off contract and there was nothing to
     // see. It renders a visible trigger unconditionally now, mounted inside the console branch — so
@@ -192,7 +196,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
   test('the header shows the four destinations and none of the legacy links', async ({ page }) => {
     await page.goto('/app')
 
-    const tabs = page.locator('.product-shell__tabs a')
+    const tabs = page.locator('.ds-shell-tabs a')
     // The tenant the fixture provisions is an OWNER of a fresh project, so on a local run with every
     // gate open it entitles all four. Asserted by NAME rather than by count: a count passes when the
     // wrong four render.
@@ -209,13 +213,14 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     for (const gone of ['Home', 'Connect', 'Agent notes']) {
       await expect(page.getByRole('link', { name: gone, exact: true })).toHaveCount(0)
     }
-    await expect(page.locator('.product-shell__sections')).toHaveCount(0)
+    // Deleted for the reason given on the gate-off half of this file: the class has not existed
+    // since Story 3.5, so asserting its absence asserted nothing.
   })
 
   test('exactly one tab is marked current, and it is the one for the page you are on', async ({ page }) => {
     await page.goto('/app')
     // /app declares `section="home"`, which marks the Today tab (A11 — they are one destination).
-    const current = page.locator('.product-shell__tabs a[aria-current="page"]')
+    const current = page.locator('.ds-shell-tabs a[aria-current="page"]')
     await expect(current).toHaveCount(1)
     await expect(current).toHaveText('Today')
 
@@ -223,7 +228,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // permanent redirect. A redirect would still land here, but asserting a tab on a URL that is not
     // the destination is asserting the redirect rather than the shell.
     await page.goto(`/app/setup/keys/${tenantSlug()}`)
-    const onSetup = page.locator('.product-shell__tabs a[aria-current="page"]')
+    const onSetup = page.locator('.ds-shell-tabs a[aria-current="page"]')
     await expect(onSetup).toHaveCount(1)
     await expect(onSetup).toHaveText('Setup')
   })
@@ -559,7 +564,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // satisfied "the palette opens on ⌘K" perfectly well, which is why that assertion did not
     // notice the missing button.
     await page.goto('/app')
-    const trigger = page.locator('.product-shell__header .cmdk')
+    const trigger = page.locator('.ds-shell-header .cmdk')
     await expect(trigger).toBeVisible()
     await expect(trigger).toContainText('⌘K')
 
@@ -794,7 +799,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await page.keyboard.press('ArrowDown')
     await page.keyboard.press('ArrowDown')
     await expect(page.locator('.command-palette')).toBeVisible()
-    await expect(page.locator('.product-shell__tabs')).toBeVisible()
+    await expect(page.locator('.ds-shell-tabs')).toBeVisible()
   })
 
   test('Esc closes the palette and leaves the page behind it', async ({ page }) => {
@@ -810,7 +815,7 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
 
   test('the account menu holds the sign-out, and /app no longer renders a second one', async ({ page }) => {
     await page.goto('/app')
-    const account = page.locator('.product-shell__account')
+    const account = page.locator('.ds-shell-account')
     await expect(account).toHaveCount(1)
 
     // ⚠️ The disclosure is CLOSED on load, so the button inside it is hidden to the accessibility

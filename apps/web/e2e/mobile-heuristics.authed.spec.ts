@@ -71,7 +71,7 @@ for (const target of AUTHED_MOBILE_ROUTES) {
     expect(response?.status(), `${path} did not render`).toBe(200)
     await expect(page, `${path} redirected to login instead of rendering itself`).not.toHaveURL(/\/login/)
     await expect(
-      page.locator('.product-shell'),
+      page.locator('.ds-shell'),
       `${path} did not render the signed-in product shell`
     ).toBeVisible()
 

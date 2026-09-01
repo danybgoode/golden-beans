@@ -61,8 +61,14 @@ export function ConsoleRail({
 }) {
   if (links.length === 0 && top === undefined) return null
 
+  // ⚠️ TWO class names, deliberately — design-system-rails Story 6.4. `console-rail` is what
+  // `console.css` still paints it with; `ds-rail-slot` is what the design system's shell LAYOUT
+  // matches on, because `system.css` may only carry `ds-`-prefixed selectors (epic D3) and
+  // `check-design-drift.mjs` enforces that. Renaming the component's own class instead would
+  // have touched fifteen `console.css` rules and three specs in the sprint that is already
+  // deleting a stylesheet.
   return (
-    <nav className="console-rail" aria-label="Section">
+    <nav className="console-rail ds-rail-slot" aria-label="Section">
       {top}
       {label !== undefined && <span className="rail-label">{label}</span>}
       <ul>

@@ -3195,3 +3195,1437 @@
      row as a whole. */
   max-width: 62ch;
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════════════════════
+ * SEAM B — the doors, the public frame and the hub.
+ * design-system-rails · Sprint 6, Stories 6.1-6.3. Ported from `reference.css`, which is generated
+ * verbatim from the approved prototype (batch 4, approved 2026-08-29).
+ *
+ * Three transformations are applied on the way in, and all three are forced by rules this repo
+ * already had rather than chosen here:
+ *
+ *   1. `.door` becomes `.ds-door`, and so on — epic **D3**, the namespace.
+ *   2. The prototype's `rgb(r g b / a%)` literals become `color-mix(… var(--token) …)`. A raw
+ *      channel triple is a `literal-color` violation in `check-design-drift.mjs`, and the point of
+ *      the rule is that a tint must stay attached to the token it is a tint OF.
+ *   3. `.sharehead .ro`'s `font: 600 10.5px/1 var(--mono)` is expanded into its four longhands.
+ *      The `font:` shorthand ALSO resets family, style and variant, so an override that restates
+ *      one of them silently inherits the rest — which is the trap Story 1.3's guard rule exists to
+ *      catch, and it fires on this file.
+ *
+ * ⚠️ `.doorlayer` has NO counterpart here. In the prototype it is a `position: fixed` overlay that
+ * covers the console, because one document has to be six screens. In the product each door IS the
+ * document, so the ground goes on the frame itself. Porting the overlay would have fixed a
+ * scrolling page inside a viewport-height box.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── The brand, in every frame ──────────────────────────────────────────────────────────────── */
+.ds .ds-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--crema);
+  flex: none;
+}
+
+.ds .ds-brand b {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── The door frame — one centred column, no nav at all ─────────────────────────────────────── */
+.ds .ds-door {
+  min-height: 100vh;
+  background: var(--roast);
+  color: var(--crema);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px 80px;
+}
+
+.ds .ds-doorcard {
+  width: 100%;
+  max-width: 396px;
+}
+
+.ds .ds-doorbrand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 30px;
+}
+
+.ds .ds-doorcard h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 7px;
+}
+
+.ds .ds-doorlede {
+  font-size: 13.5px;
+  color: var(--dim);
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+
+.ds .ds-doorform {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* The door reuses `Field`, `.ds-label` and `.ds-input` rather than declaring a second field
+ * primitive — the approved door differs from the console's field in exactly two ways, so those two
+ * are stated as overrides and everything else (the reserved error line, the focus ring, the
+ * placeholder ink) is inherited. A parallel `.ds-doorform label` block would have been a second
+ * definition of a control the system already owns, which is the drift this directory exists to end.
+ */
+.ds .ds-doorform .ds-field {
+  margin-bottom: 0;
+}
+
+/* Sentence case, not the console's uppercase micro-label. A door is read by somebody who has not
+ * used the product; "EMAIL" in 11px letter-spaced caps is console vocabulary. */
+.ds .ds-doorform .ds-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+
+.ds .ds-doorform .ds-input {
+  padding: 11px 13px;
+  font-size: 14px;
+  transition:
+    border-color var(--t),
+    background var(--t);
+}
+
+.ds .ds-doorform .ds-input:focus {
+  background: var(--card);
+}
+
+.ds .ds-doorform .ds-input[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.ds .ds-doorform .ds-btn {
+  width: 100%;
+  justify-content: center;
+  height: 42px;
+}
+
+/* The error is ON THE FIELD and says what to do. It deliberately does not say whether the email is
+ * registered — that would be a way to test which of your customers uses this product.
+ *
+ * ⚠️ This extends `.ds-field-error` rather than declaring the prototype's separate `.fielderr`.
+ * The system already owns an error slot, and that slot's whole reason for existing is the reserved
+ * height that stops a message shoving the submit button as a cursor travels towards it. A second
+ * error element beside it would have re-introduced exactly that reflow on the one form in the
+ * product where a mistyped password is the NORMAL path.
+ *
+ * The door's message is two or three lines, not one, so the console's single-line metrics are
+ * relaxed here — and the pip is drawn by the slot rather than by a span the caller must remember. */
+.ds .ds-doorform .ds-field-error {
+  line-height: 1.5;
+  min-height: 19px;
+  padding-left: 14px;
+  position: relative;
+}
+
+.ds .ds-doorform .ds-field-error[role='alert']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.ds .ds-doorfoot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--dim-2);
+  text-align: center;
+}
+
+.ds .ds-doorfoot a,
+.ds .ds-doorfoot button {
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.ds .ds-doornote {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--gold);
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+
+.ds .ds-doornote b {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+/* ── The public frame — a slim bar, and the actions a stranger may take ─────────────────────── */
+.ds .ds-public {
+  min-height: 100vh;
+  background: var(--roast);
+  color: var(--crema);
+}
+
+.ds .ds-pubbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 54px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--roast-2);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ds .ds-pubbar-spacer {
+  flex: 1;
+}
+
+.ds .ds-pubbar-scope {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--dim-2);
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds .ds-pubwrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 42px 24px 90px;
+}
+
+.ds .ds-pubwrap--wide {
+  max-width: 1080px;
+}
+
+.ds .ds-pubwrap h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.14;
+  margin-bottom: 10px;
+  text-wrap: balance;
+}
+
+.ds .ds-lede {
+  font-size: 15px;
+  color: var(--dim);
+  max-width: 62ch;
+  line-height: 1.6;
+  margin-bottom: 26px;
+}
+
+/* ── Tier 2, for the hub only (DD2: the hub is the console's PEER, not a fifth section) ─────── */
+.ds .ds-pubnav {
+  display: flex;
+  gap: 2px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--roast-2);
+  overflow-x: auto;
+}
+
+.ds .ds-pubnav a {
+  padding: 11px 14px 9px;
+  font-size: 13px;
+  color: var(--dim);
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.ds .ds-pubnav a:hover {
+  color: var(--crema);
+}
+
+.ds .ds-pubnav a[aria-current='page'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+}
+
+/* The hub is a wider read than a shared report: it draws a build-order track and a destination
+   grid, neither of which fits an 820px measure. */
+.ds .ds-public--hub .ds-pubwrap {
+  max-width: 1080px;
+}
+
+/* ── /install's demo banner ─────────────────────────────────────────────────────────────────
+ * `/install` serves the DEMO project's connector token, and that is correct (AGENTS rule #2). The
+ * defect it once caused was a signed-in operator following a link here and copying somebody else's
+ * URL, so this page's job is to be UNMISTAKABLY the demo.
+ *
+ * Same recipe as `.ds-agentline` — one blue-notice derivation in this file, not two. The prototype
+ * writes `rgb(109 179 232 / 7%)` over a hand-picked `#2f5570`; two hand-derived blues for one
+ * device is the drift this directory exists to end, and the guard bans the literal anyway. */
+.ds .ds-demobar {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 13px 16px;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blue) 32%, var(--roast));
+  font-size: 13.5px;
+  color: var(--dim);
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+
+.ds .ds-demobar-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex: none;
+  margin-top: 6px;
+}
+
+.ds .ds-demobar b {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+.ds .ds-demobar-go {
+  margin-left: auto;
+  flex: none;
+}
+
+/* ── The 404 — ONE page for unknown, malformed, expired and revoked alike ────────────────────
+ * Finding F2. `app/s/[token]/page.tsx` calls `notFound()` for all four, so the page cannot tell an
+ * attacker which one a token is. There is deliberately no expired state; do not add one to satisfy
+ * a doc. */
+.ds .ds-gone {
+  max-width: 520px;
+  margin: 96px auto 0;
+  text-align: center;
+}
+
+.ds .ds-gone-glyph {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 22px;
+  border-radius: 16px;
+  border: 1px dashed var(--line);
+  display: grid;
+  place-items: center;
+  background: var(--roast-2);
+  color: var(--dim-2);
+}
+
+.ds .ds-gone h1 {
+  font-size: 23px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  letter-spacing: -0.015em;
+}
+
+.ds .ds-gone p {
+  font-size: 14px;
+  color: var(--dim);
+  line-height: 1.62;
+  margin-bottom: 14px;
+}
+
+.ds .ds-gone-quiet {
+  color: var(--dim-2);
+  font-size: 13px;
+}
+
+.ds .ds-gone-acts {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* ── A shared report, read by somebody with no account ──────────────────────────────────────── */
+.ds .ds-sharehead {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  margin-bottom: 26px;
+}
+
+.ds .ds-sharehead-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-sharehead-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.ds .ds-sharehead-note {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  line-height: 1.5;
+}
+
+/* ⚠️ TWO transformations, and the second is the interesting one.
+ *
+ * The prototype writes `font: 600 10.5px/1 var(--mono)`, which this file's own guard rule refuses:
+ * the shorthand also resets style and variant, so a later override of one longhand silently
+ * inherits the rest.
+ *
+ * Expanding it exposes the second problem — uppercase AND mono is the pair `CONSOLE-CONTRACT.md`'s
+ * Do-not #3 forbids outright, and `vocabulary.test.ts` caught this rule the moment it landed.
+ * Answered the way F1's banned glyph was and the way Story 5.2 answered `.ds-band-who`: take the
+ * permitted route rather than record an exemption. An uppercase micro-label in this system is
+ * 10.5 / 600 Archivo at 0.09em, and it is now the third rule to say so. */
+.ds .ds-sharehead-ro {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+}
+
+/* ── /talk — one job, one control ───────────────────────────────────────────────────────────── */
+.ds .ds-talkgrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+  margin-top: 8px;
+}
+
+@media (min-width: 820px) {
+  .ds .ds-talkgrid {
+    grid-template-columns: 1fr 340px;
+  }
+}
+
+/* A third-party embed cannot be made to match the design system, so it is not pretended into one:
+   it gets a bordered slot that says "this is somebody else's frame". Styling around an iframe until
+   it almost matches is worse than admitting the seam. */
+.ds .ds-talkslot {
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  background: var(--roast-2);
+  min-height: 340px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ds .ds-talkslot iframe {
+  display: block;
+  width: 100%;
+  min-height: 640px;
+  border: 0;
+}
+
+.ds .ds-talkaside {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ds .ds-talkaside .ds-talkitem {
+  padding: 15px 17px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+}
+
+.ds .ds-talkitem b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.ds .ds-talkitem span {
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+
+/* ── The hub — a breadcrumb row, the build-order track, epics, sprints, destinations ─────────── */
+.ds .ds-crumbrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-bottom: 14px;
+}
+
+.ds .ds-crumbrow a {
+  color: var(--gold);
+  font-size: 12.5px;
+}
+
+.ds .ds-crumbrow a:hover {
+  color: var(--gold-hot);
+}
+
+.ds .ds-crumbrow-sep {
+  color: var(--line);
+}
+
+/* One sequence, not a priority score. Twenty-six nodes side by side would be a barcode, so the
+   track carries the SHAPE and the list below carries the names. */
+.ds .ds-track {
+  display: flex;
+  gap: 2px;
+  height: 34px;
+  margin: 4px 0 10px;
+}
+
+.ds .ds-track i {
+  flex: 1;
+  border-radius: 2px;
+  position: relative;
+  min-width: 3px;
+}
+
+.ds .ds-track i[data-state='shipped'] {
+  background: var(--gold-deep);
+}
+
+.ds .ds-track i[data-state='building'] {
+  background: var(--gold-hot);
+}
+
+.ds .ds-track i[data-state='queued'] {
+  background: var(--card-3);
+  border: 1px dashed var(--line);
+}
+
+.ds .ds-trackkey {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.ds .ds-trackkey span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ds .ds-trackkey i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.ds .ds-trackkey i[data-state='shipped'] {
+  background: var(--gold-deep);
+}
+
+.ds .ds-trackkey i[data-state='building'] {
+  background: var(--gold-hot);
+}
+
+.ds .ds-trackkey i[data-state='queued'] {
+  background: var(--card-3);
+  border: 1px dashed var(--line);
+}
+
+.ds .ds-trackkey b {
+  color: var(--dim);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.ds .ds-epic {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--crema);
+}
+
+.ds .ds-epic:last-child {
+  border-bottom: none;
+}
+
+.ds a.ds-epic:hover {
+  background: var(--card);
+}
+
+.ds .ds-epic-ord {
+  width: 26px;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim-2);
+  text-align: right;
+}
+
+.ds .ds-epic-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-epic-name b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ds .ds-epic-name span {
+  display: block;
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 2px;
+}
+
+.ds .ds-epic-state {
+  width: 132px;
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ds .ds-sprints {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line-soft);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.ds .ds-sprintrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px;
+  background: var(--roast-2);
+  font-size: 13.5px;
+}
+
+.ds .ds-sprintrow-n {
+  font-family: var(--mono);
+  color: var(--dim-2);
+  width: 26px;
+  flex: none;
+}
+
+.ds .ds-sprintrow-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-sprintrow-bar {
+  width: 104px;
+  flex: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--roast);
+  overflow: hidden;
+}
+
+.ds .ds-sprintrow-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  border-radius: 3px;
+}
+
+.ds .ds-sprintrow-count {
+  width: 74px;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  text-align: right;
+}
+
+.ds .ds-dests {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.ds .ds-dest {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 17px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+}
+
+.ds .ds-dest[data-status='lit'] {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 7%, transparent), transparent 55%),
+    var(--roast-2);
+}
+
+.ds .ds-dest[data-status='partial'] {
+  border-color: var(--gold-deep);
+}
+
+.ds .ds-dest[data-status='coming'] {
+  border-style: dashed;
+}
+
+.ds .ds-dest-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ds .ds-dest-head h3 {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Three STRENGTHS of one colour, not three colours (DD4). Lit / partly lit / on the way is a
+   sequence — how far along — and a sequence is magnitude. Three hues would say these are three
+   different kinds of thing. The lamp always carries its word beside it, never colour alone. */
+.ds .ds-dest-lamp {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+}
+
+.ds .ds-dest[data-status='lit'] .ds-dest-lamp {
+  color: var(--roast);
+  background: var(--gold-hot);
+  border-color: var(--gold-hot);
+}
+
+.ds .ds-dest[data-status='partial'] .ds-dest-lamp {
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 15%, transparent);
+  border-color: var(--gold-deep);
+}
+
+.ds .ds-dest[data-status='coming'] .ds-dest-lamp {
+  color: var(--dim-2);
+  background: none;
+  border-color: var(--line);
+  border-style: dashed;
+}
+
+.ds .ds-dest-why {
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.5;
+}
+
+.ds .ds-dest-lights {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.ds .ds-dest-lights li {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.ds .ds-dest-lights li .ds-dest-tick {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--dim-2);
+}
+
+.ds .ds-dest-lights li[data-shipped='true'] {
+  color: var(--dim);
+}
+
+.ds .ds-dest-lights li[data-shipped='true'] .ds-dest-tick {
+  color: var(--green);
+}
+
+/* The lamp's word, spelled out. Same Archivo micro-label as `.ds-sharehead-ro` above, and for the
+   same reason — the prototype's mono here is the pair Do-not #3 forbids. */
+.ds .ds-dest-status {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+}
+
+/* Ideas that exist as seeds and have never been bet on. Deliberately hazy: writing them down is
+   cheap, and pretending they are planned is the expensive part. */
+.ds .ds-haze {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px dashed var(--line);
+  opacity: 0.82;
+}
+
+.ds .ds-haze h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ds .ds-haze > p {
+  font-size: 13px;
+  color: var(--dim-2);
+  margin-bottom: 14px;
+  max-width: 66ch;
+}
+
+.ds .ds-hazelist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ds .ds-hazeitem {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim-2);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+  background: var(--roast-2);
+}
+
+/* ── Prose, and the stamp that says where it came from ──────────────────────────────────────── */
+.ds .ds-doc {
+  max-width: 70ch;
+}
+
+.ds .ds-doc h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 26px 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.ds .ds-doc h2:first-child {
+  margin-top: 0;
+}
+
+.ds .ds-doc p {
+  font-size: 14px;
+  color: var(--dim);
+  line-height: 1.68;
+  margin-bottom: 11px;
+}
+
+.ds .ds-doc p strong,
+.ds .ds-doc b {
+  color: var(--crema);
+  font-weight: 600;
+}
+
+.ds .ds-doc ul {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 14px;
+  list-style: none;
+  padding: 0;
+}
+
+.ds .ds-doc ul li {
+  font-size: 13.5px;
+  color: var(--dim);
+  padding-left: 17px;
+  position: relative;
+  line-height: 1.55;
+}
+
+/* An em dash, not a bullet glyph: `check-design-drift.mjs` reads `content:` strings, and a
+   pictograph in one is still a character in a file the guard sweeps. */
+.ds .ds-doc ul li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-deep);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* A report that cannot tell you how stale it is, is a screenshot. */
+.ds .ds-prov {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--dim-2);
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ds .ds-prov b {
+  color: var(--dim);
+  font-weight: 500;
+  font-family: var(--mono);
+}
+
+.ds .ds-prov-sep {
+  color: var(--line);
+}
+
+/* ── A block of code a reader is meant to copy into an editor ────────────────────────────────
+ * `/install`'s SDK snippet. Not `.ds-copyrow code`, which is one credential on a wrapping line
+ * with a button beside it; this is many lines that must keep their own line breaks and indentation,
+ * so it scrolls inside its own box rather than wrapping (Do-not #6 — the PAGE never scrolls
+ * sideways, a wide thing scrolls inside its container). */
+.ds .ds-codeblock {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  color: var(--dim);
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ── The freshness stamp — how stale is what you are reading ─────────────────────────────────
+ * A tone plus a DOT plus the words. Never colour alone (DD4): "possibly stale" is written out for
+ * the stale case, and the other three read their own label from `hub-freshness.ts`. */
+.ds .ds-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ds .ds-freshness-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--dim-2);
+}
+
+.ds .ds-freshness[data-freshness-tone='fresh'] .ds-freshness-dot {
+  background: var(--green);
+}
+
+.ds .ds-freshness[data-freshness-tone='recent'] .ds-freshness-dot {
+  background: var(--gold);
+}
+
+.ds .ds-freshness[data-freshness-tone='stale'] .ds-freshness-dot {
+  background: var(--red);
+}
+
+.ds .ds-freshness[data-freshness-tone='stale'] strong {
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* The sprint bar reports SHIPPED or not, not a parsed percentage — `sprint_progress` is free text
+   from the generator ("3/3 stories"), and a bar computed from a string nobody validates is a number
+   the page invented. */
+.ds .ds-sprintrow-bar i[data-width='full'] {
+  width: 100%;
+}
+
+.ds .ds-sprintrow-bar i[data-width='none'] {
+  width: 0;
+}
+
+/* A control inside an aside item — `/talk`'s "open the booking page" and "point Claude at it". */
+.ds .ds-talkitem .ds-btn {
+  display: inline-flex;
+  margin-top: 9px;
+}
+
+/* ── The pod report's shell ─────────────────────────────────────────────────────────────────
+ * design-system-rails · Sprint 6, Story 6.3. The report's evidence TABLES stay on
+ * `app/hub/hub.module.css`, deliberately and with a recorded decay date — the approved `hub-report`
+ * state is prose and has no table in it, so porting them would mean inventing forty unapproved
+ * visual decisions in the sprint that closes the epic. What is here is everything around them. */
+.ds .ds-report-section {
+  margin: 28px 0;
+}
+
+.ds .ds-report-heading {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+
+.ds .ds-report-heading em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+/* Decision 4, as layout: the gaps are a COLUMN of the speed section, not a block underneath it.
+   The table cannot be scrolled past without the panel that qualifies it entering the viewport at
+   the same time. */
+.ds .ds-pairing {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .ds .ds-pairing {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+
+/* The caveats sit ABOVE the numbers. Not a `Callout`: a callout is one sentence, and this is a list
+   whose length is data. Same gold left-edge, because it is the same instruction — read this first. */
+.ds .ds-caveats {
+  margin: 18px 0;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--gold);
+}
+
+.ds .ds-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 8px 0 0;
+  list-style: none;
+  padding: 0;
+}
+
+.ds .ds-doc-list li {
+  font-size: 13px;
+  color: var(--dim);
+  padding-left: 17px;
+  position: relative;
+  line-height: 1.55;
+}
+
+.ds .ds-doc-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-deep);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* Our side is computed; their side is cited and linked, never republished wholesale. */
+.ds .ds-benchlist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ds .ds-benchitem {
+  padding: 13px 16px;
+  border-radius: var(--r);
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+}
+
+.ds .ds-benchitem a {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.ds .ds-benchitem a:hover {
+  color: var(--gold-hot);
+}
+
+/* The refusal's headline. Larger than a section heading because it is the whole page: no number
+   from this artifact is shown at all, and the reader needs to know that before anything else. */
+.ds .ds-refuse-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 8px 0 10px;
+  line-height: 1.25;
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════════════════════
+ * SEAM A's CHROME — the console shell, moved here whole.
+ * design-system-rails · Sprint 6, Story 6.4 (the Sweeper).
+ *
+ * ── What this is, and why it had to move ──────────────────────────────────────────────────────
+ * `ProductShell` rendered `.product-shell__*`, and TWO stylesheets painted those names: a base
+ * block in `globals.css` (the pre-epic shell) and a `.is-console .product-shell__*` block in
+ * `console.css` that overrode almost all of it. Every rule in the second existed only to undo one
+ * in the first. That is the definition of "a layer on top of the thing it replaced", and it is what
+ * the epic's Definition of Done means by *until this happens the redesign is a layer on top*.
+ *
+ * So the winning half — the console's — moves here under `ds-shell-*` names, the losing half is
+ * deleted from both files, and the markup is renamed to match. One definition, in the directory the
+ * design lives in.
+ *
+ * ⚠️ **THIS STORY CHANGES NO PIXEL — with THREE recorded exceptions, all forced and all stated.**
+ * Every value below is carried verbatim from `console.css`'s block except:
+ *
+ *   1. The switcher and account menus painted `var(--espresso)` on `var(--elevation-overlay)`.
+ *      Both are LANDING tokens: `--espresso` (#0f0c08) is defined in
+ *      `references/design/assets/tokens.css` beside `.agent-win`, and neither is in the product
+ *      token set this directory owns. Reading the landing's palette from inside `.ds` is the exact
+ *      cross-contamination D2 and D3 exist to prevent, and `tokens-defined.test.ts` caught it the
+ *      moment the rules moved here. They are `--card` and `--shadow-hi` now: two dropdown menus get
+ *      a marginally lighter ground and the system's own elevation. A visible change, small, and
+ *      named rather than smuggled.
+ *   2. The same substitution in the shell's form-control reset — `--espresso` → `--roast-2`, which
+ *      is what `.ds-input` already paints.
+ *   3. The public branch's project signal loses `600 10px var(--mono)` in UPPERCASE. See the note
+ *      in `ProductShell.tsx`: that pairing is what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids
+ *      outright, and it was carried as recorded debt owed to "Sprint 3" that Sprint 3 never paid.
+ *
+ * ⚠️ **`.is-console` SURVIVES this story, and `tokens.css`'s header used to promise otherwise.**
+ * `console.css` still carries ~150 rules that are not shell chrome — the command palette, the
+ * console rail, modals, the environment picker, the KPI strip — all scoped to `.is-console` and all
+ * on BARE class names (`.btn`, `.pill`, `.tag`) that cannot be renamed without touching every
+ * console surface at once. Retiring that alias is a sprint of its own, not a line in this one. The
+ * claim is corrected in `extract-css.mjs` rather than left standing.
+ * ═════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.ds .ds-shell {
+  min-height: 100vh;
+}
+
+/* ── Tier 1: the top bar ────────────────────────────────────────────────────────────────────── */
+.ds .ds-shell-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+  min-height: 54px;
+  padding: 0 20px;
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* `.topbar-right{margin-left:auto}` in the reference — the port dropped it once, and the project
+   chip and the account menu sat mid-bar instead of at the right edge. */
+.ds .ds-shell-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  /* `min-width: 0` is load-bearing, not defensive. A flex item's default `min-width: auto` refuses
+     to shrink below its content, and a project SLUG is unbounded — the authed fixture's
+     `gb-e2e-authed-1787859297750-69508` pushed this row 4px past a 360px viewport and took the
+     account menu with it. A real slug like `miyagisanchez` is short enough to hide that forever,
+     which is why the least-convenient realistic input is the one worth testing. */
+  min-width: 0;
+}
+
+/* The project signal and the switcher's summary: sentence-case Archivo, and bounded.
+   ⚠️ Do-not #3 was open here for an epic — `globals.css` set `600 10px var(--mono)` with
+   `text-transform: uppercase`, so the project switcher rendered UPPERCASE MONO: exactly the
+   combination the contract says appears nowhere. The width is deliberately NOT forced: 140px is the
+   prototype's slug and a real tenant's is longer, so constraining it would truncate the one thing
+   the control exists to show. */
+.ds .ds-shell-signal,
+.ds .ds-shell-switcher summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--dim);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  min-width: 0;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds .ds-shell-signal a {
+  color: inherit;
+}
+
+.ds .ds-shell-switcher,
+.ds .ds-shell-account {
+  position: relative;
+}
+
+.ds .ds-shell-switcher summary,
+.ds .ds-shell-account summary {
+  cursor: pointer;
+  /* Safari's requirement, not a preference: without it the disclosure triangle is drawn by the UA
+     and no amount of styling removes it. */
+  list-style: none;
+}
+
+.ds .ds-shell-switcher summary::-webkit-details-marker,
+.ds .ds-shell-account summary::-webkit-details-marker {
+  display: none;
+}
+
+.ds .ds-shell-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 70;
+  min-width: 220px;
+  /* The menu opens leftward from a control near the right edge, so on a narrow screen its 220px
+     floor is what would push the document wider. Bounded by the VIEWPORT, not by the header's
+     padding, because `right: 0` is relative to the control and the control moves. */
+  max-width: calc(100vw - 24px);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-hi);
+}
+
+.ds .ds-shell-menu ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds .ds-shell-menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--roast-2);
+  color: var(--crema);
+  font-size: 13px;
+}
+
+.ds .ds-shell-menu a[aria-current='true'] {
+  box-shadow: inset 2px 0 0 var(--gold);
+}
+
+.ds .ds-shell-menu p {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 12px;
+  /* An email address has no spaces to break at, and the menu is 220px wide. Without this a long
+     address widens the panel off the right edge of a phone. */
+  overflow-wrap: anywhere;
+}
+
+/* ── The PUBLIC render of seam A — an anonymous demo dashboard, or `getShellNav`'s catch ────── */
+.ds .ds-pubbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.ds .ds-pubbar-nav a {
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.ds .ds-pubbar-nav a:hover {
+  color: var(--crema);
+  background: var(--card);
+}
+
+/* ── Tier 2: the four sections, a FULL-WIDTH row of its own ─────────────────────────────────
+ * The approved design's `#sectionnav` is a SIBLING of the top bar: its own 44px band with its own
+ * ground and bottom border. The height is stated rather than inherited from the tabs' padding — a
+ * row whose height depends on its children's padding is a row that changes height when somebody
+ * restyles a tab. */
+.ds .ds-shell-tabs {
+  display: flex;
+  gap: 2px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 20px;
+  background: var(--roast-2);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 54px;
+  z-index: 39;
+}
+
+.ds .ds-shell-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ds .ds-shell-tab {
+  display: flex;
+  align-items: center;
+  padding: 11px 12px 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--dim);
+  white-space: nowrap;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  transition:
+    color var(--t),
+    border-color var(--t);
+}
+
+.ds .ds-shell-tab:hover {
+  color: var(--crema);
+  background: none;
+}
+
+/* The current section, marked for the eye and for a screen reader by the SAME attribute — there is
+   no way to paint this state without also announcing it. */
+.ds .ds-shell-tab[aria-current='page'] {
+  color: var(--crema);
+  border-bottom-color: var(--gold);
+  font-weight: 500;
+  background: none;
+}
+
+/* ── Tier 3: the rail, and the frame it sits in ─────────────────────────────────────────────── */
+/* ⚠️ `> .content` is GONE from this selector and its two siblings below. `console.css` carried
+   `.is-console .product-shell__body > .content` in three rules and **nothing in the product renders
+   `class="content"`** — it is the PROTOTYPE's name for its main element, ported along with the
+   rules that use it. Three dead selectors, sweeping. */
+.ds .ds-shell-body > main {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .ds .ds-shell-body > main {
+    padding: 20px 16px 70px;
+  }
+}
+
+/* ⚠️ **Desktop only, at the breakpoint the shell already uses (1100px).** An earlier version
+   declared the two-column grid at EVERY width, so a 390px phone got a 236px fixed column and a
+   ~150px content column, and six `mobile-heuristics` specs went red across pages that epic never
+   touched — the rail is in the shell, so a shell-level layout bug is a whole-product bug. */
+@media (min-width: 1100px) {
+  .ds .ds-shell-body {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+  }
+
+  .ds .ds-shell-body > main {
+    padding: 26px 30px 90px;
+    max-width: 1180px;
+  }
+
+  /* Today has no rail (`railLinksFor` returns [] and `ConsoleRail` renders null), so the grid must
+     collapse to one column rather than leave a 236px gutter where navigation would have been. */
+  .ds .ds-shell-body:not(:has(.ds-rail-slot)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The rail is an ordinary sticky grid child, not a fixed sidebar with a compensating padding on
+     the body. Its offset is derived from ONE custom property so a change to the chrome's height
+     lands in one place — 98px is 54 + 44, which is what the two tiers now measure. */
+  .ds .ds-shell:has(.ds-rail-slot) .ds-shell-body {
+    padding-left: 0;
+  }
+
+  .ds .ds-shell:has(.ds-rail-slot) .ds-rail-slot {
+    position: sticky;
+    top: var(--console-chrome-height);
+    left: auto;
+    width: auto;
+    max-height: none;
+    height: calc(100vh - var(--console-chrome-height));
+  }
+
+  /* The agent rail, on the right. ONE derived pair of numbers, consumed twice: the first version
+     shipped a rail sitting on top of the project card because the gutter and the width were two
+     independent values. `:has()` scopes both to renders that actually HAVE a rail. */
+  .ds .ds-shell:has(.ds-agent-slot) {
+    --rail-gutter: max(12px, calc((100vw - 1180px) / 2));
+    --rail-width: 320px;
+  }
+
+  .ds .ds-shell:has(.ds-agent-slot) .ds-shell-body {
+    padding-right: calc(var(--rail-gutter) + var(--rail-width) + 24px);
+  }
+}
+
+/* Form controls inside the shell. `:where()` keeps this at zero specificity so any primitive's own
+   rule wins without a fight — `.ds-input` is (0,2,0) and this is (0,0,0). */
+.ds .ds-shell :where(input, textarea, select) {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--roast-2);
+  color: var(--crema);
+  font: inherit;
+}

@@ -8,7 +8,7 @@ import { z } from 'zod'
 // of how that project is configured. 8 is deliberately a floor and not a composition rule (no
 // "must contain a symbol") — length beats character-class theatre, and rejecting a passphrase for
 // lacking punctuation pushes people toward weaker, more memorable passwords.
-const MIN_PASSWORD_LENGTH = 8
+export const MIN_PASSWORD_LENGTH = 8
 // Bcrypt-family hashers silently truncate very long inputs, and an unbounded password field is a
 // free CPU-burn vector on a public route. 72 is the classic bcrypt boundary; 200 is comfortably
 // past any real passphrase while still bounded.

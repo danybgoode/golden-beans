@@ -14,7 +14,7 @@ import {
 } from '@/lib/scenario-list-view'
 import { ScenarioWorkspace } from './scenario-workspace'
 import { ScenarioRows } from './scenario-rows'
-import { Answer, PageHead } from '@/design-system/primitives'
+import { Answer, PageHead, Tile } from '@/design-system/primitives'
 
 // design-system-rails · Sprint 5, Story 5.6 — reference state `measure-scenarios`.
 //
@@ -117,34 +117,5 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
         </details>
       </main>
     </ProductShell>
-  )
-}
-
-/** A summary tile. `value: null` always carries the sentence explaining which nothing it is. */
-function Tile({
-  label,
-  value,
-  absent,
-  detail,
-  tone,
-}: {
-  label: string
-  value: string | null
-  absent?: string
-  detail?: string
-  tone?: 'up' | 'warn'
-}) {
-  return (
-    <div className="ds-tile">
-      <p className="ds-tile-label">{label}</p>
-      {value === null ? (
-        <p className="ds-tile-absent">{absent}</p>
-      ) : (
-        <p className="ds-tile-value" data-tone={tone}>
-          {value}
-        </p>
-      )}
-      {detail ? <p className="ds-tile-detail">{detail}</p> : null}
-    </div>
   )
 }

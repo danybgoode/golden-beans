@@ -4,18 +4,28 @@
 // app/hub/hub-components.tsx and app/hub/report-components.tsx.
 import type { ReactNode } from 'react'
 import type { PodReportLens } from '@/lib/pod-report-lens'
-import { Badge } from '@/components/ui/Badge'
-import styles from '../../hub/hub.module.css'
+import { Frame, FrameLink } from '@/design-system/Frame'
+import { Callout, Pill } from '@/design-system/primitives'
 
 // pod-report · Sprint 3, Story 3.1 — the share surface's own chrome and its two roadmap strips.
 //
 // Separate from page.tsx for the reason report-components.tsx is separate from its page: page.tsx
 // imports `server-only` modules (the token resolver, the query libs), so a spec can never load it.
-// These components import nothing but types and a stylesheet, which is what lets
-// e2e/report-share.spec.tsx assert on real markup instead of only on HTTP status codes.
+// These components import nothing but types and the design system, which is what lets
+// e2e/report-share.spec.ts assert on real markup instead of only on HTTP status codes.
+//
+// design-system-rails · Sprint 6, Story 6.2 — reference state `public-share`. The frame is DD3's
+// PUBLIC one: a slim bar, the mark, and at most one action. `hub.module.css` is gone from this file
+// entirely — a share link had been borrowing the signed-in hub's private stylesheet, which is how a
+// page read by somebody with no account ends up looking like a page for somebody with one.
 
 /**
  * The frame around a shared report.
+ *
+ * ⚠️ **The mark is NOT a link, and the bar offers no way into the product.** The approved state's
+ * own callout says why: a share link that quietly offers a way in is a share link that leaks a map
+ * of the account. `Frame` renders the brand as plain text when it is given no `brandHref`, which is
+ * what makes "no navigation into the product" a property of the markup rather than a promise.
  *
  * Carries the audience note as VISIBLE text, not as a comment or a data attribute. Someone who
  * receives an investor link and wonders why they cannot see the per-criterion rows should be able to
@@ -24,23 +34,30 @@ import styles from '../../hub/hub.module.css'
 export function ShareFrame({
   lens,
   audienceNote,
+  sharedBy,
   children,
 }: {
   lens: PodReportLens
   audienceNote: string
+  /** Whose report this is — the project the token resolved, never anything the URL supplied. */
+  sharedBy: string
   children: ReactNode
 }) {
   return (
-    <main className={styles.report} data-share-lens={lens}>
-      <div className="wrap">
-        <p className={styles.kicker}>Pod Report · shared link</p>
-        <p className={styles.shareAudience} data-testid="share-audience-note">
-          <span className="tag tag-next">{`${lens} lens`}</span>
-          <span>{audienceNote}</span>
-        </p>
-        {children}
+    <Frame variant="public" actions={<FrameLink href="/install">What is this?</FrameLink>}>
+      <div className="ds-sharehead" data-share-lens={lens} data-testid="share-audience-note">
+        <div className="ds-sharehead-body">
+          <p className="ds-sharehead-title">Shared with you · {sharedBy}</p>
+          <p className="ds-sharehead-note">
+            A read-only view of one report. It shows what is below and nothing else about the project,
+            and it can be switched off at any time by whoever made it. <Pill label>{lens} lens</Pill>{' '}
+            {audienceNote}
+          </p>
+        </div>
+        <span className="ds-sharehead-ro">Read only</span>
       </div>
-    </main>
+      {children}
+    </Frame>
   )
 }
 
@@ -65,26 +82,32 @@ export function ShareJourneyStrip({
 }) {
   if (epics.length === 0) return null
   return (
-    <section className={styles.shareStrip} data-testid="share-journey">
-      <h2 className={styles.shareStripTitle}>Where the work is</h2>
-      <p className={styles.shareStripLede}>
-        <b className="data">{counts.shippedEpics}</b> of <b className="data">{counts.epics}</b> epics shipped,
-        in build order.
+    <section className="ds-report-section" data-testid="share-journey">
+      <h2 className="ds-report-heading">Where the work is</h2>
+      <p className="ds-lede">
+        <b>{counts.shippedEpics}</b> of <b>{counts.epics}</b> epics shipped, in build order.
       </p>
-      <ol className={styles.shareJourneyList}>
+      <div className="ds-listcard">
         {epics.map((epic, i) => (
-          <li
-            key={epic.slug}
-            className={epic.shipped ? styles.shareJourneyShipped : styles.shareJourneyAhead}
-          >
-            <Badge status={epic.shipped ? 'live' : 'next'}>
-              {epic.shipped ? 'shipped' : i === markerIndex ? 'building' : 'next'}
-            </Badge>{' '}
-            {epic.name || epic.slug}
-            {i === markerIndex && !epic.shipped && <em className={styles.shareHere}> — in flight</em>}
-          </li>
+          // A plain row, not a `ds-epic` anchor: this reader has nowhere to go. The class carries
+          // the same layout and the element carries the truth about what is clickable.
+          <div key={epic.slug} className="ds-epic">
+            <span className="ds-epic-ord">{i + 1}</span>
+            <span className="ds-epic-name">
+              <b>{epic.name || epic.slug}</b>
+            </span>
+            <span className="ds-epic-state">
+              {epic.shipped ? (
+                <Pill state="on">shipped</Pill>
+              ) : i === markerIndex ? (
+                <Pill state="never">in flight</Pill>
+              ) : (
+                <Pill state="off">next</Pill>
+              )}
+            </span>
+          </div>
         ))}
-      </ol>
+      </div>
     </section>
   )
 }
@@ -99,30 +122,41 @@ export function ShareJourneyStrip({
  */
 export function ShareHorizonStrip({ counts, seeds }: { counts: Counts; seeds: number }) {
   return (
-    <section className={styles.shareStrip} data-testid="share-horizon">
-      <h2 className={styles.shareStripTitle}>The horizon</h2>
-      <div className={styles.counts}>
-        <div className={styles.countPill}>
-          <b className="data">{counts.shippedEpics}</b>
-          <span>shipped</span>
+    <section className="ds-report-section" data-testid="share-horizon">
+      <h2 className="ds-report-heading">The horizon</h2>
+      <div className="ds-tiles">
+        <div className="ds-tile">
+          <p className="ds-tile-label">Shipped</p>
+          <p className="ds-tile-value">{counts.shippedEpics}</p>
         </div>
-        <div className={styles.countPill}>
-          <b className="data">{counts.epics - counts.shippedEpics}</b>
-          <span>on the road ahead</span>
+        <div className="ds-tile">
+          <p className="ds-tile-label">On the road ahead</p>
+          <p className="ds-tile-value">{counts.epics - counts.shippedEpics}</p>
         </div>
-        <div className={styles.countPill}>
-          <b className="data">{counts.sprints}</b>
-          <span>sprints tracked</span>
+        <div className="ds-tile">
+          <p className="ds-tile-label">Sprints tracked</p>
+          <p className="ds-tile-value">{counts.sprints}</p>
         </div>
-        <div className={styles.countPill}>
-          <b className="data">{seeds}</b>
-          <span>ideas on the horizon</span>
+        <div className="ds-tile">
+          <p className="ds-tile-label">Ideas on the horizon</p>
+          <p className="ds-tile-value">{seeds}</p>
         </div>
       </div>
-      <p className="note">
+      <p className="ds-hint">
         Ideas on the horizon are un-groomed and deliberately unnamed — they are possibilities, not
         commitments.
       </p>
     </section>
+  )
+}
+
+/** The closing note every share link carries, whatever its lens. */
+export function ShareFooterNote() {
+  return (
+    <Callout>
+      No navigation into the product, because there is nothing here this reader may open. This link was
+      issued deliberately and can be revoked at any time; every number on this page is computed from
+      the repository&apos;s own history, and what could not be measured says so.
+    </Callout>
   )
 }
