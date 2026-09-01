@@ -1,3 +1,17 @@
+/** @jsxImportSource react */
+// ⚠️ **The pragma is a NO-OP under Next and LOAD-BEARING for the test rail** — design-system-rails
+// Sprint 6, Story 6.3. Playwright's transform pins its OWN jsx runtime, which emits `__pw_type`
+// objects that `react-dom/server` refuses to render, so any `.spec.tsx` that renders a component
+// from this file dies with "Objects are not valid as a React child".
+//
+// It became necessary the moment `app/hub/report-components.tsx` started composing `Answer`,
+// `Callout`, `Empty` and `PageHead` from here: that file has carried the same line since Sprint 2.5c
+// (as do `hub-components.tsx` and `s/[token]/share-components.tsx`), but a pragma is PER FILE — a
+// caller having it does nothing for the JSX inside the component it calls. Fourteen specs went red
+// at once, all with the same unrelated-looking error, which is exactly the failure mode the three
+// existing comments describe.
+//
+// The rule, stated once: a `design-system/` module that any `.spec.tsx` renders needs this line.
 // The primitives, as components — so a page is assembled rather than hand-drawn in CSS.
 //
 // ── Why these exist when `components/ui/` already has primitives ──────────────────────────────

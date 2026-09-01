@@ -80,6 +80,19 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [One design system, every surface](02-commercial/design-system-rails/README.md) — the design now
+  lives **in the product**, at `apps/web/design-system/`, and it outlives the epic that produced it.
+  Three prior design epics each scoped their design to themselves and left it in a closed epic's
+  folder; the audit could still find *one route in twenty-six* using the component kit. All **27**
+  in-scope routes render from one system now — the 21 console routes through `ProductShell`, the nine
+  doors and hub routes through `Frame` — each against an approved reference state, with the visual
+  gate blocking on every PR and a **ratchet that fails a PR which lowers coverage**. The approved
+  prototype's 32 states are hash-pinned in `APPROVED.md`, the tokens and stylesheet are **generated
+  from it** (so "one definition" holds by construction rather than by discipline), and
+  `MEASURED-SPEC.md` is emitted rather than typed. The old design is **deleted**, not layered over:
+  38 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
+  and a guard fails if any of them return. **Live in production** — no flag, no dark period, no
+  Vercel variable owed; the merge is the release and rollback is `git revert`.
 - ✅ [Four destinations — an information architecture for the signed-in console](02-commercial/console-ia-overhaul/README.md)
   — the signed-in product had **sixteen destinations and no information architecture**, presented as
   one flat list ordered by the sprint that built each. It now has **four sections** (Today · Measure ·
@@ -300,6 +313,23 @@ independently shippable slice of value.
 ---
 
 ## Recent highlights
+
+- **2026-09-01** — `design-system-rails` **shipped and live**: the epic that gave the design a home.
+  The premise was one level below the symptom — the last epic shipped a rejected visual result
+  because *nothing in its plan could go red on a page that looked wrong*, and the design it was
+  measured against lived in a folder named after an epic that had closed. Now
+  `apps/web/design-system/` holds the approved prototype, the generated tokens and stylesheet, the
+  measured spec, the primitives and the coverage manifest, at a product-level path; **27 of 27**
+  routes render from it, the visual gate is blocking, and coverage is a generated number a PR cannot
+  lower. Sprint 6 is the half that makes that true rather than aspirational: the nine routes a
+  customer meets *first* — `/login`, `/signup`, `/install`, a shared report and its designed 404,
+  `/talk`, and the four `/hub` screens — came off four different private stylesheets onto one frame,
+  and **the design this epic replaced was deleted rather than left underneath it**. Five plan
+  corrections came from reading the code instead of the plan, including a password hint that
+  promised twelve characters where the API enforces eight, a note promising a destination the signup
+  flow does not visit, and an approved state that is unreachable because its route 404s by design.
+  Fourteen specs went red at once on a *per-file* JSX pragma, and a coverage guard sliced a component
+  by indentation and broke on a wrapper element — both fixed as classes, not instances.
 
 - **2026-08-28** — `console-ia-overhaul` **shipped and live** (PRs #122/#123/#124 + Sprint 3B). The
   epic that had to correct its own plan to finish: Sprints 1 and 2 shipped a *correct* information

@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react'
 import type { PodReportLens } from '@/lib/pod-report-lens'
 import { Frame, FrameLink } from '@/design-system/Frame'
-import { Callout, Pill } from '@/design-system/primitives'
+import { Callout, Pill, Tile, Tiles } from '@/design-system/primitives'
 
 // pod-report · Sprint 3, Story 3.1 — the share surface's own chrome and its two roadmap strips.
 //
@@ -50,8 +50,14 @@ export function ShareFrame({
           <p className="ds-sharehead-title">Shared with you · {sharedBy}</p>
           <p className="ds-sharehead-note">
             A read-only view of one report. It shows what is below and nothing else about the project,
-            and it can be switched off at any time by whoever made it. <Pill label>{lens} lens</Pill>{' '}
-            {audienceNote}
+            and it can be switched off at any time by whoever made it.{' '}
+            {/* ⚠️ ONE template string, not `{lens} lens`. React SSR separates adjacent text nodes
+                with a `<!-- -->` marker so hydration can tell where one ended, so the two-expression
+                form renders `client<!-- --> lens` and `report-share.spec.ts`'s
+                `toContain('client lens')` fails against a page that LOOKS right. The spec is
+                correct and the markup was wrong: a reader searching the page for "client lens"
+                would not find it either. */}
+            <Pill label>{`${lens} lens`}</Pill> {audienceNote}
           </p>
         </div>
         <span className="ds-sharehead-ro">Read only</span>
@@ -124,24 +130,12 @@ export function ShareHorizonStrip({ counts, seeds }: { counts: Counts; seeds: nu
   return (
     <section className="ds-report-section" data-testid="share-horizon">
       <h2 className="ds-report-heading">The horizon</h2>
-      <div className="ds-tiles">
-        <div className="ds-tile">
-          <p className="ds-tile-label">Shipped</p>
-          <p className="ds-tile-value">{counts.shippedEpics}</p>
-        </div>
-        <div className="ds-tile">
-          <p className="ds-tile-label">On the road ahead</p>
-          <p className="ds-tile-value">{counts.epics - counts.shippedEpics}</p>
-        </div>
-        <div className="ds-tile">
-          <p className="ds-tile-label">Sprints tracked</p>
-          <p className="ds-tile-value">{counts.sprints}</p>
-        </div>
-        <div className="ds-tile">
-          <p className="ds-tile-label">Ideas on the horizon</p>
-          <p className="ds-tile-value">{seeds}</p>
-        </div>
-      </div>
+      <Tiles>
+        <Tile label="Shipped" value={String(counts.shippedEpics)} />
+        <Tile label="On the road ahead" value={String(counts.epics - counts.shippedEpics)} />
+        <Tile label="Sprints tracked" value={String(counts.sprints)} />
+        <Tile label="Ideas on the horizon" value={String(seeds)} />
+      </Tiles>
       <p className="ds-hint">
         Ideas on the horizon are un-groomed and deliberately unnamed — they are possibilities, not
         commitments.

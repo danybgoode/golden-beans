@@ -512,12 +512,23 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
 // experiment, so the keys are EXPORTED CONSTANTS rather than something to invent. Both are opened by
 // the loop below like every other route, and the two hand-written claims are deleted rather than
 // replaced by two better-worded ones.
+// ⚠️ **`/s/[token]` LEFT THIS LIST — design-system-rails Sprint 6.**
+//
+// It was here because "its URL needs a token this suite must not invent", and its `coveredBy` string
+// named `e2e/report-share.spec.ts` — which has ZERO `page.goto` calls. It is an `api` spec, so the
+// label read as coverage and provided none. The row was inert only while it was
+// `rendersFromDesignSystem: false`; Story 6.5 flips it, and a flipped row with an API-only claim
+// behind it is the exact defect Sprint 5 found on four other rows.
+//
+// `sprint-6.md` names the fix and forbids the alternative: **mint a real token in the authed
+// fixture and let this loop open the route. Do not reword the string.** `auth.setup.ts`
+// (`seedShareFixture`) mints one with the product's own `generateShareToken` + `hashCredential`, so
+// the token is not invented and the row it writes is the row the product's own mint writes.
 const EXPECTED_SKIPS = [
   '/app/flags/[projectSlug]/[flagKey]',
   '/app/funnel/[projectSlug]/[featureKey]',
   '/app/impact/[projectSlug]/[featureKey]',
   '/hub/[projectSlug]/epic/[epicSlug]',
-  '/s/[token]',
 ]
 
 const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
@@ -579,15 +590,30 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
     coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
   },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
-  // ⚠️ **SPRINT 6: this claim does not hold, and it is inert only because the row is still
-  // `rendersFromDesignSystem: false`.** `report-share.spec.ts` has ZERO `page.goto` calls — it is an
-  // API spec — so the moment Sprint 6 flips this row to `true`, `/s/[token]` starts counting toward
-  // the coverage number with nothing verifying it renders. That is the same defect S5 found on the
-  // journey and experiment detail routes, waiting one sprint out.
-  //
-  // The fix when it lands: mint a real share token in the authed fixture and open the route from the
-  // loop above, exactly as the journey and experiment details now are. Do not reword this string.
-  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts — ⚠️ API-only; see the note above before Sprint 6 flips this row' },
+  // ⚠️ **SPRINT 6 CLOSED THIS.** The `coveredBy` string that stood here named `report-share.spec.ts`,
+  // an `api` spec with zero `page.goto` calls, under a note saying the claim would stop being inert
+  // the moment the row flipped. It flipped in Story 6.5, so the route is opened by this loop with a
+  // token the fixture MINTS — see `EXPECTED_SKIPS` above.
+  '/s/[token]': () => `/s/${shareToken()}`,
+}
+
+/**
+ * The fixture's share token, narrowed.
+ *
+ * ⚠️ **Throws rather than skipping.** `TenantRecord.shareToken` is `string | null`, and a null means
+ * `seedShareFixture` failed. Returning early there would leave the loop measuring twenty-six routes
+ * and reporting twenty-seven — a skip nobody decided, which reads exactly like a suite that ran. The
+ * whole reason this token exists is that the previous arrangement counted a route nothing opened.
+ */
+function shareToken(): string {
+  const { shareToken: token } = tenant()
+  if (!token) {
+    throw new Error(
+      'the visual gate needs a share token — auth.setup.ts could not mint one, so /s/[token] would ' +
+        'be counted toward coverage without being opened'
+    )
+  }
+  return token
 }
 
 /**
@@ -704,7 +730,14 @@ test('every route claiming the design system renders from it', async ({ page }) 
             // it from `references/ux-guidelines.md` rather than from a prototype class, so
             // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
             // this list is maintained beside that one rather than derived from it.
-            'main .ds-once'
+            'main .ds-once, ' +
+            // ⚠️ `/talk` was the ONE route of twenty-seven with no entry here, and the gate said so
+            // rather than passing (design-system-rails Story 6.5). Its content is a third party's
+            // booking calendar and the three notes beside it — `.ds-talkslot` is the frame around
+            // that calendar, and it is genuinely the first thing on the page a reader is there for.
+            // Added rather than worked around: the alternative was dressing the aside items up as
+            // `.ds-card`s to satisfy a selector list, which is a page changed to fit its test.
+            'main .ds-talkslot'
         )
         return first ? Math.round(first.getBoundingClientRect().top) : null
       })(),

@@ -512,7 +512,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'door-login',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -524,10 +524,21 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     frame: 'door',
     seam: 'frame',
     surface: null,
-    // Plus `door-signup-closed` — the gate asserts whichever `SIGNUP_ENABLED` selects, and both
-    // states are approved because both are reachable in production depending on that flag.
+    // ⚠️ **CORRECTED at Sprint 6 by reading the route.** This said "the gate asserts whichever
+    // `SIGNUP_ENABLED` selects, and both states are approved because both are reachable in
+    // production depending on that flag". `door-signup-closed` is **not reachable**:
+    // `app/signup/page.tsx` calls `notFound()` while the flag is off, so the closed state of this
+    // route is a 404, not a waitlist.
+    //
+    // Left that way deliberately. The epic's platform-first note says *every route keeps the gate it
+    // has today*, and turning a 404 into a 200 is a behaviour change on the gate that decides whether
+    // strangers can create tenants. The waitlist itself is not lost — it is live on the landing page,
+    // which is where `door-signup-closed`'s content already ships.
+    //
+    // Recorded here rather than quietly skipped: an approved state with no route is exactly the kind
+    // of gap this manifest exists to make visible.
     referenceState: 'door-signup-open',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -540,7 +551,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'public-install',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -556,10 +567,25 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     // the route calls `notFound()` for unknown, malformed, expired AND revoked alike, so the page
     // cannot tell an attacker which one a token is. Do not add one to satisfy a doc.
     referenceState: 'public-share',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
-    deferred: null,
+    deferred: {
+      owner: 'Daniel',
+      until: '2026-11-30',
+      why:
+        'The pod report\u2019s SHELL renders from design-system/ \u2014 the page head, the provenance ' +
+        'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
+        'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
+        'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
+        'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
+        '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
+        'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
+        'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
+        'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
+        'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
+        'Closing it needs those states designed and approved first, which is planning-lane work.',
+    },
   },
   {
     route: '/talk',
@@ -569,7 +595,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'public-talk',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -584,7 +610,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'hub-roadmap',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -597,7 +623,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'hub-epic',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -610,7 +636,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'hub-horizon',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
     deferred: null,
@@ -623,10 +649,25 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'frame',
     surface: null,
     referenceState: 'hub-report',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
-    deferred: null,
+    deferred: {
+      owner: 'Daniel',
+      until: '2026-11-30',
+      why:
+        'The pod report\u2019s SHELL renders from design-system/ \u2014 the page head, the provenance ' +
+        'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
+        'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
+        'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
+        'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
+        '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
+        'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
+        'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
+        'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
+        'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
+        'Closing it needs those states designed and approved first, which is planning-lane work.',
+    },
   },
 ]
 

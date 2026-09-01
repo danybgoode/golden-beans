@@ -12,6 +12,23 @@ The rule, stated once so it survives this epic too:
 > **The design lives in the product, at a product-level path, and it outlives the epic that
 > produced it.** A future epic extends what is here. It does not open a new `design/` folder.
 
+## The behaviour layer, and why the pointer only runs one way
+
+`references/ux-guidelines.md` is the **behaviour** layer to this directory's **visual** one: what
+the interface owes the person using it, independent of colour and type — the ten-state taxonomy
+`system.css` implements, the "never make someone wonder" rule, the split between *disabled* and
+*unbuilt* that this system draws differently on purpose.
+
+⚠️ **It does not point back here, and that is deliberate rather than an omission.** Sprint 6's
+Story 6.5 asked for a pointer added to the top of that file. It is a **byte-mirrored handoff** —
+`check-design-drift.mjs` asserts it is identical to
+`references/golden-beans-design-system-proposal/ux-guidelines.md`, the artefact as it was supplied —
+so adding the pointer meant either breaking a shipped guard or editing what the designer handed
+over and calling it unchanged. Neither is worth a cross-reference.
+
+So the link is one-way, from the side that can carry it. If you arrived from that document: this
+directory is the home, and `CONSOLE-CONTRACT.md` beside it is the binding half.
+
 ## What is here
 
 | File | Kind | What it is |

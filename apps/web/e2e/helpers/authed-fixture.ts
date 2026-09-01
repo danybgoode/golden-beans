@@ -48,6 +48,21 @@ export type TenantRecord = {
   projectId: string | null
   slug: string | null
   email: string
+  /**
+   * A real, live share token for this tenant — design-system-rails Sprint 6, Story 6.5.
+   *
+   * ⚠️ **The visual gate needs this because a `coveredBy` string is a CLAIM, and this one was
+   * false.** `/s/[token]` named `e2e/report-share.spec.ts` as covering it. That spec has ZERO
+   * `page.goto` calls — it is an `api` spec — so the moment Sprint 6 flipped the row to
+   * `rendersFromDesignSystem: true`, the route would have counted toward the coverage number with
+   * nothing verifying that it renders. That is the exact defect Sprint 5 found on four other rows,
+   * waiting one sprint out, and `sprint-6.md` says in as many words: **do not reword the string.**
+   *
+   * So the gate opens the route itself, with a token minted here rather than invented. `null` until
+   * setup has run, and the gate throws rather than skipping if it is still null — a skip nobody
+   * decided reads exactly like a suite that ran.
+   */
+  shareToken: string | null
 }
 
 /** The tenant auth.setup.ts provisioned, or null when setup has not run. */
@@ -133,6 +148,17 @@ export const EXPERIMENT_TREATMENT_CONVERSIONS = 70
 // `merchant_activation` on `golden-beans` — so `measure-journey`'s stage bars are drawn by nothing
 // on the fixture tenant. The counts DESCEND and are all different on purpose: equal counts would let
 // a page rendering one number three times pass, and one drawing three equal bars pass with it.
+/**
+ * design-system-rails · Sprint 6, Story 6.5 — the share-link fixture.
+ *
+ * The `team` lens deliberately, because it is the WIDEST: it renders the journey strip and the
+ * horizon strip as well as the report body, so the gate opens the page with the most markup on it
+ * rather than the least. A narrower lens would pass this route while hiding two of its three
+ * sections, which is coverage measured on the easy case.
+ */
+export const SHARE_FIXTURE_LABEL = 'gb-e2e-visual-gate'
+export const SHARE_FIXTURE_LENS = 'team' as const
+
 export const JOURNEY_FIXTURE_KEY = 'gb_e2e_founding_merchant'
 export const JOURNEY_STAGES = [
   { key: 'signed_up', event: 'gb_e2e_journey_signed_up', subjects: 12 },

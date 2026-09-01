@@ -3,8 +3,8 @@
   "routes": 27,
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
-  "rendersFromDesignSystem": 18,
-  "complete": 18,
+  "rendersFromDesignSystem": 27,
+  "complete": 27,
   "covered": [
     "/app",
     "/app/destinations/[projectSlug]",
@@ -23,9 +23,7 @@
     "/app/setup/connect/[projectSlug]",
     "/app/setup/keys/[projectSlug]",
     "/app/shares/[projectSlug]",
-    "/app/tasks/[projectSlug]"
-  ],
-  "outstanding": [
+    "/app/tasks/[projectSlug]",
     "/hub/[projectSlug]",
     "/hub/[projectSlug]/epic/[epicSlug]",
     "/hub/[projectSlug]/horizon",
@@ -35,5 +33,6 @@
     "/s/[token]",
     "/signup",
     "/talk"
-  ]
+  ],
+  "outstanding": []
 }

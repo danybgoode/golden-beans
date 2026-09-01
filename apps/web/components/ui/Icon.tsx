@@ -1,3 +1,12 @@
+/** @jsxImportSource react */
+// ⚠️ **A no-op under Next, load-bearing for the test rail** — design-system-rails Sprint 6.
+// Playwright's transform pins its own jsx runtime, whose elements `react-dom/server` refuses to
+// render, and a pragma is PER FILE: a caller having one does nothing for the JSX inside the
+// component it calls. `design-system/primitives.tsx` carries the same line for the same reason, and
+// `Callout` renders an `Icon` — so a `.spec.tsx` rendering the pod report's REFUSAL state (the one
+// branch that has a callout in it) died here while every other branch passed.
+//
+// This is the seam every icon in the product goes through, so the line covers all of them at once.
 import {
   Activity,
   ArrowDown,
