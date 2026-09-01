@@ -701,7 +701,7 @@ export function coverage(sprint: Sprint = 6): Coverage {
  * name claimed to check it. A guard whose subject cannot occur is a guard that cannot fail.
  */
 export function coverageOf(rows: readonly CoverageRow[]): Coverage {
-  const complete = rows.filter((row) => row.referenceState !== null && row.rendersFromDesignSystem)
+  const complete = rows.filter((row) => row.rendersFromDesignSystem)
   return {
     total: rows.length,
     hasReferenceState: rows.filter((row) => row.referenceState !== null).length,

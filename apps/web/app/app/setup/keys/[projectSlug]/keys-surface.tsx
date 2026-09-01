@@ -26,6 +26,11 @@ import { NewKey } from './new-key'
 export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[] }) {
   // The plaintext, held for exactly as long as it is on screen. Never read back from the server.
   const [minted, setMinted] = useState<string | null>(null)
+  // ⚠️ The form's open state lives HERE, not in `NewKey` (cross-family review, agy, round 3). The
+  // head holds a button; the body holds whatever the button opens. While `NewKey` owned this,
+  // opening it expanded a pick list and three fields inside the head's flex row — the same defect
+  // the fresh reviewer found one level along for the reveal.
+  const [minting, setMinting] = useState(false)
 
   return (
     <>
@@ -37,22 +42,38 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
             — API keys, flag credentials, agent write keys, and the connector token.
           </>
         }
-        // ⚠️ No trigger at all while a value is on screen. A `+ New key` button beside a credential
-        // that cannot be recovered invites a second mint before the first has been saved.
-        actions={minted === null ? <NewKey slug={slug} onMinted={setMinted} /> : undefined}
+        // ⚠️ No trigger while a value is on screen, and none while the form is open. A `+ New key`
+        // button beside an unsaved credential invites a second mint; beside an open form it is a
+        // control that does nothing.
+        actions={minted === null && !minting ? <NewKey.Trigger onOpen={() => setMinting(true)} /> : undefined}
       />
 
       {minted !== null ? (
+        // The value takes the whole body: no list, no empty state, no form.
         <NewKey.Reveal value={minted} onDismiss={() => setMinted(null)} />
-      ) : rows.length === 0 ? (
-        <div className="ds-listcard">
-          <Empty
-            title="Nothing has a credential for this project yet"
-            body="Until something does, the SDK and POST /api/v1/track have nothing to authenticate with. Start with an API key — it is the one every project needs first."
-          />
-        </div>
       ) : (
-        <KeysList slug={slug} rows={rows} />
+        <>
+          {minting && (
+            <NewKey
+              slug={slug}
+              onMinted={(plaintext) => {
+                setMinting(false)
+                setMinted(plaintext)
+              }}
+              onClose={() => setMinting(false)}
+            />
+          )}
+          {rows.length === 0 ? (
+            <div className="ds-listcard">
+              <Empty
+                title="Nothing has a credential for this project yet"
+                body="Until something does, the SDK and POST /api/v1/track have nothing to authenticate with. Start with an API key — it is the one every project needs first."
+              />
+            </div>
+          ) : (
+            <KeysList slug={slug} rows={rows} />
+          )}
+        </>
       )}
     </>
   )

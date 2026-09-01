@@ -81,9 +81,18 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
       try {
         const result = await revokeCredentialAction(slug, row.kind, row.id)
         if (!result.ok) {
-          // Not an error — "already revoked, or not yours". Said in those words rather than reported
-          // as a failure that did not happen.
-          setError(result.error ?? 'That key was already revoked.')
+          // ⚠️ **This said "That key was already revoked." and it does not know that** (cross-family
+          // review, agy, round 3). `revokeApiKey` and its siblings return `false` for BOTH "the row
+          // was already revoked, or is not yours" AND "the UPDATE failed" — they log the error and
+          // return a boolean, so neither the action nor this component can tell the two apart.
+          //
+          // On a credential surface that difference is the whole point: an owner told "already
+          // revoked" walks away believing a leaked key is dead. The message now says what is
+          // actually known — it did not go through — and tells them how to find out which it was.
+          setError(
+            result.error ??
+              'That key was not revoked. It may already have been, or the change did not go through — reload and check whether it is still listed.'
+          )
           setConfirming(null)
           setBusy(false)
           return

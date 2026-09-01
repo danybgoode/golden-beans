@@ -51,8 +51,15 @@ const FIELD_LABEL = {
   expiry: 'When it expires',
 } as const
 
-export function NewKey({ slug, onMinted }: { slug: string; onMinted: (plaintext: string) => void }) {
-  const [open, setOpen] = useState(false)
+export function NewKey({
+  slug,
+  onMinted,
+  onClose,
+}: {
+  slug: string
+  onMinted: (plaintext: string) => void
+  onClose: () => void
+}) {
   const [kind, setKind] = useState<CredentialKind | null>(null)
   const [label, setLabel] = useState('')
   const [environment, setEnvironment] = useState<string>(FLAG_ENVIRONMENTS[0])
@@ -74,11 +81,11 @@ export function NewKey({ slug, onMinted }: { slug: string; onMinted: (plaintext:
   const inFlight = busy || pending
 
   function reset() {
-    setOpen(false)
     setKind(null)
     setLabel('')
     setError(null)
     setFieldError(null)
+    onClose()
   }
 
   function onSubmit(event: FormEvent) {
@@ -120,14 +127,6 @@ export function NewKey({ slug, onMinted }: { slug: string; onMinted: (plaintext:
       }
       setBusy(false)
     })
-  }
-
-  if (!open) {
-    return (
-      <button type="button" className="ds-btn ds-btn--primary" onClick={() => setOpen(true)}>
-        + New key
-      </button>
-    )
   }
 
   return (
@@ -276,6 +275,27 @@ export function NewKey({ slug, onMinted }: { slug: string; onMinted: (plaintext:
         </form>
       )}
     </div>
+  )
+}
+
+/**
+ * The `+ New key` control, which is all that lives in the page head.
+ *
+ * ⚠️ **The FORM used to live here too, and it should not have** (cross-family review, agy, round 3).
+ * `NewKey` returned a button when closed and a multi-field card when open, and it was mounted in
+ * `PageHead`'s `actions` slot — so opening it expanded a pick list and three fields inside a flex
+ * header row. That is the same defect the fresh reviewer found one level along for the REVEAL: a
+ * thing that takes over the page, rendered in the slot meant for a button.
+ *
+ * The head holds the trigger; `KeysSurface` renders the form in the body and owns the one piece of
+ * state that decides which. The approved `setup-keys` state puts `+ New key` in the head, and it is
+ * still there.
+ */
+NewKey.Trigger = function Trigger({ onOpen }: { onOpen: () => void }) {
+  return (
+    <button type="button" className="ds-btn ds-btn--primary" onClick={onOpen}>
+      + New key
+    </button>
   )
 }
 

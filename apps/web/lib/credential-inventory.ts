@@ -163,7 +163,7 @@ export const CREDENTIAL_MINT_ORDER: readonly CredentialKind[] = [
  * the moment the union grows, and cannot be forgotten.
  */
 export function isCredentialKind(value: unknown): value is CredentialKind {
-  return typeof value === 'string' && Object.hasOwn(CREDENTIAL_COPY, value)
+  return typeof value === 'string' && value in CREDENTIAL_COPY
 }
 
 export function credentialTitle(kind: CredentialKind): string {
