@@ -5,7 +5,7 @@ import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
 // so the weld checked itself, and the gate kept a deferred row pointing at `78`, the number D8
 // disproved. One implementation, two consumers (CODE-QUALITY #2).
-import { MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
+import { CHROME_BUDGET_PX, MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -134,6 +134,13 @@ test.describe('the console matches the approved design', () => {
     // 1. The approved design fits Ship › Features in one screen. A page that scrolls means the
     //    chrome is eating the viewport — 48px headings, three-line rail cards, a list that pages at
     //    25 instead of collapsing.
+    //
+    // ⚠️ **This one SURVIVES the L12 correction, and the distinction is the point.** Sprint 5
+    // replaced the GENERIC per-route no-scroll assertion with a chrome budget, because eleven of the
+    // thirty approved states scroll and the rule was asserting a property the design does not have.
+    // `ship-features` is not one of them: it measures exactly 960 in `MEASURED-SPEC.md`'s chrome
+    // table, and it fits *because of the dormant collapse* — forty features become one summary line.
+    // Fitting one screen is that page's actual design promise, so it keeps its own assertion.
     expect
       .soft(
         geometry.scrollHeight,
@@ -640,6 +647,18 @@ test('every route claiming the design system renders from it', async ({ page }) 
       designSystemClasses: [...document.querySelectorAll('main [class]')].filter((element) =>
         [...element.classList].some((name) => name === 'ds' || name.startsWith('ds-'))
       ).length,
+      // How far down the page the first element carrying DATA begins — the CHROME, measured. The
+      // list is the product's content vocabulary, the counterpart of the prototype's in
+      // `measure-contract.mjs`. `null` when a page renders none, which is reported rather than
+      // scored: a route with no content element is a finding, not a zero.
+      chrome: (() => {
+        const first = document.querySelector(
+          'main .ds-tile, main .ds-listcard, main .ds-tasklist, main .ds-chart, main .ds-card, ' +
+            'main .ds-empty, main .ds-band-empty, main .ds-table, main .ds-timeline, main .ds-field, ' +
+            'main .ds-summary, main .ds-kpis, main .ds-envtable, main .ds-picklist, main .ds-matrix'
+        )
+        return first ? Math.round(first.getBoundingClientRect().top) : null
+      })(),
     }))
 
     expect
@@ -648,12 +667,36 @@ test('every route claiming the design system renders from it', async ({ page }) 
         `[${row.route}] claims to render from design-system/ and its <main> contains no ds- class`
       )
       .toBeGreaterThan(0)
+
+    // ⚠️ **THE CHROME BUDGET REPLACED A NO-SCROLL ASSERTION THAT WAS GREEN FOR THE WRONG REASON.**
+    //
+    // This used to require every covered route to fit 1440x960, citing "a page that scrolls means
+    // the chrome is eating the viewport". Measured against the approved design (`MEASURED-SPEC.md`,
+    // the chrome table), ELEVEN of the thirty approved states scroll — `today` is 1711px,
+    // `experiment-blocked` 1625px, and `ship-activity` 1274px while the route built from it passed
+    // this line. It was asserting a property the design does not have, and passing because the
+    // fixture tenant is thin. In the epic named after guards that cannot go red, that is the finding
+    // rather than the inconvenience.
+    //
+    // Every defect the old assertion NAMES is about chrome — a 48px h1 wrapping to four lines, a
+    // three-line rail card, a summary strip that eats the screen — and none is about row count. So
+    // the budget is the chrome, and `CHROME_BUDGET_PX` is the approved design's own maximum,
+    // welded to the regenerated table by `console-spec.test.ts`.
     expect
-      .soft(
-        geometry.scrollHeight,
-        `[${row.route}] is ${geometry.scrollHeight}px tall in a ${geometry.innerHeight}px viewport`
-      )
-      .toBeLessThanOrEqual(geometry.innerHeight)
+      .soft(geometry.chrome, `[${row.route}] renders no content element at all inside <main>`)
+      .not.toBeNull()
+    if (geometry.chrome !== null) {
+      expect
+        .soft(
+          geometry.chrome,
+          `[${row.route}] spends ${geometry.chrome}px on chrome before its first content — the ` +
+            `approved design's worst case is ${CHROME_BUDGET_PX}px`
+        )
+        .toBeLessThanOrEqual(CHROME_BUDGET_PX)
+    }
+
+    // Horizontal scroll stays an absolute: wide content scrolls inside its OWN container, and the
+    // page never does. That one IS a property of the approved design, at every state.
     expect
       .soft(
         geometry.scrollWidth,

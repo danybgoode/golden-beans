@@ -158,6 +158,19 @@ export const UPPERCASE_ALLOWED: readonly {
   { selector: '.ds-matrix', what: "the environment matrix's column headers", keep: true },
   { selector: '.ds-envtable', what: "the environments table's header (replaces .envtable th)", keep: true },
   { selector: '.ds-here', what: 'the "you are here" marker on the environments table', keep: true },
+  // ── design-system-rails · Sprint 5 — Today's band badges ─────────────────────────────────────
+  // ⚠️ The approved prototype writes this one MONO (`font: 500 10.5px/1 var(--mono)` on
+  // `.band > h3 .who`), which Do-not #3 forbids paired with uppercase. Answered the way F1's banned
+  // glyph was — use the permitted route, never disable the rule — and Story 4.1 had already settled
+  // the identical shape: an uppercase micro-label in this system is 11 / 600 Archivo. `keep: true`
+  // because the uppercase itself is approved; only the family changed.
+  { selector: '.ds-band-who', what: "the band's “only you can” / “not you” badge", keep: true },
+  { selector: '.ds-tile-label', what: "a summary tile's caption", keep: true },
+  // ⚠️ Replaces `globals.css`'s `.command-center__gaps summary`, deleted in the same commit. That
+  // rule was `font: 600 11px var(--mono)` in uppercase — the shorthand this epic's drift rule
+  // refuses AND the uppercase-mono pair Do-not #3 forbids — so the port is also the fix, and this
+  // entry is `keep: true` in Archivo rather than mono debt.
+  { selector: '.ds-gaps', what: "the not-measuring disclosure's summary", keep: true },
   // The six the contract does not, each on a surface a later sprint rebuilds.
   { selector: '.rail-label', what: "the rail's “Environment” label — Sprint 3", keep: false },
   { selector: '.field > .lab', what: 'form field labels — Sprint 4', keep: false },
@@ -212,7 +225,6 @@ export const UPPERCASE_ALLOWED: readonly {
     keep: false,
     mono: true,
   },
-  { selector: '.command-center__gaps', what: "Today's gap disclosure — Sprint 5", keep: false, mono: true },
   {
     selector: '.data-table__filter-label',
     what: "the data table's filter label — Sprint 4",

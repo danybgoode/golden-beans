@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openPrototype, HERE } from './_harness.mjs';
+import { APPROVED_STATES } from './approved-states.mjs';
 
 const OUT = 'MEASURED-SPEC.md';
 
@@ -169,6 +170,57 @@ async function measureIn(page) {
     };
   }, TARGETS);
 
+  // ── The CHROME BUDGET, across every approved console state ──────────────────────────────────
+  //
+  // ⚠️ **This exists because the gate was asserting a property the approved design does not have.**
+  // `console-visual.authed.spec.ts` required every covered route to fit 1440x960 without scrolling,
+  // citing "a page that scrolls means the chrome is eating the viewport". Measured against the
+  // design itself, **eight of thirteen approved console states scroll** — `today` is 1711px,
+  // `experiment-blocked` 1625px, and `ship-activity` 1274px while the route built from it passes the
+  // gate. It was green because the fixture tenant is thin, not because the pages were right: a
+  // guard that passes for the wrong reason, in the epic named after that defect.
+  //
+  // What the assertion was actually FOR is a budget on CHROME — a 48px h1 wrapping to four lines, a
+  // three-line rail card, a summary strip that eats the screen. None of those is about how many rows
+  // a tenant has. So the property is measured here instead: **how far down the page the first
+  // element carrying DATA begins.** That is independent of row count, true of every approved state,
+  // and fails on exactly the defects the original named.
+  //
+  // The selector list is the prototype's own content vocabulary. It is deliberately broad: missing a
+  // state's first content element would report a LOWER budget than the design's, which is the
+  // direction that silently tightens a gate.
+  const CONTENT = '.listcard, .tile, .kpi, .hbar, .vbar, .plot, .task, .tl, .empty, .field, .card, .matrix, .small, .bars';
+  const chrome = [];
+  for (const [name, fn] of APPROVED_STATES) {
+    await page.evaluate(fn);
+    await page.waitForTimeout(120);
+    const row = await page.evaluate(
+      ([selector, state]) => {
+        // ⚠️ The doors and the public frame are reported as `null`, never as a number.
+        //
+        // They render into their own layer while `#content` keeps the last console render behind
+        // them, so a naive read returns `0` for a hidden node — a value that is not a measurement of
+        // anything and would sit in a generated table looking like one. `APP.door` is the
+        // prototype's own answer to "is a door on screen", so it is what decides.
+        //
+        // Reporting null rather than 0 also happens to be the safe direction: an absent measurement
+        // must never LOWER the maximum, because that silently tightens the gate.
+        if (APP.door) return { state, top: null, height: document.documentElement.scrollHeight };
+        const host = document.querySelector('#content');
+        if (!host) return { state, top: null, height: document.documentElement.scrollHeight };
+        const first = host.querySelector(selector);
+        return {
+          state,
+          top: first ? Math.round(first.getBoundingClientRect().top) : null,
+          height: document.documentElement.scrollHeight,
+        };
+      },
+      [CONTENT, name]
+    );
+    chrome.push(row);
+  }
+  out.chrome = chrome;
+
   // A page error means the numbers were read off a half-rendered prototype. Emitting them anyway
   // would write a plausible file that is wrong — the failure mode this whole story exists to close.
   if (errors.length) {
@@ -263,6 +315,32 @@ ${out.uppercaseElements.length ? out.uppercaseElements.map((e) => '`' + e + '`')
 | Element | Size / weight | Family | Box | Transform |
 |---|---|---|---|---|
 ${out.rows.map(cell).join('\n')}
+
+## The chrome budget — how far down each approved state's first DATA begins
+
+⚠️ **This table replaced an assertion that was green for the wrong reason.** The visual gate used to
+require every covered route to fit 1440 × 960 without scrolling, citing *"a page that scrolls means
+the chrome is eating the viewport"*. Measured against the design itself, **${out.chrome.filter((row) => row.top !== null && row.height > 960).length} of the ${out.chrome.filter((row) => row.top !== null).length} approved console
+states scroll** — so the gate asserted a property the approved design does not have, and passed only
+because the fixture tenant is thin.
+
+What that assertion was FOR is a budget on **chrome**: a 48px \`h1\` wrapping to four lines, a
+three-line rail card, a summary strip that eats the screen. None of those is about how many rows a
+tenant has. The **Chrome** column is the top of the first element carrying data, and its maximum is
+the budget \`console-gate-spec.ts\` asserts — welded by \`console-spec.test.ts\`, so the constant
+cannot drift from the design.
+
+**Chrome budget: ${Math.max(...out.chrome.filter((row) => row.top !== null).map((row) => row.top))}px**, set by \`${out.chrome.filter((row) => row.top !== null).sort((a, b) => b.top - a.top)[0].state}\`.
+
+| State | Chrome | Page height | Fits 960? |
+|---|---|---|---|
+${out.chrome
+  .map((row) =>
+    row.top === null
+      ? `| \`${row.state}\` | _no console chrome_ | ${row.height} | ${row.height <= 960 ? 'yes' : 'no'} |`
+      : `| \`${row.state}\` | ${row.top} | ${row.height} | ${row.height <= 960 ? 'yes' : '**no**'} |`
+  )
+  .join('\n')}
 `;
 }
 

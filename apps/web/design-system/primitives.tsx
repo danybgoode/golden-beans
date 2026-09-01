@@ -426,6 +426,47 @@ export function MenuItem({
  * `lede` is required: every approved state has one, and a head with no sentence under it is where
  * the 48px four-line heading came from.
  */
+/**
+ * The breadcrumb row above a page that is a VIEW OF something else.
+ *
+ * design-system-rails · Sprint 5. Four approved states open with one — `funnel-standalone`,
+ * `measure-journey`, `experiment-ready` and `tasks-standalone` — and each of them is a page you
+ * arrive at from a list. The row exists so that arriving somewhere does not mean losing the thing
+ * you arrived from, which is the reason `console-ia-overhaul` deleted the per-page
+ * "← Your projects" line and left nothing in its place on the routes that genuinely needed one.
+ *
+ * `back` is a real link, not a `history.back()` button: a page reached from a shared URL has no
+ * history to go back to, and a control that does nothing on a shareable page is worse than no
+ * control.
+ */
+export function Crumbs({
+  back,
+  children,
+}: {
+  back: { href: string; label: string }
+  /** The trail after the back link — a key, a tab name. Rendered as plain text, never as links. */
+  children?: ReactNode
+}) {
+  return (
+    <nav className="ds-crumbs" aria-label="Breadcrumb">
+      <a href={back.href}>&larr; {back.label}</a>
+      {children}
+    </nav>
+  )
+}
+
+/** One step of a breadcrumb trail, after the back link. */
+export function Crumb({ children, mono }: { children: ReactNode; mono?: boolean }) {
+  return (
+    <>
+      <span className="ds-crumbs-sep" aria-hidden="true">
+        /
+      </span>
+      <span className={mono ? 'ds-mono' : undefined}>{children}</span>
+    </>
+  )
+}
+
 export function PageHead({
   title,
   lede,

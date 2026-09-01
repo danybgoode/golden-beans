@@ -43,6 +43,22 @@ export type ShellSection = ConsoleSection | 'home'
  */
 export const TODAY_HREF = '/app'
 
+/**
+ * Today, for a named project.
+ *
+ * `/app` has no `[projectSlug]` segment — it is the one console page that is not addressed by
+ * tenant — so the switcher carries the choice as a query parameter, exactly as `/app/design-system`
+ * does. The page resolves it against the viewer's own memberships **server-side** and falls back to
+ * their first project when it matches nothing, so this parameter selects a VIEW and never a tenant
+ * (AGENTS.md: the request never selects the tenant).
+ *
+ * One definition, because three places build this URL and a hand-written `?project=` in any of them
+ * is a link that stops working the day the parameter is renamed.
+ */
+export function todayHrefFor(projectSlug: string): string {
+  return `${TODAY_HREF}?project=${encodeURIComponent(projectSlug)}`
+}
+
 export type ConsoleTab = {
   id: ShellSection
   label: string
@@ -148,7 +164,16 @@ export function buildConsoleHeader(input: {
     // strength of being an owner of A. Gates are process-wide, roles are per project.
     const sectionForProject =
       input.activeSection === 'home' || input.activeSection === 'today'
-        ? TODAY_HREF
+        ? // ⚠️ **`todayHrefFor`, not the bare `TODAY_HREF`** — design-system-rails Sprint 5, L?.
+          // Every project's Today entry used to resolve to the same `/app`, so on the one page
+          // where the switcher is most likely to be used it was a menu of N links that all went to
+          // the page you were already on. Story 4.1's own rule: a control that goes nowhere is
+          // worse than no control.
+          //
+          // The slug is a VIEW preference here, not a route identity — `/app` resolves it against
+          // the viewer's own membership list server-side and falls back to their first project, so
+          // a hand-typed slug can no more reach a foreign tenant than it could before.
+          todayHrefFor(project.slug)
         : getSectionEntryHref(
             getProjectSurfaceLinks({
               projectSlug: project.slug,

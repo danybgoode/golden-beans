@@ -2688,3 +2688,402 @@
     font-size: 34px;
   }
 }
+
+/* ── Tiles, bands and tasks — Today, and `/app/tasks` as its second mount ──────────────────────
+ * design-system-rails · Sprint 5, Story 5.2 (DD1, DD5).
+ *
+ * `.ds-tile` is the four-across summary the Measure and Today screens open with — a sibling of
+ * `.ds-stat`, not a replacement for it. The two answer different questions and the difference is
+ * load-bearing: `.ds-stat` is a LINK that filters a list to itself and always carries a number,
+ * while a tile is a plain figure with a caption and can legitimately have no value at all. Giving
+ * `.ds-stat` a null state would have put "no value has been recorded" inside a control that
+ * navigates somewhere.
+ */
+
+.ds .ds-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.ds .ds-tile {
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+
+.ds .ds-tile-label {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  font-weight: 600;
+}
+
+.ds .ds-tile-value {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⚠️ `tone` colours the number and the DETAIL line says the same thing in words. A green figure is
+   reinforcement, never the only carrier — the same rule `.ds-stat` follows. */
+.ds .ds-tile-value[data-tone='up'] {
+  color: var(--green);
+}
+
+.ds .ds-tile-value[data-tone='warn'] {
+  color: var(--gold-hot);
+}
+
+/* The tile with no reading. Set in prose at body size rather than at 28px mono, because a sentence
+   rendered as a headline figure reads as a figure — and this one is the opposite of a figure. The
+   sentence itself comes from `lib/stat-figures.ts`, which already owns the four North Star states. */
+.ds .ds-tile-absent {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.ds .ds-tile-detail {
+  font-size: 12.5px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+/* ── Bands ────────────────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-band {
+  margin-bottom: 26px;
+}
+
+.ds .ds-band-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* Whose job this band is. A fact about the BAND — `open` means nothing has picked it up — never a
+   claim about who a given row's holder is; see `lib/today-bands.ts` on why that one is not
+   derivable from a task row. */
+/* ⚠️ **Uppercase Archivo, NOT mono — the approved prototype writes this one in mono and the design
+   system does not permit the pair.** `reference.css`'s `.band > h3 .who` is
+   `font: 500 10.5px/1 var(--mono)` with `text-transform: uppercase`, and CONSOLE-CONTRACT's
+   Do-not #3 forbids uppercase-and-mono outright. Two of this epic's own guards say so out loud: the
+   drift guard's `font-shorthand` rule refuses that declaration's shape, and `vocabulary.test.ts`
+   refused this rule on its first run.
+
+   Answered the way F1 was — use the permitted route rather than disable the rule. Story 4.1 already
+   settled the identical shape for `.ds-listhead`: an uppercase micro-label in this system is
+   11 / 600 Archivo. So the badge is that, and it is registered in `UPPERCASE_ALLOWED` with
+   `keep: true` beside its siblings. */
+.ds .ds-band-who {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--dim-2);
+  background: var(--card);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds .ds-band-who[data-who='you'] {
+  color: var(--gold);
+  border-color: var(--gold-deep);
+  background: color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
+.ds .ds-band-who[data-who='agent'] {
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 40%, var(--roast));
+  background: color-mix(in srgb, var(--blue) 9%, transparent);
+}
+
+.ds .ds-band-sub {
+  font-size: 13px;
+  color: var(--dim-2);
+  margin-bottom: 12px;
+  max-width: 70ch;
+}
+
+.ds .ds-tasklist {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  overflow: hidden;
+}
+
+/* ── A task row ───────────────────────────────────────────────────────────────────────────── */
+
+.ds .ds-task {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ds .ds-task:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+}
+
+.ds .ds-task-sig {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 6px;
+  background: var(--dim-2);
+}
+
+.ds .ds-task-sig[data-kind='error'] {
+  background: var(--red);
+}
+
+.ds .ds-task-sig[data-kind='friction'] {
+  background: var(--gold);
+}
+
+/* An unclassified row gets a hollow mark rather than a coloured one — the row's own words say
+   "Unclassified", and a filled dot in the neutral token would still read as a category. */
+.ds .ds-task-sig[data-kind='unknown'] {
+  background: transparent;
+  border: 1px solid var(--dim-2);
+}
+
+.ds .ds-task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-task-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.ds .ds-task-meta {
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 3px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ds .ds-task-by {
+  flex: none;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim-2);
+}
+
+.ds .ds-task-by b {
+  display: block;
+  font-weight: 500;
+  color: var(--dim-2);
+}
+
+/* Held versus not held is the one distinction a task row can honestly draw, so it is the only one
+   drawn. `--crema` for a name somebody supplied, `--dim-2` for the absence of one. */
+.ds .ds-task-by[data-held='true'] b {
+  color: var(--crema);
+}
+
+.ds .ds-task-act {
+  flex: none;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.ds .ds-agentline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  margin-bottom: 12px;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--blue) 32%, var(--roast));
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+  font-size: 13px;
+}
+
+.ds .ds-agentline-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex: none;
+}
+
+.ds .ds-agentline-when {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--dim-2);
+  flex: none;
+}
+
+/* ── An empty band ────────────────────────────────────────────────────────────────────────── */
+
+/* An empty band is a DELIVERABLE, not a fallback (epic D10) — on the walkthrough tenant every band
+   on Today is empty, so this is the state a real person actually meets. It is a prompt to act, not
+   a blank: an empty queue and a broken queue look identical unless the page says which it is. */
+/* ⚠️ **One quiet LINE, not a 190px card — and the reason is Today's empty state specifically.**
+ *
+ * On a tenant with no tasks all three bands are empty at once, and three centred cards saying
+ * "nothing", "nothing", "nothing" spent 644px of a 960px viewport. That is precisely the "wide dead
+ * vertical gap" `console-ia-overhaul` A25 names as what was wrong with this route, reintroduced by
+ * the fix for it. Measured before and after: the page was 1121px tall and is 703px, so an empty
+ * Today now fits one screen — which is what the visual gate asserts and what makes that assertion
+ * mean something.
+ *
+ * It is still a sentence, not a blank: an empty queue and a broken queue look identical unless the
+ * page says which it is, and the `action` slot is what keeps it a prompt rather than a shrug. Only
+ * the geometry changed. */
+.ds .ds-band-empty {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 14px 16px;
+}
+
+.ds .ds-band-empty-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--crema);
+  flex: none;
+}
+
+.ds .ds-band-empty-body {
+  font-size: 12.5px;
+  color: var(--dim-2);
+  line-height: 1.5;
+  flex: 1 1 24ch;
+  min-width: 0;
+}
+
+.ds .ds-band-empty-action {
+  flex: none;
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .ds .ds-task-row {
+    flex-wrap: wrap;
+  }
+
+  .ds .ds-task-body {
+    flex: 1 1 100%;
+  }
+
+  .ds .ds-task-by {
+    text-align: left;
+  }
+}
+
+/* The breadcrumb row above a page that is a view OF something else — `funnel-standalone`,
+ * `measure-journey`, `experiment-ready`, `tasks-standalone`. Ported from `reference.css`'s
+ * `.crumbrow`, whose `button` becomes an `<a>` here: the prototype can call a JS router, a shared
+ * URL has no history to go back to, and a control that does nothing on a shareable page is worse
+ * than no control. */
+.ds .ds-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--dim-2);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ds .ds-crumbs a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.ds .ds-crumbs a:hover {
+  text-decoration: underline;
+}
+
+.ds .ds-crumbs-sep {
+  color: var(--line);
+}
+
+/* ── The Medusa-truth boundary ─────────────────────────────────────────────────────────────────
+ * design-system-rails · Sprint 5, Story 5.2.
+ *
+ * What this engine deliberately does NOT measure, each with its reason and its guardrail. ⚠️ The
+ * approved `today` state has no such block; it is kept because it has no other surface in the
+ * product, and "where is my revenue number?" is a question a plausible figure would answer badly
+ * and this answers honestly. Deleting a capability to satisfy a geometry assertion is not what
+ * "render from the design system" asks for — Sprint 4 recorded the same call for Destinations'
+ * two operational logs.
+ *
+ * It replaces `globals.css`'s `.command-center__gaps`, deleted in the same commit. That rule set
+ * its summary with a `font:` shorthand in uppercase mono — the pair Do-not #3 forbids and the
+ * shorthand this epic's own drift rule refuses — so the port is also the fix.
+ */
+.ds .ds-gaps {
+  margin-top: 4px;
+}
+
+.ds .ds-gaps > summary {
+  cursor: pointer;
+  color: var(--dim-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.ds .ds-gaps > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ds .ds-gaps > summary:hover {
+  color: var(--crema);
+}
+
+.ds .ds-gaps dt {
+  color: var(--crema);
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 12px;
+}
+
+.ds .ds-gaps dd {
+  color: var(--dim-2);
+  font-size: 12.5px;
+  margin: 3px 0 0;
+  line-height: 1.5;
+  max-width: 78ch;
+}
+
+.ds .ds-gaps dd em {
+  display: block;
+  color: var(--dim);
+  margin-top: 3px;
+}

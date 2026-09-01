@@ -158,7 +158,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: null,
     referenceState: 'today',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
@@ -172,7 +172,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     surface: 'tasks',
     // DD5 — one design, two mounts. Tasks is Today's third band, also mounted as its own page.
     referenceState: 'tasks-standalone',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,

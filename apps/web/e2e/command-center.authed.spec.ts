@@ -3,8 +3,23 @@ import { Client as PgClient } from 'pg'
 import { readTenantRecord } from './helpers/authed-fixture'
 import { hashCredential } from '@/lib/credential-hash'
 import { requireTestDatabaseUrl } from './helpers/test-db-cleanup'
+import { CHROME_BUDGET_PX } from '@/design-system/console-gate-spec'
 
 // app-shell-and-agent-rail · Sprint 3 — Command Center, in a browser, with real numbers in it.
+//
+// ── design-system-rails · Sprint 5, Story 5.2 — this route is now **Today** (DD1) ──────────────
+// Three of this file's assertions described the page that Story 5.2 replaced, and they are rewritten
+// rather than deleted, because what each of them was DEFENDING still matters:
+//
+//   · the funnel on `/app`  → the approved `today` state has no funnel, and the funnel now has a
+//     page of its own. **The non-zero check moved with it** rather than being dropped — it is the
+//     single most valuable assertion in this file and the reason the file exists.
+//   · the `.stat-card` grid → four `.ds-tile`s, one of which renders the honest never-recorded
+//     North Star (sprint L1) rather than a number this product cannot produce.
+//   · `.command-center__gaps` → still here, still asserted. The approved state has no such block,
+//     and it is kept anyway: the Medusa-truth boundary has no other surface, and deleting a
+//     capability to satisfy a geometry assertion is not what this story asks for (the same call
+//     Sprint 4 recorded for Destinations' delivery logs).
 //
 // ── Why this spec insists on a NON-ZERO number ────────────────────────────────────────────────
 // sprint-3.md calls this "not optional", and it is the single most valuable check in the sprint. A
@@ -135,75 +150,148 @@ test.describe('command center', () => {
     await pg.end()
   })
 
-  test('a real, non-zero funnel reaches the screen as bars with visible drop-off', async ({
+  test('Today leads with the four tiles and the three bands, within the chrome budget', async ({
     page,
   }, testInfo) => {
-    const { slug } = tenant()
+    await page.setViewportSize({ width: 1440, height: 960 })
     const response = await page.goto('/app')
     expect(response?.status()).toBe(200)
     // Kept like design-system.authed.spec.ts's: the assertions prove the numbers are right, the
     // artifact is what lets a human confirm the page also reads right.
-    await page.screenshot({ path: testInfo.outputPath('command-center.png'), fullPage: true })
+    await page.screenshot({ path: testInfo.outputPath('today.png'), fullPage: true })
 
-    const center = page.locator('.command-center')
-    await expect(center).toBeVisible()
-    // Story 3.3 — no bare <ul> of slugs. The page leads with the numbers.
-    await expect(center.locator('.command-center__stats')).toBeVisible()
+    // ── The four tiles ──────────────────────────────────────────────────────────────────────
+    const tiles = page.locator('main .ds-tile')
+    await expect(tiles).toHaveCount(4)
+    await expect(tiles.nth(0)).toContainText('North Star')
+    await expect(tiles.nth(1)).toContainText('On in Production')
+    await expect(tiles.nth(2)).toContainText('Needs a decision')
 
-    // THE non-zero check — scoped to the stat card, not to the whole Command Center.
+    // ⚠️ **The North Star renders its never-recorded SENTENCE, not a zero** (sprint L1). No code
+    // path in this product can produce a North Star reading — `readNorthStar` returns
+    // `latestValue: null` unconditionally and there is no table to read a level from — so a number
+    // here would be fabricated and a bare `0` would be the honest-looking zero four LEARNINGS
+    // entries are about.
+    const northStar = tiles.nth(0)
+    await expect(northStar.locator('.ds-tile-value')).toHaveCount(0)
+    await expect(northStar.locator('.ds-tile-absent')).toContainText('not a reading of zero')
+
+    // ── The three bands, in DD1's order ─────────────────────────────────────────────────────
+    const bands = page.locator('main .ds-band')
+    await expect(bands).toHaveCount(3)
+    await expect(bands.nth(0).locator('.ds-band-title')).toContainText('Waiting on you')
+    await expect(bands.nth(1).locator('.ds-band-title')).toContainText('Your agent is working')
+    await expect(bands.nth(2).locator('.ds-band-title')).toContainText('What changed')
+    // The badge is the honest half of the design's actor treatment: a fact about the BAND, never a
+    // per-row claim about whether a holder is a person or an agent (lib/today-bands.ts).
+    await expect(bands.nth(0).locator('.ds-band-who')).toHaveText('only you can')
+    await expect(bands.nth(1).locator('.ds-band-who')).toHaveText('not you')
+
+    // ── The seeded queue lands in the right bands ───────────────────────────────────────────
+    // `auth.setup.ts` seeds one task in each of three states, differing in every field a band
+    // reads — so a page rendering one row three times cannot pass this.
+    await expect(bands.nth(0).locator('.ds-task')).toHaveCount(1)
+    await expect(bands.nth(0)).toContainText('Checkout fails for sellers with no payout account')
+    await expect(bands.nth(1).locator('.ds-task')).toHaveCount(1)
+    await expect(bands.nth(1)).toContainText('Listing form abandoned at the photo step')
+    await expect(bands.nth(2).locator('.ds-task')).toHaveCount(1)
+    await expect(bands.nth(2)).toContainText('Duplicate order emails on retry')
+
+    // The kind is a WORD as well as a dot (DD4: status is never colour alone), and the evidence
+    // phrase carries the two inputs to the rank rather than an opaque score.
+    await expect(bands.nth(0).locator('.ds-task-meta')).toContainText('Error')
+    await expect(bands.nth(0).locator('.ds-task-meta')).toContainText('seen 41×')
+    await expect(bands.nth(1).locator('.ds-task-meta')).toContainText('Friction')
+    // The unheld row says so in words; the held one names its holder and does NOT classify it.
+    await expect(bands.nth(0).locator('.ds-task-by')).toContainText('nobody yet')
+    await expect(bands.nth(1).locator('.ds-task-by')).toContainText('gb-e2e-agent')
+
+    // ── THE WELD: the tile and the rows beneath it cannot disagree ──────────────────────────
+    // Both count the same array through `splitTaskBands`. A headline that contradicts the rows
+    // under it is worse than no headline, and this is what would go red if a future edit counted
+    // one of them separately.
+    const decisionTile = await tiles.nth(2).locator('.ds-tile-value').innerText()
+    expect(Number(decisionTile), 'the "needs a decision" tile does not match the band beneath it').toBe(
+      await bands.nth(0).locator('.ds-task').count()
+    )
+
+    // ── The geometry promise (sprint contract #12, as corrected by L12) ─────────────────────
     //
-    // It used to assert `center` contained "63%", which the funnel's own "63% of previous" label
-    // ALSO satisfies (fresh-reviewer finding). So the comment's claim — that a broken read could not
-    // pass this line — was false: with `rateFigure` returning null the card renders its caveat
-    // sentence and the assertion still passed on the drop-off label two elements away.
-    const adoption = center.locator('.stat-card', { hasText: `Adoption · ${FEATURE_KEY}` })
-    await expect(adoption).toBeVisible()
-    await expect(adoption.locator('.stat-card__value')).toHaveText('63%')
-    // ...and the card is NOT in its unreadable state, which is the other way this could go wrong.
-    await expect(adoption).not.toHaveAttribute('data-unreadable', 'true')
+    // ⚠️ NOT "Today fits one screen". The approved `today` state is **1711px tall** — its height is
+    // the number of tasks somebody has, and requiring it to fit would be requiring a property the
+    // design does not have. What is asserted is the CHROME: how far down the page the first thing
+    // carrying data begins. See `console-gate-spec.ts`' `CHROME_BUDGET_PX`.
+    const geometry = await page.evaluate(() => {
+      const first = document.querySelector('main .ds-tile')
+      return {
+        chrome: first ? Math.round(first.getBoundingClientRect().top) : null,
+        scrollWidth: document.body.scrollWidth,
+        innerWidth: window.innerWidth,
+      }
+    })
+    expect(geometry.chrome, 'Today rendered no tiles at all').not.toBeNull()
+    expect(
+      geometry.chrome!,
+      `Today spends ${geometry.chrome}px on chrome before its first tile — the approved design's ` +
+        `worst case is ${CHROME_BUDGET_PX}px`
+    ).toBeLessThanOrEqual(CHROME_BUDGET_PX)
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.innerWidth)
+  })
 
-    const bars = page.locator('.funnel-bars .bar')
-    await expect(bars).toHaveCount(3)
-    await expect(bars.nth(0)).toContainText(`Targeted · ${TARGETED_USERS}`)
-    await expect(bars.nth(1)).toContainText(`Adopted · ${ADOPTED_USERS}`)
-    await expect(bars.nth(2)).toContainText(`Retained · ${RETAINED_USERS}`)
+  test('a real, non-zero funnel reaches the screen with visible drop-off', async ({ page }) => {
+    // ⚠️ **This is the assertion this whole file exists for, and it MOVED rather than being
+    // deleted.** A dashboard whose correct empty state is indistinguishable from its broken state is
+    // the bug class this repo shipped to production once: a query that silently requires a tag the
+    // realistic caller has no reason to set returns an honest-looking zero, and a zero pages nobody.
+    //
+    // Story 5.2 takes the funnel off Today, because the approved `today` state has none and the
+    // funnel has a page of its own. So the check follows it to that page, driven by the same real
+    // ingest path (`POST /api/v1/track`, AGENTS rule #1) seeded in `beforeAll`.
+    const { slug } = tenant()
+    await page.setViewportSize({ width: 1440, height: 960 })
+    const response = await page.goto(`/app/funnel/${slug}/${FEATURE_KEY}`)
+    expect(response?.status()).toBe(200)
+
+    const main = page.locator('main')
+    // A deliberately LOPSIDED funnel, 8 → 5 → 2: equal counts would let a bug that renders one
+    // number three times pass, and a bug that renders equal-length bars pass with it.
+    await expect(main).toContainText(String(TARGETED_USERS))
+    await expect(main).toContainText(String(ADOPTED_USERS))
+    await expect(main).toContainText(String(RETAINED_USERS))
 
     // Rendered GEOMETRY, which is the whole reason this is a browser spec and not an API one: the
     // bars must actually get shorter. A funnel drawn with three equal bars is a decoration.
-    const heights = await page
-      .locator('.funnel-bars .bar > div')
-      .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().height))
-    expect(heights).toHaveLength(3)
-    expect(heights[0]).toBeGreaterThan(heights[1])
-    expect(heights[1]).toBeGreaterThan(heights[2])
-    expect(heights[2]).toBeGreaterThan(0)
+    const widths = await page
+      .locator('main .ds-chart-bars .ds-chart-fill')
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().width))
+    expect(widths, 'the funnel rendered no bars at all').toHaveLength(3)
+    expect(widths[0]).toBeGreaterThan(widths[1])
+    expect(widths[1]).toBeGreaterThan(widths[2])
+    expect(widths[2]).toBeGreaterThan(0)
 
-    // The drop-off is labelled, not left to the reader to compute.
-    await expect(bars.nth(1)).toContainText('63% of previous')
-    await expect(bars.nth(2)).toContainText('40% of previous')
-
-    // The numbers must agree with the surface they summarise (sprint-3.md smoke step 2).
-    const funnelPage = await page.goto(`/app/funnel/${slug}/${FEATURE_KEY}`)
-    expect(funnelPage?.status()).toBe(200)
-    await expect(page.locator('main')).toContainText(String(TARGETED_USERS))
-    await expect(page.locator('main')).toContainText(String(ADOPTED_USERS))
+    // The drop-off is stated, not left to the reader to compute.
+    await expect(main).toContainText('did not continue')
   })
 
   test('it reflows on a phone, keeps focus visible, and says what it does not measure', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/app')
 
-    await expect(page.locator('.command-center')).toBeVisible()
+    await expect(page.locator('main .ds-tiles')).toBeVisible()
 
     const [scrollWidth, clientWidth] = await page.evaluate(() => [
       document.documentElement.scrollWidth,
       document.documentElement.clientWidth,
     ])
-    expect(scrollWidth, 'Command Center must not produce horizontal scroll').toBeLessThanOrEqual(clientWidth)
+    expect(scrollWidth, 'Today must not produce horizontal scroll').toBeLessThanOrEqual(clientWidth)
 
     // The Medusa-truth boundary, on the front door. "Where is my revenue number?" is answered with
     // the reason it is not measured and the guardrail to fix that — never with a plausible figure.
-    const gaps = page.locator('.command-center__gaps')
+    //
+    // ⚠️ **The approved `today` state has no such block, and it is KEPT.** It has no other surface,
+    // and deleting a capability to satisfy a geometry assertion is not what "render from the design
+    // system" asks for — the same call Sprint 4 recorded for Destinations' two operational logs.
+    const gaps = page.locator('main .ds-gaps')
     await expect(gaps).toBeVisible()
     await gaps.locator('summary').click()
     await expect(gaps).toContainText('Revenue per feature')

@@ -17,6 +17,31 @@
 // is a genuine claim — "this app element and that prototype element are the same thing in the
 // design" — and there is nothing to derive it from.
 
+/**
+ * How far down a page its first element carrying DATA may begin, at 1440 × 960.
+ *
+ * ⚠️ **This replaced an assertion that was green for the wrong reason, and that is the whole story
+ * of this constant.**
+ *
+ * The visual gate required every covered route to fit 1440 × 960 without scrolling, citing *"a page
+ * that scrolls means the chrome is eating the viewport — 48px headings, three-line rail cards, a
+ * list that pages at 25 instead of collapsing."* Measured against the approved design itself
+ * (`MEASURED-SPEC.md`, the chrome table), **eleven of the thirty approved states scroll**: `today`
+ * is 1711px, `experiment-blocked` 1625px, `hub-roadmap` 1364px — and `ship-activity` is 1274px while
+ * the route built from it passes the gate today. The gate was asserting a property the approved
+ * design does not have, and it was passing because the fixture tenant is thin.
+ *
+ * Every failure that assertion actually names is about CHROME, not about row count. So this is the
+ * chrome, measured: the top of the first element carrying data. A 48px `h1` wrapping to four lines
+ * pushes it down. A three-line rail card pushes it down. Two hundred extra rows do not.
+ *
+ * ⚠️ **458 is MEASURED, not chosen**, and `console-spec.test.ts` welds it to the generated table's
+ * maximum — so it cannot drift from the design and cannot be argued upward in a spec file. It is the
+ * design's own worst case (`ship-features`, whose head carries an answer line, a four-tile summary
+ * strip and a toolbar). Every other console state is 223–384.
+ */
+export const CHROME_BUDGET_PX = 458
+
 export type SpecRow = {
   what: string
   selector: string

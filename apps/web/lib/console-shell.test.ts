@@ -266,12 +266,35 @@ test('switching from a section both projects entitle keeps you in that section',
   assert.equal(projects.find((project) => project.slug === 'acme')?.href, '/app/journeys/acme')
 })
 
-test('from Today, every project switches to Today', () => {
+test('from Today, every project switches to THAT PROJECT’s Today', () => {
+  // ⚠️ This asserted `TODAY_HREF` for every project until design-system-rails Sprint 5, and it was
+  // pinning a defect: `/app` has no `[projectSlug]` segment, so every entry resolved to the page
+  // the reader was already on. On the one screen where the switcher is most useful it was a menu of
+  // N links that all went nowhere — Story 4.1's own rule, "a control that goes nowhere is worse
+  // than no control", measured on the home page.
+  //
+  // The slug is a VIEW preference, not a route identity: `/app` resolves it against the viewer's
+  // own membership list server-side and falls back to their first project when it matches nothing.
   const { projects } = header('home', allGatesOpen, [
     { slug: 'miyagisanchez', role: 'owner' },
     { slug: 'acme', role: 'member' },
   ])
-  for (const project of projects) assert.equal(project.href, TODAY_HREF)
+  assert.deepEqual(
+    projects.map((project) => project.href),
+    ['/app?project=miyagisanchez', '/app?project=acme']
+  )
+  // Every one of them still LANDS on Today — the section does not change, only the tenant does.
+  for (const project of projects) {
+    assert.ok(project.href.startsWith(TODAY_HREF), `${project.href} leaves Today`)
+  }
+})
+
+test('a slug with URL-significant characters is encoded, not concatenated', () => {
+  // Slugs are validated elsewhere, so this is defence rather than a live case — but a switcher that
+  // builds a URL by concatenation is one migration away from emitting a broken link, and the
+  // encoding is free.
+  const { projects } = header('home', allGatesOpen, [{ slug: 'a b&c', role: 'owner' }])
+  assert.equal(projects[0].href, '/app?project=a%20b%26c')
 })
 
 // ── The seam itself ────────────────────────────────────────────────────────────────────────────

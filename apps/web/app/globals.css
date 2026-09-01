@@ -1507,32 +1507,6 @@ body {
 }
 
 /* app-shell-and-agent-rail S3 — Command Center. One block per project the member belongs to. */
-.command-center {
-  display: grid;
-  gap: 18px;
-  padding: 22px;
-  margin-top: 22px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-}
-
-.command-center__head h2 {
-  font-size: 20px;
-}
-
-.command-center__head small {
-  color: var(--dim-2);
-  font: 500 12px var(--mono);
-}
-
-.command-center__unavailable {
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--roast-2);
-}
-
 .command-center__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -1616,55 +1590,6 @@ a.stat-card:hover {
 
 .funnel-bars figcaption {
   margin-top: 12px;
-}
-
-.command-center__gaps summary {
-  cursor: pointer;
-  color: var(--dim);
-  font: 600 11px var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.command-center__gaps dl {
-  display: grid;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.command-center__gaps dt {
-  color: var(--crema);
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.command-center__gaps dd {
-  margin: 4px 0 0;
-  color: var(--dim);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-
-.command-center__gaps dd em {
-  display: block;
-  margin-top: 4px;
-  color: var(--gold);
-  font-style: normal;
-}
-
-.command-center__links {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.command-center__links li {
-  padding: 11px 12px;
-  border-radius: 8px;
-  background: var(--roast-2);
 }
 
 .auth-shell__card {

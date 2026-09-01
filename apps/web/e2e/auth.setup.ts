@@ -149,9 +149,131 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedImpactFixture(db, membership.project_id as string)
   await seedFunnelFixture(db, membership.project_id as string)
   await seedScenarioFixture(db, membership.project_id as string, userId)
+  await seedTaskFixture(db, membership.project_id as string)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed a queue with one task in each of the three states Today's bands show.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.2 mounts Today's three bands on `/app` and `/app/tasks`, and epic D10
+ * records that **no production tenant can render them populated**: `miyagisanchez` has zero tasks,
+ * and the one production task is a resolved one on `golden-beans-demo`. So without this the ROW —
+ * its dot, its evidence phrase, its holder, its actions — is a component nothing ever draws with
+ * data, which is the same "a guard nobody has seen red" problem one level up.
+ *
+ * Exactly the argument Story 4.2's `seedFunnelFixture` makes for the funnel, applied to the queue.
+ *
+ * ── Why the service client and not the promotion path ─────────────────────────────────────────
+ * `promoteEligibleSignals` only promotes signals that cross an impact threshold, so producing a
+ * CLAIMED and a RESOLVED task through it would mean driving the whole lifecycle — several writes
+ * whose failure modes have nothing to do with what the bands render. Same reasoning as
+ * `seedImpactFixture` and `seedFunnelFixture` above.
+ *
+ * ⚠️ **The three differ in every field a band reads**, deliberately: a spec asserting "the rows
+ * render" against three identical tasks could pass on a page rendering one row three times.
+ *   · one `open`, unheld, an error, with both evidence counts
+ *   · one `claimed`, held by a named actor, a friction, with an event count and no user count
+ *   · one `resolved`, with a resolution and an evidence pointer
+ */
+async function seedTaskFixture(db: SupabaseClient, projectId: string) {
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
+  // ⚠️ `signals.fingerprint` carries `CHECK (fingerprint ~ '^[0-9a-f]{32}$')` — it is a hash, not a
+  // label. A readable stand-in ('gb-e2e-signal-open') is rejected by the database, which is the
+  // right behaviour and was found by running the seed rather than by reading the schema. These are
+  // fixed hex strings rather than real hashes: `lib/signal-fingerprint.ts` owns the real derivation,
+  // and nothing in this fixture depends on the value beyond its uniqueness.
+  const FINGERPRINT = {
+    open: 'e2e0000000000000000000000000000a',
+    claimed: 'e2e0000000000000000000000000000b',
+    resolved: 'e2e0000000000000000000000000000c',
+  } as const
+  const signals = [
+    {
+      kind: 'error',
+      fingerprint: FINGERPRINT.open,
+      title: 'Checkout fails for sellers with no payout account',
+      event_count: 41,
+      users_affected: 12,
+      first_seen_at: minutesAgo(600),
+      last_seen_at: minutesAgo(28),
+      sample: { message: 'TypeError: payout account is undefined' },
+    },
+    {
+      kind: 'friction',
+      fingerprint: FINGERPRINT.claimed,
+      title: 'Listing form abandoned at the photo step',
+      event_count: 212,
+      users_affected: 0,
+      first_seen_at: minutesAgo(1440),
+      last_seen_at: minutesAgo(60),
+      sample: { stage: 'photo_upload' },
+    },
+    {
+      kind: 'error',
+      fingerprint: FINGERPRINT.resolved,
+      title: 'Duplicate order emails on retry',
+      event_count: 14,
+      users_affected: 9,
+      first_seen_at: minutesAgo(4320),
+      last_seen_at: minutesAgo(2880),
+      sample: { message: 'send() called twice for one order id' },
+    },
+  ].map((signal) => ({ ...signal, project_id: projectId }))
+
+  const { data: inserted, error: signalError } = await db.from('signals').insert(signals).select('id, fingerprint')
+  if (signalError || !inserted) throw new Error(`could not seed the task signals: ${signalError?.message}`)
+  const idOf = (fingerprint: string) => {
+    const row = inserted.find((signal) => signal.fingerprint === fingerprint)
+    // Fail LOUD rather than insert a task with an undefined signal id — a `not null` violation two
+    // statements later is a much worse error message than this one (CODE-QUALITY #7).
+    if (!row) throw new Error(`seeded signal ${fingerprint} did not come back with an id`)
+    return row.id as string
+  }
+
+  const { error: taskError } = await db.from('tasks').insert([
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.open),
+      status: 'open',
+      title: 'Checkout fails for sellers with no payout account',
+      impact_rank: 41,
+      evidence: {
+        signal: { kind: 'error', eventCount: 41, usersAffected: 12, firstSeenAt: minutesAgo(600) },
+        capturedAt: minutesAgo(28),
+      },
+    },
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.claimed),
+      status: 'claimed',
+      title: 'Listing form abandoned at the photo step',
+      impact_rank: 27,
+      claimed_by: 'gb-e2e-agent',
+      claimed_at: minutesAgo(45),
+      evidence: { signal: { kind: 'friction', eventCount: 212 }, capturedAt: minutesAgo(60) },
+    },
+    {
+      project_id: projectId,
+      signal_id: idOf(FINGERPRINT.resolved),
+      status: 'resolved',
+      title: 'Duplicate order emails on retry',
+      impact_rank: 9,
+      claimed_by: 'gb-e2e-agent',
+      claimed_at: minutesAgo(2880),
+      resolved_at: minutesAgo(1440),
+      resolution: 'fixed',
+      evidence_pointer: 'abc1234',
+      evidence: {
+        signal: { kind: 'error', eventCount: 14, usersAffected: 9 },
+        capturedAt: minutesAgo(2880),
+      },
+    },
+  ])
+  if (taskError) throw new Error(`could not seed the tasks: ${taskError.message}`)
+}
 
 /**
  * Seed the ONE fixture feature that has a funnel — design-system-rails Story 4.2.
