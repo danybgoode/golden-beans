@@ -329,8 +329,18 @@ Each line names the commit and the deviations, so the doc describes the build ra
 | 5.5 | `49e5cda` | Journeys list and detail; the stage bars from `cohort.stages`; the `entity-journeys` diagnostic layer kept behind a disclosure. |
 | 5.6 | `0ebfc14` | Scenarios as a tool, Onboarding off inline styles, `RowGroup`, and the pill/bar contradiction. **Coverage 18 / 27.** |
 | — | `2ab58e1` | **The authed gate runs the PROJECT, not a list of files.** Seven suites were outside it. |
+| — | `93c96c3` | The chrome numbers become **evidence**, not a compared contract — CI proved they do not reproduce across platforms. |
+| — | `984eb6b` | Three defects from the second scoped review pass, and the one spec CI runs that the local runner skips. |
+| — | `fc3697c` | **Today rendered a dark capability** — the bands ignored `isSignalsEnabled()`, against my own L8. |
+| — | `5b40e22` | **The experiments list described the wrong version, twice.** Live-data wrong on production. |
+| — | `5f26d4d` | The false `setup_guide_shares` claim swept out of the CODE, not only the doc. |
 
 ### Findings — the things that were not true before this sprint looked
+
+> **Four of the thirteen were found AFTER CI first went green** (10-13). Two of those were
+> live-data wrong on production. The rule that produced them is in the last one: verify a data
+> claim by re-deriving it through the function the page calls, never by querying the table you
+> assume it reads.
 
 1. **The visual gate asserted a property the approved design does not have.** It required every
    covered route to fit 1440×960. Measured against the design: **eleven of the thirty approved
@@ -354,6 +364,20 @@ Each line names the commit and the deviations, so the doc describes the build ra
 9. **`crossesZero` had an unreachable boundary case.** Flipping it from inclusive to exclusive left
    all eleven interval tests green; the case *is* reachable, and the exclusive form would have said
    "the difference is real" about two arms that performed identically.
+10. **The chrome numbers do not reproduce across platforms** — `ship-features` is 458px on macOS and
+    459px on `ubuntu-latest`. CI caught it on the first run of the table that introduced them, which
+    is the defect `measure-contract.mjs` exists to prevent, committed by the change that extended it.
+11. **Today rendered the task bands without checking `isSignalsEnabled()`** — a "See every task →"
+    link to a route that 404s. This was in my own lock as **L8**; the page it replaced resolved the
+    gate and handed it down, and the rewrite dropped it.
+12. **The experiments list described the wrong version, twice, and the first fix was the second
+    bug.** `.at(-1)` took the OLDEST (the mapper sorts descending, under my comment claiming
+    ascending) — live-wrong on production `fundadoras_promise_cta`. Then the highest version number
+    put a **draft** on a row whose v1 was RUNNING. **A fixture with one version cannot see either**:
+    first and last are the same element. The fixture now seeds a second version for that reason.
+13. **My own walkthrough named a state the live data cannot produce** — the thing D10 exists to
+    prevent — by reading a column (`input_values`, empty) instead of the code path (a
+    `telemetry_event` input reads `events`, which has one row).
 
 ### Deviations, stated rather than left to be found
 
