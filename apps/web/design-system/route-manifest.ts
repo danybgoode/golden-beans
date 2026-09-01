@@ -148,6 +148,32 @@ export type CoverageRow = {
  * brand system in two earlier epics, and putting them behind this epic's kill-switch would mean a
  * rollback here un-ships work this epic never touched (D6).
  */
+/**
+ * The one deferral both pod-report surfaces carry.
+ *
+ * ⚠️ Declared ONCE and referenced twice (cross-family review, agy, Nit — CODE-QUALITY #1). It was
+ * pasted verbatim into both rows, and two copies of a decay date is one date somebody updates and
+ * one that quietly expires on a different day. `/hub/[projectSlug]/report` and `/s/[token]` render
+ * the SAME `PodReportBody`, so they are short for exactly the same reason and stop being short on
+ * exactly the same day.
+ */
+const POD_REPORT_TABLES_DEFERRAL: Deferral = {
+  owner: 'Daniel',
+  until: '2026-11-30',
+  why:
+        'The pod report\u2019s SHELL renders from design-system/ \u2014 the page head, the provenance ' +
+        'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
+        'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
+        'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
+        'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
+        '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
+        'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
+        'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
+        'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
+        'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
+        'Closing it needs those states designed and approved first, which is planning-lane work.',
+}
+
 export const ROUTE_MANIFEST: readonly CoverageRow[] = [
   // ── Today ───────────────────────────────────────────────────────────────────────────────────
   {
@@ -570,22 +596,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
-    deferred: {
-      owner: 'Daniel',
-      until: '2026-11-30',
-      why:
-        'The pod report\u2019s SHELL renders from design-system/ \u2014 the page head, the provenance ' +
-        'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
-        'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
-        'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
-        'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
-        '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
-        'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
-        'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
-        'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
-        'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
-        'Closing it needs those states designed and approved first, which is planning-lane work.',
-    },
+    deferred: POD_REPORT_TABLES_DEFERRAL,
   },
   {
     route: '/talk',
@@ -652,22 +663,7 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     rendersFromDesignSystem: true,
     landsIn: 6,
     retiresIn: null,
-    deferred: {
-      owner: 'Daniel',
-      until: '2026-11-30',
-      why:
-        'The pod report\u2019s SHELL renders from design-system/ \u2014 the page head, the provenance ' +
-        'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
-        'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
-        'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
-        'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
-        '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
-        'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
-        'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
-        'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
-        'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
-        'Closing it needs those states designed and approved first, which is planning-lane work.',
-    },
+    deferred: POD_REPORT_TABLES_DEFERRAL,
   },
 ]
 

@@ -52,11 +52,23 @@ const STYLESHEETS = ['app/globals.css', 'app/console.css', 'app/hub/hub.module.c
  */
 const RETIRED_CLASSES = ['product-shell', 'auth-shell', 'auth-form']
 
+/**
+ * Does `text` contain one of the retired class names, as a WHOLE name?
+ *
+ * ⚠️ **The boundary is BEM, not "any word characters"** (cross-family review, agy, Should-fix —
+ * verified by mutation in both directions). The first version ended the name with `[\w-]*`, which
+ * swallows any suffix at all: `.product-shelling` was reported as `.product-shell`, and this file's
+ * own comment promised the opposite in as many words. A guard that blocks correct work with a wrong
+ * diagnosis is how a guard gets switched off, and a comment claiming a property the regex does not
+ * have is the defect class this whole epic is named after — written by me, in the guard against it.
+ *
+ * A retired name's real children are BEM: `__element` and `--modifier`. Those must fail, because
+ * they were deleted with their parent. Anything else that merely STARTS the same way is a different
+ * name and must not.
+ */
 function retiredNameIn(text: string): string | null {
   for (const name of RETIRED_CLASSES) {
-    // A class name ends at anything that is not a name character, so `__tab` and `--modifier` are
-    // part of the same name and a following `.`, ` `, `,`, `{`, `:` or end-of-string is not.
-    if (new RegExp(`\\.${name}(?![\\w-])|\\.${name}[\\w-]*(?![\\w-])`).test(text)) return name
+    if (new RegExp(`\\.${name}(?:__[\\w-]+|--[\\w-]+)?(?![\\w-])`).test(text)) return name
   }
   return null
 }
@@ -121,11 +133,30 @@ test('no component renders the markup that design is attached to', () => {
   for (const file of files) {
     if (file === fileURLToPath(import.meta.url)) continue
     const source = readFileSync(file, 'utf8')
-    for (const match of source.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\})/g)) {
+    // ⚠️ **EVERY string literal in a `className`, not just the two shapes I happened to write**
+    // (cross-family review, agy, **Blocking** — verified by mutation: `className={'auth-shell'}`
+    // left this test GREEN).
+    //
+    // The first version matched `className="…"` and ``className={`…`}`` only, so the two other
+    // shapes JSX allows — `className={'x'}` and `className={"x"}` — walked straight past a guard
+    // whose entire job is to prove the old path unreachable. Prettier happens to rewrite those to
+    // the bare-attribute form in this repo, which is a CONVENTION; a guard that holds only while a
+    // formatter is run is a guard that reports success for the wrong reason.
+    //
+    // So: capture the whole `className=` value (a quoted string, or a braced expression up to its
+    // matching brace), then look for a retired name inside ANY quoted string within it. That also
+    // covers the composed forms — `classes('ds-btn', 'auth-form')`, a ternary, a template with
+    // interpolations — which the previous version could not see at all.
+    for (const match of source.matchAll(/className=(?:("[^"]*"|'[^']*')|\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\})/g)) {
       const value = match[1] ?? match[2] ?? ''
-      for (const name of RETIRED_CLASSES) {
-        if (new RegExp(`(^|[\\s\`{])${name}(?![\\w-])|(^|[\\s\`{])${name}[\\w-]+`).test(value)) {
-          offenders.push(`${relative(WEB, file)}: ${value.slice(0, 60)}`)
+      for (const literal of value.matchAll(/"([^"]*)"|'([^']*)'|`([^`]*)`/g)) {
+        const text = literal[1] ?? literal[2] ?? literal[3] ?? ''
+        for (const name of RETIRED_CLASSES) {
+          // Whole class TOKEN inside the attribute — space-delimited, with the same BEM boundary
+          // `retiredNameIn` uses on selectors. `${name}-ish` is a different class and must pass.
+          if (new RegExp(`(?:^|\\s)${name}(?:__[\\w-]+|--[\\w-]+)?(?=\\s|$)`).test(text)) {
+            offenders.push(`${relative(WEB, file)}: ${text.slice(0, 60)}`)
+          }
         }
       }
     }
