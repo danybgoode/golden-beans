@@ -380,3 +380,411 @@ export function MenuItem({
     </button>
   )
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// THE PAGE LAYER — design-system-rails · Sprint 4
+//
+// Everything above is a control. Everything below is how a whole page is put together: the head,
+// the summary strip, the list card and its rows.
+//
+// ── Why these are components and not just classes ────────────────────────────────────────────
+// The rule at the top of this file — "a page never types `ds-btn` by hand, which is what keeps the
+// namespace enforceable and the states reachable" — is the reason. There is a second, sharper one
+// for the list: the header row and every body row share three fixed column widths, and a page that
+// typed `ds-col-state` into one and forgot it in the other would render a header sitting over a
+// column of a different width. `Col` owns that pairing, so the two cannot disagree.
+//
+// ── What is deliberately NOT a component ─────────────────────────────────────────────────────
+// `ds-foot`, `ds-hint`, `ds-mono` and the like. They are one class on one element with no state, no
+// variants and no structural partner; wrapping them would add a name to learn and remove nothing.
+// The line is: a class a page can get WRONG gets a component; a class it can only get right does
+// not.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * The page head — a 23/700 title, one sentence under it, and any actions pushed to the right edge.
+ *
+ * `title` is a `ReactNode` because a feature's title is its key in mono (`<code>`), not a string.
+ * `lede` is required: every approved state has one, and a head with no sentence under it is where
+ * the 48px four-line heading came from.
+ */
+export function PageHead({
+  title,
+  lede,
+  actions,
+}: {
+  title: ReactNode
+  lede: ReactNode
+  actions?: ReactNode
+}) {
+  return (
+    <div className="ds-page-head">
+      <div>
+        <h1>{title}</h1>
+        <p>{lede}</p>
+      </div>
+      {actions ? (
+        <>
+          <div className="ds-page-head-spacer" />
+          {actions}
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+/** The four-count summary strip. Each child is a `StatLink`. */
+export function Summary({ children }: { children: ReactNode }) {
+  return <div className="ds-summary">{children}</div>
+}
+
+/**
+ * One count, as a link that filters the list to itself.
+ *
+ * ⚠️ `current` paints the tile AND is what a screen reader announces, carried on ONE attribute so
+ * the two cues cannot drift apart — the same rule `RailItem` follows.
+ *
+ * ⚠️ `tone` colours the number, and the LABEL says the same thing in words: a green `12` beside
+ * "On in production" is reinforcement, never the only carrier. A zero is dimmed whatever the tone,
+ * because a green `0` beside "On in production" reads at a glance as a healthy number — which is
+ * the opposite of what it means.
+ */
+export function StatLink({
+  value,
+  label,
+  href,
+  tone = 'all',
+  current,
+}: {
+  value: number
+  label: string
+  href: string
+  tone?: 'all' | 'on' | 'off' | 'never'
+  current?: boolean
+}) {
+  return (
+    <a
+      className={`ds-stat ds-stat--${tone}`}
+      href={href}
+      data-nonzero={String(value > 0)}
+      aria-current={current ? 'true' : undefined}
+    >
+      <span className="ds-stat-value">{value}</span>
+      <span className="ds-stat-label">{label}</span>
+    </a>
+  )
+}
+
+/**
+ * A chip that captions a value — a type, a risk, an environment, an expiry.
+ *
+ * `label` becomes the `aria-label`, and it is how "Unclassified Unclassified" stopped being what a
+ * screen reader heard on a row carrying both a type tag and a risk tag. It CAPTIONS the value
+ * ("Type: Unclassified") rather than replacing it, which is the distinction that made the first
+ * attempt — an `aria-label` on the CELL — announce a feature key as the word "Feature".
+ */
+export function Tag({
+  children,
+  tone,
+  label,
+}: {
+  children: ReactNode
+  tone?: 'kill' | 'risk-high' | 'unclassified'
+  label?: string
+}) {
+  return (
+    <span className={classes('ds-tag', tone && `ds-tag--${tone}`)} aria-label={label}>
+      {children}
+    </span>
+  )
+}
+
+/**
+ * A standing note. Not a toast: a toast reports what just happened and leaves, this states
+ * something that is true of the page every time you open it.
+ *
+ * `role="status"` for a note, `role="alert"` for a warning — the two are read differently by a
+ * screen reader, and which one this is depends on whether the reader needs to know NOW.
+ */
+export function Callout({
+  children,
+  tone = 'info',
+}: {
+  children: ReactNode
+  tone?: 'info' | 'warn'
+}) {
+  return (
+    <p className={`ds-callout ds-callout--${tone}`} role={tone === 'warn' ? 'alert' : 'status'}>
+      <span className="ds-callout-icon">
+        <Icon name={tone === 'warn' ? 'warning' : 'info'} size={14} />
+      </span>
+      <span>{children}</span>
+    </p>
+  )
+}
+
+/** The card a list lives in. Rows, a header row, or an empty state — never a page's prose. */
+export function ListCard({ children, label }: { children: ReactNode; label?: string }) {
+  return (
+    <div className="ds-listcard">
+      {/* Wide content scrolls inside ITS OWN container; the page never scrolls sideways
+          (Do-not #6). `role="table"` sits on the SCROLLER because that is the element that
+          directly contains the rows — a `role="row"` whose ancestor is a plain `<div>` is an
+          orphaned role a screen reader reports as broken structure. */}
+      <div className="ds-listcard-scroll" role="table" aria-label={label}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/** The 11/600 uppercase column header row. Never mono (Do-not #3). */
+export function ListHead({ children }: { children: ReactNode }) {
+  return (
+    <div className="ds-listhead" role="row">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * One column, in the header or in a row.
+ *
+ * ⚠️ The THREE FIXED WIDTHS live here and nowhere else. A header cell and the body cells beneath it
+ * take the same `width`, so they cannot be given different ones — which is what happened when
+ * `On / off` was added as a fourth column and two hardcoded column counts were left behind.
+ */
+export function Col({
+  children,
+  width = 'main',
+  header,
+  colSpan,
+  title,
+}: {
+  children: ReactNode
+  width?: 'main' | 'state' | 'meta' | 'act'
+  header?: boolean
+  /** Set only on a banner cell that spans the whole table — the value must be the column COUNT. */
+  colSpan?: number
+  title?: string
+}) {
+  const className =
+    width === 'main'
+      ? header
+        ? 'ds-row-main'
+        : 'ds-row-main'
+      : width === 'state'
+        ? header
+          ? 'ds-col-state'
+          : 'ds-row-state'
+        : width === 'meta'
+          ? header
+            ? 'ds-col-meta'
+            : 'ds-row-meta'
+          : 'ds-col-act'
+  return (
+    <span
+      className={className}
+      role={header ? 'columnheader' : 'cell'}
+      aria-colspan={colSpan}
+      title={title}
+    >
+      {children}
+    </span>
+  )
+}
+
+/** One row of a list card. */
+export function Row({ children }: { children: ReactNode }) {
+  return (
+    <div className="ds-row" role="row">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * The first cell of a row: what this row is about, and one line saying what it does.
+ *
+ * `mono` decides the typeface, and it is a real distinction rather than a style knob — a feature key
+ * is an identifier and renders in mono; a credential's label is something a person typed and renders
+ * in the sans face. `href` makes the title the row's link; without one it is plain text.
+ */
+export function RowMain({
+  title,
+  description,
+  href,
+  mono = true,
+}: {
+  title: ReactNode
+  description?: ReactNode
+  href?: string
+  mono?: boolean
+}) {
+  const titleClass = classes('ds-row-key', !mono && 'ds-row-name')
+  return (
+    <Col width="main">
+      {href === undefined ? (
+        <span className={titleClass}>{title}</span>
+      ) : (
+        <a className={titleClass} href={href}>
+          {title}
+        </a>
+      )}
+      {description === undefined ? null : <span className="ds-row-desc">{description}</span>}
+    </Col>
+  )
+}
+
+/**
+ * The state cell: a pill, and one clipped line of detail under it.
+ *
+ * ⚠️ The detail is ONE LINE, clipped, with its full text on `title`. That is what holds the row at
+ * the contract's 71px: the sentence separating "never turned on here" from "switched off" is long
+ * on purpose, and in a 190px column it wrapped and made the row 90px — the state 39 of 42
+ * production flags are in, so the gate ran against 90px rows and stayed green.
+ */
+export function RowState({ state, label, detail }: { state: 'on' | 'off' | 'never'; label: string; detail?: string }) {
+  return (
+    <Col width="state">
+      <Pill state={state}>{label}</Pill>
+      {detail === undefined ? null : (
+        <span className="ds-state-detail" title={detail}>
+          {detail}
+        </span>
+      )}
+    </Col>
+  )
+}
+
+/** A banner naming one run of rows and counting only its own. */
+export function GroupBanner({
+  state,
+  children,
+  count,
+  columns,
+}: {
+  state: 'on' | 'off' | 'never'
+  children: ReactNode
+  count: number
+  /** The table's column COUNT — `aria-colspan` is a number and must match what is rendered. */
+  columns: number
+}) {
+  return (
+    <div className={`ds-grp ds-grp--${state}`} role="row">
+      <span className="ds-grp-bar" aria-hidden="true" />
+      {/* `role="cell"`, never `columnheader`: this heads a RUN OF ROWS, and telling assistive tech
+          it heads a COLUMN is a different and false claim. The count is READ, not hidden — how many
+          rows a run holds is information, and hiding it to dodge a column-position problem withheld
+          it from exactly the readers who cannot see the rows. */}
+      <span role="cell" aria-colspan={columns}>
+        {children} <span className="ds-grp-count">{count}</span>
+      </span>
+    </div>
+  )
+}
+
+/**
+ * The one line that stands for forty.
+ *
+ * ⚠️ The link is INSIDE the cell. A `role="row"` may own only cells, so an orphaned `<a>` is both an
+ * invalid structure and an action with no column — a defect that survived three rounds on the
+ * surface this replaces, once by having its comment corrected instead of its markup.
+ */
+export function DormantSummary({
+  title,
+  detail,
+  action,
+  href,
+  columns,
+}: {
+  title: string
+  detail: string
+  action: string
+  href: string
+  columns: number
+}) {
+  return (
+    <div className="ds-dormant" data-dormant-summary role="row">
+      <span className="ds-dormant-text" role="cell" aria-colspan={columns}>
+        <span className="ds-dormant-copy">
+          <span className="ds-dormant-title">{title}</span>
+          <span className="ds-dormant-detail">{detail}</span>
+        </span>
+        <a className="ds-dormant-go" href={href}>
+          {action}
+        </a>
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A list card's empty state — an invitation, not a dead end.
+ *
+ * `title` and `body` are both required for the reason `TableEmpty`'s are: "No results" is the dead
+ * end `references/ux-guidelines.md` names. It has to say what would put something here.
+ *
+ * ⚠️ It renders OUTSIDE any `role="row"`, and `ListCard`'s `role="table"` is dropped when a card
+ * holds one — a grid with no rows and no columns is reported as broken structure rather than as
+ * "nothing here yet". Callers use `EmptyCard` rather than `ListCard` + `Empty` for that reason.
+ */
+export function Empty({ title, body, action }: { title: string; body: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="ds-empty">
+      <span className="ds-empty-title">{title}</span>
+      <span className="ds-empty-body">{body}</span>
+      {action ? <span className="ds-empty-action">{action}</span> : null}
+    </div>
+  )
+}
+
+/** A list card holding nothing but an empty state — see `Empty` for why the table role is dropped. */
+export function EmptyCard(props: { title: string; body: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="ds-listcard">
+      <Empty {...props} />
+    </div>
+  )
+}
+
+/** A padded card: the list card's surface, holding prose and fields instead of rows. */
+export function Card({ children }: { children: ReactNode }) {
+  return <div className="ds-card">{children}</div>
+}
+
+/** A label, a control, and the sentence that explains it. */
+export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
+  return (
+    <div className="ds-field">
+      <span className="ds-label">{label}</span>
+      {children}
+      {hint === undefined ? null : <p className="ds-hint">{hint}</p>}
+    </div>
+  )
+}
+
+/**
+ * A value shown ONCE, on a screen of its own, that cannot be recovered by reloading.
+ *
+ * Sprint contract #7: *the key value is shown once, on a screen of its own, with a copy button.
+ * Never a value read off a table.* This is that screen. It is gold-bordered because it is the only
+ * thing on the page a reader cannot get back.
+ */
+export function ShownOnce({
+  title,
+  body,
+  children,
+}: {
+  title: string
+  body: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="ds-once" role="alert">
+      <span className="ds-once-title">{title}</span>
+      <span className="ds-once-body">{body}</span>
+      {children}
+    </div>
+  )
+}

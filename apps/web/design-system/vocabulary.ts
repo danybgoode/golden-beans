@@ -142,6 +142,21 @@ export const UPPERCASE_ALLOWED: readonly {
   // specimen that rendered the uppercase step in sentence case would be lying about the scale it
   // exists to show. Not product copy, and not a third place uppercase appears in the product.
   { selector: '.ds-specimen-type--label', what: 'the specimen showing the `label` step', keep: true },
+  // ── design-system-rails · Sprint 4 — the PAGE layer's own uppercase, all of it approved ──────
+  // Every entry below replaces one of the `keep: false` rows further down, in the same commit that
+  // lands its page (sprint contract #11). They are `keep: true` because the contract approves each:
+  // the column header row and the group heading are the two the design has, and Story 4.1's
+  // acceptance names the header row's 11/600 uppercase Archivo explicitly. **None is mono** — the
+  // pair Do-not #3 forbids outright — and the test above is what says so rather than this comment.
+  { selector: '.ds-listhead', what: "the list card's column header row (replaces .listhead)", keep: true },
+  { selector: '.ds-grp', what: 'the state-run heading (replaces .grp)', keep: true },
+  // A form field's label. The prototype's `.field > .lab` is the rule this replaces, and that row
+  // is recorded below as `keep: false` — it is uppercase in the approved design too, so the
+  // replacement inherits `keep: true` and the OLD selector is what leaves in Sprint 6.
+  { selector: '.ds-label', what: 'a form field label (replaces .field > .lab)', keep: true },
+  { selector: '.ds-matrix', what: "the environment matrix's column headers", keep: true },
+  { selector: '.ds-envtable', what: "the environments table's header (replaces .envtable th)", keep: true },
+  { selector: '.ds-here', what: 'the "you are here" marker on the environments table', keep: true },
   // The six the contract does not, each on a surface a later sprint rebuilds.
   { selector: '.rail-label', what: "the rail's “Environment” label — Sprint 3", keep: false },
   { selector: '.field > .lab', what: 'form field labels — Sprint 4', keep: false },

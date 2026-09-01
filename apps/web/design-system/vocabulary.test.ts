@@ -173,16 +173,34 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
     )
   }
 
-  // The two the contract approves are the two that stay.
-  // ⚠️ FOUR selectors, TWO PLACES IN THE PRODUCT. `.ds-table-head` is the design system's column header row and
-  // `.listhead` is the one it replaces; both are live until Sprint 6 deletes the old world. Counting
-  // selectors instead of places would either force a premature deletion or make this assertion a
-  // number nobody can justify — so it names them, and Sprint 6's deletion is what shrinks the list.
+  // The places the contract approves are the ones that stay.
+  //
+  // ⚠️ SELECTORS, not PLACES, and the two counts differ ON PURPOSE. `.ds-table-head` is the design
+  // system's column header row and `.listhead` is the one it replaces; `.ds-grp` replaces `.grp`;
+  // `.ds-label` replaces `.field > .lab`; `.ds-envtable` replaces `.envtable th`. Both halves of
+  // each pair are live until Sprint 6 deletes the old world, so a count of selectors would either
+  // force a premature deletion or be a number nobody can justify. This NAMES them, and Sprint 6's
+  // deletion is what shrinks the list.
+  //
+  // ⚠️ The replaced selectors are the `keep: false` rows, and they are listed there rather than
+  // deleted here: `.field > .lab` and `.envtable th` are uppercase in the APPROVED design too, so
+  // "keep: false" on those rows means *this selector* leaves, never *uppercase leaves this place*.
   assert.deepEqual(
     UPPERCASE_ALLOWED.filter((entry) => entry.keep)
       .map((entry) => entry.selector)
       .sort(),
-    ['.ds-specimen-type--label', '.ds-table-head', '.grp', '.listhead'],
+    [
+      '.ds-envtable',
+      '.ds-grp',
+      '.ds-here',
+      '.ds-label',
+      '.ds-listhead',
+      '.ds-matrix',
+      '.ds-specimen-type--label',
+      '.ds-table-head',
+      '.grp',
+      '.listhead',
+    ],
     'the approved uppercase places changed'
   )
 })
