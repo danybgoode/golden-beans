@@ -394,10 +394,50 @@
 .ds .ds-tab:hover {
   color: var(--crema);
 }
-.ds .ds-tab[aria-selected='true'] {
+.ds .ds-tab[aria-selected='true'],
+/* ⚠️ TWO attributes, ONE appearance, and that is deliberate rather than sloppy. A `role="tab"` in a
+   real tablist widget carries `aria-selected`; a strip of LINKS that navigate carries
+   `aria-current="page"`, because promising a tablist with no arrow-key handling behind it is an ARIA
+   claim the page cannot keep. The design draws them the same, so the stylesheet answers both — and
+   a page picks the honest one for its own markup rather than picking the one that happens to be
+   styled. */
+.ds .ds-tab[aria-current='page'] {
   color: var(--crema);
   border-bottom-color: var(--gold);
   font-weight: 500;
+}
+
+/* ── The page-level tab strip — the same tabs, drawn as the top of a card ────────────────────
+ * The shell's section nav and a page's own tab strip are the same control in the approved design:
+ * 13px, a 2px gold underline, 500 when current. What differs is the chrome — a page's strip is the
+ * lid of the panel below it, so it carries the card's ground, border and top radius, and its height
+ * comes from its padding rather than from the shell's 44px band. */
+.ds .ds-tabs--panel {
+  height: auto;
+  align-items: center;
+  padding: 0 20px;
+  margin-top: 22px;
+  background: var(--roast-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r) var(--r) 0 0;
+}
+.ds .ds-tabs--panel .ds-tab {
+  padding: 11px 12px 10px;
+  text-decoration: none;
+}
+
+/* The body a tab reveals. It shares the strip's border so the two read as one card — the prototype's
+   modal does the same with `.modal-tabs` above `.modal-body`. */
+.ds .ds-pane {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--card);
+}
+/* Successive blocks inside a pane need air; the first one must not push the pane open. */
+.ds .ds-pane > * + * {
+  margin-top: 16px;
 }
 
 /* ── Project switcher — ONE level, a menu, 122 x 30 (regenerated, not the contract's 140) ────── */
@@ -1758,6 +1798,33 @@
   border: 1px solid var(--gold-deep);
   border-radius: var(--r);
   padding: 1px 5px;
+}
+
+/* ── One line per environment, on a feature's Value tab ──────────────────────────────────────
+ * The environment named with its dot, the state said in words, and the 38 x 21 switch. It replaced
+ * three full-width buttons stacked down the page, which is what `globals.css`'s block-level control
+ * rules make of a `<p>` holding a button. */
+.ds .ds-envlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ds .ds-envrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  font-size: 13px;
+}
+/* The switch sits at the right edge whatever else the row carries. */
+.ds .ds-envrow .ds-switch {
+  margin-left: auto;
+}
+.ds .ds-envname {
+  min-width: 110px;
 }
 
 /* ── KPI row — three numbers a funnel is made of ─────────────────────────────────────────────── */

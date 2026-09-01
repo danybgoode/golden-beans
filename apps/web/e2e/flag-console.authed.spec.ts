@@ -46,8 +46,8 @@ test.describe('the flag console, signed in', () => {
     // rows, so `getByRole('table')` asserted markup that no longer exists — and would have kept
     // failing on a correct page. Pinned on the list's own hook and its rendered column labels.
     await expect(page.locator('[data-feature-list]')).toBeVisible()
-    await expect(page.locator('.listhead')).toContainText('Feature')
-    await expect(page.locator('.listhead')).toContainText('State in')
+    await expect(page.locator('.ds-listhead')).toContainText('Feature')
+    await expect(page.locator('.ds-listhead')).toContainText('State in')
 
     // Story 1.4: the environment selector — now in the RAIL, not as chips in the page body
     // (CONSOLE-CONTRACT.md Do-not #5; Story 1.4 asked for this and it never landed).
@@ -62,14 +62,14 @@ test.describe('the flag console, signed in', () => {
     // where the correct sentence is "Nothing is on in production — …". The first version demanded
     // "serving" and failed on a correct page, which is the same mistake as the broken stem it was
     // meant to guard — assuming every project has something on.
-    await expect(page.locator('.answer')).toContainText('production')
-    await expect(page.locator('.answer')).toContainText(/\.$/)
+    await expect(page.locator('.ds-answer')).toContainText('production')
+    await expect(page.locator('.ds-answer')).toContainText(/\.$/)
 
     // Story 1.3's actual promise — a filtered view is an ADDRESS. Asserted by navigating to one
     // directly rather than by clicking, because "survives a refresh and a paste into another
     // session" is the property, and clicking would prove only that the click worked.
     await page.goto(`/app/flags/${slug}?env=development&sort=state`)
-    await expect(page.locator('[data-feature-list] .listhead')).toContainText('State in development')
+    await expect(page.locator('[data-feature-list] .ds-listhead')).toContainText('State in development')
   })
 
   test('an unknown parameter is dropped rather than echoed back into the page', async ({ page }) => {
@@ -134,7 +134,7 @@ test.describe('the flag console, signed in', () => {
     await page.goto(`/app/flags/${slug}`)
 
     // Click through from the list, which is Story 2.1's promise — the row IS the way in.
-    const firstFeature = page.locator('[data-feature-list] .row-key').first()
+    const firstFeature = page.locator('[data-feature-list] .ds-row-key').first()
     const key = (await firstFeature.innerText()).trim()
     test.skip(key === '', 'this tenant has no flag definitions yet')
     await firstFeature.click()
@@ -147,7 +147,11 @@ test.describe('the flag console, signed in', () => {
     //
     // They are LINKS with `aria-current`, not `role="tab"`: activating one navigates, and there is
     // no JS on this page to give a tablist its arrow keys. Same markup the shell's section tabs use.
-    const tabs = ['Value', 'Targeting', 'Funnel', 'Impact', 'History', 'Settings']
+    // ⚠️ SIX → SEVEN. Story 4.2 restores `Environments` as a TAB. It used to render as a table
+    // ABOVE the strip, recorded there as a deliberate deviation from the approved design — the
+    // deviation is withdrawn, because WAYS-OF-WORKING now says an approved design IS the contract
+    // and the sprint's acceptance cites reference state `feature-environments` by name.
+    const tabs = ['Value', 'Targeting', 'Environments', 'Funnel', 'Impact', 'History', 'Settings']
     const strip = page.getByRole('navigation', { name: 'Feature sections' })
     for (const tab of tabs) {
       await expect(strip.getByRole('link', { name: tab, exact: true })).toBeVisible()
@@ -294,7 +298,7 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     // which is how `flags-visual-rule-builder`'s most important check ended up asserting nothing.
     // `.answer` is the approved design's name for the page's lede — a gold-bordered line, not the
     // generic `.lede` class the pre-redesign page used.
-    const lede = page.locator('.answer').first()
+    const lede = page.locator('.ds-answer').first()
     await expect(lede).toBeVisible()
     const line = ((await lede.innerText()) ?? '').trim()
 
@@ -325,7 +329,7 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
       // Stated plainly: the meaningful half of this test — "Show them" → `state=never` → rows —
       // does NOT execute on this fixture. It is covered exhaustively in `flag-list-view.test.ts`,
       // where the dataset is controlled.
-      const rows = await page.locator('[data-feature-list] .row').count()
+      const rows = await page.locator('[data-feature-list] .ds-row').count()
       expect(rows, 'no disclosure AND no rows — the list did not render at all').toBeGreaterThan(0)
       return
     }
@@ -343,7 +347,7 @@ test.describe('Story 3.1 — the features list answers in one line', () => {
     await showThem.click()
     await expect(page).toHaveURL(/state=never/)
     // And the destination actually lists them, rather than being a link to nowhere.
-    await expect(page.locator('[data-feature-list] .row').first()).toBeVisible()
+    await expect(page.locator('[data-feature-list] .ds-row').first()).toBeVisible()
   })
 
   test('searching turns grouping off — the rows you asked for are never collapsed away', async ({ page }) => {
@@ -415,7 +419,7 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
     // is measuring this", and rendering the first when the second is true is the failure this repo
     // has shipped to production before (`lib/tars-query.ts` filters on a tag the realistic caller
     // has no reason to set — LEARNINGS records four instances).
-    await expect(page.locator('.kpi')).toHaveCount(0)
+    await expect(page.locator('.ds-kpis .ds-stat')).toHaveCount(0)
 
     // The same shape on Impact, whose absence has a different sentence because it is a different
     // fact: nothing is linked, rather than nothing is measured.
@@ -429,7 +433,7 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
     // wrong thing.
     await expect(page.getByText(/no North Star input is linked to it/)).toBeVisible()
     await expect(page.getByText(/TARS registry/)).toHaveCount(0)
-    await expect(page.locator('.kpi')).toHaveCount(0)
+    await expect(page.locator('.ds-kpis .ds-stat')).toHaveCount(0)
   })
 
   test('the Impact tab renders NUMBERS when an input is actually linked', async ({ page }) => {
@@ -454,9 +458,9 @@ test.describe('Story 3.2 — a feature carries its own funnel and impact', () =>
 
     // Three readings, from the series the fixture seeded — asserted as a COUNT of tiles plus the
     // latest value, so a pane that rendered the right shape with the wrong numbers still fails.
-    await expect(page.locator('.kpi')).toHaveCount(3)
+    await expect(page.locator('.ds-kpis .ds-stat')).toHaveCount(3)
     const latest = IMPACT_SERIES[IMPACT_SERIES.length - 1]
-    await expect(page.locator('.kpi .n').first()).toHaveText(String(latest.value))
+    await expect(page.locator('.ds-kpis .ds-stat-value').first()).toHaveText(String(latest.value))
     // The correlation caveat rides with the numbers. It is the one claim this pane could overstate.
     await expect(page.getByText(/not a causal claim/)).toBeVisible()
 

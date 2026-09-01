@@ -3,10 +3,11 @@
   "routes": 27,
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
-  "rendersFromDesignSystem": 1,
-  "complete": 1,
+  "rendersFromDesignSystem": 2,
+  "complete": 2,
   "covered": [
-    "/app/flags/[projectSlug]"
+    "/app/flags/[projectSlug]",
+    "/app/flags/[projectSlug]/[flagKey]"
   ],
   "outstanding": [
     "/app",
@@ -14,7 +15,6 @@
     "/app/experiments/[projectSlug]",
     "/app/experiments/[projectSlug]/[experimentKey]",
     "/app/flag-audit/[projectSlug]",
-    "/app/flags/[projectSlug]/[flagKey]",
     "/app/funnel/[projectSlug]/[featureKey]",
     "/app/impact/[projectSlug]/[featureKey]",
     "/app/journeys/[projectSlug]",

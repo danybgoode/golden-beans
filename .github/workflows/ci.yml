@@ -418,6 +418,14 @@ jobs:
       # "a suite no pipeline runs decays silently". Sprint 3 then built its entire gate inside a
       # third unwired file.
       #
+      # ⚠️ **A FIFTH, and the pattern is now the rule rather than the exception:
+      # `feature-tabs.authed.spec.ts`.** Sprint 4 builds the feature destination's seven tabs, and
+      # its whole gate — every tab renders from `design-system/`, none of them scrolls, the 38 x 21
+      # switch is the approved pair rather than the 44px accessibility floor, the dashed "never"
+      # state exists, and a feature that HAS a funnel renders numbers — lives in this one file.
+      # Named positionally here at the same time it was written, which is the fix for the four
+      # findings below rather than a fifth instance of them.
+      #
       # ⚠️ **AND A FOURTH: `mobile-heuristics.authed.spec.ts`.** It sweeps 360/390 across twelve
       # console routes and it caught a Blocking on this very PR — the new `⌘K` button pushed the
       # account menu, the ONLY sign-out control on a console route, off a 360px screen. Twelve of its
@@ -472,7 +480,8 @@ jobs:
             apps/web/e2e/console-visual.authed.spec.ts \
             apps/web/e2e/design-system-specimen.authed.spec.ts \
             apps/web/e2e/console-shell.authed.spec.ts \
-            apps/web/e2e/mobile-heuristics.authed.spec.ts
+            apps/web/e2e/mobile-heuristics.authed.spec.ts \
+            apps/web/e2e/feature-tabs.authed.spec.ts
 
       - name: Upload the visual gate's screenshots
         if: always()

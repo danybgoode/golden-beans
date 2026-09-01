@@ -283,7 +283,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     surface: null,
     // Plus `feature-environments` and `feature-funnel` as its tabs.
     referenceState: 'feature-value',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.2. All seven tabs render from `apps/web/design-system/` — the
+    // head, the tab strip, the pane, the environment rows with their 38 x 21 three-state switch, the
+    // funnel's tiles and bars, and the empty state that IS the deliverable for 42 of 42 production
+    // flags. `e2e/feature-tabs.authed.spec.ts` walks every tab and asserts the ds- class inside
+    // `<main>`, so this boolean is verified per tab rather than on whichever one loads first.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,

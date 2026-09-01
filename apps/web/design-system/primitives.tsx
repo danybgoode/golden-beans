@@ -791,3 +791,34 @@ export function ShownOnce({
     </div>
   )
 }
+
+/**
+ * A page's own tab strip — the lid of the panel below it.
+ *
+ * ⚠️ A `<nav>` with `aria-current`, NOT `role="tablist"`. These are LINKS: activating one is a full
+ * navigation to a URL, which is the whole point — a tab worth reading is a tab worth sending
+ * someone. `role="tab"` would promise a JS widget with arrow-key movement between panels, and there
+ * is no JS here at all. `Tab` above is the other half of that pair, for a real tablist; this is the
+ * one a server-rendered page uses, and the stylesheet draws both the same so a page can pick the
+ * honest markup rather than the styled one.
+ */
+export function PageTabs({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <nav className="ds-tabs ds-tabs--panel" aria-label={label}>
+      {children}
+    </nav>
+  )
+}
+
+export function PageTab({ children, current, href }: { children: ReactNode; current?: boolean; href: string }) {
+  return (
+    <a className="ds-tab" href={href} aria-current={current ? 'page' : undefined}>
+      {children}
+    </a>
+  )
+}
+
+/** The body a `PageTabs` strip reveals. */
+export function Pane({ children }: { children: ReactNode }) {
+  return <div className="ds-pane">{children}</div>
+}

@@ -396,8 +396,8 @@ test('the feature page matches the contract too', async ({ page }) => {
       lines: h1 === null ? 0 : h1.getClientRects().length,
       scrollHeight: document.documentElement.scrollHeight,
       innerHeight: window.innerHeight,
-      tabs: document.querySelectorAll('.tabs a').length,
-      current: document.querySelectorAll('.tabs a[aria-current="page"]').length,
+      tabs: document.querySelectorAll('.ds-tabs--panel .ds-tab').length,
+      current: document.querySelectorAll('.ds-tabs--panel .ds-tab[aria-current="page"]').length,
     }
   })
 
@@ -413,13 +413,19 @@ test('the feature page matches the contract too', async ({ page }) => {
       `[1] the feature page is ${measured.scrollHeight}px tall in a ${measured.innerHeight}px viewport`
     )
     .toBeLessThanOrEqual(measured.innerHeight)
-  // Six tabs, exactly one current. Zero would leave a reader with no idea where they are; two is
+  // Seven tabs, exactly one current. Zero would leave a reader with no idea where they are; two is
   // the `home`/`today` class of bug the shell's own spec pins one level up.
   //
-  // ⚠️ Counted on `.tabs a[aria-current]`, not on `[role="tab"]`. These are LINKS — activating one
+  // ⚠️ **SIX → SEVEN with Story 4.2.** `Environments` used to render as a table ABOVE the strip,
+  // recorded there as a deliberate deviation from the approved design. The deviation is withdrawn:
+  // the design has it as a tab, this sprint's acceptance cites `feature-environments` by name, and
+  // an always-on table made every other tab pay ~150px it did not ask for on the one page whose
+  // contract says it must not scroll.
+  //
+  // ⚠️ Counted on `.ds-tab[aria-current]`, not on `[role="tab"]`. These are LINKS — activating one
   // navigates — so promising a tablist widget with no arrow-key handling behind it would be an ARIA
-  // claim the page cannot keep. Same markup the shell's section tabs use.
-  expect.soft(measured.tabs, '[spec] the feature page renders six tabs').toBe(6)
+  // claim the page cannot keep.
+  expect.soft(measured.tabs, '[spec] the feature page renders seven tabs').toBe(7)
   expect.soft(measured.current, '[spec] exactly one tab is current').toBe(1)
 })
 
@@ -517,7 +523,7 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/hub/[projectSlug]/horizon': (slug) => `/hub/${slug}/horizon`,
   '/hub/[projectSlug]/report': (slug) => `/hub/${slug}/report`,
   // Reached by clicking, or by a key/token this suite must not invent.
-  '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'the feature page matches the contract too' },
+  '/app/flags/[projectSlug]/[flagKey]': { coveredBy: 'e2e/feature-tabs.authed.spec.ts (all seven tabs)' },
   '/app/experiments/[projectSlug]/[experimentKey]': { coveredBy: 'e2e/experiment-governance.spec.ts' },
   '/app/journeys/[projectSlug]/[journeyKey]': { coveredBy: 'e2e/journey-management.spec.ts' },
   '/app/funnel/[projectSlug]/[featureKey]': { coveredBy: 'e2e/funnel.spec.ts' },
