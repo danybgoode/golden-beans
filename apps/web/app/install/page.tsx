@@ -51,11 +51,7 @@ export default async function InstallPage() {
     : await getActiveConnectorUrl(DEMO_PROJECT_SLUG)
 
   return (
-    <Frame
-      variant="public"
-      brandHref="/"
-      actions={<FrameLink href="/login">Sign in</FrameLink>}
-    >
+    <Frame variant="public" brandHref="/" actions={<FrameLink href="/login">Sign in</FrameLink>}>
       <h1>Point Claude at a real project</h1>
       <p className="ds-lede">
         This is a working connector for our demo shop. Paste it into Claude and ask it about the
@@ -69,7 +65,8 @@ export default async function InstallPage() {
         <span>
           <b>This is the demo project, not yours.</b> The token below reads{' '}
           <span className="ds-mono">{DEMO_PROJECT_SLUG}</span> and nothing else. Your own
-          project&apos;s URL lives inside the product, at <span className="ds-mono">Setup › Connect</span>.
+          project&apos;s URL lives inside the product, at{' '}
+          <span className="ds-mono">Setup › Connect</span>.
         </span>
         <span className="ds-demobar-go">
           <FrameLink href="/login">Sign in for yours</FrameLink>
@@ -90,17 +87,17 @@ export default async function InstallPage() {
                 displayed openly on this very page, so it is deliberately incapable of authorizing a
                 mutation. Writing needs a second, hashed credential.
 
-                Gate-aware, for the same reason landing §4 is: a sentence promising a capability
-                that is switched off, or omitting one that is live, is a claim this page cannot
-                check and a reader can. */}
+                Gate-aware, for the same reason landing §4 is: a sentence promising a capability that
+                is switched off, or omitting one that is live, is a claim this page cannot check and
+                a reader can. */}
             <p className="ds-hint">
               {isConnectorWritesEnabled() ? (
                 <>
-                  This URL is <b>read-only on its own</b> — it is displayed on this public page, so
-                  it can never authorize a change. To let your agent <em>claim</em> and{' '}
-                  <em>resolve</em> tasks, mint an <b>agent write key</b> in your dashboard and send
-                  it as a bearer token alongside this URL. Both must belong to the same project, and
-                  every change is previewed and confirmed before it applies.
+                  This URL is <b>read-only on its own</b> — it is displayed on this public page, so it
+                  can never authorize a change. To let your agent <em>claim</em> and <em>resolve</em>{' '}
+                  tasks, mint an <b>agent write key</b> in your dashboard and send it as a bearer
+                  token alongside this URL. Both must belong to the same project, and every change is
+                  previewed and confirmed before it applies.
                 </>
               ) : (
                 <>
@@ -110,29 +107,6 @@ export default async function InstallPage() {
                 </>
               )}
             </p>
-
-            <span className="ds-label">Three steps</span>
-            <Steps>
-              <Step>
-                <b>Copy the URL above.</b>
-              </Step>
-              <Step
-                note={
-                  <FrameLink href={ADD_TO_CLAUDE_URL} variant="primary" target="_blank" rel="noopener noreferrer">
-                    Add to Claude
-                    {/* F1, answered without touching the rule: the approved design's `↗` renders as
-                        the permitted `Icon`, never as a character the drift guard bans. */}
-                    <Icon name="external" size={13} />
-                  </FrameLink>
-                }
-              >
-                <b>Open Claude&apos;s connector settings.</b>
-              </Step>
-              <Step>
-                <b>Paste it in and save.</b> Then ask:{' '}
-                <span className="ds-mono">what moved the North Star this week?</span>
-              </Step>
-            </Steps>
           </>
         ) : (
           <p className="ds-hint">
@@ -146,6 +120,47 @@ export default async function InstallPage() {
           </p>
         )}
       </Card>
+
+      {/* ⚠️ **Its OWN card, matching `Setup › Connect` exactly** — `connector-manager.tsx` renders
+          the same three steps in a `ds-card` whose first child is the label.
+          Two reasons, and the second is the one that made me move it. The callout below claims "the
+          same three steps, the same words and the same button as Setup › Connect", and a claim about
+          sameness is worth more when the markup is actually the same. And in the card above, the
+          label followed two paragraphs with no top margin and read as their last line — found by
+          looking at the rendered page. The system rule that was missing is fixed too
+          (`.ds-label:not(:first-child)`), so the next person to put a label mid-card gets spacing
+          rather than a collision. */}
+      {connectorUrl && (
+        <Card>
+          <span className="ds-label">Three steps</span>
+          <Steps>
+            <Step>
+              <b>Copy the URL above.</b>
+            </Step>
+            <Step
+              note={
+                <FrameLink
+                  href={ADD_TO_CLAUDE_URL}
+                  variant="primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Add to Claude
+                  {/* F1, answered without touching the rule: the approved design's `↗` renders as
+                      the permitted `Icon`, never as a character the drift guard bans. */}
+                  <Icon name="external" size={13} />
+                </FrameLink>
+              }
+            >
+              <b>Open Claude&apos;s connector settings.</b>
+            </Step>
+            <Step>
+              <b>Paste it in and save.</b> Then ask:{' '}
+              <span className="ds-mono">what moved the North Star this week?</span>
+            </Step>
+          </Steps>
+        </Card>
+      )}
 
       <Callout>
         The same three steps, the same words and the same button as <b>Setup › Connect</b> inside the

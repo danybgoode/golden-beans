@@ -1589,6 +1589,16 @@
   color: var(--dim-2);
   margin-bottom: 8px;
 }
+
+/* ⚠️ **A label that is not the first thing in its container needs to breathe** — Sprint 6, found by
+   looking at `/install`, where "THREE STEPS" sat flush against the paragraph above it and read as
+   that paragraph's last line. Every shipped caller until now put the label first in its own card, so
+   the gap was real and invisible: the rule was correct for the only case anybody had built.
+   `:not(:first-child)` rather than a blanket `margin-top`, because the first-child case is already
+   spaced by its container's padding and adding to it would move eleven shipped surfaces. */
+.ds .ds-label:not(:first-child) {
+  margin-top: 22px;
+}
 .ds .ds-hint {
   font-size: 12.5px;
   color: var(--dim);
@@ -3638,20 +3648,46 @@
 /* A third-party embed cannot be made to match the design system, so it is not pretended into one:
    it gets a bordered slot that says "this is somebody else's frame". Styling around an iframe until
    it almost matches is worse than admitting the seam. */
+/* ⚠️ **The padding is what makes the page's own sentence true.**
+ * The callout beside this says the embed "gets a dashed slot that says 'this is somebody else's
+ * frame'". With `padding: 0` the iframe filled the box edge to edge and covered the dashed border
+ * completely — the copy asserted a property the render did not have, which is this epic's third most
+ * common defect and one I shipped into the page that explains the idea. Six pixels is enough for the
+ * seam to read as a seam. */
 .ds .ds-talkslot {
   border: 1px dashed var(--line);
   border-radius: var(--r-lg);
   background: var(--roast-2);
   min-height: 340px;
-  padding: 0;
+  padding: 6px;
   overflow: hidden;
 }
 
+/* ⚠️ **700px is MEASURED, and my first port invented 640.**
+ *
+ * `globals.css`'s `.talk-frame` carried this number with its working: Cal.com's own embed SCRIPT
+ * auto-resizes the frame by postMessage and we deliberately do not load it (a script would execute
+ * in our origin; a cross-origin frame cannot), so the height is CHOSEN. **620px was measured to
+ * scroll and 860px was measured to leave a visible gap**, and 700 sits at the top of the widget's
+ * natural range — the common case fits, the worst case is a short internal scroll rather than a lost
+ * calendar. 640 is below the value already measured as too short, and it showed: the booker's month
+ * grid was clipped mid-row on the rendered page.
+ *
+ * Porting a page means porting its measurements too. Re-deriving a number somebody already measured,
+ * and getting it wrong, is the same defect as the contract's two unreproducible numbers this epic
+ * opened by fixing. */
 .ds .ds-talkslot iframe {
   display: block;
   width: 100%;
-  min-height: 640px;
+  min-height: 700px;
   border: 0;
+  border-radius: calc(var(--r-lg) - 4px);
+}
+
+@media (min-width: 900px) {
+  .ds .ds-talkslot iframe {
+    min-height: 780px;
+  }
 }
 
 .ds .ds-talkaside {

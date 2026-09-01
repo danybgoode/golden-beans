@@ -808,6 +808,56 @@ test('every route claiming the design system renders from it', async ({ page }) 
   }
 })
 
+test('every ds- element sits inside a .ds ANCESTOR, on every covered route', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  // ── The guard for the defect that got past every other assertion in this file ────────────────
+  //
+  // `Frame` shipped `<div className="ds ds-door">`, and every rule in `system.css` is written
+  // `.ds .ds-…` — a DESCENDANT combinator, enforced by `system-cascade.test.ts` because
+  // `console.css`'s `.is-console main p` at (0,1,2) out-specifies a bare `.ds-x` at (0,1,0). A
+  // descendant selector cannot match the element carrying the scope class, so the whole frame block
+  // silently did not apply and `/login` rendered top-left on the browser's default ground.
+  //
+  // ⚠️ **Every other assertion in this file passed on that page**: it had `ds-` classes inside
+  // `<main>`, it spent little chrome, and it did not scroll sideways. Correct markup, correct
+  // stylesheet, and no relationship between them — which is precisely "a guard that cannot go red on
+  // a page that looks wrong", found by opening the page rather than by the gate.
+  //
+  // So this asserts the RELATIONSHIP the stylesheet depends on, not the presence of a class:
+  // `parentElement.closest('.ds')`, deliberately not `closest()` on the element itself — `closest`
+  // matches the node it starts from, which would call the broken markup correct.
+  await page.setViewportSize(VIEWPORT)
+  const orphansByRoute: string[] = []
+
+  for (const row of liveRows(6).filter((entry) => entry.rendersFromDesignSystem)) {
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') continue
+    const response = await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+    expect.soft(response?.status() ?? 0, `[${row.route}] answered ${response?.status()}`).toBeLessThan(400)
+
+    const orphans = await page.evaluate(() =>
+      [...document.querySelectorAll('[class]')]
+        .filter((element) => [...element.classList].some((name) => name.startsWith('ds-')))
+        .filter((element) => element.parentElement?.closest('.ds') == null)
+        .map((element) => `${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`)
+        // Deduplicated and capped: a broken frame orphans every element under it, and a failure
+        // message listing four hundred of them is one nobody reads.
+        .filter((name, index, all) => all.indexOf(name) === index)
+        .slice(0, 5)
+    )
+    if (orphans.length > 0) orphansByRoute.push(`${row.route}: ${orphans.join(', ')}`)
+  }
+
+  expect(
+    orphansByRoute,
+    'a `ds-` element has no `.ds` ANCESTOR, so every `.ds .ds-…` rule in system.css misses it — ' +
+      'the markup and the stylesheet look right separately and are not connected. Usually `.ds` ' +
+      'compounded onto the same element (`class="ds ds-door"`) instead of wrapping it.'
+  ).toEqual([])
+})
+
 test('every row of the measured spec matches the built stylesheet', async ({ page }) => {
   test.skip(!gatesAreLit(), 'the measured spec describes the LIT console; run with both gates on')
 

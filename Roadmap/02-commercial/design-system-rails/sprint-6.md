@@ -39,6 +39,48 @@ because "the plan was right" is the claim a close-out must not make by default.
    is a real capability gap, and it is owed to Daniel as a decision, not to a builder as a task:** a
    person who forgets their password today has no self-serve way back in.
 
+## ⚠️ Five defects found by OPENING THE PAGE, after every gate was green
+
+This is the section that matters most, because it is the epic's own thesis turned on its author.
+`tsc`, `build`, 1 634 unit tests, 492 `api`, 122 `authed`, 62 `browser`, the drift guard, the
+coverage ratchet and the visual gate were **all green** — and then I rendered the five public routes
+and looked at them.
+
+1. **`/login` was not centred. The entire door frame silently did not apply.** `Frame` rendered
+   `<div className="ds ds-door">`, and every rule in `system.css` is `.ds .ds-…` — a **descendant**
+   combinator, which `system-cascade.test.ts` requires for good reasons. A descendant selector cannot
+   match the element carrying the scope class, so the page rendered top-left on the browser's default
+   ground. **Every structural assertion passed**: it had `ds-` classes inside `<main>`, it spent
+   little chrome, it did not scroll sideways. Correct markup, correct stylesheet, and no relationship
+   between them.
+   → Fixed, and **guarded**: `every ds- element sits inside a .ds ANCESTOR, on every covered route`
+   in the visual gate, keyed on `parentElement.closest('.ds')` — deliberately not `closest()` on the
+   element itself, which would call the broken markup correct. **Mutation-verified**: re-compounding
+   the class turns it red, un-compounding turns it green.
+2. **`/install`'s "THREE STEPS" label sat flush against the paragraph above it** and read as that
+   paragraph's last line. `.ds-label` has `margin-bottom` and no `margin-top`, and every shipped
+   caller until now put it first in its own card — so the gap was real and invisible. Fixed in the
+   system (`.ds-label:not(:first-child)`) *and* on the page, which now mirrors `Setup › Connect`'s
+   own markup exactly. That page's callout claims the two are "the same three steps"; a claim about
+   sameness is worth more when the markup is actually the same.
+3. **`/talk`'s booking calendar was clipped mid-row, because I invented a number somebody had
+   measured.** The shipped `.talk-frame` carried `min-height: 700px` (780 at ≥900px) *with its
+   working recorded*: 620 was measured to scroll, 860 to leave a gap. My port wrote 640 — below the
+   value already measured as too short. **Porting a page means porting its measurements**, and
+   re-deriving one badly is the same defect as the two unreproducible contract numbers this epic
+   opened by fixing.
+4. **`/talk`'s callout said the embed "gets a dashed slot", and the dashes were invisible** — the
+   iframe filled the box edge to edge and covered the border. Prose asserting a property the render
+   does not have, on the page that explains the idea. Six pixels of padding makes the sentence true.
+5. **The port orphaned 22 landing rules** — `.talk*`, `.install-*`, `.surface-note` — which nothing
+   renders any more. Swept, because *"deleting a component leaves a trail in the stylesheet, and the
+   trail comes with confident prose attached"*.
+   → ⚠️ **And the sweep itself had a bug, caught by diffing what it removed against what it was asked
+   to remove.** It drops a rule when ANY selector in its comma list matches, so
+   `.eyebrow, .surface-note strong, .panel-label, .kicker { text-transform: uppercase }` went with
+   the one dead member — which would have silently un-uppercased three classes that are live across
+   the public site. **A rule dies only when EVERY selector in it does.**
+
 Two more came from the harness rather than the design, and both were fixed as classes:
 
 - **A JSX pragma is PER FILE.** `design-system/primitives.tsx` had none, so the moment
@@ -208,7 +250,9 @@ where a route goes to stop being checked.
 ## Sprint QA — what was actually built, and where it lives
 
 - **the visual gate** (`e2e/console-visual.authed.spec.ts`, `authed` project, blocking): the nine
-  new rows are driven by the manifest like every other. `/s/[token]` **left `EXPECTED_SKIPS`** and is
+  new rows are driven by the manifest like every other, plus **one new assertion** — `every ds-
+  element sits inside a .ds ANCESTOR` — added because the four existing ones all passed on a page
+  whose entire stylesheet was missing (see the defects section above). Mutation-verified both ways. `/s/[token]` **left `EXPECTED_SKIPS`** and is
   opened with a token `auth.setup.ts` mints via the product's own `generateShareToken` +
   `hashCredential` — not invented, and not a `coveredBy` label on an API-only spec.
 - **the old-world guard** — ⚠️ `apps/web/design-system/old-world.test.ts`, **not** the
@@ -229,7 +273,7 @@ where a route goes to stop being checked.
   auth-path and neither is covered by an automated smoke.
 - **deterministic gate, run locally before the PR:** `npm run typecheck` ✅ · `npm run build` ✅ ·
   `npm run test:unit` **1634 pass / 0 fail** ✅ · Playwright `api` **492 pass** ✅ · `authed`
-  **122 pass** ✅ · `browser` **62 pass** ✅ · `check-design-drift` ✅ · `extract-css --check` ✅ ·
+  **123 pass** ✅ · `browser` **62 pass** ✅ · `check-design-drift` ✅ · `extract-css --check` ✅ ·
   `design-coverage --check` **27 / 27** ✅.
 
 ## Sprint 6 — Smoke walkthrough (do these in order)

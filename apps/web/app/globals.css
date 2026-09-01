@@ -886,59 +886,6 @@ body {
   min-width: 0;
 }
 
-.install-hero {
-  max-width: 720px;
-}
-
-.install-lede {
-  max-width: 640px;
-  margin: 14px 0 36px;
-  color: var(--dim);
-}
-
-.install-stack {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-}
-
-.install-stack > *,
-.install-panel {
-  min-width: 0;
-}
-
-.install-panel__heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.install-panel__label {
-  color: var(--gold);
-  font: 700 12px var(--mono);
-  letter-spacing: 0.1em;
-}
-
-.install-panel h2 {
-  margin-bottom: 8px;
-  font-size: 20px;
-}
-
-.install-panel > p {
-  margin-bottom: 16px;
-  color: var(--dim);
-  font-size: 14px;
-}
-
-.install-panel > .btn {
-  margin-top: 16px;
-}
-
-.install-panel .note {
-  margin: 14px 0 0;
-  font-size: 12px;
-}
 
 .code-block {
   max-width: 100%;
@@ -2037,28 +1984,6 @@ a.stat-card:hover {
   margin-top: 30px;
 }
 
-/* ── The surface note ───────────────────────────────────────────────────────
-   Load-bearing, not decoration (epic D4). This page renders BOTH illustrated
-   agent conversations and one real window over live demo-tenant data. A reader
-   who cannot tell them apart learns nothing from either, so every window
-   carries a note saying which it is. */
-
-.surface-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 9px;
-  color: var(--dim);
-  font: 600 10.5px var(--mono);
-  letter-spacing: 0.08em;
-}
-
-.surface-note strong {
-  color: var(--gold-hot);
-  font-weight: 700;
-}
 
 /* ── The copy-a-prompt card ─────────────────────────────────────────────── */
 
@@ -2303,13 +2228,20 @@ a.stat-card:hover {
   }
 }
 
+
 /* ── v2 pieces discovered while building the sections ───────────────────── */
 
 /* The mockup writes these labels in literal uppercase; the components pass
    sentence case so the copy stays readable in the source and screen readers
-   don't spell out shouted text. The transform belongs here either way. */
+   don't spell out shouted text. The transform belongs here either way.
+
+   ⚠️ `.surface-note strong` LEFT this list in Sprint 6, with the `/talk` markup
+   that rendered it. The other three are live on the landing — removing the whole
+   rule because one member died would have silently un-uppercased `.eyebrow`,
+   `.panel-label` and `.kicker` across the public site. Caught by diffing what the
+   sweep removed against what it was asked to remove, which is the check a
+   selector-list sweep needs: a rule dies only when EVERY selector in it does. */
 .eyebrow,
-.surface-note strong,
 .panel-label,
 .kicker {
   text-transform: uppercase;
@@ -2771,9 +2703,6 @@ a.stat-card:hover {
   contain: layout paint;
 }
 
-.surface-note {
-  min-height: 1.4em;
-}
 
 /* An `<svg>` inside a control must not be able to change the control's height
    as it decodes. `.btn` already has `min-height: 44px` from the tap-target
@@ -3428,73 +3357,6 @@ a.stat-card:hover {
   font-style: normal;
 }
 
-/* ── The Pods booking page (/talk) ──────────────────────────────────────────
-   landing-maker-ops · Sprint 5.
-
-   Mobile-first like the rest of the maker-ops block: the brief stacks above the
-   calendar on a phone, and only becomes a two-column layout where the calendar
-   has room to render its own week view without squeezing. */
-.talk {
-  padding-block: 44px 64px;
-}
-
-.talk-grid {
-  display: grid;
-  gap: 20px;
-}
-
-.talk-brief .plain-list li {
-  margin: 10px 0;
-}
-
-.talk-direct {
-  margin-top: 14px;
-}
-
-.talk-embed {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-
-/* The frame carries its own visible edge and ground. Without them a Cal.com
-   that fails to paint is indistinguishable from a section that has finished
-   rendering — the reader sees nothing and concludes nothing is coming. With
-   them, an empty frame still reads as "a thing that did not fill", which is
-   what sends them to the escape-hatch link above it.
-
-   The height is generous because a booking widget that scrolls inside a short
-   frame is the single most unpleasant version of this pattern: two nested
-   scrollbars, and the reader loses the calendar while reaching for a date. */
-.talk-frame {
-  width: 100%;
-  /* ── A fixed height, and the honest reason it is fixed ───────────────────
-     Cal.com's own embed SCRIPT auto-resizes its frame by postMessage. We do not
-     load it (see the page's header comment: a script executes in our origin, a
-     cross-origin frame cannot), so this height is chosen rather than measured,
-     and it is a genuine trade-off with no clean answer: too short nests a second
-     scrollbar inside the page, too tall leaves dead space under the widget.
-     620px was measured to scroll; 860px was measured to leave a visible gap.
-     This sits at the top of the widget's natural range, so the common case fits
-     and the worst case is a short internal scroll rather than a lost calendar. */
-  min-height: 700px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-  box-shadow: var(--elevation-raised);
-}
-
-@media (min-width: 900px) {
-  .talk-grid {
-    grid-template-columns: 0.85fr 1.15fr;
-    gap: 28px;
-    align-items: start;
-  }
-
-  .talk-frame {
-    min-height: 780px;
-  }
-}
 
 /* The unpriced tier's slot. It sits where `$0` and `$49` sit on the tiers
    beside it, so the three cards stay aligned on their price line — but it is a

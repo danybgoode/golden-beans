@@ -88,37 +88,54 @@ export function Frame({
   brandHref?: string
   wide?: boolean
 }) {
+  // ⚠️ **`.ds` IS ITS OWN ELEMENT, and compounding it cost a shipped defect.**
+  //
+  // The first version rendered `<div className="ds ds-door">`. Every rule in `system.css` is written
+  // `.ds .ds-…` — a DESCENDANT combinator, which `system-cascade.test.ts` enforces for good reasons
+  // (`console.css`'s `.is-console main p` at (0,1,2) out-specifies a bare `.ds-x` at (0,1,0) and
+  // strips the primitives' colours). A descendant selector does not match the element that carries
+  // the scope class, so **the entire frame block silently did not apply**: `/login` rendered
+  // top-left on the browser's default ground instead of one centred column on the roast.
+  //
+  // Nothing structural could see it. The visual gate counts `ds-` classes inside `<main>`, measures
+  // the chrome budget and checks for horizontal scroll — all four assertions passed on a page that
+  // looked wrong, which is the exact failure this epic is named after, reproduced by me in its last
+  // sprint. It was found by opening the page.
+  //
+  // So the scope root is its own element everywhere, and `.ds` is never a second class on anything
+  // the stylesheet targets. `every ds- element sits inside a .ds ancestor` in the visual gate is the
+  // guard that makes this stay true — it goes red on exactly this mistake, anywhere in the product.
   if (variant === 'door') {
     return (
-      // `ds` is what makes the design system PAINT — `tokens.css` is scoped to it and every rule in
-      // `system.css` is `.ds .ds-…`. Without it these pages would render correct markup with the
-      // landing's palette resolved underneath, which is the failure ProductShell's own comment
-      // records from the other direction.
-      <div className="ds ds-door">
-        <main className="ds-doorcard">
-          <div className="ds-doorbrand">
-            <Brand href={brandHref} />
-          </div>
-          {children}
-        </main>
+      <div className="ds">
+        <div className="ds-door">
+          <main className="ds-doorcard">
+            <div className="ds-doorbrand">
+              <Brand href={brandHref} />
+            </div>
+            {children}
+          </main>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className={`ds ds-public${variant === 'hub' ? ' ds-public--hub' : ''}`}>
-      <header className="ds-pubbar">
-        <Brand href={brandHref} />
-        {scope === undefined ? null : <span className="ds-pubbar-scope">{scope}</span>}
-        <span className="ds-pubbar-spacer" />
-        {actions}
-      </header>
-      {nav === undefined ? null : (
-        <nav className="ds-pubnav" aria-label="Hub sections">
-          {nav}
-        </nav>
-      )}
-      <main className={`ds-pubwrap${wide ? ' ds-pubwrap--wide' : ''}`}>{children}</main>
+    <div className="ds">
+      <div className={`ds-public${variant === 'hub' ? ' ds-public--hub' : ''}`}>
+        <header className="ds-pubbar">
+          <Brand href={brandHref} />
+          {scope === undefined ? null : <span className="ds-pubbar-scope">{scope}</span>}
+          <span className="ds-pubbar-spacer" />
+          {actions}
+        </header>
+        {nav === undefined ? null : (
+          <nav className="ds-pubnav" aria-label="Hub sections">
+            {nav}
+          </nav>
+        )}
+        <main className={`ds-pubwrap${wide ? ' ds-pubwrap--wide' : ''}`}>{children}</main>
+      </div>
     </div>
   )
 }
