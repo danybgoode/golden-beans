@@ -258,6 +258,16 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     ).toBe(on.borderWidth)
   })
 
+  /**
+   * The rail destinations that leave the rail while the console is LIT.
+   *
+   * `readGates` derives `legacy-keys` as `!isConsoleShellEnabled()` and `legacy-flag-credentials` as
+   * `!consoleShell && isFlagConsoleEnabled()`, so all three of these are nav entries exactly while
+   * their merged Setup replacements are not. Named here so the expected count below is derived from
+   * the same fact the shell uses, rather than from a number somebody counted once.
+   */
+  const OFF_RAIL_WHILE_CONSOLE_IS_LIT = ['keys', 'agent-keys', 'flag-credentials']
+
   test('EVERY rail route marks its OWN item, not merely some item', async ({ page }) => {
     // ⚠️ **The type only catches typos.** `railActive` is now the derived `ProjectRouteSegment`
     // union, so `'taskz'` is a compile error — but `'setup/keys'` on the tasks page is a perfectly
@@ -330,11 +340,28 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // report success (fresh reviewer, round 2). A floor with that much slack is a floor that admits
     // the defect it is placed against. If a gate closes and the number legitimately changes, this
     // fails and the new number gets written down deliberately.
+    // ⚠️ **9 is DERIVED, not chosen.** An exact pin is only safe if the number has a reason, so this
+    // recomputes it from the inventory rather than trusting a literal: every surface that is not
+    // `flow-only`, minus the three the `legacy-keys`/`legacy-flag-credentials` gates remove while
+    // the console is lit, minus `tasks` (section `today`, where `railLinksFor` returns `[]`).
+    //
+    // The gates that decide this are set identically by `run-local-e2e.mjs` and by `ci.yml`'s authed
+    // step — verified by diffing both env blocks — so the count cannot differ between the runner
+    // that produced it and the pipeline that enforces it. The two gates that DO differ
+    // (`SCENARIO_AUTHORING_ENABLED`, `FLAG_DEFINITION_SYNC_ENABLED` local; `SIGNUP_ENABLED` CI)
+    // appear in no inventory row's `gate` field.
+    const expected = PROJECT_ROUTE_INVENTORY.filter(
+      (surface) =>
+        surface.status !== 'flow-only' &&
+        !OFF_RAIL_WHILE_CONSOLE_IS_LIT.includes(surface.routeSegment) &&
+        surface.routeSegment !== 'tasks'
+    ).length
+
     expect(
       checked.length,
-      `${checked.length} rail routes marked their own item, expected 9. off-rail: ` +
+      `${checked.length} rail routes marked their own item, expected ${expected}. off-rail: ` +
         `${offRail.join(', ') || 'none'}; unreachable: ${unreachable.join(', ') || 'none'}`
-    ).toBe(9)
+    ).toBe(expected)
 
     // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
     // out of the rail would satisfy the loop by never entering the branch that checks anything.
