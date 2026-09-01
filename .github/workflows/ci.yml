@@ -418,6 +418,11 @@ jobs:
       # "a suite no pipeline runs decays silently". Sprint 3 then built its entire gate inside a
       # third unwired file.
       #
+      # ⚠️ **A SEVENTH: `setup-keys.authed.spec.ts`.** Story 4.5 moves credential MINTING onto Setup ›
+      # Keys and retires three routes into redirects. That is the highest-consequence change in the
+      # sprint — four kinds of bearer credential, issued and destroyed — and the only thing that
+      # exercises the real forms end to end is this file. Named here in the commit that writes it.
+      #
       # ⚠️ **A SIXTH, and it was written a whole epic ago: `setup-surfaces.authed.spec.ts`.** Its own
       # header says it — *"NOT in the blocking gate… the PR body states the run and its result rather
       # than implying CI covered it. LEARNINGS: a suite outside the gate decays silently."* It has
@@ -489,7 +494,8 @@ jobs:
             apps/web/e2e/console-shell.authed.spec.ts \
             apps/web/e2e/mobile-heuristics.authed.spec.ts \
             apps/web/e2e/feature-tabs.authed.spec.ts \
-            apps/web/e2e/setup-surfaces.authed.spec.ts
+            apps/web/e2e/setup-surfaces.authed.spec.ts \
+            apps/web/e2e/setup-keys.authed.spec.ts
 
       - name: Upload the visual gate's screenshots
         if: always()

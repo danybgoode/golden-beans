@@ -26,9 +26,29 @@ test('unauthed dashboard for a real foreign slug → /login, never data', async 
 })
 
 test('unauthed key management for a foreign slug → /login', async ({ request }) => {
-  const res = await request.get(`/app/keys/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
+  // ⚠️ `/app/setup/keys`, not `/app/keys` — design-system-rails S4.5. The old route is a permanent
+  // redirect, so it would answer 308 to `/app/setup/keys/...` and this test would be asserting the
+  // redirect rather than the auth boundary it is named for. The boundary itself is unchanged: an
+  // unauthed request for a foreign project's credentials never reaches data.
+  const res = await request.get(`/app/setup/keys/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
   expect([302, 307]).toContain(res.status())
   expect(res.headers()['location']).toContain('/login')
+})
+
+test('the RETIRED credential routes redirect, and still never leak while unauthed', async ({ request }) => {
+  // design-system-rails S4.5 — the retirement, asserted over HTTP rather than only in the source.
+  //
+  // ⚠️ **A redirect for an unauthed caller is NOT a leak here, and the reason is worth stating.**
+  // These routes never checked auth themselves even before the retirement mattered: they rendered a
+  // page whose own `requireProjectOwnership` did the work. A `308` to Setup › Keys tells an
+  // anonymous caller only that the URL moved — which is public knowledge — and the destination then
+  // sends them to `/login`. Both hops are asserted, so "it redirects" cannot quietly become "it
+  // redirects somewhere that serves".
+  for (const retired of ['keys', 'agent-keys', 'flag-credentials']) {
+    const moved = await request.get(`/app/${retired}/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
+    expect([307, 308], `/app/${retired} should be a permanent redirect`).toContain(moved.status())
+    expect(moved.headers()['location']).toContain(`/app/setup/keys/${REAL_FOREIGN_SLUG}`)
+  }
 })
 
 // event-destination-router · Sprint 2, Story 2.1 — destination admin is owner-only credential-class

@@ -1,61 +1,36 @@
-// flags-console-parity · Sprint 3, Story 3.1 — key management gets its own place.
+// RETIRED — design-system-rails · Sprint 4, Story 4.5.
 //
-// ── Why this route exists ─────────────────────────────────────────────────────────────────────
-// The flags page opened with three credential-minting forms above the thing an operator came for.
-// Flagsmith puts SDK keys on their own screen for the same reason: minting a key is a deliberate,
-// occasional act, and the daily job is reading flags.
+// This route minted and revoked credentials. Setup › Keys now does both, for all four kinds, and
+// the replacement landed in the SAME commit that emptied this file — the ordering rule this epic
+// keeps (`console-ia-overhaul` A3): never a cleanup story, because with the console live a missing
+// control is noticed the day it goes missing.
 //
-// ── The authorization boundary moves TIGHTER, and that is deliberate ─────────────────────────
-// On the flags page a member could LOAD the page and simply see no key tables — `canManage` gated
-// the markup, not the route. Here the route itself requires ownership, so a member gets a 404 and
-// does not learn the URL exists. That is the `/app/keys/[projectSlug]` precedent (itself
-// cross-review-hardened, 2026-07-20 round 2) and it is what the inventory's `audience: 'owner'`
-// already declares. Both satisfy "a member cannot list keys"; this one is strictly stronger, and
-// the story's line — "the authorization boundary does not move with the markup" — is honoured by
-// moving it only in the safe direction. Stated out loud rather than left for review to notice.
+// ── A redirect, not a 404, and not a deletion ─────────────────────────────────────────────────
+// The sprint walkthrough allows either. A redirect is the kinder half of it: this URL is in
+// bookmarks, in the two epics of commit messages that reference it, and in whatever an operator
+// pasted into a runbook. `permanentRedirect` tells a browser and a crawler that the move is
+// permanent, which is what it is.
 //
-// ── Dark means nonexistent ────────────────────────────────────────────────────────────────────
-// The gate is checked BEFORE auth, so while the console is dark this 404s for everyone — and the
-// forms are still on the flags page, because `flag-manager.tsx` renders them whenever
-// `showDefinitions` is true. That is Amendment 1's gate-conditional move: the controls exist in
-// exactly one place in either state, never zero.
+// The FILE stays because the coverage manifest carries a row for this route with `retiresIn: 4`, and
+// `route-manifest.test.ts` asserts every manifest row points at a real `page.tsx`. `liveRows()` is
+// what removes it from the denominator; deleting the file would instead make the manifest and the
+// repository disagree. It owes no reference state — a redirect has no design.
+//
+// ── No auth check here, deliberately ──────────────────────────────────────────────────────────
+// The destination is owner-gated (`requireProjectOwnership` at the route), so a member following
+// this link gets the same flat 404 they got from this page before. Re-checking here would be a
+// second, weaker copy of a boundary that is already enforced where it matters — and this file must
+// not become somewhere a future edit could relax it.
 
-import { notFound } from 'next/navigation'
-import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isFlagConsoleEnabled } from '@/lib/flags'
-import { listFlagReadKeys } from '@/lib/flag-read-keys'
-import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
-import { ProductShell } from '@/components/product/ProductShell'
-import { FlagCredentialManager } from './flag-credential-manager'
+import { permanentRedirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-// ── console-ia-overhaul · Sprint 2, Story 2.3: this route STAYS, and keeps its forms ──────────
-// With `CONSOLE_SHELL_ENABLED` on, `/app/setup/keys/[projectSlug]` is the one place that answers
-// "what has access to this project", and this route leaves the nav at that same instant (A7's
-// derived `legacy-keys` gate). It is NOT redirected: minting and revoking still live here, because
-// the four kinds take materially different inputs and merging the forms was explicitly out of
-// scope. A redirect would send an owner away from the only surface that can issue this kind.
-//
-// So: the LIST moved, the CONTROLS did not. Both surfaces work in both gate states, and neither is
-// ever the only route to a control — the ordering rule this epic exists to respect.
-export default async function FlagCredentialsPage({ params }: { params: Promise<{ projectSlug: string }> }) {
-  if (!isFlagConsoleEnabled()) notFound()
+export default async function RetiredCredentialRoute({
+  params,
+}: {
+  params: Promise<{ projectSlug: string }>
+}) {
   const { projectSlug } = await params
-  const { projectId } = await requireProjectOwnership(projectSlug)
-  const [keys, syncKeys] = await Promise.all([listFlagReadKeys(projectId), listFlagSyncKeys(projectId)])
-
-  return (
-    <ProductShell projectSlug={projectSlug} section="setup" railActive={null}>
-      <main>
-        <h1>Flag credentials</h1>
-        <p>
-          Two kinds of key, revocable independently. A <strong>snapshot key</strong> lets a client read this
-          project&apos;s flags for one environment. A <strong>catalog sync key</strong> lets one service
-          publish flag definitions; it can never turn a feature on or off.
-        </p>
-        <FlagCredentialManager slug={projectSlug} keys={keys} syncKeys={syncKeys} />
-      </main>
-    </ProductShell>
-  )
+  permanentRedirect(`/app/setup/keys/${projectSlug}`)
 }

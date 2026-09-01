@@ -43,11 +43,13 @@ import { isFlagConsoleEnabled } from '../lib/flags'
 // console rollback would point at a page rendered by an epic that had been rolled back. Added HERE,
 // in the commit that creates the route, rather than left for the sprint that notices — a gated route
 // with no dark assertion is a gate nothing can observe.
-const MOVED_ROUTES = [
-  '/app/flag-credentials/miyagisanchez',
-  '/app/flag-audit/miyagisanchez',
-  '/app/scheduled/miyagisanchez',
-]
+// ⚠️ **`/app/flag-credentials` LEFT this list — design-system-rails S4.5.** It is a permanent
+// redirect now, so it answers 308 in BOTH gate states and asserting a gate-dependent 404 on it would
+// assert the opposite of what it does. Its replacement, Setup › Keys, is deliberately gated on
+// nothing at all (it is the only surface that mints, so a closed gate would leave a project unable
+// to issue any credential) — and `e2e/app-auth.spec.ts` asserts the redirect and its destination's
+// auth boundary, which is the coverage that moved rather than the coverage that was dropped.
+const MOVED_ROUTES = ['/app/flag-audit/miyagisanchez', '/app/scheduled/miyagisanchez']
 
 const DETAIL_ROUTES = [
   '/app/flags/miyagisanchez/checkout.stripe_enabled',

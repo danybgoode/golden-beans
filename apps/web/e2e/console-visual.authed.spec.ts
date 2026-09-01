@@ -512,9 +512,18 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
   '/app/destinations/[projectSlug]': (slug) => `/app/destinations/${slug}`,
   '/app/shares/[projectSlug]': (slug) => `/app/shares/${slug}`,
   '/app/onboarding/[projectSlug]': (slug) => `/app/onboarding/${slug}`,
-  '/app/keys/[projectSlug]': (slug) => `/app/keys/${slug}`,
-  '/app/flag-credentials/[projectSlug]': (slug) => `/app/flag-credentials/${slug}`,
-  '/app/agent-keys/[projectSlug]': (slug) => `/app/agent-keys/${slug}`,
+  // ⚠️ The three retired routes. They still need an entry — `every manifest row has a way to be
+  // reached` demands one for every row, and their rows stay in the manifest so `retiresIn: 4` can
+  // take them out of the denominator. They are never OPENED, though: `every route claiming the
+  // design system renders from it` iterates `liveRows(6)`, which excludes them, and they claim
+  // nothing anyway. A redirect has no design to assert.
+  '/app/keys/[projectSlug]': { coveredBy: 'e2e/app-auth.spec.ts — retired, asserted as a redirect' },
+  '/app/flag-credentials/[projectSlug]': {
+    coveredBy: 'e2e/app-auth.spec.ts — retired, asserted as a redirect',
+  },
+  '/app/agent-keys/[projectSlug]': {
+    coveredBy: 'e2e/app-auth.spec.ts — retired, asserted as a redirect',
+  },
   '/login': () => '/login',
   '/signup': () => '/signup',
   '/install': () => '/install',

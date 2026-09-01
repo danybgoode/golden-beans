@@ -91,11 +91,28 @@ function code(relative: string): string {
   return stripComments(source(relative))
 }
 
-const OWNER_ONLY = [
-  // The merged page, and the three it takes over from. All four must agree, because D5's whole
-  // claim is that the boundary moves "tighter or identical, never looser" — and the way to check
-  // "identical" is to assert the new route uses the same gate the old ones do.
-  'setup/keys/[projectSlug]/page.tsx',
+/**
+ * The owner-only Setup routes.
+ *
+ * ⚠️ **ONE entry now, not four — design-system-rails Story 4.5.** This list used to hold the merged
+ * page plus the three it took over from, and the test below compared their gates: D5's claim was that
+ * the boundary moves "tighter or identical, never looser", and the way to check *identical* is to
+ * assert the new route uses the same gate the old ones do.
+ *
+ * The old ones no longer have a gate to compare against — they are permanent redirects, holding no
+ * read, no control and no auth check. Comparing the merged page's gate to theirs would now compare it
+ * to nothing and pass, which is a guard that cannot fail: the exact defect class this epic is named
+ * after, sitting in the file that guards the credential boundary.
+ *
+ * So the comparison is retired and replaced by the two properties that survive the retirement, both
+ * below: the merged page is owner-gated, and each retired route is genuinely a redirect that holds no
+ * credential control. The second is what keeps the first meaningful — an "identical" claim about a
+ * page that still minted would be worth nothing.
+ */
+const OWNER_ONLY = ['setup/keys/[projectSlug]/page.tsx']
+
+/** The three routes Story 4.5 retired. Named, because an exemption nobody writes down grows. */
+const RETIRED_CREDENTIAL_ROUTES = [
   'keys/[projectSlug]/page.tsx',
   'agent-keys/[projectSlug]/page.tsx',
   'flag-credentials/[projectSlug]/page.tsx',
@@ -113,32 +130,65 @@ test('every owner-only Setup route calls requireProjectOwnership', () => {
   }
 })
 
-test('the merged Keys page uses the SAME gate as the three routes it replaces', () => {
-  // D5, stated as a comparison rather than as a claim. If a later edit weakened the merged page to
-  // `requireProjectMembership`, this goes red — and that is the precise defect D5 forbids, because
-  // it would make a page listing every credential in the project readable by any member.
-  const gateOf = (route: string) =>
-    /requireProjectOwnership\(/.test(code(route)) ? 'ownership' : 'membership'
-  const merged = gateOf('setup/keys/[projectSlug]/page.tsx')
-  for (const legacy of OWNER_ONLY.slice(1)) {
-    assert.equal(
-      merged,
-      gateOf(legacy),
-      `the merged page uses ${merged} while ${legacy} uses ${gateOf(legacy)} — the boundary moved`
-    )
+test('the merged Keys page is OWNER-gated, and it is the only credential surface left', () => {
+  // D5 restated for a world with one surface. The claim used to be a comparison; it is now an
+  // absolute, and an absolute is the stronger form — there is nothing left to be "identical to".
+  //
+  // ⚠️ `requireProjectMembership` is asserted ABSENT as well as ownership being present. Weakening
+  // the page to membership while leaving an unused `requireProjectOwnership` import would satisfy a
+  // presence check alone, and this page lists every credential in the project.
+  const merged = code('setup/keys/[projectSlug]/page.tsx')
+  assert.match(merged, /requireProjectOwnership\(/, 'the merged Keys page is not owner-gated')
+  assert.equal(
+    /requireProjectMembership\(/.test(merged),
+    false,
+    'the merged Keys page calls requireProjectMembership — the credential boundary moved LOOSER'
+  )
+})
+
+test('a retired credential route redirects and holds NO credential control', () => {
+  // ⚠️ The half that makes the retirement real. "Minting moves onto Setup › Keys in the same commit
+  // that retires the three routes" is a claim about two things happening together, and a test that
+  // only checked the arrival would pass just as happily on a world with FOUR minting surfaces.
+  //
+  // Asserted on the source rather than on a response: the property is about what these files ARE.
+  // A request-level check would prove one route redirected on one run, and this repo has shipped
+  // exactly that kind of false green before.
+  for (const route of RETIRED_CREDENTIAL_ROUTES) {
+    const body = code(route)
+    assert.match(body, /permanentRedirect\(/, `${route} does not redirect — it is still a live page`)
+    assert.match(body, /\/app\/setup\/keys\//, `${route} redirects somewhere other than Setup › Keys`)
+    for (const control of [
+      'issueApiKey',
+      'mintFlagReadKey',
+      'mintFlagSyncKey',
+      'mintAgentWriteKey',
+      'listProjectKeys',
+      'listAgentWriteKeys',
+    ]) {
+      assert.equal(
+        body.includes(control),
+        false,
+        `${route} still references ${control} — the controls were supposed to MOVE, not be copied`
+      )
+    }
   }
 })
 
 test('the gate runs BEFORE any credential list is read, and the reads are not hoisted away', () => {
+  // ⚠️ **RESTORED, not new.** This test existed before Story 4.5 and was nearly lost in the rewrite
+  // of this file's opening block — noted because "a guard deleted while editing the file around it"
+  // is how coverage shrinks without anyone deciding to shrink it.
+  //
   // Ordering, not just presence. A page that listed keys and then checked ownership would already
   // have done the read — and on a slow render, already spent it.
   //
   // ⚠️ Comparing textual positions is NOT enough, and the first version of this did exactly that.
-  // Move the four reads into a helper declared BELOW `export default` and call it from the top of
-  // the page body before the gate: `gateAt` lands on the later gate call, `readAt` lands further
-  // down inside the helper, `readAt > gateAt` holds, and the test stays green while the reads
-  // genuinely run first (fresh reviewer, PR #123). So this also pins that the reads are INLINE in
-  // the default export's body — the shape the position comparison is only valid for.
+  // Move the four reads into a helper declared BELOW `export default` and call it from the top of the
+  // page body before the gate: `gateAt` lands on the later gate call, `readAt` lands further down
+  // inside the helper, `readAt > gateAt` holds, and the test stays green while the reads genuinely
+  // run first. So this also pins that the reads are INLINE in the default export's body — the shape
+  // the position comparison is only valid for.
   const stripped = code('setup/keys/[projectSlug]/page.tsx')
   const defaultAt = stripped.indexOf('export default')
   const body = stripped.slice(defaultAt)
@@ -153,6 +203,38 @@ test('the gate runs BEFORE any credential list is read, and the reads are not ho
     assert.equal(occurrences, 1, `${read} is called ${occurrences} times; ordering is unprovable`)
     const readAt = body.indexOf(`${read}(`)
     assert.ok(readAt > gateAt, `${read} is called before the ownership check`)
+  }
+})
+
+test('every credential MUTATION on the merged page re-asserts ownership itself', () => {
+  // ⚠️ Sprint contract #8, and the reason it is a separate assertion from the page's own gate: a
+  // Server Action is a public HTTP endpoint. It is reachable by POSTing to the action id without ever
+  // rendering the page, so the page's `requireProjectOwnership` protects exactly nothing about it.
+  //
+  // Every exported action in the module, not a hand-listed subset — a ninth added later is covered
+  // the moment it exists, which is what "the page's guard is never the only thing between a member
+  // and a mint" has to mean to be true.
+  const actions = code('setup/keys/[projectSlug]/actions.ts')
+  const exported = [...actions.matchAll(/export async function (\w+)/g)].map((match) => match[1])
+  assert.ok(exported.length >= 5, `only ${exported.length} actions found; the scan asserted nothing`)
+  for (const name of exported) {
+    const start = actions.indexOf(`export async function ${name}`)
+    const next = exported
+      .map((other) => actions.indexOf(`export async function ${other}`))
+      .filter((at) => at > start)
+      .sort((a, b) => a - b)[0]
+    const body = actions.slice(start, next ?? actions.length)
+    assert.match(
+      body,
+      /await requireProjectOwnership\(/,
+      `${name} does not re-assert ownership — a member could reach it without the page`
+    )
+    // ...and it must resolve the project id FROM that call, never trust a caller-supplied one.
+    assert.match(
+      body,
+      /\{\s*projectId(?:,\s*userId)?\s*\}\s*=\s*await requireProjectOwnership\(/,
+      `${name} calls requireProjectOwnership without using the projectId it resolves`
+    )
   }
 })
 

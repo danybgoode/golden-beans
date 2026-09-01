@@ -1571,6 +1571,17 @@
   margin-top: 7px;
   max-width: 64ch;
 }
+/* ⚠️ **The slot is always present and always this tall.** Showing an error must not move the submit
+   button a cursor is already travelling towards — `min-height` reserves the line whether or not
+   there is a message in it, which is why this rule has no `:empty` variant. */
+.ds .ds-field-error {
+  min-height: 18px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--red);
+  max-width: 64ch;
+}
 .ds .ds-input {
   width: 100%;
   padding: 8px 10px;
@@ -1644,6 +1655,69 @@
   color: var(--dim);
   margin-bottom: 12px;
   max-width: 64ch;
+}
+
+/* Hidden from the EYE, kept for the SCREEN READER. `display: none` would remove it from the
+   accessibility tree too, which is the whole thing this is for. Declared once here so no page has to
+   remember the six declarations that make it correct. */
+.ds .ds-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── The mint flow — a list of JOBS, then the one question that kind asks ───────────────────── */
+.ds .ds-mint {
+  margin-top: 16px;
+}
+.ds .ds-mint-actions,
+.ds .ds-once-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.ds .ds-picklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+.ds .ds-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t),
+    background var(--t);
+}
+.ds .ds-pick:hover {
+  border-color: var(--dim-2);
+}
+/* ⚠️ `aria-pressed` paints it AND announces it — one attribute, so what a reader sees and what a
+   screen reader hears cannot disagree. The same rule the rail item and the summary cards follow. */
+.ds .ds-pick[aria-pressed='true'] {
+  border-color: var(--gold);
+  background: var(--card-2);
+}
+.ds .ds-pick-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--crema);
+}
+.ds .ds-pick-detail {
+  font-size: 12.5px;
+  color: var(--dim);
 }
 
 /* ── A timeline — an audit written as sentences, not as rows of a table nobody reads ─────────── */

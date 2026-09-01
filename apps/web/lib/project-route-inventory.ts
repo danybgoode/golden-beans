@@ -21,27 +21,20 @@ export type ProjectSurfaceGate =
   | 'flag-serving'
   | 'journey-projections'
   | 'signals'
-  // console-ia-overhaul · Sprint 2 (epic README, A7) — two values, added together on purpose.
+  // console-ia-overhaul · Sprint 2 (epic README, A7) — `console-shell` gates Setup › Connect,
+  // exactly as `flag-console` gates its own routes.
   //
-  // `console-shell` gates the two NEW Setup routes, exactly as `flag-console` gates its two.
+  // ⚠️ **`legacy-keys` and `legacy-flag-credentials` are GONE — design-system-rails S4.5.** They
+  // were the other half of A7: derived as `!isConsoleShellEnabled()`, they made the three legacy
+  // credential routes LEAVE the nav at the exact instant their merged replacement entered it, so the
+  // two worlds were never listed together and never both absent. That machinery existed to swap
+  // between two ways of minting a key. Story 4.5 leaves one, so the inverse became a switch with a
+  // single position — and a gate whose value cannot change is a gate that reads like a decision
+  // while making none.
   //
-  // `legacy-keys` is the other half, and it is what makes the move safe rather than merely tidy: it
-  // is supplied as `!isConsoleShellEnabled()`, so `/app/keys`, `/app/flag-credentials` and
-  // `/app/agent-keys` LEAVE the nav at the exact instant their merged replacement enters it. Not one
-  // deploy earlier (a dead end) and not one later (the same destination listed twice). The routes
-  // themselves are NOT redirected — they keep their minting forms (A17); only the listing moves.
-  //
-  // It is a DERIVED value, not a second env var. There is no `LEGACY_KEYS_ENABLED` to set, get wrong,
-  // or leave inconsistent with the gate it must mirror — the inversion happens once, in each caller's
-  // `ProjectSurfaceGates` record, where the compiler demands it.
+  // The three routes still ANSWER, as permanent redirects, and their manifest rows carry
+  // `retiresIn: 4`. What is gone is their status as destinations somebody navigates to.
   | 'console-shell'
-  | 'legacy-keys'
-  // The flags console's credential route needs BOTH: its own console must be on (the route 404s
-  // otherwise) AND the merged Setup › Keys must be off (or it would be listed beside its
-  // replacement). A single-valued `gate` field cannot express a conjunction, so the CALLER derives
-  // it — see `readGates()`. Keying it on `legacy-keys` alone shipped a dead link for one live
-  // combination; see the comment on the surface itself.
-  | 'legacy-flag-credentials'
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D2) — the four destinations.
@@ -158,6 +151,20 @@ export type ProjectSurfaceLink = Pick<
 // Measure (Journeys · Scenarios) and Setup (Connect · Keys · Destinations · Share links) were
 // already in approved order; both were checked at the same time rather than assumed.
 export const PROJECT_ROUTE_INVENTORY = [
+  // ── RETIRED — design-system-rails · Sprint 4, Story 4.5 ──────────────────────────────────────
+  //
+  // `keys`, `flag-credentials` and `agent-keys` were three nav surfaces here. They are gone, and so
+  // are the `legacy-keys` / `legacy-flag-credentials` gates that swapped them in and out against
+  // `setup/keys`. Their ROUTES still answer — as permanent redirects to Setup › Keys — but a
+  // redirect is not a destination, and three nav entries leading to one page is three ways to be
+  // told the same thing.
+  //
+  // The gate machinery went with them because it had nothing left to decide. `A7` derived
+  // `legacy-keys` as `!consoleShell` so that exactly one of the two credential worlds was ever
+  // listed; with only one world left, the inverse is a switch with one position. `setup/keys` is
+  // `gate: 'always'` for the same reason its page no longer calls `isConsoleShellEnabled()` — it is
+  // the ONLY surface that mints, and a rollback that removed it would leave a project unable to
+  // issue any credential at all.
   {
     routeSegment: 'journeys',
     iconKey: 'route',
@@ -241,62 +248,13 @@ export const PROJECT_ROUTE_INVENTORY = [
     // OWNER-only, matching all three routes it merges — the boundary moves tighter or identical,
     // never looser (D5/A5). A member gets a flat 404, exactly as on `/app/keys` today.
     audience: 'owner',
-    gate: 'console-shell',
+    gate: 'always',
     status: 'gated',
     topLevelProjectRoute: false,
     section: 'setup',
     label: 'Keys',
     href: (slug: string) => `/app/setup/keys/${slug}`,
     description: () => 'everything with access to this project',
-  },
-  {
-    routeSegment: 'keys',
-    iconKey: 'key',
-    audience: 'owner',
-    // A7: 'legacy-keys' is `!isConsoleShellEnabled()`, so this leaves the nav at the same instant
-    // `Setup › Keys` enters it. The ROUTE keeps working and is NOT redirected (A17) — it still holds
-    // the minting form, and is still the only surface that can issue this kind of credential. It
-    // simply stops being LISTED, because the merged page is where you go to see what has access.
-    gate: 'legacy-keys',
-    status: 'linked',
-    topLevelProjectRoute: true,
-    section: 'setup',
-    label: 'API keys',
-    href: (slug: string) => `/app/keys/${slug}`,
-    description: () => 'issue, rotate, revoke',
-  },
-  // flags-console-parity · Sprint 3, Stories 3.1 and 3.2. Registered here rather than merely linked,
-  // because this file opens with the reason: "so a new page cannot become another URL users must
-  // know." An unregistered route is a URL only its author knows.
-  //
-  // Both are `gate: 'flag-console'` — they hold controls MOVED off the flags page, so while the
-  // console is dark those controls are still on that page and these routes 404. Listing them in the
-  // nav then would be an invitation to a dead end.
-  {
-    routeSegment: 'flag-credentials',
-    iconKey: 'lock',
-    // Owner-only, and TIGHTER than the flags page it moves from: there a member could load the page
-    // and simply see no key tables. A standalone credentials route 404s for them — the
-    // `/app/keys/[projectSlug]` precedent. The boundary moves only tighter, never looser.
-    audience: 'owner',
-    // ⚠️ A7, CORRECTED. This was `flag-console`, then briefly `legacy-keys` — and `legacy-keys`
-    // alone was WRONG in a way that shipped the exact defect this epic exists to remove.
-    //
-    // `legacy-keys` is `!consoleShell`, so with the flags console OFF and the shell OFF this route
-    // was LISTED while `page.tsx` 404s it (`if (!isFlagConsoleEnabled()) notFound()`) — a nav entry
-    // leading nowhere. The other three combinations were fine, which is why it was not obvious.
-    //
-    // The condition is a CONJUNCTION: the flags console must be on for the route to exist, and the
-    // merged Setup › Keys must be off for it to still be where you go. `ProjectSurfaceGate` is a
-    // single-valued field, so the conjunction is derived once in `readGates()` rather than smuggled
-    // in here.
-    gate: 'legacy-flag-credentials',
-    status: 'gated',
-    topLevelProjectRoute: true,
-    section: 'setup',
-    label: 'Flag credentials',
-    href: (slug: string) => `/app/flag-credentials/${slug}`,
-    description: () => 'snapshot and catalog sync keys',
   },
   {
     // ── design-system-rails · Story 4.3 — the rail's fourth Ship item, DECIDED not discovered ────
@@ -374,19 +332,6 @@ export const PROJECT_ROUTE_INVENTORY = [
   },
   // The agent-write gate controls mutations, not credential preparation: an owner needs a key
   // ready before the live task-write surface can be verified.
-  {
-    routeSegment: 'agent-keys',
-    iconKey: 'key',
-    audience: 'owner',
-    // A7, same as `keys` above: listed only while `Setup › Keys` is not.
-    gate: 'legacy-keys',
-    status: 'linked',
-    topLevelProjectRoute: true,
-    section: 'setup',
-    label: 'Agent write keys',
-    href: (slug: string) => `/app/agent-keys/${slug}`,
-    description: () => 'let your own agent claim and resolve tasks',
-  },
   {
     routeSegment: 'onboarding',
     iconKey: 'sparkles',

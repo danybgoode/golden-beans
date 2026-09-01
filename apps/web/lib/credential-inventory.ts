@@ -72,6 +72,54 @@ const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: strin
   },
 }
 
+/**
+ * The expiries an agent write key may be minted with, in days.
+ *
+ * `null` ("until revoked") is offered but is NOT the default: an agent credential is typically
+ * minted for one agent's working session or one automation, and a write credential that outlives its
+ * purpose is the one most worth bounding at mint time — a decision an operator makes once, instead
+ * of a revocation they have to remember.
+ *
+ * Lives HERE rather than in the action because two things read it: the action validates against it,
+ * and the form offers it. One definition, or the form offers a value the action refuses.
+ */
+export const AGENT_KEY_EXPIRY_DAYS = [1, 7, 30, 90] as const
+
+/**
+ * What minting each kind actually ASKS FOR — the reason the four forms could not simply be merged.
+ *
+ * ⚠️ This is the fact the previous sprint used to defer the work, quoted from its own comment:
+ * *"they do differ materially: `flag_read` needs an environment, `flag_sync` needs a source string,
+ * `agent_write` needs an expiry from an allow-list, and ingest keys need none of those. Merging four
+ * forms is a bigger job than merging four lists."* That was true and it was the right call then;
+ * Story 4.5 does the bigger job, and this table is what makes the difference DATA rather than four
+ * hand-written branches that can disagree with the actions that receive them.
+ *
+ * A `Record` over the closed union: a fifth kind is a compile error here, which is what stops one
+ * reaching the page with no idea what to ask the operator for.
+ */
+export const CREDENTIAL_MINT_FIELD: Record<CredentialKind, 'none' | 'environment' | 'source' | 'expiry'> = {
+  ingest: 'none',
+  flag_read: 'environment',
+  flag_sync: 'source',
+  agent_write: 'expiry',
+}
+
+/**
+ * The order the mint picker offers the four kinds, and the sentence under each.
+ *
+ * Ordered by how often somebody needs one — an ingest key is the first credential every project
+ * gets, an agent write key is the rarest and the strongest. The picker is a list of JOBS, not of
+ * scopes: nobody thinks *"I need a flag_sync credential"*, they think *"I need to let my code
+ * register features"*.
+ */
+export const CREDENTIAL_MINT_ORDER: readonly CredentialKind[] = [
+  'ingest',
+  'flag_read',
+  'flag_sync',
+  'agent_write',
+]
+
 export function credentialTitle(kind: CredentialKind): string {
   return CREDENTIAL_COPY[kind].title
 }
@@ -92,8 +140,9 @@ export function credentialCapability(kind: CredentialKind): string {
  * one that scopes its claim honestly — and production carries two active share links on the tenant
  * this was designed against, so this is a real omission and not a hypothetical one.
  *
- * `flag_admin` exists in the schema's scope CHECK constraint but has no minting surface and no rows
- * in production; it is listed here so the next reader knows it was considered rather than missed.
+ * `flag_admin` exists in the schema's scope CHECK constraint and has no minting surface in this
+ * product — but it DOES have a live row in production, and this docstring used to say it did not.
+ * See the entry itself for the evidence and the correction (epic D11-3).
  */
 export const CREDENTIAL_KINDS_NOT_LISTED = [
   {
@@ -119,10 +168,33 @@ export const CREDENTIAL_KINDS_NOT_LISTED = [
     why: 'A public report link with its own audience lens — managed on its own Setup surface.',
   },
   {
+    // ⚠️ **THIS ENTRY WAS FALSE, and it was false on the one page whose entire job is an accurate
+    // access inventory** (epic README, D11-3). It read: *"Exists in the schema but has no minting
+    // surface and no live rows."* The first half is true — nothing in `apps/web` calls
+    // `create_flag_admin_key`; the RPC is granted to `service_role` and reachable only from a
+    // migration or a direct database session. **The second half is not.**
+    //
+    // Production, re-queried 2026-08-31 against `slweidgffcfndnskcskc` while building this story:
+    //
+    //   slug   | scope      | label                                | created_at            | revoked_at
+    //   miyagi | flag_admin | Miyagi Cloud Run flag administration | 2026-07-28 23:48:14+00| null
+    //
+    // One row. Unrevoked. **No expiry.** It authorises `get_flag_admin_snapshot` and
+    // `set_flag_admin_boolean` — reading and CHANGING what a project's flags serve — from outside
+    // this product entirely. A reader who took "no live rows" at face value would have concluded
+    // that nothing outside the four listed kinds could reach their project, which is the exact
+    // wrong answer to give someone investigating a leak.
+    //
+    // Corrected to say what is true of the KIND, not what happened to be true of one tenant when
+    // somebody last looked. `where: null` stands: there is still no surface, so there is nowhere to
+    // link to, and inventing one would be worse than saying so.
     kind: 'flag_admin',
     label: 'Flag admin keys',
     where: null,
-    why: 'Exists in the schema but has no minting surface and no live rows.',
+    why:
+      'Read and change what flags serve, from outside this product. Minted only by an operator ' +
+      'with database access — there is no surface here that can create or revoke one, so this page ' +
+      'cannot show you which exist.',
   },
 ] as const
 

@@ -1,85 +1,62 @@
-import { notFound } from 'next/navigation'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isConsoleShellEnabled, isFlagConsoleEnabled } from '@/lib/flags'
 import { listProjectKeys } from '@/lib/api-keys'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
 import { listAgentWriteKeys } from '@/lib/agent-write-keys'
 import {
   buildCredentialInventory,
-  type CredentialKind,
   credentialTitle,
   formatExpiry,
   isCurrentlyUsable,
   CREDENTIAL_KINDS_NOT_LISTED,
 } from '@/lib/credential-inventory'
 import { formatUtc } from '@/lib/format-utc'
-import { Panel } from '@/components/ui/Panel'
+import {
+  Callout,
+  Col,
+  Empty,
+  ListCard,
+  ListHead,
+  PageHead,
+  Pill,
+  Row,
+  RowMain,
+  Tag,
+} from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
+import { NewKey } from './new-key'
+import { RevokeKey } from './revoke-key'
 
-// console-ia-overhaul · Sprint 2, Story 2.3 — one page listing everything with access.
+// Setup › Keys — the one page that owns this project's credentials.
 //
-// ── The authorization boundary moves TIGHTER or identical, never looser (D5 / A5) ─────────────
-// All three routes this merges already call `requireProjectOwnership` at the route, so a member
-// gets a flat 404 from each of them today. This calls the same gate, at the route, before any list
-// read — identical, not looser. A5 corrected the story's original wording ("each section re-asserts
-// its own check"): there are not three different checks to preserve, there is ONE applied three
-// times. What each mint/revoke action re-asserts independently is ownership again, as they already
-// do — so the page's guard is never the only thing between a member and a mint.
+// ── design-system-rails · Sprint 4, Story 4.5 ✳ Daniel's complaint ────────────────────────────
+// This page listed credentials and sent you somewhere else to make one. The previous sprint said so
+// out loud and gave an honest reason — *"the four forms take materially different inputs, so this
+// sprint merged the list rather than half-merging the forms"* — and then the page named for the job
+// could not do the job. **Minting moves here in the same commit that retires `/app/keys`,
+// `/app/flag-credentials` and `/app/agent-keys`**, which is the ordering rule this epic keeps: land
+// the replacement and retire the original together, never as a cleanup story.
 //
-// ── Listing only, in this sprint, and that is a decision rather than a shortfall ──────────────
-// The story anticipated this: "if the three pages' minting forms turn out to have materially
-// different shapes, ship the LIST merged and leave minting on the existing routes — and say so."
-// They do differ materially: `flag_read` needs an environment, `flag_sync` needs a source string,
-// `agent_write` needs an expiry from an allow-list, and ingest keys need none of those. Merging four
-// forms is a bigger job than merging four lists and it is not what makes the page worth having.
-//
-// So this page answers "what has access to this project" — the question the story is named after —
-// and each row links to the surface that mints and revokes that kind. Those surfaces keep working
-// and keep their own forms; they simply stop being the only way to see the whole picture.
+// ── The gate: OWNER, at the route, unchanged — and no longer console-gated ────────────────────
+// ⚠️ `isConsoleShellEnabled()` is GONE from this page, and dropping it was forced by the retirement
+// rather than chosen. While the three legacy routes minted, this page was an additional surface and
+// gating it cost nothing. Now it is the ONLY surface: a `CONSOLE_SHELL_ENABLED=false` rollback would
+// have left a project unable to issue any credential at all, and the legacy routes redirect HERE, so
+// the rollback would have produced a redirect loop into a 404. The auth boundary is untouched —
+// `requireProjectOwnership` at the route, exactly as all four surfaces have always had it, and a
+// member still gets a flat 404 (`lib/setup-route-guards.test.ts` pins that).
 export const dynamic = 'force-dynamic'
 
-/**
- * Where each kind is minted and revoked, or `null` when that surface is currently unreachable.
- *
- * ── Why this returns null, and why that is not over-engineering ───────────────────────────────
- * `/app/flag-credentials` is `if (!isFlagConsoleEnabled()) notFound()`. Until the S1 fix, the flag
- * rows were suppressed whenever that gate was closed, so their link was never rendered in the state
- * where it 404s. Removing the suppression was correct — those credentials SERVE on different gates
- * (`FLAG_SERVING_ENABLED`, `FLAG_DEFINITION_SYNC_ENABLED`) and belong on a page listing what has
- * access — but it traded an omission for a dead link (fresh reviewer, PR #123, Blocking).
- *
- * The ROW must stay: the credential is live, and a page answering "what has access" that hides live
- * access is the defect S1 fixed. So the LINK is what goes. `project-route-inventory.test.ts` calls
- * this exact shape "the exact defect this epic exists to remove" and carries a regression test for
- * it in the nav; this is the same rule one level down, where nothing was checking.
- *
- * `CredentialKind`, not `string` (cross-review, vibe): the union is closed so a fifth kind is a
- * compile error at every consumer, and `string` opted this function out of that.
- */
-function manageHref(kind: CredentialKind, slug: string, flagConsoleOpen: boolean): string | null {
-  if (kind === 'ingest') return `/app/keys/${slug}`
-  if (kind === 'agent_write') return `/app/agent-keys/${slug}`
-  // flag_read and flag_sync are both managed on the flags console's credentials route.
-  return flagConsoleOpen ? `/app/flag-credentials/${slug}` : null
-}
-
 export default async function SetupKeysPage({ params }: { params: Promise<{ projectSlug: string }> }) {
-  if (!isConsoleShellEnabled()) notFound()
   const { projectSlug } = await params
   const { projectId } = await requireProjectOwnership(projectSlug)
 
-  // ⚠️ ALWAYS read, and keying this on `FLAG_CONSOLE_ENABLED` was wrong (fresh reviewer, PR #123).
-  //
-  // That flag gates the flags *UI*. It does not gate whether these credentials SERVE: `flag_read`
-  // serves via `/api/v1/flags/snapshot` behind `FLAG_SERVING_ENABLED`, and `flag_sync` via
-  // `/api/v1/flags/sync` behind `FLAG_DEFINITION_SYNC_ENABLED`. Neither reads the console flag.
-  //
-  // So suppressing them meant a project with live, serving flag credentials rendered a page that
-  // listed none of them, under a heading claiming to list everything, with a count that said
-  // "3 active credentials" when there were five. The original justification — avoiding "an empty
-  // section that implies this project has no flag keys" — did not survive the four kinds being
-  // merged into ONE table: there is no empty section to avoid, the rows simply vanish.
+  // ⚠️ ALWAYS read all four, and keying any of them on a flag was wrong. `FLAG_CONSOLE_ENABLED`
+  // gates the flags *UI*; it does not gate whether these credentials SERVE. `flag_read` serves via
+  // `/api/v1/flags/snapshot` behind `FLAG_SERVING_ENABLED`, and `flag_sync` via
+  // `/api/v1/flags/sync` behind `FLAG_DEFINITION_SYNC_ENABLED`. Suppressing them meant a project
+  // with live, serving flag credentials rendered a page that listed none of them, under a heading
+  // claiming to list everything.
   const [apiKeys, flagReadKeys, flagSyncKeys, agentWriteKeys] = await Promise.all([
     listProjectKeys(projectId),
     listFlagReadKeys(projectId),
@@ -88,135 +65,131 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   ])
 
   const rows = buildCredentialInventory({ apiKeys, flagReadKeys, flagSyncKeys, agentWriteKeys })
-  // Read once for the whole table: whether the surface that manages flag credentials is reachable.
-  const flagConsoleOpen = isFlagConsoleEnabled()
   const usableCount = rows.filter((row) => isCurrentlyUsable(row)).length
 
   return (
     <ProductShell projectSlug={projectSlug} section="setup" railActive={'setup/keys'}>
       <main>
-        <h1>Keys</h1>
-        <p>
-          Everything that can reach this project with a credential, in one list. Revoked keys are not shown —
-          this is what has access <strong>now</strong>.
-        </p>
-
-        <Panel className="stack">
-          {rows.length === 0 ? (
-            <p role="status">
-              Nothing has a credential for this project yet.{' '}
-              <a href={`/app/keys/${projectSlug}`}>Issue an API key</a> to start sending events.
-            </p>
-          ) : (
-            <div className="data-table">
-              <div className="data-table__scroll">
-                <table>
-                  <caption>
-                    {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An
-                        expired key is rejected on every serving path, so counting it would make
-                        this page's own "what has access now" false. Expired rows still render — an
-                        owner cleaning up wants to see them — they just are not counted. */}
-                    {usableCount} active credential{usableCount === 1 ? '' : 's'}
-                    {rows.length > usableCount ? `, ${rows.length - usableCount} expired` : ''}
-                  </caption>
-                  <thead>
-                    <tr>
-                      {/* FOUR columns, not seven, and that is a layout decision made by opening the
-                          page. Seven put "Manage" off the right edge: this route renders between the
-                          section rail and the agent rail, so `main` is ~540px at 1440 and the
-                          capability sentence is the widest thing on it. On a phone the same table
-                          was unreadable.
-
-                          The capability now sits UNDER the name — the same shape the rail uses for
-                          its descriptions — which reads better at every width and is the natural
-                          place for a sentence anyway. A green gate does not see this; a screenshot
-                          does. */}
-                      <th scope="col">Credential</th>
-                      <th scope="col">Where</th>
-                      <th scope="col">Created</th>
-                      <th scope="col">Expiry</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row) => {
-                      // Derived once per row: the IIFE version called `manageHref` twice, and the
-                      // second call is the kind of thing that later drifts from the first.
-                      const href = manageHref(row.kind, projectSlug, flagConsoleOpen)
-                      const name = row.label === '' ? 'untitled' : row.label
-                      return (
-                        <tr key={`${row.kind}:${row.id}`}>
-                          <td className="credential-cell">
-                            {/* A link only where it leads somewhere. When the managing surface is
-                              gated off, the name is plain text and the note below says why — the
-                              credential is still listed, because it is still live. */}
-                            {href === null ? <span>{name}</span> : <a href={href}>{name}</a>}
-                            {/* The kind and what it may do, together, because they answer one
-                              question. The link above goes to the surface that mints and revokes
-                              this kind — which is why "Manage" no longer needs a column of its own. */}
-                            <small>
-                              {credentialTitle(row.kind)} — {row.capability}
-                              {href === null && (
-                                <>
-                                  {' '}
-                                  <strong>
-                                    Managed on the flags console, which is switched off for this deployment —
-                                    this credential is still live.
-                                  </strong>
-                                </>
-                              )}
-                            </small>
-                          </td>
-                          {/* An em dash, not a blank: this kind has no scope, which is a fact rather
-                            than missing data — the same reasoning as the expiry column. */}
-                          <td>{row.scope ?? '—'}</td>
-                          <td>{formatUtc(row.createdAt)}</td>
-                          <td>{formatExpiry(row.expiresAt)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ⚠️ What this page does NOT list, said out loud on the page itself.
-              Its promise is "everything that has access", and share links ARE access — a bearer
-              token rendering this project's report to whoever holds the URL. Claiming completeness
-              while omitting live bearer tokens would be worse than scoping the claim honestly. */}
-          <p className="data-table__count">
-            Not listed here:{' '}
-            {CREDENTIAL_KINDS_NOT_LISTED.filter((entry) => entry.where !== null).map((entry, index) => (
-              <span key={entry.kind}>
-                {index > 0 ? ', ' : ''}
-                <a href={`${entry.where}/${projectSlug}`}>{entry.label}</a> — {entry.why}
-              </span>
-            ))}
-          </p>
-        </Panel>
-
-        {/* ⚠️ Every minting surface, listed UNCONDITIONALLY — not only the kinds that already have
-            a row (fresh reviewer, PR #123). With the console lit, `/app/keys`, `/app/agent-keys` and
-            `/app/flag-credentials` leave the nav, Command Center and ⌘K (A7), and the only inbound
-            links left were the per-row `Manage` links above — which exist only once you already
-            hold that kind of credential. So minting a FIRST agent-write key meant typing the URL:
-            the exact "you have to know the URL" defect this epic exists to remove, reintroduced one
-            level down.
-            It matters now rather than at the flip: A19 ships this console ENABLED, so there is no
-            dark period in which the gap would have gone unnoticed. */}
-        <p className="data-table__count">
-          Minting and revoking happen on each kind&apos;s own page — the forms take genuinely different
-          inputs, so this sprint merged the list rather than half-merging the forms. Issue a new credential:{' '}
-          <a href={`/app/keys/${projectSlug}`}>API key</a>
-          {flagConsoleOpen ? (
+        <PageHead
+          title="Keys"
+          lede={
             <>
-              {' · '}
-              <a href={`/app/flag-credentials/${projectSlug}`}>flag snapshot or catalog sync key</a>
+              Everything that gives something else access to this project. These used to be four separate
+              pages — API keys, flag credentials, agent write keys, and the connector token.
             </>
-          ) : null}
-          {' · '}
-          <a href={`/app/agent-keys/${projectSlug}`}>agent write key</a>.
+          }
+          actions={<NewKey slug={projectSlug} />}
+        />
+
+        {rows.length === 0 ? (
+          <div className="ds-listcard">
+            <Empty
+              title="Nothing has a credential for this project yet"
+              body="Until something does, the SDK and POST /api/v1/track have nothing to authenticate with. Start with an API key — it is the one every project needs first."
+            />
+          </div>
+        ) : (
+          <ListCard label="Credentials with access to this project">
+            <ListHead>
+              <Col header>Key</Col>
+              <Col header width="state">
+                What it may do
+              </Col>
+              <Col header width="meta">
+                Where · expires
+              </Col>
+              {/* ⚠️ **Visually empty, and NOT semantically empty.** The design leaves this header
+                  blank — a label reading "Actions" over three dots tells a reader nothing they did
+                  not already know. But a `columnheader` with no accessible name is a column a
+                  screen-reader user cannot identify at all, so the word is there and hidden from the
+                  eye. The alternative, dropping the header, would leave a four-cell row in a
+                  three-column table, which is the positional-announcement bug the feature list paid
+                  two rounds for. */}
+              <Col header width="act">
+                <span className="ds-visually-hidden">Actions</span>
+              </Col>
+            </ListHead>
+            {rows.map((row) => (
+              <Row key={`${row.kind}:${row.id}`}>
+                {/* `mono={false}`: a credential's label is something a person typed, not an
+                    identifier. The feature list's keys are mono for the opposite reason. */}
+                <RowMain
+                  mono={false}
+                  title={row.label === '' ? 'untitled' : row.label}
+                  description={`${credentialTitle(row.kind)} — ${row.capability}`}
+                />
+                <Col width="state">
+                  {/* A LABEL pill, not a state pill: this says what the key may do, which is a fact
+                      about the kind rather than a lifecycle state. Solid border, neutral ink — the
+                      three coloured states mean on / off / never everywhere else in this console and
+                      borrowing one here would say something untrue. */}
+                  <Pill state="never" label>
+                    {row.capability.split('.')[0]}
+                  </Pill>
+                </Col>
+                <Col width="meta">
+                  {/* An em dash for a kind with no scope, not a blank: "this kind has no
+                      environment" is a fact, and a blank cell reads as missing data. */}
+                  {row.scope === null ? (
+                    <Tag>Everywhere</Tag>
+                  ) : (
+                    <Tag label={`Scope: ${row.scope}`}>{row.scope}</Tag>
+                  )}
+                  {/* Words in every case. `null` is "No expiry", which is a deliberate state an
+                      owner chose (or the kind does not support one) — not missing information. */}
+                  <Tag>{formatExpiry(row.expiresAt)}</Tag>
+                  <span className="ds-note">Created {formatUtc(row.createdAt)}</span>
+                </Col>
+                <Col width="act">
+                  <RevokeKey
+                    slug={projectSlug}
+                    kind={row.kind}
+                    keyId={row.id}
+                    label={row.label === '' ? '' : row.label}
+                  />
+                </Col>
+              </Row>
+            ))}
+          </ListCard>
+        )}
+
+        <p className="ds-foot">
+          {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An expired key is
+              rejected on every serving path, so counting it would make this page's own "what has
+              access now" false. Expired rows still render — an owner cleaning up wants to see them —
+              they just are not counted. */}
+          {usableCount} credential{usableCount === 1 ? '' : 's'} can reach this project right now
+          {rows.length > usableCount ? `, and ${rows.length - usableCount} have expired` : ''}. Revoked keys
+          are not listed at all.
         </p>
+
+        {/* ⚠️ What this page does NOT list, said out loud on the page itself. Its promise is
+            "everything that has access", and share links and connector URLs ARE access — bearer
+            tokens rendering this project's data to whoever holds them. Claiming completeness while
+            omitting live bearer tokens would be worse than scoping the claim honestly. */}
+        <Callout>
+          <b>Not listed here.</b>{' '}
+          {CREDENTIAL_KINDS_NOT_LISTED.map((entry, index) => (
+            <span key={entry.kind}>
+              {index > 0 ? ' · ' : ''}
+              {/* A LINK only where it leads somewhere. `flag_admin` has no surface in this product —
+                  it is minted from a database session — so it is named as plain text rather than
+                  pointed at a page that does not exist. */}
+              {entry.where === null ? (
+                <b>{entry.label}</b>
+              ) : (
+                <a href={`${entry.where}/${projectSlug}`}>{entry.label}</a>
+              )}
+              {`: ${entry.why}`}
+            </span>
+          ))}
+        </Callout>
+
+        <Callout>
+          The key value is shown <b>once</b>, on a screen of its own, with a copy button. It is never a value
+          you read off this table or type back in — only its hash is stored, so nothing here can show it to
+          you a second time.
+        </Callout>
       </main>
     </ProductShell>
   )

@@ -80,8 +80,26 @@ export function Button({
 
 // ── State pill — dot plus WORD, never colour alone ────────────────────────────────────────────
 
-export function Pill({ state, children }: { state: 'on' | 'off' | 'never'; children: ReactNode }) {
-  return <span className={`ds-pill ds-pill--${state}`}>{children}</span>
+export function Pill({
+  state,
+  children,
+  label,
+}: {
+  state: 'on' | 'off' | 'never'
+  children: ReactNode
+  /**
+   * ⚠️ Draw this as a LABEL rather than as a state.
+   *
+   * The three coloured pills mean on / off / never everywhere in this console, and borrowing one to
+   * caption something that is not a lifecycle state says something untrue — "what this key may do"
+   * is a fact about the kind, not a state it is in. `label` keeps the pill's shape and drops the
+   * claim: solid border, neutral ink, no dashed "nothing has happened here" reading.
+   */
+  label?: boolean
+}) {
+  return (
+    <span className={classes('ds-pill', label ? 'ds-pill--label' : `ds-pill--${state}`)}>{children}</span>
+  )
 }
 
 // ── Three-state switch ────────────────────────────────────────────────────────────────────────
@@ -779,15 +797,80 @@ export function Card({ children }: { children: ReactNode }) {
   return <div className="ds-card">{children}</div>
 }
 
-/** A label, a control, and the sentence that explains it. */
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
+/**
+ * A label, a control, the sentence that explains it, and the error when there is one.
+ *
+ * ── `error` is a render-prop field, and the shape is the point ────────────────────────────────
+ * When `error` is used, `children` is called with the ARIA a control must carry: `aria-invalid`,
+ * and an `aria-describedby` naming the hint and the error message. A caller that took a plain
+ * `ReactNode` here would have to remember to wire those itself, and "remember to add the attribute"
+ * is how a field ends up announcing an error only to people who can see it.
+ *
+ * ⚠️ **The error slot reserves its height whether or not it has text.** Without that, showing an
+ * error moves the submit button a cursor is already travelling towards. That reflow was found and
+ * fixed once on `components/ui/FormSection`; the design system's own field is not going to
+ * rediscover it.
+ *
+ * ⚠️ **`aria-describedby` names only ids that EXIST.** Listing the hint's id unconditionally means a
+ * field with no hint points at an element that was never rendered — and a dangling ARIA reference
+ * reads to a screen reader as nothing at all, silently (cross-review, agy, PR #82, on the kit's
+ * version of this component).
+ */
+export function Field({
+  label,
+  children,
+  hint,
+  error,
+  controlId,
+}: {
+  label: string
+  children: ReactNode | ((control: FieldControl) => ReactNode)
+  hint?: ReactNode
+  /** `null` when the field is valid. A STRING is what makes it invalid — never a boolean beside it. */
+  error?: string | null
+  /**
+   * The control's id, supplied by the caller.
+   *
+   * Not `useId()`: this file is imported by server components, and a hook here would make every page
+   * that renders a field a client tree. A caller that renders one field per kind already has a
+   * stable name for it.
+   */
+  controlId?: string
+}) {
+  const hintId = hint === undefined || controlId === undefined ? undefined : `${controlId}-hint`
+  const errorId = error == null || controlId === undefined ? undefined : `${controlId}-error`
+  const describedBy = [hintId, errorId].filter(Boolean).join(' ')
+  const control: FieldControl = {
+    id: controlId,
+    'aria-invalid': error == null ? 'false' : 'true',
+    'aria-describedby': describedBy === '' ? undefined : describedBy,
+  }
   return (
     <div className="ds-field">
-      <span className="ds-label">{label}</span>
-      {children}
-      {hint === undefined ? null : <p className="ds-hint">{hint}</p>}
+      <span className="ds-label" id={controlId === undefined ? undefined : `${controlId}-label`}>
+        {label}
+      </span>
+      {typeof children === 'function' ? children(control) : children}
+      {hint === undefined ? null : (
+        <p className="ds-hint" id={hintId}>
+          {hint}
+        </p>
+      )}
+      {/* Rendered ALWAYS, so the slot's height is reserved and nothing below it moves when a message
+          appears. `aria-live` so the message is announced when it arrives rather than only when the
+          control is next focused. */}
+      <p className="ds-field-error" id={errorId} role={error == null ? undefined : 'alert'}>
+        {error ?? ''}
+      </p>
     </div>
   )
+}
+
+/** What `Field` hands a render-prop control so the ARIA cannot be forgotten. */
+export type FieldControl = {
+  id?: string
+  'aria-invalid': 'true' | 'false'
+  'aria-describedby'?: string
 }
 
 /**

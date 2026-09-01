@@ -158,7 +158,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     await expect(current).toHaveCount(1)
     await expect(current).toHaveText('Today')
 
-    await page.goto(`/app/keys/${tenantSlug()}`)
+    // ⚠️ `/app/setup/keys`, not `/app/keys` — design-system-rails S4.5 retired the latter into a
+    // permanent redirect. A redirect would still land here, but asserting a tab on a URL that is not
+    // the destination is asserting the redirect rather than the shell.
+    await page.goto(`/app/setup/keys/${tenantSlug()}`)
     const onSetup = page.locator('.product-shell__tabs a[aria-current="page"]')
     await expect(onSetup).toHaveCount(1)
     await expect(onSetup).toHaveText('Setup')
@@ -184,8 +187,11 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     const slug = tenantSlug()
     await expect(rail.locator(`a[href="/app/setup/keys/${slug}"]`)).toBeVisible()
     await expect(rail.locator(`a[href="/app/setup/connect/${slug}"]`)).toBeVisible()
-    // ...and the three routes it replaces are NOT listed beside it. A7's swap, seen in the browser
-    // rather than only in the projection.
+    // ...and the three routes it replaces are NOT listed beside it. This used to be A7's swap seen in
+    // the browser; since design-system-rails S4.5 the three are permanent redirects with no
+    // inventory row at all, so the assertion is now unconditional rather than gate-dependent — and
+    // it is kept precisely because it is: a re-added nav entry would be a second way to reach one
+    // page, and this is what would notice.
     await expect(rail.locator(`a[href="/app/keys/${slug}"]`)).toHaveCount(0)
     await expect(rail.locator(`a[href="/app/agent-keys/${slug}"]`)).toHaveCount(0)
     await expect(rail.locator(`a[href="/app/flag-credentials/${slug}"]`)).toHaveCount(0)

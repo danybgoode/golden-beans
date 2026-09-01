@@ -388,7 +388,11 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'setup/keys',
     referenceState: 'setup-keys',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.5. Four rows, a "what it may do" column, environment and expiry
+    // chips, a row menu and `+ New key` — and the four mint forms behind it, which is the half the
+    // previous sprint deferred with a stated reason. The three routes it replaces retired into
+    // permanent redirects in the same commit.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -447,7 +451,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'API keys (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'keys',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,
@@ -460,7 +467,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'Flag credentials (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'flag-credentials',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,
@@ -473,7 +483,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     label: 'Agent write keys (legacy)',
     frame: 'console',
     seam: 'product-shell',
-    surface: 'agent-keys',
+    // ⚠️ `surface: null` since Story 4.5 — this is no longer a nav surface. Its inventory row is
+    // deleted and the route is a permanent redirect; the manifest row stays only so `retiresIn: 4`
+    // can take it out of the denominator, and so a page.tsx that still answers is never unlisted.
+    surface: null,
     referenceState: null,
     rendersFromDesignSystem: false,
     landsIn: 4,

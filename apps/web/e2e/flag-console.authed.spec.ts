@@ -96,20 +96,13 @@ test.describe('the flag console, signed in', () => {
     await expect(page.locator('[data-feature-list]')).toBeVisible()
   })
 
-  test('the credentials route renders both key kinds for an owner', async ({ page }) => {
-    const slug = tenantSlug()
-    await page.goto(`/app/flag-credentials/${slug}`)
-
-    // ⚠️ The heading no longer names the project. Story 3.5's console-wide sweep removed the
-    // `— <slug>` suffix and the back-link from every signed-in page: the top bar's switcher already
-    // says which project this is, and on a real tenant slug the title wrapped (Do-not #1).
-    await expect(page.getByRole('heading', { name: 'Flag credentials', exact: true })).toBeVisible()
-    // Both tables and both minting forms — the four things Story 3.1 moved.
-    await expect(page.getByRole('table').filter({ hasText: 'Snapshot keys' })).toBeVisible()
-    await expect(page.getByRole('table').filter({ hasText: 'Catalog sync keys' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Mint 30-day snapshot key' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Mint 30-day catalog sync key' })).toBeVisible()
-  })
+  // ⚠️ **`the credentials route renders both key kinds for an owner` is RETIRED — S4.5.** It drove
+  // `/app/flag-credentials`, which is a permanent redirect now: both key kinds are minted and
+  // revoked on Setup › Keys, for the same owner, with the same server actions. The coverage did not
+  // go with the route — `e2e/flag-sync-keys.authed.spec.ts` drives the full mint-and-revoke round
+  // trip at the new address, and `e2e/setup-keys.authed.spec.ts` pins all four kinds and the
+  // member boundary. Named here rather than silently deleted, because a test that vanishes with the
+  // page it tested is indistinguishable from coverage that was dropped.
 
   test('the audit route renders, and reads its actions as sentences', async ({ page }) => {
     const slug = tenantSlug()

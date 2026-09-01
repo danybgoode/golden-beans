@@ -44,13 +44,26 @@ test('signed-in pages inherit the responsive Golden Frijoles product shell', asy
 // The gate-covered half of Sprint 1 is `apps/web/lib/data-table.test.ts` (sort/filter as pure
 // functions, in `npm run test:unit`).
 
+/**
+ * Issue an API key through the REAL mint flow.
+ *
+ * ⚠️ **Re-pointed at Setup › Keys — design-system-rails S4.5.** `/app/keys` is a permanent redirect
+ * now; the form it held moved, and so did the words. What this helper is FOR is unchanged: these
+ * tests are about `ConfirmDialog` — whether focus can leave a dialog, whether pressing Esc performed
+ * a mutation — and they need a real, revocable row to act on. The route that provides one moved.
+ */
 async function issueKey(page: import('@playwright/test').Page, slug: string, label: string) {
-  await page.goto(`/app/keys/${slug}`)
-  await page.getByLabel('New key label').fill(label)
-  await page.getByRole('button', { name: 'Issue key' }).click()
-  const notice = page.getByRole('alert').filter({ hasText: 'Copy your new key now' })
+  await page.goto(`/app/setup/keys/${slug}`)
+  await page.getByRole('button', { name: '+ New key' }).click()
+  // Step one is a list of JOBS, not of scopes. "API key" is the one every project needs first.
+  await page.getByRole('button', { name: 'API key' }).click()
+  await page.getByLabel('What to call it').fill(label)
+  await page.getByRole('button', { name: /Create the api key/i }).click()
+  const notice = page.getByRole('alert').filter({ hasText: 'Copy this key now' })
   await expect(notice).toBeVisible()
+  // The reveal replaces the form and reloads on dismissal, which is what puts the new row on screen.
   await notice.getByRole('button', { name: "I've saved it" }).click()
+  await page.waitForLoadState('networkidle')
 }
 
 function keyRow(page: import('@playwright/test').Page, label: string) {
@@ -62,15 +75,18 @@ test('ConfirmDialog names the specific object, traps focus, and cancels without 
   const label = `confirm-smoke-${Date.now()}`
   await issueKey(page, slug, label)
 
+  // ⚠️ There is no "active" cell any more — design-system-rails S4.5. The merged page lists what
+  // has access NOW and drops revoked rows entirely, so PRESENCE is the status. Asserting the word
+  // would be asserting a column the design does not have.
   const row = keyRow(page, label)
-  await expect(row).toContainText('active')
-  await row.getByRole('button', { name: 'Revoke' }).click()
+  await expect(row).toBeVisible()
+  await row.getByRole('button', { name: `Revoke ${label}` }).click()
 
   const dialog = page.locator('dialog.confirm-dialog')
   await expect(dialog).toBeVisible()
 
   // Story 1.2's headline criterion: the SPECIFIC key, not "Are you sure?".
-  await expect(dialog).toContainText(`Revoke key ${label}?`)
+  await expect(dialog).toContainText(`Revoke api key ${label}?`)
   await expect(dialog).not.toContainText('Are you sure')
   // Story 3.3 lands the consequence copy everywhere; the prop is required from Sprint 1, so there
   // is a real sentence here from the first call site.
@@ -111,61 +127,71 @@ test('ConfirmDialog names the specific object, traps focus, and cancels without 
   // native close() never ran, the browser never restored focus, and a keyboard user was left on
   // <body> with no way back to the row they were operating on. The trap spec above could not see
   // it — it only looked at focus while the dialog was OPEN.
-  const trigger = keyRow(page, label).getByRole('button', { name: 'Revoke' })
+  const trigger = keyRow(page, label).getByRole('button', { name: `Revoke ${label}` })
 
-  // Esc dismisses AND does not act — the property the mutation check was run against.
+  // Esc dismisses AND does not act — the property the mutation check was run against. "Did not act"
+  // is now "the row is still there", which is a stronger reading than the old "the cell still says
+  // active": a revoke that succeeded would remove it.
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
-  await expect(keyRow(page, label)).toContainText('active')
+  await expect(keyRow(page, label)).toBeVisible()
   await expect(trigger).toBeFocused()
 
   // ...and so does the Cancel button, by the same handler — including the focus restoration.
   await trigger.click()
   await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Cancel' }).click()
   await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
-  await expect(keyRow(page, label)).toContainText('active')
+  await expect(keyRow(page, label)).toBeVisible()
   await expect(trigger).toBeFocused()
 
-  // Confirming still performs exactly the operation the bare button used to.
-  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  // Confirming still performs exactly the operation the bare button used to. The page reloads and
+  // the row is GONE — "Revoked keys are not listed at all" is the page's own claim, asserted here.
+  await trigger.click()
   await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Revoke' }).click()
-  await expect(keyRow(page, label)).toContainText('revoked')
+  await page.waitForLoadState('networkidle')
+  await expect(keyRow(page, label)).toHaveCount(0)
 })
 
-test('Field announces its error against the control and does not reflow the form', async ({ page }) => {
+test('a field announces its error against the control and does not reflow the form', async ({ page }) => {
+  // ⚠️ **MOVED from `components/ui/FormSection` to `design-system/primitives` — Story 4.5.** The
+  // only route that exercised the kit's `Field` error path was `/app/keys`, which is now a redirect:
+  // its label validation moved onto the merged Setup › Keys mint form, and that form renders the
+  // design system's own field.
+  //
+  // The PROPERTIES are unchanged, deliberately. Both were bought by cross-review on the kit's
+  // version and neither is re-derivable from a rewrite: the message must be ASSOCIATED with the
+  // control (not merely near it), every id `aria-describedby` names must exist, and the submit
+  // button must not move when the message appears.
   const slug = tenantSlug()
-  await page.goto(`/app/keys/${slug}`)
-
-  // FormSection renders a real heading + description rather than a bare input.
-  const section = page.locator('.form-section')
-  await expect(section.getByRole('heading', { name: 'Issue a key' })).toBeVisible()
-  await expect(section).toContainText('shown once')
+  await page.goto(`/app/setup/keys/${slug}`)
+  await page.getByRole('button', { name: '+ New key' }).click()
+  await page.getByRole('button', { name: 'API key' }).click()
 
   await page.evaluate(() => document.fonts.ready)
 
-  const submit = page.getByRole('button', { name: 'Issue key' })
+  const submit = page.getByRole('button', { name: /Create the api key/i })
   // DOCUMENT coordinates, not `boundingBox()`. boundingBox() is viewport-relative, and clicking the
-  // button scrolls the page — which read as the button moving UP by 25px, i.e. as a reflow no error
-  // slot could possibly cause. Adding scrollY measures layout rather than scroll position.
+  // button scrolls the page — which reads as the button moving UP, i.e. as a reflow no error slot
+  // could possibly cause. Adding scrollY measures layout rather than scroll position.
   const submitTop = () => submit.evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
   const before = await submitTop()
 
-  const input = page.getByLabel('New key label')
+  const input = page.getByLabel('What to call it')
   await expect(input).toHaveAttribute('aria-invalid', 'false')
 
   await submit.click()
 
-  // The error is associated with the control, not merely near it: aria-describedby must point at
+  // The error is associated with the control, not merely near it: `aria-describedby` must point at
   // the element that now holds the message.
   await expect(input).toHaveAttribute('aria-invalid', 'true')
   const describedBy = await input.getAttribute('aria-describedby')
   expect(describedBy).toBeTruthy()
 
-  // EVERY id it names must resolve to an element that is actually in the DOM. Cross-review (Agy,
-  // PR #82) found `Field` listing its hint id unconditionally, so a field with no hint pointed at
-  // an element that was never rendered — a dangling ARIA reference reads to a screen reader as
-  // nothing at all, silently. Asserting the general property rather than the one instance means the
-  // next describedby id added here cannot reintroduce it.
+  // EVERY id it names must resolve to an element that is actually in the DOM. The kit's version
+  // listed its hint id unconditionally, so a field with no hint pointed at an element that was never
+  // rendered — a dangling ARIA reference reads to a screen reader as nothing at all, silently.
+  // Asserting the general property rather than the one instance means the next id added here cannot
+  // reintroduce it.
   const dangling = await page.evaluate(
     (ids: string[]) => ids.filter((id) => !document.getElementById(id)),
     describedBy!.split(' ').filter(Boolean)
@@ -173,13 +199,16 @@ test('Field announces its error against the control and does not reflow the form
   expect(dangling, 'aria-describedby must not name elements that do not exist').toEqual([])
   const errorId = describedBy!.split(' ').find((id) => id.endsWith('-error'))
   expect(errorId, 'the field must describe itself with an error element').toBeTruthy()
-  // An attribute selector rather than `#id`: React's useId emits ids containing characters that
-  // are not valid in a bare CSS id selector, and escaping them by hand is a footgun.
   await expect(page.locator(`[id="${errorId}"]`)).toContainText('Give the key a label')
 
   // ...and nothing moved. The error slot's height is reserved whether or not it has text, so the
   // submit button a cursor is already travelling towards stays where it was.
   expect(await submitTop()).toBeCloseTo(before, 0)
+
+  // ⚠️ And no MINT happened. A validation test that only checked the message would pass just as
+  // happily on a form that showed the error AND created the credential — which on this page means a
+  // live key nobody asked for and nobody has seen.
+  await expect(page.getByRole('alert').filter({ hasText: 'Copy this key now' })).toHaveCount(0)
 })
 
 // ── app-component-kit-adoption · Sprint 2 — the converted routes ────────────────────────────────
@@ -190,76 +219,75 @@ test('Field announces its error against the control and does not reflow the form
 // This is that coverage, on the first of the two founding call sites.
 
 test('DataTable sorts, filters, and tells the two kinds of empty apart', async ({ page }) => {
+  // ⚠️ **RE-POINTED, not relaxed — design-system-rails S4.5.** This ran against `/app/keys` and
+  // `/app/agent-keys`, creating two rows through their mint forms. Both routes are redirects now,
+  // and Setup › Keys renders the design system's list rather than a `DataTable` — it has no filter
+  // box and no sortable header, by design.
+  //
+  // The subject is the KIT COMPONENT, not those routes, so the test follows the kit to call sites
+  // that still have one. It is a fixture-stable pair rather than rows this spec creates:
+  //   · `/app/destinations` — a fresh tenant has none, which is the "you have no rows" empty state;
+  //   · `/app/impact/<slug>/<IMPACT_FEATURE_KEY>` — `auth.setup.ts` seeds a real daily series, so
+  //     sorting and filtering have something to act on with no mutation at all.
+  //
+  // ⚠️ Stated so the next reader is not surprised: this test moves again as the epic converts each
+  // route, and **Sprint 6 retires it with the kit**. Deleting it now would be the repair LEARNINGS
+  // warns about — the obvious fix for a guard that fails is to drop it, and then the guard is gone
+  // while the component it covers is still shipping.
   const slug = tenantSlug()
 
-  // The FIRST empty state — no rows at all — is asserted on `agent-keys` rather than `keys`,
-  // because provisioning issues a project's first API key, so a fresh tenant's key table is never
-  // actually empty. It must be the CALLER's sentence: a blank <tbody> or a generic "No results" is
-  // the thing this epic exists to remove.
-  await page.goto(`/app/agent-keys/${slug}`)
-  await expect(page.locator('.data-table__empty')).toContainText('No agent write keys yet')
+  // The FIRST empty state — no rows at all. It must be the CALLER's sentence: a blank <tbody> or a
+  // generic "No results" is the thing that epic existed to remove.
+  await page.goto(`/app/destinations/${slug}`)
+  await expect(page.locator('.data-table__empty').first()).toContainText('No destinations yet')
 
-  await page.goto(`/app/keys/${slug}`)
+  await page.goto(`/app/impact/${slug}/${IMPACT_FEATURE_KEY}`)
   const table = page.locator('.data-table')
+  const dateCells = () => table.locator('tbody tr td:first-child')
+  const header = table.getByRole('button', { name: 'Date' })
+  const sortState = () => table.getByRole('columnheader', { name: /Date/ })
+  const filter = page.getByLabel('Filter days')
 
-  // Two rows whose ALPHABETICAL order is the reverse of their creation order, so a passing sort
-  // assertion cannot be satisfied by the server's newest-first ordering.
-  const stamp = Date.now()
-  const first = `zz-first-${stamp}`
-  const second = `aa-second-${stamp}`
-  await issueKey(page, slug, first)
-  await issueKey(page, slug, second)
-
-  const labelCells = () => table.locator('tbody tr td:first-child')
-  const header = table.getByRole('button', { name: 'Label' })
-  const sortState = () => table.getByRole('columnheader', { name: /Label/ })
-  const filter = page.getByLabel('Filter keys')
-
-  // Narrow to just this run's two rows first. The tenant also holds the key provisioning issued,
-  // and a sort assertion that has to account for rows it did not create is a spec that breaks for
-  // reasons unrelated to sorting. Filtering and sorting compose, which is itself worth exercising.
-  await filter.fill(String(stamp))
-  await expect(labelCells()).toHaveText([second, first])
-  await expect(table.locator('.data-table__count')).toContainText('of')
+  // The fixture's own series, in the order the page received it — derived from the fixture rather
+  // than typed, so a change to the seed cannot leave this asserting a stale list.
+  const dates = IMPACT_SERIES.map((point) => point.occurredOn)
+  expect(dates.length, 'the impact fixture seeds no series; this test would assert nothing').toBeGreaterThan(
+    1
+  )
+  await expect(dateCells()).toHaveCount(dates.length)
 
   await header.click()
   await expect(sortState()).toHaveAttribute('aria-sort', 'ascending')
-  await expect(labelCells()).toHaveText([second, first])
+  await expect(dateCells()).toHaveText([...dates].sort())
 
   await header.click()
   await expect(sortState()).toHaveAttribute('aria-sort', 'descending')
-  await expect(labelCells()).toHaveText([first, second])
+  await expect(dateCells()).toHaveText([...dates].sort().reverse())
 
   // The third click returns to the server's order rather than cycling asc/desc forever — the
-  // behaviour lib/data-table.ts calls out and the reason `SortState` has a null case.
+  // behaviour `lib/data-table.ts` calls out, and the reason `SortState` has a null case.
   await header.click()
   await expect(sortState()).toHaveAttribute('aria-sort', 'none')
-  await expect(labelCells()).toHaveText([second, first])
+  await expect(dateCells()).toHaveText(dates)
 
-  // Narrowing further still works.
-  await filter.fill(`zz-first-${stamp}`)
-  await expect(labelCells()).toHaveText([first])
+  // Filtering narrows to one row, and composes with the ordering above.
+  await filter.fill(dates[0])
+  await expect(dateCells()).toHaveText([dates[0]])
+  await expect(table.locator('.data-table__count')).toContainText('of')
 
   // ...and a query matching nothing gets the OTHER empty state, naming the query. This is the
-  // distinction the component exists to preserve: "you have no keys" and "none of your keys match
-  // what you typed" are different facts, and a PM who sees the first when the second is true
-  // concludes their credentials are gone.
-  await filter.fill('no-such-key-anywhere')
+  // distinction the component exists to preserve: "there is no data" and "none of it matches what
+  // you typed" are different facts, and a reader who sees the first when the second is true
+  // concludes their numbers are gone.
+  await filter.fill('no-such-day-anywhere')
   const emptyCell = table.locator('.data-table__empty')
   await expect(emptyCell).toContainText('Nothing matches')
-  await expect(emptyCell).toContainText('no-such-key-anywhere')
-  await expect(emptyCell).not.toContainText('No keys yet')
+  await expect(emptyCell).toContainText('no-such-day-anywhere')
+  await expect(emptyCell).not.toContainText('No data yet')
 
-  // Clearing restores every row — both of this run's, plus the key provisioning issued, which the
-  // filter was hiding. Asserted per row rather than as an array: Playwright's array form of
-  // toContainText couples the assertion to the exact number of matched elements, so it would
-  // silently depend on how many keys the fixture tenant happens to arrive with. Measured: it
-  // arrives with one. (Cross-review, Codex, PR #83 — Blocking.)
+  // Clearing restores every row.
   await filter.fill('')
-  await expect(labelCells().filter({ hasText: first })).toHaveCount(1)
-  await expect(labelCells().filter({ hasText: second })).toHaveCount(1)
-  await expect(await labelCells().count()).toBeGreaterThanOrEqual(3)
-  await expect(table.locator('.data-table__count')).not.toContainText('of')
+  await expect(dateCells()).toHaveCount(dates.length)
 })
 
 // Story 2.4 — one assertion per converted route. Deliberately thin: the point is that each surface
@@ -274,8 +302,22 @@ const CONVERTED_ROUTES: Array<{
   /** Reuses `.data-table`'s look WITHOUT being a `DataTable` — see the flags entry below. */
   skipFilter?: boolean
 }> = [
-  { name: 'keys', path: (s) => `/app/keys/${s}`, expect: ['.data-table', '.form-section'] },
-  { name: 'agent-keys', path: (s) => `/app/agent-keys/${s}`, expect: ['.data-table', '.form-section'] },
+  // ⚠️ **`keys` and `agent-keys` are RE-POINTED, not deleted — design-system-rails S4.5.**
+  //
+  // Both routes are permanent redirects now: minting and revoking moved onto Setup › Keys, which
+  // renders from `apps/web/design-system/` and holds no `.data-table` or `.form-section` at all.
+  // Deleting the entries is the repair LEARNINGS warns about — the obvious fix for a guard that
+  // fails is to remove it, and then the guard added to catch drift is the thing that got dropped.
+  //
+  // So the entry keeps its force and changes its target, exactly as the flags entry below did: the
+  // route must still render through a NAMED visual system, and for this one that system is the
+  // design contract rather than the generic kit. Ad-hoc markup still fails.
+  {
+    name: 'setup keys',
+    path: (s) => `/app/setup/keys/${s}`,
+    expect: ['.ds-listcard', '.ds-page-head'],
+    skipFilter: true,
+  },
   { name: 'destinations', path: (s) => `/app/destinations/${s}`, expect: ['.data-table', '.form-section'] },
   // Experiments converts its FORM only — its version tables are per-experiment and 1-5 rows each, so
   // DataTable's always-on filter would stack a filter box above every flag on the page. Logged as a
@@ -311,12 +353,17 @@ const CONVERTED_ROUTES: Array<{
           expect: ['.listcard', '.summary'],
           skipFilter: true,
         },
+        // ⚠️ `flag credentials` is GONE and `flag audit` is RE-POINTED — design-system-rails S4.5
+        // and S4.3. The credentials route is a redirect (its rows live on Setup › Keys, covered
+        // above); the audit is a timeline rather than a `DataTable`, because the approved
+        // `ship-activity` state says in its own copy that it is "written as sentences, not as rows
+        // of a table nobody reads".
         {
-          name: 'flag credentials',
-          path: (s: string) => `/app/flag-credentials/${s}`,
-          expect: ['.data-table'],
+          name: 'flag audit',
+          path: (s: string) => `/app/flag-audit/${s}`,
+          expect: ['.ds-timeline', '.ds-page-head'],
+          skipFilter: true,
         },
-        { name: 'flag audit', path: (s: string) => `/app/flag-audit/${s}`, expect: ['.data-table'] },
       ]
     : [{ name: 'flags', path: (s: string) => `/app/flags/${s}`, expect: ['.data-table'] }]),
   // The sixth route. It needs a feature with a linked input and a recorded series, so auth.setup.ts
