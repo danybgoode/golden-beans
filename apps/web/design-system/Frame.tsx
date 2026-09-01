@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { GoldenFrijolMark } from '@/components/brand/GoldenFrijolMark'
 
 // design-system-rails · Sprint 6, Story 6.1 — SEAM B.
@@ -159,9 +160,16 @@ export function Frame({
         {agentFooter && (
           <footer className="ds-pubfoot">
             <span>agent-readable:</span>
+            {/* ⚠️ The first two are `<a>` and the third is `<Link>`, deliberately.
+                `/llms.txt` and `/northstar-self-serve.md` are Route Handlers serving plain text —
+                not pages — so there is nothing for the client router to prefetch or transition to,
+                and `next/link` would be a client-side navigation to a document the browser must
+                fetch anyway. `/methodology` IS a page, and `@next/next/no-html-link-for-pages` is
+                right to insist: an `<a>` there does a full reload of an app the visitor already has
+                loaded. (Caught by CI's lint, not mine — eslint's cache had the old result.) */}
             <a href="/llms.txt">/llms.txt</a>
             <a href="/northstar-self-serve.md">/northstar-self-serve.md</a>
-            <a href="/methodology">Methodology</a>
+            <Link href="/methodology">Methodology</Link>
           </footer>
         )}
       </div>
