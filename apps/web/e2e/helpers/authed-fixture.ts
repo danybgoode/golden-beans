@@ -126,3 +126,16 @@ export const EXPERIMENT_METRIC_EVENT = 'gb_e2e_checkout_completed'
 export const EXPERIMENT_EXPOSURES_PER_ARM = 200
 export const EXPERIMENT_CONTROL_CONVERSIONS = 40
 export const EXPERIMENT_TREATMENT_CONVERSIONS = 70
+
+// ── design-system-rails · Sprint 5, Story 5.5 — the journey fixture ───────────────────────────
+//
+// Production `miyagisanchez` has ZERO journeys (epic D10) — the one live journey is
+// `merchant_activation` on `golden-beans` — so `measure-journey`'s stage bars are drawn by nothing
+// on the fixture tenant. The counts DESCEND and are all different on purpose: equal counts would let
+// a page rendering one number three times pass, and one drawing three equal bars pass with it.
+export const JOURNEY_FIXTURE_KEY = 'gb_e2e_founding_merchant'
+export const JOURNEY_STAGES = [
+  { key: 'signed_up', event: 'gb_e2e_journey_signed_up', subjects: 12 },
+  { key: 'listed_a_product', event: 'gb_e2e_journey_listed', subjects: 7 },
+  { key: 'first_sale', event: 'gb_e2e_journey_sold', subjects: 3 },
+] as const

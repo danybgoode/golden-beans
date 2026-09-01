@@ -25,6 +25,8 @@ import {
   EXPERIMENT_EXPOSURES_PER_ARM,
   EXPERIMENT_CONTROL_CONVERSIONS,
   EXPERIMENT_TREATMENT_CONVERSIONS,
+  JOURNEY_FIXTURE_KEY,
+  JOURNEY_STAGES,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -157,9 +159,81 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedScenarioFixture(db, membership.project_id as string, userId)
   await seedTaskFixture(db, membership.project_id as string)
   await seedExperimentFixture(db, membership.project_id as string, userId)
+  await seedJourneyFixture(db, membership.project_id as string, userId)
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
+
+/**
+ * Seed an ACTIVE journey with subjects spread across its stages.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────────────────────────
+ * design-system-rails Story 5.5 builds `measure-journey`, whose whole content is stage bars with a
+ * visible drop-off. Production `miyagisanchez` has **zero** journeys (epic D10) — the one live
+ * journey is `merchant_activation` on `golden-beans` — so on the fixture tenant, and on the
+ * walkthrough tenant, the bars are drawn by nothing.
+ *
+ * ⚠️ **The stage counts DESCEND and are all different**, deliberately: 12 → 7 → 3. Equal counts
+ * would let a page rendering one number three times pass, and a page drawing three equal-length bars
+ * pass with it — the same argument `seedFunnelFixture` above makes, and the reason its own counts
+ * are 3 / 2 / 1.
+ *
+ * Subjects are nested: everyone who reaches a stage has satisfied the ones before it. A journey
+ * counts people where they ACTUALLY are, so a subject appearing at stage 3 without stage 2 is a
+ * legitimate state — it is just not the one this fixture is for.
+ */
+async function seedJourneyFixture(db: SupabaseClient, projectId: string, actorUserId: string) {
+  const definition = {
+    entityType: 'merchant',
+    description: 'A seller from sign-up to their second sale.',
+    stages: JOURNEY_STAGES.map((stage) => ({ key: stage.key, event: stage.event })),
+    cohortEntry: { stageKey: JOURNEY_STAGES[0].key },
+  }
+
+  const { data: created, error: createError } = await db.rpc('create_journey_version', {
+    p_project_id: projectId,
+    p_journey_key: JOURNEY_FIXTURE_KEY,
+    p_definition: definition,
+    p_actor_user_id: actorUserId,
+  })
+  if (createError || !created?.[0]) {
+    throw new Error(`could not seed the journey version: ${createError?.message}`)
+  }
+  const { journey_id: journeyId, version_id: versionId } = created[0]
+
+  const { data: activated, error: activateError } = await db.rpc('activate_journey_version', {
+    p_project_id: projectId,
+    p_journey_id: journeyId,
+    p_version_id: versionId,
+    p_actor_user_id: actorUserId,
+  })
+  if (activateError || activated !== true) {
+    throw new Error(`could not activate the fixture journey: ${activateError?.message ?? 'refused'}`)
+  }
+
+  // Inside the page's default 30-day entry window, and ordered so a subject's later stages fall
+  // strictly after its earlier ones — a journey is an ORDERED lifecycle, and simultaneous timestamps
+  // make "where somebody actually is" ambiguous.
+  const start = Date.now() - 20 * 86_400_000
+  const rows: Record<string, unknown>[] = []
+  JOURNEY_STAGES.forEach((stage, index) => {
+    for (let subject = 0; subject < stage.subjects; subject += 1) {
+      rows.push({
+        project_id: projectId,
+        user_id: `journey-${subject}`,
+        event: stage.event,
+        subject_type: 'merchant',
+        subject_id: `journey-${subject}`,
+        context_version: CURRENT_CONTEXT_VERSION,
+        tags: {},
+        occurred_at: new Date(start + (index * 24 + subject) * 3_600_000).toISOString(),
+        created_at: new Date(start + (index * 24 + subject) * 3_600_000).toISOString(),
+      })
+    }
+  })
+  const { error } = await db.from('events').insert(rows)
+  if (error) throw new Error(`could not seed the journey events: ${error.message}`)
+}
 
 /**
  * Seed a RUNNING experiment with enough real exposures and conversions to produce an interval.

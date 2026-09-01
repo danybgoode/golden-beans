@@ -3,8 +3,8 @@
   "routes": 27,
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
-  "rendersFromDesignSystem": 14,
-  "complete": 14,
+  "rendersFromDesignSystem": 16,
+  "complete": 16,
   "covered": [
     "/app",
     "/app/destinations/[projectSlug]",
@@ -15,6 +15,8 @@
     "/app/flags/[projectSlug]/[flagKey]",
     "/app/funnel/[projectSlug]/[featureKey]",
     "/app/impact/[projectSlug]/[featureKey]",
+    "/app/journeys/[projectSlug]",
+    "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/scheduled/[projectSlug]",
     "/app/setup/connect/[projectSlug]",
     "/app/setup/keys/[projectSlug]",
@@ -22,8 +24,6 @@
     "/app/tasks/[projectSlug]"
   ],
   "outstanding": [
-    "/app/journeys/[projectSlug]",
-    "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/onboarding/[projectSlug]",
     "/app/scenarios/[projectSlug]",
     "/hub/[projectSlug]",

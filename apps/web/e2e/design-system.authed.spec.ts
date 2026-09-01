@@ -462,9 +462,10 @@ test('impact renders its headline figures as a small multiple, and never as an i
   // ⚠️ The figure is a LEVEL, not a sum — and the two must not be confused, which is exactly what a
   // substring match over the card would allow. The total is a different quantity and lives with the
   // readings it is a total OF.
-  expect(total, 'the fixture total and its latest reading are equal, so this cannot distinguish them').not.toBe(
-    latest.value
-  )
+  expect(
+    total,
+    'the fixture total and its latest reading are equal, so this cannot distinguish them'
+  ).not.toBe(latest.value)
   await expect(multiples.first()).not.toContainText(String(total))
 
   // Not in an unreadable state — these are real readings, and the primitive marks the difference in

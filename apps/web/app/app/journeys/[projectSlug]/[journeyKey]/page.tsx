@@ -5,6 +5,24 @@ import { parseJourneyCohortRequest } from '@/lib/journey-cohort-request'
 import { validateJourneyKey } from '@/lib/journey-definition'
 import { getActiveJourneyVersionByProjectId, getJourneyCohortByProjectId } from '@/lib/journey-query'
 import { ProductShell } from '@/components/product/ProductShell'
+import { formatUtc } from '@/lib/format-utc'
+import { listJourneyRegistries } from '@/lib/journeys'
+import {
+  Answer,
+  Callout,
+  Card,
+  Col,
+  Crumb,
+  Crumbs,
+  Empty,
+  ListCard,
+  PageHead,
+  Row,
+  RowMain,
+  RowState,
+} from '@/design-system/primitives'
+import { StageBars } from '@/design-system/charts'
+import { JourneyCohortDetail } from './cohort-detail'
 
 export const dynamic = 'force-dynamic'
 
@@ -95,7 +113,15 @@ export default async function JourneyCohortPage({
     notFound()
   }
 
-  const { journey, cohort, diagnostics } = result
+  const { journey, cohort } = result
+  // The version history the approved state's second half shows. A separate, cheap registry read —
+  // the cohort result carries the version it was computed AT, not the journey's whole history.
+  // `listJourneyRegistries` is the existing seam and returns every journey with its versions; a
+  // dedicated single-key read would be a second query for a fact this one already answers.
+  const registries = await listJourneyRegistries(membership.projectId)
+  const versions = [...(registries.find((entry) => entry.key === journeyKey)?.versions ?? [])].sort(
+    (a, b) => b.version - a.version
+  )
   const baseQuery = new URLSearchParams({
     version: String(journey.definitionVersion),
     from: cohort.cohort.from,
@@ -112,182 +138,156 @@ export default async function JourneyCohortPage({
     return `?${query.toString()}`
   }
 
+  // ── The stage bars, from the SAME numbers the detail table shows ────────────────────────────
+  //
+  // `satisfiedCount` is how many reached each stage; `continuationFromPreviousRate` is the share of
+  // the previous stage that carried on. The "N did not continue" line under each bar is subtraction
+  // over those two, never a second measurement — so the picture and the table one keystroke below it
+  // cannot disagree.
+  const first = cohort.stages[0] ?? null
+  const stages = cohort.stages.map((stage, index) => {
+    const previous = index === 0 ? null : cohort.stages[index - 1]
+    const droppedCount =
+      previous === null ? null : Math.max(0, previous.satisfiedCount - stage.satisfiedCount)
+    return {
+      label: stage.key,
+      value: stage.satisfiedCount,
+      sharePercent: stage.cohortConversionRate === null ? null : stage.cohortConversionRate * 100,
+      dropped:
+        droppedCount === null || droppedCount === 0 || previous === null || previous.satisfiedCount === 0
+          ? null
+          : { count: droppedCount, percent: (droppedCount / previous.satisfiedCount) * 100 },
+    }
+  })
+  const last = cohort.stages.at(-1) ?? null
+  // The biggest drop, named in the answer line. Computed rather than described: the approved copy
+  // says "the biggest drop is between X and Y", and a sentence that named a fixed pair would be
+  // wrong for every journey but the prototype's.
+  const biggestDrop = stages.reduce<{ from: string; to: string; count: number } | null>(
+    (worst, stage, index) => {
+      if (index === 0 || stage.dropped === null) return worst
+      if (worst !== null && worst.count >= stage.dropped.count) return worst
+      return { from: stages[index - 1].label, to: stage.label, count: stage.dropped.count }
+    },
+    null
+  )
+
   return (
     <ProductShell projectSlug={projectSlug} section="measure" railActive={'journeys'}>
       <main>
-        <h1>
-          Journey cohort — {journey.key} <small>({projectSlug})</small>
-        </h1>
-        <p>
-          <a href={`/app/journeys/${encodeURIComponent(projectSlug)}`}>← Journey definitions</a>
-        </p>
-        <dl>
-          <dt>Definition</dt>
-          <dd>
-            v{journey.definitionVersion} · <code>{journey.entityType}</code>
-          </dd>
-          <dt>Cohort window</dt>
-          <dd>
-            {formatInTimezone(cohort.cohort.from, cohort.cohort.timezone)} ≤ entry &lt;{' '}
-            {formatInTimezone(cohort.cohort.to, cohort.cohort.timezone)}
-          </dd>
-          <dt>As of</dt>
-          <dd>{formatInTimezone(cohort.cohort.asOf, cohort.cohort.timezone)}</dd>
-          <dt>Display timezone</dt>
-          <dd>{cohort.cohort.timezone} (window semantics use the explicit instants above)</dd>
-          <dt>Entry rule</dt>
-          <dd>
-            {cohort.cohort.entryMode}
-            {cohort.cohort.entryStageKey ? ` · ${cohort.cohort.entryStageKey}` : ''}
-          </dd>
-          <dt>Subjects</dt>
-          <dd>
-            <a href={drilldownHref(cohort.cohort.drilldown)}>{cohort.cohort.subjectCount}</a>
-          </dd>
-          <dt>Source freshness</dt>
-          <dd>
-            {cohort.freshness.latestReceiptAt
-              ? formatInTimezone(cohort.freshness.latestReceiptAt, cohort.cohort.timezone)
-              : 'No matching source facts'}{' '}
-            · {cohort.freshness.status}
-          </dd>
-          <dt>Relevant events</dt>
-          <dd>{diagnostics.relevantEventCount}</dd>
-          <dt>Current query time</dt>
-          <dd>{diagnostics.queryDurationMs} ms</dd>
-          <dt>Query evidence</dt>
-          <dd>
-            {diagnostics.telemetryStatus === 'available'
-              ? `${diagnostics.sampleCount} bounded samples · p50 ${diagnostics.p50QueryDurationMs} ms · p95 ${diagnostics.p95QueryDurationMs} ms · max ${diagnostics.maxRelevantEventCount?.toLocaleString('en-US') ?? 'unknown'} relevant events`
-              : 'Telemetry unavailable; this analytical result is still valid.'}
-          </dd>
-          <dt>Scale decision</dt>
-          <dd>
-            {diagnostics.materializationDecision} · tripwires are p95 &gt;{' '}
-            {diagnostics.thresholds.p95QueryDurationMs} ms or relevant events &gt;{' '}
-            {diagnostics.thresholds.relevantEventCount.toLocaleString('en-US')}
-          </dd>
-        </dl>
+        <Crumbs back={{ href: `/app/journeys/${projectSlug}`, label: 'Journeys' }}>
+          <Crumb mono>{journey.key}</Crumb>
+        </Crumbs>
+        <PageHead
+          title={<span className="ds-mono">{journey.key}</span>}
+          lede={`${journey.entityType} · definition v${journey.definitionVersion}`}
+        />
 
-        {cohort.populationStatus === 'no_qualifying_events' && (
-          <p role="status">No qualifying events match this definition before the window end.</p>
-        )}
-        {cohort.populationStatus === 'zero_subjects' && (
-          <p role="status">Qualifying events exist, but zero subjects entered this cohort window.</p>
-        )}
-        {cohort.freshness.status === 'stale' && (
-          <p role="alert">
-            Source receipts are older than the {cohort.freshness.staleAfterHours}-hour freshness threshold.
-          </p>
-        )}
+        <Answer>
+          {first === null || last === null || first.satisfiedCount === 0 ? (
+            // ⚠️ The empty answer is a DELIVERABLE, and it is what a real cohort window with nobody
+            // in it renders. `populationStatus` already distinguishes "no qualifying events" from
+            // "events exist, nobody entered this window", and the two are different sentences.
+            <>
+              <strong>Nobody entered this journey in the window being counted.</strong>{' '}
+              {cohort.populationStatus === 'no_qualifying_events'
+                ? 'No event matches this definition at all yet — the stages name events that have never arrived.'
+                : 'Qualifying events exist, but none of them fall inside the entry window below. Widen it, or wait.'}
+            </>
+          ) : (
+            <>
+              <strong>
+                {last.cohortConversionRate === null
+                  ? `${last.satisfiedCount.toLocaleString('en-US')} of the ${first.satisfiedCount.toLocaleString('en-US')} people who started have reached the end.`
+                  : `${(last.cohortConversionRate * 100).toFixed(1)}% of the ${first.satisfiedCount.toLocaleString('en-US')} people who started have reached the end.`}
+              </strong>{' '}
+              {biggestDrop === null
+                ? 'Nobody has dropped out between stages.'
+                : `The biggest drop is between ${biggestDrop.from} and ${biggestDrop.to}.`}
+            </>
+          )}
+        </Answer>
 
-        <h2>Stage conversion and aging</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Stage</th>
-              <th>Actually satisfied</th>
-              <th>Actual cohort conversion</th>
-              <th>Continuation from previous</th>
-              <th>Positional at or beyond</th>
-              <th>At-or-beyond share</th>
-              <th>Current</th>
-              <th>Missing next</th>
-              <th>Median age</th>
-              <th>P90 age</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cohort.stages.map((stage) => (
-              <tr key={stage.key}>
-                <th scope="row">
-                  <code>{stage.key}</code>
-                </th>
-                <td>
-                  <a href={drilldownHref(stage.drilldowns.satisfied)}>{stage.satisfiedCount}</a>
-                </td>
-                <td>{formatRate(stage.cohortConversionRate)}</td>
-                <td>{formatRate(stage.continuationFromPreviousRate)}</td>
-                <td>
-                  <a href={drilldownHref(stage.drilldowns.atOrBeyond)}>{stage.atOrBeyondCount}</a>
-                </td>
-                <td>{formatRate(stage.atOrBeyondShare)}</td>
-                <td>
-                  <a href={drilldownHref(stage.drilldowns.current)}>{stage.currentCount}</a>
-                </td>
-                <td>
-                  {stage.drilldowns.missingNext ? (
-                    <a href={drilldownHref(stage.drilldowns.missingNext)}>{stage.missingNextStageCount}</a>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td>{formatHours(stage.medianAgeHours)}</td>
-                <td>{formatHours(stage.p90AgeHours)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card>
+          <p className="ds-label">Where people are</p>
+          {stages.length === 0 ? (
+            <Empty
+              title="This definition has no stages"
+              body="A journey is an ordered set of stages, and this version declares none — so there is nothing to count people through."
+            />
+          ) : (
+            <StageBars
+              stages={stages}
+              note="Counted from events as they arrived. Somebody who skipped a stage is counted where they actually are, not where the definition says they should be."
+            />
+          )}
+        </Card>
 
-        <h2>Retention</h2>
-        {cohort.retention ? (
-          <dl>
-            <dt>Rule</dt>
-            <dd>
-              {cohort.retention.stageKey} within {cohort.retention.withinDays} days of{' '}
-              {cohort.retention.anchorStageKey}
-            </dd>
-            <dt>Eligible</dt>
-            <dd>
-              <a href={drilldownHref(cohort.retention.drilldowns.eligible)}>
-                {cohort.retention.eligibleCount}
-              </a>
-            </dd>
-            <dt>Matured</dt>
-            <dd>{cohort.retention.maturedCount}</dd>
-            <dt>Met</dt>
-            <dd>
-              <a href={drilldownHref(cohort.retention.drilldowns.met)}>{cohort.retention.metCount}</a>
-            </dd>
-            <dt>Missed</dt>
-            <dd>
-              <a href={drilldownHref(cohort.retention.drilldowns.missed)}>{cohort.retention.missedCount}</a>
-            </dd>
-            <dt>Pending</dt>
-            <dd>
-              <a href={drilldownHref(cohort.retention.drilldowns.pending)}>{cohort.retention.pendingCount}</a>
-            </dd>
-            <dt>Rate</dt>
-            <dd>{formatRate(cohort.retention.rate)}</dd>
-          </dl>
-        ) : (
-          <p>No retention rule is configured for definition v{journey.definitionVersion}.</p>
-        )}
+        {/* The version history — the approved state's second half. A journey version is IMMUTABLE:
+            activating a draft does not rewrite history, and the numbers above stay attributable to
+            the definition that produced them. */}
+        <p className="ds-label">Versions</p>
+        <ListCard>
+          {versions.map((version) => (
+            <Row key={version.id}>
+              <RowMain
+                title={`v${version.version}`}
+                mono={false}
+                description={
+                  version.state === 'active'
+                    ? 'Counting everyone above'
+                    : version.state === 'draft'
+                      ? 'Not activated — it changes nothing until you do'
+                      : 'Superseded, and kept: never deleted'
+                }
+              />
+              <RowState
+                state={version.state === 'active' ? 'on' : version.state === 'draft' ? 'never' : 'off'}
+                label={
+                  version.state === 'active' ? 'Active' : version.state === 'draft' ? 'Draft' : 'Superseded'
+                }
+              />
+              {/* Clipped to one line with the whole value on `title` — the same rule `RowState`'s
+                  detail follows, and the reason `.ds-row-clip` exists. */}
+              <Col
+                width="meta"
+                title={
+                  version.state === 'active' && version.activatedAt
+                    ? `Activated ${formatUtc(version.activatedAt)}`
+                    : `Created ${formatUtc(version.createdAt)}`
+                }
+              >
+                <span className="ds-mono ds-row-clip">
+                  {version.state === 'active' && version.activatedAt
+                    ? formatUtc(version.activatedAt)
+                    : formatUtc(version.createdAt)}
+                </span>
+              </Col>
+              {/* No action on a version row — a superseded version is history and an active one is
+                  already active. The cell keeps the row's four-column grid, which the header row and
+                  every other list in the console share. */}
+              <Col width="act">{null}</Col>
+            </Row>
+          ))}
+        </ListCard>
 
-        {cohort.drilldown && (
-          <section>
-            <h2>
-              Opaque subject drilldown — <code>{cohort.drilldown.key}</code>
-            </h2>
-            <p>{cohort.drilldown.total} total; showing a bounded page.</p>
-            {cohort.drilldown.subjectIds.length === 0 ? (
-              <p>No subjects on this page.</p>
-            ) : (
-              <ul>
-                {cohort.drilldown.subjectIds.map((id) => (
-                  <li key={id}>
-                    <code>{id}</code>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {cohort.drilldown.nextCursor && (
-              <p>
-                <a href={drilldownHref(cohort.drilldown.key, cohort.drilldown.nextCursor)}>Next page</a>
-              </p>
-            )}
-          </section>
-        )}
+        <Callout>
+          A journey version is <strong>immutable</strong>, exactly like a feature version — activating a draft
+          does not rewrite history, and the numbers above stay attributable to the definition that produced
+          them.
+        </Callout>
+
+        {/* ⚠️ **The whole diagnostic layer is KEPT, behind a disclosure.** `entity-journeys` shipped
+            the window semantics, the drilldowns, the query-evidence telemetry, the materialisation
+            tripwires, the retention rule and the ten-column stage table; the approved state draws
+            none of them. They read the SAME `cohort.stages` the bars above are drawn from, so this
+            is a second view and never a second source. */}
+        <details className="ds-gaps">
+          <summary>The window, the drilldowns, the retention rule and the query evidence</summary>
+          <div className="ds-disclosure-body">
+            <JourneyCohortDetail result={result} drilldownHref={drilldownHref} />
+          </div>
+        </details>
       </main>
     </ProductShell>
   )
@@ -301,20 +301,4 @@ function defaultWindow(): { from: string; to: string; asOf: string } {
   const to = new Date()
   const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1_000)
   return { from: from.toISOString(), to: to.toISOString(), asOf: to.toISOString() }
-}
-
-function formatRate(value: number | null): string {
-  return value === null ? '—' : `${(value * 100).toFixed(1)}%`
-}
-
-function formatHours(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(1)} h`
-}
-
-function formatInTimezone(value: string, timezone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    dateStyle: 'medium',
-    timeStyle: 'long',
-  }).format(new Date(value))
 }

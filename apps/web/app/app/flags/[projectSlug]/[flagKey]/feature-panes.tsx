@@ -222,7 +222,9 @@ export function ImpactPane({ flagKey, result }: { flagKey: string; result: Featu
                 ? 'Nothing recorded yet.'
                 : `${input.series.length} reading${input.series.length === 1 ? '' : 's'}, totalling ${input.series
                     .reduce((sum, point) => sum + point.value, 0)
-                    .toLocaleString('en-US')} across ${input.series[0].date} → ${input.series[input.series.length - 1].date}.`}
+                    .toLocaleString(
+                      'en-US'
+                    )} across ${input.series[0].date} → ${input.series[input.series.length - 1].date}.`}
             </p>
             <ImpactSeriesTable inputName={input.name} series={input.series} />
           </div>
