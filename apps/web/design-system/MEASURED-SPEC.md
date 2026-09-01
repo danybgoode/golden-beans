@@ -82,7 +82,24 @@ the second. Two places, six elements.
 | Primary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |
 | Secondary button | 13.5 / 600 | Archivo | _text-sized_ × 38 | none |
 
+<!-- NOT-COMPARED-BELOW -->
+
 ## The chrome budget — how far down each approved state's first DATA begins
+
+⚠️ **EVIDENCE, NOT CONTRACT. Every number below this line is emitted as a MARKER and is NOT compared
+by `--check`.**
+
+The numbers are text-layout positions, and they do not reproduce across platforms — the same reason
+`Page h1`'s width is `_text-sized_` in the table above. Measured on macOS and on `ubuntu-latest`:
+`ship-features` is 458 here and **459** there, and `today` is 223 here and **202** there, because the
+lede wraps differently under different font metrics. Committing them as a compared contract is
+recording a fact about one machine and calling it the design, which is the defect this whole file
+exists to prevent — and CI said so on the first run of the version that did it.
+
+So `--check` stops at the marker above, and the BUDGET the gate asserts is a stated bound rather than
+a byte-exact weld: see `CHROME_BUDGET_PX`, which `console-spec.test.ts` holds to being at least this
+table's maximum and within a stated allowance of it. That keeps the constant derived from the design
+without letting a one-pixel renderer difference turn the gate red.
 
 ⚠️ **This table replaced an assertion that was green for the wrong reason.** The visual gate used to
 require every covered route to fit 1440 × 960 without scrolling, citing *"a page that scrolls means

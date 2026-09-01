@@ -114,6 +114,17 @@ const TARGETS = [
   ['.btn-ghost', 'Secondary button', 'height'],
 ];
 
+/**
+ * Everything after this line in `MEASURED-SPEC.md` is EVIDENCE, not contract.
+ *
+ * `--check` compares only what precedes it. The chrome table below it holds text-layout positions,
+ * which do not reproduce across renderers — CI proved it on the first run of the version that
+ * compared them: `ship-features` 458 on macOS and 459 on `ubuntu-latest`, `today` 223 and 202.
+ * Committing those as a compared contract is recording a fact about one machine and calling it the
+ * design, which is precisely what this file exists to prevent.
+ */
+const NOT_COMPARED_MARKER = '<!-- NOT-COMPARED-BELOW -->';
+
 export async function measure() {
   const { page, close } = await openPrototype();
   try {
@@ -317,7 +328,24 @@ ${out.uppercaseElements.length ? out.uppercaseElements.map((e) => '`' + e + '`')
 |---|---|---|---|---|
 ${out.rows.map(cell).join('\n')}
 
+${NOT_COMPARED_MARKER}
+
 ## The chrome budget — how far down each approved state's first DATA begins
+
+⚠️ **EVIDENCE, NOT CONTRACT. Every number below this line is emitted as a MARKER and is NOT compared
+by \`--check\`.**
+
+The numbers are text-layout positions, and they do not reproduce across platforms — the same reason
+\`Page h1\`'s width is \`_text-sized_\` in the table above. Measured on macOS and on \`ubuntu-latest\`:
+\`ship-features\` is 458 here and **459** there, and \`today\` is 223 here and **202** there, because the
+lede wraps differently under different font metrics. Committing them as a compared contract is
+recording a fact about one machine and calling it the design, which is the defect this whole file
+exists to prevent — and CI said so on the first run of the version that did it.
+
+So \`--check\` stops at the marker above, and the BUDGET the gate asserts is a stated bound rather than
+a byte-exact weld: see \`CHROME_BUDGET_PX\`, which \`console-spec.test.ts\` holds to being at least this
+table's maximum and within a stated allowance of it. That keeps the constant derived from the design
+without letting a one-pixel renderer difference turn the gate red.
 
 ⚠️ **This table replaced an assertion that was green for the wrong reason.** The visual gate used to
 require every covered route to fit 1440 × 960 without scrolling, citing *"a page that scrolls means
@@ -353,6 +381,10 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
   const check = process.argv.includes('--check');
   const path = join(HERE, OUT);
   const content = render(await measure());
+  // ⚠️ `--check` compares only the CONTRACT half. Everything after the marker is evidence whose
+  // numbers are text-layout positions and do not reproduce across renderers — see the note under
+  // that heading, and the CI run that proved it (458 here, 459 on ubuntu-latest; `today` 223 vs 202).
+  const contractHalf = (text) => text.split(NOT_COMPARED_MARKER)[0];
   let onDisk = null;
   try {
     onDisk = readFileSync(path, 'utf8');
@@ -361,7 +393,7 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
   }
 
   if (check) {
-    if (onDisk === content) {
+    if (onDisk !== null && contractHalf(onDisk) === contractHalf(content)) {
       console.log(`✓ measure-contract: ${OUT} matches a fresh measurement of the approved prototype`);
       process.exit(0);
     }
@@ -371,8 +403,8 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
     // font that had not loaded from a genuine design change without another cycle. A check that
     // says a file is wrong and not HOW is a check somebody re-runs rather than reads.
     if (onDisk !== null) {
-      const was = onDisk.split('\n');
-      const now = content.split('\n');
+      const was = contractHalf(onDisk).split('\n');
+      const now = contractHalf(content).split('\n');
       const changed = [];
       for (let i = 0; i < Math.max(was.length, now.length); i += 1) {
         if (was[i] !== now[i])

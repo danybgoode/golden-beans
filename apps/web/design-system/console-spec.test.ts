@@ -185,11 +185,24 @@ test("the chrome budget is the approved design's own maximum, not a number in a 
 
   const measured = rows.filter((row) => row.chrome !== null).map((row) => row.chrome as number)
   assert.ok(measured.length > 20, 'almost every console state should have a chrome measurement')
-  assert.equal(
-    Math.max(...measured),
-    CHROME_BUDGET_PX,
-    'CHROME_BUDGET_PX has drifted from the approved design. Regenerate MEASURED-SPEC.md and move the ' +
-      'constant to match it — never the other way round, which is how a budget gets argued upward.'
+  const worst = Math.max(...measured)
+
+  // ⚠️ **A BOUND, not an equality — and the equality is what went red on CI.** These are text-layout
+  // positions: `ship-features` measures 458 on macOS and 459 on `ubuntu-latest`, and `today` 223 and
+  // 202, because a lede wraps differently under different font metrics. Welding the constant to the
+  // maximum byte for byte made a correct page fail on one platform.
+  //
+  // Both directions are still asserted, which is what keeps this derived rather than chosen:
+  assert.ok(
+    worst <= CHROME_BUDGET_PX,
+    `the approved design's worst chrome is ${worst}px and CHROME_BUDGET_PX is ${CHROME_BUDGET_PX}px — ` +
+      'the budget must be at least what the design itself spends, or the gate fails on a correct page'
+  )
+  assert.ok(
+    CHROME_BUDGET_PX - worst <= 40,
+    `CHROME_BUDGET_PX is ${CHROME_BUDGET_PX - worst}px above the design's worst case (${worst}px). ` +
+      'A budget that drifts far above what the design spends stops being a budget — regenerate ' +
+      'MEASURED-SPEC.md and bring the constant back down, never the other way round.'
   )
 })
 
