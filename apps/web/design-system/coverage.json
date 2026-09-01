@@ -3,13 +3,14 @@
   "routes": 27,
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
-  "rendersFromDesignSystem": 4,
-  "complete": 4,
+  "rendersFromDesignSystem": 5,
+  "complete": 5,
   "covered": [
     "/app/flag-audit/[projectSlug]",
     "/app/flags/[projectSlug]",
     "/app/flags/[projectSlug]/[flagKey]",
-    "/app/scheduled/[projectSlug]"
+    "/app/scheduled/[projectSlug]",
+    "/app/setup/connect/[projectSlug]"
   ],
   "outstanding": [
     "/app",
@@ -22,7 +23,6 @@
     "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/onboarding/[projectSlug]",
     "/app/scenarios/[projectSlug]",
-    "/app/setup/connect/[projectSlug]",
     "/app/setup/keys/[projectSlug]",
     "/app/shares/[projectSlug]",
     "/app/tasks/[projectSlug]",

@@ -757,6 +757,12 @@
   color: var(--dim);
   font-size: 12.5px;
 }
+/* A step whose body carries a control rather than only a sentence. The prototype's second step is
+   exactly this shape: a line of instruction, then the button that performs it. */
+.ds .ds-step-action {
+  display: inline-flex;
+  margin-top: 8px;
+}
 
 /* ── Wizard — the step rail above a multi-stage task ────────────────────────────────────────── */
 .ds .ds-wizard {

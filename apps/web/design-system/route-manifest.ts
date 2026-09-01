@@ -370,7 +370,12 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'setup/connect',
     referenceState: 'setup-connect',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.4. The head, the status field with its pill, the connector URL in
+    // a mono copy field, and the numbered three-step card ending in `Add to Claude ↗` — whose arrow
+    // is `<Icon name="external" />`, because the guard bans the glyph and F1's answer is an icon, not
+    // an exemption. The credential half (server-side token filtering, the multi-token warning, the
+    // honest status) is kept exactly as it shipped.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
