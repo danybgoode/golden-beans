@@ -862,21 +862,39 @@ export function Field({
   }
   return (
     <div className="ds-field">
-      <span className="ds-label" id={controlId === undefined ? undefined : `${controlId}-label`}>
-        {label}
-      </span>
+      {/* ⚠️ **A REAL `<label htmlFor>`, and the first draft of this was a `<span>`.** It cost the
+          whole browser run: `getByLabel('What to call it')` resolved to nothing on four surfaces,
+          because a span beside an input associates them for a sighted reader and for nobody else. A
+          control whose only name is its visual neighbour has no accessible name at all.
+          The `<span>` fallback is for a field holding no single control — Setup › Connect's status
+          block, a pick list of buttons — where a `<label>` with no `for` would be a promise of an
+          association that does not exist. A field with a control passes `controlId`; one without
+          does not, and the difference is visible in the markup rather than in a convention. */}
+      {controlId === undefined ? (
+        <span className="ds-label">{label}</span>
+      ) : (
+        <label className="ds-label" htmlFor={controlId}>
+          {label}
+        </label>
+      )}
       {typeof children === 'function' ? children(control) : children}
       {hint === undefined ? null : (
         <p className="ds-hint" id={hintId}>
           {hint}
         </p>
       )}
-      {/* Rendered ALWAYS, so the slot's height is reserved and nothing below it moves when a message
-          appears. `aria-live` so the message is announced when it arrives rather than only when the
-          control is next focused. */}
-      <p className="ds-field-error" id={errorId} role={error == null ? undefined : 'alert'}>
-        {error ?? ''}
-      </p>
+      {/* ⚠️ **Rendered whenever the field CAN error — `undefined` means it cannot, `null` means it
+          currently does not.** The slot's height is reserved for the second case, so showing a
+          message moves nothing below it; reserving it for the FIRST case would be 24px of empty
+          space under every read-only field in the product, which is what the first draft did and
+          what pushed Setup › Connect past the fold.
+          `role="alert"` only when there is something to announce: an empty live region that
+          appears on every field is noise a screen reader has to wade through. */}
+      {error !== undefined && (
+        <p className="ds-field-error" id={errorId} role={error === null ? undefined : 'alert'}>
+          {error ?? ''}
+        </p>
+      )}
     </div>
   )
 }

@@ -151,8 +151,12 @@ export function ConnectorManager({
           >
             {/* Skipped when this is the one just minted: the reveal above already shows it, and two
                 identical copy fields would read as two different credentials. */}
-            {token.url !== minted && <CopyField value={token.url} label="Copy this connector URL" />}
-            <p>
+            {/* ⚠️ The revoke control is on the SAME LINE as the value, not under it. A `<p>` holding a
+                button is a 44px block — `globals.css` gives every button a WCAG target floor — and
+                three of those stacked is what put this page 81px past the fold. It also reads
+                better: the thing and the way to kill it belong together. */}
+            <span className="ds-copyrow">
+              {token.url !== minted && <CopyField value={token.url} label="Copy this connector URL" />}
               {/* No inner `canManage` here: the map itself is owner-only. A redundant guard reads as
                   a second, weaker condition that someone could later relax on its own. */}
               <button
@@ -161,9 +165,9 @@ export function ConnectorManager({
                 onClick={() => setConfirming(token.tokenId)}
                 disabled={pending}
               >
-                Revoke this URL
+                Revoke
               </button>
-            </p>
+            </span>
             <ConfirmDialog
               open={confirming === token.tokenId}
               /* `verb` matches the button that opened this, unchanged — a control's name must not

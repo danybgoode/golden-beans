@@ -77,6 +77,44 @@ export async function assertMobileClean(page: Page, label: string) {
         return element
       }
 
+      /**
+       * How big the tap target ACTUALLY is, counting a transparent pseudo-element.
+       *
+       * ⚠️ **This is the half the heuristic was missing, and it was reporting a correct control as a
+       * defect.** Some of this product's controls have ink SMALLER than 44px on purpose — the
+       * approved design's three-state switch is `38 × 21`, a number the visual gate asserts, and the
+       * row menu is a 26px kebab. Growing them to 44 would break the design; leaving them at 26
+       * would break the WCAG 2.5.5 target size. The resolution both use is a transparent, centred
+       * `::before` sized 44 × 44: the TARGET is real and the INK is the design's.
+       *
+       * `getBoundingClientRect()` cannot see that — a pseudo-element has no box in the DOM — so the
+       * scan measured the ink and called a correct control undersized. It now asks the style system
+       * for the pseudo-element's size and takes the larger of the two, which is what a finger
+       * actually gets.
+       *
+       * Deliberately NOT a blanket exemption for `.ds-switch` and `.ds-kebab` by class name: a class
+       * list is a promise that decays the moment somebody removes the pseudo-element, whereas this
+       * reads the same computed style the browser hit-tests against.
+       */
+      const effectiveSize = (element: Element): { width: number; height: number } => {
+        const rect = element.getBoundingClientRect()
+        let width = rect.width
+        let height = rect.height
+        for (const pseudo of ['::before', '::after'] as const) {
+          const style = getComputedStyle(element, pseudo)
+          // `content: none` means the pseudo-element is not generated at all.
+          if (style.content === 'none' || style.content === '') continue
+          // Only an element the browser actually hit-tests counts. A `pointer-events: none`
+          // decoration is paint, not a target.
+          if (style.pointerEvents === 'none') continue
+          const pseudoWidth = Number.parseFloat(style.width)
+          const pseudoHeight = Number.parseFloat(style.height)
+          if (Number.isFinite(pseudoWidth)) width = Math.max(width, pseudoWidth)
+          if (Number.isFinite(pseudoHeight)) height = Math.max(height, pseudoHeight)
+        }
+        return { width, height }
+      }
+
       return Array.from(document.querySelectorAll(selector))
         .map(targetOf)
         .filter((element) => {
@@ -87,12 +125,13 @@ export async function assertMobileClean(page: Page, label: string) {
           if (element.getAttribute('tabindex') === '-1') return false
           const rect = element.getBoundingClientRect()
           if (rect.width === 0 || rect.height === 0) return false
-          return rect.height < min || rect.width < min
+          const size = effectiveSize(element)
+          return size.height < min || size.width < min
         })
         .map((element) => {
-          const rect = element.getBoundingClientRect()
+          const size = effectiveSize(element)
           const text = (element.textContent ?? '').trim().slice(0, 40)
-          return `<${element.tagName.toLowerCase()}> "${text}" ${Math.round(rect.width)}x${Math.round(rect.height)}`
+          return `<${element.tagName.toLowerCase()}> "${text}" ${Math.round(size.width)}x${Math.round(size.height)}`
         })
     }, TAP_TARGET_MIN)
 

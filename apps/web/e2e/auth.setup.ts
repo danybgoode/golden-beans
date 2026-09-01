@@ -191,14 +191,23 @@ async function seedFunnelFixture(db: SupabaseClient, projectId: string) {
 
   // `feature_id` is the FEATURE KEY on `events`, not a foreign key — the ingest path writes the
   // string the SDK sent. Matching `tars-query`'s own `.eq('feature_id', featureKey)`.
+  //
+  // ⚠️ **The TIMESTAMPS are explicit, and without them `retained` is always 0.** `computeTars`
+  // anchors the retention window to each user's earliest ADOPTING event and requires a later
+  // qualifying event strictly after it (`t > baseline`). Inserting six rows in one statement gives
+  // them all the same `now()` default, so the retained event lands exactly ON the baseline and the
+  // funnel reads 3 / 2 / 0 — a number that looks like a measurement and is an artefact of the seed.
+  // Found by running the spec rather than by reading the query.
   const [first, second, third] = FUNNEL_SUBJECTS
+  const hourAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
   const rows = [
-    { user_id: first, event: FUNNEL_TARGET_EVENT },
-    { user_id: second, event: FUNNEL_TARGET_EVENT },
-    { user_id: third, event: FUNNEL_TARGET_EVENT },
-    { user_id: first, event: FUNNEL_ADOPTED_EVENT },
-    { user_id: second, event: FUNNEL_ADOPTED_EVENT },
-    { user_id: first, event: FUNNEL_RETAINED_EVENT },
+    { user_id: first, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: second, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: third, event: FUNNEL_TARGET_EVENT, created_at: hourAgo(72) },
+    { user_id: first, event: FUNNEL_ADOPTED_EVENT, created_at: hourAgo(48) },
+    { user_id: second, event: FUNNEL_ADOPTED_EVENT, created_at: hourAgo(48) },
+    // Inside the feature's 7-day retention window, and strictly after the adoption above.
+    { user_id: first, event: FUNNEL_RETAINED_EVENT, created_at: hourAgo(24) },
   ].map((row) => ({ ...row, project_id: projectId, feature_id: FUNNEL_FEATURE_KEY }))
   const { error: eventsError } = await db.from('events').insert(rows)
   if (eventsError) throw new Error(`could not seed the funnel events: ${eventsError.message}`)

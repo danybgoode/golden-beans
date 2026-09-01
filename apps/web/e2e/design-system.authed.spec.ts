@@ -369,7 +369,7 @@ const CONVERTED_ROUTES: Array<{
           // generic kit. Ad-hoc markup still fails.
           name: 'flags (console)',
           path: (s: string) => `/app/flags/${s}`,
-          expect: ['.listcard', '.summary'],
+          expect: ['.ds-listcard', '.ds-summary'],
           skipFilter: true,
         },
         // ⚠️ `flag credentials` is GONE and `flag audit` is RE-POINTED — design-system-rails S4.5
@@ -468,14 +468,15 @@ test('cancelling a confirmation performs no network call at all', async ({ page 
     if (request.method() === 'POST') posts += 1
   }
 
-  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  const trigger = keyRow(page, label).getByRole('button', { name: `Revoke ${label}` })
+  await trigger.click()
   await expect(page.locator('dialog.confirm-dialog')).toBeVisible()
 
   page.on('request', countPosts)
   await page.keyboard.press('Escape')
   await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
 
-  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  await trigger.click()
   await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Cancel' }).click()
   await expect(page.locator('dialog.confirm-dialog')).toBeHidden()
 
@@ -483,12 +484,16 @@ test('cancelling a confirmation performs no network call at all', async ({ page 
   await page.waitForTimeout(500)
   page.off('request', countPosts)
   expect(posts, 'dismissing a confirmation must not talk to the server').toBe(0)
-  await expect(keyRow(page, label)).toContainText('active')
+  // ⚠️ **PRESENCE, not the word "active" — design-system-rails S4.5.** The merged page lists what has
+  // access NOW and drops revoked rows entirely, so there is no status cell to read. That is a
+  // stronger reading of "cancelling did not act": a revoke that succeeded would have removed the row.
+  await expect(keyRow(page, label)).toBeVisible()
 
-  // ...and confirming does exactly what the bare button used to.
-  await keyRow(page, label).getByRole('button', { name: 'Revoke' }).click()
+  // ...and confirming does exactly what the bare button used to. The page reloads and the row goes.
+  await trigger.click()
   await page.locator('dialog.confirm-dialog').getByRole('button', { name: 'Revoke' }).click()
-  await expect(keyRow(page, label)).toContainText('revoked')
+  await page.waitForLoadState('networkidle')
+  await expect(keyRow(page, label)).toHaveCount(0)
 })
 
 test('destinations Remove confirms through ONE dialog — the two-click pattern is gone', async ({ page }) => {

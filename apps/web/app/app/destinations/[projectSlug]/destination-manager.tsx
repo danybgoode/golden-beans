@@ -327,7 +327,11 @@ export function DestinationManager({
       {creating && (
         <Card>
           <form onSubmit={onCreate}>
-            <Field label="Name" hint="How this destination appears in the list below.">
+            <Field
+              label="Name"
+              controlId="new-destination-name"
+              hint="How this destination appears in the list below."
+            >
               {(control) => (
                 <input
                   {...control}
@@ -342,6 +346,7 @@ export function DestinationManager({
             </Field>
             <Field
               label="Webhook URL"
+              controlId="new-destination-url"
               hint="Must be HTTPS. Delivery is at least once — deduplicate on the event id."
             >
               {(control) => (
@@ -356,7 +361,11 @@ export function DestinationManager({
                 />
               )}
             </Field>
-            <Field label="Which events" hint="Leave blank to deliver every event.">
+            <Field
+              label="Which events"
+              controlId="new-destination-filter"
+              hint="Leave blank to deliver every event."
+            >
               {(control) => (
                 <input
                   {...control}

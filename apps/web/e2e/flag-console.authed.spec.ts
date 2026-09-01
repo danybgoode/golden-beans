@@ -52,7 +52,13 @@ test.describe('the flag console, signed in', () => {
     // Story 1.4: the environment selector — now in the RAIL, not as chips in the page body
     // (CONSOLE-CONTRACT.md Do-not #5; Story 1.4 asked for this and it never landed).
     await expect(page.locator('.console-rail .envpick')).toBeVisible()
-    await expect(page.locator('.console-rail .envpick')).toContainText('production')
+    // ⚠️ **`Production`, title case — and this assertion was RED on `main` before Sprint 4 touched
+    // anything.** Sprint 3, Story 3.4 rebuilt the picker as one control that names where you are, and
+    // its own comment says why the label is title case: *"`production` in lower case reads like a
+    // value in a config file"*. This spec kept asserting the lower-case form, and because the
+    // `authed` rail is outside the merge gate it stayed red and unnoticed for a whole sprint — the
+    // exact decay LEARNINGS records and the reason four suites were wired into CI this sprint.
+    await expect(page.locator('.console-rail .envpick')).toContainText('Production')
 
     // The sentence that says what the list reports on. It used to read "WHAT THIS LIST REPORTS IS
     // WHAT PRODUCTION IS SERVING" in uppercase mono — a column-label style used as body copy
@@ -108,9 +114,12 @@ test.describe('the flag console, signed in', () => {
     const slug = tenantSlug()
     await page.goto(`/app/flag-audit/${slug}`)
 
-    await expect(page.getByRole('heading', { name: 'Flag audit', exact: true })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: 'What changed' })).toBeVisible()
-    await expect(page.getByRole('columnheader', { name: 'Feature' })).toBeVisible()
+    // ⚠️ **`Activity`, and it is no longer a table — design-system-rails S4.3.** The approved
+    // `ship-activity` state is a timeline, and its own copy says why: "written as sentences, not as
+    // rows of a table nobody reads". The columns went with the table; what replaced them is the
+    // sentence itself, asserted below. "Flag audit" named the table the rows came out of.
+    await expect(page.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
+    await expect(page.locator('.ds-timeline')).toBeVisible()
 
     // D7 on the surface that most tempted the storage vocabulary: the audit stores
     // `definition_created` / `activated` / `deactivated` and must never render them.
@@ -122,7 +131,7 @@ test.describe('the flag console, signed in', () => {
     }
   })
 
-  test('a feature has its own address, with the six tabs', async ({ page }) => {
+  test('a feature has its own address, with the seven tabs', async ({ page }) => {
     const slug = tenantSlug()
     await page.goto(`/app/flags/${slug}`)
 

@@ -5,27 +5,13 @@ import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
 import { listAgentWriteKeys } from '@/lib/agent-write-keys'
 import {
   buildCredentialInventory,
-  credentialTitle,
-  formatExpiry,
   isCurrentlyUsable,
   CREDENTIAL_KINDS_NOT_LISTED,
 } from '@/lib/credential-inventory'
-import { formatUtc } from '@/lib/format-utc'
-import {
-  Callout,
-  Col,
-  Empty,
-  ListCard,
-  ListHead,
-  PageHead,
-  Pill,
-  Row,
-  RowMain,
-  Tag,
-} from '@/design-system/primitives'
+import { Callout, Empty, PageHead } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
 import { NewKey } from './new-key'
-import { RevokeKey } from './revoke-key'
+import { KeysList } from './keys-list'
 
 // Setup › Keys — the one page that owns this project's credentials.
 //
@@ -89,68 +75,10 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
             />
           </div>
         ) : (
-          <ListCard label="Credentials with access to this project">
-            <ListHead>
-              <Col header>Key</Col>
-              <Col header width="state">
-                What it may do
-              </Col>
-              <Col header width="meta">
-                Where · expires
-              </Col>
-              {/* ⚠️ **Visually empty, and NOT semantically empty.** The design leaves this header
-                  blank — a label reading "Actions" over three dots tells a reader nothing they did
-                  not already know. But a `columnheader` with no accessible name is a column a
-                  screen-reader user cannot identify at all, so the word is there and hidden from the
-                  eye. The alternative, dropping the header, would leave a four-cell row in a
-                  three-column table, which is the positional-announcement bug the feature list paid
-                  two rounds for. */}
-              <Col header width="act">
-                <span className="ds-visually-hidden">Actions</span>
-              </Col>
-            </ListHead>
-            {rows.map((row) => (
-              <Row key={`${row.kind}:${row.id}`}>
-                {/* `mono={false}`: a credential's label is something a person typed, not an
-                    identifier. The feature list's keys are mono for the opposite reason. */}
-                <RowMain
-                  mono={false}
-                  title={row.label === '' ? 'untitled' : row.label}
-                  description={`${credentialTitle(row.kind)} — ${row.capability}`}
-                />
-                <Col width="state">
-                  {/* A LABEL pill, not a state pill: this says what the key may do, which is a fact
-                      about the kind rather than a lifecycle state. Solid border, neutral ink — the
-                      three coloured states mean on / off / never everywhere else in this console and
-                      borrowing one here would say something untrue. */}
-                  <Pill state="never" label>
-                    {row.capability.split('.')[0]}
-                  </Pill>
-                </Col>
-                <Col width="meta">
-                  {/* An em dash for a kind with no scope, not a blank: "this kind has no
-                      environment" is a fact, and a blank cell reads as missing data. */}
-                  {row.scope === null ? (
-                    <Tag>Everywhere</Tag>
-                  ) : (
-                    <Tag label={`Scope: ${row.scope}`}>{row.scope}</Tag>
-                  )}
-                  {/* Words in every case. `null` is "No expiry", which is a deliberate state an
-                      owner chose (or the kind does not support one) — not missing information. */}
-                  <Tag>{formatExpiry(row.expiresAt)}</Tag>
-                  <span className="ds-note">Created {formatUtc(row.createdAt)}</span>
-                </Col>
-                <Col width="act">
-                  <RevokeKey
-                    slug={projectSlug}
-                    kind={row.kind}
-                    keyId={row.id}
-                    label={row.label === '' ? '' : row.label}
-                  />
-                </Col>
-              </Row>
-            ))}
-          </ListCard>
+          // ⚠️ The list is a client island, and the reason is in its own header: `ConfirmDialog` must
+          // stay mounted when it closes (native `close()` is what restores focus), so one dialog per
+          // row would mean N `<dialog>` elements in the DOM. One list, one dialog.
+          <KeysList slug={projectSlug} rows={rows} />
         )}
 
         <p className="ds-foot">

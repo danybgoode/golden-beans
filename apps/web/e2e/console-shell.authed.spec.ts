@@ -267,12 +267,17 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
   /**
    * The rail destinations that leave the rail while the console is LIT.
    *
-   * `readGates` derives `legacy-keys` as `!isConsoleShellEnabled()` and `legacy-flag-credentials` as
-   * `!consoleShell && isFlagConsoleEnabled()`, so all three of these are nav entries exactly while
-   * their merged Setup replacements are not. Named here so the expected count below is derived from
-   * the same fact the shell uses, rather than from a number somebody counted once.
+   * ⚠️ **EMPTY since design-system-rails S4.5, and that is the finding rather than a shortcut.** This
+   * held `keys`, `agent-keys` and `flag-credentials`, which `readGates` swapped out of the nav while
+   * their merged Setup replacement was in it. Story 4.5 retired all three into permanent redirects
+   * and deleted both `legacy-*` gates, so there is no surface left that is in the inventory and out
+   * of the rail — every remaining row is a real destination in a section.
+   *
+   * The list stays, as a list, because the count below is derived from it and because the NEXT
+   * surface to leave the rail should have to be written down here rather than discovered as a number
+   * that no longer adds up.
    */
-  const OFF_RAIL_WHILE_CONSOLE_IS_LIT = ['keys', 'agent-keys', 'flag-credentials']
+  const OFF_RAIL_WHILE_CONSOLE_IS_LIT: string[] = []
 
   test('EVERY rail route marks its OWN item, not merely some item', async ({ page }) => {
     // ⚠️ **The type only catches typos.** `railActive` is now the derived `ProjectRouteSegment`
@@ -413,12 +418,23 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // is sending people to it. Checked against the rails we saw, so a gate-closed surface that
     // legitimately vanished from both the rail and the routing table passes, and a surface still
     // listed while 404ing does not.
-    // ...and the off-rail branch must be exercised too, or a change that quietly drops every route
-    // out of the rail would satisfy the loop by never entering the branch that checks anything.
+    // ⚠️ **This asserted `offRail.length > 0` and it is now WRONG to — S4.5.** The reasoning was
+    // sound: a change that quietly dropped every route out of the rail would satisfy the loop by
+    // never entering the branch that checks anything, so the branch had to be exercised. It was
+    // exercised by the three legacy credential routes, which are gone.
+    //
+    // Turning it into `> 0` on an empty set would be asserting that some surface must always be
+    // missing from the rail, which is the opposite of what this console is for. So the guard it was
+    // buying is restated directly: the two branches must ACCOUNT for every inventory surface the
+    // rail could offer, which fails just as loudly if the loop stops entering either one.
     expect(
-      offRail.length,
-      'no off-rail route was exercised — the second branch asserted nothing'
-    ).toBeGreaterThan(0)
+      checked.length + offRail.length + unreachable.length + notServing.length,
+      'the loop visited fewer routes than the inventory holds — it is asserting less than it looks'
+    ).toBe(PROJECT_ROUTE_INVENTORY.filter((surface) => surface.status !== 'flow-only').length)
+    expect(
+      offRail,
+      'a surface left the rail without being written into OFF_RAIL_WHILE_CONSOLE_IS_LIT'
+    ).toEqual(OFF_RAIL_WHILE_CONSOLE_IS_LIT)
   })
 
   test('the environment is ONE control that opens, not three stacked links', async ({ page }) => {

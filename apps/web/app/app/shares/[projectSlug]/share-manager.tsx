@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { formatUtc } from '@/lib/format-utc'
 import type { ShareRow } from '@/lib/report-shares'
 import { POD_REPORT_LENSES, lensPolicy, type PodReportLens } from '@/lib/pod-report-lens'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CopyField } from '@/design-system/copy-field'
 import {
   Callout,
@@ -87,7 +88,7 @@ export function ShareManager({
   // React 18's `isPending` clears before an async transition callback's first await resolves, so
   // minting holds its own flag. A second click issues a second live bearer token.
   const [busy, setBusy] = useState(false)
-  const [confirming, setConfirming] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState<ShareRow | null>(null)
   const inFlight = busy || pending
 
   function onMint(event: FormEvent) {
@@ -303,46 +304,18 @@ export function ShareManager({
                 </Col>
                 <Col width="act">
                   {share.revokedAt === null && (
-                    <>
-                      <button
-                        type="button"
-                        className="ds-btn ds-btn--secondary ds-btn--sm"
-                        onClick={() => setConfirming(share.id)}
-                        disabled={inFlight}
-                      >
-                        Revoke
-                      </button>
-                      {/* ⚠️ A NATIVE confirm, not `ConfirmDialog`, and the reason is a real one: a
-                          `<dialog>` per row would mount one modal per share link, and the row's own
-                          `overflow` clips a positioned child. The list's own `ConfirmDialog` usage on
-                          Setup › Keys renders ONE dialog because the trigger is a kebab in a cell
-                          whose island owns it. This surface's revoke is inline, so the confirmation
-                          is inline too — it names the specific link and what stops working, which is
-                          the property the component exists to guarantee rather than its markup. */}
-                      {confirming === share.id && (
-                        <span className="ds-row-alert" role="alert">
-                          Revoke <b>{share.label === '' ? 'this link' : share.label}</b>? Anyone holding the
-                          URL stops being able to open the report immediately — no deploy. This cannot be
-                          undone.{' '}
-                          <button
-                            type="button"
-                            className="ds-btn ds-btn--primary ds-btn--sm"
-                            onClick={() => onRevoke(share.id)}
-                            disabled={inFlight}
-                          >
-                            {inFlight ? 'Working…' : 'Revoke it'}
-                          </button>{' '}
-                          <button
-                            type="button"
-                            className="ds-btn ds-btn--secondary ds-btn--sm"
-                            onClick={() => setConfirming(null)}
-                            disabled={inFlight}
-                          >
-                            Keep it
-                          </button>
-                        </span>
-                      )}
-                    </>
+                    <button
+                      type="button"
+                      className="ds-btn ds-btn--secondary ds-btn--sm"
+                      onClick={() => setConfirming(share)}
+                      disabled={inFlight}
+                      // The name says WHICH link — "Revoke" on six rows is six identically-named
+                      // controls, and a screen-reader user picking one from a list hears only the
+                      // name.
+                      aria-label={`Revoke ${share.label === '' ? 'this untitled link' : share.label}`}
+                    >
+                      Revoke
+                    </button>
                   )}
                 </Col>
               </Row>
@@ -350,6 +323,26 @@ export function ShareManager({
           })}
         </ListCard>
       )}
+
+      {/* ⚠️ **ONE `ConfirmDialog` for the whole list, and it replaced an inline confirmation.**
+          The first draft asked the question inside the row — which meant this surface used a
+          different confirmation pattern from Setup › Keys next door, and
+          `app-component-kit-adoption`'s D5 is that the product ships exactly ONE. Two patterns for
+          one job is the thing that rule was written about.
+          One dialog rather than one per row for the reason `ConfirmDialog` states: it must stay
+          mounted when it closes, because native `close()` is what restores focus to the control that
+          opened it. */}
+      <ConfirmDialog
+        open={confirming !== null}
+        verb="Revoke"
+        noun="share link"
+        subject={confirming === null || confirming.label === '' ? 'untitled' : confirming.label}
+        consequence="Anyone holding the URL stops being able to open the report immediately — no deploy. The link is dead, not paused."
+        details="Revoking cannot be undone. Create a new link if the conversation is still going."
+        pending={inFlight}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => confirming !== null && onRevoke(confirming.id)}
+      />
     </>
   )
 }

@@ -40,7 +40,11 @@ function tenantSlug(): string {
 async function mint(page: Page, slug: string, kind: (typeof CREDENTIAL_MINT_ORDER)[number], label: string) {
   await page.goto(`/app/setup/keys/${slug}`)
   await page.getByRole('button', { name: '+ New key' }).click()
-  await page.getByRole('button', { name: credentialTitle(kind), exact: true }).click()
+  // ⚠️ NOT `exact: true`. The pick button's accessible name is its title AND the sentence under it —
+  // "API key Send events into this project, and read its funnels through the SDK." — because the
+  // whole card is the control and a screen-reader user picking a JOB needs the job described, not
+  // just named. An anchored regex matches the title without hiding the rest.
+  await page.getByRole('button', { name: new RegExp(`^${credentialTitle(kind)}\\b`) }).click()
 
   // The ONE extra question this kind asks — the difference that made merging the four forms the
   // work rather than a formatting exercise.
