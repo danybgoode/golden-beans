@@ -23,6 +23,12 @@ import { readTenantRecord } from './helpers/authed-fixture'
 
 const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 
+// The palette's two selectors and its one fetch, named once. The path is READ from the component
+// (`CommandPalette.tsx:102`); a spec that guessed it once already passed vacuously for a whole
+// sprint (see the fetch-count test below).
+const OPTION = '.command-palette [role="option"]'
+const FEATURE_INDEX = '/api/internal/feature-index/'
+
 // ⚠️ ⌘K is bound by a `useEffect`, so it does NOTHING until the island hydrates — and a keypress,
 // unlike an assertion, is not retried by Playwright. Pressing once right after `goto` is a race:
 // it passed three runs in a row and then a screenshot taken the same way caught the page with no
@@ -31,11 +37,68 @@ const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 //
 // Not a defect in the product: a person cannot out-type hydration on a page they just opened. It is
 // a defect in a spec that would otherwise fail on a slow CI box and be dismissed as flake.
-async function openPalette(page: import('@playwright/test').Page) {
+//
+// ── It also waits for the LIST TO STOP CHANGING, which is a second race and a worse one ───────
+// ⚠️ **The palette's rows arrive in two waves, and every measurement below was racing the second
+// one.** `CommandPalette` renders the surfaces immediately and fetches the feature index on first
+// open; when that lands, the features go in FRONT of the surfaces, so the row that was index 0
+// becomes index 40 and React flips `aria-selected` on THE VERY NODE a test is holding, from `true`
+// to `false`, in place. Nothing is wrong with the product — the cursor is still on row 0, which is
+// now a different row — but a spec that resolved `nth(0)` before the wave and read it after sees a
+// first option that is not selected.
+//
+// That is the CI-only failure of the cursor spec below: green on 3 CI runs and ~12 local ones, red
+// on 4 consecutive CI attempts, with `Received: "false"`. Demonstrated rather than deduced — a
+// probe that held the first node across the arrival read `heldSelected: "false"` on
+// `palette-surface:journeys` while `nth(0)` had become `palette-feature:…`, which is the failure
+// exactly. It is timing, so it belongs to the machine: a slower index makes it likelier, and no
+// amount of re-running is evidence of anything.
+//
+// So the wait is HERE, in the opener every palette test shares, rather than at the one assertion
+// that happened to go red first (LEARNINGS: fix the class). `awaitIndex: false` is for the one
+// caller that reopens a palette which has already fetched — the fetch is once per page, and waiting
+// for a response that will never come would hang that test for its full timeout.
+async function openPalette(
+  page: import('@playwright/test').Page,
+  { awaitIndex = true }: { awaitIndex?: boolean } = {}
+) {
+  // Armed BEFORE the press, because the fetch is what the press starts. Arming afterwards is the
+  // same race one layer up.
+  const landed = awaitIndex
+    ? page.waitForResponse((response) => response.url().includes(FEATURE_INDEX), { timeout: 15_000 })
+    : null
   await expect(async () => {
     await page.keyboard.press('ControlOrMeta+k')
     await expect(page.locator('.command-palette')).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 10_000 })
+  if (landed === null) return
+
+  const response = await landed
+  // The response having ARRIVED is not the list having RE-RENDERED. The DOM signal for that is a
+  // feature row, so it is waited for — and only when the index actually carries one, because a
+  // project with no features changes nothing in the DOM and there would be nothing to wait for.
+  const body = (await response.json().catch(() => ({}))) as { features?: unknown[] }
+  if (Array.isArray(body.features) && body.features.length > 0) {
+    await expect(page.locator(`${OPTION}[id^="palette-feature:"]`).first()).toBeAttached()
+  }
+}
+
+/**
+ * Every option in the palette, with what it is and whether it is the cursor.
+ *
+ * Attached to the failure message of the cursor assertion rather than kept for debugging: when that
+ * assertion goes red, "the first option says false" is not enough to tell a stale read from a
+ * cursor that genuinely moved, and this run happened on a machine nobody can attach to.
+ */
+async function paletteState(page: import('@playwright/test').Page) {
+  return JSON.stringify({
+    activedescendant: await page
+      .locator('.command-palette__input')
+      .getAttribute('aria-activedescendant'),
+    options: await page.locator(OPTION).evaluateAll((nodes) =>
+      nodes.map((node) => `${node.id}=${node.getAttribute('aria-selected')}`)
+    ),
+  })
 }
 
 function tenantSlug(): string {
@@ -529,8 +592,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // file winning — but the comment pointed at one file and implied it was the one under test
     // (fresh reviewer, Minor). Mutating BOTH selectors back to `li` is what turns this red.
     await page.goto('/app')
+    // ⚠️ The opener waits for the feature index to LAND AND RENDER. Without that this measurement
+    // raced the second wave of rows and read a node mid-flip — see `openPalette`.
     await openPalette(page)
-    const options = page.locator('.command-palette [role="option"]')
+    const options = page.locator(OPTION)
     await expect(options.first()).toBeVisible()
     expect(await options.count(), 'the palette listed fewer than two options').toBeGreaterThan(1)
 
@@ -546,7 +611,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
 
     const firstAtRest = await paint(0)
     const secondAtRest = await paint(1)
-    expect(firstAtRest.selected, 'the palette opens with no option selected').toBe('true')
+    expect(
+      firstAtRest.selected,
+      `the palette opens with no option selected: ${await paletteState(page)}`
+    ).toBe('true')
 
     // The SELECTED row must look different from an unselected one. Asserted as paint — a background
     // or a shadow — never as the attribute, which is the half that never stopped working.
@@ -584,7 +652,6 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     //
     // The path is READ from the component rather than guessed a second time, and the floor below is
     // what makes a future rename fail loudly instead of quietly returning to zero.
-    const FEATURE_INDEX = '/api/internal/feature-index/'
     const requests: string[] = []
     page.on('request', (request) => {
       const url = new URL(request.url())
@@ -596,9 +663,10 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     expect(requests.length, `the palette fetched ${requests.length} time(s) on page load`).toBe(0)
 
     await openPalette(page)
-    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
-    // The feature index arrives after the options render, so wait for the fetch rather than racing it.
-    await page.waitForResponse((response) => response.url().includes(FEATURE_INDEX))
+    await expect(page.locator(OPTION).first()).toBeVisible()
+    // The feature index arrives after the options render, and `openPalette` has already waited for
+    // it — arming a SECOND `waitForResponse` here after the response has been and gone would wait
+    // for a fetch that will never happen and hang this test for its full timeout.
     const afterFirstOpen = requests.length
 
     // ⚠️ THE FLOOR. Without it, "the palette fetched zero times because the filter is wrong" and
@@ -611,8 +679,9 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     ).toBe(1)
 
     await page.keyboard.press('Escape')
-    await openPalette(page)
-    await expect(page.locator('.command-palette [role="option"]').first()).toBeVisible()
+    // `awaitIndex: false` — this is the reopen, and NOT fetching again is the property under test.
+    await openPalette(page, { awaitIndex: false })
+    await expect(page.locator(OPTION).first()).toBeVisible()
     expect(
       requests.length,
       `reopening fetched again — ${requests.length} total against ${afterFirstOpen} after the first open`
