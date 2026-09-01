@@ -57,3 +57,12 @@ apps/web/e2e/.auth/
 # authoritative while it does — CODE-QUALITY.md #2 ("a value that must not go stale is computed,
 # not written down"). Regenerate on demand: `npm pack -w @golden-frijoles/sdk`.
 *.tgz
+
+# Rendered reference states — DERIVED from the approved prototype, never stored.
+# `apps/web/design-system/README.md` and `render-reference.mjs` have both said these are gitignored
+# since `design-system-rails` Story 1.1 moved the design into the product. Nothing made it true, so
+# 32 PNGs sat untracked in the epic's retired `Roadmap/**/design/` folder — a claim in a doc with no
+# rule behind it, which is the defect class this epic is named after. Regenerate with
+# `node apps/web/design-system/render-reference.mjs`.
+apps/web/design-system/reference/
+Roadmap/**/design/reference/
