@@ -62,8 +62,25 @@ route can actually draw: `getFeatureImpact` (`lib/north-star-query.ts`) returns 
 | the hero number + big plot | the **North Star metric** | **empty** — L1: registered, never recorded |
 | *What fed it* small multiples + sparklines | the **leading inputs'** real series | populated, and thin |
 
-Production, queried 2026-09-01: `miyagisanchez` has **2** leading inputs — `attributed_revenue`
-(`external_push`, **1** value, 2026-07-06) and `setup_guide_shares` (`telemetry_event`, **0** values).
+Production, queried 2026-09-01: `miyagisanchez` has **2** leading inputs, **both linked to
+`setup_guide`**, and **both produce a ONE-POINT series**:
+
+| Input | Source | Series comes from | Points |
+|---|---|---|---|
+| `attributed_revenue` | `external_push` | `input_values` — **1** row, 2026-07-06 | **1** |
+| `setup_guide_shares` | `telemetry_event` | `events` where `event = setup_guide_share_tapped` — **1** row | **1** |
+
+⚠️ **CORRECTED 2026-09-01, after the build.** This paragraph, and step 4 of the walkthrough, said
+`setup_guide_shares` had **zero** readings. It has zero rows in `input_values` — and that table is
+not where its series comes from. `getFeatureImpactByProjectId` branches on `value_source`: an
+`external_push` input reads `input_values`, a `telemetry_event` input reads `events` filtered by its
+`source_event`. Verified by running `computeDailySeries` over the one matching event:
+`[{"date":"2026-07-06","value":1}]`.
+
+So production renders **`too_short` twice**, not one `too_short` and one `empty`. The empty case is
+real and is worth having — it is what a newly linked input shows — but no live tenant is in it, so it
+is asserted on the specimen. **A walkthrough step that names the wrong state is exactly what D10
+exists to prevent, and I wrote one anyway by reading a column instead of the code path.**
 
 🔒 **A series of fewer than two points is not a line, and the primitive must say so.** One point drawn
 as a flat stroke reads as *"steady"*, which is a claim about a trend nobody measured — the same
@@ -192,7 +209,7 @@ Production, `miyagisanchez`, **re-queried 2026-09-01** (**D10**, and it reproduc
 | Route | Live rows on `miyagisanchez` | Which approved state it can actually render |
 |---|---|---|
 | `/app` (Today) | North Star **registered, never recorded**; leading inputs **2**; tasks **0** | the strip renders its **honest never-recorded** tile (**L1**); *Waiting on you* and *Your agent is working* render **empty** |
-| `/app/impact/…/setup_guide` | 2 inputs — **1** reading and **0** readings | hero **empty** (L1); one sparkline in its **too-short** state, one in its **no-data** state |
+| `/app/impact/…/setup_guide` | 2 inputs, **one reading each** | hero **empty** (L1); **both** sparklines in their **too-short** state |
 | `/app/funnel/…/setup_guide` | the **one** TARS feature | **populated** — this is the only honest place to assert numbers |
 | `/app/experiments/…` | **2** experiments | populated list; `experiment-ready` and `experiment-blocked` are **not** reachable here |
 | `/app/journeys/…` | **0** | **empty only.** The one production journey is `merchant_activation` on **`golden-beans`** |
@@ -409,10 +426,14 @@ Production while a nonexistent sibling answers 404 (**L9**).
    `setup_guide` is the **only** feature in this project with a TARS row; this is the one place
    numbers can honestly be asserted.
 4. Go to https://goldenfrijoles.com/app/impact/miyagisanchez/setup_guide.
-   → The **North Star** hero in its never-recorded state, and beneath it *What fed it* — **two**
-   leading inputs. `Attributed Revenue` has **one** reading and its sparkline says *one reading, not
-   a trend*; `Setup Guide Shares` has **none** and says so. ⚠️ Neither draws a flat line: a
-   one-point line would be a claim about a trend nobody measured (**L2**).
+   → The **North Star** hero in its never-recorded state — a sentence, not a number and not a blank
+   — and beneath it *What fed it*: **two** leading inputs, `Attributed Revenue` and `Setup Guide
+   Shares`. **Each shows one reading**, and each says *"One reading so far — not a trend"* where its
+   sparkline would be. ⚠️ Neither draws a line: a stroke through a single point would show a
+   direction nobody measured (**L2**).
+   ⚠️ *Corrected after the build: this step said `Setup Guide Shares` had none. It has zero rows in
+   `input_values`, which is not where its series comes from — a `telemetry_event` input reads
+   `events`, and it has one. Re-derived from the code path rather than from a column.*
 5. Go to https://goldenfrijoles.com/app/experiments/miyagisanchez.
    → **Two** experiments render on the system. Each row carries its state and its primary metric.
    The `ready` and `blocked` detail states are checked on the specimen route, not here.
