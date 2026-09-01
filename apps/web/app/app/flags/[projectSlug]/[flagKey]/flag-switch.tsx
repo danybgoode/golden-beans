@@ -305,8 +305,8 @@ export function FlagSwitch({
           check. */}
       {!servingEnabled && (
         <Callout tone="warn">
-          <b>Flag serving is currently switched off.</b> Features can be prepared, but turning them on and
-          off is unavailable until <code>FLAG_SERVING_ENABLED</code> is enabled in a new deployment.
+          <b>Flag serving is currently switched off.</b> Features can be prepared, but turning them on and off
+          is unavailable until <code>FLAG_SERVING_ENABLED</code> is enabled in a new deployment.
         </Callout>
       )}
       {error && (

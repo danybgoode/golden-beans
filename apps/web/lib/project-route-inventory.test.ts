@@ -56,7 +56,24 @@ test('members see every live member surface but never owner-only or flow-only ro
     // console-ia-overhaul Story 1.2 (D3): `funnel` and `impact` used to lead this list. They are
     // gone — not because the routes were deleted (they still render) but because neither could be
     // linked without a placeholder key. Their absence here IS the acceptance criterion.
-    ['journeys', 'experiments', 'flags', 'tasks', 'scenarios', 'setup/connect', 'flag-audit']
+    // design-system-rails S4.3: `scheduled` joins them. It is MEMBER-readable for the same reason
+    // `flag-audit` is, and then some — the page holds no data at all, so owner-gating a surface
+    // whose entire content is "this is not built yet" would tell a member less than it tells
+    // everyone else for no boundary in return.
+    [
+      'journeys',
+      // ⚠️ `flags` ahead of `experiments` — Story 4.3. The approved Ship rail is
+      // Features · Experiments · Scheduled changes · Activity, and this list had the first two the
+      // other way round. The rail renders in inventory order, so that was a visible departure from
+      // an approved design that nothing could go red on.
+      'flags',
+      'experiments',
+      'tasks',
+      'scenarios',
+      'setup/connect',
+      'scheduled',
+      'flag-audit',
+    ]
   )
   assert.deepEqual(
     links.find((link) => link.routeSegment === 'flags'),
@@ -133,7 +150,10 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
       // and `legacy-keys: false`, which is the only combination `readGates()` can produce.
       'setup/connect',
       'setup/keys',
-      // Story 3.2's audit is member-readable and therefore appears in both lists.
+      // Both member-readable, so both appear in this list too. `scheduled` sits between them in
+      // INVENTORY order, which is what the rail renders — it is the fourth Ship item the approved
+      // design has, decided by Daniel 2026-08-29 (epic D13).
+      'scheduled',
       'flag-audit',
       'destinations',
       'shares',
@@ -196,9 +216,13 @@ test('Ship holds the feature-operating surfaces and Setup holds every credential
     gates: allGatesOpen,
   })
 
+  // ⚠️ FOUR items, which is what the approved Ship rail has. `scheduled` is the one the product had
+  // no route for at all — Daniel decided (2026-08-29) to ship the designed empty-state route rather
+  // than drop the rail item, and this list is where "the rail has four items" stops being a claim
+  // about a mockup and becomes a property of the code.
   assert.deepEqual(
     getSectionLinks(links, 'ship').map((l) => l.routeSegment),
-    ['experiments', 'flags', 'flag-audit']
+    ['flags', 'experiments', 'scheduled', 'flag-audit']
   )
   // Named rather than counted: every surface that mints or reveals a credential belongs to Setup,
   // and a credential surface appearing anywhere else is the finding this assertion exists to make.

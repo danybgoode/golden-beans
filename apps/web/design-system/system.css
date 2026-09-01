@@ -1490,6 +1490,20 @@
   display: inline-flex;
   margin-top: 14px;
 }
+/* ⚠️ **`unbuilt` is NOT `empty`, and `references/ux-guidelines.md` says they "must look
+   different".** An empty list is *nothing here yet* and a control exists that would fill it; an
+   unbuilt surface is *this does not exist* and no control does. Rendering them the same sends a
+   reader hunting for a button that was never written. Same treatment the `unbuilt` button state
+   gets: dashed and amber, deliberately NOT dimmed — legible, because "this isn't built yet" is
+   information, not an apology. */
+.ds .ds-empty[data-state='unbuilt'] {
+  border: 1px dashed var(--gold-deep);
+  border-radius: var(--r-lg);
+  background: transparent;
+}
+.ds .ds-empty[data-state='unbuilt'] .ds-empty-title {
+  color: var(--gold);
+}
 
 /* ── Callout — a standing note that is not a toast ───────────────────────────────────────────
  * `role="status"` in the markup; the ink says which kind without the word having to. */

@@ -732,9 +732,27 @@ export function DormantSummary({
  * holds one — a grid with no rows and no columns is reported as broken structure rather than as
  * "nothing here yet". Callers use `EmptyCard` rather than `ListCard` + `Empty` for that reason.
  */
-export function Empty({ title, body, action }: { title: string; body: ReactNode; action?: ReactNode }) {
+export function Empty({
+  title,
+  body,
+  action,
+  state = 'empty',
+}: {
+  title: string
+  body: ReactNode
+  action?: ReactNode
+  /**
+   * ⚠️ **`unbuilt` is not `empty`, and `references/ux-guidelines.md` says the two "must look
+   * different".** An empty list means *nothing here yet* and a control exists that would fill it;
+   * an unbuilt surface means *this does not exist* and no control does. Collapsing them sends a
+   * reader hunting for a button nobody has written — which is exactly the risk the product owner
+   * accepted when deciding to ship `/app/scheduled` as a designed empty-state route, on the
+   * condition that it says so plainly (epic D13).
+   */
+  state?: 'empty' | 'unbuilt'
+}) {
   return (
-    <div className="ds-empty">
+    <div className="ds-empty" data-state={state}>
       <span className="ds-empty-title">{title}</span>
       <span className="ds-empty-body">{body}</span>
       {action ? <span className="ds-empty-action">{action}</span> : null}
@@ -743,7 +761,12 @@ export function Empty({ title, body, action }: { title: string; body: ReactNode;
 }
 
 /** A list card holding nothing but an empty state — see `Empty` for why the table role is dropped. */
-export function EmptyCard(props: { title: string; body: ReactNode; action?: ReactNode }) {
+export function EmptyCard(props: {
+  title: string
+  body: ReactNode
+  action?: ReactNode
+  state?: 'empty' | 'unbuilt'
+}) {
   return (
     <div className="ds-listcard">
       <Empty {...props} />
@@ -810,7 +833,15 @@ export function PageTabs({ label, children }: { label: string; children: ReactNo
   )
 }
 
-export function PageTab({ children, current, href }: { children: ReactNode; current?: boolean; href: string }) {
+export function PageTab({
+  children,
+  current,
+  href,
+}: {
+  children: ReactNode
+  current?: boolean
+  href: string
+}) {
   return (
     <a className="ds-tab" href={href} aria-current={current ? 'page' : undefined}>
       {children}

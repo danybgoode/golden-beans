@@ -145,6 +145,18 @@ export type ProjectSurfaceLink = Pick<
 // still exist, still render and still keep their URLs — Sprint 3 makes them a feature's tabs, so
 // they become reachable by clicking the feature instead of by knowing its key. What is deleted is
 // their status as top-level destinations, and with it the last caller of DEFAULT_FEATURE_HINT.
+// ⚠️ **THE ORDER OF THIS LIST IS THE ORDER OF THE RAIL**, and Story 4.3 corrected Ship's.
+//
+// `getSectionLinks` is a filter over this array, so a section's rail renders in inventory order.
+// The approved Ship rail is **Features · Experiments · Scheduled changes · Activity**; this list had
+// Experiments above Features, which is a visible departure from a design the product owner
+// approved, and nothing could go red on it — the section-composition test asserted the order the
+// code happened to have. Corrected here rather than reported, because WAYS-OF-WORKING now says an
+// approved design IS the contract where one has been approved, and `project-route-inventory.test.ts`
+// names all four so the correction is a decision somebody can read rather than a silent reshuffle.
+//
+// Measure (Journeys · Scenarios) and Setup (Connect · Keys · Destinations · Share links) were
+// already in approved order; both were checked at the same time rather than assumed.
 export const PROJECT_ROUTE_INVENTORY = [
   {
     routeSegment: 'journeys',
@@ -159,18 +171,6 @@ export const PROJECT_ROUTE_INVENTORY = [
     description: (role) => (role === 'owner' ? 'define and activate' : 'read-only'),
   },
   {
-    routeSegment: 'experiments',
-    iconKey: 'flask',
-    audience: 'member',
-    gate: 'experiment-governance',
-    status: 'gated',
-    topLevelProjectRoute: true,
-    section: 'ship',
-    label: 'Experiment governance',
-    href: (slug: string) => `/app/experiments/${slug}`,
-    description: (role) => (role === 'owner' ? 'plan and operate' : 'read-only'),
-  },
-  {
     routeSegment: 'flags',
     iconKey: 'flag',
     audience: 'member',
@@ -181,6 +181,18 @@ export const PROJECT_ROUTE_INVENTORY = [
     label: 'Flags',
     href: (slug: string) => `/app/flags/${slug}`,
     description: (role) => (role === 'owner' ? 'define and operate' : 'read-only'),
+  },
+  {
+    routeSegment: 'experiments',
+    iconKey: 'flask',
+    audience: 'member',
+    gate: 'experiment-governance',
+    status: 'gated',
+    topLevelProjectRoute: true,
+    section: 'ship',
+    label: 'Experiment governance',
+    href: (slug: string) => `/app/experiments/${slug}`,
+    description: (role) => (role === 'owner' ? 'plan and operate' : 'read-only'),
   },
   {
     routeSegment: 'tasks',
@@ -285,6 +297,40 @@ export const PROJECT_ROUTE_INVENTORY = [
     label: 'Flag credentials',
     href: (slug: string) => `/app/flag-credentials/${slug}`,
     description: () => 'snapshot and catalog sync keys',
+  },
+  {
+    // ── design-system-rails · Story 4.3 — the rail's fourth Ship item, DECIDED not discovered ────
+    //
+    // ⚠️ **The approved Ship rail has four items and the product had no such route, table or
+    // scheduling capability.** Verified by grep across the whole repo at the architecture lock: no
+    // `/app/scheduled`, no scheduled-changes table, nothing anywhere that could schedule a flag
+    // change. The sprint doc's original sentence ("the rail shows `0` today") described the
+    // PROTOTYPE's rail as though it were the product's, and a builder would have gone looking for a
+    // page that does not exist.
+    //
+    // Dropping a rail item is an amendment to an approved design, so it went to Daniel rather than
+    // into an architect's judgement. **Decided 2026-08-29: ship the designed empty-state route.**
+    // The counter-argument is recorded in the epic README (D13) rather than lost — Story 4.1's own
+    // rule is *"a control that goes nowhere is worse than no control"* — and the accepted mitigation
+    // is that the empty state says PLAINLY that scheduling is not available yet. It must not read as
+    // "you have no scheduled changes", which implies you could have some.
+    //
+    // `gate: 'flag-console'` rather than `'always'`: this item sits in Ship beside Features and
+    // Activity, both of which are console surfaces, and a rail item that survived a console rollback
+    // would point at a page rendered by an epic that had been rolled back.
+    routeSegment: 'scheduled',
+    iconKey: 'calendar-clock',
+    // MEMBER-readable. There is nothing here to protect — the page holds no data at all — and
+    // owner-gating a page that says "this is not built yet" would tell a member less than it tells
+    // everyone else for no boundary in return.
+    audience: 'member',
+    gate: 'flag-console',
+    status: 'gated',
+    topLevelProjectRoute: true,
+    section: 'ship',
+    label: 'Scheduled changes',
+    href: (slug: string) => `/app/scheduled/${slug}`,
+    description: () => 'changes that will happen on their own — not built yet',
   },
   {
     routeSegment: 'flag-audit',

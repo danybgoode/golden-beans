@@ -21,8 +21,9 @@ import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { isFlagConsoleEnabled } from '@/lib/flags'
 import { getFlagRegistryView } from '@/lib/flag-registry'
+import { PageHead } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
-import { FlagAuditTable } from './flag-audit-table'
+import { FlagAuditTimeline } from './flag-audit-timeline'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,12 +42,15 @@ export default async function FlagAuditPage({ params }: { params: Promise<{ proj
   return (
     <ProductShell projectSlug={projectSlug} section="ship" railActive={'flag-audit'}>
       <main>
-        <h1>Flag audit</h1>
-        <p>
-          Every change to a feature definition or to what an environment serves, with who made it and why.
-          Readable by any member of this project.
-        </p>
-        <FlagAuditTable
+        {/* ── design-system-rails · Story 4.3 — reference state `ship-activity` ────────────────
+            The title is **Activity**, which is the word the rail says and the word the design uses.
+            "Flag audit" named the TABLE the rows came out of; a person opening this is asking what
+            happened, and the answer to that is activity. The stored values are untouched. */}
+        <PageHead
+          title="Activity"
+          lede="Everything anyone has done to a feature in this project, newest first — written as sentences, not as rows of a table nobody reads. Readable by any member."
+        />
+        <FlagAuditTimeline
           entries={registry.audit}
           flagKeyById={Object.fromEntries(flagKeyById)}
           versionNumberById={Object.fromEntries(versionNumberById)}

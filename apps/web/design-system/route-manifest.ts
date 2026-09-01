@@ -323,17 +323,23 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
   },
   {
     route: '/app/scheduled/[projectSlug]',
-    notYetBuilt: true,
-    // ⚠️ DOES NOT EXIST YET — added by Story 4.3. See the D13 ledger above: the approved Ship rail
-    // has four items and the product has no scheduling route, table or capability. Daniel decided
-    // (2026-08-29) to ship the designed EMPTY state rather than drop the rail item.
+    // ⚠️ **BUILT by Story 4.3, and `notYetBuilt` is cleared in the same commit** — the flag and the
+    // file are set by different hands, which is why the test asserts BOTH directions: a row with the
+    // flag must have no page, and a row without it must have one.
+    //
+    // The approved Ship rail has four items and the product had no scheduling route, table or
+    // capability anywhere. Daniel decided (2026-08-29) to ship the designed EMPTY state rather than
+    // drop the rail item; the accepted mitigation is that the page says plainly that scheduling is
+    // not available yet, rather than "you have no scheduled changes" — which would imply you could
+    // have some. It renders the design system's `unbuilt` empty state, which
+    // `references/ux-guidelines.md` requires to look different from an ordinary empty one.
     page: 'app/scheduled/[projectSlug]/page.tsx',
     label: 'Scheduled changes',
     frame: 'console',
     seam: 'product-shell',
     surface: 'scheduled',
     referenceState: 'ship-activity',
-    rendersFromDesignSystem: false,
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,
@@ -346,7 +352,10 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     seam: 'product-shell',
     surface: 'flag-audit',
     referenceState: 'ship-activity',
-    rendersFromDesignSystem: false,
+    // design-system-rails · Story 4.3. The audit is a TIMELINE now, not a `DataTable` — the approved
+    // state's own copy says why: "written as sentences, not as rows of a table nobody reads". It is
+    // also a server component again, so a read-only list stops shipping JavaScript.
+    rendersFromDesignSystem: true,
     landsIn: 4,
     retiresIn: null,
     deferred: null,

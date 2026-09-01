@@ -37,7 +37,17 @@ import { isFlagConsoleEnabled } from '../lib/flags'
 // auth, so an anonymous request sees the flag state directly, exactly like the per-feature route.
 // This is the coverage Sprint 1's QA note promised and could not deliver: it had no gate-observable
 // surface to point at, and now there are three.
-const MOVED_ROUTES = ['/app/flag-credentials/miyagisanchez', '/app/flag-audit/miyagisanchez']
+// ⚠️ **THREE routes now — `/app/scheduled` joins them (design-system-rails S4.3).** It is the Ship
+// rail's fourth item, built as a designed empty state, and it rides `flag-console` for the same
+// reason the other two do: it sits beside Features and Activity, and a rail item that survived a
+// console rollback would point at a page rendered by an epic that had been rolled back. Added HERE,
+// in the commit that creates the route, rather than left for the sprint that notices — a gated route
+// with no dark assertion is a gate nothing can observe.
+const MOVED_ROUTES = [
+  '/app/flag-credentials/miyagisanchez',
+  '/app/flag-audit/miyagisanchez',
+  '/app/scheduled/miyagisanchez',
+]
 
 const DETAIL_ROUTES = [
   '/app/flags/miyagisanchez/checkout.stripe_enabled',

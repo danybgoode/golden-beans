@@ -48,7 +48,13 @@ const CONSOLE_SURFACES = [
   '../app/app/flag-credentials/[projectSlug]/page.tsx',
   '../app/app/flag-credentials/[projectSlug]/flag-credential-manager.tsx',
   '../app/app/flag-audit/[projectSlug]/page.tsx',
-  '../app/app/flag-audit/[projectSlug]/flag-audit-table.tsx',
+  // design-system-rails S4.3 — the audit is a TIMELINE now, not a `DataTable`. The approved
+  // `ship-activity` state says why in its own copy: "written as sentences, not as rows of a table
+  // nobody reads". Same words, same registries, one fewer client island.
+  '../app/app/flag-audit/[projectSlug]/flag-audit-timeline.tsx',
+  // The route this sprint creates. It renders no flag words today, and that is exactly why it is
+  // swept: the day somebody writes "activate" onto it, this list is what catches it.
+  '../app/app/scheduled/[projectSlug]/page.tsx',
   './flag-console-copy.ts',
 ] as const
 
