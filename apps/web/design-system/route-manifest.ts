@@ -688,7 +688,19 @@ export type Coverage = {
  * which is precisely the failure the epic is named after.
  */
 export function coverage(sprint: Sprint = 6): Coverage {
-  const rows = liveRows(sprint)
+  return coverageOf(liveRows(sprint))
+}
+
+/**
+ * The same arithmetic, over ROWS the caller supplies.
+ *
+ * ⚠️ Extracted so the conjunction above can be TESTED (fresh reviewer, Minor). Every real manifest
+ * row with `rendersFromDesignSystem` also has a `referenceState` — `route-manifest.test.ts` makes
+ * the other combination unrepresentable, correctly — which meant the `&&` was never exercised by
+ * real data, and removing half of it left every assertion in that file green while the test's own
+ * name claimed to check it. A guard whose subject cannot occur is a guard that cannot fail.
+ */
+export function coverageOf(rows: readonly CoverageRow[]): Coverage {
   const complete = rows.filter((row) => row.referenceState !== null && row.rendersFromDesignSystem)
   return {
     total: rows.length,

@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { formatUtc } from '@/lib/format-utc'
 import {
+  credentialPermits,
   credentialTitle,
   formatExpiry,
   type CredentialKind,
@@ -36,15 +37,29 @@ import { revokeCredentialAction } from './actions'
 // Never "Are you sure?". Each kind's consequence is genuinely different, which is why they are
 // written out rather than templated from the kind's name.
 
-const CONSEQUENCE: Record<CredentialKind, string> = {
-  ingest:
-    'Anything still using this key — the SDK, POST /api/v1/track, a CI job — starts getting 401s on its next request. Events sent with it are refused, not queued.',
-  flag_read:
-    'Whatever reads this environment’s flag snapshot stops being able to. It will serve whatever it last cached, or its own defaults, until you give it a new key.',
-  flag_sync:
-    'That publisher can no longer register feature definitions. Features already registered keep working and keep serving; only new definitions stop arriving.',
-  agent_write:
-    'Your agent stops being able to claim, resolve or dismiss tasks over MCP. Reading is unaffected — that is the connector URL, which is a different credential.',
+/**
+ * What stops working, per kind — and it NAMES the scope where the kind has one.
+ *
+ * ⚠️ **The scope was lost in the merge** (fresh reviewer, Minor). The surface this replaces said
+ * "Catalog publishes from **backend** start failing"; the first draft of this table said "That
+ * publisher can no longer register feature definitions" — without saying which publisher, on a page
+ * that shows the scope in the cell next door and can hold three sync keys at once. An owner with
+ * three publishers was being asked to destroy one of them by name and told about a category.
+ *
+ * `scope` is `null` for the two kinds that have none, and the sentence reads correctly either way
+ * rather than rendering "for null".
+ */
+function consequenceOf(kind: CredentialKind, scope: string | null): string {
+  if (kind === 'ingest') {
+    return 'Anything still using this key — the SDK, POST /api/v1/track, a CI job — starts getting 401s on its next request. Events sent with it are refused, not queued.'
+  }
+  if (kind === 'flag_read') {
+    return `Whatever reads ${scope === null ? 'that environment’s' : `${scope}’s`} flag snapshot stops being able to. It will serve whatever it last cached, or its own defaults, until you give it a new key.`
+  }
+  if (kind === 'flag_sync') {
+    return `${scope === null ? 'That publisher' : `Catalog publishes from ${scope}`} can no longer register feature definitions. Features already registered keep working and keep serving; only new definitions stop arriving.`
+  }
+  return 'Your agent stops being able to claim, resolve or dismiss tasks over MCP. Reading is unaffected — that is the connector URL, which is a different credential.'
 }
 
 export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }) {
@@ -133,9 +148,12 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
                   the kind rather than a lifecycle state. The three coloured states mean on / off /
                   never everywhere else in this console, and borrowing one here would say something
                   untrue. */}
-              <Pill state="never" label>
-                {row.capability.split('.')[0]}
-              </Pill>
+              {/* ⚠️ `credentialPermits`, NOT `capability.split('.')[0]` (fresh reviewer, Major). Two
+                  of the four capability sentences have no interior period, so the split returned 66
+                  and 75 characters into a `nowrap` chip in a 190px column — painting over the next
+                  two cells and pushing the card into horizontal scroll, invisibly to both cheap
+                  assertions. The approved design's own words for this column are two or three. */}
+              <Pill label>{credentialPermits(row.kind)}</Pill>
             </Col>
             <Col width="meta">
               {/* "Everywhere" for a kind with no scope, not a blank: "this kind has no environment"
@@ -174,7 +192,7 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
         verb="Revoke"
         noun={confirming === null ? 'key' : credentialTitle(confirming.kind).toLowerCase()}
         subject={confirming === null || confirming.label === '' ? 'untitled' : confirming.label}
-        consequence={confirming === null ? '' : CONSEQUENCE[confirming.kind]}
+        consequence={confirming === null ? '' : consequenceOf(confirming.kind, confirming.scope)}
         details="Revoking cannot be undone, and it takes effect on the next request — no deploy. Create a new key instead of trying to restore this one."
         pending={inFlight}
         onCancel={() => setConfirming(null)}

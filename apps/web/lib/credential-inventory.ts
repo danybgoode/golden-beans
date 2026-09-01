@@ -52,23 +52,27 @@ export type CredentialRow = {
  * These are the story's deliverable. Each says what the key AUTHORIZES, not which table it lives in
  * or which subsystem minted it — "sends events into this project" rather than "ingest scope".
  */
-const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: string }> = {
+const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: string; permits: string }> = {
   ingest: {
     title: 'API key',
     capability: 'Send events into this project, and read its funnels through the SDK.',
+    permits: 'Send events',
   },
   flag_read: {
     title: 'Flag snapshot key',
     capability: 'Read the flag snapshot for one environment. Cannot change what any flag serves.',
+    permits: 'Read the flags',
   },
   flag_sync: {
     title: 'Catalog sync key',
     capability:
       'Create flag definitions from an outside catalog. Cannot turn a flag on or off in any environment.',
+    permits: 'Register features',
   },
   agent_write: {
     title: 'Agent write key',
     capability: 'Let your own agent claim, resolve and dismiss tasks in this project over MCP.',
+    permits: 'Claim & resolve tasks',
   },
 }
 
@@ -84,6 +88,27 @@ const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: strin
  * and the form offers it. One definition, or the form offers a value the action refuses.
  */
 export const AGENT_KEY_EXPIRY_DAYS = [1, 7, 30, 90] as const
+
+/**
+ * How long a flag credential lives when it is minted, in days.
+ *
+ * ⚠️ **This constant exists because Story 4.5 nearly dropped it silently** (fresh reviewer,
+ * Blocking). The surface this page replaces minted BOTH flag kinds with a hard-coded 30 days — its
+ * buttons literally read *"Mint 30-day snapshot key"* and *"Mint 30-day catalog sync key"* — and the
+ * first draft of the merged mint action simply did not pass `expiresAt`, so the RPC inserted NULL
+ * and both kinds became **credentials that never expire**. The row then rendered "No expiry" under a
+ * comment claiming that is a state an owner deliberately chose. Nobody chose it.
+ *
+ * The FORM does not ask, and that is the design: the sprint contract says `flag_read` asks for an
+ * environment and `flag_sync` for a source, one question each. So the expiry is applied here, by the
+ * action, exactly as the old surface applied it — the behaviour is preserved and the question count
+ * is unchanged. `agent_write` is the kind that asks, because it is the only one where the operator's
+ * answer differs per credential.
+ *
+ * Named rather than inlined so `setup-keys` and the flags page's own legacy actions cannot drift to
+ * two different defaults for one credential kind.
+ */
+export const FLAG_KEY_EXPIRY_DAYS = 30
 
 /**
  * What minting each kind actually ASKS FOR — the reason the four forms could not simply be merged.
@@ -147,6 +172,26 @@ export function credentialTitle(kind: CredentialKind): string {
 
 export function credentialCapability(kind: CredentialKind): string {
   return CREDENTIAL_COPY[kind].capability
+}
+
+/**
+ * The two-or-three words that fit in a chip — the *what it may do* column.
+ *
+ * ⚠️ **The chip used to render `capability.split('.')[0]`, and that was a real layout defect**
+ * (fresh reviewer, Major). Two of the four sentences contain no interior period, so the chip
+ * rendered 66 and 75 characters of `white-space: nowrap` inside a 190px column: it painted over the
+ * next two cells and pushed the list card into horizontal scroll. Nothing in the gate could see it —
+ * `nowrap` kept the row at its measured 71px, and the card's own `overflow-x: auto` absorbed the
+ * width, so both cheap assertions passed on a broken page. That is the failure mode this whole epic
+ * is named after, produced by a `split()`.
+ *
+ * These are the approved design's own words for that column (`keysScreen` in
+ * `console-prototype.html`): "Read the numbers", "Register features", "Claim & resolve tasks". A
+ * phrase per kind, written down, rather than the first clause of a sentence written for somewhere
+ * else. The full sentence still renders under the credential's name, where it has room.
+ */
+export function credentialPermits(kind: CredentialKind): string {
+  return CREDENTIAL_COPY[kind].permits
 }
 
 /**

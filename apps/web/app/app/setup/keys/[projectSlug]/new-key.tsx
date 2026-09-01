@@ -51,8 +51,7 @@ const FIELD_LABEL = {
   expiry: 'When it expires',
 } as const
 
-export function NewKey({ slug }: { slug: string }) {
-  const router = useRouter()
+export function NewKey({ slug, onMinted }: { slug: string; onMinted: (plaintext: string) => void }) {
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<CredentialKind | null>(null)
   const [label, setLabel] = useState('')
@@ -61,7 +60,6 @@ export function NewKey({ slug }: { slug: string }) {
   // `30` rather than `null`: an agent write key that never expires is a decision, and it should be
   // one somebody makes rather than one they get by not choosing.
   const [expiryDays, setExpiryDays] = useState<number | null>(30)
-  const [minted, setMinted] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // ⚠️ TWO error states, because they are two different facts. `fieldError` is about the label a
   // reader typed and belongs beside the input; `error` is the server's rejection of the whole
@@ -109,7 +107,10 @@ export function NewKey({ slug }: { slug: string }) {
               : kind === 'flag_sync'
                 ? await mintFlagSyncKeyAction(slug, source, trimmed)
                 : await mintAgentWriteKeyAction(slug, expiryDays, trimmed)
-        if (result.ok) setMinted(result.plaintext)
+        // ⚠️ Handed UPWARD, not rendered here. `KeysSurface` owns whether a value is on screen,
+        // because "on a screen of its own" is a claim about the whole page and this component only
+        // occupies the head's action slot.
+        if (result.ok) onMinted(result.plaintext)
         else setError(result.error)
       } catch {
         // A rejected action left the button spinning back to idle with no message, which reads as
@@ -119,35 +120,6 @@ export function NewKey({ slug }: { slug: string }) {
       }
       setBusy(false)
     })
-  }
-
-  // ── The reveal. It REPLACES everything, and stays until dismissed. ──────────────────────────
-  if (minted !== null) {
-    return (
-      <ShownOnce
-        title="Copy this key now — it is not shown again"
-        body="Only its hash is stored, so nothing here or anywhere else can show it to you a second time. If you lose it, revoke this key and create another."
-      >
-        <CopyField value={minted} label="Copy your new key" />
-        <p className="ds-once-actions">
-          <button
-            type="button"
-            className="ds-btn ds-btn--secondary"
-            onClick={() => {
-              setMinted(null)
-              reset()
-              // ⚠️ `router.refresh()`, not `window.location.reload()` (cross-family review, agy). It
-              // re-runs the SERVER render, which is the property that matters — local state would be
-              // a second source of truth for "what has access", the one thing this page must not
-              // have two of — without flashing the page or diverging from Share links next door.
-              router.refresh()
-            }}
-          >
-            I&apos;ve saved it
-          </button>
-        </p>
-      </ShownOnce>
-    )
   }
 
   if (!open) {
@@ -189,67 +161,79 @@ export function NewKey({ slug }: { slug: string }) {
           {/* ── Step two: the ONE extra question this kind asks ──────────────────────────────
               Driven by `CREDENTIAL_MINT_FIELD`, so the form cannot offer a field the action does not
               accept, or omit one it requires. */}
+          {/* ⚠️ Every control below takes its name from the FIELD's `<label for>`, not from an
+              `aria-label` of its own. Two strings for one name is two strings that drift, and the one
+              a screen reader hears would be the one nobody proofreads. */}
           {CREDENTIAL_MINT_FIELD[kind] === 'environment' && (
             <Field
               label={FIELD_LABEL.environment}
-              hint="A snapshot key reads one environment and only one. Minting a second key is how you cover another."
+              controlId="new-key-environment"
+              hint="A snapshot key reads one environment and only one. Creating a second key is how you cover another."
             >
-              <span className="ds-select">
-                <select
-                  value={environment}
-                  onChange={(event) => setEnvironment(event.target.value)}
-                  aria-label={FIELD_LABEL.environment}
-                >
-                  {FLAG_ENVIRONMENTS.map((candidate) => (
-                    <option key={candidate} value={candidate}>
-                      {candidate}
-                    </option>
-                  ))}
-                </select>
-              </span>
+              {(control) => (
+                <span className="ds-select">
+                  <select
+                    {...control}
+                    value={environment}
+                    onChange={(event) => setEnvironment(event.target.value)}
+                  >
+                    {FLAG_ENVIRONMENTS.map((candidate) => (
+                      <option key={candidate} value={candidate}>
+                        {candidate}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              )}
             </Field>
           )}
 
           {CREDENTIAL_MINT_FIELD[kind] === 'source' && (
             <Field
               label={FIELD_LABEL.source}
+              controlId="new-key-source"
               hint="Give each service publisher its own name, such as “frontend” or “backend”, so you can revoke one without stopping the others."
             >
-              <input
-                className="ds-input"
-                value={source}
-                onChange={(event) => setSource(event.target.value)}
-                // A hint to the browser only — the action enforces the same pattern, because a
-                // Server Action is reachable without a browser at all.
-                pattern="[a-z][a-z0-9_-]{0,63}"
-                maxLength={64}
-                required
-                aria-label={FIELD_LABEL.source}
-              />
+              {(control) => (
+                <input
+                  {...control}
+                  className="ds-input"
+                  value={source}
+                  onChange={(event) => setSource(event.target.value)}
+                  // A hint to the browser only — the action enforces the same pattern, because a
+                  // Server Action is reachable without a browser at all.
+                  pattern="[a-z][a-z0-9_-]{0,63}"
+                  maxLength={64}
+                  required
+                />
+              )}
             </Field>
           )}
 
           {CREDENTIAL_MINT_FIELD[kind] === 'expiry' && (
             <Field
               label={FIELD_LABEL.expiry}
+              controlId="new-key-expiry"
               hint="This is the strongest credential here — it can change this project's tasks. Choosing an end date now is a decision you make once, instead of a revocation you have to remember."
             >
-              <span className="ds-select">
-                <select
-                  value={expiryDays === null ? 'never' : String(expiryDays)}
-                  onChange={(event) =>
-                    setExpiryDays(event.target.value === 'never' ? null : Number(event.target.value))
-                  }
-                  aria-label={FIELD_LABEL.expiry}
-                >
-                  {AGENT_KEY_EXPIRY_DAYS.map((days) => (
-                    <option key={days} value={String(days)}>
-                      In {days} day{days === 1 ? '' : 's'}
-                    </option>
-                  ))}
-                  <option value="never">Never — until it is revoked</option>
-                </select>
-              </span>
+              {(control) => (
+                <span className="ds-select">
+                  <select
+                    {...control}
+                    value={expiryDays === null ? 'never' : String(expiryDays)}
+                    onChange={(event) =>
+                      setExpiryDays(event.target.value === 'never' ? null : Number(event.target.value))
+                    }
+                  >
+                    {AGENT_KEY_EXPIRY_DAYS.map((days) => (
+                      <option key={days} value={String(days)}>
+                        In {days} day{days === 1 ? '' : 's'}
+                      </option>
+                    ))}
+                    <option value="never">Never — until it is revoked</option>
+                  </select>
+                </span>
+              )}
             </Field>
           )}
 
@@ -292,5 +276,42 @@ export function NewKey({ slug }: { slug: string }) {
         </form>
       )}
     </div>
+  )
+}
+
+/**
+ * The value, on a screen of its own.
+ *
+ * Rendered by `KeysSurface` in place of the whole page body — the head's trigger, the list and the
+ * empty state all go while it is up. Sprint contract #7: *the key value is shown once, on a screen
+ * of its own, with a copy button; never a value read off a table.*
+ *
+ * Attached to `NewKey` rather than exported separately so the two halves of one flow are one import
+ * and cannot drift apart in a refactor.
+ */
+NewKey.Reveal = function Reveal({ value, onDismiss }: { value: string; onDismiss: () => void }) {
+  const router = useRouter()
+  return (
+    <ShownOnce
+      title="Copy this key now — it is not shown again"
+      body="Only its hash is stored, so nothing here or anywhere else can show it to you a second time. If you lose it, revoke this key and create another."
+    >
+      <CopyField value={value} label="Copy your new key" />
+      <p className="ds-once-actions">
+        <button
+          type="button"
+          className="ds-btn ds-btn--secondary"
+          onClick={() => {
+            onDismiss()
+            // The list is server-rendered and the action revalidated its path, so this is what puts
+            // the new row on screen. Local state would be a second source of truth for "what has
+            // access", which is the one thing this page must not have two of.
+            router.refresh()
+          }}
+        >
+          I&apos;ve saved it
+        </button>
+      </p>
+    </ShownOnce>
   )
 }

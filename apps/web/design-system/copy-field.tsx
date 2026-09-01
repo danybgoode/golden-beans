@@ -49,6 +49,19 @@ export function CopyField({ value, label }: { value: string; label: string }) {
         <Icon name={copied ? 'check' : 'copy'} size={14} />
         {copied ? 'Copied' : 'Copy'}
       </button>
+      {/* ⚠️ **The confirmation reaches a screen reader through a LIVE REGION, not through the
+          button's label** (cross-family review, agy). `aria-label` is name-from-author and beats
+          name-from-content, so the button's accessible name stays "Copy this connector URL" whether
+          or not it currently says "Copied" — a sighted reader gets the confirmation and nobody else
+          does. That is the same mechanism the flags console recorded when an `aria-label` on a cell
+          made it announce itself as "Feature" instead of as the key it held.
+          The label stays: a page can carry two copy fields, and "Copy" twice is two
+          identically-named controls. What is added is the announcement.
+          `role="status"` rather than a name change, because renaming a control does not announce —
+          it is only heard if focus returns to it. */}
+      <span className="ds-visually-hidden" role="status">
+        {copied ? 'Copied to the clipboard' : ''}
+      </span>
     </div>
   )
 }

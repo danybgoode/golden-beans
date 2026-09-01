@@ -80,26 +80,26 @@ export function Button({
 
 // ── State pill — dot plus WORD, never colour alone ────────────────────────────────────────────
 
-export function Pill({
-  state,
-  children,
-  label,
-}: {
-  state: 'on' | 'off' | 'never'
-  children: ReactNode
-  /**
-   * ⚠️ Draw this as a LABEL rather than as a state.
-   *
-   * The three coloured pills mean on / off / never everywhere in this console, and borrowing one to
-   * caption something that is not a lifecycle state says something untrue — "what this key may do"
-   * is a fact about the kind, not a state it is in. `label` keeps the pill's shape and drops the
-   * claim: solid border, neutral ink, no dashed "nothing has happened here" reading.
-   */
-  label?: boolean
-}) {
-  return (
-    <span className={classes('ds-pill', label ? 'ds-pill--label' : `ds-pill--${state}`)}>{children}</span>
-  )
+/**
+ * A pill: a dot plus a WORD, never colour alone.
+ *
+ * ⚠️ **The two shapes are a UNION, so the meaningless combination cannot be typed** (cross-family
+ * review, agy). It used to take a required `state` and an optional `label`, which meant a caption
+ * pill had to pass a dummy `state="never"` that the component then ignored — a value with no meaning
+ * at the call site, and a reader of that call site has no way to know it is ignored.
+ *
+ * A STATE pill says what something IS: on / off / never, which mean the same three things everywhere
+ * in this console. A LABEL pill captions something that is not a lifecycle state at all — "what this
+ * key may do" is a fact about a kind — and borrowing one of the three colours for it would say
+ * something untrue. Solid border, neutral ink, no dashed "nothing has happened here" reading.
+ */
+export type PillProps =
+  | { label: true; state?: never; children: ReactNode }
+  | { label?: false; state: 'on' | 'off' | 'never'; children: ReactNode }
+
+export function Pill(props: PillProps) {
+  const className = props.label ? 'ds-pill--label' : `ds-pill--${props.state}`
+  return <span className={classes('ds-pill', className)}>{props.children}</span>
 }
 
 // ── Three-state switch ────────────────────────────────────────────────────────────────────────
@@ -496,10 +496,16 @@ export function StatLink({
 /**
  * A chip that captions a value — a type, a risk, an environment, an expiry.
  *
- * `label` becomes the `aria-label`, and it is how "Unclassified Unclassified" stopped being what a
- * screen reader heard on a row carrying both a type tag and a risk tag. It CAPTIONS the value
- * ("Type: Unclassified") rather than replacing it, which is the distinction that made the first
- * attempt — an `aria-label` on the CELL — announce a feature key as the word "Feature".
+ * `label` is how "Unclassified Unclassified" stopped being what a screen reader heard on a row
+ * carrying both a type tag and a risk tag. It CAPTIONS the value ("Kill switch — Type") rather than
+ * replacing it, which is the distinction that made the first attempt — an `aria-label` on the CELL —
+ * announce a feature key as the word "Feature".
+ *
+ * ⚠️ **It is hidden TEXT, not an `aria-label`** (cross-family review, agy). This was an `aria-label`
+ * on a bare `<span>`, and ARIA does not expose `aria-label` on an element with the `generic` role —
+ * so the caption this component exists to add was being dropped by the assistive tech it was added
+ * for, silently, while the markup looked correct. Hidden text is exposed everywhere, and it composes
+ * with the visible value rather than replacing it.
  */
 export function Tag({
   children,
@@ -511,8 +517,9 @@ export function Tag({
   label?: string
 }) {
   return (
-    <span className={classes('ds-tag', tone && `ds-tag--${tone}`)} aria-label={label}>
+    <span className={classes('ds-tag', tone && `ds-tag--${tone}`)}>
       {children}
+      {label === undefined ? null : <span className="ds-visually-hidden"> — {label}</span>}
     </span>
   )
 }
@@ -595,11 +602,12 @@ export function Col({
   colSpan?: number
   title?: string
 }) {
+  // ⚠️ The `main` column is the SAME class in a header and in a row — it is the flexible one, so it
+  // has no fixed width to switch between. This used to be a ternary with two identical branches
+  // (cross-family review, agy): dead code that read like a decision somebody had made.
   const className =
     width === 'main'
-      ? header
-        ? 'ds-row-main'
-        : 'ds-row-main'
+      ? 'ds-row-main'
       : width === 'state'
         ? header
           ? 'ds-col-state'

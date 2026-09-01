@@ -424,13 +424,19 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // exercised by the three legacy credential routes, which are gone.
     //
     // Turning it into `> 0` on an empty set would be asserting that some surface must always be
-    // missing from the rail, which is the opposite of what this console is for. So the guard it was
-    // buying is restated directly: the two branches must ACCOUNT for every inventory surface the
-    // rail could offer, which fails just as loudly if the loop stops entering either one.
-    expect(
-      checked.length + offRail.length + unreachable.length + notServing.length,
-      'the loop visited fewer routes than the inventory holds — it is asserting less than it looks'
-    ).toBe(PROJECT_ROUTE_INVENTORY.filter((surface) => surface.status !== 'flow-only').length)
+    // missing from the rail, which is the opposite of what this console is for.
+    //
+    // ⚠️ **My replacement was a TAUTOLOGY, and the fresh reviewer caught it** — in the epic that
+    // exists to kill guards that cannot fail. It summed the four arrays and compared them to the
+    // filter length; every path through the loop body pushes to exactly one of the four and the
+    // loop's bound IS that filter, so the sum always equalled it. It could not go red for the reason
+    // its message named, or for any other.
+    //
+    // What survives is the assertion below, which genuinely can: it NAMES which surfaces are
+    // expected to be off the rail. A surface that quietly leaves the rail changes this list, and a
+    // surface that quietly rejoins it changes it the other way. The count property the tautology was
+    // reaching for is already carried by `expect(checked.length).toBe(expected)` fifteen lines up,
+    // which is derived from the inventory independently of the loop.
     expect(
       offRail,
       'a surface left the rail without being written into OFF_RAIL_WHILE_CONSOLE_IS_LIT'

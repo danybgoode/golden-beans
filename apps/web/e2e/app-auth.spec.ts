@@ -48,6 +48,24 @@ test('the RETIRED credential routes redirect, and still never leak while unauthe
     const moved = await request.get(`/app/${retired}/${REAL_FOREIGN_SLUG}`, { maxRedirects: 0 })
     expect([307, 308], `/app/${retired} should be a permanent redirect`).toContain(moved.status())
     expect(moved.headers()['location']).toContain(`/app/setup/keys/${REAL_FOREIGN_SLUG}`)
+
+    // ⚠️ **The SECOND hop, asserted here rather than borrowed from the test above** (fresh reviewer,
+    // Nit). The comment claimed "both hops are asserted" while this test asserted one; the other was
+    // true only because a neighbouring test happened to hit the destination directly, and would have
+    // become false the moment that test was retargeted.
+    //
+    // Followed as a SECOND explicit request with `maxRedirects: 0` rather than by letting the client
+    // walk the chain: `maxRedirects: 1` throws on this route (there are two hops — 308 to Setup ›
+    // Keys, then 307 to /login, which is the correct shape), and any value that survives the walk
+    // lands on a rendered page whose intermediate `Location` header is gone. Two explicit requests
+    // assert two explicit hops.
+    const destination = moved.headers()['location']
+    const landed = await request.get(destination, { maxRedirects: 0 })
+    expect(
+      [302, 307],
+      `${retired} redirects to ${destination}, which answered ${landed.status()} to an anonymous caller`
+    ).toContain(landed.status())
+    expect(landed.headers()['location']).toContain('/login')
   }
 })
 

@@ -473,9 +473,7 @@ export default async function DesignSystemSpecimen({
                   description="API key — used by the storefront."
                 />
                 <Col width="state">
-                  <Pill state="never" label>
-                    Read the numbers
-                  </Pill>
+                  <Pill label>Read the numbers</Pill>
                 </Col>
                 <Col width="meta">
                   <Tag>production</Tag>

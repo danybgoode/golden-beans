@@ -204,22 +204,27 @@ export function ShareManager({
               </div>
             </Field>
 
-            <Field label="When it expires">
-              <span className="ds-select">
-                <select
-                  value={expiryDays === null ? '' : String(expiryDays)}
-                  onChange={(event) =>
-                    setExpiryDays(event.target.value === '' ? null : Number(event.target.value))
-                  }
-                  aria-label="When it expires"
-                >
-                  {EXPIRY_CHOICES.map((choice) => (
-                    <option key={choice.label} value={choice.days === null ? '' : String(choice.days)}>
-                      {choice.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
+            {/* The control takes its name from the FIELD's `<label for>`, not from an `aria-label`
+                of its own — two strings for one name is two strings that drift, and the one a screen
+                reader hears would be the one nobody proofreads. */}
+            <Field label="When it expires" controlId="new-share-expiry">
+              {(control) => (
+                <span className="ds-select">
+                  <select
+                    {...control}
+                    value={expiryDays === null ? '' : String(expiryDays)}
+                    onChange={(event) =>
+                      setExpiryDays(event.target.value === '' ? null : Number(event.target.value))
+                    }
+                  >
+                    {EXPIRY_CHOICES.map((choice) => (
+                      <option key={choice.label} value={choice.days === null ? '' : String(choice.days)}>
+                        {choice.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              )}
             </Field>
 
             <Field

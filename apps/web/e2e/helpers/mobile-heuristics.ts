@@ -98,8 +98,7 @@ export async function assertMobileClean(page: Page, label: string) {
        */
       const effectiveSize = (element: Element): { width: number; height: number } => {
         const rect = element.getBoundingClientRect()
-        let width = rect.width
-        let height = rect.height
+        let best = { width: rect.width, height: rect.height }
         for (const pseudo of ['::before', '::after'] as const) {
           const style = getComputedStyle(element, pseudo)
           // `content: none` means the pseudo-element is not generated at all.
@@ -107,12 +106,22 @@ export async function assertMobileClean(page: Page, label: string) {
           // Only an element the browser actually hit-tests counts. A `pointer-events: none`
           // decoration is paint, not a target.
           if (style.pointerEvents === 'none') continue
-          const pseudoWidth = Number.parseFloat(style.width)
-          const pseudoHeight = Number.parseFloat(style.height)
-          if (Number.isFinite(pseudoWidth)) width = Math.max(width, pseudoWidth)
-          if (Number.isFinite(pseudoHeight)) height = Math.max(height, pseudoHeight)
+          // ⚠️ **It must be POSITIONED and CENTRED on its element to be a target at all** (fresh
+          // reviewer, Minor). Reading the declared `width`/`height` alone would let somebody delete
+          // `position: absolute; inset: 50% auto auto 50%; transform: translate(-50%,-50%)` from
+          // `.ds-kebab::before`, leaving a 44px box laid out in normal flow beside a 26px control —
+          // and the sweep would stay green while the real target stayed 26px.
+          if (style.position !== 'absolute' && style.position !== 'fixed') continue
+          if (!style.transform.includes('matrix') && style.transform !== 'none') continue
+          const width = Number.parseFloat(style.width)
+          const height = Number.parseFloat(style.height)
+          if (!Number.isFinite(width) || !Number.isFinite(height)) continue
+          // ⚠️ **Both axes from the SAME pseudo-element.** Taking `Math.max` per axis across both
+          // would let a wide `::after` and a tall `::before` together certify a target that neither
+          // of them provides — two half-targets reported as one whole (fresh reviewer, Minor).
+          if (Math.min(width, height) > Math.min(best.width, best.height)) best = { width, height }
         }
-        return { width, height }
+        return best
       }
 
       return Array.from(document.querySelectorAll(selector))

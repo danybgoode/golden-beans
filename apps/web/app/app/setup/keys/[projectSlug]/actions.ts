@@ -6,7 +6,12 @@ import { mintFlagReadKey, revokeFlagReadKey } from '@/lib/flag-read-keys'
 import { mintFlagSyncKey, revokeFlagSyncKey } from '@/lib/flag-sync-keys'
 import { mintAgentWriteKey, revokeAgentWriteKey } from '@/lib/agent-write-keys'
 import { FLAG_ENVIRONMENTS, type FlagEnvironment } from '@/lib/flag-definition'
-import { AGENT_KEY_EXPIRY_DAYS, isCredentialKind, type CredentialKind } from '@/lib/credential-inventory'
+import {
+  AGENT_KEY_EXPIRY_DAYS,
+  FLAG_KEY_EXPIRY_DAYS,
+  isCredentialKind,
+  type CredentialKind,
+} from '@/lib/credential-inventory'
 import { recordAudit } from '@/lib/audit'
 
 // design-system-rails · Sprint 4, Story 4.5 — the credential lifecycle, on ONE page.
@@ -94,6 +99,11 @@ export async function mintFlagReadKeyAction(
     projectId,
     environment: safeEnvironment as FlagEnvironment,
     label: safeLabel,
+    // ⚠️ **NOT omitted.** The first draft left this out, the RPC inserted NULL, and a snapshot key
+    // became a credential that never expires — where the surface this page replaces minted it for 30
+    // days and said so on its own button. The form does not ask (the contract gives this kind ONE
+    // question, and it is the environment); the action applies the same default the old surface did.
+    expiresAt: new Date(Date.now() + FLAG_KEY_EXPIRY_DAYS * 86_400_000),
     actorUserId: userId,
   })
   // ⚠️ **NO `recordAudit` here, and that is not an omission.** `create_flag_read_key` is a
@@ -136,6 +146,8 @@ export async function mintFlagSyncKeyAction(
     projectId,
     label: safeLabel,
     source: safeSource,
+    // Same 30 days the old surface applied — see the note on the snapshot key above.
+    expiresAt: new Date(Date.now() + FLAG_KEY_EXPIRY_DAYS * 86_400_000),
     actorUserId: userId,
   })
   // No `recordAudit` — `create_flag_sync_key` writes `flag_sync_key_minted` itself. See the note on
@@ -194,10 +206,16 @@ export async function mintAgentWriteKeyAction(
 /**
  * ⚠️ **ONE action, FOUR scope-constrained lib calls — never a generic revoke-by-id.**
  *
- * `revokeApiKey` revokes ANY row scoped to the project, so a request carrying a snapshot key's id
- * would revoke it while the trail recorded `api_key_revoked`. The per-kind functions each constrain
- * the UPDATE to their own scope, which is what keeps the endpoint and the audit label from
- * disagreeing (the property `pod-report` S3's cross-review established on the share path).
+ * A generic revoke revokes ANY row scoped to the project, so a request carrying a share link's id
+ * would kill it while the trail recorded `api_key_revoked`. Each per-kind function constrains the
+ * UPDATE to its own scope, which is what keeps the endpoint and the audit label from disagreeing
+ * (the property `pod-report` S3's cross-review established on the share path).
+ *
+ * ⚠️ **That sentence was FALSE for `ingest` when it was first written** (fresh reviewer, Blocking).
+ * `revokeApiKey` had no scope predicate at all, so the one branch this docstring named as the danger
+ * was the one branch that had it — prose asserting a property the code lacked, on a credential
+ * path. `lib/api-keys.ts` carries the predicate now, and `revoke-scope.test.ts` pins all four
+ * against their scopes rather than against this comment.
  *
  * The `kind` is validated against the closed union before it is used, so an unknown value is a
  * refusal rather than a fallthrough to whichever branch is last.

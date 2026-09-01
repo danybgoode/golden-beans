@@ -8,10 +8,9 @@ import {
   isCurrentlyUsable,
   CREDENTIAL_KINDS_NOT_LISTED,
 } from '@/lib/credential-inventory'
-import { Callout, Empty, PageHead } from '@/design-system/primitives'
+import { Callout } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
-import { NewKey } from './new-key'
-import { KeysList } from './keys-list'
+import { KeysSurface } from './keys-surface'
 
 // Setup › Keys — the one page that owns this project's credentials.
 //
@@ -56,30 +55,11 @@ export default async function SetupKeysPage({ params }: { params: Promise<{ proj
   return (
     <ProductShell projectSlug={projectSlug} section="setup" railActive={'setup/keys'}>
       <main>
-        <PageHead
-          title="Keys"
-          lede={
-            <>
-              Everything that gives something else access to this project. These used to be four separate
-              pages — API keys, flag credentials, agent write keys, and the connector token.
-            </>
-          }
-          actions={<NewKey slug={projectSlug} />}
-        />
-
-        {rows.length === 0 ? (
-          <div className="ds-listcard">
-            <Empty
-              title="Nothing has a credential for this project yet"
-              body="Until something does, the SDK and POST /api/v1/track have nothing to authenticate with. Start with an API key — it is the one every project needs first."
-            />
-          </div>
-        ) : (
-          // ⚠️ The list is a client island, and the reason is in its own header: `ConfirmDialog` must
-          // stay mounted when it closes (native `close()` is what restores focus), so one dialog per
-          // row would mean N `<dialog>` elements in the DOM. One list, one dialog.
-          <KeysList slug={projectSlug} rows={rows} />
-        )}
+        {/* ⚠️ The head, the mint flow and the list are ONE client component — see `keys-surface.tsx`.
+            They share a single piece of state (is a credential on screen right now?), and sprint
+            contract #7's "on a screen of its own" is a claim about the whole page rather than about
+            one panel. */}
+        <KeysSurface slug={projectSlug} rows={rows} />
 
         <p className="ds-foot">
           {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An expired key is

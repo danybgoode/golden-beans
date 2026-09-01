@@ -12,7 +12,15 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { STATE_IDS } from './approved-states.mjs'
 import { PROJECT_ROUTE_INVENTORY } from '../lib/project-route-inventory.ts'
-import { OUT_OF_SCOPE_PAGES, ROUTE_MANIFEST, coverage, liveRows, type Sprint } from './route-manifest.ts'
+import {
+  OUT_OF_SCOPE_PAGES,
+  ROUTE_MANIFEST,
+  coverage,
+  coverageOf,
+  liveRows,
+  type CoverageRow,
+  type Sprint,
+} from './route-manifest.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const APP_DIR = join(HERE, '..', 'app')
@@ -198,6 +206,33 @@ test('coverage counts a route only when BOTH booleans are true', () => {
       `${row.route} claims to render from design-system/ with no approved reference state`
     )
   }
+
+  // ⚠️ **And the AND itself, on a CONSTRUCTED row** (fresh reviewer, Minor). The loop above makes a
+  // `rendersFromDesignSystem && referenceState === null` row unrepresentable in the real manifest —
+  // which is the right property to hold, and it also means `coverage()`'s conjunction is never
+  // exercised by real data. Dropping `referenceState !== null` from `coverage()` would leave every
+  // assertion in this file green, and the test's own name claims to check exactly that.
+  //
+  // So the conjunction is checked directly, against rows this test builds. A route with an approved
+  // picture of itself and no relationship to it is NOT covered: counting it would make the number
+  // measure intent rather than product, which is the failure the epic is named after.
+  const shape = {
+    page: 'app/page.tsx',
+    label: 'x',
+    frame: 'console',
+    seam: 'product-shell',
+    surface: null,
+    retiresIn: null,
+    deferred: null,
+    landsIn: 1,
+  } as const
+  const both = { ...shape, route: '/both', referenceState: 'today', rendersFromDesignSystem: true }
+  const stateOnly = { ...shape, route: '/state', referenceState: 'today', rendersFromDesignSystem: false }
+  const systemOnly = { ...shape, route: '/system', referenceState: null, rendersFromDesignSystem: true }
+  const counted = coverageOf([both, stateOnly, systemOnly] as CoverageRow[])
+  assert.equal(counted.complete, 1, 'coverage counted a route with only one of the two booleans')
+  assert.deepEqual(counted.covered, ['/both'])
+  assert.deepEqual(counted.outstanding.sort(), ['/state', '/system'])
 })
 
 test('a deferred row carries an owner and a date that has not passed', () => {

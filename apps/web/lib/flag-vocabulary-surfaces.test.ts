@@ -52,6 +52,7 @@ const CONSOLE_SURFACES = [
   '../app/app/setup/keys/[projectSlug]/page.tsx',
   '../app/app/setup/keys/[projectSlug]/new-key.tsx',
   '../app/app/setup/keys/[projectSlug]/keys-list.tsx',
+  '../app/app/setup/keys/[projectSlug]/keys-surface.tsx',
   '../app/app/setup/keys/[projectSlug]/actions.ts',
   // The retired route. It renders one `permanentRedirect` and nothing else — swept anyway, because
   // "this file has no copy today" is exactly the state a future edit changes without anyone noticing.

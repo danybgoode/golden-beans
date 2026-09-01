@@ -25,7 +25,8 @@ import { generateApiKey } from './api-keys'
 // ── Why revocation IS reimplemented here, when report-shares deliberately did not ──────────────
 // lib/report-shares.ts documents the opposite decision — it reuses `revokeApiKey` — and then a
 // cross-review finding forced `revokeShareLink` into existence anyway, for the reason that applies
-// here a fortiori: `revokeApiKey` will revoke ANY row in api_keys scoped to the project, so the
+// here a fortiori: `revokeApiKey` WOULD revoke ANY row in api_keys scoped to the project (it is
+// scoped to `ingest` since design-system-rails S4.5 — see its own comment), so the
 // caller's chosen ENDPOINT decides what the audit trail says. An operator searching
 // `agent_write_key_revoked` for "why did the agent stop writing?" must not find the answer filed
 // under `api_key_revoked`, and vice versa. The scope predicate makes the mislabel impossible rather
