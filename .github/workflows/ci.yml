@@ -477,25 +477,47 @@ jobs:
           SECURITY_SIMULATIONS_ENABLED: 'true'
           AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'true'
           SIGNUP_ENABLED: 'true'
-        # ⚠️ ONE positional filter, and `auth-setup` / `auth-teardown` are NOT named.
+          # ⚠️ **Explicitly OFF, and that is the point of writing them down.** The server this step
+          # talks to does not set either, so a suite that reads them would otherwise branch on an
+          # unset variable — and a skip nobody decided reads exactly like a suite that ran.
+          #
+          # The two authoring suites are INVERSES of each other, which is why this is a decision
+          # rather than a loss: `scenario-authoring-dark.authed.spec.ts` skips when the gate is ON,
+          # so with it off here that one RUNS and asserts the dark path; `scenario-authoring.authed`
+          # skips, and `npm run test:e2e:local -- --authed` is what exercises it (the local runner
+          # sets both gates on). Turning them on here would enable owner mutation surfaces on the CI
+          # server, which is a decision this sprint did not make.
+          #
+          # `console-shell.authed.spec.ts` already documents that these two are the gates that differ
+          # between the runner and this step, and that neither appears in any inventory row's `gate`
+          # field — so its rail count is unaffected either way.
+          SCENARIO_AUTHORING_ENABLED: 'false'
+          FLAG_DEFINITION_SYNC_ENABLED: 'false'
+        # ⚠️ `auth-setup` / `auth-teardown` are NOT named, and never were.
         # An earlier version listed all three files, and cross-review (agy) read that as forcing the
         # teardown to run as an ordinary test that could invalidate the session mid-suite. It does
         # not — `dependencies` and `teardown` are a project GRAPH, not a filter — but the argument
-        # only has to be made because the extra arguments were there. Verified by running it both
-        # ways: with the spec file alone, `auth-setup` still runs first and `auth-teardown` still
-        # runs last (7 passed, teardown reported after every assertion). Fewer arguments, nothing to
-        # explain.
+        # only has to be made because the extra arguments were there. With the file list gone (see
+        # below) there is nothing left to explain at all.
+        #
+        # ⚠️ **THE FILE LIST IS GONE — design-system-rails Sprint 5. The whole `authed` project runs.**
+        #
+        # Sprint 4 found `setup-surfaces.authed.spec.ts` outside this list, having said in its own
+        # header for a whole epic that "a suite outside the gate decays silently" while being the
+        # only automated check on Setup's connector status and member boundary. It added that one
+        # file — the instance — and left the class: SEVEN more authed suites were still outside,
+        # including `design-system`, `flag-console`, `command-center` and every scenario spec, and
+        # this sprint broke assertions in four of them without CI noticing.
+        #
+        # A hand-maintained list of tests is a list somebody must remember to extend on the day they
+        # add a suite, which is the day they are thinking about something else. `--project=authed`
+        # cannot go stale. Measured before switching: the full project is 121 tests in ~23s against a
+        # server that is already built and running for the step above, so the cost of closing this is
+        # a rounding error against the Chromium install that precedes it.
         run: |
           npx playwright test \
             --config=apps/web/playwright.config.ts \
-            --project=authed \
-            apps/web/e2e/console-visual.authed.spec.ts \
-            apps/web/e2e/design-system-specimen.authed.spec.ts \
-            apps/web/e2e/console-shell.authed.spec.ts \
-            apps/web/e2e/mobile-heuristics.authed.spec.ts \
-            apps/web/e2e/feature-tabs.authed.spec.ts \
-            apps/web/e2e/setup-surfaces.authed.spec.ts \
-            apps/web/e2e/setup-keys.authed.spec.ts
+            --project=authed
 
       - name: Upload the visual gate's screenshots
         if: always()
