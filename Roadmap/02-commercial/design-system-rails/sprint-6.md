@@ -8,9 +8,9 @@ than layered over.
 |---|---|---|
 | Coverage (`node scripts/design-coverage.mjs`) | 18 / 27 | **27 / 27** |
 | Routes the visual gate OPENS | 19 | **23** (+ 4 named siblings, all of which really open theirs) |
-| `.product-shell` rules in `globals.css` | 38 | **0** |
+| `.product-shell` rules in `globals.css` | **27** | **0** |
 | `.is-console .product-shell*` compensations in `console.css` | 16 | **0** |
-| `.auth-shell` / `.auth-form` rules | 10 | **0** |
+| `.auth-shell` / `.auth-form` rules | **12** | **0** |
 | Stylesheets painting the signed-in shell | 2 | **1** (`design-system/system.css`) |
 | `/s/[token]`'s gate coverage | a `coveredBy` label on an API-only spec | the gate **opens it** with a minted token |
 
@@ -559,7 +559,8 @@ for and what "wrong" looks like, because "it looked odd" is not a bug report any
 
 5. Go to https://goldenfrijoles.com/app/flags/miyagisanchez.
    → **Unchanged from Sprint 4.** This is the step that checks the Sweeper moved nothing: Story 6.4
-   deleted 38 rules from `globals.css` and 16 from `console.css` and re-declared the winning half in
+   deleted 39 rules from `globals.css` (27 `.product-shell` + 12 `.auth-*`) and 16 from `console.css`
+   and re-declared the winning half in
    `design-system/system.css`. The top bar is still 54px, the section row still 44px, the rail still
    sits at 98px. The visual gate asserts all four numbers, but a person looking at the page is the
    check that a *screenshot* cannot be wrong about.

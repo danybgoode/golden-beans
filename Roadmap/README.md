@@ -90,7 +90,7 @@ independently shippable slice of value.
   prototype's 32 states are hash-pinned in `APPROVED.md`, the tokens and stylesheet are **generated
   from it** (so "one definition" holds by construction rather than by discipline), and
   `MEASURED-SPEC.md` is emitted rather than typed. The old design is **deleted**, not layered over:
-  38 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
+  27 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
   and a guard fails if any of them return. ⏳ **Sprints 1–5 are live; Sprint 6 is merged-pending**
   (PR #135) — the poster says so rather than claiming ✅ ahead of the deploy, which is the one thing
   the poster rule forbids. There is no flag and no dark period: the merge IS the release, and

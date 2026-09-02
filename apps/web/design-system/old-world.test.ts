@@ -22,7 +22,7 @@ const WEB = join(HERE, '..')
  * ── What "the old world" is, precisely ────────────────────────────────────────────────────────
  * Three families of class name, all deleted by Story 6.4:
  *
- *   `.product-shell*` — the PRE-EPIC signed-in shell. `globals.css` held 38 rules for it and
+ *   `.product-shell*` — the PRE-EPIC signed-in shell. `globals.css` held 27 rules for it and
  *     `console.css` held 16 more whose entire content was undoing them. Two stylesheets painting
  *     one set of markup, one of them purely to cancel the other, is what the epic's Definition of
  *     Done means by *"the redesign is a layer on top of the thing it replaced"*. The console's half
