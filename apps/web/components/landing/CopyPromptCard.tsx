@@ -5,7 +5,8 @@ import { Icon } from '@/components/ui/Icon'
 
 // landing-redesign-v2 · Sprint 2, Story 2.2 — the "paste this into your agent" block.
 //
-// Sibling of CopyUrlField.tsx and the same shape: one client component on an otherwise
+// The same shape its sibling `CopyUrlField.tsx` had before design-system-rails Sprint 6
+// deleted it (`/install` moved to `design-system/copy-field.tsx`): one client component on an otherwise
 // server-rendered page. The difference is what it copies — an input's `value` there, a rendered
 // text node here.
 //

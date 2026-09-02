@@ -320,6 +320,8 @@ test.describe('the design system specimen', () => {
       ['Tab', '.ds-tab'],
       ['Stat', '.ds-stat'],
       ['Answer', '.ds-answer'],
+      ['Tiles', '.ds-tiles'],
+      ['Tile', '.ds-tile'],
       ['Table', '.ds-table'],
       ['TableHead', '.ds-table-head'],
       ['TableRow', '.ds-table-row'],

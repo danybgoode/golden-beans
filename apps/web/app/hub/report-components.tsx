@@ -6,7 +6,8 @@ import { isHonest, type MetricRow, type NotInstrumentedRow, type PodReportView }
 import { lensPolicy, type PodReportLens } from '@/lib/pod-report-lens'
 import type { OutcomeSection } from '@/lib/pod-outcome'
 import type { Freshness } from '@/lib/hub-freshness'
-import { FreshnessStamp } from './hub-components'
+import { HubProvenance } from './hub-components'
+import { Answer, Callout, Empty, PageHead } from '@/design-system/primitives'
 import styles from './hub.module.css'
 
 // pod-report · Sprint 2.5c — everything the Pod Report surface renders, kept OUT of page.tsx.
@@ -18,6 +19,33 @@ import styles from './hub.module.css'
 // the real markup — instead of asserting over HTTP against a shared tenant whose latest artifact
 // any other spec (or any developer's `--push`) can change underneath it. Report artifacts are
 // append-only and latest-wins, so an HTTP-only suite here would be permanently racy.
+//
+// ── design-system-rails · Sprint 6, Story 6.3 — HOW MUCH OF THIS MOVED, AND WHAT DID NOT ──────
+//
+// The report's SHELL is on the design system: the page head, the provenance stamp, the headline
+// answer, the caveats band, every section's heading and lede, the empty state, the refusal, and the
+// benchmark list. `hub.module.css` shrinks to the EVIDENCE TABLES — delivery metrics, the maturity
+// ladder, the not-instrumented panels and the outcome funnel — and that residue is **kept
+// deliberately**, which Story 6.3's acceptance allows in as many words ("retired into the system or
+// explicitly kept with a written reason").
+//
+// The reason, stated once so nobody has to re-derive it:
+//
+//   **The approved design has no state for any of it.** `hub-report` in
+//   `console-prototype.html` is PROSE — a provenance stamp, a `.doc` block and a callout. The real
+//   report is a dense evidence surface the prototype never drew, so porting its tables would mean
+//   inventing roughly forty visual decisions nobody approved, deep inside the sprint that closes an
+//   epic. That is the exact shape the epic amended itself to forbid: *"a builder shows twenty-three
+//   unreviewed screens deep into an expensive run, and the answer is no."*
+//
+// It is recorded where a number can see it, not only here: both `/hub/[projectSlug]/report` and
+// `/s/[token]` carry a `deferred` entry in `route-manifest.ts` with an owner and a decay date, and
+// `route-manifest.test.ts` fails once that date passes.
+//
+// ⚠️ **`hub.module.css` is a CSS MODULE, which is why the residue is safe rather than merely
+// tolerated.** Its class names are hashed per file, so the collision hazard D3 exists to prevent —
+// landing rules reaching the console through a shared `.tag` or `.note` — cannot happen here in
+// either direction. What remains is a second set of visual DECISIONS, not a second cascade.
 //
 // ── The rule the whole file is arranged around ────────────────────────────────────────────────
 // Decision 4 of the epic: speed is never rendered alone. `PodReportBody` owns the `isHonest` guard
@@ -75,18 +103,20 @@ const STATUS_CLASS = {
 /** Mirrors EmptyHubState, for the Pod Report's own rail. Friendly, and it hands over the command. */
 export function EmptyPodReportState({ projectSlug }: { projectSlug: string }) {
   return (
-    <div className={styles.emptyState} data-testid="pod-report-empty-state">
-      <p className={styles.emptyStateKicker}>No pod report pushed yet</p>
-      <h2>The beans are ready; no report is planted yet.</h2>
-      <p>
-        <code>{projectSlug}</code> has never pushed a <code>pod_report</code> artifact, so there is nothing to
-        render — an unplanted plot, not a broken page and not a row of zeros.
-      </p>
-      <p>Compute and push one from a checkout of the repo being measured:</p>
-      <pre className={styles.emptyStateCmd}>
-        <code>node scripts/pod-report.mjs --repo ~/dobby/medusa-bonsai --push</code>
-      </pre>
-      <p className="note">Once a push lands, this page renders it automatically — no redeploy needed.</p>
+    <div className="ds-listcard" data-testid="pod-report-empty-state">
+      <Empty
+        title="No pod report pushed yet"
+        body={
+          <>
+            <code className="ds-mono">{projectSlug}</code> has never pushed a{' '}
+            <code className="ds-mono">pod_report</code> artifact, so there is nothing to render — an unplanted
+            plot, not a broken page and not a row of zeros. Compute and push one from a checkout of the repo
+            being measured with{' '}
+            <code className="ds-mono">node scripts/pod-report.mjs --repo &lt;checkout&gt; --push</code>, and
+            this page renders it automatically. No redeploy needed.
+          </>
+        }
+      />
     </div>
   )
 }
@@ -110,19 +140,21 @@ export function RefusedPodReport({ view, projectSlug }: { view: PodReportView; p
   }
 
   return (
-    <div className={styles.refuseCard} data-testid="pod-report-refused">
-      <p className={styles.refuseKicker}>Refusing to render</p>
-      <h2>This artifact’s caveats did not survive — refusing to render it as a report.</h2>
-      <p>
+    <div className="ds-card" data-testid="pod-report-refused">
+      <span className="ds-label">Refusing to render</span>
+      <h2 className="ds-refuse-title">
+        This artifact’s caveats did not survive — refusing to render it as a report.
+      </h2>
+      <p className="ds-lede">
         The latest <code>pod_report</code> artifact for <code>{projectSlug}</code> carries numbers but is
         missing {missing.length > 0 ? missing.join(' and ') : 'part of its honesty layer'}. A report that
         shows speed without what is <em>not</em> measured beside it is the thing this surface was built not to
         produce, so no number from this artifact is shown at all.
       </p>
-      <p className="note">
+      <Callout tone="warn">
         This is a data-integrity fault, not an empty state. Re-run the computation and push again — the stored
         artifact is immutable, so the fix is a new version, never an edit.
-      </p>
+      </Callout>
     </div>
   )
 }
@@ -304,11 +336,11 @@ export function MaturityLadder({
   const { verdict, ladder, rows, notInstrumented } = maturity
 
   return (
-    <section className={styles.reportSection} aria-labelledby="maturity-heading">
-      <h2 className={styles.reportHeading} id="maturity-heading">
+    <section className="ds-report-section" aria-labelledby="maturity-heading">
+      <h2 className="ds-report-heading" id="maturity-heading">
         Where this pod sits on the ladder
       </h2>
-      <p className={styles.reportLede}>
+      <p className="ds-lede">
         Scored criterion by criterion against a published external scale, from this repository’s own git and
         pull-request history. No self-declared answers: what cannot be derived is marked not instrumented
         rather than assumed.
@@ -390,7 +422,7 @@ export function MaturityLadder({
       )}
 
       {!showRows && rows.length === 0 && (
-        <p className={styles.emptyStateInline} style={{ marginTop: 14 }}>
+        <p className="ds-hint">
           Criterion-by-criterion detail is not part of this view. The verdict and its coverage gap above are
           shown in full.
         </p>
@@ -417,11 +449,11 @@ function pct(v: number | null): string {
 /** "Shipped AND it mattered" — or the honest admission that we cannot tell yet. */
 export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
   return (
-    <section className={styles.reportSection} aria-labelledby="outcome-heading">
-      <h2 className={styles.reportHeading} id="outcome-heading">
+    <section className="ds-report-section" aria-labelledby="outcome-heading">
+      <h2 className="ds-report-heading" id="outcome-heading">
         Shipped — and did it matter?
       </h2>
-      <p className={styles.reportLede}>
+      <p className="ds-lede">
         Delivery metrics say “shipped fast”. This half says whether anything moved, read live from the
         engine’s own funnel and North-Star queries at the moment you loaded this page — not frozen into the
         artifact at computation time.
@@ -432,14 +464,14 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
           not wired the engine to its product yet. Rendering an outage as the second is how a broken
           dashboard reassures you (Roadmap/LEARNINGS.md, the zero that pages nobody). */}
       {outcome.unavailable ? (
-        <p className={styles.emptyStateInline} data-testid="outcome-unavailable">
+        <p className="ds-hint" data-testid="outcome-unavailable">
           <strong>The outcome layer could not be read just now.</strong> This is a failure to reach the
           engine’s own funnel queries — <em>not</em> a report of zero adoption, and not “not instrumented”
           either. The delivery half above is unaffected and still accurate; this half is simply missing, and
           says so rather than showing you a zero.
         </p>
       ) : outcome.rows.length === 0 ? (
-        <p className={styles.emptyStateInline} data-testid="outcome-empty">
+        <p className="ds-hint" data-testid="outcome-empty">
           No features are registered for <code>{outcome.tenant}</code>, so there is no adoption to read. That
           is “not instrumented”, not zero adoption — the two look nothing alike and must not render alike.
         </p>
@@ -484,7 +516,7 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
       )}
 
       {outcome.northStar && (
-        <div className={styles.northStarCard} data-testid="outcome-north-star">
+        <div className="ds-card" data-testid="outcome-north-star">
           <h3>
             North Star —{' '}
             {outcome.northStar.unavailable
@@ -528,10 +560,32 @@ export function OutcomeSectionView({ outcome }: { outcome: OutcomeSection }) {
 // ── The whole surface ─────────────────────────────────────────────────────────────────────────
 
 /**
+ * What the artifact was computed FROM, as one sentence for the provenance stamp.
+ *
+ * ⚠️ Lens-aware, and that is not cosmetic. `showSourceCounts` is false for the investor lens, which
+ * is the policy `pod-report-lens.ts` owns — so this returns the honest generic phrase rather than a
+ * count that lens is not entitled to. It replaced a `.sourceStrip` list that rendered the same
+ * fields under the same condition; folding it into the stamp means one line says where the numbers
+ * came from instead of two elements saying halves of it.
+ */
+function sourceSummary(view: PodReportView, policy: ReturnType<typeof lensPolicy>): string {
+  if (!policy.showSourceCounts) return "the measured repository's own history"
+  const parts: string[] = []
+  if (view.source.repo) parts.push(view.source.repo)
+  if (view.source.commits !== undefined) parts.push(`${view.source.commits} commits`)
+  if (view.source.mergedPrs !== undefined) parts.push(`${view.source.mergedPrs} merged PRs`)
+  if (view.source.epics !== undefined) parts.push(`${view.source.epics} epics`)
+  if (view.source.windowDays !== undefined) parts.push(`${view.source.windowDays} days`)
+  // An artifact whose source block is empty says so rather than rendering "from ." — the same rule
+  // every absence on this page follows: name which nothing it is.
+  return parts.length === 0 ? 'an artifact carrying no source block' : parts.join(' · ')
+}
+
+/**
  * The Pod Report body — the single component allowed to put a number on this surface.
  *
  * Order is load-bearing, not aesthetic:
- *   1. the agent window (the frame device — an agent asking the engine, getting the real answer)
+ *   1. the page head, the provenance stamp and the one-sentence answer
  *   2. the caveats, ABOVE every number
  *   3. speed and the not-instrumented rows, side by side in one section
  *   4. composition · the ladder · the outcome half
@@ -562,90 +616,57 @@ export function PodReportBody({
 
   return (
     <>
-      {/* The agent-window frame device (references/design-direction.md), same mechanic as the
-          journey and horizon views: an agent asks the engine for the pod's numbers and the real,
-          current answer comes back. The headline it prints is deliberately the verdict AND its
-          coverage gap — the pairing starts at the top of the page, not in the ladder section. */}
-      <div className="agent-win">
-        <div className="agent-bar">
-          <span className="agent-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <span>growth-engine · pod report</span>
-          <span className="agent-chip">{freshness.tone === 'stale' ? '● stale' : '● live'}</span>
-        </div>
-        <div className="agent-body">
-          <p className="you">
-            <b>you ▸</b> how is the {projectSlug} pod actually performing?
-          </p>
-          <div className="tool">
-            <b>getPodReport</b> report_artifacts · kind=pod_report · v{artifactVersion} · lens={lens}
-          </div>
+      {/* ── The head, the stamp and the ANSWER ────────────────────────────────────────────────
+          The `agent-win` device is gone with the rest of the hub's private chrome. What replaces it
+          is the approved shape every hub surface now opens with: a page head, one provenance line
+          saying how stale this is and what it came from, and a single-sentence answer.
+
+          The answer is deliberately the verdict AND its coverage gap. The pairing starts at the TOP
+          of the page, not down in the ladder section — a reader who never scrolls has still been
+          told what is not measured. */}
+      <PageHead
+        title="Pod report"
+        lede={`How the ${projectSlug} pod is actually performing, read from its own git and pull-request history.`}
+      />
+      <HubProvenance freshness={freshness} from={sourceSummary(view, policy)} version={artifactVersion}>
+        <span className="ds-prov-sep" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          lens <b>{lens}</b>
+        </span>
+      </HubProvenance>
+
+      <Answer>
+        <span data-testid="agent-headline">
           {verdict ? (
-            <p data-testid="agent-headline">
-              Operates at <b className="data">step {verdict.step}</b> — {verdict.stepLabel} ·{' '}
-              <b className="data">{verdict.metCriteria}</b>/<b className="data">{verdict.totalCriteria}</b>{' '}
-              criteria met with evidence · <b className="data">{verdict.notInstrumentedCount}</b> not
-              instrumented
-            </p>
+            <>
+              Operates at <b>step {verdict.step}</b> — {verdict.stepLabel} · <b>{verdict.metCriteria}</b>/
+              <b>{verdict.totalCriteria}</b> criteria met with evidence ·{' '}
+              <b>{verdict.notInstrumentedCount}</b> not instrumented.
+            </>
           ) : (
-            <p data-testid="agent-headline">
-              This artifact carries no ladder verdict — the delivery numbers below stand on their own.
-            </p>
+            <>This artifact carries no ladder verdict — the delivery numbers below stand on their own.</>
           )}
-          {policy.showSourceCounts && Object.keys(view.source).length > 0 && (
-            <ul className={styles.sourceStrip} aria-label="Measurement window">
-              {view.source.repo && (
-                <li className={styles.sourceItem}>
-                  repo <b>{view.source.repo}</b>
-                </li>
-              )}
-              {view.source.commits !== undefined && (
-                <li className={styles.sourceItem}>
-                  <b>{view.source.commits}</b> commits
-                </li>
-              )}
-              {view.source.epics !== undefined && (
-                <li className={styles.sourceItem}>
-                  <b>{view.source.epics}</b> epics
-                </li>
-              )}
-              {view.source.mergedPrs !== undefined && (
-                <li className={styles.sourceItem}>
-                  <b>{view.source.mergedPrs}</b> merged PRs
-                </li>
-              )}
-              {view.source.windowDays !== undefined && (
-                <li className={styles.sourceItem}>
-                  over <b>{view.source.windowDays}</b> days
-                </li>
-              )}
-            </ul>
-          )}
-          <FreshnessStamp freshness={freshness} />
-          <p className="note">{policy.audienceNote}</p>
-        </div>
-      </div>
+        </span>{' '}
+        {policy.audienceNote}
+      </Answer>
 
       {/* Caveats sit ABOVE the numbers. Sprint 2.5c's acceptance is that they are on the page and
           not in a footnote; putting them first makes that true for a reader who never scrolls. */}
       {view.caveats.length > 0 && (
-        <div className={styles.caveatBand} data-testid="pod-report-caveats">
-          <p className={styles.caveatBandTitle}>Read these first</p>
-          <ul className={styles.caveatList}>
+        <div className="ds-caveats" data-testid="pod-report-caveats" role="note">
+          <span className="ds-label">Read these first</span>
+          <ul className="ds-doc-list">
             {view.caveats.map((caveat) => (
-              <li key={caveat} className={styles.caveatItem}>
-                {caveat}
-              </li>
+              <li key={caveat}>{caveat}</li>
             ))}
           </ul>
         </div>
       )}
 
       {view.empty ? (
-        <p className={styles.emptyStateInline} data-testid="pod-report-no-delivery" style={{ marginTop: 24 }}>
+        <p className="ds-hint" data-testid="pod-report-no-delivery">
           The latest pushed artifact carries no delivery section, so there are no delivery numbers to render.
           Re-run <code>scripts/pod-report.mjs</code> against a real checkout and push again.
         </p>
@@ -655,16 +676,16 @@ export function PodReportBody({
               The gaps are a COLUMN of the speed section, not a block underneath it. Two grid
               children in one <section>: the table cannot be scrolled past without the panel that
               qualifies it entering the viewport at the same time. */}
-          <section className={styles.reportSection} aria-labelledby="speed-heading">
-            <h2 className={styles.reportHeading} id="speed-heading">
+          <section className="ds-report-section" aria-labelledby="speed-heading">
+            <h2 className="ds-report-heading" id="speed-heading">
               How fast — and what that does <em>not</em> tell you
             </h2>
-            <p className={styles.reportLede}>
+            <p className="ds-lede">
               Every number here is computed from this repository’s own git and pull-request history. Nothing
               is estimated, and nothing on the right-hand side is an apology: those are the questions this
               dataset cannot answer, each with the guardrail that would close it.
             </p>
-            <div className={styles.pairing}>
+            <div className="ds-pairing">
               <MetricTable
                 caption="Delivery — computed, not claimed"
                 rows={view.speed}
@@ -680,11 +701,11 @@ export function PodReportBody({
           </section>
 
           {policy.showComposition && view.composition.length > 0 && (
-            <section className={styles.reportSection} aria-labelledby="composition-heading">
-              <h2 className={styles.reportHeading} id="composition-heading">
+            <section className="ds-report-section" aria-labelledby="composition-heading">
+              <h2 className="ds-report-heading" id="composition-heading">
                 Who wrote it
               </h2>
-              <p className={styles.reportLede}>
+              <p className="ds-lede">
                 A composition fact about how the work was produced. It is not a productivity claim and cannot
                 be read as one — a co-author trailer records participation, never contribution.
               </p>
@@ -705,21 +726,21 @@ export function PodReportBody({
       <OutcomeSectionView outcome={outcome} />
 
       {view.benchmarks.length > 0 && (
-        <section className={styles.reportSection} aria-labelledby="benchmarks-heading">
-          <h2 className={styles.reportHeading} id="benchmarks-heading">
+        <section className="ds-report-section" aria-labelledby="benchmarks-heading">
+          <h2 className="ds-report-heading" id="benchmarks-heading">
             The benchmarks these numbers are read against
           </h2>
-          <p className={styles.reportLede}>
+          <p className="ds-lede">
             Our side is computed, not claimed. Their side is cited and linked, never republished wholesale —
             follow the link for the published figures.
           </p>
-          <ul className={styles.benchList} data-testid="pod-report-benchmarks">
+          <ul className="ds-benchlist" data-testid="pod-report-benchmarks">
             {view.benchmarks.map((b) => (
-              <li key={b.id} className={styles.benchItem}>
+              <li key={b.id} className="ds-benchitem">
                 <a href={b.url} target="_blank" rel="noreferrer">
                   {b.label}
                 </a>
-                <p className={styles.benchNote}>{b.note}</p>
+                <p className="ds-hint">{b.note}</p>
               </li>
             ))}
           </ul>

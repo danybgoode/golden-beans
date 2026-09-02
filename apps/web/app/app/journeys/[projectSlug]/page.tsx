@@ -13,7 +13,7 @@ import {
 import { JourneyManager } from './journey-manager'
 import { JourneyRows } from './journey-rows'
 import { ProductShell } from '@/components/product/ProductShell'
-import { Answer, PageHead } from '@/design-system/primitives'
+import { Answer, PageHead, Tile } from '@/design-system/primitives'
 
 // design-system-rails · Sprint 5, Story 5.5 — reference state `measure-journeys`.
 //
@@ -71,14 +71,14 @@ export default async function JourneysPage({ params }: { params: Promise<{ proje
 
         {rows.length === 0 ? null : (
           <div className="ds-tiles">
-            <Tile label="Active" value={summary.active} detail="definitions counting people" />
+            <Tile label="Active" value={String(summary.active)} detail="definitions counting people" />
             <Tile
               label="Drafts waiting"
-              value={summary.draftsWaiting}
+              value={String(summary.draftsWaiting)}
               detail="not counting anyone yet"
               tone={summary.draftsWaiting > 0 ? 'warn' : undefined}
             />
-            <Tile label="Defined" value={rows.length} detail="including drafts and superseded" />
+            <Tile label="Defined" value={String(rows.length)} detail="including drafts and superseded" />
           </div>
         )}
 
@@ -99,28 +99,5 @@ export default async function JourneysPage({ params }: { params: Promise<{ proje
         </details>
       </main>
     </ProductShell>
-  )
-}
-
-/** A summary tile. Numeric only — every figure here is a count this page genuinely read. */
-function Tile({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string
-  value: number
-  detail: string
-  tone?: 'up' | 'warn'
-}) {
-  return (
-    <div className="ds-tile">
-      <p className="ds-tile-label">{label}</p>
-      <p className="ds-tile-value" data-tone={tone}>
-        {value}
-      </p>
-      <p className="ds-tile-detail">{detail}</p>
-    </div>
   )
 }

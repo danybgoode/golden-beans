@@ -175,8 +175,35 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // named after.
   const now = coverage(1)
   assert.equal(now.total, 30)
-  assert.ok(now.hasReferenceState > now.complete, 'reference states exist ahead of the work')
+  // ⚠️ **`>=`, not `>` — and the change is the whole point of Sprint 6.** This line asserted
+  // `hasReferenceState > complete` under the message "reference states exist ahead of the work",
+  // which was true for five sprints and is FALSE at epic close by design: the work caught up. The
+  // three routes Story 4.5 retired are the only rows without a state, and they are excluded from the
+  // sprint-6 denominator, so the two counts meet.
+  //
+  // What survives every sprint is the direction: a route cannot be COVERED without an approved state
+  // to be covered against. That is a property of `coverage()`'s conjunction rather than a fact about
+  // which sprint we are in — which is what the old line was, dressed as an invariant. Same defect
+  // this test's own next paragraph records about `complete === 0`.
+  assert.ok(
+    now.hasReferenceState >= now.complete,
+    'a route is counted as covered with no approved state to be measured against'
+  )
   assert.equal(now.outstanding.length, now.total - now.complete)
+
+  // ── Story 6.5's headline, asserted rather than printed ──────────────────────────────────────
+  // `scripts/design-coverage.mjs` prints 27/27 and the ratchet stops it falling. Neither says the
+  // finish line was actually REACHED — the ratchet is satisfied by 26/27 forever. This is the line
+  // that goes red if the epic closes short, and it is deliberately a literal: the epic's Definition
+  // of Done names 27, and a number derived from the manifest would agree with the manifest by
+  // construction whatever the manifest said.
+  const atClose = coverage(6)
+  assert.equal(atClose.total, 27, 'the epic-close denominator is not the 27 the D13 ledger computes')
+  assert.equal(
+    atClose.complete,
+    27,
+    `the epic closes at ${atClose.complete}/27 — outstanding: ${atClose.outstanding.join(', ')}`
+  )
 
   // ⚠️ **This used to assert `complete === 0`, "nothing renders from design-system/ in Sprint 1".**
   // It was never testing what its message said. `coverage(sprint)` filters by `retiresIn` — which

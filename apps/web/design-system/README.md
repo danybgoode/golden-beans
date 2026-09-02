@@ -12,6 +12,32 @@ The rule, stated once so it survives this epic too:
 > **The design lives in the product, at a product-level path, and it outlives the epic that
 > produced it.** A future epic extends what is here. It does not open a new `design/` folder.
 
+## The behaviour layer, and why the pointer only runs one way
+
+`references/ux-guidelines.md` is the **behaviour** layer to this directory's **visual** one: what
+the interface owes the person using it, independent of colour and type — the ten-state taxonomy
+`system.css` implements, the "never make someone wonder" rule, the split between *disabled* and
+*unbuilt* that this system draws differently on purpose.
+
+⚠️ **It does not point back here, and that is deliberate rather than an omission.** Sprint 6's
+Story 6.5 asked for a pointer added to the top of that file. It is a **byte-mirrored handoff** —
+`check-design-drift.mjs` asserts it is identical to
+`references/golden-beans-design-system-proposal/ux-guidelines.md`, the artefact as it was supplied —
+so adding the pointer meant either breaking a shipped guard or editing what the designer handed
+over and calling it unchanged. Neither is worth a cross-reference.
+
+So the link is one-way, from the side that can carry it. If you arrived from that document: this
+directory is the home, and `CONSOLE-CONTRACT.md` beside it is the binding half.
+
+⚠️ **One thing in that document is now stale and cannot be fixed there.** Its copy-feedback note says
+*"`CopyUrlField.tsx` already does exactly this — use it as the model"*. `design-system-rails` Story
+6.4 **deleted** that component: `/install` was its last caller and it moved to
+`design-system/copy-field.tsx`, which does the same thing plus the two the console needs — the value
+WRAPS (a credential shown once must not sit on one horizontally-scrollable line) and the
+confirmation reaches a screen reader through a live region rather than through the button's name.
+**Read `copy-field.tsx` where that document says `CopyUrlField.tsx`.** Recorded here because the
+mirror is byte-asserted and correcting it there would break the guard that keeps it honest.
+
 ## What is here
 
 | File | Kind | What it is |

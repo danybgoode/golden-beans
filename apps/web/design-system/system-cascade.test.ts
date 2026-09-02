@@ -238,8 +238,52 @@ function selectors(): string[] {
   return ruleList().flatMap(({ selector }) => splitSelectorList(selector))
 }
 
+/**
+ * Is this selector inside the `.ds` scope, whichever form it is written in?
+ *
+ * `.ds`, `.ds …` — and `:where(.ds …) …`, which is the same containment written at ZERO
+ * specificity. The third form arrived in Sprint 6 for the shell's form-control reset (see the
+ * exemption in the next test for why that rule must be out-specifiable), and a scope test that read
+ * only the literal prefix would have called a correctly-scoped rule unscoped.
+ *
+ * ⚠️ **EVERY comma-part of the `:where()` head must be scoped, and checking the PREFIX alone made
+ * this guard weaker than the one it replaced** (fresh reviewer, round 2, Major — mutation-verified).
+ *
+ * `splitSelectorList` only splits TOP-LEVEL commas, so a comma *inside* `:where(…)` is invisible to
+ * it. `:where(.ds .ds-shell, .totally-unscoped) .a .b` therefore arrived here as one string starting
+ * `:where(.ds `, was declared scoped, and cleared the (0,2,0) floor too (`:where()` contributes 0,
+ * `.a .b` contributes 2) — an entirely unscoped rule passing BOTH guards. Written the plain way,
+ * `.ds .ds-shell, .totally-unscoped` would have been split at the top-level comma and the naked part
+ * flagged; the `:where()` form is what hid the comma.
+ *
+ * So the head is parsed and every part of it is checked. A pattern was the loosening; this is not.
+ */
+function isDsScoped(selector: string): boolean {
+  if (selector === '.ds' || selector.startsWith('.ds ')) return true
+  if (!selector.startsWith(':where(')) return false
+
+  // The balanced contents of the leading `:where(…)`. Balanced rather than "up to the first `)`",
+  // because `:where(.ds :not(.x))` is legal and a naive scan would truncate it into nonsense.
+  let depth = 0
+  let end = -1
+  for (let index = ':where('.length - 1; index < selector.length; index += 1) {
+    if (selector[index] === '(') depth += 1
+    else if (selector[index] === ')') {
+      depth -= 1
+      if (depth === 0) {
+        end = index
+        break
+      }
+    }
+  }
+  if (end === -1) return false
+  const head = selector.slice(':where('.length, end)
+  // Recursive, so `:where(:where(.ds x), .naked)` cannot smuggle a part through either.
+  return splitSelectorList(head).every((part) => isDsScoped(part))
+}
+
 test('every selector in system.css is scoped to .ds — the claim layout.tsx makes about it', () => {
-  const unscoped = selectors().filter((selector) => selector !== '.ds' && !selector.startsWith('.ds '))
+  const unscoped = selectors().filter((selector) => !isDsScoped(selector))
   assert.deepEqual(
     unscoped,
     [],
@@ -270,6 +314,7 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
     )
     .filter(({ spec }) => spec[0] === 0 && spec[1] < 2)
     .filter(({ selector, body }) => !exempt(selector, body))
+    .filter(({ selector }) => selector !== ZERO_SPECIFICITY_BASE)
 
   assert.deepEqual(
     weak.map(({ selector, spec }) => `${selector} is (${spec.join(',')})`),
@@ -288,6 +333,97 @@ test('the .ds scope actually buys specificity — every primitive rule is at lea
     1,
     'more than one rule opts out of the specificity floor with `:where()` + `!important` — that is ' +
       'a pattern now, not an exception, and the floor stops meaning anything'
+  )
+})
+
+/**
+ * ⚠️ **A SECOND deliberate exception, and it is narrower still: the shell's form-control reset.**
+ *
+ * `:where(.ds .ds-shell) :where(input, textarea, select)` is (0,0,0) ON PURPOSE. It is a BASE — it
+ * supplies a width, a min-height and a ground to any control that has no rule of its own — and its
+ * entire job is to be beaten by every primitive and every console rule. The version that shipped
+ * before this epic, `:where(.product-shell, .auth-shell) :where(input, …)`, was (0,0,0) for the
+ * same reason.
+ *
+ * Writing it `.ds .ds-shell :where(input, …)` instead scores (0,2,0) — `:where()` zeroes only its
+ * OWN argument — and in the last-loaded stylesheet that silently beat `.ds .ds-input`,
+ * `.is-console .text-input` and `.is-console .command-palette__input` on ties. That is what the
+ * floor below is for, pointing the other way: a base reset that CANNOT be out-specified is the
+ * defect, not the fix.
+ *
+ * Pinned by exact selector rather than by a pattern, so a second zero-specificity rule cannot join
+ * it without somebody deciding to add it here.
+ */
+const ZERO_SPECIFICITY_BASE = ':where(.ds .ds-shell) :where(input, textarea, select)'
+
+test('the shell base reset is still written at ZERO specificity', () => {
+  // ⚠️ **The floor has no CEILING, so nothing pinned the one rule that must stay BELOW it** (fresh
+  // reviewer, round 2, Minor — mutation-verified: appending `.ds .ds-shell :where(input) {…}`, the
+  // exact broken form, left all five tests green).
+  //
+  // `ZERO_SPECIFICITY_BASE` exempts that selector from the floor. It does not require it to EXIST,
+  // so rewriting it back to `.ds .ds-shell :where(input, …)` — (0,2,0), because `:where()` zeroes
+  // only its own argument — silently re-beats `.ds .ds-input` and the ⌘K palette's input on every
+  // console route, with CI green. That is the defect the exemption was created for, walking back in
+  // through the exemption's own door.
+  //
+  // The literal string, because the whole point is the exact form. A regex permissive enough to
+  // accept "some rule about shell inputs" would accept the broken one.
+  // ⚠️ Compared on WHITESPACE-NORMALISED source, not on the raw bytes. `:where(.ds  .ds-shell)` with
+  // two spaces is the same selector to CSS and a different string to `includes()`, so the byte-exact
+  // form went red on code that was correct — a guard blocking correct work with a wrong diagnosis,
+  // which is how a guard gets switched off rather than obeyed (found by mutation, round 3).
+  const normalise = (text: string) => text.replace(/\s+/g, ' ')
+  const css = normalise(withoutKeyframes(withoutComments(RAW_SYSTEM_CSS)))
+  assert.ok(
+    css.includes(normalise(ZERO_SPECIFICITY_BASE)),
+    `system.css no longer contains \`${ZERO_SPECIFICITY_BASE}\`. If the shell's form-control reset ` +
+      'was rewritten, check its specificity: at (0,2,0) in the last-loaded stylesheet it beats ' +
+      '`.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` on ties.'
+  )
+
+  // ⚠️ **PRESENCE IS NOT EFFECTIVENESS, and then BANNING A SPELLING IS NOT BANNING A FORM.**
+  //
+  // Round 4: `includes()` proves the correct selector is in the file and says nothing about a
+  // COMPETING rule beside it — appending `.ds .ds-shell :where(input, textarea, select) { … }` left
+  // every test green. Round 5: the regex that replaced it (`/\.ds\s+\.ds-shell\s+:where\(\s*input/`)
+  // required `input` to be the FIRST argument and the literal ancestor pair, so
+  // `.ds .ds-shell :where(textarea, input, select)` — same specificity, same defect — walked past it.
+  // Three rounds, three versions, each checking a proxy for the property.
+  //
+  // So the property is COMPUTED, using this file's own specificity parser: **a SHELL-WIDE rule
+  // targeting a bare form control must be (0,0,0).** That is the form, not a spelling — reordering
+  // the `:where()` arguments, renaming the ancestors or adding a third selector cannot evade it,
+  // because none of those changes what the parser returns.
+  //
+  // ⚠️ Scoped to the SHELL deliberately, and the first version was not — it banned any over-specific
+  // control rule and correctly caught `.ds .ds-search input` and `.ds .ds-select select` at (0,2,1).
+  // Those are right to be specific: they style a control belonging to ONE component, and they are
+  // supposed to beat the base. What must never beat the base is another rule that also applies to
+  // EVERY control in the shell. A guard that fires on correct work is one this epic has already
+  // shipped three times.
+  // ⚠️ The attribute form counts too. `.ds .ds-shell input[type='text']` is (0,2,1) and resets a real
+  // control, and the first version of this pattern required the tag to END the compound — so an
+  // attribute or pseudo-class suffix walked past it (round 6). A trailing `[…]`, `:…` or `::…` is
+  // still the same subject.
+  const FORM_CONTROL = /(^|[\s,(])(input|textarea|select)([\s,)[:]|$)/
+  const overSpecificResets = ruleList()
+    .flatMap(({ selector }) => splitSelectorList(selector).map((part) => ({ part, spec: specificity(part) })))
+    // Its SUBJECT is a bare control — `.ds-input` is a class and is unaffected …
+    .filter(({ part }) => FORM_CONTROL.test(part.slice(part.lastIndexOf(' ') + 1)))
+    // … and it is SHELL-wide rather than component-scoped.
+    .filter(({ part }) => /\.ds-shell(\b|-)/.test(part))
+    .filter(({ spec }) => spec[0] > 0 || spec[1] > 0 || spec[2] > 1)
+    .map(({ part, spec }) => `${part} is (${spec.join(',')})`)
+
+  assert.deepEqual(
+    overSpecificResets,
+    [],
+    'a SHELL-WIDE rule in system.css targets a bare form control above (0,0,0). `:where()` zeroes only its OWN ' +
+      'argument, so `.ds .ds-shell :where(input, …)` is (0,2,0) — and in the last-loaded stylesheet ' +
+      'that beats `.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` ' +
+      `on ties, silently redesigning the ⌘K palette on every console route. Write it \`${ZERO_SPECIFICITY_BASE}\` — ` +
+      'the whole selector inside `:where()`.'
   )
 })
 

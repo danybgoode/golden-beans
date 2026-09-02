@@ -1,10 +1,8 @@
 import type { Metadata } from 'next'
 import { BOOKING_URL, bookingEmbedUrl } from '@/lib/booking'
-import { Nav } from '@/components/landing/Nav'
-import { Footer } from '@/components/landing/Footer'
-import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
-import { Panel } from '@/components/ui/Panel'
+import { Frame, FrameLink } from '@/design-system/Frame'
+import { Callout } from '@/design-system/primitives'
 
 export const metadata: Metadata = {
   title: 'Golden Frijoles — book a Pods conversation',
@@ -23,13 +21,10 @@ export const metadata: Metadata = {
 //   2. That script executes in OUR origin. An <iframe> does not: it is a cross-origin document, and
 //      the same-origin policy alone stops it reading this page, its cookies or its DOM. (That is
 //      ISOLATION, not sandboxing — there is no `sandbox` attribute here, deliberately; see the note
-//      on the element itself. The distinction was blurred in an earlier draft of this comment and
-//      Codex caught it in round 6 of PR #100.) Same booking, strictly less trust extended.
+//      on the element itself.)
 //   3. A modal gives the reader no room to be told what the conversation actually is. The Pods tier
 //      is the one thing on the pricing table with no price on it, so the reader arriving here has
 //      exactly one question — "what am I agreeing to?" — and a calendar grid does not answer it.
-//
-// So: our nav, our ground, our framing, and Cal.com asked to render only the part it is good at.
 //
 // ── The frame is NEVER the only way through ───────────────────────────────────────────────────
 // An iframe to a third party has a failure mode a local test will never show you: it renders as a
@@ -38,94 +33,114 @@ export const metadata: Metadata = {
 // books nobody, and the reader cannot tell whether it is broken or still loading.
 //
 // CODE-QUALITY #8 ("a zero and a broken read are indistinguishable") is normally about numbers; it
-// is the same failure. So the direct link is rendered UNCONDITIONALLY, above the frame, as ordinary
-// copy rather than as an error state — it costs one line for everyone and it is the whole feature
-// for anyone the frame fails. It is not conditional on the frame failing, because nothing in this
-// page can detect that: a cross-origin iframe's load event fires for a blocked frame too.
-// This page renders `Nav`, which renders `RunYourFirstBet`, which reads `isSignupEnabled()`. Without
-// this, Next statically optimizes `/talk` at build time and freezes that flag reading into the HTML
-// — so flipping SIGNUP_ENABLED in production would leave this page's primary CTA pointing at the
-// old destination until something else happened to trigger a rebuild. Vercel snapshots env vars into
-// a deployment at build time (AGENTS.md rule #4), and `app/page.tsx` is `force-dynamic` for exactly
-// this reason. A second page rendering the same flag-reading component needs the same treatment.
-// Found by agy in cross-family review round 2 of PR #100.
+// is the same failure. So the direct link is rendered UNCONDITIONALLY, as ordinary copy rather than
+// as an error state — it costs one line for everyone and it is the whole feature for anyone the
+// frame fails. It is not conditional on the frame failing, because nothing in this page can detect
+// that: a cross-origin iframe's load event fires for a blocked frame too.
+//
+// ── design-system-rails · Sprint 6, Story 6.2 — the approved `public-talk` state ───────────────
+//
+// It moves from the landing's `Nav`/`Footer` to DD3's PUBLIC frame, at the 1080px measure the
+// approved state uses. Two corrections were forced by the product's own facts, and both are the
+// D10 class — the prototype's data is not the product's:
+//
+//   · The approved lede says **"Thirty minutes, no deck."** The shipped page, and the Cal.com event
+//     it books (`quick-chat`), are **twenty**. The number the product can keep is the one that
+//     ships; a mock's round number is not a scheduling change.
+//   · The approved aside has three items. A **fourth** is kept — the direct booking link — because
+//     it is the escape hatch above, and the header comment explains why it cannot be conditional.
+//     Dropping it to match a mock would delete the only path through for every reader whose browser
+//     blocks the frame.
+//
+// `force-dynamic` no longer has a flag to read — `Nav` (and its `isSignupEnabled()` call) is gone
+// with the landing chrome — but the page still renders a THIRD-PARTY embed URL and nothing here
+// should be frozen into a build. Kept deliberately rather than dropped as now-unused.
 export const dynamic = 'force-dynamic'
 
 export default function TalkPage() {
   return (
-    <>
-      <Nav />
-      <main>
-        <section className="talk">
-          <div className="wrap">
-            <p className="eyebrow">The vault · Pods</p>
-            <h1 className="section-title">Let&apos;s work out whether a Pod is worth it</h1>
-            <p className="measure">
-              A Pod is your team, running the ways of working this product was built with — and measured
-              before and after, because &ldquo;it felt faster&rdquo; is not a Pod Report. This call is the
-              part where we find out whether that applies to you.
-            </p>
+    <Frame
+      variant="public"
+      wide
+      brandHref="/"
+      agentFooter
+      actions={
+        <>
+          <FrameLink href="/install">Try the demo</FrameLink>
+          <FrameLink href="/login">Sign in</FrameLink>
+        </>
+      }
+    >
+      <h1>Let&apos;s work out whether a Pod is worth it</h1>
+      <p className="ds-lede">
+        Twenty minutes, no deck. Bring a number you want to move and we will say plainly whether this is the
+        thing that moves it.
+      </p>
 
-            <div className="talk-grid section-lead">
-              <div>
-                <Panel className="talk-brief">
-                  <p className="kicker">What the call is</p>
-                  <ul className="plain-list">
-                    <li>Twenty minutes, with Miyagi. Not a demo, and not a sales call.</li>
-                    <li>
-                      What your team ships now, where the time actually goes, and what you would want to be
-                      able to prove afterwards.
-                    </li>
-                    <li>An honest read on whether a Pod would help — including when it would not.</li>
-                  </ul>
-                  <p className="note">
-                    If it is not a fit we will say so on the call. That is cheaper for both of us than finding
-                    out in month two.
-                  </p>
-                </Panel>
+      <div className="ds-talkgrid">
+        {/* A third-party embed cannot be made to match the design system, so it is not pretended
+            into one: it gets a bordered slot that says "this is somebody else's frame". Styling
+            around an iframe until it almost matches is worse than admitting the seam.
 
-                {/* Unconditional, and deliberately not styled as an error. See the header comment:
-                    this page cannot detect a blocked frame, so the escape hatch has to be ordinary
-                    copy that is always there rather than a fallback that waits for a signal that
-                    never arrives. */}
-                <Panel className="talk-direct">
-                  <p className="kicker">Or book it directly</p>
-                  <p className="card-copy">
-                    The calendar below is Cal.com. If it does not load — a blocker, a proxy, a bad connection
-                    — this link is the same booking page, opened on its own.
-                  </p>
-                  <Button href={BOOKING_URL} variant="ghost" className="panel-tail">
-                    Open the booking page
-                    <Icon name="external" />
-                  </Button>
-                </Panel>
-              </div>
+            `title` is required, not decorative: it is the accessible name of the frame, and an
+            unnamed iframe is announced as "frame" with no indication of what is in it. No `sandbox`
+            attribute — a booking flow needs scripts, forms and same-origin storage to function, so a
+            sandbox tight enough to be worth having would break the thing it is protecting. The
+            isolation that matters (it cannot read this page) is inherent to cross-origin framing and
+            is not something sandbox adds. */}
+        <div className="ds-talkslot">
+          <iframe
+            src={bookingEmbedUrl()}
+            title="Book a Pods conversation with Miyagi Sánchez on Cal.com"
+            loading="lazy"
+          />
+        </div>
 
-              <div className="talk-embed">
-                <p className="surface-note">
-                  <strong>Booking runs on Cal.com</strong>
-                  <span>
-                    A real scheduler, embedded — the times below are Miyagi&apos;s actual availability
-                  </span>
-                </p>
-                {/* `title` is required, not decorative: it is the accessible name of the frame, and
-                    an unnamed iframe is announced as "frame" with no indication of what is in it.
-                    No `sandbox` attribute — a booking flow needs scripts, forms and same-origin
-                    storage to function, so a sandbox tight enough to be worth having would break
-                    the thing it is protecting. The isolation that matters (it cannot read this
-                    page) is inherent to cross-origin framing and is not something sandbox adds. */}
-                <iframe
-                  src={bookingEmbedUrl()}
-                  title="Book a Pods conversation with Miyagi Sánchez on Cal.com"
-                  className="talk-frame"
-                  loading="lazy"
-                />
-              </div>
-            </div>
+        <div className="ds-talkaside">
+          <div className="ds-talkitem">
+            <b>What we will actually do</b>
+            <span>
+              Look at your funnel, pick the one number worth moving first, and name what would have to be true
+              for it to move. Not a demo, and not a sales call.
+            </span>
           </div>
-        </section>
-      </main>
-      <Footer />
-    </>
+          <div className="ds-talkitem">
+            <b>What you leave with</b>
+            <span>
+              A written answer either way — including &ldquo;not yet, and here is what to do instead.&rdquo;
+              If it is not a fit we will say so on the call; that is cheaper for both of us than finding out
+              in month two.
+            </span>
+          </div>
+          {/* Unconditional, and deliberately not styled as an error. See the header comment: this
+              page cannot detect a blocked frame, so the escape hatch has to be ordinary copy that is
+              always there rather than a fallback waiting for a signal that never arrives. */}
+          <div className="ds-talkitem">
+            <b>Or book it directly</b>
+            <span>
+              The calendar is Cal.com. If it does not load — a blocker, a proxy, a bad connection — this is
+              the same booking page, opened on its own.
+              <FrameLink href={BOOKING_URL} target="_blank" rel="noopener noreferrer">
+                Open the booking page
+                <Icon name="external" size={13} />
+              </FrameLink>
+            </span>
+          </div>
+          <div className="ds-talkitem">
+            <b>Would rather just look?</b>
+            <span>
+              The demo connector is live and needs no call.
+              <FrameLink href="/install">Point Claude at it</FrameLink>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <Callout>
+        A third-party embed cannot be made to match the design system, so it is not pretended into one — it
+        gets a dashed slot that says &ldquo;this is somebody else&apos;s frame&rdquo;. Styling around an
+        iframe until it almost matches is worse than admitting the seam.
+      </Callout>
+    </Frame>
   )
 }

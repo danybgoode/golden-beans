@@ -1,7 +1,22 @@
 # The console visual contract
 
-**Binding. This file and `flags-console-prototype.html` are the design contract for every
-signed-in route. They are not "inspiration".**
+**Binding. This file and `console-prototype.html` are the design contract for every signed-in route.
+They are not "inspiration".**
+
+> ## The one home, named once
+>
+> **`apps/web/design-system/` is where the design lives, and this file is one of its parts.** A
+> future epic extends what is here; it does not open a new `design/` folder. `README.md` beside this
+> file is the map — the approved prototype and its 32 states, `APPROVED.md`'s hash-pinned approval,
+> the generated tokens and stylesheet, `MEASURED-SPEC.md`, the primitives as components, and
+> `route-manifest.ts`'s generated coverage number. The behaviour layer is
+> `references/ux-guidelines.md`, and it points back here.
+>
+> ⚠️ **The prototype is `console-prototype.html`, not `flags-console-prototype.html`.** The line above
+> named the *previous* epic's file for the whole of this one — the one that still sits in
+> `Roadmap/02-commercial/console-ia-overhaul/design/`, a closed epic's folder, which is precisely the
+> mechanism (F) this directory exists to end. A binding contract naming the wrong artefact is the
+> class of defect this file's own first paragraph is about. *(Sprint 6, Story 6.5.)*
 
 ## Why this file exists
 

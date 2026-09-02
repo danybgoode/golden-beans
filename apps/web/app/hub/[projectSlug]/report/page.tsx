@@ -6,7 +6,8 @@ import { trackSelfEvent, REPORT_VIEWED_EVENT, VISITOR_COOKIE } from '@/lib/self-
 import { getPodReport } from '@/lib/pod-report-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { EmptyPodReportState, PodReportBody } from '../../report-components'
-import styles from '../../hub.module.css'
+import { HubFrame } from '../../hub-frame'
+import { PageHead } from '@/design-system/primitives'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,8 +16,12 @@ export const dynamic = 'force-dynamic'
 // makes it a sales artifact instead of a row in `report_artifacts`.
 //
 // Same gate as its siblings (`requireDashboardAccess` → the demo project reads anonymously via the
-// AGENTS rule #2 allow-list, every other slug needs a signed-in member), same freshness stamp, same
-// agent-window frame device.
+// AGENTS rule #2 allow-list, every other slug needs a signed-in member), same freshness stamp.
+//
+// design-system-rails · Sprint 6, Story 6.3 — reference state `hub-report`. The page is the hub's
+// third tab now rather than a link back to the first, and every rendering decision still lives in
+// `PodReportBody`, including the `isHonest()` refusal. Read that file's header for what moved onto
+// the design system and what is deliberately still on `hub.module.css`.
 //
 // ── Why the lens is hardcoded to 'team' and not read from anything ────────────────────────────
 // lib/pod-report-lens.ts: "always resolved server-side from a credential — never from a URL". This
@@ -37,15 +42,10 @@ export default async function HubPodReportPage({ params }: { params: Promise<{ p
     if (result.reason === 'project_not_found') notFound()
 
     return (
-      <main className={styles.report}>
-        <div className="wrap">
-          <p>
-            <a href={`/hub/${encodeURIComponent(projectSlug)}`}>← Roadmap hub</a>
-          </p>
-          <p className={styles.kicker}>Pod Report · {projectSlug}</p>
-          <EmptyPodReportState projectSlug={projectSlug} />
-        </div>
-      </main>
+      <HubFrame projectSlug={projectSlug} tab="report">
+        <PageHead title="Pod report" lede={`What the ${projectSlug} pod shipped, and whether it mattered.`} />
+        <EmptyPodReportState projectSlug={projectSlug} />
+      </HubFrame>
     )
   }
 
@@ -63,25 +63,18 @@ export default async function HubPodReportPage({ params }: { params: Promise<{ p
   const freshness = formatFreshness(artifact.generatedAt, new Date(), artifact.sourceCommit)
 
   return (
-    <main className={styles.report}>
-      <div className="wrap">
-        <p>
-          <a href={`/hub/${encodeURIComponent(projectSlug)}`}>← Roadmap hub</a>
-        </p>
-        <p className={styles.kicker}>Pod Report · {projectSlug}</p>
-
-        {/* Every rendering decision lives in PodReportBody, including the isHonest() refusal. This
-            page deliberately holds no branch that could put a number on screen — see
-            app/hub/report-components.tsx for why that is the arrangement. */}
-        <PodReportBody
-          projectSlug={projectSlug}
-          view={view}
-          outcome={outcome}
-          lens={lens}
-          artifactVersion={artifact.version}
-          freshness={freshness}
-        />
-      </div>
-    </main>
+    <HubFrame projectSlug={projectSlug} tab="report">
+      {/* Every rendering decision lives in PodReportBody, including the isHonest() refusal. This
+          page deliberately holds no branch that could put a number on screen — see
+          app/hub/report-components.tsx for why that is the arrangement. */}
+      <PodReportBody
+        projectSlug={projectSlug}
+        view={view}
+        outcome={outcome}
+        lens={lens}
+        artifactVersion={artifact.version}
+        freshness={freshness}
+      />
+    </HubFrame>
   )
 }

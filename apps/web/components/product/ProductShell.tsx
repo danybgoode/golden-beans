@@ -116,9 +116,16 @@ export async function ProductShell({
     // Those two anonymous demo dashboards are the ONLY renders this changes, and they are precisely
     // the two routes Story 5.3 rebuilds — verified by enumerating the allow-list. Nothing else
     // reaches this component without a session.
-    <div className={`product-shell ds${header === null ? '' : ' is-console'}`}>
-      <header className="product-shell__header">
-        {/*
+    // ⚠️ **TWO elements, and the nesting is required rather than stylistic.**
+    // `system-cascade.test.ts` asserts that every selector in `system.css` is `.ds` itself or a
+    // DESCENDANT of it — a compound `.ds.ds-shell` scores the same (0,2,0) and still fails, because
+    // the guard checks the structural form rather than re-deriving specificity per rule. Rather than
+    // widen a guard that has already caught two real defects, the shell says the two things
+    // separately: this subtree renders from the design system, and inside it is the shell.
+    <div className="ds">
+      <div className={`ds-shell${header === null ? '' : ' is-console'}`}>
+        <header className={`ds-shell-header${header === null ? ' ds-pubbar' : ''}`}>
+          {/*
           ── D4: the gate-off branch below is UNTOUCHED, and that is auditable ───────────────────
           `header === null` means the console chrome does not apply to this render — the gate is
           unset, OR there is no session (the two demo dashboards render this shell anonymously), OR
@@ -148,11 +155,29 @@ export async function ProductShell({
           loses its only entry: `CommandCenter` still links both with a real feature key. Raised by
           the fresh reviewer on PR #122.
         */}
-        {header === null ? (
-          <>
-            <BrandLockup compact href="/app" />
-            <nav aria-label="Product" className="product-shell__nav">
-              {/* ── Story 3.5 — what this branch LOST, and what it kept ──────────────────────────
+          {header === null ? (
+            <>
+              <BrandLockup compact href="/app" />
+              {/* ⚠️ **design-system-rails Story 6.4 — this branch is DD3's PUBLIC frame now.**
+                It used to be painted by `globals.css`'s `.product-shell__header`, a 64px grid with a
+                fixed bottom tab bar on phones; those rules were the "old world" this Sweeper
+                deletes, so the branch that rendered them had to land somewhere. DD3 already said
+                where: *chrome appears when there is something to navigate*, and this render — an
+                anonymous visitor on a demo dashboard, or `getShellNav`'s catch — has a mark and two
+                links. That is the public bar exactly.
+
+                Two things get FIXED rather than merely moved, and both are recorded because "no
+                pixel changes" is this story's own claim and these are the exceptions to it:
+                  · the project signal was `600 10px var(--mono)` in UPPERCASE — the pair
+                    `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, recorded as mono debt in
+                    `vocabulary.ts` since Sprint 2 and owed to "Sprint 3". It is sentence-case
+                    Archivo now, and its debt entry is deleted with the rule.
+                  · the links were a FIXED bottom tab bar below 640px. A two-item bottom bar pinned
+                    over the content of a page a stranger is reading is chrome that outweighs what it
+                    navigates. They sit in the bar at every width. */}
+              <span className="ds-pubbar-spacer" />
+              <nav aria-label="Product" className="ds-pubbar-nav">
+                {/* ── Story 3.5 — what this branch LOST, and what it kept ──────────────────────────
                   **`Home` and the `<details>` disclosure are deleted** (epic README, A16). What
                   remains is the PUBLIC chrome, and that is the whole point of the reduction.
 
@@ -173,7 +198,7 @@ export async function ProductShell({
                   gate-off branch"; A16 corrected that, and `console-shell-public.browser.spec.ts`
                   asserts both hrefs so the correction cannot be undone by someone tidying up. */}
 
-              {/* ⚠️ THIS HREF STAYS `/install`, and reverting it here is Story 2.2's actual fix.
+                {/* ⚠️ THIS HREF STAYS `/install`, and reverting it here is Story 2.2's actual fix.
                   (Fresh reviewer, PR #123, Blocking.)
 
                   A previous revision pointed this at `/app/setup/connect/<slug>` whenever a project
@@ -206,49 +231,49 @@ export async function ProductShell({
                   narrowing that `try` so a session read failing is distinguishable from a nav read
                   failing, which is a change this sprint does not need to make.
                   (Both halves found by the fresh reviewer, PR #123, rounds 2 and 3.) */}
-              <a href="/install">
-                <Icon name="cable" />
-                Connect
-              </a>
-              <a href="/llms.txt">
-                <Icon name="book" />
-                Agent notes
-              </a>
-            </nav>
+                <a href="/install">
+                  <Icon name="cable" />
+                  Connect
+                </a>
+                <a href="/llms.txt">
+                  <Icon name="book" />
+                  Agent notes
+                </a>
+              </nav>
 
-            {/*
+              {/*
               Which project these sections belong to. When the user has more than one, the label links
               to /app rather than opening a switcher menu: a real switcher has to know the CURRENT
               surface to move you to the same page in another project, and this component is
               deliberately not told the route segment. A menu that silently dropped you on a different
               page than the one you were reading would be a worse answer than the one honest link.
             */}
-            {activeProject ? (
-              <span className="product-shell__signal" data-project={activeProject.slug}>
-                <Icon name="gauge" />
-                {projects.length > 1 ? (
-                  <a href="/app">
-                    {activeProject.slug} · {projects.length - 1} more
-                  </a>
-                ) : (
-                  activeProject.slug
-                )}
-              </span>
-            ) : (
-              <span className="product-shell__signal">
-                <Icon name="gauge" />
-                Engine ready
-              </span>
-            )}
-          </>
-        ) : (
-          <>
-            {/* The logo goes to Today, which IS /app — see lib/console-shell.ts' TODAY_HREF note on
+              {activeProject ? (
+                <span className="ds-shell-signal" data-project={activeProject.slug}>
+                  <Icon name="gauge" />
+                  {projects.length > 1 ? (
+                    <a href="/app">
+                      {activeProject.slug} · {projects.length - 1} more
+                    </a>
+                  ) : (
+                    activeProject.slug
+                  )}
+                </span>
+              ) : (
+                <span className="ds-shell-signal">
+                  <Icon name="gauge" />
+                  Engine ready
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              {/* The logo goes to Today, which IS /app — see lib/console-shell.ts' TODAY_HREF note on
                 why that resolves Story 1.3's "logo links to Today" against Story 1.4's "Today has no
                 rail". One destination, named twice. */}
-            <BrandLockup compact href={TODAY_HREF} />
+              <BrandLockup compact href={TODAY_HREF} />
 
-            {/* Four destinations, generated from the inventory's `section` field (D2). A hardcoded
+              {/* Four destinations, generated from the inventory's `section` field (D2). A hardcoded
                 list here is what lib/shell-nav.ts' own D1 comment forbids, and CONSOLE_SECTIONS is
                 the single ordered list both this and the rail read.
 
@@ -256,16 +281,16 @@ export async function ProductShell({
                 preview three of Ship's gates are closed (A2), and a tab that 404s is worse than a
                 tab that is not there. */}
 
-            <div className="product-shell__identity">
-              {/* ⚠️ The palette moved INTO the top bar, because Story 3.2 asks for a visible `⌘K`
+              <div className="ds-shell-identity">
+                {/* ⚠️ The palette moved INTO the top bar, because Story 3.2 asks for a visible `⌘K`
                   affordance there and the component now renders its own trigger. It used to mount in
                   the body, which is why the shortcut had no button: a component that returns `null`
                   when closed cannot show you that it exists. The panel still portals over the page —
                   only the trigger is in the bar. */}
-              <ShellErrorBoundary>
-                <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
-              </ShellErrorBoundary>
-              {/* The project switcher (D1). ONE tier — Golden Beans has no organisation layer, and
+                <ShellErrorBoundary>
+                  <CommandPalette links={links} projectSlug={activeProject?.slug ?? null} />
+                </ShellErrorBoundary>
+                {/* The project switcher (D1). ONE tier — Golden Beans has no organisation layer, and
                   the production schema has no table that could support one. A `<details>` again, for
                   the same reason as the legacy disclosure: no client island in the shell.
 
@@ -279,59 +304,59 @@ export async function ProductShell({
 
                   With one project there is nothing to switch to, so it renders as a label rather
                   than a menu that opens onto a list of one. */}
-              {activeProject &&
-                (projects.length > 1 ? (
-                  <details className="product-shell__switcher">
-                    <summary>
+                {activeProject &&
+                  (projects.length > 1 ? (
+                    <details className="ds-shell-switcher">
+                      <summary>
+                        <Icon name="gauge" />
+                        {activeProject.slug}
+                      </summary>
+                      <div className="ds-shell-menu">
+                        <ul>
+                          {header.projects.map((project) => (
+                            <li key={project.slug}>
+                              <a href={project.href} aria-current={project.current ? 'true' : undefined}>
+                                {project.slug}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </details>
+                  ) : (
+                    <span className="ds-shell-signal" data-project={activeProject.slug}>
                       <Icon name="gauge" />
                       {activeProject.slug}
-                    </summary>
-                    <div className="product-shell__menu">
-                      <ul>
-                        {header.projects.map((project) => (
-                          <li key={project.slug}>
-                            <a href={project.href} aria-current={project.current ? 'true' : undefined}>
-                              {project.slug}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </details>
-                ) : (
-                  <span className="product-shell__signal" data-project={activeProject.slug}>
-                    <Icon name="gauge" />
-                    {activeProject.slug}
-                  </span>
-                ))}
+                    </span>
+                  ))}
 
-              {/* The account menu carries the sign-out that used to sit in /app's own header.
+                {/* The account menu carries the sign-out that used to sit in /app's own header.
                   `/app` drops its own copy exactly when THIS renders — both sides ask
                   `shellRendersAccountMenu`, so the control appears once and can never appear zero
                   times. It previously branched on the env var on one side and on `userEmail` here,
                   which is two conditions that were supposed to agree and did not: a signed-in user
                   with no project got the legacy header AND a suppressed page line, and therefore no
                   sign-out anywhere (fresh reviewer, PR #122). */}
-              {shellRendersAccountMenu({ header, userEmail }) && (
-                <details className="product-shell__account">
-                  <summary>
-                    <Icon name="panels" />
-                    Account
-                  </summary>
-                  <div className="product-shell__menu">
-                    <p>{userEmail}</p>
-                    <SignOutButton />
-                  </div>
-                </details>
-              )}
-            </div>
-          </>
-        )}
-      </header>
+                {shellRendersAccountMenu({ header, userEmail }) && (
+                  <details className="ds-shell-account">
+                    <summary>
+                      <Icon name="panels" />
+                      Account
+                    </summary>
+                    <div className="ds-shell-menu">
+                      <p>{userEmail}</p>
+                      <SignOutButton />
+                    </div>
+                  </details>
+                )}
+              </div>
+            </>
+          )}
+        </header>
 
-      {/* ── TIER 2: the section nav, a FULL-WIDTH row of its own ──────────────────────────────────
+        {/* ── TIER 2: the section nav, a FULL-WIDTH row of its own ──────────────────────────────────
           ⚠️ **This was inside the 54px top bar, and the approved design has TWO tiers.** Measured on
-          the running console before touching anything: `.product-shell__header` was 1440x54 with the
+          the running console before touching anything: `.ds-shell-header` was 1440x54 with the
           tabs nested inside it at 289x43 — one bar carrying everything. The prototype's `#sectionnav`
           is a SIBLING of `.topbar`, a 1440x44 row with its own background and bottom border.
 
@@ -343,25 +368,25 @@ export async function ProductShell({
 
           Rendering it only when there are tabs keeps the gate-off and anonymous branches unchanged:
           `header === null` never reaches here. */}
-      {header !== null && header.tabs.length > 0 ? (
-        <nav aria-label="Sections" className="product-shell__nav product-shell__tabs">
-          {header.tabs.map((tab) => (
-            <a
-              key={tab.id}
-              href={tab.href}
-              className="product-shell__tab"
-              // `aria-current="page"` rather than a class alone: the mark has to reach a screen
-              // reader, not just the pixels. Absent (not "false") when it is not the current
-              // one — `aria-current="false"` is a value some readers announce.
-              aria-current={tab.current ? 'page' : undefined}
-            >
-              {tab.label}
-            </a>
-          ))}
-        </nav>
-      ) : null}
-      <div className="product-shell__body">
-        {/*
+        {header !== null && header.tabs.length > 0 ? (
+          <nav aria-label="Sections" className="ds-shell-tabs">
+            {header.tabs.map((tab) => (
+              <a
+                key={tab.id}
+                href={tab.href}
+                className="ds-shell-tab"
+                // `aria-current="page"` rather than a class alone: the mark has to reach a screen
+                // reader, not just the pixels. Absent (not "false") when it is not the current
+                // one — `aria-current="false"` is a value some readers announce.
+                aria-current={tab.current ? 'page' : undefined}
+              >
+                {tab.label}
+              </a>
+            ))}
+          </nav>
+        ) : null}
+        <div className="ds-shell-body">
+          {/*
           Story 1.4 — the per-section rail. FIRST in the DOM, unlike the agent rail below: this is
           navigation for the page you are on, so a screen reader and a keyboard user should meet it
           before the content, in the same order a sighted reader meets it on the left.
@@ -370,15 +395,15 @@ export async function ProductShell({
           surface is gated off, and `ConsoleRail` renders null on an empty list. So "Today renders
           full width" and "no empty rail" are one branch, decided in the pure module.
         */}
-        {header !== null && (
-          <ConsoleRail
-            links={railLinksFor(section, links)}
-            top={railTop}
-            activeSegment={railActive}
-            label={section === 'today' ? undefined : `In ${section[0].toUpperCase()}${section.slice(1)}`}
-          />
-        )}
-        {/*
+          {header !== null && (
+            <ConsoleRail
+              links={railLinksFor(section, links)}
+              top={railTop}
+              activeSegment={railActive}
+              label={section === 'today' ? undefined : `In ${section[0].toUpperCase()}${section.slice(1)}`}
+            />
+          )}
+          {/*
           Story 1.5 — ⌘K, the ONE client island in the shell, inside the ONE error boundary in
           apps/web (A9). If it throws, the boundary renders null and the page it sits on is
           untouched. Without the boundary the nearest one is Next's own error page, which would mean
@@ -388,8 +413,8 @@ export async function ProductShell({
           second read, which is also what makes it safe for a client component to hold: it inherits
           the server's entitlement filtering rather than re-implementing it.
         */}
-        {children}
-        {/*
+          {children}
+          {/*
           Sprint 2, Story 2.2 — the rail is here, in the shell, so it is present on EVERY /app
           route rather than on whichever pages someone remembered to add it to. It renders nothing
           at all unless AGENT_RAIL_ENABLED is exactly 'true' AND a membership was resolved; see
@@ -398,7 +423,7 @@ export async function ProductShell({
           It sits after {children} in the DOM on purpose: a screen reader and a keyboard user reach
           the page's own content first, and the rail is positioned into the sidebar by CSS.
         */}
-        {/* ── console-ia-overhaul · the AgentRail does NOT render on console routes ─────────────
+          {/* ── console-ia-overhaul · the AgentRail does NOT render on console routes ─────────────
             Decided by Daniel, 2026-08-28, closing CONSOLE-CONTRACT.md's Do-not #4 — which the epic
             had left open ("a decision the epic never made, and it must be made explicitly rather
             than inherited"). The rail is in none of the ten approved reference states, and inside
@@ -417,9 +442,10 @@ export async function ProductShell({
             bar — which is a real place rather than a deletion. Building that is the replacement, and
             until it exists this trades a squeezed console for a missing surface. Flagged rather than
             filed as done. */}
-        {header === null && activeProject && (
-          <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />
-        )}
+          {header === null && activeProject && (
+            <AgentRail projectId={activeProject.id} projectSlug={activeProject.slug} />
+          )}
+        </div>
       </div>
     </div>
   )

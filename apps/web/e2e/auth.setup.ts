@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { hashCredential } from '@/lib/credential-hash'
+import { generateShareToken } from '@/lib/share-token'
 import { CURRENT_CONTEXT_VERSION } from '@/lib/event-context'
 import {
   AUTHED_STATE_PATH,
@@ -27,6 +28,8 @@ import {
   EXPERIMENT_TREATMENT_CONVERSIONS,
   JOURNEY_FIXTURE_KEY,
   JOURNEY_STAGES,
+  SHARE_FIXTURE_LABEL,
+  SHARE_FIXTURE_LENS,
   TEST_USER,
   TENANT_RECORD_PATH,
   type TenantRecord,
@@ -95,7 +98,7 @@ setup('provision a disposable tenant and sign in through the real form', async (
   //
   // So the record is written here with what is known, and enriched below once the tenant exists.
   // Teardown tolerates a null projectId for precisely this reason.
-  writeRecord({ userId, projectId: null, slug: null, email: TEST_USER.email })
+  writeRecord({ userId, projectId: null, slug: null, email: TEST_USER.email, shareToken: null })
 
   // Provision a tenant for the user the same way the app does — through a real signup/callback —
   // rather than hand-inserting rows, so the fixture cannot drift from production behaviour. The
@@ -152,7 +155,13 @@ setup('provision a disposable tenant and sign in through the real form', async (
   const slug = (membership.projects as unknown as { slug: string } | null)?.slug ?? null
   // Enrich the record now that the tenant exists. The email is recorded, never re-derived by
   // teardown — see the note on TenantRecord.
-  writeRecord({ userId, projectId: membership.project_id as string, slug, email: TEST_USER.email })
+  writeRecord({
+    userId,
+    projectId: membership.project_id as string,
+    slug,
+    email: TEST_USER.email,
+    shareToken: null,
+  })
 
   await seedImpactFixture(db, membership.project_id as string)
   await seedFunnelFixture(db, membership.project_id as string)
@@ -160,6 +169,17 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedTaskFixture(db, membership.project_id as string)
   await seedExperimentFixture(db, membership.project_id as string, userId)
   await seedJourneyFixture(db, membership.project_id as string, userId)
+
+  // ⚠️ Written into the record LAST, and the record is rewritten rather than patched: teardown reads
+  // this file, so every write has to carry the whole thing.
+  const shareToken = await seedShareFixture(db, membership.project_id as string)
+  writeRecord({
+    userId,
+    projectId: membership.project_id as string,
+    slug,
+    email: TEST_USER.email,
+    shareToken,
+  })
 
   await page.context().storageState({ path: AUTHED_STATE_PATH })
 })
@@ -756,4 +776,46 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
     }))
   )
   if (valuesError) throw new Error(`could not seed the impact series: ${valuesError.message}`)
+}
+
+/**
+ * Mint a REAL share link for the fixture tenant, and hand its plaintext token back.
+ *
+ * ── Why this exists, and why a `coveredBy` string was not enough ──────────────────────────────
+ * `/s/[token]` is the last route in the coverage manifest, and until Sprint 6 its row named
+ * `e2e/report-share.spec.ts` as covering it. That spec has ZERO `page.goto` calls — it is an `api`
+ * spec — so the label read as coverage and provided none. The row was inert only because it was
+ * still `rendersFromDesignSystem: false`; flipping it would have added a route to the number with
+ * nothing verifying it renders, which is the exact shape of the last epic's five deferred rows.
+ * `sprint-6.md` names the fix and forbids the alternative: **mint a real token, do not reword the
+ * string.**
+ *
+ * ── Inserted directly rather than through `mintShareLink` ─────────────────────────────────────
+ * `lib/report-shares.ts` imports `server-only`, which a Playwright setup file cannot load. The two
+ * halves that matter are pure and ARE imported: `generateShareToken` (the prefix and the entropy)
+ * and `hashCredential` (the one hash for every credential in `api_keys`). So the row this writes is
+ * the same row the product's own mint writes, produced by the same functions — not a hand-rolled
+ * lookalike that could drift from it.
+ *
+ * Nothing is needed in teardown: `api_keys` is `REFERENCES projects(id) ON DELETE CASCADE`, and
+ * teardown already deletes the project.
+ */
+async function seedShareFixture(db: SupabaseClient, projectId: string): Promise<string | null> {
+  const token = generateShareToken()
+  const { error } = await db.from('api_keys').insert({
+    project_id: projectId,
+    key_hash: hashCredential(token),
+    label: SHARE_FIXTURE_LABEL,
+    scope: 'share',
+    share_lens: SHARE_FIXTURE_LENS,
+    expires_at: null,
+  })
+  if (error) {
+    // Loud, not silent. A null token makes the visual gate THROW rather than skip `/s/[token]`, so
+    // this failure surfaces as "the gate could not open the share route" instead of as a suite that
+    // quietly measured twenty-six routes and reported twenty-seven.
+    console.error('[auth.setup] could not mint the share fixture:', error)
+    return null
+  }
+  return token
 }

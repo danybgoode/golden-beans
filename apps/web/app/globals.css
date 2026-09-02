@@ -875,71 +875,6 @@ body {
   color: var(--red);
 }
 
-.copy-url {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.copy-url input {
-  flex: 1 1 280px;
-  min-width: 0;
-}
-
-.install-hero {
-  max-width: 720px;
-}
-
-.install-lede {
-  max-width: 640px;
-  margin: 14px 0 36px;
-  color: var(--dim);
-}
-
-.install-stack {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-}
-
-.install-stack > *,
-.install-panel {
-  min-width: 0;
-}
-
-.install-panel__heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.install-panel__label {
-  color: var(--gold);
-  font: 700 12px var(--mono);
-  letter-spacing: 0.1em;
-}
-
-.install-panel h2 {
-  margin-bottom: 8px;
-  font-size: 20px;
-}
-
-.install-panel > p {
-  margin-bottom: 16px;
-  color: var(--dim);
-  font-size: 14px;
-}
-
-.install-panel > .btn {
-  margin-top: 16px;
-}
-
-.install-panel .note {
-  margin: 14px 0 0;
-  font-size: 12px;
-}
-
 .code-block {
   max-width: 100%;
   overflow-x: auto;
@@ -1025,190 +960,6 @@ body {
     opacity: 1;
     transform: scale(1.1);
   }
-}
-
-/* Signed-in surfaces share the same roast/card/foil vocabulary without changing auth guards. */
-.product-shell {
-  min-height: 100vh;
-}
-
-.product-shell__header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 16px;
-  min-height: 64px;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(15, 12, 8, 0.92);
-}
-
-.product-shell__header nav {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
-  left: 12px;
-  z-index: 60;
-  display: flex;
-  justify-content: space-around;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--espresso);
-  box-shadow: var(--elevation-overlay);
-}
-
-.product-shell__header nav a,
-.product-shell__header nav summary,
-.product-shell__signal {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: var(--dim);
-  font-size: 12px;
-}
-
-.product-shell__header nav a:hover,
-.product-shell__header nav summary:hover {
-  color: var(--crema);
-  background: var(--card);
-}
-
-.product-shell__signal {
-  color: var(--green);
-  border: 1px solid var(--green-line);
-  font: 600 10px var(--mono);
-  text-transform: uppercase;
-}
-
-.product-shell__signal a {
-  color: inherit;
-}
-
-/* ── The `Sections` disclosure's styling is DELETED with the disclosure (Story 3.5) ─────────
-   `app-shell-and-agent-rail` S1.3's section nav — `.product-shell__sections`,
-   `.product-shell__sections-panel` and the `[data-surface-status='gated']` badge — rendered in the
-   legacy branch only, and console-ia-overhaul Story 3.5 removes that markup. Its rules go with it,
-   here and in the >=640px block below.
-
-   Swept rather than left: "deleting a component leaves a trail in the stylesheet, and the trail
-   comes with confident prose attached" (Roadmap/LEARNINGS.md) — the block that used to sit here
-   carried a paragraph explaining why the disclosure was not expanded inline on desktop, which is
-   exactly the shape of dead CSS that reads as evidence to the next reader. */
-
-/* console-ia-overhaul S1.3 — the four-destination header.
-   These rules sit ABOVE `.product-shell main` and below the legacy `__sections` block on purpose:
-   a selector gets ONE base block and it goes above every override of it (LEARNINGS — the same
-   cascade defect landed three times in one epic in this file). The mobile/desktop switch for
-   `.product-shell__header nav` in the 640px media query already covers `__tabs`, which is why
-   `__tabs` is a second class on the same element rather than a replacement for `__nav`. */
-.product-shell__tab {
-  white-space: nowrap;
-}
-
-/* The current section, marked for the eye and for a screen reader by the same attribute. Keyed on
-   `aria-current` rather than a class so the two cannot drift: there is no way to paint this state
-   without also announcing it. */
-.product-shell__tab[aria-current='page'] {
-  color: var(--crema);
-  background: var(--card);
-  box-shadow: inset 0 -2px 0 var(--gold);
-}
-
-.product-shell__identity {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  /* `min-width: 0` is load-bearing, not defensive. A grid/flex item's default `min-width: auto`
-     refuses to shrink below its content, and a project SLUG is unbounded — the authed fixture's
-     `gb-e2e-authed-1787859297750-69508` pushed this row 4px past a 360px viewport and took the
-     account menu with it (10 mobile-heuristics specs, caught with the gate ON). A real slug like
-     `miyagisanchez` is short enough to hide this forever, which is exactly why the least-convenient
-     realistic input is the one worth testing. */
-  min-width: 0;
-}
-
-/* Scoped INSIDE `__identity` so the legacy header's own `.product-shell__signal` is untouched — D4
-   promises the gate-off render is what it was, and that promise covers CSS as much as markup. The
-   legacy signal is not a child of this container, so these rules cannot reach it. */
-.product-shell__identity .product-shell__signal,
-.product-shell__switcher summary {
-  min-width: 0;
-  max-width: 42vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.product-shell__switcher,
-.product-shell__account {
-  position: relative;
-}
-
-.product-shell__switcher summary,
-.product-shell__account summary {
-  cursor: pointer;
-  /* Safari's requirement, not a preference — see the legacy `__sections summary` note above. */
-  list-style: none;
-}
-
-.product-shell__switcher summary::-webkit-details-marker,
-.product-shell__account summary::-webkit-details-marker {
-  display: none;
-}
-
-.product-shell__menu {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 70;
-  min-width: 220px;
-  /* The menu opens leftward from a control near the right edge, so on a narrow screen its 220px
-     floor is what would push the document wider. Bounded by the viewport, not by the header's
-     padding, because `right: 0` is relative to the control and the control moves. */
-  max-width: calc(100vw - 24px);
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--espresso);
-  box-shadow: var(--elevation-overlay);
-}
-
-.product-shell__menu ul {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.product-shell__menu a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--roast-2);
-  color: var(--crema);
-  font-size: 13px;
-}
-
-.product-shell__menu a[aria-current='true'] {
-  box-shadow: inset 2px 0 0 var(--gold);
-}
-
-.product-shell__menu p {
-  margin: 0 0 8px;
-  color: var(--dim);
-  font-size: 12px;
-  /* An email address has no spaces to break at, and the menu is 220px wide. Without this a long
-     address widens the panel off the right edge of a phone. */
-  overflow-wrap: anywhere;
 }
 
 /* console-ia-overhaul S1.4 — the per-section rail.
@@ -1362,12 +1113,6 @@ body {
   font-size: 13px;
 }
 
-.product-shell main {
-  width: min(1120px, calc(100% - 36px));
-  margin: 0 auto;
-  padding: 40px 0 96px;
-}
-
 /* app-shell-and-agent-rail S2.2 — the agent rail.
    Narrow width: a pull-up sheet, server-rendered CLOSED, sitting above the bottom tab bar. Wide:
    a fixed sidebar, opened once at mount by components/product/RailDisclosure.tsx. The 1100px
@@ -1375,7 +1120,13 @@ body {
 .agent-rail {
   position: fixed;
   right: 12px;
-  bottom: 78px;
+  /* ⚠️ **12px, not 78px** — design-system-rails Sprint 6 (fresh reviewer, Minor). The 78px was the
+     clearance for a FIXED BOTTOM TAB BAR that the public branch of the shell rendered below 640px.
+     Story 6.4 deleted that bar — the links sit in the public frame's top bar at every width now — so
+     the sheet was floating 78px above nothing on the one render that can still show it (an
+     anonymous visitor to a demo dashboard, on a phone). A number left behind by a deleted component
+     is the same trail in the stylesheet the Sweeper exists to remove. */
+  bottom: 12px;
   left: 12px;
   z-index: 55;
 }
@@ -1488,24 +1239,6 @@ body {
   color: var(--dim-2);
 }
 
-.product-shell main > h1,
-.product-shell main > header h1 {
-  font-size: clamp(30px, 7vw, 48px);
-  line-height: 1.05;
-}
-
-.product-shell main > p,
-.product-shell main > header p {
-  max-width: 760px;
-  margin-top: 12px;
-  color: var(--dim);
-}
-
-.product-shell main > p + *,
-.product-shell main > header + * {
-  margin-top: 28px;
-}
-
 /* app-shell-and-agent-rail S3 — Command Center. One block per project the member belongs to. */
 .stat-card {
   display: grid;
@@ -1560,13 +1293,6 @@ a.stat-card:hover {
 .stat-card__provenance {
   font-family: var(--mono);
   font-size: 10px;
-}
-
-.auth-shell__card {
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
 }
 
 /* ── app-component-kit-adoption S1 — the first table, form and dialog styling in the repo ──────
@@ -2043,69 +1769,6 @@ a.stat-card:hover {
   white-space: pre;
 }
 
-:where(.product-shell, .auth-shell) :where(input, textarea, select) {
-  width: 100%;
-  min-height: 44px;
-  padding: 11px 13px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--espresso);
-  color: var(--crema);
-  font: inherit;
-}
-
-.auth-shell {
-  display: grid;
-  align-content: center;
-  gap: 24px;
-  width: min(460px, calc(100% - 36px));
-  min-height: 100vh;
-  margin: 0 auto;
-  padding-block: 36px;
-}
-
-.auth-shell__card {
-  padding: 28px;
-}
-
-.auth-shell__intro {
-  margin-bottom: 24px;
-  color: var(--dim);
-}
-
-.auth-shell__title {
-  font-size: 34px;
-}
-
-.auth-shell__foot {
-  margin-top: 22px;
-}
-
-.auth-form {
-  display: grid;
-  gap: 14px;
-}
-
-.auth-form__label {
-  display: grid;
-  gap: 6px;
-  color: var(--dim);
-  font-size: 13px;
-}
-
-.auth-form__message {
-  color: var(--dim);
-  font: 500 14px/1.55 var(--mono);
-}
-
-.auth-form__message--success {
-  color: var(--green);
-}
-
-.auth-form__message--error {
-  color: var(--red);
-}
-
 @media (min-width: 640px) {
   .divider .wrap {
     flex-wrap: nowrap;
@@ -2136,26 +1799,6 @@ a.stat-card:hover {
     grid-template-columns: 0.9fr 1.1fr;
     gap: 48px;
   }
-
-  .product-shell__header {
-    grid-template-columns: auto 1fr auto;
-    gap: 28px;
-    padding-inline: max(24px, calc((100vw - 1180px) / 2));
-  }
-
-  .product-shell__header nav {
-    position: static;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .product-shell main {
-    padding: 52px 0 88px;
-  }
 }
 
 @media (min-width: 900px) {
@@ -2173,15 +1816,6 @@ a.stat-card:hover {
    cannot read a custom property, so the two are kept in step by hand. Below 1100px the rail stays
    the pull-up sheet defined above: a squeezed desktop rail on a phone is worse than a sheet. */
 @media (min-width: 1100px) {
-  /* ONE source for where the rail sits and how much room the page must leave it. Two independent
-     numbers is how the first version of this shipped a rail sitting on top of the project card:
-     the rail was inset by the header's own gutter while the page reserved only the rail's width,
-     so everything past ~1080px was covered. Derived once, consumed twice. */
-  .product-shell:has(.agent-rail) {
-    --rail-gutter: max(12px, calc((100vw - 1180px) / 2));
-    --rail-width: 320px;
-  }
-
   .agent-rail {
     top: 84px;
     right: var(--rail-gutter);
@@ -2192,41 +1826,6 @@ a.stat-card:hover {
 
   .agent-rail__body {
     max-height: calc(100vh - 190px);
-  }
-
-  /* Padding on the body rather than a margin on main: main keeps its `margin: 0 auto` and centres
-     inside the narrower box, so the column stays centred instead of being shoved right. `:has()`
-     scopes this to renders that actually HAVE a rail — with the flag OFF the rail is not in the DOM
-     at all and the page must be byte-identical to today. */
-  .product-shell:has(.agent-rail) .product-shell__body {
-    padding-right: calc(var(--rail-gutter) + var(--rail-width) + 24px);
-  }
-
-  /* console-ia-overhaul S1.4 — the section rail becomes the LEFT sidebar, at the same breakpoint
-     and by the same method as the agent rail on the right: ONE derived pair of numbers, consumed
-     twice. The first version of the agent rail shipped a sidebar sitting on top of the page because
-     the gutter and the width were two independent values; deriving them once is what fixed it, and
-     copying that shape is deliberate rather than incidental.
-
-     Scoped with `:has(.console-rail)` for the reason the block above gives: with the console gate
-     OFF the rail is not in the DOM at all, so none of this can reach the legacy render. */
-  .product-shell:has(.console-rail) {
-    --section-rail-gutter: max(12px, calc((100vw - 1180px) / 2));
-    --section-rail-width: 232px;
-  }
-
-  .product-shell:has(.console-rail) .console-rail {
-    position: fixed;
-    top: 84px;
-    left: var(--section-rail-gutter);
-    width: var(--section-rail-width);
-    max-height: calc(100vh - 190px);
-    overflow-y: auto;
-    margin: 0;
-  }
-
-  .product-shell:has(.console-rail) .product-shell__body {
-    padding-left: calc(var(--section-rail-gutter) + var(--section-rail-width) + 24px);
   }
 }
 
@@ -2356,29 +1955,6 @@ a.stat-card:hover {
 
 .section-lead {
   margin-top: 30px;
-}
-
-/* ── The surface note ───────────────────────────────────────────────────────
-   Load-bearing, not decoration (epic D4). This page renders BOTH illustrated
-   agent conversations and one real window over live demo-tenant data. A reader
-   who cannot tell them apart learns nothing from either, so every window
-   carries a note saying which it is. */
-
-.surface-note {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 9px;
-  color: var(--dim);
-  font: 600 10.5px var(--mono);
-  letter-spacing: 0.08em;
-}
-
-.surface-note strong {
-  color: var(--gold-hot);
-  font-weight: 700;
 }
 
 /* ── The copy-a-prompt card ─────────────────────────────────────────────── */
@@ -2628,9 +2204,15 @@ a.stat-card:hover {
 
 /* The mockup writes these labels in literal uppercase; the components pass
    sentence case so the copy stays readable in the source and screen readers
-   don't spell out shouted text. The transform belongs here either way. */
+   don't spell out shouted text. The transform belongs here either way.
+
+   ⚠️ `.surface-note strong` LEFT this list in Sprint 6, with the `/talk` markup
+   that rendered it. The other three are live on the landing — removing the whole
+   rule because one member died would have silently un-uppercased `.eyebrow`,
+   `.panel-label` and `.kicker` across the public site. Caught by diffing what the
+   sweep removed against what it was asked to remove, which is the check a
+   selector-list sweep needs: a rule dies only when EVERY selector in it does. */
 .eyebrow,
-.surface-note strong,
 .panel-label,
 .kicker {
   text-transform: uppercase;
@@ -3090,10 +2672,6 @@ a.stat-card:hover {
 .chat-avatar,
 .journey-node__icon {
   contain: layout paint;
-}
-
-.surface-note {
-  min-height: 1.4em;
 }
 
 /* An `<svg>` inside a control must not be able to change the control's height
@@ -3747,74 +3325,6 @@ a.stat-card:hover {
   color: var(--gold);
   font: 600 11.5px var(--mono);
   font-style: normal;
-}
-
-/* ── The Pods booking page (/talk) ──────────────────────────────────────────
-   landing-maker-ops · Sprint 5.
-
-   Mobile-first like the rest of the maker-ops block: the brief stacks above the
-   calendar on a phone, and only becomes a two-column layout where the calendar
-   has room to render its own week view without squeezing. */
-.talk {
-  padding-block: 44px 64px;
-}
-
-.talk-grid {
-  display: grid;
-  gap: 20px;
-}
-
-.talk-brief .plain-list li {
-  margin: 10px 0;
-}
-
-.talk-direct {
-  margin-top: 14px;
-}
-
-.talk-embed {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-
-/* The frame carries its own visible edge and ground. Without them a Cal.com
-   that fails to paint is indistinguishable from a section that has finished
-   rendering — the reader sees nothing and concludes nothing is coming. With
-   them, an empty frame still reads as "a thing that did not fill", which is
-   what sends them to the escape-hatch link above it.
-
-   The height is generous because a booking widget that scrolls inside a short
-   frame is the single most unpleasant version of this pattern: two nested
-   scrollbars, and the reader loses the calendar while reaching for a date. */
-.talk-frame {
-  width: 100%;
-  /* ── A fixed height, and the honest reason it is fixed ───────────────────
-     Cal.com's own embed SCRIPT auto-resizes its frame by postMessage. We do not
-     load it (see the page's header comment: a script executes in our origin, a
-     cross-origin frame cannot), so this height is chosen rather than measured,
-     and it is a genuine trade-off with no clean answer: too short nests a second
-     scrollbar inside the page, too tall leaves dead space under the widget.
-     620px was measured to scroll; 860px was measured to leave a visible gap.
-     This sits at the top of the widget's natural range, so the common case fits
-     and the worst case is a short internal scroll rather than a lost calendar. */
-  min-height: 700px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-  box-shadow: var(--elevation-raised);
-}
-
-@media (min-width: 900px) {
-  .talk-grid {
-    grid-template-columns: 0.85fr 1.15fr;
-    gap: 28px;
-    align-items: start;
-  }
-
-  .talk-frame {
-    min-height: 780px;
-  }
 }
 
 /* The unpriced tier's slot. It sits where `$0` and `$49` sit on the tiers

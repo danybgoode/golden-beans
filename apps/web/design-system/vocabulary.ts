@@ -171,6 +171,21 @@ export const UPPERCASE_ALLOWED: readonly {
   // refuses AND the uppercase-mono pair Do-not #3 forbids — so the port is also the fix, and this
   // entry is `keep: true` in Archivo rather than mono debt.
   { selector: '.ds-gaps', what: "the not-measuring disclosure's summary", keep: true },
+  // ── design-system-rails · Sprint 6 — seam B's two micro-labels ──────────────────────────────
+  // Both are uppercase in the approved design and BOTH are mono there. Neither is recorded as mono
+  // debt, because neither ships mono: the prototype's `font: 600 10.5px/1 var(--mono)` is expanded
+  // AND re-set in Archivo, the same answer Story 5.2 gave `.ds-band-who`. Taking the permitted
+  // route rather than recording an exemption is what keeps Do-not #3 a rule instead of a list.
+  {
+    selector: '.ds-sharehead-ro',
+    what: 'the READ ONLY stamp on a shared report (`public-share`)',
+    keep: true,
+  },
+  {
+    selector: '.ds-dest-status',
+    what: "a horizon destination's lit / partly lit / on the way word (`hub-horizon`)",
+    keep: true,
+  },
   // The six the contract does not, each on a surface a later sprint rebuilds.
   { selector: '.rail-label', what: "the rail's “Environment” label — Sprint 3", keep: false },
   { selector: '.field > .lab', what: 'form field labels — Sprint 4', keep: false },
@@ -194,12 +209,12 @@ export const UPPERCASE_ALLOWED: readonly {
   // They are recorded rather than deleted here for the same reason the six above are: Sprint 2 owns
   // none of these surfaces, and a blind sweep of twelve selectors in the sprint that builds the
   // language is how a redesign breaks a page nobody was looking at.
-  {
-    selector: '.product-shell__signal',
-    what: 'the legacy header identity — Sprint 3',
-    keep: false,
-    mono: true,
-  },
+  // ⚠️ `.product-shell__signal` LEFT THIS LIST in Sprint 6, with the rule that painted it. It was
+  // recorded as mono debt owed to "Sprint 3" and Sprint 3 never paid it: the public branch of the
+  // shell kept rendering the project slug as `600 10px var(--mono)` in uppercase — the pair Do-not
+  // #3 forbids outright — for three more sprints. Story 6.4 deleted `globals.css`'s
+  // `.product-shell*` block outright, and the replacement (`.ds-shell-signal`) is sentence-case
+  // Archivo. The debt is closed by DELETION, which is the only way this list is meant to shrink.
   {
     selector: "[data-surface-status='gated']",
     what: 'the rail GATED badge — Do-not #2 deletes it entirely, Sprint 3',

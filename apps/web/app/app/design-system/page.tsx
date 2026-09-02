@@ -51,6 +51,8 @@ import {
 import { SpecimenDialog, SpecimenProductDialog } from './specimen-dialog'
 import {
   Answer,
+  Tile,
+  Tiles,
   Button,
   Callout,
   Card,
@@ -352,6 +354,22 @@ export default async function DesignSystemSpecimen({
               <Stat value="39" label={SPECIMEN_WORDS.neverActivated} />
               <Stat value="0" label="Deliberately off" />
             </div>
+          </Section>
+
+          <Section
+            id="tiles"
+            title="Summary tiles — and the one that has no number to show"
+            note="A tile with nothing to report says WHICH nothing it is. A dash reads as zero, and a zero beside “Held” over a project that has tested nothing is the most dangerous number this system can draw."
+          >
+            <Tiles>
+              <Tile label="Shipped" value="24" detail="of 27 epics" />
+              <Tile label="Building now" value="1" detail="design-system-rails" tone="warn" />
+              <Tile
+                label="Held"
+                value={null}
+                absent="Nothing has been replayed, so there is no rate to compute — not a 100% pass."
+              />
+            </Tiles>
           </Section>
 
           <Section

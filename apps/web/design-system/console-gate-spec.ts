@@ -80,11 +80,11 @@ export const MEASURED_SPEC: SpecRow[] = [
   // for three review rounds (fresh reviewer, round 3).
   {
     what: 'project switcher',
-    selector: '.product-shell__identity .product-shell__signal',
+    selector: '.ds-shell-identity .ds-shell-signal',
     fontSize: '13px',
     fontWeight: '400',
   },
-  { what: 'section tab', selector: '.product-shell__tab', fontSize: '13px' },
+  { what: 'section tab', selector: '.ds-shell-tab', fontSize: '13px' },
   // ⚠️ **THE TWO TIERS, which the contract measured and the gate never checked.**
   // `MEASURED-SPEC.md` has carried "Top bar (tier 1) 1440 x 54" and "Section nav (tier 2) 1440 x 44"
   // since Sprint 1 — generated from the approved prototype. Neither had a row HERE, the array
@@ -111,8 +111,8 @@ export const MEASURED_SPEC: SpecRow[] = [
   // Keeping `tolerance: 0` and correcting the reason, rather than the reverse: the field is right,
   // the evidence for it was invented. Prose asserting a property the code lacks is this epic's third
   // most common defect and this is an instance of it in a comment about avoiding it.
-  { what: 'top bar (tier 1)', selector: '.product-shell__header', height: 54, tolerance: 0 },
-  { what: 'section nav (tier 2)', selector: '.product-shell__tabs', height: 44, tolerance: 0 },
+  { what: 'top bar (tier 1)', selector: '.ds-shell-header', height: 54, tolerance: 0 },
+  { what: 'section nav (tier 2)', selector: '.ds-shell-tabs', height: 44, tolerance: 0 },
   { what: 'page h1', selector: 'main h1', fontSize: '23px', fontWeight: '700' },
   { what: 'page subtitle', selector: '.ds-page-head p', fontSize: '13.5px', fontWeight: '400' },
   { what: 'the answer line', selector: '.ds-answer', fontSize: '13.5px', fontWeight: '400' },

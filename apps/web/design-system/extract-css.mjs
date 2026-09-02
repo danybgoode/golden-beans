@@ -106,8 +106,17 @@ export function buildTokensCss(tokens) {
  * \`ProductShell\` already sets, and \`console.css\` declared this same token block against it.
  * Listing both here is what lets Sprint 1 delete that duplicate block while changing **no product
  * pixel** \u2014 the console keeps resolving exactly the values it resolves today, from one declaration
- * instead of two. The alias is retired in Sprint 6 with the rest of the old world. Until then, one
- * definition under two names beats two definitions that currently happen to agree. */
+ * instead of two. The alias is NOT retired. Until it is, one definition under two names beats two
+ * definitions that currently happen to agree.
+ *
+ * \u26a0\ufe0f **CORRECTED, design-system-rails Story 6.4.** This paragraph used to end "The alias is
+ * retired in Sprint 6 with the rest of the old world." Sprint 6 did not retire it, and could not:
+ * \`console.css\` still carries ~150 \`.is-console\` rules that are not shell chrome \u2014 the command
+ * palette, the console rail, modals, the environment picker \u2014 every one of them on a BARE class
+ * name (\`.btn\`, \`.pill\`, \`.tag\`) that cannot be renamed without touching every console surface
+ * at once. What Sprint 6 DID retire is the \`.product-shell*\` family, which is a different thing.
+ * The promise is corrected rather than left standing: a generated file's header is the last place
+ * a reader should meet a claim nobody kept. */
 ${SCOPE_SELECTORS.join(',\n')} {
 ${lines.join('\n')}
 }

@@ -195,6 +195,10 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       // `.ds-listhead`. The uppercase itself is approved — only the family changed — which is why
       // both are `keep: true` and neither is recorded as mono debt.
       '.ds-band-who',
+      // ── design-system-rails · Sprint 6 — seam B's two ────────────────────────────────────────
+      // Same story, one sprint on: both are mono in the prototype, both ship in Archivo, and
+      // neither is recorded as mono debt because neither IS mono.
+      '.ds-dest-status',
       '.ds-envtable',
       '.ds-gaps',
       '.ds-grp',
@@ -202,6 +206,7 @@ test('uppercase appears only where the vocabulary allows, and never in mono', ()
       '.ds-label',
       '.ds-listhead',
       '.ds-matrix',
+      '.ds-sharehead-ro',
       '.ds-specimen-type--label',
       '.ds-table-head',
       '.ds-tile-label',

@@ -9,7 +9,12 @@ test('the /install page renders a live connector URL that actually round-trips',
   expect(page.status()).toBe(200)
   const html = await page.text()
 
-  const match = html.match(/value="(https?:\/\/[^"]*\/api\/v1\/public\/mcp\/c\/[^"]+)"/)
+  // ⚠️ `<code>`, not `value="…"` — design-system-rails Story 6.2. The page moved from the landing's
+  // `CopyUrlField` (a readonly `<input>`) to `design-system/copy-field.tsx`, which renders the value
+  // as `<code>` on purpose: a credential is not something you edit, and an input's single
+  // horizontally-scrollable line hides most of what a reader is about to copy. The assertion is the
+  // same one — the URL a visitor can actually take away — against the markup that now carries it.
+  const match = html.match(/<code[^>]*>(https?:\/\/[^<]*\/api\/v1\/public\/mcp\/c\/[^<]+)<\/code>/)
   expect(match, 'install page should render a connector URL in the copy field').not.toBeNull()
   const connectorUrl = match![1]
 

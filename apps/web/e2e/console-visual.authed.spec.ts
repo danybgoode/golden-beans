@@ -1,9 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import {
-  EXPERIMENT_FIXTURE_KEY,
-  JOURNEY_FIXTURE_KEY,
-  readTenantRecord,
-} from './helpers/authed-fixture'
+import { EXPERIMENT_FIXTURE_KEY, JOURNEY_FIXTURE_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // ⚠️ IMPORTED, not declared here. These two arrays used to live in this file, and
 // `console-spec.test.ts` checked a hand-retyped COPY of them against the regenerated contract —
@@ -244,6 +240,13 @@ test.describe('the console matches the approved design', () => {
     // different quantity — it excludes the scrollbar and is bounded by the grid column. Asserting
     // the measurement against 1180 fails on a CORRECT page at 1440 (it renders 1120), which is a
     // gate that cries wolf; asserting only the measurement would miss the cap being deleted.
+    //
+    // ⚠️ **AND THAT ASYMMETRY IS EXACTLY WHY A REGRESSION HID HERE** (fresh reviewer, round 4,
+    // Blocking). `contentMaxWidth` reads the `max-width` PROPERTY; the rule that sets the column's
+    // actual `width` lived in `globals.css` and was deleted by the Sweeper. So the column widened
+    // 1120 → 1180 at 1440 and this assertion went green **because of** the regression, not despite
+    // it. The width is measured below now, and `the page frame holds at every width` covers the
+    // band this suite never visits.
     expect
       .soft(
         geometry.contentMaxWidth,
@@ -512,12 +515,23 @@ test('the deferred spec rows are named, so the gate does not look complete', () 
 // experiment, so the keys are EXPORTED CONSTANTS rather than something to invent. Both are opened by
 // the loop below like every other route, and the two hand-written claims are deleted rather than
 // replaced by two better-worded ones.
+// ⚠️ **`/s/[token]` LEFT THIS LIST — design-system-rails Sprint 6.**
+//
+// It was here because "its URL needs a token this suite must not invent", and its `coveredBy` string
+// named `e2e/report-share.spec.ts` — which has ZERO `page.goto` calls. It is an `api` spec, so the
+// label read as coverage and provided none. The row was inert only while it was
+// `rendersFromDesignSystem: false`; Story 6.5 flips it, and a flipped row with an API-only claim
+// behind it is the exact defect Sprint 5 found on four other rows.
+//
+// `sprint-6.md` names the fix and forbids the alternative: **mint a real token in the authed
+// fixture and let this loop open the route. Do not reword the string.** `auth.setup.ts`
+// (`seedShareFixture`) mints one with the product's own `generateShareToken` + `hashCredential`, so
+// the token is not invented and the row it writes is the row the product's own mint writes.
 const EXPECTED_SKIPS = [
   '/app/flags/[projectSlug]/[flagKey]',
   '/app/funnel/[projectSlug]/[featureKey]',
   '/app/impact/[projectSlug]/[featureKey]',
   '/hub/[projectSlug]/epic/[epicSlug]',
-  '/s/[token]',
 ]
 
 const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
@@ -576,18 +590,34 @@ const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string
     coveredBy: 'e2e/command-center.authed.spec.ts — opens it and measures `.ds-chart-bars .ds-chart-fill`',
   },
   '/app/impact/[projectSlug]/[featureKey]': {
-    coveredBy: 'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
+    coveredBy:
+      'e2e/flag-console.authed.spec.ts — opens it and asserts the `North Star` h1 and `.ds-chart-small`',
   },
   '/hub/[projectSlug]/epic/[epicSlug]': { coveredBy: 'e2e/hub.authed.spec.ts' },
-  // ⚠️ **SPRINT 6: this claim does not hold, and it is inert only because the row is still
-  // `rendersFromDesignSystem: false`.** `report-share.spec.ts` has ZERO `page.goto` calls — it is an
-  // API spec — so the moment Sprint 6 flips this row to `true`, `/s/[token]` starts counting toward
-  // the coverage number with nothing verifying it renders. That is the same defect S5 found on the
-  // journey and experiment detail routes, waiting one sprint out.
-  //
-  // The fix when it lands: mint a real share token in the authed fixture and open the route from the
-  // loop above, exactly as the journey and experiment details now are. Do not reword this string.
-  '/s/[token]': { coveredBy: 'e2e/report-share.spec.ts — ⚠️ API-only; see the note above before Sprint 6 flips this row' },
+  // ⚠️ **SPRINT 6 CLOSED THIS.** The `coveredBy` string that stood here named `report-share.spec.ts`,
+  // an `api` spec with zero `page.goto` calls, under a note saying the claim would stop being inert
+  // the moment the row flipped. It flipped in Story 6.5, so the route is opened by this loop with a
+  // token the fixture MINTS — see `EXPECTED_SKIPS` above.
+  '/s/[token]': () => `/s/${shareToken()}`,
+}
+
+/**
+ * The fixture's share token, narrowed.
+ *
+ * ⚠️ **Throws rather than skipping.** `TenantRecord.shareToken` is `string | null`, and a null means
+ * `seedShareFixture` failed. Returning early there would leave the loop measuring twenty-six routes
+ * and reporting twenty-seven — a skip nobody decided, which reads exactly like a suite that ran. The
+ * whole reason this token exists is that the previous arrangement counted a route nothing opened.
+ */
+function shareToken(): string {
+  const { shareToken: token } = tenant()
+  if (!token) {
+    throw new Error(
+      'the visual gate needs a share token — auth.setup.ts could not mint one, so /s/[token] would ' +
+        'be counted toward coverage without being opened'
+    )
+  }
+  return token
 }
 
 /**
@@ -704,7 +734,14 @@ test('every route claiming the design system renders from it', async ({ page }) 
             // it from `references/ux-guidelines.md` rather than from a prototype class, so
             // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
             // this list is maintained beside that one rather than derived from it.
-            'main .ds-once'
+            'main .ds-once, ' +
+            // ⚠️ `/talk` was the ONE route of twenty-seven with no entry here, and the gate said so
+            // rather than passing (design-system-rails Story 6.5). Its content is a third party's
+            // booking calendar and the three notes beside it — `.ds-talkslot` is the frame around
+            // that calendar, and it is genuinely the first thing on the page a reader is there for.
+            // Added rather than worked around: the alternative was dressing the aside items up as
+            // `.ds-card`s to satisfy a selector list, which is a page changed to fit its test.
+            'main .ds-talkslot'
         )
         return first ? Math.round(first.getBoundingClientRect().top) : null
       })(),
@@ -773,6 +810,142 @@ test('every route claiming the design system renders from it', async ({ page }) 
     console.log(`[visual gate] ${visited} route(s) opened here; ${skipped.length} covered elsewhere:`)
     for (const line of skipped) console.log(`  · ${line}`)
   }
+})
+
+test('every ds- element sits inside a .ds ANCESTOR, on every route this suite opens', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  // ── The guard for the defect that got past every other assertion in this file ────────────────
+  //
+  // `Frame` shipped `<div className="ds ds-door">`, and every rule in `system.css` is written
+  // `.ds .ds-…` — a DESCENDANT combinator, enforced by `system-cascade.test.ts` because
+  // `console.css`'s `.is-console main p` at (0,1,2) out-specifies a bare `.ds-x` at (0,1,0). A
+  // descendant selector cannot match the element carrying the scope class, so the whole frame block
+  // silently did not apply and `/login` rendered top-left on the browser's default ground.
+  //
+  // ⚠️ **Every other assertion in this file passed on that page**: it had `ds-` classes inside
+  // `<main>`, it spent little chrome, and it did not scroll sideways. Correct markup, correct
+  // stylesheet, and no relationship between them — which is precisely "a guard that cannot go red on
+  // a page that looks wrong", found by opening the page rather than by the gate.
+  //
+  // So this asserts the RELATIONSHIP the stylesheet depends on, not the presence of a class:
+  // `parentElement.closest('.ds')`, deliberately not `closest()` on the element itself — `closest`
+  // matches the node it starts from, which would call the broken markup correct.
+  // ⚠️ **"this suite opens", not "every covered route"** (fresh reviewer, Minor). The loop skips the
+  // four `{ coveredBy }` rows whose URL needs a key or a token, so it checks 23 of 27 — and a test
+  // whose NAME claims more than its body does is the shape this epic exists to remove. The four it
+  // cannot reach are all `ProductShell` routes, which share one seam that the other 23 exercise; the
+  // gap is real and bounded rather than hidden.
+  await page.setViewportSize(VIEWPORT)
+  const orphansByRoute: string[] = []
+  const skippedHere: string[] = []
+
+  for (const row of liveRows(6).filter((entry) => entry.rendersFromDesignSystem)) {
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') {
+      skippedHere.push(row.route)
+      continue
+    }
+    const response = await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+    expect.soft(response?.status() ?? 0, `[${row.route}] answered ${response?.status()}`).toBeLessThan(400)
+
+    const orphans = await page.evaluate(() =>
+      [...document.querySelectorAll('[class]')]
+        .filter((element) => [...element.classList].some((name) => name.startsWith('ds-')))
+        .filter((element) => element.parentElement?.closest('.ds') == null)
+        .map((element) => `${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`)
+        // Deduplicated and capped: a broken frame orphans every element under it, and a failure
+        // message listing four hundred of them is one nobody reads.
+        .filter((name, index, all) => all.indexOf(name) === index)
+        .slice(0, 5)
+    )
+    if (orphans.length > 0) orphansByRoute.push(`${row.route}: ${orphans.join(', ')}`)
+  }
+
+  expect(
+    orphansByRoute,
+    'a `ds-` element has no `.ds` ANCESTOR, so every `.ds .ds-…` rule in system.css misses it — ' +
+      'the markup and the stylesheet look right separately and are not connected. Usually `.ds` ' +
+      'compounded onto the same element (`class="ds ds-door"`) instead of wrapping it.'
+  ).toEqual([])
+
+  // Reported, not swallowed — the same rule the coverage loop follows. A reader of the output can
+  // see which routes this assertion did NOT cover rather than inferring it from the test's name.
+  if (skippedHere.length > 0) {
+    console.log(`[ds-scope] ${skippedHere.length} route(s) not opened here: ${skippedHere.join(', ')}`)
+  }
+})
+
+test('the page frame holds at every width, not just the two this suite samples', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the console page frame; run with both gates on')
+
+  // ── The guard for the class of defect the Sweeper shipped, not just its instance ──────────────
+  //
+  // This suite samples 1440 and 390. `globals.css`'s `.product-shell main` supplied the console
+  // column's WIDTH, its CENTERING and its padding for every width in between, and `console.css`
+  // only ever overrode padding at ≤900 and ≥1100 — so deleting the base left the **901–1099 band**
+  // with no padding at all and the content flush to x=0, in a band nothing opened. At 1440 the same
+  // deletion widened the column 1120 → 1180 and made the `max-width` assertion above pass.
+  //
+  // A gate that samples two viewports cannot see a rule that only governs a third. So this walks the
+  // breakpoints the stylesheet actually has — the boundaries at 640, 900 and 1100, and one width
+  // inside each band — and asserts the two properties that were lost: the column is INSET from the
+  // viewport, and it has vertical padding. Values are deliberately not pinned; those are the design's
+  // to change, and pinning them would make every future padding tweak a test edit.
+  const widths = [390, 700, 950, 1040, 1280, 1440]
+  const failures: string[] = []
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`/app/flags/${tenantSlug()}?env=production`)
+    await page.waitForLoadState('networkidle')
+
+    const frame = await page.evaluate(() => {
+      const main = document.querySelector('main')
+      if (main === null) return null
+      const style = getComputedStyle(main)
+      const box = main.getBoundingClientRect()
+      return {
+        left: Math.round(box.left),
+        right: Math.round(window.innerWidth - box.right),
+        paddingTop: parseFloat(style.paddingTop),
+        paddingBottom: parseFloat(style.paddingBottom),
+        paddingLeft: parseFloat(style.paddingLeft),
+      }
+    })
+
+    if (frame === null) {
+      failures.push(`${width}px: no <main>`)
+      continue
+    }
+    // The column never touches either edge — by its own padding, by the shell's gutter, or by the
+    // rail's column. Which of the three is the design's business; that there is SOME inset is not.
+    if (frame.left + frame.paddingLeft <= 0) {
+      failures.push(
+        `${width}px: content sits flush at x=0 (left ${frame.left}, padding-left ${frame.paddingLeft})`
+      )
+    }
+    if (frame.paddingTop <= 0) {
+      failures.push(`${width}px: no padding above the content — the first line abuts the sticky nav`)
+    }
+    if (frame.paddingBottom <= 0) failures.push(`${width}px: no padding below the content`)
+    // ⚠️ **`right` was measured and thrown away** (fresh reviewer, round 5). A column that overflows
+    // the RIGHT edge passes every check above — it is inset on the left and padded — while the
+    // document scrolls sideways, which is Do-not #6. The sibling test catches that at 1440 only, so
+    // 950/1040/1280 were uncovered. Collecting a value and not asserting on it is the shape of a
+    // field that looks like coverage and is not.
+    if (frame.right < 0) {
+      failures.push(`${width}px: the content column overflows the right edge by ${-frame.right}px`)
+    }
+  }
+
+  expect(
+    failures,
+    'the console page frame collapses at a width this suite did not previously sample. ' +
+      '`globals.css` supplied the column width, centering and padding for the 901-1099 band and ' +
+      'console.css never overrode it, so deleting the base was invisible at 1440 and 390.'
+  ).toEqual([])
 })
 
 test('every row of the measured spec matches the built stylesheet', async ({ page }) => {

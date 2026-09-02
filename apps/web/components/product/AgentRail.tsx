@@ -64,8 +64,10 @@ export async function AgentRail({ projectId, projectSlug }: { projectId: string;
   // what "now" was.
   const now = new Date()
 
+  // `ds-agent-slot` beside `agent-rail`, for the reason `ConsoleRail` states: the shell's layout
+  // rules live in `system.css` and may only match `ds-`-prefixed classes.
   return (
-    <aside className="agent-rail" aria-label="Recent activity">
+    <aside className="agent-rail ds-agent-slot" aria-label="Recent activity">
       <RailDisclosure
         summary={
           <>

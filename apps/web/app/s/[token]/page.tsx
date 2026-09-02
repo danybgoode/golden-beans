@@ -10,8 +10,7 @@ import { lensPolicy } from '@/lib/pod-report-lens'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { journeyMarkerIndex } from '@/lib/hub-journey'
 import { PodReportBody, EmptyPodReportState } from '../../hub/report-components'
-import { ShareJourneyStrip, ShareHorizonStrip, ShareFrame } from './share-components'
-import styles from '../../hub/hub.module.css'
+import { ShareJourneyStrip, ShareHorizonStrip, ShareFrame, ShareFooterNote } from './share-components'
 
 // pod-report · Sprint 3, Story 3.1 — the share surface. One opaque token in the path, no account.
 //
@@ -21,6 +20,10 @@ import styles from '../../hub/hub.module.css'
 // someone else's report" and "show me the wider lens" are not requests that can be expressed —
 // which is a stronger property than validating them and saying no (AGENTS: no request-derived read
 // path may cross projects).
+//
+// ── design-system-rails · Sprint 6, Story 6.2 — reference state `public-share` ────────────────
+// The page renders inside DD3's PUBLIC frame, and the designed 404 every dead link lands on lives
+// beside it in `not-found.tsx` — see that file for why there is exactly one of them.
 //
 // ── Two independent kill switches, same shape as the MCP connector (AGENTS rule #3) ───────────
 // REPORT_SHARES_ENABLED must be on AND the row must be live. The flag is checked FIRST and without
@@ -97,7 +100,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   if (roadmap && !roadmap.ok && roadmap.reason === 'query_failed') throw new Error('Roadmap lookup failed')
 
   return (
-    <ShareFrame lens={lens} audienceNote={policy.audienceNote}>
+    <ShareFrame lens={lens} audienceNote={policy.audienceNote} sharedBy={projectSlug}>
       {report.ok ? (
         <PodReportBody
           projectSlug={projectSlug}
@@ -123,11 +126,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         <ShareHorizonStrip counts={roadmap.summary.counts} seeds={roadmap.summary.seeds.length} />
       )}
 
-      <p className={styles.shareFooterNote}>
-        This link was issued deliberately and can be revoked at any time. Every number on this page is
-        computed from the repository&apos;s own history — nothing here is estimated, and what could not be
-        measured says so.
-      </p>
+      <ShareFooterNote />
     </ShareFrame>
   )
 }

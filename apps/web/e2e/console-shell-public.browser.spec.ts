@@ -52,7 +52,7 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   // name here (fresh reviewer, PR #122, fourth pass).
   // Asserted on the DESTINATION, not the label. `getByRole('link', { name: 'Connect' })` passes if
   // the href is changed to a dead path, and what Story 3.5 risks is what a public visitor can still
-  // REACH. `.product-shell__nav` alone would be weak too — the console branch's tab nav carries that
+  // REACH. `.ds-pubbar-nav` alone would be weak too — the console branch's tab nav carries that
   // class as well, so only these two links distinguish public chrome from console chrome.
   await expect(page.getByRole('link', { name: 'Connect', exact: true })).toHaveAttribute('href', '/install')
   await expect(page.getByRole('link', { name: 'Agent notes', exact: true })).toHaveAttribute(
@@ -78,9 +78,9 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   // palette indexes the links the shell resolved for you.
   //
   // ⚠️ These are the assertions that only DISCRIMINATE with the gate on — see the header note.
-  await expect(page.locator('.product-shell__tabs')).toHaveCount(0)
-  await expect(page.locator('.product-shell__identity')).toHaveCount(0)
-  await expect(page.locator('.product-shell__account')).toHaveCount(0)
+  await expect(page.locator('.ds-shell-tabs')).toHaveCount(0)
+  await expect(page.locator('.ds-shell-identity')).toHaveCount(0)
+  await expect(page.locator('.ds-shell-account')).toHaveCount(0)
   await expect(page.locator('.console-rail')).toHaveCount(0)
 
   // ── ⌘K does nothing, and proving that needs a HYDRATED page ─────────────────────────────────

@@ -63,9 +63,18 @@ export async function assertMobileClean(page: Page, label: string) {
     ).toBeLessThanOrEqual(overflow.clientWidth)
 
     const undersized = await page.evaluate((min) => {
-      // Keep this selector identical to the zero-specificity CSS rail in globals.css. Form
+      // Keep this selector aligned with the zero-specificity CSS rail in globals.css. Form
       // controls, buttons and button-styled links are targets; links inside prose are exempt.
-      const selector = 'button, summary, select, textarea, [role="button"], input, a.btn'
+      //
+      // ⚠️ **`a.ds-btn` was missing, and that is why a 44px → 26px regression on nine public routes
+      // was invisible** (fresh reviewer, round 5, Major). The list said "button-styled links are
+      // targets" and named exactly one of the two classes the product uses for them. Worse, the
+      // share-404 row was added to this sweep in this same sprint *because* it "renders the widest
+      // button row on any door" — and the sweep measured that row's OVERFLOW and never its SIZE.
+      //
+      // The rule this encodes, so the next class does not repeat it: **a target selector must name
+      // every class that makes a link look pressable**, and the design system's is `ds-btn`.
+      const selector = 'button, summary, select, textarea, [role="button"], input, a.btn, a.ds-btn'
 
       const targetOf = (element: Element): Element => {
         if (
