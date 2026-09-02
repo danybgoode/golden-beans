@@ -175,6 +175,29 @@ It found **one Major, and it was a hole I opened while closing another.**
   inside the comment warning about selectors that match nothing. Deleted.
 - **Minor — `/signup`'s mobile row buys a documented gap, not a swept page.** Corrected above.
 
+## Review round 3 — one more undeclared change, and a guard that blocked correct work
+
+Round 3 was cut short by a session limit, so I ran its first three items myself.
+
+- **`isDsScoped()` holds.** Five smuggling shapes go red (`:where(.ds .x, .naked)`, `:is(.ds .x) .y`,
+  `:where(.dsx .y)`, `:where(.ds .a):where(.naked)`, `:not(.ds) .x`) and three legitimate ones stay
+  green. `:where(.ds) .a .b` also stays green, correctly: it *is* contained in `.ds` and scores
+  (0,2,0) from `.a .b`.
+- **Minor — the base-reset pin blocked correct work.** It compared bytes, so
+  `:where(.ds  .ds-shell)` — the same selector to CSS, two spaces to `includes()` — turned it red on
+  correct code. Whitespace-normalised now, and re-verified in both directions: the equivalent form
+  passes, the genuinely broken `.ds .ds-shell :where(…)` form still fails. This is the third time
+  this epic has shipped a guard that fires on correct work.
+- **Major — a FIFTH undeclared change, and the header said four.** The public branch's nav links
+  (`Connect`, `Agent notes`) shipped `display: inline-flex; align-items: center; gap: 6px; padding:
+  8px 10px; font-size: 12px`. My port wrote `padding: 7px 10px; font-size: 13px` and **dropped the
+  flex context entirely** — and *both* links contain an `<Icon>`, so each icon collapsed against its
+  text and lost its vertical centring. Restored verbatim.
+  ⚠️ **This header has now been wrong twice (three, then four), and both misses were found the same
+  way: by diffing against `git show origin/main:…`, never by re-reading the port.** The durable
+  lesson is that a *"carried verbatim"* claim is worth exactly as much as a diff against the deleted
+  source.
+
 **What round 2 settled** (checked rather than taken on trust, including a chromium probe of the real
 stylesheets in the real link order): the `:where()` specificity fix is genuinely (0,0,0) and all
 three previously-losing rules win again; the `ZERO_SPECIFICITY_BASE` exemption resists four smuggling

@@ -369,9 +369,14 @@ test('the shell base reset is still written at ZERO specificity', () => {
   //
   // The literal string, because the whole point is the exact form. A regex permissive enough to
   // accept "some rule about shell inputs" would accept the broken one.
-  const css = withoutKeyframes(withoutComments(RAW_SYSTEM_CSS))
+  // ⚠️ Compared on WHITESPACE-NORMALISED source, not on the raw bytes. `:where(.ds  .ds-shell)` with
+  // two spaces is the same selector to CSS and a different string to `includes()`, so the byte-exact
+  // form went red on code that was correct — a guard blocking correct work with a wrong diagnosis,
+  // which is how a guard gets switched off rather than obeyed (found by mutation, round 3).
+  const normalise = (text: string) => text.replace(/\s+/g, ' ')
+  const css = normalise(withoutKeyframes(withoutComments(RAW_SYSTEM_CSS)))
   assert.ok(
-    css.includes(ZERO_SPECIFICITY_BASE),
+    css.includes(normalise(ZERO_SPECIFICITY_BASE)),
     `system.css no longer contains \`${ZERO_SPECIFICITY_BASE}\`. If the shell's form-control reset ` +
       'was rewritten, check its specificity: at (0,2,0) in the last-loaded stylesheet it beats ' +
       '`.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` on ties.'
