@@ -301,6 +301,24 @@ horizontal overflow at 360/390 on any door, `.ds-codeblock` and the report table
 render having a rule, and the four carried `main` frame blocks reproducing `main`'s cascade at every
 band.
 
+## Review round 6 — one evasion left in the ban, and the rest verified clean
+
+Round 6's agent hit a session limit before reporting, so I ran its checks myself.
+
+- **Minor — the (0,2,0) ban had one evasion left.** Its pattern required the tag to END the compound,
+  so `.ds .ds-shell input[type='text']` — (0,2,1), a real shell-wide control reset — walked past it.
+  A trailing `[…]`, `:…` or `::…` is the same subject; the pattern accepts them now. Verified: the
+  attribute and `:focus` forms go red, and `:where(input) + span` correctly stays green because its
+  subject is a span, not a control. **Fourth version of this assertion, and the first three each
+  checked a proxy** — presence, then one spelling, then a tag position.
+- **The 44px floor measures correctly and breaks nothing.** On the real stylesheets at 390px: ink
+  26px → target 44px on every `FrameLink`; **no overlap** between the two `.ds-gone-acts` actions,
+  the two in `.ds-pubbar`, or stacked `.ds-talkitem` links; and an inline prose link 9px from a
+  button's overlay still hit-tests to itself. It follows `.ds-kebab::before`'s existing precedent in
+  the same file, and the door forms are excluded because their buttons are already 42px full-width.
+- **The `hub.module.css` sweep is exact in both directions.** Audited programmatically: **zero**
+  surviving rule-parts whose classes are all unused, and **zero** used-but-undefined classes.
+
 ## What is deliberately NOT on the design system, with its decay date
 
 **The pod report's evidence tables — and now ONLY those.** ⚠️ Round 5 measured the file: 116 classes

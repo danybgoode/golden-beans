@@ -402,7 +402,11 @@ test('the shell base reset is still written at ZERO specificity', () => {
   // supposed to beat the base. What must never beat the base is another rule that also applies to
   // EVERY control in the shell. A guard that fires on correct work is one this epic has already
   // shipped three times.
-  const FORM_CONTROL = /(^|[\s,(])(input|textarea|select)([\s,)]|$)/
+  // ⚠️ The attribute form counts too. `.ds .ds-shell input[type='text']` is (0,2,1) and resets a real
+  // control, and the first version of this pattern required the tag to END the compound — so an
+  // attribute or pseudo-class suffix walked past it (round 6). A trailing `[…]`, `:…` or `::…` is
+  // still the same subject.
+  const FORM_CONTROL = /(^|[\s,(])(input|textarea|select)([\s,)[:]|$)/
   const overSpecificResets = ruleList()
     .flatMap(({ selector }) => splitSelectorList(selector).map((part) => ({ part, spec: specificity(part) })))
     // Its SUBJECT is a bare control — `.ds-input` is a class and is unaffected …
