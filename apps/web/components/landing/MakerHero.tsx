@@ -1,5 +1,4 @@
 import { handoffPrompt } from '@/lib/landing-prompts'
-import { CATEGORY_DEFINITION } from '@/lib/positioning'
 import { getSiteUrl } from '@/lib/site-url'
 import { Button } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
