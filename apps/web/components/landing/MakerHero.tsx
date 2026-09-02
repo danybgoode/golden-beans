@@ -49,14 +49,14 @@ export function MakerHero() {
     <section className="hero" id="hero">
       <div className="wrap hero-grid">
         <div>
-          <p className="eyebrow">For makers and their agents</p>
+          
           {/* No terminal full stop, and the internal one is doing real work: the line is two beats,
               and the second is the payoff. Headings are titles, not sentences — the D7 rule
               `scripts/check-design-drift.mjs` enforces, which reads only the final character. */}
           <h1 className="display">
-            Make more.
+            For serial makers
             <br />
-            <em className="foil">Grow what works</em>
+            <em className="foil">Take your Moonshot</em>
           </h1>
           {/* ── The category, defined once, from lib/positioning.ts (epic D2) ────────────────
               "Agentic product management" is an emerging term with no owner, and today's dominant
@@ -72,7 +72,7 @@ export function MakerHero() {
               after the promise, which is where a reader is still looking.
 
               This is the ONLY place on `/` the definition appears. Twice would make it a slogan. */}
-          <p className="hero-definition">{CATEGORY_DEFINITION}</p>
+          
           {/* Set at the mockup's scale (`.hero .hero-sub` in globals.css), which is a size up from the
               rest of the page's body copy. This is the one paragraph a reader definitely reads. */}
           <p className="hero-sub">
@@ -87,7 +87,6 @@ export function MakerHero() {
             Plant your own Golden Frijoles across product, delivery, security and AI operations. You bring the
             agent, and you keep bringing whichever one is best — the rails do not change when the models do.
           </p>
-          <p className="takeaway takeaway--lead">One maker. A whole operation.</p>
 
           <div className="hero-cta">
             <RunYourFirstBet />
@@ -101,8 +100,6 @@ export function MakerHero() {
               <Icon name="arrow-right" />
             </Button>
           </div>
-
-          <p className="micro">Bring an idea. Consider it. Operate it. Exit on the Evidence.</p>
         </div>
 
         {/* The card is the hero's second object, and the only one. `handoffPrompt` takes the site
@@ -114,7 +111,7 @@ export function MakerHero() {
             See lib/site-url-resolve.ts for the order and lib/landing-prompts.ts for the rest. */}
         <div className="hero-magic">
           <CopyPromptCard
-            label="HANDOFF PROMPT · PASTE INTO YOUR AGENT"
+            label=""
             prompt={handoffPrompt(getSiteUrl())}
           />
         </div>
