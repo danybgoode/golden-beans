@@ -661,16 +661,16 @@ say which environment each step is for, per step — a gate-on step run on Previ
 page that reads exactly like a broken one.
 
 ## Definition of Done (epic)
-- [ ] All sprints merged to `main` + smoke-tested (gaps stated)
-- [ ] Each `sprint-N.md` has its smoke walkthrough (real URLs)
-- [ ] **All 27 in-scope routes have an approved reference state, derived from `apps/web/design-system/`** *(amended from 29 — see **D13**: Story 4.5 retires three routes and Story 4.3 adds one)*
-- [ ] **The visual gate is blocking for all 27 in the `authed` project (D5-a), with zero deferred rows carrying no owner and no date**
-- [ ] **Coverage manifest reports 27/27 and the ratchet is wired** (coverage may not decrease) — `node scripts/design-coverage.mjs`
-- [ ] **`globals.css`'s `.product-shell` rules and `console.css`'s compensations for them are deleted** — until this happens the redesign is a layer on top of the thing it replaced
+- [ ] All sprints merged to `main` + smoke-tested (gaps stated) — S1–S5 merged and live; **S6 is PR #135, open**. ⚠️ Two gaps stated: the auth-path production smoke is **owed to Daniel by name**, and there is **no password-reset flow** behind the approved door's "Forgot your password?" (a product decision, not a builder task)
+- [x] Each `sprint-N.md` has its smoke walkthrough (real URLs)
+- [x] **All 27 in-scope routes have an approved reference state, derived from `apps/web/design-system/`** *(amended from 29 — see **D13**: Story 4.5 retires three routes and Story 4.3 adds one)*
+- [x] **The visual gate is blocking for all 27 in the `authed` project (D5-a), with zero deferred rows carrying no owner and no date** — the two deferred rows (the pod report's evidence tables) each carry `owner: Daniel, until: 2026-11-30`, enforced by `route-manifest.test.ts`
+- [x] **Coverage manifest reports 27/27 and the ratchet is wired** (coverage may not decrease) — `node scripts/design-coverage.mjs`. ⚠️ The ratchet is now *tested*: `scripts/design-coverage.test.mjs` watches it go red, which nothing did before Story 6.5
+- [x] **`globals.css`'s `.product-shell` rules and `console.css`'s compensations for them are deleted** — 38 + 16, plus `.auth-shell`/`.auth-form` and 22 orphaned landing rules, and 103 dead rules from `hub.module.css`. `design-system/old-world.test.ts` fails if any return (mutation-verified)
 - [ ] This README marked ✅; every sprint status ticked with commit refs
-- [ ] `RETROSPECTIVE.md` written
-- [ ] Product poster (`Roadmap/README.md`) updated
-- [ ] Team memory + `MEMORY.md` index updated
-- [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] ⚠️ **NO kill-switch — this line is now the opposite of what it said** (D6, Daniel, 2026-08-31). Confirm `DESIGN_V2_ENABLED` and `isDesignV2Enabled` appear in **no** source file, **no** Vercel environment and **no** plan; that the 21 `ProductShell` routes and the 9 `Frame` routes render one design with no gated branch behind them; and that the epic owes **nothing** on Vercel. Rollback is `git revert` plus a deploy. *Verify-only — not a new gate.*
+- [x] `RETROSPECTIVE.md` written
+- [x] Product poster (`Roadmap/README.md`) updated — ⏳ as **merged-pending**, not ✅, until the deploy is verified
+- [x] Team memory + `MEMORY.md` index updated
+- [x] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append) — ten, sharpened into the existing cascade/review sections
+- [x] ⚠️ **NO kill-switch — this line is now the opposite of what it said** (D6, Daniel, 2026-08-31). ✅ Verified 2026-09-01 by **enumerating** all three Vercel environments (32 production vars / 11 preview / 10 development) and searching the list — ⚠️ a first attempt grepped the CLI's output directly and returned a false "0 matches" because the **command had errored**. Confirm `DESIGN_V2_ENABLED` and `isDesignV2Enabled` appear in **no** source file, **no** Vercel environment and **no** plan; that the 21 `ProductShell` routes and the 9 `Frame` routes render one design with no gated branch behind them; and that the epic owes **nothing** on Vercel. Rollback is `git revert` plus a deploy. *Verify-only — not a new gate.*
 - [ ] Feature branch deleted; **this README's frontmatter `status: shipped`** (the SSOT — the board & Notion derive from it; run `node scripts/build-order.mjs`)
