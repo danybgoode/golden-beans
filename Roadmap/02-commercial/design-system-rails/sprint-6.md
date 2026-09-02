@@ -8,7 +8,7 @@ than layered over.
 |---|---|---|
 | Coverage (`node scripts/design-coverage.mjs`) | 18 / 27 | **27 / 27** |
 | Routes the visual gate OPENS | 19 | **23** (+ 4 named siblings, all of which really open theirs) |
-| `.product-shell` rules in `globals.css` | **27** | **0** |
+| `.product-shell` rules in `globals.css` | **32** | **0** |
 | `.is-console .product-shell*` compensations in `console.css` | 16 | **0** |
 | `.auth-shell` / `.auth-form` rules | **12** | **0** |
 | Stylesheets painting the signed-in shell | 2 | **1** (`design-system/system.css`) |
@@ -42,7 +42,7 @@ because "the plan was right" is the claim a close-out must not make by default.
 ## ⚠️ Five defects found by OPENING THE PAGE, after every gate was green
 
 This is the section that matters most, because it is the epic's own thesis turned on its author.
-`tsc`, `build`, 1 634 unit tests, 492 `api`, 122 `authed`, 62 `browser`, the drift guard, the
+`tsc`, `build`, 1 636 unit tests, 492 `api`, 122 `authed`, 62 `browser`, the drift guard, the
 coverage ratchet and the visual gate were **all green** — and then I rendered the five public routes
 and looked at them.
 
@@ -72,7 +72,7 @@ and looked at them.
 4. **`/talk`'s callout said the embed "gets a dashed slot", and the dashes were invisible** — the
    iframe filled the box edge to edge and covered the border. Prose asserting a property the render
    does not have, on the page that explains the idea. Six pixels of padding makes the sentence true.
-5. **The port orphaned 22 landing rules** — `.talk*`, `.install-*`, `.surface-note` — which nothing
+5. **The port orphaned 24 landing rules** — `.talk*`, `.install-*`, `.surface-note` — which nothing
    renders any more. Swept, because *"deleting a component leaves a trail in the stylesheet, and the
    trail comes with confident prose attached"*.
    → ⚠️ **And the sweep itself had a bug, caught by diffing what it removed against what it was asked
@@ -319,6 +319,59 @@ Round 6's agent hit a session limit before reporting, so I ran its checks myself
 - **The `hub.module.css` sweep is exact in both directions.** Audited programmatically: **zero**
   surviving rule-parts whose classes are all unused, and **zero** used-but-undefined classes.
 
+## Review round 7 — the first round with NO Blocking and NO Major
+
+The full-diff pass before merge: 68 files, every gate run, the headline numbers re-derived from the
+artifacts, and the ported pages rendered in a browser. **Four Minors, all documentation or coverage
+claims — none of them changes what a user sees or can reach.**
+
+- **Minor — `/s/[token]`'s bar navigated into the product, and three places said it did not.** The
+  docstring above `ShareFrame` says *"the bar offers no way into the product"*; nine lines later it
+  rendered `What is this?` → `/install`. The closing callout repeats the claim as **visible page
+  copy**. The same PR had already refused to put the agent footer here **for exactly that reason**.
+  ⚠️ And the approved design draws that control as `onclick="toast(…)"` — an affordance that
+  explains in place and **navigates nowhere**. The port turned a non-navigation into an anchor
+  without noticing. The bar now carries no action, which makes all three statements true.
+- **Minor — my corrected rule counts were STILL wrong.** Round 7 recounted two independent ways:
+  **32** `.product-shell` rules in `globals.css` (not 27 — my parser silently dropped the five
+  `:has()` rules nested in the 1100px media query) and **24** orphaned landing rules (not 22).
+  Corrected everywhere, including `old-world.test.ts`'s own header. **Second time this sprint a
+  published measurement failed re-derivation**, in the epic that opened by fixing a contract whose
+  numbers would not reproduce.
+- **Minor — the four `/hub` routes were in NEITHER mobile sweep**, under a comment claiming they
+  "belong in the authed sweep, and `mobile-heuristics.authed.spec.ts` is where that lives". That
+  suite asserts `.ds-shell` is visible, which the hub frame never renders — so they could not be in
+  it. Three of the four are now genuinely swept, with a per-route `frame` field;
+  `/hub/[…]/epic/[epicSlug]` is **named and excluded** because the fixture tenant has no pushed epic
+  and the row would have measured a 404 under a name saying otherwise.
+- **Minor — the poster reintroduced a figure its own audit corrected** ("one route in twenty-six";
+  the audit and the poster's own line 170 both say **two of 26**).
+- **Nits, all fixed:** a duplicated `position: relative` my round-5 fix added to a rule that already
+  had it, under a note claiming to be adding it; a comment paragraph left starting mid-sentence by an
+  edit; and "those are already 42px", which is the DECLARED height — used height is
+  `max(height, min-height)` and `globals.css` makes it 44.
+
+### ⚠️ And one pre-existing defect the epic's guards could not see
+
+`/app/onboarding/[projectSlug]` renders `<pre className="ds-code">`. **There has never been a
+`.ds-code` rule** — Sprint 5 shipped it, so it is on `main` and outside this diff. It matters here
+because that route is one of the 27 this epic counts as rendering from the design system, and **the
+visual gate counts an undefined class as evidence**: a route can satisfy the coverage boolean with
+markup nothing paints, which makes the headline number a claim rather than a measurement.
+
+`design-system/defined-classes.test.ts` is the class fix — every `ds-` class the product renders must
+have a rule in a shipped stylesheet. It is `tokens-defined.test.ts`'s exact shape one level up, and
+that symmetry is why its absence was the gap. Mutation-verified on both a new undefined class and the
+real `ds-code` regression. The class itself is aliased rather than renamed at a call site this sprint
+does not own.
+
+**Round 7 verified green:** the 27/27 re-derived from the filesystem (34 `page.tsx` = 30 manifest
+rows + 4 out-of-scope; `liveRows(6)` drops 3), the prototype's content hash still
+`5bc7e24ed5e3d0aa`, all 40 `styles.*` references resolving against the shrunk `hub.module.css`, every
+`FrameLink` reaching a 44×44 target reconstructed the way the sweep does it, no horizontal scroll at
+390 on any door, and `/s/[token]` gating on the flag before the token with all four failures landing
+on one 404.
+
 ## What is deliberately NOT on the design system, with its decay date
 
 **The pod report's evidence tables — and now ONLY those.** ⚠️ Round 5 measured the file: 116 classes
@@ -559,7 +612,7 @@ for and what "wrong" looks like, because "it looked odd" is not a bug report any
 
 5. Go to https://goldenfrijoles.com/app/flags/miyagisanchez.
    → **Unchanged from Sprint 4.** This is the step that checks the Sweeper moved nothing: Story 6.4
-   deleted 39 rules from `globals.css` (27 `.product-shell` + 12 `.auth-*`) and 16 from `console.css`
+   deleted 44 rules from `globals.css` (32 `.product-shell` + 12 `.auth-*`) and 16 from `console.css`
    and re-declared the winning half in
    `design-system/system.css`. The top bar is still 54px, the section row still 44px, the rail still
    sits at 98px. The visual gate asserts all four numbers, but a person looking at the page is the

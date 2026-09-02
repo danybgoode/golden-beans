@@ -83,14 +83,14 @@ independently shippable slice of value.
 - ✅ [One design system, every surface](02-commercial/design-system-rails/README.md) — the design now
   lives **in the product**, at `apps/web/design-system/`, and it outlives the epic that produced it.
   Three prior design epics each scoped their design to themselves and left it in a closed epic's
-  folder; the audit could still find *one route in twenty-six* using the component kit. All **27**
+  folder; the audit could still find *two routes in twenty-six* using the component kit. All **27**
   in-scope routes render from one system now — the 21 console routes through `ProductShell`, the nine
   doors and hub routes through `Frame` — each against an approved reference state, with the visual
   gate blocking on every PR and a **ratchet that fails a PR which lowers coverage**. The approved
   prototype's 32 states are hash-pinned in `APPROVED.md`, the tokens and stylesheet are **generated
   from it** (so "one definition" holds by construction rather than by discipline), and
   `MEASURED-SPEC.md` is emitted rather than typed. The old design is **deleted**, not layered over:
-  27 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
+  32 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
   and a guard fails if any of them return. ⏳ **Sprints 1–5 are live; Sprint 6 is merged-pending**
   (PR #135) — the poster says so rather than claiming ✅ ahead of the deploy, which is the one thing
   the poster rule forbids. There is no flag and no dark period: the merge IS the release, and

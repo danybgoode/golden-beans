@@ -4,7 +4,7 @@
 // app/hub/hub-components.tsx and app/hub/report-components.tsx.
 import type { ReactNode } from 'react'
 import type { PodReportLens } from '@/lib/pod-report-lens'
-import { Frame, FrameLink } from '@/design-system/Frame'
+import { Frame } from '@/design-system/Frame'
 import { Callout, Pill, Tile, Tiles } from '@/design-system/primitives'
 
 // pod-report · Sprint 3, Story 3.1 — the share surface's own chrome and its two roadmap strips.
@@ -44,7 +44,18 @@ export function ShareFrame({
   children: ReactNode
 }) {
   return (
-    <Frame variant="public" actions={<FrameLink href="/install">What is this?</FrameLink>}>
+    // ⚠️ **NO actions in the bar, and that is the whole point of this page** (fresh reviewer, round
+    // 7). A first version carried `What is this?` → `/install`, nine lines under a docstring saying
+    // "the bar offers no way into the product" and above a callout telling the reader the same thing
+    // in visible copy. The same PR had already refused to put the agent footer here for exactly that
+    // reason. A claim a page makes about itself, contradicted by the page.
+    //
+    // The approved design does draw that control — as `onclick="toast('Learn what this is')"`, an
+    // affordance that explains in place and NAVIGATES NOWHERE. The port turned it into an anchor
+    // without noticing the difference. A toast needs a client island, and the explanation is already
+    // on the page twice (the `Shared with you` head, and the closing callout), so the honest port of
+    // a non-navigating control is no control.
+    <Frame variant="public">
       <div className="ds-sharehead" data-share-lens={lens} data-testid="share-audience-note">
         <div className="ds-sharehead-body">
           <p className="ds-sharehead-title">Shared with you · {sharedBy}</p>

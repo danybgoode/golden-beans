@@ -94,7 +94,6 @@
   border: 1px solid transparent;
   white-space: nowrap;
   cursor: pointer;
-  position: relative;
   transition:
     background var(--t),
     border-color var(--t),
@@ -191,11 +190,16 @@
  * "Back to the console" 26px — against the 44 that shipped on `main`, where they were `.btn`.
  *
  * A transparent pseudo-element rather than a `min-height`, because the approved design's ink IS
- * 26px and 31px; the target is what must be 44, not the paint. `position: relative` is added to the
- * base for the same reason `.ds-kebab` carries it.
+ * 26px and 31px; the target is what must be 44, not the paint. The base already carried
+ * `position: relative` — a first version of this fix added a second copy of it, and the note here
+ * claimed to be adding it (fresh reviewer, round 7).
  *
- * ⚠️ Not applied to `.ds-btn` inside a `.ds-doorform`: those are already 42px and full-width, and a
- * 44px overlay centred on a stacked form control would overlap its neighbours' targets. */
+ * ⚠️ Not applied to `.ds-btn` inside a `.ds-doorform`: those are `<button>`s, so `globals.css`'s
+ * zero-specificity rail already gives them `min-height: 44px` — used height is
+ * `max(height, min-height)`, so the declared 42 renders 44 — and they are full-width. A second 44px
+ * overlay centred on a stacked form control would only overlap its neighbours' targets. (The
+ * exemption was right; a first version of this note said "already 42px", which is the declared value
+ * and not the rendered one — fresh reviewer, round 7.) */
 .ds .ds-btn::before {
   content: '';
   position: absolute;
@@ -4494,6 +4498,7 @@
  * in the header above (it was #3 before commit `5554686` renumbered the list, and this cross-
  * reference went stale in that commit — fresh reviewer, round 4).
  *
+ * ⚠️ **Exception #6, which a previous version of this comment denied by claiming the typography
  * was the only change to these two elements** (fresh reviewer, round 2, Minor). `globals.css` scoped the ellipsis/clamp INSIDE
  * `__identity` on purpose, so the legacy chip could not truncate; the rule below has no
  * `.ds-shell-identity` ancestor, so that chip now clamps at `max-width: 42vw` too (537px at 1280,
@@ -4874,4 +4879,28 @@
 
 .ds .ds-pubfoot a:hover {
   color: var(--gold);
+}
+
+/* ── `.ds-code`, aliased ────────────────────────────────────────────────────────────────────────
+ * `/app/onboarding/[projectSlug]` renders `<pre className="ds-code">` and **no such rule has ever
+ * existed** — Sprint 5 shipped it, so it is on `main` and outside this diff. It matters here anyway:
+ * that route is one of the 27 this epic counts as rendering from the design system, and its code
+ * block has been rendering at UA defaults with no `overflow-x` on a ~110-character line.
+ *
+ * Aliased rather than renamed at the call site, because the route is not this sprint's to touch and
+ * an alias makes both spellings correct today. `design-system/defined-classes.test.ts` is the actual
+ * fix: it fails on the NEXT undefined `ds-` class, which is how this one got three sprints of
+ * invisibility (fresh reviewer, round 7). */
+.ds .ds-code {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--roast-2);
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  white-space: pre;
 }

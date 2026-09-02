@@ -46,8 +46,12 @@ export { assertMobileClean } from './helpers/mobile-heuristics'
 // no fixture, and it is the one public page a stranger is most likely to open on a phone — a link
 // forwarded to them that has stopped working.
 //
-// The four `/hub` routes are NOT here: they need a session, so they belong in the authed sweep, and
-// `mobile-heuristics.authed.spec.ts` is where that lives. Named rather than omitted.
+// The `/hub` routes are NOT here: they need a session, so they belong in the authed sweep — and as
+// of Sprint 6 round 7 they are actually IN it. Three of the four, with `/hub/[…]/epic/[epicSlug]`
+// named and excluded because the fixture tenant has no pushed epic to address. ⚠️ This sentence
+// previously said they "belong in the authed sweep" while that suite asserted `.ds-shell` visible,
+// which the hub frame never renders — so they could be in neither, under a comment claiming
+// coverage that did not exist.
 //
 // ⚠️⚠️ **EACH ROW DECLARES THE STATUS IT EXPECTS, and that is not bookkeeping.** The first version of
 // this list added `/signup` and relaxed the assertion to `[200, 404]` so the share 404 could join.
