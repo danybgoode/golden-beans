@@ -382,24 +382,44 @@ test('the shell base reset is still written at ZERO specificity', () => {
       '`.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` on ties.'
   )
 
-  // ⚠️ **PRESENCE IS NOT EFFECTIVENESS, and the first version of this test only checked presence**
-  // (fresh reviewer, round 4, Major — mutation-verified). `includes()` proves the correct selector
-  // is in the file. It proves nothing about a COMPETING rule sitting beside it: appending
-  // `.ds .ds-shell :where(input, textarea, select) { … }` — the exact broken form this test's own
-  // comment names — is `.ds`-scoped, clears the (0,2,0) floor, and leaves the pin above satisfied.
-  // All six tests stayed green. That is the round-2 finding ("the floor has no CEILING") repeating
-  // one layer up: I pinned the presence of the right rule and not the absence of a wrong one.
+  // ⚠️ **PRESENCE IS NOT EFFECTIVENESS, and then BANNING A SPELLING IS NOT BANNING A FORM.**
   //
-  // So the (0,2,0) form is BANNED outright. There is exactly one legitimate way to write this reset
-  // and this is the assertion that says so.
-  const bannedForm = /\.ds\s+\.ds-shell\s+:where\(\s*input/
-  assert.ok(
-    !bannedForm.test(css),
-    'system.css contains `.ds .ds-shell :where(input…)`, which is (0,2,0) — `:where()` zeroes only ' +
-      'its OWN argument, so the two leading classes still count. In the last-loaded stylesheet that ' +
-      'beats `.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` ' +
-      'on ties, which silently redesigns the ⌘K palette on every console route. Write it ' +
-      `\`${ZERO_SPECIFICITY_BASE}\` — the whole selector inside \`:where()\`.`
+  // Round 4: `includes()` proves the correct selector is in the file and says nothing about a
+  // COMPETING rule beside it — appending `.ds .ds-shell :where(input, textarea, select) { … }` left
+  // every test green. Round 5: the regex that replaced it (`/\.ds\s+\.ds-shell\s+:where\(\s*input/`)
+  // required `input` to be the FIRST argument and the literal ancestor pair, so
+  // `.ds .ds-shell :where(textarea, input, select)` — same specificity, same defect — walked past it.
+  // Three rounds, three versions, each checking a proxy for the property.
+  //
+  // So the property is COMPUTED, using this file's own specificity parser: **a SHELL-WIDE rule
+  // targeting a bare form control must be (0,0,0).** That is the form, not a spelling — reordering
+  // the `:where()` arguments, renaming the ancestors or adding a third selector cannot evade it,
+  // because none of those changes what the parser returns.
+  //
+  // ⚠️ Scoped to the SHELL deliberately, and the first version was not — it banned any over-specific
+  // control rule and correctly caught `.ds .ds-search input` and `.ds .ds-select select` at (0,2,1).
+  // Those are right to be specific: they style a control belonging to ONE component, and they are
+  // supposed to beat the base. What must never beat the base is another rule that also applies to
+  // EVERY control in the shell. A guard that fires on correct work is one this epic has already
+  // shipped three times.
+  const FORM_CONTROL = /(^|[\s,(])(input|textarea|select)([\s,)]|$)/
+  const overSpecificResets = ruleList()
+    .flatMap(({ selector }) => splitSelectorList(selector).map((part) => ({ part, spec: specificity(part) })))
+    // Its SUBJECT is a bare control — `.ds-input` is a class and is unaffected …
+    .filter(({ part }) => FORM_CONTROL.test(part.slice(part.lastIndexOf(' ') + 1)))
+    // … and it is SHELL-wide rather than component-scoped.
+    .filter(({ part }) => /\.ds-shell(\b|-)/.test(part))
+    .filter(({ spec }) => spec[0] > 0 || spec[1] > 0 || spec[2] > 1)
+    .map(({ part, spec }) => `${part} is (${spec.join(',')})`)
+
+  assert.deepEqual(
+    overSpecificResets,
+    [],
+    'a SHELL-WIDE rule in system.css targets a bare form control above (0,0,0). `:where()` zeroes only its OWN ' +
+      'argument, so `.ds .ds-shell :where(input, …)` is (0,2,0) — and in the last-loaded stylesheet ' +
+      'that beats `.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` ' +
+      `on ties, silently redesigning the ⌘K palette on every console route. Write it \`${ZERO_SPECIFICITY_BASE}\` — ` +
+      'the whole selector inside `:where()`.'
   )
 })
 

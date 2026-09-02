@@ -83,6 +83,7 @@
 
 /* ── Button ───────────────────────────────────────────────────────────────────────────────── */
 .ds .ds-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -176,6 +177,39 @@
    "not-yet-shipped gets the amber 'next' tag treatment and stays legible (it's honest marketing, it
    should read clearly)". A dimmed control says "wait a second"; this says "this doesn't exist yet". */
 /* A control inside a row, where a full-height button would push the row past its measured height. */
+/* ── The 44px target floor, which `.ds-btn` was missing ──────────────────────────────────────
+ * ⚠️ **This file's own porting note #3 prescribes exactly this and `.ds-btn` never got it** (fresh
+ * reviewer, round 5, Major): *"`globals.css` sets `min-height: 44px` on every button for WCAG 2.5.5
+ * … Where the design's ink is smaller than 44 the floor is met by a transparent pseudo-element, as
+ * the row switch already does."* `.ds-switch` and `.ds-kebab` do it. `.ds-btn` did not.
+ *
+ * It did not matter while every `.ds-btn` was a `<button>` inside the console — `globals.css`'s
+ * zero-specificity rail gives those `min-height: 44px`. Sprint 6 made it matter: `FrameLink` renders
+ * button-styled ANCHORS, the rail deliberately exempts `a` (correct — inline prose links must not be
+ * 44px tall), and those anchors are now the primary controls on the **nine public routes a customer
+ * meets first**. Measured at 390px: "Add to Claude" 26px, the 404's two actions 26px, the hub's
+ * "Back to the console" 26px — against the 44 that shipped on `main`, where they were `.btn`.
+ *
+ * A transparent pseudo-element rather than a `min-height`, because the approved design's ink IS
+ * 26px and 31px; the target is what must be 44, not the paint. `position: relative` is added to the
+ * base for the same reason `.ds-kebab` carries it.
+ *
+ * ⚠️ Not applied to `.ds-btn` inside a `.ds-doorform`: those are already 42px and full-width, and a
+ * 44px overlay centred on a stacked form control would overlap its neighbours' targets. */
+.ds .ds-btn::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 100%;
+  min-width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+}
+
+.ds .ds-doorform .ds-btn::before {
+  content: none;
+}
+
 .ds .ds-btn--sm {
   padding: 5px 9px;
   font-size: 12.5px;
@@ -3566,7 +3600,12 @@
   margin-bottom: 14px;
 }
 
-.ds .ds-gone-quiet {
+/* ⚠️ `p.ds-gone-quiet`, not `.ds-gone-quiet` — it is a `<p>` INSIDE `.ds-gone`, so `.ds .ds-gone p`
+   at (0,2,1) out-specified it at (0,2,0) and BOTH of its declarations lost. Measured on the rendered
+   404: 14px in `--dim`, identical to the paragraph above it, so the line that explains why we refuse
+   to say which failure it was read as primary copy rather than as the aside it is (fresh reviewer,
+   round 5). A rule whose every declaration is overridden is a rule that is not there. */
+.ds .ds-gone p.ds-gone-quiet {
   color: var(--dim-2);
   font-size: 13px;
 }

@@ -29,6 +29,15 @@ over and calling it unchanged. Neither is worth a cross-reference.
 So the link is one-way, from the side that can carry it. If you arrived from that document: this
 directory is the home, and `CONSOLE-CONTRACT.md` beside it is the binding half.
 
+⚠️ **One thing in that document is now stale and cannot be fixed there.** Its copy-feedback note says
+*"`CopyUrlField.tsx` already does exactly this — use it as the model"*. `design-system-rails` Story
+6.4 **deleted** that component: `/install` was its last caller and it moved to
+`design-system/copy-field.tsx`, which does the same thing plus the two the console needs — the value
+WRAPS (a credential shown once must not sit on one horizontally-scrollable line) and the
+confirmation reaches a screen reader through a live region rather than through the button's name.
+**Read `copy-field.tsx` where that document says `CopyUrlField.tsx`.** Recorded here because the
+mirror is byte-asserted and correcting it there would break the guard that keeps it honest.
+
 ## What is here
 
 | File | Kind | What it is |

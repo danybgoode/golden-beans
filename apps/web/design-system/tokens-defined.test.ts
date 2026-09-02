@@ -82,8 +82,9 @@ const DEAD_TOKEN_READS: readonly { token: string; file: string; what: string }[]
   { token: '--espresso', file: 'app/globals.css', what: 'a dark ground — Sprint 6' },
   { token: '--green-line', file: 'app/globals.css', what: 'a shipped-state border — Sprint 6' },
   { token: '--next-line', file: 'app/globals.css', what: 'a next-state border — Sprint 6' },
-  { token: '--espresso', file: 'app/hub/hub.module.css', what: 'a dark ground — Sprint 6' },
-  { token: '--green-line', file: 'app/hub/hub.module.css', what: 'shipped-state borders — Sprint 6' },
+  // ⚠️ `--espresso` in `app/hub/hub.module.css` LEFT this register in Sprint 6 round 5, with the
+  // 103 dead rules the hub port orphaned. The register's own both-directions assertion is what said
+  // so — an entry describing a read that no longer happens is the same defect as a missing one.
   { token: '--next-line', file: 'app/hub/hub.module.css', what: 'next-state borders — Sprint 6' },
   { token: '--kraft', file: 'app/hub/hub.module.css', what: 'the kraft accents — Sprint 6' },
   { token: '--kraft-deep', file: 'app/hub/hub.module.css', what: 'the kraft border — Sprint 6' },

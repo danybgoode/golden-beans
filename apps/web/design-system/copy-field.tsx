@@ -9,14 +9,18 @@
 // browser, and — worse — force every page that renders a list to become a client tree. One
 // directive, one file.
 //
-// ── Why not `components/landing/CopyUrlField` ─────────────────────────────────────────────────
-// It exists and it works, and it is the LANDING's: a `.copy-url` flex row with an `<input>`, styled
-// by `globals.css` on brand surfaces. Two differences matter here. The value is a credential shown
-// exactly once, so it must WRAP rather than sit on one horizontally-scrollable line — the defect
-// `flag-credential-manager.tsx` records against that exact class. And the console's version renders
-// from `design-system/`, which is what the coverage boolean asks about. So this is the same idea in
-// the system's own language, and the landing's is left alone rather than widened to serve two
-// masters.
+// ── What this replaced, and why ───────────────────────────────────────────────────────────────
+// ⚠️ **CORRECTED, Sprint 6 round 5.** This paragraph said `components/landing/CopyUrlField` "exists
+// and it works", that it "is the LANDING's", and that it was "left alone rather than widened".
+// All three clauses are now false: `/install` was the last caller, and Story 6.4 deleted both that
+// component and `globals.css`'s `.copy-url` rules as part of the sweep. A comment describing a
+// deleted file as a live alternative is the defect class this epic is named after, left behind by
+// the commit that did the deleting.
+//
+// What was true and still is, because it is why this component exists: the value is a credential
+// shown exactly once, so it must WRAP rather than sit on one horizontally-scrollable line — the
+// defect `flag-credential-manager.tsx` records against `.copy-url` — and it renders from
+// `design-system/`, which is what the coverage boolean asks about.
 
 import { useState } from 'react'
 import { Icon } from '@/components/ui/Icon'

@@ -53,7 +53,7 @@ test.describe('Setup surfaces with the console on', () => {
     // ⚠️ `.ds-copyrow code`, not `.copy-url input` — design-system-rails S4.4. The console's copy
     // field renders from `apps/web/design-system/` now, and it is a `<code>` rather than a readonly
     // `<input>`: a credential is not something you edit, and `<code>` is what a screen reader
-    // announces it as. `.copy-url` is the LANDING's field and is deliberately left alone.
+    // announces it as. `.copy-url` WAS the landing's field; design-system-rails Story 6.4 deleted it with its last caller, so the console's copy control is `design-system/copy-field.tsx` and there is no second one to leave alone.
     const copyField = page.locator('.ds-copyrow code')
     const fieldCount = await copyField.count()
     if (fieldCount > 0) {

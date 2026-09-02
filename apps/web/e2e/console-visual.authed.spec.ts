@@ -930,6 +930,14 @@ test('the page frame holds at every width, not just the two this suite samples',
       failures.push(`${width}px: no padding above the content — the first line abuts the sticky nav`)
     }
     if (frame.paddingBottom <= 0) failures.push(`${width}px: no padding below the content`)
+    // ⚠️ **`right` was measured and thrown away** (fresh reviewer, round 5). A column that overflows
+    // the RIGHT edge passes every check above — it is inset on the left and padded — while the
+    // document scrolls sideways, which is Do-not #6. The sibling test catches that at 1440 only, so
+    // 950/1040/1280 were uncovered. Collecting a value and not asserting on it is the shape of a
+    // field that looks like coverage and is not.
+    if (frame.right < 0) {
+      failures.push(`${width}px: the content column overflows the right edge by ${-frame.right}px`)
+    }
   }
 
   expect(

@@ -258,9 +258,61 @@ pair and their markers, the whole `__menu` family, `__tabs` + scrollbar + non-cu
 both `:has()` rail blocks, the ≥640px public nav port, and that `.content` is genuinely dead.
 `agentFooter` reaches neither `/s/[token]` nor its 404.
 
+## Review round 5 — a 44px accessibility floor lost on the nine public routes
+
+- **Major — every button-styled link on the ported routes fell from 44px to 26px.** `FrameLink`
+  renders `<a class="ds-btn ds-btn--sm">`; measured at 390px: "Add to Claude" **26px**, the 404's two
+  actions **26px**, the hub's "Back to the console" **26px**. On `main` these were `<Button href>` →
+  `.btn`, which `tokens.css` gives `min-height: 44px`. **This is lost, not redesigned** — WCAG 2.5.5,
+  on the first screens a customer ever sees.
+  ⚠️ **And `system.css`'s own porting note #3 prescribes the exact fix, which `.ds-btn` never got:**
+  *"Where the design's ink is smaller than 44 the floor is met by a transparent pseudo-element, as
+  the row switch already does."* `.ds-switch` and `.ds-kebab` do it; `.ds-btn` did not. It did not
+  matter while every `.ds-btn` was a `<button>` (the CSS rail covers those); Sprint 6 made it matter
+  by putting button-styled **anchors** on nine public routes, and the rail deliberately exempts `a`.
+  ⚠️⚠️ **The guard was blind by construction.** `mobile-heuristics.ts`'s target selector said
+  `a.btn` under a comment reading *"button-styled links are targets"* — and never `a.ds-btn`. Worse,
+  the share-404 row was added to that sweep **in this sprint** because it *"renders the widest button
+  row on any door"*, and the sweep measured that row's overflow and never its size. Both fixed;
+  mutation-verified that removing the floor now turns `/install`, `/talk` and the 404 red.
+- **Minor — the 404's quiet aside was not quiet.** `.ds-gone-quiet` (0,2,0) lost **both** its
+  declarations to `.ds .ds-gone p` (0,2,1), so the line explaining why we refuse to say which failure
+  occurred rendered identically to the paragraph above it. A rule whose every declaration is
+  overridden is a rule that is not there.
+- **Minor — my round-4 ban was one SPELLING, not the form.** The regex required `input` to be the
+  first `:where()` argument, so `.ds .ds-shell :where(textarea, input, select)` — same specificity,
+  same defect — walked past it. Three rounds, three versions, each checking a proxy. It now
+  **computes** the property with this file's own specificity parser, scoped to shell-wide resets so
+  it does not fire on `.ds-search input` (legitimately specific). All three spellings verified red.
+- **Minor — the frame guard measured `right` and threw it away**, so a column overflowing the right
+  edge passed every check while the document scrolled sideways. Asserted now.
+- **Minor — `hub.module.css` was 116 classes, 40 used.** The port orphaned **103 rules** while the
+  docs called the file *"kept for the report's tables"* — true of what was used, and it read as if
+  the rest had gone. Story 6.4 is a Sweeper: **1020 → 327 lines**, applying this sprint's own
+  comma-list rule, with all 40 used classes verified still defined. `tokens-defined.test.ts` then
+  caught two dead-token register entries the sweep had made stale — the register working as designed.
+- **Minor — three comments described `CopyUrlField` / `.copy-url` as live.** This PR deleted both.
+  The handoff doc's reference cannot be fixed there (byte-mirrored), so it is recorded in
+  `design-system/README.md`, the side that can carry it.
+
+**Round 5 verified clean:** focus rings on every new control, contrast on all new surfaces, no
+horizontal overflow at 360/390 on any door, `.ds-codeblock` and the report tables keeping their own
+`overflow-x`, the honeypot's off-screen rule surviving the sweep, every `ds-` class the nine routes
+render having a rule, and the four carried `main` frame blocks reproducing `main`'s cascade at every
+band.
+
 ## What is deliberately NOT on the design system, with its decay date
 
-**The pod report's evidence tables.** `/hub/[projectSlug]/report` and `/s/[token]` render their
+**The pod report's evidence tables — and now ONLY those.** ⚠️ Round 5 measured the file: 116 classes
+defined, **40 used**, and one importer (`report-components.tsx`). The port had orphaned 103 rules —
+roughly the first half of the file — while both this doc and the manifest's deferral described it as
+*"kept for the report's tables"*, which was true of what was USED and read as if the rest had gone
+with the port. **Story 6.4 is a Sweeper and its acceptance is *less code*.** Swept: 1020 → 327 lines,
+applying this sprint's own comma-list rule (a rule dies only when EVERY part of it is dead), with
+every one of the 40 used classes verified still defined afterwards. The description is now literally
+true rather than nearly true.
+
+`/hub/[projectSlug]/report` and `/s/[token]` render their
 shell from `design-system/` — page head, provenance stamp, headline answer, caveats band, section
 headings, empty state, refusal, benchmark list — and their **tables** (delivery metrics, the
 maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by
