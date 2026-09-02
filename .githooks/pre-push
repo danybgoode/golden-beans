@@ -18,6 +18,37 @@ if ! command -v node >/dev/null 2>&1; then
   exit 0
 fi
 
+# ── A DELETION pushes no code, so there is nothing below for it to protect ──────────────────────
+#
+# git feeds this hook one line per ref on stdin: `<local ref> <local sha> <remote ref> <remote sha>`.
+# For a deletion the LOCAL SHA is forty zeros. Nothing here ever read that, so `git push origin
+# --delete <branch>` ran the build-order guard, the scripts unit tests, a typecheck, a `next build`
+# and the whole hermetic e2e suite — roughly two minutes, per branch, to verify a push containing no
+# code at all. Deleting three merged branches at close-out is how it was noticed (2026-09-02).
+#
+# The alternative was making `--no-verify` the habit, which is strictly worse: it turns off the
+# build-order guard and the scripts tests for EVERY push, including the ones carrying code. The
+# condition is precisely detectable, so it is detected.
+#
+# ⚠️ Fail-safe direction: anything this cannot classify — an empty sha, a line it cannot parse, no
+# refs on stdin at all — falls through and RUNS the checks. A hook that skips when it is confused is
+# a hook that skips on the push that needed it.
+push_has_code=0
+saw_any_ref=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  [ -z "$local_sha" ] && continue
+  saw_any_ref=1
+  # A sha containing any character that is not `0` is a real object, i.e. a push of code.
+  case "$local_sha" in
+    *[!0]*) push_has_code=1 ;;
+  esac
+done
+
+if [ "$saw_any_ref" = 1 ] && [ "$push_has_code" = 0 ]; then
+  echo "pre-push: deletion only — this push carries no code, so the local gate has nothing to check." >&2
+  exit 0
+fi
+
 # ── BLOCKING section (added 2026-08-03) — cheap, deterministic, whole-repo ───────────────────────
 # Everything below this block is advisory by design (it can fail for environmental reasons: no local
 # Supabase, a cold build). These two cannot: they are pure node, sub-second, and a failure is
