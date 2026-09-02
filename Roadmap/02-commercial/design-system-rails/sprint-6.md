@@ -197,6 +197,13 @@ Round 3 was cut short by a session limit, so I ran its first three items myself.
   way: by diffing against `git show origin/main:…`, never by re-reading the port.** The durable
   lesson is that a *"carried verbatim"* claim is worth exactly as much as a diff against the deleted
   source.
+- **And a SIXTH, found by going looking for one.** The exceptions list was still missing the mobile
+  **fixed bottom tab bar**: below 640px the public branch's `Connect` / `Agent notes` were
+  `position: fixed; bottom: 12px` with their own ground and shadow, and they sit in the top bar at
+  every width now. It had been written down in `ProductShell.tsx` since the port and never reached
+  the list the header points at. **A change is either reverted or it is on that list — "recorded
+  somewhere else in the diff" is neither.** (It is also why `.agent-rail`'s `bottom` went 78px → 12px:
+  78 was the clearance for that bar.) The list is five, in order, each with its reason.
 
 **What round 2 settled** (checked rather than taken on trust, including a chromium probe of the real
 stylesheets in the real link order): the `:where()` specificity fix is genuinely (0,0,0) and all

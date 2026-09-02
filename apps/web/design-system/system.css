@@ -4355,14 +4355,19 @@
  * deleted from both files, and the markup is renamed to match. One definition, in the directory the
  * design lives in.
  *
- * ⚠️ **THIS STORY CHANGES NO PIXEL — with FOUR recorded exceptions, all forced and all stated.**
+ * ⚠️ **THIS STORY CHANGES NO PIXEL — with FIVE recorded exceptions, all forced and all stated.**
  *
  * ⚠️⚠️ **This header has now been wrong TWICE — it said three, then four.** Each time the missing
  * one was found by diffing against `git show origin/main:apps/web/app/{globals,console}.css`, never
  * by re-reading the port. The lesson is stronger than the list: **a "carried verbatim" claim is only
  * as good as a diff against the deleted source**, and this file has been the wrong place to take
- * that claim on trust three sprints running. The fifth was a public-branch nav link that lost its
- * flex context while both its children are icons.
+ * that claim on trust three sprints running.
+ *
+ * Round 3 found a public-branch nav link that had lost its flex context while both its children are
+ * icons — that one was RESTORED rather than declared, because it was a porting error and not a
+ * decision. Round 4 then found this list still missing the mobile tab bar below, which IS a decision
+ * and had only ever been written down in `ProductShell.tsx`. **A change is either reverted or it is
+ * on this list; "recorded somewhere else in the diff" is neither.**
  *
  * Every value below is carried verbatim from `console.css`'s block except:
  *
@@ -4376,8 +4381,14 @@
  *      named rather than smuggled.
  *   2. The same substitution in the shell's form-control reset — `--espresso` → `--roast-2`, which
  *      is what `.ds-input` already paints.
+ *   3. Below 640px the public branch's `Connect` / `Agent notes` links were a FIXED BOTTOM TAB BAR
+ *      (`position: fixed; bottom: 12px`, its own ground and shadow, `justify-content: space-around`)
+ *      and they now sit in the bar at every width. Declared in `ProductShell.tsx` since the port and
+ *      missing from THIS list until round 4 went looking for a sixth. A two-item bar pinned over the
+ *      content of a page a stranger is reading is chrome outweighing what it navigates; it is also
+ *      why `.agent-rail`'s `bottom` went from 78px (clearance for that bar) to 12px.
  *   4. The LEGACY chip gains the ellipsis clamp it never had — see the note on the two rules below.
- *   3. The project signal loses `600 10px var(--mono)` in UPPERCASE — and ONLY that. That pairing is
+ *   5. The project signal loses `600 10px var(--mono)` in UPPERCASE — and ONLY that. That pairing is
  *      what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, and it was carried as recorded debt
  *      owed to "Sprint 3" that Sprint 3 never paid.
  *      ⚠️ Its GREEN RING is kept. A first draft of the port merged the chip and the switcher's
@@ -4444,8 +4455,8 @@
  * pair the contract says appears nowhere — and it is sentence-case Archivo now. That is exception #3
  * in the header above.
  *
- * ⚠️ **And a FOURTH change, which a previous version of this comment denied by claiming #3 was the
- * only one** (fresh reviewer, round 2, Minor). `globals.css` scoped the ellipsis/clamp INSIDE
+ * ⚠️ **And exception #4, which a previous version of this comment denied by claiming the typography
+ * was the only change to these two elements** (fresh reviewer, round 2, Minor). `globals.css` scoped the ellipsis/clamp INSIDE
  * `__identity` on purpose, so the legacy chip could not truncate; the rule below has no
  * `.ds-shell-identity` ancestor, so that chip now clamps at `max-width: 42vw` too (537px at 1280,
  * 151px at 360 — it was unbounded).
