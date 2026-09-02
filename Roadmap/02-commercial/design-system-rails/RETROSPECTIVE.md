@@ -1,6 +1,6 @@
 # One design system, every surface — the rails that make a design outlive an epic — Retrospective
 
-_Closed: 2026-09-01_
+_Closed: 2026-09-02 — **shipped and live**, merged as `3258381` (PR #135)._
 
 ## What shipped
 
@@ -11,7 +11,7 @@ _Closed: 2026-09-01_
 | 3 — the shell | `ProductShell` rebuilt; 21 console routes wrapped, straight to production with no flag | `8f86cf7` (#131) |
 | 4 — Ship and Setup | 8 routes; three credential routes retired into one Setup › Keys | `3229652` (#132) |
 | 5 — Measure and Today | 10 more routes; the hand-rolled charting primitives; **DA2**'s significance layer | `a896f9c` (#133) |
-| 6 — the doors, the hub, the deletion | the 9 non-`ProductShell` routes; **the old design deleted**; 27/27 and the ratchet | #135 |
+| 6 — the doors, the hub, the deletion | the 9 non-`ProductShell` routes; **the old design deleted**; 27/27 and the ratchet | `3258381` (#135) |
 
 **The outcome, as the epic stated it:** *"all 29 in-scope routes render from one design system in
 `apps/web/design-system/`, each has an approved reference state derived from that system, the visual
@@ -74,7 +74,13 @@ because the epic's own Story 4.5 retired three routes and 4.3 added one.
    here; 4 covered elsewhere" — so the reader can check rather than trust.
 9. **Two copies of a decay date is one date somebody updates.** Both pod-report rows carry the same
    deferral for the same reason; it is one constant now.
-10. **A capped review family is a real downgrade, and a fallback model is a different reviewer.**
+10. **Seven review rounds, and the shape of them is the finding.** Rounds 1–5 each found a defect in
+    the shipped product — including a Blocking one the visual gate was passing *because of*. Rounds 6
+    and 7 found only guard and documentation defects. **That convergence is the stop signal, not a
+    round count.** Six of the defects were in fixes for earlier rounds, and three consecutive rounds
+    found a guard I had written checking a proxy instead of the property it claimed to enforce
+    (presence of a string → one spelling → a tag position → finally a computed specificity).
+11. **A capped review family is a real downgrade, and a fallback model is a different reviewer.**
     Codex was quota-capped for this PR; agy silently fell back from `gemini-3.6-flash-high` to
     `gpt-oss-120b-medium` on two of four passes and filed three "Blocking" findings that a one-line
     `grep -c` and a green `tsc` disprove. On the passes where it did not fall back it found **two

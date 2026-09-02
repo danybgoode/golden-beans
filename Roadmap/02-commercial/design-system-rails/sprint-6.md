@@ -1,8 +1,27 @@
 # One design system, every surface — Sprint 6: The doors, the hub, and deleting the old world
 
-**Status:** ✅ **BUILT — Stories 6.1–6.5 complete**, awaiting merge to `main`. Coverage **27 / 27**,
-the visual gate opens every one of them, and the design this epic replaced is **deleted** rather
-than layered over.
+**Status:** ✅ **SHIPPED & LIVE 2026-09-02** — merged as `3258381` (PR #135), deployed to production
+and verified by **probing the deploy rather than reading a deployment record**.
+
+Sprint 6 adds no new route, so "does `/x` answer 200" proves nothing. What can only be true after the
+merge is that the nine routes serve the design system's markup and the old one is gone. Measured on
+`goldenfrijoles.com` before the merge and again after:
+
+| Probe | Before | After |
+|---|---|---|
+| `/login` → `ds-door` | **0** | **2** |
+| `/login` → `auth-shell` (the design this replaced) | **2** | **0** |
+| `/install` → `ds-pubbar` | 0 | **2** |
+| `/talk` → `ds-pubbar` | 0 | **2** |
+| `/app/funnel/golden-beans-demo/setup_guide` → `product-shell` | present | **0** |
+| …→ `ds-shell` + `ds-chart-bars` (Sprint 5's charts still drawing) | — | **2 + 2** |
+| `/s/<mangled token>` → status · `ds-gone` | — | **404 · 1** |
+| `/app/definitely-not-a-route/x` (control) | 404 | **404** |
+
+⚠️ **The 404's security property was verified by reading the page, not by a grep count.** A first
+check counted lines matching `expired|revoked|never existed` and got 1 — which is the page
+*explaining why it refuses to say which*, not a leak. It names the three possibilities and
+determines none: `grep -c "has expired\.\|was revoked\."` → **0**.
 
 | | Before Sprint 6 | After |
 |---|---|---|

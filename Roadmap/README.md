@@ -91,10 +91,10 @@ independently shippable slice of value.
   from it** (so "one definition" holds by construction rather than by discipline), and
   `MEASURED-SPEC.md` is emitted rather than typed. The old design is **deleted**, not layered over:
   32 `.product-shell` rules, 16 compensating `.is-console` rules and the `.auth-shell` card are gone,
-  and a guard fails if any of them return. ⏳ **Sprints 1–5 are live; Sprint 6 is merged-pending**
-  (PR #135) — the poster says so rather than claiming ✅ ahead of the deploy, which is the one thing
-  the poster rule forbids. There is no flag and no dark period: the merge IS the release, and
-  rollback is `git revert`. This line becomes **Live in production** when the deploy is verified.
+  and a guard fails if any of them return. **Live in production** (2026-09-02, `3258381`) — verified
+  by probing the deploy: `/login` serves `ds-door` where it served `auth-shell`, and `product-shell`
+  no longer appears in any production HTML. No flag and no dark period: the merge was the release,
+  and rollback is `git revert`.
 - ✅ [Four destinations — an information architecture for the signed-in console](02-commercial/console-ia-overhaul/README.md)
   — the signed-in product had **sixteen destinations and no information architecture**, presented as
   one flat list ordered by the sprint that built each. It now has **four sections** (Today · Measure ·
@@ -316,8 +316,7 @@ independently shippable slice of value.
 
 ## Recent highlights
 
-- **2026-09-01** — `design-system-rails` **complete, Sprint 6 merged-pending** (PR #135; Sprints 1–5
-  live): the epic that gave the design a home.
+- **2026-09-02** — `design-system-rails` **shipped and live** (`3258381`, PR #135): the epic that gave the design a home.
   The premise was one level below the symptom — the last epic shipped a rejected visual result
   because *nothing in its plan could go red on a page that looked wrong*, and the design it was
   measured against lived in a folder named after an epic that had closed. Now
