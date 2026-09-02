@@ -240,6 +240,13 @@ test.describe('the console matches the approved design', () => {
     // different quantity — it excludes the scrollbar and is bounded by the grid column. Asserting
     // the measurement against 1180 fails on a CORRECT page at 1440 (it renders 1120), which is a
     // gate that cries wolf; asserting only the measurement would miss the cap being deleted.
+    //
+    // ⚠️ **AND THAT ASYMMETRY IS EXACTLY WHY A REGRESSION HID HERE** (fresh reviewer, round 4,
+    // Blocking). `contentMaxWidth` reads the `max-width` PROPERTY; the rule that sets the column's
+    // actual `width` lived in `globals.css` and was deleted by the Sweeper. So the column widened
+    // 1120 → 1180 at 1440 and this assertion went green **because of** the regression, not despite
+    // it. The width is measured below now, and `the page frame holds at every width` covers the
+    // band this suite never visits.
     expect
       .soft(
         geometry.contentMaxWidth,
@@ -868,6 +875,69 @@ test('every ds- element sits inside a .ds ANCESTOR, on every route this suite op
   if (skippedHere.length > 0) {
     console.log(`[ds-scope] ${skippedHere.length} route(s) not opened here: ${skippedHere.join(', ')}`)
   }
+})
+
+test('the page frame holds at every width, not just the two this suite samples', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the console page frame; run with both gates on')
+
+  // ── The guard for the class of defect the Sweeper shipped, not just its instance ──────────────
+  //
+  // This suite samples 1440 and 390. `globals.css`'s `.product-shell main` supplied the console
+  // column's WIDTH, its CENTERING and its padding for every width in between, and `console.css`
+  // only ever overrode padding at ≤900 and ≥1100 — so deleting the base left the **901–1099 band**
+  // with no padding at all and the content flush to x=0, in a band nothing opened. At 1440 the same
+  // deletion widened the column 1120 → 1180 and made the `max-width` assertion above pass.
+  //
+  // A gate that samples two viewports cannot see a rule that only governs a third. So this walks the
+  // breakpoints the stylesheet actually has — the boundaries at 640, 900 and 1100, and one width
+  // inside each band — and asserts the two properties that were lost: the column is INSET from the
+  // viewport, and it has vertical padding. Values are deliberately not pinned; those are the design's
+  // to change, and pinning them would make every future padding tweak a test edit.
+  const widths = [390, 700, 950, 1040, 1280, 1440]
+  const failures: string[] = []
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(`/app/flags/${tenantSlug()}?env=production`)
+    await page.waitForLoadState('networkidle')
+
+    const frame = await page.evaluate(() => {
+      const main = document.querySelector('main')
+      if (main === null) return null
+      const style = getComputedStyle(main)
+      const box = main.getBoundingClientRect()
+      return {
+        left: Math.round(box.left),
+        right: Math.round(window.innerWidth - box.right),
+        paddingTop: parseFloat(style.paddingTop),
+        paddingBottom: parseFloat(style.paddingBottom),
+        paddingLeft: parseFloat(style.paddingLeft),
+      }
+    })
+
+    if (frame === null) {
+      failures.push(`${width}px: no <main>`)
+      continue
+    }
+    // The column never touches either edge — by its own padding, by the shell's gutter, or by the
+    // rail's column. Which of the three is the design's business; that there is SOME inset is not.
+    if (frame.left + frame.paddingLeft <= 0) {
+      failures.push(
+        `${width}px: content sits flush at x=0 (left ${frame.left}, padding-left ${frame.paddingLeft})`
+      )
+    }
+    if (frame.paddingTop <= 0) {
+      failures.push(`${width}px: no padding above the content — the first line abuts the sticky nav`)
+    }
+    if (frame.paddingBottom <= 0) failures.push(`${width}px: no padding below the content`)
+  }
+
+  expect(
+    failures,
+    'the console page frame collapses at a width this suite did not previously sample. ' +
+      '`globals.css` supplied the column width, centering and padding for the 901-1099 band and ' +
+      'console.css never overrode it, so deleting the base was invisible at 1440 and 390.'
+  ).toEqual([])
 })
 
 test('every row of the measured spec matches the built stylesheet', async ({ page }) => {

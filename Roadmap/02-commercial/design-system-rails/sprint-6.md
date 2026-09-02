@@ -213,6 +213,51 @@ claimed, on both branches, from the product's own tokens; the `/s/[token]` foote
 `/signup` false-pass were both real and both already closed; and the `<span>`→`<h2>` swap on
 `/install` is pixel-identical.
 
+## Review round 4 — a BLOCKING regression the gate went green *because of*
+
+- **Blocking — the Sweeper deleted the console's page frame.** The port assumed `console.css`'s
+  `.is-console … > main` block was the whole story. It was not: that block only ever supplied
+  `min-width: 0` plus padding at **≤900px** and **≥1100px**. `globals.css`'s `.product-shell main`
+  supplied the **width, the centering and the padding for every width in between**, and console.css
+  never overrode any of it.
+  Measured in a browser at eight viewports: in the **901–1099px band** — a laptop at a non-maximised
+  window — every console route rendered flush to `x = 0` with **zero padding on all four sides**, the
+  first line against the sticky tier-2 nav. At 1440 the column silently widened 1120 → 1180.
+  ⚠️ **And the visual gate went green *because of* the regression.** It samples 1440 and 390 only, so
+  the broken band is untested — and at 1440 the widening *satisfies* its `contentMaxWidth === 1180px`
+  assertion, because that reads the `max-width` PROPERTY while the deleted rule set `width`. The
+  spec's own comment ("it renders 1120") had quietly become false.
+  Also lost with it: `main > p`'s 760px measure and `margin-top: 12px`, and `p + *`'s 28px rhythm.
+  **Fixed, and the CLASS fixed with it:** a new `the page frame holds at every width` walks the
+  stylesheet's real breakpoints (390 · 700 · 950 · 1040 · 1280 · 1440) and asserts the two properties
+  that were lost — the column is inset, and it has vertical padding — without pinning values the
+  design is free to change. Mutation-verified: re-deleting the frame names 950px and 1040px by number.
+- **Major — a sixth undeclared change.** The active section tab's underline went **4px → 2px**.
+  `globals.css` drew `box-shadow: inset 0 -2px 0 var(--gold)` and `console.css`'s override never
+  touched `box-shadow`, so on `main` the current tab drew a 2px inset band **plus** its 2px border —
+  on the one control that says which of four sections you are in. Restored.
+- **Major — the base-reset pin was green while the property was broken.** `includes()` proves the
+  correct selector is present; it proves nothing about a **competing** rule beside it. Appending the
+  exact broken `.ds .ds-shell :where(input…)` form left all six tests green — the round-2 finding
+  ("the floor has no ceiling") repeating one layer up. The (0,2,0) form is now **banned outright**.
+- **Minor — the chip's `line-height`.** `globals.css` set it with a `font:` SHORTHAND, which resets
+  `line-height` to `normal`; omitting it let the chip inherit `1.55` and grow 34px → 37.5px in a 54px
+  bar whose contract measures the control at 30px. The shorthand giving away a property nobody named
+  is the exact trap this epic's own drift rule was written for.
+- **Minor — the `--green-line` → `color-mix` substitution was documented only in its own rule's
+  comment**, one commit after the header declared that "recorded somewhere else in the diff" is not
+  enough. The rule, applied to itself. It is #3 on the list now.
+- **Minor — a stale cross-reference** left by the previous renumbering.
+
+⚠️ **The exceptions header has now been wrong three times** — three, then four, then five. It reads
+**six**, in order, with reverted changes deliberately excluded, and the rule is stated on it: *a
+change is either REVERTED or it is on this list.*
+
+**Round 4 verified clean:** the shell root, the console header, `__identity`, the switcher/account
+pair and their markers, the whole `__menu` family, `__tabs` + scrollbar + non-current tab + `:hover`,
+both `:has()` rail blocks, the ≥640px public nav port, and that `.content` is genuinely dead.
+`agentFooter` reaches neither `/s/[token]` nor its 404.
+
 ## What is deliberately NOT on the design system, with its decay date
 
 **The pod report's evidence tables.** `/hub/[projectSlug]/report` and `/s/[token]` render their

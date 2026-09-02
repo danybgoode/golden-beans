@@ -381,6 +381,26 @@ test('the shell base reset is still written at ZERO specificity', () => {
       'was rewritten, check its specificity: at (0,2,0) in the last-loaded stylesheet it beats ' +
       '`.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` on ties.'
   )
+
+  // ⚠️ **PRESENCE IS NOT EFFECTIVENESS, and the first version of this test only checked presence**
+  // (fresh reviewer, round 4, Major — mutation-verified). `includes()` proves the correct selector
+  // is in the file. It proves nothing about a COMPETING rule sitting beside it: appending
+  // `.ds .ds-shell :where(input, textarea, select) { … }` — the exact broken form this test's own
+  // comment names — is `.ds`-scoped, clears the (0,2,0) floor, and leaves the pin above satisfied.
+  // All six tests stayed green. That is the round-2 finding ("the floor has no CEILING") repeating
+  // one layer up: I pinned the presence of the right rule and not the absence of a wrong one.
+  //
+  // So the (0,2,0) form is BANNED outright. There is exactly one legitimate way to write this reset
+  // and this is the assertion that says so.
+  const bannedForm = /\.ds\s+\.ds-shell\s+:where\(\s*input/
+  assert.ok(
+    !bannedForm.test(css),
+    'system.css contains `.ds .ds-shell :where(input…)`, which is (0,2,0) — `:where()` zeroes only ' +
+      'its OWN argument, so the two leading classes still count. In the last-loaded stylesheet that ' +
+      'beats `.ds .ds-input`, `.is-console .text-input` and `.is-console .command-palette__input` ' +
+      'on ties, which silently redesigns the ⌘K palette on every console route. Write it ' +
+      `\`${ZERO_SPECIFICITY_BASE}\` — the whole selector inside \`:where()\`.`
+  )
 })
 
 test('the specificity arithmetic reproduces — including every case the old version got WRONG', () => {

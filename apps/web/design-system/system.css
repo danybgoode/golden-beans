@@ -4355,47 +4355,46 @@
  * deleted from both files, and the markup is renamed to match. One definition, in the directory the
  * design lives in.
  *
- * ⚠️ **THIS STORY CHANGES NO PIXEL — with FIVE recorded exceptions, all forced and all stated.**
+ * ⚠️ **THIS STORY CHANGES NO PIXEL — with SIX recorded exceptions, all forced and all stated.**
  *
- * ⚠️⚠️ **This header has now been wrong TWICE — it said three, then four.** Each time the missing
- * one was found by diffing against `git show origin/main:apps/web/app/{globals,console}.css`, never
- * by re-reading the port. The lesson is stronger than the list: **a "carried verbatim" claim is only
- * as good as a diff against the deleted source**, and this file has been the wrong place to take
- * that claim on trust three sprints running.
+ * ⚠️⚠️ **This header has been wrong THREE times** — it said three, then four, then five. Every miss
+ * was found by diffing against `git show origin/main:apps/web/app/{globals,console}.css`, never by
+ * re-reading the port. The rule, stated once and now applied to the header itself: **a change is
+ * either REVERTED or it is on this list. "Recorded somewhere else in the diff" is neither** — and
+ * that includes being recorded in the adjacent rule's own comment, which is how #6 hid.
  *
- * Round 3 found a public-branch nav link that had lost its flex context while both its children are
- * icons — that one was RESTORED rather than declared, because it was a porting error and not a
- * decision. Round 4 then found this list still missing the mobile tab bar below, which IS a decision
- * and had only ever been written down in `ProductShell.tsx`. **A change is either reverted or it is
- * on this list; "recorded somewhere else in the diff" is neither.**
+ * A change that was reverted is NOT listed: the current tab's `box-shadow` and the public nav
+ * links' flex context were porting errors, restored verbatim, and their notes sit on their rules.
  *
  * Every value below is carried verbatim from `console.css`'s block except:
  *
  *   1. The switcher and account menus painted `var(--espresso)` on `var(--elevation-overlay)`.
- *      Both are LANDING tokens: `--espresso` (#0f0c08) is defined in
+ *      Both are LANDING tokens — `--espresso` (#0f0c08) is defined in
  *      `references/design/assets/tokens.css` beside `.agent-win`, and neither is in the product
  *      token set this directory owns. Reading the landing's palette from inside `.ds` is the exact
  *      cross-contamination D2 and D3 exist to prevent, and `tokens-defined.test.ts` caught it the
  *      moment the rules moved here. They are `--card` and `--shadow-hi` now: two dropdown menus get
- *      a marginally lighter ground and the system's own elevation. A visible change, small, and
- *      named rather than smuggled.
+ *      a marginally lighter ground and the system's own elevation.
  *   2. The same substitution in the shell's form-control reset — `--espresso` → `--roast-2`, which
  *      is what `.ds-input` already paints.
- *   3. Below 640px the public branch's `Connect` / `Agent notes` links were a FIXED BOTTOM TAB BAR
+ *   3. The chip's green ring is `color-mix(in srgb, var(--green) 40%, var(--roast))` rather than
+ *      `var(--green-line)` — the same landing-token contamination as #1. Resolves to #405e32
+ *      against the landing's #3a5c33: (+6, +2, −1) per channel, under a just-noticeable difference
+ *      on a 1px hairline, and it now moves with the product's own green.
+ *   4. Below 640px the public branch's `Connect` / `Agent notes` links were a FIXED BOTTOM TAB BAR
  *      (`position: fixed; bottom: 12px`, its own ground and shadow, `justify-content: space-around`)
- *      and they now sit in the bar at every width. Declared in `ProductShell.tsx` since the port and
- *      missing from THIS list until round 4 went looking for a sixth. A two-item bar pinned over the
- *      content of a page a stranger is reading is chrome outweighing what it navigates; it is also
- *      why `.agent-rail`'s `bottom` went from 78px (clearance for that bar) to 12px.
- *   4. The LEGACY chip gains the ellipsis clamp it never had — see the note on the two rules below.
- *   5. The project signal loses `600 10px var(--mono)` in UPPERCASE — and ONLY that. That pairing is
- *      what `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, and it was carried as recorded debt
- *      owed to "Sprint 3" that Sprint 3 never paid.
- *      ⚠️ Its GREEN RING is kept. A first draft of the port merged the chip and the switcher's
- *      `<summary>` into one rule and dropped `color: var(--green)` + `border: 1px solid
- *      var(--green-line)` with it — a fourth exception nobody had decided, under a header that
- *      claims there are three (fresh reviewer, Major). The two elements are two rules again,
- *      because they never had the same ones.
+ *      and they now sit in the bar at every width. A two-item bar pinned over the content of a page
+ *      a stranger is reading is chrome outweighing what it navigates; it is also why
+ *      `.agent-rail`'s `bottom` went from 78px — clearance for that bar — to 12px.
+ *   5. The project signal loses `600 10px var(--mono)` in UPPERCASE. That pairing is what
+ *      `CONSOLE-CONTRACT.md`'s Do-not #3 forbids outright, and it was carried as recorded debt owed
+ *      to "Sprint 3" that Sprint 3 never paid. ⚠️ Its GREEN RING and its `line-height: normal` are
+ *      both KEPT — a first draft dropped the ring, and a second dropped the line-height the `font:`
+ *      shorthand had been setting, each of which would have been an unlisted change.
+ *   6. The LEGACY chip gains the ellipsis clamp it never had. `globals.css` scoped that clamp inside
+ *      `__identity` so the legacy chip could not truncate; that branch IS the public bar now, a
+ *      single 54px non-wrapping flex row, and an unbounded project slug in one is the defect this
+ *      epic has already paid for twice.
  *
  * ⚠️ **`.is-console` SURVIVES this story, and `tokens.css`'s header used to promise otherwise.**
  * `console.css` still carries ~150 rules that are not shell chrome — the command palette, the
@@ -4452,10 +4451,10 @@
  * and in nothing else.
  *
  * Do-not #3's fix is the part that stays: the chip was `600 10px var(--mono)` in UPPERCASE — the
- * pair the contract says appears nowhere — and it is sentence-case Archivo now. That is exception #3
- * in the header above.
+ * pair the contract says appears nowhere — and it is sentence-case Archivo now. That is exception #5
+ * in the header above (it was #3 before commit `5554686` renumbered the list, and this cross-
+ * reference went stale in that commit — fresh reviewer, round 4).
  *
- * ⚠️ **And exception #4, which a previous version of this comment denied by claiming the typography
  * was the only change to these two elements** (fresh reviewer, round 2, Minor). `globals.css` scoped the ellipsis/clamp INSIDE
  * `__identity` on purpose, so the legacy chip could not truncate; the rule below has no
  * `.ds-shell-identity` ancestor, so that chip now clamps at `max-width: 42vw` too (537px at 1280,
@@ -4497,6 +4496,13 @@
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 400;
+  /* ⚠️ `line-height: normal`, carried. `globals.css` set the chip with a `font:` SHORTHAND, which
+     resets line-height — so it computed `normal` in both branches, and `console.css`'s override set
+     only family/size/weight and left that alone. Omitting it here let the chip inherit `1.55` from
+     `body`, growing it 34px → 37.5px in a 54px bar whose contract measures the control at 30px.
+     The `font:` shorthand giving away a property nobody named is the exact trap this epic's own
+     drift rule was written for (fresh reviewer, round 4). */
+  line-height: normal;
   letter-spacing: normal;
   text-transform: none;
   min-width: 0;
@@ -4650,10 +4656,17 @@
 }
 
 /* The current section, marked for the eye and for a screen reader by the SAME attribute — there is
-   no way to paint this state without also announcing it. */
+   no way to paint this state without also announcing it.
+   ⚠️ **The `box-shadow` is carried from `globals.css` and the port originally dropped it** (fresh
+   reviewer, round 4, Major). `console.css`'s override set colour, border and weight and never
+   touched `box-shadow`, so on `main` the current tab drew a 2px inset gold band **plus** its 2px
+   gold border-bottom — a contiguous **4px** underline. Without it the cue halves in thickness, on
+   the one control that says which of four sections you are in. Sixth undeclared change, found the
+   same way as the other five: by diffing the deleted source. */
 .ds .ds-shell-tab[aria-current='page'] {
   color: var(--crema);
   border-bottom-color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
   font-weight: 500;
   background: none;
 }
@@ -4663,8 +4676,52 @@
    `.is-console .product-shell__body > .content` in three rules and **nothing in the product renders
    `class="content"`** — it is the PROTOTYPE's name for its main element, ported along with the
    rules that use it. Three dead selectors, sweeping. */
+
+/* ⚠️⚠️ **THE PAGE FRAME, CARRIED FROM `globals.css` — and the port originally lost it entirely.**
+ *
+ * The Sweeper assumed `console.css`'s `.is-console .ds-shell-body > main` block was the whole story.
+ * It was not: that block only ever supplied `min-width: 0` plus padding at **≤900px** and
+ * **≥1100px**. `globals.css`'s `.product-shell main` supplied the WIDTH, the CENTERING and the
+ * padding for every width in between, and console.css never overrode any of it.
+ *
+ * Dropping it meant that in the **901–1099px band** — a laptop at a non-maximised window — every
+ * console route rendered its content flush to `x = 0` with **zero padding on all four sides**, the
+ * first line against the sticky tier-2 nav. At 1440 the column also silently widened 1120 → 1180.
+ *
+ * **The visual gate could not see either**, and that is the part worth keeping: it runs at 1440 and
+ * 390 only, so the broken band is untested — and at 1440 the widening *satisfies* its
+ * `contentMaxWidth === '1180px'` assertion, because that reads the `max-width` PROPERTY while the
+ * deleted rule set `width`. The gate went green **because of** the regression. (Fresh reviewer,
+ * round 4, Blocking, measured in a browser at eight viewports.)
+ *
+ * The four blocks below reproduce `main`'s effective cascade exactly: base, then ≥640, then ≤900,
+ * then ≥1100 — the order matters, because they are all the same specificity and the later one wins
+ * where they overlap. */
 .ds .ds-shell-body > main {
   min-width: 0;
+  width: min(1120px, calc(100% - 36px));
+  margin: 0 auto;
+  padding: 40px 0 96px;
+}
+
+/* The lede's measure and the rhythm under it — also `globals.css`'s, also console-unoverridden, and
+   also lost with it. `console.css`'s `.is-console main p` set colour and type and never these two,
+   so a `<main>`-level paragraph ran the full column width after the port. */
+.ds .ds-shell-body > main > p,
+.ds .ds-shell-body > main > header p {
+  max-width: 760px;
+  margin-top: 12px;
+}
+
+.ds .ds-shell-body > main > p + *,
+.ds .ds-shell-body > main > header + * {
+  margin-top: 28px;
+}
+
+@media (min-width: 640px) {
+  .ds .ds-shell-body > main {
+    padding: 52px 0 88px;
+  }
 }
 
 @media (max-width: 900px) {
