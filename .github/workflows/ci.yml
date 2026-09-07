@@ -30,13 +30,13 @@ jobs:
     name: Static gate + build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # scripts/format-changed.mjs diffs against the PR base. A shallow clone has no
           # origin/main to resolve, and the script would (correctly, by design) no-op — a gate
           # that silently checks nothing. Full history makes it real.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -135,14 +135,14 @@ jobs:
     name: Playwright vs local Supabase + local server
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - name: Start local Supabase (applies migrations + seed.sql)
@@ -521,7 +521,7 @@ jobs:
 
       - name: Upload the visual gate's screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: console-visual
           # ⚠️ `design-system/` was missing, so the specimen screenshot was produced and DISCARDED on
