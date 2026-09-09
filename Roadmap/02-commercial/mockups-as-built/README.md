@@ -180,6 +180,9 @@ again, the answer is a modal, not a disclosure."*
 | **D13** | **No migration, no new table, no new SQL, no new auth boundary — verified against the LIVE database, not the migration folder.** `supabase migration list --linked` shows local and remote in sync with nothing pending (last applied `20260827120000`). Live row counts, read 2026-09-09 with `supabase db query --linked`: `projects` 4 · `journey_registries` **1** · `journey_definition_versions` 1 · `experiment_registries` 3 · `scenario_registries` 2 · `event_destinations` 1 · `event_delivery_attempts` 6 · `flag_lifecycle_audit` **148** · `north_star_metrics` 2 · `leading_inputs` **3**. Nothing this epic does needs a column, and nothing needs a backfill. | `supabase migration list --linked`; `supabase db query --linked`, 2026-09-09. |
 | **D13-b** | **Those counts decide two stories.** (a) Story 3.2's Activity page holds **148** real audit rows and renders every one — pagination is a genuine need and, at 148, it slices a list already fully in memory, so it needs no query change and no index (D13). (b) Story 3.1's North Star has exactly **3** `leading_inputs` live, which is the number the approved state draws as three separate plots — the design is buildable against real data rather than against the prototype's fixture. | Same query. |
 | **D13-c** | **The Journeys screen will never resemble its picture in DATA, and that is not a defect.** Production holds **one** journey; `measure-journeys` draws three, `10,906` people counted and `1,238` reaching the end. The built page also renders a dash in the People column on purpose — `projectJourneyRows` refuses to run one bounded cohort scan per row on a list page, and *"we did not read how many"* and *"nobody"* are different answers. The structural contract asserts that the **column exists and is labelled `People`**; it never asserts a value. A builder who "fixes" the dash to match the picture is adding N cohort queries to a list page. | `journeys/page.tsx` and its `projectJourneyRows` comment; live counts above. |
+| **D15** | **NEW — the gate blocks PER ROUTE, through a measured ratchet, not a typed flag.** Daniel's requirement (2026-09-09) is *"the gate blocks on all 17 as each one lands, not from the start — so main never carries a red gate for work that hasn't been done yet."* The only mechanism that satisfies both halves without a hand-typed "is this route supposed to pass yet" boolean — which is `rendersFromDesignSystem` under a new name — is a **floor**: `apps/web/design-system/STATE-MATCH.json` is WRITTEN by the gate and committed, a route in it that stops matching fails the build, and a route in it that the run did not open at all fails too. Nobody types which routes should pass; the file records which ones DID, and the only editable direction is forward. | Built and run, 2026-09-09. |
+| **D16** | **NEW (Daniel, 2026-09-09) — the epic builds EVERY failing route; Sprint 4 covers the nine outside the original three sprints.** Measured against `design-system-rails`' reported 27/27 with `outstanding: []`: of the 21 routes the gate opens, **5 match and 16 do not**. Seven of the sixteen are in Sprints 2–3 (`/app`, both journeys routes, scenarios, both experiments routes, destinations); **nine were in no story** — `/app/tasks`, `/app/setup/connect`, `/app/setup/keys`, `/app/shares`, `/hub`, `/hub/horizon`, `/hub/report`, `/install`, `/s/[token]`. Daniel's ruling: *"Build all 17. Add Sprint 4 for the 10. … the deliverable is the approved design on every route, not a subset with a debt list. … Don't come back on scope again — the answer for anything else you find is: it's in the design, so it gets built."* Appetite moves **M → L**. | The gate's own output, 2026-09-09. |
+| **D16-b** | ⚠️ **The numbers Daniel decided on were 17 and 10; the true numbers are 16 and 9, and the difference was MY measurement bug, not a change of scope.** `/login` was reported failing because the gate opened it from the signed-in fixture and was redirected to `/app` — so it scored `door-login` against Today. A context created from the `browser` fixture inherits the project's `use` options, `storageState` included; `storageState: undefined` had to be passed explicitly. `/login` matches its approved state and always did. The gate now refuses to measure a page it was redirected to, and says so. The decision is unaffected — every failing route is built — but a doc that kept the wrong number would be this epic's own defect. | `STATE-MATCH.json`, which now lists `/login` as matching. |
 | **D14** | **`measure-north-star` stops being mapped onto `/app/impact/[projectSlug]/[featureKey]`.** That mapping is real in `route-manifest.ts` today and is the architect's substitution the epic README describes. Story 3.1 gives North Star its own Measure surface and `/app/impact/…` keeps its own state. The denominator moves 27 → 28. | `route-manifest.ts`; `lib/project-route-inventory.ts` has exactly two Measure entries. |
 
 ## Routing — who builds what, and why
@@ -189,6 +192,7 @@ again, the answer is a modal, not a disclosure."*
 | **1 — the gate** | **Architect (Opus 5), not delegated** | It is the shared seam every later story is measured by, and WAYS-OF-WORKING puts shared surface on the strongest model, done first. A gate delegated to the tier that will be judged by it is a gate written to pass. |
 | **2 — the screens** | **Architect builds the modal seam (D8) FIRST; the four per-surface stories go to a Sonnet-class builder over the locked contract** | The modal is shared surface imported by four stories; the surfaces themselves are mechanical once the contract and the seam exist. |
 | **3 — the two screens + the flag** | **Architect** | 3.1 adds a nav surface and moves a state mapping (shared surface); 3.3 deletes a flag from `lib/flags.ts` and four gating files plus every Vercel environment (shared infra). Neither is delegable under the routing table. |
+| **4 — the other ten** | **Sonnet-class builders, fanned out over the locked contract** | By Sprint 4 the contract, the modal seam and the ratchet all exist and every story is "make this route's blocks equal its state's blocks", with the gate as the acceptance check. That is the definition of mechanical work over a locked contract. The hub's three routes go to one builder because they share `hub.module.css`. |
 
 ## Scope — stories
 
@@ -197,6 +201,10 @@ again, the answer is a modal, not a disclosure."*
 | 1 | The gate that can fail | high |
 | 2 | Delete the disclosures, build the screens | high |
 | 3 | The two missing screens, and no flags | high |
+| 4 | The nine routes nothing was measuring (D16) | high |
+
+**Appetite: L** (was M). Sprint 4 is Daniel's 2026-09-09 decision to build every failing route
+rather than ship seven and a debt list (D16).
 
 ## Build contract (locked by the architect before the builder started)
 
@@ -266,10 +274,12 @@ built page; it does not re-implement the walk.
 
 **Sprint 1 first, and it must be red before Sprint 2 opens.** A gate written after the work it is
 meant to check is a gate written to pass. Stack the branches:
-`feat/mockups-as-built` → `-s2` → `-s3`.
+`feat/mockups-as-built` → `-s2` → `-s3` → `-s4`.
 
 ## Definition of Done (epic)
-- [ ] Every route in the approved set **matches its state's structural signature**, checked by CI (D2)
+- [ ] **21 of 21** — every route the gate opens matches its state's structural signature (D2, D16).
+      `STATE-MATCH.json` lists all of them and `outstanding` is empty **because it was measured**,
+      not because a boolean says so
 - [ ] `grep -rn "<summary" apps/web/app apps/web/components` returns **only** the six `flags/…`
       disclosures (D6) and the three chrome controls (D6-c) — the grep covers **both** trees (D6-b)
 - [ ] The gate was **observed failing on Journeys** — and on a deliberately mutated Ship › Features —
