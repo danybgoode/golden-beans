@@ -270,12 +270,22 @@ test('the printed coverage number comes from the GATE, not from a typed boolean'
   ).matching;
   const measuredMatching = Object.keys(floor).filter((route) => floor[route]);
 
-  // Every route the report calls covered was measured as matching by the gate. Not a subset, not a
-  // superset: the report may not invent coverage, and it may not lose a route the gate earned.
+  // ⚠️ **This compared `covered` against `matching FILTERED BY covered`, which is `covered` itself**
+  // (cross-family review, Codex, Should-fix). It could only ever prove `covered ⊆ matching`, so a
+  // matching route silently missing from the report passed — and I wrote it under a comment saying
+  // "not a subset, not a superset". A tautology wearing a claim to be the opposite of one, in the
+  // test file for the number this epic exists to make honest.
+  //
+  // The two sets are compared directly now. The report may not invent coverage, and it may not lose
+  // a route the gate earned. The one legitimate asymmetry is stated rather than filtered away: the
+  // gate's floor can hold a route the manifest no longer lists as measurable, so `matching` is
+  // narrowed to the routes the REPORT is responsible for — by the report's own denominator, which
+  // is `covered + outstanding`.
+  const reportsOn = new Set([...report.covered, ...report.outstanding]);
   assert.deepEqual(
     [...report.covered].sort(),
-    measuredMatching.filter((route) => report.covered.includes(route)).sort(),
-    'coverage.json reports a route as covered that the gate did not measure as matching'
+    measuredMatching.filter((route) => reportsOn.has(route)).sort(),
+    'coverage.json and the gate disagree about which routes match their approved state'
   );
   assert.equal(
     report.complete,

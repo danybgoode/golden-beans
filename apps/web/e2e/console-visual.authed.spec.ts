@@ -1102,8 +1102,19 @@ test('every route matches the STRUCTURE of its approved state', async ({ page, b
     // `storageState` did. `/login` then bounced to `/app` and the gate measured Today while
     // reporting on `door-login`. `/signup` and the public routes hid it, because they render the
     // same thing signed in or out.
+    // ⚠️ `baseURL` passed EXPLICITLY. Cross-family review (Codex) called this Blocking — "a raw
+    // `browser.newContext()` does not inherit `use.baseURL`, so a path-based `goto` will fail".
+    // **Empirically it does inherit here**: `/login`, `/signup` and `/talk` all opened and matched
+    // on the run before this change, and a `goto('/login')` against no base would have thrown
+    // rather than returned a signature. So the finding as stated is false, and it is hardened
+    // anyway — the behaviour it relies on is implicit, undocumented and free to remove, and this
+    // costs one argument.
     const context = anonymous
-      ? await browser.newContext({ viewport: VIEWPORT, storageState: undefined })
+      ? await browser.newContext({
+          viewport: VIEWPORT,
+          storageState: undefined,
+          baseURL: test.info().project.use.baseURL,
+        })
       : null
     const surface = context === null ? page : await context.newPage()
 
@@ -1288,6 +1299,28 @@ test('every route matches the STRUCTURE of its approved state', async ({ page, b
     'a route in the matching floor was not opened by this run at all — it left REACHABLE, left the ' +
       'manifest, or started borrowing a state. A route that stops being checked must be a decision.'
   ).toEqual([])
+
+  // ⚠️ **The DENOMINATOR is pinned too, and `vanished` above does not cover it** (cross-family
+  // review, Codex, Blocking). That assertion protects routes that already MATCH. An OUTSTANDING
+  // route — one of the sixteen this epic exists to build — could be dropped from `REACHABLE`,
+  // logged as "covered elsewhere", and silently leave the denominator: coverage would climb toward
+  // 21/21 by shrinking, not by building. That is this epic's own defect with the arithmetic
+  // reversed, and it would look like progress.
+  //
+  // So the set the gate opens is asserted against the manifest, with the four genuinely
+  // unreachable rows PINNED BY NAME rather than counted. Counting them cannot fail; naming them
+  // means a fifth one is a decision somebody makes on purpose.
+  const shouldOpen = liveRows(6)
+    .filter((row) => row.referenceState !== null && !row.borrowsState)
+    .map((row) => row.route)
+    .filter((route) => !EXPECTED_SKIPS.includes(route))
+    .sort()
+  expect(
+    [...opened].sort(),
+    'the set of routes the structural gate opens changed. A route that leaves REACHABLE leaves the ' +
+      'denominator too, so coverage would rise by measuring less. Add it back, or retire its ' +
+      'manifest row on purpose.'
+  ).toEqual(shouldOpen)
 })
 
 test('a borrowed state is owned and has not expired', () => {
