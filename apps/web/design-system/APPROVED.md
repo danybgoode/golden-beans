@@ -16,7 +16,7 @@
 
 ### The 33rd, approved 2026-09-09 (`mockups-as-built`, epic D8)
 
-`wizard-new-feature` — `wizardModal()`, `console-prototype.html:1992. **It was drawn on
+`wizard-new-feature` — `wizardModal()`, `console-prototype.html:1992`. **It was drawn on
 2026-08-29 and not approved**, and the omission was load-bearing: all six primary authoring
 actions in the other 32 states are `toast()` stubs reading *"the same wizard shape as New
 feature"*, so the approved design drew six doors with no room behind any of them. The

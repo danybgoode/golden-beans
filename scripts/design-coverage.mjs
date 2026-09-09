@@ -77,8 +77,18 @@ const { coverage, liveRows } = await import(join(REPO, MANIFEST));
 // other means. The file cannot be edited upward by hand without the gate disagreeing on the next
 // run, and `console-visual.authed.spec.ts` fails if a route in it stops matching.
 const MATCH_FILE = 'apps/web/design-system/STATE-MATCH.json';
-const matching = JSON.parse(readFileSync(join(REPO, MATCH_FILE), 'utf8')).matching;
-const MATCHED = new Set(Object.keys(matching).filter((route) => matching[route]));
+const matchFile = JSON.parse(readFileSync(join(REPO, MATCH_FILE), 'utf8'));
+const MATCHED = new Set(Object.keys(matchFile.matching).filter((route) => matchFile.matching[route]));
+
+// ⚠️ **The DENOMINATOR comes from the gate too, not from the manifest** (cross-family review,
+// Codex, Blocking). Counting every manifest row with a reference state made the denominator 25,
+// while the gate can only ever admit the 21 routes it can OPEN — four rows need a feature key, a
+// journey key or a share token this suite must not invent, and a sibling spec covers them. So
+// "every route matches" could never make this file read complete, and the epic's Definition of Done
+// was arithmetically unreachable.
+//
+// A route the gate cannot measure is not coverage this number may claim, in either direction.
+const OPENED = new Set(matchFile.opened ?? []);
 
 // ⚠️ `--sprint N` (fresh reviewer). Everything was reported at `coverage(6)`, so the three routes
 // Story 4.5 retires were already out of the denominator while they are still live and off-system —
@@ -102,7 +112,16 @@ function buildReport() {
   // denominator would ratchet against itself.
   const now = coverage(6);
   // The rows the gate is responsible for: live, with an approved state, not borrowing one.
-  const measurable = liveRows(6).filter((row) => row.referenceState !== null && !row.borrowsState);
+  const measurable = liveRows(6).filter(
+    (row) => row.referenceState !== null && !row.borrowsState && OPENED.has(row.route)
+  );
+  // Named rather than silently dropped: a row with an approved state that the gate never opens is a
+  // real gap, and it belongs in the report where somebody can see it — not rounded out of the
+  // denominator with no trace, which is how the last epic's five deferred rows behaved.
+  const coveredElsewhere = liveRows(6)
+    .filter((row) => row.referenceState !== null && !row.borrowsState && !OPENED.has(row.route))
+    .map((row) => row.route)
+    .sort();
   const matchedRows = measurable.filter((row) => MATCHED.has(row.route));
   const outstandingRows = measurable.filter((row) => !MATCHED.has(row.route));
   return `${JSON.stringify(
@@ -130,6 +149,7 @@ function buildReport() {
       complete: matchedRows.length,
       matchesApprovedState: matchedRows.length,
       measurable: measurable.length,
+      coveredElsewhere,
       // BOTH lists. The ratchet has to name what REGRESSED, and `outstanding` alone cannot do it:
       // diffing it reports a brand-new uncovered route as one that "lost coverage" (agy).
       covered: matchedRows.map((row) => row.route).sort(),

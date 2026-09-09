@@ -246,7 +246,8 @@ export function extractSignature({ scope, kinds, annotation, side, hiddenText })
       continue;
     }
     if (child.tagName === 'DETAILS') {
-      disclosures += 1;
+      // Counted here so it does not reach the block sequence. The TOTAL is taken over the whole
+      // scope below — see the `disclosures` assignment after the loop.
       continue;
     }
     const kind = kinds.find((entry) => child.matches(entry[side]));
@@ -272,6 +273,13 @@ export function extractSignature({ scope, kinds, annotation, side, hiddenText })
     }
     blocks.push(block);
   }
+
+  // ⚠️ **Counted over the WHOLE scope, not among direct children** (cross-family review, Codex,
+  // Blocking). The loop above only sees the content column's own children, so a `<details>` nested
+  // inside a recognised block — a disclosure inside a `.ds-card`, which is exactly where the
+  // Medusa-truth one lives on `/app` — was invisible while the contract's whole claim is that the
+  // approved design draws NONE. The one that mattered most was the one it could not see.
+  disclosures = root.querySelectorAll('details').length;
 
   return { missing: false, blocks, disclosures, annotations, unknown };
 }
@@ -300,6 +308,20 @@ export function signatureArgs(side) {
 export function diffSignature(approved, built) {
   const differences = [];
   if (built.missing) return ['the route rendered no <main> at all'];
+
+  // ⚠️ **The built route's UNRECOGNISED blocks are a difference, not a note** (cross-family review,
+  // Codex, Blocking). They were collected and never compared, so a page could add an entire
+  // unnamed block to its content column — a stray panel, a leftover stack — and still pass, because
+  // the recognised sequence either side of it was unchanged. `readContract` already refuses to
+  // EMIT a signature containing one; the built side has to refuse to ACCEPT one, or the guard only
+  // covers the half of the comparison nobody was going to break.
+  if (built.unknown.length > 0) {
+    differences.push(
+      `the page renders ${built.unknown.length} block(s) the approved design has no name for: ` +
+        `${built.unknown.join(', ')}. Either it is not in the design, or the block vocabulary in ` +
+        'state-contract-core.mjs is missing a kind — both are decisions, neither is a pass.'
+    );
+  }
 
   if (built.disclosures !== 0) {
     differences.push(
