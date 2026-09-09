@@ -78,6 +78,23 @@ export async function readContract() {
         'swallow it.'
     );
   }
+  // ⚠️ **The proto side's `disclosures` is ASSERTED, not assumed** (fresh reviewer, Minor). The type
+  // doc and `diffSignature` both state "always 0 in an approved state", and nothing checked it. A
+  // future approved prototype containing a `<details>` would have been accepted into the contract
+  // as `disclosures: 1` — and since `diffSignature` only ever tests `built.disclosures !== 0`, that
+  // route would become permanently unmatchable. It fails closed rather than open, so it is not the
+  // class this epic hunts; it is still a claim the code did not make, which is CODE-QUALITY #3.
+  const withDisclosures = Object.entries(contract).filter(([, signature]) => signature.disclosures !== 0);
+  if (withDisclosures.length > 0) {
+    throw new Error(
+      'an approved state contains a <details>, and the whole contract is written on the premise ' +
+        'that none does:\n' +
+        withDisclosures.map(([name, sig]) => `  ${name}: ${sig.disclosures}`).join('\n') +
+        '\nIf the approved design genuinely draws one, `diffSignature` has to compare the two ' +
+        'counts instead of testing the built side against zero.'
+    );
+  }
+
   const empty = Object.entries(contract).filter(
     ([, signature]) => signature.missing || signature.blocks.length === 0
   );

@@ -287,14 +287,28 @@ test('the printed coverage number comes from the GATE, not from a typed boolean'
     measuredMatching.filter((route) => reportsOn.has(route)).sort(),
     'coverage.json and the gate disagree about which routes match their approved state'
   );
-  assert.equal(
-    report.complete,
-    report.covered.length,
-    'coverage.json`s complete count and its covered list disagree'
-  );
-  assert.equal(
-    report.complete + report.outstanding.length,
-    report.measurable,
-    'covered + outstanding must account for every route the gate is responsible for'
+  // ⚠️ **Two self-consistency assertions were REMOVED here, because they were true by construction**
+  // (fresh reviewer). `complete: matchedRows.length` and `covered: matchedRows.map(...)` come from
+  // the same array, so `complete === covered.length` always; and `matchedRows`/`outstandingRows` are
+  // an exact `.filter()`/`.filter(!...)` partition of `measurable`, so their sum always equals it —
+  // whatever `MATCHED` actually contained. Both would have stayed green if the gate's result were
+  // ignored entirely.
+  //
+  // They are not replaced by cleverer versions of the same idea: the assertion above already
+  // cross-checks the report against the GATE'S OWN file, which is the only independent source
+  // there is. Deleting a guard that cannot fail is worth more than keeping it for the count.
+  //
+  // What IS worth asserting is that the denominator came from the gate rather than from the
+  // manifest — `measurable` must equal the number of routes the gate reported opening, narrowed to
+  // the ones this report covers. That is the property Codex's round-2 finding was about, and it
+  // can fail: point `measurable` back at the manifest and this goes red.
+  const opened = JSON.parse(
+    readFileSync(join(REPO, 'apps/web/design-system/STATE-MATCH.json'), 'utf8')
+  ).opened;
+  assert.ok(Array.isArray(opened) && opened.length > 0, 'the gate published no `opened` set');
+  assert.deepEqual(
+    [...report.covered, ...report.outstanding].sort(),
+    [...opened].filter((route) => reportsOn.has(route)).sort(),
+    'coverage.json reports on a route the gate never opened, or omits one it did'
   );
 });
