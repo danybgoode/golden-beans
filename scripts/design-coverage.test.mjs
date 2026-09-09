@@ -43,7 +43,7 @@ function runCoverage(cwd, args = [], env = {}) {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
+      env: sealedEnv(env),
     });
     return { code: 0, stdout, stderr: '' };
   } catch (error) {
@@ -55,8 +55,49 @@ function runCoverage(cwd, args = [], env = {}) {
   }
 }
 
+/**
+ * Git's own environment variables, cleared for every child this file spawns.
+ *
+ * ⚠️ **Without this, these tests operate on THE REPOSITORY THEY ARE RUNNING IN.** `GIT_DIR` and
+ * friends override `cwd` — `git -C /tmp/fixture init` with `GIT_DIR` set initialises whatever
+ * `GIT_DIR` points at — and `.githooks/pre-push` exports them, which is precisely when this file
+ * runs. Reproduced on 2026-09-09: the fixture's `git init` flipped the real repo's `core.bare` to
+ * `true` and its `git commit -qm baseline` landed a commit deleting the entire tree on the branch
+ * being pushed. The push then failed on the fixture's own error message, which read like a broken
+ * test rather than a repository being rewritten underneath it.
+ *
+ * That is why pre-push has been failing here, and it is not new: the same leak fails these tests on
+ * `main`, verified by running them with `GIT_DIR` set against `main`'s copy of this file.
+ *
+ * A test that builds a throwaway repository must be sealed against the repository it is spawned
+ * from, or it is not a throwaway repository.
+ */
+const GIT_ENV_TO_CLEAR = {
+  GIT_DIR: undefined,
+  GIT_INDEX_FILE: undefined,
+  GIT_WORK_TREE: undefined,
+  GIT_COMMON_DIR: undefined,
+  GIT_OBJECT_DIRECTORY: undefined,
+  GIT_ALTERNATE_OBJECT_DIRECTORIES: undefined,
+  GIT_CEILING_DIRECTORIES: undefined,
+  GIT_PREFIX: undefined,
+  // The fixture repos have no hooks and must not borrow this one's.
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_SYSTEM: '/dev/null',
+};
+
+/** `process.env` with git's own variables stripped. */
+function sealedEnv(extra = {}) {
+  const env = { ...process.env, ...extra };
+  for (const key of Object.keys(GIT_ENV_TO_CLEAR)) {
+    if (GIT_ENV_TO_CLEAR[key] === undefined) delete env[key];
+    else env[key] = GIT_ENV_TO_CLEAR[key];
+  }
+  return env;
+}
+
 function git(cwd, ...args) {
-  execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+  execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: sealedEnv() });
 }
 
 /**
