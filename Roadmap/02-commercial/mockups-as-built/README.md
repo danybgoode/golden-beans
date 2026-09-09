@@ -194,6 +194,48 @@ again, the answer is a modal, not a disclosure."*
 | **3 — the two screens + the flag** | **Architect** | 3.1 adds a nav surface and moves a state mapping (shared surface); 3.3 deletes a flag from `lib/flags.ts` and four gating files plus every Vercel environment (shared infra). Neither is delegable under the routing table. |
 | **4 — the other ten** | **Sonnet-class builders, fanned out over the locked contract** | By Sprint 4 the contract, the modal seam and the ratchet all exist and every story is "make this route's blocks equal its state's blocks", with the gate as the acceptance check. That is the definition of mechanical work over a locked contract. The hub's three routes go to one builder because they share `hub.module.css`. |
 
+## State of play — read this first on re-entry (2026-09-09)
+
+**Sprint 1 is built and in review as [PR #136]. Sprints 2–4 are not started.** The decided state is
+D1–D16 above and the per-sprint build contracts below; nothing else needs reconstructing.
+
+**The one command that tells you where everything stands:**
+
+```bash
+npm run test:e2e:local -- --authed apps/web/e2e/console-visual.authed.spec.ts
+```
+
+It prints `[structure] N route(s) do not match their approved state yet`, and for each one the
+approved block sequence, the built block sequence, and the specific blocks that disagree. **That
+output is the remaining work, named by a machine.** Every story in Sprints 2–4 is "make this list
+shorter", and a route is done when it leaves the list and enters `STATE-MATCH.json`.
+
+Measured 2026-09-09 — **5 of 21 routes match**:
+
+| | routes |
+|---|---|
+| **Matching (the floor)** | `/app/flags` · `/app/flag-audit` · `/login` · `/signup` · `/talk` |
+| **Sprint 2** | `/app` · `/app/journeys` · `/app/journeys/[key]` · `/app/scenarios` · `/app/experiments` · `/app/experiments/[key]` · `/app/destinations` |
+| **Sprint 3** | North Star (a route that does not exist yet) · `/app/flag-audit` pagination |
+| **Sprint 4** | `/app/tasks` · `/app/setup/connect` · `/app/setup/keys` · `/app/shares` · `/hub` · `/hub/horizon` · `/hub/report` · `/install` · `/s/[token]` |
+
+**Two things already prepared for Sprint 2, so nobody rebuilds them:**
+
+- `summariseJourneys` (`lib/journey-list-view.ts`) already returns the **four** tile figures its own
+  comment calls *"the four summary tiles' figures"*, and `subjectsCounted` is `number | null` by
+  design. `Tile` takes `value: null` + an `absent` sentence. So Story 2.1's fourth tile is a render,
+  not a query — and **do not** add a per-row cohort scan to make a number appear (D13-c).
+- The modal seam (D8) is the FIRST thing to build in Sprint 2 and the architect owns it: four
+  stories import it. `wizard-new-feature` is in `STATE-CONTRACT.json` as
+  `dialoghead → dialogbody → dialogfoot`; the product classes are `.ds-dialog-head` (does not exist
+  yet), `.ds-dialog-body` and `.ds-dialog-actions`. `app/app/design-system/specimen-dialog.tsx` is
+  the working `<dialog>` pattern to copy, and `ConfirmDialog` is the product's own.
+
+⚠️ **`.ds-vers` and `.ds-dialog-head` are paired in the vocabulary with product classes that do not
+exist yet.** That is deliberate: the gate says *"the approved state has `versions`, the page has
+`list`"* until Sprint 2 builds them. Widening the selector to make the two agree would delete the
+question.
+
 ## Scope — stories
 
 | Sprint | Story | Risk |
