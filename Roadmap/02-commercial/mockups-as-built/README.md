@@ -194,10 +194,10 @@ again, the answer is a modal, not a disclosure."*
 | **3 — the two screens + the flag** | **Architect** | 3.1 adds a nav surface and moves a state mapping (shared surface); 3.3 deletes a flag from `lib/flags.ts` and four gating files plus every Vercel environment (shared infra). Neither is delegable under the routing table. |
 | **4 — the other ten** | **Sonnet-class builders, fanned out over the locked contract** | By Sprint 4 the contract, the modal seam and the ratchet all exist and every story is "make this route's blocks equal its state's blocks", with the gate as the acceptance check. That is the definition of mechanical work over a locked contract. The hub's three routes go to one builder because they share `hub.module.css`. |
 
-## State of play — read this first on re-entry (2026-09-09)
+## State of play — read this first on re-entry (updated 2026-09-09, after Sprint 2 part 1 merged)
 
-**Sprint 1 is built and in review as [PR #136]. Sprints 2–4 are not started.** The decided state is
-D1–D16 above and the per-sprint build contracts below; nothing else needs reconstructing.
+**Sprints 1 and 2-part-1 are SHIPPED and LIVE in production** (`93b3403`, `20cecfb`).
+**11 of 21 routes match**, measured. Ten remain.
 
 **The one command that tells you where everything stands:**
 
@@ -205,36 +205,59 @@ D1–D16 above and the per-sprint build contracts below; nothing else needs reco
 npm run test:e2e:local -- --authed apps/web/e2e/console-visual.authed.spec.ts
 ```
 
-It prints `[structure] N route(s) do not match their approved state yet`, and for each one the
-approved block sequence, the built block sequence, and the specific blocks that disagree. **That
-output is the remaining work, named by a machine.** Every story in Sprints 2–4 is "make this list
-shorter", and a route is done when it leaves the list and enters `STATE-MATCH.json`.
-
-Measured 2026-09-09 — **5 of 21 routes match**:
+It prints each unmatched route, its approved block sequence, its built one, and the blocks that
+disagree. **That output IS the remaining work.** A route is done when it leaves the list and enters
+`STATE-MATCH.json` — which the gate itself writes, and refuses to let you skip committing.
 
 | | routes |
 |---|---|
-| **Matching (the floor)** | `/app/flags` · `/app/flag-audit` · `/login` · `/signup` · `/talk` |
-| **Sprint 2** | `/app` · `/app/journeys` · `/app/journeys/[key]` · `/app/scenarios` · `/app/experiments` · `/app/experiments/[key]` · `/app/destinations` |
-| **Sprint 3** | North Star (a route that does not exist yet) · `/app/flag-audit` pagination |
-| **Sprint 4** | `/app/tasks` · `/app/setup/connect` · `/app/setup/keys` · `/app/shares` · `/hub` · `/hub/horizon` · `/hub/report` · `/install` · `/s/[token]` |
+| **Matching (the floor)** | `/app` · `/app/journeys` · `/app/scenarios` · `/app/experiments` · `/app/destinations` · `/app/tasks` · `/app/flags` · `/app/flag-audit` · `/login` · `/signup` · `/talk` |
+| **Sprint 2 remainder** | `/app/journeys/…/[journeyKey]` · `/app/experiments/…/[experimentKey]` |
+| **Sprint 3** | a North Star route that DOES NOT EXIST YET · `/app/flag-audit` pagination · delete `CONSOLE_SHELL_ENABLED` |
+| **Sprint 4** | `/app/setup/connect` · `/app/setup/keys` · `/app/shares` · `/hub` · `/hub/horizon` · `/hub/report` · `/install` · `/s/[token]` |
 
-**Two things already prepared for Sprint 2, so nobody rebuilds them:**
+### ⚠️ The two Sprint 2 remainders are REBUILDS, not deletions — which is why they were missed
 
-- `summariseJourneys` (`lib/journey-list-view.ts`) already returns the **four** tile figures its own
-  comment calls *"the four summary tiles' figures"*, and `subjectsCounted` is `number | null` by
-  design. `Tile` takes `value: null` + an `absent` sentence. So Story 2.1's fourth tile is a render,
-  not a query — and **do not** add a per-row cohort scan to make a number appear (D13-c).
-- The modal seam (D8) is the FIRST thing to build in Sprint 2 and the architect owns it: four
-  stories import it. `wizard-new-feature` is in `STATE-CONTRACT.json` as
-  `dialoghead → dialogbody → dialogfoot`; the product classes are `.ds-dialog-head` (does not exist
-  yet), `.ds-dialog-body` and `.ds-dialog-actions`. `app/app/design-system/specimen-dialog.tsx` is
-  the working `<dialog>` pattern to copy, and `ConfirmDialog` is the product's own.
+Every route shipped so far needed a disclosure removed and a control added. These two need blocks
+that do not exist:
 
-⚠️ **`.ds-vers` and `.ds-dialog-head` are paired in the vocabulary with product classes that do not
-exist yet.** That is deliberate: the gate says *"the approved state has `versions`, the page has
-`list`"* until Sprint 2 builds them. Widening the selector to make the two agree would delete the
-question.
+- **`measure-journey`** wants `crumbs → head → answer → list → sectionlabel → versions`. The page
+  renders `crumbs → head → answer → card → note → list`. There is **no `.ds-vers` primitive** — the
+  vocabulary deliberately pairs `versions` with a product class nothing renders yet, so the gate
+  says so instead of agreeing (D2-b). Building it is the story.
+- **`experiment-ready`** wants `crumbs → head → answer → list × 5`. The page renders
+  `crumbs → head → answer → card`, plus **two** disclosures (`[experimentKey]/page.tsx:259`,
+  `governance-detail.tsx:95` and `:201`). Five list blocks where there is one card.
+
+I reported Sprint 2 "complete" while these were unbuilt. The gate never agreed — both had been in
+its outstanding list the whole time. **Re-derive scope from the sprint doc, not from "every story
+has a commit".**
+
+### Known inconsistency, raised with Daniel and not yet decided
+
+Story 2.2 put **read-only scenario evidence** behind the approved `▸ Run a drill` control. A member
+who cannot author still needs the run history, the security results and the breaker trips —
+`scenario-authoring-dark.authed.spec.ts` exists to prove exactly that stays readable. Daniel's
+ruling for the identical case on Destinations was **per-row evidence, separate from the authoring
+control**. The dialog's copy was fixed so it does not mislead; the consistent fix is a split of
+`ScenarioWorkspace` and is a story, not an edit.
+
+### Prepared, so nobody rebuilds it
+
+- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`). Six surfaces use
+  the shape; `deliveries-dialog.tsx` shows the per-row pattern.
+- `summariseJourneys` already returns four tile figures. **Do not** add per-row cohort scans to make
+  a number appear (D13-c).
+- `RemovedDestinationsHistory` is the pattern for "a capability whose row no longer exists".
+
+### The three things that will bite you
+
+1. **A guard you fix deserves the mutation check AGAIN.** My union-floor fix made the regression
+   assertion unfalsifiable and shipped to review. Re-run the deliberate break after every guard edit.
+2. **Reporting must precede assertions.** A hard `expect` throws and swallows every `console.log`
+   after it — that hid the outstanding list once and 17 route failures once.
+3. **A product selector is not verified by existing in `system.css`.** `.ds-crumbrow` exists and
+   nothing renders it; the mapping was dead for five routes. It must be the class a component emits.
 
 ## Scope — stories
 

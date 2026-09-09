@@ -1,6 +1,12 @@
 # The mockups, as built — Sprint 2: Delete the disclosures, build the screens
 
-**Status:** ⬜ not started
+**Status:** 🟨 PART 1 SHIPPED (`20cecfb`) — five routes match; **two detail routes still outstanding**
+
+> ⚠️ **Stories 2.1 and 2.3 each cover TWO routes and only one of each is built.** The list routes
+> (`/app/journeys`, `/app/experiments`) match their approved states and are in the floor. The DETAIL
+> routes (`measure-journey`, `experiment-ready`/`experiment-blocked`) are not built — they are
+> rebuilds rather than deletions, and the epic README's state-of-play says exactly what each needs.
+> Story 2.2 (Scenarios) and 2.4 (Today + Destinations) are complete.
 
 > **⛔ Read the epic README's ONE RULE before starting.** Every screen below is drawn and approved.
 > There is nothing to design and nothing to decide.
