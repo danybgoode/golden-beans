@@ -172,6 +172,7 @@ setup('provision a disposable tenant and sign in through the real form', async (
 
   // ⚠️ Written into the record LAST, and the record is rewritten rather than patched: teardown reads
   // this file, so every write has to carry the whole thing.
+  await seedDestinationFixture(db, membership.project_id as string)
   const shareToken = await seedShareFixture(db, membership.project_id as string)
   writeRecord({
     userId,
@@ -800,6 +801,50 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
  * Nothing is needed in teardown: `api_keys` is `REFERENCES projects(id) ON DELETE CASCADE`, and
  * teardown already deletes the project.
  */
+/**
+ * ONE enabled destination, so `/app/destinations` renders its LIST rather than its empty state.
+ *
+ * ⚠️ **The route was failing the structural gate for a fixture reason, not a product one**
+ * (`mockups-as-built` Story 2.4). The approved `setup-destinations` state draws a list with the
+ * columns Destination · Sends · Delivery · On / off; a tenant with no destinations renders
+ * `EmptyCard` instead, which is a `.ds-listcard` with no `.ds-listhead` in it — so the gate read
+ * `columns: null` and reported a mismatch on a page that was built correctly.
+ *
+ * Seeding is the honest fix and it is the pattern every other route here already follows — the
+ * journey, experiment, scenario, funnel, impact, task and share fixtures all exist for exactly this
+ * reason. Loosening the column assertion to tolerate an empty list would have been the alternative,
+ * and it would have stopped the gate seeing a list that lost its header on EVERY route.
+ *
+ * Written through the service client rather than `createDestination`, for the same reason as its
+ * siblings: the seed needs a deterministic row, not the product's validation path.
+ */
+async function seedDestinationFixture(db: SupabaseClient, projectId: string) {
+  const { error } = await db.from('event_destinations').insert({
+    project_id: projectId,
+    name: 'gb-e2e-destination',
+    // A URL that resolves nowhere on purpose: nothing in this suite sends to it, and a real host
+    // would make a green test depend on somebody else's uptime.
+    target_url: 'https://example.invalid/gb-e2e-hook',
+    // ⚠️ The DB constraint (`event_destinations_signing_secret_shape`) is a LENGTH bound —
+    // 16..128 chars — not a prefix rule; checked against the migration rather than assumed. The
+    // `whsec_` prefix is the product's own convention (`generateSigningSecret`), matched here so a
+    // seeded row looks like a minted one to anything that reads it.
+    signing_secret: `whsec_${'0'.repeat(48)}`,
+    secret_set_at: new Date().toISOString(),
+    event_filter: null,
+    // ENABLED, unlike the product default. Safe because `event_destinations_enabled_deliverable`
+    // requires an enabled row to carry BOTH a target_url and a secret, and this row has both. The approved state draws an on/off switch in the `on`
+    // position, and a born-dark row would render the same list with a different pill — which is a
+    // fixture quietly asserting the opposite of the design.
+    enabled: true,
+  })
+  // A duplicate name is not a failure: `auth.setup.ts` runs per worker, and the partial unique index
+  // covers live rows only.
+  if (error && !/duplicate key/i.test(error.message)) {
+    throw new Error(`could not seed the destination: ${error.message}`)
+  }
+}
+
 async function seedShareFixture(db: SupabaseClient, projectId: string): Promise<string | null> {
   const token = generateShareToken()
   const { error } = await db.from('api_keys').insert({

@@ -245,6 +245,17 @@ export function extractSignature({ scope, kinds, annotation, side, hiddenText })
       annotations += 1;
       continue;
     }
+    // ⚠️ **A `<dialog>` is an OVERLAY, not a block in the content sequence.** Destinations renders
+    // `ConfirmDialog` as a direct child of `<main>`; closed, it paints nothing, and open it covers
+    // the page rather than sitting in its flow. Counting it as a content block made the route
+    // report an extra unnamed block forever — found by the unknown-block guard, which is the guard
+    // working rather than a false positive.
+    //
+    // Skipped rather than named as a kind, because a dialog's own contents ARE asserted: an open
+    // one becomes the SCOPE (`PRODUCT_SCOPE` starts at `.ds-dialog[open]`), so the wizard state is
+    // measured on its own terms instead of as a lump inside the page that opened it.
+    if (child.tagName === 'DIALOG') continue;
+
     if (child.tagName === 'DETAILS') {
       // Counted here so it does not reach the block sequence. The TOTAL is taken over the whole
       // scope below — see the `disclosures` assignment after the loop.

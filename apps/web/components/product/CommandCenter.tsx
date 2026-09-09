@@ -1,4 +1,3 @@
-import { Fragment } from 'react'
 import { getProjectOutcome } from '@/lib/pod-report-query'
 import { getFlagRegistryView } from '@/lib/flag-registry'
 import { getDeliveryHealth } from '@/lib/deliveries'
@@ -17,7 +16,8 @@ import { TaskLines } from './TaskLines'
 // ── What this replaces, and why the replacement is the story rather than a follow-up ──────────
 // `console-ia-overhaul` A25 left this route pre-contract: mono-italic caveats, a wide dead gap
 // between the stat row and the funnel figures, a `<details>` of "what we are not measuring" and a
-// bare `<ul>` of links under it. It was covered by no story in that epic, and half-doing it left a
+// bare `<ul>` of links under it. (That disclosure survived this epic in a reduced form and is gone
+// for good as of `mockups-as-built` Story 2.4 — see the note where it used to render.) It was covered by no story in that epic, and half-doing it left a
 // route that is neither the old page nor the approved one. Sprint contract #8 makes it this story.
 //
 // ── DD1: Today gains its missing third band ───────────────────────────────────────────────────
@@ -221,33 +221,18 @@ export async function CommandCenter({ project }: { project: CommandCenterProject
         </Callout>
       )}
 
-      {/*
-        The Medusa-truth boundary — the things this engine deliberately does NOT measure, each with
-        the reason and the guardrail.
+      {/* ── The Medusa-truth block is DELETED — mockups-as-built, Story 2.4 ──────────────────
+          It rendered `outcome.notInstrumented` behind a `<details>` labelled "What this project is
+          not measuring yet", under the argument that the approved `today` state draws no such block
+          but it "has no other surface in the product". That argument is the one this epic exists to
+          overturn: it was a builder deciding, after shipping, that the approved design was wrong.
 
-        ⚠️ **The approved `today` state has no such block, and it is KEPT anyway.** It has no other
-        surface in the product, and "where is my revenue number?" is a question a plausible figure
-        would answer badly and this answers honestly. Deleting a capability to satisfy a geometry
-        assertion is not what "render from the design system" asks for — the same call Sprint 4
-        recorded for Destinations' two operational logs (deviation 6).
-
-        Behind a disclosure, and last, so it costs the page nothing until somebody asks.
-      */}
-      {outcome && outcome.notInstrumented.length > 0 ? (
-        <details className="ds-gaps">
-          <summary>What this project is not measuring yet ({outcome.notInstrumented.length})</summary>
-          <dl>
-            {outcome.notInstrumented.map((gap) => (
-              <Fragment key={gap.key}>
-                <dt>{gap.label}</dt>
-                <dd>
-                  {gap.reason} <em>{gap.guardrail}</em>
-                </dd>
-              </Fragment>
-            ))}
-          </dl>
-        </details>
-      ) : null}
+          Daniel's call, 2026-09-09, asked as an explicit either/or: DELETE it. The reasoning is
+          worth keeping — it is CONTENT, not a control, so nothing stops working, and the honesty
+          boundary it described is not lost with it. `lib/pod-outcome.ts` still enforces in code that
+          this engine never claims a commerce figure it does not have, `pod-outcome.test.ts` still
+          pins that, and `/llms.txt` still states the read-only boundary to any agent that reads it.
+          What is gone is a second telling of it on a screen the design keeps for three bands. */}
     </>
   )
 }

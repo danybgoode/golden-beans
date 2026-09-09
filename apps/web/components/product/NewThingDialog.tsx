@@ -42,11 +42,21 @@ export function NewThingDialog({
   title,
   /** The one-line "Three steps. One word to type." under the title. */
   lede,
+  /**
+   * The trigger's weight. `primary` is the approved `+ New …` control in a page head; `secondary`
+   * is a per-row action (Destinations' `Deliveries`, Story 2.4).
+   *
+   * ⚠️ A variant rather than a second component: the structural gate reads the head's PRIMARY
+   * action, so a per-row trigger must NOT be one — and two components would be two places for the
+   * dialog's own markup to drift apart.
+   */
+  variant = 'primary',
   children,
 }: {
   label: string
   title: string
   lede?: ReactNode
+  variant?: 'primary' | 'secondary'
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -64,7 +74,7 @@ export function NewThingDialog({
 
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
+      <Button variant={variant} onClick={() => setOpen(true)}>
         {label}
       </Button>
       <dialog

@@ -26,6 +26,8 @@
     "/talk"
   ],
   "matching": {
+    "/app": true,
+    "/app/destinations/[projectSlug]": true,
     "/app/experiments/[projectSlug]": true,
     "/app/flag-audit/[projectSlug]": true,
     "/app/flags/[projectSlug]": true,

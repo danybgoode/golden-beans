@@ -4,8 +4,8 @@
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
   "rendersFromDesignSystem": 27,
-  "complete": 8,
-  "matchesApprovedState": 8,
+  "complete": 10,
+  "matchesApprovedState": 10,
   "measurable": 21,
   "coveredElsewhere": [
     "/app/flags/[projectSlug]/[flagKey]",
@@ -14,6 +14,8 @@
     "/hub/[projectSlug]/epic/[epicSlug]"
   ],
   "covered": [
+    "/app",
+    "/app/destinations/[projectSlug]",
     "/app/experiments/[projectSlug]",
     "/app/flag-audit/[projectSlug]",
     "/app/flags/[projectSlug]",
@@ -24,8 +26,6 @@
     "/talk"
   ],
   "outstanding": [
-    "/app",
-    "/app/destinations/[projectSlug]",
     "/app/experiments/[projectSlug]/[experimentKey]",
     "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/setup/connect/[projectSlug]",
