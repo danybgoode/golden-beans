@@ -298,7 +298,7 @@ export function signatureArgs(side) {
 /**
  * Compare a built route's signature against its approved state's.
  *
- * Returns a list of human-readable differences, empty when they agree. A LIST rather than a
+ * @returns {string[]} human-readable differences, empty when the two agree. A LIST rather than a
  * boolean, because "this page does not match its design" is not an actionable failure and "block 3
  * is `tiles` with 3 tiles, the approved state has 4" is.
  *

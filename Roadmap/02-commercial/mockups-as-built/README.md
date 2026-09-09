@@ -7,7 +7,7 @@ build_order: 27      # integer position in the ONE global build sequence.
 # Epic: The mockups, as built — delete the disclosures and finish the screens
 
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/mockups-as-built.md`](../../00-ideas/seeds/mockups-as-built.md)
-> **Appetite:** M (one wave) · **Underwritten by:** _null — not yet bet_
+> **Appetite:** L (multi-wave — raised from M on 2026-09-09, D16) · **Underwritten by:** _null — not yet bet_
 > **Design — ALREADY APPROVED, nothing to design:** [`console-prototype.html`](../../../apps/web/design-system/console-prototype.html) · [`APPROVED.md`](../../../apps/web/design-system/APPROVED.md) · **33** approved states (D8), rendered to `apps/web/design-system/reference/*.png` by CI on every run — **derived and gitignored, never committed** (D1-b).
 > **Corrects:** `design-system-rails` (#26) — which shipped six sprints, marked itself complete, and did not build the approved screens.
 

@@ -42,22 +42,59 @@ test('the prompts name no URL outside the checked set', async ({ baseURL }) => {
   }
 })
 
-// The safety property of this whole surface. Both prompts run inside a model we do not control,
-// in a context we cannot see; the likeliest bad outcome is not a wrong answer but a confident one
-// about data the agent never had. If this instruction is ever edited out, the prompt starts
-// inviting exactly that.
-test('both prompts forbid the agent from claiming a workspace connection', async ({ baseURL }) => {
-  expect(handoffPrompt(baseURL!)).toContain('Do not claim you are connected to my Golden Frijoles workspace')
+// ── The safety property of this whole surface, and WHERE IT NOW LIVES ────────────────────────
+//
+// The likeliest bad outcome from these prompts is not a wrong answer but a confident one about data
+// the agent never had: a model telling its human "I can see your workspace" when nothing is
+// connected, or "connect the MCP and I'll save your North Star" when the connector is read-only
+// (AGENTS.md rule #3). Two assertions used to pin that sentence inside `handoffPrompt`, added after
+// a cross-family review of PR #92.
+//
+// ⚠️ **`24220da` ("optimize hero copy", 2026-09-02) rewrote `handoffPrompt` and the sentence went
+// with it** — so both assertions were RED on `main`, and on every PR opened after it, until
+// `mockups-as-built` Sprint 1 tripped over them. Daniel confirmed the new copy is deliberate and
+// stays.
+//
+// **The guard is re-pointed rather than deleted, because the property did not go anywhere — it
+// moved one layer down.** The new `handoffPrompt`'s FIRST instruction is *"Read <site>/llms.txt"*,
+// and `app/llms.txt/route.ts` carries it in full: *"Do not claim to be connected… Even once
+// connected, the connector is read-only."* So the agent still receives it, from the document the
+// prompt exists to load.
+//
+// Deleting these two tests would have been the easy read of "the copy changed". That is the move
+// this repo keeps paying for — a guard "fixed" by weakening it until it matches whatever shipped.
+// What is asserted is the PROPERTY, at its real home, plus the link that carries a reader to it.
+test('the agent is told not to claim a connection it does not have', async ({ request, baseURL }) => {
+  // `decisionPrompt` still says it inline, so it is still pinned inline.
   expect(decisionPrompt(baseURL!)).toContain("Don't pretend you have access to my workspace")
+
+  // `handoffPrompt` delegates to the manifest — so the delegation itself is the assertion. A
+  // handoff prompt that stopped naming llms.txt would carry no honesty instruction at all, and
+  // that is exactly the state this must go red on.
+  expect(
+    handoffPrompt(baseURL!),
+    'the handoff prompt no longer points at llms.txt, which is the only place it carries the ' +
+      '"do not claim to be connected" instruction'
+  ).toContain('/llms.txt')
+
+  const manifest = await request.get(`${baseURL}/llms.txt`)
+  expect(manifest.status()).toBe(200)
+  const body = await manifest.text()
+  expect(body, 'llms.txt no longer tells the agent not to claim a connection').toContain(
+    'Do not claim to be connected'
+  )
 })
 
-// The second half of the same problem, caught in cross-family review of PR #92. The handoff prompt
-// used to end "connecting Golden Frijoles is how I can save it" — true of the product, false of the
-// MCP connector, which is read-only (AGENTS.md rule #3). A model reading the loose version would
-// reasonably tell its human "connect the MCP and I'll save your North Star", which nothing in the
-// system can do. The prompt now states the read-only boundary explicitly, and this pins it.
-test('the handoff prompt states the connector is read-only and cannot save the work', async ({ baseURL }) => {
-  const prompt = handoffPrompt(baseURL!)
-  expect(prompt).toContain('read-only')
-  expect(prompt).toContain('cannot write my North Star or save this conversation')
+test('the agent is told the connector is read-only and cannot save the work', async ({
+  request,
+  baseURL,
+}) => {
+  // The second half of the same problem, caught in cross-family review of PR #92: a model reading a
+  // loose version would reasonably tell its human "connect the MCP and I'll save your North Star",
+  // which nothing in the system can do.
+  const manifest = await request.get(`${baseURL}/llms.txt`)
+  expect(manifest.status()).toBe(200)
+  const body = await manifest.text()
+  expect(body, 'llms.txt no longer states the read-only boundary').toContain('the connector is read-only')
+  expect(body, 'llms.txt no longer says the agent cannot write').toContain('you cannot write anything')
 })
