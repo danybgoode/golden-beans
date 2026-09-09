@@ -80,6 +80,13 @@ function fixtureRepo() {
     join(REPO, 'apps/web/design-system/coverage.json'),
     join(dir, 'apps/web/design-system/coverage.json')
   );
+  // ⚠️ The coverage number is MEASURED now, not typed (mockups-as-built, D5/D15) — it is read from
+  // the file the visual gate writes. A fixture repo without it is a fixture the script cannot run
+  // in at all.
+  cpSync(
+    join(REPO, 'apps/web/design-system/STATE-MATCH.json'),
+    join(dir, 'apps/web/design-system/STATE-MATCH.json')
+  );
 
   git(dir, 'init', '-q');
   git(dir, 'config', 'user.email', 'ratchet@example.invalid');
@@ -89,20 +96,21 @@ function fixtureRepo() {
   return dir;
 }
 
-/** Turn one covered row off, so coverage genuinely falls by one. */
+/**
+ * Turn one covered row off, so coverage genuinely falls by one.
+ *
+ * ⚠️ **This used to flip `rendersFromDesignSystem` in the manifest, and that stopped lowering the
+ * number** — the coverage count is derived from the gate's own result now (`STATE-MATCH.json`,
+ * epic D5/D15), so a typed boolean cannot move it. Left as it was, every ratchet test would have
+ * gone on passing while testing nothing, which is the failure mode this whole epic is about.
+ * Uncovering a route now means removing it from what the gate measured.
+ */
 function uncoverOneRoute(dir, route) {
-  const path = join(dir, 'apps/web/design-system/route-manifest.ts');
-  const source = readFileSync(path, 'utf8');
-  const at = source.indexOf(`route: '${route}',`);
-  assert.ok(at > 0, `the fixture manifest has no row for ${route}`);
-  const flag = source.indexOf('rendersFromDesignSystem: true,', at);
-  assert.ok(flag > at, `${route}'s row does not claim the design system`);
-  writeFileSync(
-    path,
-    source.slice(0, flag) +
-      'rendersFromDesignSystem: false,' +
-      source.slice(flag + 'rendersFromDesignSystem: true,'.length)
-  );
+  const path = join(dir, 'apps/web/design-system/STATE-MATCH.json');
+  const file = JSON.parse(readFileSync(path, 'utf8'));
+  assert.ok(file.matching[route], `the fixture's matching floor has no entry for ${route}`);
+  delete file.matching[route];
+  writeFileSync(path, `${JSON.stringify(file, null, 2)}\n`);
 }
 
 test('the ratchet FAILS when coverage falls, and names the route that lost it', () => {
@@ -113,6 +121,9 @@ test('the ratchet FAILS when coverage falls, and names the route that lost it', 
     const before = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(before.code, 0, `the fixture's own baseline does not check out:\n${before.stderr}`);
 
+    const baselineBefore = JSON.parse(
+      readFileSync(join(dir, 'apps/web/design-system/coverage.json'), 'utf8')
+    ).complete;
     uncoverOneRoute(dir, '/login');
     // Regenerate, so the report on disk is ACCURATE and the only thing wrong is that it is lower.
     // Skipping this would fail on the "out of date" check instead, which is a different guard.
@@ -120,7 +131,14 @@ test('the ratchet FAILS when coverage falls, and names the route that lost it', 
 
     const after = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(after.code, 1, 'coverage fell and the ratchet passed');
-    assert.match(after.stderr, /RATCHET: coverage fell from 27 to 26/);
+    // ⚠️ **Derived from the fixture, never a literal.** These read `27 to 26` — the typed number —
+    // and the coverage count is MEASURED now (mockups-as-built, D5), so it moves as each route
+    // lands. A literal here would have to be edited by every story in the epic, and an assertion
+    // somebody edits to make it pass has stopped being an assertion.
+    assert.match(
+      after.stderr,
+      new RegExp(`RATCHET: coverage fell from ${baselineBefore} to ${baselineBefore - 1}`)
+    );
     // Naming the route is the half that makes a red actionable. "Coverage fell" sends a reader to
     // diff two JSON files; "/login lost coverage" sends them to the commit that did it.
     assert.match(after.stderr, /Routes that lost coverage: \/login/);
@@ -134,7 +152,11 @@ test('the ratchet PASSES when coverage is unchanged', () => {
   try {
     const result = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /not below HEAD's 27/);
+    // Derived, for the same reason as the sibling test above.
+    const baseline = JSON.parse(
+      readFileSync(join(dir, 'apps/web/design-system/coverage.json'), 'utf8')
+    ).complete;
+    assert.match(result.stdout, new RegExp(`not below HEAD's ${baseline}`));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -187,11 +209,41 @@ test('an unresolvable base ref FAILS rather than passing quietly', () => {
   }
 });
 
-test('the epic closes at 27 of 27, and the printed number is the manifest’s', () => {
-  // Story 6.5's headline, read from the SHIPPED script rather than from the manifest a unit test
-  // could import — this is the number CI prints into the PR's step summary, and the walkthrough
-  // tells Daniel to read it there.
+test('the printed coverage number comes from the GATE, not from a typed boolean', () => {
+  // ⚠️ **This test used to assert `COVERED (both) 27 / 27 (100%)`, and that number was the defect.**
+  // `design-system-rails` closed reporting 27 of 27 with `outstanding: []` while sixteen of the
+  // twenty-one routes the visual gate opens did not have the structure of the design they cite —
+  // because `complete` counted a hand-typed `rendersFromDesignSystem: true` on every row.
+  //
+  // The number is now read from `STATE-MATCH.json`, which `console-visual.authed.spec.ts` writes
+  // after opening each route in a real browser (mockups-as-built, D5/D15). So this asserts the
+  // SHAPE and the SOURCE rather than a literal: a literal here would have to be edited by every
+  // story that lands a route, and an assertion somebody edits to make it pass is not an assertion.
   const result = runCoverage(REPO, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stdout, /COVERED \(both\)\s+27 \/ 27\s+\(100%\)/);
+  assert.match(result.stdout, /MATCHES its approved state\s+\d+ \/ \d+/);
+
+  const report = JSON.parse(readFileSync(join(REPO, 'apps/web/design-system/coverage.json'), 'utf8'));
+  const floor = JSON.parse(
+    readFileSync(join(REPO, 'apps/web/design-system/STATE-MATCH.json'), 'utf8')
+  ).matching;
+  const measuredMatching = Object.keys(floor).filter((route) => floor[route]);
+
+  // Every route the report calls covered was measured as matching by the gate. Not a subset, not a
+  // superset: the report may not invent coverage, and it may not lose a route the gate earned.
+  assert.deepEqual(
+    [...report.covered].sort(),
+    measuredMatching.filter((route) => report.covered.includes(route)).sort(),
+    'coverage.json reports a route as covered that the gate did not measure as matching'
+  );
+  assert.equal(
+    report.complete,
+    report.covered.length,
+    'coverage.json`s complete count and its covered list disagree'
+  );
+  assert.equal(
+    report.complete + report.outstanding.length,
+    report.measurable,
+    'covered + outstanding must account for every route the gate is responsible for'
+  );
 });

@@ -64,6 +64,22 @@ const BASE_REF = BASE_REF_RAW || 'origin/main';
 // rather than a hidden one (fresh reviewer).
 const { coverage, liveRows } = await import(join(REPO, MANIFEST));
 
+// ── mockups-as-built · Story 1.3 (epic D5) — the number stops being typed ─────────────────────
+//
+// `coverage().complete` used to count rows where a hand-written `rendersFromDesignSystem: true`
+// sat beside a reference state. Every row said `true`, so it read **27/27 with nothing
+// outstanding** while sixteen of the twenty-one routes the gate opens did not have the structure
+// of the design they cite. A number computed from a boolean somebody typed is a number that says
+// whatever the last person hoped.
+//
+// It is now computed from `STATE-MATCH.json`, which is WRITTEN BY THE GATE (epic D15): a route is
+// covered when its structural signature equalled its approved state's in a real browser, and by no
+// other means. The file cannot be edited upward by hand without the gate disagreeing on the next
+// run, and `console-visual.authed.spec.ts` fails if a route in it stops matching.
+const MATCH_FILE = 'apps/web/design-system/STATE-MATCH.json';
+const matching = JSON.parse(readFileSync(join(REPO, MATCH_FILE), 'utf8')).matching;
+const MATCHED = new Set(Object.keys(matching).filter((route) => matching[route]));
+
 // ⚠️ `--sprint N` (fresh reviewer). Everything was reported at `coverage(6)`, so the three routes
 // Story 4.5 retires were already out of the denominator while they are still live and off-system —
 // the epic's own trajectory table says 30 through Sprint 3, and this printed 27. `route-manifest.ts`
@@ -85,6 +101,10 @@ function buildReport() {
   // what is PRINTED, never what is committed, because a baseline computed against a moving
   // denominator would ratchet against itself.
   const now = coverage(6);
+  // The rows the gate is responsible for: live, with an approved state, not borrowing one.
+  const measurable = liveRows(6).filter((row) => row.referenceState !== null && !row.borrowsState);
+  const matchedRows = measurable.filter((row) => MATCHED.has(row.route));
+  const outstandingRows = measurable.filter((row) => !MATCHED.has(row.route));
   return `${JSON.stringify(
     {
       _: 'GENERATED — do not hand-edit. Run: node scripts/design-coverage.mjs',
@@ -101,12 +121,19 @@ function buildReport() {
       // says one thing and means another is the shape D13 exists to kill.
       liveRoutesAtSprint1: liveRows(1).length,
       hasReferenceState: now.hasReferenceState,
+      // ⚠️ Kept, and no longer the coverage number. It is a real property the gate verifies — a
+      // `ds-` class inside `<main>` — but it is DECLARED in the manifest, and this epic exists
+      // because a declared property was being reported as a measured one.
       rendersFromDesignSystem: now.rendersFromDesignSystem,
-      complete: now.complete,
+      // MEASURED (D5/D15): the count of routes whose structure equalled their approved state's the
+      // last time the gate ran. Never typed.
+      complete: matchedRows.length,
+      matchesApprovedState: matchedRows.length,
+      measurable: measurable.length,
       // BOTH lists. The ratchet has to name what REGRESSED, and `outstanding` alone cannot do it:
       // diffing it reports a brand-new uncovered route as one that "lost coverage" (agy).
-      covered: [...now.covered].sort(),
-      outstanding: [...now.outstanding].sort(),
+      covered: matchedRows.map((row) => row.route).sort(),
+      outstanding: outstandingRows.map((row) => row.route).sort(),
     },
     null,
     2
@@ -125,7 +152,7 @@ const reportPath = join(REPO, REPORT);
 console.log('design coverage — apps/web/design-system/route-manifest.ts');
 console.log(line('has an approved state', parsed.hasReferenceState, parsed.routes));
 console.log(line('renders from design-system/', parsed.rendersFromDesignSystem, parsed.routes));
-console.log(line('COVERED (both)', parsed.complete, parsed.routes));
+console.log(line('MATCHES its approved state', parsed.complete, parsed.measurable));
 // The denominator is computed from the manifest's own lifecycle fields, not typed here: Story 4.5
 // retires three routes and Story 4.3 adds one, so "29" is true today and false at epic close.
 console.log(
@@ -156,6 +183,19 @@ if (onDisk !== report) {
 }
 
 // ── 2. …and it has not fallen below the base branch's ────────────────────────────────────────
+//
+// ⚠️ **ONE re-baselining is permitted, exactly once, and it cannot be reused** (mockups-as-built,
+// Story 1.3 / D5). Until this epic, `complete` counted a hand-typed `rendersFromDesignSystem` and
+// read 27 of 27 with nothing outstanding; it now counts routes the visual gate MEASURED as matching
+// their approved state, and reads 5. Those are two different quantities, and ratcheting one against
+// the other is not a regression check — it is a unit error. The number has to fall once, and the
+// fall IS the fix.
+//
+// The hatch is keyed on the base report having no `matchesApprovedState` field at all, which is
+// true on exactly one PR in this repository's history and false forever after. It is deliberately
+// not a flag, an env var or a date: those can be set again next time somebody finds the ratchet
+// inconvenient.
+
 let baseReport;
 try {
   baseReport = execFileSync('git', ['show', `${BASE_REF}:${REPORT}`], {
@@ -210,6 +250,24 @@ try {
 }
 
 const base = JSON.parse(baseReport);
+
+// The one-time re-baselining described above. `matchesApprovedState` is the field that only exists
+// once `complete` is MEASURED, so its absence on the base ref means the base's number is the old,
+// typed quantity and the two are not comparable.
+if (base.matchesApprovedState === undefined) {
+  console.error(
+    `\n⚠️  RE-BASELINING, once: ${BASE_REF}'s report counts a hand-typed \`rendersFromDesignSystem\`` +
+      ` (${base.complete}/${base.routes}); this one counts routes the visual gate MEASURED as ` +
+      `matching their approved state (${parsed.complete}/${parsed.measurable}).\n` +
+      '  Those are different quantities, so the ratchet is not comparing them. The number falling ' +
+      'here is the fix — see mockups-as-built Story 1.3 (epic D5).\n' +
+      '  From the next PR onward the base carries `matchesApprovedState` and the ratchet applies ' +
+      'normally. This branch cannot be taken twice.'
+  );
+  console.log(`\n✓ coverage re-baselined at ${parsed.complete}/${parsed.measurable} (measured)`);
+  process.exit(0);
+}
+
 if (parsed.complete < base.complete) {
   // Name the routes when they can be named. An empty list here is not a reason to print an empty
   // line and let the reader assume the tool is broken: it happens when the count fell without any
