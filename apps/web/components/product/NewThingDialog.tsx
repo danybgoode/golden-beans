@@ -32,7 +32,7 @@
 // asserts (`state-contract.mjs` reads the head's primary action). One component, one label, one
 // thing to keep in step with the design.
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Button } from '@/design-system/primitives'
 
 export function NewThingDialog({
@@ -61,6 +61,12 @@ export function NewThingDialog({
 }) {
   const [open, setOpen] = useState(false)
   const dialog = useRef<HTMLDialogElement>(null)
+  // ⚠️ **`useId`, not a slug of the title** (cross-family review, Codex). The id was
+  // `title.replace(/\W+/g, '-')`, and this component now renders ONCE PER ROW on Destinations — so
+  // two destinations named `A/B` and `A B` normalise to the same string, produce duplicate document
+  // ids, and `aria-labelledby` resolves to whichever came first. A screen reader would announce the
+  // wrong destination's dialog, which on a panel holding a replay control is worse than no label.
+  const titleId = useId()
 
   useEffect(() => {
     const element = dialog.current
@@ -80,22 +86,35 @@ export function NewThingDialog({
       <dialog
         ref={dialog}
         className="ds-dialog ds-dialog--wide"
-        aria-labelledby={`new-thing-${title.replace(/\W+/g, '-').toLowerCase()}`}
+        aria-labelledby={titleId}
         // Both, because they are different events: `onClose` fires however it closed, `onCancel`
         // is Escape specifically. Without the second, Escape closes the element and leaves React
         // believing it is still open, so the trigger stops working exactly once.
         onClose={() => setOpen(false)}
         onCancel={() => setOpen(false)}
+        // ⚠️ **The backdrop closes it, and this handler is why** (cross-family review, Codex). The
+        // comment below used to promise backdrop-dismiss and nothing implemented it — a native
+        // `<dialog>` does NOT close on a backdrop click. That is CODE-QUALITY #3, and the fix is to
+        // make the sentence true rather than to delete it: the approved prototype dismisses on its
+        // scrim (`onclick="if(event.target===this)closeOverlay()"`), so the behaviour was the
+        // design's, not an invention.
+        //
+        // `event.target === the dialog itself` IS the backdrop: the backdrop is painted by the
+        // dialog element, so a click on the panel targets a child and a click outside targets the
+        // dialog. Comparing identity is what keeps a click inside the body from closing it.
+        onClick={(event) => {
+          if (event.target === dialog.current) setOpen(false)
+        }}
       >
         <div className="ds-dialog-head">
           <div>
-            <p className="ds-dialog-title" id={`new-thing-${title.replace(/\W+/g, '-').toLowerCase()}`}>
+            <p className="ds-dialog-title" id={titleId}>
               {title}
             </p>
             {lede ? <p className="ds-dialog-sub">{lede}</p> : null}
           </div>
           {/* The prototype's `✕`. A close control that is not the only way out — Escape and the
-              backdrop both work — but the one a reader can see. */}
+              backdrop both work (see `onClick` above) — but the one a reader can see. */}
           <button type="button" className="ds-dialog-x" onClick={() => setOpen(false)} aria-label="Close">
             ✕
           </button>

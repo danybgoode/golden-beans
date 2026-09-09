@@ -801,6 +801,26 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
  * Nothing is needed in teardown: `api_keys` is `REFERENCES projects(id) ON DELETE CASCADE`, and
  * teardown already deletes the project.
  */
+async function seedShareFixture(db: SupabaseClient, projectId: string): Promise<string | null> {
+  const token = generateShareToken()
+  const { error } = await db.from('api_keys').insert({
+    project_id: projectId,
+    key_hash: hashCredential(token),
+    label: SHARE_FIXTURE_LABEL,
+    scope: 'share',
+    share_lens: SHARE_FIXTURE_LENS,
+    expires_at: null,
+  })
+  if (error) {
+    // Loud, not silent. A null token makes the visual gate THROW rather than skip `/s/[token]`, so
+    // this failure surfaces as "the gate could not open the share route" instead of as a suite that
+    // quietly measured twenty-six routes and reported twenty-seven.
+    console.error('[auth.setup] could not mint the share fixture:', error)
+    return null
+  }
+  return token
+}
+
 /**
  * ONE enabled destination, so `/app/destinations` renders its LIST rather than its empty state.
  *
@@ -843,24 +863,4 @@ async function seedDestinationFixture(db: SupabaseClient, projectId: string) {
   if (error && !/duplicate key/i.test(error.message)) {
     throw new Error(`could not seed the destination: ${error.message}`)
   }
-}
-
-async function seedShareFixture(db: SupabaseClient, projectId: string): Promise<string | null> {
-  const token = generateShareToken()
-  const { error } = await db.from('api_keys').insert({
-    project_id: projectId,
-    key_hash: hashCredential(token),
-    label: SHARE_FIXTURE_LABEL,
-    scope: 'share',
-    share_lens: SHARE_FIXTURE_LENS,
-    expires_at: null,
-  })
-  if (error) {
-    // Loud, not silent. A null token makes the visual gate THROW rather than skip `/s/[token]`, so
-    // this failure surfaces as "the gate could not open the share route" instead of as a suite that
-    // quietly measured twenty-six routes and reported twenty-seven.
-    console.error('[auth.setup] could not mint the share fixture:', error)
-    return null
-  }
-  return token
 }
