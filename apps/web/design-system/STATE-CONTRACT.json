@@ -1,0 +1,830 @@
+{
+  "_": "GENERATED — do not hand-edit. Run: node apps/web/design-system/state-contract.mjs",
+  "_source": "console-prototype.html — the states approved in APPROVED.md",
+  "states": {
+    "ship-features": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new feature"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "summary",
+          "count": 4
+        },
+        {
+          "kind": "toolbar"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "feature",
+            "state in production",
+            "type & risk",
+            "on / off"
+          ]
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "ship-features-dormant": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new feature"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "summary",
+          "count": 4
+        },
+        {
+          "kind": "toolbar"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "feature",
+            "state in production",
+            "type & risk",
+            "on / off"
+          ]
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "feature-value": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "tabs"
+        },
+        {
+          "kind": "dialogbody"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "feature-environments": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "tabs"
+        },
+        {
+          "kind": "dialogbody"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "feature-funnel": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "tabs"
+        },
+        {
+          "kind": "dialogbody"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "setup-connect": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "setup-keys": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new key"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "key",
+            "what it may do",
+            "where · expires",
+            ""
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "ship-activity": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "ship-compare": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "legend"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "measure-north-star": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "sectionlabel"
+        },
+        {
+          "kind": "smallplots",
+          "count": 3
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "measure-journeys": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new journey"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "tiles",
+          "count": 4
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "journey",
+            "state",
+            "people",
+            ""
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "measure-journey": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "sectionlabel"
+        },
+        {
+          "kind": "versions"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "measure-scenarios": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "▸ run a drill"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "tiles",
+          "count": 4
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "drill",
+            "kind",
+            "last run",
+            ""
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "funnel-standalone": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "kpis"
+        },
+        {
+          "kind": "field"
+        },
+        {
+          "kind": "field"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "today": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "tiles",
+          "count": 4
+        },
+        {
+          "kind": "band"
+        },
+        {
+          "kind": "band"
+        },
+        {
+          "kind": "band"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "tasks-standalone": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "band"
+        },
+        {
+          "kind": "band"
+        },
+        {
+          "kind": "band"
+        },
+        {
+          "kind": "band"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "ship-experiments": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new experiment"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "experiment",
+            "state",
+            "primary metric",
+            ""
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "experiment-ready": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "experiment-blocked": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "list",
+          "columns": null
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "setup-destinations": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new destination"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "destination",
+            "sends",
+            "delivery",
+            "on / off"
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "setup-shares": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": "+ new share link"
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "list",
+          "columns": [
+            "shows",
+            "scope",
+            "expires · opens",
+            ""
+          ]
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "hub-roadmap": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "tiles",
+          "count": 4
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "sectionlabel"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        },
+        {
+          "kind": "note"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "hub-epic": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "crumbs"
+        },
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "tiles",
+          "count": 4
+        },
+        {
+          "kind": "sectionlabel"
+        },
+        {
+          "kind": "sprints"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "hub-horizon": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "answer"
+        },
+        {
+          "kind": "destinations"
+        },
+        {
+          "kind": "haze"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "hub-report": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "head",
+          "action": null
+        },
+        {
+          "kind": "provenance"
+        },
+        {
+          "kind": "document"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "door-login": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "doorbrand"
+        },
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "doorform"
+        },
+        {
+          "kind": "doorfoot"
+        },
+        {
+          "kind": "doornote"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "door-signup-closed": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "doorbrand"
+        },
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "doorform"
+        },
+        {
+          "kind": "doorfoot"
+        },
+        {
+          "kind": "doornote"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "door-signup-open": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "doorbrand"
+        },
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "doorform"
+        },
+        {
+          "kind": "doorfoot"
+        },
+        {
+          "kind": "doornote"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "public-install": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "demobar"
+        },
+        {
+          "kind": "list",
+          "columns": null
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "public-share": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "sharehead"
+        },
+        {
+          "kind": "provenance"
+        },
+        {
+          "kind": "document"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "public-gone": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "goneglyph"
+        },
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "goneacts"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    },
+    "public-talk": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "title"
+        },
+        {
+          "kind": "note"
+        },
+        {
+          "kind": "talkgrid"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 1,
+      "unknown": []
+    },
+    "wizard-new-feature": {
+      "missing": false,
+      "blocks": [
+        {
+          "kind": "dialoghead"
+        },
+        {
+          "kind": "dialogbody"
+        },
+        {
+          "kind": "dialogfoot"
+        }
+      ],
+      "disclosures": 0,
+      "annotations": 0,
+      "unknown": []
+    }
+  }
+}

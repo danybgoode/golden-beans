@@ -6,6 +6,14 @@ import { ROUTE_MANIFEST, liveRows } from '@/design-system/route-manifest'
 // so the weld checked itself, and the gate kept a deferred row pointing at `78`, the number D8
 // disproved. One implementation, two consumers (CODE-QUALITY #2).
 import { CHROME_BUDGET_PX, MEASURED_SPEC, DEFERRED_SPEC_ROWS } from '@/design-system/console-gate-spec'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import {
+  extractSignature,
+  signatureArgs,
+  diffSignature,
+  type Signature,
+} from '@/design-system/state-contract-core.mjs'
 
 // console-ia-overhaul · the VISUAL gate.
 //
@@ -1014,5 +1022,323 @@ test('every row of the measured spec matches the built stylesheet', async ({ pag
         )
         .toBeLessThanOrEqual(slack)
     }
+  }
+})
+
+// ── mockups-as-built · Story 1.1 — THE GATE THAT CAN FAIL ────────────────────────────────────
+//
+// Every assertion above this line is about ONE route (Ship › Features) or about a property that
+// holds for any page — a ds- class inside `<main>`, a chrome budget, no sideways scroll. The epic
+// this test belongs to exists because all of them were green while five routes did not look
+// remotely like the design that was approved: a JSON textarea inside a collapsed `<details>` has a
+// ds- class, spends little chrome and does not scroll sideways.
+//
+// This is the assertion that can go red on the way a page LOOKS, and it is the only one in this
+// repository that opens the approved design at all.
+//
+// ── What it compares, and why not the picture ────────────────────────────────────────────────
+// The epic scaffolded a screenshot diff against `reference/<state>.png` (D2 as groomed). Measured
+// before it was written, the route we know is CORRECT scored farther from its picture than the
+// route we know is WRONG — 6.9% against 6.4% on raw pixels, and off-by-2 against a PERFECT match on
+// a structural band count. The reference PNG is a picture of a different artifact: a content column
+// at x=236 w=1180 against the product's x=278 w=1120, a `PROTOTYPE` badge, a designer annotation
+// block inside the body, and a 960px crop of designs up to 1711px tall. Full numbers: epic README,
+// D2. The PNGs still render and are still uploaded — a picture is for a person.
+//
+// So the comparison is STRUCTURAL and its source is the artifact `APPROVED.md` hashes:
+// `state-contract.mjs` reads the ordered blocks of each approved state out of the prototype, and
+// this asks the built route for the same thing with the same function.
+type StateMatch = Record<string, boolean>
+
+const STATE_CONTRACT: Record<string, Signature> = JSON.parse(
+  readFileSync(join(__dirname, '..', 'design-system', 'STATE-CONTRACT.json'), 'utf8')
+).states
+
+test('every route matches the STRUCTURE of its approved state', async ({ page, browser }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  await page.setViewportSize(VIEWPORT)
+  const failures: string[] = []
+  const borrowed: string[] = []
+  const elsewhere: string[] = []
+  const matched = new Set<string>()
+  const opened = new Set<string>()
+  let compared = 0
+
+  for (const row of liveRows(6)) {
+    if (row.referenceState === null) continue
+
+    // A route that BORROWS its state's language without matching its structure (D2-d). Owned and
+    // dated in the manifest; the decay is asserted by its own test below, so a borrow cannot
+    // quietly become permanent.
+    if (row.borrowsState) {
+      borrowed.push(`${row.route} borrows ${row.referenceState} until ${row.borrowsState.until}`)
+      continue
+    }
+
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') {
+      elsewhere.push(row.route)
+      continue
+    }
+
+    const approved = STATE_CONTRACT[row.referenceState]
+    // A route citing a state the contract does not hold is a hole, not a pass.
+    expect(
+      approved,
+      `${row.route} cites "${row.referenceState}", which is not in STATE-CONTRACT.json`
+    ).toBeDefined()
+
+    // ⚠️ **A door is an ANONYMOUS surface, and this suite is signed in.** `/login`, `/signup`,
+    // `/install`, `/s/[token]` and `/talk` either redirect a signed-in reader to `/app` or render a
+    // different thing for one. The first run of this gate scored `/login` as
+    // `head → tiles → band → band → band` — which is Today, measured through a redirect — the exact
+    // mistake the contract's own scope guard catches on the prototype side, reproduced on the
+    // product side one layer up. So a door frame gets its own context with no session, rather than
+    // being skipped (a skip is how the doors would stop being checked at all).
+    const anonymous = row.frame === 'door' || row.frame === 'public'
+    // ⚠️ **`storageState: undefined` EXPLICITLY.** A context made from the `browser` fixture picks up
+    // the project's `use` options — which is how `baseURL` reaches it, and also how the signed-in
+    // `storageState` did. `/login` then bounced to `/app` and the gate measured Today while
+    // reporting on `door-login`. `/signup` and the public routes hid it, because they render the
+    // same thing signed in or out.
+    // ⚠️ `baseURL` passed EXPLICITLY. Cross-family review (Codex) called this Blocking — "a raw
+    // `browser.newContext()` does not inherit `use.baseURL`, so a path-based `goto` will fail".
+    // **Empirically it does inherit here**: `/login`, `/signup` and `/talk` all opened and matched
+    // on the run before this change, and a `goto('/login')` against no base would have thrown
+    // rather than returned a signature. So the finding as stated is false, and it is hardened
+    // anyway — the behaviour it relies on is implicit, undocumented and free to remove, and this
+    // costs one argument.
+    const context = anonymous
+      ? await browser.newContext({
+          viewport: VIEWPORT,
+          storageState: undefined,
+          baseURL: test.info().project.use.baseURL,
+        })
+      : null
+    const surface = context === null ? page : await context.newPage()
+
+    const requested = reach(tenantSlug())
+    // ⚠️ Counted HERE, not after the comparison. It was incremented at the bottom, so the redirect
+    // branch below `continue`d past it and the reconciliation at the end went red on the count —
+    // masking the ENTIRE structural report behind a bookkeeping failure. A route that was opened
+    // and then failed is still a route that was opened.
+    compared += 1
+    opened.add(row.route)
+    const response = await surface.goto(requested)
+    await surface.waitForLoadState('networkidle')
+    expect.soft(response?.status() ?? 0, `[${row.route}] answered ${response?.status()}`).toBeLessThan(400)
+
+    // ⚠️ **A REDIRECT IS NOT A RENDER, and this gate learned that the expensive way.** `/login`
+    // bounces a signed-in reader to `/app`, so the first run of this test scored `door-login` as
+    // `head → tiles → band → band → band` — Today's structure — and reported it as a door that did
+    // not match its design. A page measured through a redirect is a confident answer about a screen
+    // nothing looked at, which is the defect this whole epic is named after; the contract's own
+    // scope guard catches the prototype-side version of it.
+    //
+    // Compared as a PATH, because the query string is ours (`?env=production`) and the fragment is
+    // the browser's.
+    const landed = new URL(surface.url()).pathname
+    const asked = new URL(requested, 'http://x').pathname
+    if (landed !== asked) {
+      failures.push(
+        `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
+          `    · asked for ${asked} and landed on ${landed} — a redirect, so nothing was measured. ` +
+          `A door or public surface is ANONYMOUS; if this is a session bouncing you, the route ` +
+          `needs a context without one.`
+      )
+      if (context !== null) await context.close()
+      continue
+    }
+
+    const built = await surface.evaluate(extractSignature, signatureArgs('product'))
+    if (context !== null) await context.close()
+
+    const differences = diffSignature(approved, built)
+    if (differences.length === 0) matched.add(row.route)
+    if (differences.length > 0) {
+      failures.push(
+        `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
+          `    approved: ${approved.blocks.map((b) => b.kind).join(' → ')}\n` +
+          `    built:    ${built.blocks.map((b) => b.kind).join(' → ') || '(nothing)'}\n` +
+          differences.map((d) => `    · ${d}`).join('\n')
+      )
+    }
+  }
+
+  // Reported, never swallowed — the same rule the coverage loop follows.
+  if (borrowed.length > 0) console.log(`[structure] borrowed states:\n  ${borrowed.join('\n  ')}`)
+  if (elsewhere.length > 0) console.log(`[structure] not opened here: ${elsewhere.join(', ')}`)
+
+  // ⚠️ **The STRUCTURAL report comes before the bookkeeping, and the bookkeeping is soft.** These
+  // were the other way round for one run and the reconciliation went red on an off-by-one — hiding
+  // seventeen real route failures behind `expected 21, received 20`. A guard about the gate's own
+  // arithmetic must never be able to suppress what the gate measured.
+  expect
+    .soft(compared, 'the structural gate opened a different number of routes than the manifest has')
+    .toBe(
+      liveRows(6).filter(
+        (row) =>
+          row.referenceState !== null && !row.borrowsState && typeof REACHABLE[row.route] === 'function'
+      ).length
+    )
+  // ⚠️ A zero here would read exactly like a suite that ran.
+  expect.soft(compared, 'the structural gate opened no routes at all').toBeGreaterThan(10)
+
+  // ── THE RATCHET — how a gate blocks per route, as each route lands ──────────────────────────
+  //
+  // Daniel's call, 2026-09-09: build all seventeen, and *"the gate blocks on all 17 as each one
+  // lands, not from the start — so main never carries a red gate for work that hasn't been done
+  // yet."* Those two requirements are only compatible through a ratchet, and the alternative is
+  // the thing this epic exists to delete: a hand-typed boolean per route saying whether it is
+  // supposed to match yet, which is `rendersFromDesignSystem` with a new name.
+  //
+  // So the FLOOR is measured, not declared. `STATE-MATCH.json` is written by this test and
+  // committed; a route listed there as matching that stops matching fails the build, and a route
+  // that starts matching has to be committed as matching before it can regress. Nobody types which
+  // routes are supposed to pass — the file records which ones DID, and the only editable direction
+  // is forward.
+  const floorPath = join(__dirname, '..', 'design-system', 'STATE-MATCH.json')
+  const floor: StateMatch = JSON.parse(readFileSync(floorPath, 'utf8')).matching
+
+  // ⚠️ **The floor is a UNION, and it may never be lowered by running the gate again.**
+  //
+  // The first version wrote exactly what this run measured. So a builder who broke a route and
+  // re-ran the gate got a floor with that route silently removed — and the NEXT run passed. A
+  // ratchet you can release by running it twice is not a ratchet, and it is the same shape as the
+  // defect this epic exists to remove: a guard that reports success because its own input moved.
+  // Found by mutation-checking it (delete a stat card from Ship › Features, run, look at the file).
+  //
+  // So a route that has ever matched STAYS in the file, keeps failing while it is broken, and can
+  // only leave by a deliberate hand edit — which the `vanished` assertion below then has to accept.
+  // ⚠️ **`regressed` is measured against what THIS RUN matched, never against the file being
+  // written** (cross-family review, Codex, Blocking). It read `floor \ measured` where `measured`
+  // was `floor ∪ matched` — a set that contains the floor by construction, so the difference was
+  // ALWAYS EMPTY and the regression assertion could not fail. That was my own fix for the
+  // floor-lowering hole two commits earlier, and it replaced a ratchet you could release by running
+  // it twice with one that never held at all. In the epic about guards that cannot go red.
+  //
+  // The two jobs are now separate and both real: the FILE is a union (a route that has ever matched
+  // stays in it, so re-running cannot quietly drop one), and the ASSERTION compares the floor
+  // against `matched` (what a browser confirmed on this run).
+  const regressed = Object.keys(floor).filter((route) => floor[route] && !matched.has(route))
+  const newlyMatching = [...matched].filter((route) => !floor[route]).sort()
+
+  const measured: StateMatch = Object.fromEntries(
+    [...new Set([...Object.keys(floor).filter((route) => floor[route]), ...matched])]
+      .sort()
+      .map((route) => [route, true])
+  )
+
+  // Written on every run so the update is a `git diff`, never a hand edit. CI's checkout is clean,
+  // so an un-committed change here is what tells a builder to commit the new floor.
+  // ⚠️ **The gate publishes its own DENOMINATOR, and the finish line is reachable because of it**
+  // (cross-family review, Codex, Blocking). `design-coverage.mjs` counted 25 "measurable" routes
+  // from the manifest while this gate can only ever admit the 21 it can OPEN — the four
+  // `{ coveredBy }` rows need a key or a token this suite must not invent, and adding them to the
+  // floor by hand trips the `vanished` assertion. So 21/21 could never make coverage read complete,
+  // and the epic's Definition of Done was arithmetically unreachable.
+  //
+  // Fixed at the source rather than by adjusting a number: the set of routes the gate is
+  // RESPONSIBLE for is a fact only the gate knows, so it writes it down. `coverage.json` reads
+  // both halves from here, which also means the two can never drift.
+  writeFileSync(
+    floorPath,
+    `${JSON.stringify(
+      {
+        _: 'GENERATED by console-visual.authed.spec.ts — do not hand-edit. Run the authed gate and commit the diff.',
+        _what:
+          'Routes whose STRUCTURE matches their approved state. The floor: a route here that stops matching fails CI.',
+        _opened:
+          'The routes the gate can open, and therefore the denominator. A route covered by a sibling spec is not in it — the gate cannot admit what it cannot measure.',
+        opened: [...opened].sort(),
+        matching: measured,
+      },
+      null,
+      2
+    )}\n`
+  )
+
+  // ⚠️ **A newly-matching route must be COMMITTED to the floor, and that is asserted rather than
+  // logged** (cross-family review, Codex, Blocking). It printed a line and wrote a runner-local
+  // file — and CI's checkout is thrown away, so a route could land, match, and never enter the
+  // floor. It would then be free to regress forever with the gate reporting green, which is the
+  // ratchet failing open on exactly the routes it had just earned.
+  //
+  // This is safe to make blocking, and it is the ONE red that does not contradict "main never
+  // carries a red gate for work nobody has done yet": committing the file is part of the story that
+  // made the route match, not separate work. The fix is `git add` on a file the run just wrote.
+  expect(
+    newlyMatching,
+    'these routes now match their approved state and are not in the committed floor. Run the ' +
+      'authed gate locally and commit apps/web/design-system/STATE-MATCH.json — until it is ' +
+      'committed, nothing stops them regressing again.'
+  ).toEqual([])
+  if (failures.length > 0) {
+    console.log(
+      `[structure] ${failures.length} route(s) do not match their approved state yet. Each is a ` +
+        `story in this epic; none of them is a regression:${failures.join('')}`
+    )
+  }
+
+  // The blocking half. A route that matched and stopped matching is a regression and fails now,
+  // whatever else is still outstanding.
+  expect(
+    regressed,
+    'a route that MATCHED its approved state no longer does. This is a regression against the ' +
+      'floor in apps/web/design-system/STATE-MATCH.json — the gate blocks on every route that has ' +
+      'landed, which is what makes "build all seventeen" possible without main carrying a red gate ' +
+      'for work nobody has done yet.'
+  ).toEqual([])
+
+  // And the floor may never be lowered by hand: a committed entry that this run did not measure at
+  // all means the route left the gate's reach, which is how a route gets quietly uncovered.
+  const vanished = Object.keys(floor).filter((route) => !opened.has(route))
+  expect(
+    vanished,
+    'a route in the matching floor was not opened by this run at all — it left REACHABLE, left the ' +
+      'manifest, or started borrowing a state. A route that stops being checked must be a decision.'
+  ).toEqual([])
+
+  // ⚠️ **The DENOMINATOR is pinned too, and `vanished` above does not cover it** (cross-family
+  // review, Codex, Blocking). That assertion protects routes that already MATCH. An OUTSTANDING
+  // route — one of the sixteen this epic exists to build — could be dropped from `REACHABLE`,
+  // logged as "covered elsewhere", and silently leave the denominator: coverage would climb toward
+  // 21/21 by shrinking, not by building. That is this epic's own defect with the arithmetic
+  // reversed, and it would look like progress.
+  //
+  // So the set the gate opens is asserted against the manifest, with the four genuinely
+  // unreachable rows PINNED BY NAME rather than counted. Counting them cannot fail; naming them
+  // means a fifth one is a decision somebody makes on purpose.
+  const shouldOpen = liveRows(6)
+    .filter((row) => row.referenceState !== null && !row.borrowsState)
+    .map((row) => row.route)
+    .filter((route) => !EXPECTED_SKIPS.includes(route))
+    .sort()
+  expect(
+    [...opened].sort(),
+    'the set of routes the structural gate opens changed. A route that leaves REACHABLE leaves the ' +
+      'denominator too, so coverage would rise by measuring less. Add it back, or retire its ' +
+      'manifest row on purpose.'
+  ).toEqual(shouldOpen)
+})
+
+test('a borrowed state is owned and has not expired', () => {
+  // No browser: a pure consistency check, so it runs even when the suite skips. Same shape as the
+  // deferred-spec-rows test above, for the same reason — an exemption with no end is an exemption
+  // nobody ever closes.
+  const today = new Date().toISOString().slice(0, 10)
+  const borrows = ROUTE_MANIFEST.filter((row) => row.borrowsState)
+  expect(borrows.length, 'update this count when a route starts or stops borrowing a state').toBe(2)
+  for (const row of borrows) {
+    const borrow = row.borrowsState!
+    expect(borrow.owner.length, `${row.route} borrows a state with no owner`).toBeGreaterThan(0)
+    expect(borrow.why.length, `${row.route} borrows a state with no reason`).toBeGreaterThan(20)
+    expect(borrow.until, `${row.route}'s borrow has no decay date`).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(
+      borrow.until >= today,
+      `${row.route}'s borrow of ${row.referenceState} expired on ${borrow.until} — build it, or ` +
+        `re-decide it with ${borrow.owner}`
+    ).toBe(true)
   }
 })

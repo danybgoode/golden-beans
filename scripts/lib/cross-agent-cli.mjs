@@ -51,10 +51,10 @@ export const AGENT_BIN = {
 // Harmless here since AGY_MODEL/AGY_FALLBACK_MODEL below are always valid, listed model names (checked via
 // `agy models`), but it means a future typo in either constant would silently review with the WRONG model
 // instead of failing loud — watch for that if either constant is ever edited.
-// agy-doctor: last verified 2026-09-01 against 1.1.23.
+// agy-doctor: last verified 2026-09-09 against 1.1.28.
 //   ^ machine-managed marker — `node scripts/agy-doctor.mjs --fix` rewrites it (with the constant
 //   below) after a green live contract probe. Don't hand-edit the marker's shape.
-export const AGY_PINNED = '1.1.23';
+export const AGY_PINNED = '1.1.28';
 
 // agy's `--print` mode prints NOTHING unless `--model` names a model — and, crucially, it ALSO prints
 // nothing (exit 0, empty stdout — the error lands only in agy's log, see --log-file) when the model is
@@ -68,10 +68,22 @@ export const AGY_PINNED = '1.1.23';
 // which models review. The Gemini-family primary is what gives this gate its model-family contrast
 // with Codex; the GPT-OSS fallback is GPT-lineage (so it costs that contrast) and exists only
 // because it draws on a separate quota pool when Gemini is exhausted.
-// Daniel's call (2026-07-26): agy REVIEWS on **Gemini 3.6 at HIGH effort**. `gemini-3.6-flash-high`
-// is the only 3.6-high slug `agy models` lists. This was `gemini-3.1-pro-high` — an older generation
-// — and the drift was invisible because both slugs are valid, so nothing ever failed to tell us.
-export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.6-flash-high';
+// Daniel's call (2026-07-26): agy REVIEWS on the **current Gemini Flash generation at HIGH effort**.
+// This was `gemini-3.1-pro-high`, then `gemini-3.6-flash-high`, and is now `gemini-3.8-flash-high`.
+//
+// ⚠️ **A retired slug fails as a QUOTA CAP, which is the wrong diagnosis and costs a review pass.**
+// On 2026-09-09 a review returned no output on the primary AND the fallback, and the CLI's advice
+// was "likely a quota cap (RESOURCE_EXHAUSTED 429)" — so the honest report was going to be "agy is
+// capped, the second cross-family pass is missing". Daniel's answer was one line: *"agy is not
+// exhausted. the model is 3.8 flash."* `agy models` confirmed it: 3.8 is listed, 3.6 is still listed
+// too, and an unavailable-but-valid slug answers with silence rather than an error.
+//
+// The generation moves under this constant and nothing in the repo notices, because both the old and
+// the new slug parse. `agy-doctor.mjs` validates AGY_MODELS_IN_USE against `agy models`, which
+// catches a slug that has been REMOVED — it cannot catch one that is merely a generation behind and
+// out of quota. Re-check this line when a review comes back empty on both models before believing
+// the cap.
+export const AGY_MODEL = process.env.AGY_MODEL || 'gemini-3.8-flash-high';
 export const AGY_FALLBACK_MODEL = process.env.AGY_FALLBACK_MODEL || 'gpt-oss-120b-medium';
 
 // ── The PROSE pair lives HERE, not in prose-draft.mjs, and that move fixed a live silent bug ─────

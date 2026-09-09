@@ -401,9 +401,17 @@ jobs:
       #
       # It also renders all 32 approved states, which is what proves `_harness.mjs` and the
       # prototype still load at all — the fresh-clone failure this closes.
-      - name: The measured spec reproduces, and all 32 approved states render
+      - name: The measured spec and the state contract reproduce, and all 33 approved states render
         run: |
           node apps/web/design-system/measure-contract.mjs --check
+          # ── mockups-as-built · Story 1.1 ───────────────────────────────────────────────────
+          # The STRUCTURE of every approved state, read out of the prototype and compared against
+          # the committed file. Same discipline as the two `--check`s beside it: a hand-edit is
+          # reverted rather than argued about, and a prototype that changed without an APPROVED.md
+          # line fails here rather than being silently adopted as the new design.
+          #
+          # It must run BEFORE the gate step below, which reads STATE-CONTRACT.json.
+          node apps/web/design-system/state-contract.mjs --check
           node apps/web/design-system/render-reference.mjs
 
       # ⚠️ TWO files, and the second one is here because it was not — which is Mechanism E

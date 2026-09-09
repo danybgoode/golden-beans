@@ -43,7 +43,7 @@ function runCoverage(cwd, args = [], env = {}) {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...env },
+      env: sealedEnv(env),
     });
     return { code: 0, stdout, stderr: '' };
   } catch (error) {
@@ -55,8 +55,49 @@ function runCoverage(cwd, args = [], env = {}) {
   }
 }
 
+/**
+ * Git's own environment variables, cleared for every child this file spawns.
+ *
+ * ⚠️ **Without this, these tests operate on THE REPOSITORY THEY ARE RUNNING IN.** `GIT_DIR` and
+ * friends override `cwd` — `git -C /tmp/fixture init` with `GIT_DIR` set initialises whatever
+ * `GIT_DIR` points at — and `.githooks/pre-push` exports them, which is precisely when this file
+ * runs. Reproduced on 2026-09-09: the fixture's `git init` flipped the real repo's `core.bare` to
+ * `true` and its `git commit -qm baseline` landed a commit deleting the entire tree on the branch
+ * being pushed. The push then failed on the fixture's own error message, which read like a broken
+ * test rather than a repository being rewritten underneath it.
+ *
+ * That is why pre-push has been failing here, and it is not new: the same leak fails these tests on
+ * `main`, verified by running them with `GIT_DIR` set against `main`'s copy of this file.
+ *
+ * A test that builds a throwaway repository must be sealed against the repository it is spawned
+ * from, or it is not a throwaway repository.
+ */
+const GIT_ENV_TO_CLEAR = {
+  GIT_DIR: undefined,
+  GIT_INDEX_FILE: undefined,
+  GIT_WORK_TREE: undefined,
+  GIT_COMMON_DIR: undefined,
+  GIT_OBJECT_DIRECTORY: undefined,
+  GIT_ALTERNATE_OBJECT_DIRECTORIES: undefined,
+  GIT_CEILING_DIRECTORIES: undefined,
+  GIT_PREFIX: undefined,
+  // The fixture repos have no hooks and must not borrow this one's.
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_SYSTEM: '/dev/null',
+};
+
+/** `process.env` with git's own variables stripped. */
+function sealedEnv(extra = {}) {
+  const env = { ...process.env, ...extra };
+  for (const key of Object.keys(GIT_ENV_TO_CLEAR)) {
+    if (GIT_ENV_TO_CLEAR[key] === undefined) delete env[key];
+    else env[key] = GIT_ENV_TO_CLEAR[key];
+  }
+  return env;
+}
+
 function git(cwd, ...args) {
-  execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+  execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: sealedEnv() });
 }
 
 /**
@@ -80,6 +121,13 @@ function fixtureRepo() {
     join(REPO, 'apps/web/design-system/coverage.json'),
     join(dir, 'apps/web/design-system/coverage.json')
   );
+  // ⚠️ The coverage number is MEASURED now, not typed (mockups-as-built, D5/D15) — it is read from
+  // the file the visual gate writes. A fixture repo without it is a fixture the script cannot run
+  // in at all.
+  cpSync(
+    join(REPO, 'apps/web/design-system/STATE-MATCH.json'),
+    join(dir, 'apps/web/design-system/STATE-MATCH.json')
+  );
 
   git(dir, 'init', '-q');
   git(dir, 'config', 'user.email', 'ratchet@example.invalid');
@@ -89,20 +137,21 @@ function fixtureRepo() {
   return dir;
 }
 
-/** Turn one covered row off, so coverage genuinely falls by one. */
+/**
+ * Turn one covered row off, so coverage genuinely falls by one.
+ *
+ * ⚠️ **This used to flip `rendersFromDesignSystem` in the manifest, and that stopped lowering the
+ * number** — the coverage count is derived from the gate's own result now (`STATE-MATCH.json`,
+ * epic D5/D15), so a typed boolean cannot move it. Left as it was, every ratchet test would have
+ * gone on passing while testing nothing, which is the failure mode this whole epic is about.
+ * Uncovering a route now means removing it from what the gate measured.
+ */
 function uncoverOneRoute(dir, route) {
-  const path = join(dir, 'apps/web/design-system/route-manifest.ts');
-  const source = readFileSync(path, 'utf8');
-  const at = source.indexOf(`route: '${route}',`);
-  assert.ok(at > 0, `the fixture manifest has no row for ${route}`);
-  const flag = source.indexOf('rendersFromDesignSystem: true,', at);
-  assert.ok(flag > at, `${route}'s row does not claim the design system`);
-  writeFileSync(
-    path,
-    source.slice(0, flag) +
-      'rendersFromDesignSystem: false,' +
-      source.slice(flag + 'rendersFromDesignSystem: true,'.length)
-  );
+  const path = join(dir, 'apps/web/design-system/STATE-MATCH.json');
+  const file = JSON.parse(readFileSync(path, 'utf8'));
+  assert.ok(file.matching[route], `the fixture's matching floor has no entry for ${route}`);
+  delete file.matching[route];
+  writeFileSync(path, `${JSON.stringify(file, null, 2)}\n`);
 }
 
 test('the ratchet FAILS when coverage falls, and names the route that lost it', () => {
@@ -113,6 +162,9 @@ test('the ratchet FAILS when coverage falls, and names the route that lost it', 
     const before = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(before.code, 0, `the fixture's own baseline does not check out:\n${before.stderr}`);
 
+    const baselineBefore = JSON.parse(
+      readFileSync(join(dir, 'apps/web/design-system/coverage.json'), 'utf8')
+    ).complete;
     uncoverOneRoute(dir, '/login');
     // Regenerate, so the report on disk is ACCURATE and the only thing wrong is that it is lower.
     // Skipping this would fail on the "out of date" check instead, which is a different guard.
@@ -120,7 +172,14 @@ test('the ratchet FAILS when coverage falls, and names the route that lost it', 
 
     const after = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(after.code, 1, 'coverage fell and the ratchet passed');
-    assert.match(after.stderr, /RATCHET: coverage fell from 27 to 26/);
+    // ⚠️ **Derived from the fixture, never a literal.** These read `27 to 26` — the typed number —
+    // and the coverage count is MEASURED now (mockups-as-built, D5), so it moves as each route
+    // lands. A literal here would have to be edited by every story in the epic, and an assertion
+    // somebody edits to make it pass has stopped being an assertion.
+    assert.match(
+      after.stderr,
+      new RegExp(`RATCHET: coverage fell from ${baselineBefore} to ${baselineBefore - 1}`)
+    );
     // Naming the route is the half that makes a red actionable. "Coverage fell" sends a reader to
     // diff two JSON files; "/login lost coverage" sends them to the commit that did it.
     assert.match(after.stderr, /Routes that lost coverage: \/login/);
@@ -134,7 +193,11 @@ test('the ratchet PASSES when coverage is unchanged', () => {
   try {
     const result = runCoverage(dir, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
     assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /not below HEAD's 27/);
+    // Derived, for the same reason as the sibling test above.
+    const baseline = JSON.parse(
+      readFileSync(join(dir, 'apps/web/design-system/coverage.json'), 'utf8')
+    ).complete;
+    assert.match(result.stdout, new RegExp(`not below HEAD's ${baseline}`));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -187,11 +250,65 @@ test('an unresolvable base ref FAILS rather than passing quietly', () => {
   }
 });
 
-test('the epic closes at 27 of 27, and the printed number is the manifest’s', () => {
-  // Story 6.5's headline, read from the SHIPPED script rather than from the manifest a unit test
-  // could import — this is the number CI prints into the PR's step summary, and the walkthrough
-  // tells Daniel to read it there.
+test('the printed coverage number comes from the GATE, not from a typed boolean', () => {
+  // ⚠️ **This test used to assert `COVERED (both) 27 / 27 (100%)`, and that number was the defect.**
+  // `design-system-rails` closed reporting 27 of 27 with `outstanding: []` while sixteen of the
+  // twenty-one routes the visual gate opens did not have the structure of the design they cite —
+  // because `complete` counted a hand-typed `rendersFromDesignSystem: true` on every row.
+  //
+  // The number is now read from `STATE-MATCH.json`, which `console-visual.authed.spec.ts` writes
+  // after opening each route in a real browser (mockups-as-built, D5/D15). So this asserts the
+  // SHAPE and the SOURCE rather than a literal: a literal here would have to be edited by every
+  // story that lands a route, and an assertion somebody edits to make it pass is not an assertion.
   const result = runCoverage(REPO, ['--check'], { COVERAGE_BASE_REF: 'HEAD' });
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stdout, /COVERED \(both\)\s+27 \/ 27\s+\(100%\)/);
+  assert.match(result.stdout, /MATCHES its approved state\s+\d+ \/ \d+/);
+
+  const report = JSON.parse(readFileSync(join(REPO, 'apps/web/design-system/coverage.json'), 'utf8'));
+  const floor = JSON.parse(
+    readFileSync(join(REPO, 'apps/web/design-system/STATE-MATCH.json'), 'utf8')
+  ).matching;
+  const measuredMatching = Object.keys(floor).filter((route) => floor[route]);
+
+  // ⚠️ **This compared `covered` against `matching FILTERED BY covered`, which is `covered` itself**
+  // (cross-family review, Codex, Should-fix). It could only ever prove `covered ⊆ matching`, so a
+  // matching route silently missing from the report passed — and I wrote it under a comment saying
+  // "not a subset, not a superset". A tautology wearing a claim to be the opposite of one, in the
+  // test file for the number this epic exists to make honest.
+  //
+  // The two sets are compared directly now. The report may not invent coverage, and it may not lose
+  // a route the gate earned. The one legitimate asymmetry is stated rather than filtered away: the
+  // gate's floor can hold a route the manifest no longer lists as measurable, so `matching` is
+  // narrowed to the routes the REPORT is responsible for — by the report's own denominator, which
+  // is `covered + outstanding`.
+  const reportsOn = new Set([...report.covered, ...report.outstanding]);
+  assert.deepEqual(
+    [...report.covered].sort(),
+    measuredMatching.filter((route) => reportsOn.has(route)).sort(),
+    'coverage.json and the gate disagree about which routes match their approved state'
+  );
+  // ⚠️ **Two self-consistency assertions were REMOVED here, because they were true by construction**
+  // (fresh reviewer). `complete: matchedRows.length` and `covered: matchedRows.map(...)` come from
+  // the same array, so `complete === covered.length` always; and `matchedRows`/`outstandingRows` are
+  // an exact `.filter()`/`.filter(!...)` partition of `measurable`, so their sum always equals it —
+  // whatever `MATCHED` actually contained. Both would have stayed green if the gate's result were
+  // ignored entirely.
+  //
+  // They are not replaced by cleverer versions of the same idea: the assertion above already
+  // cross-checks the report against the GATE'S OWN file, which is the only independent source
+  // there is. Deleting a guard that cannot fail is worth more than keeping it for the count.
+  //
+  // What IS worth asserting is that the denominator came from the gate rather than from the
+  // manifest — `measurable` must equal the number of routes the gate reported opening, narrowed to
+  // the ones this report covers. That is the property Codex's round-2 finding was about, and it
+  // can fail: point `measurable` back at the manifest and this goes red.
+  const opened = JSON.parse(
+    readFileSync(join(REPO, 'apps/web/design-system/STATE-MATCH.json'), 'utf8')
+  ).opened;
+  assert.ok(Array.isArray(opened) && opened.length > 0, 'the gate published no `opened` set');
+  assert.deepEqual(
+    [...report.covered, ...report.outstanding].sort(),
+    [...opened].filter((route) => reportsOn.has(route)).sort(),
+    'coverage.json reports on a route the gate never opened, or omits one it did'
+  );
 });

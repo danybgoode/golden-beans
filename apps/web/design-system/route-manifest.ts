@@ -125,6 +125,20 @@ export type CoverageRow = {
   retiresIn: Sprint | null
   /** Set only when a row is knowingly short. Never `null` *and* off-system after `landsIn`. */
   deferred: Deferral | null
+  /**
+   * Set when this route BORROWS its reference state's language without matching its structure.
+   *
+   * ⚠️ **This names an exemption that already existed implicitly** (`mockups-as-built`, D2-d). Two
+   * routes carry a state they cannot possibly match: `/app/scheduled` cites `ship-activity` while
+   * rendering the `unbuilt` empty state — Daniel's call on 2026-08-29, to ship the designed empty
+   * state rather than drop a rail item — and `/app/onboarding` cites `setup-connect` while being a
+   * different flow that happens to teach in the same language. The structural gate would have gone
+   * red on both, and the obvious repair would have been to loosen the gate for everyone.
+   *
+   * So it is a per-row, owned, dated exemption with the same shape and the same decay rule as
+   * `deferred`: a borrow with no end is an exemption wearing an apology.
+   */
+  borrowsState?: Deferral
 }
 
 /**
@@ -369,6 +383,16 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     landsIn: 4,
     retiresIn: null,
     deferred: null,
+    borrowsState: {
+      owner: 'Daniel',
+      until: '2027-03-31',
+      why:
+        'The approved Ship rail has four items and the product has no scheduling capability at ' +
+        'all. Daniel decided on 2026-08-29 to ship the designed `unbuilt` empty state rather than ' +
+        'drop the rail item, so this route deliberately renders NOTHING the `ship-activity` state ' +
+        'draws. It borrows the state for its language and its place in the rail. It stops ' +
+        'borrowing on the day scheduling is designed and built.',
+    },
   },
   {
     route: '/app/flag-audit/[projectSlug]',
@@ -473,6 +497,14 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     landsIn: 5,
     retiresIn: null,
     deferred: null,
+    borrowsState: {
+      owner: 'Daniel',
+      until: '2027-03-31',
+      why:
+        'Onboarding is a FLOW (first key, starter feature) that teaches in Connect\u2019s language ' +
+        'and has no approved state of its own. It cites `setup-connect` so the row is not ' +
+        'stateless, never because the two screens have the same structure.',
+    },
   },
 
   // ── The three credential routes Story 4.5 retires ───────────────────────────────────────────
