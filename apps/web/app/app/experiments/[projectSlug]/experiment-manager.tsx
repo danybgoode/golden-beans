@@ -319,15 +319,18 @@ export function ExperimentManager({
                           </a>
                         </p>
                       )}
-                      <details>
-                        <summary>Plan</summary>
+                      {/* ⚠️ The `<details>Plan` disclosure is GONE (Story 2.3) and the plan is NOT.
+                          Same rule as the journey Definition block: no disclosure survives, and
+                          nothing is lost with it. This is already inside the authoring dialog, so
+                          the plan is one click shallower than it was, not one deeper. */}
+                      <div>
                         <p>
                           Primary direction: <strong>{version.definition.primaryMetric.direction}</strong>
                           {' · '}minimum sample:{' '}
                           <strong>{version.definition.minimumSamplePerVariant} per variant</strong>
                         </p>
                         <pre>{JSON.stringify(version.definition, null, 2)}</pre>
-                      </details>
+                      </div>
                       {canManage &&
                         allowedExperimentTargets(experiment, version).map((target) => (
                           <button

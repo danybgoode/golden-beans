@@ -1,4 +1,5 @@
 import { ProductShell } from '@/components/product/ProductShell'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import {
   isResilienceScenariosEnabled,
@@ -63,6 +64,25 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
         <PageHead
           title="Scenarios &amp; drills"
           lede="Break something on purpose, in a controlled way, and keep the evidence of what held."
+          actions={
+            // ⚠️ **`▸ Run a drill` is the PRIMARY action in the approved state**, and the audit's
+            // own words for this page are *"from a read-only log to the tool the PRD describes"*.
+            // A page whose only control was a disclosure labelled "Evidence, breakers and the full
+            // run history" is the log; this is the tool. Label character-for-character from the
+            // prototype (`:2618`) — the structural gate compares the words.
+            <NewThingDialog
+              label="▸ Run a drill"
+              title="Run a drill"
+              lede="Pick a drill, a target and a cohort — then it runs."
+            >
+              <ScenarioWorkspace
+                projectSlug={projectSlug}
+                view={view}
+                canAuthor={canAuthor}
+                capabilities={capabilities}
+              />
+            </NewThingDialog>
+          }
         />
         <Answer>{scenarioAnswer(rows)}</Answer>
 
@@ -100,21 +120,6 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
         )}
 
         <ScenarioRows rows={rows} />
-
-        {/* The operating surface — evidence, security results, impact snapshots, breaker policies
-            and trips. The approved state draws none of it and it has no other home, so it is one
-            keystroke below the answer rather than above it. */}
-        <details className="ds-gaps">
-          <summary>Evidence, breakers and the full run history</summary>
-          <div className="ds-disclosure-body">
-            <ScenarioWorkspace
-              projectSlug={projectSlug}
-              view={view}
-              canAuthor={canAuthor}
-              capabilities={capabilities}
-            />
-          </div>
-        </details>
       </main>
     </ProductShell>
   )

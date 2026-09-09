@@ -17,6 +17,7 @@ import {
 import { ExperimentManager } from './experiment-manager'
 import { ExperimentRows } from './experiment-rows'
 import { ProductShell } from '@/components/product/ProductShell'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { Answer, PageHead } from '@/design-system/primitives'
 
 // design-system-rails · Sprint 5, Story 5.4 — reference state `ship-experiments`.
@@ -79,28 +80,28 @@ export default async function ExperimentsPage({ params }: { params: Promise<{ pr
         <PageHead
           title="Experiments"
           lede="A change shown to some people and not others, so the difference is the change and not the week."
+          actions={
+            // The approved state draws `+ New experiment` here (prototype `:2953`), and its stub
+            // says "the same wizard shape as New feature" — which is the 33rd approved state (D8).
+            // `experiment-manager.tsx` is the only consumer of create/transition/bind, so this is
+            // where those live now.
+            <NewThingDialog
+              label="+ New experiment"
+              title="New experiment"
+              lede="An experiment is a lever with consequences — same shape as a new feature."
+            >
+              <ExperimentManager
+                slug={projectSlug}
+                experiments={experiments}
+                flags={flagRegistry.flags}
+                bindings={bindings}
+                canManage={canManageExperiments(membership)}
+              />
+            </NewThingDialog>
+          }
         />
         <Answer>{experimentAnswer(rows)}</Answer>
         <ExperimentRows slug={projectSlug} rows={rows} />
-
-        {/* ⚠️ An AUTHORING surface, which the approved design does not draw — the same class as the
-            feature page's Targeting, History and Settings tabs, recorded as such in Sprint 4. It is
-            behind a disclosure so the list is what the page opens with, and it is complete: nothing
-            an owner could do here before, they cannot do here now. */}
-        <details className="ds-gaps">
-          <summary>
-            {canManageExperiments(membership) ? 'Manage plans and versions' : 'Plans and versions'}
-          </summary>
-          <div className="ds-disclosure-body">
-            <ExperimentManager
-              slug={projectSlug}
-              experiments={experiments}
-              flags={flagRegistry.flags}
-              bindings={bindings}
-              canManage={canManageExperiments(membership)}
-            />
-          </div>
-        </details>
       </main>
     </ProductShell>
   )

@@ -26,9 +26,11 @@
     "/talk"
   ],
   "matching": {
+    "/app/experiments/[projectSlug]": true,
     "/app/flag-audit/[projectSlug]": true,
     "/app/flags/[projectSlug]": true,
     "/app/journeys/[projectSlug]": true,
+    "/app/scenarios/[projectSlug]": true,
     "/login": true,
     "/signup": true,
     "/talk": true
