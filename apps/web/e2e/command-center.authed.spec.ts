@@ -273,7 +273,7 @@ test.describe('command center', () => {
     await expect(main).toContainText('did not continue')
   })
 
-  test('it reflows on a phone, keeps focus visible, and says what it does not measure', async ({ page }) => {
+  test('it reflows on a phone, keeps focus visible, and draws no disclosure', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/app')
 
@@ -315,16 +315,23 @@ test.describe('command center', () => {
       )
     }
 
-    // The Medusa-truth boundary, on the front door. "Where is my revenue number?" is answered with
-    // the reason it is not measured and the guardrail to fix that — never with a plausible figure.
+    // ── The Medusa-truth block is GONE from Today, and this asserts it STAYS gone ─────────────
     //
-    // ⚠️ **The approved `today` state has no such block, and it is KEPT.** It has no other surface,
-    // and deleting a capability to satisfy a geometry assertion is not what "render from the design
-    // system" asks for — the same call Sprint 4 recorded for Destinations' two operational logs.
-    const gaps = page.locator('main .ds-gaps')
-    await expect(gaps).toBeVisible()
-    await gaps.locator('summary').click()
-    await expect(gaps).toContainText('Revenue per feature')
-    await expect(gaps).toContainText('Medusa-truth boundary')
+    // It rendered `outcome.notInstrumented` behind a `<details>`, kept on the argument that the
+    // approved `today` state draws no such block but it "has no other surface". Daniel decided
+    // against that on 2026-09-09, asked as an explicit either/or (`mockups-as-built` Story 2.4).
+    //
+    // ⚠️ **Inverted rather than deleted, and that is the whole point of touching this test.** The
+    // easy edit was to drop these four lines, which would leave nothing saying the block is not
+    // supposed to come back — and it came back once already, in the epic that first removed it.
+    // The property under test is different now ("Today draws no disclosure at all") and it is still
+    // a property, so it is still asserted.
+    await expect(page.locator('main .ds-gaps')).toHaveCount(0)
+    await expect(page.locator('main details')).toHaveCount(0)
+
+    // ⚠️ And the BOUNDARY it described is not lost with the block — it was never the block's to
+    // enforce. `lib/pod-outcome.ts` refuses to synthesise a commerce figure in code,
+    // `pod-outcome.test.ts` pins that, and `/llms.txt` states it to any agent that reads it. What
+    // Today lost is a second telling of it, on a screen the design keeps for three bands.
   })
 })

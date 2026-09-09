@@ -21,7 +21,9 @@ test('scenario evidence stays readable while every owner write control is dark',
   // design-system-rails Story 5.6: the operating surface is one keystroke below the answer. The
   // evidence stays READABLE while dark, which is what this spec is for — it is one click further
   // away, not gone.
-  await page.locator('main .ds-gaps > summary').click()
+  // Story 2.2: the disclosure became the approved `▸ Run a drill` dialog. The property this spec
+  // exists for is unchanged — evidence stays READABLE while every owner write control is dark.
+  await page.getByRole('button', { name: '▸ Run a drill' }).click()
   await expect(page.getByRole('heading', { name: 'Canonical product-impact evidence' })).toBeVisible()
 
   // ...and every write control is still absent, INSIDE the opened disclosure. Asserting this before

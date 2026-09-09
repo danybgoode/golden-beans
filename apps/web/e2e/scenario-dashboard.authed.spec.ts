@@ -33,9 +33,10 @@ test('a project member can inspect the tenant-scoped scenario operating lens', a
   // thing you run, and audit §6.4's whole point is that this is a tool rather than a log. The
   // breakers are still here, still named, one keystroke below.
   await expect(page.getByRole('heading', { name: 'Scenarios & drills', exact: true })).toBeVisible()
-  // The operating surface moved behind a disclosure so the page opens on its answer. Everything
-  // below is unchanged — opening it is the only new step.
-  await page.locator('main .ds-gaps > summary').click()
+  // ⚠️ **The operating surface is behind the approved `▸ Run a drill` control now, not a
+  // disclosure** (`mockups-as-built` Story 2.2). The disclosure this used to open no longer exists;
+  // everything asserted below is unchanged, and opening the dialog is the same one extra step.
+  await page.getByRole('button', { name: '▸ Run a drill' }).click()
   await expect(page.getByRole('cell', { name: SCENARIO_TARGET_KEY, exact: true })).toBeVisible()
   await expect(page.getByText(`${SCENARIO_FIXTURE_KEY} v1`, { exact: true }).first()).toBeVisible()
   await expect(page.getByText(`${SCENARIO_UNDISCLOSED_KEY} v1`, { exact: true }).first()).toBeVisible()
