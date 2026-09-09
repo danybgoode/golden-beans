@@ -151,6 +151,33 @@ export const APPROVED_STATES = [
   ['public-share', () => openDoor('share')],
   ['public-gone', () => openDoor('gone')],
   ['public-talk', () => openDoor('talk')],
+  // ── the 33rd · approved 2026-09-09 (mockups-as-built, epic D8) ───────────
+  //
+  // ⚠️ **This state was DRAWN at approval time and not approved, and that gap is what the epic
+  // ran into.** Every primary authoring action in the 32 — `+ New journey`, `+ New experiment`,
+  // `▸ Run a drill`, `+ New destination`, `+ New key`, `+ New share link` — is a `toast()` saying
+  // *"the same wizard shape as New feature"*, and that wizard was in the prototype with no
+  // approval line. So the approved design drew six doors and no room behind any of them, while the
+  // disclosures the epic deletes were the ONLY implementation of journey creation, experiment
+  // creation, scenario launch/stop and delivery replay.
+  //
+  // Daniel approved it as the 33rd on 2026-09-09 rather than let those capabilities go: every
+  // `+ New …` opens THIS shape as a modal over the manager component that already exists.
+  //
+  // Reached from wherever the previous state left the prototype — the doors are up after
+  // `public-talk`, so this closes them first rather than assuming a console screen.
+  [
+    'wizard-new-feature',
+    () => {
+      closeDoor();
+      leaveHub();
+      closeOverlay();
+      APP.route = null;
+      setSection('ship');
+      setRail('features');
+      openWizard();
+    },
+  ],
 ];
 
 /** Just the ids, in approval order. The half every non-browser consumer needs. */

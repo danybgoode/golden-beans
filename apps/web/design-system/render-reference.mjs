@@ -25,7 +25,13 @@ try {
   for (const [name, fn] of APPROVED_STATES) {
     await page.evaluate(fn);
     await page.waitForTimeout(250);
-    await page.screenshot({ path: join(DIR, `${name}.png`) });
+    // ⚠️ **FULL PAGE — epic `mockups-as-built`, D9.** This shot was the VIEWPORT, so eleven of the
+    // approved states were cropped at 960px: `today` is 1711px tall, `ship-activity` 1274, and the
+    // picture of `today` showed 56% of its own design. The disclosure `mockups-as-built` Story 2.4
+    // deletes sits below that fold, so the reference could not see the thing it was being used to
+    // check. Free to change because these PNGs are DERIVED and gitignored — there is no committed
+    // baseline to migrate.
+    await page.screenshot({ path: join(DIR, `${name}.png`), fullPage: true });
     console.log(`  + apps/web/design-system/reference/${name}.png`);
   }
 } finally {

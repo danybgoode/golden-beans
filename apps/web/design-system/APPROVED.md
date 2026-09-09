@@ -1,6 +1,6 @@
 # Approved states — the design contract for `design-system-rails`
 
-> **Binding.** These 32 states are the contract for every route this epic touches. They are not
+> **Binding.** These 33 states are the contract for every route this epic touches. They are not
 > "inspiration". WAYS-OF-WORKING was amended on 2026-08-29 to say so:
 > *where the product owner has approved a design, the design IS the contract.*
 
@@ -12,7 +12,26 @@
 | **Approved** | 2026-08-29, in four reviewed batches |
 | **Source** | `console-prototype.html` in this folder |
 | **SHA-256 (first 16)** | `5bc7e24ed5e3d0aa` |
-| **States** | 32, rendered by `render-reference.mjs` — verified running, zero page errors |
+| **States** | **33**, rendered by `render-reference.mjs` — verified running, zero page errors |
+
+### The 33rd, approved 2026-09-09 (`mockups-as-built`, epic D8)
+
+`wizard-new-feature` — `wizardModal()`, `console-prototype.html:1992. **It was drawn on
+2026-08-29 and not approved**, and the omission was load-bearing: all six primary authoring
+actions in the other 32 states are `toast()` stubs reading *"the same wizard shape as New
+feature"*, so the approved design drew six doors with no room behind any of them. The
+disclosures `mockups-as-built` deletes were meanwhile the only implementation of journey
+creation, experiment creation, scenario launch/stop and delivery replay.
+
+Daniel's decision, 2026-09-09: *"The New feature wizard at console-prototype.html:1992 is now an
+approved state — treat it as the 33rd. Every + New … and ▸ Run a drill opens that shape, as a
+modal, wrapping the existing manager component underneath. … Two hard rules: no capability is
+lost, and no `<details>` survives. If those two ever conflict again, the answer is a modal, not a
+disclosure."*
+
+⚠️ **The prototype's content hash is UNCHANGED.** The wizard was already in the file; what changed
+is that it now has an approval line. No edit was made to `console-prototype.html`, which is why
+the SHA above still holds — exactly the property this file exists to protect.
 
 **The hash is the point.** Rail 2 says approval is recorded as a file with the state's content hash,
 not as a memory of a conversation. If `console-prototype.html` changes and this hash is not
@@ -32,6 +51,7 @@ each published as a clickable prototype and reviewed screen by screen:
 | **2 · Today, Ship, Setup** | `today` · `tasks-standalone` · `ship-experiments` · `experiment-ready` · `experiment-blocked` · `setup-destinations` · `setup-shares` | 2026-08-29 |
 | **3 · The hub** | `hub-roadmap` · `hub-epic` · `hub-horizon` · `hub-report` | 2026-08-29 |
 | **4 · The doors** | `door-login` · `door-signup-closed` · `door-signup-open` · `public-install` · `public-share` · `public-gone` · `public-talk` | 2026-08-29 |
+| **5 · The wizard** | `wizard-new-feature` | **2026-09-09** |
 
 ## Design decisions settled at approval — the lock does NOT reopen these
 

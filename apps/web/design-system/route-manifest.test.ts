@@ -110,7 +110,7 @@ test('every reference state is one of the 32 approved ids', () => {
   }
 })
 
-test('the approved state list and APPROVED.md still describe the same 32 states', () => {
+test('the approved state list and APPROVED.md still describe the same 33 states', () => {
   // The weld between the code and the approval record. `APPROVED.md` lists the states in its batch
   // table; `approved-states.mjs` is what actually renders. Two lists that must agree get a test,
   // not a shared belief that they do.
@@ -129,7 +129,7 @@ test('the approved state list and APPROVED.md still describe the same 32 states'
   for (const id of STATE_IDS) {
     assert.ok(documented.has(id), `state "${id}" renders but has no approval line in APPROVED.md`)
   }
-  assert.equal(STATE_IDS.length, 32, 'the approved set is 32 states — see APPROVED.md')
+  assert.equal(STATE_IDS.length, 33, 'the approved set is 33 states — see APPROVED.md')
 })
 
 test('every navigable surface in the inventory has a manifest row', () => {
