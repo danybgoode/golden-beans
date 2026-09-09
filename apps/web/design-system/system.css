@@ -4904,3 +4904,84 @@
   overflow-x: auto;
   white-space: pre;
 }
+
+/* ── The authoring dialog — the 33rd approved state, on six surfaces ──────────────────────────
+ * mockups-as-built · Sprint 2 (epic D8).
+ *
+ * Ported from the approved prototype's `.modal` / `.modal-head` / `.modal-foot`
+ * (`console-prototype.html:1992`, `reference.css:411-441`). The existing `.ds-dialog` above is the
+ * NARROW confirmation dialog — 430px, no head, no foot — and it stays exactly as it is; this is the
+ * wide authoring shape that wraps a manager component.
+ *
+ * ⚠️ `--wide` is a MODIFIER on `.ds-dialog`, not a second dialog class. The prototype does the same
+ * (`.modal.wide`), and one element with two shapes is what keeps the backdrop, the `margin: auto`
+ * centring and the radius defined once — the centring in particular is the property D12 exists to
+ * protect, and a parallel class would be a second place for it to go missing.
+ */
+.ds .ds-dialog--wide {
+  width: min(720px, calc(100vw - 32px));
+  /* The narrow dialog's own padding would double up on the head/body/foot, each of which brings its
+     own — the prototype's `.modal` has none for the same reason. */
+  padding: 0;
+  overflow: hidden;
+}
+
+.ds .ds-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+}
+
+/* 16px/600 in the prototype, against the confirmation dialog's 15px. The title element is shared,
+   so the size belongs to the shape rather than to the element. */
+.ds .ds-dialog--wide .ds-dialog-title {
+  font-size: 16px;
+}
+
+.ds .ds-dialog-sub {
+  margin-top: 4px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+.ds .ds-dialog-x {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--dim-2);
+  transition:
+    background var(--t),
+    color var(--t);
+}
+
+.ds .ds-dialog-x:hover {
+  background: var(--card-3);
+  color: var(--crema);
+}
+
+/* ⚠️ The body SCROLLS, the dialog does not. A manager component is arbitrarily tall — the journey
+   authoring form is the tallest thing in the console — and a dialog taller than the viewport puts
+   its own actions off-screen, which is a modal you cannot dismiss with the mouse. Do-not #6 applied
+   to a dialog: wide/tall content scrolls inside its own container. */
+.ds .ds-dialog--wide .ds-dialog-body {
+  margin-top: 0;
+  padding: 0 20px 18px;
+  max-height: min(60vh, 560px);
+  overflow-y: auto;
+  color: var(--crema);
+  font-size: 13.5px;
+}
+
+.ds .ds-dialog--wide .ds-dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--roast-2);
+}

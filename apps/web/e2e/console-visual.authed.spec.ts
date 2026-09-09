@@ -1268,18 +1268,25 @@ test('every route matches the STRUCTURE of its approved state', async ({ page, b
   // This is safe to make blocking, and it is the ONE red that does not contradict "main never
   // carries a red gate for work nobody has done yet": committing the file is part of the story that
   // made the route match, not separate work. The fix is `git add` on a file the run just wrote.
-  expect(
-    newlyMatching,
-    'these routes now match their approved state and are not in the committed floor. Run the ' +
-      'authed gate locally and commit apps/web/design-system/STATE-MATCH.json — until it is ' +
-      'committed, nothing stops them regressing again.'
-  ).toEqual([])
+  // ⚠️ **The REPORT prints before this assertion, and the ordering is not cosmetic.** A hard
+  // `expect` throws, so anything logged after it never reaches the operator. The first run that
+  // made `/app/journeys` match printed the "commit the floor" failure and SWALLOWED the list of
+  // the fifteen routes still outstanding — the one output a builder actually works from. Same
+  // shape as the bookkeeping red that masked seventeen route failures behind an off-by-one, one
+  // commit earlier. Reporting is not an assertion and must never sit behind one.
   if (failures.length > 0) {
     console.log(
       `[structure] ${failures.length} route(s) do not match their approved state yet. Each is a ` +
         `story in this epic; none of them is a regression:${failures.join('')}`
     )
   }
+
+  expect(
+    newlyMatching,
+    'these routes now match their approved state and are not in the committed floor. Run the ' +
+      'authed gate locally and commit apps/web/design-system/STATE-MATCH.json — until it is ' +
+      'committed, nothing stops them regressing again.'
+  ).toEqual([])
 
   // The blocking half. A route that matched and stopped matching is a regression and fails now,
   // whatever else is still outstanding.

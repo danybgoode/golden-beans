@@ -28,7 +28,7 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
   const { data, error } = await supabase
     .from('event_deliveries')
     .select(
-      'id, destination_id, event_id, status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_at, event_destinations(name, deleted_at), events(event)',
+      'id, destination_id, event_id, status, attempt_count, last_attempt_at, next_attempt_at, last_error, created_at, event_destinations(name, deleted_at), events(event)'
     )
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
@@ -79,7 +79,7 @@ export async function listRecentDeliveries(projectId: string, limit = 50): Promi
 export async function replayDelivery(
   projectId: string,
   deliveryId: string,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): Promise<{ ok: true; eventId: string } | { ok: false; error: string }> {
   const supabase = getSupabaseServiceClient()
   // ONE statement via the replay_delivery RPC. The destination-is-live check lives INSIDE the UPDATE
@@ -109,6 +109,16 @@ export async function replayDelivery(
 // send the dispatcher settled, including ones a later replay superseded.
 export type DeliveryAttemptRow = {
   id: string
+  /**
+   * ⚠️ Added by `mockups-as-built` Story 2.4, and it is an ID rather than a name for a reason.
+   * The attempt log is now scoped to ONE destination in that destination's own dialog, and matching
+   * on `destinationName` would put another destination's attempts in the panel the moment two share
+   * a name — or drop every attempt whose destination was later removed (the name comes back null).
+   * `destination_id` is `UUID NOT NULL` on `event_delivery_attempts`
+   * (`20260724100000_delivery_retry.sql:106`) — verified against the migration before typing it as
+   * non-null. This only SELECTS an existing column; no migration, no schema change (epic D13).
+   */
+  destinationId: string
   destinationName: string | null
   eventName: string | null
   eventId: string
@@ -124,7 +134,9 @@ export async function listRecentAttempts(projectId: string, limit = 50): Promise
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('event_delivery_attempts')
-    .select('id, event_id, outcome, http_status, latency_ms, error, attempt_no, created_at, event_destinations(name), events(event)')
+    .select(
+      'id, destination_id, event_id, outcome, http_status, latency_ms, error, attempt_no, created_at, event_destinations(name), events(event)'
+    )
     .eq('project_id', projectId)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -137,6 +149,7 @@ export async function listRecentAttempts(projectId: string, limit = 50): Promise
     const ev = r.events as unknown as { event: string } | null
     return {
       id: r.id as string,
+      destinationId: r.destination_id as string,
       destinationName: dest?.name ?? null,
       eventName: ev?.event ?? null,
       eventId: r.event_id as string,
@@ -155,10 +168,10 @@ export type DeliveryHealthRow = {
   destinationId: string
   name: string
   enabled: boolean
-  delivered: number       // successful attempts ever (survives replay)
-  failedAttempts: number  // failed attempts ever (cumulative history)
-  awaitingRetry: number   // rows currently in the failed state (a retry is scheduled)
-  dead: number            // rows currently dead-lettered
+  delivered: number // successful attempts ever (survives replay)
+  failedAttempts: number // failed attempts ever (cumulative history)
+  awaitingRetry: number // rows currently in the failed state (a retry is scheduled)
+  dead: number // rows currently dead-lettered
   pending: number
   inFlight: number
   totalAttempts: number
@@ -205,7 +218,7 @@ export async function getDeliveryHealth(projectId: string): Promise<DeliveryHeal
 export async function projectsWithDueWork(
   now: Date,
   limit = 200,
-  staleAfterMs = 5 * 60 * 1000,
+  staleAfterMs = 5 * 60 * 1000
 ): Promise<string[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase.rpc('projects_with_due_work', {

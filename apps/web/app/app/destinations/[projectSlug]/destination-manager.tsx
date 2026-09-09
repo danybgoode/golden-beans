@@ -2,11 +2,12 @@
 import { useCallback, useMemo, useState, useTransition, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import type { DestinationRow } from '@/lib/destinations'
-import type { DeliveryHistoryRow } from '@/lib/deliveries'
+import type { DeliveryAttemptRow, DeliveryHistoryRow } from '@/lib/deliveries'
 import { formatUtc } from '@/lib/format-utc'
 import type { DeliveryHealthRow } from '@/lib/deliveries'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { DataTable, type DataTableColumn } from '@/components/ui/DataTable'
+import { DeliveriesForDestination, RemovedDestinationsHistory } from './deliveries-dialog'
+import { type DataTableColumn } from '@/components/ui/DataTable'
 import { CopyField } from '@/design-system/copy-field'
 import {
   Answer,
@@ -57,11 +58,14 @@ export function DestinationManager({
   slug,
   destinations,
   deliveries,
+  attempts,
   health,
 }: {
   slug: string
   destinations: DestinationRow[]
   deliveries: DeliveryHistoryRow[]
+  /** The append-only record, scoped per destination inside each row's Deliveries dialog. */
+  attempts: DeliveryAttemptRow[]
   /**
    * Per-destination delivery counts, aggregated in the DATABASE.
    *
@@ -271,11 +275,24 @@ export function DestinationManager({
         title="Destinations"
         lede="Where this project sends what happens, so another tool can act on it. Every matching event is POSTed to your URL and signed, so your receiver can verify it came from Golden Frijoles."
         actions={
-          !creating && (
-            <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
-              + New destination
-            </button>
-          )
+          <>
+            {/* ⚠️ SECONDARY, and rendered only when there IS orphaned history — so the approved head
+                keeps `+ New destination` as its one primary action and the page's block structure is
+                unchanged. It exists because removing a destination hides its row, and with the
+                delivery tables now on the rows that made its history unreachable while the remove
+                confirmation still promised "Delivery history is kept" (fresh reviewer, Blocking). */}
+            <RemovedDestinationsHistory
+              deliveries={deliveries}
+              attempts={attempts}
+              columns={deliveryColumns}
+              liveDestinationIds={new Set(destinations.map((destination) => destination.id))}
+            />
+            {!creating && (
+              <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
+                + New destination
+              </button>
+            )}
+          </>
         }
       />
 
@@ -523,6 +540,20 @@ export function DestinationManager({
                     >
                       Rotate secret
                     </button>
+                    {/* ⚠️ **Deliveries is a PER-ROW action, and that is Daniel's call (2026-09-09).**
+                        The delivery table and the append-only attempt log used to sit in two
+                        disclosures at the bottom of this page, and they hold the only `replay`
+                        control in the product. Neither is "a new destination", so the page-head
+                        dialog would have been the wrong home for them.
+                        Evidence belongs to the destination it describes, and the approved
+                        `setup-destinations` row already draws a wide actions column — so this uses
+                        a column the design has rather than inventing a control it does not. */}
+                    <DeliveriesForDestination
+                      destination={{ id: row.id, name: row.name }}
+                      deliveries={deliveries.filter((d) => d.destinationId === row.id)}
+                      columns={deliveryColumns}
+                      attempts={attempts}
+                    />
                     <button
                       type="button"
                       className="ds-btn ds-btn--secondary ds-btn--sm"
@@ -543,27 +574,6 @@ export function DestinationManager({
           })}
         </ListCard>
       )}
-
-      {/* ── The delivery log, behind a disclosure ───────────────────────────────────────────────
-          ⚠️ **Kept, and moved below the fold rather than deleted.** The approved
-          `setup-destinations` state has no delivery table at all — the health it shows lives on the
-          rows above. But replaying a dead delivery is a real capability with no other surface, so
-          removing the table would remove the capability, which is not what "render from the design
-          system" asks for. A disclosure is the honest resolution: the page answers its question
-          without scrolling, and the depth is one click away rather than gone. */}
-      <details className="ds-disclosure">
-        <summary>Recent deliveries — replay one that never arrived</summary>
-        <div className="ds-disclosure-body">
-          <DataTable
-            caption="Recent deliveries"
-            columns={deliveryColumns}
-            rows={deliveries}
-            rowKey={(d) => d.id}
-            filterLabel="Filter deliveries"
-            empty="No deliveries yet — they appear once an enabled destination matches an incoming event."
-          />
-        </div>
-      </details>
 
       <Callout>
         Correctly built, wrongly prominent — this used to be a top-level destination in the nav. It is{' '}

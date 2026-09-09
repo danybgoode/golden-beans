@@ -1,8 +1,6 @@
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { listDestinations } from '@/lib/destinations'
 import { listRecentDeliveries, listRecentAttempts, getDeliveryHealth } from '@/lib/deliveries'
-import { formatUtc } from '@/lib/format-utc'
-import { Col, Empty, ListCard, ListHead, Pill, Row, RowMain, Tag } from '@/design-system/primitives'
 import { DestinationManager } from './destination-manager'
 import { ProductShell } from '@/components/product/ProductShell'
 
@@ -32,82 +30,23 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
 
             ⚠️ **Two nine-column tables left the top of this page.** "Delivery health" is now the
             split bar on each row — the approved state puts it beside the destination it describes,
-            rather than in a second table a reader had to join by name. The attempt log is below,
-            behind a disclosure, for the reason stated there. */}
+            rather than in a second table a reader had to join by name. The attempt log moved onto
+            the rows too in Story 2.4 — this said "below, behind a disclosure" and that disclosure
+            is gone (fresh reviewer, Minor: a comment describing markup the same diff deleted). */}
         <DestinationManager
           slug={projectSlug}
           destinations={destinations}
           deliveries={deliveries}
+          attempts={attempts}
           health={health}
         />
 
-        {/* ── The APPEND-ONLY attempt log ────────────────────────────────────────────────────
-            Distinct from "recent deliveries" in the manager above, which is CURRENT delivery state:
-            a replay resets that row's attempt count, and these rows are never rewritten. It is the
-            record; that table is the state.
-
-            Behind a disclosure for the same reason: the approved design has no attempt log, and the
-            page must answer its question at 1440×960 without scrolling — but an immutable record of
-            what actually happened is not something to delete to satisfy a geometry assertion. */}
-        <details className="ds-disclosure">
-          <summary>Attempt log — every send, including the ones a replay superseded</summary>
-          <div className="ds-disclosure-body">
-            <p className="ds-hint">
-              Append-only. Nothing here is ever rewritten, so a replay adds an attempt rather than replacing
-              one.
-            </p>
-            {attempts.length === 0 ? (
-              <Empty
-                title="Nothing has been attempted yet"
-                body="An attempt is recorded the first time an enabled destination matches an incoming event — whether it arrives or not."
-              />
-            ) : (
-              <ListCard label="Attempt log">
-                <ListHead>
-                  <Col header>Event</Col>
-                  <Col header width="state">
-                    Outcome
-                  </Col>
-                  <Col header width="meta">
-                    When · latency
-                  </Col>
-                  <Col header width="act">
-                    <span className="ds-visually-hidden">Attempt number</span>
-                  </Col>
-                </ListHead>
-                {attempts.map((attempt) => (
-                  <Row key={attempt.id}>
-                    <RowMain
-                      mono={false}
-                      title={attempt.eventName ?? 'unnamed event'}
-                      description={
-                        <>
-                          {attempt.destinationName ?? 'destination removed'}
-                          {attempt.error === null ? '' : ` · ${attempt.error}`}
-                        </>
-                      }
-                    />
-                    <Col width="state">
-                      {/* `delivered` is the only outcome that means it arrived. Everything else is a
-                          failure of some kind, and the WORD says which — never the colour alone. */}
-                      <Pill state={attempt.outcome === 'delivered' ? 'on' : 'off'}>{attempt.outcome}</Pill>
-                      {attempt.httpStatus !== null && (
-                        <span className="ds-state-detail">HTTP {attempt.httpStatus}</span>
-                      )}
-                    </Col>
-                    <Col width="meta">
-                      <Tag>{formatUtc(attempt.createdAt)}</Tag>
-                      {attempt.latencyMs !== null && <Tag>{attempt.latencyMs}ms</Tag>}
-                    </Col>
-                    <Col width="act">
-                      <span className="ds-note">attempt {attempt.attemptNo}</span>
-                    </Col>
-                  </Row>
-                ))}
-              </ListCard>
-            )}
-          </div>
-        </details>
+        {/* ── The append-only attempt log moved INTO each destination's row ─────────────────
+            It was a `<details>` here, holding the immutable record of every send. The approved
+            `setup-destinations` state draws no such table, and deleting it would have removed the
+            only record of what actually happened — so Daniel's call (2026-09-09) put it, and the
+            recent-deliveries table that owns `replayDeliveryAction`, behind a per-row `Deliveries`
+            action. Evidence belongs to the destination it describes; see `deliveries-dialog.tsx`. */}
       </main>
     </ProductShell>
   )

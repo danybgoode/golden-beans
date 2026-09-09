@@ -18,7 +18,7 @@ const EXAMPLE = JSON.stringify(
     retention: { stageKey: 'published', anchorStageKey: 'signed_up', withinDays: 30 },
   },
   null,
-  2,
+  2
 )
 
 export function JourneyManager({
@@ -76,8 +76,8 @@ export function JourneyManager({
         <form onSubmit={onCreate}>
           <h2>Create a draft version</h2>
           <p>
-            Reuse an existing journey key to create its next immutable version. Activation is a
-            separate audited action.
+            Reuse an existing journey key to create its next immutable version. Activation is a separate
+            audited action.
           </p>
           <label>
             Journey key
@@ -94,10 +94,14 @@ export function JourneyManager({
               style={{ display: 'block', width: '100%', fontFamily: 'monospace' }}
             />
           </label>
-          <button type="submit" disabled={pending}>{pending ? 'Working…' : 'Create draft'}</button>
+          <button type="submit" disabled={pending}>
+            {pending ? 'Working…' : 'Create draft'}
+          </button>
         </form>
       ) : (
-        <p><strong>Read-only access.</strong> A project owner manages journey definitions.</p>
+        <p>
+          <strong>Read-only access.</strong> A project owner manages journey definitions.
+        </p>
       )}
 
       {error && <p role="alert">{error}</p>}
@@ -109,28 +113,55 @@ export function JourneyManager({
       ) : (
         journeys.map((journey) => (
           <article key={journey.id} style={{ margin: '1.5rem 0' }}>
-            <h3><code>{journey.key}</code></h3>
+            <h3>
+              <code>{journey.key}</code>
+            </h3>
             {journey.activeVersionId && (
-              <p><a href={`/app/journeys/${encodeURIComponent(slug)}/${encodeURIComponent(journey.key)}`}>Open active cohort</a></p>
+              <p>
+                <a href={`/app/journeys/${encodeURIComponent(slug)}/${encodeURIComponent(journey.key)}`}>
+                  Open active cohort
+                </a>
+              </p>
             )}
             <table>
-              <thead><tr><th>Version</th><th>State</th><th>Created</th><th>Activated</th><th /></tr></thead>
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>State</th>
+                  <th>Created</th>
+                  <th>Activated</th>
+                  <th />
+                </tr>
+              </thead>
               <tbody>
                 {journey.versions.map((version) => (
                   <tr key={version.id}>
                     <td>v{version.version}</td>
                     <td>{version.state}</td>
-                    <td>{formatUtc(version.createdAt)} by <code>{version.createdBy}</code></td>
                     <td>
-                      {version.activatedAt
-                        ? <>{formatUtc(version.activatedAt)} by <code>{version.activatedBy}</code></>
-                        : '—'}
+                      {formatUtc(version.createdAt)} by <code>{version.createdBy}</code>
                     </td>
                     <td>
-                      <details>
-                        <summary>Definition</summary>
-                        <pre>{JSON.stringify(version.definition, null, 2)}</pre>
-                      </details>
+                      {version.activatedAt ? (
+                        <>
+                          {formatUtc(version.activatedAt)} by <code>{version.activatedBy}</code>
+                        </>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>
+                      {/* ⚠️ The `<details>Definition` disclosure is GONE (Story 2.1), and the
+                          definition itself is NOT — it is the same `<pre>`, one click shallower.
+                          Deleting the JSON would have removed the only way to read what a version
+                          actually says, which is the capability half of the rule this epic
+                          enforces: no disclosure survives, and nothing is lost with it. */}
+                      {/* No `ds-` class: the approved design draws no JSON block anywhere, so
+                          there is no design-system class for one, and inventing a `ds-json` would
+                          be a visual decision nobody approved (and `defined-classes.test.ts` would
+                          rightly reject it). The manager is legacy markup inside the dialog; this
+                          `<pre>` renders exactly as it did inside the disclosure. */}
+                      <pre>{JSON.stringify(version.definition, null, 2)}</pre>
                       {canManage && canActivateJourneyVersion(journey, version) && (
                         <button
                           type="button"
