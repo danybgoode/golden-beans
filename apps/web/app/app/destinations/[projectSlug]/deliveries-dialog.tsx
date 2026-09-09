@@ -107,6 +107,92 @@ export function DeliveriesDialog({
   )
 }
 
+/**
+ * The history of destinations that no longer exist.
+ *
+ * ⚠️ **This closes a capability loss the fresh reviewer caught, and the product had already made a
+ * PROMISE about it.** `listDestinations()` filters `deleted_at IS NULL`, so a removed destination
+ * has no row — and once the delivery/attempt tables moved onto the rows, its history became
+ * unreachable anywhere in the console. Meanwhile the remove confirmation says, in as many words,
+ * *"Delivery history is kept."* It is kept in the database and it was no longer kept in the
+ * product, which makes the sentence false at the moment a reader is relying on it.
+ *
+ * `DeliveryHistoryRow.destinationRemoved` and the `destinationName ?? 'destination removed'`
+ * fallback exist precisely for this case — they were built for the page-level table this sprint
+ * deleted, and they were left rendering nowhere.
+ *
+ * The trigger is SECONDARY and appears only when there is orphaned history to show, so the approved
+ * head keeps `+ New destination` as its one primary action and the page's block structure is
+ * unchanged.
+ */
+export function RemovedDestinationsHistory({
+  deliveries,
+  attempts,
+  columns,
+  liveDestinationIds,
+}: {
+  deliveries: DeliveryHistoryRow[]
+  attempts: DeliveryAttemptRow[]
+  columns: DataTableColumn<DeliveryHistoryRow>[]
+  liveDestinationIds: ReadonlySet<string>
+}) {
+  const orphanedDeliveries = deliveries.filter((d) => !liveDestinationIds.has(d.destinationId))
+  const orphanedAttempts = attempts.filter((a) => !liveDestinationIds.has(a.destinationId))
+  if (orphanedDeliveries.length === 0 && orphanedAttempts.length === 0) return null
+
+  return (
+    <NewThingDialog
+      label="Removed destinations"
+      title="Removed destinations"
+      lede="Endpoints that no longer exist. Their history is kept — replay is refused, because there is nothing to send to."
+      variant="secondary"
+    >
+      <DataTable
+        caption="Deliveries to removed destinations"
+        columns={columns}
+        rows={orphanedDeliveries}
+        rowKey={(delivery) => delivery.id}
+        filterLabel="Filter deliveries"
+        empty="No deliveries were ever attempted to a destination that has since been removed."
+      />
+      {orphanedAttempts.length > 0 && (
+        <ListCard label="Attempt log">
+          <ListHead>
+            <Col header>Event</Col>
+            <Col header width="state">
+              Outcome
+            </Col>
+            <Col header width="meta">
+              When · latency
+            </Col>
+            <Col header width="act">
+              <span className="ds-visually-hidden">Attempt number</span>
+            </Col>
+          </ListHead>
+          {orphanedAttempts.map((attempt) => (
+            <Row key={attempt.id}>
+              <RowMain
+                mono={false}
+                title={attempt.eventName ?? 'unnamed event'}
+                description={attempt.destinationName ?? 'destination removed'}
+              />
+              <Col width="state">
+                <Pill state={attempt.outcome === 'delivered' ? 'on' : 'off'}>{attempt.outcome}</Pill>
+              </Col>
+              <Col width="meta">
+                <Tag>{formatUtc(attempt.createdAt)}</Tag>
+              </Col>
+              <Col width="act">
+                <span className="ds-note">attempt {attempt.attemptNo}</span>
+              </Col>
+            </Row>
+          ))}
+        </ListCard>
+      )}
+    </NewThingDialog>
+  )
+}
+
 /** The per-row trigger. One dialog per destination, so the label names the destination. */
 export function DeliveriesForDestination(props: {
   destination: DeliveriesDialogDestination
@@ -120,6 +206,7 @@ export function DeliveriesForDestination(props: {
       title={`Deliveries — ${props.destination.name}`}
       lede="Every send this destination has settled, and the ones a replay superseded."
       variant="secondary"
+      size="sm"
     >
       <DeliveriesDialog {...props} />
     </NewThingDialog>

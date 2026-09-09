@@ -858,9 +858,16 @@ async function seedDestinationFixture(db: SupabaseClient, projectId: string) {
     // fixture quietly asserting the opposite of the design.
     enabled: true,
   })
-  // A duplicate name is not a failure: `auth.setup.ts` runs per worker, and the partial unique index
-  // covers live rows only.
-  if (error && !/duplicate key/i.test(error.message)) {
+  // ⚠️ **Named constraint, not a blanket `/duplicate key/` regex** (fresh reviewer, Minor). The
+  // original comment justified the tolerance with "runs per worker" — which is not how isolation
+  // works here: `TEST_USER` derives its email and project from `Date.now()` + pid + a random suffix
+  // (`helpers/authed-fixture.ts`), so every process gets its own project and two workers cannot
+  // collide on this insert at all. A blanket regex would therefore have swallowed an unrelated
+  // unique violation — a seed failing silently, which is the one thing a fixture must never do.
+  //
+  // The tolerance is kept for the ONE case that is genuinely benign (a re-run against a project
+  // that already has the row) and keyed to the index that would raise it.
+  if (error && !error.message.includes('event_destinations_project_name_live_uidx')) {
     throw new Error(`could not seed the destination: ${error.message}`)
   }
 }

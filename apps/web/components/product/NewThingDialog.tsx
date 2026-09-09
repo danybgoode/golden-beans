@@ -51,12 +51,19 @@ export function NewThingDialog({
    * dialog's own markup to drift apart.
    */
   variant = 'primary',
+  /**
+   * `sm` matches the row-action buttons a per-row trigger sits beside (fresh reviewer, Minor).
+   * `Button` has no size prop and `.ds-btn--sm` is the design system's own modifier, so the trigger
+   * would otherwise render visibly larger than Send test / Rotate secret / Remove next to it.
+   */
+  size,
   children,
 }: {
   label: string
   title: string
   lede?: ReactNode
   variant?: 'primary' | 'secondary'
+  size?: 'sm'
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -80,7 +87,11 @@ export function NewThingDialog({
 
   return (
     <>
-      <Button variant={variant} onClick={() => setOpen(true)}>
+      <Button
+        variant={variant}
+        className={size === 'sm' ? 'ds-btn--sm' : undefined}
+        onClick={() => setOpen(true)}
+      >
         {label}
       </Button>
       <dialog

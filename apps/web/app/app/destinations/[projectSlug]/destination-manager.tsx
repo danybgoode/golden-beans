@@ -6,7 +6,7 @@ import type { DeliveryAttemptRow, DeliveryHistoryRow } from '@/lib/deliveries'
 import { formatUtc } from '@/lib/format-utc'
 import type { DeliveryHealthRow } from '@/lib/deliveries'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { DeliveriesForDestination } from './deliveries-dialog'
+import { DeliveriesForDestination, RemovedDestinationsHistory } from './deliveries-dialog'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import { CopyField } from '@/design-system/copy-field'
 import {
@@ -275,11 +275,24 @@ export function DestinationManager({
         title="Destinations"
         lede="Where this project sends what happens, so another tool can act on it. Every matching event is POSTed to your URL and signed, so your receiver can verify it came from Golden Frijoles."
         actions={
-          !creating && (
-            <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
-              + New destination
-            </button>
-          )
+          <>
+            {/* ⚠️ SECONDARY, and rendered only when there IS orphaned history — so the approved head
+                keeps `+ New destination` as its one primary action and the page's block structure is
+                unchanged. It exists because removing a destination hides its row, and with the
+                delivery tables now on the rows that made its history unreachable while the remove
+                confirmation still promised "Delivery history is kept" (fresh reviewer, Blocking). */}
+            <RemovedDestinationsHistory
+              deliveries={deliveries}
+              attempts={attempts}
+              columns={deliveryColumns}
+              liveDestinationIds={new Set(destinations.map((destination) => destination.id))}
+            />
+            {!creating && (
+              <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
+                + New destination
+              </button>
+            )}
+          </>
         }
       />
 

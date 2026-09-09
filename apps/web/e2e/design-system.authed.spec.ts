@@ -243,12 +243,23 @@ test('DataTable sorts, filters, and tells the two kinds of empty apart', async (
 
   // The FIRST empty state — no rows at all. It must be the CALLER's sentence: a blank <tbody> or a
   // generic "No results" is the thing that epic existed to remove.
-  await page.goto(`/app/destinations/${slug}`)
+  //
+  // ⚠️ **This asserted `/app/destinations`, and `mockups-as-built` Story 2.4 made that tenant
+  // NON-empty** — the approved `setup-destinations` state draws a list, so `auth.setup.ts` now seeds
+  // one destination and the page correctly shows rows instead (fresh reviewer, Major: the seed and
+  // this assertion contradicted each other).
+  //
+  // Re-pointed rather than deleted, and NOT weakened to "either an empty state or a list" — that
+  // would pass on a page with no empty state at all, which is the property this line exists to
+  // hold. `/app/scheduled` is the honest home for it: it renders the design system's `unbuilt`
+  // empty state by DESIGN (Daniel's call, 2026-08-29 — ship the drawn empty state rather than drop
+  // a rail item), so it is empty on every tenant by construction rather than by fixture accident.
+  await page.goto(`/app/scheduled/${slug}`)
   // ⚠️ The DESIGN SYSTEM's empty state, not the kit's — design-system-rails S4.6 rebuilt this page.
   // The property is unchanged and is the reason this line exists: it must be the CALLER's sentence.
   // A blank list or a generic "No results" is the thing the component kit was built to remove, and
   // the design system inherits the rule rather than restarting it.
-  await expect(page.locator('.ds-empty').first()).toContainText('No destinations yet')
+  await expect(page.locator('.ds-empty').first()).toContainText('Scheduling is not built yet')
 
   await page.goto(`/app/impact/${slug}/${IMPACT_FEATURE_KEY}`)
   // ⚠️ **Behind a disclosure since design-system-rails Story 5.3.** The approved `measure-north-star`
@@ -335,7 +346,7 @@ const CONVERTED_ROUTES: Array<{
   },
   // ⚠️ Re-pointed with S4.6, same rule as `setup keys` above: the route must render through a NAMED
   // visual system, and for a console route that system is the design contract. `.data-table` is
-  // still on this page — the delivery log behind its disclosure is a `DataTable` — but asserting it
+  // still on this page — the delivery log is a `DataTable`, now inside each destination's own dialog (mockups-as-built S2.4) — but asserting it
   // would let the PAGE revert to bare markup while the log alone kept this green.
   {
     name: 'destinations',

@@ -30,8 +30,9 @@ export default async function DestinationsPage({ params }: { params: Promise<{ p
 
             ⚠️ **Two nine-column tables left the top of this page.** "Delivery health" is now the
             split bar on each row — the approved state puts it beside the destination it describes,
-            rather than in a second table a reader had to join by name. The attempt log is below,
-            behind a disclosure, for the reason stated there. */}
+            rather than in a second table a reader had to join by name. The attempt log moved onto
+            the rows too in Story 2.4 — this said "below, behind a disclosure" and that disclosure
+            is gone (fresh reviewer, Minor: a comment describing markup the same diff deleted). */}
         <DestinationManager
           slug={projectSlug}
           destinations={destinations}
