@@ -4,8 +4,8 @@
   "liveRoutesAtSprint1": 30,
   "hasReferenceState": 27,
   "rendersFromDesignSystem": 27,
-  "complete": 5,
-  "matchesApprovedState": 5,
+  "complete": 6,
+  "matchesApprovedState": 6,
   "measurable": 21,
   "coveredElsewhere": [
     "/app/flags/[projectSlug]/[flagKey]",
@@ -16,6 +16,7 @@
   "covered": [
     "/app/flag-audit/[projectSlug]",
     "/app/flags/[projectSlug]",
+    "/app/journeys/[projectSlug]",
     "/login",
     "/signup",
     "/talk"
@@ -25,7 +26,6 @@
     "/app/destinations/[projectSlug]",
     "/app/experiments/[projectSlug]",
     "/app/experiments/[projectSlug]/[experimentKey]",
-    "/app/journeys/[projectSlug]",
     "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/scenarios/[projectSlug]",
     "/app/setup/connect/[projectSlug]",

@@ -28,6 +28,7 @@
   "matching": {
     "/app/flag-audit/[projectSlug]": true,
     "/app/flags/[projectSlug]": true,
+    "/app/journeys/[projectSlug]": true,
     "/login": true,
     "/signup": true,
     "/talk": true
