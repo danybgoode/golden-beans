@@ -33,6 +33,7 @@
     "/app/flags/[projectSlug]": true,
     "/app/journeys/[projectSlug]": true,
     "/app/scenarios/[projectSlug]": true,
+    "/app/tasks/[projectSlug]": true,
     "/login": true,
     "/signup": true,
     "/talk": true

@@ -61,7 +61,13 @@ export const BLOCK_KINDS = [
   { kind: 'card', proto: '.card', product: '.ds-card' },
   { kind: 'steps', proto: '.steps', product: '.ds-steps' },
   { kind: 'field', proto: '.field', product: '.ds-field' },
-  { kind: 'crumbs', proto: '.crumbrow', product: '.ds-crumbrow' },
+  // ⚠️ **`.ds-crumbs`, not `.ds-crumbrow`** — the pair was wrong on the product side and the
+  // unknown-block guard is what surfaced it (`nav.ds-crumbs` reported as a block with no name).
+  // `.ds-crumbrow` exists in `system.css` and NOTHING renders it; the `Crumbs` primitive emits
+  // `<nav class="ds-crumbs">`. A mapping to a class no component uses can never match, so every
+  // breadcrumbed route would have reported its head as block 1 forever — a vocabulary hole that
+  // reads as a page defect, on five routes at once.
+  { kind: 'crumbs', proto: '.crumbrow', product: '.ds-crumbs' },
   {
     kind: 'summary',
     proto: '.summary',
