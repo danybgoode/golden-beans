@@ -225,8 +225,7 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
             its author, its rationale and its captured evidence. That is what this modal is for. */}
         {canManage ? null : (
           <p>
-            <strong>Read-only access.</strong> A project owner records decisions and corrections, on the
-            page.
+            <strong>Read-only access.</strong> A project owner records decisions and corrections, on the page.
           </p>
         )}
       </section>

@@ -89,7 +89,18 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   // never see it. The approved `setup-shares` state draws an "opens" column on THEIR page, so the
   // count has to live on their row. Two writes because they answer two different questions for two
   // different readers, not because one is a fallback for the other.
-  after(() => recordShareOpen(share.shareId))
+  // ⚠️ Wrapped, because `after()` swallows nothing and this must never reach the reader.
+  // `recordShareOpen` already logs an RPC that returns an error; this catches the case it cannot —
+  // the client THROWING (a DNS failure, an aborted socket). The same belt-and-suspenders shape
+  // `trackSelfEvent` uses one line above, and for the same reason: a counter is not worth a 500 on a
+  // page somebody was sent a link to. (Cross-agent review, agy, Should-fix.)
+  after(async () => {
+    try {
+      await recordShareOpen(share.shareId)
+    } catch (error) {
+      console.error('[s/token] could not record a share open:', error)
+    }
+  })
 
   const report = await getPodReportByProjectId(projectId, projectSlug, lens)
   if (!report.ok) {
