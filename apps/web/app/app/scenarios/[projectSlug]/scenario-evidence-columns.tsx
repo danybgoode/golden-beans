@@ -44,9 +44,23 @@ export function shortId(value: string): string {
 export function scenarioRunColumns({
   view,
   elapsed,
+  impactAnchors = false,
 }: {
   view: ScenarioDashboardView
   elapsed?: (run: ScenarioDashboardRun) => React.ReactNode
+  /**
+   * Whether a `View impact evidence` anchor has anything to jump TO in this render.
+   *
+   * ⚠️ **Default `false`, and the default is the safe one** (cross-agent review, Codex, round 2).
+   * Story 2.5 moved the impact articles out of `ScenarioWorkspace` and into the per-drill
+   * `DrillEvidence` dialog — and this column kept emitting `href="#impact-…"` in both places, so in
+   * the workspace it pointed at an id that is either absent or inside a closed dialog. A link that
+   * goes nowhere is worse than no link.
+   *
+   * Only `DrillEvidence` renders those articles, so only it opts in. A caller that starts rendering
+   * them has to say so, rather than a caller that stops having to remember to turn it off.
+   */
+  impactAnchors?: boolean
 }): DataTableColumn<ScenarioDashboardRun>[] {
   return [
     {
@@ -60,7 +74,7 @@ export function scenarioRunColumns({
             {row.scenarioKey} v{row.definitionVersion}
             <br />
             <small>run {shortId(row.id)}</small>
-            {impact ? (
+            {impact && impactAnchors ? (
               <>
                 <br />
                 <a href={`#impact-${impact.id}`}>View impact evidence</a>

@@ -51,7 +51,8 @@ export function DrillEvidence({
       <h2>Runs</h2>
       <DataTable
         caption={`Runs of ${scenarioKey}`}
-        columns={scenarioRunColumns({ view })}
+        // The impact articles are rendered below, in THIS dialog, so the anchor has a target.
+        columns={scenarioRunColumns({ view, impactAnchors: true })}
         rows={runs}
         rowKey={(row) => row.id}
         empty="This drill has never run — an untested control is an assumption, not evidence."

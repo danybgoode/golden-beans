@@ -82,3 +82,25 @@ test('an unreadable ?page is the FIRST page, never an error', () => {
   assert.equal(parseAuditPage(['2', '3']), 2)
   assert.equal(parseAuditPage('7'), 7)
 })
+
+test('the retained-history WINDOW is a whole number of pages plus a remainder, and the boundary is stateable', () => {
+  // ⚠️ **A cap this page paginates is a claim it can break** (cross-agent review, Codex, round 2).
+  // `getFlagRegistryView` returns at most `FLAG_AUDIT_WINDOW` rows; the page says "everything anyone
+  // has done" below that and names the window at it. This pins the arithmetic that sentence depends
+  // on, because the fixture that exercises the page has FEWER rows than the cap and therefore can
+  // never reach the branch — the "guard green because the fixture is thin" case this repo records.
+  const windowSize = 200
+  const full = paginateAudit(rows(windowSize), 1)
+  assert.equal(full.total, windowSize)
+  assert.equal(full.pageCount, Math.ceil(windowSize / AUDIT_PAGE_SIZE))
+
+  // The LAST page of a capped read is a partial one, and its `to` is the cap rather than a multiple
+  // of the page size — which is what makes "the most recent 200" a true sentence rather than a
+  // rounded one.
+  const last = paginateAudit(rows(windowSize), full.pageCount)
+  assert.equal(last.to, windowSize)
+  assert.ok(last.rows.length <= AUDIT_PAGE_SIZE)
+
+  // One row under the cap is the other side of the branch: the page still says "everything".
+  assert.equal(paginateAudit(rows(windowSize - 1), 1).total, windowSize - 1)
+})

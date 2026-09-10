@@ -215,23 +215,47 @@ function GuardrailsBlock({
       ) : (
         <>
           <div className="ds-wordlist">
-            {metrics.map((metric) => {
-              const treatment = metric.variants.find((variant) => variant.key !== controlKey)
-              const lift = treatment?.liftFromControl ?? null
+            {/* ⚠️ **ONE ROW PER (metric, treatment) — `find()` here was a Blocking defect**
+                (cross-agent review, Codex, round 2). It took the FIRST non-control variant per
+                guardrail, so on a three-arm experiment the second treatment could regress a
+                guardrail and never appear on the decision surface at all. A guardrail's entire job
+                is "this must not get worse", and the page silently answered for one arm.
+
+                `flatMap`, and the arm is NAMED whenever there is more than one — the same rule
+                `ComparisonBars` states for the same reason: *"a third variant is a third ROW, never
+                a third hue."* The prototype draws one row per guardrail because its fixture has
+                exactly two arms; the design's shape is `name → delta`, and with N treatments the
+                honest reading of that shape is N rows. */}
+            {metrics.flatMap((metric) => {
+              const treatments = metric.variants.filter((variant) => variant.key !== controlKey)
+              if (treatments.length === 0) {
+                return [
+                  <div key={metric.event} className="ds-wordlist-row">
+                    <span className="ds-wordlist-was">
+                      <code>{metric.event}</code>
+                    </span>
+                    <span className="ds-wordlist-arrow" aria-hidden="true">
+                      →
+                    </span>
+                    <span className="ds-wordlist-now">no treatment arm</span>
+                  </div>,
+                ]
+              }
               // ⚠️ "Worse" is DIRECTIONAL and this engine does not know a guardrail's direction, so
               // the row states the movement and refuses to grade it. A red arrow on a fall this
               // engine cannot interpret would be a judgement the data does not support.
-              return (
-                <div key={metric.event} className="ds-wordlist-row">
+              return treatments.map((treatment) => (
+                <div key={`${metric.event}:${treatment.key}`} className="ds-wordlist-row">
                   <span className="ds-wordlist-was">
                     <code>{metric.event}</code>
+                    {treatments.length > 1 ? <span> · {treatment.key}</span> : null}
                   </span>
                   <span className="ds-wordlist-arrow" aria-hidden="true">
                     →
                   </span>
-                  <span className="ds-wordlist-now">{signedPercentage(lift)}</span>
+                  <span className="ds-wordlist-now">{signedPercentage(treatment.liftFromControl)}</span>
                 </div>
-              )
+              ))
             })}
           </div>
           <p className="ds-chart-note">

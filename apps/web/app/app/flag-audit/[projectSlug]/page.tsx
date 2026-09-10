@@ -20,7 +20,7 @@
 import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { isFlagConsoleEnabled } from '@/lib/flags'
-import { getFlagRegistryView } from '@/lib/flag-registry'
+import { FLAG_AUDIT_WINDOW, getFlagRegistryView } from '@/lib/flag-registry'
 import { PageHead } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
 import { paginateAudit, parseAuditPage } from '@/lib/audit-page'
@@ -65,7 +65,16 @@ export default async function FlagAuditPage({
             The stored values and the route are untouched — this is one string. */}
         <PageHead
           title="History"
-          lede="Everything anyone has done to a feature in this project, newest first — written as sentences, not as rows of a table nobody reads. Readable by any member."
+          /* ⚠️ **"Everything" became a claim this page could not keep** (cross-agent review, Codex,
+             round 2). `getFlagRegistryView` reads a capped window, which was invisible while this
+             rendered one list and production sat under the cap — paginating it is what would have
+             turned the pager's "of N" into a falsehood at row 201. The sentence states the boundary
+             when the read is AT it, and says "everything" only when that is true. */
+          lede={
+            page.total >= FLAG_AUDIT_WINDOW
+              ? `The most recent ${FLAG_AUDIT_WINDOW.toLocaleString('en-US')} things anyone has done to a feature in this project, newest first — written as sentences, not as rows of a table nobody reads. Readable by any member.`
+              : 'Everything anyone has done to a feature in this project, newest first — written as sentences, not as rows of a table nobody reads. Readable by any member.'
+          }
         />
         <FlagAuditTimeline
           entries={page.rows}
