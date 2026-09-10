@@ -802,8 +802,15 @@
 }
 /* A step whose body carries a control rather than only a sentence. The prototype's second step is
    exactly this shape: a line of instruction, then the button that performs it. */
+/* ⚠️ **A BLOCK, so the action sits on its OWN line** — mockups-as-built Story 4.1. `inline-flex`
+   put "Add to Claude ↗" immediately after "Open Claude's connector settings." on the same line, and
+   the approved `setup-connect` state draws it underneath: the prototype's wrapper is a plain `<div>`
+   (`console-prototype.html:3630`), which is block by default. `flex` rather than `block` so the
+   button and its icon keep their own alignment; `align-self: flex-start` keeps it the width of its
+   own label rather than the width of the step. */
 .ds .ds-step-action {
-  display: inline-flex;
+  display: flex;
+  align-self: flex-start;
   margin-top: 8px;
 }
 
@@ -4002,9 +4009,19 @@
   text-align: right;
 }
 
+/* ⚠️ **`min(320px, 100%)`, not a bare `320px` — this overflowed a 360px phone.**
+   `minmax(320px, 1fr)` sets a track FLOOR: when the container is narrower than 320px the track does
+   not shrink, it overflows, and the page scrolls sideways (Do-not #6). `min()` lets the floor fall
+   to the container's own width on a phone while keeping 320 as the wrapping threshold everywhere
+   else.
+
+   It had never been seen because `/hub/…/horizon` rendered its EMPTY state on every fixture tenant —
+   the mobile sweep swept a page with no destinations on it. mockups-as-built Story 4.4 pushed a real
+   roadmap artifact so the route could be measured against its approved state, and the sweep found
+   this on the first run where there was anything to lay out. */
 .ds .ds-dests {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -4167,7 +4184,24 @@
 }
 
 /* ── Prose, and the stamp that says where it came from ──────────────────────────────────────── */
-.ds .ds-doc {
+/* ⚠️ **THE MEASURE IS ON THE PROSE, NOT ON THE CONTAINER** — mockups-as-built Story 4.4.
+   `.ds-doc { max-width: 70ch }` is what the prototype writes, and there the two are
+   indistinguishable: its `.doc` holds nothing but headings, paragraphs and lists. The product's does
+   — the pod report's metric tables, its not-instrumented panel and its funnel table all live inside
+   the document, because the approved `hub-report` and `public-share` states are
+   `… → provenance → document` and the document is where everything after the stamp goes.
+
+   With the measure on the container, wrapping the report in it squeezed every table to 70ch: the
+   "what it means" column collapsed and its mono text ran out of its cell. Found by opening the
+   page, on a route whose structural signature was already correct.
+
+   70ch is a READING measure and a table is not prose, so it belongs on the elements it is about.
+   Direct children only: a `<p>` inside a table cell has its own column to fit. */
+.ds .ds-doc > p,
+.ds .ds-doc > h2,
+.ds .ds-doc > h3,
+.ds .ds-doc > ul,
+.ds .ds-doc > ol {
   max-width: 70ch;
 }
 

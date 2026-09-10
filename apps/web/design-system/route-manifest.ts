@@ -171,6 +171,23 @@ export type CoverageRow = {
  * the SAME `PodReportBody`, so they are short for exactly the same reason and stop being short on
  * exactly the same day.
  */
+// ⚠️ **AMENDED, not closed and not extended — mockups-as-built Story 4.4, 2026-09-10.**
+//
+// `sprint-4.md` said "that deferral's premise is now the story… close it in this story rather than
+// extending its date". Half of that is right and the other half would have been a false green, so
+// both halves are recorded here rather than the convenient one.
+//
+// DISPROVED: *"the approved `hub-report` state is PROSE and contains no table at all"*. The state is
+// `head → provenance → document`, and a DOCUMENT may contain a table — which is exactly what the
+// structural contract, generated from the prototype, says. Story 4.4 wrapped the report in that one
+// block, and both routes now match their approved states. That sentence is deleted because it was
+// the reason the deferral gave for not porting, and it was wrong.
+//
+// STILL TRUE, and therefore the deferral stays open: the evidence tables are still PAINTED by
+// `app/hub/hub.module.css`. Matching a block sequence is not the same as rendering from
+// `design-system/`, and claiming this closed on the strength of the gate going green would be this
+// epic's own defect — a number that measures intent rather than product. The date is NOT moved: a
+// deferral whose date slides every time somebody looks at it is an exemption wearing an apology.
 const POD_REPORT_TABLES_DEFERRAL: Deferral = {
   owner: 'Daniel',
   until: '2026-11-30',
@@ -179,13 +196,14 @@ const POD_REPORT_TABLES_DEFERRAL: Deferral = {
     'stamp, the headline answer, the caveats band, every section heading and lede, the empty ' +
     'state, the refusal and the benchmark list. Its EVIDENCE TABLES (delivery metrics, the ' +
     'maturity ladder, the not-instrumented panels, the outcome funnel) are still painted by ' +
-    'app/hub/hub.module.css, and that is a decision rather than an oversight: the approved ' +
-    '`hub-report` state is PROSE and contains no table at all, so porting them would mean ' +
-    'inventing ~40 unapproved visual decisions in the sprint that closes the epic \u2014 the exact ' +
-    'shape (\u201ca builder shows twenty-three unreviewed screens\u201d) the epic amended itself to ' +
-    'forbid. hub.module.css is a CSS MODULE, so its names are hashed and the D3 collision hazard ' +
-    'cannot occur; what remains is a second set of visual decisions, not a second cascade. ' +
-    'Closing it needs those states designed and approved first, which is planning-lane work.',
+    'app/hub/hub.module.css. mockups-as-built Story 4.4 (2026-09-10) DISPROVED the reason this ' +
+    'deferral used to give \u2014 it said the approved `hub-report` state \u201cis PROSE and ' +
+    'contains no table at all\u201d, and the state is a DOCUMENT, which may contain one; both ' +
+    'routes match their approved states now. What is still outstanding is the painting: porting ' +
+    'those tables means designing and approving ~40 visual decisions first, which is planning-lane ' +
+    'work and is the reason the date does not move. hub.module.css is a CSS MODULE, so its names ' +
+    'are hashed and the D3 collision hazard cannot occur; what remains is a second set of visual ' +
+    'decisions, not a second cascade.',
 }
 
 export const ROUTE_MANIFEST: readonly CoverageRow[] = [

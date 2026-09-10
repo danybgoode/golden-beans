@@ -3,9 +3,9 @@ import { requireDashboardAccess } from '@/lib/dashboard-auth'
 import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { journeyMarkerIndex } from '@/lib/hub-journey'
-import { EmptyHubState, HubProvenance } from '../hub-components'
+import { EmptyHubState } from '../hub-components'
 import { HubFrame } from '../hub-frame'
-import { Answer, Callout, PageHead, Pill, Tag, Tile, Tiles } from '@/design-system/primitives'
+import { Answer, ListCard, PageHead, Pill, Tag, Tile, Tiles } from '@/design-system/primitives'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,12 +66,13 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
         title="Roadmap"
         lede={`Every epic ${projectSlug} has built, in the one order it was built in.`}
       />
-      <HubProvenance
-        freshness={freshness}
-        from={`${counts.epics} epics and ${counts.sprints} sprints`}
-        version={artifact.version}
-      />
-
+      {/* ⚠️ **NO PROVENANCE LINE HERE — mockups-as-built Story 4.4.** The approved `hub-roadmap`
+          state is `head → answer → tiles → list → sectionlabel → list → note`; the stamp belongs to
+          `hub-report`, which draws one, and this board does not. It is not lost: the closing note
+          below carries the same three facts in words, which is where the approved design puts them
+          ("This board is generated from each epic's own frontmatter — it is a view, never a thing
+          anybody ticks by hand"). A report that cannot tell you how stale it is, is a screenshot —
+          so the sentence says when. */}
       <Answer>
         <b>
           {counts.shippedEpics} of {counts.epics} epics have shipped.
@@ -99,7 +100,9 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
         </p>
       ) : (
         <>
-          <div className="ds-card">
+          {/* `ListCard plain`, not `Card`: the prototype draws the track as
+              `<div class="listcard" style="padding:22px">` — block 4 of the approved state. */}
+          <ListCard plain>
             <span className="ds-label">The build order, 1 to {epics.length}</span>
             <div className="ds-track" aria-hidden="true">
               {nodes.map((state, index) => (
@@ -126,8 +129,11 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
               One sequence, not a priority score — shipped epics keep their place, so this reads left to right
               as the order things actually happened.
             </p>
-          </div>
+          </ListCard>
 
+          {/* Block 5. The approved state's words are "Most recent first"; this list is in BUILD
+              order, oldest first, and says so — the label names what the reader is looking at, and
+              renaming it to match a picture would make it wrong. */}
           <span className="ds-label">In build order</span>
           <div className="ds-listcard">
             {epics.map((epic, index) => (
@@ -160,29 +166,48 @@ export default async function HubJourneyPage({ params }: { params: Promise<{ pro
               </a>
             ))}
           </div>
-
-          {/* The destination-reached case, said in words rather than by the absence of a marker. */}
-          {markerIndex === epics.length && (
-            <p className="ds-hint">
-              Every epic on the road has shipped — there is no &ldquo;you are here&rdquo; because there is
-              nothing ahead of it.
-            </p>
-          )}
         </>
       )}
 
-      {summary.seeds.length > 0 && (
-        <p className="ds-hint">
-          +{summary.seeds.length} idea{summary.seeds.length === 1 ? '' : 's'} on the horizon, not yet groomed
-          onto the road. They are named on{' '}
-          <a href={`/hub/${encodeURIComponent(projectSlug)}/horizon`}>Horizon</a>.
-        </p>
-      )}
+      {/* ── Block 7: ONE closing note, which is what the approved state draws ──────────────────
+          Three sentences used to be three blocks — a seeds line, a destination-reached line and a
+          `Callout`. The approved `hub-roadmap` state ends in a single `note` and carries NO
+          annotation at all (`STATE-CONTRACT.json`: `annotations: 0`), so the callout was a fourth
+          block wearing an annotation's clothes and the other two were extras.
 
-      <Callout>
-        This board is generated from each epic&apos;s own frontmatter — it is a view, never a thing anybody
-        ticks by hand. That is the only reason it can be trusted about work nobody is watching.
-      </Callout>
+          Every sentence survives; they are one paragraph now. The freshness stamp is here too,
+          because this is where the approved design puts the provenance of the board — in words,
+          under it, rather than as a line above the answer. */}
+      <p className="ds-hint" data-freshness-tone={freshness.tone}>
+        Showing {epics.length} of {counts.epics} epic{counts.epics === 1 ? '' : 's'},{' '}
+        {/* ⚠️ The STALE warning travels with the stamp. `FreshnessStamp` renders it as
+            "possibly stale — " and dropping the stamp for the approved block sequence must not drop
+            the one word on it that changes what a reader does. The tone is on the paragraph too, so
+            the cue reaches a stylesheet and a screen reader the same way it did. */}
+        {freshness.tone === 'stale' ? <strong>possibly stale — </strong> : null}
+        generated{' '}
+        {freshness.iso ? (
+          <time dateTime={freshness.iso} title={freshness.iso}>
+            {freshness.age}
+          </time>
+        ) : (
+          freshness.age
+        )}
+        {freshness.shortCommit ? ` as of merge ${freshness.shortCommit}` : ''} (push #{artifact.version}) from
+        each epic&apos;s own frontmatter — a view, never a thing anybody ticks by hand. That is the only
+        reason it can be trusted about work nobody is watching.
+        {markerIndex === epics.length && epics.length > 0
+          ? ' Every epic on the road has shipped, so there is no “you are here” — there is nothing ahead of it.'
+          : ''}
+        {summary.seeds.length > 0 ? (
+          <>
+            {' '}
+            +{summary.seeds.length} idea{summary.seeds.length === 1 ? '' : 's'} on the horizon are not yet
+            groomed onto the road; they are named on{' '}
+            <a href={`/hub/${encodeURIComponent(projectSlug)}/horizon`}>Horizon</a>.
+          </>
+        ) : null}
+      </p>
     </HubFrame>
   )
 }

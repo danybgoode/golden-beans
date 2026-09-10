@@ -30,6 +30,16 @@ export type ShareRow = {
   createdAt: string
   expiresAt: string | null
   revokedAt: string | null
+  /**
+   * How many times this link has been opened — mockups-as-built Story 4.2, the approved
+   * `setup-shares` state's third column.
+   *
+   * ⚠️ **Times OPENED, never people.** A bearer URL can be forwarded to a room full of people from
+   * one email, so "distinct links opened" is the only unit this page can honestly report; calling it
+   * a visitor count would be a number that reads as an audience and is not one. The same sentence is
+   * already in `/s/[token]`'s own tracking comment, and this is the half that surfaces it.
+   */
+  opens: number
 }
 
 export type ShareResolution =
@@ -185,7 +195,7 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('api_keys')
-    .select('id, label, share_lens, created_at, expires_at, revoked_at')
+    .select('id, label, share_lens, created_at, expires_at, revoked_at, opened_count')
     .eq('project_id', projectId)
     .eq('scope', 'share')
     .order('created_at', { ascending: false })
@@ -205,5 +215,27 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
     createdAt: r.created_at as string,
     expiresAt: (r.expires_at as string | null) ?? null,
     revokedAt: (r.revoked_at as string | null) ?? null,
+    // `?? 0` is safe here and nowhere else in this file: the column is `NOT NULL DEFAULT 0`, so a
+    // null can only mean a row written before the migration — which is a link that has genuinely
+    // been opened zero times as far as anything can tell.
+    opens: (r.opened_count as number | null) ?? 0,
   }))
+}
+
+/**
+ * Record one open of a share link — mockups-as-built Story 4.2.
+ *
+ * ⚠️ **Best-effort, and it must stay that way.** A failure here must never stop a share link
+ * rendering: the reader has a valid token and the report is what they came for. It is called from
+ * `after()` on the route for the same reason `trackSelfEvent` is — a counter update must not sit in
+ * front of the page's own response.
+ *
+ * The increment is atomic inside the database (`record_share_open`), because a link forwarded to a
+ * room is exactly the case where several opens arrive at once and a read-modify-write would lose
+ * them.
+ */
+export async function recordShareOpen(shareId: string): Promise<void> {
+  const supabase = getSupabaseServiceClient()
+  const { error } = await supabase.rpc('record_share_open', { p_share_id: shareId })
+  if (error) console.error('[report-shares] could not record a share open:', error)
 }

@@ -4,8 +4,8 @@
   "liveRoutesAtSprint1": 31,
   "hasReferenceState": 28,
   "rendersFromDesignSystem": 28,
-  "complete": 14,
-  "matchesApprovedState": 14,
+  "complete": 22,
+  "matchesApprovedState": 22,
   "measurable": 22,
   "coveredElsewhere": [
     "/app/flags/[projectSlug]/[flagKey]",
@@ -23,19 +23,18 @@
     "/app/journeys/[projectSlug]/[journeyKey]",
     "/app/north-star/[projectSlug]",
     "/app/scenarios/[projectSlug]",
-    "/app/tasks/[projectSlug]",
-    "/login",
-    "/signup",
-    "/talk"
-  ],
-  "outstanding": [
     "/app/setup/connect/[projectSlug]",
     "/app/setup/keys/[projectSlug]",
     "/app/shares/[projectSlug]",
+    "/app/tasks/[projectSlug]",
     "/hub/[projectSlug]",
     "/hub/[projectSlug]/horizon",
     "/hub/[projectSlug]/report",
     "/install",
-    "/s/[token]"
-  ]
+    "/login",
+    "/s/[token]",
+    "/signup",
+    "/talk"
+  ],
+  "outstanding": []
 }

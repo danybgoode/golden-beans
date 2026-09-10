@@ -756,6 +756,19 @@ test('every route claiming the design system renders from it', async ({ page }) 
             // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
             // this list is maintained beside that one rather than derived from it.
             'main .ds-once, ' +
+            // ⚠️ **`.ds-prov` and `.ds-doc`, added by mockups-as-built Story 4.5** — the same
+            // asymmetry `.ds-once` above records, on the two routes where it actually bites. The
+            // approved `hub-report` and `public-share` states ARE `… → provenance → document`: the
+            // stamp and the document are the content, by the design's own block vocabulary. Missing
+            // from this list, `/s/[token]` scored its chrome at 3081px — the first `.ds-table` deep
+            // inside the report — on a page whose content begins 200px down. That is the list being
+            // wrong about the page, not the page being wrong.
+            //
+            // `.ds-dests` is the same finding one route over: Horizon's content IS its destinations
+            // list, and with the stamp gone that page had NO entry here at all — the gate reported
+            // "renders no content element", which is the list saying so rather than passing. And
+            // `.ds-vers` is `measure-journey`'s version list, a block this epic built.
+            'main .ds-prov, main .ds-doc, main .ds-dests, main .ds-vers, ' +
             // ⚠️ `/talk` was the ONE route of twenty-seven with no entry here, and the gate said so
             // rather than passing (design-system-rails Story 6.5). Its content is a third party's
             // booking calendar and the three notes beside it — `.ds-talkslot` is the frame around

@@ -4,7 +4,7 @@ import { getSiteUrl, isSiteUrlMisconfiguredInProduction } from '@/lib/site-url'
 import { isConnectorWritesEnabled } from '@/lib/flags'
 import { Icon } from '@/components/ui/Icon'
 import { Frame, FrameLink } from '@/design-system/Frame'
-import { Callout, Card, Step, Steps } from '@/design-system/primitives'
+import { Callout, ListCard, Step, Steps } from '@/design-system/primitives'
 import { CopyField } from '@/design-system/copy-field'
 
 // Story 2.2 (commercial-shell/sprint-2.md) — the install page: copy-your-URL field, "Add to
@@ -38,11 +38,16 @@ const ADD_TO_CLAUDE_URL = 'https://claude.ai/customize/connectors?modal=add-cust
 // something to navigate* — and the reason it matters HERE is that the landing nav offers a reader
 // six destinations on the page whose entire job is three steps.
 //
+// ⚠️ **ONE CARD, not three — mockups-as-built Story 4.5.** The approved state is
+// `title → note → demobar → list`: a single `.listcard` holding "Demo connector URL", and inside it,
+// under its own label, "Three steps" (`console-prototype.html:3621-3636`). The built page rendered
+// three separate `Card`s, so the gate read `card → card → card` where the design draws one block.
+//
 // ⚠️ **The SDK block is KEPT, and it is not in the approved state.** `landing-readability-pass`
-// retired the landing's §connect and §sdk sections INTO this page; deleting the block to match a
-// mock would silently undo a shipped epic's decision. It renders as a second card under the same
-// language, which is additive rather than contradictory — the approved state describes the top of
-// this page, not the whole of it. Recorded here rather than discovered by whoever misses it.
+// retired the landing's §connect and §sdk sections INTO this page; deleting it to match a mock
+// would silently undo a shipped epic's decision, and the prototype has no reason to draw it — it has
+// no SDK. It becomes a THIRD labelled section inside the one card rather than a card of its own,
+// which is how both hold at once: the approved block sequence exactly, and nothing lost.
 export default async function InstallPage() {
   // A cross-review catch: if this ever runs in real Vercel production without SITE_URL set, show
   // the honest "not ready" state instead of a live-looking but broken localhost URL.
@@ -72,7 +77,9 @@ export default async function InstallPage() {
         </span>
       </div>
 
-      <Card>
+      {/* `ListCard plain` — the approved `.listcard` used as a padded SURFACE, with no header row
+          and no rows in it. Every labelled section below is a section of THIS card. */}
+      <ListCard plain>
         {/* ⚠️ An `h2`, not a `ds-label` span — fresh reviewer, Minor. The page this replaced had two
             `<h2>`s and the port turned both into styled spans, leaving the outline h1-only: heading
             navigation got a screen-reader user nowhere on a page whose whole job is three steps.
@@ -122,56 +129,46 @@ export default async function InstallPage() {
             )}
           </p>
         )}
-      </Card>
 
-      {/* ⚠️ **Its OWN card, matching `Setup › Connect` exactly** — `connector-manager.tsx` renders
-          the same three steps in a `ds-card` whose first child is the label.
-          Two reasons, and the second is the one that made me move it. The callout below claims "the
-          same three steps, the same words and the same button as Setup › Connect", and a claim about
-          sameness is worth more when the markup is actually the same. And in the card above, the
-          label followed two paragraphs with no top margin and read as their last line — found by
-          looking at the rendered page. The system rule that was missing is fixed too
-          (`.ds-label:not(:first-child)`), so the next person to put a label mid-card gets spacing
-          rather than a collision. */}
-      {connectorUrl && (
-        <Card>
-          <h2 className="ds-label">Three steps</h2>
-          <Steps>
-            <Step>
-              <b>Copy the URL above.</b>
-            </Step>
-            <Step
-              note={
-                <FrameLink
-                  href={ADD_TO_CLAUDE_URL}
-                  variant="primary"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Add to Claude
-                  {/* F1, answered without touching the rule: the approved design's `↗` renders as
+        {/* ⚠️ **A SECTION of the card above, not a card of its own** — Story 4.5. It was separate so
+          that its markup would match `Setup › Connect`'s, and the callout below claims "the same
+          three steps, the same words and the same button". The claim survives: the `Steps` component
+          and every word in it are unchanged, and the approved `public-install` state draws both
+          under one card. The spacing that made a mid-card label read as the previous paragraph's
+          last line is fixed in the system rule (`.ds-label:not(:first-child)`) rather than by giving
+          the label a container of its own. */}
+        {connectorUrl && (
+          <>
+            <h2 className="ds-label">Three steps</h2>
+            <Steps>
+              <Step>
+                <b>Copy the URL above.</b>
+              </Step>
+              <Step
+                note={
+                  <FrameLink
+                    href={ADD_TO_CLAUDE_URL}
+                    variant="primary"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Add to Claude
+                    {/* F1, answered without touching the rule: the approved design's `↗` renders as
                       the permitted `Icon`, never as a character the drift guard bans. */}
-                  <Icon name="external" size={13} />
-                </FrameLink>
-              }
-            >
-              <b>Open Claude&apos;s connector settings.</b>
-            </Step>
-            <Step>
-              <b>Paste it in and save.</b> Then ask:{' '}
-              <span className="ds-mono">what moved the North Star this week?</span>
-            </Step>
-          </Steps>
-        </Card>
-      )}
+                    <Icon name="external" size={13} />
+                  </FrameLink>
+                }
+              >
+                <b>Open Claude&apos;s connector settings.</b>
+              </Step>
+              <Step>
+                <b>Paste it in and save.</b> Then ask:{' '}
+                <span className="ds-mono">what moved the North Star this week?</span>
+              </Step>
+            </Steps>
+          </>
+        )}
 
-      <Callout>
-        The same three steps, the same words and the same button as <b>Setup › Connect</b> inside the product.
-        One flow, learned once — the only difference is whose numbers are on the other end, and this page says
-        which in the first line.
-      </Callout>
-
-      <Card>
         <h2 className="ds-label">For your engineers</h2>
         <p className="ds-hint">
           An npm-installed SDK, not a CLI wizard — a few lines to your first North Star input. It is the
@@ -192,7 +189,13 @@ await engine.track('setup_guide_viewed', { featureId: 'setup_guide' })
 await engine.trackAdoption('setup_guide')
 const variant = engine.bucket('quick-upload-ui', ['control', 'treatment'])`}
         </pre>
-      </Card>
+      </ListCard>
+
+      <Callout>
+        The same three steps, the same words and the same button as <b>Setup › Connect</b> inside the product.
+        One flow, learned once — the only difference is whose numbers are on the other end, and this page says
+        which in the first line.
+      </Callout>
     </Frame>
   )
 }

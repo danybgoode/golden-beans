@@ -198,8 +198,27 @@ export function Stat({ value, label }: { value: string; label: string }) {
 
 // ── The answer line — the sentence a page opens with ───────────────────────────────────────────
 
-export function Answer({ children }: { children: ReactNode }) {
-  return <p className="ds-answer">{children}</p>
+export function Answer({
+  children,
+  freshnessTone,
+}: {
+  children: ReactNode
+  /**
+   * The staleness cue, when this answer is the page's provenance too.
+   *
+   * ⚠️ **Added by mockups-as-built Story 4.4, and deliberately NOT a general escape hatch.** The
+   * approved `hub-horizon` state draws no provenance line, so Horizon's "pushed 2h ago as of merge
+   * abc1234" moved into its answer — and the tone that `FreshnessStamp` carries had to move with it,
+   * or a stale board would read as a current one. One named prop rather than a spread of arbitrary
+   * attributes: a primitive that accepts anything is a primitive that stops being a contract.
+   */
+  freshnessTone?: 'fresh' | 'recent' | 'stale' | 'unknown'
+}) {
+  return (
+    <p className="ds-answer" data-freshness-tone={freshnessTone}>
+      {children}
+    </p>
+  )
 }
 
 // ── Data table ────────────────────────────────────────────────────────────────────────────────

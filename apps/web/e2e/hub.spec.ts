@@ -119,6 +119,13 @@ test('the journey view renders the latest artifact’s epics with a freshness st
   expect(html).toContain(`Journey spec ${unique}`)
   expect(html).toContain('Not shipped yet')
   // The freshness stamp is a required design element, not fine print (sprint-1.md).
+  //
+  // ⚠️ **It MOVED, and both halves of it are still asserted** — mockups-as-built Story 4.4. The
+  // approved `hub-roadmap` state is `head → answer → tiles → list → sectionlabel → list → note` and
+  // draws no provenance line; the stamp belongs to `hub-report`, which does. So the three facts it
+  // carried — when, from which merge, and how stale — are in the closing note, in words, which is
+  // where the approved design puts the provenance of this board. The `data-freshness-tone`
+  // attribute travels with them, so a stylesheet and a screen reader still get the cue.
   expect(html).toMatch(/as of merge abc1234/)
   expect(html).toContain('data-freshness-tone="fresh"')
   // "You are here" marks the first UNSHIPPED epic — what is being built next.

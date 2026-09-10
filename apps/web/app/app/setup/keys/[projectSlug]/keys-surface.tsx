@@ -98,18 +98,25 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
               />
             </div>
           ) : (
-            <KeysList slug={slug} rows={rows} />
+            <KeysList
+              slug={slug}
+              rows={rows}
+              /* ⚠️ INSIDE the card — mockups-as-built Story 4.1. The approved `setup-keys` state is
+                 `head → list`, and this rendered as a third block the design does not draw. The
+                 sentence is unchanged; only where it sits is. */
+              foot={
+                <p className="ds-foot">
+                  {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An expired
+                      key is rejected on every serving path, so counting it would make this page's own
+                      "what has access now" false. Expired rows still render — an owner cleaning up
+                      wants to see them — they just are not counted. */}
+                  {usableCount} credential{usableCount === 1 ? '' : 's'} can reach this project right now
+                  {rows.length > usableCount ? `, and ${rows.length - usableCount} have expired` : ''}.
+                  Revoked keys are not listed at all.
+                </p>
+              }
+            />
           )}
-
-          <p className="ds-foot">
-            {/* Counts what can actually AUTHENTICATE, not what is merely unrevoked. An expired key is
-                rejected on every serving path, so counting it would make this page's own "what has
-                access now" false. Expired rows still render — an owner cleaning up wants to see them —
-                they just are not counted. */}
-            {usableCount} credential{usableCount === 1 ? '' : 's'} can reach this project right now
-            {rows.length > usableCount ? `, and ${rows.length - usableCount} have expired` : ''}. Revoked keys
-            are not listed at all.
-          </p>
 
           {/* ⚠️ What this page does NOT list, said out loud on the page itself. Its promise is
               "everything that has access", and share links and connector URLs ARE access — bearer

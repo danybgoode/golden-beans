@@ -7,19 +7,21 @@ import { POD_REPORT_LENSES, lensPolicy, type PodReportLens } from '@/lib/pod-rep
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CopyField } from '@/design-system/copy-field'
 import {
+  Answer,
   Callout,
-  Card,
   Col,
   Empty,
   Field,
   ListCard,
   ListHead,
+  PageHead,
   Pill,
   Row,
   RowMain,
   ShownOnce,
   Tag,
 } from '@/design-system/primitives'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { mintShareAction, revokeShareAction } from './actions'
 
 // Setup › Share links — mint, list, revoke.
@@ -89,7 +91,6 @@ export function ShareManager({
   enabled: boolean
 }) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
   const [lens, setLens] = useState<PodReportLens>('investor')
   const [label, setLabel] = useState('')
   const [fieldError, setFieldError] = useState<string | null>(null)
@@ -117,9 +118,13 @@ export function ShareManager({
       try {
         const result = await mintShareAction(slug, lens, trimmed, expiryDays)
         if (result.ok) {
+          // ⚠️ **No `setOpen(false)` — setting `minted` is what closes the dialog.** The trigger is
+          // rendered only while `minted === null` (see the head below), so a successful mint
+          // unmounts `NewThingDialog` and the modal goes with it, revealing the shown-once URL
+          // underneath. One condition decides both, which is why they cannot disagree about whether
+          // a bearer token is on screen.
           setMinted(result.url)
           setLabel('')
-          setOpen(false)
           router.refresh()
         } else setError(result.error)
       } catch {
@@ -145,8 +150,140 @@ export function ShareManager({
     })
   }
 
+  // ⚠️ **The mint FORM, unchanged, hoisted so the head can carry it (Story 4.2, epic D8).** Every
+  // field, every hint and every validation is the one that shipped — the wizard shape wraps the
+  // existing manager rather than a rewrite of it, which is the whole rule D8 states: "the capability
+  // IS the component, and rewriting it is how a capability quietly changes shape."
+  //
+  // The dialog owns whether it is open, so `open`/`setOpen` are gone from this component; what is
+  // left is the form's own state, which is where it always was.
+  const mintForm = (
+    <form onSubmit={onMint}>
+      {/* ── Audience ────────────────────────────────────────────────────────────────────
+          A pick list, not a `<fieldset>` of bare radios: the choice is what the link WILL
+          SHOW, and each option's consequence is the sentence under it. `aria-pressed` paints
+          the selection and announces it — one attribute, so the two cannot disagree. */}
+      <Field
+        label="Who is this for"
+        hint="Every lens keeps the report's caveats and its “not instrumented” rows — a narrower lens shows less detail, never less honesty."
+      >
+        <div className="ds-picklist">
+          {POD_REPORT_LENSES.map((candidate) => (
+            <button
+              type="button"
+              key={candidate}
+              className="ds-pick"
+              aria-pressed={lens === candidate}
+              onClick={() => setLens(candidate)}
+            >
+              <span className="ds-pick-title">{candidate}</span>
+              <span className="ds-pick-detail">{lensPolicy(candidate).audienceNote}</span>
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      {/* The control takes its name from the FIELD's `<label for>`, not from an `aria-label`
+          of its own — two strings for one name is two strings that drift, and the one a screen
+          reader hears would be the one nobody proofreads. */}
+      <Field label="When it expires" controlId="new-share-expiry">
+        {(control) => (
+          <span className="ds-select">
+            <select
+              {...control}
+              value={expiryDays === null ? '' : String(expiryDays)}
+              onChange={(event) =>
+                setExpiryDays(event.target.value === '' ? null : Number(event.target.value))
+              }
+            >
+              {EXPIRY_CHOICES.map((choice) => (
+                <option key={choice.label} value={choice.days === null ? '' : String(choice.days)}>
+                  {choice.label}
+                </option>
+              ))}
+            </select>
+          </span>
+        )}
+      </Field>
+
+      <Field
+        label="What to call it"
+        controlId="new-share-label"
+        hint="For you, not for the reader. “Series-A data room”, “Acme quarterly review” — whatever tells you which link to kill when the conversation ends."
+        error={fieldError}
+      >
+        {(control) => (
+          <input
+            {...control}
+            className="ds-input"
+            value={label}
+            onChange={(event) => {
+              setLabel(event.target.value)
+              if (fieldError) setFieldError(null)
+            }}
+            maxLength={120}
+          />
+        )}
+      </Field>
+
+      {error && <Callout tone="warn">{error}</Callout>}
+
+      <p className="ds-mint-actions">
+        <button type="submit" className="ds-btn ds-btn--primary" disabled={inFlight}>
+          {inFlight ? 'Creating…' : 'Create the share link'}
+        </button>
+        {/* ⚠️ **No `Cancel` button — the dialog already has three ways out** (its `✕`, Escape and a
+            backdrop click, all in `NewThingDialog`), and a fourth that this form cannot actually
+            perform would be a control that does nothing: the dialog owns whether it is open, and
+            nothing inside it can close it. A button that looks like it dismisses and does not is
+            worse than no button (Story 4.1's own rule, one surface over). */}
+      </p>
+    </form>
+  )
+
   return (
     <>
+      {/* ── mockups-as-built · Story 4.2 — THE HEAD MOVED IN HERE, and the mint control with it ───
+          The approved `setup-shares` state is `head → answer → list`, and its head carries a primary
+          action reading exactly `+ New share link`. The page rendered that control as a `<p>` between
+          the answer and the list — a `note` block the design does not draw — and its head drew no
+          action at all, so the contract reported three differences for one cause.
+
+          The head lives in this component for the reason `keys-surface.tsx` gives one file over: the
+          trigger, the form and the revealed value share ONE piece of state (is a credential on screen
+          right now?), and a trigger in the page with the state here would be two places that have to
+          agree about it. */}
+      <PageHead
+        title="Share links"
+        lede={
+          <>
+            A link that shows one thing to somebody who has no account here. It is a bearer token: anyone
+            holding the URL can read the report, so treat it like a password and revoke it when the
+            conversation ends — revocation takes effect on the next request, no deploy.
+          </>
+        }
+        /* ⚠️ No trigger while a freshly-minted URL is on screen. A `+ New share link` button beside an
+           unsaved bearer token invites a second mint before the first is copied — the same rule
+           `keys-surface.tsx` follows for the same reason. */
+        actions={
+          minted === null ? (
+            <NewThingDialog
+              /* The approved state's label, character for character — the structural gate compares
+                 the words (epic D2). */
+              label="+ New share link"
+              title="New share link"
+              lede="Who it is for, what it shows, and when it stops working."
+            >
+              {mintForm}
+            </NewThingDialog>
+          ) : undefined
+        }
+      />
+      <Answer>
+        <b>Also reachable as “Share this” from any report</b> — which is where you will actually want it. This
+        page is for seeing every link that exists, and killing one.
+      </Answer>
+
       {/* Dark-by-default is a design decision, not an outage — but an owner who mints a link, opens
           it and gets a 404 has no way to tell those apart. Saying so up front is the difference. */}
       {!enabled && (
@@ -177,107 +314,7 @@ export function ShareManager({
         </ShownOnce>
       )}
 
-      {open && (
-        <Card>
-          <form onSubmit={onMint}>
-            {/* ── Audience ────────────────────────────────────────────────────────────────────
-                A pick list, not a `<fieldset>` of bare radios: the choice is what the link WILL
-                SHOW, and each option's consequence is the sentence under it. `aria-pressed` paints
-                the selection and announces it — one attribute, so the two cannot disagree. */}
-            <Field
-              label="Who is this for"
-              hint="Every lens keeps the report's caveats and its “not instrumented” rows — a narrower lens shows less detail, never less honesty."
-            >
-              <div className="ds-picklist">
-                {POD_REPORT_LENSES.map((candidate) => (
-                  <button
-                    type="button"
-                    key={candidate}
-                    className="ds-pick"
-                    aria-pressed={lens === candidate}
-                    onClick={() => setLens(candidate)}
-                  >
-                    <span className="ds-pick-title">{candidate}</span>
-                    <span className="ds-pick-detail">{lensPolicy(candidate).audienceNote}</span>
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            {/* The control takes its name from the FIELD's `<label for>`, not from an `aria-label`
-                of its own — two strings for one name is two strings that drift, and the one a screen
-                reader hears would be the one nobody proofreads. */}
-            <Field label="When it expires" controlId="new-share-expiry">
-              {(control) => (
-                <span className="ds-select">
-                  <select
-                    {...control}
-                    value={expiryDays === null ? '' : String(expiryDays)}
-                    onChange={(event) =>
-                      setExpiryDays(event.target.value === '' ? null : Number(event.target.value))
-                    }
-                  >
-                    {EXPIRY_CHOICES.map((choice) => (
-                      <option key={choice.label} value={choice.days === null ? '' : String(choice.days)}>
-                        {choice.label}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              )}
-            </Field>
-
-            <Field
-              label="What to call it"
-              controlId="new-share-label"
-              hint="For you, not for the reader. “Series-A data room”, “Acme quarterly review” — whatever tells you which link to kill when the conversation ends."
-              error={fieldError}
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  className="ds-input"
-                  value={label}
-                  onChange={(event) => {
-                    setLabel(event.target.value)
-                    if (fieldError) setFieldError(null)
-                  }}
-                  maxLength={120}
-                />
-              )}
-            </Field>
-
-            {error && <Callout tone="warn">{error}</Callout>}
-
-            <p className="ds-mint-actions">
-              <button type="submit" className="ds-btn ds-btn--primary" disabled={inFlight}>
-                {inFlight ? 'Creating…' : 'Create the share link'}
-              </button>
-              <button
-                type="button"
-                className="ds-btn ds-btn--secondary"
-                onClick={() => {
-                  setOpen(false)
-                  setFieldError(null)
-                }}
-                disabled={inFlight}
-              >
-                Cancel
-              </button>
-            </p>
-          </form>
-        </Card>
-      )}
-
-      {!open && (
-        <p className="ds-mint-actions">
-          <button type="button" className="ds-btn ds-btn--primary" onClick={() => setOpen(true)}>
-            + New share link
-          </button>
-        </p>
-      )}
-
-      {error && !open && <Callout tone="warn">{error}</Callout>}
+      {error && <Callout tone="warn">{error}</Callout>}
 
       {shares.length === 0 ? (
         <div className="ds-listcard">
@@ -294,7 +331,7 @@ export function ShareManager({
               Scope
             </Col>
             <Col header width="meta">
-              Expires · created
+              Expires · opens
             </Col>
             <Col header width="act">
               <span className="ds-visually-hidden">Actions</span>
@@ -317,7 +354,20 @@ export function ShareManager({
                 </Col>
                 <Col width="meta">
                   <Tag>{share.expiresAt === null ? 'No expiry' : formatUtc(share.expiresAt)}</Tag>
-                  <span className="ds-note">Made {formatUtc(share.createdAt)}</span>
+                  {/* ⚠️ **Times OPENED, never people** — mockups-as-built Story 4.2, and the unit is
+                      the whole point. A bearer URL can be forwarded to a room full of people from
+                      one email, so "opened N times" is the only honest reading; "N visitors" would
+                      be a number that reads as an audience and is not one.
+
+                      Zero is a real answer here and is written as words rather than as a bare `0`:
+                      the column also carries the created date, and "0 · Made 2026-09-01" invites the
+                      reader to compute a rate out of two numbers that do not support one. */}
+                  <span className="ds-note">
+                    {share.opens === 0
+                      ? 'Not opened yet'
+                      : `Opened ${share.opens.toLocaleString('en-US')} time${share.opens === 1 ? '' : 's'}`}{' '}
+                    · made {formatUtc(share.createdAt)}
+                  </span>
                 </Col>
                 <Col width="act">
                   {share.revokedAt === null && (

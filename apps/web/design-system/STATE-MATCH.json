@@ -37,8 +37,16 @@
     "/app/journeys/[projectSlug]/[journeyKey]": true,
     "/app/north-star/[projectSlug]": true,
     "/app/scenarios/[projectSlug]": true,
+    "/app/setup/connect/[projectSlug]": true,
+    "/app/setup/keys/[projectSlug]": true,
+    "/app/shares/[projectSlug]": true,
     "/app/tasks/[projectSlug]": true,
+    "/hub/[projectSlug]": true,
+    "/hub/[projectSlug]/horizon": true,
+    "/hub/[projectSlug]/report": true,
+    "/install": true,
     "/login": true,
+    "/s/[token]": true,
     "/signup": true,
     "/talk": true
   }

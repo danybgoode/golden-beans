@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { after } from 'next/server'
 import { isReportSharesEnabled } from '@/lib/flags'
 import { trackSelfEvent, SHARE_VIEWED_EVENT } from '@/lib/self-track'
-import { resolveShareToken } from '@/lib/report-shares'
+import { recordShareOpen, resolveShareToken } from '@/lib/report-shares'
 import { looksLikeShareToken } from '@/lib/share-token'
 import { getPodReportByProjectId } from '@/lib/pod-report-query'
 import { getHubRoadmapByProjectId } from '@/lib/hub-query'
@@ -83,6 +83,14 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   // not one. Never the token itself: that would write a live credential into the event stream.
   after(() => trackSelfEvent(SHARE_VIEWED_EVENT, `share:${share.shareId}`))
 
+  // ⚠️ **The OWNER'S OWN count, which the line above is not** — mockups-as-built Story 4.2.
+  // `trackSelfEvent` posts through the public API under `SELF_PROJECT_API_KEY`, so it lands in the
+  // SELF tenant: it is our telemetry about our product, and the project that owns this link can
+  // never see it. The approved `setup-shares` state draws an "opens" column on THEIR page, so the
+  // count has to live on their row. Two writes because they answer two different questions for two
+  // different readers, not because one is a fallback for the other.
+  after(() => recordShareOpen(share.shareId))
+
   const report = await getPodReportByProjectId(projectId, projectSlug, lens)
   if (!report.ok) {
     if (report.reason === 'query_failed') throw new Error('Pod report lookup failed')
@@ -109,21 +117,31 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
           lens={lens}
           artifactVersion={report.artifact.version}
           freshness={formatFreshness(report.artifact.generatedAt, new Date(), report.artifact.sourceCommit)}
+          // ⚠️ The approved `public-share` state is `sharehead → provenance → document` — no page
+          // head. The `.ds-sharehead` above ("Shared with you by … · Read only") IS this page's
+          // head, and a "Pod report" title under it would name the page twice to a reader who is
+          // not in the product (mockups-as-built Story 4.5).
+          withHead={false}
+          /* ⚠️ INSIDE the document, not beside it — mockups-as-built Story 4.5. The approved
+             `public-share` state is `sharehead → provenance → document`, and a strip rendered as a
+             sibling is a fourth block the design has no name for. */
+          appendix={
+            <>
+              {roadmap?.ok && policy.showJourney && (
+                <ShareJourneyStrip
+                  epics={roadmap.summary.epics}
+                  markerIndex={journeyMarkerIndex(roadmap.summary.epics)}
+                  counts={roadmap.summary.counts}
+                />
+              )}
+              {roadmap?.ok && policy.showHorizon && (
+                <ShareHorizonStrip counts={roadmap.summary.counts} seeds={roadmap.summary.seeds.length} />
+              )}
+            </>
+          }
         />
       ) : (
         <EmptyPodReportState projectSlug={projectSlug} />
-      )}
-
-      {roadmap?.ok && policy.showJourney && (
-        <ShareJourneyStrip
-          epics={roadmap.summary.epics}
-          markerIndex={journeyMarkerIndex(roadmap.summary.epics)}
-          counts={roadmap.summary.counts}
-        />
-      )}
-
-      {roadmap?.ok && policy.showHorizon && (
-        <ShareHorizonStrip counts={roadmap.summary.counts} seeds={roadmap.summary.seeds.length} />
       )}
 
       <ShareFooterNote />

@@ -6,6 +6,9 @@ import { dirname } from 'node:path'
 import { hashCredential } from '@/lib/credential-hash'
 import { generateShareToken } from '@/lib/share-token'
 import { CURRENT_CONTEXT_VERSION } from '@/lib/event-context'
+// The one version this engine accepts — read rather than retyped, so a bumped generator fails here
+// rather than seeding an artifact the product would reject.
+import { ROADMAP_SCHEMA_VERSION } from '@/lib/roadmap-artifact-schema'
 import {
   AUTHED_STATE_PATH,
   IMPACT_FEATURE_KEY,
@@ -177,6 +180,8 @@ setup('provision a disposable tenant and sign in through the real form', async (
   // ⚠️ Written into the record LAST, and the record is rewritten rather than patched: teardown reads
   // this file, so every write has to carry the whole thing.
   await seedDestinationFixture(db, membership.project_id as string)
+  await seedPodReportFixture(db, membership.project_id as string)
+  await seedRoadmapFixture(db, membership.project_id as string)
   const shareToken = await seedShareFixture(db, membership.project_id as string)
   writeRecord({
     userId,
@@ -873,6 +878,152 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
     if (extraValuesError)
       throw new Error(`could not seed the ${extra.key} series: ${extraValuesError.message}`)
   }
+}
+
+/**
+ * A REAL pushed roadmap artifact — mockups-as-built · Sprint 4, Story 4.4.
+ *
+ * ⚠️ **Same class of gap as the pod report beside it: `/hub/[projectSlug]` and `/hub/…/horizon`
+ * render their EMPTY states without one**, and the approved `hub-roadmap` and `hub-horizon` states
+ * describe populated boards. Both routes came out of the gate as `head → list` — the "nothing pushed
+ * yet" card — where the design draws seven blocks and four.
+ *
+ * The shape is `lib/roadmap-artifact-schema.ts`'s: Epics, Sprints keyed to their epic by
+ * `epic_slug`, and Seeds. Enough of each that `summarizeRoadmap`'s four counts are all non-zero and
+ * genuinely different — a fixture where every count is 1 cannot tell the four tiles apart, and one
+ * where every epic has shipped cannot tell "shipped" from "in the funnel".
+ *
+ * ⚠️ **One epic deliberately has NO `build_order_num`.** The approved state's own copy calls that
+ * out — *"1 epic has no build-order number yet, so it is in the list below and not on the track.
+ * Padding the track to make the arithmetic look right is how a board starts lying."* A fixture where
+ * every epic has a number could never render the sentence the design draws.
+ *
+ * Pushed through `push_report_artifact`, the product's own write path, for the reason the pod-report
+ * fixture gives: the RPC runs the payload CHECK, so a payload this accepts is one the API accepts.
+ */
+async function seedRoadmapFixture(db: SupabaseClient, projectId: string) {
+  const epic = (slug: string, name: string, status: string, order: number | null, area: string) => ({
+    name,
+    slug,
+    grain: 'Epic' as const,
+    status,
+    area,
+    build_order_num: order,
+    build_order: order,
+    status_date: '2026-09-01',
+    type: 'Feature',
+    risk: 'high',
+    epic_slug: null,
+  })
+  const sprint = (epicSlug: string, index: number, status: string) => ({
+    name: `Sprint ${index}`,
+    slug: `${epicSlug}--s${index}`,
+    grain: 'Sprint' as const,
+    status,
+    area: '02-commercial',
+    epic_slug: epicSlug,
+  })
+  const seed = (slug: string, name: string) => ({
+    name,
+    slug,
+    grain: 'Seed' as const,
+    status: 'idea',
+    area: '00-ideas',
+    epic_slug: null,
+  })
+
+  const { error } = await db.rpc('push_report_artifact', {
+    p_project_id: projectId,
+    p_kind: 'roadmap',
+    p_schema_version: ROADMAP_SCHEMA_VERSION,
+    p_payload: {
+      items: [
+        epic(
+          'fixture-console-ia',
+          'Four destinations — an information architecture',
+          'shipped',
+          1,
+          '02-commercial'
+        ),
+        epic('fixture-design-rails', 'One design system, every surface', 'shipped', 2, '02-commercial'),
+        epic('fixture-mockups', 'The mockups, as built', 'in-progress', 3, '02-commercial'),
+        // ⚠️ No `build_order_num` — the design draws the sentence about exactly this row.
+        epic('fixture-unbet', 'An idea nobody has bet on yet', 'scaffolded', null, '01-platform'),
+        sprint('fixture-console-ia', 1, 'shipped'),
+        sprint('fixture-console-ia', 2, 'shipped'),
+        sprint('fixture-design-rails', 1, 'shipped'),
+        sprint('fixture-mockups', 1, 'shipped'),
+        sprint('fixture-mockups', 2, 'in-progress'),
+        seed('fixture-seed-alerts', 'Alerting on a signal that has stopped arriving'),
+        seed('fixture-seed-digest', 'A weekly digest nobody has to open the console for'),
+      ],
+    },
+    p_generated_at: new Date().toISOString(),
+    p_source_commit: null,
+    p_source_ref: null,
+  })
+  if (error) throw new Error(`could not push the roadmap fixture: ${error.message}`)
+}
+
+/**
+ * A REAL pushed pod-report artifact — mockups-as-built · Sprint 4, Stories 4.4 and 4.5.
+ *
+ * ⚠️ **Without one, `/hub/report` and `/s/[token]` render their EMPTY states, and the approved
+ * states describe populated ones.** `hub-report` is `head → provenance → document` and
+ * `public-share` is `sharehead → provenance → document`; a tenant that has never pushed an artifact
+ * renders `head → list` (the "nothing pushed yet" card) on both. So the two routes could not have
+ * matched their pictures for any amount of work on the pages — it was a fixture gap wearing a
+ * product defect's clothes, the third one this epic has found (Destinations' empty list, the North
+ * Star's single input, and this).
+ *
+ * Pushed through `push_report_artifact`, which is the product's own write path: it allocates the
+ * monotonic version under a lock and runs `private.report_artifact_payload_is_valid`, so a payload
+ * this fixture accepts is one the API would have accepted. A direct insert would have bypassed both
+ * and could seed a row the product can never produce.
+ *
+ * The payload is the SHAPE `buildPodReportView` reads (`lib/pod-report-view.ts`), with small honest
+ * numbers rather than a copy of production's: `delivery.notInstrumented` is the one structural
+ * requirement (`lib/pod-report-schema.ts`), and it is non-empty on purpose — the report's whole
+ * argument is that the gaps ship beside the numbers, and a fixture declaring no gaps could not
+ * exercise the panel that says so.
+ *
+ * No teardown counterpart: `test-db-cleanup.ts` deletes `report_artifacts` by project, and the
+ * table deliberately has NO cascading FK (a project cleanup must not silently rewrite evidence a
+ * shared link already rendered).
+ */
+async function seedPodReportFixture(db: SupabaseClient, projectId: string) {
+  const { error } = await db.rpc('push_report_artifact', {
+    p_project_id: projectId,
+    p_kind: 'pod_report',
+    p_schema_version: 1,
+    p_payload: {
+      source: { repo: 'golden-frijoles/fixture', commits: 214, epics: 6, mergedPrs: 31, windowDays: 90 },
+      delivery: {
+        cycleTime: {
+          medianHours: 5.5,
+          interpretation: 'Time from a pull request opening to its first review, not to a release.',
+        },
+        epicLeadTime: { medianDays: 4, interpretation: 'From the first commit on an epic to its merge.' },
+        deployFrequency: { perWeek: 6, isProxy: true, proxyNote: 'Merges to the default branch.' },
+        epicThroughput: { perWeek: 1.5 },
+        authorship: [{ month: '2026-08', agentShare: 0.62, commits: 88 }],
+        // ⚠️ NON-EMPTY, deliberately — see the docstring. This is the panel the report exists for.
+        notInstrumented: [
+          {
+            key: 'change_failure_rate',
+            label: 'Change failure rate',
+            why: 'No incident record is linked to a deploy, so a rate computed here would read 0% and mean "not measured".',
+            guardrail: 'Record incidents against the release that caused them.',
+          },
+        ],
+      },
+      caveats: ['Every number is computed from this repository’s own git history, over a 90-day window.'],
+    },
+    p_generated_at: new Date().toISOString(),
+    p_source_commit: null,
+    p_source_ref: null,
+  })
+  if (error) throw new Error(`could not push the pod report fixture: ${error.message}`)
 }
 
 /**
