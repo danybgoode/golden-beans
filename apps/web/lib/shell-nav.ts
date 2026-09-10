@@ -2,7 +2,6 @@ import 'server-only'
 import { getSessionUser } from './supabase-auth'
 import { getUserProjects, type MemberProject } from './membership'
 import {
-  isConsoleShellEnabled,
   isExperimentGovernanceEnabled,
   isFlagConsoleEnabled,
   isFlagServingEnabled,
@@ -40,25 +39,23 @@ export type ShellNav = {
   /** Entitled, gate-open surfaces for `activeProject`, straight from the inventory. */
   links: ProjectSurfaceLink[]
   /**
-   * console-ia-overhaul · Story 1.3 — the four-section header, or `null` while the console gate is
-   * off (and whenever there is no active project to build one for).
+   * console-ia-overhaul · Story 1.3 — the four-section header, or `null` whenever there is no
+   * session to build one for.
    *
    * Resolved HERE rather than in the component, for the same reason `links` is: this is the one
    * module that has already read the session, the memberships and the gates, and a second resolution
    * point is a second thing that can disagree. `ProductShell` renders what it is handed.
    *
-   * `null` is what makes D4 auditable: with `CONSOLE_SHELL_ENABLED` unset this is never populated,
-   * so the component takes its legacy branch and the gate-off render is unchanged by construction —
-   * a property `git diff` can check, not one prose promises.
    */
   /**
    * The console chrome for this render, or `null` when it does not apply — the SINGLE field that
    * decides, deliberately.
    *
-   * Non-null exactly when `CONSOLE_SHELL_ENABLED` is open **and** there is a session. Not the env
-   * var alone: every element of the console (switcher, account menu, palette over entitled surfaces)
-   * presupposes a session, and the two demo dashboards render this shell anonymously. An anonymous
-   * visitor is not a degraded signed-in user.
+   * ⚠️ **Non-null exactly when there is a SESSION** — mockups-as-built Story 3.3 deleted
+   * `CONSOLE_SHELL_ENABLED`, and the session was always the other half of the condition. Every
+   * element of the console (switcher, account menu, palette over entitled surfaces) presupposes a
+   * session, and the two demo dashboards render this shell anonymously. An anonymous visitor is not
+   * a degraded signed-in user.
    *
    * A previous revision carried a separate `consoleEnabled` boolean beside this, with the chrome
    * branching on one and the account menu on the other — an invariant maintained by hand at four
@@ -99,25 +96,22 @@ function emptyHeader(activeSection: ShellSection) {
       'flag-serving': false,
       'journey-projections': false,
       signals: false,
-      'console-shell': false,
     },
   })
 }
 
 /** The gate values, read once per call. One resolution point, two consumers (header and rail). */
 function readGates(): ProjectSurfaceGates {
-  const consoleShell = isConsoleShellEnabled()
   return {
     'experiment-governance': isExperimentGovernanceEnabled(),
     'flag-console': isFlagConsoleEnabled(),
     'flag-serving': isFlagServingEnabled(),
     'journey-projections': isJourneyProjectionsEnabled(),
     signals: isSignalsEnabled(),
-    'console-shell': consoleShell,
-    // ⚠️ **`legacy-keys` and `legacy-flag-credentials` are GONE — design-system-rails S4.5.** They
-    // were derived inverses (`!consoleShell`) that swapped the three legacy credential routes out of
-    // the nav as their merged replacement swapped in. Story 4.5 retired those routes into permanent
-    // redirects, so there is nothing left to swap: the inverse became a switch with one position.
+    // ⚠️ **`console-shell` is GONE — mockups-as-built Story 3.3 deleted the flag.** It gated Setup ›
+    // Connect, which is now `gate: 'always'`. Two other derived gates (`legacy-keys`,
+    // `legacy-flag-credentials`) were deleted before it for the same reason design-system-rails S4.5
+    // gives: a gate whose value cannot change is a gate that reads like a decision while making none.
   }
 }
 
@@ -167,7 +161,10 @@ export async function getShellNav(
    */
   activeSection: ShellSection = 'home'
 ): Promise<ShellNav> {
-  const gateOpen = isConsoleShellEnabled()
+  // ⚠️ **`const gateOpen = isConsoleShellEnabled()` is GONE — mockups-as-built Story 3.3.** The
+  // console is not behind a flag any more, so `header` is decided by the one condition that always
+  // mattered: is there a SESSION. The two demo dashboards render this shell anonymously and still
+  // get `EMPTY`; that branch is unchanged and is the one this file's comments are really about.
   try {
     const user = await getSessionUser()
     // Anonymous is a legitimate state here: the demo project's dashboards render without a session
@@ -199,7 +196,7 @@ export async function getShellNav(
       return {
         ...EMPTY,
         userEmail: user.email ?? null,
-        header: gateOpen ? emptyHeader(activeSection) : null,
+        header: emptyHeader(activeSection),
       }
     }
 
@@ -224,7 +221,7 @@ export async function getShellNav(
       return {
         ...EMPTY,
         userEmail: user.email ?? null,
-        header: gateOpen ? emptyHeader(activeSection) : null,
+        header: emptyHeader(activeSection),
       }
     }
 
@@ -242,14 +239,12 @@ export async function getShellNav(
         role: activeProject.role,
         gates,
       }),
-      header: gateOpen
-        ? buildConsoleHeader({
-            activeSection,
-            activeProjectSlug: activeProject.slug,
-            projects,
-            gates,
-          })
-        : null,
+      header: buildConsoleHeader({
+        activeSection,
+        activeProjectSlug: activeProject.slug,
+        projects,
+        gates,
+      }),
     }
   } catch (error) {
     console.error('[shell-nav] could not resolve the section nav:', error)

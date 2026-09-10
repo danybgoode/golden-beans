@@ -81,7 +81,7 @@ export default async function AppHome({
         {/* console-ia-overhaul · Story 1.3 — this line renders exactly when the shell did NOT
             render an account menu, so sign-out is present once and never zero times.
 
-            It used to test `!isConsoleShellEnabled()`, which is a DIFFERENT question: the shell
+            It used to test the console flag directly, which is a DIFFERENT question: the shell
             also needs a resolved header and an email, and a signed-in user with no project (say,
             `/app?provision=failed`) has neither — so the gate being on suppressed this line while
             the shell fell back to the legacy header that has no account menu, leaving the page

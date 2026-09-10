@@ -89,12 +89,66 @@ export function readTenantRecord(): TenantRecord | null {
 //
 // Nothing extra is needed in auth.teardown.ts: every one of these tables is
 // `REFERENCES projects(id) ON DELETE CASCADE`, and teardown already deletes the project.
+/**
+ * mockups-as-built · Story 3.2 — the Activity fixture's flag, and how much history it gets.
+ *
+ * ⚠️ **28 rows, which is more than TWO pages of twelve.** A two-page fixture would let a bug that
+ * always returns the LAST page pass on `page=2`; with three pages, page 2 is neither the first nor
+ * the last and the spec can assert that the rows on it belong to neither.
+ */
+export const ACTIVITY_FIXTURE_FLAG_KEY = 'gb_e2e_activity_history'
+export const AUDIT_FIXTURE_ROWS = 28
+
 export const IMPACT_FEATURE_KEY = 'gb-e2e-impact-feature'
 export const IMPACT_INPUT_KEY = 'gb-e2e-impact-revenue'
 export const IMPACT_SERIES: ReadonlyArray<{ occurredOn: string; value: number }> = [
   { occurredOn: '2026-03-01', value: 120.5 },
   { occurredOn: '2026-03-02', value: 80 },
   { occurredOn: '2026-03-03', value: 240.25 },
+]
+
+/**
+ * mockups-as-built · Story 3.1 — the OTHER TWO leading inputs, and why there have to be three.
+ *
+ * ⚠️ **The approved `measure-north-star` state draws THREE small plots, and the contract asserts the
+ * count** — `smallplots: { count: 3 }` in `STATE-CONTRACT.json`. It is three because production
+ * `miyagisanchez` holds exactly three `leading_inputs` (epic D13-b, counted against the live
+ * database on 2026-09-09), and the design was drawn against that shape.
+ *
+ * The fixture had ONE, because the only thing that had ever needed an input was
+ * `/app/impact/<slug>/<featureKey>`, which renders whatever number it finds. A fixture with one of
+ * something cannot tell a three-plot design from a one-plot page — the same class as the `.at(-1)`
+ * ordering bug that stayed green for a whole epic (LEARNINGS). So the fixture is brought up to the
+ * shape the design is drawn for.
+ *
+ * ⚠️ **Only the first is linked to a FEATURE.** `/app/impact/…` reads through `feature_inputs` and
+ * asserts what THIS feature feeds; `/app/north-star/…` reads every input the project has. Linking
+ * all three would make the two reads identical on the fixture and hide the difference between them —
+ * which is precisely the difference Story 3.1 exists to draw. An input attached to no feature still
+ * feeds the metric, and this fixture now proves that.
+ */
+export const NORTH_STAR_EXTRA_INPUTS: ReadonlyArray<{
+  key: string
+  name: string
+  series: ReadonlyArray<{ occurredOn: string; value: number }>
+}> = [
+  {
+    key: 'gb-e2e-impact-signups',
+    name: 'Signups (fixture)',
+    series: [
+      { occurredOn: '2026-03-01', value: 12 },
+      { occurredOn: '2026-03-02', value: 19 },
+      { occurredOn: '2026-03-03', value: 17 },
+    ],
+  },
+  {
+    // ⚠️ NO series at all, deliberately. One of the three plots renders the "nothing recorded yet"
+    // state, which is a state the approved design's freshness line contemplates and which a fixture
+    // where every input has data could never exercise. An empty series is not a zero.
+    key: 'gb-e2e-impact-support',
+    name: 'Support replies < 4h (fixture)',
+    series: [],
+  },
 ]
 
 /**

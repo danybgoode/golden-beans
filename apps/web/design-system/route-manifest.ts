@@ -219,6 +219,26 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
   },
 
   // ── Measure ─────────────────────────────────────────────────────────────────────────────────
+  //
+  // mockups-as-built · Sprint 3, Story 3.1 (epic D14) — the route the substitution stood in for.
+  {
+    route: '/app/north-star/[projectSlug]',
+    page: 'app/north-star/[projectSlug]/page.tsx',
+    label: 'North Star',
+    frame: 'console',
+    seam: 'product-shell',
+    surface: 'north-star',
+    referenceState: 'measure-north-star',
+    rendersFromDesignSystem: true,
+    // ⚠️ `landsIn` is `design-system-rails`' sprint numbering, and this route post-dates that epic —
+    // `Sprint` is a closed 1-6 union and there is no honest value for "a later epic built it". `6`
+    // is the truthful reading of the only question the field is asked: was this route live at the
+    // end of the numbered run. It was not built by Sprint 6; it is live from here on, which is what
+    // `liveRows` uses the row for. `retiresIn` is the field that actually moves the denominator.
+    landsIn: 6,
+    retiresIn: null,
+    deferred: null,
+  },
   {
     route: '/app/impact/[projectSlug]/[featureKey]',
     page: 'app/impact/[projectSlug]/[featureKey]/page.tsx',
@@ -226,16 +246,33 @@ export const ROUTE_MANIFEST: readonly CoverageRow[] = [
     frame: 'console',
     seam: 'product-shell',
     surface: null,
-    // ⚠️ An architect mapping, not one the sprint doc made. The approved Measure rail opens on
-    // "North Star", and the product has no `/app/north-star` route — but `/app/impact/…` reads
-    // `getFeatureImpact` from `lib/north-star-query.ts` and is the only route in the product that
-    // renders the North Star and a lift against it. So this route IS that state, feature-scoped,
-    // rather than a route left without one.
+    // ⚠️ **This route BORROWS `measure-north-star` — it no longer MATCHES it (epic D14, D14-b).**
+    //
+    // It carried the state as an architect's substitution for a route that did not exist. Story 3.1
+    // built `/app/north-star/[projectSlug]`, so the substitution is over — but the approved 33 hold
+    // no impact screen, and a `referenceState: null` here would put a route in the denominator that
+    // can never be covered, closing the epic at 27/28 forever.
+    //
+    // Daniel's call, 2026-09-10: it borrows. That is the D2-d mechanism doing exactly its job — a
+    // per-row, owned, dated exemption for a route that carries a state's LANGUAGE without matching
+    // its structure, rather than a gate loosened for everyone. This page is a North Star screen,
+    // feature-scoped; it answers *"what does THIS FEATURE feed"* where the state answers *"what
+    // feeds the North Star"*, so it cannot match and never could.
     referenceState: 'measure-north-star',
     rendersFromDesignSystem: true,
     landsIn: 5,
     retiresIn: null,
     deferred: null,
+    borrowsState: {
+      owner: 'Daniel',
+      until: '2027-03-31',
+      why:
+        'The approved 33 hold no impact screen. This route answers "what does THIS FEATURE feed" ' +
+        'and `measure-north-star` answers "what feeds the North Star" — the same language about a ' +
+        'different subject, so it borrows the state rather than matching a structure it cannot ' +
+        'have. It stops borrowing on the day a per-feature impact screen is designed, or the day ' +
+        'this route is retired into the feature page\u2019s Impact tab, which already covers it.',
+    },
   },
   {
     route: '/app/funnel/[projectSlug]/[featureKey]',

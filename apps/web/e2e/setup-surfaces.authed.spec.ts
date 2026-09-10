@@ -7,11 +7,15 @@ import { readTenantRecord } from './helpers/authed-fixture'
 // actually say — the honest connector status, the capability column, the member/owner boundary —
 // needs a session, so it lives here.
 //
-// ⚠️ NOT in the blocking gate. Run with `npm run test:e2e:authed` and
-// `CONSOLE_SHELL_ENABLED=true`; the PR body states the run and its result rather than implying CI
-// covered it. LEARNINGS: a suite outside the gate decays silently.
-
-const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
+// ⚠️ **IN the blocking gate since design-system-rails Sprint 5** — `ci.yml` runs the whole `authed`
+// project, so the header's old "NOT in the blocking gate, run it by hand" is out of date.
+//
+// ⚠️ **`GATE_ON` is GONE — mockups-as-built Story 3.3 deleted `CONSOLE_SHELL_ENABLED`.** It read
+// that variable and skipped the whole describe when it was unset; with the variable deleted from
+// `ci.yml` and from `run-local-e2e.mjs`, leaving it would have skipped this file in every run
+// forever. It is the only automated check on Setup's connector status, its member/owner boundary
+// and its capability column. LEARNINGS: a suite outside the gate decays silently — and a suite that
+// skips itself is outside the gate while looking like it is inside it.
 
 function tenantSlug(): string {
   const slug = readTenantRecord()?.slug
@@ -19,9 +23,7 @@ function tenantSlug(): string {
   return slug
 }
 
-test.describe('Setup surfaces with the console on', () => {
-  test.skip(!GATE_ON, 'run with CONSOLE_SHELL_ENABLED=true to exercise these routes')
-
+test.describe('Setup surfaces', () => {
   test('Connect shows the honest status, and never claims Claude has used it', async ({ page }) => {
     const response = await page.goto(`/app/setup/connect/${tenantSlug()}`)
     expect(response?.status()).toBe(200)

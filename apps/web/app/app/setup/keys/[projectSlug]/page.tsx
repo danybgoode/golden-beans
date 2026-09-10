@@ -18,11 +18,12 @@ import { KeysSurface } from './keys-surface'
 // the replacement and retire the original together, never as a cleanup story.
 //
 // ── The gate: OWNER, at the route, unchanged — and no longer console-gated ────────────────────
-// ⚠️ `isConsoleShellEnabled()` is GONE from this page, and dropping it was forced by the retirement
-// rather than chosen. While the three legacy routes minted, this page was an additional surface and
-// gating it cost nothing. Now it is the ONLY surface: a `CONSOLE_SHELL_ENABLED=false` rollback would
-// have left a project unable to issue any credential at all, and the legacy routes redirect HERE, so
-// the rollback would have produced a redirect loop into a 404. The auth boundary is untouched —
+// ⚠️ The console flag is GONE from this page, and dropping it was forced by the retirement rather
+// than chosen. While the three legacy routes minted, this page was an additional surface and gating
+// it cost nothing. Once it became the ONLY surface, a closed console gate would have left a project
+// unable to issue any credential at all, and the legacy routes redirect HERE, so the rollback would
+// have produced a redirect loop into a 404. (mockups-as-built Story 3.3 has since deleted that flag
+// outright, so the hazard is gone rather than merely avoided.) The auth boundary is untouched —
 // `requireProjectOwnership` at the route, exactly as all four surfaces have always had it, and a
 // member still gets a flat 404 (`lib/setup-route-guards.test.ts` pins that).
 export const dynamic = 'force-dynamic'

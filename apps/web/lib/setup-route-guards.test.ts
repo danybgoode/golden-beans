@@ -421,24 +421,21 @@ test('closedConnectorGate refuses when the CONNECTOR gate is off — AGENTS rule
   // on one unasserted line: deleting `if (!connectorEnabled)` left every other guard in this file
   // green while minting became reachable with the connector switched off.
   //
-  // Behavioural — all four combinations, run — not a source scan.
-  assert.equal(closedConnectorGate({ connectorEnabled: true, consoleEnabled: true }), null)
+  // ⚠️ **The `consoleEnabled` half is GONE — mockups-as-built Story 3.3 deleted
+  // `CONSOLE_SHELL_ENABLED`.** It was checked because this action served a page that 404'd while the
+  // console was dark; the console is not behind a flag any more and the page always exists, so that
+  // branch could never be taken. Rule #3 itself is untouched and is what these two lines are for.
+  //
+  // Behavioural — both combinations, run — not a source scan.
+  assert.equal(closedConnectorGate({ connectorEnabled: true }), null)
   assert.equal(
-    closedConnectorGate({ connectorEnabled: false, consoleEnabled: true }),
+    closedConnectorGate({ connectorEnabled: false }),
     'connector',
     'minting is permitted with the connector switched off'
   )
-  assert.equal(
-    closedConnectorGate({ connectorEnabled: true, consoleEnabled: false }),
-    'console',
-    'minting is permitted while the console is dark'
-  )
-  // Both closed names the CONNECTOR first, deliberately: it is the one rule #3 is about, and an
-  // operator told "the console is off" while the connector was also off would fix the wrong thing.
-  assert.equal(closedConnectorGate({ connectorEnabled: false, consoleEnabled: false }), 'connector')
 })
 
-test('the mint action feeds BOTH env gates into the predicate', () => {
+test('the mint action feeds the connector gate into the predicate', () => {
   // The half a source scan is actually good for: the decision is unit-tested above, but nothing
   // there can see whether this action still passes it the real values.
   const actions = stripComments(
@@ -450,7 +447,6 @@ test('the mint action feeds BOTH env gates into the predicate', () => {
   const start = actions.indexOf('function closedGate()')
   const body = actions.slice(start, actions.indexOf('\n}', start))
   assert.match(body, /connectorEnabled: isConnectorEnabled\(\)/, 'the connector gate is not read')
-  assert.match(body, /consoleEnabled: isConsoleShellEnabled\(\)/, 'the console gate is not read')
 })
 
 // ── B1: the legacy Connect link must never point at a gated route ─────────────────────────────

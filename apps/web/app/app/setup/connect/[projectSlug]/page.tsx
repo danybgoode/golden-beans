@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { isConnectorEnabled, isConsoleShellEnabled } from '@/lib/flags'
+import { isConnectorEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getConnectorStatus } from '@/lib/connector-tokens'
 import { formatUtc } from '@/lib/format-utc'
@@ -23,13 +22,15 @@ import { ConnectorManager } from './connector-manager'
 // **all of it is kept** (sprint contract #9). What this story adds is the half that makes setup a
 // task rather than a credential screen.
 //
-// ── Gate: dark means nonexistent, before auth ─────────────────────────────────────────────────
-// The flag check runs BEFORE `requireProjectMembership`, so while the console is dark this 404s for
-// everyone rather than leaking its existence through a login redirect.
+// ── The console gate is GONE — mockups-as-built Story 3.3 ─────────────────────────────────────
+// This page opened with `if (!isConsoleShellEnabled()) notFound()`, so that while the console was
+// dark it 404'd for everyone before auth rather than leaking its existence through a login
+// redirect. `CONSOLE_SHELL_ENABLED` is deleted from the repository and from every Vercel
+// environment; the console is the console. Nothing about AUTHORIZATION changed — the flag never was
+// one, and `requireProjectMembership` below is untouched.
 export const dynamic = 'force-dynamic'
 
 export default async function SetupConnectPage({ params }: { params: Promise<{ projectSlug: string }> }) {
-  if (!isConsoleShellEnabled()) notFound()
   const { projectSlug } = await params
   // MEMBER gate. Reading your own project's connector URL is how its operators point an agent at
   // their data — that is not credential administration. MINTING one is, and the action re-checks

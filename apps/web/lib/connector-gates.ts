@@ -14,7 +14,11 @@
 // Zero imports on purpose: the caller supplies the already-read env values, which is what keeps this
 // testable without booting a differently-enved process.
 
-export type ConnectorGate = 'connector' | 'console' | null
+// ⚠️ **`'console'` is GONE — mockups-as-built Story 3.3 deleted `CONSOLE_SHELL_ENABLED`.** The
+// console is not behind a flag any more; there is no state in which this action serves a page that
+// does not exist, so there is no second gate to report. `connectorEnabled` is the whole rule #3
+// question and always was — the console check was about a 404 that can no longer happen.
+export type ConnectorGate = 'connector' | null
 
 /**
  * Which gate is closed, or `null` when minting may proceed.
@@ -24,18 +28,17 @@ export type ConnectorGate = 'connector' | 'console' | null
  * off would stop it serving while still letting an owner mint credentials for it. A switch you can
  * route around is not a switch.
  *
- * `consoleEnabled` is checked because the action exists only to serve a page that 404s without it,
- * and a server action is reachable by POST whether or not its page ever rendered.
+ * ⚠️ **The `consoleEnabled` half is gone with `CONSOLE_SHELL_ENABLED` (Story 3.3).** It existed
+ * because the action served a page that 404'd while the console was dark; nothing is dark now, so
+ * the second branch could never be taken. A gate whose value cannot change is a gate that reads
+ * like a decision while making none — the same argument `project-route-inventory.ts` records for
+ * the `legacy-keys` gate it deleted for exactly this reason.
  *
- * **The connector is reported FIRST when both are closed**, and that ordering is deliberate: it is
- * the one that matters for rule #3, and an operator told "the console is off" while the connector
- * was also off would go and fix the wrong thing.
+ * The signature stays an OBJECT with one field rather than collapsing to a bare boolean: this is
+ * the seam AGENTS rule #3 rests on, and a second gate arriving later must be an added field rather
+ * than a changed shape at every call site.
  */
-export function closedConnectorGate(input: {
-  connectorEnabled: boolean
-  consoleEnabled: boolean
-}): ConnectorGate {
+export function closedConnectorGate(input: { connectorEnabled: boolean }): ConnectorGate {
   if (!input.connectorEnabled) return 'connector'
-  if (!input.consoleEnabled) return 'console'
   return null
 }

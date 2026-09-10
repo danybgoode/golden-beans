@@ -150,11 +150,17 @@ test('the denominator moves exactly as the D13 ledger says', () => {
   // 29 today; Story 4.5 retires three credential routes and Story 4.3 adds Scheduled changes.
   // Written as an assertion because "29" is quoted in four documents and a number in a document is
   // what this epic exists to stop trusting.
+  //
+  // ⚠️ **+1 — mockups-as-built Story 3.1 (epic D14): `/app/north-star/[projectSlug]`.** The approved
+  // Measure rail opened on North Star and the product had no such route, so `measure-north-star` was
+  // mapped onto `/app/impact/…` as an architect's substitution. Story 3.1 built the route and
+  // unmapped the substitution; `/app/impact/…` keeps its own identity with no approved state, which
+  // is why the denominator moves and the "has a state" count does not.
   const beforeSprint4 = liveRows(3)
   const atClose = liveRows(6)
 
-  assert.equal(beforeSprint4.length, 30, 'every row is live before Story 4.5 retires three')
-  assert.equal(atClose.length, 27, 'after Story 4.5: 30 rows minus the three retired')
+  assert.equal(beforeSprint4.length, 31, 'every row is live before Story 4.5 retires three')
+  assert.equal(atClose.length, 28, 'after Story 4.5: 31 rows minus the three retired')
 
   // ...and the row that does not exist yet is the one Daniel approved as a designed empty state.
   const scheduled = ROUTE_MANIFEST.find((row) => row.route === '/app/scheduled/[projectSlug]')
@@ -174,7 +180,7 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   // it would make the number measure intent rather than product, which is the failure the epic is
   // named after.
   const now = coverage(1)
-  assert.equal(now.total, 30)
+  assert.equal(now.total, 31)
   // ⚠️ **`>=`, not `>` — and the change is the whole point of Sprint 6.** This line asserted
   // `hasReferenceState > complete` under the message "reference states exist ahead of the work",
   // which was true for five sprints and is FALSE at epic close by design: the work caught up. The
@@ -192,17 +198,23 @@ test('coverage counts a route only when BOTH booleans are true', () => {
   assert.equal(now.outstanding.length, now.total - now.complete)
 
   // ── Story 6.5's headline, asserted rather than printed ──────────────────────────────────────
-  // `scripts/design-coverage.mjs` prints 27/27 and the ratchet stops it falling. Neither says the
-  // finish line was actually REACHED — the ratchet is satisfied by 26/27 forever. This is the line
-  // that goes red if the epic closes short, and it is deliberately a literal: the epic's Definition
-  // of Done names 27, and a number derived from the manifest would agree with the manifest by
-  // construction whatever the manifest said.
+  // `scripts/design-coverage.mjs` prints the number and the ratchet stops it falling. Neither says
+  // the finish line was actually REACHED — the ratchet is satisfied by N-1/N forever. This is the
+  // line that goes red if the epic closes short, and it is deliberately a literal: a number derived
+  // from the manifest would agree with the manifest by construction whatever the manifest said.
+  //
+  // ⚠️ **28, not 27 — mockups-as-built epic D14.** `design-system-rails` closed at 27/27 with the
+  // approved `measure-north-star` state mapped onto `/app/impact/…`, an architect's substitution
+  // for a route that did not exist. Story 3.1 built `/app/north-star/[projectSlug]`; the
+  // substitution is over and `/app/impact/…` now BORROWS that state (D14-b, Daniel 2026-09-10) —
+  // the same language about a different subject. So the denominator moves by exactly one and the
+  // epic can still close as a clean sweep.
   const atClose = coverage(6)
-  assert.equal(atClose.total, 27, 'the epic-close denominator is not the 27 the D13 ledger computes')
+  assert.equal(atClose.total, 28, 'the epic-close denominator is not the 28 the D14 ledger computes')
   assert.equal(
     atClose.complete,
-    27,
-    `the epic closes at ${atClose.complete}/27 — outstanding: ${atClose.outstanding.join(', ')}`
+    28,
+    `the epic closes at ${atClose.complete}/28 — outstanding: ${atClose.outstanding.join(', ')}`
   )
 
   // ⚠️ **This used to assert `complete === 0`, "nothing renders from design-system/ in Sprint 1".**
@@ -294,7 +306,7 @@ test('every row names a seam, and the seam matches the frame', () => {
   }
 
   const bySeam = (seam: string) => liveRows(3).filter((row) => row.seam === seam).length
-  assert.equal(bySeam('product-shell'), 21, 'seam A: the 20 console routes today, plus Scheduled')
+  assert.equal(bySeam('product-shell'), 22, 'seam A: the 20 console routes, plus Scheduled and North Star')
   assert.equal(bySeam('frame'), 9, 'seam B: four hub routes and five doors')
 })
 

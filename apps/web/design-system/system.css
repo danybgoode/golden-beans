@@ -1899,7 +1899,18 @@
 .ds .ds-tl--off .ds-tl-dot {
   background: var(--red);
 }
+/* ⚠️ **A COLUMN, and without this the whole entry rendered as one crammed line.**
+   `flag-audit-timeline.tsx` renders the title, the timestamp and the reason as three `<span>`s.
+   Spans are inline, so they laid out side by side and every `margin-top` below them did nothing —
+   `Daniel turned x on in Development2026-08-26 16:48Reason: Testing`, on one line, at three
+   different sizes. The approved `ship-activity` state draws three lines
+   (`console-prototype.html:511-517`, where the equivalents are `<div>`s).
+   Found by mockups-as-built Story 3.2 by LOOKING at the page while adding its pager. Nothing could
+   have caught it before: the structural contract counts blocks, and the route matched its approved
+   signature the whole time it looked like this. */
 .ds .ds-tl-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .ds .ds-tl-title {
@@ -1912,10 +1923,16 @@
   font-family: var(--mono);
   margin-top: 2px;
 }
+/* The quoted reason, with the approved left rule (`console-prototype.html:514`). `align-self` keeps
+   the rule the height of the text rather than the height of the row — the prototype gets there with
+   `display: inline-block`, which a flex item cannot use. */
 .ds .ds-tl-reason {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding-left: 9px;
+  border-left: 2px solid var(--line);
   font-size: 12.5px;
   color: var(--dim);
-  margin-top: 3px;
   max-width: 78ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2573,9 +2590,20 @@
  * says "this is the important one" about a set of one. `380px` is about the approved card's width
  * at three-up, so a lone card is the size it would be beside two others and the row fills from the
  * left. Found by looking at the rendered page; nothing structural could see it. */
+/* ⚠️ **THREE COLUMNS, which is what the approved design draws** — `console-prototype.html:713` is
+   `repeat(3, 1fr)`. This was `repeat(auto-fit, minmax(230px, 380px))`, and the 380px cap meant that
+   in the console's 1120px content column only TWO of three plots fitted per row: the approved
+   `measure-north-star` state's three small multiples wrapped 2 + 1. The structural contract counts
+   three and found three — a count is not a layout, and only opening the page shows the difference.
+
+   Fixed tracks rather than `auto-fit`, deliberately: with one input `auto-fit` would stretch a
+   single tile across the whole column, and the prototype leaves the other two tracks empty. A
+   number's tile is the same size whether or not it has neighbours.
+
+   The 900px query below collapses it to one column, which is unchanged. */
 .ds .ds-chart-smalls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 380px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -5057,11 +5085,15 @@
 /* ── Guardrails, the split check and the decision — `experiment-ready` blocks 4, 5 and 6 ───────
    Ported from `console-prototype.html:643` (`.wordlist`), `:3073` and `:893` (`.outcomes`). */
 
-/* ⚠️ The strikethrough on the LEFT-HAND word is the approved design's, and it is deliberate here
-   rather than copied by accident: `.wordlist` is the prototype's before/after list, and the
-   guardrails panel is the one place it renders a name that is not being replaced. Built exactly as
-   drawn (epic: THE ONE RULE) and raised with the product owner rather than quietly "corrected" —
-   an improvement is the move that produced this epic. */
+/* ⚠️ **NO STRIKETHROUGH ON THE NAME — an APPROVED DEVIATION, Daniel, 2026-09-10.**
+   The prototype's `.wordlist .was` is `text-decoration: line-through` in `--red-deep`, because that
+   class is its BEFORE/AFTER list and its left-hand word is the thing being replaced. The guardrails
+   panel reuses it for a guardrail's NAME, which is not being replaced by anything — so the approved
+   PNG shows "Refund rate" and "Median load time" struck through in red, reading as "this guardrail
+   is gone" on a panel whose subject is guardrails that still apply.
+   Raised rather than corrected (epic: THE ONE RULE — if you believe a mockup is wrong, ASK), and
+   Daniel ruled it a class-reuse accident. This is the only deviation from the approved design in
+   this epic and it carries his name and its date. */
 .ds .ds-wordlist {
   display: flex;
   flex-direction: column;
@@ -5086,8 +5118,6 @@
   flex: 1;
   min-width: 0;
   color: var(--dim-2);
-  text-decoration: line-through;
-  text-decoration-color: var(--red-deep);
 }
 
 .ds .ds-wordlist-arrow {
@@ -5160,4 +5190,70 @@
 .ds .ds-outcome[aria-pressed='true']:not([disabled]) {
   border-color: var(--gold-deep);
   color: var(--gold);
+}
+
+/* ── The Activity pager — mockups-as-built Story 3.2 ───────────────────────────────────────────
+   ⚠️ The approved `ship-activity` state draws NO pagination control: its fixture is exactly twelve
+   rows and fits on one page, while production holds 148. So the page size comes from the design and
+   this control is built — inside the list card, which is what keeps the route's approved signature
+   at `head → list` rather than adding a block the design has no name for.
+
+   Three cells with the count centred, so the two steps sit at the edges whether or not both exist —
+   the spacer holds the empty side open rather than letting the count slide across. */
+.ds .ds-pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--roast-2);
+  font-size: 12.5px;
+}
+
+.ds .ds-pager-step {
+  color: var(--crema);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  justify-self: start;
+  transition:
+    border-color var(--t),
+    background var(--t);
+}
+
+.ds .ds-pager-step[rel='next'] {
+  justify-self: end;
+}
+
+.ds .ds-pager-step:hover {
+  border-color: var(--gold-deep);
+  background: var(--card-2);
+}
+
+.ds .ds-pager-count {
+  color: var(--dim-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+/* The empty half of the row. `aria-hidden` is unnecessary — it has no text — but it must still
+   occupy its track so the count stays centred on the first and last pages. */
+.ds .ds-pager-spacer {
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .ds .ds-pager {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 8px;
+  }
+
+  .ds .ds-pager-step,
+  .ds .ds-pager-step[rel='next'] {
+    justify-self: center;
+  }
 }

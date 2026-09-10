@@ -1,6 +1,6 @@
 'use server'
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
-import { isConnectorEnabled, isConsoleShellEnabled } from '@/lib/flags'
+import { isConnectorEnabled } from '@/lib/flags'
 import { mintConnectorToken, revokeConnectorToken } from '@/lib/connector-tokens'
 import { recordAudit } from '@/lib/audit'
 import { closedConnectorGate, type ConnectorGate } from '@/lib/connector-gates'
@@ -37,10 +37,12 @@ function requireString(value: unknown, field: string): string {
  * off would stop it serving while still letting an owner mint credentials for it — a switch you can
  * route around is not a switch.
  *
- * `CONSOLE_SHELL_ENABLED` is checked because this action exists only to serve a page that 404s
- * without it, and a server action is reachable by POST whether or not its page ever rendered.
+ * ⚠️ **The `CONSOLE_SHELL_ENABLED` half is GONE — Story 3.3 deleted the flag.** It was checked
+ * because this action served a page that 404'd while the console was dark, and a server action is
+ * reachable by POST whether or not its page ever rendered. Nothing is dark now; the page always
+ * exists, so the branch could never be taken.
  */
-// The two env reads, handed to the pure predicate in `lib/connector-gates.ts`.
+// The env read, handed to the pure predicate in `lib/connector-gates.ts`.
 //
 // The DECISION lives there, not here, so it can be run as a truth table by the unit layer — this
 // action cannot be imported by `node --test` (its `@/…` aliases do not resolve), so anything decided
@@ -50,10 +52,7 @@ function requireString(value: unknown, field: string): string {
 // What remains here is only the wiring, and `setup-route-guards.test.ts` pins that BOTH values reach
 // the predicate — the one thing a source scan is actually good for.
 function closedGate(): ConnectorGate {
-  return closedConnectorGate({
-    connectorEnabled: isConnectorEnabled(),
-    consoleEnabled: isConsoleShellEnabled(),
-  })
+  return closedConnectorGate({ connectorEnabled: isConnectorEnabled() })
 }
 
 export async function mintConnectorAction(slug: unknown) {
@@ -62,10 +61,7 @@ export async function mintConnectorAction(slug: unknown) {
   if (blocked !== null) {
     return {
       ok: false as const,
-      error:
-        blocked === 'connector'
-          ? 'The MCP connector is switched off for this deployment, so a URL would not serve.'
-          : 'The new console is not enabled for this deployment.',
+      error: 'The MCP connector is switched off for this deployment, so a URL would not serve.',
     }
   }
 

@@ -56,8 +56,19 @@ const VIEWPORT = { width: 1440, height: 960 }
  * as off and served the legacy render. The suite then failed hard against markup it never claims to
  * describe (fresh reviewer, round 2).
  */
+// ⚠️ **`CONSOLE_SHELL_ENABLED` is GONE from this predicate — mockups-as-built Story 3.3 deleted the
+// flag.** Leaving it in would have been the worst possible outcome of that deletion: with the
+// variable unset everywhere, `gatesAreLit()` is permanently false and THIS SUITE — the epic's
+// flagship gate, the one thing that can go red on the way a page looks — would skip itself in every
+// run and report green having asserted nothing. That is the exact failure this repo has recorded
+// twice (`SIGNUP_ENABLED`, `FLAG_CONSOLE_ENABLED`), and it is worse here because the suite is the
+// blocking gate rather than an opt-in rail.
+//
+// `FLAG_CONSOLE_ENABLED` stays: it is a real flag with a real dark state that CI asserts on the
+// `:3100` server, and the exact `=== 'true'` comparison is what keeps `"false"` from reading as
+// truthy the way it once did.
 function gatesAreLit(): boolean {
-  return process.env.CONSOLE_SHELL_ENABLED === 'true' && process.env.FLAG_CONSOLE_ENABLED === 'true'
+  return process.env.FLAG_CONSOLE_ENABLED === 'true'
 }
 
 function tenant() {
@@ -119,7 +130,7 @@ async function openFeatures(page: Page): Promise<void> {
 test.describe('the console matches the approved design', () => {
   test.skip(
     !gatesAreLit(),
-    'the visual gate asserts the LIT console; run with CONSOLE_SHELL_ENABLED=true and FLAG_CONSOLE_ENABLED=true'
+    'the visual gate asserts the LIT flag console; run with FLAG_CONSOLE_ENABLED=true'
   )
 
   test('Ship › Features at 1440x960 matches the approved prototype', async ({ page }) => {
@@ -545,6 +556,8 @@ const EXPECTED_SKIPS = [
 const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
   '/app': () => '/app',
   '/app/tasks/[projectSlug]': (slug) => `/app/tasks/${slug}`,
+  // mockups-as-built Story 3.1 — the route `measure-north-star` was substituted for until now.
+  '/app/north-star/[projectSlug]': (slug) => `/app/north-star/${slug}`,
   '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
   '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
   '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,
@@ -1336,7 +1349,12 @@ test('a borrowed state is owned and has not expired', () => {
   // nobody ever closes.
   const today = new Date().toISOString().slice(0, 10)
   const borrows = ROUTE_MANIFEST.filter((row) => row.borrowsState)
-  expect(borrows.length, 'update this count when a route starts or stops borrowing a state').toBe(2)
+  // ⚠️ **THREE since mockups-as-built Story 3.1.** `/app/impact/[projectSlug]/[featureKey]` carried
+  // `measure-north-star` as an architect's SUBSTITUTION for a route that did not exist; Story 3.1
+  // built that route, and Daniel ruled (2026-09-10, epic D14-b) that the impact page borrows the
+  // state rather than losing it — the approved 33 hold no impact screen, and a route in the
+  // denominator with no state could never be covered.
+  expect(borrows.length, 'update this count when a route starts or stops borrowing a state').toBe(3)
   for (const row of borrows) {
     const borrow = row.borrowsState!
     expect(borrow.owner.length, `${row.route} borrows a state with no owner`).toBeGreaterThan(0)

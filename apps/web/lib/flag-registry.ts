@@ -120,6 +120,16 @@ export async function getFlagRegistryView(projectId: string): Promise<{
       )
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
+      // ⚠️ **A TIEBREAKER, added by mockups-as-built Story 3.2 because pagination needs a TOTAL
+      // order.** `created_at` alone is not one: two audit rows written in the same transaction — a
+      // definition created and activated together, a bulk catalog sync — share a timestamp, and
+      // Postgres is free to return them in either order between two queries. Unpaginated that is
+      // invisible; sliced into pages it means a row can appear on page 1 and again on page 2 while
+      // another is skipped entirely, with every count still correct.
+      //
+      // `id` is a UUID and carries no meaning, which is the point: it is an arbitrary but STABLE
+      // discriminator, so equal timestamps resolve the same way on every request.
+      .order('id', { ascending: false })
       .limit(200),
   ])
   if (versionsResult.error || activationsResult.error || statesResult.error || auditResult.error) {

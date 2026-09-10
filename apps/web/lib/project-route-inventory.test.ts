@@ -21,7 +21,6 @@ const allGatesOpen: ProjectSurfaceGates = {
   signals: true,
   // Console ON ⇒ `legacy-keys` OFF, always. A7 makes them inverses, and a fixture that set both
   // true would be asserting against a state `readGates()` cannot produce.
-  'console-shell': true,
 }
 
 /**
@@ -98,11 +97,16 @@ test('members see every live member surface but never owner-only or flow-only ro
     // console-ia-overhaul Story 1.2 (D3): `funnel` and `impact` used to lead this list. They are
     // gone — not because the routes were deleted (they still render) but because neither could be
     // linked without a placeholder key. Their absence here IS the acceptance criterion.
+    //
+    // ⚠️ **`north-star` LEADS the list — mockups-as-built Story 3.1.** It is Measure's first surface
+    // and therefore the section's entry (`getSectionEntryHref` takes `[0]`), which is how "the
+    // approved Measure rail opens on North Star" is expressed. Its position IS the assertion.
     // design-system-rails S4.3: `scheduled` joins them. It is MEMBER-readable for the same reason
     // `flag-audit` is, and then some — the page holds no data at all, so owner-gating a surface
     // whose entire content is "this is not built yet" would tell a member less than it tells
     // everyone else for no boundary in return.
     [
+      'north-star',
       'journeys',
       // ⚠️ `flags` ahead of `experiments` — Story 4.3. The approved Ship rail is
       // Features · Experiments · Scheduled changes · Activity, and this list had the first two the
@@ -184,6 +188,7 @@ test('owner-only links stay owner-only while Flags and Tasks follow their indepe
   assert.deepEqual(
     links.map(({ routeSegment }) => routeSegment),
     [
+      'north-star',
       'journeys',
       'experiments',
       'scenarios',
@@ -274,7 +279,10 @@ test('Ship holds the feature-operating surfaces and Setup holds every credential
   )
   assert.deepEqual(
     getSectionLinks(links, 'measure').map((l) => l.routeSegment),
-    ['journeys', 'scenarios']
+    // ⚠️ **`north-star` FIRST — mockups-as-built Story 3.1 (epic D14).** Measure's rail opens on it
+    // because `getSectionEntryHref` takes `[0]`, so the order in the inventory is the design
+    // decision rather than a second `isDefault` field somebody would have to keep in step.
+    ['north-star', 'journeys', 'scenarios']
   )
   assert.deepEqual(
     getSectionLinks(links, 'today').map((l) => l.routeSegment),
@@ -378,17 +386,28 @@ test('the three retired credential routes are gone from the inventory, in every 
   // The other half, and it has to be asserted from this side: a redirect is not a destination, and
   // three nav entries leading to one page is three ways to be told the same thing. Reinstating any
   // of them would pass the test above while quietly restoring the world it describes as over.
-  for (const consoleShell of [true, false]) {
+  // ⚠️ **"in every gate state" now means every state of the gates that still EXIST** —
+  // mockups-as-built Story 3.3 deleted `CONSOLE_SHELL_ENABLED`, which was the gate the three retired
+  // routes used to swap against. Sweeping every remaining gate rather than pinning one keeps the
+  // assertion's title true and gets STRONGER as gates are added, instead of silently narrowing to
+  // one hardcoded pair.
+  const gateNames = Object.keys(allGatesOpen) as (keyof typeof allGatesOpen)[]
+  const states: (typeof allGatesOpen)[] = [
+    allGatesOpen,
+    Object.fromEntries(gateNames.map((name) => [name, false])) as typeof allGatesOpen,
+    ...gateNames.map((name) => ({ ...allGatesOpen, [name]: false })),
+  ]
+  for (const gates of states) {
     const segments = getProjectSurfaceLinks({
       projectSlug: 'project-one',
       role: 'owner',
-      gates: { ...allGatesOpen, 'console-shell': consoleShell },
+      gates,
     }).map((link) => link.routeSegment)
     for (const retired of ['keys', 'flag-credentials', 'agent-keys']) {
       assert.equal(
         segments.includes(retired),
         false,
-        `${retired} is listed again (console-shell=${consoleShell}); Story 4.5 retired it into a redirect`
+        `${retired} is listed again (gates=${JSON.stringify(gates)}); Story 4.5 retired it into a redirect`
       )
     }
   }

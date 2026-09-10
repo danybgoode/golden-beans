@@ -18,8 +18,8 @@ import { ShellErrorBoundary } from './ShellErrorBoundary'
  * shell below the guard makes the HTTP status and the visual rail agree.
  *
  * app-shell-and-agent-rail · Sprint 1, Story 1.3 — the section nav.
- * console-ia-overhaul · Sprint 1, Story 1.3 — the four-destination header, behind
- * `CONSOLE_SHELL_ENABLED`.
+ * console-ia-overhaul · Sprint 1, Story 1.3 — the four-destination header. It was behind a flag;
+ * mockups-as-built Story 3.3 deleted the flag, so it renders for every signed-in viewer.
  *
  * `projectSlug` is the page's own project, passed so the sections point at the project you are
  * actually looking at. It is a HINT, not an authorization input: lib/shell-nav.ts matches it
@@ -139,12 +139,13 @@ export async function ProductShell({
           3.5's whole content is the reduction below. What it is now is the PUBLIC chrome: a logo,
           `Connect`, `Agent notes`, and the project signal.
 
-          ⚠️ **`isConsoleShellEnabled()` is NOT retired with it**, and A16 says why: `header === null`
-          stopped meaning "the gate is off" in Sprint 1. Two states reach this branch permanently and
-          neither is about the gate — an anonymous viewer, and `getShellNav`'s catch. The flag stays
-          a real kill switch; what changed is that flipping it back now lands a signed-in operator on
-          a header with no section nav, navigating from Command Center's own links. Said out loud
-          rather than discovered by whoever flips it.
+          ⚠️ **THE FLAG IS GONE AND THIS BRANCH IS NOT — mockups-as-built Story 3.3.** A16 already
+          said why: `header === null` stopped meaning "the gate is off" in Sprint 1. Two states reach
+          this branch permanently and neither was ever about the flag — an ANONYMOUS viewer on one of
+          the two demo dashboards, and `getShellNav`'s catch. Deleting the branch along with
+          `CONSOLE_SHELL_ENABLED` would have taken the public bar away from every anonymous reader
+          and dropped a signed-in operator into nothing on an outage. It is the public chrome, and it
+          is reached by two conditions that have nothing to do with a flag.
 
           ── One honest qualification, because "unchanged" was too strong ──────────────────────
           This BRANCH is byte-identical. The DATA it renders is not: Story 1.2 removes `funnel` and
@@ -186,10 +187,9 @@ export async function ProductShell({
 
                   The `Sections` disclosure required `activeProject`, which requires a session — so
                   it never rendered anonymously, and its deletion is signed-in-only by construction.
-                  The one state that loses it is "signed in with `CONSOLE_SHELL_ENABLED` off", which
-                  is the kill-switch state; Command Center still lists every entitled surface as a
-                  link, so nothing becomes unreachable, and the console's own four-section nav is
-                  what replaced it.
+                  The one state that lost it was "signed in with the console gate off", which no
+                  longer exists at all since Story 3.3 deleted the flag; the console's own
+                  four-section nav is what replaced it.
 
                   ⚠️ **`Connect` and `Agent notes` STAY, permanently.** This branch is what an
                   anonymous visitor to the two demo dashboards gets — they have no session, so no
@@ -202,17 +202,21 @@ export async function ProductShell({
                   (Fresh reviewer, PR #123, Blocking.)
 
                   A previous revision pointed this at `/app/setup/connect/<slug>` whenever a project
-                  was resolved. But this is the LEGACY branch — it renders when `header === null`,
-                  which includes **the console gate being off** — and that route's first statement is
-                  `if (!isConsoleShellEnabled()) notFound()`. So with the gate unset (its value in
-                  production right now) every signed-in operator clicking `Connect` got a hard 404,
-                  on a link that worked before this epic. A nav entry pointing at a route that 404s
-                  is the exact defect this epic exists to remove.
+                  was resolved. This is the PUBLIC branch: it renders when `header === null`, which
+                  is an anonymous viewer or `getShellNav`'s catch. An anonymous viewer has no project
+                  and no session, so pointing them at a member-gated Setup route sends them to a
+                  login redirect from a bar whose whole job is to work without one — and `/install`
+                  is the page that actually answers "how do I connect this".
 
-                  Story 2.2's criterion is "**with the gate on**, nothing in the signed-in shell links
-                  to `/install`". The console branch has no Connect link at all — `Setup › Connect
-                  your agent` in the rail is the destination — so on every normal path the criterion
-                  holds and this line needed no change.
+                  ⚠️ The original reason was sharper and is worth keeping as history: the route's
+                  first statement used to be `if (!isConsoleShellEnabled()) notFound()`, so with the
+                  gate unset — its production value at the time — every signed-in operator clicking
+                  `Connect` got a hard 404 on a link that had worked before that epic. Story 3.3
+                  deleted the flag, so that particular 404 is unreachable now; the anonymous case
+                  above is why the href still does not move.
+
+                  The console branch has no Connect link at all — `Setup › Connect your agent` in the
+                  rail is the destination — so on every signed-in path this line is not reached.
 
                   ⚠️ It is NOT satisfied "by construction", and an earlier version of this comment
                   said it was. There is one path where the gate is on and this branch still renders:

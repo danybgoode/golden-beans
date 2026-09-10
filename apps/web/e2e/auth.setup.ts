@@ -15,7 +15,10 @@ import {
   FUNNEL_FEATURE_KEY,
   FUNNEL_RETAINED_EVENT,
   FUNNEL_SUBJECTS,
+  ACTIVITY_FIXTURE_FLAG_KEY,
+  AUDIT_FIXTURE_ROWS,
   FUNNEL_TARGET_EVENT,
+  NORTH_STAR_EXTRA_INPUTS,
   SCENARIO_FIXTURE_KEY,
   SCENARIO_FLAG_KEY,
   SCENARIO_TARGET_KEY,
@@ -169,6 +172,7 @@ setup('provision a disposable tenant and sign in through the real form', async (
   await seedTaskFixture(db, membership.project_id as string)
   await seedExperimentFixture(db, membership.project_id as string, userId)
   await seedJourneyFixture(db, membership.project_id as string, userId)
+  await seedActivityFixture(db, membership.project_id as string, userId)
 
   // ⚠️ Written into the record LAST, and the record is rewritten rather than patched: teardown reads
   // this file, so every write has to carry the whole thing.
@@ -725,6 +729,65 @@ async function seedScenarioFixture(db: SupabaseClient, projectId: string, ownerI
 }
 
 /**
+ * Enough Activity history for PAGINATION to be observable — mockups-as-built · Story 3.2.
+ *
+ * ⚠️ **A fixture with one page cannot tell a paginated list from an unpaginated one.** The approved
+ * `ship-activity` state draws twelve entries and production holds 148 (epic D13-b), so twelve is the
+ * page size — and every other fixture in this file produces a handful of audit rows at most, which
+ * is exactly the "fixture with ONE of something" shape this repo has already paid for (LEARNINGS:
+ * `.at(-1)` took the oldest version and everything stayed green).
+ *
+ * `AUDIT_FIXTURE_ROWS` is deliberately more than two pages, so `page=2` is neither the first nor the
+ * last — a two-page fixture would let a bug that always returns the last page pass.
+ *
+ * Written through the service client rather than through the flag RPCs: `create_flag_definition_version`
+ * writes ONE audit row per call and would need `AUDIT_FIXTURE_ROWS` real definitions to produce them,
+ * which is a fixture about flags rather than about a list. The rows here are the same shape the RPC
+ * writes — `flag_lifecycle_audit` has a `CHECK` on `action` and on `reason`, and both are honoured,
+ * so a row that the product could not have produced cannot be seeded by accident.
+ *
+ * ⚠️ `created_at` is set EXPLICITLY and descending, because the page is "newest first" and a bulk
+ * insert would give every row the same `now()` — an ordering assertion over rows with one timestamp
+ * is an assertion that cannot fail.
+ *
+ * No teardown counterpart: `flag_lifecycle_audit.project_id` cascades, and `test-db-cleanup.ts`
+ * deletes it by project too.
+ */
+async function seedActivityFixture(db: SupabaseClient, projectId: string, ownerId: string) {
+  // ⚠️ **Through the RPC, one call at a time — `flag_lifecycle_audit` REFUSES a direct insert.**
+  // First attempt wrote the rows with the service client and got `permission denied for table
+  // flag_lifecycle_audit`: the table is append-only BY RPC, and `create_flag_definition_version` is
+  // the only thing that may write a `definition_created` row. That is the product's own rule working,
+  // and it is why this fixture is a loop rather than a bulk insert.
+  //
+  // It also buys the thing a bulk insert would have destroyed: each call is its own transaction, so
+  // each row gets its own `now()`. A bulk insert would have stamped every row with one timestamp,
+  // and a "newest first" list ordered on a column where every value is equal has no order at all.
+  for (let index = 0; index < AUDIT_FIXTURE_ROWS; index += 1) {
+    const { error } = await db.rpc('create_flag_definition_version', {
+      p_project_id: projectId,
+      p_flag_key: ACTIVITY_FIXTURE_FLAG_KEY,
+      p_definition: {
+        valueType: 'boolean',
+        // Distinct per version, so each call is a genuinely new definition rather than a repeat the
+        // RPC might reasonably refuse.
+        description: `Activity pagination fixture, revision ${index + 1}.`,
+        defaultVariantKey: 'off',
+        variants: [
+          { key: 'off', value: false },
+          { key: 'on', value: true },
+        ],
+        rules: [],
+      },
+      // The spec reads these back to assert that no entry appears on two pages.
+      p_reason: `Activity fixture row ${index + 1}`,
+      p_actor_user_id: ownerId,
+    })
+    if (error) throw new Error(`could not seed activity row ${index + 1}: ${error.message}`)
+  }
+}
+
+/**
  * Seed exactly enough for `/app/impact/<slug>/<featureKey>` to render.
  *
  * Added by app-component-kit-adoption Sprint 2: that route was the one converted surface the authed
@@ -777,6 +840,39 @@ async function seedImpactFixture(db: SupabaseClient, projectId: string) {
     }))
   )
   if (valuesError) throw new Error(`could not seed the impact series: ${valuesError.message}`)
+
+  // mockups-as-built Story 3.1 — the other two leading inputs. The approved `measure-north-star`
+  // state draws THREE plots and the contract asserts the count; production holds exactly three
+  // (epic D13-b). Deliberately NOT linked to a feature: `/app/impact/…` reads through
+  // `feature_inputs` and `/app/north-star/…` reads every input the project has, and a fixture where
+  // those two sets are equal cannot tell the two reads apart.
+  for (const extra of NORTH_STAR_EXTRA_INPUTS) {
+    const { data: row, error } = await db
+      .from('leading_inputs')
+      .insert({
+        project_id: projectId,
+        metric_id: metric.id,
+        key: extra.key,
+        name: extra.name,
+        value_source: 'external_push',
+      })
+      .select('id')
+      .single()
+    if (error || !row) throw new Error(`could not seed the ${extra.key} input: ${error?.message}`)
+    if (extra.series.length === 0) continue
+    const { error: extraValuesError } = await db.from('input_values').insert(
+      extra.series.map((point) => ({
+        project_id: projectId,
+        input_id: row.id,
+        occurred_on: point.occurredOn,
+        value: point.value,
+        // `dedupe_key` is GLOBALLY unique — keyed by project id and input key, both unique per run.
+        dedupe_key: `gb-e2e-impact:${projectId}:${extra.key}:${point.occurredOn}`,
+      }))
+    )
+    if (extraValuesError)
+      throw new Error(`could not seed the ${extra.key} series: ${extraValuesError.message}`)
+  }
 }
 
 /**

@@ -16,14 +16,21 @@ import { test, expect } from '@playwright/test'
 // 307 would say "this exists, sign in to see it", and leaking the existence of an unbuilt surface is
 // what dark launching is supposed to prevent.
 //
-// It runs in whichever gate state CI has (`CONSOLE_SHELL_ENABLED` is created disabled everywhere,
-// so today that is dark), and it states which state it observed rather than asserting one blindly.
-
-const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
+// ── ⚠️ THE DARK HALF IS GONE — mockups-as-built Story 3.3 ────────────────────────────────────
+// `CONSOLE_SHELL_ENABLED` is deleted from the repository and from every Vercel environment. There
+// is no state in which `/app/setup/connect/<slug>` 404s for a flag, so the two gate-conditional
+// describes below it are gone with it: a test that asserted the dark contract would now assert the
+// opposite of production, and one that skipped in every configuration would be a suite reporting
+// green having run nothing.
+//
+// The file KEEPS ITS NAME and its two unconditional tests, which are the ones that still have a
+// subject: Setup › Keys is gated on nothing, and the three retired routes redirect to it. Renaming
+// it would move the file for no reason a reader could reconstruct; what it is now is the Setup
+// routes' existence contract, and the header says so.
 
 // ⚠️ **Setup › KEYS left this list — design-system-rails S4.5, and it is a behaviour change.**
 //
-// It was `CONSOLE_SHELL_ENABLED`-gated while it was an additional surface duplicating a list. Story
+// It was console-gated while it was an additional surface duplicating a list. Story
 // 4.5 made it the ONLY place a credential can be minted and retired the three routes it replaced
 // into permanent redirects — so a closed gate would leave a project unable to issue any credential
 // at all, including the ingest key without which nothing can send an event, and the redirects would
@@ -31,7 +38,7 @@ const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 // boundary is untouched (`requireProjectOwnership` at the route).
 //
 // It is not simply deleted from coverage: `the credential surface is gated on NOTHING` below asserts
-// the new contract in both gate states, which is the property that replaced the dark one.
+// the contract that replaced the dark one.
 const SETUP_ROUTES = [
   '/app/setup/connect/miyagisanchez',
   // A slug that does not exist anywhere. While dark it must 404 for the SAME reason as a real one —
@@ -48,9 +55,9 @@ const RETIRED_ROUTES = [
 ]
 
 test('the credential surface is gated on NOTHING, in whichever state this run is in', async ({ request }) => {
-  // ⚠️ Deliberately OUTSIDE both describes, so it runs in every configuration rather than in the one
-  // that happens to match. That is the whole claim: Setup › Keys answers regardless of
-  // `CONSOLE_SHELL_ENABLED`, because it is the only surface that mints.
+  // The claim: Setup › Keys answers whatever the deployment's flags say, because it is the only
+  // surface that mints. It was written when `CONSOLE_SHELL_ENABLED` was the flag it had to survive;
+  // Story 3.3 deleted that one, and the property is broader than any single flag.
   //
   // "Answers" means a login redirect for an anonymous caller — the route exists and is owner-gated.
   // A 404 would mean a gate closed over it, which is the regression this exists to catch.
@@ -75,36 +82,22 @@ test('the three retired routes redirect to it, in whichever state this run is in
   }
 })
 
-test.describe('the Setup routes while the console is dark', () => {
-  test.skip(GATE_ON, 'CONSOLE_SHELL_ENABLED is on for this run; the dark contract does not apply')
-
+test('the two Setup routes exist and require a session — no flag can take them away', async ({ request }) => {
+  // ⚠️ **This replaces the dark contract rather than deleting it.** While the console was flagged,
+  // the property worth asserting was that a gated route returned a FLAT 404 instead of bouncing to
+  // login — 404 says "this does not exist", 307 says "this exists, sign in". With the flag gone the
+  // meaningful property is the other one: these routes exist for everybody, and an anonymous caller
+  // is sent to login rather than told they do not exist.
+  //
+  // The nonexistent slug is still here and still matters: the answer must not distinguish a real
+  // tenant from an invented one, or the route leaks tenant existence to anonymous callers.
   for (const route of SETUP_ROUTES) {
-    test(`${route} is a flat 404, not a login redirect`, async ({ request }) => {
-      const response = await request.get(route, { maxRedirects: 0 })
-      expect(
-        response.status(),
-        `${route} should not exist while the console is dark — a 307 would leak that it does`
-      ).toBe(404)
-    })
-  }
-
-  // ⚠️ **`the routes they replace are untouched while dark` is RETIRED — S4.5.** It asserted that
-  // turning the console off left the three legacy credential surfaces exactly as they were, which was
-  // the right contract while they were the fallback. They are permanent redirects now and there is
-  // no fallback to preserve: the two unconditional tests above assert what replaced that promise —
-  // the redirects work in every gate state, and their destination is gated on nothing.
-})
-
-test.describe('the Setup routes while the console is lit', () => {
-  test.skip(!GATE_ON, 'run with CONSOLE_SHELL_ENABLED=true to exercise the lit contract')
-
-  for (const route of ['/app/setup/connect/miyagisanchez']) {
-    test(`${route} exists and requires a session`, async ({ request }) => {
-      // Lit, these become ordinary credential-gated routes: an anonymous request is redirected to
-      // login rather than 404'd. Asserting the FLIP of the dark contract is what makes the dark
-      // assertion meaningful — without this, a 404 could mean "gated" or "never built".
-      const response = await request.get(route, { maxRedirects: 0 })
-      expect(response.status(), `${route} should redirect an anonymous visitor to login`).not.toBe(404)
-    })
+    const response = await request.get(route, { maxRedirects: 0 })
+    expect(
+      response.status(),
+      `${route} 404'd — nothing gates it any more, so a 404 means it stopped existing`
+    ).not.toBe(404)
+    expect([302, 307]).toContain(response.status())
+    expect(response.headers()['location']).toContain('/login')
   }
 })

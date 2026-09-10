@@ -176,11 +176,13 @@ async function main() {
     // be "the local counterpart to CI's Playwright gate", silently skipped the one spec that can go
     // red on the way a page looks. A local gate that is a SUBSET of CI's is worse than no local
     // gate, because it produces a green nobody should trust (Roadmap/LEARNINGS.md).
-    // All three are ON in production, so this matches CI rather than loosening anything.
+    // Both are ON in production, so this matches CI rather than loosening anything.
     // `FLAG_RULE_BUILDER_ENABLED` rides along because `ci.yml`'s main server sets it too and the
     // feature page's Targeting tab renders behind it — a lit server missing it is not the server
     // CI runs.
-    CONSOLE_SHELL_ENABLED: 'true',
+    //
+    // ⚠️ `CONSOLE_SHELL_ENABLED` was the third and is GONE — mockups-as-built Story 3.3 deleted the
+    // flag. The console is the console.
     FLAG_CONSOLE_ENABLED: 'true',
     FLAG_RULE_BUILDER_ENABLED: 'true',
     SIGNUP_ENABLED: requestedProject === 'authed' ? 'true' : 'false',
@@ -202,11 +204,13 @@ async function main() {
     SECURITY_SIMULATIONS_ENABLED: 'false',
     AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false',
     SCENARIO_AUTHORING_ENABLED: 'false',
-    // The dark server mirrors CI's `:3100`, which turns these two OFF so `setup-routes-dark` and
-    // `flag-console-dark` assert the dark contract. They are ON above for the same reason CI has
-    // them ON there: production does. Both states get asserted, rather than whichever one the
-    // environment happened to be in.
-    CONSOLE_SHELL_ENABLED: 'false',
+    // The dark server mirrors CI's `:3100`, which turns this OFF so `flag-console-dark` asserts the
+    // dark contract. It is ON above for the same reason CI has it ON there: production does. Both
+    // states get asserted, rather than whichever one the environment happened to be in.
+    //
+    // ⚠️ `CONSOLE_SHELL_ENABLED: 'false'` was here and is GONE with the flag (Story 3.3).
+    // `setup-routes-dark.spec.ts` stays in the list below — it keeps its two unconditional tests,
+    // which are about the credential surface being gated on nothing, and those still have a subject.
     FLAG_CONSOLE_ENABLED: 'false',
     SIGNUP_ENABLED: 'false',
   };
@@ -218,8 +222,8 @@ async function main() {
       'apps/web/e2e/flag-catalog-sync-dark.spec.ts',
       'apps/web/e2e/scenario-dark.spec.ts',
       // ⚠️ **These three were added because the change above SILENTLY RETIRED them locally**
-      // (fresh reviewer, round 2). Setting `CONSOLE_SHELL_ENABLED`/`FLAG_CONSOLE_ENABLED`/
-      // `SIGNUP_ENABLED` true on the lit server — which is what makes the visual gate runnable —
+      // (fresh reviewer, round 2). Setting `FLAG_CONSOLE_ENABLED`/`SIGNUP_ENABLED` true on the lit
+      // server — which is what makes the visual gate runnable —
       // means `setup-routes-dark` skips itself there, and `flag-console-dark` and `signup` take
       // their lit branches. Before that change they ran against an unset (therefore dark) lit
       // server; after it they ran NOWHERE locally, while a comment claimed this list "mirrors CI's

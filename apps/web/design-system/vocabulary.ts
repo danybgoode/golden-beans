@@ -81,7 +81,7 @@ export const STORAGE_WORDS: readonly { word: string; insteadSay: string; why: st
  *
  * `.product-shell__signal` is the clearest: `console.css` resets it inside
  * `.is-console .product-shell__identity`, so the LIT console is fine — and the legacy branch, which
- * is what a `CONSOLE_SHELL_ENABLED` rollback serves, renders uppercase mono.
+ * is what the public/legacy shell branch serves, renders uppercase mono.
  *
  * Rather than delete eighteen rules blind in the sprint that builds the language — Sprint 2 owns
  * none of those surfaces, and a blind sweep is how a redesign breaks a page nobody was looking at —

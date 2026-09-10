@@ -31,17 +31,12 @@ const VIEWPORT = { width: 1440, height: 960 }
 const EXPECTED_FOCUSABLE = 46
 const SPECIMEN = '/app/design-system'
 
-/** Exactly `'true'`, matching `lib/flags.ts`. `CONSOLE_SHELL_ENABLED=false` must SKIP, not fail. */
-function gatesAreLit(): boolean {
-  return process.env.CONSOLE_SHELL_ENABLED === 'true'
-}
+// ⚠️ **`gatesAreLit()` is GONE — mockups-as-built Story 3.3 deleted `CONSOLE_SHELL_ENABLED`.** It
+// read that variable, so leaving it would have made this whole file skip in every run — including
+// the nested-dialog regression this sprint just added, which is the only guard on that defect that
+// CI executes. The specimen renders inside the console shell, and the shell is not flagged now.
 
 test.describe('the design system specimen', () => {
-  test.skip(
-    !gatesAreLit(),
-    'the specimen renders inside the console shell; run with CONSOLE_SHELL_ENABLED=true'
-  )
-
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(VIEWPORT)
     await page.goto(SPECIMEN)
