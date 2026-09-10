@@ -80,6 +80,21 @@ independently shippable slice of value.
   under 120 ms with 13 relevant events, so the engine keeps its simpler query-time architecture.
 
 ### 02 · Commercial
+- ✅ [The mockups, as built](02-commercial/mockups-as-built/README.md) — the previous epic shipped six
+  sprints, reported **27/27 coverage with `outstanding: []`**, and the console still did not look like
+  the approved design. Three facts explained the whole gap: the old UI had been **hidden behind
+  sixteen `<details>` disclosures** rather than replaced, the assertion on 25 of 27 routes was
+  *"status < 400 and the `<main>` contains at least one `ds-` class"* (which a JSON textarea inside a
+  collapsed disclosure satisfies), and the coverage number was computed from a **hand-typed boolean**.
+  Now: **22 of 22 routes match their approved state's structural signature, measured** — a contract
+  generated from the approved prototype that asserts the ordered block sequence, the tile count, the
+  column labels, the primary action's words and that the number of `<details>` is **zero**, with a
+  committed floor that fails a PR which lowers it. Every disclosure on a rebuilt surface is gone and
+  **no capability went with them** (journey create+activate, experiment create/transition/bind,
+  scenario launch+stop and delivery replay all still work, from the approved wizard shape as a modal).
+  Two screens that never existed were built — a **North Star** Measure surface and **Activity's**
+  pagination — and `CONSOLE_SHELL_ENABLED` is deleted from the repository and every Vercel
+  environment. 🚧 **Built 2026-09-10; production verification is the last step.**
 - ✅ [One design system, every surface](02-commercial/design-system-rails/README.md) — the design now
   lives **in the product**, at `apps/web/design-system/`, and it outlives the epic that produced it.
   Three prior design epics each scoped their design to themselves and left it in a closed epic's
@@ -316,6 +331,19 @@ independently shippable slice of value.
 
 ## Recent highlights
 
+- **2026-09-10** — `mockups-as-built` **built** (PRs #136/#137/#138): the epic that made the last
+  epic's number true. `design-system-rails` reported 27/27 with `outstanding: []` and at least
+  sixteen routes did not resemble their approved design — the arithmetic was real and its input was a
+  boolean somebody typed. The replacement is a **structural state contract generated from the
+  approved prototype**, per route, blocking, with the coverage number derived from its result rather
+  than from a flag. A screenshot diff was specified and **disproved by measurement before it was
+  written**: the route the plan called correct came out farther from its picture than the one it
+  called wrong, on both metrics, so no threshold separated them.
+  Nine defects were found by **opening the page** on routes whose signature already agreed — including
+  an activity timeline that had been rendering as one crammed line since the previous epic — and
+  three more "failures" turned out to be **fixture gaps**, where the gate blamed a page that was
+  correct. Deleting one flag meant fixing **six suites that read it** and would otherwise have skipped
+  forever, this epic's own blocking gate among them.
 - **2026-09-02** — `design-system-rails` **shipped and live** (`3258381`, PR #135): the epic that gave the design a home.
   The premise was one level below the symptom — the last epic shipped a rejected visual result
   because *nothing in its plan could go red on a page that looked wrong*, and the design it was
