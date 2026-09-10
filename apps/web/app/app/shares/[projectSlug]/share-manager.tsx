@@ -96,7 +96,17 @@ export function ShareManager({
   const [fieldError, setFieldError] = useState<string | null>(null)
   const [expiryDays, setExpiryDays] = useState<number | null>(null)
   const [minted, setMinted] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // ⚠️ **TWO error slots, not one** (cross-agent review, Codex, Should-fix). They were one, rendered
+  // in two places — inside the mint form and again in the body — and while the dialog was open a
+  // single failure appeared twice. The body's copy used to be gated on `!open`, and that guard went
+  // when the dialog took ownership of its own open state (Story 4.2).
+  //
+  // Splitting rather than re-adding a guard: these are two different failures with two different
+  // readers. A mint that failed belongs beside the form that failed, inside the dialog; a revoke
+  // that failed belongs beside the list it was aimed at. One state could only ever render in one of
+  // those places, which would put a revoke error inside a mint dialog or the reverse.
+  const [mintError, setMintError] = useState<string | null>(null)
+  const [revokeError, setRevokeError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   // React 18's `isPending` clears before an async transition callback's first await resolves, so
   // minting holds its own flag. A second click issues a second live bearer token.
@@ -111,7 +121,7 @@ export function ShareManager({
       setFieldError('Give the link a label, so you know which conversation it belongs to.')
       return
     }
-    setError(null)
+    setMintError(null)
     setFieldError(null)
     setBusy(true)
     startTransition(async () => {
@@ -126,23 +136,23 @@ export function ShareManager({
           setMinted(result.url)
           setLabel('')
           router.refresh()
-        } else setError(result.error)
+        } else setMintError(result.error)
       } catch {
-        setError('Could not reach the server. Reload and check whether the link was created.')
+        setMintError('Could not reach the server. Reload and check whether the link was created.')
       }
       setBusy(false)
     })
   }
 
   function onRevoke(shareId: string) {
-    setError(null)
+    setRevokeError(null)
     setBusy(true)
     startTransition(async () => {
       try {
         const { ok } = await revokeShareAction(slug, shareId)
-        if (!ok) setError('That link was already revoked.')
+        if (!ok) setRevokeError('That link was already revoked.')
       } catch {
-        setError('Could not revoke that link. It is still live — reload and try again.')
+        setRevokeError('Could not revoke that link. It is still live — reload and try again.')
       }
       setConfirming(null)
       setBusy(false)
@@ -226,7 +236,8 @@ export function ShareManager({
         )}
       </Field>
 
-      {error && <Callout tone="warn">{error}</Callout>}
+      {/* The MINT failure, beside the form that failed — inside the dialog. */}
+      {mintError && <Callout tone="warn">{mintError}</Callout>}
 
       <p className="ds-mint-actions">
         <button type="submit" className="ds-btn ds-btn--primary" disabled={inFlight}>
@@ -314,7 +325,9 @@ export function ShareManager({
         </ShownOnce>
       )}
 
-      {error && <Callout tone="warn">{error}</Callout>}
+      {/* The REVOKE failure, beside the list it was aimed at. A revoke error inside a mint dialog
+          would be a message about a link the reader is not looking at. */}
+      {revokeError && <Callout tone="warn">{revokeError}</Callout>}
 
       {shares.length === 0 ? (
         <div className="ds-listcard">

@@ -1,5 +1,4 @@
 import type { GovernedExperimentAnalysisResult } from '@/lib/experiment-analysis-query'
-import { DecisionRecorder } from './decision-recorder'
 
 // The governance layer — design-system-rails · Sprint 5, Story 5.4.
 //
@@ -215,21 +214,19 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
             ))}
           </ol>
         )}
-        {canManage ? (
-          <DecisionRecorder
-            slug={result.project.slug}
-            experimentKey={experiment.key}
-            definitionVersion={experiment.definitionVersion}
-            lifecycle={experiment.lifecycle}
-            controlVariantKey={experiment.definition.controlVariantKey}
-            treatmentVariantKeys={experiment.definition.variants
-              .map((variant) => variant.key)
-              .filter((key) => key !== experiment.definition.controlVariantKey)}
-            currentDecisionId={decisions.current?.id ?? null}
-          />
-        ) : (
+        {/* ⚠️ **THE RECORDER IS GONE FROM HERE — mockups-as-built Story 2.3, and leaving it was a
+            real defect** (cross-agent review, Codex, Should-fix). The approved `experiment-ready`
+            state draws the decision as block 6 ON THE PAGE, so `DecisionRecorder` moved into
+            `DecisionBlock`; this component was not touched, which left TWO live forms writing to the
+            same APPEND-ONLY ledger — the most irreversible control in the product, duplicated.
+            A capability must not be lost, and it must not be doubled either.
+
+            What stays here is the HISTORY: every decision ever recorded against this version, with
+            its author, its rationale and its captured evidence. That is what this modal is for. */}
+        {canManage ? null : (
           <p>
-            <strong>Read-only access.</strong> A project owner records decisions and corrections.
+            <strong>Read-only access.</strong> A project owner records decisions and corrections, on the
+            page.
           </p>
         )}
       </section>

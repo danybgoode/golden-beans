@@ -34,10 +34,10 @@ export type ShareRow = {
    * How many times this link has been opened — mockups-as-built Story 4.2, the approved
    * `setup-shares` state's third column.
    *
-   * ⚠️ **Times OPENED, never people.** A bearer URL can be forwarded to a room full of people from
-   * one email, so "distinct links opened" is the only unit this page can honestly report; calling it
-   * a visitor count would be a number that reads as an audience and is not one. The same sentence is
-   * already in `/s/[token]`'s own tracking comment, and this is the half that surfaces it.
+   * ⚠️ **TOTAL times opened, never people, and never deduplicated.** Every request that resolved
+   * this token counts, so one person reloading twice is two. That is the honest unit available: a
+   * bearer URL can be forwarded to a room full of people from one email, so a "visitor" count would
+   * be a number that reads as an audience and is not one.
    */
   opens: number
 }

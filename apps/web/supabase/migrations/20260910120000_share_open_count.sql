@@ -16,11 +16,15 @@
 -- rollback of BEHAVIOUR even though the schema keeps a column. That property is why this is a
 -- column on the existing row rather than a new table with its own lifecycle.
 --
--- ── A COUNT, not a log, and the difference is deliberate ──────────────────────────────────────
--- A bearer URL can be forwarded to a room full of people from one email, so the only unit this can
--- honestly report is "distinct times the link was opened" — never a visitor count and never an
--- audience. Storing one row per open would invite exactly that misreading, and would also store a
--- timeline of when a named recipient read a report. The number is the whole fact.
+-- ── A COUNT, not a log, and the unit is the whole point ───────────────────────────────────────
+-- ⚠️ **TOTAL OPENS — every request that resolved this token, with no deduplication of any kind**
+-- (cross-agent review, Codex, Nit: an earlier draft of this comment said "distinct times", which
+-- this counter does not measure and could not). One person reloading twice is two.
+--
+-- That is the honest unit available, and it is the only one this data supports: a bearer URL can be
+-- forwarded to a room full of people from one email, so a "visitor" count would be a number that
+-- reads as an audience and is not one. Storing one row per open would invite exactly that
+-- misreading, and would also store a timeline of when a named recipient read a report.
 ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS opened_count INTEGER NOT NULL DEFAULT 0;
 
 -- ⚠️ An RPC rather than an UPDATE from the route, for the reason every other counter in this schema
