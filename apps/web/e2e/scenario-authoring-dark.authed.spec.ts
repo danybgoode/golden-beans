@@ -21,15 +21,36 @@ test('scenario evidence stays readable while every owner write control is dark',
   // design-system-rails Story 5.6: the operating surface is one keystroke below the answer. The
   // evidence stays READABLE while dark, which is what this spec is for — it is one click further
   // away, not gone.
-  // Story 2.2: the disclosure became the approved `▸ Run a drill` dialog. The property this spec
-  // exists for is unchanged — evidence stays READABLE while every owner write control is dark.
-  await page.getByRole('button', { name: '▸ Run a drill' }).click()
-  await expect(page.getByRole('heading', { name: 'Canonical product-impact evidence' })).toBeVisible()
+  // ⚠️ **Story 2.5 — the evidence opens from the DRILL'S OWN ROW, not from `▸ Run a drill`.**
+  // Story 2.2 removed the disclosure and put everything behind the approved authoring control,
+  // which satisfied D3 and left this spec's subject — a reader who cannot author — reaching the run
+  // history through a button that says it starts something. Daniel ruled the identical case on
+  // Destinations as per-row evidence separate from the authoring control (2026-09-09) and extended
+  // it here on 2026-09-10.
+  //
+  // Asserting the ROW's control is what makes this spec's title true rather than nearly true: the
+  // evidence is reachable without ever touching a write surface.
+  await page.locator('main .ds-listcard').getByRole('button', { name: 'Evidence' }).first().click()
+  // ⚠️ Scoped to the OPEN dialog: every drill row carries its own, and a closed `<dialog>`'s
+  // children are still in the document.
+  const evidence = page.locator('dialog[open]')
+  await expect(evidence.getByRole('heading', { name: 'Canonical product-impact evidence' })).toBeVisible()
+  await expect(evidence.getByRole('heading', { name: 'Runs' })).toBeVisible()
+  // ⚠️ The immutable DEFINITION is evidence too — it is what bounded the run — and it is here so
+  // that the impact article's `Open the producing definition` link has a target in this dialog
+  // rather than in the authoring workspace a read-only reader never opens (cross-agent review,
+  // Codex, round 5).
+  await expect(evidence.getByRole('heading', { name: 'Definitions' })).toBeVisible()
 
-  // ...and every write control is still absent, INSIDE the opened disclosure. Asserting this before
-  // opening it would have passed for the wrong reason — a control hidden behind a collapsed
-  // `<details>` is not a control that does not exist, and this spec's whole subject is the
-  // difference.
+  // ...and the evidence dialog holds NO control. A read-only surface that grew a mutation would be
+  // the split undone.
+  await expect(page.getByRole('button', { name: /Launch run|Stop run|Revoke/ })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+
+  // ...and every write control is still absent inside the AUTHORING dialog too. Asserting this
+  // before opening it would have passed for the wrong reason — a control behind a closed dialog is
+  // not a control that does not exist, and this spec's whole subject is the difference.
+  await page.getByRole('button', { name: '▸ Run a drill' }).click()
   await expect(page.getByRole('heading', { name: 'Define a scenario' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Launch run|Stop run|Revoke/ })).toHaveCount(0)
 })

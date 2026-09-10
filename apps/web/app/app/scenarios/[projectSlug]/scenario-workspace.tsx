@@ -20,28 +20,17 @@ import {
   SCENARIO_AUTHORING_LIMITS,
   type ScenarioAuthoringDraft,
 } from '@/lib/scenario-authoring-draft'
-import type {
-  ScenarioDashboardImpact,
-  ScenarioDashboardRun,
-  ScenarioDashboardView,
-} from '@/lib/scenario-dashboard'
+import type { ScenarioDashboardRun, ScenarioDashboardView } from '@/lib/scenario-dashboard'
 import {
   isScenarioKindEnabled,
   scenarioLaunchBlocker,
   type ScenarioCapabilityGates,
 } from '@/lib/scenario-authoring-policy'
-import { scenarioImpactExperimentReference } from '@/lib/scenario-impact-link'
 import { launchScenarioRunAction, scenarioOwnerOperationAction, startScenarioRunAction } from './actions'
-
-function timestamp(value: string | null): string {
-  return value ? `${new Date(value).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '—'
-}
-function shortId(value: string): string {
-  return value.slice(0, 8)
-}
-function durationSeconds(startAt: string, expiresAt: string): number {
-  return Math.round((Date.parse(expiresAt) - Date.parse(startAt)) / 1_000)
-}
+// ⚠️ **The run table is declared ONCE** (Story 2.5). `DrillEvidence` draws the same eight columns
+// read-only from a drill's own row; this component appends its actions column to them. Two column
+// lists in two files that currently agree is CODE-QUALITY #2.
+import { durationSeconds, scenarioRunColumns, shortId, timestamp } from './scenario-evidence-columns'
 function localStart(): string {
   const date = new Date()
   date.setSeconds(0, 0)
@@ -193,100 +182,25 @@ export function ScenarioWorkspace({
   ]
 
   const runColumns: DataTableColumn<ScenarioDashboardRun>[] = [
-    {
-      key: 'scenario',
-      header: 'Scenario',
-      value: (row) => row.scenarioKey,
-      cell: (row) => (
-        <span id={`run-${row.id}`}>
-          <a href={`#definition-${row.scenarioKey}-${row.definitionVersion}`}>
-            {row.scenarioKey} v{row.definitionVersion}
-          </a>
-          <br />
-          <small>run {shortId(row.id)}</small>
-          {view.impacts.find((impact) => impact.runId === row.id) ? (
-            <>
-              <br />
-              <a href={`#impact-${view.impacts.find((impact) => impact.runId === row.id)?.id}`}>
-                View impact evidence
-              </a>
-            </>
-          ) : null}
-        </span>
-      ),
-    },
-    {
-      key: 'kind',
-      header: 'Kind / cohort',
-      value: (row) => `${row.kind} ${row.cohort}`,
-      cell: (row) => `${row.kind} / ${row.cohort}`,
-    },
-    {
-      key: 'target',
-      header: 'Target',
-      value: (row) => row.targetKey,
-      cell: (row) => (
-        <>
-          {row.targetKey}
-          <br />
-          <small>{row.environment}</small>
-        </>
-      ),
-    },
-    {
-      key: 'state',
-      header: 'State',
-      value: (row) => row.status,
-      cell: (row) => (
-        <>
-          {row.status} · r{row.revision}
-          {row.status === 'running'
-            ? (() => {
-                const definition = view.definitions.find(
-                  (item) => item.id === row.scenarioVersionId
-                )?.definition
-                return definition ? (
-                  <small>
-                    <br />
-                    Elapsed <ElapsedTime since={row.startedAt ?? row.createdAt} /> · abort at{' '}
-                    {definition.guardrails.abortAfterFailures} failures or{' '}
-                    {(definition.guardrails.maxErrorRateBasisPoints / 100).toFixed(2)}% errors
-                  </small>
-                ) : null
-              })()
-            : null}
-        </>
-      ),
-    },
-    { key: 'requests', header: 'Requests', value: (row) => row.requestCount },
-    {
-      key: 'outcomes',
-      header: 'Outcomes',
-      value: (row) => row.successCount + row.failureCount,
-      cell: (row) => `${row.successCount} ok / ${row.failureCount} failed`,
-    },
-    {
-      key: 'started',
-      header: 'Started',
-      value: (row) => row.startedAt,
-      cell: (row) => timestamp(row.startedAt),
-    },
-    {
-      key: 'stopped',
-      header: 'Stopped',
-      value: (row) => row.stoppedAt,
-      cell: (row) => (
-        <>
-          {timestamp(row.stoppedAt)}
-          {row.stopReason ? (
-            <>
-              <br />
-              <small>{row.stopReason}</small>
-            </>
-          ) : null}
-        </>
-      ),
-    },
+    ...scenarioRunColumns({
+      view,
+      // This component renders the `<article id="definition-…">` panels below, so the link has a
+      // target here. `DrillEvidence` renders its own read-only copy of them and opts in separately.
+      definitionAnchors: true,
+      // The live counter is client-only and belongs to the operator's view. The read-only dialog
+      // renders the started time instead, which is why this is a parameter rather than a copy.
+      elapsed: (row) => {
+        const definition = view.definitions.find((item) => item.id === row.scenarioVersionId)?.definition
+        return definition ? (
+          <small>
+            <br />
+            Elapsed <ElapsedTime since={row.startedAt ?? row.createdAt} /> · abort at{' '}
+            {definition.guardrails.abortAfterFailures} failures or{' '}
+            {(definition.guardrails.maxErrorRateBasisPoints / 100).toFixed(2)}% errors
+          </small>
+        ) : null
+      },
+    }),
     ...(canAuthor
       ? [
           {
@@ -819,131 +733,15 @@ export function ScenarioWorkspace({
         />
       </Panel>
 
-      <Panel>
-        <h2>Defensive simulation results</h2>
-        <DataTable
-          caption="Defensive simulation results"
-          columns={[
-            {
-              key: 'when',
-              header: 'When',
-              value: (row) => row.createdAt,
-              cell: (row) => timestamp(row.createdAt),
-            },
-            {
-              key: 'run',
-              header: 'Run',
-              value: (row) => row.runId,
-              cell: (row) => <a href={`#run-${row.runId}`}>{shortId(row.runId)}</a>,
-            },
-            { key: 'template', header: 'Template', value: (row) => row.template },
-            { key: 'expected', header: 'Expected', value: (row) => row.expectedOutcome },
-            {
-              key: 'observed',
-              header: 'Observed',
-              value: (row) => row.observedOutcome,
-              cell: (row) => (row.succeeded ? 'expected guard observed' : row.observedOutcome),
-            },
-            { key: 'http', header: 'HTTP', value: (row) => row.observedStatuses.join(', ') },
-            {
-              key: 'latency',
-              header: 'Latency',
-              value: (row) => row.latencyMs,
-              cell: (row) => `${row.latencyMs}ms`,
-            },
-          ]}
-          rows={view.securityResults}
-          rowKey={(row) => row.id}
-          empty="No defensive simulations recorded."
-        />
-      </Panel>
+      {/* ⚠️ **The defensive-simulation results and the impact snapshots MOVED to `DrillEvidence`**
+          (Story 2.5) — per drill, opened from the drill's own row, reachable by a member who cannot
+          author. They are read-only evidence and this dialog is the authoring surface. Nothing was
+          deleted: the same rows, the same columns (`scenario-evidence-columns.tsx`) and the same
+          impact article render there.
 
-      <Panel>
-        <h2>Canonical product-impact evidence</h2>
-        <p>
-          <strong>Internal and synthetic cohorts never produce a causal customer claim.</strong>
-        </p>
-        {view.impacts.length === 0 ? (
-          <p>No impact snapshots captured.</p>
-        ) : (
-          view.impacts.map((impact: ScenarioDashboardImpact) => {
-            const comparable =
-              impact.evidence.technical.control.attempts > 0 && impact.evidence.technical.fault.attempts > 0
-            const experiment = scenarioImpactExperimentReference(impact.evidence)
-            return (
-              <article id={`impact-${impact.id}`} key={impact.id} className="panel">
-                <h3>
-                  {impact.scenarioKey} v{impact.scenarioVersion} · {impact.evidence.cohort} cohort
-                </h3>
-                <p>
-                  <strong>Claim status: {impact.evidence.claim.status}</strong>
-                </p>
-                <p>
-                  <strong>Blockers: {impact.evidence.claim.blockers.join(', ') || 'none'}</strong>
-                </p>
-                <p>
-                  Captured {timestamp(impact.createdAt)} · run {shortId(impact.runId)} · {impact.reason}
-                  <br />
-                  Technical delta: {impact.evidence.technical.nonZeroDifference ? 'non-zero' : 'none'} ·
-                  failure Δ {impact.evidence.technical.failureRateDelta ?? '—'} · latency Δ{' '}
-                  {impact.evidence.technical.latencyP95DeltaMs ?? '—'}ms
-                </p>
-                {comparable ? (
-                  <table>
-                    <caption>Control versus treatment technical evidence</caption>
-                    <thead>
-                      <tr>
-                        <th>Arm</th>
-                        <th>Attempts</th>
-                        <th>Failures</th>
-                        <th>Latency p95</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <th>Control</th>
-                        <td>{impact.evidence.technical.control.attempts}</td>
-                        <td>{impact.evidence.technical.control.failures}</td>
-                        <td>{impact.evidence.technical.control.latencyP95Ms ?? 'unrecorded'}</td>
-                      </tr>
-                      <tr>
-                        <th>Fault treatment</th>
-                        <td>{impact.evidence.technical.fault.attempts}</td>
-                        <td>{impact.evidence.technical.fault.failures}</td>
-                        <td>{impact.evidence.technical.fault.latencyP95Ms ?? 'unrecorded'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                ) : (
-                  <p>Evidence is insufficient for a control-versus-treatment comparison.</p>
-                )}
-                <p>
-                  <a href={`#definition-${impact.scenarioKey}-${impact.scenarioVersion}`}>
-                    Open the producing definition
-                  </a>{' '}
-                  · <a href={`#run-${impact.runId}`}>Open the producing run</a> ·{' '}
-                  {experiment ? (
-                    <a
-                      href={`/app/experiments/${projectSlug}/${encodeURIComponent(experiment.key)}?version=${experiment.definitionVersion}`}
-                    >
-                      Open downstream experiment analysis v{experiment.definitionVersion}
-                    </a>
-                  ) : (
-                    <span>No downstream experiment reference was captured.</span>
-                  )}
-                </p>
-              </article>
-            )
-          })
-        )}
-        {view.malformedImpactCount > 0 ? (
-          <p role="status">
-            {view.malformedImpactCount} malformed impact evidence{' '}
-            {view.malformedImpactCount === 1 ? 'record was' : 'records were'} omitted because the stored
-            contract could not be verified.
-          </p>
-        ) : null}
-      </Panel>
+          The breaker policies and trips below STAY here. They are the operator's view of a control
+          that can change a bound flag, not a record of one drill — a trip belongs to a policy, and
+          `ScenarioDashboardTrip` carries no scenario key to file it under. */}
 
       <Panel>
         <h2>Automatic circuit-breaker policies</h2>

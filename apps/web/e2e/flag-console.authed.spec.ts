@@ -118,7 +118,12 @@ test.describe('the flag console, signed in', () => {
     // `ship-activity` state is a timeline, and its own copy says why: "written as sentences, not as
     // rows of a table nobody reads". The columns went with the table; what replaced them is the
     // sentence itself, asserted below. "Flag audit" named the table the rows came out of.
-    await expect(page.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
+    // ⚠️ **"History", not "Activity" — mockups-as-built Story 3.2.** The RAIL item says Activity and
+    // the page's `<h1>` says History, and the approved `ship-activity` state draws exactly that
+    // pair: the rail names a place, the heading names what is on it. `design-system-rails` Story 4.3
+    // renamed the heading to "Activity" reasoning it was "the word the design uses"; half of that
+    // was right and the other half was never checked against the picture.
+    await expect(page.getByRole('heading', { name: 'History', exact: true })).toBeVisible()
     await expect(page.locator('.ds-timeline')).toBeVisible()
 
     // D7 on the surface that most tempted the storage vocabulary: the audit stores

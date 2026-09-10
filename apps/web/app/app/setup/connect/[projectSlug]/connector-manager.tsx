@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CopyField } from '@/design-system/copy-field'
-import { Callout, Field, ShownOnce, Step, Steps } from '@/design-system/primitives'
+import { Callout, Field, ListCard, ShownOnce, Step, Steps } from '@/design-system/primitives'
 import type { ActiveConnector } from '@/lib/connector-tokens'
 import { mintConnectorAction, revokeConnectorAction } from './actions'
 
@@ -117,8 +117,6 @@ export function ConnectorManager({
     })
   }
 
-  const hasAny = minted !== null || tokens.length > 0
-
   return (
     <>
       {/* ⚠️ **The value is shown ONCE, on its own, and this is that screen** (sprint contract #7).
@@ -203,49 +201,70 @@ export function ConnectorManager({
         </p>
       )}
 
-      {/* ── The teaching half — reference state `setup-connect`, the numbered three-step card ────
-          ⚠️ Gated on `canManage && hasAny`, and both halves matter. This copy says "paste the URL
-          above into it", and a MEMBER has no URL above — the page would be telling them to do
-          something it had just made impossible. Without a token there is nothing to paste at all. */}
-      {canManage && hasAny && (
-        <div className="ds-card">
-          <span className="ds-label">Three steps</span>
-          <Steps>
-            <Step>
-              <b>Copy the URL above.</b>
-            </Step>
-            <Step
-              note={
-                // The modal takes no URL parameter — verified against the shipped install panel — so
-                // the flow is copy-then-paste and this link cannot pre-fill it. Saying so is better
-                // than a reader assuming the button did something it did not.
-                'The button opens Claude’s connector dialog. It cannot be pre-filled from a link, so paste the URL yourself.'
-              }
-            >
-              <b>Open Claude&apos;s connector settings.</b>
-              <span className="ds-step-action">
-                {/* ⚠️ The design's `Add to Claude ↗`, and the arrow is an `<Icon>`, not the glyph.
-                    `check-design-drift.mjs` bans `↗` inside `/app`, and epic F1's answer is
-                    explicitly "render it as `<Icon name="external" />`" — never widen the rule, never
-                    add an exemption, never disable the guard. */}
-                <a
-                  className="ds-btn ds-btn--primary"
-                  href={ADD_TO_CLAUDE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Add to Claude
-                  <Icon name="external" size={13} />
-                </a>
-              </span>
-            </Step>
-            <Step>
-              <b>Paste it into the dialog and save.</b> Claude can then read this project&apos;s funnels,
-              features and North Star.
-            </Step>
-          </Steps>
-        </div>
-      )}
+      {/* ⚠️ **The teaching half MOVED OUT of this component — mockups-as-built Story 4.1.** The
+          approved `setup-connect` state is `head → list → list → note`: the URL and its status in
+          ONE card, the three steps in a SECOND one beside it, and a closing sentence under both.
+          While the steps rendered here they were nested inside the page's card, so the gate read the
+          whole page as `head → card` — one block where the design draws three.
+
+          It is `ConnectorSteps` below, rendered by the page as its own sibling. */}
     </>
+  )
+}
+
+/**
+ * The numbered three-step card — reference state `setup-connect`, block 3.
+ *
+ * ⚠️ **Its own block, and the CONDITION travels with it.** It renders only when the reader is an
+ * owner AND a URL exists: the copy says "paste the URL above into it", and a member has no URL above
+ * — the page would be telling them to do something it had just made impossible. Without a token
+ * there is nothing to paste at all.
+ *
+ * `hasConnector` rather than the manager's `minted || tokens.length` because this component is
+ * rendered beside the manager rather than inside it, and a just-minted URL is on the page either
+ * way: the page passes `status.state === 'active'`, and a mint that has only happened in the client
+ * shows its steps on the next render. Making the freshly-minted case reactive would mean lifting the
+ * manager's state into the page, which is a bigger seam than the sentence is worth.
+ */
+export function ConnectorSteps({ canManage, hasConnector }: { canManage: boolean; hasConnector: boolean }) {
+  if (!canManage || !hasConnector) return null
+  return (
+    <ListCard plain>
+      <span className="ds-label">Three steps</span>
+      <Steps>
+        <Step>
+          <b>Copy the URL above.</b>
+        </Step>
+        <Step
+          note={
+            // The modal takes no URL parameter — verified against the shipped install panel — so
+            // the flow is copy-then-paste and this link cannot pre-fill it. Saying so is better
+            // than a reader assuming the button did something it did not.
+            'The button opens Claude’s connector dialog. It cannot be pre-filled from a link, so paste the URL yourself.'
+          }
+        >
+          <b>Open Claude&apos;s connector settings.</b>
+          <span className="ds-step-action">
+            {/* ⚠️ The design's `Add to Claude ↗`, and the arrow is an `<Icon>`, not the glyph.
+            `check-design-drift.mjs` bans `↗` inside `/app`, and epic F1's answer is
+            explicitly "render it as `<Icon name="external" />`" — never widen the rule, never
+            add an exemption, never disable the guard. */}
+            <a
+              className="ds-btn ds-btn--primary"
+              href={ADD_TO_CLAUDE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Add to Claude
+              <Icon name="external" size={13} />
+            </a>
+          </span>
+        </Step>
+        <Step>
+          <b>Paste it into the dialog and save.</b> Claude can then read this project&apos;s funnels, features
+          and North Star.
+        </Step>
+      </Steps>
+    </ListCard>
   )
 }

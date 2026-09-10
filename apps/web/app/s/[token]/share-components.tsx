@@ -58,7 +58,13 @@ export function ShareFrame({
     <Frame variant="public">
       <div className="ds-sharehead" data-share-lens={lens} data-testid="share-audience-note">
         <div className="ds-sharehead-body">
-          <p className="ds-sharehead-title">Shared with you · {sharedBy}</p>
+          {/* ⚠️ **An `<h1>`, not a `<p>` — mockups-as-built Story 4.5.** The approved `public-share`
+              state draws no page head (`sharehead → provenance → document`), and `PodReportBody`
+              stopped rendering one here, which left the page with `<h2>`s and no `<h1>` at all —
+              heading navigation starting in the middle of a document a stranger is reading.
+              This line IS the page's name, so it carries the level. Nothing moves visually:
+              `.ds-sharehead-title` is the same rule either way. */}
+          <h1 className="ds-sharehead-title">Shared with you · {sharedBy}</h1>
           <p className="ds-sharehead-note">
             A read-only view of one report. It shows what is below and nothing else about the project, and it
             can be switched off at any time by whoever made it.{' '}

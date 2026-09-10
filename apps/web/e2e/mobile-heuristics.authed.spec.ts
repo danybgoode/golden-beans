@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { IMPACT_FEATURE_KEY, readTenantRecord } from './helpers/authed-fixture'
 import { assertMobileClean } from './helpers/mobile-heuristics'
-import { isConsoleShellEnabled, isFlagConsoleEnabled } from '../lib/flags'
+import { isFlagConsoleEnabled } from '../lib/flags'
 
 // frijoles-rebrand-closeout · Story 1.4 — the signed-in half of the shared mobile rail.
 //
@@ -62,9 +62,10 @@ const AUTHED_MOBILE_ROUTES: readonly AuthedRoute[] = [
   // ⚠️ `setup keys` moved OUT of this conditional — S4.5 dropped its console gate, because it is now
   // the only surface that mints and a closed gate would leave a project unable to issue a credential.
   { label: 'setup keys', path: (slug) => `/app/setup/keys/${slug}` },
-  ...(isConsoleShellEnabled()
-    ? ([{ label: 'setup connect', path: (slug: string) => `/app/setup/connect/${slug}` }] as const)
-    : []),
+  // ⚠️ `setup connect` moved OUT of a conditional too — mockups-as-built Story 3.3 deleted
+  // `CONSOLE_SHELL_ENABLED`, so the route is unconditional and so is the sweep of it. A route swept
+  // only when a flag happens to be set is a route nothing sweeps on the run where it matters.
+  { label: 'setup connect', path: (slug) => `/app/setup/connect/${slug}` },
   // ── design-system-rails · Sprint 6 — the hub's four routes ───────────────────────────────────
   // They render `Frame`'s `hub` variant, whose bar is a 54px non-wrapping flex row carrying the
   // brand, the project scope, a spacer and a `nowrap` action — the exact shape of the two overflow

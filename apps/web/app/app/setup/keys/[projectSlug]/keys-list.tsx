@@ -1,5 +1,5 @@
 'use client'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { Icon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -71,7 +71,24 @@ function consequenceOf(kind: CredentialKind, scope: string | null): string {
   return CONSEQUENCE[kind](scope)
 }
 
-export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }) {
+export function KeysList({
+  slug,
+  rows,
+  foot,
+}: {
+  slug: string
+  rows: CredentialRow[]
+  /**
+   * The counting sentence, rendered INSIDE the card — mockups-as-built Story 4.1.
+   *
+   * ⚠️ **The approved `setup-keys` state is `head → list`, two blocks.** The page rendered the count
+   * as a `<p>` after the card, which the contract reads as a third block (`note`) the design does
+   * not draw. It is not deleted — it is the one sentence on the page that says what can actually
+   * authenticate right now — it moves inside the card it describes, the same way the Activity pager
+   * sits inside its list rather than beside it.
+   */
+  foot?: ReactNode
+}) {
   const router = useRouter()
   const [confirming, setConfirming] = useState<CredentialRow | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -198,6 +215,7 @@ export function KeysList({ slug, rows }: { slug: string; rows: CredentialRow[] }
             </Col>
           </Row>
         ))}
+        {foot}
       </ListCard>
 
       {/* ONE dialog, for every row. See the header of this file. */}

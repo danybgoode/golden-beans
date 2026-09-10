@@ -198,8 +198,27 @@ export function Stat({ value, label }: { value: string; label: string }) {
 
 // ── The answer line — the sentence a page opens with ───────────────────────────────────────────
 
-export function Answer({ children }: { children: ReactNode }) {
-  return <p className="ds-answer">{children}</p>
+export function Answer({
+  children,
+  freshnessTone,
+}: {
+  children: ReactNode
+  /**
+   * The staleness cue, when this answer is the page's provenance too.
+   *
+   * ⚠️ **Added by mockups-as-built Story 4.4, and deliberately NOT a general escape hatch.** The
+   * approved `hub-horizon` state draws no provenance line, so Horizon's "pushed 2h ago as of merge
+   * abc1234" moved into its answer — and the tone that `FreshnessStamp` carries had to move with it,
+   * or a stale board would read as a current one. One named prop rather than a spread of arbitrary
+   * attributes: a primitive that accepts anything is a primitive that stops being a contract.
+   */
+  freshnessTone?: 'fresh' | 'recent' | 'stale' | 'unknown'
+}) {
+  return (
+    <p className="ds-answer" data-freshness-tone={freshnessTone}>
+      {children}
+    </p>
+  )
 }
 
 // ── Data table ────────────────────────────────────────────────────────────────────────────────
@@ -607,6 +626,7 @@ export function ListCard({
   children,
   label,
   wideActions,
+  plain,
 }: {
   children: ReactNode
   label?: string
@@ -618,6 +638,18 @@ export function ListCard({
    * the stylesheet where the header and the cells read the same one.
    */
   wideActions?: boolean
+  /**
+   * The card WITHOUT the table semantics — a padded surface rather than a grid of rows.
+   *
+   * ⚠️ **The approved design uses `.listcard` for both**, and eight of the states this epic builds
+   * take the second form: `measure-journey`'s stage funnel, `measure-north-star`'s trend, and the
+   * five panels `experiment-ready` stacks are all `.listcard` in the prototype with no `.listhead`
+   * and no rows in them at all. Rendering those through the row-shaped `ListCard` would put
+   * `role="table"` around a bar chart and a paragraph — a table a screen reader announces as having
+   * no rows, which is worse structure than the plain `<div>` it replaced, and bought only to make
+   * one class name serve two jobs silently. The flag makes the two forms visible at the call site.
+   */
+  plain?: boolean
 }) {
   return (
     <div className="ds-listcard" data-actions={wideActions ? 'wide' : undefined}>
@@ -625,7 +657,11 @@ export function ListCard({
           (Do-not #6). `role="table"` sits on the SCROLLER because that is the element that
           directly contains the rows — a `role="row"` whose ancestor is a plain `<div>` is an
           orphaned role a screen reader reports as broken structure. */}
-      <div className="ds-listcard-scroll" role="table" aria-label={label}>
+      <div
+        className={classes('ds-listcard-scroll', plain && 'ds-listcard-scroll--plain')}
+        role={plain ? undefined : 'table'}
+        aria-label={plain ? undefined : label}
+      >
         {children}
       </div>
     </div>
@@ -1096,4 +1132,51 @@ export function PageTab({
 /** The body a `PageTabs` strip reveals. */
 export function Pane({ children }: { children: ReactNode }) {
   return <div className="ds-pane">{children}</div>
+}
+
+/**
+ * The version list — `measure-journey`'s second half, and the block the state contract calls
+ * `versions` (epic D2-b, `state-contract-core.mjs`).
+ *
+ * ⚠️ **This is deliberately NOT a `ListCard`.** The vocabulary pairs `versions` with `.ds-vers` and
+ * the built page rendered a `.ds-listcard`, so the gate said *"the approved state has `versions`,
+ * the page has `list`"* — which was the gate working, not a hole in it. Widening `versions` to also
+ * match `.ds-listcard` would have made the two agree by deleting the question. The approved design
+ * draws a different thing here: hairline-separated rows with no header, no column grid and no
+ * action cell, because a version is a fact and never a control.
+ */
+export function Versions({ children }: { children: ReactNode }) {
+  return (
+    <div className="ds-vers" role="list">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * One version in a `Versions` list.
+ *
+ * The number, its state, what that version does, and who put it there — in that order, which is the
+ * order `console-prototype.html:2586` draws. `who` floats to the trailing edge from the stylesheet
+ * rather than from a spacer element, so a row with no `who` still lines up.
+ */
+export function Version({
+  number,
+  state,
+  children,
+  who,
+}: {
+  number: string
+  state: ReactNode
+  children: ReactNode
+  who: ReactNode
+}) {
+  return (
+    <div className="ds-vers-row" role="listitem">
+      <span className="ds-vers-n ds-mono">{number}</span>
+      {state}
+      <span className="ds-vers-what">{children}</span>
+      <span className="ds-vers-who ds-mono">{who}</span>
+    </div>
+  )
 }

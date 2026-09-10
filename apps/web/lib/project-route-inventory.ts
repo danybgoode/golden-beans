@@ -21,20 +21,28 @@ export type ProjectSurfaceGate =
   | 'flag-serving'
   | 'journey-projections'
   | 'signals'
-  // console-ia-overhaul · Sprint 2 (epic README, A7) — `console-shell` gates Setup › Connect,
-  // exactly as `flag-console` gates its own routes.
-  //
-  // ⚠️ **`legacy-keys` and `legacy-flag-credentials` are GONE — design-system-rails S4.5.** They
-  // were the other half of A7: derived as `!isConsoleShellEnabled()`, they made the three legacy
-  // credential routes LEAVE the nav at the exact instant their merged replacement entered it, so the
-  // two worlds were never listed together and never both absent. That machinery existed to swap
-  // between two ways of minting a key. Story 4.5 leaves one, so the inverse became a switch with a
-  // single position — and a gate whose value cannot change is a gate that reads like a decision
-  // while making none.
-  //
-  // The three routes still ANSWER, as permanent redirects, and their manifest rows carry
-  // `retiresIn: 4`. What is gone is their status as destinations somebody navigates to.
-  | 'console-shell'
+// ⚠️ **`console-shell` is GONE — mockups-as-built Story 3.3.**
+//
+// It gated Setup › Connect, and before that it swapped the three legacy credential routes in and
+// out through two DERIVED gates (`legacy-keys`, `legacy-flag-credentials`) whose comment below
+// still explains why they went: a gate whose value cannot change is a gate that reads like a
+// decision while making none. `CONSOLE_SHELL_ENABLED` reached that state the moment Daniel ruled
+// the console ships unflagged — its only remaining position was ON.
+//
+// Deleted from `lib/flags.ts`, from this union, from `ci.yml`, from `run-local-e2e.mjs` and from
+// every Vercel environment. Rollback is `git revert` of the sprint PR, which is sound because this
+// epic ships no migration, no schema change and no auth change (epic D4/D13).
+//
+// ⚠️ **`legacy-keys` and `legacy-flag-credentials` are GONE — design-system-rails S4.5.** They
+// were the other half of A7: derived as `!isConsoleShellEnabled()`, they made the three legacy
+// credential routes LEAVE the nav at the exact instant their merged replacement entered it, so the
+// two worlds were never listed together and never both absent. That machinery existed to swap
+// between two ways of minting a key. Story 4.5 leaves one, so the inverse became a switch with a
+// single position — and a gate whose value cannot change is a gate that reads like a decision
+// while making none.
+//
+// The three routes still ANSWER, as permanent redirects, and their manifest rows carry
+// `retiresIn: 4`. What is gone is their status as destinations somebody navigates to.
 export type ProjectSurfaceStatus = 'linked' | 'gated' | 'flow-only'
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D2) — the four destinations.
@@ -165,6 +173,36 @@ export const PROJECT_ROUTE_INVENTORY = [
   // `gate: 'always'` for the same reason its page no longer calls `isConsoleShellEnabled()` — it is
   // the ONLY surface that mints, and a rollback that removed it would leave a project unable to
   // issue any credential at all.
+  // ── mockups-as-built · Sprint 3, Story 3.1 (epic D14) — MEASURE'S DEFAULT ────────────────────
+  //
+  // ⚠️ **FIRST among the `measure` rows, and that is what makes it the section's entry.**
+  // `getSectionEntryHref` takes `getSectionLinks(links, section)[0]` — the first surface in THIS
+  // array's order — so "the approved Measure rail opens on North Star" is expressed by position
+  // rather than by a second `isDefault` field that would have to be kept in step with it.
+  //
+  // `gate: 'always'`: the page reads `north_star_metrics` and `leading_inputs`, which every project
+  // has whether or not anything is registered in them, and it renders a named absence when nothing
+  // is. There is no flag to hide it behind and this epic adds none (epic D4).
+  //
+  // Until this row existed the approved `measure-north-star` state was mapped onto
+  // `/app/impact/[projectSlug]/[featureKey]` — an architect's substitution for a route that did not
+  // exist, recorded honestly in `route-manifest.ts`. That mapping is gone; `/app/impact/…` keeps its
+  // own state.
+  {
+    routeSegment: 'north-star',
+    // `star`, from the closed `ICON_NAMES` union — the approved rail draws `◈`, and
+    // `check-design-drift.mjs` bans pictographs inside `/app`, which is why every rail glyph is an
+    // SVG name rather than the character.
+    iconKey: 'star',
+    audience: 'member',
+    gate: 'always',
+    status: 'linked',
+    topLevelProjectRoute: true,
+    section: 'measure',
+    label: 'North Star',
+    href: (slug: string) => `/app/north-star/${slug}`,
+    description: () => 'the one number, and what feeds it',
+  },
   {
     routeSegment: 'journeys',
     iconKey: 'route',
@@ -244,7 +282,10 @@ export const PROJECT_ROUTE_INVENTORY = [
     // MEMBER-readable. The connector URL is how this project's own operators point an agent at their
     // data; minting one is owner-only (the action re-checks), but reading the page is not.
     audience: 'member',
-    gate: 'console-shell',
+    // `always` since Story 3.3 deleted `CONSOLE_SHELL_ENABLED`. The page's own
+    // `if (!isConsoleShellEnabled()) notFound()` went with it, so a nav entry that could point at a
+    // 404 is no longer representable.
+    gate: 'always',
     status: 'gated',
     topLevelProjectRoute: false,
     section: 'setup',

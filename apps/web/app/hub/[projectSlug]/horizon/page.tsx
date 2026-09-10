@@ -4,7 +4,7 @@ import { getHubRoadmap } from '@/lib/hub-query'
 import { formatFreshness } from '@/lib/hub-freshness'
 import { deriveHorizon, type DestinationStatus } from '@/lib/horizon-destinations'
 import { Icon } from '@/components/ui/Icon'
-import { EmptyHubState, HubProvenance } from '../../hub-components'
+import { EmptyHubState } from '../../hub-components'
 import { HubFrame } from '../../hub-frame'
 import { Answer, Callout, PageHead } from '@/design-system/primitives'
 
@@ -79,18 +79,25 @@ export default async function HubHorizonPage({ params }: { params: Promise<{ pro
         title="Horizon"
         lede="The end states this product is walking toward, and which epics light each one."
       />
-      <HubProvenance
-        freshness={freshness}
-        from={`${summary.counts.epics} epics on the road`}
-        version={artifact.version}
-      />
-
-      <Answer>
+      {/* ⚠️ **NO PROVENANCE LINE — mockups-as-built Story 4.4.** The approved `hub-horizon` state is
+          `head → answer → destinations → haze`; the stamp belongs to `hub-report`, which draws one.
+          It is not lost: the answer below says when, which is where a sentence about how current a
+          view is belongs on a page whose whole subject is what has not happened yet. */}
+      <Answer freshnessTone={freshness.tone}>
         <b>
           {litCount} of {destinations.length} destinations are lit.
         </b>{' '}
         A destination goes lit only when every epic under it has actually shipped — nothing here marks one lit
-        on the strength of work that has not.
+        on the strength of work that has not. Read from {summary.counts.epics} epics on the road,{' '}
+        {freshness.tone === 'stale' ? <strong>possibly stale — </strong> : null}pushed{' '}
+        {freshness.iso ? (
+          <time dateTime={freshness.iso} title={freshness.iso}>
+            {freshness.age}
+          </time>
+        ) : (
+          freshness.age
+        )}
+        {freshness.shortCommit ? ` as of merge ${freshness.shortCommit}` : ''} (push #{artifact.version}).
       </Answer>
 
       <ul className="ds-dests" aria-label="End-state destinations">

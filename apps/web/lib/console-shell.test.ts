@@ -56,7 +56,6 @@ const allGatesOpen: ProjectSurfaceGates = {
   signals: true,
   // Console ON, so `legacy-keys` is its inverse (A7). These two are never independently true: the
   // merged Setup route and the three it replaces are never in the nav at the same time.
-  'console-shell': true,
 }
 
 // What a Vercel PREVIEW actually serves (epic README, A2): four gates are Production-scoped, so a
@@ -70,7 +69,6 @@ const previewGates: ProjectSurfaceGates = {
   signals: false,
   // `CONSOLE_SHELL_ENABLED` is created disabled in every scope, preview included — so a preview
   // shows the LEGACY credential routes, which is what makes this fixture the real preview state.
-  'console-shell': false,
 }
 
 const owner = [{ slug: 'miyagisanchez', role: 'owner' }]
@@ -95,7 +93,11 @@ test('each tab points at the first entitled surface of its section', () => {
   const tabs = header('home').tabs
   const href = (id: string) => tabs.find((tab) => tab.id === id)?.href
   assert.equal(href('today'), '/app')
-  assert.equal(href('measure'), '/app/journeys/miyagisanchez')
+  // ⚠️ `north-star`, not `journeys` — mockups-as-built Story 3.1 (epic D14). The approved Measure
+  // rail opens on North Star, and the route did not exist until this sprint built it; the tab points
+  // at the section's FIRST entitled surface, so putting the row first in the inventory is what makes
+  // "Measure opens on North Star" true. Same shape as the `flags`/`experiments` correction below.
+  assert.equal(href('measure'), '/app/north-star/miyagisanchez')
   // ⚠️ `flags`, not `experiments` — design-system-rails Story 4.3. The approved Ship rail is
   // Features · Experiments · Scheduled changes · Activity, and the inventory had the first two the
   // other way round; the tab points at the section's FIRST entitled surface, so correcting the rail
@@ -158,10 +160,16 @@ test('on PREVIEW gates all four tabs still render, and Ship lands on a surface a
     '/app/scheduled/miyagisanchez',
     'Ship pointed somewhere a preview cannot serve'
   )
+  // ⚠️ **`north-star`, and it is a STRICTLY better answer than the one this line used to pin.**
+  // Measure used to land on Scenarios here, because Journeys rides `journey-projections` which a
+  // preview gates off — the tab skipped past its own first surface to the first one a preview could
+  // serve. North Star is `gate: 'always'`, so a preview now lands on the SAME surface production
+  // does. The property this assertion exists for is unchanged: a tab never points somewhere a
+  // preview cannot serve.
   assert.equal(
     tabs.find((tab) => tab.id === 'measure')?.href,
-    '/app/scenarios/miyagisanchez',
-    'Measure pointed at journeys, which a preview gates off'
+    '/app/north-star/miyagisanchez',
+    'Measure pointed somewhere a preview cannot serve'
   )
   // Stated as the property rather than the instance: no tab may exist without a destination.
   for (const tab of tabs) assert.ok(tab.href.length > 0, `${tab.id} rendered with no href`)
@@ -216,7 +224,6 @@ test('Today always renders, even when every gate is closed and the viewer owns n
     'flag-serving': false,
     'journey-projections': false,
     signals: false,
-    'console-shell': false,
   }
   const tabs = header('home', closed, [{ slug: 'miyagisanchez', role: 'member' }]).tabs
   // `scenarios` is `gate: 'always'` and member-readable, so Measure survives — which is the useful
@@ -263,7 +270,9 @@ test('switching from a section both projects entitle keeps you in that section',
     { slug: 'miyagisanchez', role: 'owner' },
     { slug: 'acme', role: 'member' },
   ])
-  assert.equal(projects.find((project) => project.slug === 'acme')?.href, '/app/journeys/acme')
+  // Measure's entry, resolved with acme's own role — `/app/north-star` since Story 3.1 made North
+  // Star the section's first surface.
+  assert.equal(projects.find((project) => project.slug === 'acme')?.href, '/app/north-star/acme')
 })
 
 test('from Today, every project switches to THAT PROJECT’s Today', () => {
@@ -315,7 +324,7 @@ test('getSectionEntryHref returns null rather than an empty string for an unenti
     gates: { ...allGatesOpen, 'experiment-governance': false, 'flag-serving': false, 'flag-console': false },
   })
   assert.equal(getSectionEntryHref(noShip, 'ship'), null)
-  assert.equal(getSectionEntryHref(memberLinks, 'measure'), '/app/journeys/acme')
+  assert.equal(getSectionEntryHref(memberLinks, 'measure'), '/app/north-star/acme')
 })
 
 test('a slug the viewer is not a member of yields no tabs beyond Today', () => {
@@ -501,7 +510,6 @@ test('with no projects the gates cannot affect the header — EVERY combination 
     'flag-serving': false,
     'journey-projections': false,
     signals: false,
-    'console-shell': false,
   })
   // ANCHORED absolutely, not just relatively. Every comparison below is `header(x)` against
   // `header(allFalse)` — both sides from the same function — so deleting the unconditional Today

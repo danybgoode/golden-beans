@@ -101,8 +101,26 @@ export function NewThingDialog({
         // Both, because they are different events: `onClose` fires however it closed, `onCancel`
         // is Escape specifically. Without the second, Escape closes the element and leaves React
         // believing it is still open, so the trigger stops working exactly once.
-        onClose={() => setOpen(false)}
-        onCancel={() => setOpen(false)}
+        //
+        // ⚠️ **`event.target === dialog.current`, and WITHOUT it this seam closed itself on every
+        // successful mutation, on all six surfaces.** `close` does not bubble in the DOM — but React
+        // delegates it and replays it up the REACT tree, so a nested `<dialog>` closing fires this
+        // handler too. Every manager mounted in here confirms its mutation with `ConfirmDialog`,
+        // which is a `<dialog>` inside this one: confirming a launch, a stop, a journey activation,
+        // an experiment transition or a delivery replay closed the confirmation and then, one React
+        // event later, the modal around it. The work succeeded and the operator was returned to the
+        // page without ever seeing "Scenario run stopped."
+        //
+        // Traced 2026-09-10 by patching `HTMLDialogElement.prototype.close` and reading the stack:
+        // the call came from this component's own effect, during a commit, with React's `open`
+        // already false — so the cause was `setOpen`, not the DOM. Same identity comparison the
+        // backdrop handler below already uses, and for the same reason.
+        onClose={(event) => {
+          if (event.target === dialog.current) setOpen(false)
+        }}
+        onCancel={(event) => {
+          if (event.target === dialog.current) setOpen(false)
+        }}
         // ⚠️ **The backdrop closes it, and this handler is why** (cross-family review, Codex). The
         // comment below used to promise backdrop-dismiss and nothing implemented it — a native
         // `<dialog>` does NOT close on a backdrop click. That is CODE-QUALITY #3, and the fix is to

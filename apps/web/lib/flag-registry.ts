@@ -77,6 +77,15 @@ type RawAudit = {
 }
 
 /** Member-readable, project-scoped immutable control-plane inspection. */
+/**
+ * How many lifecycle-audit rows a single read returns — the retained history this product SHOWS.
+ *
+ * Exported so `/app/flag-audit` can name the boundary rather than imply there is none. A page that
+ * says "everything anyone has done" while reading a capped window is a page making a claim its own
+ * query cannot keep.
+ */
+export const FLAG_AUDIT_WINDOW = 200
+
 export async function getFlagRegistryView(projectId: string): Promise<{
   flags: FlagRegistryRow[]
   environments: FlagEnvironmentStateRow[]
@@ -120,7 +129,27 @@ export async function getFlagRegistryView(projectId: string): Promise<{
       )
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
-      .limit(200),
+      // ⚠️ **A TIEBREAKER, added by mockups-as-built Story 3.2 because pagination needs a TOTAL
+      // order.** `created_at` alone is not one: two audit rows written in the same transaction — a
+      // definition created and activated together, a bulk catalog sync — share a timestamp, and
+      // Postgres is free to return them in either order between two queries. Unpaginated that is
+      // invisible; sliced into pages it means a row can appear on page 1 and again on page 2 while
+      // another is skipped entirely, with every count still correct.
+      //
+      // `id` is a UUID and carries no meaning, which is the point: it is an arbitrary but STABLE
+      // discriminator, so equal timestamps resolve the same way on every request.
+      .order('id', { ascending: false })
+      // ⚠️ **A RETAINED-HISTORY BOUNDARY, and the page must say so rather than imply otherwise**
+      // (cross-agent review, Codex, round 2). This cap predates pagination and was invisible while
+      // the page rendered one list — production holds 148 rows, under it. Paginating a capped subset
+      // is what made it a defect in waiting: at 201 rows the pager's "of N" and the page's own
+      // "Everything anyone has done" both become false, and nothing would have said so.
+      //
+      // The cap STAYS — lifting it would put an unbounded read on a request path — and
+      // `FLAG_AUDIT_WINDOW` is exported so the page can state the boundary in words instead of
+      // claiming completeness it does not have. One number, one place, read by the page rather than
+      // retyped there.
+      .limit(FLAG_AUDIT_WINDOW),
   ])
   if (versionsResult.error || activationsResult.error || statesResult.error || auditResult.error) {
     console.error(

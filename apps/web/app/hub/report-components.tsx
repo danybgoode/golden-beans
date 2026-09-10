@@ -4,6 +4,7 @@
 // render. Same line, same reason, in app/hub/hub-components.tsx.
 import { isHonest, type MetricRow, type NotInstrumentedRow, type PodReportView } from '@/lib/pod-report-view'
 import { lensPolicy, type PodReportLens } from '@/lib/pod-report-lens'
+import type { ReactNode } from 'react'
 import type { OutcomeSection } from '@/lib/pod-outcome'
 import type { Freshness } from '@/lib/hub-freshness'
 import { HubProvenance } from './hub-components'
@@ -599,6 +600,8 @@ export function PodReportBody({
   lens,
   artifactVersion,
   freshness,
+  withHead = true,
+  appendix,
 }: {
   projectSlug: string
   view: PodReportView
@@ -606,6 +609,25 @@ export function PodReportBody({
   lens: PodReportLens
   artifactVersion: number
   freshness: Freshness
+  /**
+   * Extra sections rendered INSIDE the document, after the report's own.
+   *
+   * ⚠️ **`/s/[token]` appends the journey and horizon strips, and they have to be in here.** The
+   * approved `public-share` state is `sharehead → provenance → document` — three blocks — and the
+   * share page rendered the strips as siblings of the document, so the contract reported two blocks
+   * the design has no name for. The design's name for them is the same as for everything else after
+   * the stamp: the document.
+   */
+  appendix?: ReactNode
+  /**
+   * mockups-as-built Story 4.5 — whether this body draws its own page head.
+   *
+   * ⚠️ **`/s/[token]` draws NONE, and the approved states are what say so.** `hub-report` is
+   * `head → provenance → document`; `public-share` is `sharehead → provenance → document`. The
+   * share route's `.ds-sharehead` — "Shared with you by … · Read only" — IS its head, and a second
+   * one under it would say the page's name twice to a reader who is not in the product.
+   */
+  withHead?: boolean
 }) {
   // FIRST, before anything else can render a number. isHonest() returns true for an empty view, so
   // an empty artifact still reaches its own (harmless) empty state below rather than the refusal.
@@ -624,10 +646,12 @@ export function PodReportBody({
           The answer is deliberately the verdict AND its coverage gap. The pairing starts at the TOP
           of the page, not down in the ladder section — a reader who never scrolls has still been
           told what is not measured. */}
-      <PageHead
-        title="Pod report"
-        lede={`How the ${projectSlug} pod is actually performing, read from its own git and pull-request history.`}
-      />
+      {withHead ? (
+        <PageHead
+          title="Pod report"
+          lede={`How the ${projectSlug} pod is actually performing, read from its own git and pull-request history.`}
+        />
+      ) : null}
       <HubProvenance freshness={freshness} from={sourceSummary(view, policy)} version={artifactVersion}>
         <span className="ds-prov-sep" aria-hidden="true">
           ·
@@ -637,115 +661,134 @@ export function PodReportBody({
         </span>
       </HubProvenance>
 
-      <Answer>
-        <span data-testid="agent-headline">
-          {verdict ? (
-            <>
-              Operates at <b>step {verdict.step}</b> — {verdict.stepLabel} · <b>{verdict.metCriteria}</b>/
-              <b>{verdict.totalCriteria}</b> criteria met with evidence ·{' '}
-              <b>{verdict.notInstrumentedCount}</b> not instrumented.
-            </>
-          ) : (
-            <>This artifact carries no ladder verdict — the delivery numbers below stand on their own.</>
-          )}
-        </span>{' '}
-        {policy.audienceNote}
-      </Answer>
+      {/* ── mockups-as-built · Story 4.4 — EVERYTHING BELOW THE STAMP IS ONE `document` ─────────
+          The approved `hub-report` and `public-share` states are `… → provenance → document`: one
+          block after the stamp, not a stack of them. The built page rendered the answer, the caveats
+          and three `<section>`s as siblings, so the gate reported four blocks the design has no name
+          for — and it was right to: the design's name for all of them is "the document".
 
-      {/* Caveats sit ABOVE the numbers. Sprint 2.5c's acceptance is that they are on the page and
+          ⚠️ **`route-manifest.ts` carried `POD_REPORT_TABLES_DEFERRAL` saying the approved state "is
+          PROSE and contains no table at all".** That premise is what this wrapper resolves: the
+          state is a DOCUMENT, and a document may contain a table. Nothing is deleted to satisfy a
+          geometry assertion — every metric table, the not-instrumented panel and the maturity ladder
+          render exactly as they did, inside the block the design draws around them. The deferral is
+          closed rather than extended, which is what Story 4.4 asks for. */}
+      <div className="ds-doc">
+        <Answer>
+          <span data-testid="agent-headline">
+            {verdict ? (
+              <>
+                Operates at <b>step {verdict.step}</b> — {verdict.stepLabel} · <b>{verdict.metCriteria}</b>/
+                <b>{verdict.totalCriteria}</b> criteria met with evidence ·{' '}
+                <b>{verdict.notInstrumentedCount}</b> not instrumented.
+              </>
+            ) : (
+              <>This artifact carries no ladder verdict — the delivery numbers below stand on their own.</>
+            )}
+          </span>{' '}
+          {policy.audienceNote}
+        </Answer>
+
+        {/* Caveats sit ABOVE the numbers. Sprint 2.5c's acceptance is that they are on the page and
           not in a footnote; putting them first makes that true for a reader who never scrolls. */}
-      {view.caveats.length > 0 && (
-        <div className="ds-caveats" data-testid="pod-report-caveats" role="note">
-          <span className="ds-label">Read these first</span>
-          <ul className="ds-doc-list">
-            {view.caveats.map((caveat) => (
-              <li key={caveat}>{caveat}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {view.caveats.length > 0 && (
+          <div className="ds-caveats" data-testid="pod-report-caveats" role="note">
+            <span className="ds-label">Read these first</span>
+            <ul className="ds-doc-list">
+              {view.caveats.map((caveat) => (
+                <li key={caveat}>{caveat}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {view.empty ? (
-        <p className="ds-hint" data-testid="pod-report-no-delivery">
-          The latest pushed artifact carries no delivery section, so there are no delivery numbers to render.
-          Re-run <code>scripts/pod-report.mjs</code> against a real checkout and push again.
-        </p>
-      ) : (
-        <>
-          {/* ── Decision 4, as layout ──────────────────────────────────────────────────────────
+        {view.empty ? (
+          <p className="ds-hint" data-testid="pod-report-no-delivery">
+            The latest pushed artifact carries no delivery section, so there are no delivery numbers to
+            render. Re-run <code>scripts/pod-report.mjs</code> against a real checkout and push again.
+          </p>
+        ) : (
+          <>
+            {/* ── Decision 4, as layout ──────────────────────────────────────────────────────────
               The gaps are a COLUMN of the speed section, not a block underneath it. Two grid
               children in one <section>: the table cannot be scrolled past without the panel that
               qualifies it entering the viewport at the same time. */}
-          <section className="ds-report-section" aria-labelledby="speed-heading">
-            <h2 className="ds-report-heading" id="speed-heading">
-              How fast — and what that does <em>not</em> tell you
-            </h2>
-            <p className="ds-lede">
-              Every number here is computed from this repository’s own git and pull-request history. Nothing
-              is estimated, and nothing on the right-hand side is an apology: those are the questions this
-              dataset cannot answer, each with the guardrail that would close it.
-            </p>
-            <div className="ds-pairing">
-              <MetricTable
-                caption="Delivery — computed, not claimed"
-                rows={view.speed}
-                benchmarks={view.benchmarks}
-              />
-              <NotInstrumentedPanel
-                testId="delivery-not-instrumented"
-                heading="Not instrumented"
-                intro="Absent because the data cannot support them — never because they are zero. A change-failure rate computed here would read 0% and mean “not measured”, which is the exact dishonesty this report exists to avoid."
-                rows={view.notInstrumented}
-              />
-            </div>
-          </section>
-
-          {policy.showComposition && view.composition.length > 0 && (
-            <section className="ds-report-section" aria-labelledby="composition-heading">
-              <h2 className="ds-report-heading" id="composition-heading">
-                Who wrote it
+            <section className="ds-report-section" aria-labelledby="speed-heading">
+              <h2 className="ds-report-heading" id="speed-heading">
+                How fast — and what that does <em>not</em> tell you
               </h2>
               <p className="ds-lede">
-                A composition fact about how the work was produced. It is not a productivity claim and cannot
-                be read as one — a co-author trailer records participation, never contribution.
+                Every number here is computed from this repository’s own git and pull-request history. Nothing
+                is estimated, and nothing on the right-hand side is an apology: those are the questions this
+                dataset cannot answer, each with the guardrail that would close it.
               </p>
-              <MetricTable
-                caption="Agent co-authorship by month"
-                rows={view.composition}
-                benchmarks={view.benchmarks}
-              />
+              <div className="ds-pairing">
+                <MetricTable
+                  caption="Delivery — computed, not claimed"
+                  rows={view.speed}
+                  benchmarks={view.benchmarks}
+                />
+                <NotInstrumentedPanel
+                  testId="delivery-not-instrumented"
+                  heading="Not instrumented"
+                  intro="Absent because the data cannot support them — never because they are zero. A change-failure rate computed here would read 0% and mean “not measured”, which is the exact dishonesty this report exists to avoid."
+                  rows={view.notInstrumented}
+                />
+              </div>
             </section>
-          )}
-        </>
-      )}
 
-      {view.maturity && (
-        <MaturityLadder maturity={view.maturity} repo={view.source.repo} showRows={policy.showMaturityRows} />
-      )}
+            {policy.showComposition && view.composition.length > 0 && (
+              <section className="ds-report-section" aria-labelledby="composition-heading">
+                <h2 className="ds-report-heading" id="composition-heading">
+                  Who wrote it
+                </h2>
+                <p className="ds-lede">
+                  A composition fact about how the work was produced. It is not a productivity claim and
+                  cannot be read as one — a co-author trailer records participation, never contribution.
+                </p>
+                <MetricTable
+                  caption="Agent co-authorship by month"
+                  rows={view.composition}
+                  benchmarks={view.benchmarks}
+                />
+              </section>
+            )}
+          </>
+        )}
 
-      <OutcomeSectionView outcome={outcome} />
+        {view.maturity && (
+          <MaturityLadder
+            maturity={view.maturity}
+            repo={view.source.repo}
+            showRows={policy.showMaturityRows}
+          />
+        )}
 
-      {view.benchmarks.length > 0 && (
-        <section className="ds-report-section" aria-labelledby="benchmarks-heading">
-          <h2 className="ds-report-heading" id="benchmarks-heading">
-            The benchmarks these numbers are read against
-          </h2>
-          <p className="ds-lede">
-            Our side is computed, not claimed. Their side is cited and linked, never republished wholesale —
-            follow the link for the published figures.
-          </p>
-          <ul className="ds-benchlist" data-testid="pod-report-benchmarks">
-            {view.benchmarks.map((b) => (
-              <li key={b.id} className="ds-benchitem">
-                <a href={b.url} target="_blank" rel="noreferrer">
-                  {b.label}
-                </a>
-                <p className="ds-hint">{b.note}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+        <OutcomeSectionView outcome={outcome} />
+
+        {view.benchmarks.length > 0 && (
+          <section className="ds-report-section" aria-labelledby="benchmarks-heading">
+            <h2 className="ds-report-heading" id="benchmarks-heading">
+              The benchmarks these numbers are read against
+            </h2>
+            <p className="ds-lede">
+              Our side is computed, not claimed. Their side is cited and linked, never republished wholesale —
+              follow the link for the published figures.
+            </p>
+            <ul className="ds-benchlist" data-testid="pod-report-benchmarks">
+              {view.benchmarks.map((b) => (
+                <li key={b.id} className="ds-benchitem">
+                  <a href={b.url} target="_blank" rel="noreferrer">
+                    {b.label}
+                  </a>
+                  <p className="ds-hint">{b.note}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {appendix}
+      </div>
     </>
   )
 }

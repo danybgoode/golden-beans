@@ -6,6 +6,20 @@ import { useRouter } from 'next/navigation'
 import type { ExperimentDecisionOutcome } from '@/lib/experiment-decision-contract'
 import { recordExperimentDecisionAction } from '../actions'
 
+/**
+ * The five outcomes, in the approved order, with the approved words.
+ *
+ * Declared once beside the component that draws them so the labels the design specifies and the
+ * values `parseExperimentDecisionCommand` accepts cannot drift into two lists.
+ */
+const OUTCOMES: [ExperimentDecisionOutcome, string][] = [
+  ['ship_treatment', 'Ship the treatment'],
+  ['keep_control', 'Keep control'],
+  ['iterate', 'Change it and run again'],
+  ['inconclusive', 'Call it inconclusive'],
+  ['invalid', 'Mark it invalid'],
+]
+
 export function DecisionRecorder({
   slug,
   experimentKey,
@@ -86,27 +100,46 @@ export function DecisionRecorder({
     })
   }
 
-  if (!eligible) {
-    return <p>Decision recording becomes available to project owners after the experiment is stopped.</p>
-  }
-
   return (
     <form onSubmit={onSubmit}>
-      <h3>{recordKind === 'decision' ? 'Record human decision' : 'Append correction'}</h3>
-      <label>
-        Outcome
-        <select
-          value={outcome}
-          onChange={(event) => setOutcome(event.target.value as ExperimentDecisionOutcome)}
-        >
-          <option value="ship_treatment">Ship a treatment</option>
-          <option value="keep_control">Keep control</option>
-          <option value="iterate">Iterate</option>
-          <option value="inconclusive">Inconclusive</option>
-          <option value="invalid">Invalid evidence</option>
-        </select>
-      </label>
-      {outcome === 'ship_treatment' && (
+      {/* ⚠️ **The five outcomes are BUTTONS, because that is what the approved state draws** —
+          `console-prototype.html:3089` (`.outcomes`), five side-by-side controls greyed until the
+          blockers clear, not a `<select>`. mockups-as-built Story 2.3.
+
+          ⚠️ **And an ineligible experiment draws them DISABLED rather than replacing the whole
+          panel with a sentence.** This used to `return <p>…</p>` before the form existed, so on a
+          running experiment the approved state's sixth block had no controls in it at all — the
+          page told you the decision surface was absent instead of showing you the decision you
+          cannot make yet. The sentence stays; it moves under the buttons it explains.
+
+          The gate itself is UNCHANGED and is not this component's: `parseExperimentDecisionCommand`
+          refuses a decision unless the version is stopped and undecided (`:175`), on the server,
+          from the governed analysis rather than from anything the browser sent. `disabled` here is
+          presentation. */}
+      <div className="ds-outcomes" role="group" aria-label="Decision outcome">
+        {OUTCOMES.map(([value, words]) => (
+          <button
+            key={value}
+            type="button"
+            className="ds-outcome"
+            // ⚠️ Not `outcome === value` alone: a DISABLED button announced as pressed tells a
+            // screen reader that a decision has been made on an experiment where none can be. The
+            // stylesheet carries the same `:not([disabled])` guard, so the two cues say one thing.
+            aria-pressed={eligible && outcome === value}
+            disabled={!eligible}
+            onClick={() => setOutcome(value)}
+          >
+            {words}
+          </button>
+        ))}
+      </div>
+      {!eligible ? (
+        <p className="ds-chart-note">
+          Greyed out until this version is stopped and undecided. Recording a decision on numbers that cannot
+          support one is the thing this page exists to prevent.
+        </p>
+      ) : null}
+      {eligible && outcome === 'ship_treatment' && (
         <label>
           Chosen treatment
           <select value={treatment} onChange={(event) => setTreatment(event.target.value)}>
@@ -118,25 +151,29 @@ export function DecisionRecorder({
           </select>
         </label>
       )}
-      {outcome === 'keep_control' && (
+      {eligible && outcome === 'keep_control' && (
         <p>
           Declared control: <code>{controlVariantKey}</code>
         </p>
       )}
-      <label>
-        Human rationale
-        <textarea
-          value={rationale}
-          onChange={(event) => setRationale(event.target.value)}
-          rows={5}
-          maxLength={2_000}
-          required
-          style={{ display: 'block', width: '100%' }}
-        />
-      </label>
-      <button type="submit" disabled={pending || (outcome === 'ship_treatment' && !treatment)}>
-        {pending ? 'Recording…' : recordKind === 'decision' ? 'Record decision' : 'Append correction'}
-      </button>
+      {eligible ? (
+        <>
+          <label>
+            Human rationale
+            <textarea
+              value={rationale}
+              onChange={(event) => setRationale(event.target.value)}
+              rows={5}
+              maxLength={2_000}
+              required
+              style={{ display: 'block', width: '100%' }}
+            />
+          </label>
+          <button type="submit" disabled={pending || (outcome === 'ship_treatment' && !treatment)}>
+            {pending ? 'Recording…' : recordKind === 'decision' ? 'Record decision' : 'Append correction'}
+          </button>
+        </>
+      ) : null}
 
       <ConfirmDialog
         open={confirming}

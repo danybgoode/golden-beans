@@ -1,7 +1,6 @@
 import { requireProjectOwnership } from '@/lib/dashboard-auth'
 import { listShareLinks } from '@/lib/report-shares'
 import { isReportSharesEnabled } from '@/lib/flags'
-import { Answer, PageHead } from '@/design-system/primitives'
 import { ShareManager } from './share-manager'
 import { ProductShell } from '@/components/product/ProductShell'
 
@@ -19,26 +18,16 @@ export default async function SharesPage({ params }: { params: Promise<{ project
   return (
     <ProductShell projectSlug={projectSlug} section="setup" railActive={'shares'}>
       <main>
-        {/* ── design-system-rails · Sprint 4, Story 4.6 — reference state `setup-shares` ────────
-            ⚠️ **The second paragraph MOVED rather than being deleted.** It said every lens keeps the
-            report's caveats and its "not instrumented" rows — which is a promise about what a
-            narrower lens does NOT hide, and it belongs where the lens is chosen. It is the hint on
-            the audience field now, so it is read at the moment it matters instead of two paragraphs
-            above a form. */}
-        <PageHead
-          title="Share links"
-          lede={
-            <>
-              A link that shows one thing to somebody who has no account here. It is a bearer token: anyone
-              holding the URL can read the report, so treat it like a password and revoke it when the
-              conversation ends — revocation takes effect on the next request, no deploy.
-            </>
-          }
-        />
-        <Answer>
-          <b>Also reachable as “Share this” from any report</b> — which is where you will actually want it.
-          This page is for seeing every link that exists, and killing one.
-        </Answer>
+        {/* ── reference state `setup-shares` ───────────────────────────────────────────────
+            ⚠️ **The head and the answer moved INTO `ShareManager`** — mockups-as-built Story 4.2.
+            The approved head carries a primary action, and that control shares one piece of state
+            with the mint form and the shown-once URL: whether a bearer token is on screen right now.
+            `keys-surface.tsx` made the same move one surface over, for the same reason.
+
+            ⚠️ **The lede's second paragraph MOVED rather than being deleted** (Story 4.6, kept). It
+            said every lens keeps the report's caveats and its "not instrumented" rows — a promise
+            about what a narrower lens does NOT hide — and it belongs where the lens is chosen. It is
+            the hint on the audience field now. */}
         <ShareManager slug={projectSlug} shares={shares} enabled={isReportSharesEnabled()} />
       </main>
     </ProductShell>

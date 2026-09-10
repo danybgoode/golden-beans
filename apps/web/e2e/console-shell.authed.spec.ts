@@ -6,7 +6,7 @@ import { readTenantRecord } from './helpers/authed-fixture'
 //
 // ── Why these assertions are HERE and not in the blocking `api` gate ──────────────────────────
 // Every surface this sprint touches is credential-gated, so the `api` project only ever observes
-// `/app` redirecting to `/login` — identical with `CONSOLE_SHELL_ENABLED` on or off.
+// `/app` redirecting to `/login`, whatever the shell renders behind it.
 // `flags-console-parity` Sprint 1 corrected exactly this mistake: a spec asserting "the header
 // renders as it does today" from the api project is a guard that cannot fail.
 //
@@ -16,12 +16,10 @@ import { readTenantRecord } from './helpers/authed-fixture'
 // none: `node --test` cannot load `.tsx` and this repo has no component-test rail (probed, not
 // assumed), so a browser is the only place its behaviour is observable at all.
 //
-// ── This project is NOT in the blocking gate, so it must be run ON PURPOSE ────────────────────
-// `npm run test:e2e:authed`. LEARNINGS records that a suite outside the gate decays silently — a
-// deletion-heavy epic invalidated five specs nobody ran for three review rounds. Sprint 1's PR body
-// states the run and its result rather than implying CI covered it.
-
-const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
+// ── This project IS in the blocking gate since design-system-rails Sprint 5 ──────────────────
+// `ci.yml` runs `--project=authed` with no file list, which is what closed the hazard the paragraph
+// below was written about. LEARNINGS records that a suite outside the gate decays silently — a
+// deletion-heavy epic invalidated five specs nobody ran for three review rounds.
 
 // The palette's two selectors and its one fetch, named once. The path is READ from the component
 // (`CommandPalette.tsx:102`); a spec that guessed it once already passed vacuously for a whole
@@ -105,94 +103,24 @@ function tenantSlug(): string {
   return slug
 }
 
-// ── The gate-OFF half. Runs whenever the flag is not exactly 'true'. ──────────────────────────
+// ── ⚠️ THE GATE-OFF HALF IS DELETED — mockups-as-built Story 3.3 ─────────────────────────────
 //
-// This is the half that protects D4, and it is the one a spec CAN make honestly: the legacy header
-// is byte-identical markup, so its four links either render or they do not.
-// ⚠️ **THIS HALF RUNS NOWHERE, AND SAYING SO IS THE POINT.**
+// It was four assertions about "signed in with `CONSOLE_SHELL_ENABLED` off", inside a
+// `test.describe` that this file's own header already recorded as running NOWHERE: CI set the flag
+// true on the only server that runs this file, and the dark server's spec list never included it.
+// Story 3.3 deleted the flag, so the state those assertions described is not merely unrun — it is
+// unreachable.
 //
-// CI sets `CONSOLE_SHELL_ENABLED: 'true'` on the only server that runs this file (A19 — the console
-// ships enabled, so the gate MUST be on or the blocking gate asserts the opposite of production),
-// and the dark server's spec list does not include it. `run-local-e2e.mjs --authed` is the lit
-// server too. So every test below skips in every runner that exists today.
-//
-// That is not a reason to delete them — the gate-off branch is real code that a rollback serves —
-// but it IS a reason to stop counting them as coverage. Found in Sprint 3 while adding the `.cmdk`
-// absence assertion below and checking, for once, whether the thing I had just written would ever
-// execute. It would not.
-//
-// Owed: either boot a gate-off server for this file the way `setup-routes-dark` gets one, or move
-// these four assertions to a spec the dark server already runs. Recorded here rather than in a plan
-// nobody re-reads, because this is the file whose green will otherwise keep implying they passed.
-test.describe('with CONSOLE_SHELL_ENABLED off', () => {
-  test.skip(GATE_ON, 'the gate is on for this run')
+// ⚠️ **What they were really about is NOT lost.** The `header === null` branch still exists and is
+// still rendered, by two conditions that were never the flag: an ANONYMOUS viewer on one of the two
+// demo dashboards, and `getShellNav`'s catch. `console-shell-public.browser.spec.ts` asserts that
+// branch anonymously — including that `Connect` points at `/install` and `Agent notes` at
+// `/llms.txt`, the two hrefs A16 kept — and it runs without a session, which is the state that
+// actually reaches the branch. The owed item this file recorded ("boot a gate-off server, or move
+// these assertions to a spec the dark server already runs") is closed by the flag going away.
 
-  test('the gate-off header is the PUBLIC chrome — Connect and Agent notes, and nothing else', async ({
-    page,
-  }) => {
-    // ⚠️ **This assertion was reduced by Story 3.5, and the reduction IS the story.** It used to
-    // read "the legacy header is intact — Home, Sections, Connect and Agent notes all render",
-    // because Sprints 1 and 2 kept this branch byte-identical for the dark launch. That guarantee
-    // is discharged (A19 — the console shipped enabled), and 3.5 deletes the two entries the
-    // console replaced.
-    //
-    // What survives is asserted POSITIVELY as well as negatively, which is the half that matters:
-    // `Connect` and `Agent notes` are an anonymous visitor's only route to `/install` and
-    // `/llms.txt`, and the original Story 3.5 would have deleted them with "the now-dead gate-off
-    // branch" (A16).
-    await page.goto('/app')
-    await expect(page.getByRole('link', { name: 'Connect', exact: true })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Agent notes', exact: true })).toBeVisible()
-
-    // Gone, in the ONE state where they used to render: signed in, gate off.
-    await expect(page.getByRole('link', { name: 'Home', exact: true })).toHaveCount(0)
-    // ⚠️ The `.product-shell__sections` assertion that stood here is DELETED, not renamed
-    // (design-system-rails Story 6.4). Story 3.5 removed the disclosure AND its markup, so nothing
-    // has rendered that class since — the assertion has been `toHaveCount(0)` by construction for
-    // three sprints, which is this epic's own definition of a guard that cannot fail. The `Home`
-    // line above is the one that can: it names a LINK, and a link can come back.
-
-    // ...and the logo still goes to /app, which is why deleting `Home` lost a link and not a route.
-    await expect(page.locator('.brand-lockup')).toHaveAttribute('href', '/app')
-  })
-
-  test('none of the new console chrome exists while the gate is off', async ({ page }) => {
-    await page.goto('/app')
-    // The things the console adds. All absent, or the gate is not a gate.
-    await expect(page.locator('.ds-shell-tabs')).toHaveCount(0)
-    await expect(page.locator('.console-rail')).toHaveCount(0)
-    await expect(page.locator('.ds-shell-account')).toHaveCount(0)
-    // ⚠️ `.cmdk` is FOURTH, added in Sprint 3. Until now `CommandPalette` returned `null` when
-    // closed, so "⌘K does nothing" was the whole of its gate-off contract and there was nothing to
-    // see. It renders a visible trigger unconditionally now, mounted inside the console branch — so
-    // the absence has to be asserted rather than inferred from the mount point. A search button on
-    // the anonymous demo dashboards would be a control with nothing behind it.
-    await expect(page.locator('.cmdk')).toHaveCount(0)
-  })
-
-  test('⌘K does nothing at all while the gate is off', async ({ page }) => {
-    await page.goto('/app')
-    // Deliberately NOT polled, and deliberately given time to hydrate first: this asserts an
-    // ABSENCE, so the danger is passing because the island had not loaded yet rather than because
-    // it is not there. Waiting for the network to settle removes that reading.
-    await page.waitForLoadState('networkidle')
-    await page.keyboard.press('ControlOrMeta+k')
-    await page.waitForTimeout(500)
-    await expect(page.locator('.command-palette')).toHaveCount(0)
-  })
-
-  test('/app still carries its own sign-out while the header has no account menu', async ({ page }) => {
-    // The MOVE, checked from the side that must not lose the control. Sign-out exists exactly once
-    // in either gate state — never twice, and never zero.
-    await page.goto('/app')
-    await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(1)
-  })
-})
-
-// ── The gate-ON half. ──────────────────────────────────────────────────────────────────────────
-test.describe('with CONSOLE_SHELL_ENABLED on', () => {
-  test.skip(!GATE_ON, 'run with CONSOLE_SHELL_ENABLED=true to exercise the new shell')
-
+// ── The console shell. Unconditional since Story 3.3 deleted the flag. ───────────────────────
+test.describe('the console shell', () => {
   test('the header shows the four destinations and none of the legacy links', async ({ page }) => {
     await page.goto('/app')
 
@@ -745,12 +673,30 @@ test.describe('with CONSOLE_SHELL_ENABLED on', () => {
     // The regression this guards is a merge that put 42 features in front of 13 surfaces and left no
     // way to reach a surface by name. Asserted through the browser because the ORDER is decided in
     // the component, which no unit test can reach.
+    //
+    // ⚠️ **This asserted `toHaveCount(1)` and that was an INCIDENTAL pass.** It held only because no
+    // fixture feature's key contained the word "Activity" — so the test that exists for the
+    // crowded case was passing on an uncrowded one, and any tenant with a feature called
+    // `checkout.activity_enabled` would have turned it red for the right reason and looked like a
+    // bug. mockups-as-built Story 3.2 seeds `gb_e2e_activity_history` (28 versions of it, for the
+    // Activity pager), which is exactly that collision.
+    //
+    // What replaces the count is the property the test's own NAME claims: a surface is still FOUND
+    // when features share its word. Presence, not position — `lib/console-palette.ts:96` is explicit
+    // that features come FIRST and that this is the approved order ("somebody who presses ⌘K and
+    // types is nearly always naming a feature"). A first draft of this fix asserted the surface was
+    // first and went red against that design, which is the ordering comment doing its job.
     await page.goto('/app')
     await openPalette(page)
     await page.keyboard.type('Activity')
     const options = page.locator('.command-palette [role="option"]')
-    await expect(options).toHaveCount(1)
-    await expect(options.first()).toContainText('Go to')
+    // The collision is real, so the assertion below is made under the crowded condition this test is
+    // named for rather than on a fixture where the surface was the only match.
+    expect(await options.count()).toBeGreaterThan(1)
+    await expect(
+      options.filter({ hasText: 'Go to' }),
+      'no surface survived a query that also matches a feature'
+    ).toHaveCount(1)
   })
 
   test('the palette hugs its contents rather than filling the viewport', async ({ page }) => {

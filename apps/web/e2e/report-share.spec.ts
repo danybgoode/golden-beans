@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 
 // pod-report · Sprint 3, Story 3.1 — scoped share links.
 //
@@ -304,6 +304,57 @@ test('the share revoke touches ONLY share rows, so the audit trail cannot be mis
   // And the ingest key is still live — proving the no-op was the predicate, not a failed statement.
   const { data: still } = await dbClient().from('api_keys').select('revoked_at').eq('id', ingest!.id).single()
   expect(still!.revoked_at).toBeNull()
+})
+
+test('record_share_open is scoped by PROJECT and by SCOPE — an id alone cannot move a counter', async () => {
+  // mockups-as-built · Story 4.2 (D17). `record_share_open` is `service_role`-only and both ids it
+  // takes are server-resolved by `resolve_share_token`, so no request can supply either — the
+  // predicate below is defence in depth, exactly like `revokeShareLink`'s one test above.
+  //
+  // ⚠️ **Asserted by CALLING the RPC, not by reading its source.** A source scan would pass on a
+  // function whose `WHERE` clause was later loosened, which is the whole reason this repo's sibling
+  // guard exercises the real statement (cross-agent review, Codex, Blocking).
+  const projectId = await projectIdForKey(LOCAL_ONLY)
+  const db = dbClient()
+
+  const { data: ingest } = await db
+    .from('api_keys')
+    .select('id, opened_count')
+    .eq('project_id', projectId)
+    .eq('scope', 'ingest')
+    .is('revoked_at', null)
+    .limit(1)
+    .single()
+  expect(ingest, 'this project has no ingest key to aim the RPC at').not.toBeNull()
+
+  // 1. The SCOPE predicate: pointed at an ingest key, with the right project, it must do nothing.
+  await db.rpc('record_share_open', { p_project_id: projectId, p_share_id: ingest!.id })
+  const { data: afterScope } = await db.from('api_keys').select('opened_count').eq('id', ingest!.id).single()
+  expect(afterScope!.opened_count, 'the share-open counter reached a row that is not a share link').toBe(
+    ingest!.opened_count
+  )
+
+  // 2. The PROJECT predicate: a real share row, with a project id that is not its own.
+  // ⚠️ `mintShare` hands back the id it just wrote. Re-querying for "the newest share row" would
+  // make this test depend on nothing else minting concurrently — a fixture assumption rather than
+  // a fact, and the kind that fails once in twenty runs.
+  const minted = await mintShare(projectId, 'team')
+  const { data: share } = await db.from('api_keys').select('id, opened_count').eq('id', minted.id).single()
+  expect(share, 'the mint did not produce a share row to aim at').not.toBeNull()
+
+  const foreign = randomUUID()
+  await db.rpc('record_share_open', { p_project_id: foreign, p_share_id: share!.id })
+  const { data: afterProject } = await db.from('api_keys').select('opened_count').eq('id', share!.id).single()
+  expect(
+    afterProject!.opened_count,
+    'a mismatched project id still incremented the counter — the id alone decided the row'
+  ).toBe(share!.opened_count)
+
+  // 3. …and the RIGHT pair DOES increment, so the two no-ops above were the predicates rather than
+  //    a statement that never runs. A guard whose subject cannot occur is a guard that cannot fail.
+  await db.rpc('record_share_open', { p_project_id: projectId, p_share_id: share!.id })
+  const { data: afterCorrect } = await db.from('api_keys').select('opened_count').eq('id', share!.id).single()
+  expect(afterCorrect!.opened_count, 'the correct pair did not increment').toBe(share!.opened_count + 1)
 })
 
 test('a share token keeps following its tenant across a rename (does NOT reproduce the race — see note)', async ({

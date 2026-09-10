@@ -1,12 +1,11 @@
-import { notFound } from 'next/navigation'
 import { requireProjectMembership } from '@/lib/dashboard-auth'
-import { isConnectorEnabled, isConsoleShellEnabled } from '@/lib/flags'
+import { isConnectorEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getConnectorStatus } from '@/lib/connector-tokens'
 import { formatUtc } from '@/lib/format-utc'
-import { Callout, Card, Field, PageHead, Pill } from '@/design-system/primitives'
+import { Callout, Field, ListCard, PageHead, Pill } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
-import { ConnectorManager } from './connector-manager'
+import { ConnectorManager, ConnectorSteps } from './connector-manager'
 
 // Setup › Connect — your own project's connector URL, inside the product.
 //
@@ -23,13 +22,15 @@ import { ConnectorManager } from './connector-manager'
 // **all of it is kept** (sprint contract #9). What this story adds is the half that makes setup a
 // task rather than a credential screen.
 //
-// ── Gate: dark means nonexistent, before auth ─────────────────────────────────────────────────
-// The flag check runs BEFORE `requireProjectMembership`, so while the console is dark this 404s for
-// everyone rather than leaking its existence through a login redirect.
+// ── The console gate is GONE — mockups-as-built Story 3.3 ─────────────────────────────────────
+// This page opened with `if (!isConsoleShellEnabled()) notFound()`, so that while the console was
+// dark it 404'd for everyone before auth rather than leaking its existence through a login
+// redirect. `CONSOLE_SHELL_ENABLED` is deleted from the repository and from every Vercel
+// environment; the console is the console. Nothing about AUTHORIZATION changed — the flag never was
+// one, and `requireProjectMembership` below is untouched.
 export const dynamic = 'force-dynamic'
 
 export default async function SetupConnectPage({ params }: { params: Promise<{ projectSlug: string }> }) {
-  if (!isConsoleShellEnabled()) notFound()
   const { projectSlug } = await params
   // MEMBER gate. Reading your own project's connector URL is how its operators point an agent at
   // their data — that is not credential administration. MINTING one is, and the action re-checks
@@ -62,7 +63,10 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
           }
         />
 
-        <Card>
+        {/* Block 2 of the approved `setup-connect` state: the URL, its status, and the controls
+            that mint or revoke it. `ListCard plain` is the `.listcard` used as a padded surface,
+            which is what the prototype draws (`console-prototype.html`). */}
+        <ListCard plain>
           {!connectorEnabled && (
             // Honest, and specific about WHICH switch is off. "Unavailable" would leave a reader
             // unable to tell a disabled feature from a broken one. It does not REPLACE the panel: an
@@ -75,6 +79,41 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
             </Callout>
           )}
 
+          {status.state === 'active' && status.tokens.length > 1 && canManage && (
+            // Should not happen, and is shown rather than hidden when it does. Two concurrent mints
+            // can both pass the check-then-act in `mintConnectorToken`; listing every active token is
+            // what keeps the extra one revocable instead of invisible.
+            <Callout tone="warn">
+              <b>More than one connector URL is active.</b> Each one below can read this project until it is
+              revoked. Revoke the ones you are not using.
+            </Callout>
+          )}
+
+          <ConnectorManager
+            slug={projectSlug}
+            /* ⚠️ FILTERED HERE, on the server, and that is the whole fix. The previous revision
+               passed every token and let the client component decide what to render — but this page
+               is a Server Component and `ConnectorManager` is `'use client'`, so props crossing that
+               boundary are serialized into the RSC flight payload and shipped inside the HTML. A
+               member could read the plaintext bearer URL out of View Source while the page politely
+               told them to ask an owner.
+               Hiding a credential with a conditional render is not hiding it. The `canManage` check
+               has to happen before the data leaves the server. */
+            tokens={canManage && status.state === 'active' ? status.tokens : []}
+            /* Separate from `tokens` precisely BECAUSE tokens is now empty for a member: the member
+               notice cannot be derived from `tokens.length` any more. */
+            hasConnector={status.state === 'active'}
+            canManage={canManage}
+            /* Withheld while unreadable, and while the connector is off: the mint action refuses
+               either way, and a button guaranteed to fail is worse than no button. Revoke is NOT
+               withheld. */
+            canMint={status.state === 'absent' && connectorEnabled}
+          />
+
+          {/* ⚠️ **BELOW the URL, which is the order the approved state draws** — the thing first,
+              then whether it is live (`setup-connect.png`: "YOUR CONNECTOR URL", then "STATUS").
+              It rendered above, so the page opened on a verdict about something the reader had not
+              been shown yet. */}
           {/* ── The status line, and what it deliberately does NOT claim (sprint contract #10) ───
               Two states, because two is what the data supports. `connector_tokens` has five columns
               and NONE of them records use; the MCP route resolves a token and writes nothing. So
@@ -128,46 +167,23 @@ export default async function SetupConnectPage({ params }: { params: Promise<{ p
               </p>
             )}
           </Field>
+        </ListCard>
 
-          {status.state === 'active' && status.tokens.length > 1 && canManage && (
-            // Should not happen, and is shown rather than hidden when it does. Two concurrent mints
-            // can both pass the check-then-act in `mintConnectorToken`; listing every active token is
-            // what keeps the extra one revocable instead of invisible.
-            <Callout tone="warn">
-              <b>More than one connector URL is active.</b> Each one below can read this project until it is
-              revoked. Revoke the ones you are not using.
-            </Callout>
-          )}
+        {/* Block 3 — the three steps, in a card of their own beside the URL rather than inside it. */}
+        <ConnectorSteps canManage={canManage} hasConnector={status.state === 'active'} />
 
-          <ConnectorManager
-            slug={projectSlug}
-            /* ⚠️ FILTERED HERE, on the server, and that is the whole fix. The previous revision
-               passed every token and let the client component decide what to render — but this page
-               is a Server Component and `ConnectorManager` is `'use client'`, so props crossing that
-               boundary are serialized into the RSC flight payload and shipped inside the HTML. A
-               member could read the plaintext bearer URL out of View Source while the page politely
-               told them to ask an owner.
-               Hiding a credential with a conditional render is not hiding it. The `canManage` check
-               has to happen before the data leaves the server. */
-            tokens={canManage && status.state === 'active' ? status.tokens : []}
-            /* Separate from `tokens` precisely BECAUSE tokens is now empty for a member: the member
-               notice cannot be derived from `tokens.length` any more. */
-            hasConnector={status.state === 'active'}
-            canManage={canManage}
-            /* Withheld while unreadable, and while the connector is off: the mint action refuses
-               either way, and a button guaranteed to fail is worse than no button. Revoke is NOT
-               withheld. */
-            canMint={status.state === 'absent' && connectorEnabled}
-          />
-        </Card>
+        {/* Block 4 — a plain closing sentence, which is what the approved state draws under the
+            annotation: `head → list → list → note`. It was a `Callout`, and a `.ds-callout--info` is
+            an ANNOTATION to the contract (epic D2-c) — excluded from the sequence entirely — so the
+            page's fourth block was missing while this line was on screen. The words are unchanged.
 
-        {/* The SDK snippet is deliberately NOT here — two audiences, two places. This page is for
+            The SDK snippet is deliberately NOT here — two audiences, two places. This page is for
             pointing an agent at data that already flows; sending events is a different job with a
             different reader, and duplicating the snippet would mean two copies to keep correct. */}
-        <Callout>
+        <p className="ds-hint">
           Sending events instead? That is an engineer&apos;s job, not this one — the SDK snippet lives on{' '}
           <a href={`/app/onboarding/${projectSlug}`}>your setup guide</a>.
-        </Callout>
+        </p>
       </main>
     </ProductShell>
   )

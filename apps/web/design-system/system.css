@@ -705,7 +705,13 @@
      notice that this is not byte-identical to the prototype. */
   background: color-mix(in srgb, var(--roast) 82%, transparent);
 }
-.ds .ds-dialog-title {
+/* ⚠️ **`.ds .ds-dialog .ds-dialog-title`, and the extra class is LOAD-BEARING.**
+   `NewThingDialog` renders its `<dialog>` beside the trigger, and every `+ New …` trigger lives in
+   a page head's `actions` — so the dialog's own markup sits INSIDE `.ds-page-head`, where
+   `.ds .ds-page-head p` at (0,2,1) beat this rule at (0,2,0) and styled the modal's title as the
+   page's lede. Found by the cascade guard in `console-visual.authed.spec.ts`, which exists because
+   the same trap took the share page's title (mockups-as-built Story 4.5). */
+.ds .ds-dialog .ds-dialog-title {
   font-size: 15px;
   font-weight: 600;
   /* ⚠️ An EXPLICIT colour, because the absence of one was the actual defect. Scoping the sheet to
@@ -802,8 +808,15 @@
 }
 /* A step whose body carries a control rather than only a sentence. The prototype's second step is
    exactly this shape: a line of instruction, then the button that performs it. */
+/* ⚠️ **A BLOCK, so the action sits on its OWN line** — mockups-as-built Story 4.1. `inline-flex`
+   put "Add to Claude ↗" immediately after "Open Claude's connector settings." on the same line, and
+   the approved `setup-connect` state draws it underneath: the prototype's wrapper is a plain `<div>`
+   (`console-prototype.html:3630`), which is block by default. `flex` rather than `block` so the
+   button and its icon keep their own alignment; `align-self: flex-start` keeps it the width of its
+   own label rather than the width of the step. */
 .ds .ds-step-action {
-  display: inline-flex;
+  display: flex;
+  align-self: flex-start;
   margin-top: 8px;
 }
 
@@ -1090,7 +1103,15 @@
   color: var(--crema);
   line-height: 1.25;
 }
-.ds .ds-page-head p {
+/* ⚠️ **`:not([class])` — a page head's LEDE is a classless `<p>`, and this rule is for it alone.**
+   `NewThingDialog` renders its `<dialog>` beside the trigger, and every `+ New …` trigger lives in
+   a page head's `actions` — so the modal's whole markup sits inside `.ds-page-head`, where this rule
+   at (0,2,1) beat `.ds-dialog-title`, `.ds-dialog-sub`, `.ds-hint` and `.ds-field-error` at (0,2,0)
+   and styled a modal's contents as the page's subtitle.
+   Same treatment as `.ds-doc`'s prose rules, and the same reasoning: an element selector inside a
+   scope is for the ELEMENTS that scope owns, never for a primitive that happens to be nested in it.
+   Caught by the cascade guard in `console-visual.authed.spec.ts` (mockups-as-built). */
+.ds .ds-page-head p:not([class]) {
   color: var(--dim);
   font-size: 13.5px;
   font-weight: 400;
@@ -1243,6 +1264,12 @@
    put while its contents move. */
 .ds .ds-listcard-scroll {
   overflow-x: auto;
+}
+/* The card as a padded SURFACE rather than a grid of rows — `ListCard plain`. The prototype writes
+   this as `padding: 22px` on the card itself; here it goes on the scroller so the card's border and
+   radius keep sitting outside anything that moves. */
+.ds .ds-listcard-scroll--plain {
+  padding: 22px;
 }
 /* 11/600 uppercase, and NEVER mono (Do-not #3). Height 36 — asserted by the measured spec. */
 .ds .ds-listhead {
@@ -1893,7 +1920,18 @@
 .ds .ds-tl--off .ds-tl-dot {
   background: var(--red);
 }
+/* ⚠️ **A COLUMN, and without this the whole entry rendered as one crammed line.**
+   `flag-audit-timeline.tsx` renders the title, the timestamp and the reason as three `<span>`s.
+   Spans are inline, so they laid out side by side and every `margin-top` below them did nothing —
+   `Daniel turned x on in Development2026-08-26 16:48Reason: Testing`, on one line, at three
+   different sizes. The approved `ship-activity` state draws three lines
+   (`console-prototype.html:511-517`, where the equivalents are `<div>`s).
+   Found by mockups-as-built Story 3.2 by LOOKING at the page while adding its pager. Nothing could
+   have caught it before: the structural contract counts blocks, and the route matched its approved
+   signature the whole time it looked like this. */
 .ds .ds-tl-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 .ds .ds-tl-title {
@@ -1906,10 +1944,16 @@
   font-family: var(--mono);
   margin-top: 2px;
 }
+/* The quoted reason, with the approved left rule (`console-prototype.html:514`). `align-self` keeps
+   the rule the height of the text rather than the height of the row — the prototype gets there with
+   `display: inline-block`, which a flex item cannot use. */
 .ds .ds-tl-reason {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding-left: 9px;
+  border-left: 2px solid var(--line);
   font-size: 12.5px;
   color: var(--dim);
-  margin-top: 3px;
   max-width: 78ch;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2347,6 +2391,15 @@
   margin-top: 6px;
 }
 
+/* The satisfied half of the same line — `console-prototype.html:867` (`.vbar .foot`). Same size and
+   colour as the shortfall so the two read as one row of the same kind of fact, and neither is
+   dressed up as the more important one. */
+.ds .ds-chart-foot {
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 6px;
+}
+
 .ds .ds-chart-drop-mark {
   font-family: var(--mono);
   color: var(--red);
@@ -2558,9 +2611,20 @@
  * says "this is the important one" about a set of one. `380px` is about the approved card's width
  * at three-up, so a lone card is the size it would be beside two others and the row fills from the
  * left. Found by looking at the rendered page; nothing structural could see it. */
+/* ⚠️ **THREE COLUMNS, which is what the approved design draws** — `console-prototype.html:713` is
+   `repeat(3, 1fr)`. This was `repeat(auto-fit, minmax(230px, 380px))`, and the 380px cap meant that
+   in the console's 1120px content column only TWO of three plots fitted per row: the approved
+   `measure-north-star` state's three small multiples wrapped 2 + 1. The structural contract counts
+   three and found three — a count is not a layout, and only opening the page shows the difference.
+
+   Fixed tracks rather than `auto-fit`, deliberately: with one input `auto-fit` would stretch a
+   single tile across the whole column, and the prototype leaves the other two tracks empty. A
+   number's tile is the same size whether or not it has neighbours.
+
+   The 900px query below collapses it to one column, which is unchanged. */
 .ds .ds-chart-smalls {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 380px));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -3638,7 +3702,18 @@
   min-width: 0;
 }
 
-.ds .ds-sharehead-title {
+/* ⚠️ **`.ds .ds-sharehead .ds-sharehead-title`, and the extra class is LOAD-BEARING** — cross-agent
+   review, agy, Nit; confirmed by measuring the computed style, not by reading the cascade.
+   mockups-as-built Story 4.5 promoted this from `<p>` to `<h1>` (the approved `public-share` state
+   draws no page head, so this line IS the page's name and a document whose headings start at `h2`
+   is one a screen reader enters in the middle). That put it under `.ds .ds-pubwrap h1` — (0,2,1),
+   two classes and an ELEMENT — which beats a bare `.ds .ds-sharehead-title` at (0,2,0). The title
+   silently rendered at 30px/700 where the design draws 13.5px/600.
+
+   Three classes is (0,3,0) and wins. The same trap this repo has already paid for twice
+   (`:where()` zeroing its own argument, and a base reset that could not be out-specified): an
+   element selector inside a scope quietly outranks a class named for the thing itself. */
+.ds .ds-sharehead .ds-sharehead-title {
   font-size: 13.5px;
   font-weight: 600;
   margin-bottom: 3px;
@@ -3959,9 +4034,19 @@
   text-align: right;
 }
 
+/* ⚠️ **`min(320px, 100%)`, not a bare `320px` — this overflowed a 360px phone.**
+   `minmax(320px, 1fr)` sets a track FLOOR: when the container is narrower than 320px the track does
+   not shrink, it overflows, and the page scrolls sideways (Do-not #6). `min()` lets the floor fall
+   to the container's own width on a phone while keeping 320 as the wrapping threshold everywhere
+   else.
+
+   It had never been seen because `/hub/…/horizon` rendered its EMPTY state on every fixture tenant —
+   the mobile sweep swept a page with no destinations on it. mockups-as-built Story 4.4 pushed a real
+   roadmap artifact so the route could be measured against its approved state, and the sweep found
+   this on the first run where there was anything to lay out. */
 .ds .ds-dests {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 14px;
 }
 
@@ -4124,29 +4209,51 @@
 }
 
 /* ── Prose, and the stamp that says where it came from ──────────────────────────────────────── */
-.ds .ds-doc {
+/* ⚠️ **THE MEASURE IS ON THE PROSE, NOT ON THE CONTAINER** — mockups-as-built Story 4.4.
+   `.ds-doc { max-width: 70ch }` is what the prototype writes, and there the two are
+   indistinguishable: its `.doc` holds nothing but headings, paragraphs and lists. The product's does
+   — the pod report's metric tables, its not-instrumented panel and its funnel table all live inside
+   the document, because the approved `hub-report` and `public-share` states are
+   `… → provenance → document` and the document is where everything after the stamp goes.
+
+   With the measure on the container, wrapping the report in it squeezed every table to 70ch: the
+   "what it means" column collapsed and its mono text ran out of its cell. Found by opening the
+   page, on a route whose structural signature was already correct.
+
+   70ch is a READING measure and a table is not prose, so it belongs on the elements it is about.
+   Direct children only: a `<p>` inside a table cell has its own column to fit. */
+.ds .ds-doc > p,
+.ds .ds-doc > h2,
+.ds .ds-doc > h3,
+.ds .ds-doc > ul,
+.ds .ds-doc > ol {
   max-width: 70ch;
 }
 
-.ds .ds-doc h2 {
+/* ⚠️ **`:not([class])` — the document's prose rules are for PROSE.** Story 4.4 wrapped the whole
+   pod report in `.ds-doc` (the approved `hub-report` state is `head → provenance → document`), which
+   put every primitive inside it under these element selectors: `.ds .ds-doc p` at (0,2,1) beat
+   `.ds-answer`, `.ds-lede` and both tile classes at (0,2,0). A classless `<p>` is what "prose"
+   means here, and a primitive is not it. */
+.ds .ds-doc h2:not([class]) {
   font-size: 17px;
   font-weight: 600;
   margin: 26px 0 8px;
   letter-spacing: -0.01em;
 }
 
-.ds .ds-doc h2:first-child {
+.ds .ds-doc h2:not([class]):first-child {
   margin-top: 0;
 }
 
-.ds .ds-doc p {
+.ds .ds-doc p:not([class]) {
   font-size: 14px;
   color: var(--dim);
   line-height: 1.68;
   margin-bottom: 11px;
 }
 
-.ds .ds-doc p strong,
+.ds .ds-doc p:not([class]) strong,
 .ds .ds-doc b {
   color: var(--crema);
   font-weight: 600;
@@ -4939,7 +5046,7 @@
   font-size: 16px;
 }
 
-.ds .ds-dialog-sub {
+.ds .ds-dialog .ds-dialog-sub {
   margin-top: 4px;
   color: var(--dim);
   font-size: 12.5px;
@@ -4984,4 +5091,233 @@
   padding: 14px 20px;
   border-top: 1px solid var(--line);
   background: var(--roast-2);
+}
+
+/* ── Versions — the block the state contract calls `versions` ─────────────────────────────────
+   `console-prototype.html:767` (`.vers`). Hairline-separated rows on the card surface, achieved by
+   a 1px gap over the soft line colour rather than per-row borders: the first and last rows then
+   need no exception, and the radius clips both ends. */
+.ds .ds-vers {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line-soft);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.ds .ds-vers-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: var(--roast-2);
+  font-size: 13px;
+}
+
+.ds .ds-vers-n {
+  font-weight: 500;
+  width: 34px;
+  flex: none;
+  color: var(--dim);
+}
+
+/* The sentence takes the slack so `who` sits at the trailing edge without a spacer element — a row
+   whose `who` is absent still lines its other three cells up the same way. */
+.ds .ds-vers-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-vers-who {
+  color: var(--dim-2);
+  font-size: 12px;
+}
+
+/* The row wraps rather than scrolls at phone width: four short cells reflow legibly, and a
+   horizontal scroller for a version number would be Do-not #6 solved in the wrong direction. */
+@media (max-width: 560px) {
+  .ds .ds-vers-row {
+    flex-wrap: wrap;
+  }
+
+  .ds .ds-vers-what {
+    flex-basis: 100%;
+  }
+}
+
+/* ── Guardrails, the split check and the decision — `experiment-ready` blocks 4, 5 and 6 ───────
+   Ported from `console-prototype.html:643` (`.wordlist`), `:3073` and `:893` (`.outcomes`). */
+
+/* ⚠️ **NO STRIKETHROUGH ON THE NAME — an APPROVED DEVIATION, Daniel, 2026-09-10.**
+   The prototype's `.wordlist .was` is `text-decoration: line-through` in `--red-deep`, because that
+   class is its BEFORE/AFTER list and its left-hand word is the thing being replaced. The guardrails
+   panel reuses it for a guardrail's NAME, which is not being replaced by anything — so the approved
+   PNG shows "Refund rate" and "Median load time" struck through in red, reading as "this guardrail
+   is gone" on a panel whose subject is guardrails that still apply.
+   Raised rather than corrected (epic: THE ONE RULE — if you believe a mockup is wrong, ASK), and
+   Daniel ruled it a class-reuse accident. This is the only deviation from the approved design in
+   this epic and it carries his name and its date. */
+.ds .ds-wordlist {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 16px;
+}
+
+.ds .ds-wordlist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.ds .ds-wordlist-row:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-wordlist-was {
+  flex: 1;
+  min-width: 0;
+  color: var(--dim-2);
+}
+
+.ds .ds-wordlist-arrow {
+  color: var(--dim-2);
+}
+
+.ds .ds-wordlist-now {
+  flex: 1;
+  min-width: 0;
+  color: var(--crema);
+  font-weight: 500;
+}
+
+/* The split verdict: a pill and the sentence that reads it, on one line that wraps rather than
+   scrolls. `p`, not a div, because it is a sentence with a badge in it. */
+.ds .ds-split {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.ds .ds-split-stats {
+  color: var(--dim-2);
+  font-size: 12px;
+}
+
+/* The five outcomes. A row of equal-weight controls — the design draws no primary among them
+   until one has been chosen, because choosing is the point. */
+.ds .ds-outcomes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.ds .ds-outcome {
+  padding: 9px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--dim);
+  font-size: 13px;
+  transition:
+    border-color var(--t),
+    background var(--t),
+    color var(--t);
+}
+
+.ds .ds-outcome:hover:not([disabled]) {
+  border-color: var(--gold-deep);
+  color: var(--crema);
+  background: var(--card-2);
+}
+
+/* ⚠️ `[disabled]` and `aria-pressed` carry the SAME two cues the design draws — the greying and
+   the chosen outline — so a screen reader and a sighted reader are told the same thing by the same
+   attribute. The rule `RailItem` and `StatLink` already follow. */
+.ds .ds-outcome[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ⚠️ `:not([disabled])`. The recorder opens with a default outcome selected, so on a running
+   experiment — where every outcome is correctly greyed — one of the five was ALSO painted as
+   chosen: the page showed a decision nobody had made and could not make. Found by looking at the
+   rendered page; a structural contract counts blocks, not what a block says. */
+.ds .ds-outcome[aria-pressed='true']:not([disabled]) {
+  border-color: var(--gold-deep);
+  color: var(--gold);
+}
+
+/* ── The Activity pager — mockups-as-built Story 3.2 ───────────────────────────────────────────
+   ⚠️ The approved `ship-activity` state draws NO pagination control: its fixture is exactly twelve
+   rows and fits on one page, while production holds 148. So the page size comes from the design and
+   this control is built — inside the list card, which is what keeps the route's approved signature
+   at `head → list` rather than adding a block the design has no name for.
+
+   Three cells with the count centred, so the two steps sit at the edges whether or not both exist —
+   the spacer holds the empty side open rather than letting the count slide across. */
+.ds .ds-pager {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--roast-2);
+  font-size: 12.5px;
+}
+
+.ds .ds-pager-step {
+  color: var(--crema);
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+  justify-self: start;
+  transition:
+    border-color var(--t),
+    background var(--t);
+}
+
+.ds .ds-pager-step[rel='next'] {
+  justify-self: end;
+}
+
+.ds .ds-pager-step:hover {
+  border-color: var(--gold-deep);
+  background: var(--card-2);
+}
+
+.ds .ds-pager-count {
+  color: var(--dim-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+/* The empty half of the row. `aria-hidden` is unnecessary — it has no text — but it must still
+   occupy its track so the count stays centred on the first and last pages. */
+.ds .ds-pager-spacer {
+  display: block;
+}
+
+@media (max-width: 560px) {
+  .ds .ds-pager {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 8px;
+  }
+
+  .ds .ds-pager-step,
+  .ds .ds-pager-step[rel='next'] {
+    justify-self: center;
+  }
 }

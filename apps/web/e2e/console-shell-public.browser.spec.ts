@@ -18,19 +18,22 @@ import { test, expect } from '@playwright/test'
 // not a degraded signed-in user, so the shell resolves no console header without a session — and
 // this spec is what makes that true in fact rather than in a comment.
 //
-// ⚠️ **ONLY THE GATE-ON RUN CAN CATCH THE REGRESSION, and that is not the default run.**
-// `playwright.config.ts` sets no `CONSOLE_SHELL_ENABLED` and the gate is born unset, so a plain
-// `npm run test:e2e:browser` exercises this gate-OFF — where no console chrome renders anyway and
-// every absence assertion below passes against the PRE-FIX code too. The `Expected: 0, Received: 1`
-// that proved this spec has teeth came from a `CONSOLE_SHELL_ENABLED=true` run.
+// ⚠️ **EVERY RUN IS THE DISCRIMINATING RUN NOW — mockups-as-built Story 3.3.**
 //
-// Saying so matters more than it looks: an earlier version of this comment called running in either
-// state a STRENGTH, which reads as coverage and is the opposite. `GATE_ON` below marks which
-// assertions are load-bearing, the same way `console-shell.authed.spec.ts` does for itself.
-// After Story 3.5 flips the gate in production, the discriminating run becomes the default one.
+// This used to be conditional and the conditionality was the point: `playwright.config.ts` set no
+// `CONSOLE_SHELL_ENABLED`, the gate was born unset, so a plain `npm run test:e2e:browser` exercised
+// the gate-OFF state — where no console chrome renders anyway and every absence assertion below
+// passed against the PRE-FIX code too. The `Expected: 0, Received: 1` that proved this spec has
+// teeth came from a `CONSOLE_SHELL_ENABLED=true` run, and the annotation below said so in the run
+// output so a green could not be mistaken for the discriminating one.
+//
+// Story 3.3 deleted the flag. The shell now resolves a console header for every SIGNED-IN viewer,
+// which is exactly the condition that could leak console chrome onto an anonymous page — so the
+// regression is live in every configuration and the assertions below are load-bearing in all of
+// them. The annotation is deleted rather than left to fire on a variable nothing sets: a note
+// saying "this run proved nothing" printed on a run that proves everything is worse than no note.
 
 const DEMO = '/app/funnel/golden-beans-demo/setup_guide'
-const GATE_ON = process.env.CONSOLE_SHELL_ENABLED === 'true'
 
 test('the public demo dashboard renders public chrome, never the signed-in console', async ({ page }) => {
   const response = await page.goto(DEMO)
@@ -111,16 +114,6 @@ test('the public demo dashboard renders public chrome, never the signed-in conso
   await page.keyboard.press('ControlOrMeta+k')
   await page.waitForTimeout(300)
   await expect(page.locator('.command-palette')).toHaveCount(0)
-
-  // Named in the run output, so a green result cannot be mistaken for the discriminating one.
-  if (!GATE_ON) {
-    test.info().annotations.push({
-      type: 'note',
-      description:
-        'CONSOLE_SHELL_ENABLED is unset for this run: the absence assertions above hold trivially. ' +
-        'Re-run with CONSOLE_SHELL_ENABLED=true to exercise the regression this spec guards.',
-    })
-  }
 })
 
 test('the manifest the public chrome links to actually serves', async ({ page }) => {

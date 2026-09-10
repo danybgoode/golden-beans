@@ -25,10 +25,10 @@ import { MIN_VISIBLE_PX } from '@/design-system/charts/geometry'
 const VIEWPORT = { width: 1440, height: 960 }
 const SPECIMEN = '/app/design-system#charts'
 
-/** Exactly `'true'`, matching `lib/flags.ts`. A gate that is off must SKIP, not fail. */
-function gatesAreLit(): boolean {
-  return process.env.CONSOLE_SHELL_ENABLED === 'true'
-}
+// ⚠️ **`gatesAreLit()` is GONE — mockups-as-built Story 3.3 deleted `CONSOLE_SHELL_ENABLED`.** It
+// read that variable, so leaving it would have made this whole file skip in every run and report
+// green having asserted nothing about the charting primitives. The specimen renders inside the
+// console shell, and the console shell is not behind a flag any more.
 
 async function openCharts(page: Page): Promise<void> {
   await page.setViewportSize(VIEWPORT)
@@ -38,11 +38,6 @@ async function openCharts(page: Page): Promise<void> {
 }
 
 test.describe('the charting primitives', () => {
-  test.skip(
-    !gatesAreLit(),
-    'the specimen renders inside the console shell; run with CONSOLE_SHELL_ENABLED=true'
-  )
-
   test.beforeEach(async ({ page }) => {
     await openCharts(page)
     await page.locator('#charts').screenshot({ path: 'test-results/console-visual/charts.png' })
@@ -297,7 +292,6 @@ test.describe('the charting primitives', () => {
 test('the experiments row describes the running version, with a newer draft flagged beside it', async ({
   page,
 }) => {
-  test.skip(!gatesAreLit(), 'the console renders behind CONSOLE_SHELL_ENABLED')
   const slug = readTenantRecord()?.slug
   test.skip(!slug, 'needs the auth-setup project')
 

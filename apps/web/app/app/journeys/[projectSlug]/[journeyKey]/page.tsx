@@ -10,18 +10,18 @@ import { listJourneyRegistries } from '@/lib/journeys'
 import {
   Answer,
   Callout,
-  Card,
-  Col,
   Crumb,
   Crumbs,
   Empty,
   ListCard,
   PageHead,
-  Row,
-  RowMain,
-  RowState,
+  Pill,
+  Tag,
+  Version,
+  Versions,
 } from '@/design-system/primitives'
 import { StageBars } from '@/design-system/charts'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { JourneyCohortDetail } from './cohort-detail'
 
 export const dynamic = 'force-dynamic'
@@ -181,6 +181,22 @@ export default async function JourneyCohortPage({
         <PageHead
           title={<span className="ds-mono">{journey.key}</span>}
           lede={`${journey.entityType} · definition v${journey.definitionVersion}`}
+          /* ⚠️ **A SECONDARY control, and the head's primary action stays null** — which is what
+             `measure-journey` draws (`STATE-CONTRACT.json`: `head` with `action: null`). The
+             diagnostic layer below is READ-ONLY evidence, and Daniel's ruling for the identical
+             case on Destinations was that evidence gets its own control, separate from authoring.
+             Making it the page's primary action would both fail the contract and tell a reader
+             that the main thing to do on this screen is inspect its telemetry. */
+          actions={
+            <NewThingDialog
+              variant="secondary"
+              label="How this was counted"
+              title="How this cohort was counted"
+              lede="The window, the drilldowns, the retention rule and the query evidence — the same numbers the bars are drawn from."
+            >
+              <JourneyCohortDetail result={result} drilldownHref={drilldownHref} />
+            </NewThingDialog>
+          }
         />
 
         <Answer>
@@ -208,7 +224,10 @@ export default async function JourneyCohortPage({
           )}
         </Answer>
 
-        <Card>
+        {/* ⚠️ A `ListCard plain`, not a `Card`. The approved state's block 4 is `list`, and the
+            prototype draws this as `<div class="listcard" style="padding:22px">` — the card SURFACE
+            without a header row or a column grid (`console-prototype.html:2561`). */}
+        <ListCard plain>
           <p className="ds-label">Where people are</p>
           {stages.length === 0 ? (
             <Empty
@@ -221,73 +240,54 @@ export default async function JourneyCohortPage({
               note="Counted from events as they arrived. Somebody who skipped a stage is counted where they actually are, not where the definition says they should be."
             />
           )}
-        </Card>
+        </ListCard>
 
         {/* The version history — the approved state's second half. A journey version is IMMUTABLE:
             activating a draft does not rewrite history, and the numbers above stay attributable to
-            the definition that produced them. */}
+            the definition that produced them.
+
+            ⚠️ **`Versions`, not `ListCard`.** The vocabulary pairs the approved `versions` block
+            with `.ds-vers` and this page rendered a `.ds-listcard`, so the gate reported *"the
+            approved state has `versions`, the page has `list`"* for two sprints. The design draws a
+            different thing: hairline rows with no header, no column grid and no action cell,
+            because a version is a fact and never a control. */}
         <p className="ds-label">Versions</p>
-        <ListCard>
+        <Versions>
           {versions.map((version) => (
-            <Row key={version.id}>
-              <RowMain
-                title={`v${version.version}`}
-                mono={false}
-                description={
-                  version.state === 'active'
-                    ? 'Counting everyone above'
-                    : version.state === 'draft'
-                      ? 'Not activated — it changes nothing until you do'
-                      : 'Superseded, and kept: never deleted'
-                }
-              />
-              <RowState
-                state={version.state === 'active' ? 'on' : version.state === 'draft' ? 'never' : 'off'}
-                label={
-                  version.state === 'active' ? 'Active' : version.state === 'draft' ? 'Draft' : 'Superseded'
-                }
-              />
-              {/* Clipped to one line with the whole value on `title` — the same rule `RowState`'s
-                  detail follows, and the reason `.ds-row-clip` exists. */}
-              <Col
-                width="meta"
-                title={
-                  version.state === 'active' && version.activatedAt
-                    ? `Activated ${formatUtc(version.activatedAt)}`
-                    : `Created ${formatUtc(version.createdAt)}`
-                }
-              >
-                <span className="ds-mono ds-row-clip">
-                  {version.state === 'active' && version.activatedAt
-                    ? formatUtc(version.activatedAt)
-                    : formatUtc(version.createdAt)}
-                </span>
-              </Col>
-              {/* No action on a version row — a superseded version is history and an active one is
-                  already active. The cell keeps the row's four-column grid, which the header row and
-                  every other list in the console share. */}
-              <Col width="act">{null}</Col>
-            </Row>
+            <Version
+              key={version.id}
+              number={`v${version.version}`}
+              state={
+                version.state === 'draft' ? (
+                  <Tag tone="unclassified">Draft</Tag>
+                ) : version.state === 'active' ? (
+                  <Pill state="on">Active</Pill>
+                ) : (
+                  <Tag>Superseded</Tag>
+                )
+              }
+              who={
+                version.state === 'active' && version.activatedAt
+                  ? formatUtc(version.activatedAt)
+                  : version.state === 'draft'
+                    ? 'not activated'
+                    : formatUtc(version.createdAt)
+              }
+            >
+              {version.state === 'active'
+                ? 'Counting everyone above'
+                : version.state === 'draft'
+                  ? 'Not activated — it changes nothing until you do'
+                  : 'Kept, never deleted'}
+            </Version>
           ))}
-        </ListCard>
+        </Versions>
 
         <Callout>
           A journey version is <strong>immutable</strong>, exactly like a feature version — activating a draft
           does not rewrite history, and the numbers above stay attributable to the definition that produced
           them.
         </Callout>
-
-        {/* ⚠️ **The whole diagnostic layer is KEPT, behind a disclosure.** `entity-journeys` shipped
-            the window semantics, the drilldowns, the query-evidence telemetry, the materialisation
-            tripwires, the retention rule and the ten-column stage table; the approved state draws
-            none of them. They read the SAME `cohort.stages` the bars above are drawn from, so this
-            is a second view and never a second source. */}
-        <details className="ds-gaps">
-          <summary>The window, the drilldowns, the retention rule and the query evidence</summary>
-          <div className="ds-disclosure-body">
-            <JourneyCohortDetail result={result} drilldownHref={drilldownHref} />
-          </div>
-        </details>
       </main>
     </ProductShell>
   )

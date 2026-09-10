@@ -30,6 +30,16 @@ export type ShareRow = {
   createdAt: string
   expiresAt: string | null
   revokedAt: string | null
+  /**
+   * How many times this link has been opened — mockups-as-built Story 4.2, the approved
+   * `setup-shares` state's third column.
+   *
+   * ⚠️ **TOTAL times opened, never people, and never deduplicated.** Every request that resolved
+   * this token counts, so one person reloading twice is two. That is the honest unit available: a
+   * bearer URL can be forwarded to a room full of people from one email, so a "visitor" count would
+   * be a number that reads as an audience and is not one.
+   */
+  opens: number
 }
 
 export type ShareResolution =
@@ -185,7 +195,7 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
   const supabase = getSupabaseServiceClient()
   const { data, error } = await supabase
     .from('api_keys')
-    .select('id, label, share_lens, created_at, expires_at, revoked_at')
+    .select('id, label, share_lens, created_at, expires_at, revoked_at, opened_count')
     .eq('project_id', projectId)
     .eq('scope', 'share')
     .order('created_at', { ascending: false })
@@ -205,5 +215,40 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
     createdAt: r.created_at as string,
     expiresAt: (r.expires_at as string | null) ?? null,
     revokedAt: (r.revoked_at as string | null) ?? null,
+    // ⚠️ **The `?? 0` is a TYPE guard, not a data one, and the earlier comment here was wrong**
+    // (cross-agent review, agy). It claimed a null "can only mean a row written before the
+    // migration" — `ALTER TABLE … ADD COLUMN opened_count INTEGER NOT NULL DEFAULT 0` backfills
+    // every existing row, so no such null exists and no such row can be written.
+    //
+    // What it actually guards is this file's own boundary: `supabase-js` has no generated Database
+    // type wired up here, so the response is untyped and the cast is a promise rather than a
+    // checked fact. `?? 0` keeps a shape surprise from putting `undefined` into a `number` field
+    // that the page then calls `.toLocaleString()` on. Unlike the `?? 0`s this codebase forbids
+    // elsewhere, it cannot assert a false ZERO: the column has no nullable state to misread.
+    opens: (r.opened_count as number | null) ?? 0,
   }))
+}
+
+/**
+ * Record one open of a share link — mockups-as-built Story 4.2.
+ *
+ * ⚠️ **Best-effort, and it must stay that way.** A failure here must never stop a share link
+ * rendering: the reader has a valid token and the report is what they came for. It is called from
+ * `after()` on the route for the same reason `trackSelfEvent` is — a counter update must not sit in
+ * front of the page's own response.
+ *
+ * The increment is atomic inside the database (`record_share_open`), because a link forwarded to a
+ * room is exactly the case where several opens arrive at once and a read-modify-write would lose
+ * them. It is scoped by PROJECT as well as by id (cross-agent review, Codex) — both come from
+ * `resolveShareToken`, which resolved them together from the one token.
+ */
+export async function recordShareOpen(projectId: string, shareId: string): Promise<void> {
+  const supabase = getSupabaseServiceClient()
+  // ⚠️ BOTH ids, exactly as `revokeShareLink` above takes both — the scope predicate is what stops
+  // an id alone deciding which row a privileged mutation touches.
+  const { error } = await supabase.rpc('record_share_open', {
+    p_project_id: projectId,
+    p_share_id: shareId,
+  })
+  if (error) console.error('[report-shares] could not record a share open:', error)
 }

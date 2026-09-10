@@ -8,6 +8,7 @@ build_order: 27      # integer position in the ONE global build sequence.
 
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/mockups-as-built.md`](../../00-ideas/seeds/mockups-as-built.md)
 > **Appetite:** L (multi-wave — raised from M on 2026-09-09, D16) · **Underwritten by:** _null — not yet bet_
+> **Status: BUILT 2026-09-10 — 22 of 22 routes match, measured. Owed: the production walkthrough.**
 > **Design — ALREADY APPROVED, nothing to design:** [`console-prototype.html`](../../../apps/web/design-system/console-prototype.html) · [`APPROVED.md`](../../../apps/web/design-system/APPROVED.md) · **33** approved states (D8), rendered to `apps/web/design-system/reference/*.png` by CI on every run — **derived and gitignored, never committed** (D1-b).
 > **Corrects:** `design-system-rails` (#26) — which shipped six sprints, marked itself complete, and did not build the approved screens.
 
@@ -80,6 +81,12 @@ rendered with it, not the system itself.
 
 **One thing is deleted from shared surface:** `CONSOLE_SHELL_ENABLED`, and the four pages that
 gate on it. Nothing ships dark.
+
+⚠️ **AMENDED 2026-09-10 (D17): the epic DOES ship one migration.** `api_keys.opened_count` and
+`record_share_open()`, because the approved `setup-shares` state draws an "opens" column and the
+product had nothing to put in it. It is additive and defaulted, so `git revert` of the code is still
+a complete rollback of behaviour — but "no migration" is no longer true, and correcting this
+sentence rather than leaving it is the discipline this epic is named after.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -183,6 +190,8 @@ again, the answer is a modal, not a disclosure."*
 | **D15** | **NEW — the gate blocks PER ROUTE, through a measured ratchet, not a typed flag.** Daniel's requirement (2026-09-09) is *"the gate blocks on all 17 as each one lands, not from the start — so main never carries a red gate for work that hasn't been done yet."* The only mechanism that satisfies both halves without a hand-typed "is this route supposed to pass yet" boolean — which is `rendersFromDesignSystem` under a new name — is a **floor**: `apps/web/design-system/STATE-MATCH.json` is WRITTEN by the gate and committed, a route in it that stops matching fails the build, and a route in it that the run did not open at all fails too. Nobody types which routes should pass; the file records which ones DID, and the only editable direction is forward. | Built and run, 2026-09-09. |
 | **D16** | **NEW (Daniel, 2026-09-09) — the epic builds EVERY failing route; Sprint 4 covers the nine outside the original three sprints.** Measured against `design-system-rails`' reported 27/27 with `outstanding: []`: of the 21 routes the gate opens, **5 match and 16 do not**. Seven of the sixteen are in Sprints 2–3 (`/app`, both journeys routes, scenarios, both experiments routes, destinations); **nine were in no story** — `/app/tasks`, `/app/setup/connect`, `/app/setup/keys`, `/app/shares`, `/hub`, `/hub/horizon`, `/hub/report`, `/install`, `/s/[token]`. Daniel's ruling: *"Build all 17. Add Sprint 4 for the 10. … the deliverable is the approved design on every route, not a subset with a debt list. … Don't come back on scope again — the answer for anything else you find is: it's in the design, so it gets built."* Appetite moves **M → L**. | The gate's own output, 2026-09-09. |
 | **D16-b** | ⚠️ **The numbers Daniel decided on were 17 and 10; the true numbers are 16 and 9, and the difference was MY measurement bug, not a change of scope.** `/login` was reported failing because the gate opened it from the signed-in fixture and was redirected to `/app` — so it scored `door-login` against Today. A context created from the `browser` fixture inherits the project's `use` options, `storageState` included; `storageState: undefined` had to be passed explicitly. `/login` matches its approved state and always did. The gate now refuses to measure a page it was redirected to, and says so. The decision is unaffected — every failing route is built — but a doc that kept the wrong number would be this epic's own defect. | `STATE-MATCH.json`, which now lists `/login` as matching. |
+| **D14-b** | **NEW (Daniel, 2026-09-10) — `/app/impact/…` BORROWS `measure-north-star` rather than losing it.** D14's arithmetic was incomplete: unmapping the state left that route with NO approved picture — the approved 33 hold no impact screen — so a denominator of 28 could never be fully covered and the epic could not close. It borrows, which is the D2-d mechanism doing exactly its job: owned, dated, and the same language about a different subject (*"what does THIS FEATURE feed"* against *"what feeds the North Star"*). | `route-manifest.ts`'s `borrowsState`; `coverage(6)` reads 28/28. |
+| **D17** | **NEW (Daniel, 2026-09-10) — the epic SHIPS A MIGRATION, and D13 and D4 are amended.** The approved `setup-shares` state draws "Expires · **opens**" and there was no opens count: `/s/[token]` records a view with `trackSelfEvent`, which writes into the SELF tenant, so a customer's project held no record their own link was opened. Daniel ruled *build it*, which is D16 applied. `20260910120000_share_open_count.sql` adds `api_keys.opened_count` and `record_share_open()` — additive, defaulted, no backfill, so reverting the code leaves a column nothing reads and `git revert` stays a complete rollback of BEHAVIOUR. **D13's "no migration" and D4's reason for revert being sound are amended, here, rather than left to be discovered in a diff.** | `lib/self-track.ts` resolves the tenant from `SELF_PROJECT_API_KEY`; the migration is additive. |
 | **D14** | **`measure-north-star` stops being mapped onto `/app/impact/[projectSlug]/[featureKey]`.** That mapping is real in `route-manifest.ts` today and is the architect's substitution the epic README describes. Story 3.1 gives North Star its own Measure surface and `/app/impact/…` keeps its own state. The denominator moves 27 → 28. | `route-manifest.ts`; `lib/project-route-inventory.ts` has exactly two Measure entries. |
 
 ## Routing — who builds what, and why
@@ -194,47 +203,80 @@ again, the answer is a modal, not a disclosure."*
 | **3 — the two screens + the flag** | **Architect** | 3.1 adds a nav surface and moves a state mapping (shared surface); 3.3 deletes a flag from `lib/flags.ts` and four gating files plus every Vercel environment (shared infra). Neither is delegable under the routing table. |
 | **4 — the other ten** | **Sonnet-class builders, fanned out over the locked contract** | By Sprint 4 the contract, the modal seam and the ratchet all exist and every story is "make this route's blocks equal its state's blocks", with the gate as the acceptance check. That is the definition of mechanical work over a locked contract. The hub's three routes go to one builder because they share `hub.module.css`. |
 
-## State of play — read this first on re-entry (2026-09-09)
+## State of play — the epic is BUILT (2026-09-10)
 
-**Sprint 1 is built and in review as [PR #136]. Sprints 2–4 are not started.** The decided state is
-D1–D16 above and the per-sprint build contracts below; nothing else needs reconstructing.
+**All four sprints are built. 22 of 22 routes match their approved state, measured.**
+`STATE-MATCH.json` lists all 22 and `coverage.json` reads `28/28` with `outstanding: []` — derived
+from the gate, not from a typed boolean (D5). The only thing between here and closed is the
+production walkthrough.
 
-**The one command that tells you where everything stands:**
+**The one command that tells you where everything stands, still:**
 
 ```bash
 npm run test:e2e:local -- --authed apps/web/e2e/console-visual.authed.spec.ts
 ```
 
-It prints `[structure] N route(s) do not match their approved state yet`, and for each one the
-approved block sequence, the built block sequence, and the specific blocks that disagree. **That
-output is the remaining work, named by a machine.** Every story in Sprints 2–4 is "make this list
-shorter", and a route is done when it leaves the list and enters `STATE-MATCH.json`.
+It now prints no outstanding routes. A route that stops matching fails the build (D15), and a route
+in `STATE-MATCH.json` that a run did not open fails too.
 
-Measured 2026-09-09 — **5 of 21 routes match**:
+### What each sprint actually cost, beyond its stories
 
-| | routes |
-|---|---|
-| **Matching (the floor)** | `/app/flags` · `/app/flag-audit` · `/login` · `/signup` · `/talk` |
-| **Sprint 2** | `/app` · `/app/journeys` · `/app/journeys/[key]` · `/app/scenarios` · `/app/experiments` · `/app/experiments/[key]` · `/app/destinations` |
-| **Sprint 3** | North Star (a route that does not exist yet) · `/app/flag-audit` pagination |
-| **Sprint 4** | `/app/tasks` · `/app/setup/connect` · `/app/setup/keys` · `/app/shares` · `/hub` · `/hub/horizon` · `/hub/report` · `/install` · `/s/[token]` |
+Every sprint doc carries its own list. The four things worth reading before the next epic:
 
-**Two things already prepared for Sprint 2, so nobody rebuilds them:**
+1. **THREE routes were FIXTURE gaps wearing product defects' clothes.** Destinations' empty list
+   (Story 2.4), the North Star's single leading input where the design draws three (3.1), and the
+   two hub artifacts (4.4). A fixture thinner than the design cannot tell a correct page from an
+   incorrect one, and the gate reports it as the page being wrong.
+2. **A structural match is not a look.** Nine defects in this epic were found by opening the page on
+   a route whose signature already agreed: the Activity timeline rendering as one crammed line, the
+   `.ds-doc` measure squeezing every table to 70ch, `.ds-dests` overflowing a phone, a disabled
+   outcome button painted as chosen, an `Empty` making the guardrail panel the tallest block on the
+   page while saying the least, `ComparisonBars` drawing half its approved line, `.ds-step-action`
+   on the wrong line, Setup › Connect opening on a verdict about a URL not yet shown, and the three
+   plots wrapping 2 + 1.
+3. **Deleting a flag is mostly about the suites that read it.** Six spec files gated on
+   `CONSOLE_SHELL_ENABLED` and would have skipped FOREVER — including this epic's own blocking gate.
+   A skipped suite is green, and none of it is visible in a diff of the flag.
+4. **Two guards were passing incidentally.** `⌘K still finds a SURFACE once features are in the
+   list` asserted `toHaveCount(1)`, which held only because no fixture feature contained the word
+   "Activity"; and `hub.authed.spec.ts` asserted an empty state that the fixture happened to be in.
 
-- `summariseJourneys` (`lib/journey-list-view.ts`) already returns the **four** tile figures its own
-  comment calls *"the four summary tiles' figures"*, and `subjectsCounted` is `number | null` by
-  design. `Tile` takes `value: null` + an `absent` sentence. So Story 2.1's fourth tile is a render,
-  not a query — and **do not** add a per-row cohort scan to make a number appear (D13-c).
-- The modal seam (D8) is the FIRST thing to build in Sprint 2 and the architect owns it: four
-  stories import it. `wizard-new-feature` is in `STATE-CONTRACT.json` as
-  `dialoghead → dialogbody → dialogfoot`; the product classes are `.ds-dialog-head` (does not exist
-  yet), `.ds-dialog-body` and `.ds-dialog-actions`. `app/app/design-system/specimen-dialog.tsx` is
-  the working `<dialog>` pattern to copy, and `ConfirmDialog` is the product's own.
+### The two approved DEVIATIONS from the design, both Daniel's, both dated
 
-⚠️ **`.ds-vers` and `.ds-dialog-head` are paired in the vocabulary with product classes that do not
-exist yet.** That is deliberate: the gate says *"the approved state has `versions`, the page has
-`list`"* until Sprint 2 builds them. Widening the selector to make the two agree would delete the
-question.
+Everything else is the approved state exactly. These two are not, and they carry his name:
+
+| what | why | ruled |
+|---|---|---|
+| The guardrail NAME is not struck through | `experiment-ready` draws it with a red strikethrough, which comes from reusing `.wordlist` — the prototype's before/after list, whose left-hand word is the thing being replaced. A guardrail's name is not being replaced by anything, so it read as "this guardrail is gone" on a panel about guardrails that still apply. Raised, not decided. | Daniel, 2026-09-10 |
+| Activity's rail item says "Activity", its heading says "History" | Both are the approved design's — `ship-activity.png` draws exactly that pair. Recorded here because `design-system-rails` Story 4.3 renamed the heading to "Activity" reasoning it was "the word the design uses", and half of that was never checked against the picture. | the design itself |
+
+### Raised, not decided — the one thing still open
+
+**The Activity entry names its actor as a raw UUID.** The approved state draws *"**Daniel** turned
+`ml.sync_enabled` off in Development"*; the product renders `actor_user_id`, which is a UUID in
+production too. Resolving it to a name needs a read of the auth schema — a new query and arguably a
+new boundary — so it is named here rather than built or ignored.
+
+### Prepared, so nobody rebuilds it
+
+- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`). Six surfaces use
+  the shape; `deliveries-dialog.tsx` and `drill-evidence.tsx` show the per-row pattern.
+- `ListCard plain` is the approved `.listcard` used as a padded SURFACE — the form eight states take.
+  A `role="table"` around a bar chart is worse structure than the `<div>` it replaced.
+- `Versions` / `Version` is the `versions` block. `.ds-vers` did not exist until Sprint 2 built it.
+
+### The things that will bite you
+
+1. **A guard you fix deserves the mutation check AGAIN.** Re-run the deliberate break after every
+   guard edit.
+2. **Reporting must precede assertions.** A hard `expect` throws and swallows every `console.log`
+   after it.
+3. **A product selector is not verified by existing in `system.css`.** `.ds-crumbrow` and
+   `.ds-rail-label` were both dead pairs — the second found in Sprint 2 part 2, the same way.
+4. **Check a comment's claim before you write it.** A first draft of the `NewThingDialog` fix
+   credited the wrong cause and had to be measured a second time to find the real one; a first draft
+   of the ⌘K fix asserted the surface ranks FIRST, which is the opposite of what
+   `console-palette.ts:96` says the design does.
 
 ## Scope — stories
 
@@ -319,20 +361,24 @@ meant to check is a gate written to pass. Stack the branches:
 `feat/mockups-as-built` → `-s2` → `-s3` → `-s4`.
 
 ## Definition of Done (epic)
-- [ ] **21 of 21** — every route the gate opens matches its state's structural signature (D2, D16).
-      `STATE-MATCH.json` lists all of them and `outstanding` is empty **because it was measured**,
-      not because a boolean says so
-- [ ] `grep -rn "<summary" apps/web/app apps/web/components` returns **only** the six `flags/…`
-      disclosures (D6) and the three chrome controls (D6-c) — the grep covers **both** trees (D6-b)
-- [ ] The gate was **observed failing on Journeys** — and on a deliberately mutated Ship › Features —
+- [x] **22 of 22** — every route the gate opens matches its state's structural signature (D2, D16).
+      `STATE-MATCH.json` lists all of them and `outstanding` is empty **because it was measured**
+- [x] `grep -rn "<summary" apps/web/app apps/web/components` returns **only** the six `flags/…`
+      disclosures (D6) and the three chrome controls (D6-c) — verified 2026-09-10, exactly nine hits
+- [x] The gate was **observed failing on Journeys** — and on a deliberately mutated Ship › Features —
       before Sprint 2 started
-- [ ] **No capability was lost**: journey create+activate, experiment create/transition/bind,
-      scenario launch+stop and delivery replay all still work, from a modal (D8)
-- [ ] `CONSOLE_SHELL_ENABLED` appears nowhere in the repository **and in no Vercel environment**
-- [ ] `coverage.json`'s numbers are derived from the gate, not typed (D5)
-- [ ] North Star is a Measure surface in `project-route-inventory.ts` and is the section's default
-- [ ] Activity paginates, and the page is in the URL
-- [ ] `wizard-new-feature` is in `approved-states.mjs` **and** `APPROVED.md` (D8)
+- [x] **No capability was lost**: journey create+activate, experiment create/transition/bind,
+      scenario launch+stop and delivery replay all still work, from a modal (D8). Every behavioural
+      spec for those surfaces is green, and one of them — `scenario-authoring.authed.spec.ts` — had
+      been red locally since Story 2.2 and is green again
+- [x] `CONSOLE_SHELL_ENABLED` appears in no live read in the repository **and in no Vercel
+      environment** — removed from Production, Preview and Development on 2026-09-10 (Daniel
+      authorized it by name that day); `vercel env ls | grep -c CONSOLE_SHELL` returns 0
+- [x] `coverage.json`'s numbers are derived from the gate, not typed (D5)
+- [x] North Star is a Measure surface in `project-route-inventory.ts` and is the section's default
+- [x] Activity paginates, and the page is in the URL
+- [x] `wizard-new-feature` is in `approved-states.mjs` **and** `APPROVED.md` (D8)
 - [ ] `RETROSPECTIVE.md` written — including what `design-system-rails` reported vs. what shipped,
       and the measurement that disproved D2
 - [ ] Product poster updated; `status: shipped`; `node scripts/build-order.mjs`
+- [ ] **The production walkthrough** — the four sprint docs' smoke steps, on `goldenfrijoles.com`

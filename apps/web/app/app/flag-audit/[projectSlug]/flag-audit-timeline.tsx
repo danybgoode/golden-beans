@@ -25,6 +25,7 @@
 import { formatUtc } from '@/lib/format-utc'
 import type { FlagActivationState } from '@/lib/flag-list-view'
 import type { FlagLifecycleAuditRow } from '@/lib/flag-registry'
+import type { AuditPage } from '@/lib/audit-page'
 import { Empty } from '@/design-system/primitives'
 import { AUDIT_ACTION_LABEL } from '../../flags/[projectSlug]/flag-vocabulary'
 
@@ -46,10 +47,15 @@ export function FlagAuditTimeline({
   entries,
   flagKeyById,
   versionNumberById,
+  page,
+  hrefForPage,
 }: {
   entries: FlagLifecycleAuditRow[]
   flagKeyById: Record<string, string>
   versionNumberById: Record<string, number>
+  /** mockups-as-built Story 3.2 — the slice on screen, and where the rest of it is. */
+  page: AuditPage<FlagLifecycleAuditRow>
+  hrefForPage: (page: number) => string
 }) {
   if (entries.length === 0) {
     return (
@@ -121,6 +127,39 @@ export function FlagAuditTimeline({
           )
         })}
       </div>
+      {/* ── mockups-as-built · Story 3.2 — the pager ─────────────────────────────────────────
+          ⚠️ **INSIDE the card, which is what keeps the route's signature `head → list`.** The
+          approved `ship-activity` state is two blocks and draws no pagination control at all —
+          because the prototype's fixture is exactly twelve rows and fits on one page. Production
+          holds 148. So the page SIZE is read off the design (twelve) and the controls are built,
+          in the one place that does not add a block the design has no name for.
+
+          Rendered only when there is more than one page: a pager on a single page is two dead
+          controls and a sentence nobody needs. */}
+      {page.pageCount > 1 ? (
+        <nav className="ds-pager" aria-label="Activity pages">
+          {/* Links, not buttons: the page is in the URL (`console-ia-overhaul` Story 1.3's rule),
+              so this is navigation and a middle-click or a copied link has to work. */}
+          {page.previousPage === null ? (
+            <span className="ds-pager-spacer" />
+          ) : (
+            <a className="ds-pager-step" href={hrefForPage(page.previousPage)} rel="prev">
+              ← Newer
+            </a>
+          )}
+          <span className="ds-pager-count">
+            {page.from.toLocaleString('en-US')}–{page.to.toLocaleString('en-US')} of{' '}
+            {page.total.toLocaleString('en-US')} · page {page.page} of {page.pageCount}
+          </span>
+          {page.nextPage === null ? (
+            <span className="ds-pager-spacer" />
+          ) : (
+            <a className="ds-pager-step" href={hrefForPage(page.nextPage)} rel="next">
+              Older →
+            </a>
+          )}
+        </nav>
+      ) : null}
     </div>
   )
 }

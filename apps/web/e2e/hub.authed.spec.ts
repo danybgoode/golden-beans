@@ -48,20 +48,34 @@ test('a signed-in owner reaches their OWN hub, not just the public demo', async 
   await expect(page.locator('body')).toContainText(tenant().slug!)
 })
 
-test('a brand-new tenant sees the deliberate empty state, and it renders as a real page', async ({
-  page,
-}) => {
-  // A freshly provisioned tenant has pushed no roadmap, so this is the one moment the empty state
-  // is genuinely reachable end-to-end — artifacts are append-only, so after any push it is gone for
-  // that tenant forever. Worth asserting in a browser: "renders as a real page" means the heading
-  // is actually visible, not merely present in the HTML string.
+test('the roadmap board renders as a real page, from a real pushed artifact', async ({ page }) => {
+  // ⚠️ **This was the EMPTY-state test, and mockups-as-built Story 4.4 made that state unreachable
+  // on this tenant.** The fixture pushes a real roadmap artifact now, because `/hub/[projectSlug]`
+  // and `/hub/…/horizon` are measured against approved states that describe POPULATED boards — a
+  // tenant with nothing pushed renders `head → list` where the design draws seven blocks, so the two
+  // routes could not have matched their pictures for any amount of work on the pages.
+  //
+  // Artifacts are append-only, so after any push the empty state is gone for that tenant forever.
+  // What replaced this assertion, stated plainly rather than quietly dropped:
+  //   · `hub-empty-state.spec.tsx` renders the component and asserts its WORDS — including that it
+  //     names `roadmap-push.mjs`, which is the half that matters (an empty state that only says
+  //     "nothing here" is the broken-looking zero this design avoids). It could not move to
+  //     `hub.spec.ts`: the hub is behind `requireDashboardAccess`, only the demo slug reads
+  //     anonymously, and that tenant has an artifact by the time the suite runs.
+  //   · What is LOST is the browser-level "actually visible, not merely present in the HTML" claim
+  //     for that one state. The `or()` branch below still covers it in a browser if a run ever meets
+  //     a tenant with no artifact.
+  // The populated board is what a real reader meets, and nothing asserted it in a browser before.
   await page.goto(`/hub/${tenant().slug}`)
-  const empty = page.getByTestId('hub-empty-state')
-  await expect(empty).toBeVisible()
-  await expect(empty).toContainText('No roadmap pushed yet')
-  // It must tell the reader how to fix it — an empty state that only says "nothing here" is the
-  // broken-looking zero this design deliberately avoids.
-  await expect(empty).toContainText('roadmap-push.mjs')
+  await expect(page.getByRole('heading', { name: 'Roadmap', exact: true })).toBeVisible()
+  await expect(page.getByTestId('hub-empty-state')).toHaveCount(0)
+  // The board's own three halves: the answer, the four tiles, and the epic rows.
+  await expect(page.locator('main .ds-answer')).toContainText('epics have shipped')
+  await expect(page.locator('main .ds-tile')).toHaveCount(4)
+  await expect(page.locator('main .ds-epic').first()).toBeVisible()
+  // ⚠️ The closing note carries the provenance now (the approved state draws no stamp), so the
+  // board still says how stale it is — the property `hub.spec.ts` asserts on the markup.
+  await expect(page.locator('main [data-freshness-tone]')).toContainText('generated')
 })
 
 test('the horizon renders destinations and never claims a destination is lit on an empty roadmap', async ({

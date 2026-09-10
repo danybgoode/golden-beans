@@ -56,8 +56,19 @@ const VIEWPORT = { width: 1440, height: 960 }
  * as off and served the legacy render. The suite then failed hard against markup it never claims to
  * describe (fresh reviewer, round 2).
  */
+// ⚠️ **`CONSOLE_SHELL_ENABLED` is GONE from this predicate — mockups-as-built Story 3.3 deleted the
+// flag.** Leaving it in would have been the worst possible outcome of that deletion: with the
+// variable unset everywhere, `gatesAreLit()` is permanently false and THIS SUITE — the epic's
+// flagship gate, the one thing that can go red on the way a page looks — would skip itself in every
+// run and report green having asserted nothing. That is the exact failure this repo has recorded
+// twice (`SIGNUP_ENABLED`, `FLAG_CONSOLE_ENABLED`), and it is worse here because the suite is the
+// blocking gate rather than an opt-in rail.
+//
+// `FLAG_CONSOLE_ENABLED` stays: it is a real flag with a real dark state that CI asserts on the
+// `:3100` server, and the exact `=== 'true'` comparison is what keeps `"false"` from reading as
+// truthy the way it once did.
 function gatesAreLit(): boolean {
-  return process.env.CONSOLE_SHELL_ENABLED === 'true' && process.env.FLAG_CONSOLE_ENABLED === 'true'
+  return process.env.FLAG_CONSOLE_ENABLED === 'true'
 }
 
 function tenant() {
@@ -119,7 +130,7 @@ async function openFeatures(page: Page): Promise<void> {
 test.describe('the console matches the approved design', () => {
   test.skip(
     !gatesAreLit(),
-    'the visual gate asserts the LIT console; run with CONSOLE_SHELL_ENABLED=true and FLAG_CONSOLE_ENABLED=true'
+    'the visual gate asserts the LIT flag console; run with FLAG_CONSOLE_ENABLED=true'
   )
 
   test('Ship › Features at 1440x960 matches the approved prototype', async ({ page }) => {
@@ -545,6 +556,8 @@ const EXPECTED_SKIPS = [
 const REACHABLE: Record<string, ((slug: string) => string) | { coveredBy: string }> = {
   '/app': () => '/app',
   '/app/tasks/[projectSlug]': (slug) => `/app/tasks/${slug}`,
+  // mockups-as-built Story 3.1 — the route `measure-north-star` was substituted for until now.
+  '/app/north-star/[projectSlug]': (slug) => `/app/north-star/${slug}`,
   '/app/journeys/[projectSlug]': (slug) => `/app/journeys/${slug}`,
   '/app/scenarios/[projectSlug]': (slug) => `/app/scenarios/${slug}`,
   '/app/flags/[projectSlug]': (slug) => `/app/flags/${slug}?env=production`,
@@ -743,6 +756,19 @@ test('every route claiming the design system renders from it', async ({ page }) 
             // `measure-contract.mjs`' list has nothing to pair it with. That asymmetry is the reason
             // this list is maintained beside that one rather than derived from it.
             'main .ds-once, ' +
+            // ⚠️ **`.ds-prov` and `.ds-doc`, added by mockups-as-built Story 4.5** — the same
+            // asymmetry `.ds-once` above records, on the two routes where it actually bites. The
+            // approved `hub-report` and `public-share` states ARE `… → provenance → document`: the
+            // stamp and the document are the content, by the design's own block vocabulary. Missing
+            // from this list, `/s/[token]` scored its chrome at 3081px — the first `.ds-table` deep
+            // inside the report — on a page whose content begins 200px down. That is the list being
+            // wrong about the page, not the page being wrong.
+            //
+            // `.ds-dests` is the same finding one route over: Horizon's content IS its destinations
+            // list, and with the stamp gone that page had NO entry here at all — the gate reported
+            // "renders no content element", which is the list saying so rather than passing. And
+            // `.ds-vers` is `measure-journey`'s version list, a block this epic built.
+            'main .ds-prov, main .ds-doc, main .ds-dests, main .ds-vers, ' +
             // ⚠️ `/talk` was the ONE route of twenty-seven with no entry here, and the gate said so
             // rather than passing (design-system-rails Story 6.5). Its content is a third party's
             // booking calendar and the three notes beside it — `.ds-talkslot` is the frame around
@@ -818,6 +844,174 @@ test('every route claiming the design system renders from it', async ({ page }) 
     console.log(`[visual gate] ${visited} route(s) opened here; ${skipped.length} covered elsewhere:`)
     for (const line of skipped) console.log(`  · ${line}`)
   }
+})
+
+test('a ds- class never loses its own typography to a bare ELEMENT selector', async ({ page }) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  // ── An element selector inside a scope OUTRANKS the class named for the thing itself ─────────
+  //
+  // mockups-as-built Story 4.5 promoted `/s/[token]`'s title from `<p>` to `<h1>`, which put it
+  // under `.ds .ds-pubwrap h1` — (0,2,1), two classes and an ELEMENT — while its own rule
+  // `.ds .ds-sharehead-title` is (0,2,0). The element selector won, and the title rendered at
+  // 30px/700 where the design draws 13.5px/600.
+  //
+  // ⚠️ **Every gate in this repository stayed green.** The structural contract counts BLOCKS and the
+  // block was right; the measured spec runs on ONE route (`/app/flags`); the mobile sweep measures
+  // overflow. A cross-family reviewer raised it as a Nit — *"verify the CSS does not rely on element
+  // type"* — and measuring it turned the Nit into a real defect. This is the CLASS of that instance,
+  // on every route this suite opens rather than the one it happened on.
+  //
+  // ── Two formulations were WRONG before this one, and both failures are the point ─────────────
+  //
+  // 1. **A static pass over `system.css` cannot decide it.** Whether two rules ever meet depends on
+  //    which ELEMENT a class renders as, which lives in the components — the attempt produced 6,347
+  //    pairs, almost all impossible (`.ds-btn` "conflicting" with `.ds-page-head h1`).
+  //
+  // 2. **Comparing the computed size against the declared one fires on the design working.**
+  //    `.ds .ds-dialog--wide .ds-dialog-title { font-size: 16px }` is a legitimate ancestor VARIANT
+  //    over `.ds .ds-dialog-title`'s 15px, and the element carries only the base class — so a
+  //    declared-vs-computed check called 29 correct renders defects. A guard that fires on an idiom
+  //    the repo already uses is how a guard gets switched off instead of fixed (LEARNINGS).
+  //
+  // What is actually asserted, and it is decidable: **of every rule that matches this element and
+  // sets this property, the winner's SUBJECT is a class — never a bare element.** A `ds-` variant
+  // beating its base is the design; a bare `h1` beating `.ds-sharehead-title` is the defect. The
+  // browser has already parsed the stylesheet, so the cascade is read rather than modelled.
+  await page.setViewportSize(VIEWPORT)
+
+  const failures: string[] = []
+  for (const row of liveRows(6).filter((entry) => entry.rendersFromDesignSystem)) {
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') continue
+    await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+
+    const losses = await page.evaluate(() => {
+      const PROPERTIES = ['font-size', 'font-weight']
+
+      /** (ids, classes, elements) — enough for this stylesheet's shapes. */
+      const specificity = (selector: string): [number, number, number] => {
+        const clean = selector.replace(/::?[a-z-]+(\([^)]*\))?/g, ' ')
+        return [
+          (clean.match(/#[\w-]+/g) ?? []).length,
+          (clean.match(/\.[\w-]+|\[[^\]]+\]/g) ?? []).length,
+          (clean.match(/(^|[\s>+~])([a-z][\w-]*)/g) ?? []).length,
+        ]
+      }
+      const rank = ([i, c, e]: [number, number, number]) => i * 10_000 + c * 100 + e
+      /** The last simple selector — what the rule is ABOUT. */
+      const subject = (selector: string) =>
+        selector
+          .trim()
+          .split(/[\s>+~]+/)
+          .pop() ?? ''
+
+      /** Split a selector LIST on its top-level commas, leaving `:where(a, b)` intact. */
+      const splitTopLevel = (selector: string): string[] => {
+        const parts: string[] = []
+        let depth = 0
+        let current = ''
+        for (const char of selector) {
+          if (char === '(') depth += 1
+          else if (char === ')') depth -= 1
+          if (char === ',' && depth === 0) {
+            parts.push(current)
+            current = ''
+            continue
+          }
+          current += char
+        }
+        parts.push(current)
+        return parts
+      }
+
+      // Every style rule the page actually loaded, flattened out of its media wrappers.
+      const flat: { selector: string; style: CSSStyleDeclaration }[] = []
+      const walk = (rules: CSSRuleList) => {
+        for (const rule of rules) {
+          if (rule instanceof CSSStyleRule) flat.push({ selector: rule.selectorText, style: rule.style })
+          else if ('cssRules' in rule) walk((rule as CSSGroupingRule).cssRules)
+        }
+      }
+      for (const sheet of document.styleSheets) {
+        // A cross-origin sheet throws on access. There are none here, and skipping is the only
+        // option if one ever appears — reported rather than silently ignored would need a channel
+        // this evaluate does not have, so the guard is scoped to same-origin CSS by construction.
+        try {
+          walk(sheet.cssRules)
+        } catch {
+          continue
+        }
+      }
+
+      const out: string[] = []
+      for (const element of document.querySelectorAll('[class]')) {
+        const own = [...element.classList].filter((name) => name.startsWith('ds-'))
+        if (own.length === 0) continue
+
+        // ⚠️ **Only the properties this element's OWN classes actually DECLARE.**
+        // "A class never loses its own typography" presupposes it has some. Without this the guard
+        // fired wherever a bare-element rule set a property no `ds-` class had an opinion about —
+        // `:where(.ds .ds-shell) :where(input, textarea, select)` "beating" `.ds-input` on
+        // font-weight, which `.ds-input` does not set. That is INHERITANCE working, not a loss.
+        const declaredByOwn = new Set<string>()
+        for (const { selector, style } of flat) {
+          for (const one of splitTopLevel(selector)) {
+            const trimmed = one.trim()
+            if (!own.some((name) => subject(trimmed) === `.${name}`)) continue
+            for (const property of PROPERTIES) {
+              if (style.getPropertyValue(property) !== '') declaredByOwn.add(property)
+            }
+          }
+        }
+
+        for (const property of PROPERTIES) {
+          if (!declaredByOwn.has(property)) continue
+          let best: { selector: string; rank: number } | null = null
+          for (const { selector, style } of flat) {
+            if (style.getPropertyValue(property) === '') continue
+            // ⚠️ **Split on TOP-LEVEL commas only.** A naive `split(',')` tears `:where(a, b)` in
+            // half and produces `:where(.ds .ds-shell) :where(input` — an unparseable fragment that
+            // `matches()` throws on, and whose "subject" reads as a bare element. The first run of
+            // this guard reported exactly that as a defect against `.ds-input`, which is the guard
+            // being wrong rather than the stylesheet.
+            for (const one of splitTopLevel(selector)) {
+              const trimmed = one.trim()
+              if (trimmed === '') continue
+              try {
+                if (!element.matches(trimmed)) continue
+              } catch {
+                continue
+              }
+              const score = rank(specificity(trimmed))
+              // `>=` — a later rule of equal specificity wins, which is the cascade's own rule.
+              if (best === null || score >= best.rank) best = { selector: trimmed, rank: score }
+            }
+          }
+          if (best === null) continue
+          const won = subject(best.selector)
+          // A CLASS subject is the design: either the element's own class or a variant of it.
+          if (won.startsWith('.')) continue
+          out.push(
+            `<${element.tagName.toLowerCase()}>.${own.join('.')} — ${property} won by ` +
+              `\`${best.selector}\`, whose subject is the ELEMENT \`${won}\``
+          )
+        }
+      }
+      return [...new Set(out)].slice(0, 6)
+    })
+
+    for (const line of losses) failures.push(`${row.route} — ${line}`)
+  }
+
+  expect(
+    [...new Set(failures)],
+    'a `ds-` class lost its own typography to a BARE ELEMENT selector. An element rule inside a ' +
+      'scope — `.ds .ds-pubwrap h1` is (0,2,1) — outranks a two-class rule named for the thing ' +
+      'itself at (0,2,0). Give the class rule a scope class so the specific rule is the specific ' +
+      'one; never widen the element rule, and never rename the element to dodge it.'
+  ).toEqual([])
 })
 
 test('every ds- element sits inside a .ds ANCESTOR, on every route this suite opens', async ({ page }) => {
@@ -1336,7 +1530,12 @@ test('a borrowed state is owned and has not expired', () => {
   // nobody ever closes.
   const today = new Date().toISOString().slice(0, 10)
   const borrows = ROUTE_MANIFEST.filter((row) => row.borrowsState)
-  expect(borrows.length, 'update this count when a route starts or stops borrowing a state').toBe(2)
+  // ⚠️ **THREE since mockups-as-built Story 3.1.** `/app/impact/[projectSlug]/[featureKey]` carried
+  // `measure-north-star` as an architect's SUBSTITUTION for a route that did not exist; Story 3.1
+  // built that route, and Daniel ruled (2026-09-10, epic D14-b) that the impact page borrows the
+  // state rather than losing it — the approved 33 hold no impact screen, and a route in the
+  // denominator with no state could never be covered.
+  expect(borrows.length, 'update this count when a route starts or stops borrowing a state').toBe(3)
   for (const row of borrows) {
     const borrow = row.borrowsState!
     expect(borrow.owner.length, `${row.route} borrows a state with no owner`).toBeGreaterThan(0)

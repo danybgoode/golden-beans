@@ -1,5 +1,4 @@
 import type { GovernedExperimentAnalysisResult } from '@/lib/experiment-analysis-query'
-import { DecisionRecorder } from './decision-recorder'
 
 // The governance layer — design-system-rails · Sprint 5, Story 5.4.
 //
@@ -91,11 +90,13 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
         {' · '}integrity: {analysis.integrityReady ? 'clear' : 'blocked'}
         {' · '}minimum sample: {analysis.sampleStatus}
       </p>
-      <details>
-        <summary>Immutable plan</summary>
-        <p>{experiment.definition.hypothesis}</p>
-        <pre>{JSON.stringify(experiment.definition, null, 2)}</pre>
-      </details>
+      {/* ⚠️ **Was a `<details>Immutable plan`, and no `<details>` survives a rebuilt surface**
+          (epic D3/D6). This whole component now lives INSIDE the modal the page head opens, which
+          is already the "one keystroke away" the disclosure was providing — nesting a second
+          disclosure inside it hid the plan twice. */}
+      <h2>Immutable plan</h2>
+      <p>{experiment.definition.hypothesis}</p>
+      <pre>{JSON.stringify(experiment.definition, null, 2)}</pre>
 
       <h2>Allocation and sample guidance</h2>
       <table>
@@ -197,38 +198,34 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
                     </>
                   )}
                 </p>
-                <details>
-                  <summary>Captured analysis and integrity evidence</summary>
-                  <pre>
-                    {JSON.stringify(
-                      {
-                        analysis: decision.analysisSnapshot,
-                        integrity: decision.integritySnapshot,
-                      },
-                      null,
-                      2
-                    )}
-                  </pre>
-                </details>
+                {/* Same rule as the plan above: the modal is the disclosure now. */}
+                <p>Captured analysis and integrity evidence</p>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      analysis: decision.analysisSnapshot,
+                      integrity: decision.integritySnapshot,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
               </li>
             ))}
           </ol>
         )}
-        {canManage ? (
-          <DecisionRecorder
-            slug={result.project.slug}
-            experimentKey={experiment.key}
-            definitionVersion={experiment.definitionVersion}
-            lifecycle={experiment.lifecycle}
-            controlVariantKey={experiment.definition.controlVariantKey}
-            treatmentVariantKeys={experiment.definition.variants
-              .map((variant) => variant.key)
-              .filter((key) => key !== experiment.definition.controlVariantKey)}
-            currentDecisionId={decisions.current?.id ?? null}
-          />
-        ) : (
+        {/* ⚠️ **THE RECORDER IS GONE FROM HERE — mockups-as-built Story 2.3, and leaving it was a
+            real defect** (cross-agent review, Codex, Should-fix). The approved `experiment-ready`
+            state draws the decision as block 6 ON THE PAGE, so `DecisionRecorder` moved into
+            `DecisionBlock`; this component was not touched, which left TWO live forms writing to the
+            same APPEND-ONLY ledger — the most irreversible control in the product, duplicated.
+            A capability must not be lost, and it must not be doubled either.
+
+            What stays here is the HISTORY: every decision ever recorded against this version, with
+            its author, its rationale and its captured evidence. That is what this modal is for. */}
+        {canManage ? null : (
           <p>
-            <strong>Read-only access.</strong> A project owner records decisions and corrections.
+            <strong>Read-only access.</strong> A project owner records decisions and corrections, on the page.
           </p>
         )}
       </section>

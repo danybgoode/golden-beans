@@ -184,10 +184,10 @@ jobs:
           RESILIENCE_SCENARIOS_ENABLED: 'false'
           SECURITY_SIMULATIONS_ENABLED: 'false'
           AUTOMATIC_CIRCUIT_BREAKERS_ENABLED: 'false'
-          # console-ia-overhaul. The dark CONTRACT belongs here, on the differently-enved server,
-          # now that A19 ships the console ENABLED — the main server below runs with it ON, so a
-          # dark assertion there would assert the opposite of production.
-          CONSOLE_SHELL_ENABLED: 'false'
+          # ⚠️ `CONSOLE_SHELL_ENABLED` is GONE — mockups-as-built Story 3.3 deleted the flag from
+          # `lib/flags.ts` and from every Vercel environment. `setup-routes-dark.spec.ts` keeps its
+          # name and its two unconditional tests; its dark describes are deleted, because a dark
+          # assertion about a flag that does not exist asserts the opposite of production.
           # ⚠️ Sprint 3 — `FLAG_CONSOLE_ENABLED` was set NOWHERE in this workflow, so the whole
           # blocking gate ran with the flag console dark while production has served it ON since
           # flags-console-parity. That is the same defect A19 caught for `CONSOLE_SHELL_ENABLED`,
@@ -272,7 +272,6 @@ jobs:
           # assert 404 on two routes that serve, and the lit halves of `console-shell.authed` and
           # all of `setup-surfaces.authed` would skip permanently — three suites silently inverting
           # on the day this merges. The dark contract moved to the OFF server above.
-          CONSOLE_SHELL_ENABLED: 'true'
           # Same argument, the flag console's own gate: ON in production since
           # flags-console-parity, and set nowhere in this workflow until Sprint 3. The visual gate
           # below needs it too — it asserts the LIT console and skips silently without it.
@@ -354,7 +353,6 @@ jobs:
           CONNECTOR_ENABLED: 'true'
           # Both places, per this block's own rule — `setup-routes-dark.spec.ts` BRANCHES on this to
           # decide which half to run, so the server and the test process must agree about it.
-          CONSOLE_SHELL_ENABLED: 'true'
           # `flag-console-dark.spec.ts` branches on this one the same way, and it is now set on the
           # server above — a mismatch here would make it assert the dark contract against a lit
           # server, which is the single most confusing CI-only failure this repo records.
@@ -472,7 +470,6 @@ jobs:
         # CI-only failure this repo records. Mirroring costs nothing and removes the class rather
         # than the instance.
         env:
-          CONSOLE_SHELL_ENABLED: 'true'
           FLAG_CONSOLE_ENABLED: 'true'
           FLAG_RULE_BUILDER_ENABLED: 'true'
           FLAG_SERVING_ENABLED: 'true'

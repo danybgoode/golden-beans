@@ -32,7 +32,6 @@ import {
   isAgentRailEnabled,
   isFlagRuleBuilderEnabled,
   isFlagConsoleEnabled,
-  isConsoleShellEnabled,
   isTaskMcpToolEnabled,
   isConnectorWriteToolEnabled,
 } from './flags.ts'
@@ -90,10 +89,13 @@ const singleFlagGates: Array<[string, () => boolean]> = [
   // matrix automatically rather than depend on whoever added it remembering to re-type it.
   ['FLAG_RULE_BUILDER_ENABLED', isFlagRuleBuilderEnabled],
   ['FLAG_CONSOLE_ENABLED', isFlagConsoleEnabled],
-  // console-ia-overhaul · Story 1.1 (epic README, D4). The eighteenth, added to the shared table
-  // for the reason the two notes above give — and from this sprint on, membership of this table is
-  // no longer a thing the next author has to remember. See the exhaustiveness test below.
-  ['CONSOLE_SHELL_ENABLED', isConsoleShellEnabled],
+  // ⚠️ **`CONSOLE_SHELL_ENABLED` was the eighteenth and is GONE** — mockups-as-built Story 3.3
+  // deleted it from `lib/flags.ts`, from `ci.yml`, from `run-local-e2e.mjs` and from every Vercel
+  // environment. The console ships unflagged; the merge is the release and rollback is `git revert`.
+  //
+  // Nothing had to be remembered to remove it from here: the exhaustiveness test below is keyed on
+  // the `process.env.<NAME>` reads in `flags.ts`, so deleting the function is what deletes the row,
+  // and leaving this line behind would have gone red rather than passing quietly.
 ]
 
 // ── The table is now SELF-ENFORCING, and that is the point of adding it here ──────────────────
@@ -141,7 +143,12 @@ test('every env gate in flags.ts is registered in singleFlagGates, and vice vers
 
   // A bare count, so a future refactor that made BOTH sets empty (a regex that stops matching, a
   // table that gets cleared) fails loudly instead of passing two vacuous deepEquals.
-  assert.ok(registered.size >= 18, `expected at least 18 registered gates, found ${registered.size}`)
+  //
+  // ⚠️ **17, down from 18 — mockups-as-built Story 3.3 DELETED `CONSOLE_SHELL_ENABLED`.** This is a
+  // FLOOR against vacuity, not a ratchet: the two `deepEqual`s above are what actually hold the two
+  // sets equal, and a gate that is genuinely retired must be allowed to lower it. Lowering it is a
+  // decision that leaves its trace here rather than a number quietly following the code.
+  assert.ok(registered.size >= 17, `expected at least 17 registered gates, found ${registered.size}`)
 })
 
 for (const [envKey, gate] of singleFlagGates) {

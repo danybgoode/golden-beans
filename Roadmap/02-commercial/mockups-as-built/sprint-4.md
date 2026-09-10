@@ -1,6 +1,64 @@
 # The mockups, as built — Sprint 4: The nine routes nothing was measuring
 
-**Status:** ⬜ not started
+**Status:** ✅ COMPLETE (2026-09-10) — all eight routes match. **22 of 22.**
+
+> What it took, beyond the five stories as written:
+>
+> - ⚠️ **THREE of the eight were FIXTURE gaps, not page defects.** `/hub/[projectSlug]`,
+>   `/hub/…/horizon`, `/hub/…/report` and `/s/[token]` all rendered their EMPTY states, because the
+>   authed fixture tenant had never pushed a roadmap or a pod-report artifact — so they came out as
+>   `head → list` where the design draws seven blocks and four. The pages were already built. Both
+>   artifacts are pushed through `push_report_artifact`, the product's own write path, so a payload
+>   the fixture accepts is one the API accepts.
+> - **`/install` is ONE card, not three**, and the SDK block is a third labelled section inside it
+>   rather than a card of its own — `landing-readability-pass` retired the landing's §sdk into this
+>   page, and deleting it to match a mock would undo a shipped epic's decision. The prototype has no
+>   reason to draw it: it has no SDK.
+> - **`setup-connect`'s three steps moved OUT of the page's card**, into a sibling
+>   (`ConnectorSteps`). While they were nested the whole page read as `head → card` — one block
+>   where the design draws three. Its closing `Callout` became a plain `<p>`: a `.ds-callout--info`
+>   is an ANNOTATION to the contract (D2-c), so the page's fourth block was missing while the line
+>   was on screen.
+> - **`setup-keys`' counting sentence moved INSIDE its card**, the same way the Activity pager did.
+> - **`setup-shares`' head moved into `ShareManager`** so the `+ New share link` trigger, the mint
+>   form and the shown-once URL share one piece of state — the `keys-surface.tsx` pattern. Its
+>   `Cancel` button is deleted: the dialog owns whether it is open, so a fourth way out that the form
+>   cannot perform would be a control that does nothing.
+> - **The pod report is wrapped in ONE `document`**, which is what closes `POD_REPORT_TABLES_DEFERRAL`
+>   rather than extending it: the deferral's premise was that the approved state "is PROSE and
+>   contains no table at all", and the state is a DOCUMENT — a document may contain a table. Nothing
+>   is deleted to satisfy a geometry assertion.
+> - **The hub's provenance stamps are gone from Roadmap and Horizon**, because neither approved state
+>   draws one — and every fact they carried (when, from which merge, how stale, the `data-freshness-tone`)
+>   moved into the closing note and the answer respectively. A report that cannot tell you how stale
+>   it is, is a screenshot.
+>
+> ### Four defects only LOOKING could find, on routes whose signature already matched
+>
+> - **The `.ds-doc` measure squeezed every table to 70ch.** `max-width` was on the CONTAINER, which
+>   is indistinguishable from the prototype's rule while a document holds only prose — and wrong the
+>   moment it holds the pod report's metric tables. The measure is on the prose children now.
+> - **`.ds-dests` overflowed a 360px phone.** `minmax(320px, 1fr)` is a track FLOOR, so a container
+>   narrower than 320px scrolls sideways. It had never been seen because Horizon rendered its empty
+>   state on every fixture tenant — the mobile sweep swept a page with nothing to lay out.
+> - **`.ds-step-action` was `inline-flex`**, so "Add to Claude ↗" sat on the same line as the step it
+>   belongs under. The approved state draws it beneath.
+> - **Setup › Connect opened on a STATUS verdict** about a URL the reader had not been shown yet.
+>   The approved order is the thing, then whether it is live.
+>
+> ### D17 — the epic DOES ship a migration now, and Daniel decided it
+>
+> The approved `setup-shares` state draws "Expires · **opens**". There was no opens count:
+> `/s/[token]` records a view with `trackSelfEvent`, which writes into the SELF tenant — our
+> telemetry about our own product — so a customer's project holds no record their own link was
+> opened. Daniel's ruling, 2026-09-10: **build it**, which is D16 applied.
+>
+> `20260910120000_share_open_count.sql` adds `api_keys.opened_count` and `record_share_open()`.
+> Additive, defaulted, no backfill: reverting this epic's code leaves a column nothing reads, so
+> `git revert` stays a complete rollback of BEHAVIOUR. **It amends D13 ("no migration") and the
+> reason D4 gives for revert being sound.** The number is a COUNT and not a log, and the page says
+> "opened N times", never a visitor count — a bearer URL forwarded to a room is one link and many
+> readers.
 
 > **⛔ Read the epic README's ONE RULE before starting.** Every screen below is drawn and approved.
 > There is nothing to design and nothing to decide.
@@ -29,7 +87,7 @@ Every story is the same shape, and the gate is the acceptance check:
 
 ## Stories
 
-### Story 4.1 — Setup › Connect and Setup › Keys
+### Story 4.1 — Setup › Connect and Setup › Keys — ✅
 **As a** person, **I want** the two Setup screens I approved.
 **Acceptance:**
 - `/app/setup/connect/[projectSlug]` matches `setup-connect`: `head → list → list → note`. It
@@ -38,21 +96,21 @@ Every story is the same shape, and the gate is the acceptance check:
   block today, and its `+ New key` control opens the wizard shape (D8).
 **Risk:** high
 
-### Story 4.2 — Setup › Share links
+### Story 4.2 — Setup › Share links — ✅
 **Acceptance:**
 - `/app/shares/[projectSlug]` matches `setup-shares`: `head → answer → list`. It renders
   `head → answer → note → list` today, and its head draws no `+ New share link` — the approved
   state does, and it opens the wizard shape (D8).
 **Risk:** high
 
-### Story 4.3 — Tasks
+### Story 4.3 — Tasks — ✅ (already matching; no change needed)
 **Acceptance:**
 - `/app/tasks/[projectSlug]` matches `tasks-standalone`:
   `crumbs → head → answer → band → band → band → band`. It renders no breadcrumb row and one band
   fewer today.
 **Risk:** high
 
-### Story 4.4 — The hub: roadmap, horizon and report
+### Story 4.4 — The hub: roadmap, horizon and report — ✅
 **Acceptance:**
 - `/hub/[projectSlug]` matches `hub-roadmap`: `head → answer → tiles(4) → list → sectionlabel →
   list → note`. It renders `head → list`.
@@ -65,7 +123,7 @@ Every story is the same shape, and the gate is the acceptance check:
   is what closes the deferral. **Close it in this story rather than extending its date.**
 **Risk:** high
 
-### Story 4.5 — The public surfaces: /install and /s/[token]
+### Story 4.5 — The public surfaces: /install and /s/[token] — ✅
 **Acceptance:**
 - ⚠️ **`/login` is NOT in this story.** It was in the list Daniel decided on, and it matches its
   approved state — it only looked broken because the gate opened it from the signed-in fixture and
