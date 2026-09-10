@@ -250,6 +250,30 @@ Everything else is the approved state exactly. These two are not, and they carry
 | The guardrail NAME is not struck through | `experiment-ready` draws it with a red strikethrough, which comes from reusing `.wordlist` — the prototype's before/after list, whose left-hand word is the thing being replaced. A guardrail's name is not being replaced by anything, so it read as "this guardrail is gone" on a panel about guardrails that still apply. Raised, not decided. | Daniel, 2026-09-10 |
 | Activity's rail item says "Activity", its heading says "History" | Both are the approved design's — `ship-activity.png` draws exactly that pair. Recorded here because `design-system-rails` Story 4.3 renamed the heading to "Activity" reasoning it was "the word the design uses", and half of that was never checked against the picture. | the design itself |
 
+### What the PRODUCTION walkthrough found (2026-09-10)
+
+Every rebuilt route was opened signed-in on `goldenfrijoles.com` and looked at. Seven were correct
+on sight — North Star, Activity (with its pager, and `?page=2` surviving a copy-paste), Setup ›
+Connect, Setup › Keys, the hub's Roadmap/Horizon/Report, `/install` and `/s/[token]`. Both mints ran
+end to end and the shown-once screen held. Three things came out of it:
+
+1. ⚠️ **A real defect, fixed in [PR #139]:** `.ds-row-desc` is rendered as a `<span>` by `RowMain`,
+   and an INLINE element ignores `max-width`, `overflow` and `text-overflow` — so its clipping never
+   applied. On `/app/shares` a description ran to 594px inside a 554px parent and collided with the
+   scope label. Same class as the Activity timeline this epic already fixed. The cascade guard now
+   also asserts that no class declaring `text-overflow: ellipsis` computes to `display: inline`.
+2. ⚠️ **STORY 4.1 IS NOT FULLY DONE, and this doc said it was.** Its acceptance reads *"its
+   `+ New key` control opens the wizard shape (D8)"*. It does not — Setup › Keys expands an inline
+   panel from `keys-surface.tsx`, which does not import `NewThingDialog`. The `note` half of that
+   story is done and the route matches its approved signature, so the gate is green and the
+   criterion is unmet: the structural contract cannot see a control it never clicks. **Setup ›
+   Shares DOES use the seam** — verified, the wizard modal opens over a dimmed page — so this is one
+   surface of the six, not the mechanism.
+3. **The contract's `smallplots: 3` is DATA, not structure.** Production has two leading inputs and
+   renders two plots, correctly; the gate is green only because the fixture was seeded with three.
+   Every other fact in a signature survives a change of dataset — this one does not, and it is the
+   one place D2's own premise does not hold.
+
 ### Raised, not decided — the one thing still open
 
 **The Activity entry names its actor as a raw UUID.** The approved state draws *"**Daniel** turned
@@ -381,4 +405,7 @@ meant to check is a gate written to pass. Stack the branches:
 - [ ] `RETROSPECTIVE.md` written — including what `design-system-rails` reported vs. what shipped,
       and the measurement that disproved D2
 - [ ] Product poster updated; `status: shipped`; `node scripts/build-order.mjs`
-- [ ] **The production walkthrough** — the four sprint docs' smoke steps, on `goldenfrijoles.com`
+- [x] **The production walkthrough — RUN 2026-09-10 on `goldenfrijoles.com`**, signed in. Every
+      rebuilt route verified by looking, both authorized mints performed, and D17 proved end to end:
+      a freshly minted share link moved from *"Not opened yet"* to **"Opened 1 time"** after being
+      opened. Findings below.

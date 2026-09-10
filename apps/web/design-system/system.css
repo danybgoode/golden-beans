@@ -1375,7 +1375,19 @@
 .ds .ds-row:hover .ds-row-key {
   color: var(--gold-hot);
 }
+/* ⚠️ **`display: block`, and without it every containment rule below was INERT.**
+   `RowMain` renders this as a `<span>` (`primitives.tsx`), and an INLINE element ignores
+   `max-width`, `overflow` and `text-overflow` — so the clipping this rule exists for never
+   happened. Measured on production 2026-09-10: `max-width` computed to 429.5px and the element
+   rendered at 565px and 594px, past its own parent (554px) and into the next column, where a share
+   link's description collided with its scope label.
+
+   Same class as the Activity timeline this epic already fixed: markup that is a `<span>` under CSS
+   written for a block, where the rules do not fail loudly — they do nothing. `.ds-row-clip` and the
+   feature list's 71px row height both depend on this clipping, which is why the fix is to make the
+   element match its rules rather than to relax them. */
 .ds .ds-row-desc {
+  display: block;
   font-size: 12.5px;
   font-weight: 400;
   color: var(--dim);

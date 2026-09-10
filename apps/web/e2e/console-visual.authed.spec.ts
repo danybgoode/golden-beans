@@ -846,7 +846,7 @@ test('every route claiming the design system renders from it', async ({ page }) 
   }
 })
 
-test('a ds- class never loses its own typography to a bare ELEMENT selector', async ({ page }) => {
+test('a ds- class keeps its own typography, and its clipping rules actually apply', async ({ page }) => {
   test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
 
   // ── An element selector inside a scope OUTRANKS the class named for the thing itself ─────────
@@ -945,10 +945,41 @@ test('a ds- class never loses its own typography to a bare ELEMENT selector', as
         }
       }
 
+      // ── The SECOND thing this walk checks: an INLINE element carrying containment rules ───────
+      //
+      // ⚠️ `max-width`, `overflow` and `text-overflow` all do NOTHING on `display: inline`. Found on
+      // production: `.ds-row-desc` is rendered as a `<span>` by `RowMain`, so its `max-width: 60ch`
+      // and its ellipsis never applied — a share link's description rendered at 594px inside a
+      // 554px parent and collided with the next column. Same class as the Activity timeline this
+      // epic already fixed: markup that is a `<span>` under CSS written for a block, where the rules
+      // do not fail loudly, they do nothing.
+      //
+      // ⚠️ **Runtime, because a static check cannot decide it.** A flex or grid CHILD is blockified
+      // by its parent, so `.ds-tl-reason`, `.ds-pubbar-scope` and `.ds-shell-signal` declare no
+      // `display` and are correct anyway. The browser has already resolved that; asking it is the
+      // only formulation that does not fire on the design working.
+      const clipping = new Set<string>()
+      for (const { selector, style } of flat) {
+        if (style.getPropertyValue('text-overflow') !== 'ellipsis') continue
+        for (const one of splitTopLevel(selector)) {
+          const name = subject(one.trim())
+          if (name.startsWith('.ds-')) clipping.add(name.slice(1))
+        }
+      }
+
       const out: string[] = []
       for (const element of document.querySelectorAll('[class]')) {
         const own = [...element.classList].filter((name) => name.startsWith('ds-'))
         if (own.length === 0) continue
+
+        for (const name of own) {
+          if (!clipping.has(name)) continue
+          if (getComputedStyle(element).display !== 'inline') continue
+          out.push(
+            `<${element.tagName.toLowerCase()}>.${name} — declares \`text-overflow: ellipsis\` and ` +
+              'computes to `display: inline`, where max-width, overflow and text-overflow ALL do nothing'
+          )
+        }
 
         // ⚠️ **Only the properties this element's OWN classes actually DECLARE.**
         // "A class never loses its own typography" presupposes it has some. Without this the guard
@@ -1007,10 +1038,12 @@ test('a ds- class never loses its own typography to a bare ELEMENT selector', as
 
   expect(
     [...new Set(failures)],
-    'a `ds-` class lost its own typography to a BARE ELEMENT selector. An element rule inside a ' +
-      'scope — `.ds .ds-pubwrap h1` is (0,2,1) — outranks a two-class rule named for the thing ' +
-      'itself at (0,2,0). Give the class rule a scope class so the specific rule is the specific ' +
-      'one; never widen the element rule, and never rename the element to dodge it.'
+    'a `ds-` class either lost its own typography to a BARE ELEMENT selector, or carries clipping ' +
+      'rules that do nothing because it computes to `display: inline`. For the first: an element ' +
+      'rule inside a scope — `.ds .ds-pubwrap h1` is (0,2,1) — outranks a two-class rule named for ' +
+      'the thing itself at (0,2,0), so give the class rule a scope class; never widen the element ' +
+      'rule. For the second: give the rule a `display` that is not inline, or the element a flex/grid ' +
+      'parent — never delete the max-width, which is what the row heights depend on.'
   ).toEqual([])
 })
 

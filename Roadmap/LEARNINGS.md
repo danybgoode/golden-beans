@@ -546,6 +546,33 @@ one-liner + why + date shape.
   a backdrop-click handler needs. Traced by patching `HTMLDialogElement.prototype.close` and reading
   the stack — the first diagnosis (a missing effect dependency) was WRONG and its explanatory comment
   had to be deleted rather than left beside a working fix. *(2026-09-10.)*
+- **CSS written for a block does nothing on an inline element, and it fails SILENTLY.**
+  `max-width`, `overflow` and `text-overflow: ellipsis` are all ignored on `display: inline`. A row
+  description rendered as a `<span>` therefore never clipped: measured on production, `max-width`
+  computed to 429px while the element rendered at 594px, past its own parent and into the next
+  column. Its sibling `.ds-row-clip` two hundred lines away already carried `display: block`, so one
+  author knew and the other rule was written as if it did. **The runtime check is the only one that
+  decides it** — a flex or grid CHILD is blockified by its parent, so three other rules declare no
+  `display` and are correct anyway; a static "must declare display" rule fires on the design working.
+  Assert the COMPUTED display instead, on every route a suite opens. *(2026-09-10.)*
+- **A structural contract can only assert a page's DEFAULT state, so a criterion about a CONTROL can
+  go unmet under a green gate.** A story's acceptance said a `+ New …` button opens the approved
+  modal; the button opened an inline panel instead, and the route still matched its approved block
+  sequence — because the panel only exists after a click the gate never makes, and the default page
+  is unchanged either way. Found by pressing the button on production. **Where an acceptance
+  criterion is about what a control DOES, the gate that proves it has to press it.** *(2026-09-10.)*
+- **Not every fact in a "structural" signature survives a change of dataset — check which ones are
+  really data.** A contract generated from an approved prototype asserted `smallplots: 3`, and
+  production renders 2 because that tenant has two leading inputs. The page is correct; the number is
+  the fixture's. Every other fact in that signature (block order, column labels, the primary action's
+  words, `<details>` count) is structure. **A per-item COUNT of something the data produces is not,
+  and seeding a fixture to match it makes the gate agree with the fixture rather than the product.**
+  *(2026-09-10.)*
+- **Read a credential from the DOM, never from a screenshot.** Transcribing a one-time share token
+  out of a screenshot got one character wrong; the page then correctly rendered "this link is not
+  working", which reads exactly like a product defect. Hashing the transcription and comparing it to
+  the stored `key_hash` settled it in one command — worth doing BEFORE reporting a shown-once
+  credential as broken. *(2026-09-10.)*
 - **Porting a page means porting its MEASUREMENTS.** A third-party iframe shipped at `min-height:
   700px` with its working in the comment — 620 measured to scroll, 860 measured to leave a gap. The
   port re-derived it as 640, below the value already measured as too short, and the booker clipped.
