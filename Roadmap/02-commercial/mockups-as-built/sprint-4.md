@@ -87,22 +87,37 @@ Every story is the same shape, and the gate is the acceptance check:
 
 ## Stories
 
-### Story 4.1 — Setup › Connect and Setup › Keys — 🟨 ONE CRITERION UNMET
+### Story 4.1 — Setup › Connect and Setup › Keys — ✅
 **As a** person, **I want** the two Setup screens I approved.
 **Acceptance:**
 - `/app/setup/connect/[projectSlug]` matches `setup-connect`: `head → list → list → note`. It
   renders `head → card` today — one card where the design draws two lists and a closing note.
 - `/app/setup/keys/[projectSlug]` matches `setup-keys`: `head → list`. ✅ — the counting sentence
   moved inside the card, which is what the extra `note` block was.
-- ⚠️ **`+ New key` does NOT open the wizard shape, and this doc reported the story done.** Found by
-  pressing the button on production, 2026-09-10: it expands an inline panel from `keys-surface.tsx`,
-  which does not import `NewThingDialog`. Setup › **Shares** does use the seam — verified in the same
-  walkthrough — so this is one surface of D8's six, not the mechanism.
+- ✅ **`+ New key` opens the wizard shape** (2026-09-10). It did not, and this doc reported the story
+  done: it expanded an inline panel from `keys-surface.tsx`, which did not import `NewThingDialog`.
+  Found by pressing the button on production.
   **Why no gate caught it:** the structural contract asserts the page's DEFAULT state, and the panel
-  only exists after a click the gate never makes. The route legitimately matches `head → list`.
-  Converting it means moving `NewKey`'s trigger/reveal state into the dialog the way `ShareManager`'s
-  was — a story's worth of work on the surface that mints four kinds of bearer credential, so it is
-  named here rather than rushed into a close-out.
+  only exists after a click the gate never makes. The route legitimately matches `head → list` either
+  way — so the criterion could be unmet on a green gate indefinitely.
+  **What it took:** `NewKey`'s trigger and open state moved into `NewThingDialog` the way
+  `ShareManager`'s were. `NewKey.Trigger` is deleted (the seam renders the button, so one component
+  owns the label the gate reads); its `Cancel` is deleted (the dialog owns whether it is open, and a
+  control that cannot do what it says is worse than no control); `.ds-mint` went with the card it
+  spaced. Setting `minted` is what closes the dialog — one condition decides both, so they cannot
+  disagree about whether an unsaved credential is on screen.
+- ⚠️ **A SECOND surface was doing the same thing, and only the new guard found it.**
+  `+ New destination` toggled a `creating` card in `destination-manager.tsx`. Same conversion, plus
+  the `mintError`/`revokeError` split `share-manager.tsx` already carries — a create failure belongs
+  inside the dialog, a rotate/remove/test failure beside the list it was aimed at.
+- ✅ **The guard that makes this class of defect impossible to ship again**, in
+  `console-visual.authed.spec.ts`: *every approved "+ New …" opens the wizard shape, and no surface
+  answers it inline*. It reads the approved action labels out of `STATE-CONTRACT.json` rather than a
+  list retyped in the spec, presses each, and requires a `<dialog>` that is genuinely `:modal` and
+  carries `.ds-dialog`. `/app/flags/[projectSlug]`'s New feature wizard is exempted from the CLASS
+  check by name — it renders `console.css`'s `.modal`, a stated `design-system-rails` S4.1 deviation.
+  **Mutation-checked twice:** red on Destinations before its fix, and red on all six D8 surfaces with
+  `showModal()` swapped for `show()`.
 **Risk:** high
 
 ### Story 4.2 — Setup › Share links — ✅
@@ -159,6 +174,8 @@ Env: **production · https://goldenfrijoles.com**
 2. Go to https://goldenfrijoles.com/app/setup/keys/miyagisanchez and press **+ New key**.
    → The wizard shape opens as a modal. Minting still works end to end.
    **(Owed to Daniel by name — this mints a real credential.)**
+2b. Go to https://goldenfrijoles.com/app/destinations/miyagisanchez and press **+ New destination**.
+   → The same wizard shape opens as a modal, over a dimmed page — not an inline card.
 3. Go to https://goldenfrijoles.com/app/shares/miyagisanchez and press **+ New share link**.
    → The wizard shape opens. **(Owed to Daniel by name — this mints a real share link.)**
 4. Go to https://goldenfrijoles.com/app/tasks/miyagisanchez

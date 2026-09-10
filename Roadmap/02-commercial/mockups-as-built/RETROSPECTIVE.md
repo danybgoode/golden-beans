@@ -71,6 +71,21 @@ Every one of these was on a route whose signature already agreed with its approv
 The contract is a floor, not a finish. It cannot go green on a page nobody has looked at — and it
 cannot go red on one that looks wrong while its blocks are right.
 
+### A structural contract measures the DEFAULT state, so a button can lie on a green route
+
+Two surfaces — Setup › Keys and Destinations — drew the approved `+ New …` control, matched their
+approved block sequence on every run, and opened an inline panel instead of the wizard shape D8
+requires. Both facts were true at once, and neither is a bug in the contract: **it measures what a
+route renders before anybody touches it, and the panel only existed after a click the gate never
+made.** Seven review rounds did not find them either; the first was found by pressing the button on
+production, and the second by the guard written for the first.
+
+The guard is the general form, and it is written against the contract rather than beside it: for
+every approved state whose head draws an action, press that action's exact words and require a
+`<dialog>` that is genuinely `:modal`. Nothing is retyped, so a seventh `+ New …` is covered the
+moment its state is generated. **The lesson is not "click more buttons" — it is that a gate's scope
+is a claim, and this one's was "the page as it loads".**
+
 ### Three routes were FIXTURE gaps wearing product defects' clothes
 
 Destinations' empty list, the North Star's one leading input where the design draws three, and the
@@ -106,6 +121,9 @@ beside a working fix. **Prose asserting a property the code does not have is a d
 
 ## Gaps / follow-ups
 
+- **`/app/flags/[projectSlug]`'s New feature wizard renders `console.css`'s `.modal`, not
+  `.ds-dialog`** — a stated `design-system-rails` S4.1 deviation, exempted BY NAME in the D8 guard's
+  `WIZARD_DEVIATIONS` so the exemption is one line in a diff rather than a silent pass.
 - **The Activity entry names its actor as a raw UUID** where the approved state draws a name.
   Resolving it needs a read of the auth schema — a new query and arguably a new boundary — so it is
   raised rather than built. Named in the epic README and in `sprint-3.md`.

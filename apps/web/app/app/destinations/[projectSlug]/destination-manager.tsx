@@ -6,13 +6,13 @@ import type { DeliveryAttemptRow, DeliveryHistoryRow } from '@/lib/deliveries'
 import { formatUtc } from '@/lib/format-utc'
 import type { DeliveryHealthRow } from '@/lib/deliveries'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { DeliveriesForDestination, RemovedDestinationsHistory } from './deliveries-dialog'
 import { type DataTableColumn } from '@/components/ui/DataTable'
 import { CopyField } from '@/design-system/copy-field'
 import {
   Answer,
   Callout,
-  Card,
   Col,
   Empty,
   Field,
@@ -77,13 +77,23 @@ export function DestinationManager({
   health: DeliveryHealthRow[]
 }) {
   const router = useRouter()
-  // The form is behind `+ New destination`, so the page opens on the answer and the list rather
-  // than on an empty form — which is what the approved state shows and what makes the page fit.
-  const [creating, setCreating] = useState(false)
+  // ⚠️ **`creating` is GONE — `NewThingDialog` owns whether the form is open** (mockups-as-built
+  // Story 4.1, epic D8). The form was behind `+ New destination` from the start, which is why the
+  // page always opened on the answer and the list; what it opened INTO was an inline card, and the
+  // approved design opens the wizard shape as a modal. Found by the D8 guard in
+  // `console-visual.authed.spec.ts`, on the run that guard was first written — the structural
+  // contract could never see it, because it measures a route's default state and the card only
+  // existed after a click.
   const [name, setName] = useState('')
   const [targetUrl, setTargetUrl] = useState('')
   const [eventFilter, setEventFilter] = useState('')
   const [secret, setSecret] = useState<{ id: string; value: string; rotated: boolean } | null>(null)
+  // ⚠️ TWO error slots, because they are two different failures with two different readers — the
+  // split `share-manager.tsx` was made to adopt one surface over. A CREATE that failed belongs
+  // beside the form that failed, inside the dialog; a rotate, a remove or a test that failed belongs
+  // beside the list it was aimed at. One state rendered in both places would show a create error
+  // under the table, and a rotate error inside a create dialog.
+  const [createError, setCreateError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<TestState | null>(null)
   // The destination awaiting confirmation, and WHICH question is being asked about it. Held as the
@@ -96,19 +106,23 @@ export function DestinationManager({
 
   function onCreate(event: FormEvent) {
     event.preventDefault()
-    setError(null)
+    setCreateError(null)
     setTestResult(null)
     startTransition(async () => {
       const result = await createDestinationAction(slug, name, targetUrl, eventFilter || null)
       if (result.ok) {
+        // ⚠️ **No `setCreating(false)` — setting `secret` is what closes the dialog.** The trigger
+        // renders only while no signing secret is on screen, so a successful create unmounts
+        // `NewThingDialog` and the modal goes with it, revealing the shown-once secret underneath.
+        // One condition decides both, which is why they cannot disagree about whether a credential
+        // is on screen. Same mechanism as `share-manager.tsx`.
         setSecret({ id: result.id, value: result.signingSecret, rotated: false })
-        setCreating(false)
         setName('')
         setTargetUrl('')
         setEventFilter('')
         router.refresh()
       } else {
-        setError(result.error)
+        setCreateError(result.error)
       }
     })
   }
@@ -266,6 +280,84 @@ export function DestinationManager({
     [pending, onReplay]
   )
 
+  // ⚠️ **The create FORM, unchanged, hoisted so the head can carry it** (Story 4.1, epic D8). Every
+  // field, every hint and every validation is the one that shipped — the wizard shape wraps the
+  // existing manager rather than a rewrite of it, which is the rule D8 states: the capability IS the
+  // component, and rewriting one is how a capability quietly changes shape.
+  const createForm = (
+    <form onSubmit={onCreate}>
+      <Field
+        label="Name"
+        controlId="new-destination-name"
+        hint="How this destination appears in the list below."
+      >
+        {(control) => (
+          <input
+            {...control}
+            className="ds-input"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. crm-webhook"
+            required
+          />
+        )}
+      </Field>
+      <Field
+        label="Webhook URL"
+        controlId="new-destination-url"
+        hint="Must be HTTPS. Delivery is at least once — deduplicate on the event id."
+      >
+        {(control) => (
+          <input
+            {...control}
+            className="ds-input"
+            type="url"
+            value={targetUrl}
+            onChange={(e) => setTargetUrl(e.target.value)}
+            placeholder="https://example.com/webhooks/golden-frijoles"
+            required
+          />
+        )}
+      </Field>
+      <Field
+        label="Which events"
+        controlId="new-destination-filter"
+        hint="Leave blank to deliver every event."
+      >
+        {(control) => (
+          <input
+            {...control}
+            className="ds-input"
+            type="text"
+            value={eventFilter}
+            onChange={(e) => setEventFilter(e.target.value)}
+            placeholder="e.g. order_placed"
+          />
+        )}
+      </Field>
+      {/* New destinations start DISABLED — configure it, send a test, then enable it. Said
+            here, at the moment somebody creates one, rather than in a paragraph at the top of
+            the page they read before they had a reason to care. */}
+      <Callout>
+        A new destination starts <b>switched off</b>. Send it a test first, then turn it on — turning it on
+        starts delivery from now, not from the backlog.
+      </Callout>
+      {/* The CREATE failure, beside the form that failed — inside the dialog. */}
+      {createError && <Callout tone="warn">{createError}</Callout>}
+      <p className="ds-mint-actions">
+        <button type="submit" className="ds-btn ds-btn--primary" disabled={pending}>
+          {pending ? 'Working…' : 'Create the destination'}
+        </button>
+        {/* ⚠️ **No `Cancel` — the dialog already has three ways out** (its `✕`, Escape and a
+              backdrop click, all in `NewThingDialog`), and a fourth that this form cannot perform
+              would be a control that does nothing: the dialog owns whether it is open, and nothing
+              inside it can close it. Deleted for the same reason `share-manager.tsx` never grew
+              one. */}
+      </p>
+    </form>
+  )
+
   const live = destinations.filter((row) => row.enabled).length
   const failed = health.reduce((total, row) => total + row.failedAttempts, 0)
 
@@ -287,10 +379,20 @@ export function DestinationManager({
               columns={deliveryColumns}
               liveDestinationIds={new Set(destinations.map((destination) => destination.id))}
             />
-            {!creating && (
-              <button type="button" className="ds-btn ds-btn--primary" onClick={() => setCreating(true)}>
-                + New destination
-              </button>
+            {/* ⚠️ No trigger while a signing secret is on screen. A `+ New destination` button
+                beside an unsaved secret invites a second create before the first is copied — the
+                rule `keys-surface.tsx` and `share-manager.tsx` both follow — and it is also what
+                closes this dialog on success (see `onCreate`). */}
+            {secret === null && (
+              <NewThingDialog
+                /* The approved `setup-destinations` state's label, character for character — the
+                   structural gate compares the words (epic D2). */
+                label="+ New destination"
+                title="New destination"
+                lede="Where it goes, which events, and the secret it will be signed with."
+              >
+                {createForm}
+              </NewThingDialog>
             )}
           </>
         }
@@ -341,85 +443,9 @@ export function DestinationManager({
         </ShownOnce>
       )}
 
-      {creating && (
-        <Card>
-          <form onSubmit={onCreate}>
-            <Field
-              label="Name"
-              controlId="new-destination-name"
-              hint="How this destination appears in the list below."
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  className="ds-input"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. crm-webhook"
-                  required
-                />
-              )}
-            </Field>
-            <Field
-              label="Webhook URL"
-              controlId="new-destination-url"
-              hint="Must be HTTPS. Delivery is at least once — deduplicate on the event id."
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  className="ds-input"
-                  type="url"
-                  value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
-                  placeholder="https://example.com/webhooks/golden-frijoles"
-                  required
-                />
-              )}
-            </Field>
-            <Field
-              label="Which events"
-              controlId="new-destination-filter"
-              hint="Leave blank to deliver every event."
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  className="ds-input"
-                  type="text"
-                  value={eventFilter}
-                  onChange={(e) => setEventFilter(e.target.value)}
-                  placeholder="e.g. order_placed"
-                />
-              )}
-            </Field>
-            {/* New destinations start DISABLED — configure it, send a test, then enable it. Said
-                here, at the moment somebody creates one, rather than in a paragraph at the top of
-                the page they read before they had a reason to care. */}
-            <Callout>
-              A new destination starts <b>switched off</b>. Send it a test first, then turn it on — turning it
-              on starts delivery from now, not from the backlog.
-            </Callout>
-            {error && <Callout tone="warn">{error}</Callout>}
-            <p className="ds-mint-actions">
-              <button type="submit" className="ds-btn ds-btn--primary" disabled={pending}>
-                {pending ? 'Working…' : 'Create the destination'}
-              </button>
-              <button
-                type="button"
-                className="ds-btn ds-btn--secondary"
-                onClick={() => setCreating(false)}
-                disabled={pending}
-              >
-                Cancel
-              </button>
-            </p>
-          </form>
-        </Card>
-      )}
-
-      {error && !creating && <Callout tone="warn">{error}</Callout>}
+      {/* The page-level failure — a rotate, a remove or a test, beside the list each was aimed
+          at. A create failure renders inside the dialog instead. */}
+      {error && <Callout tone="warn">{error}</Callout>}
 
       {destinations.length === 0 ? (
         <div className="ds-listcard">

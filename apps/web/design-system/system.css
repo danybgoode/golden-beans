@@ -1856,9 +1856,9 @@
 }
 
 /* ── The mint flow — a list of JOBS, then the one question that kind asks ───────────────────── */
-.ds .ds-mint {
-  margin-top: 16px;
-}
+/* `.ds-mint` was here, and it is gone with the panel it spaced: mockups-as-built Story 4.1 moved the
+   mint form into `NewThingDialog`, whose `.ds-dialog-body` already supplies the padding this rule's
+   single `margin-top` was providing. */
 .ds .ds-mint-actions,
 .ds .ds-once-actions {
   display: flex;
