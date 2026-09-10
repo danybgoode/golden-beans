@@ -96,7 +96,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   // page somebody was sent a link to. (Cross-agent review, agy, Should-fix.)
   after(async () => {
     try {
-      await recordShareOpen(share.shareId)
+      await recordShareOpen(projectId, share.shareId)
     } catch (error) {
       console.error('[s/token] could not record a share open:', error)
     }

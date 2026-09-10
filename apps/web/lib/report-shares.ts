@@ -232,10 +232,16 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
  *
  * The increment is atomic inside the database (`record_share_open`), because a link forwarded to a
  * room is exactly the case where several opens arrive at once and a read-modify-write would lose
- * them.
+ * them. It is scoped by PROJECT as well as by id (cross-agent review, Codex) — both come from
+ * `resolveShareToken`, which resolved them together from the one token.
  */
-export async function recordShareOpen(shareId: string): Promise<void> {
+export async function recordShareOpen(projectId: string, shareId: string): Promise<void> {
   const supabase = getSupabaseServiceClient()
-  const { error } = await supabase.rpc('record_share_open', { p_share_id: shareId })
+  // ⚠️ BOTH ids, exactly as `revokeShareLink` above takes both — the scope predicate is what stops
+  // an id alone deciding which row a privileged mutation touches.
+  const { error } = await supabase.rpc('record_share_open', {
+    p_project_id: projectId,
+    p_share_id: shareId,
+  })
   if (error) console.error('[report-shares] could not record a share open:', error)
 }

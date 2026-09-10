@@ -34,8 +34,19 @@ ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS opened_count INTEGER NOT NULL DEFA
 --
 -- It takes the share's id and NEVER a token: the route has already resolved the token through
 -- `resolve_share_token`, and accepting a token here would be a second place a credential is
--- compared. It is scoped to `share` rows so it can never be pointed at an ingest key.
-CREATE OR REPLACE FUNCTION record_share_open(p_share_id UUID)
+-- compared.
+--
+-- ── THREE predicates, and the project one is the point (cross-agent review, Codex, Blocking) ──
+-- `p_project_id` is required and filtered on, exactly as `revokeShareLink` does one file over.
+-- Both ids are server-resolved — `resolve_share_token` returns them together — so no request can
+-- supply either, and this function is `service_role`-only. The predicate is therefore defence in
+-- depth rather than a closed hole, and it is worth having for the same reason that sibling gives:
+-- without it, the ID alone decides which row a privileged mutation touches, and a mismatched pair
+-- would silently increment another tenant's counter instead of failing. The scope predicate makes
+-- that unrepresentable rather than merely unlikely.
+--
+-- `scope = 'share'` stays for the third: it can never be pointed at an ingest key.
+CREATE OR REPLACE FUNCTION record_share_open(p_project_id UUID, p_share_id UUID)
 RETURNS VOID
 LANGUAGE sql
 SECURITY DEFINER
@@ -44,8 +55,9 @@ AS $$
   UPDATE api_keys
      SET opened_count = opened_count + 1
    WHERE id = p_share_id
+     AND project_id = p_project_id
      AND scope = 'share';
 $$;
 
-REVOKE ALL ON FUNCTION record_share_open(UUID) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION record_share_open(UUID) TO service_role;
+REVOKE ALL ON FUNCTION record_share_open(UUID, UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION record_share_open(UUID, UUID) TO service_role;
