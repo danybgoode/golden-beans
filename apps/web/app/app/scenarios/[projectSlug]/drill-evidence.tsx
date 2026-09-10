@@ -39,6 +39,7 @@ export function DrillEvidence({
   const runIds = new Set(runs.map((run) => run.id))
   const securityResults = view.securityResults.filter((result) => runIds.has(result.runId))
   const impacts = view.impacts.filter((impact) => impact.scenarioKey === scenarioKey)
+  const definitions = view.definitions.filter((item) => item.scenarioKey === scenarioKey)
 
   return (
     <NewThingDialog
@@ -48,11 +49,63 @@ export function DrillEvidence({
       title={`Evidence — ${scenarioKey}`}
       lede="Every run of this drill, what the defensive simulations observed, and the impact snapshots they produced. Read-only."
     >
+      {/* ── The immutable DEFINITIONS this drill has had ────────────────────────────────────────
+          ⚠️ **This section exists because moving the impact evidence here dropped a link**
+          (cross-agent review, Codex, round 5). The workspace's impact article carried
+          `Open the producing definition` → `#definition-KEY-VERSION`, and the anchor's target lives
+          in `ScenarioWorkspace`, which a read-only reader is not in.
+          The half-fix would have been to delete the link and call the provenance "stated"; the other
+          half-fix would have been to keep the anchor pointing at nothing, which is the defect round 3
+          of this same review corrected one component over. Bringing the TARGET here is what actually
+          loses nothing: the definition is what bounded the run, so on a page of evidence it is the
+          most load-bearing piece of it.
+
+          Read-only by construction — the launch control stays in the workspace with its confirmation
+          and its capability gates. */}
+      <h2>Definitions</h2>
+      {definitions.length === 0 ? (
+        <p>No definition is on file for this drill.</p>
+      ) : (
+        definitions.map((item) => {
+          const duration = Math.round(
+            (Date.parse(item.definition.expiresAt) - Date.parse(item.definition.startAt)) / 1_000
+          )
+          const flag = view.faultFlags.find(
+            (candidate) =>
+              candidate.key === item.definition.flag.key &&
+              candidate.version === item.definition.flag.definitionVersion
+          )
+          return (
+            <article id={`definition-${item.scenarioKey}-${item.version}`} key={item.id} className="panel">
+              <h3>
+                {item.scenarioKey} v{item.version}
+              </h3>
+              <p>
+                {item.definition.kind} · {item.definition.cohort} · {item.definition.targetKey}
+              </p>
+              <p>
+                Blast radius: {item.definition.limits.requestCap} requests,{' '}
+                {item.definition.limits.concurrencyCap} concurrent, {duration} seconds.
+              </p>
+              {flag ? (
+                <p>
+                  <strong>Payloads:</strong> {flag.payloadSummary}
+                  <br />
+                  <strong>Targeting:</strong> {flag.targetingSummary}
+                </p>
+              ) : null}
+            </article>
+          )
+        })
+      )}
+
       <h2>Runs</h2>
       <DataTable
         caption={`Runs of ${scenarioKey}`}
-        // The impact articles are rendered below, in THIS dialog, so the anchor has a target.
-        columns={scenarioRunColumns({ view, impactAnchors: true })}
+        // Both anchor targets are rendered in THIS dialog — the definitions above and the impact
+        // articles below — so both links resolve. `ScenarioWorkspace` opts into `definitionAnchors`
+        // for its own copy of the definitions, and into neither anchor it does not render.
+        columns={scenarioRunColumns({ view, impactAnchors: true, definitionAnchors: true })}
         rows={runs}
         rowKey={(row) => row.id}
         empty="This drill has never run — an untested control is an assumption, not evidence."
@@ -126,7 +179,11 @@ export function DrillEvidence({
                 <p>Evidence is insufficient for a control-versus-treatment comparison.</p>
               )}
               <p>
-                <a href={`#run-${impact.runId}`}>Open the producing run</a> ·{' '}
+                {/* Restored — the target is the `Definitions` section above, in this same dialog. */}
+                <a href={`#definition-${impact.scenarioKey}-${impact.scenarioVersion}`}>
+                  Open the producing definition
+                </a>{' '}
+                · <a href={`#run-${impact.runId}`}>Open the producing run</a> ·{' '}
                 {experiment ? (
                   <a
                     href={`/app/experiments/${projectSlug}/${encodeURIComponent(experiment.key)}?version=${experiment.definitionVersion}`}

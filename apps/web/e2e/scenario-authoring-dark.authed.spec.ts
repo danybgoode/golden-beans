@@ -36,6 +36,11 @@ test('scenario evidence stays readable while every owner write control is dark',
   const evidence = page.locator('dialog[open]')
   await expect(evidence.getByRole('heading', { name: 'Canonical product-impact evidence' })).toBeVisible()
   await expect(evidence.getByRole('heading', { name: 'Runs' })).toBeVisible()
+  // ⚠️ The immutable DEFINITION is evidence too — it is what bounded the run — and it is here so
+  // that the impact article's `Open the producing definition` link has a target in this dialog
+  // rather than in the authoring workspace a read-only reader never opens (cross-agent review,
+  // Codex, round 5).
+  await expect(evidence.getByRole('heading', { name: 'Definitions' })).toBeVisible()
 
   // ...and the evidence dialog holds NO control. A read-only surface that grew a mutation would be
   // the split undone.
