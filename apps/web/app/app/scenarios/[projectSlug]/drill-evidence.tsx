@@ -24,7 +24,13 @@ import { DataTable } from '@/components/ui/DataTable'
 import { NewThingDialog } from '@/components/product/NewThingDialog'
 import type { ScenarioDashboardView } from '@/lib/scenario-dashboard'
 import { scenarioImpactExperimentReference } from '@/lib/scenario-impact-link'
-import { scenarioRunColumns, scenarioSecurityColumns, shortId, timestamp } from './scenario-evidence-columns'
+import {
+  durationSeconds,
+  scenarioRunColumns,
+  scenarioSecurityColumns,
+  shortId,
+  timestamp,
+} from './scenario-evidence-columns'
 
 export function DrillEvidence({
   projectSlug,
@@ -67,9 +73,7 @@ export function DrillEvidence({
         <p>No definition is on file for this drill.</p>
       ) : (
         definitions.map((item) => {
-          const duration = Math.round(
-            (Date.parse(item.definition.expiresAt) - Date.parse(item.definition.startAt)) / 1_000
-          )
+          const duration = durationSeconds(item.definition.startAt, item.definition.expiresAt)
           const flag = view.faultFlags.find(
             (candidate) =>
               candidate.key === item.definition.flag.key &&

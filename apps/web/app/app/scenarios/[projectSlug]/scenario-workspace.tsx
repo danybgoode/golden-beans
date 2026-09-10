@@ -30,10 +30,7 @@ import { launchScenarioRunAction, scenarioOwnerOperationAction, startScenarioRun
 // ⚠️ **The run table is declared ONCE** (Story 2.5). `DrillEvidence` draws the same eight columns
 // read-only from a drill's own row; this component appends its actions column to them. Two column
 // lists in two files that currently agree is CODE-QUALITY #2.
-import { scenarioRunColumns, shortId, timestamp } from './scenario-evidence-columns'
-function durationSeconds(startAt: string, expiresAt: string): number {
-  return Math.round((Date.parse(expiresAt) - Date.parse(startAt)) / 1_000)
-}
+import { durationSeconds, scenarioRunColumns, shortId, timestamp } from './scenario-evidence-columns'
 function localStart(): string {
   const date = new Date()
   date.setSeconds(0, 0)
@@ -188,7 +185,7 @@ export function ScenarioWorkspace({
     ...scenarioRunColumns({
       view,
       // This component renders the `<article id="definition-…">` panels below, so the link has a
-      // target. `DrillEvidence` does not list definitions and therefore does not opt in.
+      // target here. `DrillEvidence` renders its own read-only copy of them and opts in separately.
       definitionAnchors: true,
       // The live counter is client-only and belongs to the operator's view. The read-only dialog
       // renders the started time instead, which is why this is a parameter rather than a copy.

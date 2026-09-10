@@ -20,14 +20,27 @@
 // is also written to avoid. One list, and the workspace APPENDS its actions column to it.
 
 import type { DataTableColumn } from '@/components/ui/DataTable'
+import { formatUtc } from '@/lib/format-utc'
 import type {
   ScenarioDashboardRun,
   ScenarioDashboardSecurityResult,
   ScenarioDashboardView,
 } from '@/lib/scenario-dashboard'
 
+/**
+ * A run's timestamp, or a dash.
+ *
+ * ⚠️ **`formatUtc`, not a local re-derivation** (cross-agent review, agy). The inline version this
+ * replaced was `new Date(value).toISOString()`, which THROWS `RangeError: Invalid time value` on a
+ * malformed row — and `format-utc.ts`'s own header says it exists so that "a bad historical row
+ * cannot crash a dashboard". Same output for every valid value; the difference is entirely in what
+ * happens to the one bad row nobody has yet.
+ *
+ * The `null → '—'` case stays here: absent and unreadable are different facts, and `formatUtc`
+ * answers the second.
+ */
 export function timestamp(value: string | null): string {
-  return value ? `${new Date(value).toISOString().slice(0, 16).replace('T', ' ')} UTC` : '—'
+  return value === null ? '—' : formatUtc(value)
 }
 
 export function shortId(value: string): string {
@@ -35,11 +48,24 @@ export function shortId(value: string): string {
 }
 
 /**
+ * How long a scenario definition's window is, in seconds.
+ *
+ * ⚠️ Exported HERE rather than left inline in two places (cross-agent review, agy). `DrillEvidence`
+ * re-derived the same subtraction, and two copies of "how long is this window" is the shape that
+ * drifts the first time one of them learns about, say, a clamped maximum.
+ */
+export function durationSeconds(startAt: string, expiresAt: string): number {
+  return Math.round((Date.parse(expiresAt) - Date.parse(startAt)) / 1_000)
+}
+
+/**
  * The run table's read-only columns.
  *
  * `elapsed` is injected rather than imported: the live "Elapsed 00:41" counter is a client-only
- * ticking component that belongs to the workspace, and the read-only dialog renders the started
- * time instead of a counter. A parameter keeps the other seven columns identical either way.
+ * ticking component that belongs to the workspace. Omitting it renders NOTHING extra in the state
+ * cell — the started time has its own column and is shown either way (cross-agent review, agy: an
+ * earlier version of this sentence claimed the dialog rendered the time "instead of" the counter,
+ * which is not what the cell does). A parameter keeps the other seven columns identical.
  */
 export function scenarioRunColumns({
   view,
@@ -58,8 +84,9 @@ export function scenarioRunColumns({
    * the workspace it pointed at an id that is either absent or inside a closed dialog. A link that
    * goes nowhere is worse than no link.
    *
-   * Only `DrillEvidence` renders those articles, so only it opts in. A caller that starts rendering
-   * them has to say so, rather than a caller that stops having to remember to turn it off.
+   * Only the render that CONTAINS those articles opts in — `DrillEvidence` does, and the workspace
+   * does not. A caller that starts rendering them has to say so, rather than a caller that stops
+   * having to remember to turn it off.
    */
   impactAnchors?: boolean
   /**
@@ -72,8 +99,9 @@ export function scenarioRunColumns({
    * "Moved, not rewritten" is this epic's own rule for exactly this failure.
    *
    * Same default and same reasoning as `impactAnchors`: only the render that CONTAINS those
-   * `<article id="definition-…">` elements opts in. The read-only dialog does not list definitions,
-   * so a link there would go nowhere.
+   * `<article id="definition-…">` elements opts in. Both the workspace and `DrillEvidence` do —
+   * the dialog grew its own read-only `Definitions` section in review round 5, precisely so this
+   * link would have a target there rather than being deleted.
    */
   definitionAnchors?: boolean
 }): DataTableColumn<ScenarioDashboardRun>[] {
