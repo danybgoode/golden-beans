@@ -104,3 +104,30 @@ test('the retained-history WINDOW is a whole number of pages plus a remainder, a
   // One row under the cap is the other side of the branch: the page still says "everything".
   assert.equal(paginateAudit(rows(windowSize - 1), 1).total, windowSize - 1)
 })
+
+test('paginateAudit owns its own preconditions — a float or a NaN cannot produce NaN bounds', () => {
+  // ⚠️ `parseAuditPage` is the only caller today and guarantees a safe integer. This function is
+  // EXPORTED, so "the sibling was called first" is an assumption rather than a fact — and the day a
+  // second caller appears, fractional row indices and `NaN` bounds are what it gets (cross-agent
+  // review, agy).
+  for (const bad of [Number.NaN, Infinity, -Infinity]) {
+    const page = paginateAudit(rows(30), bad)
+    assert.ok(Number.isSafeInteger(page.page), `page was ${page.page} for ${bad}`)
+    assert.ok(Number.isSafeInteger(page.from), `from was ${page.from} for ${bad}`)
+    assert.ok(Number.isSafeInteger(page.to), `to was ${page.to} for ${bad}`)
+    assert.equal(page.rows.length, AUDIT_PAGE_SIZE)
+  }
+  // A float floors rather than slicing between rows.
+  const fractional = paginateAudit(rows(30), 2.7)
+  assert.equal(fractional.page, 2)
+  assert.deepEqual(fractional.rows, rows(30).slice(AUDIT_PAGE_SIZE, AUDIT_PAGE_SIZE * 2))
+})
+
+test("'1e9' and a repeated parameter are NOT flattened to page 1 — the docstring says so now", () => {
+  // The Nit that corrected the prose: out-of-range is not unreadable. `paginateAudit` clamps it,
+  // which is the honest answer to "page a billion" — page 1 would be a different, wrong answer.
+  assert.equal(parseAuditPage('1e9'), 1_000_000_000)
+  assert.equal(paginateAudit(rows(30), parseAuditPage('1e9')).page, 3)
+  // A repeated query parameter takes the FIRST rather than discarding a value somebody typed.
+  assert.equal(parseAuditPage(['2', '3']), 2)
+})

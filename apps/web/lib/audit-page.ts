@@ -41,11 +41,18 @@ export type AuditPage<T> = {
 /**
  * Read a page number out of a query string.
  *
- * ⚠️ **Anything unreadable is page 1, never an error and never a crash.** `?page=` arrives from a
- * URL a person can edit and a link somebody can paste wrong; `NaN`, `0`, `-3`, `1e9` and
- * `['2','3']` are all "they meant the first page" rather than four different failure modes on a
- * read-only audit. The clamping to the LAST page happens in `paginateAudit`, which is the only
- * place that knows how many there are.
+ * ⚠️ **Anything UNREADABLE is page 1, never an error and never a crash.** `?page=` arrives from a
+ * URL a person can edit and a link somebody can paste wrong, so `''`, `'x'`, `'0'`, `'-3'`,
+ * `'1.5'`, `'NaN'` and `'Infinity'` all mean "they meant the first page" rather than seven
+ * different failure modes on a read-only audit.
+ *
+ * ⚠️ **Two things this deliberately does NOT flatten to 1** (cross-agent review, agy — an earlier
+ * version of this comment listed both as if it did, which is prose asserting a property the code
+ * does not have):
+ *   · `'1e9'` parses to a real integer and is returned AS one. Out-of-range is not unreadable, and
+ *     `paginateAudit` clamps it to the last page — which is the honest answer to "page a billion".
+ *   · `['2','3']` — a repeated query parameter — takes the FIRST. Discarding a value somebody
+ *     actually typed because it arrived twice would be a different kind of wrong.
  */
 export function parseAuditPage(raw: string | string[] | undefined): number {
   const value = Array.isArray(raw) ? raw[0] : raw
@@ -65,20 +72,26 @@ export function parseAuditPage(raw: string | string[] | undefined): number {
  * not on screen.
  */
 export function paginateAudit<T>(rows: readonly T[], requested: number): AuditPage<T> {
+  // ⚠️ **Sanitised HERE too, not only in `parseAuditPage`** (cross-agent review, agy). This is
+  // exported, and a caller reaching it with a float or a `NaN` — a different route, a later
+  // refactor — would compute `NaN` bounds and fractional row indices rather than clamping. The
+  // function that owns the arithmetic owns its own preconditions; depending on a sibling to have
+  // been called first is the shape that breaks the day something else calls this.
+  const page = Number.isFinite(requested) ? Math.floor(requested) : 1
   const total = rows.length
   // An EMPTY list is one page, not zero. `Math.ceil(0 / 12)` is 0, and a pageCount of 0 makes
   // "page 1 of 0" — a sentence about a list that exists and is empty should not be arithmetic
   // nonsense.
   const pageCount = Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE))
-  const page = Math.min(Math.max(1, requested), pageCount)
-  const start = (page - 1) * AUDIT_PAGE_SIZE
+  const shown = Math.min(Math.max(1, page), pageCount)
+  const start = (shown - 1) * AUDIT_PAGE_SIZE
   const slice = rows.slice(start, start + AUDIT_PAGE_SIZE)
   return {
     rows: slice,
-    page,
+    page: shown,
     pageCount,
-    previousPage: page > 1 ? page - 1 : null,
-    nextPage: page < pageCount ? page + 1 : null,
+    previousPage: shown > 1 ? shown - 1 : null,
+    nextPage: shown < pageCount ? shown + 1 : null,
     // `from`/`to` are 1-based and describe the rows on screen. On an empty list both are 0, which
     // is the honest reading of "showing nothing".
     from: total === 0 ? 0 : start + 1,
