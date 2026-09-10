@@ -5,7 +5,7 @@
 
 # Build order — generated status board
 
-> **Generated 2026-09-09 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
+> **Generated 2026-09-10 — do not hand-edit.** Epic status SSOT = the epic `README.md` frontmatter
 > `status:` field (set at epic close). To change what this shows, edit that field (or a seed for the
 > funnel), then run `node scripts/build-order.mjs`. This board and the Notion "Marketplace Roadmap"
 > DB are both *derived views* — never hand-edit the board.
@@ -13,7 +13,7 @@
 ## 🏗️ Building now (2)
 
 - [Scenarios made PM-operable — define, launch, and kill a scenario from the UI](../../01-growth-engine/scenarios-pm-operable/README.md) — 01 Growth Engine · 10/10 stories · risk: High · wave-2026-08-08
-- [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 0/16 stories · risk: High
+- [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 14/17 stories · risk: High
 
 ## 📋 Ready to build (scaffolded, not started) (1)
 
