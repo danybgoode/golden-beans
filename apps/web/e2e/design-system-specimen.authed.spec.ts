@@ -28,7 +28,7 @@ const VIEWPORT = { width: 1440, height: 960 }
 // ⚠️ 44 → 45 with Sprint 5: the breadcrumb section adds its one back LINK. The charts section adds
 // nothing focusable, deliberately — every chart there is a picture with its numbers written beside
 // it, so there is no control to reach.
-const EXPECTED_FOCUSABLE = 45
+const EXPECTED_FOCUSABLE = 46
 const SPECIMEN = '/app/design-system'
 
 /** Exactly `'true'`, matching `lib/flags.ts`. `CONSOLE_SHELL_ENABLED=false` must SKIP, not fail. */
@@ -98,6 +98,38 @@ test.describe('the design system specimen', () => {
 
     // ...and the destructive action is not the one focused on open.
     await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  })
+
+  // ⚠️ **A CONFIRMATION INSIDE THE MODAL SEAM MUST NOT CLOSE THE MODAL** — mockups-as-built,
+  // 2026-09-10. `close` does not bubble in the DOM, but React delegates it and replays it up the
+  // React tree, so `ConfirmDialog` closing fired `NewThingDialog`'s `onClose` as well. Every
+  // manager the seam wraps confirms its mutation that way, so on all six surfaces the modal shut
+  // the instant the work succeeded and the operator never saw the result.
+  //
+  // It is asserted HERE, on the specimen, because the product surfaces that exercise it sit behind
+  // capability gates this pipeline turns off (`SCENARIO_AUTHORING_ENABLED: 'false'`) — so the only
+  // suite that could have caught it is one CI skips. This one needs no gate and mutates nothing.
+  //
+  // Verified by mutation: restore `onClose={() => setOpen(false)}` in `NewThingDialog` and the last
+  // assertion goes red.
+  test('a confirmation nested in the modal seam closes itself and nothing else', async ({ page }) => {
+    const scope = page.locator('[data-specimen-nested-dialog]')
+    await scope.getByRole('button', { name: 'Open a dialog that confirms inside itself' }).click()
+    const seam = scope.locator('dialog.ds-dialog')
+    await expect(seam).toBeVisible()
+
+    await seam.getByRole('button', { name: 'Ask the nested question' }).click()
+    const confirmation = scope.locator('dialog.confirm-dialog')
+    await expect(confirmation).toBeVisible()
+
+    await confirmation.getByRole('button', { name: 'Do', exact: true }).click()
+
+    // The inner one is gone…
+    await expect(confirmation).toBeHidden()
+    // …and the outer one is still open, still showing what just happened. This is the assertion.
+    await expect(seam).toBeVisible()
+    expect(await seam.evaluate((element) => (element as HTMLDialogElement).open)).toBe(true)
+    await expect(seam).toContainText('The nested confirmation was confirmed.')
   })
 
   test("the PRODUCT's confirmation dialog opens centred — the element D12 actually names", async ({
@@ -343,6 +375,11 @@ test.describe('the design system specimen', () => {
       ['Summary', '.ds-summary'],
       ['StatLink', '.ds-stat[href]'],
       ['ListCard', '.ds-listcard'],
+      // mockups-as-built Story 2.1 — `measure-journey`'s version list, the vocabulary's `versions`
+      // block. Its product class did not exist until this sprint built it, which is what the gate
+      // had been saying for two sprints.
+      ['Versions', '.ds-vers'],
+      ['Version', '.ds-vers-row'],
       ['ListHead', '.ds-listhead'],
       ['Col', '.ds-col-state'],
       ['Row', '.ds-row'],
@@ -558,7 +595,9 @@ test.describe('the design system specimen', () => {
     expect(answer.color, 'the answer line lost --crema to console.css`s body-copy rule').toBe(crema)
 
     await page.getByRole('button', { name: 'Open the confirmation dialog' }).click()
-    const title = await page.locator('.ds-dialog-title').evaluate((element) => {
+    // ⚠️ Scoped: `SpecimenNestedDialog` renders a second `.ds-dialog-title`, so the bare class is
+    // ambiguous. This assertion is about the specimen dialog whose button was just clicked.
+    const title = await page.locator('[data-specimen-dialog] .ds-dialog-title').evaluate((element) => {
       const style = getComputedStyle(element)
       return { fontSize: style.fontSize, color: style.color }
     })

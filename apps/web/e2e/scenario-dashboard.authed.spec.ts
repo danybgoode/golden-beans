@@ -40,8 +40,23 @@ test('a project member can inspect the tenant-scoped scenario operating lens', a
   await expect(page.getByRole('cell', { name: SCENARIO_TARGET_KEY, exact: true })).toBeVisible()
   await expect(page.getByText(`${SCENARIO_FIXTURE_KEY} v1`, { exact: true }).first()).toBeVisible()
   await expect(page.getByText(`${SCENARIO_UNDISCLOSED_KEY} v1`, { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('No impact snapshots captured.')).toBeVisible()
+  // The breaker record stays with the operating surface: a trip belongs to a POLICY, and
+  // `ScenarioDashboardTrip` carries no scenario key to file it under a drill (Story 2.5).
   await expect(page.getByText('No breaker trips recorded.')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  // ⚠️ **The impact evidence moved to the DRILL'S OWN ROW** — Story 2.5, Daniel's ruling of
+  // 2026-09-10. It is read-only evidence and no longer sits behind a control that says it authors,
+  // so the member's lens reaches it without opening a write surface at all. Asserted here in the
+  // same spec that asserts the operating surface, because "a member can inspect the lens" is one
+  // claim about two controls now.
+  await page.locator('main .ds-listcard').getByRole('button', { name: 'Evidence' }).first().click()
+  // ⚠️ Scoped to the OPEN dialog. Every drill row carries its own evidence dialog, and a closed
+  // `<dialog>`'s children are still in the document — so an unscoped `getByText` matches one per
+  // drill and Playwright's strict mode rejects the ambiguity before it ever checks visibility.
+  await expect(
+    page.locator('dialog[open]').getByText('No impact snapshots captured for this drill.')
+  ).toBeVisible()
 })
 
 test('a signed-in user cannot use the scenario lens to confirm a foreign tenant', async ({ page }) => {

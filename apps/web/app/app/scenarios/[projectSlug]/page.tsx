@@ -73,12 +73,11 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
             <NewThingDialog
               label="▸ Run a drill"
               title="Run a drill"
-              // ⚠️ The lede names EVIDENCE as well as the launch, because the workspace behind this
-              // control holds both — the run history, the security results, the impact snapshots and
-              // the breaker trips. A member who cannot author still reads all of it here, and a
-              // control whose copy only promised "then it runs" would tell them this is not for
-              // them. The LABEL is the approved state's and does not move.
-              lede="Pick a drill, a target and a cohort — and the evidence from every run that came before."
+              // ⚠️ **The lede is the approved state's again, because the evidence has moved out**
+              // (Story 2.5). Story 2.2 widened these words to cover the run history and the
+              // security results, since this control was the only way to reach them; each drill now
+              // carries its own `Evidence` control on its own row, so this one authors and says so.
+              lede="Pick a drill, a target and a cohort — then it runs."
             >
               <ScenarioWorkspace
                 projectSlug={projectSlug}
@@ -124,7 +123,7 @@ export default async function ScenariosPage({ params }: { params: Promise<{ proj
           </div>
         )}
 
-        <ScenarioRows rows={rows} />
+        <ScenarioRows rows={rows} projectSlug={projectSlug} view={view} />
       </main>
     </ProductShell>
   )

@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { Button } from '@/design-system/primitives'
 
 /**
@@ -50,6 +51,54 @@ export function SpecimenProductDialog() {
         />
       </div>
     </>
+  )
+}
+
+/**
+ * `NewThingDialog` with a `ConfirmDialog` INSIDE it — the seam's real shape, and a regression test
+ * for a defect it shipped on six surfaces at once.
+ *
+ * ⚠️ **`close` does not bubble in the DOM, but React delegates it and replays it up the REACT
+ * tree.** Every manager the seam wraps confirms its mutation with `ConfirmDialog`, which is a
+ * `<dialog>` nested inside the seam's own — so confirming a scenario launch, a journey activation,
+ * an experiment transition or a delivery replay fired the OUTER dialog's `onClose` too, and the
+ * modal shut the instant the work succeeded. The operator was returned to the page having never
+ * seen whether it worked.
+ *
+ * The product surfaces that exercise this all sit behind capability gates CI turns off, so nothing
+ * in the blocking gate could see it. Here it needs no gate and mutates nothing: open the outer,
+ * open the inner, confirm, and the outer must still be open. Verified by mutation — restore
+ * `onClose={() => setOpen(false)}` in `NewThingDialog` and this goes red.
+ */
+export function SpecimenNestedDialog() {
+  const [confirming, setConfirming] = useState(false)
+  const [confirmed, setConfirmed] = useState(false)
+  return (
+    <div data-specimen-nested-dialog="">
+      <NewThingDialog
+        variant="secondary"
+        label="Open a dialog that confirms inside itself"
+        title="A dialog with a confirmation in it"
+        lede="The shape every manager the seam wraps actually has."
+      >
+        <p>{confirmed ? 'The nested confirmation was confirmed.' : 'Nothing confirmed yet.'}</p>
+        <Button variant="secondary" onClick={() => setConfirming(true)}>
+          Ask the nested question
+        </Button>
+        <ConfirmDialog
+          open={confirming}
+          verb="Do"
+          noun="the thing"
+          subject="this specimen"
+          consequence="Nothing at all happens — this specimen exists to prove the dialog around it survives."
+          onConfirm={() => {
+            setConfirmed(true)
+            setConfirming(false)
+          }}
+          onCancel={() => setConfirming(false)}
+        />
+      </NewThingDialog>
+    </div>
   )
 }
 

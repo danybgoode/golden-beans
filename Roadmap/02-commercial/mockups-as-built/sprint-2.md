@@ -1,12 +1,35 @@
 # The mockups, as built — Sprint 2: Delete the disclosures, build the screens
 
-**Status:** 🟨 PART 1 SHIPPED (`20cecfb`) — five routes match; **two detail routes still outstanding**
+**Status:** ✅ COMPLETE — part 1 `20cecfb`, part 2 this branch. **All seven routes match.**
 
-> ⚠️ **Stories 2.1 and 2.3 each cover TWO routes and only one of each is built.** The list routes
-> (`/app/journeys`, `/app/experiments`) match their approved states and are in the floor. The DETAIL
-> routes (`measure-journey`, `experiment-ready`/`experiment-blocked`) are not built — they are
-> rebuilds rather than deletions, and the epic README's state-of-play says exactly what each needs.
-> Story 2.2 (Scenarios) and 2.4 (Today + Destinations) are complete.
+> **Part 2 (2026-09-10)** built the two detail routes and added Story 2.5. What it took, beyond the
+> two stories as written:
+>
+> - **`.ds-vers` was built** — the `versions` primitive the vocabulary deliberately paired with a
+>   product class that did not exist (epic README's warning). `Versions` / `Version` in
+>   `primitives.tsx`, in the specimen, and in the specimen's coverage list.
+> - **`sectionlabel` was a DEAD PAIR and is corrected.** `.ds-rail-label` appears in no file in this
+>   repository; `.rail-label`'s port is `.ds-label`, which nineteen call sites emit. Same class of
+>   defect as `.ds-crumbrow`, found the same way. This is a mapping correction, not a widening — the
+>   test is whether a component renders the class today.
+> - **`ListCard plain`** — the approved design uses `.listcard` as a padded SURFACE on eight states,
+>   not only as a grid of rows. A `role="table"` around a bar chart is worse structure than the
+>   `<div>` it replaced.
+> - **Two defects only LOOKING could find**, on a page whose structural signature already matched:
+>   an `Empty` made the guardrail panel the tallest block on the page while saying the least, and a
+>   disabled outcome button was painted as the chosen one.
+> - **`ComparisonBars` was drawing half its approved line.** The prototype says
+>   `obs >= exp ? "Enough people" : "N more needed"`; only the shortfall was built, so an arm that
+>   had reached its sample said nothing — and "enough" and "no minimum declared" looked identical.
+> - ⚠️ **A defect the seam shipped on SIX surfaces**: `close` does not bubble in the DOM, but React
+>   delegates it, so every `ConfirmDialog` closing also fired `NewThingDialog`'s `onClose`. The
+>   modal shut the instant a mutation succeeded and the operator never saw the result. Guarded by
+>   identity, and asserted on the SPECIMEN — because every product surface that exercises it sits
+>   behind a capability gate CI turns off.
+> - ⚠️ **`scenario-authoring.authed.spec.ts` had been red locally since Story 2.2 merged**, clicking
+>   a `<details>` that no longer exists. CI never saw it: CI runs the DARK half of that inverse pair
+>   (`SCENARIO_AUTHORING_ENABLED: 'false'`), so the only suite exercising the owner authoring path is
+>   the local runner's. A suite outside the gate decays silently.
 
 > **⛔ Read the epic README's ONE RULE before starting.** Every screen below is drawn and approved.
 > There is nothing to design and nothing to decide.
@@ -15,7 +38,7 @@
 > new home, do not keep it "behind a disclosure, complete". That is the exact move that produced
 > this epic.
 >
-> Sprint 1's gate is red on these routes right now. Each story is done when its route is green.
+> Sprint 1's gate was red on these routes. Each story is done when its route is green.
 
 ## Stories
 
@@ -71,6 +94,26 @@ decision is available and why not.
 - `/app` matches `today.png` — the three bands, and the Medusa-truth disclosure
   `design-system-rails` Sprint 5 added is deleted.
 **Risk:** high
+
+### Story 2.5 — Scenario evidence leaves the authoring control ✳ *`measure-scenarios`* — Daniel, 2026-09-10
+**As a** person who cannot author, **I want** a drill's evidence from the drill's own row, **so that**
+reading the run history does not mean opening a control that says it starts something.
+**Acceptance:**
+- Each drill row carries an `Evidence` control opening THAT drill's runs, its defensive-simulation
+  results and its impact snapshots — read-only, scoped by `scenarioKey` and, for the security
+  results, joined through this drill's run ids (a security result carries only a run).
+- `▸ Run a drill`'s lede is the approved state's again: *"Pick a drill, a target and a cohort — then
+  it runs."* Story 2.2 had widened it to promise evidence, because that control was the only way to
+  reach it.
+- The run table is declared ONCE (`scenario-evidence-columns.tsx`); the workspace APPENDS its
+  actions column to it. Two column lists in two files that currently agree is CODE-QUALITY #2.
+- The evidence dialog holds **no control**. Launch, stop and retry stay in the workspace with their
+  confirmations and capability gates.
+- Breaker policies and trips STAY in the workspace: a trip belongs to a policy, and
+  `ScenarioDashboardTrip` carries no scenario key to file it under a drill.
+- `scenario-authoring-dark.authed.spec.ts` now asserts its own title directly — the evidence is
+  reached without touching a write surface at all.
+**Risk:** medium
 
 ## Sprint QA
 - **api spec(s):** no new spec — **Sprint 1's gate is the spec.** Each story is done when its

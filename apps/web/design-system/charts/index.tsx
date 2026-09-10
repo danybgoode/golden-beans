@@ -183,9 +183,20 @@ export function ComparisonBars({ rows, note }: { rows: ComparisonRow[]; note?: R
                   />
                 )}
               </div>
-              {short !== null && short > 0 ? (
+              {/* ⚠️ **Both branches, because the approved state draws both** —
+                  `console-prototype.html:3029`: `v.obs >= v.exp ? "Enough people" : "N more needed
+                  before this counts"`. Only the shortfall was built, so an arm that HAD reached its
+                  declared sample said nothing at all — and "enough" and "we did not read a minimum"
+                  then looked identical on the page. Same class as the People-column dash on
+                  Journeys (epic D13-c): silence has to mean one thing.
+
+                  `short === null` is still silent, and that is the third case: no minimum was
+                  declared, so there is no "enough" to report. */}
+              {short === null ? null : short > 0 ? (
                 <p className="ds-chart-drop">{count(short)} more needed before this counts</p>
-              ) : null}
+              ) : (
+                <p className="ds-chart-foot">Enough people</p>
+              )}
             </div>
           )
         })}

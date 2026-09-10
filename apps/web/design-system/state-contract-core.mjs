@@ -95,7 +95,20 @@ export const BLOCK_KINDS = [
   { kind: 'gonequiet', proto: '.quiet', product: '.ds-gone-quiet' },
   { kind: 'band', proto: '.band', product: '.ds-band' },
   { kind: 'legend', proto: '.legend', product: '.ds-legend' },
-  { kind: 'sectionlabel', proto: '.rail-label', product: '.ds-rail-label' },
+  // ⚠️ **`.ds-label`, not `.ds-rail-label` — the SECOND dead pair on the product side**, and the
+  // same class of defect as `.ds-crumbrow` above. `.ds-rail-label` appears in no file in this
+  // repository: not in `system.css`, not in a component. `.rail-label`'s hand-written port is
+  // `.ds-label` (`system.css:1621` — block, 11px, 600, uppercase, `letter-spacing:.09em`, `dim-2`),
+  // which nineteen call sites emit. A pair whose product half nothing renders can never match, so
+  // every `sectionlabel` in every approved state was scored against a class that does not exist —
+  // and the built pages' labels, being `<p>`, were reported as `note` instead. That reads on four
+  // routes as "the design has a section label and the page has a paragraph" when the page has the
+  // section label and the CONTRACT could not see it.
+  //
+  // This is a CORRECTION of a mapping, not a widening of one: `.ds-vers` below is the deliberately
+  // unbuilt pair and it stays unbuilt until a primitive emits it. The test for the difference is
+  // whether any component renders the class today — `.ds-label` does, `.ds-vers` does not.
+  { kind: 'sectionlabel', proto: '.rail-label', product: '.ds-label' },
   { kind: 'sprints', proto: '.sprints', product: '.ds-sprints' },
   { kind: 'destinations', proto: '.dests', product: '.ds-dests' },
   { kind: 'haze', proto: '.haze', product: '.ds-haze' },

@@ -48,7 +48,7 @@ import {
   SplitBar,
   StageBars,
 } from '@/design-system/charts'
-import { SpecimenDialog, SpecimenProductDialog } from './specimen-dialog'
+import { SpecimenDialog, SpecimenNestedDialog, SpecimenProductDialog } from './specimen-dialog'
 import {
   Answer,
   Tile,
@@ -94,6 +94,8 @@ import {
   TableRow,
   Tag,
   Toast,
+  Version,
+  Versions,
   Wizard,
   type ControlState,
 } from '@/design-system/primitives'
@@ -428,6 +430,7 @@ export default async function DesignSystemSpecimen({
           >
             <SpecimenDialog />
             <SpecimenProductDialog />
+            <SpecimenNestedDialog />
           </Section>
 
           <Section id="feedback" title="Toasts">
@@ -609,6 +612,24 @@ export default async function DesignSystemSpecimen({
                 </div>
               </RowGroup>
             </ListCard>
+
+            {/* mockups-as-built · Story 2.1 — the `versions` block. Deliberately NOT a `ListCard`:
+                the approved `measure-journey` state draws hairline rows with no header, no column
+                grid and no action cell, because a version is a fact and never a control. The gate
+                said "the approved state has `versions`, the page has `list`" for two sprints, which
+                is the vocabulary refusing to let one class name serve two designs. */}
+            <p className="ds-label">…and a version history, which is not a list</p>
+            <Versions>
+              <Version number="v4" state={<Tag tone="unclassified">Draft</Tag>} who="Daniel · not activated">
+                Adds a stage after Listed a product
+              </Version>
+              <Version number="v3" state={<Pill state="on">Active</Pill>} who="Daniel · 2026-08-19 11:02">
+                Counting everyone above
+              </Version>
+              <Version number="v2" state={<Tag>Superseded</Tag>} who="Daniel · earlier">
+                Kept, never deleted
+              </Version>
+            </Versions>
           </Section>
 
           <Section

@@ -12,6 +12,8 @@ import {
   TableEmpty,
 } from '@/design-system/primitives'
 import { SplitBar } from '@/design-system/charts'
+import type { ScenarioDashboardView } from '@/lib/scenario-dashboard'
+import { DrillEvidence } from './drill-evidence'
 
 // design-system-rails · Sprint 5, Story 5.6 — reference state `measure-scenarios`.
 //
@@ -19,7 +21,15 @@ import { SplitBar } from '@/design-system/charts'
 // row that answers a question — what held, what failed, and what has never been run — instead of a
 // chronological dump of every run.
 
-export function ScenarioRows({ rows }: { rows: ScenarioListRow[] }) {
+export function ScenarioRows({
+  rows,
+  projectSlug,
+  view,
+}: {
+  rows: ScenarioListRow[]
+  projectSlug: string
+  view: ScenarioDashboardView
+}) {
   if (rows.length === 0) {
     return (
       <ListCard>
@@ -82,6 +92,11 @@ export function ScenarioRows({ rows }: { rows: ScenarioListRow[] }) {
               <Tag tone={row.kind === 'security' ? undefined : 'unclassified'}>
                 {row.kind === 'security' ? 'Security' : 'Resilience'}
               </Tag>
+              {/* ⚠️ **Per-row, and NOT behind `▸ Run a drill`** — Story 2.5, Daniel's ruling of
+                  2026-09-10 extending the Destinations one. This is read-only evidence and a member
+                  who cannot author reaches it from the drill it describes, rather than through a
+                  control whose words say it starts something. */}
+              <DrillEvidence projectSlug={projectSlug} scenarioKey={row.scenarioKey} view={view} />
             </Col>
           </Row>
           {/* The evidence, under the name it is evidence about. `SplitBar` renders the WORD for a

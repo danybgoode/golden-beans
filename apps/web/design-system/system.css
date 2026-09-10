@@ -1244,6 +1244,12 @@
 .ds .ds-listcard-scroll {
   overflow-x: auto;
 }
+/* The card as a padded SURFACE rather than a grid of rows — `ListCard plain`. The prototype writes
+   this as `padding: 22px` on the card itself; here it goes on the scroller so the card's border and
+   radius keep sitting outside anything that moves. */
+.ds .ds-listcard-scroll--plain {
+  padding: 22px;
+}
 /* 11/600 uppercase, and NEVER mono (Do-not #3). Height 36 — asserted by the measured spec. */
 .ds .ds-listhead {
   display: flex;
@@ -2342,6 +2348,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 12px;
+  color: var(--dim-2);
+  margin-top: 6px;
+}
+
+/* The satisfied half of the same line — `console-prototype.html:867` (`.vbar .foot`). Same size and
+   colour as the shortfall so the two read as one row of the same kind of fact, and neither is
+   dressed up as the more important one. */
+.ds .ds-chart-foot {
   font-size: 12px;
   color: var(--dim-2);
   margin-top: 6px;
@@ -4984,4 +4999,165 @@
   padding: 14px 20px;
   border-top: 1px solid var(--line);
   background: var(--roast-2);
+}
+
+/* ── Versions — the block the state contract calls `versions` ─────────────────────────────────
+   `console-prototype.html:767` (`.vers`). Hairline-separated rows on the card surface, achieved by
+   a 1px gap over the soft line colour rather than per-row borders: the first and last rows then
+   need no exception, and the radius clips both ends. */
+.ds .ds-vers {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line-soft);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.ds .ds-vers-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: var(--roast-2);
+  font-size: 13px;
+}
+
+.ds .ds-vers-n {
+  font-weight: 500;
+  width: 34px;
+  flex: none;
+  color: var(--dim);
+}
+
+/* The sentence takes the slack so `who` sits at the trailing edge without a spacer element — a row
+   whose `who` is absent still lines its other three cells up the same way. */
+.ds .ds-vers-what {
+  flex: 1;
+  min-width: 0;
+}
+
+.ds .ds-vers-who {
+  color: var(--dim-2);
+  font-size: 12px;
+}
+
+/* The row wraps rather than scrolls at phone width: four short cells reflow legibly, and a
+   horizontal scroller for a version number would be Do-not #6 solved in the wrong direction. */
+@media (max-width: 560px) {
+  .ds .ds-vers-row {
+    flex-wrap: wrap;
+  }
+
+  .ds .ds-vers-what {
+    flex-basis: 100%;
+  }
+}
+
+/* ── Guardrails, the split check and the decision — `experiment-ready` blocks 4, 5 and 6 ───────
+   Ported from `console-prototype.html:643` (`.wordlist`), `:3073` and `:893` (`.outcomes`). */
+
+/* ⚠️ The strikethrough on the LEFT-HAND word is the approved design's, and it is deliberate here
+   rather than copied by accident: `.wordlist` is the prototype's before/after list, and the
+   guardrails panel is the one place it renders a name that is not being replaced. Built exactly as
+   drawn (epic: THE ONE RULE) and raised with the product owner rather than quietly "corrected" —
+   an improvement is the move that produced this epic. */
+.ds .ds-wordlist {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 16px;
+}
+
+.ds .ds-wordlist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.ds .ds-wordlist-row:last-child {
+  border-bottom: none;
+}
+
+.ds .ds-wordlist-was {
+  flex: 1;
+  min-width: 0;
+  color: var(--dim-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--red-deep);
+}
+
+.ds .ds-wordlist-arrow {
+  color: var(--dim-2);
+}
+
+.ds .ds-wordlist-now {
+  flex: 1;
+  min-width: 0;
+  color: var(--crema);
+  font-weight: 500;
+}
+
+/* The split verdict: a pill and the sentence that reads it, on one line that wraps rather than
+   scrolls. `p`, not a div, because it is a sentence with a badge in it. */
+.ds .ds-split {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+
+.ds .ds-split-stats {
+  color: var(--dim-2);
+  font-size: 12px;
+}
+
+/* The five outcomes. A row of equal-weight controls — the design draws no primary among them
+   until one has been chosen, because choosing is the point. */
+.ds .ds-outcomes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.ds .ds-outcome {
+  padding: 9px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--dim);
+  font-size: 13px;
+  transition:
+    border-color var(--t),
+    background var(--t),
+    color var(--t);
+}
+
+.ds .ds-outcome:hover:not([disabled]) {
+  border-color: var(--gold-deep);
+  color: var(--crema);
+  background: var(--card-2);
+}
+
+/* ⚠️ `[disabled]` and `aria-pressed` carry the SAME two cues the design draws — the greying and
+   the chosen outline — so a screen reader and a sighted reader are told the same thing by the same
+   attribute. The rule `RailItem` and `StatLink` already follow. */
+.ds .ds-outcome[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ⚠️ `:not([disabled])`. The recorder opens with a default outcome selected, so on a running
+   experiment — where every outcome is correctly greyed — one of the five was ALSO painted as
+   chosen: the page showed a decision nobody had made and could not make. Found by looking at the
+   rendered page; a structural contract counts blocks, not what a block says. */
+.ds .ds-outcome[aria-pressed='true']:not([disabled]) {
+  border-color: var(--gold-deep);
+  color: var(--gold);
 }

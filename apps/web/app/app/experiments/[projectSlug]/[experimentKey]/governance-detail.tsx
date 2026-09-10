@@ -91,11 +91,13 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
         {' · '}integrity: {analysis.integrityReady ? 'clear' : 'blocked'}
         {' · '}minimum sample: {analysis.sampleStatus}
       </p>
-      <details>
-        <summary>Immutable plan</summary>
-        <p>{experiment.definition.hypothesis}</p>
-        <pre>{JSON.stringify(experiment.definition, null, 2)}</pre>
-      </details>
+      {/* ⚠️ **Was a `<details>Immutable plan`, and no `<details>` survives a rebuilt surface**
+          (epic D3/D6). This whole component now lives INSIDE the modal the page head opens, which
+          is already the "one keystroke away" the disclosure was providing — nesting a second
+          disclosure inside it hid the plan twice. */}
+      <h2>Immutable plan</h2>
+      <p>{experiment.definition.hypothesis}</p>
+      <pre>{JSON.stringify(experiment.definition, null, 2)}</pre>
 
       <h2>Allocation and sample guidance</h2>
       <table>
@@ -197,19 +199,18 @@ export function GovernanceDetail({ result, canManage }: { result: GovernedSucces
                     </>
                   )}
                 </p>
-                <details>
-                  <summary>Captured analysis and integrity evidence</summary>
-                  <pre>
-                    {JSON.stringify(
-                      {
-                        analysis: decision.analysisSnapshot,
-                        integrity: decision.integritySnapshot,
-                      },
-                      null,
-                      2
-                    )}
-                  </pre>
-                </details>
+                {/* Same rule as the plan above: the modal is the disclosure now. */}
+                <p>Captured analysis and integrity evidence</p>
+                <pre>
+                  {JSON.stringify(
+                    {
+                      analysis: decision.analysisSnapshot,
+                      integrity: decision.integritySnapshot,
+                    },
+                    null,
+                    2
+                  )}
+                </pre>
               </li>
             ))}
           </ol>
