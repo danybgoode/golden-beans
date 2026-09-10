@@ -87,13 +87,22 @@ Every story is the same shape, and the gate is the acceptance check:
 
 ## Stories
 
-### Story 4.1 — Setup › Connect and Setup › Keys — ✅
+### Story 4.1 — Setup › Connect and Setup › Keys — 🟨 ONE CRITERION UNMET
 **As a** person, **I want** the two Setup screens I approved.
 **Acceptance:**
 - `/app/setup/connect/[projectSlug]` matches `setup-connect`: `head → list → list → note`. It
   renders `head → card` today — one card where the design draws two lists and a closing note.
-- `/app/setup/keys/[projectSlug]` matches `setup-keys`: `head → list`. It renders an extra `note`
-  block today, and its `+ New key` control opens the wizard shape (D8).
+- `/app/setup/keys/[projectSlug]` matches `setup-keys`: `head → list`. ✅ — the counting sentence
+  moved inside the card, which is what the extra `note` block was.
+- ⚠️ **`+ New key` does NOT open the wizard shape, and this doc reported the story done.** Found by
+  pressing the button on production, 2026-09-10: it expands an inline panel from `keys-surface.tsx`,
+  which does not import `NewThingDialog`. Setup › **Shares** does use the seam — verified in the same
+  walkthrough — so this is one surface of D8's six, not the mechanism.
+  **Why no gate caught it:** the structural contract asserts the page's DEFAULT state, and the panel
+  only exists after a click the gate never makes. The route legitimately matches `head → list`.
+  Converting it means moving `NewKey`'s trigger/reveal state into the dialog the way `ShareManager`'s
+  was — a story's worth of work on the surface that mints four kinds of bearer credential, so it is
+  named here rather than rushed into a close-out.
 **Risk:** high
 
 ### Story 4.2 — Setup › Share links — ✅
