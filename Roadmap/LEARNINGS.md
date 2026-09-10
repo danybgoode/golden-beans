@@ -497,6 +497,55 @@ one-liner + why + date shape.
   `parentElement.closest('.ds')`, never `closest()` on the element itself, which would call the
   broken markup correct — and it was found by rendering the page and looking, after every gate was
   green. *(2026-09-01, design-system-rails S6.)*
+- **A number computed from a hand-typed boolean is rigorous about a value nobody checked.**
+  `design-system-rails` reported `27/27` design coverage with `outstanding: []`, ratcheted so it
+  could never fall — and at least sixteen routes did not resemble their approved design. The
+  arithmetic was real; its input was `rendersFromDesignSystem: true`, typed on each manifest row.
+  Three things had to be true at once and each is its own lesson: the screenshot layer of the
+  contract was never built (and the spec SAID so, in a comment that read as a note rather than as a
+  hole); the assertion on 25 of 27 routes was `status < 400` plus "the `<main>` contains at least one
+  `ds-` class"; and the old UI had been HIDDEN behind `<details>`, which is invisible to a presence
+  check and to a screenshot of a viewport. **The fix is to derive the number from the gate's own
+  result, so the only editable direction is forward.** *(2026-09-10, mockups-as-built.)*
+- **A screenshot-diff threshold that has to be tuned until the right pages pass is aimed at today's
+  pages.** Measured before writing it: the route the epic called CORRECT came out 6.9% from its
+  approved PNG and the one it called WRONG came out 6.4%, and the structural metric scored the
+  canonical wrong page a perfect match. No threshold separates them. Four causes, none fixable by a
+  better metric — the content column differs by construction on every route, the references paint a
+  `PROTOTYPE` badge and designer annotations that must never be product UI, they are viewport clips
+  of designs twice as tall, and live data is not fixture data. **Assert the facts that survive a
+  change of dataset instead**: the ordered block sequence, the tile count, the column labels, the
+  primary action's words, and that the number of `<details>` is zero. *(2026-09-10.)*
+- **A STRUCTURAL match is not a look, and the gap is where the defects live.** Nine defects in one
+  epic were found by opening a page whose signature already agreed with its approved state — a
+  timeline rendering as one crammed line because its three lines were `<span>`s inside a `<span>`
+  (so every `margin-top` did nothing); a `max-width: 70ch` on a document CONTAINER squeezing every
+  table inside it; a grid `minmax(320px, 1fr)` overflowing a 360px phone because that is a track
+  FLOOR; a disabled button painted as the chosen one; a chart drawing half its approved line, so
+  "enough people" and "no minimum declared" looked identical. **A contract is a floor, not a finish:
+  budget looking at the rendered page as a step, not as a courtesy.** *(2026-09-10.)*
+- **When a gate says the PAGE is wrong, check the FIXTURE first.** Three routes in one epic reported
+  a mismatch and were correct: the tenant had no destinations, one leading input where the design
+  draws three, and no pushed artifacts, so four routes rendered EMPTY states. The tell is a diff
+  where the built sequence is a plausible empty state of the approved one. A fixture thinner than the
+  design cannot tell a correct page from an incorrect one — and seeding it through the product's own
+  write path (an RPC, not an INSERT) is what keeps the fixture a state the product can actually
+  reach. *(2026-09-10.)*
+- **DELETING a flag is mostly about the suites that READ it.** `CONSOLE_SHELL_ENABLED` was six
+  `test.skip` conditions away from silence — including the epic's own blocking visual gate. With the
+  variable unset everywhere each would have skipped in every run forever and reported green having
+  asserted nothing, and **none of it appears in a diff of the flag itself**. This repo had already
+  paid twice for the inverse (a flag set NOWHERE and asserted as if lit); this is the same failure
+  from the opposite direction. `grep -rn '<FLAG>' apps scripts .github` before deleting, and read
+  every hit that is a `skip` condition. *(2026-09-10.)*
+- **`close` does not bubble in the DOM — but React DELEGATES it and replays it up the React tree.**
+  A `<dialog>` seam wrapped six surfaces, and every manager inside it confirmed its mutation with a
+  nested `ConfirmDialog`. Confirming closed the confirmation and then, one React event later, the
+  modal around it: the work succeeded and the operator was returned to the page having never seen
+  that it had. Guard with `event.target === element` on `onClose`/`onCancel`, the same identity check
+  a backdrop-click handler needs. Traced by patching `HTMLDialogElement.prototype.close` and reading
+  the stack — the first diagnosis (a missing effect dependency) was WRONG and its explanatory comment
+  had to be deleted rather than left beside a working fix. *(2026-09-10.)*
 - **Porting a page means porting its MEASUREMENTS.** A third-party iframe shipped at `min-height:
   700px` with its working in the comment — 620 measured to scroll, 860 measured to leave a gap. The
   port re-derived it as 640, below the value already measured as too short, and the booker clipped.
