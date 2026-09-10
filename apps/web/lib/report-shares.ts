@@ -215,9 +215,16 @@ export async function listShareLinks(projectId: string): Promise<ShareRow[]> {
     createdAt: r.created_at as string,
     expiresAt: (r.expires_at as string | null) ?? null,
     revokedAt: (r.revoked_at as string | null) ?? null,
-    // `?? 0` is safe here and nowhere else in this file: the column is `NOT NULL DEFAULT 0`, so a
-    // null can only mean a row written before the migration — which is a link that has genuinely
-    // been opened zero times as far as anything can tell.
+    // ⚠️ **The `?? 0` is a TYPE guard, not a data one, and the earlier comment here was wrong**
+    // (cross-agent review, agy). It claimed a null "can only mean a row written before the
+    // migration" — `ALTER TABLE … ADD COLUMN opened_count INTEGER NOT NULL DEFAULT 0` backfills
+    // every existing row, so no such null exists and no such row can be written.
+    //
+    // What it actually guards is this file's own boundary: `supabase-js` has no generated Database
+    // type wired up here, so the response is untyped and the cast is a promise rather than a
+    // checked fact. `?? 0` keeps a shape surprise from putting `undefined` into a `number` field
+    // that the page then calls `.toLocaleString()` on. Unlike the `?? 0`s this codebase forbids
+    // elsewhere, it cannot assert a false ZERO: the column has no nullable state to misread.
     opens: (r.opened_count as number | null) ?? 0,
   }))
 }
