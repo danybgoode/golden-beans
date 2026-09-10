@@ -108,21 +108,38 @@ export function DestinationManager({
     event.preventDefault()
     setCreateError(null)
     setTestResult(null)
+    // ⚠️ **The page-level `error` is deliberately NOT cleared here** (cross-agent review, agy,
+    // Should-fix — considered and declined). It used to be, because there was one error state; now
+    // that they are split it describes a rotate, a remove or a test that genuinely failed and has
+    // not been resolved, and clearing it because somebody started an unrelated create would hide a
+    // real failure behind an unrelated success. Each action clears the slot it owns.
     startTransition(async () => {
-      const result = await createDestinationAction(slug, name, targetUrl, eventFilter || null)
-      if (result.ok) {
-        // ⚠️ **No `setCreating(false)` — setting `secret` is what closes the dialog.** The trigger
-        // renders only while no signing secret is on screen, so a successful create unmounts
-        // `NewThingDialog` and the modal goes with it, revealing the shown-once secret underneath.
-        // One condition decides both, which is why they cannot disagree about whether a credential
-        // is on screen. Same mechanism as `share-manager.tsx`.
-        setSecret({ id: result.id, value: result.signingSecret, rotated: false })
-        setName('')
-        setTargetUrl('')
-        setEventFilter('')
-        router.refresh()
-      } else {
-        setCreateError(result.error)
+      // ⚠️ A THROWN action, caught — the shape `new-key.tsx` and `share-manager.tsx` both carry and
+      // this one did not (cross-agent review, agy, Should-fix). It was survivable while the form
+      // was an inline card: the button spun back to idle in front of a page the reader could see.
+      // Inside a modal it is worse — nothing on screen changes at all, which reads as "the click
+      // did nothing" when the truth is "we do not know", and on a create that may mean a live
+      // destination exists that nobody has configured.
+      try {
+        const result = await createDestinationAction(slug, name, targetUrl, eventFilter || null)
+        if (result.ok) {
+          // ⚠️ **No `setCreating(false)` — setting `secret` is what closes the dialog.** The
+          // trigger renders only while no signing secret is on screen, so a successful create
+          // unmounts `NewThingDialog` and the modal goes with it, revealing the shown-once secret
+          // underneath. One condition decides both, which is why they cannot disagree about
+          // whether a credential is on screen. Same mechanism as `share-manager.tsx`.
+          setSecret({ id: result.id, value: result.signingSecret, rotated: false })
+          setName('')
+          setTargetUrl('')
+          setEventFilter('')
+          router.refresh()
+        } else {
+          setCreateError(result.error)
+        }
+      } catch {
+        setCreateError(
+          'Could not reach the server. Reload the page and check whether the destination was created.'
+        )
       }
     })
   }
