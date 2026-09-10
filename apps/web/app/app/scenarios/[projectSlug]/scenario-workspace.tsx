@@ -187,6 +187,9 @@ export function ScenarioWorkspace({
   const runColumns: DataTableColumn<ScenarioDashboardRun>[] = [
     ...scenarioRunColumns({
       view,
+      // This component renders the `<article id="definition-…">` panels below, so the link has a
+      // target. `DrillEvidence` does not list definitions and therefore does not opt in.
+      definitionAnchors: true,
       // The live counter is client-only and belongs to the operator's view. The read-only dialog
       // renders the started time instead, which is why this is a parameter rather than a copy.
       elapsed: (row) => {

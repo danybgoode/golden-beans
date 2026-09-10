@@ -45,6 +45,7 @@ export function scenarioRunColumns({
   view,
   elapsed,
   impactAnchors = false,
+  definitionAnchors = false,
 }: {
   view: ScenarioDashboardView
   elapsed?: (run: ScenarioDashboardRun) => React.ReactNode
@@ -61,6 +62,20 @@ export function scenarioRunColumns({
    * them has to say so, rather than a caller that stops having to remember to turn it off.
    */
   impactAnchors?: boolean
+  /**
+   * Whether a `#definition-…` anchor has anything to jump TO in this render.
+   *
+   * ⚠️ **The extraction DROPPED this link, and that is a capability lost in a refactor**
+   * (cross-agent review, Codex, round 3). The workspace's original run column linked each run to the
+   * immutable definition that produced it — `<a href="#definition-KEY-VERSION">` — and the shared
+   * version rendered plain text, so the authoring modal lost an in-modal navigation path it had.
+   * "Moved, not rewritten" is this epic's own rule for exactly this failure.
+   *
+   * Same default and same reasoning as `impactAnchors`: only the render that CONTAINS those
+   * `<article id="definition-…">` elements opts in. The read-only dialog does not list definitions,
+   * so a link there would go nowhere.
+   */
+  definitionAnchors?: boolean
 }): DataTableColumn<ScenarioDashboardRun>[] {
   return [
     {
@@ -71,7 +86,15 @@ export function scenarioRunColumns({
         const impact = view.impacts.find((entry) => entry.runId === row.id)
         return (
           <span id={`run-${row.id}`}>
-            {row.scenarioKey} v{row.definitionVersion}
+            {definitionAnchors ? (
+              <a href={`#definition-${row.scenarioKey}-${row.definitionVersion}`}>
+                {row.scenarioKey} v{row.definitionVersion}
+              </a>
+            ) : (
+              <>
+                {row.scenarioKey} v{row.definitionVersion}
+              </>
+            )}
             <br />
             <small>run {shortId(row.id)}</small>
             {impact && impactAnchors ? (
