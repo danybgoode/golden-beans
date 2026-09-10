@@ -128,8 +128,12 @@ Env: **production · https://goldenfrijoles.com**
 3. Go to **Ship › Activity**.
    → A page of activity with pagination. Go to page 2, copy the URL, open it in a new tab.
    → You land on page 2.
-4. (Owed to Daniel by name) Remove `CONSOLE_SHELL_ENABLED` from every Vercel environment and redeploy.
-   → The console serves normally. Nothing 404s. There is no flag left to turn it off.
+4. ✅ **DONE 2026-09-10** — `CONSOLE_SHELL_ENABLED` removed from Production, Preview and Development
+   (Daniel authorized it by name). `vercel env ls | grep -c CONSOLE_SHELL` returns **0**.
+   ⚠️ Vercel snapshots env vars into a deployment at build time, so the removal reaches running
+   functions on the next deploy — which the merge of this PR performs. Nothing reads the variable
+   any more either way, so there is no window where the two disagree about anything.
+   → Still to confirm on the deployed build: the console serves normally and nothing 404s.
 5. Open the PR's CI run.
    → The visual gate is **green for every route**, and coverage reports every route matching its
    approved PNG — derived from the gate, not typed.

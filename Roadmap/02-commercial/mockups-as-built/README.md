@@ -371,8 +371,9 @@ meant to check is a gate written to pass. Stack the branches:
       scenario launch+stop and delivery replay all still work, from a modal (D8). Every behavioural
       spec for those surfaces is green, and one of them — `scenario-authoring.authed.spec.ts` — had
       been red locally since Story 2.2 and is green again
-- [x] `CONSOLE_SHELL_ENABLED` appears in no live read in the repository. **Removal from every Vercel
-      environment is the one item owed to Daniel by name** and is in the walkthrough below
+- [x] `CONSOLE_SHELL_ENABLED` appears in no live read in the repository **and in no Vercel
+      environment** — removed from Production, Preview and Development on 2026-09-10 (Daniel
+      authorized it by name that day); `vercel env ls | grep -c CONSOLE_SHELL` returns 0
 - [x] `coverage.json`'s numbers are derived from the gate, not typed (D5)
 - [x] North Star is a Measure surface in `project-route-inventory.ts` and is the section's default
 - [x] Activity paginates, and the page is in the URL
