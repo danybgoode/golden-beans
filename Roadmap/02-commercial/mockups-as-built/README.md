@@ -298,8 +298,14 @@ new boundary — so it is named here rather than built or ignored.
 
 ### Prepared, so nobody rebuilds it
 
-- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`). Six surfaces use
-  the shape; `deliveries-dialog.tsx` and `drill-evidence.tsx` show the per-row pattern.
+- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`, `onOpenChange`).
+  Six surfaces use the shape; `deliveries-dialog.tsx` and `drill-evidence.tsx` show the per-row
+  pattern.
+- ⚠️ **A hoisted wizard form's state outlives the modal.** Keys, Shares and Destinations hold their
+  form outside the `<dialog>` so the head can carry it, and closing the dialog hides the form without
+  resetting it. `onOpenChange` is how a surface clears it: remount by `key` when the form owns all its
+  state (Keys), clear the slots you own when the manager does (Shares, Destinations). Every way in or
+  out goes through one setter, so there is no exit the caller is not told about.
 - `ListCard plain` is the approved `.listcard` used as a padded SURFACE — the form eight states take.
   A `role="table"` around a bar chart is worse structure than the `<div>` it replaced.
 - `Versions` / `Version` is the `versions` block. `.ds-vers` did not exist until Sprint 2 built it.

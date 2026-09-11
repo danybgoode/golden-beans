@@ -96,7 +96,14 @@ export function NewThingDialog({
   // ⚠️ ONE setter, and every path below uses it — the trigger, the `✕`, `Done`, Escape and the
   // backdrop. A second bare `setOpen` would be a way out that the caller is never told about, which
   // is the same class of defect as two components disagreeing about one label.
+  //
+  // ⚠️ **Reports a TRANSITION, never a repeat** (cross-agent review, agy, Should-fix). Dismissing
+  // through `✕`, Done or the backdrop sets `open` false; the effect then calls `element.close()`,
+  // which dispatches the native `close` event, and `onClose` calls this again — so every UI dismissal
+  // told the caller "closed" twice. The native `close` event is queued as a task, so by the time it
+  // arrives React has re-rendered and `open` is already false here, which is what the guard reads.
   function change(next: boolean) {
+    if (next === open) return
     setOpen(next)
     onOpenChange?.(next)
   }
