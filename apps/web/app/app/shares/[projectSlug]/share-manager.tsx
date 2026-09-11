@@ -284,6 +284,17 @@ export function ShareManager({
               label="+ New share link"
               title="New share link"
               lede="Who it is for, what it shows, and when it stops working."
+              /* ⚠️ The mint form's state is held HERE, so it outlives the modal (cross-agent
+                 review, agy, on the sibling surface — the same shape, so the same fix). A failed
+                 mint's callout and a rejected label would both be sitting in the form the next
+                 time it opened. `label` itself is kept: a half-typed name is work the reader did,
+                 and losing it on a mis-click is worse than seeing it again. */
+              onOpenChange={(open) => {
+                if (open) {
+                  setMintError(null)
+                  setFieldError(null)
+                }
+              }}
             >
               {mintForm}
             </NewThingDialog>

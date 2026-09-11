@@ -54,11 +54,9 @@ const FIELD_LABEL = {
 export function NewKey({
   slug,
   onMinted,
-  onClose,
 }: {
   slug: string
   onMinted: (plaintext: string) => void
-  onClose: () => void
 }) {
   const [kind, setKind] = useState<CredentialKind | null>(null)
   const [label, setLabel] = useState('')
@@ -79,14 +77,6 @@ export function NewKey({
   // the failure mode with the highest cost on this page.
   const [busy, setBusy] = useState(false)
   const inFlight = busy || pending
-
-  function reset() {
-    setKind(null)
-    setLabel('')
-    setError(null)
-    setFieldError(null)
-    onClose()
-  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -130,7 +120,11 @@ export function NewKey({
   }
 
   return (
-    <div className="ds-card ds-mint">
+    // ⚠️ A FRAGMENT, not a `.ds-card`. The dialog's `.ds-dialog-body` is the surface now, and a card
+    // inside the modal panel would be a second border around the same content — the same reason
+    // `share-manager.tsx`'s mint form is a bare `<form>` in its dialog. `.ds-mint` went with it:
+    // its only rule was a `margin-top` that the dialog body's own padding already provides.
+    <>
       {/* ── Step one: what is this for? ──────────────────────────────────────────────────────
           A list of JOBS. The sentences are `credentialCapability`, the same ones the table renders,
           so the thing you pick and the thing you later read about it are one string. */}
@@ -268,36 +262,23 @@ export function NewKey({
             <button type="submit" className="ds-btn ds-btn--primary" disabled={inFlight}>
               {inFlight ? 'Creating…' : `Create the ${credentialTitle(kind).toLowerCase()}`}
             </button>
-            <button type="button" className="ds-btn ds-btn--secondary" onClick={reset} disabled={inFlight}>
-              Cancel
-            </button>
+            {/* ⚠️ **No `Cancel` — the dialog already has three ways out** (its `✕`, Escape and a
+                backdrop click, all in `NewThingDialog`), and a fourth that this form cannot perform
+                would be a control that does nothing: the dialog owns whether it is open, and nothing
+                inside it can close it. Deleted for the same reason `share-manager.tsx` never grew
+                one. */}
           </p>
         </form>
       )}
-    </div>
+    </>
   )
 }
 
-/**
- * The `+ New key` control, which is all that lives in the page head.
- *
- * ⚠️ **The FORM used to live here too, and it should not have** (cross-family review, agy, round 3).
- * `NewKey` returned a button when closed and a multi-field card when open, and it was mounted in
- * `PageHead`'s `actions` slot — so opening it expanded a pick list and three fields inside a flex
- * header row. That is the same defect the fresh reviewer found one level along for the REVEAL: a
- * thing that takes over the page, rendered in the slot meant for a button.
- *
- * The head holds the trigger; `KeysSurface` renders the form in the body and owns the one piece of
- * state that decides which. The approved `setup-keys` state puts `+ New key` in the head, and it is
- * still there.
- */
-NewKey.Trigger = function Trigger({ onOpen }: { onOpen: () => void }) {
-  return (
-    <button type="button" className="ds-btn ds-btn--primary" onClick={onOpen}>
-      + New key
-    </button>
-  )
-}
+// ⚠️ **`NewKey.Trigger` is GONE — `NewThingDialog` renders the `+ New key` button now**
+// (mockups-as-built Story 4.1). The trigger lives inside the modal seam on purpose: a caller that
+// rendered its own button beside the dialog would be two places that have to agree about a label the
+// structural gate reads off the page head. One component, one label. The button is still in the head
+// and still says exactly `+ New key`, which is what the approved `setup-keys` state draws.
 
 /**
  * The value, on a screen of its own.

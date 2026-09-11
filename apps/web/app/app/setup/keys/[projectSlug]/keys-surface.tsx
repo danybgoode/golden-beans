@@ -6,6 +6,7 @@ import {
   isCurrentlyUsable,
   type CredentialRow,
 } from '@/lib/credential-inventory'
+import { NewThingDialog } from '@/components/product/NewThingDialog'
 import { KeysList } from './keys-list'
 import { NewKey } from './new-key'
 
@@ -27,6 +28,19 @@ import { NewKey } from './new-key'
 // owns a secret and also owns the page around it is a component that can be persuaded to render one
 // inside the other.
 //
+// ── mockups-as-built · Sprint 4, Story 4.1 — the FORM moved into the modal seam ────────────────
+// The approved design opens `+ New key` as **the same wizard shape as New feature** — the 33rd
+// approved state, `console-prototype.html:1992`, and epic D8 makes it the answer on all six `+ New …`
+// surfaces. This page expanded an inline panel in the body instead, and the epic's own doc reported
+// the story done: **no gate could see it**, because the structural contract measures a route's
+// DEFAULT state and the panel only exists after a click the gate never makes. Found by pressing the
+// button on production, 2026-09-10.
+//
+// Nothing about the paragraphs above changes — the trigger is still in the head, the reveal still
+// replaces the whole body, and `NewKey` still reports upward. What changed is where the FORM renders
+// between those two moments: in the dialog, which owns its own open state, instead of in the body
+// behind a boolean this component held.
+//
 // ⚠️ **The footnote and both callouts moved in here too** (fresh reviewer, verifying the fix). They
 // were siblings of this component in `page.tsx`, so "while a value is on screen this renders the
 // reveal and NOTHING else" was true of the component and false of the page — including the "Not
@@ -43,11 +57,17 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
   const heading = useRef<HTMLDivElement>(null)
   // The plaintext, held for exactly as long as it is on screen. Never read back from the server.
   const [minted, setMinted] = useState<string | null>(null)
-  // ⚠️ The form's open state lives HERE, not in `NewKey` (cross-family review, agy, round 3). The
-  // head holds a button; the body holds whatever the button opens. While `NewKey` owned this,
-  // opening it expanded a pick list and three fields inside the head's flex row — the same defect
-  // the fresh reviewer found one level along for the reveal.
-  const [minting, setMinting] = useState(false)
+  // ⚠️ Bumped every time the wizard OPENS, and used as `NewKey`'s `key` — so the form remounts
+  // instead of reappearing with the last attempt's picked kind, typed label and red callout still
+  // in it (cross-agent review, agy, on the sibling surfaces). `NewKey` holds all of that state
+  // itself, so unlike Destinations and Shares there is nothing here to clear: a remount IS the
+  // reset, and it cannot go stale as the form grows a seventh field.
+  const [wizardOpens, setWizardOpens] = useState(0)
+  // ⚠️ **The form's open state is GONE from this file — `NewThingDialog` owns it** (mockups-as-built
+  // Story 4.1, epic D8). It used to live here, because while `NewKey` owned it, opening the form
+  // expanded a pick list and three fields inside the head's flex row. The modal seam solves the same
+  // problem one level up: the head holds the trigger, the dialog holds what the trigger opens, and
+  // neither this component nor `NewKey` has a boolean to keep in step with the other.
 
   return (
     <>
@@ -60,11 +80,28 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
               pages — API keys, flag credentials, agent write keys, and the connector token.
             </>
           }
-          // ⚠️ No trigger while a value is on screen, and none while the form is open. A `+ New key`
-          // button beside an unsaved credential invites a second mint; beside an open form it is a
-          // control that does nothing.
+          // ⚠️ No trigger while a value is on screen. A `+ New key` button beside an unsaved
+          // credential invites a second mint before the first is copied.
+          //
+          // **Setting `minted` is also what closes the dialog** — the same single condition
+          // `share-manager.tsx` uses one surface over. A successful mint unmounts `NewThingDialog`,
+          // and the modal goes with it, revealing the value underneath. One condition decides both,
+          // so they cannot disagree about whether a credential is on screen.
           actions={
-            minted === null && !minting ? <NewKey.Trigger onOpen={() => setMinting(true)} /> : undefined
+            minted === null ? (
+              <NewThingDialog
+                /* The approved `setup-keys` state's label, character for character — the structural
+                   gate compares the words (epic D2). */
+                label="+ New key"
+                title="New key"
+                lede="What it is for, the one thing that kind needs, and a name you will know it by later."
+                onOpenChange={(open) => {
+                  if (open) setWizardOpens((count) => count + 1)
+                }}
+              >
+                <NewKey key={wizardOpens} slug={slug} onMinted={setMinted} />
+              </NewThingDialog>
+            ) : undefined
           }
         />
       </div>
@@ -80,16 +117,6 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
         />
       ) : (
         <>
-          {minting && (
-            <NewKey
-              slug={slug}
-              onMinted={(plaintext) => {
-                setMinting(false)
-                setMinted(plaintext)
-              }}
-              onClose={() => setMinting(false)}
-            />
-          )}
           {rows.length === 0 ? (
             <div className="ds-listcard">
               <Empty

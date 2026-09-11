@@ -154,6 +154,47 @@ test.describe('Setup › Keys owns the credential lifecycle', () => {
     await expect(body.getByRole('link', { name: 'Flag admin keys' })).toHaveCount(0)
   })
 
+  test("the wizard reopens clean — last attempt's error and pick do not come back", async ({ page }) => {
+    // ⚠️ **The form's state outlives the modal, and the modal is the only thing that looks closed**
+    // (cross-agent review, agy, reported twice — on Destinations as a Nit and again as a Should-fix
+    // after the first fix, which is what made it a CLASS rather than one surface). Every wizard on
+    // the seam holds its form state outside the `<dialog>`: Keys inside `NewKey`, Destinations and
+    // Shares in their manager. Dismissing the modal hides the form; it does not reset it.
+    //
+    // Asserted on Keys because it is the surface with the most to carry over — a picked KIND, a
+    // typed label and a field error — and because the fix here is the general one (`NewKey` is
+    // remounted by `key`), where the other two clear the slots they own.
+    const slug = tenantSlug()
+    await page.goto(`/app/setup/keys/${slug}`)
+
+    await page.getByRole('button', { name: '+ New key' }).click()
+    await page.getByRole('button', { name: /^API key\b/ }).click()
+    // Submitting an empty label is the cheapest way to put a real error on screen — the same path
+    // `design-system.authed.spec.ts` drives for the `aria-describedby` property.
+    await page.getByRole('button', { name: /Create the api key/i }).click()
+    const dialog = page.locator('dialog.ds-dialog[open]')
+    await expect(dialog, 'the label error did not appear, so this test proves nothing').toContainText(
+      'Give the key a label'
+    )
+
+    // Out through the dialog's own `✕` — a reader dismissing a mistake, not a reload.
+    await dialog.getByRole('button', { name: 'Close' }).click()
+    await expect(dialog).toHaveCount(0)
+
+    await page.getByRole('button', { name: '+ New key' }).click()
+    const reopened = page.locator('dialog.ds-dialog[open]')
+    await expect(reopened).toBeVisible()
+    await expect(
+      reopened,
+      "the wizard reopened carrying the last attempt's error, in a form nobody has submitted yet"
+    ).not.toContainText('Give the key a label')
+    // And it is back at step ONE: the kind is unpicked, so the submit button does not exist yet.
+    await expect(
+      reopened.getByRole('button', { name: /Create the api key/i }),
+      'the wizard reopened on step two, still holding the kind picked last time'
+    ).toHaveCount(0)
+  })
+
   test('the three retired routes land here, and hold no controls of their own', async ({ page }) => {
     const slug = tenantSlug()
     for (const retired of ['keys', 'agent-keys', 'flag-credentials']) {

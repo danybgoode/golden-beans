@@ -262,17 +262,32 @@ end to end and the shown-once screen held. Three things came out of it:
    applied. On `/app/shares` a description ran to 594px inside a 554px parent and collided with the
    scope label. Same class as the Activity timeline this epic already fixed. The cascade guard now
    also asserts that no class declaring `text-overflow: ellipsis` computes to `display: inline`.
-2. ⚠️ **STORY 4.1 IS NOT FULLY DONE, and this doc said it was.** Its acceptance reads *"its
-   `+ New key` control opens the wizard shape (D8)"*. It does not — Setup › Keys expands an inline
-   panel from `keys-surface.tsx`, which does not import `NewThingDialog`. The `note` half of that
-   story is done and the route matches its approved signature, so the gate is green and the
-   criterion is unmet: the structural contract cannot see a control it never clicks. **Setup ›
-   Shares DOES use the seam** — verified, the wizard modal opens over a dimmed page — so this is one
-   surface of the six, not the mechanism.
+2. ⚠️ **STORY 4.1 WAS NOT DONE, and this doc said it was — now BUILT (2026-09-10).** Its acceptance
+   reads *"its `+ New key` control opens the wizard shape (D8)"*. It did not: Setup › Keys expanded
+   an inline panel from `keys-surface.tsx`, which did not import `NewThingDialog`. The route matched
+   its approved signature the whole time, because **the structural contract cannot see a control it
+   never clicks** — it measures a route's DEFAULT state, and the panel only existed after a click.
+   Fixed, and so was a **second surface the same day**: writing the guard that catches this found
+   `+ New destination` doing exactly the same thing (`destination-manager.tsx`'s `creating` card).
+   Neither was visible to any gate, and neither was reported by any of the seven review rounds.
+   **The guard is the deliverable, not the two fixes** — `every approved "+ New …" opens the wizard
+   shape, and no surface answers it inline` in `console-visual.authed.spec.ts` reads the approved
+   action labels out of `STATE-CONTRACT.json`, presses each one, and requires a genuinely `:modal`
+   `<dialog>` carrying `.ds-dialog`. A seventh surface with an approved `+ New …` is covered the
+   moment its state is generated. Mutation-checked twice: it went red on Destinations before the fix,
+   and swapping `showModal()` for `show()` in the seam names all six surfaces.
 3. **The contract's `smallplots: 3` is DATA, not structure.** Production has two leading inputs and
    renders two plots, correctly; the gate is green only because the fixture was seeded with three.
    Every other fact in a signature survives a change of dataset — this one does not, and it is the
    one place D2's own premise does not hold.
+
+### One documented exemption the D8 guard carries
+
+`/app/flags/[projectSlug]`'s **New feature** wizard is a modal and opens on the approved words, but
+renders `dialog.modal` from `console.css` rather than `.ds-dialog` — a stated deviation from
+`design-system-rails` S4.1 (*"porting it here would be an unreviewed screen smuggled into a story
+about a list"*), not a surface this epic left inline. It is exempted from the guard's CLASS check by
+name, in `WIZARD_DEVIATIONS`, and from nothing else.
 
 ### Raised, not decided — the one thing still open
 
@@ -283,8 +298,14 @@ new boundary — so it is named here rather than built or ignored.
 
 ### Prepared, so nobody rebuilds it
 
-- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`). Six surfaces use
-  the shape; `deliveries-dialog.tsx` and `drill-evidence.tsx` show the per-row pattern.
+- The modal seam is `components/product/NewThingDialog.tsx` (`variant`, `size`, `onOpenChange`).
+  Six surfaces use the shape; `deliveries-dialog.tsx` and `drill-evidence.tsx` show the per-row
+  pattern.
+- ⚠️ **A hoisted wizard form's state outlives the modal.** Keys, Shares and Destinations hold their
+  form outside the `<dialog>` so the head can carry it, and closing the dialog hides the form without
+  resetting it. `onOpenChange` is how a surface clears it: remount by `key` when the form owns all its
+  state (Keys), clear the slots you own when the manager does (Shares, Destinations). Every way in or
+  out goes through one setter, so there is no exit the caller is not told about.
 - `ListCard plain` is the approved `.listcard` used as a padded SURFACE — the form eight states take.
   A `role="table"` around a bar chart is worse structure than the `<div>` it replaced.
 - `Versions` / `Version` is the `versions` block. `.ds-vers` did not exist until Sprint 2 built it.

@@ -1557,6 +1557,121 @@ test('every route matches the STRUCTURE of its approved state', async ({ page, b
   ).toEqual(shouldOpen)
 })
 
+// ── D8, asserted — the half of the approved design the structural contract cannot see ─────────
+//
+// ⚠️ **This guard exists because the contract went green on a page that was wrong, and the epic's
+// own doc recorded the story as done.** `setup-keys` matched `head → list` on every run while
+// `+ New key` expanded an inline panel from `keys-surface.tsx` instead of opening the wizard shape.
+// Both facts were true at once and neither is a bug in the contract: a structural signature measures
+// a route's DEFAULT state, and the panel only existed after a click the gate never made. Found by
+// pressing the button on production, 2026-09-10.
+//
+// So the assertion is about what happens AFTER the click, and it is written against the CONTRACT's
+// own action labels rather than a list retyped here — a seventh surface with an approved `+ New …`
+// is covered the moment its state is generated, instead of being covered by whoever remembers.
+//
+// D8, verbatim: *"Every + New … and ▸ Run a drill opens that shape, as a modal, wrapping the
+// existing manager component underneath."* Three properties, all three checked below: a control with
+// exactly the approved words, a dialog that is genuinely `:modal`, and the seam's own markup.
+/** `+ New key` and `▸ Run a drill` both carry regex metacharacters; the label is compared literally. */
+function escapeForRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+const WIZARD_DEVIATIONS: Record<string, string> = {
+  // The FEATURES wizard predates the seam and renders `dialog.modal` from `console.css` — a stated
+  // deviation from design-system-rails S4.1 ("porting it here would be an unreviewed screen
+  // smuggled into a story about a list"), not a surface this epic left inline. It is still a modal
+  // and still opens on the approved words, so it is exempted from the CLASS check only.
+  '/app/flags/[projectSlug]': 'design-system-rails S4.1 — the New feature wizard renders .modal',
+}
+
+test('every approved “+ New …” opens the wizard shape, and no surface answers it inline', async ({
+  page,
+}) => {
+  test.skip(!gatesAreLit(), 'the visual gate asserts the LIT console; run with both gates on')
+
+  await page.setViewportSize(VIEWPORT)
+  const failures: string[] = []
+  let pressed = 0
+
+  for (const row of liveRows(6)) {
+    if (row.referenceState === null || row.borrowsState) continue
+    const approved = STATE_CONTRACT[row.referenceState]
+    // Only the head carries a primary action, and only some states draw one.
+    const action = approved?.blocks.find((block) => block.kind === 'head')?.action ?? null
+    if (!action) continue
+    const reach = REACHABLE[row.route]
+    if (typeof reach !== 'function') continue
+
+    await page.goto(reach(tenantSlug()))
+    await page.waitForLoadState('networkidle')
+
+    // ⚠️ The label is compared CASE-INSENSITIVELY and otherwise exactly. The contract lowercases
+    // (`+ new key`), and the page draws `+ New key`; anything else — "New key", "Add key" — is a
+    // different word than the one that was approved, which the structural gate already fails on.
+    const trigger = page.getByRole('button', { name: new RegExp(`^\\s*${escapeForRegExp(action)}\\s*$`, 'i') })
+    if ((await trigger.count()) !== 1) {
+      failures.push(
+        `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
+          `    · the approved head action "${action}" resolves to ${await trigger.count()} buttons`
+      )
+      continue
+    }
+
+    // Nothing may be open BEFORE the click — otherwise "a dialog is open afterwards" is a fact
+    // about the page's initial state rather than about the button.
+    expect
+      .soft(await page.locator('dialog[open]').count(), `[${row.route}] a dialog was already open`)
+      .toBe(0)
+
+    await trigger.click()
+    pressed += 1
+
+    const dialog = page.locator('dialog[open]')
+    // ⚠️ An explicit SHORT wait, rather than evaluating and catching. With no dialog at all the
+    // locator would sit on Playwright's default timeout and the real finding — "this button opens
+    // an inline panel" — would arrive dressed as a 30-second hang.
+    const appeared = await dialog
+      .first()
+      .waitFor({ state: 'attached', timeout: 2_000 })
+      .then(() => true)
+      .catch(() => false)
+    const shape = appeared
+      ? await dialog.first().evaluate((element) => ({
+          // ⚠️ `:modal`, not merely `open`. A non-modal `<dialog>` leaves the page behind it live
+          // and is not centred by the UA — it is an inline panel that happens to be a dialog
+          // element, which is exactly the defect this guard is named after wearing better markup.
+          modal: element.matches(':modal'),
+          seam: element.classList.contains('ds-dialog'),
+        }))
+      : null
+
+    if (shape === null || !shape.modal) {
+      failures.push(
+        `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
+          `    · pressing "${action}" opened no modal dialog. D8: every + New … opens the wizard ` +
+          `shape as a modal, wrapping the existing manager — never an inline panel, never a ` +
+          `<details>.`
+      )
+      continue
+    }
+    if (!shape.seam && WIZARD_DEVIATIONS[row.route] === undefined) {
+      failures.push(
+        `\n  ${row.route}  (approved state: ${row.referenceState})\n` +
+          `    · pressing "${action}" opened a modal that is not NewThingDialog (no .ds-dialog). ` +
+          `One shape, six surfaces — a second implementation is where the label and the markup ` +
+          `start to drift.`
+      )
+    }
+  }
+
+  expect(failures.join(''), 'a primary action in the approved design does not open the wizard shape').toBe('')
+  // ⚠️ A zero here reads exactly like a suite that ran. Six surfaces carry an approved `+ New …`
+  // plus the features wizard and its dormant twin — so this must press several.
+  expect(pressed, 'the wizard-shape guard pressed no buttons at all').toBeGreaterThan(4)
+})
+
 test('a borrowed state is owned and has not expired', () => {
   // No browser: a pure consistency check, so it runs even when the suite skips. Same shape as the
   // deferred-spec-rows test above, for the same reason — an exemption with no end is an exemption
