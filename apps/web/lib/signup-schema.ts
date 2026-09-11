@@ -24,7 +24,9 @@ export const signupSchema = z.object({
   // by `parseDisplayName` in `lib/display-name.ts`, the same function the Account menu uses, so the
   // two doors cannot disagree about what a name is. The bound is only so a public route never parses
   // an unbounded string; 400 is five times the longest name it will accept.
-  name: z.string().max(400).optional(),
+  // `.nullable()` so the wire schema accepts what `parseDisplayName` already treats as "no name"
+  // (cross-agent review, agy, Nit) — two definitions of "absent" is how they start to disagree.
+  name: z.string().max(400).nullable().optional(),
 })
 
 export type SignupInput = z.infer<typeof signupSchema>

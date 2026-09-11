@@ -45,8 +45,16 @@ test('metadata is read from display_name first, then the keys other writers use'
   assert.equal(displayNameFrom({ display_name: 'Daniel', full_name: 'Other' }), 'Daniel')
   assert.equal(displayNameFrom({ full_name: 'Daniel Vega' }), 'Daniel Vega')
   assert.equal(displayNameFrom({ name: 'Dan' }), 'Dan')
-  // A blank preferred key does not hide a real one behind it.
-  assert.equal(displayNameFrom({ display_name: '  ', full_name: 'Daniel' }), 'Daniel')
+})
+
+test('a CLEARED display_name is a decision, and a provider name does not override it', () => {
+  // Clearing the field in the Account menu writes `display_name: null`. The first version skipped
+  // the null and fell through to `full_name`, so clearing said "Saved." and changed nothing for any
+  // account a provider or the Supabase dashboard had given a name (cross-agent review, Blocking).
+  assert.equal(displayNameFrom({ display_name: null, full_name: 'Daniel Vega' }), null)
+  assert.equal(displayNameFrom({ display_name: '  ', name: 'Dan' }), null)
+  // Only when the person has said NOTHING here do the provider keys speak.
+  assert.equal(displayNameFrom({ full_name: 'Daniel Vega' }), 'Daniel Vega')
 })
 
 test('metadata is INPUT: an invalid stored name is ignored, never rendered', () => {

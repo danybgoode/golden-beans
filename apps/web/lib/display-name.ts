@@ -62,11 +62,22 @@ export function parseDisplayName(raw: unknown): DisplayNameResult {
  * what Supabase's own dashboard and every OAuth provider write — so a user created by hand with a
  * name, or through a provider added later, is not shown by email for want of a key spelling. Every
  * candidate goes through `parseDisplayName`: metadata is user-writable, so it is input, not truth.
+ *
+ * ⚠️ **A PRESENT `display_name` is the person's decision, even when it is `null`** (cross-agent
+ * review, agy, Blocking). Clearing the field in the Account menu writes `display_name: null`, and the
+ * first version then skipped the null and read a provider's `full_name` — so anyone with one (a user
+ * created in the Supabase dashboard with a name, or any future OAuth sign-in) cleared their name, saw
+ * "Saved.", and kept it. The provider keys are a fallback for when the person has said NOTHING here,
+ * never an override of having said "no name".
  */
 export function displayNameFrom(metadata: unknown): string | null {
   if (metadata === null || typeof metadata !== 'object') return null
   const record = metadata as Record<string, unknown>
-  for (const key of ['display_name', 'full_name', 'name']) {
+  if ('display_name' in record) {
+    const own = parseDisplayName(record.display_name)
+    return own.ok ? own.value : null
+  }
+  for (const key of ['full_name', 'name']) {
     const parsed = parseDisplayName(record[key])
     if (parsed.ok && parsed.value !== null) return parsed.value
   }

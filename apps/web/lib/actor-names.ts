@@ -38,7 +38,11 @@ export const ACTOR_LOOKUP_CAP = 25
 export async function resolveActorIdentities(
   actorUserIds: readonly string[]
 ): Promise<Record<string, ActorIdentity>> {
-  const unique = [...new Set(actorUserIds)].slice(0, ACTOR_LOOKUP_CAP)
+  // Empties are dropped BEFORE the cap (cross-agent review, agy). Its premise — that audit rows here
+  // carry null actors — is false for today's callers: `flag_lifecycle_audit.actor_user_id` is
+  // `UUID NOT NULL`. But this function takes any string array, and an empty id would spend a slot
+  // of the cap on a lookup that cannot succeed and log it as a failure.
+  const unique = [...new Set(actorUserIds.filter((id) => id !== ''))].slice(0, ACTOR_LOOKUP_CAP)
   if (unique.length === 0) return {}
 
   const supabase = getSupabaseServiceClient()

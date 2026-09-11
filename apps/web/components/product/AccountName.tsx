@@ -51,6 +51,8 @@ export function AccountName({ current }: { current: string | null }) {
           setSaved(false)
         }}
         autoComplete="name"
+        // No `maxLength` (cross-agent review, agy — declined): the browser counts UTF-16 units,
+        // the rule counts characters a reader sees, so 80 would cut a valid 80-emoji name at 40.
         placeholder="Shown instead of your email"
         aria-invalid={error !== null}
         aria-describedby={error !== null ? 'account-name-error' : undefined}
