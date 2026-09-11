@@ -407,6 +407,13 @@ export function DestinationManager({
                 label="+ New destination"
                 title="New destination"
                 lede="Where it goes, which events, and the secret it will be signed with."
+                /* ⚠️ The form's state is held HERE, so it outlives the modal — a failed create's
+                   callout would be sitting in the form the next time it opened. Cleared on the way
+                   OPEN rather than on the way closed, so a reader who dismisses a failure can still
+                   read it in the instant before it goes. */
+                onOpenChange={(open) => {
+                  if (open) setCreateError(null)
+                }}
               >
                 {createForm}
               </NewThingDialog>

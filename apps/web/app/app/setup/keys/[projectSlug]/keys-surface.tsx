@@ -57,6 +57,12 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
   const heading = useRef<HTMLDivElement>(null)
   // The plaintext, held for exactly as long as it is on screen. Never read back from the server.
   const [minted, setMinted] = useState<string | null>(null)
+  // ⚠️ Bumped every time the wizard OPENS, and used as `NewKey`'s `key` — so the form remounts
+  // instead of reappearing with the last attempt's picked kind, typed label and red callout still
+  // in it (cross-agent review, agy, on the sibling surfaces). `NewKey` holds all of that state
+  // itself, so unlike Destinations and Shares there is nothing here to clear: a remount IS the
+  // reset, and it cannot go stale as the form grows a seventh field.
+  const [wizardOpens, setWizardOpens] = useState(0)
   // ⚠️ **The form's open state is GONE from this file — `NewThingDialog` owns it** (mockups-as-built
   // Story 4.1, epic D8). It used to live here, because while `NewKey` owned it, opening the form
   // expanded a pick list and three fields inside the head's flex row. The modal seam solves the same
@@ -89,8 +95,11 @@ export function KeysSurface({ slug, rows }: { slug: string; rows: CredentialRow[
                 label="+ New key"
                 title="New key"
                 lede="What it is for, the one thing that kind needs, and a name you will know it by later."
+                onOpenChange={(open) => {
+                  if (open) setWizardOpens((count) => count + 1)
+                }}
               >
-                <NewKey slug={slug} onMinted={setMinted} />
+                <NewKey key={wizardOpens} slug={slug} onMinted={setMinted} />
               </NewThingDialog>
             ) : undefined
           }

@@ -57,6 +57,23 @@ export function NewThingDialog({
    * would otherwise render visibly larger than Send test / Rotate secret / Remove next to it.
    */
   size,
+  /**
+   * Told whenever the dialog opens or closes, so a caller holding form state OUTSIDE the dialog can
+   * clear it.
+   *
+   * ⚠️ **This exists because a mint form's state outlives the modal, and the modal is the only
+   * thing that looks closed** (cross-agent review, agy, reported twice — once as a Nit on
+   * Destinations and again as a Should-fix after the first fix). The wizard forms on Keys, Shares
+   * and Destinations are hoisted into their manager so the page head can carry them, which means
+   * `createError` / `mintError` / a half-typed label survive a dismissal: close a failed create,
+   * reopen it, and last attempt's red callout is sitting in a form nobody has submitted yet.
+   *
+   * A `key` on the body would remount the children and fix the half that lives INSIDE them; it
+   * cannot reach state the caller holds. So the dialog reports the transition and each surface
+   * clears the slots it owns — which is also the only version that knows which state is stale and
+   * which (an in-flight `pending`) must not be touched.
+   */
+  onOpenChange,
   children,
 }: {
   label: string
@@ -64,6 +81,7 @@ export function NewThingDialog({
   lede?: ReactNode
   variant?: 'primary' | 'secondary'
   size?: 'sm'
+  onOpenChange?: (open: boolean) => void
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -74,6 +92,14 @@ export function NewThingDialog({
   // ids, and `aria-labelledby` resolves to whichever came first. A screen reader would announce the
   // wrong destination's dialog, which on a panel holding a replay control is worse than no label.
   const titleId = useId()
+
+  // ⚠️ ONE setter, and every path below uses it — the trigger, the `✕`, `Done`, Escape and the
+  // backdrop. A second bare `setOpen` would be a way out that the caller is never told about, which
+  // is the same class of defect as two components disagreeing about one label.
+  function change(next: boolean) {
+    setOpen(next)
+    onOpenChange?.(next)
+  }
 
   useEffect(() => {
     const element = dialog.current
@@ -90,7 +116,7 @@ export function NewThingDialog({
       <Button
         variant={variant}
         className={size === 'sm' ? 'ds-btn--sm' : undefined}
-        onClick={() => setOpen(true)}
+        onClick={() => change(true)}
       >
         {label}
       </Button>
@@ -116,10 +142,10 @@ export function NewThingDialog({
         // already false — so the cause was `setOpen`, not the DOM. Same identity comparison the
         // backdrop handler below already uses, and for the same reason.
         onClose={(event) => {
-          if (event.target === dialog.current) setOpen(false)
+          if (event.target === dialog.current) change(false)
         }}
         onCancel={(event) => {
-          if (event.target === dialog.current) setOpen(false)
+          if (event.target === dialog.current) change(false)
         }}
         // ⚠️ **The backdrop closes it, and this handler is why** (cross-family review, Codex). The
         // comment below used to promise backdrop-dismiss and nothing implemented it — a native
@@ -132,7 +158,7 @@ export function NewThingDialog({
         // dialog element, so a click on the panel targets a child and a click outside targets the
         // dialog. Comparing identity is what keeps a click inside the body from closing it.
         onClick={(event) => {
-          if (event.target === dialog.current) setOpen(false)
+          if (event.target === dialog.current) change(false)
         }}
       >
         <div className="ds-dialog-head">
@@ -144,7 +170,7 @@ export function NewThingDialog({
           </div>
           {/* The prototype's `✕`. A close control that is not the only way out — Escape and the
               backdrop both work (see `onClick` above) — but the one a reader can see. */}
-          <button type="button" className="ds-dialog-x" onClick={() => setOpen(false)} aria-label="Close">
+          <button type="button" className="ds-dialog-x" onClick={() => change(false)} aria-label="Close">
             ✕
           </button>
         </div>
@@ -154,7 +180,7 @@ export function NewThingDialog({
               "Create draft", "Activate", "Run a drill" — wired to the server action it already
               called from inside the disclosure. A second submit here would be a second code path
               to the same mutation, which is how two buttons start disagreeing about what they do. */}
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          <Button variant="secondary" onClick={() => change(false)}>
             Done
           </Button>
         </div>
