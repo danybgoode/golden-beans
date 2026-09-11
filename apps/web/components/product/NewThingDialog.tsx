@@ -85,6 +85,9 @@ export function NewThingDialog({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  // The last open state `change()` reported. Only `change()` writes it, and only `change()` writes
+  // `open`, so the two cannot disagree.
+  const reported = useRef(false)
   const dialog = useRef<HTMLDialogElement>(null)
   // ⚠️ **`useId`, not a slug of the title** (cross-family review, Codex). The id was
   // `title.replace(/\W+/g, '-')`, and this component now renders ONCE PER ROW on Destinations — so
@@ -97,13 +100,16 @@ export function NewThingDialog({
   // backdrop. A second bare `setOpen` would be a way out that the caller is never told about, which
   // is the same class of defect as two components disagreeing about one label.
   //
-  // ⚠️ **Reports a TRANSITION, never a repeat** (cross-agent review, agy, Should-fix). Dismissing
-  // through `✕`, Done or the backdrop sets `open` false; the effect then calls `element.close()`,
-  // which dispatches the native `close` event, and `onClose` calls this again — so every UI dismissal
-  // told the caller "closed" twice. The native `close` event is queued as a task, so by the time it
-  // arrives React has re-rendered and `open` is already false here, which is what the guard reads.
+  // ⚠️ **Reports a TRANSITION, never a repeat — tracked in a REF, not read from `open`** (cross-agent
+  // review, agy, two rounds). A UI dismissal sets `open` false, the effect calls `element.close()`,
+  // and the native `close` event calls this again; Escape fires `cancel` and then `close`, one after
+  // the other. The first fix compared `next` against the `open` in this render's closure, which is
+  // only right if React has re-rendered between the two events — a claim about event timing that
+  // holds for one path and was argued, not measured, for the other. A ref holds the last value
+  // actually REPORTED, so the second call is a no-op however close together the two events arrive.
   function change(next: boolean) {
-    if (next === open) return
+    if (reported.current === next) return
+    reported.current = next
     setOpen(next)
     onOpenChange?.(next)
   }
