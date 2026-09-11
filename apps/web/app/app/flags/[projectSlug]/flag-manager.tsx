@@ -48,6 +48,7 @@ export function FlagManager({
   flags,
   environments,
   audit,
+  actorLabels,
   keys,
   syncKeys,
   canManage,
@@ -62,6 +63,12 @@ export function FlagManager({
   flags: FlagRegistryRow[]
   environments: FlagEnvironmentStateRow[]
   audit: FlagLifecycleAuditRow[]
+  /**
+   * mockups-as-built Story 3.5 — each audit actor's name, else email, else id, resolved server-side
+   * in `page.tsx`. Optional because it is only looked up when this component renders the audit; an
+   * actor missing from it renders its id, which is what this table showed before names existed.
+   */
+  actorLabels?: Record<string, string>
   keys: FlagReadKeyRow[]
   syncKeys: FlagSyncKeyRow[]
   canManage: boolean
@@ -365,11 +372,15 @@ export function FlagManager({
       {
         key: 'actor',
         header: 'Actor',
-        value: (entry) =>
-          entry.externalActorId ? `${entry.actorUserId} via ${entry.externalActorId}` : entry.actorUserId,
+        // The LABEL is what sorts and filters, because it is what the reader sees and types. The id
+        // stays in the cell's `title`: a name is self-chosen and two people can share one.
+        value: (entry) => {
+          const who = actorLabels?.[entry.actorUserId] ?? entry.actorUserId
+          return entry.externalActorId ? `${who} via ${entry.externalActorId}` : who
+        },
         cell: (entry) => (
           <>
-            <code>{entry.actorUserId}</code>
+            <span title={entry.actorUserId}>{actorLabels?.[entry.actorUserId] ?? entry.actorUserId}</span>
             {entry.externalActorId && (
               <>
                 {' '}
@@ -380,7 +391,7 @@ export function FlagManager({
         ),
       },
     ],
-    []
+    [actorLabels]
   )
 
   // ── Nothing left to render is a REAL state now, and it must render nothing ──────────────────

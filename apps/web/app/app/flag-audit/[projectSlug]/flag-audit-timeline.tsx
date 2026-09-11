@@ -47,12 +47,19 @@ export function FlagAuditTimeline({
   entries,
   flagKeyById,
   versionNumberById,
+  actorLabels,
   page,
   hrefForPage,
 }: {
   entries: FlagLifecycleAuditRow[]
   flagKeyById: Record<string, string>
   versionNumberById: Record<string, number>
+  /**
+   * mockups-as-built Story 3.5 — each actor's name, else their email, else their id, resolved on
+   * the server by `lib/actor-names.ts`. A row whose actor is missing here renders the id: the id is
+   * still the fact of who acted, and a blank in an audit reads as "nobody".
+   */
+  actorLabels: Record<string, string>
   /** mockups-as-built Story 3.2 — the slice on screen, and where the rest of it is. */
   page: AuditPage<FlagLifecycleAuditRow>
   hrefForPage: (page: number) => string
@@ -92,7 +99,10 @@ export function FlagAuditTimeline({
                       is rendered ALONGSIDE the Golden owner, never instead of it: "owner X via
                       Clerk user Y" is what makes a Miyagi-initiated flip attributable to a person
                       rather than to a service account. */}
-                  <b>{entry.actorUserId}</b>
+                  {/* The approved state's "**Daniel** turned …". The exact id stays one hover away
+                      in `title`: a name is self-chosen and two people can share one, so the fact
+                      that identifies who acted is never removed — only moved out of the sentence. */}
+                  <b title={entry.actorUserId}>{actorLabels[entry.actorUserId] ?? entry.actorUserId}</b>
                   {entry.externalActorId !== null && (
                     <>
                       {' via '}

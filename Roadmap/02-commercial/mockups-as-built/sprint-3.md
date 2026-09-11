@@ -1,6 +1,6 @@
 # The mockups, as built — Sprint 3: The two missing screens, and no flags
 
-**Status:** ✅ COMPLETE (2026-09-10) — 3.1, 3.2 and 3.3 built. 3.4 closes with the epic.
+**Status:** ✅ COMPLETE (2026-09-10) — 3.1, 3.2, 3.3 and 3.5 built. 3.4 closes with the epic.
 
 > Two surfaces in the approved design were never built at all, and one flag was standing between the
 > console and the people using it. What it took, beyond the three stories as written:
@@ -35,13 +35,14 @@
 >   draft that asserted the surface ranked FIRST went red against `console-palette.ts:96`, which says
 >   features come first by design.
 >
-> ### Raised, not decided — for Daniel
+> ### Raised, then decided and built — Story 3.5
 >
-> **The Activity entry names its actor as a raw UUID.** The approved state draws *"**Daniel** turned
-> `ml.sync_enabled` off in Development"*; the product renders `actor_user_id`, which is a UUID in
-> production too. Resolving it to a name needs a read of the auth schema — a new query and arguably a
-> new boundary, which D13 says this epic does not add — so it is named here rather than built or
-> ignored.
+> **The Activity entry named its actor as a raw UUID.** The approved state draws *"**Daniel** turned
+> `ml.sync_enabled` off in Development"*; the product rendered `actor_user_id`. Daniel ruled
+> (2026-09-10) to build it — and building it found that **no name existed anywhere to render**:
+> sign-up collected an email and a password, and no screen let anyone set a name, in the approved
+> design or the product. His second ruling the same day: collect an optional name at sign-up and in
+> the Account menu, and show the name when set, the email until then. See Story 3.5.
 
 ## Stories
 
@@ -109,10 +110,35 @@ not inherit a false green.
 - The durable lesson goes to `Roadmap/LEARNINGS.md`, deduped and sharpened, not appended.
 **Risk:** low
 
+### Story 3.5 — Activity names who acted ✳ *`ship-activity`* — ✅
+**As a** person reading Activity, **I want** to see who made a change, **so that** the sentence
+reads the way the approved state draws it rather than as a UUID.
+**Acceptance:**
+- Activity's sentence names the actor: their **name** when one is set, else their **email**, else
+  (a failed or skipped lookup) their id — never a blank and never an invented word. The exact id
+  stays in the actor's `title`, one hover away: a name is self-chosen and two people can share one.
+- The flags page's "Lifecycle audit" table uses the same label — the second surface that printed
+  the id.
+- Sign-up carries an **optional** "Your name" field, after the two the approved state draws.
+  ⚠️ **Daniel's approved deviation from `door-signup-open`, 2026-09-10.** The structural contract
+  records `doorform` as a block, not its fields, so the route's signature is unchanged.
+- The Account menu lets an existing account set or clear its name — every account created before
+  this story has none, including the one that owns the product.
+- **One definition of a name** (`lib/display-name.ts`, zero imports): both doors validate with it.
+  Whitespace collapses; zero-width, bidi-override and other unshowable characters are REFUSED rather
+  than stripped (an override can make one name read as another); 80 characters, counted as a reader
+  counts them.
+- **The lookup is narrow** (`lib/actor-names.ts`): it only ever reads ids from audit rows already
+  read project-scoped behind `requireProjectMembership`, returns a name and an email and nothing
+  else, is capped at 25 distinct actors, and never throws. No migration — the auth admin API.
+**Risk:** medium — the first code that reads another person's auth record.
+
 ## Sprint QA
 - **api spec(s):** `e2e/north-star.authed.spec.ts` (the surface exists, is Measure's default, and
   renders three separate plots) · `e2e/flag-audit.authed.spec.ts` (paginates; the page survives a
-  copy-paste) · the visual gate covers both against their PNGs.
+  copy-paste) · `e2e/actor-names.authed.spec.ts` (the email until a name is set, then the name, never
+  the raw id in the sentence; a refused name changes nothing) · `lib/display-name.test.ts` (what a
+  name may be) · the visual gate covers the routes against their PNGs.
 - **browser smoke owed:** yes, to Daniel — **removing the flag from every Vercel environment** is a
   live environment change and is never covered by a merge authorization.
 - **deterministic gate:** `tsc --noEmit` + `npm run build` + Playwright `api` green before merge.

@@ -28,6 +28,7 @@ const PASSWORD_HINT = `At least ${MIN_PASSWORD_LENGTH} characters`
 export function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [company, setCompany] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +41,7 @@ export function SignupForm() {
       const res = await fetch('/api/v1/public/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, company }),
+        body: JSON.stringify({ email, password, company, name }),
       })
       const body = await res.json().catch(() => null)
       if (!res.ok || !body?.ok) {
@@ -93,6 +94,29 @@ export function SignupForm() {
             autoComplete="new-password"
             minLength={MIN_PASSWORD_LENGTH}
             required
+          />
+        )}
+      </Field>
+      {/* ⚠️ **Not in the approved `door-signup-open` state — Daniel's approved deviation, 2026-09-10**
+          (mockups-as-built Story 3.5). The approved Activity screen names who acted ("Daniel turned
+          …"), and nothing collected a name to name them with. OPTIONAL, and last, so the two fields
+          the approved state draws are still the two a person meets first; leaving it blank shows
+          the email instead, and the Account menu can set it later. */}
+      <Field
+        label="Your name"
+        controlId="signup-name"
+        hint="Optional. Shown beside the changes you make, instead of your email."
+      >
+        {(control) => (
+          <input
+            {...control}
+            className="ds-input"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            // No `maxLength` (cross-agent review, agy — declined): the browser counts UTF-16 units,
+            // the rule counts characters a reader sees, so 80 would cut a valid 80-emoji name at 40.
           />
         )}
       </Field>

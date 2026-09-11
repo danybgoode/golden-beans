@@ -4733,6 +4733,31 @@
   box-shadow: inset 2px 0 0 var(--gold);
 }
 
+/* mockups-as-built Story 3.5 — "Your name", the first thing in the account menu. A grid so the label,
+   the field and Save stack in the menu's 220px and its status line wraps under them. */
+.ds .ds-shell-name {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.ds .ds-shell-name label {
+  color: var(--dim);
+  font-size: 12px;
+}
+.ds .ds-shell-name .ds-btn {
+  justify-self: start;
+}
+.ds .ds-shell-name [role='status'],
+.ds .ds-shell-name [role='alert'] {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ds .ds-shell-name [role='alert'] {
+  color: var(--red);
+}
+
 .ds .ds-shell-menu p {
   margin: 0 0 8px;
   color: var(--dim);

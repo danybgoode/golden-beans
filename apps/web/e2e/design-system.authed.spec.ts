@@ -548,7 +548,10 @@ test('destinations Remove confirms through ONE dialog — the two-click pattern 
   // opens on the answer line and the list, not on an empty form, which is also what lets the page
   // fit at 1440×960.
   await page.getByRole('button', { name: '+ New destination' }).click()
-  await page.getByLabel('Name').fill(name)
+  // ⚠️ `exact: true` since mockups-as-built Story 3.5. Playwright matches a label by SUBSTRING, and the
+  // Account menu now carries "Your name" on every signed-in page — so a bare 'Name' resolved to two
+  // fields and failed strict mode. That is the locator being loose, not the page being wrong.
+  await page.getByLabel('Name', { exact: true }).fill(name)
   await page.getByLabel('Webhook URL').fill(`https://example.invalid/hooks/${name}`)
   await page.getByRole('button', { name: 'Create the destination' }).click()
   const secretNotice = page.getByRole('alert').filter({ hasText: 'Copy this signing secret now' })

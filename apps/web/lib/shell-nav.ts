@@ -1,5 +1,6 @@
 import 'server-only'
 import { getSessionUser } from './supabase-auth'
+import { displayNameFrom } from './display-name'
 import { getUserProjects, type MemberProject } from './membership'
 import {
   isExperimentGovernanceEnabled,
@@ -72,6 +73,8 @@ export type ShellNav = {
    * appears once either way.
    */
   userEmail: string | null
+  /** The signed-in person's name, when they set one (mockups-as-built Story 3.5). */
+  userName: string | null
 }
 
 /**
@@ -121,6 +124,7 @@ const EMPTY: ShellNav = {
   links: [],
   header: null,
   userEmail: null,
+  userName: null,
 }
 
 // console-ia-overhaul · Sprint 1, Story 1.2 (epic README, D3) — DEFAULT_FEATURE_HINT is DELETED, and
@@ -196,6 +200,7 @@ export async function getShellNav(
       return {
         ...EMPTY,
         userEmail: user.email ?? null,
+        userName: displayNameFrom(user.user_metadata),
         header: emptyHeader(activeSection),
       }
     }
@@ -221,6 +226,7 @@ export async function getShellNav(
       return {
         ...EMPTY,
         userEmail: user.email ?? null,
+        userName: displayNameFrom(user.user_metadata),
         header: emptyHeader(activeSection),
       }
     }
@@ -234,6 +240,7 @@ export async function getShellNav(
       activeProject,
       projects,
       userEmail: user.email ?? null,
+      userName: displayNameFrom(user.user_metadata),
       links: getProjectSurfaceLinks({
         projectSlug: activeProject.slug,
         role: activeProject.role,

@@ -42,7 +42,7 @@
 - [Pod Report + Roadmap Hub — benchmarks/ROI + live roadmap-vs-end-state views](../../02-commercial/pod-report/README.md) — 02 Commercial · 10/10 stories · risk: High
 - [The landing reads at a glance — the maker-ops page, cut down to what it claims](../../02-commercial/landing-readability-pass/README.md) — 02 Commercial · 4/4 stories
 - [The methodology gets a room of its own](../../02-commercial/methodology-experience/README.md) — 02 Commercial · 17/17 stories · risk: Low · wave-2026-08-20
-- [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 17/17 stories · risk: High
+- [The mockups, as built — delete the disclosures and finish the screens](../../02-commercial/mockups-as-built/README.md) — 02 Commercial · 18/18 stories · risk: High
 - [The public surface names the category — agentic product management, a hero that hands you a prompt, and a North Star workshop worth the URL](../../02-commercial/agentic-pm-public-surface/README.md) — 02 Commercial · 12/12 stories · risk: Low · wave-2026-08-20
 - [A preview deployment stops calling itself localhost](../../09-platform-infra/site-url-preview-aware/README.md) — 09 Platform Infra · 4/4 stories
 - [Notification rails — Telegram and Slack in lockstep](../../09-platform-infra/notification-rails/README.md) — 09 Platform Infra · 3/3 stories

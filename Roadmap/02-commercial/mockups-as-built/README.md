@@ -241,14 +241,15 @@ Every sprint doc carries its own list. The four things worth reading before the 
    list` asserted `toHaveCount(1)`, which held only because no fixture feature contained the word
    "Activity"; and `hub.authed.spec.ts` asserted an empty state that the fixture happened to be in.
 
-### The two approved DEVIATIONS from the design, both Daniel's, both dated
+### The three approved DEVIATIONS from the design, all dated
 
-Everything else is the approved state exactly. These two are not, and they carry his name:
+Everything else is the approved state exactly. These three are not, and they carry his name:
 
 | what | why | ruled |
 |---|---|---|
 | The guardrail NAME is not struck through | `experiment-ready` draws it with a red strikethrough, which comes from reusing `.wordlist` — the prototype's before/after list, whose left-hand word is the thing being replaced. A guardrail's name is not being replaced by anything, so it read as "this guardrail is gone" on a panel about guardrails that still apply. Raised, not decided. | Daniel, 2026-09-10 |
 | Activity's rail item says "Activity", its heading says "History" | Both are the approved design's — `ship-activity.png` draws exactly that pair. Recorded here because `design-system-rails` Story 4.3 renamed the heading to "Activity" reasoning it was "the word the design uses", and half of that was never checked against the picture. | the design itself |
+| Sign-up asks for an optional **"Your name"** | `door-signup-open` draws email and password only, while `ship-activity` names who acted ("**Daniel** turned …"). Nothing collected a name, so the approved sentence could not be built. Optional and last, so the two approved fields are still the two a person meets first; blank shows the email. Story 3.5. | Daniel, 2026-09-10 |
 
 ### What the PRODUCTION walkthrough found (2026-09-10)
 
@@ -289,12 +290,16 @@ renders `dialog.modal` from `console.css` rather than `.ds-dialog` — a stated 
 about a list"*), not a surface this epic left inline. It is exempted from the guard's CLASS check by
 name, in `WIZARD_DEVIATIONS`, and from nothing else.
 
-### Raised, not decided — the one thing still open
+### Raised, then decided and built — Activity names who acted (Story 3.5)
 
-**The Activity entry names its actor as a raw UUID.** The approved state draws *"**Daniel** turned
-`ml.sync_enabled` off in Development"*; the product renders `actor_user_id`, which is a UUID in
-production too. Resolving it to a name needs a read of the auth schema — a new query and arguably a
-new boundary — so it is named here rather than built or ignored.
+**The Activity entry named its actor as a raw UUID**, where the approved state draws *"**Daniel**
+turned `ml.sync_enabled` off in Development"*. Daniel ruled to build it (2026-09-10) — and building
+it found **no name existed anywhere**: sign-up collected email and password, and no screen, approved
+or built, let anyone set a name. So a "look the name up" story would have shown the fallback for
+every real user, the owner included. His second ruling: an optional name at sign-up and in the
+Account menu; the name when set, the email until then, the id only if the lookup fails. It is the
+third approved deviation above, and `lib/actor-names.ts` is the first code in the product that reads
+another person's auth record — narrowed to ids from audit rows already read project-scoped.
 
 ### Prepared, so nobody rebuilds it
 
