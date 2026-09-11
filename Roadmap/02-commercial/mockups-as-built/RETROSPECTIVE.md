@@ -11,6 +11,8 @@ _Closed: 2026-09-10_
 | 2 part 2 | The two detail routes, the `versions` primitive, and Story 2.5 — scenario evidence per drill | `fd10fb7` (PR #138) |
 | 3 | North Star as a route, Activity paginated, `CONSOLE_SHELL_ENABLED` deleted | `5e5bedf` (PR #138) |
 | 4 | The eight routes nothing was measuring — both Setup surfaces, Shares, the three hub routes, `/install`, `/s/[token]` | `a54bc01` (PR #138) |
+| walkthrough | `.ds-row-desc` was a `<span>`, so none of its clipping applied — found on production | `81336ea` (PR #139) |
+| 4.1 close | Every approved `+ New …` opens the wizard shape — Keys AND Destinations, and the guard that presses them | PR #140 |
 
 **22 of 22 routes match their approved state's structural signature, measured.** `coverage.json`
 reads 28/28 with `outstanding: []`, derived from the gate rather than from a hand-typed boolean.
@@ -137,5 +139,7 @@ beside a working fix. **Prose asserting a property the code does not have is a d
 - **The browser-level assertion that the hub's empty state is VISIBLE** is gone: the fixture must now
   push artifacts for the hub routes to be measurable, and artifacts are append-only.
   `hub-empty-state.spec.tsx` asserts its words instead.
-- **The production walkthrough**, and removing `CONSOLE_SHELL_ENABLED` from every Vercel
-  environment — owed to Daniel by name.
+- ~~The production walkthrough, and removing `CONSOLE_SHELL_ENABLED` from every Vercel
+  environment~~ — **both done 2026-09-10**, each authorized by Daniel by name.
+- **Two live prod credentials from the walkthrough** — an API key and a share link, both labelled
+  `walkthrough-2026-09-10-…`. Real and working; revoke them if they are not wanted.

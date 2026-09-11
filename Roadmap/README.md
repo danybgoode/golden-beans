@@ -94,7 +94,8 @@ independently shippable slice of value.
   scenario launch+stop and delivery replay all still work, from the approved wizard shape as a modal).
   Two screens that never existed were built — a **North Star** Measure surface and **Activity's**
   pagination — and `CONSOLE_SHELL_ENABLED` is deleted from the repository and every Vercel
-  environment. 🚧 **Built 2026-09-10; production verification is the last step.**
+  environment. **Live in production** (2026-09-10) — walked through signed-in on goldenfrijoles.com,
+  including every `+ New …` opening the approved wizard shape as a modal (PR #140).
 - ✅ [One design system, every surface](02-commercial/design-system-rails/README.md) — the design now
   lives **in the product**, at `apps/web/design-system/`, and it outlives the epic that produced it.
   Three prior design epics each scoped their design to themselves and left it in a closed epic's
@@ -331,7 +332,7 @@ independently shippable slice of value.
 
 ## Recent highlights
 
-- **2026-09-10** — `mockups-as-built` **built** (PRs #136/#137/#138): the epic that made the last
+- **2026-09-10** — `mockups-as-built` **shipped & live** (PRs #136–#140): the epic that made the last
   epic's number true. `design-system-rails` reported 27/27 with `outstanding: []` and at least
   sixteen routes did not resemble their approved design — the arithmetic was real and its input was a
   boolean somebody typed. The replacement is a **structural state contract generated from the
