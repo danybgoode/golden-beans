@@ -1,5 +1,5 @@
 ---
-status: in-progress   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
+status: shipped   # AUTHORITATIVE epic status (SSOT) — scaffolded | in-progress | shipped | archived. Set shipped at epic close.
 slug: mockups-as-built
 build_order: 27      # integer position in the ONE global build sequence.
 ---
@@ -8,7 +8,7 @@ build_order: 27      # integer position in the ONE global build sequence.
 
 > **Area:** 02-commercial · **Risk:** high · **Class:** Feature · **Scope seed:** [`00-ideas/seeds/mockups-as-built.md`](../../00-ideas/seeds/mockups-as-built.md)
 > **Appetite:** L (multi-wave — raised from M on 2026-09-09, D16) · **Underwritten by:** _null — not yet bet_
-> **Status: BUILT 2026-09-10 — 22 of 22 routes match, measured. Owed: the production walkthrough.**
+> **Status: SHIPPED & LIVE 2026-09-10 — 22 of 22 routes match, measured; walked through signed-in on production, including every `+ New …` opening the wizard shape (PR #140).**
 > **Design — ALREADY APPROVED, nothing to design:** [`console-prototype.html`](../../../apps/web/design-system/console-prototype.html) · [`APPROVED.md`](../../../apps/web/design-system/APPROVED.md) · **33** approved states (D8), rendered to `apps/web/design-system/reference/*.png` by CI on every run — **derived and gitignored, never committed** (D1-b).
 > **Corrects:** `design-system-rails` (#26) — which shipped six sprints, marked itself complete, and did not build the approved screens.
 
