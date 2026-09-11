@@ -20,6 +20,11 @@ export const signupSchema = z.object({
   // Honeypot — visually off-screen in the form, never filled by a real visitor. Any non-empty
   // value gets a silent success with no account created (same contract as the waitlist route).
   company: z.string().optional(),
+  // mockups-as-built Story 3.5 — OPTIONAL, and only BOUNDED here. What a name may contain is decided
+  // by `parseDisplayName` in `lib/display-name.ts`, the same function the Account menu uses, so the
+  // two doors cannot disagree about what a name is. The bound is only so a public route never parses
+  // an unbounded string; 400 is five times the longest name it will accept.
+  name: z.string().max(400).optional(),
 })
 
 export type SignupInput = z.infer<typeof signupSchema>

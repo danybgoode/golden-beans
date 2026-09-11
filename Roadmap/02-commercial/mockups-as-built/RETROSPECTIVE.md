@@ -126,9 +126,9 @@ beside a working fix. **Prose asserting a property the code does not have is a d
 - **`/app/flags/[projectSlug]`'s New feature wizard renders `console.css`'s `.modal`, not
   `.ds-dialog`** — a stated `design-system-rails` S4.1 deviation, exempted BY NAME in the D8 guard's
   `WIZARD_DEVIATIONS` so the exemption is one line in a diff rather than a silent pass.
-- **The Activity entry names its actor as a raw UUID** where the approved state draws a name.
-  Resolving it needs a read of the auth schema — a new query and arguably a new boundary — so it is
-  raised rather than built. Named in the epic README and in `sprint-3.md`.
+- ~~The Activity entry names its actor as a raw UUID~~ — **built as Story 3.5 (2026-09-10).**
+  Building it found no name existed anywhere to show, so it grew an optional name at sign-up and in
+  the Account menu (Daniel's third approved deviation): the name when set, the email until then.
 - **`POD_REPORT_TABLES_DEFERRAL` is AMENDED, not closed.** Its premise ("the approved `hub-report`
   state is PROSE and contains no table at all") is disproved — the state is a DOCUMENT and a document
   may contain a table — but its substance stands: the evidence tables are still painted by

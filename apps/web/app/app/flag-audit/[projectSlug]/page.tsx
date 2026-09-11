@@ -24,6 +24,8 @@ import { FLAG_AUDIT_WINDOW, getFlagRegistryView } from '@/lib/flag-registry'
 import { PageHead } from '@/design-system/primitives'
 import { ProductShell } from '@/components/product/ProductShell'
 import { paginateAudit, parseAuditPage } from '@/lib/audit-page'
+import { resolveActorIdentities } from '@/lib/actor-names'
+import { actorLabel } from '@/lib/display-name'
 import { FlagAuditTimeline } from './flag-audit-timeline'
 
 export const dynamic = 'force-dynamic'
@@ -44,6 +46,15 @@ export default async function FlagAuditPage({
   // opens the same screen. Slicing a list already fully in memory — no query change, no index
   // (epic D13-b); production holds 148 rows and this route reads all of them either way.
   const page = paginateAudit(registry.audit, parseAuditPage((await searchParams).page))
+  // ── mockups-as-built · Story 3.5 — who acted, as a NAME ─────────────────────────────────────
+  // Only the actors on THIS page are looked up — twelve rows at most, and on every project so far
+  // one or two distinct people. The ids come from rows `getFlagRegistryView` already read for this
+  // project behind `requireProjectMembership`, so nothing a request supplies decides whose record
+  // is read (the property `lib/actor-names.ts` exists to keep).
+  const identities = await resolveActorIdentities(page.rows.map((row) => row.actorUserId))
+  const actorLabels = Object.fromEntries(
+    page.rows.map((row) => [row.actorUserId, actorLabel(identities[row.actorUserId], row.actorUserId)])
+  )
   // The audit references versions by id; the label a reader wants is the flag KEY and the version
   // NUMBER. Both are already in the same payload, so this is a join in memory, not a second query.
   const flagKeyById = new Map(registry.flags.map((flag) => [flag.id, flag.key]))
@@ -80,6 +91,7 @@ export default async function FlagAuditPage({
           entries={page.rows}
           flagKeyById={Object.fromEntries(flagKeyById)}
           versionNumberById={Object.fromEntries(versionNumberById)}
+          actorLabels={actorLabels}
           page={page}
           hrefForPage={(number) => `/app/flag-audit/${encodeURIComponent(projectSlug)}?page=${number}`}
         />

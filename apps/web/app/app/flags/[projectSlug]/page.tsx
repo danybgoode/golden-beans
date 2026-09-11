@@ -2,6 +2,8 @@ import { requireProjectMembership } from '@/lib/dashboard-auth'
 import { isFlagConsoleEnabled, isFlagRuleBuilderEnabled, isFlagServingEnabled } from '@/lib/flags'
 import { isOwner } from '@/lib/roles'
 import { getFlagRegistryView } from '@/lib/flag-registry'
+import { resolveActorIdentities } from '@/lib/actor-names'
+import { actorLabel } from '@/lib/display-name'
 import { listFlagReadKeys } from '@/lib/flag-read-keys'
 import { listFlagSyncKeys } from '@/lib/flag-sync-keys'
 import { FLAG_ENVIRONMENTS } from '@/lib/flag-definition'
@@ -60,6 +62,22 @@ export default async function FlagsPage({
     wantsKeys ? listFlagReadKeys(membership.projectId) : Promise.resolve([]),
     wantsKeys ? listFlagSyncKeys(membership.projectId) : Promise.resolve([]),
   ])
+
+  // ── mockups-as-built · Story 3.5 — the audit table's actors, as names ────────────────────────
+  // Looked up ONLY when this page renders the audit (`showAudit` below is `!consoleEnabled`). With the
+  // console on — production — the audit lives on Activity, and a lookup here would be an auth API
+  // round-trip per actor on every flags page load for a table nobody sees.
+  const auditIdentities = consoleEnabled
+    ? {}
+    : await resolveActorIdentities(registry.audit.map((row) => row.actorUserId))
+  const auditActorLabels = consoleEnabled
+    ? undefined
+    : Object.fromEntries(
+        registry.audit.map((row) => [
+          row.actorUserId,
+          actorLabel(auditIdentities[row.actorUserId], row.actorUserId),
+        ])
+      )
 
   // The gate is resolved HERE, server-side, and passed down. One resolver covers the list, the
   // environment selector and both views; no client ever reads `process.env`.
@@ -188,6 +206,7 @@ export default async function FlagsPage({
         <FlagManager
           slug={projectSlug}
           {...registry}
+          actorLabels={auditActorLabels}
           keys={keys}
           syncKeys={syncKeys}
           canManage={canManage}

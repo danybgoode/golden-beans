@@ -6,6 +6,7 @@ import { signupSchema } from '@/lib/signup-schema'
 import { checkRateLimit, hashIp } from '@/lib/rate-limit'
 import { recordAudit } from '@/lib/audit'
 import { trackSelfEvent, SIGNUP_STARTED_EVENT } from '@/lib/self-track'
+import { parseDisplayName } from '@/lib/display-name'
 
 // POST /api/v1/public/signup — multi-tenant-activation · Sprint 2, Story 2.1.
 //
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false, error: 'Malformed signup payload', issues: parsed.error.flatten() },
-      { status: 400 },
+      { status: 400 }
     )
   }
 
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest) {
   // learns nothing from the response (lifted from the waitlist route, Story 1.3).
   if (parsed.data.company) {
     return NextResponse.json({ ok: true })
+  }
+
+  // mockups-as-built Story 3.5 — the optional name, validated BEFORE the rate limit is spent, the
+  // same order the schema already takes: a request this route would refuse must not use up one of a
+  // visitor's three attempts. Its words are safe to echo — they describe the field, not the account.
+  const name = parseDisplayName(parsed.data.name)
+  if (!name.ok) {
+    return NextResponse.json({ ok: false, error: name.error }, { status: 400 })
   }
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
@@ -69,6 +78,10 @@ export async function POST(req: NextRequest) {
       // Sprint 1 never needed it (signInWithPassword sets cookies directly, no round-trip);
       // signup's confirmation link is the first flow that actually leaves and comes back.
       emailRedirectTo: new URL('/auth/callback', getSiteUrl()).toString(),
+      // Stored on the auth user's `user_metadata`, where the Account menu writes it too and where
+      // `lib/actor-names.ts` reads it back. Absent — not an empty string — when nobody typed one, so
+      // "no name" has exactly one representation.
+      ...(name.value !== null ? { data: { display_name: name.value } } : {}),
     },
   })
 
@@ -78,7 +91,7 @@ export async function POST(req: NextRequest) {
     // "weak password", and echoing it back turns this route into an account-enumeration oracle.
     return NextResponse.json(
       { ok: false, error: 'Could not start signup. Check the address and try again.' },
-      { status: 400 },
+      { status: 400 }
     )
   }
 

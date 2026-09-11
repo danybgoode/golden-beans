@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/Icon'
 import { getShellNav } from '@/lib/shell-nav'
 import { railLinksFor, shellRendersAccountMenu, TODAY_HREF, type ShellSection } from '@/lib/console-shell'
 import { SignOutButton } from './SignOutButton'
+import { AccountName } from './AccountName'
 import { AgentRail } from './AgentRail'
 import { ConsoleRail } from './ConsoleRail'
 import { CommandPalette } from './CommandPalette'
@@ -71,7 +72,10 @@ export async function ProductShell({
    */
   railActive: ProjectRouteSegment | null
 }) {
-  const { activeProject, projects, links, header, userEmail } = await getShellNav(projectSlug, section)
+  const { activeProject, projects, links, header, userEmail, userName } = await getShellNav(
+    projectSlug,
+    section
+  )
 
   return (
     // `is-console` is set by the SAME field that decides whether console chrome renders at all,
@@ -348,6 +352,10 @@ export async function ProductShell({
                       Account
                     </summary>
                     <div className="ds-shell-menu">
+                      {/* mockups-as-built Story 3.5 — the name Activity shows for this person. The
+                          email stays under it: it is still how they sign in, and who they are
+                          until a name is set. */}
+                      <AccountName current={userName} />
                       <p>{userEmail}</p>
                       <SignOutButton />
                     </div>
