@@ -37,7 +37,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import {
   AGENTS,
   headSidePaths,
@@ -67,9 +67,28 @@ import {
   checkReviewerPairing,
   reviewersFor,
 } from './lib/cross-agent-cli.mjs';
+import {
+  assertReviewOutput,
+  cliVersionNote,
+  isReReview,
+  postReviewStatus,
+  RE_REVIEW_NOTE,
+} from './lib/review-guard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = join(__dirname, 'cross-review.prompt.md');
+// `--lens security` swaps the prompt ONLY ��� agent selection, the fallback chain, --skip-trivial and the
+// output guard are untouched, so the lens cannot regress the rail that reviews every other PR.
+const SECURITY_PROMPT_PATH = join(__dirname, 'cross-review.security.prompt.md');
+export const LENSES = ['security'];
+
+// THROWS rather than die()s: a pure function that exits cannot be unit-tested, and silently falling back
+// to the general prompt would let an operator believe a security pass ran when a general one did.
+export function promptPathFor(lens) {
+  if (!lens) return PROMPT_PATH;
+  if (!LENSES.includes(lens)) throw new Error(`unknown lens '${lens}' (expected: ${LENSES.join(' | ')})`);
+  return SECURITY_PROMPT_PATH;
+}
 
 const BANNER =
   '> **The judgment-layer review for this PR** (WAYS-OF-WORKING, updated 2026-07-23) — a single-pass ' +
@@ -119,6 +138,7 @@ function parseArgs(argv) {
     dryRun: false,
     skipTrivial: false,
     minLines: 10,
+    lens: null,
     includeLockfiles: false,
     help: false,
   };
@@ -139,6 +159,8 @@ function parseArgs(argv) {
         .filter(Boolean);
     else if (a === '--builder') out.builder = need(argv[++i], '--builder');
     else if (a.startsWith('--builder=')) out.builder = a.slice('--builder='.length);
+    else if (a === '--lens') out.lens = need(argv[++i], '--lens');
+    else if (a.startsWith('--lens=')) out.lens = a.slice('--lens='.length);
     else if (a === '--agent') out.agent = need(argv[++i], '--agent');
     else if (a.startsWith('--agent=')) out.agent = a.slice('--agent='.length);
     else if (a === '--repo') out.repo = need(argv[++i], '--repo');
@@ -233,8 +255,31 @@ function runReview(agent, prompt, diff) {
   die(`unknown --agent '${agent}'; use ${Object.keys(AGENTS).join('|')}`);
 }
 
-function buildComment(agentLabel, findings) {
-  return `### 🔎 Cross-agent review (${agentLabel})\n\n${BANNER}\n\n---\n\n${findings}\n`;
+export function buildComment(agentLabel, findings, { lens = null, version = null, reReview = false } = {}) {
+  const title = lens
+    ? `### 🔐 Cross-agent review — ${lens} lens (${agentLabel})`
+    : `### 🔎 Cross-agent review (${agentLabel})`;
+  // The reviewer CLI's version is machine-local state no artifact used to capture: if it drifts, review
+  // strength changes and nothing notices. Recorded, not enforced — see lib/review-guard.mjs.
+  const attribution = version ? `\n\n_${version}._` : '';
+  const limit = lens === 'security'
+    ? `\n\n> **Scope of this pass:** one advisory, single-pass read by a different model family, triggered by the changed paths. It is **not** static analysis, not exhaustive, and not a required check. A clean result here is not a security guarantee.`
+    : '';
+  const convergence = reReview ? `\n\n> **Re-review:** Blocking/Important findings only — earlier nits are deliberately not repeated.` : '';
+  return `${title}\n\n${BANNER}${attribution}${limit}${convergence}\n\n---\n\n${findings}\n`;
+}
+
+/** Comment bodies already on the PR, for re-review convergence. [] on any failure (degrade to first pass). */
+function ghComments(pr, repo) {
+  const args = ['pr', 'view', String(pr), '--json', 'comments'];
+  if (repo) args.push('--repo', repo);
+  const r = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  if (r.status !== 0) return [];
+  try {
+    return (JSON.parse(r.stdout || '{}').comments || []).map((c) => c.body || '');
+  } catch {
+    return [];
+  }
 }
 
 function postComment(pr, repo, body) {
@@ -259,6 +304,7 @@ function main() {
     skipTrivial,
     minLines,
     includeLockfiles,
+    lens,
     help,
     builder,
     codeOnly,
@@ -300,6 +346,8 @@ function main() {
       `Builder: ${builder} → reviewer '${agent}' OK (eligible: ${reviewersFor(builder).join(', ')}).\n`
     );
   }
+
+  if (lens && !LENSES.includes(lens)) die(`unknown --lens '${lens}'; use ${LENSES.join('|')}`);
 
   ensureGh();
 
@@ -358,7 +406,9 @@ function main() {
     );
   }
 
-  const prompt = loadPromptBody(PROMPT_PATH);
+  // Re-review convergence (D8): a prior pass for THIS lens means Blocking/Important only.
+  const reReview = isReReview(ghComments(pr, repo), lens);
+  const prompt = loadPromptBody(promptPathFor(lens)) + (reReview ? RE_REVIEW_NOTE : '');
   const rawDiff = ghDiff(pr, repo);
   let diff = rawDiff;
   if (!includeLockfiles) {
@@ -486,16 +536,35 @@ function main() {
   }
 
   const findings = runReview(agent, fileContext ? `${prompt}\n\n${fileContext}` : prompt, diff);
-  if (!findings) die(`${AGENTS[agent]} returned no output.`);
 
-  const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings);
+  // THE GUARD (ways-of-work-lean-pass D9). With one external pass, a CLI that exits 0 with nothing to say
+  // reads exactly like a clean review and nothing contradicts it. A structureless reply FAILS the run and
+  // fails the PR's `cross-review/<lens>` status rather than posting a comment that looks like a pass.
+  const verdict = assertReviewOutput(findings);
+  if (!verdict.ok) {
+    if (!dryRun) {
+      const st = postReviewStatus({ pr, repo, state: 'failure', lens, description: `${AGENTS[agent]}: ${verdict.reason}` });
+      process.stderr.write(st.posted ? `✗ marked cross-review/${lens || 'general'} FAILED on PR #${pr}.\n` : `✗ could not post the failing status (${st.detail}).\n`);
+    }
+    die(`${AGENTS[agent]} did not return a review: ${verdict.reason}`);
+  }
+
+  const body = buildComment(AGENTS[agent], scopeNote ? `${scopeNote}\n\n---\n\n${findings}` : findings, {
+    lens,
+    version: cliVersionNote(agent),
+    reReview,
+  });
   if (dryRun) {
     process.stdout.write(body);
     process.stderr.write('\n(dry-run — no comment posted)\n');
   } else {
     const url = postComment(pr, repo, body);
     process.stderr.write(`✓ Review comment posted${url ? `: ${url}` : ''}\n`);
+    const st = postReviewStatus({ pr, repo, state: 'success', lens, description: `${AGENTS[agent]} — ${verdict.reason}` });
+    process.stderr.write(st.posted ? `✓ cross-review/${lens || 'general'} status: success.\n` : `⚠ review posted but its status did not (${st.detail}).\n`);
   }
 }
 
-main();
+// Guarded so importing this module for its pure helpers does not run a review.
+const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) main();

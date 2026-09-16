@@ -109,13 +109,21 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
   for (const list of ['deny', 'ask']) {
     for (const rule of perms[list] ?? []) {
       const e = entries.find((x) => x.list === list && x.rule === rule);
-      if (!e) findings.push({ kind: 'uncited-rule', detail: `${list}: ${rule} has no ledger entry citing what it enforces` });
-      else if (!String(e.cites || '').trim()) findings.push({ kind: 'uncited-rule', detail: `${list}: ${rule} has an empty 'cites'` });
+      if (!e)
+        findings.push({
+          kind: 'uncited-rule',
+          detail: `${list}: ${rule} has no ledger entry citing what it enforces`,
+        });
+      else if (!String(e.cites || '').trim())
+        findings.push({ kind: 'uncited-rule', detail: `${list}: ${rule} has an empty 'cites'` });
     }
   }
   for (const e of entries) {
     if (!(perms[e.list] ?? []).includes(e.rule)) {
-      findings.push({ kind: 'stale-ledger', detail: `ledger ${e.list}: ${e.rule} is not in settings — a promised guardrail is gone` });
+      findings.push({
+        kind: 'stale-ledger',
+        detail: `ledger ${e.list}: ${e.rule} is not in settings — a promised guardrail is gone`,
+      });
       continue;
     }
     const p = parseRule(e.rule);
@@ -123,26 +131,52 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
     // typo'd path denies nothing and would otherwise read as a guardrail.
     if ((p?.tool === 'Edit' || p?.tool === 'Write') && p.pattern && !p.pattern.includes('*')) {
       if (!exists(p.pattern.replace(/^\//, ''))) {
-        findings.push({ kind: 'probe-mismatch', detail: `${e.list}: ${e.rule} protects a path that does not exist` });
+        findings.push({
+          kind: 'probe-mismatch',
+          detail: `${e.list}: ${e.rule} protects a path that does not exist`,
+        });
       }
     }
     if (p?.tool === 'Bash' && p.pattern !== null) {
       if (!e.probe) findings.push({ kind: 'no-probe', detail: `${e.list}: ${e.rule} has no probe command` });
       else if (!bashRuleMatches(p.pattern, e.probe)) {
-        findings.push({ kind: 'probe-mismatch', detail: `${e.list}: probe '${e.probe}' is not matched by ${e.rule}` });
+        findings.push({
+          kind: 'probe-mismatch',
+          detail: `${e.list}: probe '${e.probe}' is not matched by ${e.rule}`,
+        });
       }
     }
   }
   const bashDeny = (perms.deny ?? []).map(parseRule).filter((p) => p?.tool === 'Bash' && p.pattern !== null);
   for (const probe of REQUIRED_REFUSALS) {
     if (!bashDeny.some((p) => bashRuleMatches(p.pattern, probe))) {
-      findings.push({ kind: 'missing-guardrail', detail: `no deny rule refuses '${probe}' — a required guardrail is gone` });
+      findings.push({
+        kind: 'missing-guardrail',
+        detail: `no deny rule refuses '${probe}' — a required guardrail is gone`,
+      });
     }
   }
   for (const rule of perms.allow ?? []) {
-    if (looksLiteral(rule)) findings.push({ kind: 'literal-allow', detail: `allow: ${rule} is a one-off command, not a verb class` });
+    if (looksLiteral(rule))
+      findings.push({
+        kind: 'literal-allow',
+        detail: `allow: ${rule} is a one-off command, not a verb class`,
+      });
   }
   for (const { path, json } of projectFiles) {
+    // The accretion actually happens in `.claude/settings.local.json` — untracked, per-machine, invisible
+    // to CI. Sweeping only the committed list would leave the file this whole story is about unchecked.
+    // A one-off command there is a finding: generalize it into the committed list, or drop it.
+    if (path.endsWith('.local.json')) {
+      for (const rule of json?.permissions?.allow ?? []) {
+        if (looksLiteral(rule)) {
+          findings.push({
+            kind: 'literal-local-allow',
+            detail: `${path}: ${rule} is a one-off approval — generalize it into the committed allow list or drop it`,
+          });
+        }
+      }
+    }
     const mode = json?.permissions?.defaultMode;
     if (mode === 'auto' || mode === 'bypassPermissions') {
       findings.push({
@@ -160,11 +194,17 @@ export function describeUserMode(readJson) {
   try {
     json = readJson();
   } catch {
-    return { state: 'unavailable', text: 'user settings unreadable here (CI, or no ~/.claude) — user-level auto mode NOT verified' };
+    return {
+      state: 'unavailable',
+      text: 'user settings unreadable here (CI, or no ~/.claude) — user-level auto mode NOT verified',
+    };
   }
   const mode = json?.permissions?.defaultMode;
   if (mode === 'auto') return { state: 'auto', text: 'user-level defaultMode is auto ✓' };
-  return { state: 'other', text: `user-level defaultMode is ${mode ? `"${mode}"` : 'unset (the plan default applies)'} — set "auto" in ~/.claude/settings.json` };
+  return {
+    state: 'other',
+    text: `user-level defaultMode is ${mode ? `"${mode}"` : 'unset (the plan default applies)'} — set "auto" in ~/.claude/settings.json`,
+  };
 }
 
 /** Parse a headless `claude -p --output-format json` result into the set of refused commands. */
@@ -217,7 +257,9 @@ function runStatic() {
   const settingsPath = join(REPO, '.claude', 'settings.json');
   const ledgerPath = join(REPO, '.claude', 'permissions-ledger.json');
   if (!existsSync(settingsPath) || !existsSync(ledgerPath)) {
-    process.stderr.write(`✗ permissions-smoke: missing ${existsSync(settingsPath) ? ledgerPath : settingsPath} — nothing to check is a FAILURE, not a pass.\n`);
+    process.stderr.write(
+      `✗ permissions-smoke: missing ${existsSync(settingsPath) ? ledgerPath : settingsPath} — nothing to check is a FAILURE, not a pass.\n`
+    );
     process.exit(1);
   }
   const projectFiles = ['settings.json', 'settings.local.json']
@@ -226,7 +268,12 @@ function runStatic() {
     .map((p) => ({ path: p.slice(REPO.length + 1), json: readJsonFile(p) }));
   const settings = readJsonFile(settingsPath);
   const ledger = readJsonFile(ledgerPath);
-  const findings = checkContract({ settings, ledger, projectFiles, exists: (rel) => existsSync(join(REPO, rel)) });
+  const findings = checkContract({
+    settings,
+    ledger,
+    projectFiles,
+    exists: (rel) => existsSync(join(REPO, rel)),
+  });
   const p = settings.permissions ?? {};
   const user = describeUserMode(() => readJsonFile(join(homedir(), '.claude', 'settings.json')));
 
@@ -239,7 +286,9 @@ function runStatic() {
     for (const f of findings) process.stderr.write(`  ✗ [${f.kind}] ${f.detail}\n`);
     process.exit(1);
   }
-  process.stdout.write('✓ contract holds: every deny/ask rule cited and probed, allow list is verb classes, no project-level auto mode.\n');
+  process.stdout.write(
+    '✓ contract holds: every deny/ask rule cited and probed, allow list is verb classes, no project-level auto mode.\n'
+  );
 }
 
 function runLive() {
@@ -274,45 +323,96 @@ function runLive() {
     mkdirSync(join(proj, '.claude'), { recursive: true });
     // `dontAsk` refuses anything not allowed, so each probed PROGRAM is allowed wholesale: the only
     // thing left that can refuse a probe is the deny/ask list under test (the baseline proves it).
-    writeFileSync(join(proj, '.claude', 'settings.json'), JSON.stringify({
-      permissions: { defaultMode: 'dontAsk', allow: ['probe-ok', ...programs].map((p) => `Bash(${p} *)`), ...perms },
-    }, null, 2));
+    writeFileSync(
+      join(proj, '.claude', 'settings.json'),
+      JSON.stringify(
+        {
+          permissions: {
+            defaultMode: 'dontAsk',
+            allow: ['probe-ok', ...programs].map((p) => `Bash(${p} *)`),
+            ...perms,
+          },
+        },
+        null,
+        2
+      )
+    );
     const prompt = [
       'Automated permission-rule test. Every program named below is a harmless logging shim on PATH.',
       'Run each command EXACTLY as written, one Bash tool call per command, in order, continuing after any refusal:',
       ...commands,
     ].join('\n');
-    const r = spawnSync('claude', ['-p', prompt, '--model', 'haiku', '--setting-sources', 'project', '--tools', 'Bash',
-      '--output-format', 'json', '--no-session-persistence'],
-    { cwd: proj, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, timeout: 900_000 });
+    const r = spawnSync(
+      'claude',
+      [
+        '-p',
+        prompt,
+        '--model',
+        'haiku',
+        '--setting-sources',
+        'project',
+        '--tools',
+        'Bash',
+        '--output-format',
+        'json',
+        '--no-session-persistence',
+      ],
+      {
+        cwd: proj,
+        encoding: 'utf8',
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+        timeout: 900_000,
+      }
+    );
     let parsed;
     try {
       parsed = JSON.parse(r.stdout);
     } catch {
-      process.stderr.write(`✗ ${name}: no parseable session result — UNAVAILABLE, not passed.\n${(r.stderr || '').slice(0, 400)}\n`);
+      process.stderr.write(
+        `✗ ${name}: no parseable session result — UNAVAILABLE, not passed.\n${(r.stderr || '').slice(0, 400)}\n`
+      );
       process.exit(2);
     }
-    return { refused: refusedCommands(parsed), shimLog: readFileSync(log, 'utf8').split('\n').filter(Boolean) };
+    return {
+      refused: refusedCommands(parsed),
+      shimLog: readFileSync(log, 'utf8').split('\n').filter(Boolean),
+    };
   };
   const report = (title, score) => {
-    process.stdout.write(`${title}: ${score.ok ? 'OK' : 'FAILED'} (control ran: ${score.controlRan ? 'yes' : 'NO'})\n`);
+    process.stdout.write(
+      `${title}: ${score.ok ? 'OK' : 'FAILED'} (control ran: ${score.controlRan ? 'yes' : 'NO'})\n`
+    );
     for (const res of score.results) process.stdout.write(`  ${res.verdict.padEnd(13)} ${res.cmd}\n`);
   };
 
   // 1. Safety: the shims must shadow the real binaries before any probe is sent.
   const shadow = shadowCheck({ ...session('shadow', {}, ['probe-ok control']), programs, binDir: bin });
   if (!shadow.ok) {
-    process.stderr.write(`✗ UNSAFE — real binaries reachable ahead of the shims, no probe sent: ${shadow.unsafe.map((u) => `${u.prog} → ${u.where}`).join(', ')}\n`);
+    process.stderr.write(
+      `✗ UNSAFE — real binaries reachable ahead of the shims, no probe sent: ${shadow.unsafe.map((u) => `${u.prog} → ${u.where}`).join(', ')}\n`
+    );
     process.exit(2);
   }
   // 2. Baseline: with NO deny/ask rules every probe must run. Otherwise a refusal proves nothing.
-  const base = scoreLive({ probes, ...session('baseline', {}, ['probe-ok control', ...probes]), expect: 'ran' });
+  const base = scoreLive({
+    probes,
+    ...session('baseline', {}, ['probe-ok control', ...probes]),
+    expect: 'ran',
+  });
   report('baseline (no rules — every probe must RUN)', base);
   if (!base.ok) process.exit(2);
   // 3. The rules under test: every probe refused, none reached its shim.
-  const live = scoreLive({ probes, ...session('rules', { deny: settings.permissions.deny ?? [], ask: settings.permissions.ask ?? [] }, ['probe-ok control', ...probes]) });
+  const live = scoreLive({
+    probes,
+    ...session('rules', { deny: settings.permissions.deny ?? [], ask: settings.permissions.ask ?? [] }, [
+      'probe-ok control',
+      ...probes,
+    ]),
+  });
   report('with the committed rules (every probe must be REFUSED)', live);
-  process.stdout.write('note: under dontAsk an ask rule also refuses, so this replay cannot tell deny from ask — the static contract pins which list each rule is in.\n');
+  process.stdout.write(
+    'note: under dontAsk an ask rule also refuses, so this replay cannot tell deny from ask — the static contract pins which list each rule is in.\n'
+  );
   process.exit(live.ok ? 0 : 1);
 }
 

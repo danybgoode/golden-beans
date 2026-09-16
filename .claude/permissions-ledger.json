@@ -58,25 +58,25 @@
     {
       "list": "deny",
       "rule": "Bash(supabase db push*)",
-      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase db push"
     },
     {
       "list": "deny",
       "rule": "Bash(supabase * db push*)",
-      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase --debug db push"
     },
     {
       "list": "deny",
       "rule": "Bash(npx supabase db push*)",
-      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "npx supabase db push"
     },
     {
       "list": "deny",
       "rule": "Bash(supabase db reset*)",
-      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase db reset --linked"
     },
     {
@@ -338,55 +338,55 @@
     {
       "list": "ask",
       "rule": "Bash(vercel env add *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "vercel env add SMOKE_VAR production"
     },
     {
       "list": "ask",
       "rule": "Bash(vercel env rm *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "vercel env rm SMOKE_VAR production"
     },
     {
       "list": "ask",
       "rule": "Bash(vercel env update *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "vercel env update SMOKE_VAR production"
     },
     {
       "list": "ask",
       "rule": "Bash(gh secret set *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gh secret set SMOKE_SECRET"
     },
     {
       "list": "ask",
       "rule": "Bash(gh secret delete *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gh secret delete SMOKE_SECRET"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud secrets create *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud secrets create smoke-secret"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud secrets delete *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud secrets delete smoke-secret"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud secrets versions add *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud secrets versions add smoke-secret --data-file=x"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud secrets versions destroy *)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud secrets versions destroy 1 --secret=smoke-secret"
     },
     {
@@ -404,13 +404,13 @@
     {
       "list": "ask",
       "rule": "Bash(gcloud run services update *--set-secrets*)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud run services update svc --set-secrets=A=s:1"
     },
     {
       "list": "ask",
       "rule": "Bash(gcloud run services update *--update-secrets*)",
-      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud run services update svc --update-secrets=A=s:1"
     },
     {
@@ -422,8 +422,68 @@
     {
       "list": "ask",
       "rule": "Bash(gcloud run deploy *)",
-      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven. A CLI Cloud Run deploy is an out-of-band production release; it asks rather than being denied because ops recovery occasionally needs one.",
+      "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud run deploy svc --image=x"
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/tokens.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/tokens.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/tokens.ts)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/tokens.ts)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/reference.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/reference.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/coverage.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/coverage.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/STATE-CONTRACT.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/STATE-CONTRACT.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/STATE-MATCH.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/STATE-MATCH.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
     }
   ]
 }

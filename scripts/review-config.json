@@ -1,0 +1,18 @@
+{
+  "_about": "Which PRs get which review layers (ways-of-work-lean-pass D5/D7). reviewScope 'every-pr' = the fresh pr-reviewer subagent + one external general pass on every non-trivial PR. securityPaths decides the lean external security lens (cross-review.mjs --lens security) in every scope: the multi-tenant read paths, auth/tokens, the public and connector surfaces, migrations, middleware and CI config.",
+  "reviewScope": "every-pr",
+  "securityPaths": [
+    "apps/web/app/api/**",
+    "apps/web/lib/auth*",
+    "apps/web/lib/connector-tokens*",
+    "apps/web/lib/public-demo*",
+    "apps/web/lib/supabase*",
+    "apps/web/lib/rate-limit*",
+    "apps/web/lib/site-url*",
+    "apps/web/middleware.ts",
+    "apps/web/supabase/migrations/*.sql",
+    "packages/sdk/src/**",
+    ".github/workflows/**",
+    ".claude/settings.json"
+  ]
+}
