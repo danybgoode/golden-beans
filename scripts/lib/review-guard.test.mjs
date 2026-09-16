@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   assertReviewOutput,
   commitStatusArgs,
@@ -8,6 +11,7 @@ import {
   isReReview,
   parseReviewConfig,
   postReviewStatus,
+  reviewMarker,
 } from './review-guard.mjs';
 
 // Real reply shapes, excerpted from cross-review comments posted on this operation's PRs. Measured
@@ -85,6 +89,59 @@ test('security pass: path match or declared high risk triggers; neither does not
   );
 });
 
+test("the SHIPPED globs trigger on an App Router's route files, not just on basenames", () => {
+  // Every route file in an App Router is called `route.ts`, so a basename glob like `**/*webhook*` is
+  // near-dead there — the directory carries the meaning. Found by the fresh review of dobby-foundation#11.
+  // Derived from THIS repo's own config: a hardcoded path silently stops testing anything in a repo
+  // whose globs differ.
+  const cfg = parseReviewConfig(
+    JSON.parse(
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'review-config.json'), 'utf8')
+    )
+  );
+  const materialise = (glob) =>
+    glob
+      .replace(/\*\*\//g, 'x/')
+      .replace(/\/\*\*/g, '/x')
+      .replace(/\*/g, 'x');
+  for (const glob of cfg.securityPaths) {
+    const path = materialise(glob);
+    assert.equal(
+      decideSecurityPass({ files: [path], securityPaths: cfg.securityPaths }).run,
+      true,
+      `glob ${glob} does not match its own shape ${path}`
+    );
+    // The App Router case: a file INSIDE a security directory, named route.ts like every other one.
+    if (glob.endsWith('/**')) {
+      const routeFile = `${materialise(glob.slice(0, -3))}/route.ts`;
+      assert.equal(
+        decideSecurityPass({ files: [routeFile], securityPaths: cfg.securityPaths }).run,
+        true,
+        `a route file under ${glob} does not trigger: ${routeFile}`
+      );
+    }
+  }
+  for (const p of ['components/Button.tsx', 'docs/readme.md', 'Roadmap/09-platform-infra/x/README.md']) {
+    assert.equal(
+      decideSecurityPass({ files: [p], securityPaths: cfg.securityPaths }).run,
+      false,
+      `should NOT trigger: ${p}`
+    );
+  }
+});
+
+test('a plain-prose "low-risk high-value" body is not a risk declaration', () => {
+  const securityPaths = ['**/auth/**'];
+  assert.equal(
+    decideSecurityPass({ files: ['x.md'], body: 'a low-risk high-value change', securityPaths }).run,
+    false
+  );
+  assert.equal(
+    decideSecurityPass({ files: ['x.md'], body: '**Risk tier: HIGH** (auth)', securityPaths }).run,
+    true
+  );
+});
+
 test('review config is validated, never defaulted', () => {
   assert.deepEqual(
     parseReviewConfig({ reviewScope: 'every-pr', securityPaths: ['**/auth/**'] }).reviewScope,
@@ -132,6 +189,45 @@ test('postReviewStatus resolves the head, posts, and reports a failure instead o
   );
   assert.equal(down.posted, false);
   assert.match(down.detail, /404/);
+});
+
+test('a RETRY on the same commit is not a re-review — only a new commit is', () => {
+  const first = `### 🔎 Cross-agent review (Codex)${reviewMarker({ sha: 'aaa111' })}`;
+  // Same commit: the previous run may have died posting its status. Suppressing Should-fix and nits
+  // here would silently shrink the only review that PR ever got.
+  assert.equal(isReReview([first], null, 'aaa111'), false);
+  // New commit: the author pushed a fix — Blocking/Should-fix only.
+  assert.equal(isReReview([first], null, 'bbb222'), true);
+  // A comment from before markers existed: conservative side, treat as a re-review.
+  assert.equal(isReReview(['### 🔎 Cross-agent review (Codex)'], null, 'aaa111'), true);
+  // The security lens's own marker does not silence the general pass, or vice versa.
+  const sec = `### 🔐 Cross-agent review — security lens (Codex)${reviewMarker({ lens: 'security', sha: 'aaa111' })}`;
+  assert.equal(isReReview([sec], null, 'aaa111'), false);
+  assert.equal(isReReview([sec], 'security', 'aaa111'), false);
+  assert.equal(isReReview([sec], 'security', 'ccc333'), true);
+});
+
+test('postReviewStatus pins the reviewed sha and refuses a partial payload instead of throwing', () => {
+  const calls = [];
+  const spawn = (cmd, args) => {
+    calls.push(args);
+    return { status: 0, stdout: '{}' };
+  };
+  // With an explicit sha and repo it never needs to ask gh where the head is — so a push mid-review
+  // cannot move the status onto an unreviewed commit.
+  const pinned = postReviewStatus(
+    { pr: 7, repo: 'o/r', state: 'success', sha: 'deadbeefcafe', description: 'd' },
+    { spawn }
+  );
+  assert.equal(pinned.posted, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][3], 'repos/o/r/statuses/deadbeefcafe');
+  const partial = postReviewStatus(
+    { pr: 7, state: 'success', description: 'd' },
+    { spawn: () => ({ status: 0, stdout: '{"url":"https://github.com/o/r/pull/7"}' }) }
+  );
+  assert.equal(partial.posted, false);
+  assert.match(partial.detail, /no usable head sha/);
 });
 
 test('re-review detection is per lens', () => {

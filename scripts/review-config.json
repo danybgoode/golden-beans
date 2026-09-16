@@ -1,5 +1,5 @@
 {
-  "_about": "Which PRs get which review layers (ways-of-work-lean-pass D5/D7). reviewScope 'every-pr' = the fresh pr-reviewer subagent + one external general pass on every non-trivial PR. securityPaths decides the lean external security lens (cross-review.mjs --lens security) in every scope: the multi-tenant read paths, auth/tokens, the public and connector surfaces, migrations, middleware and CI config.",
+  "_about": "Which PRs get which review layers (ways-of-work-lean-pass D5/D7). reviewScope 'every-pr' = the fresh pr-reviewer subagent + one external general pass on every non-trivial PR. securityPaths decides the lean external security lens (cross-review.mjs --lens security) in every scope: the multi-tenant read paths, auth/tokens, the public and connector surfaces, migrations, middleware and CI config. NOTE: a basename glob like `**/*webhook*` matches a FILE named for it; in an App Router every route file is `route.ts`, so each basename glob is paired with a `/**` directory form.",
   "reviewScope": "every-pr",
   "securityPaths": [
     "apps/web/app/api/**",
