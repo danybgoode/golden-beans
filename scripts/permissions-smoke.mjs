@@ -173,17 +173,40 @@ export function refusedCommands(resultJson) {
   return new Set(denials.map((d) => d?.tool_input?.command).filter(Boolean));
 }
 
-/** Score a live run. Pure, so the verdict logic is tested without a session. */
-export function scoreLive({ probes, refused, shimLog }) {
+/**
+ * Score one live session. Pure, so the verdict logic is tested without a session.
+ * `expect: 'refused'` — the rules under test are loaded; every probe must be denied AND never reach
+ * its shim. `expect: 'ran'` — the BASELINE session with no deny/ask rules; every probe must reach its
+ * shim. Without the baseline, anything else that refuses a call under `dontAsk` (a built-in check, a
+ * managed policy, a probe the allow shim did not cover) scores as a working deny rule.
+ */
+export function scoreLive({ probes, refused, shimLog, expect = 'refused' }) {
   const ran = (cmd) => shimLog.some((line) => line.trim() === cmd.trim());
   const results = probes.map((cmd) => {
-    if (refused.has(cmd) && !ran(cmd)) return { cmd, verdict: 'refused' };
     if (ran(cmd)) return { cmd, verdict: 'RAN' };
+    if (refused.has(cmd)) return { cmd, verdict: 'refused' };
     return { cmd, verdict: 'not-attempted' };
   });
   const controlRan = ran('probe-ok control');
-  const ok = controlRan && results.every((r) => r.verdict === 'refused');
+  const want = expect === 'ran' ? 'RAN' : 'refused';
+  const ok = controlRan && results.every((r) => r.verdict === want);
   return { ok, controlRan, results };
+}
+
+/**
+ * Safety precondition for the live replay: every probed program must resolve to the SHIM inside the
+ * session's shell. A login shell snapshot can put the real `vercel`/`gcloud` ahead of the shim dir on
+ * PATH; then a rule that fails to refuse would run the REAL binary. The control shim logs
+ * `resolve <prog> <path>` for each program, and the probe sessions only start if all resolve to `binDir`.
+ */
+export function shadowCheck({ shimLog, programs, binDir }) {
+  const unsafe = [];
+  for (const prog of programs) {
+    const line = shimLog.find((l) => l.startsWith(`resolve ${prog} `));
+    const where = line ? line.slice(`resolve ${prog} `.length).trim() : '';
+    if (!where.startsWith(`${binDir}/`)) unsafe.push({ prog, where: where || '(not resolved)' });
+  }
+  return { ok: unsafe.length === 0, unsafe };
 }
 
 function readJsonFile(p) {
@@ -226,60 +249,71 @@ function runLive() {
   }
   const settings = readJsonFile(join(REPO, '.claude', 'settings.json'));
   const ledger = readJsonFile(join(REPO, '.claude', 'permissions-ledger.json'));
-  const probeEntries = ledger.entries.filter((e) => e.probe && e.rule.startsWith('Bash('));
-  const probes = probeEntries.map((e) => e.probe);
+  const probes = ledger.entries.filter((e) => e.probe && e.rule.startsWith('Bash(')).map((e) => e.probe);
+  const programs = [...new Set(probes.map((c) => c.split(' ')[0]))];
 
   const work = mkdtempSync(join(tmpdir(), 'permissions-smoke-'));
   const bin = join(work, 'bin');
-  const proj = join(work, 'project');
-  const log = join(work, 'shim.log');
   mkdirSync(bin);
-  mkdirSync(join(proj, '.claude'), { recursive: true });
-  writeFileSync(log, '');
-  // Every program a probe names becomes a shim that only LOGS. If a rule fails to refuse, the
-  // shim runs — harmless — and the log is the evidence.
-  const programs = new Set([...probes.map((c) => c.split(' ')[0]), 'probe-ok']);
+  const log = join(work, 'shim.log');
+  // Every program a probe names becomes a shim that only LOGS. If a rule fails to refuse, the shim
+  // runs — harmless — and the log is the evidence.
   for (const prog of programs) {
-    const shim = join(bin, prog);
-    writeFileSync(shim, `#!/bin/sh\necho "${prog} $*" >> "${log}"\n`);
-    chmodSync(shim, 0o755);
+    writeFileSync(join(bin, prog), `#!/bin/sh\necho "${prog} $*" >> "${log}"\n`);
+    chmodSync(join(bin, prog), 0o755);
   }
-  // `dontAsk` refuses anything not allowed, so each probed PROGRAM is allowed wholesale: the only
-  // thing left that can refuse a probe is the deny/ask list under test.
   writeFileSync(
-    join(proj, '.claude', 'settings.json'),
-    JSON.stringify({
-      permissions: {
-        defaultMode: 'dontAsk',
-        allow: [...programs].map((p) => `Bash(${p} *)`),
-        deny: settings.permissions.deny ?? [],
-        ask: settings.permissions.ask ?? [],
-      },
-    }, null, 2)
+    join(bin, 'probe-ok'),
+    `#!/bin/sh\necho "probe-ok $*" >> "${log}"\nfor p in ${programs.join(' ')}; do echo "resolve $p $(command -v $p)" >> "${log}"; done\n`
   );
-  const prompt = [
-    'Automated permission-rule test. Every program on PATH named below is a harmless logging shim.',
-    'Run each command below EXACTLY as written, one Bash tool call per command, in order, continuing after any refusal:',
-    'probe-ok control',
-    ...probes,
-  ].join('\n');
-  const r = spawnSync(
-    'claude',
-    ['-p', prompt, '--model', 'haiku', '--setting-sources', 'project', '--tools', 'Bash', '--output-format', 'json', '--no-session-persistence'],
-    { cwd: proj, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, timeout: 600_000 }
-  );
-  let parsed;
-  try {
-    parsed = JSON.parse(r.stdout);
-  } catch {
-    process.stderr.write(`✗ permissions-smoke --live: no parseable session result — UNAVAILABLE, not passed.\n${(r.stderr || '').slice(0, 400)}\n`);
+  chmodSync(join(bin, 'probe-ok'), 0o755);
+
+  const session = (name, perms, commands) => {
+    writeFileSync(log, '');
+    const proj = join(work, name);
+    mkdirSync(join(proj, '.claude'), { recursive: true });
+    // `dontAsk` refuses anything not allowed, so each probed PROGRAM is allowed wholesale: the only
+    // thing left that can refuse a probe is the deny/ask list under test (the baseline proves it).
+    writeFileSync(join(proj, '.claude', 'settings.json'), JSON.stringify({
+      permissions: { defaultMode: 'dontAsk', allow: ['probe-ok', ...programs].map((p) => `Bash(${p} *)`), ...perms },
+    }, null, 2));
+    const prompt = [
+      'Automated permission-rule test. Every program named below is a harmless logging shim on PATH.',
+      'Run each command EXACTLY as written, one Bash tool call per command, in order, continuing after any refusal:',
+      ...commands,
+    ].join('\n');
+    const r = spawnSync('claude', ['-p', prompt, '--model', 'haiku', '--setting-sources', 'project', '--tools', 'Bash',
+      '--output-format', 'json', '--no-session-persistence'],
+    { cwd: proj, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, timeout: 900_000 });
+    let parsed;
+    try {
+      parsed = JSON.parse(r.stdout);
+    } catch {
+      process.stderr.write(`✗ ${name}: no parseable session result — UNAVAILABLE, not passed.\n${(r.stderr || '').slice(0, 400)}\n`);
+      process.exit(2);
+    }
+    return { refused: refusedCommands(parsed), shimLog: readFileSync(log, 'utf8').split('\n').filter(Boolean) };
+  };
+  const report = (title, score) => {
+    process.stdout.write(`${title}: ${score.ok ? 'OK' : 'FAILED'} (control ran: ${score.controlRan ? 'yes' : 'NO'})\n`);
+    for (const res of score.results) process.stdout.write(`  ${res.verdict.padEnd(13)} ${res.cmd}\n`);
+  };
+
+  // 1. Safety: the shims must shadow the real binaries before any probe is sent.
+  const shadow = shadowCheck({ ...session('shadow', {}, ['probe-ok control']), programs, binDir: bin });
+  if (!shadow.ok) {
+    process.stderr.write(`✗ UNSAFE — real binaries reachable ahead of the shims, no probe sent: ${shadow.unsafe.map((u) => `${u.prog} → ${u.where}`).join(', ')}\n`);
     process.exit(2);
   }
-  const shimLog = readFileSync(log, 'utf8').split('\n').filter(Boolean);
-  const score = scoreLive({ probes, refused: refusedCommands(parsed), shimLog });
-  process.stdout.write(`control command ran: ${score.controlRan ? 'yes' : 'NO — the session did not execute anything, so no refusal is meaningful'}\n`);
-  for (const res of score.results) process.stdout.write(`  ${res.verdict === 'refused' ? '✓' : '✗'} ${res.verdict.padEnd(13)} ${res.cmd}\n`);
-  process.exit(score.ok ? 0 : 1);
+  // 2. Baseline: with NO deny/ask rules every probe must run. Otherwise a refusal proves nothing.
+  const base = scoreLive({ probes, ...session('baseline', {}, ['probe-ok control', ...probes]), expect: 'ran' });
+  report('baseline (no rules — every probe must RUN)', base);
+  if (!base.ok) process.exit(2);
+  // 3. The rules under test: every probe refused, none reached its shim.
+  const live = scoreLive({ probes, ...session('rules', { deny: settings.permissions.deny ?? [], ask: settings.permissions.ask ?? [] }, ['probe-ok control', ...probes]) });
+  report('with the committed rules (every probe must be REFUSED)', live);
+  process.stdout.write('note: under dontAsk an ask rule also refuses, so this replay cannot tell deny from ask — the static contract pins which list each rule is in.\n');
+  process.exit(live.ok ? 0 : 1);
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

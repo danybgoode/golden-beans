@@ -10,6 +10,7 @@ import {
   looksLiteral,
   refusedCommands,
   scoreLive,
+  shadowCheck,
 } from './permissions-smoke.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +31,7 @@ test('the deny list names the guardrails the process promises', () => {
 
 test('ordinary builder commands are NOT caught by the deny list (a guard must allow the negation)', () => {
   const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
-  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git commit --amend --no-edit', 'git commit -m "fix: add -a flag docs"', 'git add scripts/a.mjs', 'rm -r build', 'vercel env ls', 'supabase migration list', 'git push --follow-tags origin feat/x']) {
+  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git push origin --delete feat/x', 'git commit --amend --no-edit', 'git commit -m "fix: add -a flag docs"', 'git add scripts/a.mjs', 'git add -u scripts/', 'rm -r build', 'vercel env ls', 'vercel ls --prod', 'supabase migration list', 'git push --follow-tags origin feat/x', 'git push --force-with-lease origin feat/x-s2']) {
     assert.ok(!deny.some((r) => bashRuleMatches(r.slice(5, -1), ok)), `deny list wrongly refuses: ${ok}`);
   }
 });
@@ -58,13 +59,13 @@ test('an uncited deny rule fails', () => {
 
 test('a ledger entry whose rule was deleted fails as stale', () => {
   const s = structuredClone(settings);
-  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db reset *)');
+  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db reset*)');
   assert.deepEqual(kinds(checkContract({ settings: s, ledger })), ['stale-ledger']);
 });
 
 test('a probe its own rule does not match fails (catches a typo in the rule)', () => {
   const l = structuredClone(ledger);
-  l.entries.find((e) => e.rule === 'Bash(supabase db push *)').probe = 'supabase db pushh';
+  l.entries.find((e) => e.rule === 'Bash(vercel promote*)').probe = 'vercel promot dpl_1';
   assert.deepEqual(kinds(checkContract({ settings, ledger: l })), ['probe-mismatch']);
 });
 
@@ -75,8 +76,30 @@ test('a file-tool deny rule protecting a path that does not exist fails', () => 
 
 test('staging or committing the whole tree by any common spelling is refused', () => {
   const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
-  for (const probe of ['git add -A', 'git add .', 'git add -u', 'git add --update', 'git commit -a -m x', 'git commit -am x', 'git commit --all -m x', 'git commit -m x -a']) {
+  for (const probe of ['git add -A', 'git add -Av', 'git add .', 'git add :/', 'git add -u', 'git add --update', 'git commit -a -m x', 'git commit -am x', 'git commit -qam x', 'git commit -av', 'git commit --all -m x', 'git commit -m x -a']) {
     assert.ok(deny.some((r) => bashRuleMatches(r.slice(5, -1), probe)), `not refused: ${probe}`);
+  }
+});
+
+test('force pushes, recursive deletes and CLI deploys are refused in the spellings agents actually write', () => {
+  const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
+  for (const probe of ['git push -fu origin x', 'git push origin x -f', 'git push --mirror origin', 'git -C ../r push -f origin x', 'git -C ../r push origin +main',
+    'rm -fR build', 'rm -rfv build', 'rm -vrf build', 'rm -R -f build', 'rm -r --force build', 'rm --recursive --force build',
+    'vercel --yes', 'vercel .', 'npx vercel --prod', 'npx supabase db push', 'supabase --debug db push']) {
+    assert.ok(deny.some((r) => bashRuleMatches(r.slice(5, -1), probe)), `not refused: ${probe}`);
+  }
+});
+
+test('a lease push to your own branch ASKS rather than being denied (a deny cannot be approved once)', () => {
+  const probe = 'git push --force-with-lease origin feat/x-s2';
+  assert.ok(settings.permissions.ask.some((r) => bashRuleMatches(r.slice(5, -1), probe)));
+  assert.ok(!settings.permissions.deny.some((r) => r.startsWith('Bash(') && bashRuleMatches(r.slice(5, -1), probe)));
+});
+
+test('the allow list never pre-approves a command that destroys uncommitted work (allowed commands skip the classifier)', () => {
+  const allow = settings.permissions.allow.filter((r) => r.startsWith('Bash('));
+  for (const bad of ['git checkout -- .', 'git checkout -f main', 'git restore .', 'git stash clear', 'git stash drop', 'git branch -D feat/x', 'git worktree remove --force x', 'git reset --hard', 'git clean -fd', "sed -n -i 's/a/b/' f", 'sort -o f f']) {
+    assert.ok(!allow.some((r) => bashRuleMatches(r.slice(5, -1), bad)), `allow list pre-approves: ${bad}`);
   }
 });
 
@@ -118,4 +141,21 @@ test('live scoring: refused only when denied AND the shim never ran; control mus
   assert.equal(silent.ok, false, 'a session that ran nothing proves nothing');
   const good = scoreLive({ probes: ['vercel deploy --prod'], refused: new Set(['vercel deploy --prod']), shimLog: ['probe-ok control'] });
   assert.equal(good.ok, true);
+});
+
+test('live baseline: without rules every probe must RUN — a refusal there means something else is refusing', () => {
+  const probes = ['vercel deploy --prod', 'supabase db push'];
+  const polluted = scoreLive({ probes, refused: new Set(['vercel deploy --prod']), shimLog: ['probe-ok control', 'supabase db push'], expect: 'ran' });
+  assert.equal(polluted.ok, false);
+  const clean = scoreLive({ probes, refused: new Set(), shimLog: ['probe-ok control', ...probes], expect: 'ran' });
+  assert.equal(clean.ok, true);
+});
+
+test('live shadow check: a program resolving outside the shim dir blocks every probe', () => {
+  const bin = '/tmp/x/bin';
+  const ok = shadowCheck({ shimLog: ['resolve vercel /tmp/x/bin/vercel', 'resolve git /tmp/x/bin/git'], programs: ['vercel', 'git'], binDir: bin });
+  assert.equal(ok.ok, true);
+  const bad = shadowCheck({ shimLog: ['resolve vercel /opt/homebrew/bin/vercel', 'resolve git /tmp/x/bin/git'], programs: ['vercel', 'git', 'gcloud'], binDir: bin });
+  assert.equal(bad.ok, false);
+  assert.deepEqual(bad.unsafe.map((u) => u.prog), ['vercel', 'gcloud']);
 });
