@@ -85,6 +85,11 @@
       "Bash(git add .)",
       "Bash(git commit -a *)",
       "Bash(git commit -am *)",
+      "Bash(git add -u *)",
+      "Bash(git add --update *)",
+      "Bash(git commit --all *)",
+      "Bash(git commit * -a)",
+      "Bash(git commit * --all)",
       "Edit(/Roadmap/00-ideas/BUILD-ORDER.md)",
       "Write(/Roadmap/00-ideas/BUILD-ORDER.md)"
     ],

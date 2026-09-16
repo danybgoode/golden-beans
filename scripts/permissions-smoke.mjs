@@ -73,14 +73,35 @@ export function looksLiteral(rule) {
   const p = parseRule(rule);
   if (!p || p.pattern === null) return false;
   if (p.tool !== 'Bash') return /^\/\/|^~/.test(p.pattern); // absolute Read/Edit grants are machine-local
-  return /["'`$|&;<>]|\s\/(?:Users|home|tmp|private)\//.test(p.pattern);
+  if (/["'`$|&;<>]|\s\/(?:Users|home|tmp|private)\//.test(p.pattern)) return true;
+  // A Bash allow rule with no wildcard is one exact command — `Bash(rm -rf .git)` looks innocent by
+  // character class. Only the named exact-match forms are verb classes in their own right.
+  return !p.pattern.includes('*') && !EXACT_ALLOW.test(p.pattern);
 }
+
+/** Exact-match allow rules that are verb classes despite having no wildcard. */
+export const EXACT_ALLOW = /^(?:[\w.-]+ --version|npm ci)$/;
+
+/**
+ * The guardrails the process PROMISES. Consistency checks alone pass on an empty deny list — deleting
+ * every rule and every ledger entry together would read green. These probes must each be refused by
+ * some deny rule in every project, whatever else it adds.
+ */
+export const REQUIRED_REFUSALS = [
+  'vercel deploy --prod',
+  'vercel --prod',
+  'supabase db push',
+  'git push --force origin main',
+  'rm -rf build',
+  'git add -A',
+  'git commit --all -m x',
+];
 
 /**
  * THE CONTRACT. Pure: settings + ledger + the project settings files' parsed contents → findings.
  * `projectFiles` is [{ path, json }] for `.claude/settings.json` and `.claude/settings.local.json`.
  */
-export function checkContract({ settings, ledger, projectFiles = [] }) {
+export function checkContract({ settings, ledger, projectFiles = [], exists = () => true }) {
   const findings = [];
   const perms = settings?.permissions ?? {};
   const entries = ledger?.entries ?? [];
@@ -98,11 +119,24 @@ export function checkContract({ settings, ledger, projectFiles = [] }) {
       continue;
     }
     const p = parseRule(e.rule);
+    // A file-tool rule has no command to probe; its probe is that the path it protects EXISTS. A
+    // typo'd path denies nothing and would otherwise read as a guardrail.
+    if ((p?.tool === 'Edit' || p?.tool === 'Write') && p.pattern && !p.pattern.includes('*')) {
+      if (!exists(p.pattern.replace(/^\//, ''))) {
+        findings.push({ kind: 'probe-mismatch', detail: `${e.list}: ${e.rule} protects a path that does not exist` });
+      }
+    }
     if (p?.tool === 'Bash' && p.pattern !== null) {
       if (!e.probe) findings.push({ kind: 'no-probe', detail: `${e.list}: ${e.rule} has no probe command` });
       else if (!bashRuleMatches(p.pattern, e.probe)) {
         findings.push({ kind: 'probe-mismatch', detail: `${e.list}: probe '${e.probe}' is not matched by ${e.rule}` });
       }
+    }
+  }
+  const bashDeny = (perms.deny ?? []).map(parseRule).filter((p) => p?.tool === 'Bash' && p.pattern !== null);
+  for (const probe of REQUIRED_REFUSALS) {
+    if (!bashDeny.some((p) => bashRuleMatches(p.pattern, probe))) {
+      findings.push({ kind: 'missing-guardrail', detail: `no deny rule refuses '${probe}' — a required guardrail is gone` });
     }
   }
   for (const rule of perms.allow ?? []) {
@@ -169,7 +203,7 @@ function runStatic() {
     .map((p) => ({ path: p.slice(REPO.length + 1), json: readJsonFile(p) }));
   const settings = readJsonFile(settingsPath);
   const ledger = readJsonFile(ledgerPath);
-  const findings = checkContract({ settings, ledger, projectFiles });
+  const findings = checkContract({ settings, ledger, projectFiles, exists: (rel) => existsSync(join(REPO, rel)) });
   const p = settings.permissions ?? {};
   const user = describeUserMode(() => readJsonFile(join(homedir(), '.claude', 'settings.json')));
 

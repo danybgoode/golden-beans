@@ -159,6 +159,36 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(git add -u *)",
+      "probe": "git add -u",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add --update *)",
+      "probe": "git add --update",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit --all *)",
+      "probe": "git commit --all -m smoke",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit * -a)",
+      "probe": "git commit -m smoke -a",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit * --all)",
+      "probe": "git commit -m smoke --all",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
       "rule": "Edit(/Roadmap/00-ideas/BUILD-ORDER.md)",
       "cites": "WAYS-OF-WORKING → Documentation map: BUILD-ORDER.md is generated — a hand edit is silently reverted by the next regeneration."
     },

@@ -30,7 +30,7 @@ test('the deny list names the guardrails the process promises', () => {
 
 test('ordinary builder commands are NOT caught by the deny list (a guard must allow the negation)', () => {
   const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
-  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git commit --amend --no-edit', 'git add scripts/a.mjs', 'rm -r build', 'vercel env ls', 'supabase migration list', 'git push --follow-tags origin feat/x']) {
+  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git commit --amend --no-edit', 'git commit -m "fix: add -a flag docs"', 'git add scripts/a.mjs', 'rm -r build', 'vercel env ls', 'supabase migration list', 'git push --follow-tags origin feat/x']) {
     assert.ok(!deny.some((r) => bashRuleMatches(r.slice(5, -1), ok)), `deny list wrongly refuses: ${ok}`);
   }
 });
@@ -42,6 +42,14 @@ test('matcher: trailing " *" matches the bare command; a mid wildcard does not',
   assert.equal(bashRuleMatches('git push * -f', 'git push origin main'), false);
 });
 
+test('deleting the whole deny list and its ledger together still fails (consistency is not coverage)', () => {
+  const s = structuredClone(settings);
+  s.permissions.deny = [];
+  s.permissions.ask = [];
+  const f = checkContract({ settings: s, ledger: { entries: [] } });
+  assert.ok(f.length >= 7 && f.every((x) => x.kind === 'missing-guardrail'), JSON.stringify(kinds(f)));
+});
+
 test('an uncited deny rule fails', () => {
   const s = structuredClone(settings);
   s.permissions.deny.push('Bash(terraform destroy *)');
@@ -50,7 +58,7 @@ test('an uncited deny rule fails', () => {
 
 test('a ledger entry whose rule was deleted fails as stale', () => {
   const s = structuredClone(settings);
-  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db push *)');
+  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db reset *)');
   assert.deepEqual(kinds(checkContract({ settings: s, ledger })), ['stale-ledger']);
 });
 
@@ -60,10 +68,25 @@ test('a probe its own rule does not match fails (catches a typo in the rule)', (
   assert.deepEqual(kinds(checkContract({ settings, ledger: l })), ['probe-mismatch']);
 });
 
+test('a file-tool deny rule protecting a path that does not exist fails', () => {
+  const f = checkContract({ settings, ledger, exists: (rel) => rel !== 'Roadmap/00-ideas/BUILD-ORDER.md' });
+  assert.deepEqual(kinds(f), ['probe-mismatch', 'probe-mismatch']);
+});
+
+test('staging or committing the whole tree by any common spelling is refused', () => {
+  const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
+  for (const probe of ['git add -A', 'git add .', 'git add -u', 'git add --update', 'git commit -a -m x', 'git commit -am x', 'git commit --all -m x', 'git commit -m x -a']) {
+    assert.ok(deny.some((r) => bashRuleMatches(r.slice(5, -1), probe)), `not refused: ${probe}`);
+  }
+});
+
 test('a literal past command in allow fails; verb classes pass', () => {
   assert.equal(looksLiteral(`Bash(sed -n '1,60p' app/page.tsx)`), true);
   assert.equal(looksLiteral('Bash(echo "tsc exit=$?")'), true);
   assert.equal(looksLiteral('Read(//Users/someone/**)'), true);
+  assert.equal(looksLiteral('Bash(rm -rf .git)'), true, 'an exact command with no wildcard is a one-off');
+  assert.equal(looksLiteral('Bash(npm ci)'), false);
+  assert.equal(looksLiteral('Bash(codex --version)'), false);
   assert.equal(looksLiteral('Bash(npm run *)'), false);
   assert.equal(looksLiteral('Bash(node scripts/*)'), false);
   const s = structuredClone(settings);
