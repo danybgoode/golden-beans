@@ -237,6 +237,36 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(git add -- .)",
+      "probe": "git add -- .",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add ./)",
+      "probe": "git add ./",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -- ./*)",
+      "probe": "git add -- ./",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -- :/*)",
+      "probe": "git add -- :/",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add * .)",
+      "probe": "git add -v .",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(git add :/*)",
       "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
       "probe": "git add :/"

@@ -31,7 +31,7 @@ test('the deny list names the guardrails the process promises', () => {
 
 test('ordinary builder commands are NOT caught by the deny list (a guard must allow the negation)', () => {
   const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
-  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git push origin --delete feat/x', 'git commit --amend --no-edit', 'git commit -m "fix: add -a flag docs"', 'git add scripts/a.mjs', 'git add -u scripts/', 'rm -r build', 'vercel env ls', 'vercel ls --prod', 'supabase migration list', 'git push --follow-tags origin feat/x', 'git push --force-with-lease origin feat/x-s2']) {
+  for (const ok of ['git push origin feat/x', 'git push -u origin feat/x', 'git push origin --delete feat/x', 'git commit --amend --no-edit', 'git commit -m "fix: add -a flag docs"', 'git add scripts/a.mjs', 'git add -u scripts/', 'git add -- scripts/a.mjs', 'git add ./scripts/a.mjs', 'rm -r build', 'vercel env ls', 'vercel ls --prod', 'supabase migration list', 'git push --follow-tags origin feat/x', 'git push --force-with-lease origin feat/x-s2']) {
     assert.ok(!deny.some((r) => bashRuleMatches(r.slice(5, -1), ok)), `deny list wrongly refuses: ${ok}`);
   }
 });
@@ -76,7 +76,7 @@ test('a file-tool deny rule protecting a path that does not exist fails', () => 
 
 test('staging or committing the whole tree by any common spelling is refused', () => {
   const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
-  for (const probe of ['git add -A', 'git add -Av', 'git add .', 'git add :/', 'git add -u', 'git add --update', 'git commit -a -m x', 'git commit -am x', 'git commit -qam x', 'git commit -av', 'git commit --all -m x', 'git commit -m x -a']) {
+  for (const probe of ['git add -A', 'git add -Av', 'git add .', 'git add :/', 'git add -u', 'git add --update', 'git commit -a -m x', 'git commit -am x', 'git commit -qam x', 'git commit -av', 'git commit --all -m x', 'git commit -m x -a', 'git add -- .', 'git add -- ./', 'git add -- :/', 'git add ./', 'git add -v .']) {
     assert.ok(deny.some((r) => bashRuleMatches(r.slice(5, -1), probe)), `not refused: ${probe}`);
   }
 });
