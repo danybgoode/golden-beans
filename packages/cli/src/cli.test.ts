@@ -6,7 +6,16 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as Module from 'node:module'
@@ -42,6 +51,11 @@ const { gitignoreCovers, readEnvValue, upsertEnvValue, ENV_KEYS } = await import
 const { VERSION } = await import('./version.ts')
 
 const TOKEN = `gf_pat_${'a'.repeat(32)}`
+
+/** A fetch that FAILS the test if it is reached — proof that a path answered without the network. */
+const noNetworkFetch = (() => {
+  throw new Error('the network must not be touched')
+}) as unknown as typeof fetch
 
 function capture() {
   const out: string[] = []
@@ -544,6 +558,54 @@ test('\u26a0\ufe0f gf init REFUSES when git does not actually ignore .env.local'
   assert.match(err.join('\n'), /git rm --cached/)
   // And the file is untouched — no credential was written into a tracked file.
   assert.equal(readFileSync(join(cwd, '.env.local'), 'utf8'), 'EXISTING=1\n')
+})
+
+test('\u26a0\ufe0f gf init REFUSES a symlinked .env.local, and writes nothing', async () => {
+  // The ignore check answers about the PATH; `writeFileSync` follows the LINK. An ignored
+  // `.env.local` pointing at a tracked file passes every check and then writes a live credential
+  // into a file git is watching — the outcome `ensureIgnored` exists to prevent, reached around it
+  // (cross-family review, Codex, round 2).
+  const env = sandbox({ GOLDEN_FRIJOLES_TOKEN: TOKEN, GOLDEN_FRIJOLES_PROJECT: 'acme' })
+  const cwd = mkdtempSync(join(tmpdir(), 'gf-link-'))
+  writeFileSync(join(cwd, '.gitignore'), '.env.local\n')
+  writeFileSync(join(cwd, 'tracked.env'), 'SECRET_ALREADY_COMMITTED=1\n')
+  symlinkSync(join(cwd, 'tracked.env'), join(cwd, '.env.local'))
+
+  const { writer, err } = capture()
+  const code = await run({
+    argv: ['init'],
+    writer,
+    env,
+    cwd,
+    fetchImpl: (() => {
+      throw new Error('nothing may be minted before the link is refused')
+    }) as unknown as typeof fetch,
+  })
+
+  assert.equal(code, EXIT.USAGE)
+  assert.match(err.join('\n'), /symlink/)
+  // The target is untouched — no credential followed the link.
+  assert.equal(readFileSync(join(cwd, 'tracked.env'), 'utf8'), 'SECRET_ALREADY_COMMITTED=1\n')
+})
+
+test('\u26a0\ufe0f --json --help emits ONE JSON document, not the plain-text help', async () => {
+  // `output.ts` states the contract in one line: under --json, stdout carries exactly one JSON
+  // document and nothing else. The help path wrote straight to the writer and bypassed the emitter,
+  // so an agent piping `gf --json --help` into a parser got a wall of prose (Codex, round 2).
+  for (const argv of [
+    ['--json', '--help'],
+    ['flags', 'ls', '--json', '--help'],
+    ['help', 'whoami', '--json'],
+  ]) {
+    const { writer, out, err } = capture()
+    const code = await run({ argv, writer, env: sandbox(), fetchImpl: noNetworkFetch })
+    assert.equal(code, EXIT.OK, argv.join(' '))
+    assert.equal(out.length, 1, `${argv.join(' ')} wrote ${out.length} times to stdout`)
+    assert.deepEqual(err, [], argv.join(' '))
+    const parsed = JSON.parse(out[0]) as { ok: boolean; help: unknown }
+    assert.equal(parsed.ok, true)
+    assert.ok(parsed.help, `${argv.join(' ')} carried no help payload`)
+  }
 })
 
 // ── the reading verbs ─────────────────────────────────────────────────────────────────────────
