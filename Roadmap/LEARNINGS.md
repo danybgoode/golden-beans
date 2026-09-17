@@ -1173,6 +1173,25 @@ one-liner + why + date shape.
   script, and write the spec that fails BEFORE the work starts.** The gate that caught it was red at
   `2889px in a 960px viewport` on day one. *(2026-08-28, console-ia-overhaul A20/A22.)*
 
+## Permissions & guardrails (ways-of-work-lean-pass, 2026-09-17)
+
+- **A deny rule matches command TEXT, and patching rules one at a time cannot close a rule CLASS.** A
+  leading assignment whose value contains an expansion (`PATH=/x:$PATH vercel deploy --prod`) was observed
+  live to escape a bare rule; patching only the rules someone had probed left `vercel --yes --prod`,
+  `rm -fr`, `supabase db reset` and `git -C <path> push --force` matching nothing — found one per review
+  round. Generate the three spellings (bare, `*=*`, `env *`) from a list the contract checks, so a
+  bare-only rule fails CI rather than waiting for a reader.
+- **`ask` escapes the same way, and an escaped ask is worse than an escaped deny** — it silently demotes
+  "a human decides" to "the classifier decides". Carry ask rules in all three spellings too.
+- **`*=*` matches an `=` anywhere in the line.** A `Bash(*=* vercel*)` catch-all hard-refused
+  `grep -rn --include=*.json vercel .` — ordinary reading, permanently blocked. Keep prefixed rules per
+  dangerous subcommand and pin the safe negations; a guard that rejects correct output gets bypassed.
+- **`Write(<path>)` rules are INERT** — Claude Code checks only `Edit(<path>)` for file tools, and a nested
+  `claude -p` refuses to start while one is present. This repo had seven of them on the design-system
+  files, all protecting nothing; the paired `Edit` rules were doing the whole job.
+- **An ALLOW skips the auto-mode classifier**, so the allow list is not "safe verbs" in the abstract — it is
+  the set of commands that run with no second look, and it must never contain one that destroys work.
+
 ## Delegating prose to a cheap model
 - **A cheap model summarising a dense engineering commit will fabricate, and its two failure modes are
   predictable enough to write into the prompt.** Measured over three live runs of
