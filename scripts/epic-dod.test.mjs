@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { citations, evaluate, frontmatter, ITEMS, parseTreeUrl, refKey } from './epic-dod.mjs';
+import {
+  citations,
+  effectiveBareRefsRepo,
+  evaluate,
+  frontmatter,
+  isRealClosedDate,
+  ITEMS,
+  parseTreeUrl,
+  refKey,
+} from './epic-dod.mjs';
 
 const README_SHIPPED = '---\nstatus: shipped   # closed\nslug: demo\n---\n# Epic\n';
 const README_OPEN = '---\nstatus: in-progress\nslug: demo\n---\n# Epic\n';
@@ -241,4 +250,39 @@ test('frontmatter strips inline comments and quotes', () => {
     status: 'shipped',
     slug: 'x',
   });
+});
+
+test('bareRefsRepo is honoured ONLY in a single-repo project — a sibling alias makes #N ambiguous again', () => {
+  // Found by codex on #17: resolving a bare `#143` against this repo when the epic also cites a sibling
+  // repo's #143 certifies the WRONG PR — a false green, not a miss.
+  assert.deepEqual(effectiveBareRefsRepo({ bareRefsRepo: 'o/r', aliases: { r: 'o/r' } }), {
+    repo: 'o/r',
+    note: 'bare #N means o/r',
+  });
+  const multi = effectiveBareRefsRepo({ bareRefsRepo: 'o/r', aliases: { r: 'o/r', sib: 'o/sibling' } });
+  assert.equal(multi.repo, null);
+  assert.match(multi.note, /IGNORED.*o\/sibling/);
+  assert.equal(effectiveBareRefsRepo({}).repo, null);
+});
+
+test('an epic with BOTH sprints_in and local sprint files fails — one epic, one source', () => {
+  const readme =
+    '---\nstatus: shipped\nslug: demo\nsprints_in: https://github.com/o/f/tree/main/Roadmap/x\n---\n';
+  const r = evaluate({
+    ...closedEpic,
+    readme,
+    externalDocs: { sprints: [{ name: 'sprint-1.md', text: '**Status:** ✅ o/r#1\n' }], retro: null },
+  });
+  assert.equal(r.items['sprints-ticked'].state, 'fail');
+  assert.match(r.items['sprints-merged'].detail, /one epic, one source/);
+  assert.equal(r.ok, false);
+});
+
+test('a retrospective date must EXIST, not merely match the shape', () => {
+  assert.equal(isRealClosedDate('_Closed: 2026-09-16_'), true);
+  assert.equal(isRealClosedDate('_Closed: 2026-99-99_'), false);
+  assert.equal(isRealClosedDate('_Closed: 2026-02-30_'), false);
+  assert.equal(isRealClosedDate('_Closed: <date>_'), false);
+  const r = evaluate({ ...closedEpic, retro: '_Closed: 2026-13-01_\n' });
+  assert.equal(r.items['retro-written'].state, 'fail');
 });

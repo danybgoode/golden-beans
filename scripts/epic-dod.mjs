@@ -111,6 +111,24 @@ export function citations(text, { aliases = {}, bareRefsRepo = null } = {}) {
 }
 
 /**
+ * `bareRefsRepo` is only trustworthy in a project whose epics never cite another repo. The moment the alias
+ * map names a SECOND repository, a bare `#N` is ambiguous again — and `#143` resolving to this repo's PR 143
+ * instead of the sibling's is a false GREEN, not a miss (found by codex on dobby-foundation#17). So the knob
+ * is honoured only in a single-repo config, and the reason is printed rather than silently applied.
+ */
+export function effectiveBareRefsRepo(cfg = {}) {
+  const repo = cfg.bareRefsRepo || null;
+  if (!repo) return { repo: null, note: 'bareRefsRepo is not set' };
+  const others = [...new Set(Object.values(cfg.aliases || {}))].filter((r) => r !== repo);
+  return others.length
+    ? {
+        repo: null,
+        note: `bareRefsRepo is IGNORED — this project also cites ${others.join(', ')}, so a bare #N is ambiguous`,
+      }
+    : { repo, note: `bare #N means ${repo}` };
+}
+
+/**
  * THE DECISION. Pure. Facts in, one verdict per item out.
  * sprints: [{ name, text }] · verified: Map(refKey → 'merged' | 'unmerged' | 'unavailable')
  * branches: string[] of remote branch names, or null when the remote could not be read.
@@ -126,12 +144,16 @@ export function evaluate({
   exemptions = [],
   externalDocs = null,
   bareRefsRepo = null,
+  bareRefsNote = 'bareRefsRepo is not set',
 }) {
   const fm = frontmatter(readme);
   const items = {};
   // `sprints_in` is only trusted when the docs it names were actually READ: a typo'd URL must not turn the
   // sprint items green (found by codex on #179), and neither must a directory that exists but holds no
   // sprint files (found by codex on dobby-foundation#17). null = could not check.
+  // Two sources for the same sprints is a contradiction, and picking one silently is how a stale local copy
+  // certifies a remote that nobody read (found by codex on #17). Say it and fail.
+  const conflicted = Boolean(fm.sprints_in) && sprints.length > 0;
   const wantsExternal = Boolean(fm.sprints_in) && sprints.length === 0;
   const fetched = wantsExternal && externalDocs && Array.isArray(externalDocs.sprints);
   if (fetched) {
@@ -155,7 +177,11 @@ export function evaluate({
           detail: `README frontmatter status is '${fm.status || '(missing)'}'`,
         };
 
-  if (external) {
+  if (conflicted) {
+    const clash = `both a sprints_in (${fm.sprints_in}) and ${sprints.length} local sprint-N.md file(s) — one epic, one source: delete one`;
+    items['sprints-ticked'] = { state: 'fail', detail: clash };
+    items['sprints-merged'] = { state: 'fail', detail: clash };
+  } else if (external) {
     items['sprints-ticked'] = { state: externalState, detail: externalDetail };
     items['sprints-merged'] = { state: externalState, detail: externalDetail };
   } else if (!sprints.length) {
@@ -182,7 +208,7 @@ export function evaluate({
         if (/(?<![\w/])#\d{1,5}\b/.test(s.text)) {
           unavailable = true;
           problems.push(
-            `${s.name}: only bare #N citations, and bareRefsRepo is not set — could be verified only with a repo`
+            `${s.name}: only bare #N citations — ${bareRefsNote}, so they could be verified only with a repo. Cite owner/repo#N or a full PR link.`
           );
         } else problems.push(`${s.name} cites no PR or commit`);
         continue;
@@ -218,7 +244,7 @@ export function evaluate({
       ? { state: externalState, detail: externalDetail }
       : retro == null
         ? { state: 'fail', detail: `RETROSPECTIVE.md missing${from}` }
-        : /_Closed:\s*20\d\d-\d\d-\d\d/.test(retro)
+        : isRealClosedDate(retro)
           ? { state: 'pass', detail: `closed with a real date${from}` }
           : {
               state: 'fail',
@@ -259,6 +285,15 @@ export function evaluate({
   }
   const ok = ITEMS.every((k) => ['pass', 'exempt'].includes(items[k].state));
   return { ok, items };
+}
+
+/** `_Closed: YYYY-MM-DD_` with a date that EXISTS — `2026-99-99` matched the shape and meant nothing. */
+export function isRealClosedDate(retro) {
+  const m = /_Closed:\s*(\d{4})-(\d{2})-(\d{2})/.exec(String(retro || ''));
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
 }
 
 export function refKey(r) {
@@ -381,7 +416,7 @@ function main() {
     .map((f) => ({ name: f, text: readFileSync(join(dir, f), 'utf8') }));
   const retroPath = join(dir, 'RETROSPECTIVE.md');
   run('git', ['fetch', '-q', 'origin']);
-  const bareRefsRepo = cfg.bareRefsRepo || null;
+  const { repo: bareRefsRepo, note: bareRefsNote } = effectiveBareRefsRepo(cfg);
   const refs = sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo }));
   const readmeText = readFileSync(join(dir, 'README.md'), 'utf8');
   const externalDocs = frontmatter(readmeText).sprints_in
@@ -404,6 +439,7 @@ function main() {
     readme: readmeText,
     externalDocs,
     bareRefsRepo,
+    bareRefsNote,
     sprints,
     retro: existsSync(retroPath) ? readFileSync(retroPath, 'utf8') : null,
     verified,
