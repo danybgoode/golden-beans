@@ -103,7 +103,15 @@ export const CRITICAL_COMMANDS = [
   'git push --force origin main',
   'git push -f origin main',
   'git push origin +main',
+  'git push origin :main',
+  'git push --delete origin main',
+  'git push origin -d main',
   'git -C /repo push --force origin main',
+  'npx -y vercel --prod',
+  'pnpm dlx vercel --prod',
+  'rm -f -R build',
+  'rm -rvf build',
+  'rm --force --recursive build',
   'npx supabase db reset --linked',
   'npx supabase --debug db push',
   'supabase --debug db reset',
@@ -137,6 +145,35 @@ export const MUST_NOT_DENY = [
   'PATH=/x:$PATH git push --force-with-lease origin main',
   'env PATH=/x:$PATH git push --force-with-lease origin main',
   'rm notes.txt',
+  'rm -f build/one-file.txt',
+  'git push origin HEAD:main',
+  // A `*=* vercel*` catch-all ALSO refused these ordinary reads, because `*=*` matches an `=` anywhere in
+  // the line, not an assignment prefix. Narrow rules per dangerous subcommand, and these stay reachable.
+  'grep -rn --include=*.json vercel .claude/',
+  'rg --glob=!node_modules vercel .',
+  'env | grep vercel',
+];
+
+/**
+ * Commands that must reach a HUMAN QUESTION — in all three spellings, exactly like the refusals. An `ask`
+ * rule escapes a prefix the same way a deny rule does, and an escaped `ask` is not a stricter outcome: it
+ * silently becomes a classifier judgement instead of a question (found by the security lens on #17). A deny
+ * that swallows one of these is also a finding: a refusal cannot be approved once for a legitimate need.
+ */
+export const ASK_COMMANDS = [
+  'gcloud run deploy svc --image x',
+  'gh secret set STRIPE_SECRET_KEY',
+  'gh secret delete STRIPE_SECRET_KEY',
+  'gcloud secrets versions destroy 1 --secret=api-key',
+  'gcloud secrets create api-key',
+  'vercel env add FOO production',
+  'git push --force-with-lease origin main',
+];
+
+export const REQUIRED_ASKS = [
+  ...ASK_COMMANDS,
+  ...ASK_COMMANDS.map((c) => `PATH=/x:$PATH ${c}`),
+  ...ASK_COMMANDS.map((c) => `env PATH=/x:$PATH ${c}`),
 ];
 
 /**
@@ -205,6 +242,22 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
       findings.push({
         kind: 'missing-guardrail',
         detail: `no deny rule refuses '${probe}' — a required guardrail is gone`,
+      });
+    }
+  }
+  const bashAsk = (perms.ask ?? []).map(parseRule).filter((p) => p?.tool === 'Bash' && p.pattern !== null);
+  for (const probe of REQUIRED_ASKS) {
+    if (!bashAsk.some((p) => bashRuleMatches(p.pattern, probe))) {
+      findings.push({
+        kind: 'missing-ask',
+        detail: `no ask rule stops to ask about '${probe}' — it would run on the classifier's judgement alone`,
+      });
+    }
+    const denied = bashDeny.find((p) => bashRuleMatches(p.pattern, probe));
+    if (denied) {
+      findings.push({
+        kind: 'ask-swallowed-by-deny',
+        detail: `deny rule '${denied.pattern}' refuses '${probe}', which is meant to ASK — a refusal cannot be approved once`,
       });
     }
   }

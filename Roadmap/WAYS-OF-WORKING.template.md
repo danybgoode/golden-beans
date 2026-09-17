@@ -151,8 +151,12 @@ that needs this list references it here; there is no second copy.
 
 `.claude/settings.json` carries a committed `permissions` block: **allow** = verb classes only (never a
 literal past command, and never one that destroys uncommitted work — an allowed command skips the
-auto-mode classifier); **deny** = the irreversible-by-rule (CLI deploys, migration replays, force pushes,
-`rm -rf`, whole-tree staging, edits to generated files); **ask** = production secrets and env writes.
+auto-mode classifier); **deny** = the irreversible-by-rule (CLI deploys, migration replays, force pushes and
+protected-branch deletes, `rm -r`, whole-tree staging, edits to generated files, and the few repo scripts
+that write production secrets from inside an allowed `node scripts/*`); **ask** = production secrets, env
+writes and a service deploy. Deny and ask rules are carried in **three spellings** — bare,
+assignment-prefixed and `env`-prefixed — because a leading assignment escapes a bare rule, and an escaped
+*ask* is not a stricter outcome but a silent downgrade to the classifier.
 Every deny/ask rule cites what it enforces in `.claude/permissions-ledger.json`, and
 `node scripts/permissions-smoke.mjs` fails on an uncited rule, a stale ledger entry, a literal allow or a
 missing baseline guardrail.

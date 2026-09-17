@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ASK_COMMANDS,
   CRITICAL_COMMANDS,
+  REQUIRED_ASKS,
   REQUIRED_REFUSALS,
   bashRuleMatches,
   checkContract,
@@ -75,7 +77,10 @@ test('deleting the whole deny list and its ledger together still fails (consiste
   s.permissions.deny = [];
   s.permissions.ask = [];
   const f = checkContract({ settings: s, ledger: { entries: [] } });
-  assert.ok(f.length >= 7 && f.every((x) => x.kind === 'missing-guardrail'), JSON.stringify(kinds(f)));
+  assert.ok(
+    f.length >= 7 && f.every((x) => x.kind === 'missing-guardrail' || x.kind === 'missing-ask'),
+    JSON.stringify(kinds(f))
+  );
 });
 
 test('an uncited deny rule fails', () => {
@@ -381,4 +386,50 @@ test('a Write(path) rule is reported as inert — only Edit(path) is checked for
   const f = kinds(checkContract({ settings: s2, ledger: l2, exists: () => true }));
   assert.ok(f.includes('inert-write-rule'), JSON.stringify(f));
   assert.deepEqual(kinds(checkContract({ settings, ledger, exists: () => true })), []);
+});
+
+test('an ask that only exists in the bare spelling is a finding — an escaped ask is not a stricter outcome', () => {
+  // The prefix escape applies to `ask` exactly as to `deny`: `PATH=/x:$PATH gcloud run deploy …` would run
+  // on the classifier's judgement instead of stopping for a human (found by the security lens on #17).
+  for (const c of ASK_COMMANDS) {
+    assert.ok(REQUIRED_ASKS.includes(`PATH=/x:$PATH ${c}`));
+    assert.ok(REQUIRED_ASKS.includes(`env PATH=/x:$PATH ${c}`));
+  }
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  const gone = s2.permissions.ask.filter((r) => r.includes('gcloud run deploy') && r.startsWith('Bash(*=*'));
+  assert.equal(gone.length, 1);
+  s2.permissions.ask = s2.permissions.ask.filter((r) => !gone.includes(r));
+  l2.entries = l2.entries.filter((e) => !gone.includes(e.rule));
+  const f = kinds(checkContract({ settings: s2, ledger: l2 }));
+  assert.ok(f.includes('missing-ask'), JSON.stringify(f));
+});
+
+test('a deny rule may not swallow a command that is meant to ASK', () => {
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  s2.permissions.deny.push('Bash(gcloud run deploy *)');
+  l2.entries.push({
+    list: 'deny',
+    rule: 'Bash(gcloud run deploy *)',
+    probe: 'gcloud run deploy svc --image x',
+    cites: 'over-broad on purpose, for this test',
+  });
+  const f = kinds(checkContract({ settings: s2, ledger: l2 }));
+  assert.ok(f.includes('ask-swallowed-by-deny'), JSON.stringify(f));
+});
+
+test('the narrow prefixed rules leave ordinary reads alone', () => {
+  // A `*=* vercel*` catch-all refused `grep -rn --include=*.json vercel .` — `*=*` matches an `=` anywhere.
+  const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
+  for (const safe of [
+    'grep -rn --include=*.json vercel .claude/',
+    'rg --glob=!node_modules vercel .',
+    'env | grep vercel',
+    'rm -f build/one-file.txt',
+    'git push origin HEAD:main',
+  ]) {
+    const hit = deny.find((r) => bashRuleMatches(r.slice(5, -1), safe));
+    assert.equal(hit, undefined, `${safe} refused by ${hit}`);
+  }
 });
