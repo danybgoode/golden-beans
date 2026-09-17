@@ -21,8 +21,10 @@
 // cannot see). Unavailable is NOT pass — the run exits non-zero and names what it could not check. A
 // green run that verified nothing is worse than no script (AGENTS rule).
 //
-// An epic whose sprint docs live in another repo (frontmatter `sprints_in:`) reports the sprint items as
-// `external` — true, checked where the docs are, and not a failure here.
+// An epic whose sprint docs live in another repo (frontmatter `sprints_in:`) is checked against THOSE
+// files: the URL is fetched and the same tick/citation/retro rules run on what comes back. Directory
+// existence alone is not a pass — an empty or wrong directory answered 200 and turned three items green
+// (found by codex on dobby-foundation#17). Unfetchable ⇒ `unavailable`, 404 ⇒ `fail`.
 //
 // ── Exemptions, with the check-plugin-leaks discipline ─────────────────────────────────────────────
 // `scripts/epic-dod.exemptions.json` lists {epic, item, reason} for epics closed before a convention
@@ -86,8 +88,8 @@ export function citations(text, { aliases = {}, bareRefsRepo = null } = {}) {
   for (const m of rest.matchAll(/\b([\w.-]+\/[\w.-]+)#(\d+)\b/g))
     add({ kind: 'pr', repo: m[1], number: Number(m[2]) });
   rest = rest.replace(/\b[\w.-]+\/[\w.-]+#\d+\b/g, ' ');
-  // 3. A named repo: `backend #33`, `medusa-bonsai-backend#33`, `frontend PR [#100]`. Only names the
-  //    alias map knows count; an unknown word before a `#N` is prose, not a repo.
+  // 3. A named repo the project's alias map knows: `backend #33`, `web-app#33`, `frontend PR [#100]`. Only
+  //    mapped names count; an unknown word before a `#N` is prose, not a repo.
   for (const m of rest.matchAll(/\b([a-z][\w-]*)\s*(?:PR\s*)?\[?#(\d{1,5})\b/gi)) {
     const repo = aliases[m[1].toLowerCase()];
     if (repo) add({ kind: 'pr', repo, number: Number(m[2]) });
@@ -97,7 +99,7 @@ export function citations(text, { aliases = {}, bareRefsRepo = null } = {}) {
   );
   // 4. A bare `#N` means THIS repo only where the project says so (`bareRefsRepo`). In a multi-repo project
   //    a bare `#N` is ambiguous — resolving it against the docs repo verified the wrong PRs on real epics
-  //    (found by the fresh review of miyagi-product-management#179), so it is ignored, never guessed.
+  //    (found by a fresh review on a real multi-repo epic), so it is ignored, never guessed.
   if (bareRefsRepo) {
     for (const m of rest.matchAll(/(?<![\w/])\[?#(\d{1,5})\b/g))
       add({ kind: 'pr', repo: bareRefsRepo, number: Number(m[1]) });
@@ -122,39 +124,54 @@ export function evaluate({
   branches,
   aliases = {},
   exemptions = [],
-  externalVerified = null,
+  externalDocs = null,
   bareRefsRepo = null,
 }) {
   const fm = frontmatter(readme);
   const items = {};
-  // `sprints_in` is only trusted when the place it names was actually found: a typo'd or unreachable URL
-  // must not turn the sprint items green (found by codex on #179). null = could not check.
-  const external = Boolean(fm.sprints_in) && sprints.length === 0;
-  const externalState =
-    externalVerified === true ? 'external' : externalVerified === false ? 'fail' : 'unavailable';
+  // `sprints_in` is only trusted when the docs it names were actually READ: a typo'd URL must not turn the
+  // sprint items green (found by codex on #179), and neither must a directory that exists but holds no
+  // sprint files (found by codex on dobby-foundation#17). null = could not check.
+  const wantsExternal = Boolean(fm.sprints_in) && sprints.length === 0;
+  const fetched = wantsExternal && externalDocs && Array.isArray(externalDocs.sprints);
+  if (fetched) {
+    // Same rules, other repo: from here on the fetched files ARE the sprint docs.
+    sprints = externalDocs.sprints;
+    retro = externalDocs.retro ?? null;
+  }
+  const from = fetched ? ` (read from ${fm.sprints_in})` : '';
+  const externalState = externalDocs === false ? 'fail' : 'unavailable';
   const externalDetail =
-    externalVerified === true
-      ? `sprint docs live in ${fm.sprints_in}`
-      : externalVerified === false
-        ? `sprints_in points at nothing: ${fm.sprints_in}`
-        : `could not verify sprints_in: ${fm.sprints_in}`;
+    externalDocs === false
+      ? `sprints_in points at nothing: ${fm.sprints_in}`
+      : `could not read sprints_in: ${fm.sprints_in}`;
+  const external = wantsExternal && !fetched;
 
   items['readme-shipped'] =
     fm.status === 'shipped'
       ? { state: 'pass', detail: 'status: shipped' }
-      : { state: 'fail', detail: `README frontmatter status is '${fm.status || '(missing)'}'` };
+      : {
+          state: 'fail',
+          detail: `README frontmatter status is '${fm.status || '(missing)'}'`,
+        };
 
   if (external) {
     items['sprints-ticked'] = { state: externalState, detail: externalDetail };
     items['sprints-merged'] = { state: externalState, detail: externalDetail };
   } else if (!sprints.length) {
-    items['sprints-ticked'] = { state: 'fail', detail: 'no sprint-N.md files' };
-    items['sprints-merged'] = { state: 'fail', detail: 'no sprint-N.md files' };
+    items['sprints-ticked'] = {
+      state: 'fail',
+      detail: `no sprint-N.md files${from}`,
+    };
+    items['sprints-merged'] = {
+      state: 'fail',
+      detail: `no sprint-N.md files${from}`,
+    };
   } else {
     const unticked = sprints.filter((s) => !/^\*\*Status:\*\*\s*(?:✅|🟩)/m.test(s.text)).map((s) => s.name);
     items['sprints-ticked'] = unticked.length
-      ? { state: 'fail', detail: `not ✅: ${unticked.join(', ')}` }
-      : { state: 'pass', detail: `${sprints.length} sprint(s) ✅` };
+      ? { state: 'fail', detail: `not ✅: ${unticked.join(', ')}${from}` }
+      : { state: 'pass', detail: `${sprints.length} sprint(s) ✅${from}` };
 
     const problems = [];
     let unavailable = false;
@@ -175,10 +192,21 @@ export function evaluate({
       else if (!states.includes('merged')) {
         unavailable = true;
         problems.push(`${s.name}: none of ${refs.length} citation(s) could be verified`);
+      } else if (states.includes('unavailable')) {
+        // One merged citation does not vouch for the rest: a sprint citing a merged PR *and* a commit this
+        // checkout has never seen is one un-run check away from a false green (found by codex on #17).
+        unavailable = true;
+        const n = states.filter((x) => x === 'unavailable').length;
+        problems.push(
+          `${s.name}: cites a merged change, but ${n} of ${refs.length} citation(s) could be verified by nobody here`
+        );
       }
     }
     items['sprints-merged'] = !problems.length
-      ? { state: 'pass', detail: 'every sprint cites a verified-merged change' }
+      ? {
+          state: 'pass',
+          detail: `every sprint cites a verified-merged change${from}`,
+        }
       : {
           state: unavailable && problems.every((p) => /could be verified/.test(p)) ? 'unavailable' : 'fail',
           detail: problems.join('; '),
@@ -186,19 +214,22 @@ export function evaluate({
   }
 
   items['retro-written'] =
-    retro == null && Boolean(fm.sprints_in)
-      ? {
-          state: externalState,
-          detail: externalVerified === true ? `retrospective lives in ${fm.sprints_in}` : externalDetail,
-        }
+    retro == null && external
+      ? { state: externalState, detail: externalDetail }
       : retro == null
-        ? { state: 'fail', detail: 'RETROSPECTIVE.md missing' }
+        ? { state: 'fail', detail: `RETROSPECTIVE.md missing${from}` }
         : /_Closed:\s*20\d\d-\d\d-\d\d/.test(retro)
-          ? { state: 'pass', detail: 'closed with a real date' }
-          : { state: 'fail', detail: 'RETROSPECTIVE.md is still the stub (no `_Closed: YYYY-MM-DD_`)' };
+          ? { state: 'pass', detail: `closed with a real date${from}` }
+          : {
+              state: 'fail',
+              detail: 'RETROSPECTIVE.md is still the stub (no `_Closed: YYYY-MM-DD_`)',
+            };
 
   if (branches == null)
-    items['branch-deleted'] = { state: 'unavailable', detail: 'could not list origin branches' };
+    items['branch-deleted'] = {
+      state: 'unavailable',
+      detail: 'could not list origin branches',
+    };
   else {
     const left = branches.filter((b) => b === `feat/${slug}` || b.startsWith(`feat/${slug}-`));
     items['branch-deleted'] = left.length
@@ -214,16 +245,19 @@ export function evaluate({
     // An exemption excuses a known FAILURE. It never turns "could not check" into a pass — unavailable
     // stays unavailable (found by codex on #179).
     if (it.state === 'unavailable') continue;
-    if (it.state === 'pass' || it.state === 'external') {
+    if (it.state === 'pass') {
       items[e.item] = {
         state: 'fail',
         detail: `STALE exemption — '${e.item}' passes now, so remove it from epic-dod.exemptions.json`,
       };
     } else {
-      items[e.item] = { state: 'exempt', detail: `${it.detail} — exempt: ${e.reason}` };
+      items[e.item] = {
+        state: 'exempt',
+        detail: `${it.detail} — exempt: ${e.reason}`,
+      };
     }
   }
-  const ok = ITEMS.every((k) => ['pass', 'external', 'exempt'].includes(items[k].state));
+  const ok = ITEMS.every((k) => ['pass', 'exempt'].includes(items[k].state));
   return { ok, items };
 }
 
@@ -278,8 +312,7 @@ function verify(refs, deps = {}) {
 }
 
 /**
- * Does a `sprints_in` URL name a real directory? Only github.com tree URLs are understood; anything else is
- * unverifiable (null), never assumed. true = found, false = GitHub says it does not exist.
+ * Only github.com tree URLs are understood; anything else is unreadable (null), never assumed.
  */
 export function parseTreeUrl(url) {
   const m = /^https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/tree\/([\w.\/-]+?)\/(Roadmap\/[^\s#?]+?)\/?$/.exec(
@@ -288,14 +321,40 @@ export function parseTreeUrl(url) {
   return m ? { repo: m[1], ref: m[2], path: m[3] } : null;
 }
 
-function verifyExternal(url, deps = {}) {
-  if (!url) return null;
+/**
+ * READ the sprint docs a `sprints_in:` URL points at, so the same checks run on them.
+ * null = could not check · false = GitHub says the directory does not exist · { sprints, retro } = read.
+ * A file that lists but will not fetch makes the whole thing unavailable: a partially-read directory
+ * would silently check fewer sprints than the epic has.
+ */
+export function fetchExternal(url, deps = {}) {
   const t = parseTreeUrl(url);
   if (!t) return null;
   const exec = deps.run ?? run;
-  const r = exec('gh', ['api', `repos/${t.repo}/contents/${t.path}?ref=${t.ref}`, '--jq', 'length']);
-  if (r.status === 0) return true;
-  return /404|Not Found/.test(`${r.stderr || ''}${r.stdout || ''}`) ? false : null;
+  const ls = exec('gh', ['api', `repos/${t.repo}/contents/${t.path}?ref=${t.ref}`, '--jq', '.[] | .name']);
+  if (ls.status !== 0) return /404|Not Found/.test(`${ls.stderr || ''}${ls.stdout || ''}`) ? false : null;
+  const names = String(ls.stdout)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const read = (name) => {
+    const r = exec('gh', [
+      'api',
+      `repos/${t.repo}/contents/${t.path}/${name}?ref=${t.ref}`,
+      '-H',
+      'Accept: application/vnd.github.raw',
+    ]);
+    return r.status === 0 ? String(r.stdout) : null;
+  };
+  const sprints = [];
+  for (const name of names.filter((n) => /^sprint-\d+\.md$/.test(n)).sort()) {
+    const text = read(name);
+    if (text == null) return null;
+    sprints.push({ name, text });
+  }
+  const retro = names.includes('RETROSPECTIVE.md') ? read('RETROSPECTIVE.md') : null;
+  if (names.includes('RETROSPECTIVE.md') && retro == null) return null;
+  return { sprints, retro };
 }
 
 function main() {
@@ -325,7 +384,12 @@ function main() {
   const bareRefsRepo = cfg.bareRefsRepo || null;
   const refs = sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo }));
   const readmeText = readFileSync(join(dir, 'README.md'), 'utf8');
-  const externalVerified = verifyExternal(frontmatter(readmeText).sprints_in);
+  const externalDocs = frontmatter(readmeText).sprints_in
+    ? fetchExternal(frontmatter(readmeText).sprints_in)
+    : null;
+  // The fetched sprint docs cite PRs too — verify THEIR citations, not just the local ones.
+  if (!sprints.length && externalDocs && Array.isArray(externalDocs.sprints))
+    refs.push(...externalDocs.sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo })));
   const verified = verify(refs);
   const ls = run('git', ['ls-remote', '--heads', 'origin']);
   const branches =
@@ -338,7 +402,7 @@ function main() {
   const { ok, items } = evaluate({
     slug,
     readme: readmeText,
-    externalVerified,
+    externalDocs,
     bareRefsRepo,
     sprints,
     retro: existsSync(retroPath) ? readFileSync(retroPath, 'utf8') : null,
@@ -347,7 +411,7 @@ function main() {
     aliases,
     exemptions: cfg.exemptions || [],
   });
-  const icon = { pass: '✓', fail: '✗', unavailable: '?', external: '↗', exempt: '~' };
+  const icon = { pass: '✓', fail: '✗', unavailable: '?', exempt: '~' };
   process.stdout.write(`epic-dod — ${target}\n`);
   for (const k of ITEMS)
     process.stdout.write(

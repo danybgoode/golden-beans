@@ -4,8 +4,14 @@ import { citations, evaluate, frontmatter, ITEMS, parseTreeUrl, refKey } from '.
 
 const README_SHIPPED = '---\nstatus: shipped   # closed\nslug: demo\n---\n# Epic\n';
 const README_OPEN = '---\nstatus: in-progress\nslug: demo\n---\n# Epic\n';
-const SPRINT_DONE = { name: 'sprint-1.md', text: '# S1\n\n**Status:** ✅ shipped — o/r#12 merged\n' };
-const SPRINT_OPEN = { name: 'sprint-2.md', text: '# S2\n\n**Status:** ⬜ not started\n' };
+const SPRINT_DONE = {
+  name: 'sprint-1.md',
+  text: '# S1\n\n**Status:** ✅ shipped — o/r#12 merged\n',
+};
+const SPRINT_OPEN = {
+  name: 'sprint-2.md',
+  text: '# S2\n\n**Status:** ⬜ not started\n',
+};
 const RETRO_REAL = '# Retro\n\n_Closed: 2026-09-17_\n';
 const RETRO_STUB = '# Retro\n\n_Closed: <date>_\n';
 const merged = (...refs) => new Map(refs.map((r) => [r, 'merged']));
@@ -50,7 +56,10 @@ test('UNAVAILABLE is not pass — an unverifiable citation or an unreadable remo
 });
 
 test('a sprint citing an UNMERGED PR fails even when another citation is merged', () => {
-  const sprint = { name: 'sprint-1.md', text: '**Status:** ✅ done — o/r#12 and o/r#13\n' };
+  const sprint = {
+    name: 'sprint-1.md',
+    text: '**Status:** ✅ done — o/r#12 and o/r#13\n',
+  };
   const verified = new Map([
     ['pr:o/r#12', 'merged'],
     ['pr:o/r#13', 'unmerged'],
@@ -60,19 +69,87 @@ test('a sprint citing an UNMERGED PR fails even when another citation is merged'
   assert.match(r.items['sprints-merged'].detail, /UNMERGED/);
 });
 
-test('an epic whose sprint docs live in another repo reports them as external, not failed', () => {
+test('a merged citation does not vouch for an UNVERIFIABLE one alongside it', () => {
+  // Found by codex on #17: `states.includes('merged')` passed a sprint whose other citation was a commit
+  // this checkout has never seen — "I could not check" silently read as "checked".
+  const sprint = {
+    name: 'sprint-1.md',
+    text: '**Status:** ✅ done — o/r#12 and deadbeef1\n',
+  };
+  const verified = new Map([['pr:o/r#12', 'merged']]);
+  const r = evaluate({ ...closedEpic, sprints: [sprint], verified });
+  assert.equal(r.items['sprints-merged'].state, 'unavailable');
+  assert.match(r.items['sprints-merged'].detail, /1 of 2 citation\(s\) could be verified by nobody/);
+  assert.equal(r.ok, false);
+});
+
+test('sprint docs in ANOTHER repo are READ and checked by the same rules — existence is not a pass', () => {
   const readme =
     '---\nstatus: shipped\nslug: demo\nsprints_in: https://github.com/o/foundation/tree/main/Roadmap/x\n---\n';
-  const r = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: true });
-  assert.equal(r.items['sprints-ticked'].state, 'external');
-  assert.equal(r.items['retro-written'].state, 'external');
-  assert.equal(r.ok, true);
-  // A typo'd or unreachable sprints_in must not turn the sprint items green.
-  const missing = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: false });
+  const docs = {
+    sprints: [{ name: 'sprint-1.md', text: '**Status:** ✅ done — o/r#12\n' }],
+    retro: '_Closed: 2026-09-16_\n',
+  };
+  const verified = new Map([['pr:o/r#12', 'merged']]);
+  const ok = evaluate({
+    ...closedEpic,
+    readme,
+    sprints: [],
+    retro: null,
+    verified,
+    externalDocs: docs,
+  });
+  assert.equal(ok.items['sprints-ticked'].state, 'pass');
+  assert.equal(ok.items['sprints-merged'].state, 'pass');
+  assert.equal(ok.items['retro-written'].state, 'pass');
+  assert.match(ok.items['sprints-ticked'].detail, /read from https:/);
+  assert.equal(ok.ok, true);
+
+  // The hole codex found on #17: a directory that exists but holds no sprint docs used to pass.
+  const empty = evaluate({
+    ...closedEpic,
+    readme,
+    sprints: [],
+    retro: null,
+    externalDocs: { sprints: [], retro: null },
+  });
+  assert.equal(empty.items['sprints-ticked'].state, 'fail');
+  assert.equal(empty.items['retro-written'].state, 'fail');
+  assert.equal(empty.ok, false);
+
+  // The docs are there but unticked / the retro is a stub: the same rules, so the same verdict.
+  const unticked = evaluate({
+    ...closedEpic,
+    readme,
+    sprints: [],
+    retro: null,
+    verified,
+    externalDocs: {
+      sprints: [{ name: 'sprint-1.md', text: '**Status:** ⬜ — o/r#12\n' }],
+      retro: null,
+    },
+  });
+  assert.equal(unticked.items['sprints-ticked'].state, 'fail');
+
+  // A typo'd sprints_in (404) fails; an unreadable one is UNAVAILABLE, never green.
+  const missing = evaluate({
+    ...closedEpic,
+    readme,
+    sprints: [],
+    retro: null,
+    externalDocs: false,
+  });
   assert.equal(missing.items['sprints-ticked'].state, 'fail');
   assert.equal(missing.ok, false);
-  const unknown = evaluate({ ...closedEpic, readme, sprints: [], retro: null, externalVerified: null });
+  const unknown = evaluate({
+    ...closedEpic,
+    readme,
+    sprints: [],
+    retro: null,
+    externalDocs: null,
+  });
   assert.equal(unknown.items['sprints-merged'].state, 'unavailable');
+  assert.equal(unknown.items['retro-written'].state, 'unavailable');
   assert.equal(unknown.ok, false);
   assert.deepEqual(parseTreeUrl('https://github.com/o/r/tree/main/Roadmap/09-x/slug'), {
     repo: 'o/r',
@@ -83,8 +160,18 @@ test('an epic whose sprint docs live in another repo reports them as external, n
 });
 
 test('an exemption excuses a failure with its reason; an exemption on a PASSING item is stale and fails', () => {
-  const exempt = [{ epic: 'demo', item: 'branch-deleted', reason: 'closed before the convention' }];
-  const excused = evaluate({ ...closedEpic, branches: ['feat/demo'], exemptions: exempt });
+  const exempt = [
+    {
+      epic: 'demo',
+      item: 'branch-deleted',
+      reason: 'closed before the convention',
+    },
+  ];
+  const excused = evaluate({
+    ...closedEpic,
+    branches: ['feat/demo'],
+    exemptions: exempt,
+  });
   assert.equal(excused.items['branch-deleted'].state, 'exempt');
   assert.equal(excused.ok, true);
   const stale = evaluate({ ...closedEpic, exemptions: exempt });
@@ -94,7 +181,13 @@ test('an exemption excuses a failure with its reason; an exemption on a PASSING 
 });
 
 test('an exemption never turns UNAVAILABLE into a pass', () => {
-  const exempt = [{ epic: 'demo', item: 'branch-deleted', reason: 'closed before the convention' }];
+  const exempt = [
+    {
+      epic: 'demo',
+      item: 'branch-deleted',
+      reason: 'closed before the convention',
+    },
+  ];
   const r = evaluate({ ...closedEpic, branches: null, exemptions: exempt });
   assert.equal(r.items['branch-deleted'].state, 'unavailable');
   assert.equal(r.ok, false);
@@ -106,7 +199,10 @@ test('an explicit owner/repo#N is not ALSO read as a local #N', () => {
 });
 
 test('citations: PR links, owner/repo#N, known repo names and commits — never a guessed bare #N', () => {
-  const aliases = { backend: 'o/backend', 'product-repo': 'o/product-management' };
+  const aliases = {
+    backend: 'o/backend',
+    'product-repo': 'o/product-management',
+  };
   const text =
     'merged (product-repo #106, backend PR [#33]), https://github.com/o/front/pull/100, commit b13ae84, run 29305671818, o/r#9, AGENTS rule #3';
   const keys = citations(text, { aliases }).map(refKey);
@@ -122,13 +218,19 @@ test('citations: PR links, owner/repo#N, known repo names and commits — never 
 });
 
 test('a sprint with only bare #N refs and no bareRefsRepo is UNAVAILABLE, not a fail and not a pass', () => {
-  const sprint = { name: 'sprint-1.md', text: '**Status:** ✅ shipped — #12\n' };
+  const sprint = {
+    name: 'sprint-1.md',
+    text: '**Status:** ✅ shipped — #12\n',
+  };
   const r = evaluate({ ...closedEpic, sprints: [sprint], verified: new Map() });
   assert.equal(r.items['sprints-merged'].state, 'unavailable');
 });
 
 test('real status markers and close lines seen on shipped epics are accepted', () => {
-  const green = { name: 'sprint-1.md', text: '**Status:** 🟩 shipped — o/r#12\n' };
+  const green = {
+    name: 'sprint-1.md',
+    text: '**Status:** 🟩 shipped — o/r#12\n',
+  };
   assert.equal(evaluate({ ...closedEpic, sprints: [green] }).items['sprints-ticked'].state, 'pass');
   const longClose = '# Retro\n\n_Closed: 2026-08-12 · S1–S5 shipped, verified live_\n';
   assert.equal(evaluate({ ...closedEpic, retro: longClose }).items['retro-written'].state, 'pass');
