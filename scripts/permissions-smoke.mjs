@@ -82,21 +82,50 @@ export function looksLiteral(rule) {
 /** Exact-match allow rules that are verb classes despite having no wildcard. */
 export const EXACT_ALLOW = /^(?:[\w.-]+ --version|npm ci)$/;
 
+// Commands that must be refused in EVERY spelling — bare, assignment-prefixed and `env`-prefixed. The
+// prefixes are GENERATED, not listed, because listing them is how the gap happened: `vercel deploy` and
+// `rm -rf` got expansion-safe rules while `vercel --yes --prod`, `rm -fr` and `supabase db reset` stayed
+// bare-only, and a bare-only rule is not a rule (a leading assignment whose value contains an expansion
+// escapes it — observed live 2026-09-16; the gap was found in review by codex on golden-beans#146).
+export const CRITICAL_COMMANDS = [
+  'vercel deploy --prod',
+  'vercel --prod',
+  'vercel --yes --prod',
+  'npx vercel --prod',
+  'supabase db push',
+  'supabase db reset',
+  'git push --force origin main',
+  'git push -f origin main',
+  'rm -rf build',
+  'rm -fr build',
+  'rm -R -f build',
+];
+
+/** Refused in the ordinary spelling; a prefixed form of these is not the failure mode. */
+export const PLAIN_REFUSALS = ['git add -A', 'git commit --all -m x'];
+
 /**
  * The guardrails the process PROMISES. Consistency checks alone pass on an empty deny list — deleting
  * every rule and every ledger entry together would read green. These probes must each be refused by
  * some deny rule in every project, whatever else it adds.
  */
 export const REQUIRED_REFUSALS = [
-  'vercel deploy --prod',
-  'vercel --prod',
-  'supabase db push',
-  'git push --force origin main',
-  'rm -rf build',
-  'git add -A',
-  'git commit --all -m x',
-  // Observed live: a leading assignment with an expansion escapes the bare rule.
-  'PATH=/x:$PATH vercel deploy --prod',
+  ...CRITICAL_COMMANDS,
+  ...CRITICAL_COMMANDS.map((c) => `PATH=/x:$PATH ${c}`),
+  ...CRITICAL_COMMANDS.map((c) => `env PATH=/x:$PATH ${c}`),
+  ...PLAIN_REFUSALS,
+];
+
+/**
+ * The other half of a guard: what it must NOT catch. A deny rule that swallows the safe negation trains
+ * people to bypass the whole list, so these stay reachable — `--force-with-lease` is an ASK, and an
+ * ordinary non-recursive `rm` of one file is ordinary work.
+ */
+export const MUST_NOT_DENY = [
+  'git push --force-with-lease origin main',
+  'PATH=/x:$PATH git push --force-with-lease origin main',
+  'env PATH=/x:$PATH git push --force-with-lease origin main',
+  'rm notes.txt',
 ];
 
 /**
@@ -155,6 +184,15 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
       findings.push({
         kind: 'missing-guardrail',
         detail: `no deny rule refuses '${probe}' — a required guardrail is gone`,
+      });
+    }
+  }
+  for (const safe of MUST_NOT_DENY) {
+    const swallowed = bashDeny.find((p) => bashRuleMatches(p.pattern, safe));
+    if (swallowed) {
+      findings.push({
+        kind: 'over-broad-deny',
+        detail: `deny rule '${swallowed.pattern}' also refuses '${safe}' — the safe negation must stay reachable`,
       });
     }
   }

@@ -48,7 +48,7 @@ Plan → branch + scaffold docs → build story → verify → QA/smoke → PR �
 
 A whole epic in one orchestrated session is the normal unit of work; sprint docs are integration and
 rollback boundaries *inside* it (a per-sprint session stays valid for a one-sprint epic, or when a sprint's
-outcome genuinely changes the next one's scope). Five things make it work, and the first is the leverage:
+outcome genuinely changes the next one's scope). Six things make it work, and the first is the leverage:
 
 1. **Lock the architecture before any builder starts** — numbered decisions `D1…Dn` in the epic README
    plus a per-sprint **"Build contract (locked by the architect before the builder started)"**, each
@@ -67,7 +67,11 @@ outcome genuinely changes the next one's scope). Five things make it work, and t
 4. **Merges are pre-authorized on green** in a named run: that removes the round-trip, not the gate or the
    review layers, and never extends to a new category of production mutation (TLS/IAM/secrets, money or
    entitlement writes, a new external dependency) — name those in one focused question.
-5. **Derive state, journal intent** — re-derive branches, worktrees, open PRs and migration drift at
+5. **Generate the kickoff, don't compose it** — `node skills/groom/emit-epic-kickoff.mjs --epic <slug>`
+   (the `groom` skill) reads the epic README and every sprint file and prints the orchestrator prompt.
+   Hand-composing it is how the architecture lock gets summarised away and the review policy silently
+   reverts to whatever the composing agent remembered.
+6. **Derive state, journal intent** — re-derive branches, worktrees, open PRs and migration drift at
    session start; journal each locked decision. A killed worker's agent is resumed with a one-paragraph
    state recap (its actual `git status`/`diff`), not re-spawned cold.
 
@@ -175,7 +179,7 @@ mutation, so it is not a tautology; and the sprint doc is ticked.
 
 **An epic is done** when `node scripts/epic-dod.mjs --check <macro/slug>` passes — it derives the
 mechanical half (sprints merged, README `status: shipped`, sprint statuses ticked with refs, a real
-retrospective, no leftover branch) — **and** the three judgment items are true:
+retrospective, no leftover branch) — **and** the judgment items below are true:
 
 - [ ] The **product poster** reflects what is now live (✅ = enforced in code).
 - [ ] **`RETROSPECTIVE.md`** says what actually happened, and its durable learnings are promoted into

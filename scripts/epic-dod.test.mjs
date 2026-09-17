@@ -1,14 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BRANCH_PREFIXES,
   citations,
   effectiveBareRefsRepo,
   evaluate,
   frontmatter,
   isRealClosedDate,
   ITEMS,
+  fetchExternal,
   parseTreeUrl,
   refKey,
+  verify,
 } from './epic-dod.mjs';
 
 const README_SHIPPED = '---\nstatus: shipped   # closed\nslug: demo\n---\n# Epic\n';
@@ -285,4 +288,86 @@ test('a retrospective date must EXIST, not merely match the shape', () => {
   assert.equal(isRealClosedDate('_Closed: <date>_'), false);
   const r = evaluate({ ...closedEpic, retro: '_Closed: 2026-13-01_\n' });
   assert.equal(r.items['retro-written'].state, 'fail');
+});
+
+test('a leftover branch under ANY named prefix keeps the epic open, not just feat/', () => {
+  // Found by codex on #179: the process names feat/, fix/ and chore/, the check only looked at feat/.
+  assert.deepEqual(BRANCH_PREFIXES, ['feat/', 'fix/', 'chore/']);
+  for (const p of BRANCH_PREFIXES) {
+    const r = evaluate({ ...closedEpic, branches: ['main', `${p}demo`] });
+    assert.equal(r.items['branch-deleted'].state, 'fail', p);
+  }
+  const clean = evaluate({ ...closedEpic, branches: ['main', 'feat/other-epic'] });
+  assert.equal(clean.items['branch-deleted'].state, 'pass');
+});
+
+test('verify(): a git ERROR is unavailable, a genuine non-ancestor is unmerged', () => {
+  // Measured exit codes: `merge-base --is-ancestor` exits 1 for "not an ancestor" (a fact) and 128 when
+  // origin/main is missing or unfetched (unknown). Collapsing 128 into `unmerged` is a false FAIL.
+  const run = (cmd, args) => {
+    if (args[0] === 'cat-file') return { status: 0 };
+    if (args[0] === 'merge-base') return { status: args[2] === 'deadbeef1' ? 1 : 128 };
+    return { status: 0, stdout: '' };
+  };
+  const out = verify(
+    [
+      { kind: 'commit', sha: 'deadbeef1' },
+      { kind: 'commit', sha: 'cafebabe2' },
+    ],
+    { run }
+  );
+  assert.equal(out.get('commit:deadbeef1'), 'unmerged');
+  assert.equal(out.get('commit:cafebabe2'), 'unavailable');
+  // A commit this checkout has never heard of is unavailable, never "unmerged".
+  const unknown = verify([{ kind: 'commit', sha: 'deadbeef1' }], { run: () => ({ status: 128 }) });
+  assert.equal(unknown.get('commit:deadbeef1'), 'unavailable');
+});
+
+test('verify(): a PR read failure is unavailable; merged_at decides the rest', () => {
+  const answers = {
+    1: { status: 0, stdout: '2026-09-16T00:00:00Z\tclosed\n' },
+    2: { status: 0, stdout: 'null\topen\n' },
+    3: { status: 1, stderr: 'gh: Not Found' },
+  };
+  const run = (cmd, args) => answers[Number(args[1].split('/').pop())];
+  const out = verify(
+    [1, 2, 3].map((n) => ({ kind: 'pr', repo: 'o/r', number: n })),
+    { run }
+  );
+  assert.equal(out.get('pr:o/r#1'), 'merged');
+  assert.equal(out.get('pr:o/r#2'), 'unmerged');
+  assert.equal(out.get('pr:o/r#3'), 'unavailable');
+});
+
+test('fetchExternal(): 404 is false, an unreadable file is unavailable, a good listing is read', () => {
+  // The I/O half decides here, so it is tested here — a pure core is only as true as its inputs.
+  const url = 'https://github.com/o/f/tree/main/Roadmap/09-x/demo';
+  const listing = 'README.md\nsprint-1.md\nsprint-2.md\nRETROSPECTIVE.md\n';
+  const ok = fetchExternal(url, {
+    run: (cmd, args) => {
+      const path = args[1];
+      if (args.includes('.[] | .name')) return { status: 0, stdout: listing };
+      return { status: 0, stdout: `body of ${path.split('/').pop().split('?')[0]}` };
+    },
+  });
+  assert.deepEqual(
+    ok.sprints.map((s) => s.name),
+    ['sprint-1.md', 'sprint-2.md']
+  );
+  assert.match(ok.retro, /RETROSPECTIVE.md/);
+
+  assert.equal(fetchExternal(url, { run: () => ({ status: 1, stderr: 'gh: Not Found (HTTP 404)' }) }), false);
+  assert.equal(fetchExternal(url, { run: () => ({ status: 1, stderr: 'could not connect' }) }), null);
+  // A file that lists but will not fetch makes the WHOLE read unavailable — a partial read would check
+  // fewer sprints than the epic has and still look complete.
+  const partial = fetchExternal(url, {
+    run: (cmd, args) =>
+      args.includes('.[] | .name')
+        ? { status: 0, stdout: listing }
+        : args[1].includes('sprint-2.md')
+          ? { status: 1, stderr: 'boom' }
+          : { status: 0, stdout: 'x' },
+  });
+  assert.equal(partial, null);
+  assert.equal(fetchExternal('not a tree url'), null);
 });

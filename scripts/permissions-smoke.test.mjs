@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  CRITICAL_COMMANDS,
+  REQUIRED_REFUSALS,
   bashRuleMatches,
   checkContract,
   describeUserMode,
@@ -84,8 +86,42 @@ test('an uncited deny rule fails', () => {
 
 test('a ledger entry whose rule was deleted fails as stale', () => {
   const s = structuredClone(settings);
-  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db reset*)');
+  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(git push *--mirror*)');
   assert.deepEqual(kinds(checkContract({ settings: s, ledger })), ['stale-ledger']);
+});
+
+test('deleting a rule that carries a REQUIRED refusal fails twice — stale ledger AND missing guardrail', () => {
+  const s = structuredClone(settings);
+  s.permissions.deny = s.permissions.deny.filter((r) => !r.includes('supabase db reset'));
+  const f = kinds(checkContract({ settings: s, ledger }));
+  assert.ok(f.includes('stale-ledger') && f.includes('missing-guardrail'), JSON.stringify(f));
+});
+
+test('every CRITICAL command is required in all three spellings — bare, assignment-prefixed and env', () => {
+  // The gap this closes: `vercel deploy` and `rm -rf` had expansion-safe rules while `vercel --yes --prod`,
+  // `rm -fr` and `supabase db reset` were bare-only, so a prefixed spelling matched nothing.
+  for (const c of CRITICAL_COMMANDS) {
+    assert.ok(REQUIRED_REFUSALS.includes(c));
+    assert.ok(REQUIRED_REFUSALS.includes(`PATH=/x:$PATH ${c}`));
+    assert.ok(REQUIRED_REFUSALS.includes(`env PATH=/x:$PATH ${c}`));
+  }
+  assert.deepEqual(kinds(checkContract({ settings, ledger })), []);
+});
+
+test('an over-broad deny that swallows a safe negation fails', () => {
+  // `--force-with-lease` is an ASK: a deny that also matches it cannot be approved even once, and a guard
+  // that rejects correct output is worse than one that misses a rare fault.
+  const s = structuredClone(settings);
+  const l = structuredClone(ledger);
+  s.permissions.deny.push('Bash(*=* git push *--force*)');
+  l.entries.push({
+    list: 'deny',
+    rule: 'Bash(*=* git push *--force*)',
+    probe: 'PATH=/x:$PATH git push origin main --force',
+    cites: 'over-broad on purpose, for this test',
+  });
+  const f = kinds(checkContract({ settings: s, ledger: l }));
+  assert.ok(f.includes('over-broad-deny'), JSON.stringify(f));
 });
 
 test('a probe its own rule does not match fails (catches a typo in the rule)', () => {

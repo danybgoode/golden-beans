@@ -6,15 +6,16 @@
 // The epic DoD used to be a nine-item checklist an agent ticked from memory at close — and "ticked from
 // memory" is how a README said `shipped` while a sprint still said ⬜, or a feature branch outlived its
 // merge by a month. Five of those items are facts about files, frontmatter and git, so they are checked
-// here (ways-of-work-lean-pass S3.3, D13). The three that need judgement — is the poster honest, does the
-// retro say what happened, is each smoke walkthrough followable — stay prose in WAYS-OF-WORKING.
+// here (ways-of-work-lean-pass S3.3, D13). The ones that need judgement — is the poster honest, does the
+// retro say what happened, is each smoke walkthrough followable, did team memory record it — stay prose in
+// WAYS-OF-WORKING, where each project's own list lives.
 //
 // ── The five derived items ─────────────────────────────────────────────────────────────────────────
 //   readme-shipped   README frontmatter `status: shipped`
 //   sprints-ticked   every sprint-N.md's `**Status:**` line starts with ✅
 //   sprints-merged   every sprint cites ≥1 PR/commit, ≥1 citation VERIFIES as merged, none verifies unmerged
 //   retro-written    RETROSPECTIVE.md exists with a real `_Closed: YYYY-MM-DD_` (not the `<date>` stub)
-//   branch-deleted   no `feat/<slug>` or `feat/<slug>-*` branch left on origin
+//   branch-deleted   no `feat|fix|chore/<slug>` (or `-<suffix>`) branch left on origin
 //
 // ── Three states, never two ────────────────────────────────────────────────────────────────────────
 // Each item is `pass`, `fail` or `unavailable` (gh unauthenticated, a citation into a repo this checkout
@@ -40,6 +41,9 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(__dirname, '..');
+/** The branch prefixes WAYS-OF-WORKING names: a leftover branch under any of them is still a leftover. */
+export const BRANCH_PREFIXES = ['feat/', 'fix/', 'chore/'];
+
 export const ITEMS = [
   'readme-shipped',
   'sprints-ticked',
@@ -257,7 +261,11 @@ export function evaluate({
       detail: 'could not list origin branches',
     };
   else {
-    const left = branches.filter((b) => b === `feat/${slug}` || b.startsWith(`feat/${slug}-`));
+    // The process names three branch prefixes (`feat/`, `fix/`, `chore/`), so checking only `feat/` let a
+    // leftover `fix/<slug>` pass the item (found by codex on #179).
+    const left = branches.filter((b) =>
+      BRANCH_PREFIXES.some((p) => b === `${p}${slug}` || b.startsWith(`${p}${slug}-`))
+    );
     items['branch-deleted'] = left.length
       ? { state: 'fail', detail: `still on origin: ${left.join(', ')}` }
       : { state: 'pass', detail: 'no feature branch left' };
@@ -306,7 +314,7 @@ function run(cmd, args, opts = {}) {
   return spawnSync(cmd, args, { encoding: 'utf8', cwd: REPO, ...opts });
 }
 
-function verify(refs, deps = {}) {
+export function verify(refs, deps = {}) {
   const exec = deps.run ?? run;
   const out = new Map();
   for (const r of refs) {
@@ -318,8 +326,11 @@ function verify(refs, deps = {}) {
         out.set(key, 'unavailable');
         continue;
       }
+      // Exit 1 = "not an ancestor" (a fact). Anything else — 128 for a missing or unfetched `origin/main`,
+      // a shallow clone, no remote — is "I could not check", and reporting that as UNMERGED is a confident
+      // false FAIL (found by codex twice, then by the fresh reviewer, who measured the two exit codes).
       const anc = exec('git', ['merge-base', '--is-ancestor', r.sha, 'origin/main']);
-      out.set(key, anc.status === 0 ? 'merged' : 'unmerged');
+      out.set(key, anc.status === 0 ? 'merged' : anc.status === 1 ? 'unmerged' : 'unavailable');
       continue;
     }
     const args = [
@@ -415,7 +426,13 @@ function main() {
     .sort((a, b) => Number(a.match(/\d+/)[0]) - Number(b.match(/\d+/)[0]))
     .map((f) => ({ name: f, text: readFileSync(join(dir, f), 'utf8') }));
   const retroPath = join(dir, 'RETROSPECTIVE.md');
-  run('git', ['fetch', '-q', 'origin']);
+  // A failed fetch means every ancestry answer below is about a STALE origin/main. Say so rather than
+  // verifying against yesterday's remote (found by codex, then measured by the fresh reviewer).
+  const fetched = run('git', ['fetch', '-q', 'origin']);
+  if (fetched.status !== 0)
+    process.stderr.write(
+      '⚠ `git fetch origin` failed — merge checks below are against a possibly STALE origin/main.\n'
+    );
   const { repo: bareRefsRepo, note: bareRefsNote } = effectiveBareRefsRepo(cfg);
   const refs = sprints.flatMap((s) => citations(s.text, { aliases, bareRefsRepo }));
   const readmeText = readFileSync(join(dir, 'README.md'), 'utf8');

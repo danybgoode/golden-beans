@@ -21,6 +21,18 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *vercel*)",
+      "probe": "env PATH=/x:$PATH vercel --yes --prod",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Catch-all `env` form, for the same reason as `Bash(*=* vercel*)`."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* vercel*)",
+      "probe": "PATH=/x:$PATH vercel --yes --prod",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Catch-all prefixed form: the per-subcommand pairs missed `PATH=/x:$PATH vercel --yes --prod` because they require `--prod` or `deploy` adjacent to `vercel` (found by codex on golden-beans#146 and the fresh reviewer). An assignment or `env` prefix on a `vercel` invocation is never an ordinary spelling, so the whole binary is denied under a prefix; the plain read-only `vercel ls` / `vercel env ls` spellings are untouched."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(*=* vercel --prod*)",
       "probe": "PATH=/x:$PATH vercel --prod --yes",
       "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
@@ -81,6 +93,18 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *npx vercel*)",
+      "probe": "env PATH=/x:$PATH npx vercel --prod",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* npx vercel*)",
+      "probe": "PATH=/x:$PATH npx vercel --prod",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Prefixed form: `npx` puts a word between the assignment and `vercel`, so the vercel catch-all does not reach it."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(supabase db push*)",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase db push"
@@ -105,9 +129,33 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *supabase * db push*)",
+      "probe": "env PATH=/x:$PATH supabase --debug db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* supabase * db push*)",
+      "probe": "PATH=/x:$PATH supabase --debug db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed form."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(npx supabase db push*)",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "npx supabase db push"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *npx supabase db push*)",
+      "probe": "env PATH=/x:$PATH npx supabase db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* npx supabase db push*)",
+      "probe": "PATH=/x:$PATH npx supabase db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed form."
     },
     {
       "list": "deny",
@@ -117,21 +165,45 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *supabase db reset*)",
+      "probe": "env PATH=/x:$PATH supabase db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* supabase db reset*)",
+      "probe": "PATH=/x:$PATH supabase db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed form: `db reset` DROPS the linked database, so it carries the same expansion-safe pair as `db push`."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(git push *--force)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git push origin smoke-branch --force"
     },
     {
       "list": "deny",
-      "rule": "Bash(*=* git push *--force*)",
-      "probe": "PATH=/x:$PATH git push origin smoke-branch --force",
-      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it. Note the deliberate overlap: this expansion/`env` form also matches `--force-with-lease`, which the ask list treats as a question rather than a refusal. Erring STRICT on a prefixed spelling is the right way round — the ordinary `git push --force-with-lease` spelling still reaches the ask rule, and a rule that denies a lease push costs one `--no-verify`-free retry, while a rule that lets a prefixed force push through costs a rewritten shared branch (raised by codex on dobby-foundation#17)."
+      "rule": "Bash(*=* git push *--force)",
+      "probe": "PATH=/x:$PATH git push origin main --force",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it. Anchored exactly like the bare rules (`*--force` at the end, or `*--force *` with a trailing space) so it does NOT swallow `--force-with-lease`, which is an ASK, not a refusal: a guard that rejects correct output is worse than one that misses a rare fault (found by the fresh reviewer on #17)."
     },
     {
       "list": "deny",
-      "rule": "Bash(env *git push *--force*)",
-      "probe": "env PATH=/x:$PATH git push origin smoke-branch --force",
-      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay. Note the deliberate overlap: this expansion/`env` form also matches `--force-with-lease`, which the ask list treats as a question rather than a refusal. Erring STRICT on a prefixed spelling is the right way round — the ordinary `git push --force-with-lease` spelling still reaches the ask rule, and a rule that denies a lease push costs one `--no-verify`-free retry, while a rule that lets a prefixed force push through costs a rewritten shared branch (raised by codex on dobby-foundation#17)."
+      "rule": "Bash(*=* git push *--force *)",
+      "probe": "PATH=/x:$PATH git push origin --force main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-16 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it. Anchored exactly like the bare rules (`*--force` at the end, or `*--force *` with a trailing space) so it does NOT swallow `--force-with-lease`, which is an ASK, not a refusal: a guard that rejects correct output is worse than one that misses a rare fault (found by the fresh reviewer on #17)."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git push *--force)",
+      "probe": "env PATH=/x:$PATH git push origin main --force",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay. Anchored exactly like the bare rules (`*--force` at the end, or `*--force *` with a trailing space) so it does NOT swallow `--force-with-lease`, which is an ASK, not a refusal: a guard that rejects correct output is worse than one that misses a rare fault (found by the fresh reviewer on #17)."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git push *--force *)",
+      "probe": "env PATH=/x:$PATH git push origin --force main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. `env` form: `env PATH=/x:$PATH vercel deploy --prod` matches neither the bare nor the assignment form, because `env` is not one of the wrappers Claude Code strips (found by codex on golden-beans#146). Verified only by the human-run `--live` replay. Anchored exactly like the bare rules (`*--force` at the end, or `*--force *` with a trailing space) so it does NOT swallow `--force-with-lease`, which is an ASK, not a refusal: a guard that rejects correct output is worse than one that misses a rare fault (found by the fresh reviewer on #17)."
     },
     {
       "list": "deny",
@@ -144,6 +216,18 @@
       "rule": "Bash(git push -f*)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git push -fu origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git push -f*)",
+      "probe": "env PATH=/x:$PATH git push -f origin main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git push -f*)",
+      "probe": "PATH=/x:$PATH git push -f origin main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed form."
     },
     {
       "list": "deny",
@@ -174,6 +258,18 @@
       "rule": "Bash(git push *--mirror*)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git push --mirror origin"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git push *--mirror*)",
+      "probe": "env PATH=/x:$PATH git push --mirror origin",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git push *--mirror*)",
+      "probe": "PATH=/x:$PATH git push --mirror origin",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed form."
     },
     {
       "list": "deny",
@@ -210,6 +306,18 @@
       "rule": "Bash(rm -rf*)",
       "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -rfv smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *rm *)",
+      "probe": "env PATH=/x:$PATH rm -fr build",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. Catch-all `env` form, same reason as `Bash(*=* rm *)`."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* rm *)",
+      "probe": "PATH=/x:$PATH rm -fr build",
+      "cites": "WAYS-OF-WORKING → Permissions → three actions get one focused question: a destructive change is the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. Catch-all prefixed form: only `rm -rf` had an expansion-safe pair, so `PATH=/x:$PATH rm -fr <dir>` and the other flag spellings (`-Rf`, `-vrf`, `-r -f`, `-r --force`, …) evaded every rule (found by codex on golden-beans#146). A leading assignment or `env` on an `rm` is never an ordinary spelling, so any prefixed `rm` is denied while plain `rm file` stays ordinary work."
     },
     {
       "list": "deny",
@@ -396,6 +504,66 @@
       "cites": "WAYS-OF-WORKING → Documentation map: BUILD-ORDER.md is generated — a hand edit is silently reverted by the next regeneration."
     },
     {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/tokens.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/tokens.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/tokens.ts)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/tokens.ts)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/reference.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/reference.css)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/coverage.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/coverage.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/STATE-CONTRACT.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/STATE-CONTRACT.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/apps/web/design-system/STATE-MATCH.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/apps/web/design-system/STATE-MATCH.json)",
+      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
+    },
+    {
       "list": "ask",
       "rule": "Bash(vercel env add *)",
       "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
@@ -484,66 +652,6 @@
       "rule": "Bash(gcloud run deploy *)",
       "cites": "AGENTS.md rule #4 (merging to main is the deploy; never an out-of-band CLI deploy) + the env-var note: a Vercel env change only reaches running functions on a REDEPLOY, so a write here is a production change the product owner should see. One focused question, not a ban.",
       "probe": "gcloud run deploy svc --image=x"
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/tokens.css)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/tokens.css)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/tokens.ts)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/tokens.ts)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/reference.css)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/reference.css)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/coverage.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/coverage.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/STATE-CONTRACT.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/STATE-CONTRACT.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Edit(/apps/web/design-system/STATE-MATCH.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
-    },
-    {
-      "list": "deny",
-      "rule": "Write(/apps/web/design-system/STATE-MATCH.json)",
-      "cites": "AGENTS.md + each file's own DO-NOT-HAND-EDIT header: these are generated by scripts/check-design-drift.mjs / design-coverage.mjs and CI --checks them. A hand edit is silently reverted by the next regeneration."
     }
   ]
 }
