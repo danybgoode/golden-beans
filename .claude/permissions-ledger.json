@@ -21,6 +21,12 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(*=* vercel --prod*)",
+      "probe": "PATH=/x:$PATH vercel --prod --yes",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(vercel --yes*)",
       "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
       "probe": "vercel --yes"
@@ -30,6 +36,12 @@
       "rule": "Bash(vercel deploy*)",
       "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
       "probe": "vercel deploy --prod"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* vercel deploy*)",
+      "probe": "PATH=/x:$PATH vercel deploy --prod",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`). Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -63,6 +75,12 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(*=* supabase db push*)",
+      "probe": "PATH=/x:$PATH supabase db push",
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(supabase * db push*)",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase --debug db push"
@@ -84,6 +102,12 @@
       "rule": "Bash(git push *--force)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git push origin smoke-branch --force"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git push *--force*)",
+      "probe": "PATH=/x:$PATH git push origin smoke-branch --force",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",
@@ -162,6 +186,12 @@
       "rule": "Bash(rm -rf*)",
       "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
       "probe": "rm -rfv smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* rm -rf*)",
+      "probe": "PATH=/x:$PATH rm -rf smoke-victim",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`. Expansion-prefixed form: observed LIVE 2026-09-17 that `PATH=/x:$PATH vercel deploy --prod` is NOT matched by the bare rule (a leading assignment whose value contains an expansion escapes deny matching), while `FOO=1 …` and a literal `PATH=/x …` are refused. This form is unverified in a live session — the auto-mode classifier refused further bypass probes — so the human-run `--live` replay is what proves it."
     },
     {
       "list": "deny",

@@ -270,6 +270,27 @@ test('live scoring: refused only when denied AND the shim never ran; control mus
   assert.equal(good.ok, true);
 });
 
+test('live scoring sees an assignment-prefixed probe run — the shim never logs the assignment', () => {
+  const probe = 'PATH=/x:$PATH vercel deploy --prod';
+  const s = scoreLive({
+    probes: [probe],
+    refused: new Set(),
+    shimLog: ['probe-ok control', 'vercel deploy --prod'],
+    expect: 'ran',
+  });
+  assert.equal(s.ok, true);
+  const leaked = scoreLive({
+    probes: [probe],
+    refused: new Set(),
+    shimLog: ['probe-ok control', 'vercel deploy --prod'],
+  });
+  assert.equal(
+    leaked.results[0].verdict,
+    'RAN',
+    'an escaped deny rule must read as RAN, not as not-attempted'
+  );
+});
+
 test('live baseline: without rules every probe must RUN — a refusal there means something else is refusing', () => {
   const probes = ['vercel deploy --prod', 'supabase db push'];
   const polluted = scoreLive({

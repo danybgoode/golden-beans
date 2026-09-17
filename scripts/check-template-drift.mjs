@@ -16,6 +16,7 @@
 // Zero deps — Node 18+. Run: `node scripts/check-template-drift.mjs` (wired as `npm run check:template-drift`).
 
 import { readFileSync } from 'node:fs';
+import { parseFillIns, render } from './render-ways-of-working.mjs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -51,14 +52,43 @@ for (const rel of LOAD_BEARING) {
   });
 }
 
+// ── Rendered-file drift (ways-of-work-lean-pass S3.5) ─────────────────────────────────────────────
+// A filled placeholder is not enough: Roadmap/WAYS-OF-WORKING.md is GENERATED from the vendored template
+// plus Roadmap/fill-ins.yml, and a hand edit to the generated file is exactly how the fork this repo had
+// for months comes back. So the committed file must equal what the renderer would produce, byte for byte.
+{
+  const rel = 'Roadmap/WAYS-OF-WORKING.md';
+  try {
+    const expected = render(
+      readFileSync(join(repoRoot, 'Roadmap', 'WAYS-OF-WORKING.template.md'), 'utf8'),
+      parseFillIns(readFileSync(join(repoRoot, 'Roadmap', 'fill-ins.yml'), 'utf8'))
+    );
+    const actual = readFileSync(join(repoRoot, rel), 'utf8');
+    if (actual !== expected) {
+      const a = actual.split('\n');
+      const e = expected.split('\n');
+      const at = a.findIndex((line, i) => line !== e[i]);
+      violations.push({
+        rel,
+        line: at + 1,
+        content: `DRIFTED from its source (first difference at line ${at + 1}) — edit Roadmap/fill-ins.yml or the template, then run: node scripts/render-ways-of-working.mjs`,
+      });
+    }
+  } catch (err) {
+    violations.push({ rel, line: 0, content: `could not render from its source: ${err.message}` });
+  }
+}
+
 if (violations.length === 0) {
   console.log(`✓ template-drift: ${LOAD_BEARING.length} load-bearing docs clean (no unfilled placeholders).`);
   process.exit(0);
 }
 
-console.error('✗ template-drift: unfilled TEMPLATE FILL-IN placeholder(s) in load-bearing docs:\n');
+console.error(
+  '✗ template-drift: load-bearing docs have an unfilled placeholder or have drifted from their source:\n'
+);
 for (const v of violations) {
   console.error(`  ${v.rel}:${v.line}: ${v.content}`);
 }
-console.error('\nFill each placeholder with this project\'s real shape (see the poster-hardening seed).');
+console.error("\nFill each placeholder with this project's real shape (see the poster-hardening seed).");
 process.exit(1);

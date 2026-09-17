@@ -2,7 +2,8 @@
   cross-review.prompt.md — the ONE shared reviewer prompt, read by BOTH readers.
 
   • `scripts/cross-review.mjs` (the external CLI pass) sends everything below the first `---`.
-  • The fresh `pr-reviewer` subagent reads *Shared bar* + *Project rules* and ignores *CLI reader only*.
+  • The fresh `pr-reviewer` subagent reads *Shared bar*, *What to check* and *Project rules*, and ignores
+    *CLI reader only*.
 
   One prompt, two independent readers, no drift: that is the whole design (ways-of-work-lean-pass D8).
   If the review criteria change, change them HERE.
@@ -42,9 +43,9 @@ matters and trains people to skim these comments.
 input, the path, and the wrong result. A manufactured finding costs a real round-trip. **If the diff
 looks clean, say so plainly in one line** — an honest empty result is a useful result.
 
-**Re-review convergence.** If you are reviewing a PR you have already reviewed once, report **Blocking
-and Important findings only**: no new nits, and never repeat a finding the author already fixed or
-answered.
+**Re-review convergence.** If you are reviewing a commit you have already reviewed once, report
+**Blocking and Should-fix findings only**: no new nits, and never repeat a finding the author already
+fixed or answered.
 
 ## What to check
 
@@ -72,11 +73,18 @@ answered.
 5. **Site/base URLs never fall back to a request Host header** — only `getSiteUrl()`'s explicit
    `SITE_URL` env var or its hardcoded localhost default.
 
-## How to report
+## How to report — the shape is part of the contract
 
 Group findings by severity: **Blocking** (a real bug or rule violation), **Should-fix**, **Nit** (max 3).
 For each: a one-line claim + the `file:line` + why it matters. Be concise; no preamble, no restating the
 diff back.
+
+**Write the severity as a heading or a bold marker** — `### Blocking`, `**Blocking**`, or
+`- **Blocking**: …` all work. **If the diff is clean, say so in one line** — `Clean.` or
+`No blocking findings.` A reply carrying neither a severity marker nor a clean verdict is treated as a
+FAILED run, not a clean one, and fails this PR's `cross-review` status: the reviewer CLI that exits 0
+printing nothing is the failure that rule exists for. **Never emit a raw tool call** (`read_file{…}`) —
+that is the other observed failure.
 
 ## CLI reader only — ignore this section if you are the fresh reviewer subagent
 

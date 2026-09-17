@@ -95,6 +95,8 @@ export const REQUIRED_REFUSALS = [
   'rm -rf build',
   'git add -A',
   'git commit --all -m x',
+  // Observed live: a leading assignment with an expansion escapes the bare rule.
+  'PATH=/x:$PATH vercel deploy --prod',
 ];
 
 /**
@@ -221,7 +223,10 @@ export function refusedCommands(resultJson) {
  * managed policy, a probe the allow shim did not cover) scores as a working deny rule.
  */
 export function scoreLive({ probes, refused, shimLog, expect = 'refused' }) {
-  const ran = (cmd) => shimLog.some((line) => line.trim() === cmd.trim());
+  // The shim logs the program and its args, never a leading `VAR=value` assignment — strip those from
+  // the probe before comparing, or an assignment-prefixed probe could never be seen to have run.
+  const bare = (cmd) => cmd.trim().replace(/^(?:[A-Za-z_]\w*=\S*\s+)+/, '');
+  const ran = (cmd) => shimLog.some((line) => line.trim() === bare(cmd));
   const results = probes.map((cmd) => {
     if (ran(cmd)) return { cmd, verdict: 'RAN' };
     if (refused.has(cmd)) return { cmd, verdict: 'refused' };
