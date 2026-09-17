@@ -19,7 +19,7 @@
 // name. What matters is that the file and its reader agree, so both come out of `ENV_KEYS` below.
 
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, chmodSync, existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { isFlagEnvironment } from '@golden-frijoles/sdk'
 import { flagValue } from '../args'
@@ -134,6 +134,8 @@ export const initCommand: Command = {
     // ── 2. the file must be ignorable BEFORE anything is minted ───────────────────────────────
     const gitignorePath = join(context.cwd, GITIGNORE)
     const envPath = join(context.cwd, ENV_FILE)
+    const symlinkResult = refuseSymlink(envPath, context)
+    if (symlinkResult !== null) return symlinkResult
     const ignoreResult = ensureIgnored(gitignorePath, context)
     if (ignoreResult !== null) return ignoreResult
 
@@ -219,6 +221,39 @@ export const initCommand: Command = {
     )
     return EXIT.OK
   },
+}
+
+/**
+ * Refuse a `.env.local` that is a SYMLINK.
+ *
+ * ⚠️ **Because the ignore check and the write look at different things** (cross-family review,
+ * Codex, round 2). `git check-ignore .env.local` answers about the PATH, and `writeFileSync`
+ * FOLLOWS the link — so an ignored `.env.local` pointing at a tracked file elsewhere in the
+ * repository passes every check this verb makes and then writes a live credential into a file git
+ * is watching. That is the exact outcome `ensureIgnored` exists to prevent, reached around it.
+ *
+ * `lstatSync`, not `statSync`: `stat` follows the link and would describe the target, which is the
+ * very thing being checked for.
+ *
+ * Refused rather than resolved-and-re-checked. Following the link to check the target would work,
+ * and then `gf init` would be a verb that writes credentials to a path the caller did not name —
+ * a worse property than the one it fixed.
+ */
+function refuseSymlink(envPath: string, context: CommandContext): ExitCode | null {
+  let link = false
+  try {
+    link = lstatSync(envPath).isSymbolicLink()
+  } catch {
+    return null // it does not exist yet, which is the ordinary case
+  }
+  if (!link) return null
+  context.emit.fail(
+    'invalid',
+    `${ENV_FILE} is a symlink. Writing through it would put a live credential wherever it points — ` +
+      `possibly into a tracked file — so nothing was minted and nothing was written. Replace it with ` +
+      `a real file and re-run.`
+  )
+  return EXIT.USAGE
 }
 
 /**

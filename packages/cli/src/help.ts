@@ -59,6 +59,44 @@ function exitCodes(): string {
   ].join('\n')
 }
 
+/**
+ * `--help` as DATA, for `--json`.
+ *
+ * ⚠️ **This exists because `gf --json --help` printed the plain-text help to stdout** (cross-family
+ * review, Codex, round 2). `output.ts` states the contract in one line — under `--json`, stdout
+ * carries exactly one JSON document and nothing else — and the help path wrote straight to the
+ * writer, bypassing the emitter entirely. An agent that piped `gf --json --help` into a parser got
+ * a wall of prose.
+ *
+ * It is a STRUCTURED shape rather than `{ help: "<the same text>" }`, because the reason an agent
+ * asks for help is to learn the verbs and their flags — and a string forces it to parse the layout
+ * of a table it did not write. Both forms are pinned by golden files; changing either is a change
+ * to what every agent believes this tool can do.
+ */
+export function helpAsData(commands: readonly Command[]) {
+  return {
+    usage: 'gf <command> [flags]',
+    commands: commands.map((command) => ({
+      command: command.path.join(' '),
+      summary: command.summary,
+      usage: command.usage,
+      needsAuth: command.needsAuth,
+      flags: command.flags.map((flag) => ({
+        flag: `--${flag.name}`,
+        takesValue: flag.value !== undefined,
+        describe: flag.describe,
+      })),
+    })),
+    globalFlags: ['--json', '--project', '--api', '--token', '--help', '--version'],
+    environment: ['GOLDEN_FRIJOLES_TOKEN', 'GOLDEN_FRIJOLES_URL', 'GOLDEN_FRIJOLES_PROJECT'],
+    exitCodes: EXIT_CODE_TABLE.map((row) => ({ code: row.code, name: row.name, means: row.means })),
+  }
+}
+
+export function commandAsData(command: Command) {
+  return helpAsData([command]).commands[0]
+}
+
 export function renderRootHelp(commands: readonly Command[]): string {
   return [HEADER, `Usage\n  gf <command> [flags]`, `Commands\n${verbList(commands)}`, GLOBAL_FLAGS, ENVIRONMENT, exitCodes()].join(
     '\n\n'

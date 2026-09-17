@@ -150,6 +150,16 @@ const FLAGS = {
   environments: [{ environment: 'production', snapshotVersion: 7, updatedAt: '2026-09-17T00:00:00.000Z' }],
 }
 
+test('gf --json --help has the recorded MACHINE-READABLE shape', async () => {
+  // Added in review round 2, with the fix that made `--json --help` emit JSON at all. It is a
+  // contract for the same reason the text form is: an agent reads it to learn the verbs, so a
+  // renamed field breaks every agent that already scrapes the old one.
+  const { writer, out } = capture()
+  const code = await run({ argv: ['--json', '--help'], writer, env: sandbox() })
+  assert.equal(code, 0)
+  golden('json-help.json', out.join('\n'))
+})
+
 test('gf whoami --json has the recorded shape', async () => {
   const { writer, out } = capture()
   const code = await run({

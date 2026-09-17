@@ -12,7 +12,7 @@ import { matchCommand, type Command, type CommandContext } from './command'
 import { COMMANDS } from './commands'
 import { resolveAuth } from './credentials'
 import { EXIT, type ExitCode } from './exit-codes'
-import { renderCommandHelp, renderRootHelp } from './help'
+import { commandAsData, helpAsData, renderCommandHelp, renderRootHelp } from './help'
 import { createEmitter, processWriter, type Writer } from './output'
 import { VERSION } from './version'
 
@@ -53,10 +53,12 @@ export async function run(options: RunOptions): Promise<ExitCode> {
     if (target.length > 0) {
       const found = matchCommand(commands, target)
       if (!found) return unknownCommand(target, emit)
-      writer.out(renderCommandHelp(found.command))
+      // Through the EMITTER, not `writer.out`. Writing help directly bypassed `--json` entirely, so
+      // `gf --json help <verb>` emitted prose on the stdout an agent was parsing (Codex, round 2).
+      emit.ok({ help: commandAsData(found.command) }, renderCommandHelp(found.command))
       return EXIT.OK
     }
-    writer.out(renderRootHelp(commands))
+    emit.ok({ help: helpAsData(commands) }, renderRootHelp(commands))
     // `gf` with no arguments prints help and exits 0 — it is what a person types to find out what
     // this is, and answering their question is not an error. `gf nonsense` is (see below).
     return EXIT.OK
@@ -67,7 +69,7 @@ export async function run(options: RunOptions): Promise<ExitCode> {
   const { command, rest } = found
 
   if (args.help) {
-    writer.out(renderCommandHelp(command))
+    emit.ok({ help: commandAsData(command) }, renderCommandHelp(command))
     return EXIT.OK
   }
 
