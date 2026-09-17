@@ -12,10 +12,12 @@ on:
     branches: [main]
     paths:
       - 'scripts/**'
+      - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
   pull_request:
     paths:
       - 'scripts/**'
+      - '.claude/**'
       - '.github/workflows/scripts-guard.yml'
 
 jobs:
@@ -28,3 +30,7 @@ jobs:
           node-version: '22'
       - name: Run CLI/tooling node:test
         run: node --test 'scripts/lib/*.test.mjs' 'scripts/*.test.mjs'
+      # The committed permission rules: every deny/ask rule cited in .claude/permissions-ledger.json,
+      # verb-class allow list, no project-level auto mode. Static — the --live replay is human-run.
+      - name: permissions contract
+        run: node scripts/permissions-smoke.mjs

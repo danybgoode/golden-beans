@@ -1,0 +1,429 @@
+{
+  "_about": "Every deny/ask rule in .claude/settings.json, with the rule it enforces and a probe command. Checked by scripts/permissions-smoke.mjs — a rule without an entry, or an entry without its rule, fails CI. Deny rules match the command text an agent normally writes; they are not a sandbox (see the script header).",
+  "entries": [
+    {
+      "list": "deny",
+      "rule": "Bash(vercel)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel .*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel ."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel --prod*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel --prod --yes"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel --yes*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel --yes"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel deploy*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel deploy --prod"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel promote*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel promote dpl_123"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel rollback*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel rollback"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(vercel redeploy*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "vercel redeploy dpl_123"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(npx vercel*)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven — merging to main is the deploy; a CLI deploy is an out-of-band production release (a consuming project recorded an agent running `vercel --prod --yes`).",
+      "probe": "npx vercel --prod"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(supabase db push*)",
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "probe": "supabase db push"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(supabase * db push*)",
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "probe": "supabase --debug db push"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(npx supabase db push*)",
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "probe": "npx supabase db push"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(supabase db reset*)",
+      "cites": "WAYS-OF-WORKING → Epic-mode: migrations are applied deliberately and verified live; `db push` replays every local migration file not recorded remotely, `db reset` destroys the linked database. Agents apply via the Supabase MCP; the product owner can still run it by hand.",
+      "probe": "supabase db reset --linked"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push *--force)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push origin smoke-branch --force"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push *--force *)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push --force origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push -f*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push -fu origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push * -f*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push origin smoke-branch -f"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push -uf*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push -uf origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push * -uf*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push origin -uf smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push * +*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push origin +smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git push *--mirror*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git push --mirror origin"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git -C * push *--force)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git -C . push origin smoke-branch --force"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git -C * push *--force *)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git -C . push --force origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git -C * push -f*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git -C . push -f origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git -C * push * -f*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git -C . push origin smoke-branch -f"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git -C * push * +*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
+      "probe": "git -C . push origin +smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -rf*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -rfv smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -fr*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -fr smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -Rf*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -Rf smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -fR*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -fR smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -vrf*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -vrf smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -r -f*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -r -f smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -R -f*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -R -f smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -f -r*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -f -r smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm -r --force*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm -r --force smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(rm --recursive --force*)",
+      "cites": "WAYS-OF-WORKING → Operating care: destructive changes are the one irreversible class. A consuming project's local approvals had accreted `rm -rf .git`.",
+      "probe": "rm --recursive --force smoke-victim"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -A*)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add -Av"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add --all*)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add --all"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add .)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add ."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -- .)",
+      "probe": "git add -- .",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add ./)",
+      "probe": "git add ./",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -- ./*)",
+      "probe": "git add -- ./",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -- :/*)",
+      "probe": "git add -- :/",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add * .)",
+      "probe": "git add -v .",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add :/*)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add :/"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add -u)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add -u"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git add --update)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git add --update"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit -a *)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -a -m smoke"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit -am *)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -am smoke"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit -qam *)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -qam smoke"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit -av*)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -av"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit --all*)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit --all -m smoke"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit * -a)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -m smoke -a"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(git commit * --all)",
+      "cites": "WAYS-OF-WORKING → Conventions (path-limited commits): several agents share one checkout, so whole-tree staging commits a sibling agent's in-flight work.",
+      "probe": "git commit -m smoke --all"
+    },
+    {
+      "list": "deny",
+      "rule": "Edit(/Roadmap/00-ideas/BUILD-ORDER.md)",
+      "cites": "WAYS-OF-WORKING → Documentation map: BUILD-ORDER.md is generated — a hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "deny",
+      "rule": "Write(/Roadmap/00-ideas/BUILD-ORDER.md)",
+      "cites": "WAYS-OF-WORKING → Documentation map: BUILD-ORDER.md is generated — a hand edit is silently reverted by the next regeneration."
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(vercel env add *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "vercel env add SMOKE_VAR production"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(vercel env rm *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "vercel env rm SMOKE_VAR production"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(vercel env update *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "vercel env update SMOKE_VAR production"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gh secret set *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gh secret set SMOKE_SECRET"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gh secret delete *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gh secret delete SMOKE_SECRET"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud secrets create *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud secrets create smoke-secret"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud secrets delete *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud secrets delete smoke-secret"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud secrets versions add *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud secrets versions add smoke-secret --data-file=x"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud secrets versions destroy *)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud secrets versions destroy 1 --secret=smoke-secret"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud run services update *--set-env-vars*)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud run services update svc --set-env-vars=A=b"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud run services update *--update-env-vars*)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud run services update svc --update-env-vars=A=b"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud run services update *--set-secrets*)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud run services update svc --set-secrets=A=s:1"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud run services update *--update-secrets*)",
+      "cites": "WAYS-OF-WORKING → the three actions that get one focused question: production secrets/IAM. ASK, not deny — secret names are not enumerable, so a name-matched deny would be decoration; one prompt is the honest control.",
+      "probe": "gcloud run services update svc --update-secrets=A=s:1"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(git push *--force-with-lease*)",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a SHARED branch. A lease push to your own feature branch (after rebasing a stacked branch) is legitimate, so it asks once instead of being denied — a deny cannot be approved for the one legitimate case.",
+      "probe": "git push --force-with-lease origin smoke-branch"
+    },
+    {
+      "list": "ask",
+      "rule": "Bash(gcloud run deploy *)",
+      "cites": "WAYS-OF-WORKING → Conventions: deploys are git-driven. A CLI Cloud Run deploy is an out-of-band production release; it asks rather than being denied because ops recovery occasionally needs one.",
+      "probe": "gcloud run deploy svc --image=x"
+    }
+  ]
+}

@@ -466,7 +466,7 @@ The authenticated CLI access Claude can drive in this repo:
 | **git / gh** | Version control, feature branches, pull requests + merges, GitHub operations |
 | **node / npm** | Type-check (`tsc`), build (`npm run build`), Playwright (`npm run test:e2e`), local dev server, the `scripts/*` tooling |
 | **vercel** | Env-var management (`vercel env pull/add/ls`) + reading deploy state. **Never** `vercel deploy`/`--prod` — merge to `main` is the deploy (rule #4); check state via `gh api repos/<owner>/<repo>/deployments`. |
-| **supabase** | Migrations against linked project (`supabase link` / `migration list` / `db push`) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
+| **supabase** | Migrations against linked project (`supabase link` / `migration list`; apply via the Supabase MCP — `db push` is denied to agents by `.claude/settings.json`, the product owner may run it by hand) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
 | **antigravity (agy)** | Baseline cold judgment-layer PR review via `scripts/cross-review.mjs` (see *Review & merge*). |
 | **devin** | Added independent review for high-risk migrations, tenancy, auth, concurrency and shared infrastructure. Default router is sufficient; named premium models may be plan-gated. |
 | **cursor-agent** | Quota-aware specialist/tie-breaker (SQL, boundary contracts, disputed findings). Auto is acceptable; prefer Anthropic then Grok when model selection/quota permits. |
