@@ -34,7 +34,7 @@ import { writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { die, need, hasCmd, AGENT_BIN } from './lib/cross-agent-cli.mjs';
-import { decideSecurityPass, parseReviewConfig } from './lib/review-guard.mjs';
+import { changedFileCount, decideSecurityPass, parseReviewConfig } from './lib/review-guard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -168,6 +168,7 @@ function main() {
       files: facts.files,
       body: facts.body,
       securityPaths: config.securityPaths,
+      totalFiles: changedFileCount({ pr, repo }),
     });
     securityPass = decision.run;
     trigger = decision.reason;

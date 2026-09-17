@@ -70,6 +70,7 @@ import {
 } from './lib/cross-agent-cli.mjs';
 import {
   assertReviewOutput,
+  changedFileCount,
   cliVersionNote,
   decideSecurityPass,
   parseReviewConfig,
@@ -433,6 +434,7 @@ function main() {
       files: ghFiles(pr, repo),
       body: ghBody(pr, repo),
       securityPaths: cfg.securityPaths,
+      totalFiles: changedFileCount({ pr, repo }),
     });
     if (decision.run) {
       securityOwed = decision.reason;

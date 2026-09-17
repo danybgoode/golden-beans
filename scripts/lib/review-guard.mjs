@@ -82,7 +82,7 @@ export function globToRegExp(glob) {
  * Does this PR get the security lens? Pure.
  * files: [{ path }] or strings · body: PR body · securityPaths: globs from review-config.json.
  */
-export function decideSecurityPass({ files = [], body = '', securityPaths = [] }) {
+export function decideSecurityPass({ files = [], body = '', securityPaths = [], totalFiles = null }) {
   const paths = files.map((f) => (typeof f === 'string' ? f : f.path)).filter(Boolean);
   const res = securityPaths.map(globToRegExp);
   const matched = paths.filter((p) => res.some((r) => r.test(p)));
@@ -96,6 +96,16 @@ export function decideSecurityPass({ files = [], body = '', securityPaths = [] }
   // a declaration.
   if (/\brisk\s*tier\s*[:=]\s*\**\s*high\b|\brisk\s*[:=]\s*\**\s*high\b/i.test(body))
     return { run: true, reason: 'PR body declares risk: high', matched: [] };
+  // `gh pr view --json files` silently caps at 100 files — measured on a 108-file PR. A security file
+  // sorted past #100 would read as "no security path touched": a confident false negative on exactly
+  // the large refactor that most needs the lens. An incomplete list is UNKNOWN, and unknown forces the
+  // lens ON rather than off.
+  if (Number.isInteger(totalFiles) && totalFiles > paths.length)
+    return {
+      run: true,
+      reason: `file list truncated (${paths.length} of ${totalFiles} changed files seen) — lens forced on`,
+      matched: [],
+    };
   return { run: false, reason: 'no security path touched and no risk: high declared', matched: [] };
 }
 
@@ -116,6 +126,31 @@ export function parseReviewConfig(json) {
     throw new Error('review-config.json: securityPaths must be a non-empty array of globs');
   }
   return { reviewScope: json.reviewScope, securityPaths: json.securityPaths };
+}
+
+/**
+ * The PR's TRUE changed-file count, from the REST endpoint (the GraphQL-backed `gh pr view --json files`
+ * silently caps at 100). null when it cannot be read — never a guess; the trigger treats null as "no
+ * extra signal" and the caller has already failed loudly if it could not read the file list at all.
+ */
+export function changedFileCount({ pr, repo = null }, deps = {}) {
+  const run = deps.spawn ?? spawnSync;
+  let fullRepo = repo;
+  if (!fullRepo) {
+    const view = run('gh', ['pr', 'view', String(pr), '--json', 'url'], { encoding: 'utf8' });
+    if (view.status !== 0) return null;
+    try {
+      fullRepo = new URL(JSON.parse(view.stdout).url).pathname.split('/').slice(1, 3).join('/');
+    } catch {
+      return null;
+    }
+  }
+  const r = run('gh', ['api', `repos/${fullRepo}/pulls/${pr}`, '--jq', '.changed_files'], {
+    encoding: 'utf8',
+  });
+  if (r.status !== 0) return null;
+  const n = Number(String(r.stdout).trim());
+  return Number.isInteger(n) && n >= 0 ? n : null;
 }
 
 /** The `gh api` argv that sets a commit status. Pure, so the shape is pinned by a test. */

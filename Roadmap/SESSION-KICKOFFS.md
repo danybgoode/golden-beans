@@ -28,7 +28,7 @@ A **fixed-scope** ask (bug, chore, clear story) skips Bet by design — see §1.
 - `<epic-slug>` — e.g. `discovery-polish`
 - `<NN-macro>` — macro-section folder, e.g. `01-onboarding-and-auth`
 - `<N>` — sprint number
-- `<risk>` — **LOW** (reviewer may auto-merge on green CI) / **HIGH** (product owner merges)
+- `<risk>` — **LOW** / **HIGH** (money, auth, migrations, shared infra). The tier selects the review scope and whether the security lens is forced; **the builder merges on green at either tier**
 - `<appetite>` — **S** (one builder session) / **M** (one wave) / **L** (multi-wave) — the budget, fixed before the solution
 - `<lane>` — **shaped bet** (→ the table) / **fixed scope** (→ straight to a builder) / **reactive** (logged against the wave)
 - `<wave>` — the wave file under `Roadmap/bets/`, e.g. `wave-2026-08-03-harness-portability.md`
@@ -48,12 +48,12 @@ Pleasantries are fine and cost nothing — the leverage is the defined verb, not
 | **Build S\<N\> of \<epic\>** | §2 — build a single sprint (the exception: one-sprint epic, or the next sprint's scope genuinely isn't knowable yet) |
 | **Spike \<name\>** | §3 — run a spike |
 | **Review PR #\<N\>** | §4 — route it: `node scripts/review-route.mjs --builder <who> <N>` → one external general pass + the fresh `pr-reviewer` subagent (+ a security lens when the paths trigger it) |
-| **Cross-review PR #\<N\>** | §4 — synonym. Always route it; hand-picking `--agent` is how a family reviews its own diff. Fresh reviewer subagent on HIGH only, **never on LOW** |
-| **Refund \<tool\>** | a reviewer family is capped — top up the quota so the external layer stays lit instead of being replaced by orchestrator subagents |
-| **Panel: \<scope-doc \| ask\>** | advisory second opinion on a *plan* — `node scripts/cross-panel.mjs <doc> --lens both --agent codex\|antigravity` (single-pass, print-only, never gates; surfaced at groom Stage 2/4) |
+| **Cross-review PR #\<N\>** | §4 — synonym. Always route it; hand-picking `--agent` is how a family reviews its own diff. The fresh `pr-reviewer` subagent runs on **every** non-trivial PR here |
+| **Skip \<family\>** | a reviewer family is capped — re-route past it: `node scripts/review-route.mjs --builder <who> <N> --exclude <family>` (there is no refund pause) |
+| **Panel: \<scope-doc \| ask\>** | advisory second opinion on a *plan* — `node scripts/cross-panel.mjs <doc> --lens both --agent codex\|antigravity` (single-pass, print-only, never gates; on demand only) |
 | **Wrap S\<N\>** | tick the sprint doc status + emit the §7 sprint-wrap terminal summary |
 | **Close epic \<slug\>** | §6 — full epic Definition of Done |
-| **Clear to merge — LOW** / **product-owner-merge** | the risk-tier gate: reviewer auto-merges on green CI / product owner merges |
+| **Clear to merge** | the builder merges on a green gate with every finding fixed or answered — at any risk tier |
 | **Next** | proceed to the next story/sprint per the current `sprint-N.md` |
 | **Resume** | §8 — pick up a session that died mid-flight (`node scripts/session-trail.mjs --resume`) |
 
@@ -94,7 +94,7 @@ PATH-SCOPED (git add <your files> && git commit -- <those paths>; never -A). One
 story. Keep the CI gate green; open a draft PR declaring risk <risk>. Write the sprint smoke walkthrough
 into sprint-<N>.md before calling it done.
 ```
-*HIGH-risk: add — "all stories HIGH → product owner merges; the authed money-path browser smoke is owed
+*HIGH-risk: add — "all stories HIGH → the security lens runs on each PR and the builder still merges on green; the authed money-path browser smoke is owed
 to the product owner."*
 
 ## 3 · Run a spike — strong model
@@ -117,7 +117,7 @@ diff, the **security lens** by the next family when a changed path matches `scri
 `securityPaths` (or the body declares `risk: high`), and the **fresh `pr-reviewer` subagent**, which runs
 on every non-trivial PR here.
 
-A capped family falls to the next in the order (`codex → agy → vibe → claude`); there is no refund pause.
+A capped family is routed past with `--exclude <family>` (order `codex → agy → vibe → claude`); there is no refund pause.
 One family left runs both prompts and you say so in the PR body; none left means the layer is DARK and you
 say that. **A reviewer that returns nothing is a FAILED run** — the script prints its reply, exits non-zero
 and fails the PR's `cross-review/<lens>` status. Findings are fixed or answered on the PR; the builder

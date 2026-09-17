@@ -282,7 +282,7 @@ node scripts/review-route.mjs --builder <who-wrote-it> <PR#>
 
 The highest-preference family that did **not** build the diff runs the general pass; the next runs the
 security lens. Preference order `codex → agy → vibe → claude` (`claude` last: its capacity is usually the
-thing *building*). A capped family falls to the next — **no refund pause, no waiting.** One family left
+thing *building*). A capped family falls to the next — re-route with `--exclude <family>` (an installed CLI cannot be told from a capped one without spending a run); **no refund pause, no waiting.** One family left
 runs both prompts and the PR body says so; none left means the layer is **DARK** and the PR body says that.
 
 **A silent reviewer is a FAILED run, not a clean one.** With one external pass nothing contradicts a CLI
@@ -296,7 +296,7 @@ a count), skip what CI already enforces, Blocking/Should-fix only when re-review
 
 **Every finding is fixed, or answered on the PR.** Neither pass authorizes anything.
 
-**The builder merges their own PR, at every risk tier**, once CI is green and findings are resolved. The
+**Risk tiers.** **HIGH** = money, auth and authorization boundaries, tenancy, DB migrations, shared infra; **LOW** = everything else. When unsure, HIGH. **The builder merges their own PR, at every risk tier**, once CI is green and findings are resolved. The
 declared tier selects the review scope, not the merge authority. Roll back with `git revert` on `main`.
 
 **Three actions still get one focused question first** — a destructive change to live data, real money or
@@ -455,9 +455,7 @@ The authenticated CLI access Claude can drive in this repo:
 | **node / npm** | Type-check (`tsc`), build (`npm run build`), Playwright (`npm run test:e2e`), local dev server, the `scripts/*` tooling |
 | **vercel** | Env-var management (`vercel env pull/add/ls`) + reading deploy state. **Never** `vercel deploy`/`--prod` — merge to `main` is the deploy (rule #4); check state via `gh api repos/<owner>/<repo>/deployments`. |
 | **supabase** | Migrations against linked project (`supabase link` / `migration list`; apply via the Supabase MCP — `db push` is denied to agents by `.claude/settings.json`, the product owner may run it by hand) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
-| **antigravity (agy)** | Baseline cold judgment-layer PR review via `scripts/cross-review.mjs` (see *Review & merge*). |
-| **devin** | Added independent review for high-risk migrations, tenancy, auth, concurrency and shared infrastructure. Default router is sufficient; named premium models may be plan-gated. |
-| **cursor-agent** | Quota-aware specialist/tie-breaker (SQL, boundary contracts, disputed findings). Auto is acceptable; prefer Anthropic then Grok when model selection/quota permits. |
+| **codex / agy / vibe / claude** | The external review families, in preference order — **routed, never hand-picked**: `node scripts/review-route.mjs --builder <who> <PR#>` prints the general pass and, when the paths trigger it, the security lens by a different family (see *Review & merge*). Health and pins: `node scripts/agy-doctor.mjs`. **devin** does prose, not review; **cursor-agent** is not wired into review. |
 
 This means a story can go from code → verified → preview-deployed → live-tested on a branch, then
 merged to production via PR — with verification at each step. Actions that touch live production, real

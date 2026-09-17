@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertReviewOutput,
+  changedFileCount,
   commitStatusArgs,
   decideSecurityPass,
   globToRegExp,
@@ -128,6 +129,36 @@ test("the SHIPPED globs trigger on an App Router's route files, not just on base
       `should NOT trigger: ${p}`
     );
   }
+});
+
+test('a TRUNCATED file list forces the lens on instead of reading as "no security path"', () => {
+  // gh pr view --json files caps at 100 with no signal (a real 108-file PR returned 100).
+  const securityPaths = ['**/auth/**'];
+  const hundred = Array.from({ length: 100 }, (_, i) => `components/C${i}.tsx`);
+  const cut = decideSecurityPass({ files: hundred, securityPaths, totalFiles: 108 });
+  assert.equal(cut.run, true);
+  assert.match(cut.reason, /truncated \(100 of 108/);
+  // A complete list with nothing matching stays off — the guard must allow the negation.
+  assert.equal(decideSecurityPass({ files: hundred, securityPaths, totalFiles: 100 }).run, false);
+  assert.equal(decideSecurityPass({ files: hundred, securityPaths }).run, false);
+});
+
+test('changedFileCount reads the REST count and never guesses', () => {
+  const calls = [];
+  const spawn = (cmd, args) => {
+    calls.push(args);
+    return { status: 0, stdout: '108\n' };
+  };
+  assert.equal(changedFileCount({ pr: 399, repo: 'o/r' }, { spawn }), 108);
+  assert.deepEqual(calls[0].slice(0, 2), ['api', 'repos/o/r/pulls/399']);
+  assert.equal(
+    changedFileCount({ pr: 1, repo: 'o/r' }, { spawn: () => ({ status: 1, stderr: 'HTTP 404' }) }),
+    null
+  );
+  assert.equal(
+    changedFileCount({ pr: 1, repo: 'o/r' }, { spawn: () => ({ status: 0, stdout: 'null' }) }),
+    null
+  );
 });
 
 test('a plain-prose "low-risk high-value" body is not a risk declaration', () => {
