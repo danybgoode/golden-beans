@@ -1,0 +1,29 @@
+gf flags sync — publish a flag catalog from source control
+
+Usage
+  gf flags sync --file flags.json [--dry-run]
+
+Uses a flag_sync key — NOT your CLI token — from --sync-key or
+  GOLDEN_FRIJOLES_FLAG_SYNC_KEY. There is deliberately no fallback to the CLI token: a
+  pipeline that forgot to set the narrow credential must fail, not quietly get the wide one.
+
+  Mint one with: gf keys create --type flag_sync --source <name> --label <text>
+
+  ⚠️ Sync NEVER activates, deactivates or deletes a flag. It creates immutable definition
+  versions. A key that already exists with an identical definition reports created: false;
+  semantic drift from an existing version is a conflict for an owner to resolve through the
+  normal version lifecycle.
+
+Flags
+  --file <path>     a JSON array of { key, definition } entries
+  --sync-key <key>  the flag_sync credential (or set the env var)
+  --dry-run         parse and report, send nothing
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

@@ -1,0 +1,29 @@
+gf flags rollout — serve a flag to a percentage of contexts
+
+Usage
+  gf flags rollout <key> --percent 25 --env production
+
+⚠️ REPLACES the rule list with one unconditional rollout rule, and says so here rather
+  than surprising you. An unconditional rollout beside existing clause rules is ambiguous
+  about which one wins at a glance, and "ambiguous at a glance" is what an operator reaches
+  for at 3am. Use `gf flags rules --rules-file` to compose several.
+
+  --percent is rejected, never clamped: 150 is a typo, and agreeing with a typo is worse
+  than refusing it. 0 and 100 are exactly expressible.
+
+Flags
+  --env <environment>  development | preview | production (repeatable)
+  --all-envs           all three environments, under the partial-failure contract
+  --project <slug>     the project (default: the remembered one)
+  --reason <text>      why — it goes in the audit trail (default: "via gf")
+  --percent <0-100>    the share of matching contexts served
+  --variant <key>      which variant to roll out (default: on)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

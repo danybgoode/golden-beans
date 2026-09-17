@@ -1,0 +1,22 @@
+gf flags history — every version of a flag, and who changed what
+
+Usage
+  gf flags history <key> [--project <slug>] [--json]
+
+Read-only: it creates no version, touches no activation and writes no audit row.
+
+  ⚠️ The audit window is CAPPED by the control plane at the most recent entries, so a flag
+  with a very long history shows the newest of them rather than all of them. Saying so is
+  the point — a list that implies completeness it does not have is worse than a short one.
+
+Flags
+  --project <slug>  the project (default: the remembered one)
+
+Exit codes
+  0  ok         it worked
+  1  usage      the command is wrong — nothing was sent
+  2  auth       the credential is not accepted — run `gf login`
+  3  not-found  no such thing, or not yours
+  4  conflict   someone else changed it — re-read and retry
+  5  partial    some environments changed and some did not
+  6  server     the server or the network is unwell — retry

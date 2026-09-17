@@ -21,6 +21,19 @@ Commands
   flags
   flags ls         every flag, and what each environment serves
   flags get        one flag: its definition, its versions and who changed it
+  flags create     create a flag, with a polarity, in the environments you name
+  flags set        change which variant a flag serves by default
+  flags rollout    serve a flag to a percentage of contexts
+  flags rules      replace a flag’s targeting rules from a file
+  flags kill       the 3am verb — serve false, and clear every rule
+  flags diff       what changed between two versions, in words
+  flags history    every version of a flag, and who changed what
+  flags sync       publish a flag catalog from source control
+
+  keys
+  keys ls          every credential that can reach this project
+  keys create      mint a credential — the kind is required, never guessed
+  keys revoke      kill a credential, immediately and permanently
 
 Global flags
   --json                 machine-readable output on stdout, and nothing else
