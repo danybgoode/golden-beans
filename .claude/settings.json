@@ -155,19 +155,12 @@
       "Bash(git commit * -a)",
       "Bash(git commit * --all)",
       "Edit(/Roadmap/00-ideas/BUILD-ORDER.md)",
-      "Write(/Roadmap/00-ideas/BUILD-ORDER.md)",
       "Edit(/apps/web/design-system/tokens.css)",
-      "Write(/apps/web/design-system/tokens.css)",
       "Edit(/apps/web/design-system/tokens.ts)",
-      "Write(/apps/web/design-system/tokens.ts)",
       "Edit(/apps/web/design-system/reference.css)",
-      "Write(/apps/web/design-system/reference.css)",
       "Edit(/apps/web/design-system/coverage.json)",
-      "Write(/apps/web/design-system/coverage.json)",
       "Edit(/apps/web/design-system/STATE-CONTRACT.json)",
-      "Write(/apps/web/design-system/STATE-CONTRACT.json)",
-      "Edit(/apps/web/design-system/STATE-MATCH.json)",
-      "Write(/apps/web/design-system/STATE-MATCH.json)"
+      "Edit(/apps/web/design-system/STATE-MATCH.json)"
     ],
     "ask": [
       "Bash(vercel env add *)",

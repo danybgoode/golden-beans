@@ -169,6 +169,16 @@ export function checkContract({ settings, ledger, projectFiles = [], exists = ()
       continue;
     }
     const p = parseRule(e.rule);
+    // A `Write(<path>)` rule is INERT — Claude Code checks only `Edit(<path>)` for file tools, and a nested
+    // session refuses to start while one is present ("only Edit(path) rules are matched by file permission
+    // checks"). Observed live 2026-09-16 when the security lens tried to run through the claude CLI on a
+    // repo carrying seven of them; `Edit` covers Write, Edit and NotebookEdit alike.
+    if (p?.tool === 'Write') {
+      findings.push({
+        kind: 'inert-write-rule',
+        detail: `${e.list}: ${e.rule} does nothing — use Edit(${p.pattern}), which covers every file-editing tool`,
+      });
+    }
     // A file-tool rule has no command to probe; its probe is that the path it protects EXISTS. A
     // typo'd path denies nothing and would otherwise read as a guardrail.
     if ((p?.tool === 'Edit' || p?.tool === 'Write') && p.pattern && !p.pattern.includes('*')) {

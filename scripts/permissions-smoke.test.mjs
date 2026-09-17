@@ -131,8 +131,9 @@ test('a probe its own rule does not match fails (catches a typo in the rule)', (
 });
 
 test('a file-tool deny rule protecting a path that does not exist fails', () => {
+  // One finding, not two: the paired `Write(<path>)` rule is gone — Claude Code never checked it.
   const f = checkContract({ settings, ledger, exists: (rel) => rel !== 'Roadmap/00-ideas/BUILD-ORDER.md' });
-  assert.deepEqual(kinds(f), ['probe-mismatch', 'probe-mismatch']);
+  assert.deepEqual(kinds(f), ['probe-mismatch']);
 });
 
 test('staging or committing the whole tree by any common spelling is refused', () => {
@@ -363,4 +364,21 @@ test('live shadow check: a program resolving outside the shim dir blocks every p
     bad.unsafe.map((u) => u.prog),
     ['vercel', 'gcloud']
   );
+});
+
+test('a Write(path) rule is reported as inert — only Edit(path) is checked for file tools', () => {
+  // Observed live: a nested `claude -p` REFUSES TO START while a Write rule is present, and outside that
+  // path the rule silently protects nothing.
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  s2.permissions.deny.push('Write(/Roadmap/00-ideas/BUILD-ORDER.md)');
+  l2.entries.push({
+    list: 'deny',
+    rule: 'Write(/Roadmap/00-ideas/BUILD-ORDER.md)',
+    cites: 'generated file',
+    probe: 'n/a',
+  });
+  const f = kinds(checkContract({ settings: s2, ledger: l2, exists: () => true }));
+  assert.ok(f.includes('inert-write-rule'), JSON.stringify(f));
+  assert.deepEqual(kinds(checkContract({ settings, ledger, exists: () => true })), []);
 });
