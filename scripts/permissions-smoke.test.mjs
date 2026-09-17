@@ -4,6 +4,10 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ASK_COMMANDS,
+  CRITICAL_COMMANDS,
+  REQUIRED_ASKS,
+  REQUIRED_REFUSALS,
   bashRuleMatches,
   checkContract,
   describeUserMode,
@@ -73,7 +77,10 @@ test('deleting the whole deny list and its ledger together still fails (consiste
   s.permissions.deny = [];
   s.permissions.ask = [];
   const f = checkContract({ settings: s, ledger: { entries: [] } });
-  assert.ok(f.length >= 7 && f.every((x) => x.kind === 'missing-guardrail'), JSON.stringify(kinds(f)));
+  assert.ok(
+    f.length >= 7 && f.every((x) => x.kind === 'missing-guardrail' || x.kind === 'missing-ask'),
+    JSON.stringify(kinds(f))
+  );
 });
 
 test('an uncited deny rule fails', () => {
@@ -84,8 +91,42 @@ test('an uncited deny rule fails', () => {
 
 test('a ledger entry whose rule was deleted fails as stale', () => {
   const s = structuredClone(settings);
-  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(supabase db reset*)');
+  s.permissions.deny = s.permissions.deny.filter((r) => r !== 'Bash(git push *--mirror*)');
   assert.deepEqual(kinds(checkContract({ settings: s, ledger })), ['stale-ledger']);
+});
+
+test('deleting a rule that carries a REQUIRED refusal fails twice — stale ledger AND missing guardrail', () => {
+  const s = structuredClone(settings);
+  s.permissions.deny = s.permissions.deny.filter((r) => !r.includes('supabase db reset'));
+  const f = kinds(checkContract({ settings: s, ledger }));
+  assert.ok(f.includes('stale-ledger') && f.includes('missing-guardrail'), JSON.stringify(f));
+});
+
+test('every CRITICAL command is required in all three spellings — bare, assignment-prefixed and env', () => {
+  // The gap this closes: `vercel deploy` and `rm -rf` had expansion-safe rules while `vercel --yes --prod`,
+  // `rm -fr` and `supabase db reset` were bare-only, so a prefixed spelling matched nothing.
+  for (const c of CRITICAL_COMMANDS) {
+    assert.ok(REQUIRED_REFUSALS.includes(c));
+    assert.ok(REQUIRED_REFUSALS.includes(`PATH=/x:$PATH ${c}`));
+    assert.ok(REQUIRED_REFUSALS.includes(`env PATH=/x:$PATH ${c}`));
+  }
+  assert.deepEqual(kinds(checkContract({ settings, ledger })), []);
+});
+
+test('an over-broad deny that swallows a safe negation fails', () => {
+  // `--force-with-lease` is an ASK: a deny that also matches it cannot be approved even once, and a guard
+  // that rejects correct output is worse than one that misses a rare fault.
+  const s = structuredClone(settings);
+  const l = structuredClone(ledger);
+  s.permissions.deny.push('Bash(*=* git push *--force*)');
+  l.entries.push({
+    list: 'deny',
+    rule: 'Bash(*=* git push *--force*)',
+    probe: 'PATH=/x:$PATH git push origin main --force',
+    cites: 'over-broad on purpose, for this test',
+  });
+  const f = kinds(checkContract({ settings: s, ledger: l }));
+  assert.ok(f.includes('over-broad-deny'), JSON.stringify(f));
 });
 
 test('a probe its own rule does not match fails (catches a typo in the rule)', () => {
@@ -95,8 +136,9 @@ test('a probe its own rule does not match fails (catches a typo in the rule)', (
 });
 
 test('a file-tool deny rule protecting a path that does not exist fails', () => {
+  // One finding, not two: the paired `Write(<path>)` rule is gone — Claude Code never checked it.
   const f = checkContract({ settings, ledger, exists: (rel) => rel !== 'Roadmap/00-ideas/BUILD-ORDER.md' });
-  assert.deepEqual(kinds(f), ['probe-mismatch', 'probe-mismatch']);
+  assert.deepEqual(kinds(f), ['probe-mismatch']);
 });
 
 test('staging or committing the whole tree by any common spelling is refused', () => {
@@ -270,6 +312,27 @@ test('live scoring: refused only when denied AND the shim never ran; control mus
   assert.equal(good.ok, true);
 });
 
+test('live scoring sees an assignment-prefixed probe run — the shim never logs the assignment', () => {
+  const probe = 'PATH=/x:$PATH vercel deploy --prod';
+  const s = scoreLive({
+    probes: [probe],
+    refused: new Set(),
+    shimLog: ['probe-ok control', 'vercel deploy --prod'],
+    expect: 'ran',
+  });
+  assert.equal(s.ok, true);
+  const leaked = scoreLive({
+    probes: [probe],
+    refused: new Set(),
+    shimLog: ['probe-ok control', 'vercel deploy --prod'],
+  });
+  assert.equal(
+    leaked.results[0].verdict,
+    'RAN',
+    'an escaped deny rule must read as RAN, not as not-attempted'
+  );
+});
+
 test('live baseline: without rules every probe must RUN — a refusal there means something else is refusing', () => {
   const probes = ['vercel deploy --prod', 'supabase db push'];
   const polluted = scoreLive({
@@ -306,4 +369,67 @@ test('live shadow check: a program resolving outside the shim dir blocks every p
     bad.unsafe.map((u) => u.prog),
     ['vercel', 'gcloud']
   );
+});
+
+test('a Write(path) rule is reported as inert — only Edit(path) is checked for file tools', () => {
+  // Observed live: a nested `claude -p` REFUSES TO START while a Write rule is present, and outside that
+  // path the rule silently protects nothing.
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  s2.permissions.deny.push('Write(/Roadmap/00-ideas/BUILD-ORDER.md)');
+  l2.entries.push({
+    list: 'deny',
+    rule: 'Write(/Roadmap/00-ideas/BUILD-ORDER.md)',
+    cites: 'generated file',
+    probe: 'n/a',
+  });
+  const f = kinds(checkContract({ settings: s2, ledger: l2, exists: () => true }));
+  assert.ok(f.includes('inert-write-rule'), JSON.stringify(f));
+  assert.deepEqual(kinds(checkContract({ settings, ledger, exists: () => true })), []);
+});
+
+test('an ask that only exists in the bare spelling is a finding — an escaped ask is not a stricter outcome', () => {
+  // The prefix escape applies to `ask` exactly as to `deny`: `PATH=/x:$PATH gcloud run deploy …` would run
+  // on the classifier's judgement instead of stopping for a human (found by the security lens on #17).
+  for (const c of ASK_COMMANDS) {
+    assert.ok(REQUIRED_ASKS.includes(`PATH=/x:$PATH ${c}`));
+    assert.ok(REQUIRED_ASKS.includes(`env PATH=/x:$PATH ${c}`));
+  }
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  const gone = s2.permissions.ask.filter((r) => r.includes('gcloud run deploy') && r.startsWith('Bash(*=*'));
+  assert.equal(gone.length, 1);
+  s2.permissions.ask = s2.permissions.ask.filter((r) => !gone.includes(r));
+  l2.entries = l2.entries.filter((e) => !gone.includes(e.rule));
+  const f = kinds(checkContract({ settings: s2, ledger: l2 }));
+  assert.ok(f.includes('missing-ask'), JSON.stringify(f));
+});
+
+test('a deny rule may not swallow a command that is meant to ASK', () => {
+  const s2 = structuredClone(settings);
+  const l2 = structuredClone(ledger);
+  s2.permissions.deny.push('Bash(gcloud run deploy *)');
+  l2.entries.push({
+    list: 'deny',
+    rule: 'Bash(gcloud run deploy *)',
+    probe: 'gcloud run deploy svc --image x',
+    cites: 'over-broad on purpose, for this test',
+  });
+  const f = kinds(checkContract({ settings: s2, ledger: l2 }));
+  assert.ok(f.includes('ask-swallowed-by-deny'), JSON.stringify(f));
+});
+
+test('the narrow prefixed rules leave ordinary reads alone', () => {
+  // A `*=* vercel*` catch-all refused `grep -rn --include=*.json vercel .` — `*=*` matches an `=` anywhere.
+  const deny = settings.permissions.deny.filter((r) => r.startsWith('Bash('));
+  for (const safe of [
+    'grep -rn --include=*.json vercel .claude/',
+    'rg --glob=!node_modules vercel .',
+    'env | grep vercel',
+    'rm -f build/one-file.txt',
+    'git push origin HEAD:main',
+  ]) {
+    const hit = deny.find((r) => bashRuleMatches(r.slice(5, -1), safe));
+    assert.equal(hit, undefined, `${safe} refused by ${hit}`);
+  }
 });

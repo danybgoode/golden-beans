@@ -1,0 +1,9 @@
+{
+  "_about": "epic-dod.mjs config. `aliases` maps how sprint docs name a repo to owner/repo. `exemptions` excuse ONE derived item on ONE epic closed before a convention existed, with the reason; an exemption on an item that now passes is STALE and fails the check.",
+  "aliases": {
+    "golden-beans": "danybgoode/golden-beans",
+    "dobby-foundation": "danybgoode/dobby-foundation",
+    "medusa-bonsai": "danybgoode/miyagi-product-management"
+  },
+  "exemptions": []
+}

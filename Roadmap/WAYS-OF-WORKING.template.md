@@ -1,11 +1,18 @@
-<!-- GENERATED FILE — do not edit by hand.
-     Source: Roadmap/WAYS-OF-WORKING.template.md + Roadmap/fill-ins.yml
-     Regenerate: node scripts/render-ways-of-working.mjs   (CI checks it with --check)
-     Shared process text belongs in the .template.md; this project's own belongs in fill-ins.yml. -->
+<!--
+  SOURCE FILE. `Roadmap/WAYS-OF-WORKING.md` is RENDERED from this plus `Roadmap/fill-ins.yml`:
+
+      node scripts/render-ways-of-working.mjs            # write it
+      node scripts/render-ways-of-working.mjs --check    # CI: fail if the rendered file drifted
+
+  Edit THIS file for anything every project shares, and `fill-ins.yml` for anything one project's own.
+  Rendering twice with no source change is a byte-for-byte no-op (ways-of-work-lean-pass S3.5).
+-->
 # Ways of Working
 
-How the product owner and Claude (builder) ship product together. Small slices, plan first, ship
+How {{fill:product_owner}} and Claude (builder) ship product together. Small slices, plan first, ship
 the moment each slice works — and each slice is a piece of the final product, never a test of it.
+
+{{fill:operating_posture}}
 
 ## Roles and the unit of work
 
@@ -26,18 +33,13 @@ Plan → branch + scaffold docs → build story → verify → QA/smoke → PR �
 ```
 
 1. **Plan.** Non-trivial work goes through plan mode as user stories, approved before code, naming its
-   QA/smoke stage. **A reference end-state is inspiration — an APPROVED design is scope.** ⚠️ *Amended 2026-08-29 (`design-system-rails`, from `console-ia-overhaul`'s A20/A22).* This sentence used to read "reference end-states are inspiration, never signed-off scope", full stop, and **that is why the console shipped looking nothing like the design the product owner approved.** Every acceptance criterion in that epic's first two sprints was *structural* — "the header renders one project switcher and four sections" — the build satisfied **all** of them, and it looked like a different product. Nothing in the plan could go red on a page that looked wrong. The rule exists to stop a *speculative spec doc* being treated as committed scope, and it still does. It does **not** apply to a design the product owner has explicitly approved: **where the product owner has approved a design, the design IS the contract**, it is binding on every route it covers, and there must be an assertion that can fail on the way a page looks. A builder cannot hit a visual target described in prose.
+   QA/smoke stage. {{fill:design_is_scope}}
 2. **Branch + scaffold.** One branch per epic (`feat/<slug>`, or `fix/…`, `chore/…`) off the latest
    `main`, in each repo you touch. Scaffold the epic `README.md` + `sprint-N.md` *before* any code, so
    the product owner sees scope as it grows, and keep them current (✅ ticks, commit refs).
 3. **Build one story at a time.** Reuse before rebuild. Commit per story, **path-limited**.
 4. **Verify + QA.** The deterministic gate — typecheck, lint, build, the suite — is green **before**
-   merge, run by the building agent, not only by CI. **Deploy rail.** Merging to `main` is the deploy: Vercel's GitHub integration builds production on every
-merge, and each PR gets a Vercel preview the Playwright harness runs against. **Never `vercel deploy` from
-the CLI** (AGENTS rule #4; it is on the deny list). An env-var change reaches running functions only on a
-**redeploy**, so verify by exercising the behaviour the var controls. **Supabase migrations are a separate,
-deliberate step** — applied through the Supabase MCP by an agent, or `supabase db push` by the product
-owner by hand; nothing migrates on merge.
+   merge, run by the building agent, not only by CI. {{fill:deploy_rail}}
 5. **PR → review → merge.** Declare a risk tier, run the review the policy asks for, resolve or answer
    every finding, merge on green. **Merging to `main` is the production deploy.** Delete the branch.
 6. **Close.** Sprint close: the sprint-wrap summary. Epic close: the Definition of Done below.
@@ -111,7 +113,7 @@ CI (deterministic gate)            — does it build, typecheck, pass the suite?
 **Which PRs**: `scripts/review-config.json` → `reviewScope` — `every-pr` (all non-trivial PRs;
 `--skip-trivial` drops docs-only and tiny diffs) or `security-paths-only`. The **security lens** is
 triggered by a `securityPaths` glob or a `risk: high` body in either scope — paths, not judgement, so a
-builder can add it but never skip it. **Here `reviewScope` is `every-pr`**: the fresh `pr-reviewer` and the external general pass run on every non-trivial PR.
+builder can add it but never skip it. {{fill:review_scope_note}}
 
 **Who reviews** is printed by `node scripts/review-route.mjs --builder <who> <PR#>`, never picked by hand:
 the highest-preference family that did **not** build the diff takes the general pass, the next takes the
@@ -132,10 +134,7 @@ locally as a pre-push self-check, never a gate. Why this shape:
 risk tier** once CI is green and findings are resolved — the tier selects the review
 scope, not the merge authority. Roll back with `git revert` on `main`.
 
-**A deterministic security floor runs underneath, free and without an LLM:** GitHub secret scanning with
-push protection (enabled 2026-09-16) and this repo's CodeQL workflow. The security lens finds logic flaws —
-a cross-project read, a lost update, authorization gated on the wrong thing; the scanners find known
-patterns and leaked credentials. Neither replaces the other.
+{{fill:security_floor}}
 
 ## Escalate, don't guess — the ONE trigger list
 
@@ -192,7 +191,7 @@ retrospective, no leftover branch) — **and** the judgment items below are true
 - [ ] **Each sprint has a smoke walkthrough** a person can follow blind, with real URLs; money/auth steps
       are flagged by name as owed to the product owner.
 - [ ] **Team memory** (and its index, if your tooling keeps one) records the epic.
-- [ ] **Kill-switch — only if one was planned at grooming:** the flag exists with the polarity the scope doc stated (the rule: `groom/references/kill-switch.md`). This verifies planned work; it is not a new build-time gate.
+{{fill:kill_switch_dod}}
 
 ## Automated QA
 
@@ -229,119 +228,13 @@ derived views. **`Roadmap/bets/`** holds one file per wave; **`tasks/`** is the 
   a rate-limited subagent still returns a plausible-sounding result. Compact at sprint/PR boundaries; for a
   big epic consider a fresh session per sprint.
 - Commit messages end with the `Co-Authored-By: Claude` trailer.
-- **Language.** Docs are written in **English** — everything under `Roadmap/`, `tasks/`, code
-  comments, and PR descriptions. **App copy is English too** (the landing renders `<html lang="en">`);
-  Golden Beans is a standalone English-language product with **no bilingual requirement** — do not
-  introduce a locale/translation layer or make a surface bilingual without a deliberate scope decision
-  that says so. (This differs from the Miyagi sibling, whose app copy is es-MX with an es/en
-  allow-list — that policy is theirs, not this repo's.)
+{{fill:language_policy}}
 
-## Epic-mode, model routing and delegation — this project's specifics
-
-**What the epic-sized handover changes here (adopted 2026-07-25):**
-
-1. **One architect, many builders.** The coordinating agent owns the plan, the architecture calls and
-   the merges. It does **not** hand-build every story. It classifies each story by complexity and
-   type, then dispatches builders — see the routing table below.
-2. **Assembly line, not a relay.** Read-only research on an external dataset, doc scaffolding and
-   independent stories run in **parallel, in the background**, while the architect works the critical
-   path. Anything touching shared surface (CI config, `package.json`, lint config, a `lib/` seam
-   several stories import) is done **first and by the architect**, because its blast radius is every
-   branch opened after it.
-3. **Surface scope-breaking findings the moment you have them, then keep building.** An epic-sized
-   handover means research can invalidate a premise written weeks ago. Put the decision to the
-   product owner as an explicit either/or **with a recommendation**, record the answer as a dated
-   **amendment in the epic README** (never a silent reinterpretation), and meanwhile finish
-   everything that does not depend on the answer. Worked example: pod-report's
-   "human-baseline vs agent-augmented eras" spine, which the dataset could not support — amended
-   2026-07-25 to published-benchmark baselines.
-
-### Routing a build by model tier
-
-The point is to spend the expensive model where judgment compounds and the cheap one where the work
-is mechanical — not to use one tier for everything.
-
-| Work | Tier | Why |
-|---|---|---|
-| Grooming, architecture, the epic plan, merge decisions, review triage | **Strongest** (the coordinating agent) | These are the decisions everything else inherits. |
-| Shared-surface changes: CI, lint config, `package.json`, a `lib/` seam many stories import | **Strongest**, done FIRST | Highest blast radius; a mistake here breaks every later branch. |
-| A well-specified story with a clear acceptance check | **Mid** (Sonnet-class subagent) | Bounded, verifiable, cheap to re-run. |
-| Read-only research / data-availability reports over a large or foreign codebase | **Mid**, background, parallel | Fan-out with no write conflicts. Ask for an explicit "NOT DERIVABLE" list — an honest gap beats an optimistic guess. |
-| Money · auth · migrations · tenancy · concurrency | **Strongest**, never delegated | Same tier that decides who merges. |
-| PR review — the judgment layers (CI is the gate; reviews authorize nothing) | **The routed external pass**, the fresh `pr-reviewer` and, when paths trigger it, the security lens | See *Review & merge*. Findings are resolved or answered before merge. |
-| File-derived prose: retro, poster entry, sprint wrap, the merge report | **Devin — the dedicated prose writer**, with Agy `gpt-oss-120b-medium` as fallback | Devin owns prose so Codex/Agy quota stays free for review and building. **One** prose model, never a Gemini one — a model-level fallback between registers is what silently changed every report's voice (see `PROSE_MODEL`). **Always read the draft.** |
-
-### Verifying delegated work — the rule that is not optional
-
-**A subagent's final message is not evidence.** A subagent that dies mid-task (a shared session
-rate-limit will do it) still returns a plausible-sounding `result`, and that text is just its last
-tool-call narration. Always re-derive state yourself: `git status`, `git diff HEAD`, then the
-type-checker and the test suite.
-
-This is not theoretical. On 2026-07-25 a subagent building the unit-test layer died mid-**mutation**
-and left `apps/web/lib/webhook-signature.ts` with `timingSafeEqual` replaced by `a === b` — a real
-security regression sitting in the working tree, reported by the agent's own last words as ordinary
-progress. `git diff HEAD` found it in seconds. **After any subagent batch, diff the tree for source
-files it should not have touched**, and re-run at least one mutation check yourself rather than
-trusting a claim that they were run.
-
-## Shipping a merge
-
-Merging to `main` is the deploy. The GitHub workflow continues to send its mechanical 📦/🚀 pings when
-Actions capacity is available; it is not the prose rail.
-
-The **product report** runs locally because Devin and Agy use interactive OAuth and cannot run in a
-GitHub runner. Install the user-scoped runner once on the always-on Mac:
-
-```bash
-node scripts/install-main-report-daemon.mjs
-node scripts/install-main-report-daemon.mjs --status
-```
-
-It fetches `origin/main` every five minutes without changing the checked-out branch, reports only
-first-parent mainline commits (one merged PR, not every commit inside it), and advances its local
-baseline only after Telegram **and Slack** accept the same report. Each accepted destination is
-checkpointed per commit, so a partial failure retries only the missing channel with the exact same
-prose. A failed writer, fetch, or post is visible in
-`~/Library/Logs/golden-beans-main-report.log` and is retried on the next interval. Credentials remain
-in the ignored root `.env.local` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CICD_CHAT_ID`, and
-`SLACK_WEBHOOK_URL`); they are never put in the plist. The GitHub `SLACK_WEBHOOK_URL` secret powers
-the Actions workflow but cannot be read back by this local runner, so the local env entry is a
-separate required setup step. Git hooks remain an immediate best-effort trigger, but the runner is
-the durable retry path even when merges happen on GitHub and this checkout stays on a feature branch.
-
-Use `node scripts/report-main-daemon.mjs --dry-run` to see pending reports without calling a writer or
-either channel. The guard still labels its model and blocks known unsupported claims before delivery.
-
-## Cadence, Definitions of Done and conventions — this project's specifics
-
-- **Draft → ready.** **Flip the PR draft → ready-for-review the moment the deterministic gate is green and the self-QA note is posted** (updated 2026-07-15): a draft means *still building*, ready means *review me* — this is also what the roadmap board's Lifecycle overlay reads (draft PR → In progress, ready PR → In review), so leaving finished work in draft hides it in the "In review" column. Set the sprint doc's `Status:` line to `🟦 In review` at the same moment.
-- **Product poster — `Roadmap/README.md`.** Find the epic's macro-section in the **Feature map** and update its line(s) to reflect what's now live (✅), and add a **Recent highlights** entry.
-- **Landing backfill (the public-offer contract, adopted 2026-07-14):** if the epic changes the
-  public offer, its landing-page section ships or updates **in the same epic** — flip the
-  section's 🔜 badge / content toward the end-state (`references/landing-end-state.md`). Like
-  the poster rule: the public page never claims ✅ for unshipped work, and never lags a shipped
-  one.
-- **Grooming cadence (updated 2026-07-14):** with a strong planning model (Fable-class), the
-  default is a **single-session groom** — one deep Definition-of-Ready groom for the front-of-queue
-  epic *plus* a portfolio pass that seeds/resequences the rest of the funnel — rather than one seed
-  per session. The groom skill's discipline (stages, scope-doc gate, one *deep* ask per run) is
-  unchanged; what batches is the funnel bookkeeping. Deep-groom later epics only when they reach
-  the front. Build sprints stay session-sized — versions may supersede in the immediately-next
-  sprint, so keep per-sprint kickoffs thin and let the epic docs carry state.
+{{fill:project_sections}}
 
 ## Tooling
 
-| Tool | Used for |
-|------|----------|
-| **git / gh** | Version control, feature branches, pull requests + merges, GitHub operations |
-| **node / npm** | Type-check (`tsc`), build (`npm run build`), Playwright (`npm run test:e2e`), local dev server, the `scripts/*` tooling |
-| **vercel** | Env-var management (`vercel env pull/add/ls`) + reading deploy state. **Never** `vercel deploy`/`--prod` — merge to `main` is the deploy (rule #4); check state via `gh api repos/<owner>/<repo>/deployments`. |
-| **supabase** | Migrations against linked project (`supabase link` / `migration list`; apply via the Supabase MCP — `db push` is denied to agents by `.claude/settings.json`, the product owner may run it by hand) and read-only prod queries (`supabase db query --linked "select …"`, uses the CLI's own auth — no service-role key in the shell). A separate, manual step from the Vercel deploy. |
-| **codex / agy / vibe / claude** | The external review families, in preference order — **routed, never hand-picked**: `node scripts/review-route.mjs --builder <who> <PR#>` prints the general pass and, when the paths trigger it, the security lens by a different family (see *Review & merge*). Health and pins: `node scripts/agy-doctor.mjs`. **devin** does prose, not review; **cursor-agent** is not wired into review. |
-
-This means a story can go from code → verified → preview-deployed → live-tested on a branch, then
-merged to production via PR — with verification at each step.
+{{fill:tooling_table}}
 
 Actions that touch live production, real money, or paid infrastructure are surfaced to the product owner
 before running.
