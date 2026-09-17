@@ -82,6 +82,12 @@ export function looksLiteral(rule) {
 /** Exact-match allow rules that are verb classes despite having no wildcard. */
 export const EXACT_ALLOW = /^(?:[\w.-]+ --version|npm ci)$/;
 
+// WHAT THIS LIST IS NOT: a sandbox. A deny rule matches command TEXT, so an adversary with a shell has
+// spellings it cannot see (`/bin/rm`, a script, a here-doc). The bar it does hold is "every spelling an
+// agent plausibly writes, in all three prefix forms" — reviewers found `vercel --yes --prod`, `rm -fr`,
+// `git -C <path> push --force` and `npx supabase --debug db push` that way, one class at a time. The
+// second floor is the auto-mode classifier; the behavioural proof is the human-run `--live` replay.
+//
 // Commands that must be refused in EVERY spelling — bare, assignment-prefixed and `env`-prefixed. The
 // prefixes are GENERATED, not listed, because listing them is how the gap happened: `vercel deploy` and
 // `rm -rf` got expansion-safe rules while `vercel --yes --prod`, `rm -fr` and `supabase db reset` stayed
@@ -97,7 +103,10 @@ export const CRITICAL_COMMANDS = [
   'git push --force origin main',
   'git push -f origin main',
   'git push origin +main',
+  'git -C /repo push --force origin main',
   'npx supabase db reset --linked',
+  'npx supabase --debug db push',
+  'supabase --debug db reset',
   'rm -rf build',
   'rm -fr build',
   'rm -R -f build',

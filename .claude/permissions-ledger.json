@@ -147,6 +147,24 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *npx supabase * db push*)",
+      "probe": "env PATH=/x:$PATH npx supabase --debug db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* npx supabase * db push*)",
+      "probe": "PATH=/x:$PATH npx supabase --debug db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(npx supabase * db push*)",
+      "probe": "npx supabase --debug db push",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Flag-between form: `npx supabase --debug db push` puts a valid CLI flag between the binary and the subcommand, which the adjacent-word rules miss (found by codex on golden-beans#146)."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(env *npx supabase db push*)",
       "probe": "env PATH=/x:$PATH npx supabase db push",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` form."
@@ -162,6 +180,42 @@
       "rule": "Bash(supabase db reset*)",
       "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database.",
       "probe": "supabase db reset --linked"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *npx supabase * db reset*)",
+      "probe": "env PATH=/x:$PATH npx supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` + `npx` flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* npx supabase * db reset*)",
+      "probe": "PATH=/x:$PATH npx supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `npx` flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(npx supabase * db reset*)",
+      "probe": "npx supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. `npx` flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *supabase * db reset*)",
+      "probe": "env PATH=/x:$PATH supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed `env` flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* supabase * db reset*)",
+      "probe": "PATH=/x:$PATH supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Prefixed flag-between form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(supabase * db reset*)",
+      "probe": "supabase --debug db reset",
+      "cites": "AGENTS.md → Workflow (2026-09-16): migrations are a separate, deliberate step — an agent applies them through the Supabase MCP, the product owner may run `supabase db push` by hand. `db reset` destroys the linked database. Flag-between form, as for `db push`."
     },
     {
       "list": "deny",
@@ -309,9 +363,33 @@
     },
     {
       "list": "deny",
+      "rule": "Bash(env *git -C * push *--force)",
+      "probe": "env PATH=/x:$PATH git -C /repo push origin main --force",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed `env` form."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git -C * push *--force)",
+      "probe": "PATH=/x:$PATH git -C /repo push origin main --force",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed form: `git -C <path> push --force` matched the bare `git -C` rule but none of the prefixed `git push` ones (found by codex on golden-beans#146). Anchored like the bare rule, so `--force-with-lease` still reaches `ask`."
+    },
+    {
+      "list": "deny",
       "rule": "Bash(git -C * push *--force *)",
       "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main.",
       "probe": "git -C . push --force origin smoke-branch"
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(env *git -C * push *--force *)",
+      "probe": "env PATH=/x:$PATH git -C /repo push --force origin main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed `env` form, trailing-space spelling."
+    },
+    {
+      "list": "deny",
+      "rule": "Bash(*=* git -C * push *--force *)",
+      "probe": "PATH=/x:$PATH git -C /repo push --force origin main",
+      "cites": "WAYS-OF-WORKING → Gitflow: never force-push a shared branch — roll back with `git revert` on main. Prefixed form, trailing-space spelling."
     },
     {
       "list": "deny",
