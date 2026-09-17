@@ -210,9 +210,13 @@ test('a member DOES see Setup now, because Connect your agent is member-readable
     tabs.map((tab) => tab.id),
     ['today', 'measure', 'ship', 'setup']
   )
+  // ⚠️ **TWO since golden-frijoles-cli.** `setup/cli` is member-readable on purpose: a CLI token
+  // grants exactly what its holder's console session grants, and every project-scoped call the CLI
+  // makes re-resolves membership server-side. Barring a member from minting one would bar them from
+  // reading in a terminal what they can already read in a browser. Keys stays owner-only.
   assert.deepEqual(
     getSectionLinks(links, 'setup').map((link) => link.routeSegment),
-    ['setup/connect'],
+    ['setup/connect', 'setup/cli'],
     'a member was offered a Setup surface they cannot open'
   )
 })
@@ -349,7 +353,7 @@ const ownerLinks = getProjectSurfaceLinks({
 test('the rail lists the active section’s surfaces, in inventory order', () => {
   assert.deepEqual(
     railLinksFor('setup', ownerLinks).map((link) => link.routeSegment),
-    ['setup/connect', 'setup/keys', 'destinations', 'shares']
+    ['setup/connect', 'setup/cli', 'setup/keys', 'destinations', 'shares']
   )
   assert.deepEqual(
     railLinksFor('ship', ownerLinks).map((link) => link.routeSegment),
@@ -397,10 +401,12 @@ test('the rail and the tab agree about what a member may reach in Setup', () => 
     role: 'member',
     gates: allGatesOpen,
   })
-  // One surface, not five: the member-readable connector page, and none of the credential ones.
+  // Two surfaces, not five: the member-readable connector page and CLI access, and none of the
+  // three that administer a PROJECT's credentials. See the member assertion above for why a CLI
+  // token — which is administered against an account, not a project — belongs on this side.
   assert.deepEqual(
     railLinksFor('setup', memberLinks).map((link) => link.routeSegment),
-    ['setup/connect']
+    ['setup/connect', 'setup/cli']
   )
   // Two seams, one answer — the tab exists exactly when the rail has something to put under it.
   assert.equal(

@@ -57,6 +57,17 @@ export type AuditAction =
   | 'flag_read_key_revoked'
   | 'flag_admin_key_minted'
   | 'flag_admin_key_revoked'
+  // golden-frijoles-cli · Sprint 1, Story 1.2 — the CLI credential's lifecycle. Its OWN labels,
+  // beside the four credential pairs above, for the reason `agent_write_key_*` states: these kinds
+  // share a shape but answer different incident questions, and this one answers a question none of
+  // the others can — "which laptop or CI job was signed in to `gf` when this flag changed?"
+  //
+  // ⚠️ These are the only actions in this union whose rows carry `project_id: null`, and that is
+  // correct rather than a gap. A CLI token belongs to an ACCOUNT; filing its mint under whichever
+  // project the operator happened to be looking at would make that project's trail claim something
+  // about its own access that is not true. Query them by `actor_user_id`.
+  | 'cli_token_minted'
+  | 'cli_token_revoked'
   // A lifecycle event that could not be emitted. The task row still holds the truth; this records
   // that a tenant's automation was never told, so the gap is queryable rather than only a log line.
   | 'task_event_emit_failed'

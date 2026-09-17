@@ -81,6 +81,32 @@ export type {
   FlagVariant,
   JsonValue,
 } from './flags'
+// golden-frijoles-cli · D4 — the shared command core. `packages/cli` and `apps/web` both import
+// these planners, which is what makes CLI/MCP parity structural instead of a review checklist.
+export {
+  FLAG_POLARITIES,
+  OFF_VARIANT_KEY,
+  ON_VARIANT_KEY,
+  defaultServedValue,
+  normalizeEnvironments,
+  planFlagCreate,
+  planFlagKill,
+  planFlagRollout,
+  planFlagRules,
+  planFlagSet,
+  planTypedFlagCreate,
+} from './flag-commands'
+export type { FlagCreateInput, FlagPlan, FlagPlanResult, FlagPolarity, FlagTypedCreateInput } from './flag-commands'
+// golden-frijoles-cli · D4 — moved here from apps/web/lib so the CLI and the console describe a
+// rollout, and diff two versions, with ONE implementation. apps/web re-exports both paths.
+export {
+  basisPointsToPercent,
+  formatRolloutPercent,
+  percentToBasisPoints,
+  rolloutBarPercent,
+} from './rollout-percent'
+export { UNEXPLAINED_DIFF_TEXT, describeFlagClause, diffFlagDefinitions } from './flag-definition-diff'
+export type { FlagDefinitionDiff } from './flag-definition-diff'
 export { createFlagProvider } from './flag-provider'
 export type {
   FlagProvider,

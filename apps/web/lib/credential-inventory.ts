@@ -240,6 +240,25 @@ export const CREDENTIAL_KINDS_NOT_LISTED = [
     why: 'A bearer URL that reads this whole project over MCP — managed on its own Setup surface.',
   },
   {
+    // ⚠️ **golden-frijoles-cli · Sprint 1. It reaches this project, so this page has to name it.**
+    // A `cli_tokens` row signs `gf` in as its holder and can therefore do, against THIS project,
+    // everything that person can do in the console — read its flags, and from Sprint 2 change what
+    // they serve. It is invisible to the completeness test below because that test is keyed on
+    // `api_keys.scope` and this credential lives in its own table, which is exactly how the
+    // connector token stayed missing until cross-review found it: the universe was wrong, not the
+    // list.
+    //
+    // It is not LISTED because it does not belong to a project — one token reaches every project
+    // its holder is a member of — so folding it into a per-project inventory would make the count
+    // above mean something different for one of its rows.
+    kind: 'cli',
+    label: 'CLI tokens',
+    where: '/app/setup/cli',
+    why:
+      'Signs the Golden Frijoles CLI in as a person, across every project they belong to — so it ' +
+      'is listed per ACCOUNT rather than per project, on its own Setup surface.',
+  },
+  {
     kind: 'share',
     label: 'Share links',
     where: '/app/shares',

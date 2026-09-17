@@ -121,7 +121,7 @@ test('typing a SECTION name lists everything in that section', () => {
   const found = filterPaletteEntries(entries, 'setup')
   assert.deepEqual(
     found.map((entry) => entry.label),
-    ['Connect your agent', 'Keys', 'Destinations', 'Share links']
+    ['Connect your agent', 'CLI access', 'Keys', 'Destinations', 'Share links']
   )
 })
 
