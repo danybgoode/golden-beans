@@ -76,28 +76,131 @@ loosening rule #2 or #3.
   the CLI mirrors; their server actions are the behaviour contract.
 - `packages/sdk/package.json` — the publishing shape for a second package under the same scope.
 
-## Architecture decisions to lock before any builder starts
+## Architecture decisions — LOCKED (verified against live code, 2026-09-17)
 
-- **D1 — the auth grant.** Real OAuth device code vs. a console-minted PAT. **Recommendation:
-  console-minted PAT for Sprint 1** (hours, not a wave); real device code only if Sprint 3 has
-  budget. Locked against `lib/supabase-auth.ts`'s actual browser-SSR flow, not against a guess.
-- **D2 — `--all-envs` partial-failure contract.** Creating a flag in every environment is a
-  multi-write with no transaction. Idempotent per-env create, a per-env report, non-zero exit on any
-  failure. **Never a silent partial.**
-- **D3 — polarity is a CLI concept.** `--kill-switch` ⇒ default `true`, created ENABLED everywhere;
-  `--enablement` ⇒ default `false`, created DISABLED everywhere. The caller cannot express the wrong
-  combination because the CLI derives value + initial state from the polarity flag.
-- **D4 — the command core is pure and shared.** One function per verb, zero I/O. Both the CLI and any
-  MCP write tool call it. **Parity becomes structural, not a review checklist.**
-- **D5 — the `--json` contract is a golden-file test.** An agent-facing output shape that can change
-  on a copy edit is a contract with no teeth.
-- **D6 — env var naming.** The SDK README deliberately retains `GOLDEN_BEANS_FLAG_READ_KEY` /
-  `GOLDEN_BEANS_FLAG_SYNC_KEY` as "caller-owned integration addresses" post-rebrand. Decide **once,
-  here**, whether `gf init` emits the legacy names (compat) or `GOLDEN_FRIJOLES_*` (consistency).
-  A builder must not decide this mid-build.
-- **D7 — no plan awareness in v1.** Every account is unlimited today and every user is one of ours.
-  No quota display, no upgrade prompts, no limit errors. The plan table lives in the mandate epic;
-  `gf` learns about plans when there is a plan to learn about.
+> Each decision below was checked against the running system, not against the plan. Where the
+> check disproved the plan, the decision says so and an **amendment** records it. Builders **cite**
+> these by number; a paraphrase drifts permissive.
+
+### D1 — the auth grant: a console-minted PAT, scoped to the ACCOUNT, in its own table
+
+`lib/supabase-auth.ts` is a browser-SSR cookie flow; a device-code grant against it is a new OAuth
+primitive and an appetite trap (the seed says so). **Locked: a console-minted personal access
+token**, `gf_pat_…`, hashed through the one `hashCredential`, pasted once by `gf login` or supplied
+as `GOLDEN_FRIJOLES_TOKEN`.
+
+**It gets its own table, `cli_tokens`, and that is not the default answer here.** The house rule
+(`CODE-QUALITY.md` #1, and both the `agent_write` and share-link migrations) is *reuse the seam,
+never build a second revoke path*. It does not apply, for a reason checked in the schema rather
+than assumed: **`api_keys.project_id` is `NOT NULL`** (`20260720130000_api_keys.sql`) and every one
+of the six scopes resolves *through a project*. A CLI token must answer "which projects does this
+caller have?" **before** a project is known — `gf projects ls`, `gf whoami`, `gf init` in an empty
+directory all need it. No row in `api_keys` can express that, and making `project_id` nullable
+would weaken the predicate that every existing scope filter leans on.
+
+So the CLI token is **user-bound**, and every project-scoped thing it then does is authorized the
+way the console authorizes it: resolve `user_id` → `project_members` → owner/member. The CLI gets
+**no authority the console session does not already have.**
+
+### D2 — `--all-envs` partial-failure contract
+
+Three environments, three writes, no transaction. Locked: **idempotent per environment, a per-env
+report, non-zero exit if any environment failed** — and the report is part of the `--json` contract,
+not prose. Never a silent partial, and never a rollback attempt (a "rollback" across three
+non-transactional writes is a fourth thing that can half-fail).
+
+### D3 — polarity is a CLI concept, and BOTH polarities activate
+
+`--kill-switch` ⇒ variants `on=true` / `off=false`, **default `on`**, activated in every
+environment ⇒ the flag serves `true` everywhere on the day it is born.
+`--enablement` ⇒ same variants, **default `off`**, activated in every environment ⇒ it serves
+`false` everywhere.
+
+⚠️ **Both polarities ACTIVATE. That is a correction to the scope doc's wording** and it is the
+whole point of the kill-switch story. In this control plane a definition with no activation is
+absent from the environment's snapshot, so a consumer resolving it gets `FLAG_NOT_FOUND` and falls
+back to its own literal — which is exactly the "a flag is invisible until it exists in the
+provider" failure the epic exists to end. "Created disabled" therefore means **serving `false`**,
+not **not serving**. The caller still cannot express the wrong combination: the CLI derives the
+default variant *and* the activation from the polarity flag, and `--kill-switch --enablement` is a
+usage error.
+
+### D4 — the command core is pure and shared, and it lives in the SDK
+
+One function per verb, zero I/O. **Locked: `packages/sdk/src/flag-commands.ts`, not
+`packages/cli`.** The MCP write tools live in `apps/web`, which already depends on
+`@golden-frijoles/sdk` and must not start depending on the CLI. Putting the core in the SDK is what
+makes parity *structural*: `apps/web` and `packages/cli` import the same module, so a CLI verb and
+its MCP tool cannot disagree about what a flag definition is.
+
+The core is a **planner**: it takes parsed input and returns the definition + the list of
+environments to activate. It does no fetch, reads no env, touches no disk. The I/O lives in
+`packages/cli/src/api.ts` (HTTP) and the route handlers (database).
+
+### D5 — the `--json` contract is a golden-file test
+
+`packages/cli/src/__golden__/` holds the exact bytes of `gf --help`, every subcommand's help, and a
+representative `--json` envelope per verb. `npm run test:unit` diffs them. An agent-facing output
+shape that a copy edit can change is a contract with no teeth.
+
+### D6 — env var naming: `GOLDEN_FRIJOLES_*`
+
+**Checked, and the premise in the scope doc was wrong in a way that makes this easy.** The SDK reads
+**no** environment variable — `createFlagProvider` takes `flagReadKey` as an argument, and the
+`GOLDEN_BEANS_FLAG_READ_KEY` / `GOLDEN_BEANS_FLAG_SYNC_KEY` names appear only in
+`packages/sdk/README.md` **examples**. They are caller-owned addresses, exactly as the README says.
+
+So there is no compatibility to preserve — nothing in shipped code resolves either name. Locked:
+`gf init` writes **`GOLDEN_FRIJOLES_FLAG_READ_KEY`**, `GOLDEN_FRIJOLES_FLAG_SYNC_KEY`,
+`GOLDEN_FRIJOLES_API_KEY` and `GOLDEN_FRIJOLES_URL`, and it **prints the snippet that reads them in
+the same breath**, so the file and its reader are generated together and cannot drift. The SDK
+README gains one line naming the new default; the legacy names stay valid because they were never
+lookups. Existing consumers are untouched.
+
+### D7 — no plan awareness in v1
+
+Unchanged. No quota display, no upgrade prompt, no limit error. `gf` learns about plans when there
+is a plan to learn about.
+
+### D8 — the gating seam: `CLI_WRITE_API_ENABLED`, and it is **born ON**
+
+The seam the scope doc asked for is built: one resolver, `isCliWriteApiEnabled()` in
+`apps/web/lib/flags.ts`, checked by every CLI-authenticated write route before any credential work,
+so OFF is a whole-surface kill switch and not a credential-validity oracle.
+
+⚠️ **Its polarity is inverted from the scope doc, by a standing product-owner instruction** (Daniel,
+2026-08-31, restated for this epic 2026-09-17: *"nothing is dark, all is enabled, nothing is waiting
+for me"*). The gate reads `process.env.CLI_WRITE_API_ENABLED !== 'false'` — **enabled unless
+explicitly disabled** — which is the only polarity that ships live on merge with no Vercel env var
+owed. Every other gate in `lib/flags.ts` is `=== 'true'`; this one is deliberately not, and says so
+where it is defined.
+
+**On the "fails CLOSED" line in the bet:** that clause exists to stop the flag service gating its
+own CLI *through its own flag service* — a read that fails would grant write access. This gate does
+not do that. It reads an environment variable, there is no read that can fail, and the recursion the
+bet warned about does not exist. The inversion is recorded rather than quietly resolved.
+
+### D9 — `gf projects create` is an idempotent **ensure**, not a second creation path
+
+**Disproved by the schema.** `projects_one_per_creator_idx`
+(`20260721100000_self_serve_tenants.sql`) is a partial UNIQUE index on `projects(created_by)`: a
+self-serve account owns **exactly one** project, enforced by the database. It is a signup-race
+guard, not a plan limit, and dropping it would reopen the race a cross-review closed.
+
+So there is no second project for `gf projects create` to create, and building one would mean
+either lifting that index or writing a second provisioning path. Locked: `gf projects create` calls
+the **existing** `lib/provisioning.ts`, is idempotent, and returns `{ created: false }` naming the
+account's existing project when there is one. That is a real capability — `?provision=failed` is a
+reachable state — and it is honest about the ceiling instead of pretending to a `create` that
+cannot happen.
+
+### D10 — the CLI writes through routes, never through a second control plane
+
+Every CLI write lands on `lib/flag-registry.ts`'s existing RPCs (`create_flag_definition_version`,
+`set_flag_activation`, `deactivate_flag`, `import_flag_definition_catalog`) — the same functions the
+console's server actions call, with the same optimistic-concurrency `expected_snapshot_version` and
+the same audit rows. **No new SQL touches flag state.** The one new migration creates the credential
+table and nothing else.
 
 ## Scope — stories
 
@@ -122,13 +225,21 @@ loosening rule #2 or #3.
 
 ## Deploy order
 
-**Backend-gated, client-published.** The server half (any new CLI-authenticated write route) merges
-**dark** behind `cli.write_api_enabled`; the npm package is published only once the routes are live
-and the flag is flipped. Migrations, if any, are **applied before merge** — merging deploys, and code
-reading a new column against an unmigrated table breaks an actively-used path rather than staying dark.
+**Backend-first, client-published — and nothing merges dark (D8).**
 
-Branches stack: `feat/golden-frijoles-cli` → `-s2` → `-s3`, one PR per sprint, merged in order. All
-three sprints share `packages/cli/` and the command core by construction — **stack or pay.**
+1. **The migration is applied to production BEFORE the PR that reads it merges.** Merging deploys;
+   code reading `cli_tokens` against an unmigrated database would break at the first request. The
+   migration is expand-only and nothing reads the new table until Sprint 1's routes do, so it is
+   safe to apply early.
+2. **Sprint 1 merges → production serves the CLI write API immediately** (`CLI_WRITE_API_ENABLED`
+   is born ON; no Vercel env var is owed, no flip is owed).
+3. **The npm package is published once the routes answer on `goldenfrijoles.com`**, verified by
+   exercising them — not by reading a deploy list. A published client pointing at a route that 404s
+   is worse than no client.
+
+Branches stack: `feat/golden-frijoles-cli` → `-s2` → `-s3`, one PR per sprint, merged in order.
+
+All three sprints share `packages/cli/` and the command core by construction — **stack or pay.**
 
 **Model routing:** Sprint 2 defines the write contract everything else imports — stronger model.
 Sprint 1 is mostly mechanical once D1 is locked; Sprint 3 is mechanical apart from 3.4. Review is
@@ -142,10 +253,13 @@ inverted: Sprint 2's PR gets the strongest available fresh reviewer.
 - [ ] Product poster (`Roadmap/README.md`) updated
 - [ ] Team memory + index updated
 - [ ] Durable learnings promoted to `Roadmap/LEARNINGS.md` (dedupe — sharpen, don't append)
-- [ ] **Kill-switch (planned at grooming — Stage 6b):** `cli.write_api_enabled` exists **in every
-      env, created DISABLED** (enablement polarity), gating the CLI-authenticated write seam.
-      ⚠️ **Note the inversion:** the flag service gating its own CLI must **fail CLOSED** here —
-      the opposite of this product's normal fail-open rule. `D`-decisions must name it.
+- [ ] **Kill-switch (planned at grooming — Stage 6b), AMENDED by D8:** the seam exists —
+      `isCliWriteApiEnabled()` in `apps/web/lib/flags.ts`, checked by every CLI-authenticated write
+      route before any credential work. ⚠️ **Its polarity is inverted from the scope doc, on a
+      standing product-owner instruction** (Daniel 2026-08-31, restated 2026-09-17): it is **born
+      ON** (`CLI_WRITE_API_ENABLED !== 'false'`), so the epic ships live on merge and no Vercel env
+      var is owed. The "fails CLOSED" clause in the bet addressed a recursive read of the product's
+      own flag service; this gate reads an env var and has no read that can fail. See **D8**.
 - [ ] **`@golden-frijoles/cli` is published to npm** and `npx @golden-frijoles/cli --version` works on
       a machine that has never seen it. *Done means shipped — a merged PR that isn't installable is
       not done.*
