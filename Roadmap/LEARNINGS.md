@@ -1189,6 +1189,10 @@ one-liner + why + date shape.
 - **`Write(<path>)` rules are INERT** — Claude Code checks only `Edit(<path>)` for file tools, and a nested
   `claude -p` refuses to start while one is present. This repo had seven of them on the design-system
   files, all protecting nothing; the paired `Edit` rules were doing the whole job.
+- **Claude Code refuses a `PATH=`-prefixed command itself** — "prepending a directory to PATH before
+  invoking git is a binary-hijacking pattern", even with that command explicitly allowed. Probe the
+  prefixed rule forms with a plain assignment (`FOO=1 …`), which runs; a probe the platform will not run
+  can never have a baseline, so it can never prove a rule.
 - **A behavioural test needs a baseline the system will actually produce.** `permissions-smoke --live` asks
   a throwaway session to run each probe with NO rules, so that a later refusal proves the rule. Told the
   probes were harmless shims, and with the commands explicitly allowed, a session still **refuses**

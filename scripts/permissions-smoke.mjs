@@ -47,6 +47,7 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
+  renameSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -367,13 +368,22 @@ export function bareCommand(cmd) {
 
 export function scoreLive({ probes, refused, shimLog, expect = 'refused' }) {
   const bare = bareCommand;
-  const ran = (cmd) => shimLog.some((line) => line.trim() === bare(cmd));
+  // The shim cannot see the wrapper, so all three spellings of one command log the SAME line. Matching by
+  // presence would let ONE of them run and mark the other two as exercised (found by codex on #181), so a
+  // log line is CONSUMED by the first probe that claims it: three variants need three lines.
+  const unclaimed = shimLog.map((l) => l.trim());
+  const claim = (cmd) => {
+    const i = unclaimed.indexOf(bare(cmd));
+    if (i < 0) return false;
+    unclaimed.splice(i, 1);
+    return true;
+  };
+  const controlRan = claim('probe-ok control');
   const results = probes.map((cmd) => {
-    if (ran(cmd)) return { cmd, verdict: 'RAN' };
+    if (claim(cmd)) return { cmd, verdict: 'RAN' };
     if (refused.has(cmd)) return { cmd, verdict: 'refused' };
     return { cmd, verdict: 'not-attempted' };
   });
-  const controlRan = ran('probe-ok control');
   const want = expect === 'ran' ? 'RAN' : 'refused';
   const ok = controlRan && results.every((r) => r.verdict === want);
   return { ok, controlRan, results };
@@ -457,9 +467,21 @@ function runStatic() {
  * destructive rules are held by the static contract plus that same second floor.
  */
 export function liveProbes(entries) {
-  return entries
-    .filter((e) => e.probe && e.rule.startsWith('Bash(') && /^git (add|commit)\b/.test(bareCommand(e.probe)))
-    .map((e) => e.probe);
+  const bare = [
+    ...new Set(
+      entries
+        .filter(
+          (e) => e.probe && e.rule.startsWith('Bash(') && /^git (add|commit)\b/.test(bareCommand(e.probe))
+        )
+        .map((e) => bareCommand(e.probe))
+    ),
+  ];
+  // The prefix is `FOO=1`, not the ledger's `PATH=/x:$PATH`, and that is a finding in itself: Claude Code
+  // REFUSES a PATH-prefixed command outright — "prepending a directory to PATH before invoking git is a
+  // binary-hijacking pattern … regardless of the harmless-shim framing" — even with the command explicitly
+  // allowed (measured 2026-09-17). A probe the platform will not run can never have a baseline, so the
+  // replay uses an assignment prefix that DOES run and still exercises the same `*=*` / `env *` rule forms.
+  return bare.flatMap((c) => [c, `FOO=1 ${c}`, `env FOO=1 ${c}`]);
 }
 
 function runLive() {
@@ -520,10 +542,24 @@ function runLive() {
         hasTrustDialogAccepted: true,
       };
     else delete cfg.projects[proj];
-    writeFileSync(claudeJsonPath, JSON.stringify(cfg, null, 2) + '\n');
+    // `~/.claude.json` is SHARED with every other Claude session on this machine and has no lock. Keep the
+    // read-modify-write as short as possible and swap the file in with an atomic rename, so a concurrent
+    // writer can never see a half-written config (raised by codex on #181). Residual risk, stated rather
+    // than hidden: a session that writes between our read and our rename loses that edit. Only the temp
+    // project's own key is touched, and it is removed again when the run ends — including on Ctrl-C.
+    const tmp = `${claudeJsonPath}.permissions-smoke-${process.pid}`;
+    writeFileSync(tmp, JSON.stringify(cfg, null, 2) + '\n');
+    renameSync(tmp, claudeJsonPath);
     return true;
   };
   const trusted = [];
+  // Ctrl-C or a kill must not leave this machine trusting a throwaway directory.
+  for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
+    process.on(sig, () => {
+      untrustAll();
+      process.exit(130);
+    });
+  }
 
   const session = (name, perms, commands) => {
     writeFileSync(log, '');
@@ -584,6 +620,18 @@ function runLive() {
         timeout: 900_000,
       }
     );
+    // A session that never started, or was killed, is UNAVAILABLE — scoring it would turn a crash into a
+    // behavioural result (found by codex on #181). The EXIT CODE alone is not that signal: the `git` shim
+    // also intercepts Claude Code's own internal git calls (plugin-cache clones), which makes the CLI exit
+    // non-zero on a session whose own result says `is_error: false`. So the verdict comes from the result
+    // object, and the exit code only from a spawn failure or a signal.
+    if (r.error || r.signal) {
+      untrustAll();
+      process.stderr.write(
+        `✗ ${name}: the session did not run (${r.error ? r.error.message : `killed by ${r.signal}`}) — UNAVAILABLE, not passed.\n`
+      );
+      process.exit(2);
+    }
     let parsed;
     try {
       parsed = JSON.parse(r.stdout);
@@ -591,6 +639,13 @@ function runLive() {
       untrustAll();
       process.stderr.write(
         `✗ ${name}: no parseable session result — UNAVAILABLE, not passed.\n${(r.stderr || '').slice(0, 400)}\n`
+      );
+      process.exit(2);
+    }
+    if (parsed.is_error === true) {
+      untrustAll();
+      process.stderr.write(
+        `✗ ${name}: the session reported an error (${parsed.subtype || 'unknown'}) — UNAVAILABLE, not passed.\n`
       );
       process.exit(2);
     }
@@ -629,7 +684,15 @@ function runLive() {
     runBatches(list, CHUNK);
     // A probe the session never attempted is a HARNESS miss, not a verdict — the model skipped a line.
     // Re-send just those, in small batches, twice; whatever is still unattempted is reported as such.
-    const attempted = (cmd) => refused.has(cmd) || shimLog.some((l) => l.trim() === bareCommand(cmd));
+    // Same consumption rule as scoreLive: N variants of one command need N log lines, or the retry loop
+    // would call a probe attempted because a SIBLING spelling ran.
+    const attempted = (cmd) => {
+      const pool = shimLog.map((l) => l.trim());
+      const need = list.filter((c) => bareCommand(c) === bareCommand(cmd) && !refused.has(c));
+      const have = pool.filter((l) => l === bareCommand(cmd)).length;
+      if (refused.has(cmd)) return true;
+      return need.indexOf(cmd) < have;
+    };
     // Retry in ever-smaller batches: a probe the model skipped once tends to be skipped again in company,
     // and singly it is just one command to run (dobby-foundation's baseline still had 24 unattempted after
     // two rounds of four, while the same list passed first time in the other two repos — model variance,
