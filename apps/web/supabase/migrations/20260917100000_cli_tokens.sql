@@ -85,6 +85,18 @@ CREATE OR REPLACE VIEW active_cli_tokens AS
   SELECT
     t.id,
     t.user_id,
+    -- The hash is SELECTED, and it has to be. The first version of this view omitted it, on the
+    -- reasoning that a view should not expose a credential hash, and every lookup then failed with
+    -- `column active_cli_tokens.token_hash does not exist` -- because the hash is what the lookup
+    -- FILTERS BY, and PostgREST can only filter on a column the view has. Caught by the e2e suite on
+    -- its first real run; nothing in typecheck, lint or the unit layer could see it.
+    --
+    -- Exposing it here is the established shape, not a concession: active_ingest_keys,
+    -- active_share_links and active_agent_write_keys all select their hash for the same reason, and
+    -- the 20260806100000 migration says so in words -- "this view exposes a credential hash; anon
+    -- must never reach it". The grants below are what make that safe, and they are asserted by
+    -- attempting the writes they forbid.
+    t.token_hash,
     t.label
   FROM cli_tokens t
   WHERE t.revoked_at IS NULL

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { recordAudit } from '@/lib/audit'
 import { listCliTokens, mintCliToken, revokeCliToken } from '@/lib/cli-tokens'
 import { getSessionUser } from '@/lib/supabase-auth'
+import { CLI_TOKEN_EXPIRY_DAYS } from '@/lib/credential-inventory'
 
 // golden-frijoles-cli · Sprint 1, Story 1.2 — mint and revoke the CLI's personal access token.
 //
@@ -21,8 +22,10 @@ import { getSessionUser } from '@/lib/supabase-auth'
 // Mirrors `AGENT_KEY_EXPIRY_DAYS`: an operator bounding a credential at mint time is a decision made
 // once, instead of a revocation they have to remember. "Until revoked" stays available because CI
 // is a real caller and a token that dies mid-release is worse than one that is deliberately long.
-
-export const CLI_TOKEN_EXPIRY_DAYS = [7, 30, 90] as const
+//
+// ⚠️ The list itself lives in `lib/credential-inventory.ts`, NOT here. A `'use server'` module may
+// export only async functions — exporting the array from this file type-checked and linted clean and
+// then failed `next build`. Its docstring there records the failure.
 
 async function requireAccount(): Promise<string> {
   const user = await getSessionUser()

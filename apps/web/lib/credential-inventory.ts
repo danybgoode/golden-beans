@@ -90,6 +90,24 @@ const CREDENTIAL_COPY: Record<CredentialKind, { title: string; capability: strin
 export const AGENT_KEY_EXPIRY_DAYS = [1, 7, 30, 90] as const
 
 /**
+ * How long a CLI token may be minted for, in days.
+ *
+ * Beside `AGENT_KEY_EXPIRY_DAYS` and for the identical reason that constant gives: two things read
+ * it — the action validates against it and the form offers it — and one definition is what stops
+ * the form offering a value the action refuses.
+ *
+ * ⚠️ **It lives HERE and not in `app/app/setup/cli/[projectSlug]/actions.ts`, and that is not a
+ * preference.** A `'use server'` module may export only async functions; exporting this array from
+ * there compiled, type-checked and LINTED cleanly, and then failed `next build` with "a use server
+ * file can only export async functions, found object". Nothing but the build can see it, which is
+ * why the build is in the gate.
+ *
+ * `null` ("until I revoke it") is offered but is not the default, and 1 day is deliberately absent:
+ * a CLI credential is held by a machine across a working week, not for one automation run.
+ */
+export const CLI_TOKEN_EXPIRY_DAYS = [7, 30, 90] as const
+
+/**
  * How long a flag credential lives when it is minted, in days.
  *
  * ⚠️ **This constant exists because Story 4.5 nearly dropped it silently** (fresh reviewer,

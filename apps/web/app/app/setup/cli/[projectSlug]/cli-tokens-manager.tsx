@@ -21,7 +21,8 @@ import {
 } from '@/design-system/primitives'
 import type { CliTokenRow } from '@/lib/cli-tokens'
 import { formatUtc } from '@/lib/format-utc'
-import { CLI_TOKEN_EXPIRY_DAYS, mintCliTokenAction, revokeCliTokenAction } from './actions'
+import { CLI_TOKEN_EXPIRY_DAYS } from '@/lib/credential-inventory'
+import { mintCliTokenAction, revokeCliTokenAction } from './actions'
 
 // Setup › CLI — the interactive half: mint, reveal once, list, revoke.
 //
