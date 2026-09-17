@@ -8,7 +8,7 @@
 //
 // What was NOT covered, and what this file exists for, is the seam BETWEEN the two rosters:
 //
-//   • `review-route.mjs`      decides who to ROUTE to      → CROSS_FAMILY_PREFERENCE, BUILDERS
+//   • `review-route.mjs`      decides who to ROUTE to      → PREFERENCE, BUILDERS
 //   • `lib/cross-agent-cli.mjs` decides who may REVIEW what → BUILDER_FAMILIES, reviewersFor, AGENTS
 //
 // Those are two lists in two files that must agree, and on 2026-08-25 they did not: `vibe` had been
@@ -21,7 +21,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AGENTS, BUILDER_FAMILIES, isTruncatedReview, reviewersFor } from './lib/cross-agent-cli.mjs';
-import { BUILDERS, CROSS_FAMILY_PREFERENCE } from './review-route.mjs';
+// `PREFERENCE` was `CROSS_FAMILY_PREFERENCE` until the router collapsed (ways-of-work-lean-pass S2.5);
+// the roster seam this file guards is unchanged — one list of who may review, one of who may build.
+import { BUILDERS, PREFERENCE as CROSS_FAMILY_PREFERENCE } from './review-route.mjs';
 
 /** The reviewer CLI name → the model family it belongs to. `antigravity` is agy's CLI name. */
 const FAMILY_OF = { codex: 'codex', antigravity: 'agy', vibe: 'vibe', claude: 'claude' };

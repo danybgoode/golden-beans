@@ -55,28 +55,50 @@ export const AGENT_FLAG = { codex: 'codex', agy: 'antigravity', vibe: 'vibe', cl
  * Returns { general, security, notes }. `security` is null when the lens is not triggered.
  */
 export function planReview({ builder, available = PREFERENCE, securityPass = false }) {
-  if (!BUILDERS.includes(builder)) throw new Error(`unknown builder '${builder}' (expected: ${BUILDERS.join(' | ')})`);
+  if (!BUILDERS.includes(builder))
+    throw new Error(`unknown builder '${builder}' (expected: ${BUILDERS.join(' | ')})`);
   const eligible = PREFERENCE.filter((f) => f !== builder && available.includes(f));
   const general = eligible[0] ?? null;
   // Prefer a different family for the security lens; fall back to the general one rather than skipping.
   const security = securityPass ? (eligible[1] ?? general) : null;
 
   const notes = [];
-  if (general) notes.push(`${general} runs the general pass because ${builder} built it — a family never reviews its own diff.`);
-  else notes.push(`NO external family is available: the cross-family layer is DARK for this PR. Say so in the PR body rather than letting a missing layer look like a clean one.`);
+  if (general)
+    notes.push(
+      `${general} runs the general pass because ${builder} built it — a family never reviews its own diff.`
+    );
+  else
+    notes.push(
+      `NO external family is available: the cross-family layer is DARK for this PR. Say so in the PR body rather than letting a missing layer look like a clean one.`
+    );
   if (securityPass) {
-    if (security && security !== general) notes.push(`${security} runs the security lens — a different family from the general pass, so the two reads have different blind spots.`);
-    else if (security) notes.push(`${security} runs BOTH passes (no second family available) — two prompts, one family. Record that in the PR body: family independence is short here.`);
+    if (security && security !== general)
+      notes.push(
+        `${security} runs the security lens — a different family from the general pass, so the two reads have different blind spots.`
+      );
+    else if (security)
+      notes.push(
+        `${security} runs BOTH passes (no second family available) — two prompts, one family. Record that in the PR body: family independence is short here.`
+      );
     else notes.push(`The security lens is triggered but no family can run it. Say so in the PR body.`);
   }
-  notes.push('The fresh `pr-reviewer` subagent runs as well — context independence is a different axis from family independence.');
+  notes.push(
+    'The fresh `pr-reviewer` subagent runs as well — context independence is a different axis from family independence.'
+  );
   return { builder, general, security, notes };
 }
 
 /** The exact commands to run, in order. Pure. */
 export function renderPlan(plan, pr, repo) {
-  const arg = (f) => `node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent ${AGENT_FLAG[f]}`;
-  const l = [`Review plan — PR #${pr}${repo ? ` (${repo})` : ''}`, `  built by:       ${plan.builder}`, `  general pass:   ${plan.general || '⚠ NONE AVAILABLE'}`, `  security lens:  ${plan.security || 'not triggered'}`, ''];
+  const arg = (f) =>
+    `node scripts/cross-review.mjs ${pr}${repo ? ` --repo ${repo}` : ''} --agent ${AGENT_FLAG[f]}`;
+  const l = [
+    `Review plan — PR #${pr}${repo ? ` (${repo})` : ''}`,
+    `  built by:       ${plan.builder}`,
+    `  general pass:   ${plan.general || '⚠ NONE AVAILABLE'}`,
+    `  security lens:  ${plan.security || 'not triggered'}`,
+    '',
+  ];
   for (const n of plan.notes) l.push(`  · ${n}`);
   l.push('');
   l.push('  Run:');
@@ -114,7 +136,8 @@ function main() {
     else if (a === '--repo') repo = need(argv[++i], '--repo');
     else if (a === '--json') json = true;
     else if (a === '--security') forceSecurity = true;
-    else if (a === '--tier') argv[++i]; // accepted and ignored: the tier no longer selects reviewers
+    else if (a === '--tier')
+      argv[++i]; // accepted and ignored: the tier no longer selects reviewers
     else if (!a.startsWith('-') && pr === null) pr = a;
     else die(`unknown argument '${a}'`);
   }
@@ -129,19 +152,31 @@ function main() {
     const facts = prFacts(pr, repo);
     if (!facts) {
       // Three states, never two: "I could not check" is not "no security path touched".
-      die(`could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Re-run when gh works, or pass --security.`);
+      die(
+        `could not read PR #${pr}'s changed files — the security trigger is UNKNOWN, not false. Re-run when gh works, or pass --security.`
+      );
     }
-    const decision = decideSecurityPass({ files: facts.files, body: facts.body, securityPaths: config.securityPaths });
+    const decision = decideSecurityPass({
+      files: facts.files,
+      body: facts.body,
+      securityPaths: config.securityPaths,
+    });
     securityPass = decision.run;
     trigger = decision.reason;
   }
   const available = PREFERENCE.filter((f) => hasCmd(AGENT_BIN[AGENT_FLAG[f]]));
   const plan = planReview({ builder, available, securityPass });
   if (json) {
-    writeSync(1, `${JSON.stringify({ pr, repo, trigger, reviewScope: config.reviewScope, ...plan }, null, 2)}\n`);
+    writeSync(
+      1,
+      `${JSON.stringify({ pr, repo, trigger, reviewScope: config.reviewScope, ...plan }, null, 2)}\n`
+    );
     return;
   }
-  writeSync(1, `${renderPlan(plan, pr, repo)}\n\n  security trigger: ${trigger}\n  review scope:     ${config.reviewScope}\n`);
+  writeSync(
+    1,
+    `${renderPlan(plan, pr, repo)}\n\n  security trigger: ${trigger}\n  review scope:     ${config.reviewScope}\n`
+  );
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

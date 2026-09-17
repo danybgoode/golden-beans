@@ -12,7 +12,10 @@ test('a family never reviews its own diff, whoever built it', () => {
   for (const builder of BUILDERS) {
     const plan = planReview({ builder });
     assert.notEqual(plan.general, builder, `${builder} was routed to review its own diff`);
-    assert.equal(plan.general, PREFERENCE.find((f) => f !== builder));
+    assert.equal(
+      plan.general,
+      PREFERENCE.find((f) => f !== builder)
+    );
   }
 });
 
@@ -35,7 +38,10 @@ test('the security lens takes a DIFFERENT family from the general pass', () => {
 test('a capped family falls to the next in the order — no refund ask, no waiting', () => {
   const plan = planReview({ builder: 'claude', available: ['vibe', 'claude'] });
   assert.equal(plan.general, 'vibe');
-  assert.ok(plan.notes.every((n) => !/refund/i.test(n)), 'the REFUND-ASK protocol is deleted');
+  assert.ok(
+    plan.notes.every((n) => !/refund/i.test(n)),
+    'the REFUND-ASK protocol is deleted'
+  );
 });
 
 test('one family left runs both prompts and SAYS so — a short layer must be loud', () => {
